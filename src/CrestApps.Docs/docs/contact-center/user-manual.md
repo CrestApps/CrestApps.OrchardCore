@@ -223,7 +223,15 @@ On **Telnyx**, a number you dial from the keypad is connected by the phone syste
 3. Click it. The calls are merged; no provider call id is required.
 4. The conference is listed under its own **Conference** heading with its participants. Each participant has its own hang-up button, which ends only that participant's call.
 
+To get the second call in the first place, click **Add call** during a call:
+
+- The current call is put on hold. The keypad opens with an empty number field and the held call is listed above it.
+- Type the number and press **Enter** (or click the green call button).
+- Changed your mind? Click **Back to call** or press **Escape** to take the held call off hold.
+
 To add another call to a running conference, tick any participant of the conference and the new call; the button reads **Add to conference**, and the new call joins the same conference rather than starting a second one.
+
+**Leaving a conference or ending it for everyone.** In a conference, **Hang up** reads **Leave**: you drop out and everyone else stays connected to each other. A Contact Center caller is never disconnected by you leaving; their call stays on your phone. If only one other person is left, **Hang up** simply ends the call, so nobody is left alone on the line. To end the call for everyone, click **End for all** and confirm. The confirmation starts on **Keep talking**, so pressing Enter does not end the call by accident.
 
 :::note Screencast
 `contact-center-agent-conference.mp4`
@@ -233,7 +241,7 @@ To add another call to a running conference, tick any participant of the confere
 
 **Prerequisites:** an active call.
 
-1. Click **Hang up** to end the selected call, or **Disconnect all** to end every active call.
+1. Click the red **Hang up** to end the selected call. It sits with your own call controls: **Mute**, **Hold** and **Keypad**. The keypad stays closed during a call until you open it to send digits. With two or more calls up, **End all** (outlined in red, in the row with **Transfer** and **Add call**) ends every call after you confirm. In a conference, see [leaving a conference or ending it for everyone](#how-to-conference-two-calls).
 
 When an answered call ends, a terminal provider event moves you from **Busy** to **Wrap-up** so you can complete after-call work.
 

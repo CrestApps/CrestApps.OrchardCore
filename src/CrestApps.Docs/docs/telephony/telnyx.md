@@ -268,19 +268,25 @@ is sent to the dialed party's leg, read back from the agent leg's client state (
 
 - **Transfer** rings the destination first and hands the dialed party over only when it answers (see
   [Transferring a keypad call](#transferring-a-keypad-call)).
-- **Merge** creates the conference from the first call's dialed party, which parks the agent's first leg, joins that leg
-  with `end_conference_on_exit` (the agent leaving ends the conference), and joins every other call's dialed party. The
-  agent's other legs stay parked, one per participant, so hanging up a participant's line ends that participant.
-  **Add to conference** joins only the new call's dialed party. Every call is read before anything moves, so a call that
-  cannot be merged refuses the merge with nothing changed.
-- **Merging an extension call** never moves the agent's own leg: that leg is already in the extension's conference
-  (`ext-{agent leg}`) with `end_conference_on_exit`, and taking it out ended that conference, hung up the colleague, and
-  -- through the colleague's hang-up -- the agent's leg too, leaving the other party alone in a new conference. An
-  extension call first in the merge lends its own conference (the colleague is marked detached, so their leaving does not
-  end it); later in the merge, its colleague joins and the agent's leg stays behind in its own conference, the way a
-  dialed number's agent leg stays parked. The agent leg of an extension call records the colleague's leg in its client
-  state for this, and hanging that leg up releases the colleague as well. An extension call whose colleague has not
-  answered cannot be merged yet.
+- **Merge** creates the conference from the first call's dialed party, which parks the agent's first leg. That leg joins
+  the conference *without* `end_conference_on_exit`, so the agent can leave while the others stay connected. Every other
+  call's dialed party joins too. The agent's other legs stay parked, one per participant, so hanging up a participant's
+  line ends that participant. **Add to conference** joins only the new call's dialed party. Every call is read before
+  anything moves, so a call that cannot be merged refuses the merge with nothing changed.
+- **Merging an extension call** is done through the colleague. The agent's own leg is already in the extension's
+  conference (`ext-{agent leg}`) with `end_conference_on_exit`, which Telnyx cannot change once a leg has joined: the
+  conference participant update command only sets `supervisor_role`.
+  - A dialed number leads any merge it is part of, whatever order the phone names the calls in. The colleague joins its
+    conference, and the agent's extension leg stays behind in its own conference, the way a dialed number's agent leg
+    stays parked.
+  - With no dialed number in the merge, the colleague is moved into a new conference, `conf-{agent leg}`, marked detached
+    so their leaving does not reach back for the agent. The agent's extension leg then joins it without
+    `end_conference_on_exit`, which leaves the extension's own conference empty.
+  - Only if Telnyx refuses to move the colleague is the extension's own conference the merge's. In that case the agent
+    leaving still ends it, and the provider logs a warning saying so.
+
+  The agent leg of an extension call records the colleague's leg in its client state for this, and hanging that leg up
+  releases the colleague as well. An extension call whose colleague has not answered cannot be merged yet.
 - **Digits** are sent from the dialed party's leg (`send_dtmf` plays tones to the far end of the leg it is sent on).
 - **Hang-up** from either side ends both: the agent's leg ending hangs up the dialed party (also while it is still
   ringing), and the dialed party ending -- answered or not -- hangs up the agent's leg. A leg the platform transferred or
@@ -294,6 +300,38 @@ says so in the transfer panel and disables its checkbox in the active-call list.
 
 The agent hears no ringback while the number rings: the agent's leg is answered and silent until the number answers,
 as on an extension call.
+
+### Leaving a conference and ending it for everyone
+
+The soft phone's **Hang up** in a conference leaves it, and the others stay connected (see
+[the soft phone's conference controls](index.md#keypad-recent-calls-and-extension-tabs)). For each of the agent's calls
+in the conference, the hang-up is flagged `conferenceLeave`, and the provider handles it in three steps:
+
+1. It reads the agent's leg (`GET /v2/calls/{agent leg}`).
+2. It marks both the agent's leg and its party detached (`PUT /v2/calls/{id}/actions/client_state_update`). With both
+   detached, the agent's leg ending no longer releases the party, and the party ending later no longer reaches back for
+   the leg.
+3. It hangs up the agent's leg alone (`POST /v2/calls/{agent leg}/actions/hangup`).
+
+The agent's leg joined without `end_conference_on_exit`, so the conference runs on. Telnyx's
+[Join a conference](https://developers.telnyx.com/api-reference/conference-commands/join-a-conference) defines that flag
+as "the conference should end and all remaining participants be hung up after the participant leaves". Three cases
+differ:
+
+- If the agent's leg cannot be marked detached, nothing is hung up and the phone says it could not leave. Hung up still
+  attached, the leg would disconnect its party.
+- A call that is another party's own leg, such as a Contact Center caller's, is never hung up by leaving.
+- With only one other party left, the phone does not leave. It hangs up as usual, so nobody is left alone in a
+  conference.
+
+**End for all** sends the hang-up of the call the conference was made from flagged `conferenceEnd`, with its
+`conferenceName`. The provider finds the conference by name (`GET /v2/conferences?filter[name]=…`) and ends it with
+[End a conference](https://developers.telnyx.com/api-reference/conference-commands/end-a-conference)
+(`POST /v2/conferences/{id}/actions/end`, "End a conference and terminate all active participants"). It then hangs up the
+call. The phone hangs up every other call of the conference as well.
+
+Once the agent has left, the remaining parties are in a conference with no end-on-exit participant. When one of them
+hangs up, the last one stays until they hang up too.
 
 ### Transferring a keypad call
 

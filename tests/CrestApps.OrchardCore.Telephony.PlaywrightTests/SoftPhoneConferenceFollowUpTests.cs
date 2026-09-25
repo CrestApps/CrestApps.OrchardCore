@@ -71,18 +71,78 @@ public sealed class SoftPhoneConferenceFollowUpTests : SoftPhoneBrowserTest
         await page.WaitForFunctionAsync("() => window.telephonySoftPhone.getInstance().getActiveCalls().length === 0");
     }
 
+    // Live, the agent merged a dialed number with extension 2 and pressed Hang up, and everybody was disconnected. Hang up
+    // in a conference now leaves it: each of the agent's calls in it is hung up as leaving, and the parties stay connected.
     [Fact]
-    public async Task HangingUpTheConference_EndsEveryCallInIt()
+    public async Task HangingUpAConferenceTwoOthersAreIn_LeavesIt_AndTheOthersStayConnected()
     {
         // Arrange
         var (page, first, second) = await MergeTwoCallsAsync();
+        Assert.Equal("Leave", await page.Locator("[data-telephony-hangup]").GetAttributeAsync("aria-label"));
 
         // Act
         await page.ClickAsync("[data-telephony-hangup]");
 
         // Assert
-        await WaitForAsync(() => Server.Provider.HangupCommands.Contains(first) && Server.Provider.HangupCommands.Contains(second));
-        Assert.DoesNotContain(Server.Provider.HangupCommands, command => command.EndsWith(":participant", StringComparison.Ordinal));
+        await WaitForAsync(() => Server.Provider.HangupCommands.Contains($"{first}:leave") && Server.Provider.HangupCommands.Contains($"{second}:leave"));
+        Assert.Equal(new[] { first, second }.Order(), Server.Provider.PartiesStillConnected.Keys.Order());
+        Assert.DoesNotContain(Server.Provider.HangupCommands, command => command == first || command == second || command.EndsWith(":end", StringComparison.Ordinal));
+        await page.WaitForFunctionAsync("() => window.telephonySoftPhone.getInstance().getActiveCalls().length === 0");
+    }
+
+    // With one party left, leaving would strand them alone in a conference: Hang up ends the call.
+    [Fact]
+    public async Task HangingUpAConferenceWithOnlyOnePartyLeft_EndsTheCall()
+    {
+        // Arrange - the conference's first party is dropped from its row.
+        var (page, first, second) = await MergeTwoCallsAsync();
+        var primary = (await LastMergeAsync(page)).GetProperty("callIds")[0].GetString();
+        var other = primary == first ? second : first;
+        await page.ClickAsync($"[data-telephony-participant-hangup=\"{primary}\"]");
+        await WaitForAsync(() => Server.Provider.HangupCommands.Contains($"{primary}:participant"));
+        await page.WaitForFunctionAsync("() => document.querySelectorAll('[data-telephony-conference-participant]').length === 1");
+        Assert.Equal("Hang up", await page.Locator("[data-telephony-hangup]").GetAttributeAsync("aria-label"));
+
+        // Act
+        await page.ClickAsync("[data-telephony-hangup]");
+
+        // Assert
+        await WaitForAsync(() => Server.Provider.HangupCommands.Contains(primary) && Server.Provider.HangupCommands.Contains(other));
+        Assert.Empty(Server.Provider.PartiesStillConnected);
+        Assert.DoesNotContain(Server.Provider.HangupCommands, command => command.EndsWith(":leave", StringComparison.Ordinal));
+    }
+
+    // Ending the conference for everyone is a separate, confirmed action; the confirmation starts on keeping the call.
+    [Fact]
+    public async Task EndForAll_AsksFirst_ThenEndsTheConferenceForEveryone()
+    {
+        // Arrange
+        var (page, first, second) = await MergeTwoCallsAsync();
+        var primary = (await LastMergeAsync(page)).GetProperty("callIds")[0].GetString();
+        var endAll = page.Locator("[data-telephony-hangup-all]");
+        Assert.Equal("End for all", await endAll.GetAttributeAsync("aria-label"));
+
+        // Act - asked, and kept.
+        await endAll.ClickAsync();
+        var confirm = page.Locator("[data-telephony-confirm]");
+        await confirm.WaitForAsync();
+        Assert.Contains("All 2 participants", await confirm.InnerTextAsync());
+        Assert.True(await page.EvaluateAsync<bool>("() => document.activeElement && document.activeElement.hasAttribute('data-telephony-confirm-cancel')"));
+        await CaptureAsync(page, "conference-end-for-all-confirm");
+        await page.ClickAsync("[data-telephony-confirm-cancel]");
+        await page.WaitForTimeoutAsync(200);
+
+        // Assert - nothing was hung up.
+        Assert.Empty(Server.Provider.HangupCommands);
+
+        // Act - asked again, and confirmed.
+        await endAll.ClickAsync();
+        await page.ClickAsync("[data-telephony-confirm-accept]");
+
+        // Assert - the conference is ended from the call it was made from, and every call is hung up.
+        await WaitForAsync(() => Server.Provider.HangupCommands.Contains($"{primary}:end") && Server.Provider.HangupCommands.Contains(primary == first ? second : first));
+        Assert.Empty(Server.Provider.PartiesStillConnected);
+        await page.WaitForFunctionAsync("() => window.telephonySoftPhone.getInstance().getActiveCalls().length === 0");
     }
 
     [Fact]

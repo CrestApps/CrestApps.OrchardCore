@@ -34,12 +34,14 @@ public sealed class SoftPhoneTransferPanelTests : SoftPhoneBrowserTest
         Assert.False(await page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth > window.innerWidth"));
         await CaptureAsync(page, "transfer-panel");
 
-        // Act - back returns to the keypad.
+        // Act - back returns to the call.
         await page.ClickAsync("[data-telephony-transfer-back]");
 
         // Assert
         Assert.True(await panel.IsHiddenAsync());
-        Assert.True(await page.Locator("[data-telephony-keypad-panel]").IsVisibleAsync());
+        // Back on the call, whose keypad stays closed until the agent opens it for digits.
+        Assert.True(await page.Locator("[data-telephony-keypad-panel]").IsHiddenAsync());
+        Assert.True(await page.Locator("[data-telephony-keypad-toggle]").IsVisibleAsync());
         Assert.Empty(dialogs);
     }
 

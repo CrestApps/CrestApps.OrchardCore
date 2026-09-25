@@ -304,7 +304,8 @@ public sealed class SoftPhoneWidgetTests : SoftPhoneBrowserTest
             "([count]) => window.telephonySoftPhone.getInstance().getConnection().invoke('GetTransferRequestCount').then(value => value === count + 1)",
             new[] { baselineCount });
         Assert.True(await page.Locator("[data-telephony-transfer-panel]").IsHiddenAsync());
-        Assert.True(await page.Locator("[data-telephony-keypad-panel]").IsVisibleAsync());
+        // The call carries on until the provider reports it transferred, with its keypad closed until asked for.
+        Assert.True(await page.Locator("[data-telephony-keypad-panel]").IsHiddenAsync());
         Assert.Equal("Transfer", await page.Locator("[data-telephony-transfer-label]").InnerTextAsync());
     }
 

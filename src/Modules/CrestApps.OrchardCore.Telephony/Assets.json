@@ -32,6 +32,7 @@
       "Assets/js/soft-phone/call-legs.js",
       "Assets/js/soft-phone/keypad-dial.js",
       "Assets/js/soft-phone/conference.js",
+      "Assets/js/soft-phone/in-call-controls.js",
       "Assets/js/soft-phone/browser-calls.js",
       "Assets/js/soft-phone/remote-elements.js",
       "Assets/js/soft-phone/dial-target.js",

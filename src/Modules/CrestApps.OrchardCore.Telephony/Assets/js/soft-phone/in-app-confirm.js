@@ -14,7 +14,7 @@
 
     // Asks `options.message` in a bar inserted into `host` ahead of `options.before` (or at its end). Resolves true when
     // the agent confirms and false when they cancel or press Escape. Asking again replaces a question still open.
-    //   options - { message, confirmLabel, cancelLabel, before }
+    //   options - { message, confirmLabel, cancelLabel, before, focusCancel }
     function showInAppConfirm(host, options) {
         options = options || {};
 
@@ -89,7 +89,8 @@
                 host.appendChild(bar);
             }
 
-            confirm.focus();
+            // A question whose confirmation ends the call for other people starts on the answer that keeps them on.
+            (options.focusCancel ? cancel : confirm).focus();
         });
     }
 
