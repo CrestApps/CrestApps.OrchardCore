@@ -277,11 +277,9 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
             return session;
         }
 
-        var previousState = session.State;
-        var previousIsMuted = session.IsMuted;
-        var previousRecordingState = session.RecordingState;
-        var previousIsConference = session.IsConference;
-        var previousParticipantCount = session.ParticipantCount;
+        var previous = CallSessionSnapshot.Of(session);
+        var previousState = previous.State;
+        var interactionWasSettled = interaction.IsSettled;
 
         ApplyState(session, interaction, ReportedState(session, providerEvent), now);
         ApplyProviderDetails(session, interaction, providerEvent, now);
@@ -320,17 +318,7 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
         await _callSessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
         await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
 
-        foreach (var eventType in ResolveEventTypes(
-            previousState,
-            session.State,
-            previousIsMuted,
-            session.IsMuted,
-            previousRecordingState,
-            session.RecordingState,
-            previousIsConference,
-            session.IsConference,
-            previousParticipantCount,
-            session.ParticipantCount))
+        foreach (var eventType in await CallSessionEventTypes.ResolveAsync(previous, session, interactionWasSettled, interaction.ItemId, _eventStore, cancellationToken))
         {
             var idempotencyKey = ResolveEventIdempotencyKey(providerEvent.IdempotencyKey, eventType);
 
@@ -716,90 +704,6 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
             InteractionStatus.Transferring => VoiceCallState.Connected,
             InteractionStatus.Conferenced => VoiceCallState.Connected,
             _ => VoiceCallState.Ringing,
-        };
-    }
-
-    private static List<string> ResolveEventTypes(
-        VoiceCallState previousState,
-        VoiceCallState currentState,
-        bool previousIsMuted,
-        bool currentIsMuted,
-        RecordingState previousRecordingState,
-        RecordingState currentRecordingState,
-        bool previousIsConference,
-        bool currentIsConference,
-        int previousParticipantCount,
-        int currentParticipantCount)
-    {
-        var eventTypes = new List<string>
-        {
-            ContactCenterConstants.Events.CallSessionUpdated,
-        };
-
-        if (currentState == VoiceCallState.Connected && previousState != VoiceCallState.Connected)
-        {
-            eventTypes.Add(ContactCenterConstants.Events.CallConnected);
-        }
-
-        if (currentState == VoiceCallState.OnHold && previousState != VoiceCallState.OnHold)
-        {
-            eventTypes.Add(ContactCenterConstants.Events.CallHeld);
-        }
-
-        if (previousState == VoiceCallState.OnHold && currentState == VoiceCallState.Connected)
-        {
-            eventTypes.Add(ContactCenterConstants.Events.CallResumed);
-        }
-
-        if (currentIsMuted && !previousIsMuted)
-        {
-            eventTypes.Add(ContactCenterConstants.Events.CallMuted);
-        }
-
-        if (!currentIsMuted && previousIsMuted)
-        {
-            eventTypes.Add(ContactCenterConstants.Events.CallUnmuted);
-        }
-
-        if (currentRecordingState != previousRecordingState)
-        {
-            eventTypes.AddRange(ResolveRecordingEvents(previousRecordingState, currentRecordingState));
-        }
-
-        // Participation now changes as legs join and leave the bridge, not only when a provider publishes a
-        // conference count. An ordinary two-party call gaining its customer and agent legs is not a conference
-        // change, so the event stays scoped to calls that are, or have just stopped being, a conference.
-        if (currentIsConference != previousIsConference ||
-            ((currentIsConference || previousIsConference) && currentParticipantCount != previousParticipantCount))
-        {
-            eventTypes.Add(ContactCenterConstants.Events.CallConferenceChanged);
-        }
-
-        if (IsTerminalState(currentState) && !IsTerminalState(previousState))
-        {
-            eventTypes.Add(ContactCenterConstants.Events.CallEnded);
-        }
-
-        return eventTypes;
-    }
-
-    private static string[] ResolveRecordingEvents(
-        RecordingState previousState,
-        RecordingState currentState)
-    {
-        if (currentState == previousState)
-        {
-            return [];
-        }
-
-        return currentState switch
-        {
-            RecordingState.Recording when previousState == RecordingState.Paused
-                => [ContactCenterConstants.Events.RecordingResumed],
-            RecordingState.Recording => [ContactCenterConstants.Events.RecordingStarted],
-            RecordingState.Paused => [ContactCenterConstants.Events.RecordingPaused],
-            RecordingState.Stopped => [ContactCenterConstants.Events.RecordingStopped],
-            _ => [],
         };
     }
 

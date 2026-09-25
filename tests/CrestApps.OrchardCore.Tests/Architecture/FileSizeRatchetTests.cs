@@ -42,7 +42,7 @@ public sealed class FileSizeRatchetTests
         ["src/Modules/CrestApps.OrchardCore.Telephony/Hubs/TelephonyHub.cs"] = 1238,
         ["src/Modules/CrestApps.OrchardCore.ContactCenter/Reports/Providers/EnterpriseInteractionReportProvider.cs"] = 1249,
         ["src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ContactCenterReportingService.cs"] = 839,
-        ["src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ProviderVoiceEventService.cs"] = 937,
+        ["src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ProviderVoiceEventService.cs"] = 841,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Sms.Portal/Controllers/AdminController.cs"] = 955,
     };
 

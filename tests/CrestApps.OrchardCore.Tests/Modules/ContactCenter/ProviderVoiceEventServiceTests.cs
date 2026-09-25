@@ -2584,7 +2584,7 @@ public sealed class ProviderVoiceEventServiceTests
             Times.Never);
     }
 
-    private static ProviderVoiceEventService CreateService(
+    internal static ProviderVoiceEventService CreateService(
         IInteractionManager interactionManager,
         ICallSessionManager callSessionManager,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
