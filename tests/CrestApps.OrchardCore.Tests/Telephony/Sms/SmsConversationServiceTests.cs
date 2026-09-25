@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
@@ -6,6 +8,7 @@ using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Notifications;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -196,12 +199,148 @@ public class SmsConversationServiceTests
         dispatcher.Verify(d => d.SendAsync(It.IsAny<SmsMessage>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+    public async Task SendAsync_ToAnUnassignedQueueThread_ClaimsItForTheSender()
+    {
+        // Arrange
+        // A handed-off thread sits unassigned in its queue. The agent who answers it has taken it: leaving it
+        // unclaimed kept offering it to the rest of the department, still showing "Claim", while they talked.
+        var conversation = CreateQueueConversation(assignedAgentId: null, SmsConversationAssignmentStatus.Unassigned);
+        var notifier = new Mock<ISmsRealTimeNotifier>();
+        var (service, dispatcher) = CreateService(
+            conversation,
+            dispatchSucceeds: true,
+            onSave: _ => { },
+            conversationAuthorization: CreateQueueMemberAuthorization(),
+            notifier: notifier);
+
+        // Act
+        var result = await service.SendAsync(
+            new SmsSendRequest { ConversationId = "conv-1", Body = "nice! thank you", ActingAgentId = "agent-7", Principal = CreateQueueMemberPrincipal() },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Equal("agent-7", conversation.AssignedAgentId);
+        Assert.Equal(SmsConversationAssignmentStatus.Assigned, conversation.AssignmentStatus);
+        Assert.Equal(SmsConversationOwnerType.Queue, conversation.OwnerType);
+        Assert.Equal("queue-1", conversation.OwnerId); // the queue stays the owner, as with Claim
+        dispatcher.Verify(d => d.SendAsync(It.IsAny<SmsMessage>(), It.IsAny<CancellationToken>()), Times.Once);
+        notifier.Verify(
+            n => n.ConversationAssignedAsync(It.Is<SmsAssignmentNotification>(a => a.AssignedAgentId == "agent-7" && a.OwnerQueueId == "queue-1"), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task SendAsync_ToAQueueThreadAColleagueClaimed_IsRefused_AndKeepsTheirClaim()
+    {
+        // Arrange
+        var conversation = CreateQueueConversation(assignedAgentId: "agent-owner", SmsConversationAssignmentStatus.Assigned);
+        var (service, dispatcher) = CreateService(
+            conversation,
+            dispatchSucceeds: true,
+            onSave: _ => { },
+            conversationAuthorization: CreateQueueMemberAuthorization());
+
+        // Act
+        var result = await service.SendAsync(
+            new SmsSendRequest { ConversationId = "conv-1", Body = "hi", ActingAgentId = "agent-7", Principal = CreateQueueMemberPrincipal() },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Equal("agent-owner", conversation.AssignedAgentId);
+        dispatcher.Verify(d => d.SendAsync(It.IsAny<SmsMessage>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SendAsync_BySomeoneAllowedToAnswerAColleaguesThread_DoesNotTakeItFromThem()
+    {
+        // Arrange
+        // A supervisor may reply on any thread, but replying on one an agent already holds is not a claim.
+        var conversation = CreateQueueConversation(assignedAgentId: "agent-owner", SmsConversationAssignmentStatus.Assigned);
+        var notifier = new Mock<ISmsRealTimeNotifier>();
+        var (service, _) = CreateService(conversation, dispatchSucceeds: true, onSave: _ => { }, conversationAuthorized: true, notifier: notifier);
+
+        // Act
+        var result = await service.SendAsync(
+            new SmsSendRequest { ConversationId = "conv-1", Body = "hi", ActingAgentId = "agent-supervisor", Principal = CreateQueueMemberPrincipal() },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Equal("agent-owner", conversation.AssignedAgentId);
+        notifier.Verify(n => n.ConversationAssignedAsync(It.IsAny<SmsAssignmentNotification>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SendAsync_ToAPersonalThreadAnotherAgentOwns_DoesNotTakeItFromThem()
+    {
+        // Arrange
+        var conversation = new SmsConversation
+        {
+            ItemId = "conv-1",
+            ServiceAddress = "+15553334444",
+            ContactAddress = "+15551112222",
+            OwnerType = SmsConversationOwnerType.Personal,
+            OwnerId = "agent-owner",
+            AssignmentStatus = SmsConversationAssignmentStatus.Unassigned,
+        };
+
+        var (service, _) = CreateService(conversation, dispatchSucceeds: true, onSave: _ => { }, conversationAuthorized: true);
+
+        // Act
+        await service.SendAsync(
+            new SmsSendRequest { ConversationId = "conv-1", Body = "hi", ActingAgentId = "agent-supervisor", Principal = CreateQueueMemberPrincipal() },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("agent-owner", conversation.OwnerId);
+        Assert.Null(conversation.AssignedAgentId);
+    }
+
+    private static SmsConversation CreateQueueConversation(string assignedAgentId, SmsConversationAssignmentStatus assignmentStatus)
+        => new()
+        {
+            ItemId = "conv-1",
+            ServiceAddress = "+15553334444",
+            ContactAddress = "+15551112222",
+            OwnerType = SmsConversationOwnerType.Queue,
+            OwnerId = "queue-1",
+            AssignedAgentId = assignedAgentId,
+            AssignmentStatus = assignmentStatus,
+        };
+
+    private static ClaimsPrincipal CreateQueueMemberPrincipal()
+        => new(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "user-7")], "Test"));
+
+    // The real conversation rule for a queue member who is not a supervisor.
+    private static SmsConversationAuthorizationService CreateQueueMemberAuthorization()
+    {
+        var authorizationService = new Mock<IAuthorizationService>();
+        authorizationService
+            .Setup(service => service.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
+            .ReturnsAsync(AuthorizationResult.Failed());
+
+        var agentProfileManager = new Mock<IAgentProfileManager>();
+        agentProfileManager
+            .Setup(manager => manager.FindByUserIdAsync("user-7", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentProfile { ItemId = "agent-7", UserId = "user-7", QueueIds = ["queue-1"], AllowedQueueIds = ["queue-1"] });
+
+        return new SmsConversationAuthorizationService(
+            authorizationService.Object,
+            agentProfileManager.Object,
+            new PermissiveAgentEntitlementPolicy());
+    }
+
     private static (SmsConversationService Service, Mock<ISmsDispatcher> Dispatcher) CreateService(
         SmsConversation conversation,
         bool dispatchSucceeds,
         Action<OmnichannelMessage> onSave,
         ContentItem contact = null,
-        bool conversationAuthorized = true)
+        bool conversationAuthorized = true,
+        ISmsConversationAuthorizationService conversationAuthorization = null,
+        Mock<ISmsRealTimeNotifier> notifier = null)
     {
         var store = new Mock<ISmsConversationStore>();
         store.Setup(s => s.FindByIdAsync(conversation.ItemId, It.IsAny<CancellationToken>()))
@@ -219,7 +358,7 @@ public class SmsConversationServiceTests
         contentManager.Setup(c => c.GetAsync(It.IsAny<string>(), It.IsAny<VersionOptions>()))
             .ReturnsAsync(contact);
 
-        var notifier = new Mock<ISmsRealTimeNotifier>();
+        notifier ??= new Mock<ISmsRealTimeNotifier>();
 
         var session = new Mock<ISession>();
         session.Setup(s => s.SaveAsync(It.IsAny<OmnichannelMessage>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -239,7 +378,7 @@ public class SmsConversationServiceTests
             contentManager.Object,
             contactResolver.Object,
             notifier.Object,
-            CreateConversationAuthorizationService(conversationAuthorized),
+            conversationAuthorization ?? CreateConversationAuthorizationService(conversationAuthorized),
             session.Object,
             new NoOpSmsFirstResponseSlaService(),
             clock.Object,

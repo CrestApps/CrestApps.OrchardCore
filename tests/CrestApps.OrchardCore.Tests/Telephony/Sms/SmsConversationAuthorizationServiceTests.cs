@@ -106,6 +106,34 @@ public class SmsConversationAuthorizationServiceTests
         Assert.True(allowed);
     }
 
+    [Theory]
+    [InlineData(SmsConversationAssignmentStatus.Unassigned)]
+    [InlineData(SmsConversationAssignmentStatus.Pooled)]
+    public async Task AuthorizeAsync_WhenQueueMemberAndThreadIsUnclaimed_AllowsSend_BecauseTheReplyClaimsIt(SmsConversationAssignmentStatus assignmentStatus)
+    {
+        // Answering an unclaimed thread is taking it: the reply claims it for the sender, so whoever may claim it
+        // may also answer it, exactly as on an unowned personal thread.
+        var conversation = CreateQueueConversation(assignedAgentId: null, assignmentStatus);
+        var service = CreateService(canViewAll: false, agent: CreateAgent(queueIds: [QueueId], allowedQueueIds: [QueueId]));
+
+        var allowed = await service.AuthorizeAsync(CreatePrincipal(), conversation, SmsConversationOperation.Send, TestContext.Current.CancellationToken);
+
+        Assert.True(allowed);
+    }
+
+    [Theory]
+    [InlineData(SmsConversationOperation.Close)]
+    [InlineData(SmsConversationOperation.Snooze)]
+    public async Task AuthorizeAsync_WhenQueueMemberAndThreadIsUnclaimed_StillDeniesClosingIt(SmsConversationOperation operation)
+    {
+        var conversation = CreateQueueConversation(assignedAgentId: null, SmsConversationAssignmentStatus.Unassigned);
+        var service = CreateService(canViewAll: false, agent: CreateAgent(queueIds: [QueueId], allowedQueueIds: [QueueId]));
+
+        var allowed = await service.AuthorizeAsync(CreatePrincipal(), conversation, operation, TestContext.Current.CancellationToken);
+
+        Assert.False(allowed);
+    }
+
     [Fact]
     public async Task AuthorizeAsync_WhenCallerIsNotAQueueMember_DeniesView()
     {

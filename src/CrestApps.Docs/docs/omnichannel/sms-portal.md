@@ -24,7 +24,7 @@ The portal turns a set of SMS numbers into a shared team inbox:
 - **Conversations** — one thread per customer phone number, hydrated from the shared Omnichannel message store. A customer always maps to a single conversation, so replies never fork into duplicate threads.
 - **Composer** — send from any of your numbers, insert a canned-response **template**, and link the thread to a **customer** (any content item that uses the Omnichannel Contact part).
 - **Live contact search** — the *To* selector searches your Contact content items by phone number, first name, and last name, so operators can start a conversation from a known contact or a raw number.
-- **Claim, assign, transfer** — pull an unassigned conversation into your own queue, hand it to another operator, or move it between personal and queue ownership.
+- **Claim, assign, transfer** — pull an unassigned conversation into your own queue, hand it to another operator, or move it between personal and queue ownership. Replying to a conversation nobody holds claims it for you, under the same rules as **Claim**; replying never takes a conversation from the operator who already holds it.
 - **Close / spam / reopen** — resolve conversations, flag spam, and reopen when a customer replies.
 - **Broadcasts** — send one message to many recipients as individual 1:1 threads (not a group chat), processed by a durable, resumable background task.
 - **Real-time updates** — inbound messages and delivery receipts are pushed to open inboxes over the portal's own SignalR hub.
