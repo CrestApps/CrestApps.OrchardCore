@@ -116,59 +116,12 @@ public sealed partial class TelnyxTelephonyProvider
             : null;
     }
 
-    // Moves the dialed party to the destination and releases the agent's leg, which the bridge parked when the party
-    // left it. The party's leg is marked detached first, so its later end does not reach back for the agent's leg.
-    private async Task<TelephonyResult> TransferBridgedDialAsync(TransferRequest request, string destination, BridgedDial bridge, CancellationToken cancellationToken)
-    {
-        if (request.Mode == TransferMode.Warm)
-        {
-            return TelephonyResult.Failed(S["A warm transfer is not available for a number dialed from the soft phone. Transfer it blind, or merge the colleague into the call."].Value);
-        }
-
-        var transfer = await _apiClient.TransferAsync(
-            bridge.RemoteLegId,
-            destination,
-            _options.DefaultOutboundCallerId,
-            RemoteLegState(bridge).ToClientStateJson(),
-            cancellationToken);
-
-        if (!transfer.Succeeded)
-        {
-            _logger.LogError(
-                "Telnyx rejected transferring the dialed party of call {CallId} with status code {StatusCode}. Response: {Response}",
-                bridge.AgentLegId.SanitizeLogValue(),
-                transfer.StatusCode,
-                transfer.ErrorBody.SanitizeLogValue());
-
-            return TelephonyResult.Failed(S["Telnyx could not complete the requested operation."].Value);
-        }
-
-        await ReleaseAgentLegAsync(bridge, cancellationToken);
-
-        return TelephonyResult.Success(BuildCall(bridge.AgentLegId, CallState.Disconnected));
-    }
-
-    private async Task ReleaseAgentLegAsync(BridgedDial bridge, CancellationToken cancellationToken)
-    {
-        var hangup = await _apiClient.HangupWithStateAsync(bridge.AgentLegId, bridge.State.AsDetached().ToClientStateJson(), cancellationToken);
-
-        if (!hangup.Succeeded && !TelnyxApiErrors.IsCallAlreadyEnded(hangup))
-        {
-            _logger.LogWarning(
-                "The dialed party of call {CallId} was transferred, but the agent's leg could not be hung up ({StatusCode}).",
-                bridge.AgentLegId.SanitizeLogValue(),
-                hangup.StatusCode);
-        }
-    }
-
-    // The dialed party's leg as the orchestrator knows it, detached from the agent's leg.
-    private static TelnyxOutboundBridgeState RemoteLegState(BridgedDial bridge)
-        => new()
-        {
-            Intent = TelnyxOutboundBridgeState.DestinationLegIntent,
-            PeerCallControlId = bridge.AgentLegId,
-            Detached = true,
-        };
+    // A blind transfer rings its destination and hands the party over once it answers; a warm one rings the agent's own
+    // phone for a consult first (see TelnyxTelephonyProvider.Consult.cs).
+    private Task<TelephonyResult> TransferBridgedDialAsync(TransferRequest request, string destination, BridgedDial bridge, CancellationToken cancellationToken)
+        => request.Mode == TransferMode.Warm
+            ? StartConsultAsync(request, destination, bridge, cancellationToken)
+            : RingBlindTransferAsync(request, destination, bridge, cancellationToken);
 
     private sealed record BridgedDial(string AgentLegId, string RemoteLegId, TelnyxOutboundBridgeState State);
 }

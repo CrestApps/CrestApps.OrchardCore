@@ -59,6 +59,71 @@ public sealed class TelnyxOutboundBridgeState
     public const string ContactCenterConsultLegIntent = "cc-consult";
 
     /// <summary>
+    /// The intent marking a leg the platform rings to hand a soft-phone call to somebody else: a colleague's
+    /// registered browser (which rings it with Answer and Decline, and follows it as its own call once answered), or an
+    /// outside number. For a blind transfer <see cref="PeerCallControlId"/> is the party being handed over, who stays
+    /// with the transferring agent until this leg answers; for a consult it is the agent's consult leg, joined with
+    /// this one in the conference <see cref="ConferenceName"/>. <see cref="TransferOfCallControlId"/> names the
+    /// transferring agent's leg either way.
+    /// </summary>
+    public const string TransferLegIntent = "ob-xfer";
+
+    /// <summary>
+    /// Gets or sets, on a transfer leg (and on the legs it hands a call over to), the transferring agent's leg the
+    /// transfer was made from.
+    /// </summary>
+    [JsonPropertyName("h")]
+    public string TransferOfCallControlId { get; set; }
+
+    /// <summary>
+    /// Gets or sets, on an agent leg rung for a warm transfer's consult, the agent's leg of the call being consulted
+    /// about -- the call that will be handed over.
+    /// </summary>
+    [JsonPropertyName("o")]
+    public string ConsultOfCallControlId { get; set; }
+
+    /// <summary>
+    /// Gets or sets, on a consult's agent leg, the party the consult is about: the other end of
+    /// <see cref="ConsultOfCallControlId"/>, handed to the consulted destination when the transfer completes.
+    /// </summary>
+    [JsonPropertyName("y")]
+    public string PartyCallControlId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the user a transfer or consult rings, when it rings a colleague rather than a number.
+    /// </summary>
+    [JsonPropertyName("u")]
+    public string TargetUserId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of the party being transferred, shown to the colleague the call is handed to.
+    /// </summary>
+    [JsonPropertyName("m")]
+    public string PartyNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets, on the agent's leg of a call being transferred and on its party's leg, the leg the transfer rang
+    /// (a transfer leg, or a consult's agent leg) while the transfer is under way. The agent hanging up does not release
+    /// the party while it is set, and the party hanging up releases that leg too.
+    /// </summary>
+    [JsonPropertyName("q")]
+    public string PendingTransferCallControlId { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the destination of a consult answered, on the consult's agent leg: only
+    /// then can the call be handed to them.
+    /// </summary>
+    [JsonPropertyName("s")]
+    public bool? TargetAnswered { get; set; }
+
+    /// <summary>
+    /// Gets or sets a leg to hang up when this one ends, for two outside parties the platform joined to each other and
+    /// then left: nothing else ties them together.
+    /// </summary>
+    [JsonPropertyName("w")]
+    public string ReleaseWithCallControlId { get; set; }
+
+    /// <summary>
     /// Gets or sets the Contact Center consult a consult leg was placed for (consult-leg state only).
     /// </summary>
     [JsonPropertyName("k")]
@@ -163,12 +228,33 @@ public sealed class TelnyxOutboundBridgeState
             !string.IsNullOrWhiteSpace(PeerCallControlId);
 
     /// <summary>
+    /// Gets a value indicating whether this is the agent leg rung for a warm transfer's consult.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsConsultAgentLeg
+        => Intent == AgentLegIntent && !string.IsNullOrWhiteSpace(ConsultOfCallControlId);
+
+    /// <summary>
     /// Returns a copy of this state marked <see cref="Detached"/>.
     /// </summary>
     public TelnyxOutboundBridgeState AsDetached()
     {
         var copy = (TelnyxOutboundBridgeState)MemberwiseClone();
         copy.Detached = true;
+        copy.PendingTransferCallControlId = null;
+
+        return copy;
+    }
+
+    /// <summary>
+    /// Returns a copy of this state that names <paramref name="pendingTransferCallControlId"/> as the transfer under way,
+    /// or none.
+    /// </summary>
+    /// <param name="pendingTransferCallControlId">The leg the transfer rang, or <see langword="null"/>.</param>
+    public TelnyxOutboundBridgeState WithPendingTransfer(string pendingTransferCallControlId)
+    {
+        var copy = (TelnyxOutboundBridgeState)MemberwiseClone();
+        copy.PendingTransferCallControlId = pendingTransferCallControlId;
 
         return copy;
     }
@@ -256,7 +342,8 @@ public sealed class TelnyxOutboundBridgeState
                  parsed.Intent != ContactCenterPreDialedAgentLegIntent &&
                  parsed.Intent != ConferenceExtensionLegIntent &&
                  parsed.Intent != AiVoiceLegIntent &&
-                 parsed.Intent != ContactCenterConsultLegIntent))
+                 parsed.Intent != ContactCenterConsultLegIntent &&
+                 parsed.Intent != TransferLegIntent))
             {
                 return false;
             }

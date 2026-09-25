@@ -53,4 +53,11 @@ public sealed class TransferRequest
     /// before completing the transfer.
     /// </summary>
     public TransferMode Mode { get; set; }
+
+    /// <summary>
+    /// Gets or sets additional key-value metadata for the transfer: which soft phone asked for it
+    /// (<see cref="TelephonyConstants.RequestMetadata.SoftPhoneCredentialId"/>, sent by the client) and who is
+    /// transferring (<see cref="TelephonyConstants.RequestMetadata.SoftPhoneUserId"/>, stamped by the server).
+    /// </summary>
+    public IDictionary<string, string> Metadata { get; set; }
 }

@@ -98,6 +98,12 @@ public static class TelephonyConstants
         /// <see cref="SoftPhoneClientCapabilities.BridgedDialLeg"/>.
         /// </summary>
         public const string SoftPhoneCredentialId = "softPhoneCredentialId";
+
+        /// <summary>
+        /// The display name of the user placing a soft phone command, stamped by the server (never taken from the
+        /// client) so a colleague a call is handed to can be told who handed it over.
+        /// </summary>
+        public const string SoftPhoneUserDisplayName = "softPhoneUserDisplayName";
     }
 
     /// <summary>
@@ -111,6 +117,52 @@ public static class TelephonyConstants
         /// as an extension call and redialed by extension from the Recent tab.
         /// </summary>
         public const string ExtensionNumber = "extensionNumber";
+
+        /// <summary>
+        /// The leg a transfer or consult rings, which the soft phone follows until the transfer is over. The soft
+        /// phone names it back when it asks where the consult stands, completes it or cancels it.
+        /// </summary>
+        public const string ConsultId = "consultId";
+
+        /// <summary>
+        /// Where a transfer or consult stands: <see cref="ConsultStatuses.Ringing"/>,
+        /// <see cref="ConsultStatuses.Connected"/>, <see cref="ConsultStatuses.Completed"/> or
+        /// <see cref="ConsultStatuses.Cancelled"/>.
+        /// </summary>
+        public const string ConsultStatus = "consultStatus";
+
+        /// <summary>
+        /// Whether the transfer or consult is still going on (a boolean).
+        /// </summary>
+        public const string ConsultLive = "consultLive";
+
+        /// <summary>
+        /// Whether the call being transferred has ended -- the caller hung up (a boolean).
+        /// </summary>
+        public const string ConsultCallEnded = "consultCallEnded";
+
+        /// <summary>
+        /// On a consult call, the call the agent is consulting about (the one that will be handed over).
+        /// </summary>
+        public const string ConsultOf = "consultOf";
+    }
+
+    /// <summary>
+    /// The states a transfer or consult passes through, as <see cref="CallMetadata.ConsultStatus"/> carries them.
+    /// </summary>
+    public static class ConsultStatuses
+    {
+        /// <summary>The destination is being rung.</summary>
+        public const string Ringing = "ringing";
+
+        /// <summary>The destination answered; the agent is talking to them and the caller is on hold.</summary>
+        public const string Connected = "connected";
+
+        /// <summary>The call was handed to the destination.</summary>
+        public const string Completed = "completed";
+
+        /// <summary>The destination did not take the call, or the transfer was called off.</summary>
+        public const string Cancelled = "cancelled";
     }
 
     /// <summary>

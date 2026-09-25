@@ -27,6 +27,7 @@ public sealed partial class TelnyxTelephonyProvider :
     ITelephonyMuteProvider,
     ITelephonyTransferProvider,
     ITelephonyAttendedTransferProvider,
+    ITelephonyConsultTransferProvider,
     ITelephonyConferenceProvider,
     ITelephonyDtmfProvider,
     ITelephonyVoicemailProvider,
@@ -41,6 +42,7 @@ public sealed partial class TelnyxTelephonyProvider :
     private readonly IClock _clock;
     private readonly ILogger _logger;
     private readonly TelnyxOptions _options;
+    private readonly TelnyxTransferCommands _transfers;
 
     internal readonly IStringLocalizer S;
 
@@ -53,6 +55,7 @@ public sealed partial class TelnyxTelephonyProvider :
     /// <param name="logger">The logger.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     /// <param name="telnyxOptions">The active Telnyx settings resolved for the tenant shell.</param>
+    /// <param name="interactionStore">The call history a colleague handed a call is recorded in.</param>
     public TelnyxTelephonyProvider(
         TelnyxApiClient apiClient,
         ITelnyxAgentCredentialStore credentialStore,
@@ -60,7 +63,8 @@ public sealed partial class TelnyxTelephonyProvider :
         IClock clock,
         ILogger<TelnyxTelephonyProvider> logger,
         IStringLocalizer<TelnyxTelephonyProvider> stringLocalizer,
-        IOptionsMonitor<TelnyxOptions> telnyxOptions)
+        IOptionsMonitor<TelnyxOptions> telnyxOptions,
+        ITelephonyInteractionStore interactionStore = null)
     {
         _apiClient = apiClient;
         _credentialStore = credentialStore;
@@ -68,6 +72,7 @@ public sealed partial class TelnyxTelephonyProvider :
         _clock = clock;
         _logger = logger;
         _options = telnyxOptions.CurrentValue;
+        _transfers = new TelnyxTransferCommands(apiClient, _options, interactionStore, clock, logger);
         S = stringLocalizer;
     }
 

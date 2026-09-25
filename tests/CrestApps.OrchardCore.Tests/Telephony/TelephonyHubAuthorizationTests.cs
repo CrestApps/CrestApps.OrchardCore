@@ -2,6 +2,7 @@
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Telephony.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -14,6 +15,7 @@ using Moq;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Builders;
 using OrchardCore.Environment.Shell.Scope;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -280,11 +282,140 @@ public sealed class TelephonyHubAuthorizationTests
         Assert.Equal(["call-1", "call-2"], callIds);
     }
 
+    // The transfer's own leg rings somebody else, so it is never in the caller's history; the call being transferred is.
+    [Fact]
+    public async Task GetConsult_OfTheCallersOwnCall_InvokesTheService()
+    {
+        // Arrange
+        using var harness = CreateHarness("user-1", [new TelephonyInteraction { UserId = "user-1", CallId = "call-1" }]);
+        harness.TelephonyService
+            .Setup(value => value.GetConsultAsync(It.IsAny<ConsultTransferRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TelephonyResult.Success());
+
+        // Act
+        var result = await InvokeInShellAsync(harness, hub => hub.GetConsult(new ConsultTransferRequest { CallId = "call-1", ConsultCallId = "leg-9" }));
+
+        // Assert
+        Assert.True(result.Succeeded);
+        harness.TelephonyService.Verify(
+            value => value.GetConsultAsync(It.Is<ConsultTransferRequest>(request => request.ConsultCallId == "leg-9"), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Theory]
+    [InlineData("GetConsult")]
+    [InlineData("CompleteConsult")]
+    [InlineData("CancelConsult")]
+    public async Task ConsultCommands_OnSomebodyElsesCall_AreRefused(string command)
+    {
+        // Arrange
+        using var harness = CreateHarness("user-1", [new TelephonyInteraction { UserId = "user-2", CallId = "call-1" }]);
+        var request = new ConsultTransferRequest { CallId = "call-1", ConsultCallId = "leg-9" };
+
+        // Act
+        var result = await InvokeInShellAsync(harness, hub => command switch
+        {
+            "GetConsult" => hub.GetConsult(request),
+            "CompleteConsult" => hub.CompleteConsult(request),
+            _ => hub.CancelConsult(request),
+        });
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Equal(0, harness.CommandExecutor.InvocationCount);
+    }
+
+    [Fact]
+    public async Task Transfer_TellsTheProviderWhoIsTransferring_WhateverTheClientSent()
+    {
+        // Arrange
+        using var harness = CreateHarness("user-1", [new TelephonyInteraction { UserId = "user-1", CallId = "call-1" }]);
+        TransferRequest sent = null;
+        harness.TelephonyService
+            .Setup(value => value.TransferAsync(It.IsAny<TransferRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<TransferRequest, CancellationToken>((request, _) => sent = request)
+            .ReturnsAsync(TelephonyResult.Success());
+
+        // Act
+        await InvokeInShellAsync(harness, hub => hub.Transfer(new TransferRequest
+        {
+            CallId = "call-1",
+            To = "+17025550199",
+            Metadata = new Dictionary<string, string>
+            {
+                [TelephonyConstants.RequestMetadata.SoftPhoneUserId] = "user-2",
+                [TelephonyConstants.RequestMetadata.SoftPhoneUserDisplayName] = "Somebody Else",
+                [TelephonyConstants.RequestMetadata.SoftPhoneCredentialId] = "credential-1",
+            },
+        }));
+
+        // Assert
+        Assert.Equal("user-1", sent.Metadata[TelephonyConstants.RequestMetadata.SoftPhoneUserId]);
+        Assert.Equal("user-1", sent.Metadata[TelephonyConstants.RequestMetadata.SoftPhoneUserDisplayName]);
+        Assert.Equal("credential-1", sent.Metadata[TelephonyConstants.RequestMetadata.SoftPhoneCredentialId]);
+    }
+
+    [Fact]
+    public async Task WarmTransfer_RecordsItsConsultAsANewCallOfTheAgents()
+    {
+        // Arrange
+        using var harness = CreateHarness("user-1", [new TelephonyInteraction { UserId = "user-1", CallId = "call-1" }]);
+        harness.TelephonyService
+            .Setup(value => value.TransferAsync(It.IsAny<TransferRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TelephonyResult.Success(new TelephonyCall
+            {
+                CallId = "consult-1",
+                State = CallState.Connecting,
+                Direction = CallDirection.Outbound,
+                To = "2",
+                Metadata = new Dictionary<string, object>
+                {
+                    [TelephonyConstants.CallMetadata.ConsultOf] = "call-1",
+                    [TelephonyConstants.CallMetadata.ExtensionNumber] = "2",
+                },
+            }));
+
+        // Act
+        await InvokeInShellAsync(harness, hub => hub.Transfer(new TransferRequest { CallId = "call-1", To = "2", Mode = TransferMode.Warm }));
+
+        // Assert
+        var store = harness.ServiceProvider.GetRequiredService<ITelephonyInteractionStore>();
+        var consult = await store.FindByCallIdAsync("user-1", "consult-1", TestContext.Current.CancellationToken);
+        Assert.NotNull(consult);
+        Assert.True(consult.IsExtension);
+    }
+
+    [Fact]
+    public async Task BlindTransfer_RecordsNoNewCall()
+    {
+        // Arrange
+        using var harness = CreateHarness("user-1", [new TelephonyInteraction { UserId = "user-1", CallId = "call-1" }]);
+        harness.TelephonyService
+            .Setup(value => value.TransferAsync(It.IsAny<TransferRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TelephonyResult.Success(new TelephonyCall
+            {
+                CallId = "call-1",
+                State = CallState.OnHold,
+                Metadata = new Dictionary<string, object> { [TelephonyConstants.CallMetadata.ConsultId] = "leg-9" },
+            }));
+
+        // Act
+        await InvokeInShellAsync(harness, hub => hub.Transfer(new TransferRequest { CallId = "call-1", To = "2" }));
+
+        // Assert
+        var store = harness.ServiceProvider.GetRequiredService<ITelephonyInteractionStore>();
+        Assert.Null(await store.FindByCallIdAsync("user-1", "leg-9", TestContext.Current.CancellationToken));
+    }
+
     private static HubAuthorizationHarness CreateHarness(
         string userId,
         IEnumerable<TelephonyInteraction> interactions = null)
     {
         var telephonyService = new Mock<ITelephonyService>();
+        var targetPolicy = new Mock<ITransferTargetPolicy>();
+        targetPolicy
+            .Setup(value => value.ResolveAsync(It.IsAny<TransferRequest>(), It.IsAny<ClaimsPrincipal>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((TransferRequest request, ClaimsPrincipal _, CancellationToken _) => TransferTargetDecision.Allow(request.To));
         var commandExecutor = new PassThroughTelephonyCommandExecutor();
         var store = new InMemoryTelephonyInteractionStore(interactions);
         var shellSettings = new ShellSettings
@@ -297,6 +428,8 @@ public sealed class TelephonyHubAuthorizationTests
             .AddSingleton<ITelephonyService>(telephonyService.Object)
             .AddSingleton<ITelephonyCommandExecutor>(commandExecutor)
             .AddSingleton<ITelephonyInteractionStore>(store)
+            .AddSingleton(targetPolicy.Object)
+            .AddSingleton<IClock>(new StubClock(new DateTime(2026, 9, 25, 12, 0, 0, DateTimeKind.Utc)))
             .AddSingleton(shellHost.Object)
             .BuildServiceProvider();
 

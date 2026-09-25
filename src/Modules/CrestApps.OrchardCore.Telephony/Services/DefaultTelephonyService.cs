@@ -207,6 +207,27 @@ public sealed class DefaultTelephonyService : ITelephonyService
             cancellationToken);
 
     /// <inheritdoc/>
+    public Task<TelephonyResult> GetConsultAsync(ConsultTransferRequest request, CancellationToken cancellationToken = default)
+        => InvokeAsync<ITelephonyConsultTransferProvider>(
+            TelephonyCapabilities.Transfer,
+            (provider, token) => provider.GetConsultAsync(request, token),
+            cancellationToken);
+
+    /// <inheritdoc/>
+    public Task<TelephonyResult> CompleteConsultAsync(ConsultTransferRequest request, CancellationToken cancellationToken = default)
+        => InvokeAsync<ITelephonyConsultTransferProvider>(
+            TelephonyCapabilities.AttendedTransfer,
+            (provider, token) => provider.CompleteConsultAsync(request, token),
+            cancellationToken);
+
+    /// <inheritdoc/>
+    public Task<TelephonyResult> CancelConsultAsync(ConsultTransferRequest request, CancellationToken cancellationToken = default)
+        => InvokeAsync<ITelephonyConsultTransferProvider>(
+            TelephonyCapabilities.Transfer,
+            (provider, token) => provider.CancelConsultAsync(request, token),
+            cancellationToken);
+
+    /// <inheritdoc/>
     public Task<TelephonyResult> SendDigitsAsync(SendDigitsRequest request, CancellationToken cancellationToken = default)
         => InvokeAsync<ITelephonyDtmfProvider>(
             TelephonyCapabilities.SendDigits,

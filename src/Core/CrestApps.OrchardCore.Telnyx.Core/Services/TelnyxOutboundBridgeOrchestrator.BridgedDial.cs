@@ -17,7 +17,10 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator
 {
     private async Task ConnectAgentLegAsync(string agentLegCallControlId, TelnyxOutboundBridgeState state, CancellationToken cancellationToken)
     {
-        var destinationLegCallControlId = await DialDestinationAsync(agentLegCallControlId, state, cancellationToken);
+        // A consult with a colleague rings them on a transfer leg, which their phone follows as its own call.
+        var destinationLegCallControlId = state.IsConsultAgentLeg && !string.IsNullOrWhiteSpace(state.TargetUserId)
+            ? await RingConsultTargetAsync(agentLegCallControlId, state, cancellationToken)
+            : await DialDestinationAsync(agentLegCallControlId, state, cancellationToken);
 
         // An internal extension call is joined through a conference and keeps its own rules, but its agent leg still
         // names the colleague's leg: a merge moves the colleague, not the agent, into the conference it makes.

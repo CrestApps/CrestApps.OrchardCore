@@ -73,6 +73,30 @@ public interface ITelephonyService
     Task<TelephonyResult> MergeAsync(MergeRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Reports where a transfer the default provider started as a call of its own stands.
+    /// </summary>
+    /// <param name="request">The call and its transfer's leg.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
+    Task<TelephonyResult> GetConsultAsync(ConsultTransferRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Hands a call to the destination its agent consulted, using the default provider.
+    /// </summary>
+    /// <param name="request">The call and its consult's leg.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
+    Task<TelephonyResult> CompleteConsultAsync(ConsultTransferRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Calls off a transfer the default provider started as a call of its own, leaving the call with its agent.
+    /// </summary>
+    /// <param name="request">The call and its transfer's leg.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
+    Task<TelephonyResult> CancelConsultAsync(ConsultTransferRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Sends DTMF digits to an active call using the default provider.
     /// </summary>
     /// <param name="request">The request describing the call and the digits to send.</param>

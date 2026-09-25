@@ -3,9 +3,11 @@ using System.Net.Http.Json;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Telnyx.Services;
 
@@ -25,6 +27,7 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
     private readonly IInboundVoiceInteractionProbe _interactionProbe;
     private readonly IConsultLegEventSink _consultLegEventSink;
     private readonly TelnyxOptions _options;
+    private readonly TelnyxTransferCommands _transfers;
 
     public TelnyxOutboundBridgeOrchestrator(
         TelnyxApiClient apiClient,
@@ -34,7 +37,9 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
         IEnumerable<ITelnyxAiVoiceEventHandler> aiVoiceEventHandlers,
         IEnumerable<IAgentPreDialCoordinator> preDialCoordinators,
         IEnumerable<IInboundVoiceInteractionProbe> interactionProbes,
-        IEnumerable<IConsultLegEventSink> consultLegEventSinks = null)
+        IEnumerable<IConsultLegEventSink> consultLegEventSinks = null,
+        ITelephonyInteractionStore interactionStore = null,
+        IClock clock = null)
     {
         _apiClient = apiClient;
         _logger = logger;
@@ -44,6 +49,7 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
         _preDialCoordinator = preDialCoordinators?.FirstOrDefault();
         _interactionProbe = interactionProbes?.FirstOrDefault();
         _consultLegEventSink = consultLegEventSinks?.FirstOrDefault();
+        _transfers = new TelnyxTransferCommands(apiClient, _options, interactionStore, clock, logger);
     }
 
     /// <inheritdoc/>
@@ -68,6 +74,11 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
             return await AdvanceConsultLegAsync(callEvent, state, isAnswered, cancellationToken);
         }
 
+        if (state.Intent == TelnyxOutboundBridgeState.TransferLegIntent)
+        {
+            return await AdvanceTransferLegAsync(callEvent, state, isAnswered, cancellationToken);
+        }
+
         if (state.Intent == TelnyxOutboundBridgeState.AgentLegIntent)
         {
             // The agent's browser answered the leg we rang; dial the destination it wanted to reach.
@@ -77,7 +88,7 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
             }
             else if (IsHangup(callEvent) && _options.IsConfigured)
             {
-                await ReleaseRemotePartyAsync(state, cancellationToken);
+                await AgentLegEndedAsync(callEvent.CallControlId, state, cancellationToken);
             }
 
             return TelnyxOutboundBridgeLeg.AgentLeg;
@@ -189,9 +200,12 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
                     destinationLegCallControlId: callEvent.CallControlId,
                     cancellationToken);
             }
-            else
+            else if (await BridgeDialedNumberAsync(agentLegCallControlId: state.PeerCallControlId, destinationLegCallControlId: callEvent.CallControlId, cancellationToken) &&
+                !string.IsNullOrWhiteSpace(state.TransferOfCallControlId) &&
+                state.Detached != true)
             {
-                await BridgeDialedNumberAsync(agentLegCallControlId: state.PeerCallControlId, destinationLegCallControlId: callEvent.CallControlId, cancellationToken);
+                // The number a consult dialed answered: the agent can now hand the call to it.
+                await MarkConsultAnsweredAsync(state.PeerCallControlId, cancellationToken);
             }
 
             return TelnyxOutboundBridgeLeg.DestinationLeg;
@@ -231,12 +245,21 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
                 // caller hung up first (which ended the conference and this leg), the agent leg is already gone.
                 await HangupLegAsync(state.PeerCallControlId, cancellationToken);
             }
+            else if (state.Detached != true && !string.IsNullOrWhiteSpace(state.TransferOfCallControlId))
+            {
+                // The number a consult dialed hung up: the consult is over, and the call goes back to the agent, held.
+                await ConsultTargetLeftAsync(state.PeerCallControlId, state.TransferOfCallControlId, cancellationToken);
+            }
             else if (state.Detached != true)
             {
                 // The number the agent dialed hung up, answered or not: busy, unanswered, refused, or the end of the
                 // conversation. The agent's leg is bridged with park_after_unbridge, so nothing ends it but this.
                 await HangupLegAsync(state.PeerCallControlId, cancellationToken);
             }
+
+            // A transfer still ringing for this party, or the outside party it was handed to, has nobody left to talk to.
+            await HangupLegAsync(state.PendingTransferCallControlId, cancellationToken);
+            await HangupLegAsync(state.ReleaseWithCallControlId, cancellationToken);
         }
 
         return TelnyxOutboundBridgeLeg.DestinationLeg;
@@ -479,6 +502,9 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
                 Intent = TelnyxOutboundBridgeState.DestinationLegIntent,
                 PeerCallControlId = agentLegCallControlId,
                 VoicemailRecipientUserId = agentState.VoicemailRecipientUserId,
+                // A consult's number names the call being consulted about, so its answer and its hang-up are read as
+                // the consult's.
+                TransferOfCallControlId = agentState.ConsultOfCallControlId,
             }.ToClientState(),
             // Telnyx de-duplicates by command_id, so a redelivered agent-answered webhook cannot place a
             // second destination call.

@@ -150,7 +150,7 @@ public sealed partial class TelephonyHub : Hub<ITelephonyClient>
         => ExecuteAsync(
             "Transfer",
             () => DescribeTransferRequest(request),
-            (service, token) => service.TransferAsync(request, token),
+            (service, token) => service.TransferAsync(StampTransferCaller(request), token),
             () => GetCallIds(request),
             async (serviceProvider, token) =>
             {
@@ -1142,9 +1142,8 @@ public sealed partial class TelephonyHub : Hub<ITelephonyClient>
     {
         // Record outbound-producing actions in call history. Both a server-placed "Dial" and an internal
         // "DialExtension" (and a browser-originated call the client reports through RecordBrowserCall, which
-        // also routes here as "Dial") return a Call that should appear in the Recent tab.
-        if ((!string.Equals(actionName, "Dial", StringComparison.Ordinal) &&
-             !string.Equals(actionName, "DialExtension", StringComparison.Ordinal)) ||
+        // also routes here as "Dial") return a Call that should appear in the Recent tab; so does a warm transfer's consult.
+        if (!PlacesNewCall(actionName, call) ||
             call is null ||
             string.IsNullOrEmpty(call.CallId))
         {

@@ -132,6 +132,12 @@ namespace CrestApps.OrchardCore.Telephony
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> MergeAsync(CrestApps.OrchardCore.Telephony.Models.MergeRequest request, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface ITelephonyConsultTransferProvider
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> CancelConsultAsync(CrestApps.OrchardCore.Telephony.Models.ConsultTransferRequest request, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> CompleteConsultAsync(CrestApps.OrchardCore.Telephony.Models.ConsultTransferRequest request, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> GetConsultAsync(CrestApps.OrchardCore.Telephony.Models.ConsultTransferRequest request, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface ITelephonyDirectoryProvider
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyDirectoryResult> GetDirectoryAsync(System.Threading.CancellationToken cancellationToken = default);
@@ -199,10 +205,13 @@ namespace CrestApps.OrchardCore.Telephony
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> AddExtensionToConferenceAsync(CrestApps.OrchardCore.Telephony.Models.ExtensionConferenceRequest request, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> AnswerAsync(CrestApps.OrchardCore.Telephony.Models.CallReference call, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> CancelConsultAsync(CrestApps.OrchardCore.Telephony.Models.ConsultTransferRequest request, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> CompleteConsultAsync(CrestApps.OrchardCore.Telephony.Models.ConsultTransferRequest request, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> DialAsync(CrestApps.OrchardCore.Telephony.Models.DialRequest request, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> DialExtensionAsync(CrestApps.OrchardCore.Telephony.Models.ExtensionDialRequest request, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyCapabilities> GetCapabilitiesAsync(System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyClientCredentials> GetClientCredentialsAsync(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> GetConsultAsync(CrestApps.OrchardCore.Telephony.Models.ConsultTransferRequest request, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyDirectoryResult> GetDirectoryAsync(System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> HangupAsync(CrestApps.OrchardCore.Telephony.Models.CallReference call, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> HoldAsync(CrestApps.OrchardCore.Telephony.Models.CallReference call, System.Threading.CancellationToken cancellationToken = default);
@@ -277,7 +286,19 @@ namespace CrestApps.OrchardCore.Telephony
         }
         public static class CallMetadata
         {
+            public const string ConsultCallEnded = "consultCallEnded";
+            public const string ConsultId = "consultId";
+            public const string ConsultLive = "consultLive";
+            public const string ConsultOf = "consultOf";
+            public const string ConsultStatus = "consultStatus";
             public const string ExtensionNumber = "extensionNumber";
+        }
+        public static class ConsultStatuses
+        {
+            public const string Cancelled = "cancelled";
+            public const string Completed = "completed";
+            public const string Connected = "connected";
+            public const string Ringing = "ringing";
         }
         public static class ErrorCodes
         {
@@ -295,6 +316,7 @@ namespace CrestApps.OrchardCore.Telephony
             public const string FenceToken = "commandFenceToken";
             public const string IdempotencyKey = "idempotencyKey";
             public const string SoftPhoneCredentialId = "softPhoneCredentialId";
+            public const string SoftPhoneUserDisplayName = "softPhoneUserDisplayName";
             public const string SoftPhoneUserId = "softPhoneUserId";
         }
         public static class RouteNames
@@ -464,6 +486,12 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public System.DateTime? ConnectedUtc { get; set; }
         public bool EndedUnreported { get; set; }
         public System.DateTime? LastReportedUtc { get; set; }
+    }
+    public sealed class ConsultTransferRequest
+    {
+        public ConsultTransferRequest() { }
+        public string CallId { get; set; }
+        public string ConsultCallId { get; set; }
     }
     public sealed class DialRequest
     {
@@ -925,6 +953,7 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public TransferRequest() { }
         public string CallId { get; set; }
         public bool IsExtension { get; set; }
+        public System.Collections.Generic.IDictionary<string, string> Metadata { get; set; }
         public CrestApps.OrchardCore.Telephony.Models.TransferMode Mode { get; set; }
         public string TargetUserId { get; set; }
         public string To { get; set; }

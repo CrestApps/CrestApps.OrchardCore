@@ -145,7 +145,11 @@ public sealed class TelephonyCallHistoryVoiceEventHandler : INormalizedVoiceEven
         // Those are internal routing endpoints, not user-facing numbers -- an internal extension call already
         // recorded the friendly extension/target as To, and formatting a SIP URI as a phone number renders it
         // as a garbage number in the in-call display and the Recent list.
-        if (!string.IsNullOrWhiteSpace(providerEvent.FromAddress) && !IsSipUri(providerEvent.FromAddress))
+        // An incoming call is from whoever it was offered as. A call handed over by a colleague rings this user on a leg
+        // the platform placed from its own number, and its events would otherwise replace the caller with that number.
+        var keepCaller = interaction.Direction == CallDirection.Inbound && !string.IsNullOrWhiteSpace(interaction.From);
+
+        if (!keepCaller && !string.IsNullOrWhiteSpace(providerEvent.FromAddress) && !IsSipUri(providerEvent.FromAddress))
         {
             interaction.From = providerEvent.FromAddress;
         }
