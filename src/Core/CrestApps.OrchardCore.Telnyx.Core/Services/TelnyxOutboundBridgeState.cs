@@ -50,6 +50,21 @@ public sealed class TelnyxOutboundBridgeState
     public const string AiVoiceLegIntent = "ai-voice";
 
     /// <summary>
+    /// The intent marking the leg a warm transfer rings to the destination the agent is consulting: another agent's
+    /// browser or an external number. When it answers it joins the conference named <see cref="ConferenceName"/>,
+    /// where the customer in <see cref="PeerCallControlId"/> is held; its answer and hangup are reported to the
+    /// Contact Center against the consult in <see cref="ConsultId"/>. It is never bridged to the customer directly
+    /// until the agent completes the transfer.
+    /// </summary>
+    public const string ContactCenterConsultLegIntent = "cc-consult";
+
+    /// <summary>
+    /// Gets or sets the Contact Center consult a consult leg was placed for (consult-leg state only).
+    /// </summary>
+    [JsonPropertyName("k")]
+    public string ConsultId { get; set; }
+
+    /// <summary>
     /// Gets or sets the leg intent, one of <see cref="AgentLegIntent"/> or <see cref="DestinationLegIntent"/>.
     /// </summary>
     [JsonPropertyName("i")]
@@ -163,7 +178,8 @@ public sealed class TelnyxOutboundBridgeState
                  parsed.Intent != ContactCenterAgentLegIntent &&
                  parsed.Intent != ContactCenterPreDialedAgentLegIntent &&
                  parsed.Intent != ConferenceExtensionLegIntent &&
-                 parsed.Intent != AiVoiceLegIntent))
+                 parsed.Intent != AiVoiceLegIntent &&
+                 parsed.Intent != ContactCenterConsultLegIntent))
             {
                 return false;
             }

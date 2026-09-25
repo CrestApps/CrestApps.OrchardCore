@@ -137,6 +137,10 @@ public sealed partial class TelnyxContactCenterVoiceProvider
                 {
                     ["call_control_id"] = callerCallControlId,
                     ["command_id"] = $"cc-predial-bridge-{agentCallControlId}",
+
+                    // A warm transfer moves the caller out of this bridge into a consult conference; parked, the
+                    // agent's leg survives that and can follow them in. Every other ending releases it explicitly.
+                    ["park_after_unbridge"] = "self",
                 },
                 cancellationToken);
 

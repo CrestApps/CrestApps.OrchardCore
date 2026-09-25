@@ -23,6 +23,7 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
     private readonly IEnumerable<ITelnyxAiVoiceEventHandler> _aiVoiceEventHandlers;
     private readonly IAgentPreDialCoordinator _preDialCoordinator;
     private readonly IInboundVoiceInteractionProbe _interactionProbe;
+    private readonly IConsultLegEventSink _consultLegEventSink;
     private readonly TelnyxOptions _options;
 
     public TelnyxOutboundBridgeOrchestrator(
@@ -32,7 +33,8 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
         IContactCenterAgentLegFailureService agentLegFailureService,
         IEnumerable<ITelnyxAiVoiceEventHandler> aiVoiceEventHandlers,
         IEnumerable<IAgentPreDialCoordinator> preDialCoordinators,
-        IEnumerable<IInboundVoiceInteractionProbe> interactionProbes)
+        IEnumerable<IInboundVoiceInteractionProbe> interactionProbes,
+        IEnumerable<IConsultLegEventSink> consultLegEventSinks = null)
     {
         _apiClient = apiClient;
         _logger = logger;
@@ -41,6 +43,7 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
         _aiVoiceEventHandlers = aiVoiceEventHandlers;
         _preDialCoordinator = preDialCoordinators?.FirstOrDefault();
         _interactionProbe = interactionProbes?.FirstOrDefault();
+        _consultLegEventSink = consultLegEventSinks?.FirstOrDefault();
     }
 
     /// <inheritdoc/>
@@ -58,6 +61,11 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
         if (state.Intent == TelnyxOutboundBridgeState.AiVoiceLegIntent)
         {
             return await AdvanceAiVoiceLegAsync(callEvent, state, cancellationToken);
+        }
+
+        if (state.Intent == TelnyxOutboundBridgeState.ContactCenterConsultLegIntent)
+        {
+            return await AdvanceConsultLegAsync(callEvent, state, isAnswered, cancellationToken);
         }
 
         if (state.Intent == TelnyxOutboundBridgeState.AgentLegIntent)
@@ -79,7 +87,7 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
             if (isAnswered && !string.IsNullOrWhiteSpace(state.PeerCallControlId))
             {
                 if (_options.IsConfigured &&
-                    await BridgeAsync(destinationLegCallControlId: callEvent.CallControlId, agentLegCallControlId: state.PeerCallControlId, cancellationToken))
+                    await BridgeAsync(destinationLegCallControlId: callEvent.CallControlId, agentLegCallControlId: state.PeerCallControlId, cancellationToken, parkAfterUnbridge: true))
                 {
                     // The caller has been listening to the queue while the agent was reached. Now that they are
                     // joined the music stops -- not before, which left the caller in dead air for the second or
@@ -632,13 +640,18 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
         }
     }
 
-    private async Task<bool> BridgeAsync(string destinationLegCallControlId, string agentLegCallControlId, CancellationToken cancellationToken)
+    private async Task<bool> BridgeAsync(string destinationLegCallControlId, string agentLegCallControlId, CancellationToken cancellationToken, bool parkAfterUnbridge = false)
     {
         var body = new Dictionary<string, object>
         {
             ["call_control_id"] = agentLegCallControlId,
             ["command_id"] = $"ob-bridge-{destinationLegCallControlId}",
         };
+
+        if (parkAfterUnbridge)
+        {
+            body["park_after_unbridge"] = "self";
+        }
 
         try
         {

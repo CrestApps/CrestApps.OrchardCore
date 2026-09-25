@@ -19,7 +19,7 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 /// refused command abandons a customer mid-flow, while a result lets the caller fail deliberately and say why.
 /// </para>
 /// </summary>
-public sealed class TelnyxApiClient
+public sealed partial class TelnyxApiClient
 {
     private static readonly JsonSerializerOptions _serializerOptions = new(JsonSerializerDefaults.Web);
 
