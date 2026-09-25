@@ -2771,6 +2771,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public sealed class AgentWorkStateHealingService : CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentWorkStateHealingService
     {
         public AgentWorkStateHealingService(CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityReservationManager reservationManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityReservationService reservationService, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemManager queueItemManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityManager activityManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterWorkStateService workStateService, System.Lazy<CrestApps.OrchardCore.ContactCenter.Core.Services.IProviderCallStateSynchronizationService> synchronizationService, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.AgentWorkStateHealingService> logger) { }
+        public System.Threading.Tasks.Task<bool> HasPendingOfferAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<int> HealForAvailabilityAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<int> HealForResetAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
     }
@@ -3592,6 +3593,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public interface IAgentWorkStateHealingService
     {
+        System.Threading.Tasks.Task<bool> HasPendingOfferAsync(string agentId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<int> HealForAvailabilityAsync(string agentId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<int> HealForResetAsync(string agentId, System.Threading.CancellationToken cancellationToken = default);
     }
@@ -4389,6 +4391,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public sealed class NoAgentWorkStateHealingService : CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentWorkStateHealingService
     {
         public NoAgentWorkStateHealingService() { }
+        public System.Threading.Tasks.Task<bool> HasPendingOfferAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<int> HealForAvailabilityAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<int> HealForResetAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
     }

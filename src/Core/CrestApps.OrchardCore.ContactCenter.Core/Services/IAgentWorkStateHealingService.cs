@@ -21,4 +21,12 @@ public interface IAgentWorkStateHealingService
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The number of stale state fragments that were healed.</returns>
     Task<int> HealForAvailabilityAsync(string agentId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Whether an offer is still ringing for the agent: a reservation routing holds for them that has not settled.
+    /// </summary>
+    /// <param name="agentId">The agent profile identifier.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns><see langword="true"/> when a pending reservation names the agent.</returns>
+    Task<bool> HasPendingOfferAsync(string agentId, CancellationToken cancellationToken = default);
 }
