@@ -113,6 +113,20 @@ public static class OmnichannelConstants
     }
 
     /// <summary>
+    /// Provider-neutral reasons an SMS provider refused a message. Each provider maps its own codes onto these,
+    /// so the code that reacts to a refusal never needs to know which carrier sent it.
+    /// </summary>
+    public static class SmsErrorCodes
+    {
+        /// <summary>
+        /// The recipient has opted out of messages from the sending number with the provider or the carrier (for
+        /// example by texting STOP), so the provider refuses to deliver to them and has confirmed the opt-out to
+        /// them itself. Retrying cannot succeed; the recipient is to be recorded as opted out.
+        /// </summary>
+        public const string RecipientOptedOut = "recipient_opted_out";
+    }
+
+    /// <summary>
     /// Represents the features.
     /// </summary>
     public static class Features

@@ -1,5 +1,7 @@
 using System.Net;
 using System.Text;
+using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.Services;
 using Microsoft.Extensions.Logging;
 
@@ -30,6 +32,44 @@ public sealed class TwilioErrorLoggingHandlerTests
         Assert.Contains("20003", entry.Message, StringComparison.Ordinal);
         Assert.Contains("Authenticate", entry.Message, StringComparison.Ordinal);
         Assert.Equal(Body, await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task ARecipientWhoOptedOut_IsLoggedAsInformation_AndReportedAsAnOptOut()
+    {
+        // Arrange
+        // A contact who texts STOP to a number with Twilio's opt-out management is unsubscribed by Twilio, which
+        // sends its own confirmation and refuses ours with 21610. That is the expected outcome, not a fault.
+        const string Body = """{"code": 21610, "message": "Attempt to send to unsubscribed recipient", "status": 400}""";
+        var logger = new RecordingLogger();
+        using var invoker = CreateInvoker(logger, HttpStatusCode.BadRequest, Body);
+        using var refusal = SmsProviderRefusalScope.Begin();
+
+        // Act
+        using var response = await invoker.SendAsync(new HttpRequestMessage(HttpMethod.Post, "https://api.twilio.com/2010-04-01/Accounts/AC1/Messages.json"), TestContext.Current.CancellationToken);
+
+        // Assert
+        var entry = Assert.Single(logger.Entries);
+        Assert.Equal(LogLevel.Information, entry.Level);
+        Assert.Contains("21610", entry.Message, StringComparison.Ordinal);
+        Assert.Equal(OmnichannelConstants.SmsErrorCodes.RecipientOptedOut, refusal.ErrorCode);
+    }
+
+    [Fact]
+    public async Task AnotherRefusal_IsNotReportedAsAnOptOut()
+    {
+        // Arrange
+        const string Body = """{"code": 21211, "message": "Invalid 'To' Phone Number", "status": 400}""";
+        var logger = new RecordingLogger();
+        using var invoker = CreateInvoker(logger, HttpStatusCode.BadRequest, Body);
+        using var refusal = SmsProviderRefusalScope.Begin();
+
+        // Act
+        using var response = await invoker.SendAsync(new HttpRequestMessage(HttpMethod.Post, "https://api.twilio.com/"), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(LogLevel.Warning, Assert.Single(logger.Entries).Level);
+        Assert.Null(refusal.ErrorCode);
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Models;
@@ -34,6 +35,15 @@ public sealed class SmsOutboundOutboxTests
         Assert.True(SmsOutboundDeliveryState.CanRetry(1));
         Assert.True(SmsOutboundDeliveryState.CanRetry(SmsOutboundDeliveryState.MaxAttempts - 1));
         Assert.False(SmsOutboundDeliveryState.CanRetry(SmsOutboundDeliveryState.MaxAttempts));
+    }
+
+    [Fact]
+    public void CanRetry_IsFalse_WhenTheRecipientOptedOut()
+    {
+        // A recipient who opted out is refused on every attempt; retrying only spends the number's reputation.
+        Assert.False(SmsOutboundDeliveryState.CanRetry(1, OmnichannelConstants.SmsErrorCodes.RecipientOptedOut));
+        Assert.True(SmsOutboundDeliveryState.CanRetry(1, errorCode: null));
+        Assert.False(SmsOutboundDeliveryState.CanRetry(SmsOutboundDeliveryState.MaxAttempts, errorCode: null));
     }
 
     [Fact]

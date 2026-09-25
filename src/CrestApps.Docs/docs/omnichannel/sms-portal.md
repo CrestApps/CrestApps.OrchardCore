@@ -86,6 +86,8 @@ Sending is handled by an `ISmsDispatcher` that resolves the number's provider fr
 
 Inbound opt-out keywords such as `STOP` close the conversation and update the contact's **Do not SMS** preference, consistent with the automated SMS path.
 
+Some providers manage opt-outs themselves (Twilio's opt-out management on toll-free numbers and Messaging Services, Telnyx's STOP handling): they confirm the opt-out to the customer and refuse any further message to them, including the portal's own STOP confirmation. That refusal is expected and is logged as information, not as a warning. Whenever a provider refuses a portal message because the recipient opted out, the contact is marked **Do not SMS** and the message is marked failed at once rather than retried.
+
 ## Permissions
 
 The portal ships its own permission set (using the SMS Portal inbox, managing templates and broadcasts, and supervisor access to all conversations). Assign them to the roles your operators and supervisors use.

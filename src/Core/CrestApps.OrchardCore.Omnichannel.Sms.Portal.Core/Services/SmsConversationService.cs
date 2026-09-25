@@ -517,7 +517,7 @@ public sealed class SmsConversationService : ISmsConversationService
 
         state.LastError = dispatch.GetErrorText();
 
-        if (SmsOutboundDeliveryState.CanRetry(state.Attempts))
+        if (SmsOutboundDeliveryState.CanRetry(state.Attempts, dispatch.ErrorCode))
         {
             state.NextAttemptUtc = _clock.UtcNow.Add(SmsOutboundDeliveryState.GetDelay(state.Attempts));
 

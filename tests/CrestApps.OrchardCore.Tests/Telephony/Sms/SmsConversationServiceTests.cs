@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
@@ -87,6 +88,37 @@ public class SmsConversationServiceTests
         Assert.Equal(1, state.Attempts);
         Assert.NotNull(state.NextAttemptUtc);
         Assert.Equal("provider down", state.LastError);
+    }
+
+    [Fact]
+    public async Task SendAsync_WhenTheRecipientOptedOut_FailsAtOnce_InsteadOfRetrying()
+    {
+        // Arrange
+        // A provider refusing a recipient who opted out will refuse every retry the same way; the bubble says so
+        // now rather than after an hour of attempts that each count against the number with the carrier.
+        var conversation = new SmsConversation
+        {
+            ItemId = "conv-1",
+            ServiceAddress = "+15553334444",
+            ContactAddress = "+15551112222",
+            OwnerType = SmsConversationOwnerType.Personal,
+            AssignmentStatus = SmsConversationAssignmentStatus.Unassigned,
+        };
+
+        OmnichannelMessage saved = null;
+        var (service, dispatcher) = CreateService(conversation, dispatchSucceeds: false, onSave: m => saved = m);
+        var refusal = SmsDispatchResult.Failed("Attempt to send to unsubscribed recipient");
+        refusal.ErrorCode = OmnichannelConstants.SmsErrorCodes.RecipientOptedOut;
+        dispatcher.Setup(d => d.SendAsync(It.IsAny<SmsMessage>(), It.IsAny<CancellationToken>())).ReturnsAsync(refusal);
+
+        // Act
+        var result = await service.SendAsync(new SmsSendRequest { ConversationId = "conv-1", Body = "x", ActingAgentId = "agent-7" }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Equal(SmsDeliveryStatus.Failed.ToString(), saved.DeliveryStatus);
+        Assert.True(saved.TryGet<SmsOutboundDeliveryState>(out var state));
+        Assert.Null(state.NextAttemptUtc);
     }
 
     [Fact]

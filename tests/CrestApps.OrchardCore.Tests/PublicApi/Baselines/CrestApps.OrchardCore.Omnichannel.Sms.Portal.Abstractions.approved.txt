@@ -113,6 +113,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services
     public sealed class SmsDispatchResult
     {
         public SmsDispatchResult() { }
+        public string ErrorCode { get; set; }
         public System.Collections.Generic.IList<Microsoft.Extensions.Localization.LocalizedString> Errors { get; set; }
         public string ProviderMessageId { get; set; }
         public bool Succeeded { get; set; }

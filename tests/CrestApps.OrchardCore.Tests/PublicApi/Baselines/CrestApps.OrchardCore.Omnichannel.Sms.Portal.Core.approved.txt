@@ -144,6 +144,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models
         public System.DateTime? NextAttemptUtc { get; set; }
         public static int MaxAttempts { get; }
         public static bool CanRetry(int attempts) { }
+        public static bool CanRetry(int attempts, string errorCode) { }
         public static System.TimeSpan GetDelay(int attempts) { }
     }
     public sealed class SmsPortalOptions
@@ -397,7 +398,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services
     }
     public sealed class SmsDispatcher : CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services.ISmsDispatcher
     {
-        public SmsDispatcher(CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointManager endpointManager, OrchardCore.Sms.ISmsProviderResolver providerResolver, OrchardCore.Settings.ISiteService siteService, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.SmsDispatcher> logger) { }
+        public SmsDispatcher(CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointManager endpointManager, OrchardCore.Sms.ISmsProviderResolver providerResolver, OrchardCore.Settings.ISiteService siteService, CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.ISmsContactResolver contactResolver, OrchardCore.ContentManagement.IContentManager contentManager, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Compliance.Redaction.IRedactorProvider redactorProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.SmsDispatcher> logger) { }
         public System.Threading.Tasks.ValueTask<string> ResolveProviderNameAsync(string fromNumber, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services.SmsDispatchResult> SendAsync(OrchardCore.Sms.SmsMessage message, System.Threading.CancellationToken cancellationToken = default) { }
     }
