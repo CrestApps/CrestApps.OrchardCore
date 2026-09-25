@@ -175,7 +175,11 @@ public sealed partial class ActivityReservationService
         return (DeadlineOutcome.Expired, reservation.ExpiresUtc);
     }
 
-    private async Task ReleaseAsync(ActivityReservation reservation, ReservationStatus status, CancellationToken cancellationToken)
+    private async Task ReleaseAsync(
+        ActivityReservation reservation,
+        ReservationStatus status,
+        CancellationToken cancellationToken,
+        bool sendToVoicemail = false)
     {
         var now = _clock.UtcNow;
         reservation.TransitionTo(status);
@@ -229,16 +233,13 @@ public sealed partial class ActivityReservationService
         // offer expire or declines it, the caller is sent to that agent's voicemail rather than stranded --
         // unless the entry point disabled voicemail (ring window 0), in which case the held call is requeued so
         // it can be re-offered when the agent is next available. A cancel (for example the caller hanging up
-        // while it rings) keeps the shared release behavior.
+        // while it rings) keeps the shared release behavior. An agent who sends the offer to voicemail has chosen
+        // for the caller, whatever the queue or line would have done.
         var isDirect = ContactCenterConstants.IsDirectRoutingQueue(reservation.QueueId);
         var directVoicemailEnabled = isDirect && IsDirectVoicemailEnabled(interaction);
-        var configuredUnansweredAction = isDirect
-            ? directVoicemailEnabled && status is ReservationStatus.Expired or ReservationStatus.Rejected
-                ? UnansweredOfferAction.Voicemail
-                : UnansweredOfferAction.Requeue
-            : status == ReservationStatus.Expired
-                ? queue?.UnansweredOfferAction ?? UnansweredOfferAction.Requeue
-                : UnansweredOfferAction.Requeue;
+        var configuredUnansweredAction = sendToVoicemail
+            ? UnansweredOfferAction.Voicemail
+            : ResolveUnansweredAction(isDirect, directVoicemailEnabled, status, queue);
         var unansweredAction = configuredUnansweredAction;
         ProviderCommandRegistration providerCommand = null;
 
@@ -415,6 +416,19 @@ public sealed partial class ActivityReservationService
         NotDue,
         Settled,
     }
+
+    private static UnansweredOfferAction ResolveUnansweredAction(
+        bool isDirect,
+        bool directVoicemailEnabled,
+        ReservationStatus status,
+        ActivityQueue queue)
+        => isDirect
+            ? directVoicemailEnabled && status is ReservationStatus.Expired or ReservationStatus.Rejected
+                ? UnansweredOfferAction.Voicemail
+                : UnansweredOfferAction.Requeue
+            : status == ReservationStatus.Expired
+                ? queue?.UnansweredOfferAction ?? UnansweredOfferAction.Requeue
+                : UnansweredOfferAction.Requeue;
 
     private static bool IsDirectVoicemailEnabled(Interaction interaction)
     {

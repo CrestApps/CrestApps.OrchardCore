@@ -59,6 +59,23 @@ public sealed class ContactCenterIncomingCallContextProviderTests
         Assert.Equal("/contents/contact-1", Assert.Single(context.Cards).Url);
     }
 
+    // Bug: the soft phone's Voicemail button on a Contact Center offer declined the offer and also asked the telephony
+    // hub to send the call to voicemail, so the caller was answered and greeted twice. The offer carries its own
+    // voicemail action, so the Contact Center alone sends an offered caller to voicemail.
+    [Fact]
+    public async Task ContributeAsync_CarriesTheOffersOwnVoicemailAction()
+    {
+        // Arrange
+        var provider = CreateProvider(httpContext: null, requestUrlPrefix: "tenant-a");
+        var context = CreateContext();
+
+        // Act
+        await provider.ContributeAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("/tenant-a/offers/reservation-1/voicemail", context.Properties["voicemailUrl"]);
+    }
+
     [Fact]
     public async Task ContributeAsync_WithALiveRequest_KeepsItsHostedPathBase()
     {
@@ -275,6 +292,7 @@ public sealed class ContactCenterIncomingCallContextProviderTests
             {
                 string name when name == "ContactCenterVoiceAcceptOffer" => $"/offers/{values["reservationId"]}/accept",
                 string name when name == "ContactCenterVoiceDeclineOffer" => $"/offers/{values["reservationId"]}/decline",
+                string name when name == "ContactCenterVoiceSendOfferToVoicemail" => $"/offers/{values["reservationId"]}/voicemail",
                 RouteValuesAddress routeValues when Equals(routeValues.ExplicitValues["action"], "Complete") =>
                     $"/activities/{routeValues.ExplicitValues["id"]}/complete?returnUrl={routeValues.ExplicitValues["returnUrl"]}",
                 RouteValuesAddress routeValues => $"/contents/{routeValues.ExplicitValues["contentItemId"]}",

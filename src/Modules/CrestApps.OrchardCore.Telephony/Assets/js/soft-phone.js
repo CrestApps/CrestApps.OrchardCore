@@ -125,6 +125,9 @@
     var selectReceiveTrack = softPhoneModules.selectReceiveTrack;
     var inboundProbeNeedsRebuild = softPhoneModules.inboundProbeNeedsRebuild;
 
+    var voicemailRoute = softPhoneModules.voicemailRoute;
+    var VOICEMAIL_ROUTES = softPhoneModules.VOICEMAIL_ROUTES;
+
     // Must match the CrestApps.OrchardCore.Telephony.Models.TelephonyCapabilities flags enum.
     var CAPABILITIES = {
         Dial: 1,
@@ -6952,24 +6955,40 @@
         }
 
         function voicemailIncoming() {
+            var call = currentCallReference();
+            var offer = incomingContext && incomingContext.properties ? incomingContext.properties : null;
+            var decision = voicemailRoute({ browserInboundRinging: isBrowserInboundRinging(), offer: offer, hasCall: !!call });
+
             // A direct extension call: decline the local leg. The server's no-answer handling routes the caller to
             // the extension owner's voicemail from the destination-leg hangup, so there is nothing more to do here.
-            if (isBrowserInboundRinging()) {
+            if (decision.route === VOICEMAIL_ROUTES.browserLeg) {
                 clearBrowserInboundRing({ decline: true });
 
                 return;
             }
 
-            var call = currentCallReference();
-            var declinedReservationId = incomingContext && incomingContext.properties
-                ? incomingContext.properties.reservationId || ''
-                : '';
+            var declinedReservationId = offer ? offer.reservationId || '' : '';
 
             settleOfferLeg(declinedReservationId, false);
             announceOfferHandled(false, declinedReservationId);
-            postLifecycle('declineUrl');
 
-            if (call) {
+            // A Contact Center offer is sent to voicemail by the Contact Center alone; asking the telephony hub as
+            // well answered the caller twice and played the greeting twice.
+            if (decision.route === VOICEMAIL_ROUTES.contactCenter) {
+                postLifecycle(decision.lifecycleKey).then(function (result) {
+                    if (!result || result.succeeded === false) {
+                        showError(strings.offerUnavailable || 'This call is no longer available.');
+
+                        return;
+                    }
+
+                    clearIncomingOffer();
+                });
+
+                return;
+            }
+
+            if (decision.route === VOICEMAIL_ROUTES.telephony) {
                 invoke('Voicemail', call);
             }
         }

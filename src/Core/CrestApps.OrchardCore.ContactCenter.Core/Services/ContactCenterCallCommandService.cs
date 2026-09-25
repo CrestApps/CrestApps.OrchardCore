@@ -307,7 +307,18 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
     }
 
     /// <inheritdoc/>
-    public async Task<CallCommandResult> DeclineInboundOfferAsync(string reservationId, string agentUserId, CancellationToken cancellationToken = default)
+    public Task<CallCommandResult> DeclineInboundOfferAsync(string reservationId, string agentUserId, CancellationToken cancellationToken = default)
+        => DeclineInboundOfferCoreAsync(reservationId, agentUserId, sendToVoicemail: false, cancellationToken);
+
+    /// <inheritdoc/>
+    public Task<CallCommandResult> DeclineInboundOfferToVoicemailAsync(string reservationId, string agentUserId, CancellationToken cancellationToken = default)
+        => DeclineInboundOfferCoreAsync(reservationId, agentUserId, sendToVoicemail: true, cancellationToken);
+
+    private async Task<CallCommandResult> DeclineInboundOfferCoreAsync(
+        string reservationId,
+        string agentUserId,
+        bool sendToVoicemail,
+        CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrEmpty(reservationId);
         ArgumentException.ThrowIfNullOrEmpty(agentUserId);
@@ -319,7 +330,11 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
             return CallCommandResult.Failure("The offer is no longer available.");
         }
 
-        reservation = await _reservationService.RejectAsync(reservationId, cancellationToken);
+        // Sent to voicemail, the caller leaves the queue and a durable voicemail command is registered with the
+        // release; declined, they go back to the queue (or, on a direct line, to the agent's voicemail).
+        reservation = sendToVoicemail
+            ? await _reservationService.RejectToVoicemailAsync(reservationId, cancellationToken)
+            : await _reservationService.RejectAsync(reservationId, cancellationToken);
 
         if (reservation is null)
         {
@@ -364,7 +379,9 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
 
         await _publisher.PublishAsync(interactionEvent, cancellationToken);
 
-        return CallCommandResult.Success("The offer was declined.", requiresDeviceAnswer: false);
+        return CallCommandResult.Success(
+            sendToVoicemail ? "The offer was sent to voicemail." : "The offer was declined.",
+            requiresDeviceAnswer: false);
     }
 
     private async Task<AgentPreDialLeg> FindPreDialedLegAsync(string reservationId, CancellationToken cancellationToken)

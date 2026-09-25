@@ -2839,6 +2839,60 @@
   softPhone.createHostDelegation = createHostDelegation;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*
+ * Which path sends a ringing call to voicemail when the agent clicks Voicemail.
+ *
+ * Exactly one path may do it. The soft phone used to decline a Contact Center offer (which the Contact Center turns
+ * into voicemail, recording the decline and releasing the agent) and also ask the telephony hub to send the same call
+ * to voicemail. Both answered the caller and both played the greeting, so the caller heard it twice before the beep.
+ *
+ * A call the Contact Center offered belongs to the Contact Center: it sends the caller to voicemail through the offer's
+ * own action. The telephony hub is only for a plain telephony call that no Contact Center offer owns. A direct
+ * extension call rung in the browser is declined locally; the server routes its caller to voicemail from that hangup.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+  var VOICEMAIL_ROUTES = Object.freeze({
+    browserLeg: 'browser-leg',
+    contactCenter: 'contact-center',
+    telephony: 'telephony',
+    none: 'none'
+  });
+
+  // state.browserInboundRinging: a direct extension call is ringing in the browser.
+  // state.offer: the ringing offer's properties (its lifecycle actions), or nothing for a plain telephony call.
+  // state.hasCall: the phone knows the ringing call, so the telephony hub can act on it.
+  //
+  // Returns the route, and for the Contact Center the offer property holding the action to post. An offer that
+  // carries its voicemail action uses it; one that only carries a decline is declined, which for a direct-to-agent
+  // line is itself what sends the caller to voicemail.
+  function voicemailRoute(state) {
+    var current = state || {};
+    if (current.browserInboundRinging) {
+      return {
+        route: VOICEMAIL_ROUTES.browserLeg
+      };
+    }
+    var offer = current.offer || {};
+    var lifecycleKey = offer.voicemailUrl ? 'voicemailUrl' : offer.declineUrl ? 'declineUrl' : null;
+    if (lifecycleKey) {
+      return {
+        route: VOICEMAIL_ROUTES.contactCenter,
+        lifecycleKey: lifecycleKey
+      };
+    }
+    return {
+      route: current.hasCall ? VOICEMAIL_ROUTES.telephony : VOICEMAIL_ROUTES.none
+    };
+  }
+  softPhone.VOICEMAIL_ROUTES = VOICEMAIL_ROUTES;
+  softPhone.voicemailRoute = voicemailRoute;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
  * Provider-agnostic soft phone client.
  *
  * Connects to the Telephony SignalR hub and drives the floating soft phone UI. The widget can be
@@ -2950,6 +3004,8 @@
   var createHostDelegation = softPhoneModules.createHostDelegation;
   var selectReceiveTrack = softPhoneModules.selectReceiveTrack;
   var inboundProbeNeedsRebuild = softPhoneModules.inboundProbeNeedsRebuild;
+  var voicemailRoute = softPhoneModules.voicemailRoute;
+  var VOICEMAIL_ROUTES = softPhoneModules.VOICEMAIL_ROUTES;
 
   // Must match the CrestApps.OrchardCore.Telephony.Models.TelephonyCapabilities flags enum.
   var CAPABILITIES = {
@@ -8704,20 +8760,39 @@
       });
     }
     function voicemailIncoming() {
+      var call = currentCallReference();
+      var offer = incomingContext && incomingContext.properties ? incomingContext.properties : null;
+      var decision = voicemailRoute({
+        browserInboundRinging: isBrowserInboundRinging(),
+        offer: offer,
+        hasCall: !!call
+      });
+
       // A direct extension call: decline the local leg. The server's no-answer handling routes the caller to
       // the extension owner's voicemail from the destination-leg hangup, so there is nothing more to do here.
-      if (isBrowserInboundRinging()) {
+      if (decision.route === VOICEMAIL_ROUTES.browserLeg) {
         clearBrowserInboundRing({
           decline: true
         });
         return;
       }
-      var call = currentCallReference();
-      var declinedReservationId = incomingContext && incomingContext.properties ? incomingContext.properties.reservationId || '' : '';
+      var declinedReservationId = offer ? offer.reservationId || '' : '';
       settleOfferLeg(declinedReservationId, false);
       announceOfferHandled(false, declinedReservationId);
-      postLifecycle('declineUrl');
-      if (call) {
+
+      // A Contact Center offer is sent to voicemail by the Contact Center alone; asking the telephony hub as
+      // well answered the caller twice and played the greeting twice.
+      if (decision.route === VOICEMAIL_ROUTES.contactCenter) {
+        postLifecycle(decision.lifecycleKey).then(function (result) {
+          if (!result || result.succeeded === false) {
+            showError(strings.offerUnavailable || 'This call is no longer available.');
+            return;
+          }
+          clearIncomingOffer();
+        });
+        return;
+      }
+      if (decision.route === VOICEMAIL_ROUTES.telephony) {
         invoke('Voicemail', call);
       }
     }

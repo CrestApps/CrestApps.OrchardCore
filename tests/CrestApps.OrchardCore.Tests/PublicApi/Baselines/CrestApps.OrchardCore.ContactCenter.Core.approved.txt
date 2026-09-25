@@ -2549,6 +2549,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task<int> ExpireDueAsync(System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<int> ReclaimDueAsync(int maxReservations, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation> RejectAsync(string reservationId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation> RejectToVoicemailAsync(string reservationId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation> ReserveAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem queueItem, CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile agent, int timeoutSeconds, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ActivityReservationStore : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation, CrestApps.OrchardCore.ContactCenter.Core.Indexes.ActivityReservationIndex>, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityReservationStore
@@ -2906,6 +2907,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
                     Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterCallCommandService> logger) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.CallCommandResult> AcceptInboundOfferAsync(string reservationId, string agentUserId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.CallCommandResult> DeclineInboundOfferAsync(string reservationId, string agentUserId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.CallCommandResult> DeclineInboundOfferToVoicemailAsync(string reservationId, string agentUserId, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public static class ContactCenterClaimKeys
     {
@@ -3361,6 +3363,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation> CompensateAsync(string reservationId, bool removeFromQueue, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<int> ExpireDueAsync(System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation> RejectAsync(string reservationId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation> RejectToVoicemailAsync(string reservationId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation> ReserveAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem queueItem, CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile agent, int timeoutSeconds, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IActivityReservationStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>
@@ -3600,6 +3603,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.CallCommandResult> AcceptInboundOfferAsync(string reservationId, string agentUserId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.CallCommandResult> DeclineInboundOfferAsync(string reservationId, string agentUserId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.CallCommandResult> DeclineInboundOfferToVoicemailAsync(string reservationId, string agentUserId, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IContactCenterConfigurationCache
     {

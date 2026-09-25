@@ -506,6 +506,68 @@ public sealed class ContactCenterCallCommandServiceTests
             Times.Never);
     }
 
+    // Bug: an agent sending an offered call to voicemail had the Contact Center decline it and the telephony hub send it
+    // to voicemail as well, so the caller was greeted twice. The Contact Center now sends an offered caller to voicemail
+    // itself: the offer is rejected to voicemail (never re-offered) and the decline is recorded against the agent.
+    [Fact]
+    public async Task DeclineInboundOfferToVoicemailAsync_RejectsTheOfferToVoicemail_AndRecordsTheDecline()
+    {
+        // Arrange
+        var order = new List<string>();
+        var harness = new Harness();
+        harness.SetupPendingReservation();
+        InteractionEvent? publishedEvent = null;
+        harness.ReservationService
+            .Setup(service => service.RejectToVoicemailAsync("r1", It.IsAny<CancellationToken>()))
+            .Callback(() => order.Add("reject-to-voicemail"))
+            .ReturnsAsync(new ActivityReservation { ItemId = "r1", AgentId = "a1", QueueId = "q1" });
+        harness.Publisher
+            .Setup(publisher => publisher.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<InteractionEvent, CancellationToken>((interactionEvent, _) =>
+            {
+                publishedEvent = interactionEvent;
+                order.Add("publish");
+            })
+            .Returns(Task.CompletedTask);
+
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.DeclineInboundOfferToVoicemailAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.False(result.RequiresDeviceAnswer);
+        Assert.Equal(["reject-to-voicemail", "publish"], order);
+        Assert.Equal(ContactCenterConstants.Events.OfferDeclined, publishedEvent!.EventType);
+        Assert.Equal("u1", publishedEvent.ActorId);
+        Assert.Equal(ContactCenterActorType.Agent, publishedEvent.ActorType);
+        harness.ReservationService.Verify(
+            service => service.RejectAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task DeclineInboundOfferToVoicemailAsync_WhenTheOfferIsNoLongerTheAgents_DoesNothing()
+    {
+        // Arrange
+        // A second click, or one that lands after the offer moved on, must not send the caller anywhere a second time.
+        var harness = new Harness();
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.DeclineInboundOfferToVoicemailAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        harness.ReservationService.Verify(
+            service => service.RejectToVoicemailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        harness.Publisher.Verify(
+            publisher => publisher.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     [Fact]
     public async Task AcceptInboundOfferAsync_WhenTheAgentWasPreDialed_JoinsThatLegInsteadOfRingingTheAgentAgain()
     {

@@ -211,6 +211,15 @@ public sealed class ContactCenterIncomingCallContextProvider : IIncomingCallCont
             context.Properties["declineUrl"] = declineUrl;
         }
 
+        // The offer's own route to voicemail. A Contact Center offer is sent to voicemail by the Contact Center alone,
+        // so the soft phone never also asks the telephony hub and the caller is answered and greeted once.
+        var voicemailUrl = _linkGenerator.GetPathByName("ContactCenterVoiceSendOfferToVoicemail", new { reservationId = reservation.ItemId }, pathBase);
+
+        if (!string.IsNullOrEmpty(voicemailUrl))
+        {
+            context.Properties["voicemailUrl"] = voicemailUrl;
+        }
+
         context.Properties["reservationId"] = reservation.ItemId;
         context.Properties["expiresUtc"] = reservation.ExpiresUtc.ToString("O");
 

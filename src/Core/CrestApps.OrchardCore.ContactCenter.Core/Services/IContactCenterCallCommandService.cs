@@ -31,4 +31,15 @@ public interface IContactCenterCallCommandService
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The command result describing the outcome.</returns>
     Task<CallCommandResult> DeclineInboundOfferAsync(string reservationId, string agentUserId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Declines an offered inbound interaction and sends its caller to voicemail: rejects the reservation, releases
+    /// the agent, takes the work out of its queue rather than re-offering it, and sends the caller to voicemail
+    /// through a durable provider command.
+    /// </summary>
+    /// <param name="reservationId">The reservation identifier of the offered interaction.</param>
+    /// <param name="agentUserId">The Orchard user identifier of the agent sending the caller to voicemail.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The command result describing the outcome.</returns>
+    Task<CallCommandResult> DeclineInboundOfferToVoicemailAsync(string reservationId, string agentUserId, CancellationToken cancellationToken = default);
 }

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.ContactCenter.Core;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
@@ -13,6 +14,7 @@ internal static class VoiceOfferEndpoints
 {
     public const string AcceptOfferRouteName = "ContactCenterVoiceAcceptOffer";
     public const string DeclineOfferRouteName = "ContactCenterVoiceDeclineOffer";
+    public const string SendOfferToVoicemailRouteName = "ContactCenterVoiceSendOfferToVoicemail";
 
     public static IEndpointRouteBuilder AddVoiceOfferEndpoints(this IEndpointRouteBuilder builder)
     {
@@ -21,6 +23,9 @@ internal static class VoiceOfferEndpoints
 
         builder.MapPost("Admin/contact-center/voice/offer/decline", HandleDeclineAsync)
             .WithName(DeclineOfferRouteName);
+
+        builder.MapPost("Admin/contact-center/voice/offer/voicemail", HandleVoicemailAsync)
+            .WithName(SendOfferToVoicemailRouteName);
 
         return builder;
     }
@@ -83,12 +88,40 @@ internal static class VoiceOfferEndpoints
         });
     }
 
-    private static async Task<IResult> HandleDeclineAsync(
+    private static Task<IResult> HandleDeclineAsync(
         IAuthorizationService authorizationService,
         IAntiforgery antiforgery,
         IContactCenterCallCommandService callCommandService,
         IContactCenterFeatureWorkManager workManager,
         HttpContext httpContext)
+        => SettleOfferAsync(
+            authorizationService,
+            antiforgery,
+            workManager,
+            httpContext,
+            (reservationId, userId) => callCommandService.DeclineInboundOfferAsync(reservationId, userId, httpContext.RequestAborted));
+
+    // The agent sends the ringing offer to voicemail. The Contact Center owns the whole of it -- the decline, the
+    // agent's release, and the one voicemail command -- so the soft phone does not also ask the telephony hub.
+    private static Task<IResult> HandleVoicemailAsync(
+        IAuthorizationService authorizationService,
+        IAntiforgery antiforgery,
+        IContactCenterCallCommandService callCommandService,
+        IContactCenterFeatureWorkManager workManager,
+        HttpContext httpContext)
+        => SettleOfferAsync(
+            authorizationService,
+            antiforgery,
+            workManager,
+            httpContext,
+            (reservationId, userId) => callCommandService.DeclineInboundOfferToVoicemailAsync(reservationId, userId, httpContext.RequestAborted));
+
+    private static async Task<IResult> SettleOfferAsync(
+        IAuthorizationService authorizationService,
+        IAntiforgery antiforgery,
+        IContactCenterFeatureWorkManager workManager,
+        HttpContext httpContext,
+        Func<string, string, Task<CallCommandResult>> settle)
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.SignIntoQueues))
         {
@@ -121,7 +154,7 @@ internal static class VoiceOfferEndpoints
             return TypedResults.Forbid();
         }
 
-        var result = await callCommandService.DeclineInboundOfferAsync(reservationId, userId, httpContext.RequestAborted);
+        var result = await settle(reservationId, userId);
 
         return result.Succeeded
             ? TypedResults.Ok()

@@ -34,6 +34,14 @@ public interface IActivityReservationService
     Task<ActivityReservation> RejectAsync(string reservationId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Rejects a pending reservation and sends its caller to voicemail instead of returning the item to its queue.
+    /// </summary>
+    /// <param name="reservationId">The reservation identifier.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The rejected reservation, or <see langword="null"/> when not found or no longer pending.</returns>
+    Task<ActivityReservation> RejectToVoicemailAsync(string reservationId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Cancels a pending or accepted reservation and returns the item to its queue.
     /// </summary>
     /// <param name="reservationId">The reservation identifier.</param>

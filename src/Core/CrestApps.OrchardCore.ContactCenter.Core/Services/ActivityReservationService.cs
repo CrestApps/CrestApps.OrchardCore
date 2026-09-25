@@ -338,7 +338,14 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
     }
 
     /// <inheritdoc/>
-    public async Task<ActivityReservation> RejectAsync(string reservationId, CancellationToken cancellationToken = default)
+    public Task<ActivityReservation> RejectAsync(string reservationId, CancellationToken cancellationToken = default)
+        => RejectCoreAsync(reservationId, sendToVoicemail: false, cancellationToken);
+
+    /// <inheritdoc/>
+    public Task<ActivityReservation> RejectToVoicemailAsync(string reservationId, CancellationToken cancellationToken = default)
+        => RejectCoreAsync(reservationId, sendToVoicemail: true, cancellationToken);
+
+    private async Task<ActivityReservation> RejectCoreAsync(string reservationId, bool sendToVoicemail, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrEmpty(reservationId);
 
@@ -356,13 +363,16 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
 
         var reservation = await _reservationManager.FindByIdAsync(reservationId, cancellationToken);
 
+        // Only a ringing offer can be sent to voicemail; an accepted one is already the agent's call. A reservation
+        // that is no longer pending was settled by an earlier request, so a repeat never sends the caller twice.
         if (reservation is null ||
-            reservation.Status is not ReservationStatus.Pending and not ReservationStatus.Accepted)
+            (reservation.Status is not ReservationStatus.Pending &&
+             (sendToVoicemail || reservation.Status is not ReservationStatus.Accepted)))
         {
             return null;
         }
 
-        await ReleaseAsync(reservation, ReservationStatus.Rejected, cancellationToken);
+        await ReleaseAsync(reservation, ReservationStatus.Rejected, cancellationToken, sendToVoicemail);
 
         await CommitTransitionAsync(
             reservation.ActivityItemId,
