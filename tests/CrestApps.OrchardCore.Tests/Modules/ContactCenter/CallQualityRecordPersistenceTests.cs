@@ -119,7 +119,61 @@ public sealed class CallQualityRecordPersistenceTests
             Assert.Equal(CallPartyRole.Customer, record.LegRole);
             Assert.Equal("interaction-1", record.InteractionId);
             Assert.Equal(4.4, record.Mos);
-            Assert.Equal(1.0, record.LossPercent);
+
+            // Skipped packets are not packets lost in transit, so the provider's record carries no loss figure.
+            Assert.Null(record.LossPercent);
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task Observe_ProviderStatsForAnAgentLeg_KeepTheirPeakJitterVarianceOutOfTheJitterFigure()
+    {
+        // Arrange
+        var databasePath = DatabasePath("quality-provider-agent-leg");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            await SeedCallSessionAsync(store);
+
+            // Act: the live agent leg whose peak jitter variance of 852.04 was shown as 852 ms of jitter, and whose
+            // 75 skipped of 1,557 packets were read as 4.6% loss and rated it degraded.
+            await ObserveAsync(store, new CallQualityObservation
+            {
+                Source = CallQualitySource.Provider,
+                ProviderName = "Telnyx",
+                ProviderCallControlId = "agent-leg",
+                Rating = CallQualityRating.Degraded,
+                ObservedUtc = _now,
+                Provider = new ProviderCallQualityStats
+                {
+                    InboundMos = 4.5,
+                    InboundJitterMaxVarianceMs = 852.04,
+                    InboundJitterPacketCount = 0,
+                    InboundPacketCount = 1557,
+                    InboundSkipPacketCount = 75,
+                    OutboundPacketCount = 1585,
+                    OutboundSkipPacketCount = 0,
+                },
+            });
+
+            // Assert
+            await using var session = store.CreateSession();
+            var record = await new CallQualityRecordStore(session).FindByRecordKeyAsync(
+                CallQualityRecord.BuildRecordKey(CallQualitySource.Provider, "agent-leg"),
+                TestContext.Current.CancellationToken);
+
+            Assert.NotNull(record);
+            Assert.Equal(CallPartyRole.Agent, record.LegRole);
+            Assert.Equal(CallQualityRating.Good, record.Rating);
+            Assert.Equal(4.5, record.Mos);
+            Assert.Null(record.LossPercent);
+            Assert.Null(record.JitterMs);
+            Assert.Equal(852.04, record.Provider.InboundJitterMaxVarianceMs);
         }
         finally
         {

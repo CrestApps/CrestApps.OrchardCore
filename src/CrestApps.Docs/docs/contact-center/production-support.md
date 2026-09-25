@@ -290,6 +290,25 @@ Never tag a Redis, database, provider, or backplane connectivity check `contactc
 
 On a single node the in-memory backplane needs no separate check.
 
+### Call quality ratings and alerts
+
+Each call leg is measured once it ends, by up to two sources, and each measurement is kept as its own call quality record:
+
+- **The soft phone** sends an end-of-call summary for the agent's own leg. It is rated on its average MOS and its worst packet loss: **Poor** at a MOS of 3.5 or below or 5% loss or more, **Degraded** at a MOS of 4.0 or below or 2% loss or more. A leg that received packets but no audio bytes is Poor. Its round-trip time lowers the MOS, so a call with a long round trip rates poor even without loss.
+- **The provider** (Telnyx) reports statistics for every leg it carries, including the customer's, on the hangup. That leg is rated on the provider's **MOS alone**, using the same MOS thresholds. When the provider received no audio packets at all, it has no MOS worth rating, so the leg keeps no MOS and rates Good.
+
+The provider's other figures are kept on the record for diagnosis, but they are not rated and are not shown as loss or jitter:
+
+- **Skipped packets are not packet loss.** Telnyx labels `skip_packet_count` as packet loss, but it counts every playout slot it had nothing to play. Silence suppression leaves skipped slots. So does a voicemail greeting or hold music playing to a caller who says nothing, and so does a party that sends no audio. Live voicemail and agent legs skipped from 1% to every slot while Telnyx scored them at its 4.5 maximum. Telnyx's MOS already counts packets that were really lost, so the provider's record leaves its loss figure empty.
+- **`jitter_max_variance` is not jitter.** It is the peak variance of packet arrival over the whole leg, with values in the hundreds or thousands on clean calls. It is kept as `InboundJitterMaxVarianceMs` in the raw statistics, and the record's jitter figure stays empty.
+
+A record's rating is always the one its headline figures give. A record kept under an earlier rule is read under the current rule when the report and the alert load it.
+
+**Only calls an agent talked on count against the agent.** The call's outcome is read with the same classification every Contact Center report uses. An agent's leg is counted only when the call was **answered** and an agent was on it. That leaves out a call sent to voicemail, a caller who hung up while the agent's phone rang, a call the AI voice agent handled alone, and a failed call. On those legs the agent's side carried a greeting, ringback or silence, not a conversation. A leg of a call the contact center did not route, such as an extension call between two agents, is still counted.
+
+- **The repeated-poor-call alert.** `CallQualityAlertRaised` is published when three of an agent's five most recent calls in the last hour were poor, at most once per agent per hour. It looks only at agent conversations: the soft phone's measurement, or the provider's measurement of the agent's leg. A call measured by both sources counts once. A poor leg of a call no agent talked on neither raises the alert nor counts toward one.
+- **The call quality report.** The agent's side of the report (calls measured, ratings, the by-agent and network-path tables) counts agent conversations only. The summary shows how many agent legs were left out for having no conversation. The customer's legs are still reported on the customer's side whatever the call's outcome.
+
 ## Base-voice deployment acceptance
 
 The Asterisk voice provider advertises `Recording | Monitor | Whisper | Barge` and the snoop/bridge implementations are unit- and cassette-tested, but whether the **end-to-end WebRTC audio path** works — trusted WSS/DTLS certificates, TURN relay, direct-ICE media, restart drain, and a measured capacity floor — is a property of a *deployment* and its infrastructure, not of the capability code. It cannot be proven in the application build, so it is proven once against the reference topology and then declared. Inbound, outbound, transfer, and conference calls all ride the same conversation-bridge audio path, so proving it once covers them all. Supervisor **monitor, whisper, and barge** ride a *separate* snoop bridge that this acceptance run does not exercise; they stay advertised and enabled, but do not read the acknowledgment as evidence that supervision audio was verified — add a monitor/whisper/barge tone check to the run if your deployment relies on them.

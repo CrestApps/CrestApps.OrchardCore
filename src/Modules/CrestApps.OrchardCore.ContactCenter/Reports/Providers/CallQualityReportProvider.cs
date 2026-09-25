@@ -30,6 +30,8 @@ public sealed class CallQualityReportProvider : ContactCenterReportBase
     internal const int PoorCallListLimit = 200;
 
     private readonly ICallQualityRecordStore _recordStore;
+    private readonly IInteractionStore _interactionStore;
+    private readonly IInteractionEventStore _eventStore;
     private readonly IAgentProfileStore _agentProfileStore;
     private readonly UserManager<IUser> _userManager;
 
@@ -39,6 +41,8 @@ public sealed class CallQualityReportProvider : ContactCenterReportBase
     /// <param name="reportingService">The Contact Center reporting service.</param>
     /// <param name="capabilityGuard">The guard that decides whether the producing capabilities are enabled.</param>
     /// <param name="recordStore">The call quality records.</param>
+    /// <param name="interactionStore">The interactions, for whether an agent talked on a measured call.</param>
+    /// <param name="eventStore">The event log, from which each interaction's outcome is read.</param>
     /// <param name="agentProfileStore">The agent directory, for agent names.</param>
     /// <param name="userManager">The user manager, for the name of an agent whose profile does not carry one.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
@@ -46,12 +50,16 @@ public sealed class CallQualityReportProvider : ContactCenterReportBase
         IContactCenterReportingService reportingService,
         IContactCenterReportCapabilityGuard capabilityGuard,
         ICallQualityRecordStore recordStore,
+        IInteractionStore interactionStore,
+        IInteractionEventStore eventStore,
         IAgentProfileStore agentProfileStore,
         UserManager<IUser> userManager,
         IStringLocalizer<CallQualityReportProvider> stringLocalizer)
         : base(reportingService, capabilityGuard, stringLocalizer)
     {
         _recordStore = recordStore;
+        _interactionStore = interactionStore;
+        _eventStore = eventStore;
         _agentProfileStore = agentProfileStore;
         _userManager = userManager;
     }
@@ -90,9 +98,15 @@ public sealed class CallQualityReportProvider : ContactCenterReportBase
             cancellationToken))
             .Where(record => string.IsNullOrEmpty(criteria.QueueId) || string.Equals(record.QueueId, criteria.QueueId, StringComparison.OrdinalIgnoreCase))
             .Where(record => string.IsNullOrEmpty(criteria.AgentId) || string.Equals(record.AgentId, criteria.AgentId, StringComparison.Ordinal))
+            .Select(CallQualityRecordFigures.Apply)
             .ToArray();
 
-        var agentCalls = SelectAgentSide(records);
+        // An agent's leg of a call no agent talked on, such as one sent to voicemail, measured the platform's greeting
+        // or silence rather than the agent, so it is not counted against them.
+        var conversations = await CallQualityAgentConversations.LoadAsync(_interactionStore, _eventStore, records, cancellationToken);
+        var agentSide = SelectAgentSide(records);
+        var agentCalls = agentSide.Where(conversations.HadAgentConversation).ToArray();
+        var withoutConversation = agentSide.Count - agentCalls.Length;
         var customerLegs = records
             .Where(record => record.Source == CallQualitySource.Provider && record.LegRole == CallPartyRole.Customer)
             .ToArray();
@@ -116,13 +130,14 @@ public sealed class CallQualityReportProvider : ContactCenterReportBase
 
         document.Add(ReportSection.ForMetrics(S["Summary"].Value,
         [
-            new ReportMetric(S["Calls measured"].Value, ReportFormat.Number(agentCalls.Count)),
-            new ReportMetric(S["Good"].Value, ReportFormat.Number(Count(agentCalls, CallQualityRating.Good)), ReportFormat.Percent(Rate(Count(agentCalls, CallQualityRating.Good), agentCalls.Count))),
-            new ReportMetric(S["Degraded"].Value, ReportFormat.Number(Count(agentCalls, CallQualityRating.Degraded)), ReportFormat.Percent(Rate(Count(agentCalls, CallQualityRating.Degraded), agentCalls.Count))),
-            new ReportMetric(S["Poor"].Value, ReportFormat.Number(poorCalls.Length), ReportFormat.Percent(Rate(poorCalls.Length, agentCalls.Count))),
+            new ReportMetric(S["Calls measured"].Value, ReportFormat.Number(agentCalls.Length)),
+            new ReportMetric(S["Good"].Value, ReportFormat.Number(Count(agentCalls, CallQualityRating.Good)), ReportFormat.Percent(Rate(Count(agentCalls, CallQualityRating.Good), agentCalls.Length))),
+            new ReportMetric(S["Degraded"].Value, ReportFormat.Number(Count(agentCalls, CallQualityRating.Degraded)), ReportFormat.Percent(Rate(Count(agentCalls, CallQualityRating.Degraded), agentCalls.Length))),
+            new ReportMetric(S["Poor"].Value, ReportFormat.Number(poorCalls.Length), ReportFormat.Percent(Rate(poorCalls.Length, agentCalls.Length))),
             new ReportMetric(S["Avg MOS"].Value, FormatNumber(Average(agentCalls, record => record.Mos), "0.00")),
             new ReportMetric(S["Customer legs measured"].Value, ReportFormat.Number(customerLegs.Length)),
             new ReportMetric(S["Poor on the customer's side"].Value, ReportFormat.Number(poorCustomerLegs.Length), ReportFormat.Percent(Rate(poorCustomerLegs.Length, customerLegs.Length))),
+            new ReportMetric(S["Agent legs with no conversation (not counted)"].Value, ReportFormat.Number(withoutConversation)),
         ]));
 
         var causes = poorCalls
@@ -140,7 +155,7 @@ public sealed class CallQualityReportProvider : ContactCenterReportBase
                 causes.Select(entry => new ReportBar(DescribeCause(entry.Cause), ReportFormat.Number(entry.Count), max > 0 ? (double)entry.Count / max : 0))));
         }
 
-        if (agentCalls.Count > 0)
+        if (agentCalls.Length > 0)
         {
             var columns = new[]
             {

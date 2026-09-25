@@ -568,10 +568,11 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public bool HasMeasurements { get; }
         public double? InboundJitterMaxVarianceMs { get; set; }
         public long? InboundJitterPacketCount { get; set; }
-        public double? InboundLossPercent { get; }
         public double? InboundMos { get; set; }
         public long? InboundPacketCount { get; set; }
         public long? InboundSkipPacketCount { get; set; }
+        public double? InboundSkippedPercent { get; }
+        public double? MeasuredInboundMos { get; }
         public long? OutboundPacketCount { get; set; }
         public long? OutboundSkipPacketCount { get; set; }
     }
@@ -772,6 +773,7 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public const double PoorMosThreshold = 3.5D;
         public static CrestApps.OrchardCore.Telephony.Models.CallQualityRating Evaluate(CrestApps.OrchardCore.Telephony.Models.CallQualityReport report) { }
         public static CrestApps.OrchardCore.Telephony.Models.CallQualityRating Evaluate(double? mos, double? lossPercent) { }
+        public static CrestApps.OrchardCore.Telephony.Models.CallQualityRating EvaluateProvider(CrestApps.OrchardCore.Telephony.Models.ProviderCallQualityStats stats) { }
         public static CrestApps.OrchardCore.Telephony.Models.CallQualityRating EvaluateSummary(CrestApps.OrchardCore.Telephony.Models.CallQualityReport report) { }
     }
     [System.Flags]

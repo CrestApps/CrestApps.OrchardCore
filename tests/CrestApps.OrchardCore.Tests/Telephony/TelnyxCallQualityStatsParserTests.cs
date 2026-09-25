@@ -52,7 +52,7 @@ public sealed class TelnyxCallQualityStatsParserTests
         Assert.Equal(50, stats.InboundSkipPacketCount);
         Assert.Equal(1002, stats.OutboundPacketCount);
         Assert.Equal(3, stats.OutboundSkipPacketCount);
-        Assert.Equal(5.0, stats.InboundLossPercent);
+        Assert.Equal(5.0, stats.InboundSkippedPercent);
     }
 
     [Fact]

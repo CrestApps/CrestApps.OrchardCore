@@ -6,8 +6,9 @@ namespace CrestApps.OrchardCore.Telephony.Models;
 /// <remarks>
 /// The browser can only measure the legs it holds, so an agent's soft phone says nothing about the customer's phone,
 /// a hidden bridge leg, or an automated call. The provider measures every leg it carries, which is what makes the
-/// customer's side of a poor call visible at all. Counts are packets; a skipped packet is one the provider did not
-/// receive in time to play.
+/// customer's side of a poor call visible at all. Counts are packets. A skipped packet is a playout slot the provider
+/// had nothing to play in: a packet lost in transit leaves one, but so do silence suppression, a greeting or hold music
+/// playing to a caller who says nothing, and a party that sends nothing at all, so a skipped count is not a loss count.
 /// </remarks>
 public sealed class ProviderCallQualityStats
 {
@@ -18,8 +19,13 @@ public sealed class ProviderCallQualityStats
     public double? InboundMos { get; set; }
 
     /// <summary>
-    /// Gets or sets the largest jitter variance the provider saw on the audio it received, in milliseconds.
+    /// Gets or sets the largest jitter variance the provider saw on the audio it received, as it reports it
+    /// (<c>jitter_max_variance</c>).
     /// </summary>
+    /// <remarks>
+    /// This is a peak variance of packet arrival over the whole leg, not the mean jitter a soft phone reports, so it is
+    /// kept for diagnosis and never compared with a jitter threshold.
+    /// </remarks>
     public double? InboundJitterMaxVarianceMs { get; set; }
 
     /// <summary>
@@ -33,7 +39,7 @@ public sealed class ProviderCallQualityStats
     public long? InboundPacketCount { get; set; }
 
     /// <summary>
-    /// Gets or sets the number of audio packets the provider expected on this leg and did not receive.
+    /// Gets or sets the number of playout slots on this leg the provider had no received packet for.
     /// </summary>
     public long? InboundSkipPacketCount { get; set; }
 
@@ -48,13 +54,23 @@ public sealed class ProviderCallQualityStats
     public long? OutboundSkipPacketCount { get; set; }
 
     /// <summary>
-    /// Gets the share of the audio the provider expected on this leg and did not receive, as a percentage, or
+    /// Gets the share of this leg's playout slots the provider had no received packet for, as a percentage, or
     /// <see langword="null"/> when there is nothing to measure it from.
     /// </summary>
-    public double? InboundLossPercent
+    /// <remarks>
+    /// It is not packet loss and nothing is rated on it; see <see cref="InboundSkipPacketCount"/>.
+    /// </remarks>
+    public double? InboundSkippedPercent
         => InboundPacketCount is > 0 || InboundSkipPacketCount is > 0
             ? 100.0 * (InboundSkipPacketCount ?? 0) / ((InboundPacketCount ?? 0) + (InboundSkipPacketCount ?? 0))
             : null;
+
+    /// <summary>
+    /// Gets the provider's opinion score for the audio it received, or <see langword="null"/> when it received no audio
+    /// packets to score: a score of nothing says nothing about the leg.
+    /// </summary>
+    public double? MeasuredInboundMos
+        => InboundPacketCount is 0 ? null : InboundMos;
 
     /// <summary>
     /// Gets whether the provider reported anything worth keeping.

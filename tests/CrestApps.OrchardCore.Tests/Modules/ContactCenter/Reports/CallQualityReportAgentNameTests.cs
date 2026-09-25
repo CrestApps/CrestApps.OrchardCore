@@ -65,6 +65,8 @@ public sealed class CallQualityReportAgentNameTests
             new Mock<IContactCenterReportingService>().Object,
             guard.Object,
             records.Object,
+            Mock.Of<IInteractionStore>(),
+            Mock.Of<IInteractionEventStore>(),
             profiles.Object,
             userManager.Object,
             localizer.Object);

@@ -2755,6 +2755,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public CallControlAuthorizationService(CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentManager, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallSessionManager callSessionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.ISupervisorQueueAuthorizationService supervisorQueueAuthorizationService) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.CallControlAuthorizationResult> AuthorizeAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.CallControlAuthorizationContext context, System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public sealed class CallQualityAgentConversations
+    {
+        public bool HadAgentConversation(CrestApps.OrchardCore.ContactCenter.Core.Models.CallQualityRecord record) { }
+        public static System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Services.CallQualityAgentConversations> LoadAsync(CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionStore interactionStore, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionEventStore eventStore, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Models.CallQualityRecord> records, System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public static class CallQualityCauseClassifier
     {
         public const double JitterMsThreshold = 30D;
@@ -2762,6 +2767,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public const double RoundTripMsThreshold = 300D;
         public static CrestApps.OrchardCore.ContactCenter.Models.CallQualityCause Classify(CrestApps.OrchardCore.ContactCenter.Core.Models.CallQualityRecord record) { }
         public static CrestApps.OrchardCore.ContactCenter.Models.CallQualityCause ClassifyMostLikely(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Models.CallQualityRecord> records) { }
+    }
+    public static class CallQualityRecordFigures
+    {
+        public static CrestApps.OrchardCore.ContactCenter.Core.Models.CallQualityRecord Apply(CrestApps.OrchardCore.ContactCenter.Core.Models.CallQualityRecord record) { }
     }
     public sealed class CallQualityRecordStore : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.CallQualityRecord, CrestApps.OrchardCore.ContactCenter.Core.Indexes.CallQualityRecordIndex>, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.CallQualityRecord>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.CallQualityRecord>, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallQualityRecordStore
     {

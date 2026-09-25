@@ -78,7 +78,7 @@ public sealed class ContactCenterCallQualityObserver : ICallQualityObserver
             CreatedUtc = _clock.UtcNow,
         };
 
-        CopyHeadlineFigures(record);
+        CallQualityRecordFigures.Apply(record);
         await AttachCallAsync(record, callControlId, cancellationToken);
         await AttachAgentAsync(record, cancellationToken);
 
@@ -153,29 +153,6 @@ public sealed class ContactCenterCallQualityObserver : ICallQualityObserver
             var profile = await _agentProfileStore.FindByIdAsync(record.AgentId, cancellationToken);
 
             record.UserId = profile?.UserId;
-        }
-    }
-
-    private static void CopyHeadlineFigures(CallQualityRecord record)
-    {
-        if (record.Browser is { } browser)
-        {
-            var mos = browser.AvgMos > 0 ? browser.AvgMos : browser.Mos;
-
-            record.Mos = mos > 0 ? mos : null;
-            record.LossPercent = Math.Max(browser.MaxLossPercent, browser.LossPercent);
-            record.JitterMs = browser.JitterMs;
-            record.RoundTripMs = browser.RoundTripTimeMs > 0 ? browser.RoundTripTimeMs : null;
-            record.DurationSeconds = browser.DurationMs > 0 ? browser.DurationMs / 1000.0 : null;
-
-            return;
-        }
-
-        if (record.Provider is { } provider)
-        {
-            record.Mos = provider.InboundMos;
-            record.LossPercent = provider.InboundLossPercent;
-            record.JitterMs = provider.InboundJitterMaxVarianceMs;
         }
     }
 }

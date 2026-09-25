@@ -20,15 +20,15 @@ public sealed partial class TelnyxWebhookService
             return;
         }
 
-        var loss = stats.InboundLossPercent;
-
         if (_logger.IsEnabled(LogLevel.Information))
         {
+            // Skipped slots are not packet loss (silence and one-way media leave them too), so they are logged as what
+            // they are and the leg is rated on the provider's opinion score.
             _logger.LogInformation(
-                "Telnyx call quality for leg {CallControlId}: Mos={Mos}, Loss={LossPercent}%, JitterMaxVariance={JitterMaxVariance}ms, InboundPackets={InboundPackets}, InboundSkipped={InboundSkipped}, OutboundPackets={OutboundPackets}, OutboundSkipped={OutboundSkipped}.",
+                "Telnyx call quality for leg {CallControlId}: Mos={Mos}, Skipped={SkippedPercent}%, JitterMaxVariance={JitterMaxVariance}, InboundPackets={InboundPackets}, InboundSkipped={InboundSkipped}, OutboundPackets={OutboundPackets}, OutboundSkipped={OutboundSkipped}.",
                 callEvent.CallControlId.SanitizeLogValue(),
                 stats.InboundMos,
-                loss?.ToString("0.##", CultureInfo.InvariantCulture),
+                stats.InboundSkippedPercent?.ToString("0.##", CultureInfo.InvariantCulture),
                 stats.InboundJitterMaxVarianceMs,
                 stats.InboundPacketCount,
                 stats.InboundSkipPacketCount,
@@ -43,7 +43,7 @@ public sealed partial class TelnyxWebhookService
             ProviderCallControlId = callEvent.CallControlId,
             ProviderLegId = callEvent.CallLegId,
             ProviderSessionId = callEvent.CallSessionId,
-            Rating = TelephonyCallQualityEvaluator.Evaluate(stats.InboundMos, loss),
+            Rating = TelephonyCallQualityEvaluator.EvaluateProvider(stats),
             ObservedUtc = callEvent.OccurredUtc ?? _clock.UtcNow,
             Provider = stats,
         };

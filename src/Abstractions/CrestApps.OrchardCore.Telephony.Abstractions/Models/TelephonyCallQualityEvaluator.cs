@@ -112,6 +112,31 @@ public static class TelephonyCallQualityEvaluator
     }
 
     /// <summary>
+    /// Rates a leg from the provider's own measurement of it.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The leg is rated on the provider's opinion score alone, which already accounts for packets lost in transit and
+    /// for late arrivals. The skipped-packet counts are not loss: a slot is skipped whenever there was nothing to play,
+    /// which is what silence suppression, a greeting or hold music playing to a caller who says nothing, and a party
+    /// that sends nothing at all all look like. Live voicemail and agent legs skipped from 1% to every slot while the
+    /// provider scored them at its 4.5 maximum, so rating on them called clean calls poor.
+    /// </para>
+    /// <para>
+    /// The jitter figure the provider reports is a peak variance of packet arrival, not a mean jitter, so it is not
+    /// rated against a jitter threshold either. Both are kept on the raw statistics for diagnosis.
+    /// </para>
+    /// </remarks>
+    /// <param name="stats">The provider's statistics for the leg.</param>
+    /// <returns>The rating.</returns>
+    public static CallQualityRating EvaluateProvider(ProviderCallQualityStats stats)
+    {
+        ArgumentNullException.ThrowIfNull(stats);
+
+        return Evaluate(stats.MeasuredInboundMos, lossPercent: null);
+    }
+
+    /// <summary>
     /// Rates a leg from an opinion score and a loss percentage, either of which may be unknown.
     /// </summary>
     /// <param name="mos">The mean opinion score, or <see langword="null"/> when not measured.</param>

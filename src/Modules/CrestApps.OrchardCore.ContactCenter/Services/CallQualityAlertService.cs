@@ -46,13 +46,19 @@ public sealed class CallQualityAlertService : ICallQualityAlertService
     public static readonly TimeSpan Window = TimeSpan.FromMinutes(60);
 
     private readonly ICallQualityRecordStore _recordStore;
+    private readonly IInteractionStore _interactionStore;
+    private readonly IInteractionEventStore _eventStore;
     private readonly IContactCenterEventPublisher _publisher;
 
     public CallQualityAlertService(
         ICallQualityRecordStore recordStore,
+        IInteractionStore interactionStore,
+        IInteractionEventStore eventStore,
         IContactCenterEventPublisher publisher)
     {
         _recordStore = recordStore;
+        _interactionStore = interactionStore;
+        _eventStore = eventStore;
         _publisher = publisher;
     }
 
@@ -74,10 +80,25 @@ public sealed class CallQualityAlertService : ICallQualityAlertService
             RecentCallCount * 2,
             cancellationToken);
 
-        // A leg both the soft phone and the provider measured is one call, counted once.
-        var recent = earlier
+        // Records kept before a rating rule changed are read the way the rules read them now.
+        var candidates = earlier
             .Where(candidate => candidate.ItemId != record.ItemId && IsAgentSide(candidate))
+            .Select(CallQualityRecordFigures.Apply)
             .Prepend(record)
+            .ToArray();
+
+        // A leg of a call no agent talked on, such as one sent to voicemail or abandoned before anybody answered,
+        // measured the platform's greeting or the caller's line, never the agent.
+        var conversations = await CallQualityAgentConversations.LoadAsync(_interactionStore, _eventStore, candidates, cancellationToken);
+
+        if (!conversations.HadAgentConversation(record))
+        {
+            return;
+        }
+
+        // A leg both the soft phone and the provider measured is one call, counted once.
+        var recent = candidates
+            .Where(conversations.HadAgentConversation)
             .DistinctBy(candidate => candidate.ProviderCallControlId, StringComparer.Ordinal)
             .Take(RecentCallCount)
             .ToArray();
