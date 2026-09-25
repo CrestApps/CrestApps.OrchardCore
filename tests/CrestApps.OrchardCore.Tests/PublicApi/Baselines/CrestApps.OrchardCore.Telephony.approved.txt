@@ -182,6 +182,7 @@ namespace CrestApps.OrchardCore.Telephony.Hubs
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> Merge(CrestApps.OrchardCore.Telephony.Models.MergeRequest request) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> Mute(CrestApps.OrchardCore.Telephony.Models.CallReference call) { }
         public override System.Threading.Tasks.Task OnConnectedAsync() { }
+        public override System.Threading.Tasks.Task OnDisconnectedAsync(System.Exception exception) { }
         public System.Threading.Tasks.Task RecordBrowserCall(string callId, string to, string from) { }
         public System.Threading.Tasks.Task RecordBrowserCallEnded(string callId, bool connected) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> Reject(CrestApps.OrchardCore.Telephony.Models.CallReference call) { }

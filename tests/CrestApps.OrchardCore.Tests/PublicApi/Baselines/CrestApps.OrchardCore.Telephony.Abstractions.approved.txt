@@ -44,6 +44,11 @@ namespace CrestApps.OrchardCore.Telephony
     {
         System.Threading.Tasks.Task<bool> ReportCapabilitiesAsync(string userId, string credentialId, System.Collections.Generic.IReadOnlyCollection<string> capabilities, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface ISoftPhoneConnectionRegistrar
+    {
+        System.Threading.Tasks.Task ReportConnectionClosedAsync(string userId, string connectionId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> ReportRegisteredAsync(string userId, string credentialId, string connectionId, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface ISoftPhoneCredentialRegistrar
     {
         string ProviderName { get; }

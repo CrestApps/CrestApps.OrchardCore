@@ -237,6 +237,12 @@ public sealed class TelnyxTelephonyCredentialIssuerTests
         public Task<bool> MarkRegisteredAsync(string userId, string credentialId, DateTime registeredUtc, CancellationToken cancellationToken = default)
             => Task.FromResult(true);
 
+        public Task<bool> MarkRegisteredAsync(string userId, string credentialId, string connectionId, DateTime registeredUtc, CancellationToken cancellationToken = default)
+            => Task.FromResult(true);
+
+        public Task<int> MarkConnectionClosedAsync(string userId, string connectionId, DateTime closedUtc, CancellationToken cancellationToken = default)
+            => Task.FromResult(0);
+
         public Task<bool> SetClientCapabilitiesAsync(string userId, string credentialId, IReadOnlyCollection<string> capabilities, CancellationToken cancellationToken = default)
             => Task.FromResult(true);
     }

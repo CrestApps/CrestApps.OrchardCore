@@ -18,6 +18,13 @@ public static class TelnyxAgentCredentialSelection
     /// with SIP 486, leaving the agent's leg silently unreachable. A credential the client reported registering
     /// on therefore wins, most recently registered first. Credentials that were never reported fall back to
     /// newest-issued, so a client that predates the report still resolves to something.
+    /// <para>
+    /// One user can also have the soft phone open in several windows, each registered on a credential of its own.
+    /// A credential whose window's connection has closed ranks after every credential registered by a window still
+    /// open, so closing the window that registered last hands calls to one that is still there. It still ranks ahead
+    /// of a credential nothing registered on: a window that only lost its connection for a moment stays registered
+    /// with the provider.
+    /// </para>
     /// </remarks>
     /// <param name="credentials">The live credentials to order.</param>
     /// <returns>The credentials ordered best delivery target first.</returns>
@@ -29,7 +36,8 @@ public static class TelnyxAgentCredentialSelection
         }
 
         return credentials
-            .OrderByDescending(credential => credential.RegisteredUtc.HasValue)
+            .OrderByDescending(credential => credential.RegisteredUtc.HasValue && !credential.ConnectionClosedUtc.HasValue)
+            .ThenByDescending(credential => credential.RegisteredUtc.HasValue)
             .ThenByDescending(credential => credential.RegisteredUtc ?? DateTime.MinValue)
             .ThenByDescending(credential => credential.IssuedUtc)
             .ToList();

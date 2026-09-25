@@ -56,6 +56,27 @@ public sealed class TelnyxAgentCredential
     public DateTime? RegisteredUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets the soft-phone connection that reported registering on this credential, when it said which.
+    /// </summary>
+    /// <remarks>
+    /// One agent can have the soft phone open in several windows, each registered on a credential of its own. The
+    /// window that registered last used to be where every call went, so closing it left calls going to a credential
+    /// nothing was listening on until another window happened to register again.
+    /// </remarks>
+    public string RegisteredConnectionId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time the connection that registered on this credential closed, when it has, and nothing
+    /// has registered on the credential since.
+    /// </summary>
+    /// <remarks>
+    /// A closed connection is most likely a window that is gone, so a credential registered by a window still open is
+    /// preferred over it. It is not revoked: the connection also closes when a window only loses its link to the
+    /// server for a moment, and the window's registration with the provider outlives that.
+    /// </remarks>
+    public DateTime? ConnectionClosedUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets what the client registered on this credential reported it can do (see
     /// <c>TelephonyConstants.SoftPhoneClientCapabilities</c>). Empty for a client that reported nothing, which is
     /// treated as able to do none of them.

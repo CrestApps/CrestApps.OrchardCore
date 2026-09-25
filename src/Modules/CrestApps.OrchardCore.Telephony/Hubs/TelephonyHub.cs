@@ -548,7 +548,7 @@ public sealed partial class TelephonyHub : Hub<ITelephonyClient>
             // so a provider that does not own it simply returns without doing anything.
             foreach (var registrar in scope.ServiceProvider.GetServices<ISoftPhoneCredentialRegistrar>())
             {
-                await registrar.ReportRegisteredAsync(userId, credentialId, Context.ConnectionAborted);
+                await ReportRegisteredOnConnectionAsync(registrar, userId, credentialId);
             }
         });
     }

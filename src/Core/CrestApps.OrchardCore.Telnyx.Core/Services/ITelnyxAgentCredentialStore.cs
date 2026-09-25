@@ -15,8 +15,8 @@ public interface ITelnyxAgentCredentialStore
 
     /// <summary>
     /// Lists the live (not revoked, not expired) credentials owned by a user, best delivery target first: the
-    /// credential the client most recently reported registering on, then any credential that has never been
-    /// reported as registered, newest issued first.
+    /// credential a client whose connection is still open most recently reported registering on, then those whose
+    /// connection has closed, then any credential that has never been reported as registered, newest issued first.
     /// </summary>
     Task<IReadOnlyList<TelnyxAgentCredential>> ListLiveByUserAsync(string userId, DateTime nowUtc, CancellationToken cancellationToken = default);
 
@@ -29,6 +29,18 @@ public interface ITelnyxAgentCredentialStore
     /// Records that the user's client completed SIP registration on a credential.
     /// </summary>
     Task<bool> MarkRegisteredAsync(string userId, string credentialId, DateTime registeredUtc, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Records that the user's client completed SIP registration on a credential, through the soft-phone connection
+    /// that reported it.
+    /// </summary>
+    Task<bool> MarkRegisteredAsync(string userId, string credentialId, string connectionId, DateTime registeredUtc, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Records that a soft-phone connection closed, against the user's live credentials it had registered on.
+    /// </summary>
+    /// <returns>How many credentials the connection had registered on.</returns>
+    Task<int> MarkConnectionClosedAsync(string userId, string connectionId, DateTime closedUtc, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Records what the client registered on a user's credential reported it can do, replacing what it reported

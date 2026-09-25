@@ -7,7 +7,7 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 /// Records which Telnyx browser SIP credential a user's soft phone is registered on, so the platform delivers
 /// a call to a credential that can actually receive it.
 /// </summary>
-public sealed class TelnyxSoftPhoneCredentialRegistrar : ISoftPhoneCredentialRegistrar, ISoftPhoneClientCapabilityRegistrar
+public sealed class TelnyxSoftPhoneCredentialRegistrar : ISoftPhoneCredentialRegistrar, ISoftPhoneConnectionRegistrar, ISoftPhoneClientCapabilityRegistrar
 {
     private readonly ITelnyxAgentCredentialStore _credentialStore;
     private readonly IClock _clock;
@@ -27,6 +27,14 @@ public sealed class TelnyxSoftPhoneCredentialRegistrar : ISoftPhoneCredentialReg
     /// <inheritdoc/>
     public Task<bool> ReportRegisteredAsync(string userId, string credentialId, CancellationToken cancellationToken = default)
         => _credentialStore.MarkRegisteredAsync(userId, credentialId, _clock.UtcNow, cancellationToken);
+
+    /// <inheritdoc/>
+    public Task<bool> ReportRegisteredAsync(string userId, string credentialId, string connectionId, CancellationToken cancellationToken = default)
+        => _credentialStore.MarkRegisteredAsync(userId, credentialId, connectionId, _clock.UtcNow, cancellationToken);
+
+    /// <inheritdoc/>
+    public Task ReportConnectionClosedAsync(string userId, string connectionId, CancellationToken cancellationToken = default)
+        => _credentialStore.MarkConnectionClosedAsync(userId, connectionId, _clock.UtcNow, cancellationToken);
 
     /// <inheritdoc/>
     public Task<bool> ReportCapabilitiesAsync(

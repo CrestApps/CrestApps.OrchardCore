@@ -63,7 +63,11 @@ public sealed class TelnyxAgentCredentialStore : ITelnyxAgentCredentialStore
     }
 
     /// <inheritdoc/>
-    public async Task<bool> MarkRegisteredAsync(string userId, string credentialId, DateTime registeredUtc, CancellationToken cancellationToken = default)
+    public Task<bool> MarkRegisteredAsync(string userId, string credentialId, DateTime registeredUtc, CancellationToken cancellationToken = default)
+        => MarkRegisteredAsync(userId, credentialId, connectionId: null, registeredUtc, cancellationToken);
+
+    /// <inheritdoc/>
+    public async Task<bool> MarkRegisteredAsync(string userId, string credentialId, string connectionId, DateTime registeredUtc, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(credentialId))
         {
@@ -89,9 +93,40 @@ public sealed class TelnyxAgentCredentialStore : ITelnyxAgentCredentialStore
 
         credential.RegisteredUtc = registeredUtc;
 
+        // Registered again is live again, whichever connection says so.
+        credential.RegisteredConnectionId = string.IsNullOrWhiteSpace(connectionId) ? null : connectionId;
+        credential.ConnectionClosedUtc = null;
+
         await _session.SaveAsync(credential, cancellationToken: cancellationToken);
 
         return true;
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> MarkConnectionClosedAsync(string userId, string connectionId, DateTime closedUtc, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(connectionId))
+        {
+            return 0;
+        }
+
+        var marked = 0;
+
+        // Only the user's live credentials: an expired or revoked one is never delivered to anyway.
+        foreach (var credential in await ListLiveByUserAsync(userId, closedUtc, cancellationToken))
+        {
+            if (!string.Equals(credential.RegisteredConnectionId, connectionId, StringComparison.Ordinal) ||
+                credential.ConnectionClosedUtc.HasValue)
+            {
+                continue;
+            }
+
+            credential.ConnectionClosedUtc = closedUtc;
+            await _session.SaveAsync(credential, cancellationToken: cancellationToken);
+            marked++;
+        }
+
+        return marked;
     }
 
     /// <inheritdoc/>
