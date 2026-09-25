@@ -62,7 +62,7 @@ public sealed class ConsultTransferService : IConsultTransferService
             return null;
         }
 
-        var transferProvider = ResolveTransferProvider();
+        var transferProvider = ResolveTransferProvider(session);
 
         // A provider that cannot hold a customer and ring a third party privately cannot do a warm transfer, and
         // the agent needs to be told that rather than watching a consult that never happens.
@@ -77,7 +77,7 @@ public sealed class ConsultTransferService : IConsultTransferService
         var consultId = IdGenerator.GenerateId();
 
         var result = await transferProvider.BeginConsultAsync(
-            BuildRequest(session, consultId, request.TargetAddress, providerLegId: null),
+            BuildRequest(session, consultId, request.TargetAddress, providerLegId: null, request.InitiatedByAgentId, request.Metadata),
             cancellationToken);
 
         // The provider refuses a destination the platform will not place a call to, so a consult cannot be a way
@@ -144,7 +144,7 @@ public sealed class ConsultTransferService : IConsultTransferService
             return false;
         }
 
-        var transferProvider = ResolveTransferProvider();
+        var transferProvider = ResolveTransferProvider(session);
 
         if (transferProvider is null)
         {
@@ -152,7 +152,7 @@ public sealed class ConsultTransferService : IConsultTransferService
         }
 
         var result = await transferProvider.CompleteConsultAsync(
-            BuildRequest(session, consult.ConsultId, consult.TargetAddress, consult.ProviderLegId),
+            BuildRequest(session, consult.ConsultId, consult.TargetAddress, consult.ProviderLegId, consult.InitiatedByAgentId, BuildTargetMetadata(consult)),
             cancellationToken);
 
         if (!result.Succeeded)
@@ -170,7 +170,38 @@ public sealed class ConsultTransferService : IConsultTransferService
     }
 
     /// <inheritdoc/>
-    public async Task<bool> CancelAsync(string callSessionId, string consultId, CancellationToken cancellationToken = default)
+    public Task<bool> CancelAsync(string callSessionId, string consultId, CancellationToken cancellationToken = default)
+        => CancelCoreAsync(callSessionId, consultId, ConsultEndedBy.Agent, cancellationToken);
+
+    /// <inheritdoc/>
+    public Task<bool> EndByTargetAsync(string callSessionId, string consultId, CancellationToken cancellationToken = default)
+        => CancelCoreAsync(callSessionId, consultId, ConsultEndedBy.Target, cancellationToken);
+
+    /// <inheritdoc/>
+    public async Task<int> EndForCallerHangupAsync(string callSessionId, CancellationToken cancellationToken = default)
+    {
+        var session = await _callSessionManager.FindByIdAsync(callSessionId, cancellationToken);
+
+        if (session is null)
+        {
+            return 0;
+        }
+
+        var ended = 0;
+        var liveConsultIds = session.Consults.Where(IsLive).Select(consult => consult.ConsultId).ToArray();
+
+        foreach (var consultId in liveConsultIds)
+        {
+            if (await CancelCoreAsync(callSessionId, consultId, ConsultEndedBy.Caller, cancellationToken))
+            {
+                ended++;
+            }
+        }
+
+        return ended;
+    }
+
+    private async Task<bool> CancelCoreAsync(string callSessionId, string consultId, ConsultEndedBy endedBy, CancellationToken cancellationToken)
     {
         var (session, consult) = await FindAsync(callSessionId, consultId, cancellationToken);
 
@@ -179,18 +210,32 @@ public sealed class ConsultTransferService : IConsultTransferService
             return false;
         }
 
-        var transferProvider = ResolveTransferProvider();
+        var transferProvider = ResolveTransferProvider(session);
 
         if (transferProvider is null)
         {
             return false;
         }
 
+        var metadata = BuildTargetMetadata(consult);
+
+        // What is left to undo depends on who left. The agent cancelling drops the destination and brings the
+        // customer back; a destination that hung up is already gone, so only the customer comes back; a customer who
+        // hung up is already gone, so only the destination is dropped.
+        metadata[ContactCenterConstants.AttendedTransferMetadata.EndedBy] = endedBy switch
+        {
+            ConsultEndedBy.Target => ContactCenterConstants.AttendedTransferMetadata.EndedByTarget,
+            ConsultEndedBy.Caller => ContactCenterConstants.AttendedTransferMetadata.EndedByCaller,
+            _ => ContactCenterConstants.AttendedTransferMetadata.EndedByAgent,
+        };
+
         var result = await transferProvider.CancelConsultAsync(
-            BuildRequest(session, consult.ConsultId, consult.TargetAddress, consult.ProviderLegId),
+            BuildRequest(session, consult.ConsultId, consult.TargetAddress, consult.ProviderLegId, consult.InitiatedByAgentId, metadata),
             cancellationToken);
 
-        if (!result.Succeeded)
+        // A consult whose caller or destination is already gone is over whatever the provider says about the rest of
+        // the teardown; recording it as still live would keep a supervisor watching a conversation nobody is in.
+        if (!result.Succeeded && endedBy == ConsultEndedBy.Agent)
         {
             return false;
         }
@@ -206,8 +251,8 @@ public sealed class ConsultTransferService : IConsultTransferService
         return true;
     }
 
-    private IContactCenterVoiceAttendedTransferProvider ResolveTransferProvider()
-        => _voiceProviderResolver.Get() as IContactCenterVoiceAttendedTransferProvider;
+    private IContactCenterVoiceAttendedTransferProvider ResolveTransferProvider(CallSession session)
+        => _voiceProviderResolver.Get(session.ProviderName) as IContactCenterVoiceAttendedTransferProvider;
 
     private async Task<(CallSession Session, ConsultCall Consult)> FindAsync(string callSessionId, string consultId, CancellationToken cancellationToken)
     {
@@ -219,25 +264,71 @@ public sealed class ConsultTransferService : IConsultTransferService
         return (session, consult);
     }
 
+    private static Dictionary<string, string> BuildTargetMetadata(ConsultCall consult)
+        => new(StringComparer.OrdinalIgnoreCase)
+        {
+            [ContactCenterConstants.AttendedTransferMetadata.TargetType] = consult.TargetType.ToString(),
+        };
+
     private static ContactCenterVoiceAttendedTransferRequest BuildRequest(
         CallSession session,
         string consultId,
         string targetAddress,
-        string providerLegId)
+        string providerLegId,
+        string initiatedByAgentId,
+        IDictionary<string, string> extraMetadata)
     {
+        var metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["consultId"] = consultId,
+            ["consultLegId"] = providerLegId ?? string.Empty,
+            ["targetAddress"] = targetAddress ?? string.Empty,
+        };
+
+        // The provider has to reach the consulting agent's own leg -- to move it next to the destination, and to
+        // drop it on completion -- and only the topology knows which leg that is.
+        var agentLegId = FindAgentLegId(session, initiatedByAgentId);
+
+        if (!string.IsNullOrEmpty(agentLegId))
+        {
+            metadata[ContactCenterConstants.AttendedTransferMetadata.AgentLegId] = agentLegId;
+        }
+
+        if (extraMetadata is not null)
+        {
+            foreach (var entry in extraMetadata)
+            {
+                metadata[entry.Key] = entry.Value ?? string.Empty;
+            }
+        }
+
         return new ContactCenterVoiceAttendedTransferRequest
         {
             InteractionId = session.InteractionId,
             ProviderCallId = session.ProviderCallId,
-            Metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["consultId"] = consultId,
-                ["consultLegId"] = providerLegId ?? string.Empty,
-                ["targetAddress"] = targetAddress ?? string.Empty,
-            },
+            Metadata = metadata,
         };
     }
 
+    private static string FindAgentLegId(CallSession session, string agentId)
+        => session.Legs
+            .Where(leg =>
+                leg is not null &&
+                leg.Role == CallPartyRole.Agent &&
+                !leg.EndedUtc.HasValue &&
+                !string.IsNullOrWhiteSpace(leg.ProviderLegId) &&
+                !string.Equals(leg.ProviderLegId, session.ProviderCallId, StringComparison.Ordinal) &&
+                (string.IsNullOrEmpty(agentId) || string.IsNullOrEmpty(leg.AgentId) || string.Equals(leg.AgentId, agentId, StringComparison.Ordinal)))
+            .Select(leg => leg.ProviderLegId)
+            .LastOrDefault();
+
     private static bool IsLive(ConsultCall consult)
         => consult.Status is ConsultCallStatus.Initiated or ConsultCallStatus.Ringing or ConsultCallStatus.Connected;
+
+    private enum ConsultEndedBy
+    {
+        Agent,
+        Target,
+        Caller,
+    }
 }

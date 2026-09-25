@@ -31,4 +31,10 @@ public sealed class ConsultTransferRequest
     /// Gets or sets the resolved address of the destination, already checked against the destination policy.
     /// </summary>
     public string TargetAddress { get; set; }
+
+    /// <summary>
+    /// Gets or sets server-resolved details the provider needs to place the consult, such as the destination
+    /// agent's user id or the hold audio for the customer. The client never supplies these.
+    /// </summary>
+    public IDictionary<string, string> Metadata { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 }

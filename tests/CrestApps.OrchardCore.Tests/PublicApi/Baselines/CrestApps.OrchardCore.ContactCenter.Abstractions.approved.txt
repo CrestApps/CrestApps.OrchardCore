@@ -12,7 +12,14 @@ namespace CrestApps.OrchardCore.ContactCenter
         }
         public static class AttendedTransferMetadata
         {
+            public const string AgentLegId = "attendedTransferAgentLegId";
             public const string AgentUserId = "attendedTransferAgentUserId";
+            public const string EndedBy = "attendedTransferEndedBy";
+            public const string EndedByAgent = "agent";
+            public const string EndedByCaller = "caller";
+            public const string EndedByTarget = "target";
+            public const string HoldAudio = "attendedTransferHoldAudio";
+            public const string TargetType = "attendedTransferTargetType";
         }
         public static class CampaignQueue
         {
@@ -288,6 +295,10 @@ namespace CrestApps.OrchardCore.ContactCenter
         bool IsQuiescing(string featureId);
         void Quiesce(string featureId);
         CrestApps.OrchardCore.ContactCenter.IContactCenterFeatureWorkLease TryEnter(string featureId);
+    }
+    public interface IContactCenterOwnNumberSource
+    {
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<string>> GetOwnNumbersAsync(System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IContactCenterRealTimeNotifier
     {

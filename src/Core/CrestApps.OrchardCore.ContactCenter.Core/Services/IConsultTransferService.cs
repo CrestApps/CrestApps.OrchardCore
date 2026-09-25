@@ -38,4 +38,22 @@ public interface IConsultTransferService
     /// <param name="consultId">The consult.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     Task<bool> CancelAsync(string callSessionId, string consultId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Ends a consult whose destination hung up or never answered: the customer returns to the agent they had.
+    /// </summary>
+    /// <param name="callSessionId">The call the customer is on.</param>
+    /// <param name="consultId">The consult.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns><see langword="true"/> when a live consult was ended.</returns>
+    Task<bool> EndByTargetAsync(string callSessionId, string consultId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Ends every live consult on a call whose customer hung up, dropping the destination who is now talking to
+    /// nobody the handover was for.
+    /// </summary>
+    /// <param name="callSessionId">The call that ended.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>How many consults were ended.</returns>
+    Task<int> EndForCallerHangupAsync(string callSessionId, CancellationToken cancellationToken = default);
 }

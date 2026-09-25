@@ -4,11 +4,13 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Services;
-using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Modules;
+using YesSql;
+using ProviderVoiceEvent = CrestApps.OrchardCore.Telephony.Models.ProviderVoiceEvent;
+using VoiceCallState = CrestApps.OrchardCore.Telephony.Models.VoiceCallState;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -17,358 +19,223 @@ public sealed class ContactCenterTransferServiceTests
     private static readonly DateTime _now = new(2026, 1, 5, 12, 0, 0, DateTimeKind.Utc);
 
     [Fact]
-    public async Task TransferAsync_ToQueue_ReEnqueuesActivityAndRecordsHistory()
+    public async Task TransferAsync_ToAQueue_IsRoutedByTheContactCenter_NotHandedToTheProvider()
     {
-        // Arrange
-        var interaction = CreateInteraction();
-        var interactionManager = new Mock<IInteractionManager>();
-        interactionManager.Setup(m => m.FindByIdAsync("int-1", It.IsAny<CancellationToken>())).ReturnsAsync(interaction);
+        var harness = new Harness();
+        harness.Router
+            .Setup(router => router.RouteToQueueAsync(It.IsAny<TransferRoutingContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TransferResult.Success("The call is waiting in Sales."));
 
-        var queueService = new Mock<IActivityQueueService>();
-        var publisher = new Mock<IContactCenterEventPublisher>();
-        var provider = CreateProvider(ContactCenterVoiceProviderCapabilities.CallTransfer);
-        var transferProvider = provider.As<IContactCenterVoiceTransferProvider>();
-        transferProvider
-            .Setup(p => p.TransferAsync(
-                It.Is<ContactCenterVoiceTransferRequest>(request =>
-                    request.InteractionId == "int-1" &&
-                    request.ProviderCallId == "call-1" &&
-                    request.TransferType == InteractionTransferType.Blind &&
-                    request.TargetType == InteractionTransferTargetType.Queue &&
-                    request.Target == "q2"),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ContactCenterVoiceProviderResult { Succeeded = true });
-        var service = CreateService(interactionManager, queueService, publisher, CreateResolver(provider));
+        var result = await harness.Service.TransferAsync(Request(InteractionTransferTargetType.Queue, "q2"), TestContext.Current.CancellationToken);
 
-        var request = new TransferRequest
-        {
-            InteractionId = "int-1",
-            InitiatedByUserId = "sup-1",
-            Type = InteractionTransferType.Blind,
-            TargetType = InteractionTransferTargetType.Queue,
-            TargetId = "q2",
-            InitiatedByAgentId = "a1",
-        };
-
-        // Act
-        var result = await service.TransferAsync(request, TestContext.Current.CancellationToken);
-
-        // Assert
         Assert.True(result.Succeeded);
-        queueService.Verify(s => s.EnqueueAsync("act-1", "q2", null, It.IsAny<CancellationToken>()), Times.Once);
-        Assert.Single(interaction.TransferHistory);
-        Assert.Equal(InteractionStatus.Transferring, interaction.Status);
-        publisher.Verify(p => p.PublishAsync(It.Is<InteractionEvent>(e => e.EventType == ContactCenterConstants.Events.InteractionTransferred), It.IsAny<CancellationToken>()), Times.Once);
-
-        // The transfer now says where the call went, which the event alone never did.
-        var transferred = publisher.Invocations
-            .Select(invocation => invocation.Arguments[0])
-            .OfType<InteractionEvent>()
-            .Single(e => e.EventType == ContactCenterConstants.Events.InteractionTransferred);
-        var data = transferred.GetData<CallLifecycleEventData>();
-        Assert.Equal("q2", data.Target);
-        Assert.Equal("int-1", data.InteractionId);
-        Assert.Equal("a1", data.AgentId);
-        Assert.Equal(nameof(InteractionTransferType.Blind), data.Details["transferType"]);
-        Assert.Equal(nameof(InteractionTransferTargetType.Queue), data.Details["targetType"]);
-        Assert.Equal(ContactCenterActorType.Agent, transferred.ActorType);
+        harness.Router.Verify(router => router.RouteToQueueAsync(
+            It.Is<TransferRoutingContext>(context =>
+                context.TargetId == "q2" &&
+                context.TransferringAgentId == "a1" &&
+                context.TransferringUserId == "user-1" &&
+                context.Interaction.ItemId == "int-1"),
+            It.IsAny<CancellationToken>()), Times.Once);
+        harness.TransferProvider.Verify(
+            provider => provider.TransferAsync(It.IsAny<ContactCenterVoiceTransferRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
-    public async Task TransferAsync_WhenCallerDisconnectsDuringProviderMutation_CompletesWithServerOwnedToken()
+    public async Task TransferAsync_ToAnAgent_IsRoutedByTheContactCenter_NotHandedToTheProvider()
     {
-        // Arrange
+        var harness = new Harness();
+        harness.Router
+            .Setup(router => router.RouteToAgentAsync(It.IsAny<TransferRoutingContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TransferResult.Success());
+
+        var result = await harness.Service.TransferAsync(Request(InteractionTransferTargetType.Agent, "a2"), TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        harness.Router.Verify(router => router.RouteToAgentAsync(It.Is<TransferRoutingContext>(context => context.TargetId == "a2"), It.IsAny<CancellationToken>()), Times.Once);
+        harness.TransferProvider.Verify(
+            provider => provider.TransferAsync(It.IsAny<ContactCenterVoiceTransferRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task TransferAsync_ToAnExternalNumber_MovesTheCallThroughTheProvider_AndSettlesItAsTransferred()
+    {
+        var harness = new Harness();
+        harness.TransferProvider
+            .Setup(provider => provider.TransferAsync(It.IsAny<ContactCenterVoiceTransferRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ContactCenterVoiceProviderResult { Succeeded = true });
+
+        var result = await harness.Service.TransferAsync(Request(InteractionTransferTargetType.External, "+15557654321"), TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        harness.TransferProvider.Verify(provider => provider.TransferAsync(
+            It.Is<ContactCenterVoiceTransferRequest>(request =>
+                request.InteractionId == "int-1" &&
+                request.ProviderCallId == "call-1" &&
+                request.TransferType == InteractionTransferType.Blind &&
+                request.TargetType == InteractionTransferTargetType.External &&
+                request.Target == "+15557654321"),
+            It.IsAny<CancellationToken>()), Times.Once);
+
+        // The call has left the contact center, and it leaves through provider truth like any other ending.
+        harness.VoiceEvents.Verify(service => service.IngestAsync(
+            It.Is<ProviderVoiceEvent>(voiceEvent => voiceEvent.State == VoiceCallState.Transferred && voiceEvent.ProviderCallId == "call-1"),
+            It.IsAny<CancellationToken>()), Times.Once);
+
+        var entry = Assert.Single(harness.Interaction.TransferHistory);
+        Assert.Equal("a1", entry.FromParticipantId);
+        Assert.Equal("+15557654321", entry.ToParticipantId);
+        Assert.Equal(_now, entry.CompletedUtc);
+        Assert.Equal(InteractionTransferHistory.SentToExternalNumber, entry.Result);
+
+        var transferred = harness.Published.Single(e => e.EventType == ContactCenterConstants.Events.InteractionTransferred);
+        var data = transferred.GetData<CallLifecycleEventData>();
+        Assert.Equal("+15557654321", data.Target);
+        Assert.Equal("a1", data.AgentId);
+        Assert.Equal(nameof(InteractionTransferTargetType.External), data.Details["targetType"]);
+        Assert.Equal("user-1", transferred.ActorId);
+        Assert.Equal(ContactCenterActorType.Agent, transferred.ActorType);
+
+        // The agent's own leg is hung up only once the call is settled, so its hangup cannot end the call.
+        harness.AgentRelease.Verify(release => release.HangUpAsync("provider", It.Is<IEnumerable<string>>(legs => legs.Single() == "agent-leg-1"), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task TransferAsync_WhenTheDestinationIsRefused_RecordsTheDenialAndMovesNothing()
+    {
+        var harness = new Harness(new FakeTransferDestinationResolver(_ => TransferDestinationResolutionResult.Denied("Not on the approved list.")));
+
+        var result = await harness.Service.TransferAsync(Request(InteractionTransferTargetType.External, "+15557654321"), TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal("Not on the approved list.", result.Reason);
+        Assert.Single(harness.Published, e => e.EventType == ContactCenterConstants.Events.InteractionTransferDenied);
+        harness.TransferProvider.VerifyNoOtherCalls();
+        harness.Router.VerifyNoOtherCalls();
+        Assert.Empty(harness.Interaction.TransferHistory);
+    }
+
+    [Fact]
+    public async Task TransferAsync_AWarmTransfer_IsNotBlindTransferredInstead()
+    {
+        var harness = new Harness();
+        var request = Request(InteractionTransferTargetType.Agent, "a2");
+        request.Type = InteractionTransferType.Consultative;
+
+        var result = await harness.Service.TransferAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        harness.Router.VerifyNoOtherCalls();
+        harness.TransferProvider.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task TransferAsync_WhenTheProviderRefusesAnExternalTransfer_RecordsNothing()
+    {
+        var harness = new Harness();
+        harness.TransferProvider
+            .Setup(provider => provider.TransferAsync(It.IsAny<ContactCenterVoiceTransferRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ContactCenterVoiceProviderResult { Succeeded = false, ErrorMessage = "Transfer rejected." });
+
+        var result = await harness.Service.TransferAsync(Request(InteractionTransferTargetType.External, "+15557654321"), TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal("Transfer rejected.", result.Reason);
+        Assert.Empty(harness.Interaction.TransferHistory);
+        Assert.Empty(harness.Published);
+        harness.VoiceEvents.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task TransferAsync_WhenTheProviderOutcomeIsUnknown_RecordsNothing()
+    {
+        var harness = new Harness();
+        harness.TransferProvider
+            .Setup(provider => provider.TransferAsync(It.IsAny<ContactCenterVoiceTransferRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ContactCenterVoiceProviderResult { Succeeded = true, OutcomeUnknown = true, ErrorMessage = "The provider outcome is unknown." });
+
+        var result = await harness.Service.TransferAsync(Request(InteractionTransferTargetType.External, "+15557654321"), TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal("The provider outcome is unknown.", result.Reason);
+        Assert.Empty(harness.Interaction.TransferHistory);
+        harness.VoiceEvents.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task TransferAsync_WhenTheProviderDeadlineExpires_ReturnsUnknownWithoutRecording()
+    {
+        var harness = new Harness(commandExecutor: new TimeoutTelephonyCommandExecutor());
+
+        var result = await harness.Service.TransferAsync(Request(InteractionTransferTargetType.External, "+15557654321"), TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.True(result.OutcomeUnknown);
+        Assert.Empty(harness.Interaction.TransferHistory);
+        Assert.Empty(harness.Published);
+    }
+
+    [Fact]
+    public async Task TransferAsync_WhenTheCallerDisconnects_TheProviderStillGetsAServerOwnedToken()
+    {
         using var callerCancellation = new CancellationTokenSource();
-        var interaction = CreateInteraction();
-        var interactionManager = new Mock<IInteractionManager>();
-        interactionManager
-            .Setup(manager => manager.FindByIdAsync("int-1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(interaction);
-        interactionManager
-            .Setup(manager => manager.UpdateAsync(
-                It.IsAny<Interaction>(),
-                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
-                It.IsAny<CancellationToken>()))
-            .Callback<Interaction, System.Text.Json.Nodes.JsonNode, CancellationToken>(
-                (_, _, cancellationToken) => Assert.Equal(CancellationToken.None, cancellationToken))
-            .Returns(ValueTask.CompletedTask);
-        var queueService = new Mock<IActivityQueueService>();
-        queueService
-            .Setup(service => service.EnqueueAsync(
-                "act-1",
-                "q2",
-                null,
-                It.IsAny<CancellationToken>()))
-            .Callback<string, string, InteractionPriority?, CancellationToken>(
-                (_, _, _, cancellationToken) => Assert.Equal(CancellationToken.None, cancellationToken))
-            .ReturnsAsync(new QueueItem());
-        var publisher = new Mock<IContactCenterEventPublisher>();
-        publisher
-            .Setup(value => value.PublishAsync(
-                It.IsAny<InteractionEvent>(),
-                It.IsAny<CancellationToken>()))
-            .Callback<InteractionEvent, CancellationToken>(
-                (_, cancellationToken) => Assert.Equal(CancellationToken.None, cancellationToken))
-            .Returns(Task.CompletedTask);
-        var provider = CreateProvider(ContactCenterVoiceProviderCapabilities.CallTransfer);
-        provider
-            .As<IContactCenterVoiceTransferProvider>()
-            .Setup(value => value.TransferAsync(
-                It.IsAny<ContactCenterVoiceTransferRequest>(),
-                It.IsAny<CancellationToken>()))
+        var harness = new Harness();
+        harness.TransferProvider
+            .Setup(provider => provider.TransferAsync(It.IsAny<ContactCenterVoiceTransferRequest>(), It.IsAny<CancellationToken>()))
             .Returns<ContactCenterVoiceTransferRequest, CancellationToken>((_, cancellationToken) =>
             {
-                Assert.True(cancellationToken.CanBeCanceled);
-                Assert.False(cancellationToken.IsCancellationRequested);
                 Assert.NotEqual(callerCancellation.Token, cancellationToken);
                 callerCancellation.Cancel();
 
                 return Task.FromResult(new ContactCenterVoiceProviderResult { Succeeded = true });
             });
-        var service = CreateService(
-            interactionManager,
-            queueService,
-            publisher,
-            CreateResolver(provider));
 
-        // Act
-        var result = await service.TransferAsync(new TransferRequest
-        {
-            InteractionId = "int-1",
-            InitiatedByUserId = "sup-1",
-            TargetType = InteractionTransferTargetType.Queue,
-            TargetId = "q2",
-        }, callerCancellation.Token);
+        var result = await harness.Service.TransferAsync(Request(InteractionTransferTargetType.External, "+15557654321"), callerCancellation.Token);
 
-        // Assert
         Assert.True(result.Succeeded);
         Assert.True(callerCancellation.IsCancellationRequested);
-        Assert.Equal(InteractionStatus.Transferring, interaction.Status);
     }
 
     [Fact]
-    public async Task TransferAsync_WhenProviderRejects_DoesNotRecordOrPublish()
+    public async Task TransferAsync_WhenTheProviderCannotTransfer_FailsClosed()
     {
-        // Arrange
-        var interaction = CreateInteraction();
-        var interactionManager = new Mock<IInteractionManager>();
-        interactionManager.Setup(m => m.FindByIdAsync("int-1", It.IsAny<CancellationToken>())).ReturnsAsync(interaction);
+        var harness = new Harness(providerTransfers: false);
 
-        var queueService = new Mock<IActivityQueueService>();
-        var publisher = new Mock<IContactCenterEventPublisher>();
-        var provider = CreateProvider(ContactCenterVoiceProviderCapabilities.CallTransfer);
-        var transferProvider = provider.As<IContactCenterVoiceTransferProvider>();
-        transferProvider
-            .Setup(p => p.TransferAsync(It.IsAny<ContactCenterVoiceTransferRequest>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ContactCenterVoiceProviderResult
-            {
-                Succeeded = false,
-                ErrorMessage = "Transfer rejected.",
-            });
-        var service = CreateService(interactionManager, queueService, publisher, CreateResolver(provider));
+        var result = await harness.Service.TransferAsync(Request(InteractionTransferTargetType.External, "+15557654321"), TestContext.Current.CancellationToken);
 
-        var request = new TransferRequest
+        Assert.False(result.Succeeded);
+        Assert.Empty(harness.Interaction.TransferHistory);
+        Assert.Empty(harness.Published);
+    }
+
+    [Fact]
+    public async Task TransferAsync_WhenTheInteractionIsMissing_Fails()
+    {
+        var harness = new Harness();
+
+        var request = Request(InteractionTransferTargetType.Queue, "q2");
+        request.InteractionId = "missing";
+
+        var result = await harness.Service.TransferAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        harness.Router.VerifyNoOtherCalls();
+    }
+
+    private static TransferRequest Request(InteractionTransferTargetType targetType, string targetId)
+        => new()
         {
             InteractionId = "int-1",
-            InitiatedByUserId = "sup-1",
-            TargetType = InteractionTransferTargetType.External,
-            TargetId = "+15551234567",
+            InitiatedByUserId = "user-1",
+            Type = InteractionTransferType.Blind,
+            TargetType = targetType,
+            TargetId = targetId,
         };
 
-        // Act
-        var result = await service.TransferAsync(request, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.False(result.Succeeded);
-        Assert.Equal("Transfer rejected.", result.Reason);
-        queueService.Verify(s => s.EnqueueAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<InteractionPriority?>(), It.IsAny<CancellationToken>()), Times.Never);
-        Assert.Empty(interaction.TransferHistory);
-        publisher.Verify(p => p.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task TransferAsync_WhenProviderOutcomeIsUnknown_DoesNotRecordOrPublish()
+    private sealed class Harness
     {
-        // Arrange
-        var interaction = CreateInteraction();
-        var interactionManager = new Mock<IInteractionManager>();
-        interactionManager.Setup(m => m.FindByIdAsync("int-1", It.IsAny<CancellationToken>())).ReturnsAsync(interaction);
-
-        var queueService = new Mock<IActivityQueueService>();
-        var publisher = new Mock<IContactCenterEventPublisher>();
-        var provider = CreateProvider(ContactCenterVoiceProviderCapabilities.CallTransfer);
-        var transferProvider = provider.As<IContactCenterVoiceTransferProvider>();
-        transferProvider
-            .Setup(p => p.TransferAsync(It.IsAny<ContactCenterVoiceTransferRequest>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ContactCenterVoiceProviderResult
-            {
-                Succeeded = true,
-                OutcomeUnknown = true,
-                ErrorMessage = "The provider outcome is unknown.",
-            });
-        var service = CreateService(interactionManager, queueService, publisher, CreateResolver(provider));
-
-        var request = new TransferRequest
-        {
-            InteractionId = "int-1",
-            InitiatedByUserId = "sup-1",
-            TargetType = InteractionTransferTargetType.External,
-            TargetId = "+15551234567",
-        };
-
-        // Act
-        var result = await service.TransferAsync(request, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.False(result.Succeeded);
-        Assert.Equal("The provider outcome is unknown.", result.Reason);
-        Assert.Empty(interaction.TransferHistory);
-        Assert.NotEqual(InteractionStatus.Transferring, interaction.Status);
-        queueService.Verify(
-            s => s.EnqueueAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<InteractionPriority?>(), It.IsAny<CancellationToken>()),
-            Times.Never);
-        interactionManager.Verify(
-            m => m.UpdateAsync(It.IsAny<Interaction>(), It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()),
-            Times.Never);
-        publisher.Verify(p => p.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task TransferAsync_WhenProviderDeadlineExpires_ReturnsUnknownWithoutRecording()
-    {
-        // Arrange
-        var interaction = CreateInteraction();
-        var interactionManager = new Mock<IInteractionManager>();
-        interactionManager
-            .Setup(manager => manager.FindByIdAsync("int-1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(interaction);
-        var queueService = new Mock<IActivityQueueService>();
-        var publisher = new Mock<IContactCenterEventPublisher>();
-        var provider = CreateProvider(ContactCenterVoiceProviderCapabilities.CallTransfer);
-        _ = provider.As<IContactCenterVoiceTransferProvider>();
-        var service = CreateService(
-            interactionManager,
-            queueService,
-            publisher,
-            CreateResolver(provider),
-            new TimeoutTelephonyCommandExecutor());
-
-        // Act
-        var result = await service.TransferAsync(new TransferRequest
-        {
-            InteractionId = "int-1",
-            InitiatedByUserId = "sup-1",
-            TargetType = InteractionTransferTargetType.Queue,
-            TargetId = "q2",
-        }, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.False(result.Succeeded);
-        Assert.True(result.OutcomeUnknown);
-        Assert.Contains("outcome is unknown", result.Reason, StringComparison.OrdinalIgnoreCase);
-        Assert.Empty(interaction.TransferHistory);
-        queueService.Verify(
-            value => value.EnqueueAsync(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<InteractionPriority?>(),
-                It.IsAny<CancellationToken>()),
-            Times.Never);
-        publisher.Verify(
-            value => value.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()),
-            Times.Never);
-    }
-
-    [Fact]
-    public async Task TransferAsync_WhenCapabilityHasNoExecutableContract_FailsClosed()
-    {
-        // Arrange
-        var interaction = CreateInteraction();
-        var interactionManager = new Mock<IInteractionManager>();
-        interactionManager.Setup(m => m.FindByIdAsync("int-1", It.IsAny<CancellationToken>())).ReturnsAsync(interaction);
-        var queueService = new Mock<IActivityQueueService>();
-        var publisher = new Mock<IContactCenterEventPublisher>();
-        var provider = CreateProvider(ContactCenterVoiceProviderCapabilities.CallTransfer);
-        var service = CreateService(interactionManager, queueService, publisher, CreateResolver(provider));
-        var request = new TransferRequest
-        {
-            InteractionId = "int-1",
-            InitiatedByUserId = "sup-1",
-            TargetType = InteractionTransferTargetType.External,
-            TargetId = "+15551234567",
-        };
-
-        // Act
-        var result = await service.TransferAsync(request, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.False(result.Succeeded);
-        Assert.Empty(interaction.TransferHistory);
-        queueService.Verify(
-            s => s.EnqueueAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<InteractionPriority?>(), It.IsAny<CancellationToken>()),
-            Times.Never);
-        publisher.Verify(p => p.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task TransferAsync_WhenInteractionMissing_Fails()
-    {
-        // Arrange
-        var interactionManager = new Mock<IInteractionManager>();
-        interactionManager.Setup(m => m.FindByIdAsync("int-1", It.IsAny<CancellationToken>())).ReturnsAsync((Interaction)null);
-
-        var service = CreateService(
-            interactionManager,
-            new Mock<IActivityQueueService>(),
-            new Mock<IContactCenterEventPublisher>(),
-            new Mock<IContactCenterVoiceProviderResolver>());
-
-        var request = new TransferRequest { InteractionId = "int-1", InitiatedByUserId = "sup-1", TargetType = InteractionTransferTargetType.Queue, TargetId = "q2" };
-
-        // Act
-        var result = await service.TransferAsync(request, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.False(result.Succeeded);
-    }
-
-    private static ContactCenterTransferService CreateService(
-        Mock<IInteractionManager> interactionManager,
-        Mock<IActivityQueueService> queueService,
-        Mock<IContactCenterEventPublisher> publisher,
-        Mock<IContactCenterVoiceProviderResolver> voiceProviderResolver,
-        ITelephonyCommandExecutor commandExecutor = null,
-        ICallControlAuthorizationService callControlAuthorizationService = null,
-        ITransferDestinationResolver transferDestinationResolver = null,
-        CallSession callSession = null,
-        RecordingContactCenterAuditRecorder auditRecorder = null)
-    {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(_now);
-
-        var callSessionManager = new Mock<ICallSessionManager>();
-        callSessionManager
-            .Setup(m => m.FindByInteractionIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(callSession);
-
-        return new ContactCenterTransferService(
-            interactionManager.Object,
-            callSessionManager.Object,
-            queueService.Object,
-            voiceProviderResolver.Object,
-            publisher.Object,
-            auditRecorder ?? new RecordingContactCenterAuditRecorder(),
-            commandExecutor ?? new DefaultTelephonyCommandExecutor(
-                Options.Create(new TelephonyCommandOptions()),
-                Mock.Of<IHostApplicationLifetime>()),
-            clock.Object,
-            callControlAuthorizationService ?? FakeCallControlAuthorizationService.Resolving("call-1"),
-            transferDestinationResolver ?? new FakeTransferDestinationResolver());
-    }
-
-    private static Interaction CreateInteraction()
-    {
-        return new Interaction
+        public Interaction Interaction { get; } = new()
         {
             ItemId = "int-1",
             ActivityItemId = "act-1",
@@ -376,29 +243,83 @@ public sealed class ContactCenterTransferServiceTests
             ProviderName = "provider",
             ProviderInteractionId = "call-1",
         };
-    }
 
-    private static Mock<IContactCenterVoiceProvider> CreateProvider(ContactCenterVoiceProviderCapabilities capabilities)
-    {
-        var provider = new Mock<IContactCenterVoiceProvider>();
-        provider.SetupGet(p => p.Capabilities).Returns(capabilities);
+        public CallSession Session { get; } = new()
+        {
+            ItemId = "session-1",
+            InteractionId = "int-1",
+            ProviderName = "provider",
+            ProviderCallId = "call-1",
+            AgentId = "a1",
+            Legs =
+            [
+                new CallLeg { ProviderLegId = "call-1", Role = CallPartyRole.Customer },
+                new CallLeg { ProviderLegId = "agent-leg-1", Role = CallPartyRole.Agent, AgentId = "a1", AnsweredUtc = _now },
+            ],
+        };
 
-        return provider;
-    }
+        public Mock<ITransferredCallRouter> Router { get; } = new();
 
-    private static Mock<IContactCenterVoiceProviderResolver> CreateResolver(Mock<IContactCenterVoiceProvider> provider)
-    {
-        var resolver = new Mock<IContactCenterVoiceProviderResolver>();
-        resolver.Setup(r => r.Get("provider")).Returns(provider.Object);
+        public Mock<ITransferAgentReleaseService> AgentRelease { get; } = new();
 
-        return resolver;
+        public Mock<IProviderVoiceEventService> VoiceEvents { get; } = new();
+
+        public Mock<IContactCenterVoiceTransferProvider> TransferProvider { get; }
+
+        public List<InteractionEvent> Published { get; } = [];
+
+        public ContactCenterTransferService Service { get; }
+
+        public Harness(
+            ITransferDestinationResolver destinationResolver = null,
+            ITelephonyCommandExecutor commandExecutor = null,
+            bool providerTransfers = true)
+        {
+            var interactionManager = new Mock<IInteractionManager>();
+            interactionManager.Setup(manager => manager.FindByIdAsync("int-1", It.IsAny<CancellationToken>())).ReturnsAsync(Interaction);
+
+            var provider = new Mock<IContactCenterVoiceProvider>();
+            provider.SetupGet(value => value.Capabilities).Returns(ContactCenterVoiceProviderCapabilities.CallTransfer);
+            TransferProvider = providerTransfers ? provider.As<IContactCenterVoiceTransferProvider>() : new Mock<IContactCenterVoiceTransferProvider>();
+
+            var resolver = new Mock<IContactCenterVoiceProviderResolver>();
+            resolver.Setup(value => value.Get("provider")).Returns(provider.Object);
+
+            var publisher = new Mock<IContactCenterEventPublisher>();
+            publisher
+                .Setup(value => value.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+                .Callback<InteractionEvent, CancellationToken>((interactionEvent, _) => Published.Add(interactionEvent))
+                .Returns(Task.CompletedTask);
+
+            var clock = new Mock<IClock>();
+            clock.SetupGet(value => value.UtcNow).Returns(_now);
+
+            var authorization = new FakeCallControlAuthorizationService(context => new CallControlAuthorizationResult
+            {
+                Succeeded = true,
+                AgentId = "a1",
+                ProviderCallId = "call-1",
+                CallSession = Session,
+            });
+
+            Service = new ContactCenterTransferService(
+                interactionManager.Object,
+                resolver.Object,
+                authorization,
+                destinationResolver ?? new FakeTransferDestinationResolver(),
+                Router.Object,
+                AgentRelease.Object,
+                VoiceEvents.Object,
+                publisher.Object,
+                commandExecutor ?? new DefaultTelephonyCommandExecutor(Options.Create(new TelephonyCommandOptions()), Mock.Of<IHostApplicationLifetime>()),
+                Mock.Of<ISession>(),
+                clock.Object);
+        }
     }
 
     private sealed class TimeoutTelephonyCommandExecutor : ITelephonyCommandExecutor
     {
         public Task<TResult> ExecuteAsync<TResult>(Func<CancellationToken, Task<TResult>> operation)
-        {
-            return Task.FromException<TResult>(new TimeoutException());
-        }
+            => Task.FromException<TResult>(new TimeoutException());
     }
 }

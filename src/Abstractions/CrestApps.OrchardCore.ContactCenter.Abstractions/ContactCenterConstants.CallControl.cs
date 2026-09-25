@@ -63,6 +63,37 @@ public static partial class ContactCenterConstants
         /// agent's live endpoint. The client never supplies this; the transfer service resolves it server-side.
         /// </summary>
         public const string AgentUserId = "attendedTransferAgentUserId";
+
+        /// <summary>
+        /// Identifies the provider leg of the agent who is consulting, which the provider moves next to the
+        /// destination while the customer is held, and drops when the transfer completes.
+        /// </summary>
+        public const string AgentLegId = "attendedTransferAgentLegId";
+
+        /// <summary>
+        /// The kind of destination being consulted (<c>Agent</c> or <c>External</c>), which decides how a provider
+        /// joins the customer to the destination on completion.
+        /// </summary>
+        public const string TargetType = "attendedTransferTargetType";
+
+        /// <summary>
+        /// The audio the customer hears while held for the consult: a URL, or a clip the provider already stores.
+        /// </summary>
+        public const string HoldAudio = "attendedTransferHoldAudio";
+
+        /// <summary>
+        /// Says who ended a cancelled consult, and therefore what is left for the provider to undo.
+        /// </summary>
+        public const string EndedBy = "attendedTransferEndedBy";
+
+        /// <summary>The agent cancelled: drop the destination and return the customer.</summary>
+        public const string EndedByAgent = "agent";
+
+        /// <summary>The destination hung up or never answered: return the customer.</summary>
+        public const string EndedByTarget = "target";
+
+        /// <summary>The customer hung up: drop the destination.</summary>
+        public const string EndedByCaller = "caller";
     }
 
     /// <summary>

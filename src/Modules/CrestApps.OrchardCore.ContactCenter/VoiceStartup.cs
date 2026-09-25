@@ -120,6 +120,15 @@ public sealed class VoiceStartup : StartupBase
             // Attended transfer as the three phases it is, recorded against the call so a supervisor can see a
             // customer held while their agent talks to somebody else.
             .AddScoped<IConsultTransferService, ConsultTransferService>()
+            // Transfers the soft phone asks for: blind ones routed through the Contact Center's own offers, warm ones
+            // driven through the consult, and the leg events a provider reports for the consult's destination.
+            .AddScoped<ITransferAgentReleaseService, TransferAgentReleaseService>()
+            .AddScoped<ITransferredCallRouter, TransferredCallRouter>()
+            .AddScoped<IWarmTransferService, WarmTransferService>()
+            .AddScoped<IConsultLegEventSink, ConsultLegEventSink>()
+            .AddScoped(sp => new Lazy<IConsultTransferService>(sp.GetRequiredService<IConsultTransferService>))
+            .AddScoped(sp => new Lazy<IAgentPresenceManager>(sp.GetRequiredService<IAgentPresenceManager>))
+            .AddScoped<IContactCenterEventHandler, ContactCenterTransferCallEndedHandler>()
             // With Voice enabled, the soft-phone transfer field resolves through the curated destination catalog
             // rather than accepting whatever an agent types.
             .Replace(ServiceDescriptor.Scoped<ITransferTargetPolicy, ContactCenterTransferTargetPolicy>())
@@ -195,6 +204,10 @@ public sealed class VoiceSoftPhoneStartup : StartupBase
             // Tells the agent's other open soft phones an offer was answered from inside the accept, so they stop
             // ringing at once instead of when the outbox delivers the durable event.
             .AddScoped<IContactCenterOfferAnsweredNotifier, ContactCenterOfferAnsweredNotifier>()
+            // The soft phone's transfer panel for Contact Center calls, and the call leaving the phone of the agent
+            // who transferred it.
+            .AddScoped<IContactCenterTransferDirectoryService, ContactCenterTransferDirectoryService>()
+            .AddScoped<IContactCenterEventHandler, ContactCenterSoftPhoneTransferEventHandler>()
             .AddDisplayDriver<SoftPhoneWidget, ContactCenterSoftPhoneWidgetDisplayDriver>();
 
         services.AddResourceConfiguration<ContactCenterSoftPhoneResourceConfiguration>();
@@ -204,6 +217,7 @@ public sealed class VoiceSoftPhoneStartup : StartupBase
     {
         var adminOptions = serviceProvider.GetRequiredService<IOptions<AdminOptions>>().Value;
         routes.AddAgentSoftPhoneEndpoints(adminOptions.AdminUrlPrefix);
+        routes.AddAgentSoftPhoneTransferEndpoints(adminOptions.AdminUrlPrefix);
     }
 }
 

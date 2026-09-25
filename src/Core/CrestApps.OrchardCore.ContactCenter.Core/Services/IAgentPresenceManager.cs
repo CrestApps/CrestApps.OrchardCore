@@ -130,6 +130,16 @@ public interface IAgentPresenceManager
     Task<AgentProfile> CompleteWorkAsync(string agentId, AgentStateChangeContext context, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Makes an Available agent Busy because they answered a colleague's consult on a live call, remembering
+    /// Available as the state to return to. An agent in any other state is left as they are.
+    /// </summary>
+    /// <param name="agentId">The agent profile identifier.</param>
+    /// <param name="context">The interaction the consult is on.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The agent profile after the change, or <see langword="null"/> when none exists.</returns>
+    Task<AgentProfile> StartConsultWorkAsync(string agentId, AgentStateChangeContext context, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Applies manager-owned queue and campaign entitlements to the agent profile, pruning any live queue
     /// or campaign membership that the new entitlements no longer authorize while preserving the agent's
     /// current presence status and active reservation.

@@ -139,6 +139,9 @@ public static class AgentStateChangeSources
 
     /// <summary>A pending requested state took effect after work ended.</summary>
     public const string RequestApplied = "RequestApplied";
+
+    /// <summary>The agent answered a colleague's consult on a live call and became busy.</summary>
+    public const string ConsultAnswered = "ConsultAnswered";
 }
 
 /// <summary>

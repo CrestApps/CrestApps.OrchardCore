@@ -565,6 +565,59 @@ public static class CallTopologyProjector
     }
 
     /// <summary>
+    /// Completes a consult by handing the call to the party that was consulted: the consult ends, and its leg
+    /// carries on as that party's leg of the call rather than ending with it.
+    /// </summary>
+    /// <remarks>
+    /// A completed warm transfer is the one consult whose leg outlives it. Ended with the consult, it would leave the
+    /// call with nobody on it as far as the topology knows, so the new agent's hangup would be ignored and the caller
+    /// released by nobody.
+    /// </remarks>
+    /// <param name="session">The call session that owns the consult.</param>
+    /// <param name="consultId">The platform identifier of the consult.</param>
+    /// <param name="role">The part the consulted party now plays: an agent, or an external party.</param>
+    /// <param name="agentId">The consulted agent's profile identifier, for an agent.</param>
+    /// <param name="utcNow">When the call was handed over.</param>
+    /// <returns>The leg that now carries the consulted party, or <see langword="null"/> when the consult has none.</returns>
+    public static CallLeg HandOverToConsultedParty(
+        CallSession session,
+        string consultId,
+        CallPartyRole role,
+        string agentId,
+        DateTime utcNow)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+
+        var consult = FindConsult(session, consultId);
+
+        if (consult is null)
+        {
+            return null;
+        }
+
+        consult.Status = ConsultCallStatus.Completed;
+        consult.EndedUtc ??= utcNow;
+
+        var leg = string.IsNullOrEmpty(consult.ProviderLegId) ? null : FindLeg(session, consult.ProviderLegId);
+
+        if (leg is null)
+        {
+            return null;
+        }
+
+        leg.Role = role;
+        leg.AgentId = agentId;
+        leg.Status = CallLegStatus.Answered;
+        leg.AnsweredUtc ??= consult.ConnectedUtc ?? utcNow;
+        leg.EndedUtc = null;
+        leg.HangupCause = null;
+
+        Join(session, leg.ProviderLegId, role, utcNow, agentId, leg.Address);
+
+        return leg;
+    }
+
+    /// <summary>
     /// Opens a supervisor engagement on the session. Barge places the supervisor in the conversation itself so
     /// the topology gains a party; listening and whispering do not, because the supervisor hears the call without
     /// being one of the parties on it.

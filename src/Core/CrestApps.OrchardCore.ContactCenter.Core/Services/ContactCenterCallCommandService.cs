@@ -200,6 +200,9 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
         interaction.AgentId = reservation.AgentId;
         interaction.QueueId ??= reservation.QueueId;
 
+        // A transferred caller has now reached somebody, which is when the transfer they were sent on completed.
+        InteractionTransferHistory.CompletePending(interaction, now, InteractionTransferHistory.Answered, reservation.AgentId);
+
         if (interaction.Status != InteractionStatus.Connected)
         {
             interaction.TransitionTo(InteractionStatus.Ringing);
