@@ -1,6 +1,0 @@
-@model IEnumerable<SmsMessageBubbleViewModel>
-
-@foreach (var bubble in Model)
-{
-    @await Html.PartialAsync("_MessageBubble", bubble)
-}

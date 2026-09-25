@@ -111,7 +111,7 @@ const sidebars = {
                 'omnichannel/management',
                 'omnichannel/cadences',
                 'omnichannel/sms',
-                'omnichannel/sms-portal',
+                'omnichannel/messaging-workspace',
                 'omnichannel/ai-agent-handoff-project-plan',
                 'omnichannel/production-readiness-sms-portal',
             ],

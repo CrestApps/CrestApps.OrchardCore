@@ -699,8 +699,8 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         var repositoryRoot = FindRepositoryRoot();
         var project = File.ReadAllText(Path.Combine(
             repositoryRoot,
-            "src/Modules/CrestApps.OrchardCore.Omnichannel.Sms.Portal/CrestApps.OrchardCore.Omnichannel.Sms.Portal.csproj"));
-        var sourceDirectory = Path.Combine(repositoryRoot, "src/Modules/CrestApps.OrchardCore.Omnichannel.Sms.Portal");
+            "src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/CrestApps.OrchardCore.Omnichannel.Messaging.csproj"));
+        var sourceDirectory = Path.Combine(repositoryRoot, "src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging");
         var source = string.Join(
             Environment.NewLine,
             Directory.EnumerateFiles(sourceDirectory, "*.cs", SearchOption.AllDirectories)
@@ -722,27 +722,27 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
     {
         // Arrange
         var repositoryRoot = FindRepositoryRoot();
-        var features = ParseManifestFeatures(repositoryRoot, "src/Modules/CrestApps.OrchardCore.Omnichannel.Sms.Portal/Manifest.cs")
+        var features = ParseManifestFeatures(repositoryRoot, "src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Manifest.cs")
             .ToDictionary(feature => feature.Id, StringComparer.Ordinal);
         var startupClasses = ParseStartupClassesInDirectory(
             repositoryRoot,
-            "src/Modules/CrestApps.OrchardCore.Omnichannel.Sms.Portal",
-            "CrestApps.OrchardCore.Omnichannel.Sms.Portal");
+            "src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging",
+            "CrestApps.OrchardCore.Omnichannel.Messaging");
 
         // Act
-        var routed = features["CrestApps.OrchardCore.Omnichannel.Sms.Portal.RoutedDistribution"];
-        var baseFeature = features["CrestApps.OrchardCore.Omnichannel.Sms.Portal"];
+        var routed = features["CrestApps.OrchardCore.Omnichannel.Messaging.RoutedDistribution"];
+        var baseFeature = features["CrestApps.OrchardCore.Omnichannel.Messaging"];
         var routedStartup = startupClasses.Single(startup =>
-            startup.Body.Contains("ISmsInboundRouter, RoutedQueueRouter", StringComparison.Ordinal));
+            startup.Body.Contains("IMessagingInboundRouter, RoutedQueueRouter", StringComparison.Ordinal));
 
         // Assert
         // Push distribution is the only part of the workspace that needs Contact Center work distribution, so it
         // is a feature of its own. The base workspace keeps personal and shared-pool routing, which need only the
         // agent directory - enabling it without Work Distribution must not break inbound SMS at DI resolution.
         Assert.Contains("CrestApps.OrchardCore.ContactCenter.Queues", routed.Dependencies);
-        Assert.Contains("CrestApps.OrchardCore.Omnichannel.Sms.Portal", routed.Dependencies);
+        Assert.Contains("CrestApps.OrchardCore.Omnichannel.Messaging", routed.Dependencies);
         Assert.DoesNotContain("CrestApps.OrchardCore.ContactCenter.Queues", baseFeature.Dependencies);
-        Assert.Equal("CrestApps.OrchardCore.Omnichannel.Sms.Portal.RoutedDistribution", routedStartup.FeatureId);
+        Assert.Equal("CrestApps.OrchardCore.Omnichannel.Messaging.RoutedDistribution", routedStartup.FeatureId);
     }
 
     [Fact]

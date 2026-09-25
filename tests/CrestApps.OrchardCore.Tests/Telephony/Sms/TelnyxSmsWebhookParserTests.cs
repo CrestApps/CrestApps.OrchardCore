@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Models;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 using CrestApps.OrchardCore.Telnyx.Services;
 
 namespace CrestApps.OrchardCore.Tests.Telephony.Sms;
@@ -56,11 +56,11 @@ public class TelnyxSmsWebhookParserTests
     }
 
     [Theory]
-    [InlineData("delivered", SmsDeliveryStatus.Delivered)]
-    [InlineData("sent", SmsDeliveryStatus.Sent)]
-    [InlineData("delivery_failed", SmsDeliveryStatus.Failed)]
-    [InlineData("queued", SmsDeliveryStatus.Queued)]
-    public void TryParse_OutboundReceipt_MapsStatus(string telnyxStatus, SmsDeliveryStatus expected)
+    [InlineData("delivered", MessageDeliveryStatus.Delivered)]
+    [InlineData("sent", MessageDeliveryStatus.Sent)]
+    [InlineData("delivery_failed", MessageDeliveryStatus.Failed)]
+    [InlineData("queued", MessageDeliveryStatus.Queued)]
+    public void TryParse_OutboundReceipt_MapsStatus(string telnyxStatus, MessageDeliveryStatus expected)
     {
         var body = $$"""
         {
@@ -102,7 +102,7 @@ public class TelnyxSmsWebhookParserTests
         """;
 
         Assert.True(TelnyxSmsWebhookParser.TryParse(body, out var result));
-        Assert.Equal(SmsDeliveryStatus.Failed, result.DeliveryStatus);
+        Assert.Equal(MessageDeliveryStatus.Failed, result.DeliveryStatus);
         Assert.Equal("40010", result.ErrorCode);
     }
 

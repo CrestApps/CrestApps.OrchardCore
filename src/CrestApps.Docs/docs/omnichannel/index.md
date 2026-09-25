@@ -25,7 +25,7 @@ The management experience layers a lightweight Customer Relationship Management 
 | Event Grid integration | [Event Grid](event-grid) |
 | Management UI | [Management](management) |
 | SMS automation (AI) | [SMS](sms) |
-| SMS Portal (human two-way) | [SMS Portal](sms-portal) |
+| Messaging workspace (human two-way, every non-voice channel; SMS today) | [Messaging Workspace](messaging-workspace) |
 
 ## What the base module does
 

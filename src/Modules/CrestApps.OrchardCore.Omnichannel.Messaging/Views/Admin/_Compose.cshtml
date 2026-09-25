@@ -1,0 +1,91 @@
+@using System.Text.Json
+@model ComposeViewModel
+
+@*
+    The composer sits in the conversation pane, beside the customer list, laid out like a mail client's compose window:
+    labelled From and To lines separated by rules, then the message itself filling the pane, and the send bar last.
+*@
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<form method="post" asp-action="New" class="messaging-compose d-flex flex-column flex-grow-1 overflow-hidden no-multisubmit">
+    <input type="hidden" asp-for="Channel" />
+
+    <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom flex-shrink-0">
+        <span class="fw-semibold">
+            <i class="fa-solid fa-pen-to-square me-2 text-primary" aria-hidden="true"></i>@T["New message"]
+        </span>
+        <a class="btn btn-sm btn-link text-body-secondary" asp-action="Index" title="@T["Discard"]" aria-label="@T["Discard"]">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </a>
+    </div>
+
+    <div asp-validation-summary="All" class="alert alert-danger m-3 mb-0 py-2 small flex-shrink-0"></div>
+
+    <div class="messaging-compose-line">
+        <label asp-for="EndpointId" class="messaging-compose-label">@T["From"]</label>
+        <div class="flex-grow-1" style="min-width: 0;">
+            <select asp-for="EndpointId" asp-items="Model.Endpoints" id="endpoint-select" class="selectpicker show-tick" data-live-search="true" data-width="100%" data-style="btn-light border-0 bg-transparent px-0" title="@T["Choose the channel and address to send from"]"></select>
+        </div>
+    </div>
+
+    <div class="messaging-compose-line">
+        <label asp-for="ContactAddresses" class="messaging-compose-label">@T["To"]</label>
+        <div class="flex-grow-1" style="min-width: 0;">
+            <select asp-for="ContactAddresses" id="recipient-select" class="selectpicker show-tick" multiple data-live-search="true" data-width="100%" data-style="btn-light border-0 bg-transparent px-0"
+                    title="@T["Search contacts by name or address…"]"
+                    data-messaging-contact-picker
+                    data-search-url="@Url.RouteUrl("MessagingSearchContacts")"
+                    data-endpoint-select="#endpoint-select"
+                    data-endpoint-channels="@JsonSerializer.Serialize(Model.EndpointChannels)"></select>
+        </div>
+    </div>
+
+    <div class="messaging-compose-line">
+        <label asp-for="Recipients" class="messaging-compose-label" title="@T["Addresses that are not in your contacts"]">@T["Other"]</label>
+        <input asp-for="Recipients" class="form-control border-0 shadow-none px-0" autocomplete="off" placeholder="@T["Addresses not in your contacts, comma-separated"]" />
+    </div>
+
+    <textarea asp-for="Body" class="messaging-compose-body form-control border-0 rounded-0 shadow-none flex-grow-1 px-3 py-3" placeholder="@T["Write your message…"]"></textarea>
+
+    <div class="d-flex justify-content-between align-items-center gap-3 px-3 py-2 border-top flex-shrink-0">
+        <span class="text-muted small">@T["One recipient starts a conversation; several get their own private conversation each."]</span>
+        <div class="d-flex gap-2 flex-shrink-0">
+            <a class="btn btn-outline-secondary" asp-action="Index">@T["Discard"]</a>
+            <button class="btn btn-primary" type="submit">
+                <i class="fa-solid fa-paper-plane me-1" aria-hidden="true"></i>@T["Send"]
+            </button>
+        </div>
+    </div>
+</form>
+
+<style at="Head">
+    .messaging-compose-line {
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+        padding: .35rem 1rem;
+        border-bottom: 1px solid var(--bs-border-color-translucent);
+        flex-shrink: 0;
+    }
+
+    .messaging-compose-label {
+        width: 3.5rem;
+        margin: 0;
+        color: var(--bs-secondary-color);
+        flex-shrink: 0;
+    }
+
+    .messaging-compose-body {
+        resize: none;
+        min-height: 8rem;
+    }
+
+    /* An empty validation summary would otherwise leave a red bar above a form that has no errors. */
+    .messaging-compose .validation-summary-valid {
+        display: none;
+    }
+</style>
+
+<script asp-src="~/CrestApps.OrchardCore.Omnichannel.Messaging/scripts/messaging-contact-picker.min.js" debug-src="~/CrestApps.OrchardCore.Omnichannel.Messaging/scripts/messaging-contact-picker.js" depends-on="bootstrap-select" at="Foot"></script>

@@ -1,6 +1,7 @@
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
@@ -100,7 +101,27 @@ public class OmnichannelChannelEndpointHandlerCanonicalizationTests
         Assert.Null(endpoint.Value);
     }
 
-    private static OmnichannelChannelEndpointHandler CreateHandler()
+    [Fact]
+    public async Task CreatingAsync_ForAChannelAnotherFeatureAdds_StoresTheAddressThatFeaturesPolicyNormalizes()
+    {
+        // Arrange
+        // A channel contributed by another feature (a messaging channel such as WhatsApp) tells the handler how its
+        // addresses are stored, so its endpoints match their inbound traffic the way phone endpoints do.
+        var policy = new Mock<IChannelEndpointAddressPolicy>();
+        policy.Setup(p => p.AppliesTo("WhatsApp")).Returns(true);
+        policy.Setup(p => p.Normalize("WhatsApp", It.IsAny<string>())).Returns("+14155552671");
+
+        var handler = CreateHandler(policy.Object);
+        var endpoint = new OmnichannelChannelEndpoint { Channel = "WhatsApp", Value = "whatsapp:+1 415 555 2671" };
+
+        // Act
+        await handler.CreatingAsync(new CreatingContext<OmnichannelChannelEndpoint>(endpoint), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("+14155552671", endpoint.Value);
+    }
+
+    private static OmnichannelChannelEndpointHandler CreateHandler(params IChannelEndpointAddressPolicy[] policies)
     {
         var phoneNumberService = new Mock<IPhoneNumberService>();
 
@@ -118,6 +139,7 @@ public class OmnichannelChannelEndpointHandlerCanonicalizationTests
             new Mock<IClock>().Object,
             phoneNumberService.Object,
             new Mock<IEmailAddressValidator>().Object,
+            policies,
             new PassThroughStringLocalizer<OmnichannelCampaignHandler>());
     }
 

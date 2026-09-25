@@ -1,0 +1,130 @@
+namespace CrestApps.OrchardCore.Omnichannel.Messaging
+{
+    public static class MessagingConstants
+    {
+        public static class Feature
+        {
+            public const string RoutedDistribution = "CrestApps.OrchardCore.Omnichannel.Messaging.RoutedDistribution";
+            public const string Sms = "CrestApps.OrchardCore.Omnichannel.Messaging.Sms";
+            public const string Workspace = "CrestApps.OrchardCore.Omnichannel.Messaging";
+        }
+    }
+}
+namespace CrestApps.OrchardCore.Omnichannel.Messaging.Models
+{
+    public enum ConversationAssignmentStatus
+    {
+        Unassigned = 0,
+        Assigned = 1,
+        Pooled = 2,
+    }
+    public enum ConversationDistributionMode
+    {
+        Routed = 0,
+        SharedPool = 1,
+    }
+    public enum ConversationOwnerType
+    {
+        Personal = 0,
+        Queue = 1,
+    }
+    public enum ConversationRouteTargetType
+    {
+        Agent = 0,
+        Queue = 1,
+    }
+    public enum ConversationStatus
+    {
+        Open = 0,
+        Snoozed = 1,
+        Closed = 2,
+        Spam = 3,
+    }
+    public enum MessageDeliveryStatus
+    {
+        Queued = 0,
+        Sent = 1,
+        Delivered = 2,
+        Failed = 3,
+        Undelivered = 4,
+    }
+    public enum MessagingBroadcastStatus
+    {
+        Draft = 0,
+        Queued = 1,
+        Running = 2,
+        Completed = 3,
+        Failed = 4,
+    }
+    public enum MessagingInboxFilter
+    {
+        All = 0,
+        Mine = 1,
+        Unassigned = 2,
+    }
+}
+namespace CrestApps.OrchardCore.Omnichannel.Messaging.Notifications
+{
+    public interface IMessagingRealTimeNotifier
+    {
+        System.Threading.Tasks.Task ConversationAssignedAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Notifications.MessagingAssignmentNotification notification, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task FirstResponseBreachedAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Notifications.MessagingFirstResponseBreachNotification notification, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task MessageDeliveryUpdatedAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Notifications.MessagingDeliveryNotification notification, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task NewInboundMessageAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Notifications.MessagingInboundNotification notification, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public sealed class MessagingAssignmentNotification
+    {
+        public MessagingAssignmentNotification() { }
+        public string AssignedAgentId { get; set; }
+        public string ConversationId { get; set; }
+        public string OwnerQueueId { get; set; }
+    }
+    public sealed class MessagingDeliveryNotification
+    {
+        public MessagingDeliveryNotification() { }
+        public string AssignedAgentId { get; set; }
+        public string ConversationId { get; set; }
+        public string ErrorCode { get; set; }
+        public string MessageId { get; set; }
+        public string OwnerQueueId { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Messaging.Models.MessageDeliveryStatus Status { get; set; }
+    }
+    public sealed class MessagingFirstResponseBreachNotification
+    {
+        public MessagingFirstResponseBreachNotification() { }
+        public string AssignedAgentId { get; set; }
+        public System.DateTime BreachedUtc { get; set; }
+        public string ConversationId { get; set; }
+        public System.DateTime DueUtc { get; set; }
+        public string OwnerQueueId { get; set; }
+    }
+    public sealed class MessagingInboundNotification
+    {
+        public MessagingInboundNotification() { }
+        public string AssignedAgentId { get; set; }
+        public string Channel { get; set; }
+        public string ContactAddress { get; set; }
+        public string ConversationId { get; set; }
+        public string CustomerKey { get; set; }
+        public string OwnerQueueId { get; set; }
+        public string Preview { get; set; }
+        public System.DateTime ReceivedUtc { get; set; }
+        public string ServiceAddress { get; set; }
+        public int UnreadCount { get; set; }
+    }
+}
+namespace CrestApps.OrchardCore.Omnichannel.Messaging.Services
+{
+    public sealed class MessageDispatchResult
+    {
+        public MessageDispatchResult() { }
+        public string ErrorCode { get; set; }
+        public System.Collections.Generic.IList<Microsoft.Extensions.Localization.LocalizedString> Errors { get; set; }
+        public string ProviderMessageId { get; set; }
+        public bool Succeeded { get; set; }
+        public string GetErrorText() { }
+        public static CrestApps.OrchardCore.Omnichannel.Messaging.Services.MessageDispatchResult Failed(params Microsoft.Extensions.Localization.LocalizedString[] errors) { }
+        public static CrestApps.OrchardCore.Omnichannel.Messaging.Services.MessageDispatchResult Failed(string error) { }
+        public static CrestApps.OrchardCore.Omnichannel.Messaging.Services.MessageDispatchResult Success(string providerMessageId = null) { }
+    }
+}

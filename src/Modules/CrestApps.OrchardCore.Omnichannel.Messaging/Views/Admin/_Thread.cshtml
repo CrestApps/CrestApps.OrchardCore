@@ -1,0 +1,265 @@
+@using CrestApps.OrchardCore.Omnichannel.Messaging.Services
+@using CrestApps.OrchardCore.Omnichannel.Messaging.Models
+@model ThreadViewModel
+
+@{
+    var conversation = Model.Conversation;
+    var contactLabel = string.IsNullOrEmpty(Model.ContactDisplayText) ? Model.ContactAddressDisplay : Model.ContactDisplayText;
+    var canReply = Model.CanSend && conversation.Status != ConversationStatus.Closed && conversation.Status != ConversationStatus.Spam;
+}
+
+<div class="d-flex flex-grow-1 overflow-hidden">
+    <div class="d-flex flex-column flex-grow-1 overflow-hidden">
+        @* Customer header: who this is, and what can be done with the conversation. *@
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 px-3 py-2 border-bottom flex-shrink-0">
+            <div class="d-flex align-items-center gap-2 text-truncate">
+                <a class="btn btn-sm btn-link px-1 d-md-none" asp-route-action="Index" title="@T["Back to the list"]" aria-label="@T["Back to the list"]">
+                    <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+                </a>
+                <span class="messaging-avatar rounded-circle @AvatarPalette.For(Model.CustomerKey) d-inline-flex align-items-center justify-content-center flex-shrink-0 fw-semibold" aria-hidden="true">
+                    @if (AvatarPalette.Initials(Model.ContactDisplayText) is { } initials)
+                    {
+                        @initials
+                    }
+                    else
+                    {
+                        <i class="fa-solid fa-user"></i>
+                    }
+                </span>
+                <span class="fw-semibold text-truncate">@contactLabel</span>
+                <span class="text-muted small text-nowrap">@Model.ContactAddressDisplay</span>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                @if (Model.CanClaim && conversation.AssignmentStatus != ConversationAssignmentStatus.Assigned)
+                {
+                    <form method="post" asp-route-action="Claim" asp-route-id="@conversation.ItemId" class="d-inline">
+                        <button type="submit" class="btn btn-sm btn-outline-primary" title="@T["Claim to own it and remove it from the shared inbox."]">
+                            <i class="fa-solid fa-hand me-1" aria-hidden="true"></i>@T["Claim"]
+                        </button>
+                    </form>
+                }
+                @if (Model.CanChangeStatus && conversation.Status == ConversationStatus.Open)
+                {
+                    <form asp-route-action="SetStatus" asp-route-id="@conversation.ItemId" method="post" class="d-inline">
+                        <input type="hidden" name="status" value="@nameof(ConversationStatus.Closed)" />
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">@T["Close"]</button>
+                    </form>
+                    <form asp-route-action="SetStatus" asp-route-id="@conversation.ItemId" method="post" class="d-inline">
+                        <input type="hidden" name="status" value="@nameof(ConversationStatus.Spam)" />
+                        <button type="submit" class="btn btn-sm btn-outline-danger">@T["Mark spam"]</button>
+                    </form>
+                }
+                else if (Model.CanChangeStatus)
+                {
+                    <form asp-route-action="SetStatus" asp-route-id="@conversation.ItemId" method="post" class="d-inline">
+                        <input type="hidden" name="status" value="@nameof(ConversationStatus.Open)" />
+                        <button type="submit" class="btn btn-sm btn-outline-primary">@T["Reopen"]</button>
+                    </form>
+                }
+            </div>
+        </div>
+
+        @* One tab per enabled channel: the same view, reading and sending on another channel. A badge counts the messages
+           waiting on a channel other than the one on screen. *@
+        <ul class="nav messaging-channel-tabs border-bottom px-2 flex-shrink-0" role="tablist" aria-label="@T["Channels"]" data-channel-tabs>
+            @foreach (var tab in Model.ChannelTabs)
+            {
+                <li class="nav-item" role="presentation">
+                    @if (tab.Url is null)
+                    {
+                        <span class="nav-link disabled" title="@tab.Tooltip" data-channel-tab="@tab.Name" aria-disabled="true">
+                            <i class="@tab.IconCssClass" aria-hidden="true"></i>
+                            <span class="visually-hidden">@tab.DisplayName</span>
+                        </span>
+                    }
+                    else
+                    {
+                        <a class="nav-link @(tab.IsActive ? "active" : string.Empty)" href="@tab.Url" title="@tab.Tooltip" role="tab" aria-selected="@(tab.IsActive ? "true" : "false")" data-channel-tab="@tab.Name">
+                            <i class="@tab.IconCssClass" aria-hidden="true"></i>
+                            <span class="visually-hidden">@tab.DisplayName</span>
+                            <span class="badge rounded-pill text-bg-danger messaging-tab-badge @(tab.UnreadCount > 0 ? string.Empty : "d-none")" data-channel-tab-badge>@tab.UnreadCount</span>
+                        </a>
+                    }
+                </li>
+            }
+            <li class="nav-item ms-auto d-flex align-items-center small text-muted pe-2">
+                <span title="@T["The address this conversation runs on"]">
+                    @T["via {0}", Model.ServiceAddressDisplay] &middot; @conversation.Status.ToString()
+                </span>
+            </li>
+        </ul>
+
+        <div class="messaging-thread-messages flex-grow-1 overflow-y-auto p-3" style="background: var(--bs-tertiary-bg);" data-thread>
+            @if (Model.HasEarlierMessages)
+            {
+                <div class="text-center mb-3">
+                    <a class="btn btn-sm btn-outline-secondary" asp-route-action="Conversation" asp-route-id="@conversation.ItemId" asp-route-beforeTicks="@Model.EarliestMessageTicks">@T["Load earlier messages"]</a>
+                </div>
+            }
+            @if (Model.Messages.Count == 0)
+            {
+                <div class="text-muted" data-empty>@T["No messages yet."]</div>
+            }
+            else
+            {
+                DateTime? lastDay = null;
+
+                foreach (var message in Model.Messages)
+                {
+                    // A day separator whenever the calendar date changes.
+                    var localDay = message.CreatedUtc.ToLocalTime().Date;
+                    if (lastDay != localDay)
+                    {
+                        lastDay = localDay;
+                        <div class="text-center my-3">
+                            <span class="badge rounded-pill text-bg-light border">@message.CreatedUtc.ToLocalTime().ToString("D")</span>
+                        </div>
+                    }
+
+                    string agentName = null;
+                    if (!message.IsInbound && !string.IsNullOrEmpty(message.SentByAgentId))
+                    {
+                        Model.AgentNames.TryGetValue(message.SentByAgentId, out agentName);
+                    }
+                    @await Html.PartialAsync("_MessageBubble", new MessageBubbleViewModel { Message = message, ContactLabel = contactLabel, AgentName = agentName })
+                }
+            }
+        </div>
+
+        @if (canReply)
+        {
+            <div class="px-3 pb-3 pt-2 flex-shrink-0">
+                @if (Model.IsQuietHours)
+                {
+                    <div class="alert @(Model.CanSendDuringQuietHours ? "alert-warning" : "alert-secondary") py-2 px-3 mb-2 small" role="status">
+                        <i class="fa-solid fa-moon me-1" aria-hidden="true"></i>
+                        @Model.QuietHoursReason
+                        @if (!Model.CanSendDuringQuietHours)
+                        {
+                            <span>@T["Sending now may reach the contact at an unsociable hour."]</span>
+                        }
+                    </div>
+                }
+
+                <form method="post" asp-route-action="Send" asp-route-id="@conversation.ItemId" data-composer>
+                    <div class="bg-body text-body rounded border w-100">
+                        @if (Model.SupportsSubject)
+                        {
+                            <input name="subject" class="form-control bg-transparent border-0 border-bottom rounded-0 px-3" placeholder="@T["Subject"]" />
+                        }
+                        <textarea name="body" class="form-control bg-transparent border-0 px-3 pt-2" rows="2" placeholder="@T["Reply by {0}…", Model.Channel?.DisplayName]" autofocus required
+                                  data-composer-body maxlength="@Model.MaxBodyLength"></textarea>
+                        <div class="d-flex justify-content-between align-items-center px-3 pb-2 gap-2 pt-1">
+                            <div class="d-flex align-items-center gap-2">
+                                @if (Model.Channel is not null)
+                                {
+                                    <span class="text-muted small text-nowrap" title="@T["This reply is sent by {0}", Model.Channel.DisplayName]">
+                                        <i class="@Model.Channel.IconCssClass" aria-hidden="true"></i> @Model.Channel.DisplayName
+                                    </span>
+                                }
+                                @if (Model.Templates.Count > 0)
+                                {
+                                    <select class="form-select form-select-sm" style="max-width: 16rem;" data-template-picker aria-label="@T["Insert a canned response"]">
+                                        <option value="">@T["Insert a canned response…"]</option>
+                                        @foreach (var template in Model.Templates)
+                                        {
+                                            <option value="@template.Body">@template.Name</option>
+                                        }
+                                    </select>
+                                }
+                                @if (Model.MaxBodyLength.HasValue)
+                                {
+                                    <span class="text-muted small" data-composer-counter data-max-length="@Model.MaxBodyLength">0 / @Model.MaxBodyLength</span>
+                                }
+                            </div>
+                            <button type="submit" class="btn btn-dark btn-sm rounded" title="@T["Send"]" aria-label="@T["Send"]">
+                                <i class="fa-solid fa-arrow-up" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        }
+        else if (Model.Channel is null)
+        {
+            <div class="alert alert-secondary m-3 flex-shrink-0">@T["The {0} channel is not enabled, so this conversation can be read but not replied to.", conversation.Channel]</div>
+        }
+        else
+        {
+            <div class="alert alert-secondary m-3 flex-shrink-0">@T["This conversation is {0} and cannot be replied to.", conversation.Status.ToString().ToLowerInvariant()]</div>
+        }
+    </div>
+
+    <div class="d-none d-xl-flex flex-column flex-shrink-0 overflow-y-auto border-start p-3 gap-3" style="width: 20rem;">
+        @if (!string.IsNullOrWhiteSpace(conversation.Summary))
+        {
+            <div class="card">
+                <div class="card-header d-flex align-items-center justify-content-between gap-2">
+                    <span>
+                        <i class="fa-solid fa-robot text-primary me-2" aria-hidden="true"></i>@T["AI summary"]
+                    </span>
+                    @if (conversation.SummaryGeneratedUtc.HasValue)
+                    {
+                        <span class="text-muted small text-nowrap" title="@T["When this summary was generated"]">@conversation.SummaryGeneratedUtc.Value.ToLocalTime().ToString("g")</span>
+                    }
+                </div>
+                <div class="card-body">
+                    @conversation.Summary
+                </div>
+            </div>
+        }
+
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>@T["Customer"]</span>
+                @if (Model.Contacts.Count > 1)
+                {
+                    <span class="badge bg-secondary" title="@T["Several contact records share this address."]">@Model.Contacts.Count</span>
+                }
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    @if (Model.Channel is not null)
+                    {
+                        <i class="@Model.Channel.IconCssClass text-muted me-1" aria-hidden="true"></i>
+                    }
+                    <span class="user-select-all">@Model.ContactAddressDisplay</span>
+                </div>
+
+                @if (Model.Contacts.Count == 0)
+                {
+                    <p class="text-muted mb-0">
+                        <i class="fa-solid fa-user-slash me-1" aria-hidden="true"></i>
+                        @T["No contact record matches this address."]
+                    </p>
+                }
+                else
+                {
+                    <ul class="list-unstyled mb-0">
+                        @foreach (var contact in Model.Contacts)
+                        {
+                            <li class="d-flex justify-content-between align-items-center gap-2 py-2 border-top">
+                                <span class="text-truncate">
+                                    <i class="fa-solid fa-user text-muted me-1" aria-hidden="true"></i>
+                                    @(string.IsNullOrWhiteSpace(contact.DisplayName) ? T["(untitled contact)"] : contact.DisplayName)
+                                    @if (contact.IsPrimary && Model.Contacts.Count > 1)
+                                    {
+                                        <span class="badge bg-info text-dark ms-1" title="@T["The contact this conversation is linked to."]">@T["linked"]</span>
+                                    }
+                                </span>
+                                <a class="btn btn-sm btn-outline-primary flex-shrink-0"
+                                   asp-action="Edit"
+                                   asp-controller="Admin"
+                                   asp-area="OrchardCore.Contents"
+                                   asp-route-contentItemId="@contact.ContentItemId"
+                                   title="@T["Open this contact's account."]">
+                                    @T["View account"]
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    </div>
+</div>

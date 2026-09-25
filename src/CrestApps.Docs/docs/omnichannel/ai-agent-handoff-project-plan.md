@@ -13,7 +13,7 @@ the **same channel and the same thread/call**, with the conversation history and
 across so the customer never repeats themselves.
 
 It complements the automated paths documented under [SMS Automation](sms) and the Telnyx AI voice handler, and
-reuses the human destinations already built: the [SMS Portal](sms-portal) inbox for SMS, and the
+reuses the human destinations already built: the [Messaging Workspace](messaging-workspace) inbox for SMS, and the
 [Contact Center](../contact-center/index.md) inbound-queue + offer pipeline for phone.
 
 > **Status: implemented (SMS end-to-end; phone pending live media verification).** The shared spine, the SMS

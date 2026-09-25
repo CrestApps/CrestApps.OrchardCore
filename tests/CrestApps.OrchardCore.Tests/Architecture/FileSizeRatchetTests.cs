@@ -27,8 +27,10 @@ public sealed class FileSizeRatchetTests
         Path.Combine("Modules", "CrestApps.OrchardCore.Telephony"),
         Path.Combine("Core", "CrestApps.OrchardCore.Telnyx.Core"),
         Path.Combine("Modules", "CrestApps.OrchardCore.Telnyx"),
-        Path.Combine("Core", "CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core"),
-        Path.Combine("Modules", "CrestApps.OrchardCore.Omnichannel.Sms.Portal"),
+        Path.Combine("Core", "CrestApps.OrchardCore.Omnichannel.Messaging.Core"),
+        Path.Combine("Modules", "CrestApps.OrchardCore.Omnichannel.Messaging"),
+        Path.Combine("Core", "CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Core"),
+        Path.Combine("Modules", "CrestApps.OrchardCore.Omnichannel.Messaging.Sms"),
         Path.Combine("Core", "CrestApps.OrchardCore.Omnichannel.Voice.Core"),
         Path.Combine("Modules", "CrestApps.OrchardCore.Omnichannel.Voice"),
     ];
@@ -43,7 +45,6 @@ public sealed class FileSizeRatchetTests
         ["src/Modules/CrestApps.OrchardCore.ContactCenter/Reports/Providers/EnterpriseInteractionReportProvider.cs"] = 1249,
         ["src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ContactCenterReportingService.cs"] = 839,
         ["src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ProviderVoiceEventService.cs"] = 841,
-        ["src/Modules/CrestApps.OrchardCore.Omnichannel.Sms.Portal/Controllers/AdminController.cs"] = 955,
     };
 
     [Fact]

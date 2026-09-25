@@ -51,13 +51,13 @@ public sealed class OmnichannelMessage : Entity
     /// </summary>
     public bool IsInbound { get; set; }
 
-    // ---- SMS Communication Portal fields ----
-    // These extend the shared message/bubble in place (rather than introducing a separate SMS message entity)
-    // so the human portal and the existing inbound-persistence and automated-AI paths all read one record type.
+    // ---- Messaging workspace fields ----
+    // These extend the shared message/bubble in place (rather than introducing a separate message entity per channel)
+    // so the messaging workspace and the existing inbound-persistence and automated-AI paths all read one record type.
 
     /// <summary>
-    /// Gets or sets the identifier of the <c>SmsConversation</c> (thread) this message belongs to. Indexed so a
-    /// thread loads its bubbles by conversation. Null for messages not yet linked to a portal conversation.
+    /// Gets or sets the identifier of the <c>MessagingConversation</c> (thread) this message belongs to. Indexed so a
+    /// thread loads its bubbles by conversation. Null for messages not yet linked to a workspace conversation.
     /// </summary>
     public string ConversationId { get; set; }
 
@@ -69,7 +69,7 @@ public sealed class OmnichannelMessage : Entity
 
     /// <summary>
     /// Gets or sets the normalized delivery status of an outbound message, stored as the string name of the
-    /// portal's delivery-status enumeration. Null for inbound/automated messages, which carry no delivery
+    /// workspace's delivery-status enumeration. Null for inbound/automated messages, which carry no delivery
     /// lifecycle.
     /// </summary>
     public string DeliveryStatus { get; set; }

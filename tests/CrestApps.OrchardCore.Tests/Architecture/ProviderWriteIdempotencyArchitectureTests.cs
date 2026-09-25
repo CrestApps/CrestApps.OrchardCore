@@ -106,7 +106,7 @@ public sealed class ProviderWriteIdempotencyArchitectureTests
     [
         typeof(IProviderWebhookInboxHandler),
         typeof(CrestApps.OrchardCore.ContactCenter.Core.Services.ProviderVoiceEventInboxHandler),
-        typeof(CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.SmsInboundInboxHandler),
+        typeof(CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services.SmsInboundInboxHandler),
         typeof(CrestApps.OrchardCore.Telnyx.Services.TelnyxWebhookInboxHandler),
         typeof(CrestApps.OrchardCore.Dialpad.Services.DialpadWebhookInboxHandler),
     ];
