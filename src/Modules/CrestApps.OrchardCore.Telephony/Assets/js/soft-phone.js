@@ -94,6 +94,12 @@
     var disarmAutoAnswer = softPhoneModules.disarmAutoAnswer;
     var disarmOtherOffers = softPhoneModules.disarmOtherOffers;
 
+    var BRIDGED_DIAL_LEG_CAPABILITY = softPhoneModules.BRIDGED_DIAL_LEG_CAPABILITY;
+    var planKeypadDial = softPhoneModules.planKeypadDial;
+    var bridgedDialRequest = softPhoneModules.bridgedDialRequest;
+    var shouldDialFromBrowser = softPhoneModules.shouldDialFromBrowser;
+    var sharedMicrophoneEnabled = softPhoneModules.sharedMicrophoneEnabled;
+
     var shouldRingForOffer = softPhoneModules.shouldRingForOffer;
     var shouldStartRegistration = softPhoneModules.shouldStartRegistration;
     var answerClickAction = softPhoneModules.answerClickAction;
@@ -181,7 +187,8 @@
         SendDigits: 1 << 7,
         ReceiveCalls: 1 << 8,
         Voicemail: 1 << 9,
-        Directory: 1 << 10
+        Directory: 1 << 10,
+        BridgedDial: 1 << 14
     };
 
     var AUDIO_MODES = {
@@ -2124,7 +2131,8 @@
                 canOriginate: true,
                 // Reported to the server once registered: this client recognizes and holds the leg the platform
                 // rings for an offer that is still ringing, so the platform may ring it early.
-                clientCapabilities: OFFER_LEG_CAPABILITY ? [OFFER_LEG_CAPABILITY] : [],
+                // And it answers, without ringing, the leg the platform rings back to it for a number it dialed.
+                clientCapabilities: [OFFER_LEG_CAPABILITY, BRIDGED_DIAL_LEG_CAPABILITY].filter(Boolean),
                 outboundCallerId: registrationConfig.outboundCallerId || '',
                 // Optional echo/loopback destination for the diagnostics audio test (companion tooling).
                 echoTestDestination: registrationConfig.echoTestDestination || '',
@@ -2245,7 +2253,10 @@
                 // the moment the customer answered, when a refresh came back empty), and a terminal report about a
                 // platform call is not about it either.
                 handleCallState: function (serverCall) {
-                    var plan = planPlatformReport(legs, serverCall ? normalizeState(serverCall.state) : null);
+                    var plan = planPlatformReport(
+                        legs,
+                        serverCall ? normalizeState(serverCall.state) : null,
+                        serverCall ? serverCall.callId : null);
                     var leg = plan.leg;
 
                     if (plan.action === 'hangup') {
@@ -4327,20 +4338,28 @@
                 return;
             }
 
-            var stateName = normalizeState(call && call.state);
-            var microphoneEnabled = stateName === 'Connected' && !call.isMuted;
-            var ended = !call || stateName === 'Disconnected' || stateName === 'Failed';
-            // The microphone is shared with a call placed from the keypad, which the end of a platform call says
-            // nothing about.
-            var keypadCallLive = getActiveCalls().some(function (active) {
-                return active && active.browserOriginated;
+            // The microphone is shared by every call the phone holds -- a call placed from the keypad, and each of the
+            // platform's calls on a leg of its own -- so a report about one call decides it only while that call is
+            // the one the agent is talking on (see soft-phone/keypad-dial.js).
+            var others = getActiveCalls().filter(function (active) {
+                return active && (!call || active.callId !== call.callId);
+            }).map(function (active) {
+                return {
+                    callId: active.callId,
+                    state: normalizeState(active.state),
+                    isMuted: !!active.isMuted,
+                    isOnHold: !!active.isOnHold,
+                    browserOriginated: !!active.browserOriginated
+                };
             });
+            var microphoneEnabled = sharedMicrophoneEnabled(
+                call ? { callId: call.callId, state: normalizeState(call.state), isMuted: !!call.isMuted, isOnHold: !!call.isOnHold } : null,
+                others,
+                function (entry) { return isAgentHeld(agentHolds, entry.callId); });
 
-            if (!(ended && keypadCallLive)) {
-                localAudioStream.getAudioTracks().forEach(function (track) {
-                    track.enabled = microphoneEnabled;
-                });
-            }
+            localAudioStream.getAudioTracks().forEach(function (track) {
+                track.enabled = microphoneEnabled;
+            });
 
             if (typeof browserAudioSession.handleCallState === 'function') {
                 Promise.resolve(browserAudioSession.handleCallState(call || null)).catch(function (error) {
@@ -4407,8 +4426,44 @@
                 }).then(settleDial).catch(failDial);
             }
 
+            // A provider that connects keypad dials itself rings this browser's own leg for the number, exactly as an
+            // extension call does, so the call is one the platform can transfer and merge; the phone answers that leg
+            // without ringing. When the provider says it cannot -- and only then, because nothing was dialed -- the
+            // phone dials the number itself (see soft-phone/keypad-dial.js).
+            function placeBridgedCall(session) {
+                armAutoAnswer(inboundAutoAnswer, EXTENSION_CALL_KEY, Date.now());
+
+                return invoke('Dial', bridgedDialRequest(number, browserAudioCredentialId(session))).then(function (result) {
+                    if (shouldDialFromBrowser(result, session)) {
+                        disarmAutoAnswer(inboundAutoAnswer, EXTENSION_CALL_KEY);
+                        showError(null);
+                        reportDiagnostic('warning', 'bridged-dial-unavailable',
+                            'The provider could not connect a keypad dial through this phone; it was dialed from the browser.', '');
+                        originateBrowserCall(session, number);
+
+                        return null;
+                    }
+
+                    if (!result || result.succeeded === false) {
+                        disarmAutoAnswer(inboundAutoAnswer, EXTENSION_CALL_KEY);
+                    }
+
+                    return settleDial(result);
+                });
+            }
+
             return ensureBrowserAudio().then(function (session) {
-                if (session && session.canOriginate && typeof session.originate === 'function') {
+                var route = planKeypadDial({
+                    bridgedDial: has(CAPABILITIES.BridgedDial),
+                    session: session,
+                    credentialId: browserAudioCredentialId(session)
+                });
+
+                if (route === 'bridge') {
+                    return placeBridgedCall(session);
+                }
+
+                if (route === 'browser') {
                     originateBrowserCall(session, number);
 
                     return null;
@@ -6966,6 +7021,14 @@
                     call.metadata.participantCount = conference.callIds.length;
                     call.metadata.conferencePrimaryCallId = conference.primaryCallId;
                     call.metadata.conferenceName = conference.conferenceName;
+                });
+
+                // The agent hears the conference on these calls' legs: whichever was held here is taken off hold -- its
+                // comfort tone stopped and the far end's audio unmuted -- on the leg that carries it.
+                conference.callIds.forEach(function (callId) {
+                    if (activeCalls[callId]) {
+                        notifyBrowserAudio(activeCalls[callId]);
+                    }
                 });
 
                 conferenceSelections = {};

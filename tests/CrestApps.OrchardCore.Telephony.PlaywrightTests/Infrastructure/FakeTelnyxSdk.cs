@@ -36,6 +36,9 @@ public static class FakeTelnyxSdk
                             return Promise.resolve({
                                 signaling: { authorizationUser: 'agent' },
                                 credential: { value: 'secret' },
+                                // The credential the phone is registered on, which it names when it asks the platform
+                                // to connect a number it dialed.
+                                session: { interactionId: 'fake-credential-1' },
                                 ice: {},
                                 media: {}
                             });
@@ -214,6 +217,21 @@ public static class FakeTelnyxSdk
                 call.setState('ringing');
 
                 return call.id;
+            };
+
+            // Rings the browser with a leg the platform placed to it -- the agent's own leg of a number the phone asked the
+            // platform to dial, or of an extension call.
+            fake.ringLeg = function (legId) {
+                var call = new Call(fake.client, { telnyxCallControlId: legId, customHeaders: [] }, 'inbound');
+
+                call.setState('ringing');
+
+                return call.id;
+            };
+
+            // Whether the browser dialed anything itself through the SDK.
+            fake.placedCount = function () {
+                return fake.calls.filter(function (call) { return call.direction === 'outbound'; }).length;
             };
 
             fake.byLeg = function (legId) {

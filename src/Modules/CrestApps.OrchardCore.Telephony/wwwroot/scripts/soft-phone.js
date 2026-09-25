@@ -2312,21 +2312,33 @@
 
   var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
 
-  // { platform, browser, browserLegs }: the leg carrying a server-tracked call, the latest call placed from this
-  // browser's keypad, and every keypad call still up. The agent can place a second call while the first is on hold,
-  // and the first is no less this browser's for it: with only the latest remembered, the held call was forgotten the
-  // moment the second one ended, and its own hang-up was never heard.
+  // { platform, platformLegs, browser, browserLegs }: the latest leg carrying a server-tracked call and every such leg
+  // still up, the latest call placed from this browser's keypad, and every keypad call still up. The agent can place a
+  // second call while the first is on hold, and the first is no less this browser's for it: with only the latest
+  // remembered, the held call was forgotten the moment the second one ended, and its own hang-up was never heard.
   function createCallLegs() {
     return {
       platform: null,
+      platformLegs: [],
       browser: null,
       browserLegs: []
     };
   }
   function notePlatformLeg(legs, leg) {
     if (legs && leg) {
+      legs.platformLegs = legs.platformLegs || [];
+      if (legs.platformLegs.indexOf(leg) < 0) {
+        legs.platformLegs.push(leg);
+      }
       legs.platform = leg;
     }
+  }
+
+  // The provider's id for a leg, as the platform names the call it carries: the leg the platform rang for a number
+  // dialed here, or for an extension call, is the call the server tracks.
+  function legCallId(leg) {
+    var options = leg && leg.options || {};
+    return String(options.telnyxCallControlId || options.callControlId || '');
   }
   function noteBrowserLeg(legs, leg) {
     if (legs && leg) {
@@ -2341,8 +2353,12 @@
     if (!legs || !leg) {
       return;
     }
+    var platformIndex = legs.platformLegs ? legs.platformLegs.indexOf(leg) : -1;
+    if (platformIndex >= 0) {
+      legs.platformLegs.splice(platformIndex, 1);
+    }
     if (legs.platform === leg) {
-      legs.platform = null;
+      legs.platform = legs.platformLegs && legs.platformLegs.length ? legs.platformLegs[legs.platformLegs.length - 1] : null;
     }
     var index = legs.browserLegs ? legs.browserLegs.indexOf(leg) : -1;
     if (index >= 0) {
@@ -2353,13 +2369,48 @@
     }
   }
 
+  // The leg a report about the platform call `callId` is about. Several calls the server tracks can be up at once --
+  // numbers dialed from the keypad and connected by the platform each ring a leg of their own -- and a report about
+  // one of them applied to whichever leg arrived last held, resumed or hung up the wrong call. A leg whose own id is
+  // the call's is that call's. A Contact Center call is reported by the caller's leg, which is not the agent's, so a
+  // report that names no leg here goes to the latest platform leg -- unless that leg is already known to carry a
+  // call of its own.
+  function platformLegFor(legs, callId) {
+    var candidates = legs && legs.platformLegs || [];
+    var id = callId ? String(callId) : '';
+    if (id) {
+      for (var i = 0; i < candidates.length; i++) {
+        if (legCallId(candidates[i]) === id) {
+          return candidates[i];
+        }
+      }
+    }
+    var latest = legs && legs.platform || null;
+    if (latest && id && legs.reportedCallIds && legs.reportedCallIds.indexOf(legCallId(latest)) >= 0) {
+      return null;
+    }
+    return latest;
+  }
+
+  // Remembers that the server reported a call by this id, so its leg is known to carry that call.
+  function noteReportedCall(legs, callId) {
+    if (legs && callId) {
+      legs.reportedCallIds = legs.reportedCallIds || [];
+      if (legs.reportedCallIds.indexOf(String(callId)) < 0) {
+        legs.reportedCallIds.push(String(callId));
+      }
+    }
+  }
+
   // What a report about the platform call asks of the media.
   //   stateName - the reported state ('Connected', 'OnHold', 'Disconnected', ...), or null when the server reports
   //               no call at all.
+  //   callId    - the call the report is about, when it names one.
   // Returns { action: 'none' | 'hold' | 'resume' | 'hangup', leg }. A keypad call is never the leg: the server
   // cannot know when it ends and has no hold of it to report.
-  function planPlatformReport(legs, stateName) {
-    var leg = legs && legs.platform || null;
+  function planPlatformReport(legs, stateName, callId) {
+    noteReportedCall(legs, callId);
+    var leg = platformLegFor(legs, callId);
     if (!leg) {
       return {
         action: 'none',
@@ -2404,7 +2455,7 @@
     if (!legs) {
       return all;
     }
-    [legs.platform, legs.browser].concat(legs.browserLegs || []).forEach(function (leg) {
+    [legs.platform].concat(legs.platformLegs || [], [legs.browser], legs.browserLegs || []).forEach(function (leg) {
       if (leg && all.indexOf(leg) < 0) {
         all.push(leg);
       }
@@ -2422,9 +2473,102 @@
   softPhone.noteBrowserLeg = noteBrowserLeg;
   softPhone.forgetLeg = forgetLeg;
   softPhone.planPlatformReport = planPlatformReport;
+  softPhone.platformLegFor = platformLegFor;
   softPhone.legAfterEnd = legAfterEnd;
   softPhone.allLegs = allLegs;
   softPhone.canConferenceCall = canConferenceCall;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * How a number typed on the keypad is placed, and how the phone's one microphone follows several calls at once.
+ *
+ * A call the browser dials itself through the provider's SDK is invisible to the platform on some providers (Telnyx: the
+ * credential connection reports nothing), so it can be neither transferred nor merged. A provider that can connect the
+ * dial on the server instead (TelephonyCapabilities.BridgedDial) is asked to: it rings this browser's own registered
+ * credential, which the phone answers without ringing, and dials the number from there. When the provider says it
+ * cannot -- and only then, because nothing was dialed -- the phone dials the number itself, as before.
+ *
+ * With calls placed that way the phone holds several calls the platform tracks, each on a leg of its own, all sending
+ * the same microphone track. The track used to follow whichever call was reported last, so holding one call muted the
+ * agent on the call they had just resumed.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // Must match CrestApps.OrchardCore.Telephony.TelephonyConstants.
+  var BRIDGED_DIAL_LEG_CAPABILITY = 'bridged-dial-leg';
+  var BRIDGE_UNAVAILABLE = 'bridge-unavailable';
+  var SOFT_PHONE_CREDENTIAL_ID = 'softPhoneCredentialId';
+  function canOriginate(session) {
+    return !!(session && session.canOriginate && typeof session.originate === 'function');
+  }
+
+  // How to place a keypad dial:
+  //   bridgedDial  - whether the provider connects keypad dials itself (the BridgedDial capability)
+  //   session      - the browser audio session, or null when the phone has none
+  //   credentialId - the credential this phone is registered on
+  // Returns 'bridge' (ask the provider, naming this phone), 'browser' (dial it here) or 'server' (a plain Dial).
+  function planKeypadDial(options) {
+    options = options || {};
+    if (options.bridgedDial && options.session && options.credentialId) {
+      return 'bridge';
+    }
+    return canOriginate(options.session) ? 'browser' : 'server';
+  }
+
+  // The Dial request that asks the provider to connect the number through this phone's own leg.
+  function bridgedDialRequest(number, credentialId) {
+    var metadata = {};
+    metadata[SOFT_PHONE_CREDENTIAL_ID] = credentialId;
+    return {
+      to: number,
+      isExtension: false,
+      metadata: metadata
+    };
+  }
+
+  // Whether the provider's answer to a bridged dial means the phone should dial the number itself: the provider said it
+  // could not connect it and created no leg. Any other failure -- a refused number, a call the provider may have placed
+  // -- is shown, never dialed a second time.
+  function shouldDialFromBrowser(result, session) {
+    return !!(result && result.succeeded === false && result.errorCode === BRIDGE_UNAVAILABLE && canOriginate(session));
+  }
+
+  // Whether the shared microphone track should be live after a report about one call.
+  //   reported - the call the report is about: { state, isMuted }
+  //   others   - every other call the phone shows: { state, isMuted, isOnHold, browserOriginated }
+  //   isHeld   - optional; whether the agent holds a call (a browser-audio hold happens here, not on the server)
+  // A connected call speaks for itself -- muting it mutes the agent. A call that is held, ringing or over leaves the
+  // microphone to the others: live while the agent is talking on any of them, or a call this browser placed is up.
+  function sharedMicrophoneEnabled(reported, others, isHeld) {
+    var held = typeof isHeld === 'function' ? isHeld : function () {
+      return false;
+    };
+    if (reported && reported.state === 'Connected' && !reported.isOnHold && !held(reported)) {
+      return !reported.isMuted;
+    }
+    return (others || []).some(function (call) {
+      if (!call) {
+        return false;
+      }
+
+      // A call placed here is muted through its own session, which mutes this same track.
+      if (call.browserOriginated) {
+        return !call.isMuted;
+      }
+      return call.state === 'Connected' && !call.isMuted && !call.isOnHold && !held(call);
+    });
+  }
+  softPhone.BRIDGED_DIAL_LEG_CAPABILITY = BRIDGED_DIAL_LEG_CAPABILITY;
+  softPhone.BRIDGE_UNAVAILABLE = BRIDGE_UNAVAILABLE;
+  softPhone.planKeypadDial = planKeypadDial;
+  softPhone.bridgedDialRequest = bridgedDialRequest;
+  softPhone.shouldDialFromBrowser = shouldDialFromBrowser;
+  softPhone.sharedMicrophoneEnabled = sharedMicrophoneEnabled;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*
  * Merging calls into a conference, and showing the conference once it exists.
@@ -5222,6 +5366,11 @@
   var consumeAutoAnswer = softPhoneModules.consumeAutoAnswer;
   var disarmAutoAnswer = softPhoneModules.disarmAutoAnswer;
   var disarmOtherOffers = softPhoneModules.disarmOtherOffers;
+  var BRIDGED_DIAL_LEG_CAPABILITY = softPhoneModules.BRIDGED_DIAL_LEG_CAPABILITY;
+  var planKeypadDial = softPhoneModules.planKeypadDial;
+  var bridgedDialRequest = softPhoneModules.bridgedDialRequest;
+  var shouldDialFromBrowser = softPhoneModules.shouldDialFromBrowser;
+  var sharedMicrophoneEnabled = softPhoneModules.sharedMicrophoneEnabled;
   var shouldRingForOffer = softPhoneModules.shouldRingForOffer;
   var shouldStartRegistration = softPhoneModules.shouldStartRegistration;
   var answerClickAction = softPhoneModules.answerClickAction;
@@ -5302,7 +5451,8 @@
     SendDigits: 1 << 7,
     ReceiveCalls: 1 << 8,
     Voicemail: 1 << 9,
-    Directory: 1 << 10
+    Directory: 1 << 10,
+    BridgedDial: 1 << 14
   };
   var AUDIO_MODES = {
     None: 0,
@@ -6968,7 +7118,8 @@
         canOriginate: true,
         // Reported to the server once registered: this client recognizes and holds the leg the platform
         // rings for an offer that is still ringing, so the platform may ring it early.
-        clientCapabilities: OFFER_LEG_CAPABILITY ? [OFFER_LEG_CAPABILITY] : [],
+        // And it answers, without ringing, the leg the platform rings back to it for a number it dialed.
+        clientCapabilities: [OFFER_LEG_CAPABILITY, BRIDGED_DIAL_LEG_CAPABILITY].filter(Boolean),
         outboundCallerId: registrationConfig.outboundCallerId || '',
         // Optional echo/loopback destination for the diagnostics audio test (companion tooling).
         echoTestDestination: registrationConfig.echoTestDestination || '',
@@ -7076,7 +7227,7 @@
         // the moment the customer answered, when a refresh came back empty), and a terminal report about a
         // platform call is not about it either.
         handleCallState: function (serverCall) {
-          var plan = planPlatformReport(legs, serverCall ? normalizeState(serverCall.state) : null);
+          var plan = planPlatformReport(legs, serverCall ? normalizeState(serverCall.state) : null, serverCall ? serverCall.callId : null);
           var leg = plan.leg;
           if (plan.action === 'hangup') {
             if (leg === currentCall) {
@@ -8870,19 +9021,32 @@
       if (!browserAudioSession || !localAudioStream) {
         return;
       }
-      var stateName = normalizeState(call && call.state);
-      var microphoneEnabled = stateName === 'Connected' && !call.isMuted;
-      var ended = !call || stateName === 'Disconnected' || stateName === 'Failed';
-      // The microphone is shared with a call placed from the keypad, which the end of a platform call says
-      // nothing about.
-      var keypadCallLive = getActiveCalls().some(function (active) {
-        return active && active.browserOriginated;
+
+      // The microphone is shared by every call the phone holds -- a call placed from the keypad, and each of the
+      // platform's calls on a leg of its own -- so a report about one call decides it only while that call is
+      // the one the agent is talking on (see soft-phone/keypad-dial.js).
+      var others = getActiveCalls().filter(function (active) {
+        return active && (!call || active.callId !== call.callId);
+      }).map(function (active) {
+        return {
+          callId: active.callId,
+          state: normalizeState(active.state),
+          isMuted: !!active.isMuted,
+          isOnHold: !!active.isOnHold,
+          browserOriginated: !!active.browserOriginated
+        };
       });
-      if (!(ended && keypadCallLive)) {
-        localAudioStream.getAudioTracks().forEach(function (track) {
-          track.enabled = microphoneEnabled;
-        });
-      }
+      var microphoneEnabled = sharedMicrophoneEnabled(call ? {
+        callId: call.callId,
+        state: normalizeState(call.state),
+        isMuted: !!call.isMuted,
+        isOnHold: !!call.isOnHold
+      } : null, others, function (entry) {
+        return isAgentHeld(agentHolds, entry.callId);
+      });
+      localAudioStream.getAudioTracks().forEach(function (track) {
+        track.enabled = microphoneEnabled;
+      });
       if (typeof browserAudioSession.handleCallState === 'function') {
         Promise.resolve(browserAudioSession.handleCallState(call || null)).catch(function (error) {
           showError(error && error.message ? error.message : String(error));
@@ -8943,8 +9107,37 @@
           });
         }).then(settleDial).catch(failDial);
       }
+
+      // A provider that connects keypad dials itself rings this browser's own leg for the number, exactly as an
+      // extension call does, so the call is one the platform can transfer and merge; the phone answers that leg
+      // without ringing. When the provider says it cannot -- and only then, because nothing was dialed -- the
+      // phone dials the number itself (see soft-phone/keypad-dial.js).
+      function placeBridgedCall(session) {
+        armAutoAnswer(inboundAutoAnswer, EXTENSION_CALL_KEY, Date.now());
+        return invoke('Dial', bridgedDialRequest(number, browserAudioCredentialId(session))).then(function (result) {
+          if (shouldDialFromBrowser(result, session)) {
+            disarmAutoAnswer(inboundAutoAnswer, EXTENSION_CALL_KEY);
+            showError(null);
+            reportDiagnostic('warning', 'bridged-dial-unavailable', 'The provider could not connect a keypad dial through this phone; it was dialed from the browser.', '');
+            originateBrowserCall(session, number);
+            return null;
+          }
+          if (!result || result.succeeded === false) {
+            disarmAutoAnswer(inboundAutoAnswer, EXTENSION_CALL_KEY);
+          }
+          return settleDial(result);
+        });
+      }
       return ensureBrowserAudio().then(function (session) {
-        if (session && session.canOriginate && typeof session.originate === 'function') {
+        var route = planKeypadDial({
+          bridgedDial: has(CAPABILITIES.BridgedDial),
+          session: session,
+          credentialId: browserAudioCredentialId(session)
+        });
+        if (route === 'bridge') {
+          return placeBridgedCall(session);
+        }
+        if (route === 'browser') {
           originateBrowserCall(session, number);
           return null;
         }
@@ -11051,6 +11244,14 @@
           call.metadata.participantCount = conference.callIds.length;
           call.metadata.conferencePrimaryCallId = conference.primaryCallId;
           call.metadata.conferenceName = conference.conferenceName;
+        });
+
+        // The agent hears the conference on these calls' legs: whichever was held here is taken off hold -- its
+        // comfort tone stopped and the far end's audio unmuted -- on the leg that carries it.
+        conference.callIds.forEach(function (callId) {
+          if (activeCalls[callId]) {
+            notifyBrowserAudio(activeCalls[callId]);
+          }
         });
         conferenceSelections = {};
         render();

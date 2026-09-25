@@ -21,18 +21,32 @@
 
     var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
 
-    // { platform, browser, browserLegs }: the leg carrying a server-tracked call, the latest call placed from this
-    // browser's keypad, and every keypad call still up. The agent can place a second call while the first is on hold,
-    // and the first is no less this browser's for it: with only the latest remembered, the held call was forgotten the
-    // moment the second one ended, and its own hang-up was never heard.
+    // { platform, platformLegs, browser, browserLegs }: the latest leg carrying a server-tracked call and every such leg
+    // still up, the latest call placed from this browser's keypad, and every keypad call still up. The agent can place a
+    // second call while the first is on hold, and the first is no less this browser's for it: with only the latest
+    // remembered, the held call was forgotten the moment the second one ended, and its own hang-up was never heard.
     function createCallLegs() {
-        return { platform: null, browser: null, browserLegs: [] };
+        return { platform: null, platformLegs: [], browser: null, browserLegs: [] };
     }
 
     function notePlatformLeg(legs, leg) {
         if (legs && leg) {
+            legs.platformLegs = legs.platformLegs || [];
+
+            if (legs.platformLegs.indexOf(leg) < 0) {
+                legs.platformLegs.push(leg);
+            }
+
             legs.platform = leg;
         }
+    }
+
+    // The provider's id for a leg, as the platform names the call it carries: the leg the platform rang for a number
+    // dialed here, or for an extension call, is the call the server tracks.
+    function legCallId(leg) {
+        var options = (leg && leg.options) || {};
+
+        return String(options.telnyxCallControlId || options.callControlId || '');
     }
 
     function noteBrowserLeg(legs, leg) {
@@ -52,8 +66,16 @@
             return;
         }
 
+        var platformIndex = legs.platformLegs ? legs.platformLegs.indexOf(leg) : -1;
+
+        if (platformIndex >= 0) {
+            legs.platformLegs.splice(platformIndex, 1);
+        }
+
         if (legs.platform === leg) {
-            legs.platform = null;
+            legs.platform = legs.platformLegs && legs.platformLegs.length
+                ? legs.platformLegs[legs.platformLegs.length - 1]
+                : null;
         }
 
         var index = legs.browserLegs ? legs.browserLegs.indexOf(leg) : -1;
@@ -69,13 +91,54 @@
         }
     }
 
+    // The leg a report about the platform call `callId` is about. Several calls the server tracks can be up at once --
+    // numbers dialed from the keypad and connected by the platform each ring a leg of their own -- and a report about
+    // one of them applied to whichever leg arrived last held, resumed or hung up the wrong call. A leg whose own id is
+    // the call's is that call's. A Contact Center call is reported by the caller's leg, which is not the agent's, so a
+    // report that names no leg here goes to the latest platform leg -- unless that leg is already known to carry a
+    // call of its own.
+    function platformLegFor(legs, callId) {
+        var candidates = (legs && legs.platformLegs) || [];
+        var id = callId ? String(callId) : '';
+
+        if (id) {
+            for (var i = 0; i < candidates.length; i++) {
+                if (legCallId(candidates[i]) === id) {
+                    return candidates[i];
+                }
+            }
+        }
+
+        var latest = (legs && legs.platform) || null;
+
+        if (latest && id && legs.reportedCallIds && legs.reportedCallIds.indexOf(legCallId(latest)) >= 0) {
+            return null;
+        }
+
+        return latest;
+    }
+
+    // Remembers that the server reported a call by this id, so its leg is known to carry that call.
+    function noteReportedCall(legs, callId) {
+        if (legs && callId) {
+            legs.reportedCallIds = legs.reportedCallIds || [];
+
+            if (legs.reportedCallIds.indexOf(String(callId)) < 0) {
+                legs.reportedCallIds.push(String(callId));
+            }
+        }
+    }
+
     // What a report about the platform call asks of the media.
     //   stateName - the reported state ('Connected', 'OnHold', 'Disconnected', ...), or null when the server reports
     //               no call at all.
+    //   callId    - the call the report is about, when it names one.
     // Returns { action: 'none' | 'hold' | 'resume' | 'hangup', leg }. A keypad call is never the leg: the server
     // cannot know when it ends and has no hold of it to report.
-    function planPlatformReport(legs, stateName) {
-        var leg = (legs && legs.platform) || null;
+    function planPlatformReport(legs, stateName, callId) {
+        noteReportedCall(legs, callId);
+
+        var leg = platformLegFor(legs, callId);
 
         if (!leg) {
             return { action: 'none', leg: null };
@@ -113,7 +176,7 @@
             return all;
         }
 
-        [legs.platform, legs.browser].concat(legs.browserLegs || []).forEach(function (leg) {
+        [legs.platform].concat(legs.platformLegs || [], [legs.browser], legs.browserLegs || []).forEach(function (leg) {
             if (leg && all.indexOf(leg) < 0) {
                 all.push(leg);
             }
@@ -133,6 +196,7 @@
     softPhone.noteBrowserLeg = noteBrowserLeg;
     softPhone.forgetLeg = forgetLeg;
     softPhone.planPlatformReport = planPlatformReport;
+    softPhone.platformLegFor = platformLegFor;
     softPhone.legAfterEnd = legAfterEnd;
     softPhone.allLegs = allLegs;
     softPhone.canConferenceCall = canConferenceCall;

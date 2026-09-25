@@ -8,6 +8,7 @@ const {
     noteBrowserLeg,
     forgetLeg,
     planPlatformReport,
+    platformLegFor,
     legAfterEnd,
     allLegs,
     canConferenceCall,
@@ -151,5 +152,57 @@ describe('allLegs', () => {
 
         expect(allLegs(legs)).toEqual([predialedLeg, browserCall, heldCall]);
         expect(allLegs(null)).toEqual([]);
+    });
+});
+
+// Numbers dialed from the keypad and connected by the platform each ring a leg of their own, so the phone holds several
+// calls the server tracks at once. A report about one of them used to reach whichever leg arrived last: holding the
+// first call held the third, and the first call's hang-up hung up the third.
+describe('several platform calls at once', () => {
+    const legFor = callId => ({ name: `leg of ${callId}`, options: { telnyxCallControlId: callId } });
+
+    it('applies each report to the leg of the call it names', () => {
+        const legs = createCallLegs();
+        const first = legFor('agent-leg-1');
+        const second = legFor('agent-leg-2');
+        const third = legFor('agent-leg-3');
+        notePlatformLeg(legs, first);
+        notePlatformLeg(legs, second);
+        notePlatformLeg(legs, third);
+
+        expect(planPlatformReport(legs, 'OnHold', 'agent-leg-1')).toEqual({ action: 'hold', leg: first });
+        expect(planPlatformReport(legs, 'Connected', 'agent-leg-2')).toEqual({ action: 'resume', leg: second });
+        expect(planPlatformReport(legs, 'Disconnected', 'agent-leg-3')).toEqual({ action: 'hangup', leg: third });
+    });
+
+    it('hands the latest platform leg back when the newest one ends', () => {
+        const legs = createCallLegs();
+        const first = legFor('agent-leg-1');
+        const second = legFor('agent-leg-2');
+        notePlatformLeg(legs, first);
+        notePlatformLeg(legs, second);
+        forgetLeg(legs, second);
+
+        expect(legs.platform).toBe(first);
+        expect(allLegs(legs)).toEqual([first]);
+    });
+
+    // The call a Contact Center offer rang the agent for is reported by the caller's leg, which is not the agent's.
+    it('still sends a report that names no leg here to the platform leg', () => {
+        const legs = createCallLegs();
+        notePlatformLeg(legs, legFor('agent-leg-cc'));
+
+        expect(platformLegFor(legs, 'caller-leg-1')).toBe(legs.platform);
+        expect(planPlatformReport(legs, 'OnHold', 'caller-leg-1').action).toBe('hold');
+    });
+
+    // A dialed call's first report arrives before its leg does; it must not act on the previous call's leg.
+    it("never hands a report about a call whose leg has not arrived to another call's leg", () => {
+        const legs = createCallLegs();
+        const first = legFor('agent-leg-1');
+        notePlatformLeg(legs, first);
+        planPlatformReport(legs, 'Connected', 'agent-leg-1');
+
+        expect(planPlatformReport(legs, 'Disconnected', 'agent-leg-2')).toEqual({ action: 'none', leg: null });
     });
 });

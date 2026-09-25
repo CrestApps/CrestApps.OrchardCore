@@ -37,6 +37,10 @@ public sealed class InMemoryTelephonyProvider :
     private TransferRequest _lastTransfer;
     private MergeRequest _lastMerge;
     private volatile bool _attendedTransfer;
+    private volatile bool _bridgedDial;
+    private volatile bool _bridgeUnavailable;
+    private DialRequest _lastDial;
+    private SendDigitsRequest _lastDigits;
 
     public LocalizedString Name => new("InMemory", "InMemory");
 
@@ -55,8 +59,36 @@ public sealed class InMemoryTelephonyProvider :
                 TelephonyCapabilities.ReceiveCalls |
                 TelephonyCapabilities.Voicemail |
                 TelephonyCapabilities.Directory |
-                (_attendedTransfer ? TelephonyCapabilities.AttendedTransfer : TelephonyCapabilities.None);
+                (_attendedTransfer ? TelephonyCapabilities.AttendedTransfer : TelephonyCapabilities.None) |
+                (_bridgedDial ? TelephonyCapabilities.BridgedDial : TelephonyCapabilities.None);
         }
+    }
+
+    /// <summary>
+    /// Has the provider connect keypad dials itself, as Telnyx does: the phone asks it to, naming its credential, and
+    /// answers the leg the provider rings back to it. With <paramref name="unavailable"/> the provider says it cannot,
+    /// and the phone dials from the browser.
+    /// </summary>
+    public void EnableBridgedDial(bool unavailable = false)
+    {
+        _bridgedDial = true;
+        _bridgeUnavailable = unavailable;
+    }
+
+    /// <summary>
+    /// Gets the last dial the phone asked for.
+    /// </summary>
+    public DialRequest GetLastDial()
+    {
+        return Volatile.Read(ref _lastDial);
+    }
+
+    /// <summary>
+    /// Gets the last digits the phone sent.
+    /// </summary>
+    public SendDigitsRequest GetLastDigits()
+    {
+        return Volatile.Read(ref _lastDigits);
     }
 
     /// <summary>
@@ -90,6 +122,13 @@ public sealed class InMemoryTelephonyProvider :
     public async Task<TelephonyResult> DialAsync(DialRequest request, CancellationToken cancellationToken = default)
     {
         Interlocked.Increment(ref _dialRequestCount);
+        Volatile.Write(ref _lastDial, request);
+
+        if (_bridgeUnavailable &&
+            request?.Metadata?.ContainsKey(TelephonyConstants.RequestMetadata.SoftPhoneCredentialId) == true)
+        {
+            return TelephonyResult.Failed("This call cannot be connected through the soft phone right now.", TelephonyConstants.ErrorCodes.BridgeUnavailable);
+        }
 
         var delayMilliseconds = Volatile.Read(ref _dialDelayMilliseconds);
 
@@ -204,6 +243,8 @@ public sealed class InMemoryTelephonyProvider :
 
     public Task<TelephonyResult> SendDigitsAsync(SendDigitsRequest request, CancellationToken cancellationToken = default)
     {
+        Volatile.Write(ref _lastDigits, request);
+
         return Task.FromResult(TelephonyResult.Success());
     }
 
