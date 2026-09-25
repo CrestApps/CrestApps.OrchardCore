@@ -46,7 +46,7 @@ public sealed class SoftPhoneWidgetTests : SoftPhoneBrowserTest
         await AssertTimedStatusAsync(page, "In call");
         Assert.True(await page.Locator("[data-telephony-dial]").IsHiddenAsync());
         Assert.True(await page.Locator("[data-telephony-hold]").IsVisibleAsync());
-        Assert.True(await page.Locator("[data-telephony-merge]").IsHiddenAsync());
+        Assert.Equal(0, await page.Locator("[data-telephony-merge-calls]").CountAsync());
         Assert.Equal("fa-solid fa-phone", await page.Locator("[data-telephony-toggle-icon]").GetAttributeAsync("class"));
 
         // Act - hang up.
@@ -255,15 +255,18 @@ public sealed class SoftPhoneWidgetTests : SoftPhoneBrowserTest
         var page = await CreateThreeCallPageAsync();
         var baselineCount = await page.EvaluateAsync<int>(
             "() => window.telephonySoftPhone.getInstance().getConnection().invoke('GetMergeRequestCount')");
-        var merge = page.Locator("[data-telephony-merge]");
-        Assert.True(await merge.IsHiddenAsync());
+        var merge = page.Locator("[data-telephony-merge-calls]");
+        var summary = page.Locator("[data-telephony-merge-summary]");
 
-        // Act
+        // Assert - with nothing ticked, Merge joins every call, and says so.
+        Assert.True(await merge.IsVisibleAsync());
+        Assert.Equal(3, CountOf(await summary.InnerTextAsync(), "(555)"));
+
+        // Act - ticking two calls narrows the merge to them.
         var selections = page.Locator("[data-telephony-conference-call]");
         await selections.Nth(0).CheckAsync();
-        Assert.True(await merge.IsHiddenAsync());
         await selections.Nth(1).CheckAsync();
-        Assert.True(await merge.IsVisibleAsync());
+        Assert.Equal(2, CountOf(await summary.InnerTextAsync(), "(555)"));
         await selections.Nth(2).CheckAsync();
         await merge.ClickAsync();
 
@@ -271,7 +274,7 @@ public sealed class SoftPhoneWidgetTests : SoftPhoneBrowserTest
         await page.WaitForFunctionAsync(
             "([count]) => window.telephonySoftPhone.getInstance().getConnection().invoke('GetMergeRequestCount').then(value => value === count + 1)",
             new[] { baselineCount });
-        Assert.True(await merge.IsHiddenAsync());
+        await page.WaitForFunctionAsync("() => !document.querySelector('[data-telephony-merge-calls]')");
         await page.WaitForFunctionAsync(
             "() => Array.from(document.querySelectorAll('.telephony-soft-phone__active-call-state')).every(element => element.textContent.trim() === 'In conference')");
     }
@@ -350,6 +353,11 @@ public sealed class SoftPhoneWidgetTests : SoftPhoneBrowserTest
         await page.WaitForFunctionAsync(
             "([count]) => window.telephonySoftPhone.getInstance().getConnection().invoke('GetHangupRequestCount').then(value => value === count + 2)",
             new[] { baselineCount });
+    }
+
+    private static int CountOf(string text, string value)
+    {
+        return (text.Length - text.Replace(value, string.Empty, StringComparison.Ordinal).Length) / value.Length;
     }
 
     private async Task<IPage> CreateTwoCallPageAsync()

@@ -2189,6 +2189,106 @@
   softPhone.canConferenceCall = canConferenceCall;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*
+ * Merging calls into a conference, and showing the conference once it exists.
+ *
+ * With one call held and a second call up, the only way to join them was to tick a checkbox beside each call in the
+ * active-call list and then find an unlabelled icon among the call buttons, which only appeared once two boxes were
+ * ticked. Agents did not find it. The phone now offers a labelled Merge action whenever two or more calls can be joined,
+ * naming the calls it will join, and lists a conference's participants under their own heading, each with a hang-up.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+  function defaultStateOf(call) {
+    return call ? String(call.state || '') : '';
+  }
+  function defaultIsConference(call) {
+    var value = call && call.metadata ? call.metadata.isConference : false;
+    return value === true || value === 1 || value === 'true' || value === 'True';
+  }
+
+  // Merging is a server command over calls the server tracks (see soft-phone/call-legs.js); a call this browser
+  // placed itself is never part of one.
+  function canJoin(call) {
+    return typeof softPhone.canConferenceCall === 'function' ? softPhone.canConferenceCall(call) : !!(call && call.callId && !call.browserOriginated);
+  }
+
+  // Which calls a Merge would join.
+  //   calls      - the active calls.
+  //   selections - { callId: true } for the calls the agent ticked.
+  //   options    - { stateOf(call) -> 'Connected' | 'OnHold' | ..., isConference(call) -> bool }.
+  // Returns { available, callIds, calls, usesSelection }. Two or more ticked calls are merged on their own; otherwise
+  // every call that can join is. Nothing is offered when the calls are already one conference.
+  function planMerge(calls, selections, options) {
+    options = options || {};
+    var stateOf = options.stateOf || defaultStateOf;
+    var isConference = options.isConference || defaultIsConference;
+    var eligible = (calls || []).filter(function (call) {
+      var state = stateOf(call);
+      return canJoin(call) && (state === 'Connected' || state === 'OnHold');
+    });
+    var selected = eligible.filter(function (call) {
+      return !!(selections && selections[call.callId]);
+    });
+    var usesSelection = selected.length >= 2;
+    var chosen = usesSelection ? selected : eligible;
+    var alreadyMerged = chosen.length > 0 && chosen.every(isConference);
+    return {
+      available: chosen.length >= 2 && !alreadyMerged,
+      callIds: chosen.map(function (call) {
+        return call.callId;
+      }),
+      calls: chosen,
+      usesSelection: usesSelection
+    };
+  }
+  function format(template, value) {
+    return String(template).replace('{0}', value);
+  }
+  function row(item, strings, escapeHtml, inConference) {
+    var check = item.selectable ? '<input type="checkbox" class="telephony-soft-phone__active-call-check" data-telephony-conference-call="' + escapeHtml(item.callId) + '"' + (item.selected ? ' checked' : '') + ' aria-label="' + escapeHtml(format(strings.selectCall || 'Select {0}', item.number)) + '" />' : '';
+    var hangup = inConference && item.canHangup ? '<button type="button" class="telephony-soft-phone__participant-hangup" data-telephony-participant-hangup="' + escapeHtml(item.callId) + '" title="' + escapeHtml(format(strings.hangupParticipant || 'Hang up {0}', item.number)) + '" aria-label="' + escapeHtml(format(strings.hangupParticipant || 'Hang up {0}', item.number)) + '">' + '<i class="fa-solid fa-phone-slash" aria-hidden="true"></i></button>' : '';
+    return '<div class="telephony-soft-phone__active-call' + (item.current ? ' is-current' : '') + (inConference ? ' is-participant' : '') + '"' + (inConference ? ' data-telephony-conference-participant="' + escapeHtml(item.callId) + '"' : '') + '>' + check + '<button type="button" class="telephony-soft-phone__active-call-select" data-telephony-call-select="' + escapeHtml(item.callId) + '">' + '<span class="telephony-soft-phone__active-call-number">' + escapeHtml(item.number) + '</span>' + '<span class="telephony-soft-phone__active-call-state">' + escapeHtml(item.state) + '</span>' + '</button>' + hangup + '</div>';
+  }
+
+  // The active-call list: the conference's participants under their own heading, the other calls, and -- when calls
+  // can be joined -- the Merge action naming them.
+  //   model - { calls: [{ callId, number, state, current, selectable, selected, inConference, canHangup }],
+  //             merge: { available, numbers: [] } }
+  function buildActiveCallsHtml(model, strings, escapeHtml) {
+    model = model || {};
+    strings = strings || {};
+    var calls = model.calls || [];
+    var participants = calls.filter(function (call) {
+      return call.inConference;
+    });
+    var others = calls.filter(function (call) {
+      return !call.inConference;
+    });
+    var html = '';
+    if (participants.length) {
+      html += '<div class="telephony-soft-phone__conference" data-telephony-conference role="group" aria-label="' + escapeHtml(format(strings.conferenceParticipants || 'Conference · {0} participants', participants.length)) + '">' + '<div class="telephony-soft-phone__conference-heading">' + '<i class="fa-solid fa-users" aria-hidden="true"></i> ' + escapeHtml(format(strings.conferenceParticipants || 'Conference · {0} participants', participants.length)) + '</div>' + participants.map(function (call) {
+        return row(call, strings, escapeHtml, true);
+      }).join('') + '</div>';
+    }
+    html += others.map(function (call) {
+      return row(call, strings, escapeHtml, false);
+    }).join('');
+    var merge = model.merge || {};
+    if (merge.available) {
+      var names = (merge.numbers || []).join(' + ');
+      html += '<div class="telephony-soft-phone__merge-bar">' + '<span class="telephony-soft-phone__merge-summary" data-telephony-merge-summary>' + escapeHtml(format(strings.mergeSummary || 'Join {0} in one conference.', names)) + '</span>' + '<button type="button" class="btn btn-sm btn-primary telephony-soft-phone__merge-calls" data-telephony-merge-calls>' + '<i class="fa-solid fa-code-merge" aria-hidden="true"></i> ' + escapeHtml(strings.mergeCalls || 'Merge calls') + '</button></div>';
+    }
+    return html;
+  }
+  softPhone.planMerge = planMerge;
+  softPhone.buildActiveCallsHtml = buildActiveCallsHtml;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
  * What the dial button may call.
  *
  * While a call is held the keypad opens for adding a call, and the number field keeps showing the held call's number
@@ -2301,6 +2401,527 @@
   softPhone.resolveDialTarget = resolveDialTarget;
   softPhone.shouldOfferDial = shouldOfferDial;
   softPhone.shouldShowCallNumber = shouldShowCallNumber;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * Who a call may be transferred to, and how.
+ *
+ * The transfer button used to open the browser's own "Transfer to number" prompt. Inside the desktop app's narrow
+ * window that prompt was cut off, it named the site rather than the phone, and it took whatever was typed -- including
+ * the tenant's own number, which only rings the tenant back. The soft phone now picks the target in its own panel: a
+ * directory entry, or a number checked the way the keypad checks one. These are the decisions that panel makes.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // Must match the Transfer and AttendedTransfer flags of CrestApps.OrchardCore.Telephony.Models.TelephonyCapabilities.
+  var TRANSFER_CAPABILITY = 1 << 5;
+  var ATTENDED_TRANSFER_CAPABILITY = 1 << 11;
+
+  // Must match CrestApps.OrchardCore.Telephony.Models.TransferMode.
+  var TRANSFER_MODE_VALUES = {
+    blind: 0,
+    warm: 1
+  };
+  function digitsOf(value) {
+    return value == null ? '' : String(value).replace(/\D+/g, '');
+  }
+
+  // Whether two numbers are the same line. A number typed without its country code is the same North American line as
+  // the tenant's +1 number, so "7025550100" and "+17025550100" match.
+  function isSameLine(left, right) {
+    var a = digitsOf(left);
+    var b = digitsOf(right);
+    if (!a || !b) {
+      return false;
+    }
+    if (a === b) {
+      return true;
+    }
+    return a.length === 11 && a.charAt(0) === '1' && a.substring(1) === b || b.length === 11 && b.charAt(0) === '1' && b.substring(1) === a;
+  }
+
+  // The transfer modes the provider supports, blind first: ['blind'], ['warm'], ['blind', 'warm'] or [].
+  function transferModes(capabilities) {
+    var value = Number(capabilities) || 0;
+    var modes = [];
+    if ((value & TRANSFER_CAPABILITY) === TRANSFER_CAPABILITY) {
+      modes.push('blind');
+    }
+    if ((value & ATTENDED_TRANSFER_CAPABILITY) === ATTENDED_TRANSFER_CAPABILITY) {
+      modes.push('warm');
+    }
+    return modes;
+  }
+
+  // The TransferMode value the hub expects for a mode name; blind for anything it does not know.
+  function transferModeValue(mode) {
+    return Object.prototype.hasOwnProperty.call(TRANSFER_MODE_VALUES, mode) ? TRANSFER_MODE_VALUES[mode] : 0;
+  }
+
+  // Whether what was typed reads as a phone number or extension rather than a name or an address.
+  function isNumberLike(value) {
+    var text = value == null ? '' : String(value).trim();
+    return !!text && /^[+\d\s().\-]+$/.test(text) && /\d/.test(text);
+  }
+
+  // A provider directory entry as the panel shows it: { id, name, destination, detail }.
+  function normalizeDirectoryEntry(entry) {
+    entry = entry || {};
+    var destination = String(entry.destination || entry.extension || entry.phoneNumber || '');
+    var detail = String(entry.extension || entry.phoneNumber || entry.detail || destination);
+    return {
+      id: String(entry.id || destination),
+      name: String(entry.displayName || destination),
+      destination: destination,
+      detail: detail
+    };
+  }
+
+  // The directory entries matching what the agent typed, by name, extension or number. Entries with nowhere to send
+  // the call are dropped.
+  function filterTransferTargets(entries, query) {
+    var text = query == null ? '' : String(query).trim().toLowerCase();
+    var digits = digitsOf(text);
+    return (entries || []).map(normalizeDirectoryEntry).filter(function (entry) {
+      if (!entry.destination) {
+        return false;
+      }
+      if (!text) {
+        return true;
+      }
+      if (entry.name.toLowerCase().indexOf(text) !== -1 || entry.detail.toLowerCase().indexOf(text) !== -1) {
+        return true;
+      }
+      return !!digits && isNumberLike(text) && (digitsOf(entry.destination).indexOf(digits) !== -1 || digitsOf(entry.detail).indexOf(digits) !== -1);
+    });
+  }
+
+  // What to transfer the call to.
+  //   query      - what the agent typed.
+  //   selected   - the directory entry the agent picked, if any ({ destination, name }).
+  //   ownNumbers - the tenant's own outbound caller ids.
+  // Returns { destination, label, refused }: where to send the call, or '' with why it was refused
+  // ('empty' | 'invalid-number' | 'own-number').
+  function resolveTransferTarget(options) {
+    options = options || {};
+    var selected = options.selected;
+    if (selected && selected.destination) {
+      return {
+        destination: String(selected.destination),
+        label: String(selected.name || selected.destination),
+        refused: ''
+      };
+    }
+    var text = options.query == null ? '' : String(options.query).trim();
+    if (!text) {
+      return {
+        destination: '',
+        label: '',
+        refused: 'empty'
+      };
+    }
+    if (!isNumberLike(text)) {
+      // A SIP address or a provider directory id: the provider resolves it, and the server's transfer policy
+      // decides whether it may be reached.
+      return {
+        destination: text,
+        label: text,
+        refused: ''
+      };
+    }
+    var international = text.charAt(0) === '+';
+    var digits = digitsOf(text);
+    var validLength = international ? digits.length >= 8 && digits.length <= 15 : digits.length >= 2 && digits.length <= 15;
+    if (!validLength) {
+      return {
+        destination: '',
+        label: '',
+        refused: 'invalid-number'
+      };
+    }
+    if ((options.ownNumbers || []).some(function (own) {
+      return isSameLine(text, own);
+    })) {
+      return {
+        destination: '',
+        label: '',
+        refused: 'own-number'
+      };
+    }
+    var destination = (international ? '+' : '') + digits;
+    return {
+      destination: destination,
+      label: text,
+      refused: ''
+    };
+  }
+  softPhone.TRANSFER_MODE_VALUES = TRANSFER_MODE_VALUES;
+  softPhone.isSameLine = isSameLine;
+  softPhone.transferModes = transferModes;
+  softPhone.transferModeValue = transferModeValue;
+  softPhone.isNumberLike = isNumberLike;
+  softPhone.normalizeDirectoryEntry = normalizeDirectoryEntry;
+  softPhone.filterTransferTargets = filterTransferTargets;
+  softPhone.resolveTransferTarget = resolveTransferTarget;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * The soft phone's own transfer panel.
+ *
+ * Transferring a call used to open the browser's "Transfer to number" prompt whenever the provider had no directory.
+ * The prompt was headed with the site's address, blocked the page, and was cut off inside the desktop app's narrow
+ * window. The panel replaces it inside the phone: the agent searches the directory or types a number, picks blind or
+ * warm when the provider offers both, and goes back to the keypad without leaving the phone. The decisions it makes
+ * live in soft-phone/transfer-target.js; this file only draws them and wires them to the call.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+  function label(strings, key, fallback) {
+    return strings && typeof strings[key] === 'string' && strings[key] ? strings[key] : fallback;
+  }
+  function format(template, value) {
+    return String(template).replace('{0}', value);
+  }
+
+  // Creates the panel inside `container`.
+  //   options.strings       - the phone's localized labels.
+  //   options.escapeHtml    - escapes text for markup.
+  //   options.formatNumber  - formats a number for display.
+  //   options.modes()       - the supported modes (see transferModes).
+  //   options.ownNumbers()  - the tenant's own outbound caller ids.
+  //   options.loadDirectory() - a promise of the provider's directory entries, or null when it has none.
+  //   options.transfer(destination, modeValue) - performs the transfer; resolves to the hub result.
+  //   options.onChange()    - called when the panel opens or closes, so the phone re-renders around it.
+  function createTransferPanel(container, options) {
+    options = options || {};
+    var strings = options.strings || {};
+    var escapeHtml = options.escapeHtml || function (value) {
+      return String(value == null ? '' : value);
+    };
+    var formatNumber = options.formatNumber || function (value) {
+      return value;
+    };
+    var state = {
+      open: false,
+      query: '',
+      selected: null,
+      mode: 'blind',
+      entries: [],
+      loading: false,
+      error: ''
+    };
+    var parts = {};
+    function modes() {
+      return typeof options.modes === 'function' ? options.modes() : ['blind'];
+    }
+    function changed() {
+      if (typeof options.onChange === 'function') {
+        options.onChange();
+      }
+    }
+    function isOpen() {
+      return state.open;
+    }
+    function open(context) {
+      if (!container) {
+        return;
+      }
+      var supported = modes();
+      state = {
+        open: true,
+        query: '',
+        selected: null,
+        mode: supported.length ? supported[0] : 'blind',
+        entries: [],
+        loading: false,
+        error: ''
+      };
+      renderShell(context || {});
+      loadDirectory();
+      changed();
+      if (parts.input) {
+        parts.input.focus();
+      }
+    }
+    function close() {
+      if (!state.open) {
+        return;
+      }
+      state.open = false;
+      state.entries = [];
+      if (container) {
+        container.innerHTML = '';
+      }
+      parts = {};
+      changed();
+    }
+    function loadDirectory() {
+      var pending = typeof options.loadDirectory === 'function' ? options.loadDirectory() : null;
+      if (!pending || typeof pending.then !== 'function') {
+        renderResults();
+        return;
+      }
+      state.loading = true;
+      renderResults();
+      pending.then(function (entries) {
+        if (!state.open) {
+          return;
+        }
+        state.entries = Array.isArray(entries) ? entries : [];
+      }).catch(function () {
+        state.entries = [];
+      }).then(function () {
+        state.loading = false;
+        if (state.open) {
+          renderResults();
+        }
+      });
+    }
+    function renderShell(context) {
+      var supported = modes();
+      var title = context.callLabel ? format(label(strings, 'transferCallOf', 'Transfer {0}'), context.callLabel) : label(strings, 'transferTitle', 'Transfer call');
+      var modeHtml = '';
+      if (supported.length > 1) {
+        modeHtml = '<div class="telephony-soft-phone__transfer-modes" role="radiogroup" aria-label="' + escapeHtml(label(strings, 'transferType', 'Transfer type')) + '">' + supported.map(function (mode) {
+          var text = mode === 'warm' ? label(strings, 'transferWarm', 'Warm') : label(strings, 'transferBlind', 'Blind');
+          return '<button type="button" role="radio" class="telephony-soft-phone__transfer-mode" data-telephony-transfer-mode="' + mode + '" aria-checked="false">' + escapeHtml(text) + '</button>';
+        }).join('') + '</div>' + '<div class="telephony-soft-phone__transfer-hint" data-telephony-transfer-mode-hint></div>';
+      }
+      container.innerHTML = '<div class="telephony-soft-phone__transfer-header">' + '<button type="button" class="telephony-soft-phone__settings-back" data-telephony-transfer-back title="' + escapeHtml(label(strings, 'back', 'Back')) + '" aria-label="' + escapeHtml(label(strings, 'back', 'Back')) + '">' + '<i class="fa-solid fa-arrow-left" aria-hidden="true"></i></button>' + '<span class="telephony-soft-phone__transfer-title" data-telephony-transfer-title>' + escapeHtml(title) + '</span>' + '</div>' + modeHtml + '<input type="text" class="telephony-soft-phone__transfer-input" data-telephony-transfer-input autocomplete="off" inputmode="text" ' + 'placeholder="' + escapeHtml(label(strings, 'transferSearchPlaceholder', 'Search a name, or enter a number')) + '" ' + 'aria-label="' + escapeHtml(label(strings, 'transferDestination', 'Transfer destination')) + '" />' + '<div class="telephony-soft-phone__transfer-error" data-telephony-transfer-error role="alert" hidden></div>' + '<div class="telephony-soft-phone__transfer-results" data-telephony-transfer-results></div>' + '<div class="telephony-soft-phone__transfer-actions">' + '<button type="button" class="btn btn-sm btn-outline-secondary" data-telephony-transfer-cancel>' + escapeHtml(label(strings, 'cancel', 'Cancel')) + '</button>' + '<button type="button" class="btn btn-sm btn-primary" data-telephony-transfer-confirm>' + escapeHtml(label(strings, 'transfer', 'Transfer')) + '</button>' + '</div>';
+      parts = {
+        input: container.querySelector('[data-telephony-transfer-input]'),
+        error: container.querySelector('[data-telephony-transfer-error]'),
+        results: container.querySelector('[data-telephony-transfer-results]'),
+        confirm: container.querySelector('[data-telephony-transfer-confirm]'),
+        hint: container.querySelector('[data-telephony-transfer-mode-hint]'),
+        modes: Array.prototype.slice.call(container.querySelectorAll('[data-telephony-transfer-mode]'))
+      };
+      container.querySelector('[data-telephony-transfer-back]').addEventListener('click', close);
+      container.querySelector('[data-telephony-transfer-cancel]').addEventListener('click', close);
+      parts.confirm.addEventListener('click', submit);
+      parts.input.addEventListener('input', function () {
+        state.query = parts.input.value;
+        state.selected = null;
+        setError('');
+        renderResults();
+      });
+      parts.input.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          submit();
+        } else if (event.key === 'Escape') {
+          event.preventDefault();
+          close();
+        }
+      });
+      parts.modes.forEach(function (button) {
+        button.addEventListener('click', function () {
+          state.mode = button.getAttribute('data-telephony-transfer-mode');
+          renderMode();
+        });
+      });
+      parts.results.addEventListener('click', function (event) {
+        var target = event.target && event.target.closest ? event.target.closest('[data-telephony-transfer-option]') : null;
+        if (!target) {
+          return;
+        }
+        var destination = target.getAttribute('data-telephony-directory-destination');
+        if (destination !== null) {
+          var entry = softPhone.filterTransferTargets(state.entries, '').filter(function (candidate) {
+            return candidate.destination === destination;
+          })[0];
+          state.selected = state.selected && entry && state.selected.destination === entry.destination ? null : entry || null;
+        } else {
+          state.selected = null;
+        }
+        setError('');
+        renderResults();
+        if (target.hasAttribute('data-telephony-transfer-number')) {
+          submit();
+        }
+      });
+      renderMode();
+    }
+    function renderMode() {
+      (parts.modes || []).forEach(function (button) {
+        var selected = button.getAttribute('data-telephony-transfer-mode') === state.mode;
+        button.classList.toggle('is-active', selected);
+        button.setAttribute('aria-checked', selected ? 'true' : 'false');
+      });
+      if (parts.hint) {
+        parts.hint.textContent = state.mode === 'warm' ? label(strings, 'transferWarmHint', 'You speak to them before the call is handed over.') : label(strings, 'transferBlindHint', 'The call is sent straight to them.');
+      }
+    }
+    function renderResults() {
+      if (!parts.results) {
+        return;
+      }
+      var matches = softPhone.filterTransferTargets(state.entries, state.query);
+      var html = '';
+      var query = String(state.query || '').trim();
+      if (query && softPhone.isNumberLike(query)) {
+        html += '<button type="button" class="telephony-soft-phone__transfer-option telephony-soft-phone__transfer-option--number" ' + 'data-telephony-transfer-option data-telephony-transfer-number>' + '<i class="fa-solid fa-phone" aria-hidden="true"></i>' + '<span class="telephony-soft-phone__directory-name">' + escapeHtml(format(label(strings, 'transferToNumber', 'Transfer to {0}'), formatNumber(query) || query)) + '</span></button>';
+      }
+      if (state.loading) {
+        html += '<div class="telephony-soft-phone__directory-empty">' + escapeHtml(label(strings, 'directoryLoading', 'Loading the directory...')) + '</div>';
+      } else if (matches.length) {
+        html += '<div class="telephony-soft-phone__transfer-group" role="presentation">' + escapeHtml(label(strings, 'directory', 'Directory')) + '</div>' + matches.map(function (entry) {
+          var selected = !!(state.selected && state.selected.destination === entry.destination);
+          return '<button type="button" class="telephony-soft-phone__directory-entry telephony-soft-phone__transfer-option' + (selected ? ' is-selected' : '') + '" data-telephony-transfer-option data-telephony-directory-destination="' + escapeHtml(entry.destination) + '" aria-pressed="' + (selected ? 'true' : 'false') + '">' + '<i class="fa-solid fa-user" aria-hidden="true"></i>' + '<span class="telephony-soft-phone__directory-name">' + escapeHtml(entry.name) + '</span>' + '<span class="telephony-soft-phone__directory-destination">' + escapeHtml(entry.detail) + '</span></button>';
+        }).join('');
+      } else if (state.entries.length && query) {
+        html += '<div class="telephony-soft-phone__directory-empty">' + escapeHtml(label(strings, 'directoryNoMatch', 'Nobody in the directory matches.')) + '</div>';
+      } else if (!query) {
+        html += '<div class="telephony-soft-phone__directory-empty">' + escapeHtml(label(strings, state.entries.length ? 'directoryEmpty' : 'transferEnterNumber', state.entries.length ? 'No directory entries are available.' : 'Enter the number or extension to transfer to.')) + '</div>';
+      }
+      parts.results.innerHTML = html;
+      if (parts.confirm) {
+        var text = state.selected ? format(label(strings, 'transferToNumber', 'Transfer to {0}'), state.selected.name) : label(strings, 'transfer', 'Transfer');
+        parts.confirm.textContent = text;
+      }
+    }
+    function setError(message) {
+      state.error = message || '';
+      if (parts.error) {
+        parts.error.textContent = state.error;
+        parts.error.hidden = !state.error;
+      }
+    }
+    function refusalMessage(refused) {
+      if (refused === 'own-number') {
+        return label(strings, 'transferOwnNumber', 'That is this phone system\'s own number. Choose who to transfer the call to.');
+      }
+      if (refused === 'invalid-number') {
+        return label(strings, 'transferInvalidNumber', 'Enter a complete phone number or extension.');
+      }
+      return label(strings, 'transferTargetRequired', 'Choose who to transfer the call to, or enter a number.');
+    }
+    function submit() {
+      var target = softPhone.resolveTransferTarget({
+        query: state.query,
+        selected: state.selected,
+        ownNumbers: typeof options.ownNumbers === 'function' ? options.ownNumbers() : []
+      });
+      if (target.refused) {
+        setError(refusalMessage(target.refused));
+        if (parts.input) {
+          parts.input.focus();
+        }
+        return;
+      }
+      setError('');
+      var pending = typeof options.transfer === 'function' ? options.transfer(target.destination, softPhone.transferModeValue(state.mode)) : null;
+
+      // A refused transfer is reported by the phone's own error line, as every other command is; the panel stays
+      // open so the agent can pick someone else.
+      Promise.resolve(pending).then(function (result) {
+        if (result && result.succeeded !== false) {
+          close();
+        }
+      }).catch(function () {});
+    }
+    return {
+      open: open,
+      close: close,
+      isOpen: isOpen,
+      submit: submit
+    };
+  }
+  softPhone.createTransferPanel = createTransferPanel;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * A confirmation asked inside the soft phone instead of through the browser.
+ *
+ * The browser's own confirm dialog is headed with the site's address, blocks every call event while it is open, and
+ * inside the desktop app's narrow window it is cut off. The phone asks its questions in its own panel instead.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // Asks `options.message` in a bar inserted into `host` ahead of `options.before` (or at its end). Resolves true when
+  // the agent confirms and false when they cancel or press Escape. Asking again replaces a question still open.
+  //   options - { message, confirmLabel, cancelLabel, before }
+  function showInAppConfirm(host, options) {
+    options = options || {};
+    if (!host || !host.ownerDocument) {
+      return Promise.resolve(false);
+    }
+    var existing = host.querySelector('[data-telephony-confirm]');
+    if (existing && typeof existing.__telephonyCancel === 'function') {
+      existing.__telephonyCancel();
+    }
+    var doc = host.ownerDocument;
+    var bar = doc.createElement('div');
+    var message = doc.createElement('p');
+    var actions = doc.createElement('div');
+    var cancel = doc.createElement('button');
+    var confirm = doc.createElement('button');
+    var messageId = 'telephony-confirm-' + Date.now();
+    bar.className = 'telephony-soft-phone__confirm';
+    bar.setAttribute('data-telephony-confirm', '');
+    bar.setAttribute('role', 'alertdialog');
+    bar.setAttribute('aria-labelledby', messageId);
+    message.className = 'telephony-soft-phone__confirm-text';
+    message.id = messageId;
+    message.textContent = options.message || '';
+    actions.className = 'telephony-soft-phone__confirm-actions';
+    cancel.type = 'button';
+    cancel.className = 'btn btn-sm btn-outline-secondary';
+    cancel.setAttribute('data-telephony-confirm-cancel', '');
+    cancel.textContent = options.cancelLabel || 'Cancel';
+    confirm.type = 'button';
+    confirm.className = 'btn btn-sm btn-danger';
+    confirm.setAttribute('data-telephony-confirm-accept', '');
+    confirm.textContent = options.confirmLabel || 'OK';
+    actions.appendChild(cancel);
+    actions.appendChild(confirm);
+    bar.appendChild(message);
+    bar.appendChild(actions);
+    return new Promise(function (resolve) {
+      function finish(answer) {
+        if (bar.parentNode) {
+          bar.parentNode.removeChild(bar);
+        }
+        resolve(answer);
+      }
+      bar.__telephonyCancel = function () {
+        finish(false);
+      };
+      cancel.addEventListener('click', function () {
+        finish(false);
+      });
+      confirm.addEventListener('click', function () {
+        finish(true);
+      });
+      bar.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          finish(false);
+        }
+      });
+      if (options.before && options.before.parentNode === host) {
+        host.insertBefore(bar, options.before);
+      } else {
+        host.appendChild(bar);
+      }
+      confirm.focus();
+    });
+  }
+  softPhone.showInAppConfirm = showInAppConfirm;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*
  * The labels of a matched-record card's actions in the incoming-call panel.
@@ -3116,6 +3737,11 @@
   var planPlatformReport = softPhoneModules.planPlatformReport;
   var legAfterEnd = softPhoneModules.legAfterEnd;
   var canConferenceCall = softPhoneModules.canConferenceCall;
+  var planMerge = softPhoneModules.planMerge;
+  var buildActiveCallsHtml = softPhoneModules.buildActiveCallsHtml;
+  var transferModes = softPhoneModules.transferModes;
+  var createTransferPanel = softPhoneModules.createTransferPanel;
+  var showInAppConfirm = softPhoneModules.showInAppConfirm;
   var resolveDialTarget = softPhoneModules.resolveDialTarget;
   var shouldOfferDial = softPhoneModules.shouldOfferDial;
   var shouldShowCallNumber = softPhoneModules.shouldShowCallNumber;
@@ -4936,12 +5562,6 @@
       transferLabel: rootElement.querySelector('[data-telephony-transfer-label]'),
       transferPanel: rootElement.querySelector('[data-telephony-transfer-panel]'),
       keypadPanel: rootElement.querySelector('[data-telephony-keypad-panel]'),
-      transferInput: rootElement.querySelector('[data-telephony-transfer-input]'),
-      transferCancel: rootElement.querySelector('[data-telephony-transfer-cancel]'),
-      transferConfirm: rootElement.querySelector('[data-telephony-transfer-confirm]'),
-      directory: rootElement.querySelector('[data-telephony-directory]'),
-      directoryList: rootElement.querySelector('[data-telephony-directory-list]'),
-      merge: rootElement.querySelector('[data-telephony-merge]'),
       hangup: rootElement.querySelector('[data-telephony-hangup]'),
       hangupAll: rootElement.querySelector('[data-telephony-hangup-all]'),
       body: rootElement.querySelector('[data-telephony-body]'),
@@ -4978,8 +5598,29 @@
     var currentCall = null;
     var activeCalls = {};
     var conferenceSelections = {};
-    var directoryEntries = [];
-    var transferOpen = false;
+    // The transfer panel draws itself into the keypad view (see soft-phone/transfer-panel.js).
+    var transferPanel = createTransferPanel(dom.transferPanel, {
+      strings: strings,
+      escapeHtml: escapeHtml,
+      formatNumber: formatPhoneNumber,
+      modes: function () {
+        return transferModes(capabilities);
+      },
+      ownNumbers: function () {
+        return ownOutboundNumbers();
+      },
+      loadDirectory: loadTransferDirectory,
+      transfer: function (destination, mode) {
+        return invoke('Transfer', {
+          callId: currentCallId(),
+          to: destination,
+          mode: mode
+        });
+      },
+      onChange: function () {
+        render();
+      }
+    });
     var numberIsCallDisplay = false;
     // Whether the number field holds something the agent entered since it last showed a call's number. On hold
     // that entry is the number to add, and a render must not write the held call's number back over it.
@@ -7706,17 +8347,31 @@
       }
       var calls = getActiveCalls();
       show(dom.activeCalls, calls.length > 1);
-      dom.activeCallsList.innerHTML = calls.map(function (call) {
-        var callId = call.callId || '';
-        var selected = !!conferenceSelections[callId];
-        var current = currentCall && currentCall.callId === callId;
-        var number = formatPhoneNumber(getPeerNumber(call)) || callId;
-        var state = statusTextForCall(call);
+      var plan = currentMergePlan();
 
-        // Only calls the server tracks can be merged; a call this browser placed is never offered for it.
-        var conferenceCheck = canConferenceCall(call) ? '<input type="checkbox" class="telephony-soft-phone__active-call-check" data-telephony-conference-call="' + escapeHtml(callId) + '"' + (selected ? ' checked' : '') + ' aria-label="' + escapeHtml(strings.conference || 'Conference selected calls') + '" />' : '';
-        return '<div class="telephony-soft-phone__active-call' + (current ? ' is-current' : '') + '">' + conferenceCheck + '<button type="button" class="telephony-soft-phone__active-call-select" data-telephony-call-select="' + escapeHtml(callId) + '">' + '<span class="telephony-soft-phone__active-call-number">' + escapeHtml(number) + '</span>' + '<span class="telephony-soft-phone__active-call-state">' + escapeHtml(state) + '</span>' + '</button></div>';
-      }).join('');
+      // The conference's participants, the other calls, and the Merge action naming the calls it joins (see
+      // soft-phone/conference.js).
+      dom.activeCallsList.innerHTML = buildActiveCallsHtml({
+        calls: calls.map(function (call) {
+          var callId = call.callId || '';
+          return {
+            callId: callId,
+            number: formatPhoneNumber(getPeerNumber(call)) || callId,
+            state: statusTextForCall(call),
+            current: !!(currentCall && currentCall.callId === callId),
+            selectable: canConferenceCall(call),
+            selected: !!conferenceSelections[callId],
+            inConference: metadataBoolean(call, 'isConference'),
+            canHangup: has(CAPABILITIES.Hangup)
+          };
+        }),
+        merge: {
+          available: plan.available && has(CAPABILITIES.Merge),
+          numbers: plan.calls.map(function (call) {
+            return formatPhoneNumber(getPeerNumber(call)) || call.callId;
+          })
+        }
+      }, strings, escapeHtml);
       Array.prototype.forEach.call(dom.activeCallsList.querySelectorAll('[data-telephony-call-select]'), function (button) {
         button.addEventListener('click', function () {
           var callId = button.getAttribute('data-telephony-call-select');
@@ -7738,28 +8393,25 @@
           render();
         });
       });
-    }
-    function renderDirectory() {
-      if (!dom.directory || !dom.directoryList) {
-        return;
-      }
-      show(dom.directory, transferOpen && has(CAPABILITIES.Directory));
-      if (!directoryEntries.length) {
-        dom.directoryList.innerHTML = '<div class="telephony-soft-phone__directory-empty">' + escapeHtml(strings.directoryEmpty || 'No directory entries are available.') + '</div>';
-        return;
-      }
-      dom.directoryList.innerHTML = directoryEntries.map(function (entry) {
-        var destination = entry.destination || entry.extension || entry.phoneNumber || '';
-        var detail = entry.extension || entry.phoneNumber || entry.detail || destination;
-        return '<button type="button" class="telephony-soft-phone__directory-entry" data-telephony-directory-destination="' + escapeHtml(destination) + '">' + '<span class="telephony-soft-phone__directory-name">' + escapeHtml(entry.displayName || destination) + '</span>' + '<span class="telephony-soft-phone__directory-destination">' + escapeHtml(detail) + '</span></button>';
-      }).join('');
-      Array.prototype.forEach.call(dom.directoryList.querySelectorAll('[data-telephony-directory-destination]'), function (button) {
+      Array.prototype.forEach.call(dom.activeCallsList.querySelectorAll('[data-telephony-participant-hangup]'), function (button) {
+        button.disabled = !!activeCommand;
         button.addEventListener('click', function () {
-          if (dom.transferInput) {
-            dom.transferInput.value = button.getAttribute('data-telephony-directory-destination') || '';
-            dom.transferInput.focus();
-          }
+          hangupCall(button.getAttribute('data-telephony-participant-hangup'));
         });
+      });
+      Array.prototype.forEach.call(dom.activeCallsList.querySelectorAll('[data-telephony-merge-calls]'), function (button) {
+        button.disabled = !!activeCommand;
+        button.addEventListener('click', merge);
+      });
+    }
+    function currentMergePlan() {
+      return planMerge(getActiveCalls(), conferenceSelections, {
+        stateOf: function (call) {
+          return normalizeState(call && call.state);
+        },
+        isConference: function (call) {
+          return metadataBoolean(call, 'isConference');
+        }
       });
     }
     function render() {
@@ -7806,12 +8458,11 @@
         return !!activeCalls[callId];
       });
       var currentIsConference = metadataBoolean(currentCall, 'isConference');
-      if (transferOpen && !liveMedia) {
-        transferOpen = false;
-        directoryEntries = [];
+      if (transferPanel.isOpen() && !liveMedia) {
+        transferPanel.close();
       }
+      var transferOpen = transferPanel.isOpen();
       renderActiveCalls();
-      renderDirectory();
       show(dom.transferPanel, transferOpen && liveMedia);
       show(dom.keypadPanel, !transferOpen);
       if (dom.transfer) {
@@ -7970,8 +8621,7 @@
       var muted = currentCall && currentCall.isMuted;
       show(dom.mute, connected && !muted && has(CAPABILITIES.Mute));
       show(dom.unmute, connected && muted && has(CAPABILITIES.Mute));
-      show(dom.transfer, liveMedia && has(CAPABILITIES.Transfer) && (!currentIsConference || selectedConferenceCallIds.length === 1));
-      show(dom.merge, selectedConferenceCallIds.length >= 2 && has(CAPABILITIES.Merge));
+      show(dom.transfer, liveMedia && transferModes(capabilities).length > 0 && (!currentIsConference || selectedConferenceCallIds.length === 1));
       if (dom.number) {
         var numberDisabled = !canDial || !!activeCommand || pendingDial && !currentCall;
         if (telInput && typeof telInput.setDisabled === 'function') {
@@ -7983,14 +8633,11 @@
           dom.dialModeToggle.disabled = numberDisabled;
         }
       }
-      [dom.dial, dom.hangup, dom.hold, dom.resume, dom.mute, dom.unmute, dom.transfer, dom.merge, dom.hangupAll].forEach(function (button) {
+      [dom.dial, dom.hangup, dom.hold, dom.resume, dom.mute, dom.unmute, dom.transfer, dom.hangupAll].forEach(function (button) {
         if (button) {
           button.disabled = !!activeCommand;
         }
       });
-      if (dom.merge) {
-        dom.merge.disabled = !!activeCommand || selectedConferenceCallIds.length < 2;
-      }
       dom.keys.forEach(function (button) {
         button.disabled = active && stateName !== 'Connected' && stateName !== 'OnHold' || !!activeCommand;
       });
@@ -8218,6 +8865,30 @@
         render();
       });
     }
+
+    // Hangs up one call of several -- a single participant of a conference -- without touching the others.
+    function hangupCall(callId) {
+      var call = callId ? activeCalls[callId] : null;
+      if (!call) {
+        return;
+      }
+      if (call.browserOriginated && browserCallControllers[callId]) {
+        Promise.resolve(browserCallControllers[callId].terminate()).catch(function () {});
+        return;
+      }
+      invoke('Hangup', {
+        callId: callId,
+        metadata: call.metadata || null
+      }).then(function (result) {
+        if (result && result.succeeded === false) {
+          removeActiveCall(callId);
+          render();
+        }
+      }).catch(function () {
+        removeActiveCall(callId);
+        render();
+      });
+    }
     function hangupAll() {
       var calls = getActiveCalls();
 
@@ -8335,64 +9006,35 @@
       if (!id) {
         return;
       }
-      if (transferOpen) {
-        cancelTransfer();
+      if (transferPanel.isOpen()) {
+        transferPanel.close();
         return;
       }
-      if (!has(CAPABILITIES.Directory) || !dom.transferPanel) {
-        var destination = window.prompt(strings.transferPrompt || 'Transfer to number');
-        if (destination) {
-          invoke('Transfer', {
-            callId: id,
-            to: destination,
-            mode: 0
-          });
-        }
-        return;
-      }
-      transferOpen = true;
-      directoryEntries = [];
-      if (dom.transferInput) {
-        dom.transferInput.value = '';
-      }
-      render();
-      connection.invoke('GetDirectory').then(function (result) {
-        if (!result || result.succeeded === false) {
-          showError(result && result.error ? result.error : 'Unable to load the provider directory.');
-          return;
-        }
-        directoryEntries = result.entries || [];
-        render();
-      }).catch(function (error) {
-        showError(error && error.message ? error.message : String(error));
+
+      // The soft phone picks the target in its own panel, never the browser's prompt (see soft-phone/transfer-panel.js).
+      transferPanel.open({
+        callLabel: formatPhoneNumber(getPeerNumber(currentCall))
       });
     }
-    function cancelTransfer() {
-      transferOpen = false;
-      directoryEntries = [];
-      render();
-    }
-    function confirmTransfer() {
-      var id = currentCallId();
-      var destination = dom.transferInput ? String(dom.transferInput.value || '').trim() : '';
-      if (!id || !destination) {
-        showError(strings.invalidNumber || 'Enter a phone number to call.');
-        return;
+
+    // The provider's directory entries for the transfer panel, or null when the provider has no directory.
+    function loadTransferDirectory() {
+      if (!has(CAPABILITIES.Directory) || !connection) {
+        return null;
       }
-      invoke('Transfer', {
-        callId: id,
-        to: destination,
-        mode: 0
-      }).then(function (result) {
-        if (result && result.succeeded !== false) {
-          cancelTransfer();
+      return connection.invoke('GetDirectory').then(function (result) {
+        if (!result || result.succeeded === false) {
+          showError(result && result.error ? result.error : 'Unable to load the provider directory.');
+          return [];
         }
+        return result.entries || [];
+      }).catch(function (error) {
+        showError(error && error.message ? error.message : String(error));
+        return [];
       });
     }
     function merge() {
-      var callIds = Object.keys(conferenceSelections).filter(function (callId) {
-        return !!activeCalls[callId];
-      });
+      var callIds = currentMergePlan().callIds;
       if (callIds.length < 2) {
         showError(strings.selectCallsToMerge || 'Select at least two calls to conference.');
         return;
@@ -9151,9 +9793,20 @@
         showError(strings.disconnectActiveCalls || 'End active calls before disconnecting from the provider.');
         return;
       }
-      if (window.confirm && !window.confirm(strings.disconnectConfirm || 'Disconnect your provider account from the soft phone?')) {
-        return;
-      }
+
+      // Asked inside the phone, never through the browser's confirm (see soft-phone/in-app-confirm.js).
+      showInAppConfirm(dom.panel, {
+        message: strings.disconnectConfirm || 'Disconnect your provider account from the soft phone?',
+        confirmLabel: strings.disconnectProvider || 'Disconnect provider',
+        cancelLabel: strings.cancel || 'Cancel',
+        before: dom.body
+      }).then(function (confirmed) {
+        if (confirmed) {
+          disconnectProvider();
+        }
+      });
+    }
+    function disconnectProvider() {
       authActionPending = true;
       showError(null);
       showConnectError(null);
@@ -9951,15 +10604,6 @@
       }
       if (dom.transfer) {
         dom.transfer.addEventListener('click', transfer);
-      }
-      if (dom.transferCancel) {
-        dom.transferCancel.addEventListener('click', cancelTransfer);
-      }
-      if (dom.transferConfirm) {
-        dom.transferConfirm.addEventListener('click', confirmTransfer);
-      }
-      if (dom.merge) {
-        dom.merge.addEventListener('click', merge);
       }
       if (dom.incomingAnswer) {
         dom.incomingAnswer.addEventListener('click', function () {

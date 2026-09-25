@@ -44,13 +44,25 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
         app.Urls.Add("http://127.0.0.1:0");
 
         app.MapHub<TestTelephonyHub>("/telephony");
-        app.MapGet("/", (HttpContext context) => Results.Content(
-            BuildHtml(
-                context.Request.Query.ContainsKey("browserAudio"),
-                context.Request.Query.ContainsKey("embedded"),
-                context.Request.Query["answerCallId"],
-                context.Request.Query.ContainsKey("voicemail")),
-            "text/html; charset=utf-8"));
+        app.MapGet("/", (HttpContext context) =>
+        {
+            var attendedTransfer = context.Request.Query.ContainsKey("attendedTransfer");
+
+            if (attendedTransfer)
+            {
+                context.RequestServices.GetRequiredService<InMemoryTelephonyProvider>().EnableAttendedTransfer();
+            }
+
+            return Results.Content(
+                BuildHtml(
+                    context.Request.Query.ContainsKey("browserAudio"),
+                    context.Request.Query.ContainsKey("embedded"),
+                    context.Request.Query["answerCallId"],
+                    voicemail: context.Request.Query.ContainsKey("voicemail"),
+                    styled: context.Request.Query.ContainsKey("styled"),
+                    attendedTransfer: attendedTransfer),
+                "text/html; charset=utf-8");
+        });
 
         // The voicemail delete endpoint, answering a refusal the way the site's cookie authentication did before
         // the endpoint wrote its own 403: a redirect to a sign-in page that itself answers 200.
@@ -85,9 +97,16 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
     /// </summary>
     public static IReadOnlyList<string> ScriptUrls { get; } = SoftPhoneAssets.ResolveHarnessScriptUrls();
 
+    /// <summary>
+    /// Gets the URL of the soft phone's own stylesheet, which a styled harness page (<c>?styled</c>) links so a test can
+    /// check how the phone's panels are laid out and not only what they contain.
+    /// </summary>
+    public static string StylesheetUrl { get; } = SoftPhoneAssets.ModuleUrlPrefix + "styles/soft-phone.css";
+
     // Only the files the harness page loads are served, looked up by the URL the manifest gives them, so a request's
     // path never becomes a file path.
     private static readonly Dictionary<string, string> _moduleAssets = ScriptUrls
+        .Append(StylesheetUrl)
         .Where(url => url.StartsWith(SoftPhoneAssets.ModuleUrlPrefix, StringComparison.Ordinal))
         .Select(url => url[SoftPhoneAssets.ModuleUrlPrefix.Length..])
         .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -132,12 +151,12 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
         return Results.Stream(stream, "application/javascript");
     }
 
-    private static string BuildHtml(bool browserAudio, bool embedded = false, string answerCallId = null, bool voicemail = false)
+    private static string BuildHtml(bool browserAudio, bool embedded = false, string answerCallId = null, bool voicemail = false, bool styled = false, bool attendedTransfer = false)
     {
         var config = new Dictionary<string, object>
         {
             ["hubUrl"] = "/telephony",
-            ["capabilities"] = 2047,
+            ["capabilities"] = attendedTransfer ? 2047 | 2048 : 2047,
             ["audioCapabilities"] = browserAudio ? 1 : 2,
             ["audioMode"] = browserAudio ? 1 : 2,
             ["browserMediaAdapterName"] = browserAudio ? "in-memory" : null,
@@ -152,7 +171,6 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
                 ["failed"] = "Call failed",
                 ["disconnectedHub"] = "Disconnected",
                 ["invalidNumber"] = "Enter a phone number to call.",
-                ["transferPrompt"] = "Transfer to number",
                 ["transfer"] = "Transfer",
                 ["keypad"] = "Keypad",
                 ["directoryEmpty"] = "No directory entries are available.",
@@ -183,6 +201,12 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
             : string.Empty;
         var embeddedClose = embedded ? "</div>" : string.Empty;
         var scripts = string.Join(Environment.NewLine + "    ", ScriptUrls.Select(url => $"<script src=\"{url}\"></script>"));
+        // A styled page gives the root the widget's class, so the stylesheet's variables apply, but keeps it in the page
+        // flow rather than floating in a corner, so a test can measure what it draws.
+        var stylesheet = styled
+            ? $"<link rel=\"stylesheet\" href=\"{StylesheetUrl}\" /><style>#telephony-soft-phone.telephony-soft-phone {{ position: static; }}</style>"
+            : string.Empty;
+        var rootClass = styled ? " class=\"telephony-soft-phone\"" : string.Empty;
 
         return $$"""
         <!DOCTYPE html>
@@ -190,10 +214,11 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
         <head>
             <meta charset="utf-8" />
             <title>Soft Phone Test</title>
+            {{stylesheet}}
         </head>
         <body>
             {{embeddedOpen}}
-            <div id="telephony-soft-phone" data-config='{{configJson}}'>
+            <div id="telephony-soft-phone"{{rootClass}} data-config='{{configJson}}'>
                 <button type="button" data-telephony-toggle><i class="fa-solid fa-phone" data-telephony-toggle-icon></i></button>
                 <div data-telephony-panel hidden>
                     <audio data-telephony-remote-audio autoplay></audio>
@@ -205,17 +230,10 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
                         <div data-telephony-view="keypad">
                             <input type="tel" data-telephony-number />
                             <div data-telephony-error hidden></div>
-                            <div data-telephony-active-calls hidden>
-                                <div data-telephony-active-calls-list></div>
+                            <div class="telephony-soft-phone__active-calls" data-telephony-active-calls hidden>
+                                <div class="telephony-soft-phone__active-calls-list" data-telephony-active-calls-list></div>
                             </div>
-                            <div data-telephony-transfer-panel hidden>
-                                <input type="tel" data-telephony-transfer-input />
-                                <div data-telephony-directory hidden>
-                                    <div data-telephony-directory-list></div>
-                                </div>
-                                <button type="button" data-telephony-transfer-cancel>Cancel</button>
-                                <button type="button" data-telephony-transfer-confirm>Transfer</button>
-                            </div>
+                            <div class="telephony-soft-phone__transfer-panel" data-telephony-transfer-panel hidden></div>
                             <div data-telephony-keypad-panel>
                                 <button type="button" data-telephony-key="1">1</button>
                             </div>
@@ -228,7 +246,6 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
                                 <i data-telephony-transfer-icon></i>
                                 <span data-telephony-transfer-label>Transfer</span>
                             </button>
-                            <button type="button" data-telephony-merge hidden>Merge</button>
                             <button type="button" data-telephony-hangup hidden>Hangup</button>
                             <button type="button" data-telephony-hangup-all hidden>Disconnect all</button>
                         </div>

@@ -858,6 +858,71 @@
         white-space: nowrap;
     }
 
+    // A conference's participants sit under their own heading, each with its own hang-up.
+    &__conference {
+        border-top: 1px solid var(--bs-border-color, #dee2e6);
+        background-color: color-mix(in srgb, var(--telephony-accent) 6%, var(--bs-body-bg, #fff));
+    }
+
+    &__conference-heading {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.35rem 0.5rem 0.2rem;
+        color: var(--telephony-accent);
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    &__participant-hangup {
+        flex: 0 0 auto;
+        width: 1.7rem;
+        height: 1.7rem;
+        border: none;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        background-color: #d23f3f;
+        font-size: 0.72rem;
+        cursor: pointer;
+
+        &:disabled {
+            opacity: 0.55;
+            cursor: default;
+        }
+    }
+
+    // The Merge action names the calls it will join, so the agent can see what a click does before making it.
+    &__merge-bar {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.45rem 0.5rem;
+        border-top: 1px solid var(--bs-border-color, #dee2e6);
+        background-color: var(--bs-tertiary-bg, #f8f9fa);
+    }
+
+    &__merge-summary {
+        flex: 1 1 auto;
+        min-width: 0;
+        color: var(--bs-body-color, #212529);
+        font-size: 0.72rem;
+        line-height: 1.3;
+        overflow-wrap: anywhere;
+    }
+
+    &__merge-calls {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        white-space: nowrap;
+    }
+
     &__transfer-panel {
         margin: 0 0.85rem 0.6rem;
         padding: 0.55rem;
@@ -866,14 +931,53 @@
         background-color: var(--bs-tertiary-bg, #f8f9fa);
     }
 
-    &__transfer-title,
-    &__directory-heading {
-        margin-bottom: 0.35rem;
+    // The panel's own header mirrors the settings panel: a back button and the title.
+    &__transfer-header {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin: -0.15rem 0 0.45rem -0.2rem;
+    }
+
+    &__transfer-title {
+        min-width: 0;
+        overflow: hidden;
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    // Blind or warm, as a segmented control; only drawn when the provider offers both.
+    &__transfer-modes {
+        display: flex;
+        padding: 0.15rem;
+        border: 1px solid var(--bs-border-color, #dee2e6);
+        border-radius: 0.45rem;
+        background-color: var(--bs-body-bg, #fff);
+    }
+
+    &__transfer-mode {
+        flex: 1 1 0;
+        padding: 0.25rem 0.4rem;
+        border: none;
+        border-radius: 0.35rem;
+        background: transparent;
+        color: var(--bs-secondary-color, #6c757d);
+        font-size: 0.78rem;
+        font-weight: 600;
+        cursor: pointer;
+
+        &.is-active {
+            background-color: var(--telephony-accent);
+            color: #fff;
+        }
+    }
+
+    &__transfer-hint {
+        margin: 0.3rem 0 0.45rem;
         color: var(--bs-secondary-color, #6c757d);
         font-size: 0.7rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
     }
 
     &__transfer-input {
@@ -883,6 +987,122 @@
         border-radius: 0.4rem;
         background-color: var(--bs-body-bg, #fff);
         color: var(--bs-body-color, #212529);
+
+        &:focus {
+            outline: 2px solid color-mix(in srgb, var(--telephony-accent) 45%, transparent);
+            outline-offset: 0;
+            border-color: var(--telephony-accent);
+        }
+    }
+
+    &__transfer-error {
+        margin-top: 0.35rem;
+        color: #b02a37;
+        font-size: 0.72rem;
+    }
+
+    &__transfer-results {
+        max-height: 11rem;
+        margin-top: 0.45rem;
+        overflow-y: auto;
+        border: 1px solid var(--bs-border-color, #dee2e6);
+        border-radius: 0.4rem;
+        background-color: var(--bs-body-bg, #fff);
+        scrollbar-width: thin;
+
+        &:empty {
+            display: none;
+        }
+    }
+
+    // A section label inside the results, not an option: small caps, muted, and never looking clickable.
+    &__transfer-group {
+        padding: 0.4rem 0.5rem 0.15rem;
+        color: var(--bs-secondary-color, #6c757d);
+        font-size: 0.64rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        user-select: none;
+    }
+
+    &__transfer-option {
+        cursor: pointer;
+
+        > i {
+            flex: 0 0 auto;
+            width: 1rem;
+            color: var(--bs-secondary-color, #6c757d);
+            text-align: center;
+        }
+
+        .telephony-soft-phone__directory-name {
+            flex: 1 1 auto;
+        }
+
+        &.is-selected {
+            background-color: color-mix(in srgb, var(--telephony-accent) 12%, var(--bs-body-bg, #fff));
+            box-shadow: inset 0.2rem 0 0 var(--telephony-accent);
+        }
+    }
+
+    &__transfer-option--number {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        width: 100%;
+        padding: 0.45rem 0.5rem;
+        border: none;
+        background: transparent;
+        color: var(--telephony-accent);
+        text-align: left;
+
+        > i {
+            color: var(--telephony-accent);
+        }
+
+        &:hover {
+            background-color: var(--bs-tertiary-bg, #f8f9fa);
+        }
+    }
+
+    // A question the phone asks itself rather than through the browser (see soft-phone/in-app-confirm.js).
+    &__confirm {
+        margin: 0.6rem 0.85rem 0;
+        padding: 0.55rem 0.65rem;
+        border: 1px solid #f1aeb5;
+        border-radius: 0.5rem;
+        background-color: #f8d7da;
+        color: #58151c;
+    }
+
+    &__confirm-text {
+        margin: 0 0 0.45rem;
+        font-size: 0.8rem;
+    }
+
+    &__confirm-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.4rem;
+    }
+
+    // A section label inside a header menu (for example the presence menu's break reasons). It names the items below it
+    // and must never read as one of them: no item padding, no item colour, and nothing that looks clickable.
+    &__menu-heading {
+        margin: 0.35rem 0 0.1rem;
+        padding: 0.45rem 0.75rem 0.15rem;
+        border-top: 1px solid var(--bs-border-color, #dee2e6);
+        color: var(--bs-secondary-color, #6c757d);
+        font-size: 0.66rem;
+        font-weight: 700;
+        line-height: 1.2;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        white-space: nowrap;
+        cursor: default;
+        pointer-events: none;
+        user-select: none;
     }
 
     &__directory {
@@ -902,6 +1122,7 @@
         align-items: center;
         justify-content: space-between;
         gap: 0.5rem;
+        min-height: 2.1rem;
         width: 100%;
         padding: 0.35rem 0.45rem;
         border: none;
@@ -1005,8 +1226,7 @@
         &--resume,
         &--mute,
         &--unmute,
-        &--transfer,
-        &--merge {
+        &--transfer {
             background-color: var(--telephony-accent);
         }
     }

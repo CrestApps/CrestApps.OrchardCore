@@ -34,6 +34,8 @@ public sealed class InMemoryTelephonyProvider :
     private int _dialDelayMilliseconds;
     private int _lookupRequestCount;
     private int _lookupDelayMilliseconds;
+    private TransferRequest _lastTransfer;
+    private volatile bool _attendedTransfer;
 
     public LocalizedString Name => new("InMemory", "InMemory");
 
@@ -51,8 +53,17 @@ public sealed class InMemoryTelephonyProvider :
                 TelephonyCapabilities.SendDigits |
                 TelephonyCapabilities.ReceiveCalls |
                 TelephonyCapabilities.Voicemail |
-                TelephonyCapabilities.Directory;
+                TelephonyCapabilities.Directory |
+                (_attendedTransfer ? TelephonyCapabilities.AttendedTransfer : TelephonyCapabilities.None);
         }
+    }
+
+    /// <summary>
+    /// Has the provider also advertise attended (warm) transfer, so the phone offers a choice of transfer mode.
+    /// </summary>
+    public void EnableAttendedTransfer()
+    {
+        _attendedTransfer = true;
     }
 
     public TelephonyAudioCapabilities AudioCapabilities => TelephonyAudioCapabilities.Browser;
@@ -143,6 +154,7 @@ public sealed class InMemoryTelephonyProvider :
     public Task<TelephonyResult> TransferAsync(TransferRequest request, CancellationToken cancellationToken = default)
     {
         Interlocked.Increment(ref _transferRequestCount);
+        Volatile.Write(ref _lastTransfer, request);
 
         return Update(request?.CallId, c => c.State = CallState.Connected);
     }
@@ -346,6 +358,11 @@ public sealed class InMemoryTelephonyProvider :
     public int GetTransferRequestCount()
     {
         return Volatile.Read(ref _transferRequestCount);
+    }
+
+    public TransferRequest GetLastTransfer()
+    {
+        return Volatile.Read(ref _lastTransfer);
     }
 
     public void SetDialDelay(int milliseconds)

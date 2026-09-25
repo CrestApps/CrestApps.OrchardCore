@@ -119,6 +119,11 @@ public sealed class TestTelephonyHub : Hub<ITelephonyClient>
         return Task.FromResult(_provider.GetTransferRequestCount());
     }
 
+    public Task<TransferRequest> GetLastTransfer()
+    {
+        return Task.FromResult(_provider.GetLastTransfer());
+    }
+
     public Task SetDialDelay(int milliseconds)
     {
         _provider.SetDialDelay(milliseconds);

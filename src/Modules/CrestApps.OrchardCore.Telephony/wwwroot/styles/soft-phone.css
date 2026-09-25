@@ -716,6 +716,62 @@
   font-size: 0.68rem;
   white-space: nowrap;
 }
+.telephony-soft-phone__conference {
+  border-top: 1px solid var(--bs-border-color, #dee2e6);
+  background-color: color-mix(in srgb, var(--telephony-accent) 6%, var(--bs-body-bg, #fff));
+}
+.telephony-soft-phone__conference-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.5rem 0.2rem;
+  color: var(--telephony-accent);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.telephony-soft-phone__participant-hangup {
+  flex: 0 0 auto;
+  width: 1.7rem;
+  height: 1.7rem;
+  border: none;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background-color: #d23f3f;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+.telephony-soft-phone__participant-hangup:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.telephony-soft-phone__merge-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.5rem;
+  border-top: 1px solid var(--bs-border-color, #dee2e6);
+  background-color: var(--bs-tertiary-bg, #f8f9fa);
+}
+.telephony-soft-phone__merge-summary {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--bs-body-color, #212529);
+  font-size: 0.72rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.telephony-soft-phone__merge-calls {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
 .telephony-soft-phone__transfer-panel {
   margin: 0 0.85rem 0.6rem;
   padding: 0.55rem;
@@ -723,13 +779,46 @@
   border-radius: 0.5rem;
   background-color: var(--bs-tertiary-bg, #f8f9fa);
 }
-.telephony-soft-phone__transfer-title, .telephony-soft-phone__directory-heading {
-  margin-bottom: 0.35rem;
+.telephony-soft-phone__transfer-header {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: -0.15rem 0 0.45rem -0.2rem;
+}
+.telephony-soft-phone__transfer-title {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.telephony-soft-phone__transfer-modes {
+  display: flex;
+  padding: 0.15rem;
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  border-radius: 0.45rem;
+  background-color: var(--bs-body-bg, #fff);
+}
+.telephony-soft-phone__transfer-mode {
+  flex: 1 1 0;
+  padding: 0.25rem 0.4rem;
+  border: none;
+  border-radius: 0.35rem;
+  background: transparent;
+  color: var(--bs-secondary-color, #6c757d);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.telephony-soft-phone__transfer-mode.is-active {
+  background-color: var(--telephony-accent);
+  color: #fff;
+}
+.telephony-soft-phone__transfer-hint {
+  margin: 0.3rem 0 0.45rem;
   color: var(--bs-secondary-color, #6c757d);
   font-size: 0.7rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 .telephony-soft-phone__transfer-input {
   width: 100%;
@@ -738,6 +827,102 @@
   border-radius: 0.4rem;
   background-color: var(--bs-body-bg, #fff);
   color: var(--bs-body-color, #212529);
+}
+.telephony-soft-phone__transfer-input:focus {
+  outline: 2px solid color-mix(in srgb, var(--telephony-accent) 45%, transparent);
+  outline-offset: 0;
+  border-color: var(--telephony-accent);
+}
+.telephony-soft-phone__transfer-error {
+  margin-top: 0.35rem;
+  color: #b02a37;
+  font-size: 0.72rem;
+}
+.telephony-soft-phone__transfer-results {
+  max-height: 11rem;
+  margin-top: 0.45rem;
+  overflow-y: auto;
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  border-radius: 0.4rem;
+  background-color: var(--bs-body-bg, #fff);
+  scrollbar-width: thin;
+}
+.telephony-soft-phone__transfer-results:empty {
+  display: none;
+}
+.telephony-soft-phone__transfer-group {
+  padding: 0.4rem 0.5rem 0.15rem;
+  color: var(--bs-secondary-color, #6c757d);
+  font-size: 0.64rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  user-select: none;
+}
+.telephony-soft-phone__transfer-option {
+  cursor: pointer;
+}
+.telephony-soft-phone__transfer-option > i {
+  flex: 0 0 auto;
+  width: 1rem;
+  color: var(--bs-secondary-color, #6c757d);
+  text-align: center;
+}
+.telephony-soft-phone__transfer-option .telephony-soft-phone__directory-name {
+  flex: 1 1 auto;
+}
+.telephony-soft-phone__transfer-option.is-selected {
+  background-color: color-mix(in srgb, var(--telephony-accent) 12%, var(--bs-body-bg, #fff));
+  box-shadow: inset 0.2rem 0 0 var(--telephony-accent);
+}
+.telephony-soft-phone__transfer-option--number {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.45rem 0.5rem;
+  border: none;
+  background: transparent;
+  color: var(--telephony-accent);
+  text-align: left;
+}
+.telephony-soft-phone__transfer-option--number > i {
+  color: var(--telephony-accent);
+}
+.telephony-soft-phone__transfer-option--number:hover {
+  background-color: var(--bs-tertiary-bg, #f8f9fa);
+}
+.telephony-soft-phone__confirm {
+  margin: 0.6rem 0.85rem 0;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid #f1aeb5;
+  border-radius: 0.5rem;
+  background-color: #f8d7da;
+  color: #58151c;
+}
+.telephony-soft-phone__confirm-text {
+  margin: 0 0 0.45rem;
+  font-size: 0.8rem;
+}
+.telephony-soft-phone__confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+.telephony-soft-phone__menu-heading {
+  margin: 0.35rem 0 0.1rem;
+  padding: 0.45rem 0.75rem 0.15rem;
+  border-top: 1px solid var(--bs-border-color, #dee2e6);
+  color: var(--bs-secondary-color, #6c757d);
+  font-size: 0.66rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  white-space: nowrap;
+  cursor: default;
+  pointer-events: none;
+  user-select: none;
 }
 .telephony-soft-phone__directory {
   margin-top: 0.5rem;
@@ -754,6 +939,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
+  min-height: 2.1rem;
   width: 100%;
   padding: 0.35rem 0.45rem;
   border: none;
@@ -839,7 +1025,7 @@
 .telephony-soft-phone__btn--hangup-all {
   background-color: #a52834;
 }
-.telephony-soft-phone__btn--hold, .telephony-soft-phone__btn--resume, .telephony-soft-phone__btn--mute, .telephony-soft-phone__btn--unmute, .telephony-soft-phone__btn--transfer, .telephony-soft-phone__btn--merge {
+.telephony-soft-phone__btn--hold, .telephony-soft-phone__btn--resume, .telephony-soft-phone__btn--mute, .telephony-soft-phone__btn--unmute, .telephony-soft-phone__btn--transfer {
   background-color: var(--telephony-accent);
 }
 .telephony-soft-phone__view[data-telephony-view=keypad], .telephony-soft-phone__history, .telephony-soft-phone__extension-view, .telephony-soft-phone__connect, .telephony-soft-phone__unavailable, .telephony-soft-phone__directory-list {

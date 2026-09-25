@@ -77,6 +77,41 @@ public abstract class SoftPhoneBrowserTest : IAsyncLifetime
     }
 
     /// <summary>
+    /// The size of the CrestApps Soft Phone for Windows window, which hosts the standalone phone in WebView2. Anything the
+    /// phone draws has to fit it.
+    /// </summary>
+    protected static ViewportSize DesktopAppViewport { get; } = new() { Width = 430, Height = 740 };
+
+    /// <summary>
+    /// Opens the harness page at <paramref name="viewport"/> and waits for the phone's hub connection.
+    /// </summary>
+    protected async Task<IPage> OpenAsync(string query, ViewportSize viewport)
+    {
+        var page = await Browser.NewPageAsync(new BrowserNewPageOptions { ViewportSize = viewport });
+        await page.GotoAsync(Server.BaseUrl + query);
+        await WaitForConnectedAsync(page);
+
+        return page;
+    }
+
+    /// <summary>
+    /// Saves a screenshot of <paramref name="page"/> when <c>SOFTPHONE_SCREENSHOT_DIR</c> names a folder, so a person can
+    /// look at what a test drove. Nothing is written otherwise.
+    /// </summary>
+    protected static async Task CaptureAsync(IPage page, string name)
+    {
+        var directory = Environment.GetEnvironmentVariable("SOFTPHONE_SCREENSHOT_DIR");
+
+        if (string.IsNullOrWhiteSpace(directory))
+        {
+            return;
+        }
+
+        Directory.CreateDirectory(directory);
+        await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(directory, name + ".png"), FullPage = true });
+    }
+
+    /// <summary>
     /// Waits for the phone's hub connection.
     /// </summary>
     protected static async Task WaitForConnectedAsync(IPage page)

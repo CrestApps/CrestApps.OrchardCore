@@ -163,9 +163,10 @@ If the provider does not advertise Hold, the button is hidden.
 
 **Prerequisites:** an active call and provider **Transfer** capability.
 
-1. Click **Transfer** on the soft phone.
-2. Enter the destination number or extension, or pick a directory entry.
-3. Confirm the transfer.
+1. Click **Transfer** on the soft phone. The transfer panel opens inside the phone, in place of the keypad; the back arrow returns to the keypad.
+2. Search the directory by name or extension and pick an entry, or type the number or extension to transfer to. The phone refuses its own number and an incomplete number before anything is sent.
+3. When the provider offers both, choose **Blind** (the call is sent straight to them) or **Warm** (you speak to them first). A provider that supports only one shows no choice.
+4. Click **Transfer** (or press Enter).
 
 :::caution Provider differences
 Transfer support is provider-dependent. The bundled **Asterisk** provider supports **blind transfer** and a **two-call conference** but rejects warm (consultative) transfer. **Dialpad** exposes its own transfer and merge actions when configured. Only the actions the active provider supports are shown.
@@ -179,8 +180,9 @@ Transfer support is provider-dependent. The bundled **Asterisk** provider suppor
 
 **Prerequisites:** two active calls (for example the original caller on hold plus a second call) and provider **Merge** capability.
 
-1. In the soft phone's **Active calls** list, select the two calls you want to join.
-2. Click **Conference selected calls**. The two calls are merged; no provider call id is required.
+1. With two or more calls up, the soft phone's **Active calls** list shows **Merge calls** and names the calls it will join. To join only some of three or more calls, tick those calls first.
+2. Click **Merge calls**. The calls are merged; no provider call id is required.
+3. The conference is listed under its own **Conference** heading with its participants. Each participant has its own hang-up button, which ends only that participant's call.
 
 :::note Screencast
 `contact-center-agent-conference.mp4`

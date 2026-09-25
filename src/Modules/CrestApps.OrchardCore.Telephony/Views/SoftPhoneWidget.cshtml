@@ -110,17 +110,35 @@
             ["extensionPlaceholder"] = T["Enter an extension"].Value,
             ["numberLabel"] = T["Phone number"].Value,
             ["extensionLabel"] = T["Extension"].Value,
-            ["transferPrompt"] = T["Transfer to number"].Value,
             ["transferTitle"] = T["Transfer call"].Value,
-            ["transferDestination"] = T["Number or extension"].Value,
+            ["transferCallOf"] = T["Transfer {0}"].Value,
+            ["transferDestination"] = T["Transfer destination"].Value,
+            ["transferSearchPlaceholder"] = T["Search a name, or enter a number"].Value,
+            ["transferType"] = T["Transfer type"].Value,
+            ["transferBlind"] = T["Blind"].Value,
+            ["transferWarm"] = T["Warm"].Value,
+            ["transferBlindHint"] = T["The call is sent straight to them."].Value,
+            ["transferWarmHint"] = T["You speak to them before the call is handed over."].Value,
+            ["transferToNumber"] = T["Transfer to {0}"].Value,
+            ["transferEnterNumber"] = T["Enter the number or extension to transfer to."].Value,
+            ["transferTargetRequired"] = T["Choose who to transfer the call to, or enter a number."].Value,
+            ["transferInvalidNumber"] = T["Enter a complete phone number or extension."].Value,
+            ["transferOwnNumber"] = T["That is this phone system's own number. Choose who to transfer the call to."].Value,
+            ["back"] = T["Back"].Value,
             ["directory"] = T["Directory"].Value,
             ["directoryEmpty"] = T["No directory entries are available."].Value,
+            ["directoryLoading"] = T["Loading the directory..."].Value,
+            ["directoryNoMatch"] = T["Nobody in the directory matches."].Value,
             ["cancel"] = T["Cancel"].Value,
             ["transfer"] = T["Transfer"].Value,
             ["keypad"] = T["Keypad"].Value,
             ["activeCalls"] = T["Active calls"].Value,
             ["selectCallsToMerge"] = T["Select at least two calls to conference."].Value,
-            ["conference"] = T["Conference selected calls"].Value,
+            ["selectCall"] = T["Select {0}"].Value,
+            ["mergeCalls"] = T["Merge calls"].Value,
+            ["mergeSummary"] = T["Join {0} in one conference."].Value,
+            ["conferenceParticipants"] = T["Conference · {0} participants"].Value,
+            ["hangupParticipant"] = T["Hang up {0}"].Value,
             ["disconnectAll"] = T["Disconnect all calls"].Value,
             ["connectPrompt"] = T["Connect your account to the telephony provider to start making calls."].Value,
             ["connectUnavailable"] = T["The connection could not be started. Refresh the page and try again."].Value,
@@ -396,22 +414,8 @@
                     <div class="telephony-soft-phone__active-calls-list" data-telephony-active-calls-list></div>
                 </div>
 
-                <div class="telephony-soft-phone__transfer-panel" data-telephony-transfer-panel hidden>
-                    <div class="telephony-soft-phone__transfer-title">@T["Transfer call"]</div>
-                    <input type="tel"
-                           class="telephony-soft-phone__transfer-input"
-                           data-telephony-transfer-input
-                           placeholder="@T["Number or extension"]"
-                           aria-label="@T["Transfer destination"]" />
-                    <div class="telephony-soft-phone__directory" data-telephony-directory hidden>
-                        <div class="telephony-soft-phone__directory-heading">@T["Directory"]</div>
-                        <div class="telephony-soft-phone__directory-list" data-telephony-directory-list></div>
-                    </div>
-                    <div class="telephony-soft-phone__transfer-actions">
-                        <button type="button" class="btn btn-sm btn-secondary" data-telephony-transfer-cancel>@T["Cancel"]</button>
-                        <button type="button" class="btn btn-sm btn-primary" data-telephony-transfer-confirm>@T["Transfer"]</button>
-                    </div>
-                </div>
+                @* Drawn by the soft phone when the agent starts a transfer (see Assets/js/soft-phone/transfer-panel.js). *@
+                <div class="telephony-soft-phone__transfer-panel" data-telephony-transfer-panel role="region" aria-label="@T["Transfer call"]" hidden></div>
 
                 <div class="telephony-soft-phone__keypad" data-telephony-keypad-panel>
                     @foreach (var key in new[] { "1", "2", "3", "4", "5", "6", "7", "8", "9", "*", "0", "#" })
@@ -439,9 +443,6 @@
                     <button type="button" class="telephony-soft-phone__btn telephony-soft-phone__btn--transfer" data-telephony-transfer title="@T["Transfer"]" hidden>
                         <i class="fa-solid fa-arrow-right-arrow-left" data-telephony-transfer-icon></i>
                         <span class="visually-hidden" data-telephony-transfer-label>@T["Transfer"]</span>
-                    </button>
-                    <button type="button" class="telephony-soft-phone__btn telephony-soft-phone__btn--merge" data-telephony-merge title="@T["Conference selected calls"]" hidden>
-                        <i class="fa-solid fa-code-merge"></i>
                     </button>
                     <button type="button" class="telephony-soft-phone__btn telephony-soft-phone__btn--hangup-all" data-telephony-hangup-all title="@T["Disconnect all calls"]" hidden>
                         <i class="fa-solid fa-phone-volume"></i>
