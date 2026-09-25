@@ -206,6 +206,30 @@ contact center voice adapter activates automatically whenever both are enabled. 
 - **Inbound** — Telnyx posts signed call events to `/api/telnyx/webhook/call`; new inbound calls create a
   CRM activity and voice interaction and route through the matching entry point.
 
+## Transfers
+
+A Contact Center call on Telnyx is transferred by the Contact Center, not by Telnyx's own `transfer` action,
+because an agent or a queue is not something Telnyx can dial. The soft phone's transfer panel calls the
+Contact Center's transfer endpoints (see [How to transfer a call](../contact-center/user-manual.md)).
+
+- **Blind to an agent or a queue** — the caller's leg stays on the platform with the queue's hold music
+  (`playback_start`), the transferring agent's leg is taken off the call topology and then hung up, and the
+  call is offered through the normal reservation pipeline. When the new agent accepts, their leg is joined to
+  the caller exactly as for a new call, and the music stops.
+- **Blind to an outside number** — `POST /v2/calls/{caller}/actions/transfer` from the platform's default
+  caller id, then the call settles as *Transferred* and the agent is released.
+- **Warm (consult)** — the caller is moved into a conference named `cc-consult-{consultId}`
+  (`POST /v2/conferences`) and held there with the queue's hold music (`conferences/{id}/actions/hold`); the
+  agent's leg joins the conference, and the destination is rung on a leg of its own (client state intent
+  `cc-consult`, 30-second ring window). When it answers it joins the conference, and the agent and the
+  destination talk while the caller holds. **Complete** unholds the caller; for an outside party both legs
+  then leave the conference and are bridged directly. **Cancel** hangs up the destination and unholds the
+  caller. The agent's own leg is hung up by the Contact Center only after it has recorded that the leg no
+  longer carries the call, so its hangup is not mistaken for the agent ending the call.
+- Agent legs are bridged with `park_after_unbridge: self`, so moving the caller into the consult conference
+  parks the agent's leg instead of hanging it up. When a call ends, the Contact Center releases any agent leg
+  still up.
+
 ## DID → agent routing
 
 Inbound calls route by their dialed number through **entry points** (**Contact Center → Entry points**). An
@@ -249,8 +273,8 @@ your platform, encrypted at rest — not left only in Telnyx's cloud.
 The Telnyx telephony provider advertises dialing, hang up, hold, resume, mute, blind and attended transfer,
 merge (conference), sending DTMF digits, and receiving inbound calls. Hold and mute are executed by the
 browser media adapter because Telnyx delivers this call's audio to the browser. The Contact Center voice
-provider advertises dialer dialing, agent connect (bridge), call transfer, and — with the Call Recording
-feature — recording.
+provider advertises dialer dialing, agent connect (bridge), call transfer, attended (consult) transfer, and —
+with the Call Recording feature — recording.
 
 ## Telnyx AI Voice Agent
 

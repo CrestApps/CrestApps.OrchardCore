@@ -165,11 +165,35 @@ If the provider does not advertise Hold, the button is hidden.
 
 1. Click **Transfer** on the soft phone. The transfer panel opens inside the phone, in place of the keypad; the back arrow returns to the keypad.
 2. Search the directory by name or extension and pick an entry, or type the number or extension to transfer to. The phone refuses its own number and an incomplete number before anything is sent.
-3. When the provider offers both, choose **Blind** (the call is sent straight to them) or **Warm** (you speak to them first). A provider that supports only one shows no choice.
+3. When the call offers both, choose **Blind** (the call is sent straight to them) or **Warm** (you speak to them first). A call that supports only one shows no choice.
 4. Click **Transfer** (or press Enter).
 
+### Transferring a Contact Center call
+
+When the call came to you through the Contact Center (a queue, a direct line or a campaign), the Contact Center carries the transfer rather than the phone provider, and the panel lists:
+
+- **Agents** — every other agent with their extension and presence. Only agents shown as **Available** can be picked; the others are listed so you can see why.
+- **Queues** — every enabled queue, with how many callers are waiting in it.
+- **Outside numbers** — the approved external destinations, when you have the **Transfer Contact Center calls externally** permission. A number that is not on that list can be typed only when an administrator turned on **Let agents transfer to numbers that are not on this list** (*Settings → Contact Center*). Emergency, premium-rate and the contact center's own numbers are always refused.
+
+**Blind transfer**
+
+- **To an agent:** the caller hears the queue's hold music while the call rings on that agent's phone as a normal offer. If they do not answer within the ring window, the caller goes to that agent's voicemail.
+- **To a queue:** the caller joins the queue, keeping at least the priority they had, and is offered to the next available agent; with nobody free they hear the queue's treatment.
+- **To an outside number:** the call leaves the contact center and is connected to that number from the platform's own number.
+
+In every case the call leaves your phone at once and you go into wrap-up, or straight back to ready for a direct call, exactly as when a call ends.
+
+**Warm (consult) transfer**
+
+1. Choose **Warm**, pick an available agent or an outside number, and click **Transfer**. The caller is put on hold with the queue's hold music and the destination is rung. The panel shows **Calling…**; you can **Cancel transfer** at any time.
+2. When they answer, the panel shows **Talking to…**: you are speaking to them privately while the caller holds.
+3. Click **Complete transfer** to join the caller to them and leave the call, or **Cancel transfer** to drop them and return to the caller.
+
+If the person you consulted hangs up or does not answer within 30 seconds, the caller comes straight back to you and the panel says so. If the caller hangs up during the consult, the consult ends and the person you consulted is released. A queue cannot be consulted; send the call to a queue with a blind transfer.
+
 :::caution Provider differences
-Transfer support is provider-dependent. The bundled **Asterisk** provider supports **blind transfer** and a **two-call conference** but rejects warm (consultative) transfer. **Dialpad** exposes its own transfer and merge actions when configured. Only the actions the active provider supports are shown.
+Transfer support is provider-dependent. The bundled **Asterisk** provider supports **blind transfer** and a **two-call conference** but rejects warm (consultative) transfer. **Dialpad** exposes its own transfer and merge actions when configured. **Telnyx** supports every Contact Center transfer above, including the consult. Only the actions the active provider supports are shown.
 :::
 
 :::note Screencast

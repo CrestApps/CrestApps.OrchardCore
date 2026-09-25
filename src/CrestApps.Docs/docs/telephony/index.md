@@ -164,7 +164,16 @@ agents and end users by other, independent means.
 What an agent may **transfer** to is decided separately by `ITransferTargetPolicy`. Without Contact Center Voice
 the transfer field accepts the destination as typed, once the dial destination policy has cleared it, so provider
 directory addresses keep working. With Contact Center Voice enabled, the field accepts only a curated destination
-— an approved external destination, an agent, or a queue — and a raw phone number is refused.
+— an approved external destination, an agent, or a queue — and a raw phone number is refused unless the tenant
+turned on **Let agents transfer to numbers that are not on this list**, in which case it must still pass the dial
+destination policy and may never be one of the contact center's own numbers (entry-point numbers and the
+provider's outbound caller id, contributed through `IContactCenterOwnNumberSource`).
+
+A call that belongs to a Contact Center interaction is not transferred through the hub at all. The widget's
+configuration carries a `transferService` block with the Contact Center's transfer endpoints (resolved by route
+name, so it is empty when the module is not enabled), and for a call whose metadata names an `interactionId` the
+panel lists the agents, queues and approved outside numbers those endpoints return and posts blind transfers and
+consults to them. Every other call keeps the provider path.
 
 When you enable the only configured provider, it is automatically selected as the default. When you
 disable the current default provider, the default is cleared and the soft phone is disabled until a
