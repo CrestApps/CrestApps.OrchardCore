@@ -64,6 +64,11 @@
 
     var createHoldAudioController = softPhoneModules.createHoldAudioController;
 
+    var hasLiveAudioTrack = softPhoneModules.hasLiveAudioTrack;
+    var releaseSharedCapture = softPhoneModules.releaseSharedCapture;
+    var startOutboundAudioMonitor = softPhoneModules.startOutboundAudioMonitor;
+    var OUTBOUND_SILENCE_MS = softPhoneModules.OUTBOUND_SILENCE_MS;
+
     var rememberAgentHold = softPhoneModules.rememberAgentHold;
     var pruneAgentHolds = softPhoneModules.pruneAgentHolds;
     var isAgentHeld = softPhoneModules.isAgentHeld;
@@ -862,6 +867,8 @@
         var QUALITY_TRANSMIT_EVERY = 3;
         var qualityTimer = null;
         var qualityState = null;
+        // Watches the live call for audio that stops leaving it (see soft-phone/send-audio.js).
+        var outboundMonitor = null;
 
         // Loudness probes for the two directions, measured in the browser rather than read out of getStats.
         // They cover what getStats cannot: how loud the far end actually is (no browser reports it), and the
@@ -1095,6 +1102,34 @@
             startLevelProbes();
 
             qualityTimer = window.setInterval(sampleQuality, QUALITY_SAMPLE_INTERVAL_MS);
+            startOutboundWatch(call);
+        }
+
+        // Tells the phone when a connected call stops sending, and marks the call's summary. A stall is sampled at once
+        // so a call too short for the regular sample still sends a summary that says so.
+        function startOutboundWatch(call) {
+            outboundMonitor = typeof startOutboundAudioMonitor !== 'function' ? null : startOutboundAudioMonitor({
+                readPeer: function () { return call.peer && call.peer.instance; },
+                isSuppressed: function () {
+                    return (holdAudio && holdAudio.isEngaged()) ||
+                        (typeof context.isOutboundSuppressed === 'function' && context.isOutboundSuppressed());
+                },
+                onStalled: function (info) {
+                    if (qualityState && qualityState.call === call) {
+                        qualityState.outboundStalled = true;
+                        sampleQuality();
+                    }
+
+                    if (typeof context.onOutboundAudioStalled === 'function') {
+                        context.onOutboundAudioStalled(info);
+                    }
+                },
+                onResumed: function () {
+                    if (typeof context.onOutboundAudioResumed === 'function') {
+                        context.onOutboundAudioResumed();
+                    }
+                }
+            });
         }
 
         function sampleQuality() {
@@ -1417,6 +1452,8 @@
                 captureReported: !!sample.captureReported,
                 bytesSent: sample.bytesSent,
                 packetsSent: sample.packetsSent,
+                // Whether audio stopped leaving this call for a stretch while it was connected, unmuted and not held.
+                outboundAudioStalled: !!(qualityState && qualityState.outboundStalled),
                 // The delay the browser itself adds on top of the network round trip, and the measured loudness
                 // of each direction. All three are -1 when they could not be measured. Together they are what
                 // separates "this call sounded bad" from "every number said the call was fine", which is the
@@ -1470,6 +1507,16 @@
             if (qualityTimer) {
                 window.clearInterval(qualityTimer);
                 qualityTimer = null;
+            }
+
+            if (outboundMonitor) {
+                // The call is over, so a warning about it is too.
+                if (outboundMonitor.isStalled() && typeof context.onOutboundAudioResumed === 'function') {
+                    context.onOutboundAudioResumed();
+                }
+
+                outboundMonitor.stop();
+                outboundMonitor = null;
             }
 
             if (!qualityState) {
@@ -1641,6 +1688,21 @@
         // (sendrecv) audio answer and attach the remote audio to remoteElement; answering with only remoteElement
         // left the leg connected (DTLS up) but silent -- no media flowed in either direction.
         function answerInboundCall(call) {
+            // A send track that ended since it was captured would carry nothing: take a fresh one first.
+            if (!hasLiveAudioTrack(context.localStream) && typeof context.reviveCapture === 'function') {
+                Promise.resolve(context.reviveCapture()).catch(function () { }).then(function () {
+                    if (!disposed && !isTelnyxTerminalState(call.state)) {
+                        answerOnLocalStream(call);
+                    }
+                });
+
+                return;
+            }
+
+            answerOnLocalStream(call);
+        }
+
+        function answerOnLocalStream(call) {
             try {
                 var answerOptions = {
                     localStream: context.localStream,
@@ -1747,6 +1809,10 @@
             }
 
             var call = notification.call;
+
+            // The SDK stops the stream a call holds right after telling us the call is being torn down; take the
+            // shared microphone back first, or every later call on this registration sends a dead track.
+            releaseSharedCapture(call, context.localStream);
 
             // A held offer leg that ends (the platform hung it up because the offer was declined or expired, or it
             // rang out) is reported so the core stops holding it.
@@ -3139,6 +3205,59 @@
                 'Your microphone is not picking up any sound, so the caller cannot hear you. Check that it is not muted and that the right device is selected.');
         }
 
+        // A fresh capture in place of a send track that has ended, taken without re-registering: re-registering would
+        // hang up the offer leg about to be answered on it.
+        function reviveSendCapture() {
+            if (hasLiveAudioTrack(localAudioStream) || !navigator.mediaDevices ||
+                typeof navigator.mediaDevices.getUserMedia !== 'function') {
+                return Promise.resolve(false);
+            }
+
+            return navigator.mediaDevices.getUserMedia(buildAudioConstraints()).then(function (stream) {
+                commitCapture(stream, createBoostPipeline(stream, micBoostDb));
+                watchLocalAudioTrack();
+                reportDiagnostic('warning', 'microphone-revived',
+                    'The outgoing microphone track had ended; a fresh capture was taken for the call.', localAudioTrackLabel());
+
+                return true;
+            }, function (error) {
+                reportDiagnostic('error', 'mic-error', (error && (error.name || error.message)) || 'getUserMedia failed', null);
+
+                return false;
+            });
+        }
+
+        // Muted, held or not yet connected, the agent's voice is not meant to be on the wire.
+        function isOutboundAudioSuppressed() {
+            return !currentCall || !!currentCall.isMuted || !!currentCall.isOnHold ||
+                normalizeState(currentCall.state) !== 'Connected';
+        }
+
+        function outboundAudioWarning() {
+            return strings.outboundAudioStalled || 'The caller may not hear you. Check your microphone.';
+        }
+
+        // Nothing has left a connected call for several seconds: tell the agent now rather than leave the caller to.
+        // A send track that ended is replaced under the call, which is usually the whole fix.
+        function handleOutboundAudioStalled(info) {
+            var trackState = (info && info.trackState) || 'unknown';
+
+            reportDiagnostic('warning', 'no-outbound-audio',
+                'No audio has left this browser for ' + Math.round((OUTBOUND_SILENCE_MS || 5000) / 1000) +
+                ' seconds on a connected call (send track ' + trackState + ').', localAudioTrackLabel());
+            showError(outboundAudioWarning());
+
+            if (trackState !== 'live' && hasLiveCall()) {
+                switchLocalAudioTrack('ended').catch(function () { });
+            }
+        }
+
+        function handleOutboundAudioResumed() {
+            if (dom.error && dom.error.textContent === outboundAudioWarning()) {
+                showError(null);
+            }
+        }
+
         function handleLocalAudioTrackLost(reason) {
             reportDiagnostic('warning', 'microphone-lost',
                 'The captured microphone stopped delivering audio (' + reason + ').', localAudioTrackLabel());
@@ -3966,6 +4085,11 @@
                         // The capture went silent mid-call: the microphone is live as far as the browser is
                         // concerned but is delivering nothing, so the caller cannot hear the agent.
                         onCaptureSilent: handleSilentCapture,
+                        // Nothing is leaving a connected call: the caller cannot hear the agent. See send-audio.js.
+                        reviveCapture: reviveSendCapture,
+                        isOutboundSuppressed: isOutboundAudioSuppressed,
+                        onOutboundAudioStalled: handleOutboundAudioStalled,
+                        onOutboundAudioResumed: handleOutboundAudioResumed,
                         // The capture format, read at sample time rather than at registration: a Bluetooth
                         // headset changes it when the call takes its microphone, so reading it once up front
                         // would record the format the call is not using.

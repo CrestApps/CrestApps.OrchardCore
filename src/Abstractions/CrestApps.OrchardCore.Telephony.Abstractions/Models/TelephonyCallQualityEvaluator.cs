@@ -66,6 +66,11 @@ public static class TelephonyCallQualityEvaluator
             return CallQualityRating.Poor;
         }
 
+        if (SentNoAudio(report))
+        {
+            return CallQualityRating.Poor;
+        }
+
         if (report.Mos > 0 && report.Mos <= PoorMosThreshold)
         {
             return CallQualityRating.Poor;
@@ -100,7 +105,7 @@ public static class TelephonyCallQualityEvaluator
     {
         ArgumentNullException.ThrowIfNull(report);
 
-        if (report.BytesReceived == 0 && report.PacketsReceived > 0)
+        if ((report.BytesReceived == 0 && report.PacketsReceived > 0) || SentNoAudio(report))
         {
             return CallQualityRating.Poor;
         }
@@ -109,6 +114,25 @@ public static class TelephonyCallQualityEvaluator
         var loss = Math.Max(report.MaxLossPercent, report.LossPercent);
 
         return Evaluate(mos > 0 ? mos : null, loss);
+    }
+
+    /// <summary>
+    /// Gets whether the soft phone's report shows the caller could not hear the agent: audio stopped leaving the call
+    /// for a stretch while it was connected, or the browser's sender, carrying a track, sent nothing while audio was
+    /// arriving.
+    /// </summary>
+    /// <remarks>
+    /// A call carries silence as well as speech, so a sender with a track never sends nothing: it is sending a track that
+    /// has ended. Every other figure on such a call measures the direction the agent listens to and can be perfect.
+    /// </remarks>
+    /// <param name="report">The report.</param>
+    /// <returns><see langword="true"/> when nothing the agent said reached the far end.</returns>
+    public static bool SentNoAudio(CallQualityReport report)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+
+        return report.OutboundAudioStalled ||
+            (report.SentTrackReported && report.PacketsSent == 0 && report.PacketsReceived > 0);
     }
 
     /// <summary>

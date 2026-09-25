@@ -52,6 +52,14 @@ public static class CallQualityCauseClassifier
             return CallQualityCause.NoAudioReceived;
         }
 
+        // The caller could not hear the agent: the soft phone saw nothing leave, or the provider received nothing on the
+        // agent's leg while sending the agent the caller.
+        if ((record.Browser is { } browser && TelephonyCallQualityEvaluator.SentNoAudio(browser)) ||
+            (record.Source == CallQualitySource.Provider && record.LegRole == CallPartyRole.Agent && record.Provider is { ReceivedNoAudio: true }))
+        {
+            return CallQualityCause.NoAudioSent;
+        }
+
         if (record.LossPercent >= LossPercentThreshold)
         {
             return CallQualityCause.PacketLoss;

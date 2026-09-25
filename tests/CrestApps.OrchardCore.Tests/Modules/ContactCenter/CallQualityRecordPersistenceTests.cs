@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
@@ -174,6 +175,94 @@ public sealed class CallQualityRecordPersistenceTests
             Assert.Null(record.LossPercent);
             Assert.Null(record.JitterMs);
             Assert.Equal(852.04, record.Provider.InboundJitterMaxVarianceMs);
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
+    // The live agent legs of four one-way calls: the provider sent the caller's audio to the agent (572 packets) and
+    // received nothing back. With no packets there is no opinion score, and the leg was rated Good.
+    [Fact]
+    public async Task Observe_ProviderStatsForAnAgentLegThatReceivedNothing_IsPoorForNoAudioSent()
+    {
+        // Arrange
+        var databasePath = DatabasePath("quality-provider-agent-one-way");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            await SeedCallSessionAsync(store);
+
+            // Act
+            await ObserveAsync(store, new CallQualityObservation
+            {
+                Source = CallQualitySource.Provider,
+                ProviderName = "Telnyx",
+                ProviderCallControlId = "agent-leg",
+                Rating = CallQualityRating.Good,
+                ObservedUtc = _now,
+                Provider = new ProviderCallQualityStats
+                {
+                    InboundMos = 4.5,
+                    InboundPacketCount = 0,
+                    InboundSkipPacketCount = 596,
+                    OutboundPacketCount = 572,
+                    OutboundSkipPacketCount = 0,
+                },
+            });
+
+            // Assert
+            await using var session = store.CreateSession();
+            var record = await new CallQualityRecordStore(session).FindByRecordKeyAsync(
+                CallQualityRecord.BuildRecordKey(CallQualitySource.Provider, "agent-leg"),
+                TestContext.Current.CancellationToken);
+
+            Assert.NotNull(record);
+            Assert.Equal(CallPartyRole.Agent, record.LegRole);
+            Assert.Equal(CallQualityRating.Poor, record.Rating);
+            Assert.Null(record.Mos);
+            Assert.Equal(CallQualityCause.NoAudioSent, CallQualityCauseClassifier.Classify(record));
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
+    // A customer who sends nothing is the customer's line, not the agent's microphone; it is not rated on this.
+    [Fact]
+    public async Task Observe_ProviderStatsForTheCustomersLegThatReceivedNothing_IsNotRatedAsNoAudioSent()
+    {
+        // Arrange
+        var databasePath = DatabasePath("quality-provider-customer-silent");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            await SeedCallSessionAsync(store);
+
+            // Act
+            await ObserveAsync(store, new CallQualityObservation
+            {
+                Source = CallQualitySource.Provider,
+                ProviderName = "Telnyx",
+                ProviderCallControlId = "customer-leg",
+                Rating = CallQualityRating.Good,
+                ObservedUtc = _now,
+                Provider = new ProviderCallQualityStats { InboundMos = 4.5, InboundPacketCount = 0, InboundSkipPacketCount = 300, OutboundPacketCount = 280 },
+            });
+
+            // Assert
+            await using var session = store.CreateSession();
+            var record = await new CallQualityRecordStore(session).FindByRecordKeyAsync(
+                CallQualityRecord.BuildRecordKey(CallQualitySource.Provider, "customer-leg"),
+                TestContext.Current.CancellationToken);
+
+            Assert.NotNull(record);
+            Assert.Equal(CallPartyRole.Customer, record.LegRole);
+            Assert.Equal(CallQualityRating.Good, record.Rating);
         }
         finally
         {

@@ -33,6 +33,11 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
     /// </summary>
     public TestVoicemailInbox VoicemailInbox => _app.Services.GetRequiredService<TestVoicemailInbox>();
 
+    /// <summary>
+    /// Gets the provider the harness hub routes to.
+    /// </summary>
+    public InMemoryTelephonyProvider Provider => _app.Services.GetRequiredService<InMemoryTelephonyProvider>();
+
     public async Task StartAsync()
     {
         var builder = WebApplication.CreateBuilder();
@@ -69,7 +74,8 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
                     voicemail: context.Request.Query.ContainsKey("voicemail"),
                     styled: context.Request.Query.ContainsKey("styled"),
                     attendedTransfer: attendedTransfer,
-                    mediaAdapter: context.Request.Query[MediaAdapterQueryKey]),
+                    mediaAdapter: context.Request.Query[MediaAdapterQueryKey],
+                    browserMediaAdapterName: context.RequestServices.GetRequiredService<InMemoryTelephonyProvider>().BrowserMediaAdapterName),
                 "text/html; charset=utf-8");
         });
 
@@ -160,9 +166,11 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
         return Results.Stream(stream, "application/javascript");
     }
 
-    private static string BuildHtml(bool browserAudio, bool embedded = false, string answerCallId = null, bool voicemail = false, bool styled = false, bool attendedTransfer = false, string mediaAdapter = null)
+    private static string BuildHtml(bool browserAudio, bool embedded = false, string answerCallId = null, bool voicemail = false, bool styled = false, bool attendedTransfer = false, string mediaAdapter = null, string browserMediaAdapterName = "in-memory")
     {
-        var adapterName = string.IsNullOrEmpty(mediaAdapter) ? "in-memory" : mediaAdapter;
+        var adapterName = !string.IsNullOrEmpty(mediaAdapter)
+            ? mediaAdapter
+            : string.IsNullOrEmpty(browserMediaAdapterName) ? "in-memory" : browserMediaAdapterName;
         var config = new Dictionary<string, object>
         {
             ["hubUrl"] = string.IsNullOrEmpty(mediaAdapter)

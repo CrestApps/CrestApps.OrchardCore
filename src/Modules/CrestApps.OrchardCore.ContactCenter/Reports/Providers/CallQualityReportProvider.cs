@@ -310,6 +310,7 @@ public sealed class CallQualityReportProvider : ContactCenterReportBase
         => cause switch
         {
             CallQualityCause.NoAudioReceived => S["No audio received"].Value,
+            CallQualityCause.NoAudioSent => S["No audio sent"].Value,
             CallQualityCause.PacketLoss => S["Packet loss"].Value,
             CallQualityCause.Jitter => S["Jitter"].Value,
             CallQualityCause.Latency => S["Latency"].Value,

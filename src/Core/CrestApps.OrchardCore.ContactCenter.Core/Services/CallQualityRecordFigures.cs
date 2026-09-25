@@ -34,12 +34,17 @@ public static class CallQualityRecordFigures
         // A provider measurement is rated on the provider's opinion score alone, and its headline figures are the ones
         // that rating reads: its skipped slots are not packet loss and its jitter figure is a peak variance, not a mean
         // jitter, so neither is shown as one. Records kept before that rule are read the same way, so history agrees.
+        //
+        // An agent's leg on which the provider received nothing has no opinion score, and is not a good call for that:
+        // the caller could not hear the agent. The rating needs the leg's role, so the record is applied once it is known.
         if (record.Source == CallQualitySource.Provider && record.Provider is { } provider)
         {
             record.Mos = provider.MeasuredInboundMos;
             record.LossPercent = null;
             record.JitterMs = null;
-            record.Rating = TelephonyCallQualityEvaluator.EvaluateProvider(provider);
+            record.Rating = record.LegRole == CallPartyRole.Agent && provider.ReceivedNoAudio
+                ? CallQualityRating.Poor
+                : TelephonyCallQualityEvaluator.EvaluateProvider(provider);
         }
 
         return record;

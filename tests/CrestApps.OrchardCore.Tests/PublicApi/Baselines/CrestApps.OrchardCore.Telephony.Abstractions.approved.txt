@@ -412,6 +412,7 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public double MinMicrophoneLevel { get; set; }
         public double MinMos { get; set; }
         public double Mos { get; set; }
+        public bool OutboundAudioStalled { get; set; }
         public long PacketsLost { get; set; }
         public long PacketsReceived { get; set; }
         public long PacketsSent { get; set; }
@@ -587,6 +588,7 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public double? MeasuredInboundMos { get; }
         public long? OutboundPacketCount { get; set; }
         public long? OutboundSkipPacketCount { get; set; }
+        public bool ReceivedNoAudio { get; }
     }
     public sealed class ProviderIdentity
     {
@@ -787,6 +789,7 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public static CrestApps.OrchardCore.Telephony.Models.CallQualityRating Evaluate(double? mos, double? lossPercent) { }
         public static CrestApps.OrchardCore.Telephony.Models.CallQualityRating EvaluateProvider(CrestApps.OrchardCore.Telephony.Models.ProviderCallQualityStats stats) { }
         public static CrestApps.OrchardCore.Telephony.Models.CallQualityRating EvaluateSummary(CrestApps.OrchardCore.Telephony.Models.CallQualityReport report) { }
+        public static bool SentNoAudio(CrestApps.OrchardCore.Telephony.Models.CallQualityReport report) { }
     }
     [System.Flags]
     public enum TelephonyCapabilities

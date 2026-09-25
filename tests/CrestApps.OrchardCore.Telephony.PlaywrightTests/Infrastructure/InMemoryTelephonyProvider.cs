@@ -70,7 +70,21 @@ public sealed class InMemoryTelephonyProvider :
 
     public TelephonyAudioMode ConfiguredAudioMode => TelephonyAudioMode.Browser;
 
-    public string BrowserMediaAdapterName => "in-memory";
+    /// <summary>
+    /// Gets or sets the browser media adapter the phone registers with: the stand-in a test registers itself
+    /// (<c>in-memory</c>), or the soft phone's own Telnyx adapter (<c>telnyx-webrtc</c>) over <see cref="FakeTelnyxSdk"/>.
+    /// </summary>
+    public string BrowserMediaAdapterName { get; set; } = "in-memory";
+
+    /// <summary>
+    /// Gets the diagnostic codes the phone reported, in order.
+    /// </summary>
+    public ConcurrentQueue<string> ClientDiagnosticCodes { get; } = new();
+
+    /// <summary>
+    /// Gets the call quality reports the phone sent, in order.
+    /// </summary>
+    public ConcurrentQueue<CallQualityReport> CallQualityReports { get; } = new();
 
     public async Task<TelephonyResult> DialAsync(DialRequest request, CancellationToken cancellationToken = default)
     {
@@ -292,6 +306,29 @@ public sealed class InMemoryTelephonyProvider :
         }
 
         return _latestCall;
+    }
+
+    /// <summary>
+    /// Records a call a test reports, the way a real provider knows the calls it carries, so the phone's periodic
+    /// refresh of its active calls keeps it instead of dropping it. An ended call is forgotten.
+    /// </summary>
+    public void TrackCall(TelephonyCall call)
+    {
+        if (string.IsNullOrEmpty(call?.CallId))
+        {
+            return;
+        }
+
+        if (call.State is CallState.Disconnected or CallState.Failed)
+        {
+            _calls.TryRemove(call.CallId, out _);
+            _publishedCallIds.TryRemove(call.CallId, out _);
+
+            return;
+        }
+
+        _calls[call.CallId] = call;
+        _publishedCallIds[call.CallId] = 0;
     }
 
     public async Task<IReadOnlyList<TelephonyCall>> GetActiveCallsAsync()

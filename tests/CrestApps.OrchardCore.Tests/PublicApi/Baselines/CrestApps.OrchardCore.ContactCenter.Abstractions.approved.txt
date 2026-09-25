@@ -532,6 +532,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         Jitter = 3,
         Latency = 4,
         CustomerSide = 5,
+        NoAudioSent = 6,
     }
     public enum CallbackRequestStatus
     {

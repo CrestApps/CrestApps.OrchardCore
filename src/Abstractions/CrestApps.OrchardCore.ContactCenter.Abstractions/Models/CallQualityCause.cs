@@ -34,4 +34,9 @@ public enum CallQualityCause
     /// The agent's side was good and the customer's side was not: the customer's phone or carrier.
     /// </summary>
     CustomerSide,
+
+    /// <summary>
+    /// The agent's audio never left: the caller could not hear the agent, usually a microphone track that had stopped.
+    /// </summary>
+    NoAudioSent,
 }

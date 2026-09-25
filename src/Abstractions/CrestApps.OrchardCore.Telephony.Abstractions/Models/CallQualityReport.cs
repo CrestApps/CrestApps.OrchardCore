@@ -92,6 +92,13 @@ public sealed class CallQualityReport
     public long PacketsSent { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the soft phone saw no audio leave the call for several seconds while it was connected and
+    /// the agent was neither muted nor holding: the caller could not hear the agent for that stretch, whatever the rest
+    /// of the call measured.
+    /// </summary>
+    public bool OutboundAudioStalled { get; set; }
+
+    /// <summary>
     /// Gets or sets the lowest microphone capture level observed over the call (populated on the final
     /// summary). It answers whether the agent was audible for the whole call from the summary alone.
     /// </summary>

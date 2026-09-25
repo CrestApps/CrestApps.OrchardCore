@@ -78,9 +78,11 @@ public sealed class ContactCenterCallQualityObserver : ICallQualityObserver
             CreatedUtc = _clock.UtcNow,
         };
 
-        CallQualityRecordFigures.Apply(record);
         await AttachCallAsync(record, callControlId, cancellationToken);
         await AttachAgentAsync(record, cancellationToken);
+
+        // Rated once the leg's role is known: an agent's leg the provider heard nothing on is rated on that.
+        CallQualityRecordFigures.Apply(record);
 
         await _recordStore.CreateAsync(record, cancellationToken);
 

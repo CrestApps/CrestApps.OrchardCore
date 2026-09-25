@@ -233,6 +233,30 @@ public sealed class TestTelephonyHub : Hub<ITelephonyClient>
         await Clients.Caller.CallStateChanged(call);
     }
 
+    public Task ReportClientDiagnostic(string level, string code, string message, string context)
+    {
+        _provider.ClientDiagnosticCodes.Enqueue(code);
+
+        return Task.CompletedTask;
+    }
+
+    public Task ReportCallQuality(CallQualityReport report)
+    {
+        if (report is not null)
+        {
+            _provider.CallQualityReports.Enqueue(report);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task PublishTrackedCallState(TelephonyCall call)
+    {
+        _provider.TrackCall(call);
+
+        return Clients.Caller.CallStateChanged(call);
+    }
+
     public Task PublishCallState(TelephonyCall call)
     {
         return Clients.Caller.CallStateChanged(call);

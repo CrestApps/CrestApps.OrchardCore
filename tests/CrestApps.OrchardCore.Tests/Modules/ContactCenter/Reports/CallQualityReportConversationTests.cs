@@ -66,20 +66,35 @@ public sealed class CallQualityReportConversationTests
     [Fact]
     public async Task RunAsync_AStoredProviderLegRatedOnSkippedPackets_IsReadAsItRatesNow()
     {
-        // Arrange: an answered call whose provider agent leg was stored as poor with 100% "loss": the provider received
-        // nothing from the soft phone and scored the leg 4.5.
-        var answered = new Interaction
+        // Arrange: an answered call whose provider agent leg was stored as degraded with 3.2% "loss": 170 of its 5,327
+        // playout slots were skipped, and the provider scored the leg 4.5.
+        var record = Record("r1", "answered", "leg-1", CallQualitySource.Provider, CallQualityRating.Degraded, mos: 4.5);
+        record.LossPercent = 3.2;
+        record.Provider = new ProviderCallQualityStats
         {
-            ItemId = "answered",
-            Channel = InteractionChannel.Voice,
-            Direction = InteractionDirection.Inbound,
-            AgentId = "a1",
-            CreatedUtc = _observed.AddMinutes(-3),
-            AnsweredUtc = _observed.AddMinutes(-2),
+            InboundMos = 4.5,
+            InboundPacketCount = 5157,
+            InboundSkipPacketCount = 170,
+            OutboundPacketCount = 4304,
         };
 
-        var record = Record("r1", "answered", "leg-1", CallQualitySource.Provider, CallQualityRating.Poor, mos: 4.5);
-        record.LossPercent = 100;
+        // Act
+        var document = await RunAsync([AnsweredCall()], record);
+
+        // Assert
+        var metrics = document.Sections.SelectMany(section => section.Metrics).ToDictionary(metric => metric.Label, metric => metric.Value);
+
+        Assert.Equal("1", metrics["Calls measured"]);
+        Assert.Equal("0", metrics["Poor"]);
+    }
+
+    // The live agent leg of a one-way call: the provider sent the agent the caller's audio and received nothing back. It
+    // has no opinion score to rate, and it must not read as a good call for that.
+    [Fact]
+    public async Task RunAsync_AnAnsweredAgentLegTheProviderReceivedNothingOn_IsPoorForNoAudioSent()
+    {
+        // Arrange
+        var record = Record("r1", "answered", "leg-1", CallQualitySource.Provider, CallQualityRating.Good, mos: 4.5);
         record.Provider = new ProviderCallQualityStats
         {
             InboundMos = 4.5,
@@ -89,14 +104,28 @@ public sealed class CallQualityReportConversationTests
         };
 
         // Act
-        var document = await RunAsync([answered], record);
+        var document = await RunAsync([AnsweredCall()], record);
 
         // Assert
         var metrics = document.Sections.SelectMany(section => section.Metrics).ToDictionary(metric => metric.Label, metric => metric.Value);
 
         Assert.Equal("1", metrics["Calls measured"]);
-        Assert.Equal("0", metrics["Poor"]);
+        Assert.Equal("1", metrics["Poor"]);
+
+        var causes = document.Sections.Single(section => section.Title == "Likely cause of poor calls");
+        Assert.Contains(causes.Bars, bar => bar.Label == "No audio sent");
     }
+
+    private static Interaction AnsweredCall()
+        => new()
+        {
+            ItemId = "answered",
+            Channel = InteractionChannel.Voice,
+            Direction = InteractionDirection.Inbound,
+            AgentId = "a1",
+            CreatedUtc = _observed.AddMinutes(-3),
+            AnsweredUtc = _observed.AddMinutes(-2),
+        };
 
     private static async Task<ReportDocument> RunAsync(Interaction[] interactions, params CallQualityRecord[] stored)
     {

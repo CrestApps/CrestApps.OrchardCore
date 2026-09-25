@@ -204,13 +204,13 @@ public sealed class CallQualityAlertServiceTests
     [Fact]
     public async Task Evaluate_StoredProviderAgentLegsRatedOnSkippedPackets_AreReadAsTheyRateNow()
     {
-        // Arrange: live agent legs of answered calls, stored as 100% loss when skipped packets were read as loss. The
-        // provider received no packets at all from the soft phone on them, and scored what it had at MOS 4.5.
+        // Arrange: live agent legs of answered calls, stored as poor when skipped packets were read as loss. The provider
+        // received the agent's audio on them and scored it at MOS 4.5.
         var (service, publisher) = CreateService(
             [Answered("answered-1"), Answered("answered-2"), Answered("answered-3")],
             [],
-            ProviderAgentLeg("c1", minutesAgo: 3, interactionId: "answered-1", inbound: 0, skipped: 596, outbound: 572),
-            ProviderAgentLeg("c2", minutesAgo: 4, interactionId: "answered-2", inbound: 0, skipped: 346, outbound: 298));
+            ProviderAgentLeg("c1", minutesAgo: 3, interactionId: "answered-1", inbound: 5157, skipped: 170, outbound: 4304),
+            ProviderAgentLeg("c2", minutesAgo: 4, interactionId: "answered-2", inbound: 1557, skipped: 75, outbound: 1585));
 
         // Act: the newest leg is a genuinely poor soft phone measurement, so the alert is evaluated.
         await service.EvaluateAsync(
@@ -219,6 +219,74 @@ public sealed class CallQualityAlertServiceTests
 
         // Assert
         Assert.Empty(publisher.Invocations);
+    }
+
+    // The live agent legs of one-way calls: the provider sent the agent the caller's audio and received nothing back. No
+    // packets means no opinion score, and that must not pass for a good call: the caller could not hear the agent.
+    [Fact]
+    public async Task Evaluate_AnsweredAgentLegsTheProviderReceivedNothingOn_RaiseTheAlertForNoAudioSent()
+    {
+        // Arrange
+        var (service, publisher) = CreateService(
+            [Answered("answered-1"), Answered("answered-2"), Answered("answered-3")],
+            [],
+            ProviderAgentLeg("c1", minutesAgo: 3, interactionId: "answered-1", inbound: 0, skipped: 596, outbound: 572),
+            ProviderAgentLeg("c2", minutesAgo: 4, interactionId: "answered-2", inbound: 0, skipped: 346, outbound: 298));
+
+        // Act
+        await service.EvaluateAsync(
+            ProviderAgentLeg("c3", minutesAgo: 0, interactionId: "answered-3", inbound: 0, skipped: 128, outbound: 102),
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        var published = Assert.Single(publisher.Invocations);
+        var alert = Assert.IsType<InteractionEvent>(published.Arguments[0]).GetData<CallQualityAlertNotification>();
+
+        Assert.Equal(3, alert.PoorCallCount);
+        Assert.Equal(nameof(CallQualityCause.NoAudioSent), alert.LikelyCause);
+    }
+
+    [Fact]
+    public void Classify_ASoftPhoneLegThatSentNothing_IsNoAudioSent()
+    {
+        // Arrange
+        var record = Record("c1", CallQualityRating.Poor, minutesAgo: 0);
+        record.Browser = new CallQualityReport { PacketsReceived = 590, BytesReceived = 18936, SentTrackReported = true, PacketsSent = 0 };
+
+        // Act
+        var cause = CallQualityCauseClassifier.Classify(record);
+
+        // Assert
+        Assert.Equal(CallQualityCause.NoAudioSent, cause);
+    }
+
+    [Fact]
+    public void Classify_ASoftPhoneLegWhoseAudioStoppedLeaving_IsNoAudioSent()
+    {
+        // Arrange
+        var record = Record("c1", CallQualityRating.Poor, minutesAgo: 0, lossPercent: 6);
+        record.Browser = new CallQualityReport { PacketsReceived = 3000, BytesReceived = 480_000, PacketsSent = 1200, OutboundAudioStalled = true };
+
+        // Act
+        var cause = CallQualityCauseClassifier.Classify(record);
+
+        // Assert
+        Assert.Equal(CallQualityCause.NoAudioSent, cause);
+    }
+
+    // The provider not hearing a customer is the customer's line, whatever it measured.
+    [Fact]
+    public void Classify_ACustomerLegTheProviderReceivedNothingOn_IsTheCustomersSide()
+    {
+        // Arrange
+        var record = ProviderAgentLeg("c1", minutesAgo: 0, interactionId: "answered-1", inbound: 0, skipped: 300, outbound: 280);
+        record.LegRole = CallPartyRole.Customer;
+
+        // Act
+        var cause = CallQualityCauseClassifier.Classify(record);
+
+        // Assert
+        Assert.Equal(CallQualityCause.CustomerSide, cause);
     }
 
     [Fact]

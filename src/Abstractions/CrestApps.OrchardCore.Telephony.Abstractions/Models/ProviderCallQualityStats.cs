@@ -73,6 +73,17 @@ public sealed class ProviderCallQualityStats
         => InboundPacketCount is 0 ? null : InboundMos;
 
     /// <summary>
+    /// Gets whether the provider sent audio on this leg and received none back: the leg carried media, and the party on
+    /// it sent nothing at all.
+    /// </summary>
+    /// <remarks>
+    /// A phone or soft phone sends packets through silence too, so on a leg that carried media this is not a quiet party
+    /// but one whose audio never left: on an agent's leg, a caller who could not hear the agent.
+    /// </remarks>
+    public bool ReceivedNoAudio
+        => InboundPacketCount is 0 && OutboundPacketCount is > 0;
+
+    /// <summary>
     /// Gets whether the provider reported anything worth keeping.
     /// </summary>
     public bool HasMeasurements
