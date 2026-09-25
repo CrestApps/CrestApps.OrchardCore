@@ -207,6 +207,7 @@ public sealed class VoiceSoftPhoneStartup : StartupBase
             // The soft phone's transfer panel for Contact Center calls, and the call leaving the phone of the agent
             // who transferred it.
             .AddScoped<IContactCenterTransferDirectoryService, ContactCenterTransferDirectoryService>()
+            .AddScoped<ISoftPhoneExtensionTransferTargetResolver, SoftPhoneExtensionTransferTargetResolver>()
             .AddScoped<IContactCenterEventHandler, ContactCenterSoftPhoneTransferEventHandler>()
             .AddDisplayDriver<SoftPhoneWidget, ContactCenterSoftPhoneWidgetDisplayDriver>();
 

@@ -55,6 +55,7 @@ namespace CrestApps.OrchardCore.Telephony.Core.Services
     public sealed class DefaultTransferTargetPolicy : CrestApps.OrchardCore.Telephony.Services.ITransferTargetPolicy
     {
         public DefaultTransferTargetPolicy(CrestApps.OrchardCore.Telephony.Services.IDialDestinationPolicy destinationPolicy) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Services.TransferTargetDecision> ResolveAsync(CrestApps.OrchardCore.Telephony.Models.TransferRequest request, System.Security.Claims.ClaimsPrincipal user, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Services.TransferTargetDecision> ResolveAsync(string rawTarget, System.Security.Claims.ClaimsPrincipal user, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ExtensionResolution

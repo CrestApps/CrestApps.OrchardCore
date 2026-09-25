@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Services;
 
 namespace CrestApps.OrchardCore.Telephony.Core.Services;
@@ -44,5 +45,26 @@ public sealed class DefaultTransferTargetPolicy : ITransferTargetPolicy
         }
 
         return Task.FromResult(TransferTargetDecision.Allow(target));
+    }
+
+    /// <inheritdoc/>
+    public Task<TransferTargetDecision> ResolveAsync(TransferRequest request, ClaimsPrincipal user, CancellationToken cancellationToken = default)
+    {
+        if (request?.IsExtension != true)
+        {
+            return ResolveAsync(request?.To, user, cancellationToken);
+        }
+
+        // An extension is a colleague inside the phone system, reached through their own endpoint; the telephony
+        // service resolves it to the user it rings. Only digits are an extension, so marking a number or an address
+        // as one is not a way to reach it, and a refused code such as an emergency number stays refused.
+        var extension = request.GetExtension();
+
+        if (extension is null)
+        {
+            return Task.FromResult(TransferTargetDecision.Refuse("Enter the extension as digits only."));
+        }
+
+        return ResolveAsync(extension, user, cancellationToken);
     }
 }

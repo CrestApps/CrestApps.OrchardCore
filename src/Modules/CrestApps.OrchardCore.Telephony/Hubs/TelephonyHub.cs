@@ -158,7 +158,7 @@ public sealed partial class TelephonyHub : Hub<ITelephonyClient>
                 // decides whether it may be reached and what the provider is actually given, so a deployment that
                 // curates its destinations is not bypassed by typing a number into the field.
                 var targetPolicy = serviceProvider.GetRequiredService<ITransferTargetPolicy>();
-                var decision = await targetPolicy.ResolveAsync(request?.To, Context.User, token);
+                var decision = await targetPolicy.ResolveAsync(request, Context.User, token);
 
                 if (!decision.IsAllowed)
                 {
@@ -1043,7 +1043,7 @@ public sealed partial class TelephonyHub : Hub<ITelephonyClient>
     {
         return request is null
             ? "(null)"
-            : $"CallId={request.CallId.SanitizeLogValue()}, To={_addressRedactor.Redact(request.To)}, Mode={request.Mode}";
+            : $"CallId={request.CallId.SanitizeLogValue()}, To={_addressRedactor.Redact(request.To)}, Mode={request.Mode}, IsExtension={request.IsExtension}";
     }
 
     private static string DescribeMergeRequest(MergeRequest request)

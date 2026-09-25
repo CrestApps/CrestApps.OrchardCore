@@ -915,8 +915,11 @@ namespace CrestApps.OrchardCore.Telephony.Models
     {
         public TransferRequest() { }
         public string CallId { get; set; }
+        public bool IsExtension { get; set; }
         public CrestApps.OrchardCore.Telephony.Models.TransferMode Mode { get; set; }
+        public string TargetUserId { get; set; }
         public string To { get; set; }
+        public string GetExtension() { }
     }
     public enum VoiceCallState
     {
@@ -977,6 +980,7 @@ namespace CrestApps.OrchardCore.Telephony.Services
     }
     public interface ITransferTargetPolicy
     {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Services.TransferTargetDecision> ResolveAsync(CrestApps.OrchardCore.Telephony.Models.TransferRequest request, System.Security.Claims.ClaimsPrincipal user, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Services.TransferTargetDecision> ResolveAsync(string rawTarget, System.Security.Claims.ClaimsPrincipal user, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IVoiceAgentMediaProvider

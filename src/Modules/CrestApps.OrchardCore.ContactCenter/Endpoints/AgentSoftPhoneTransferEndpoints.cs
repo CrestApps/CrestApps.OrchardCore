@@ -32,6 +32,9 @@ internal static class AgentSoftPhoneTransferEndpoints
     public const string ConsultCompleteRouteName = "ContactCenterSoftPhoneConsultComplete";
     public const string ConsultCancelRouteName = "ContactCenterSoftPhoneConsultCancel";
 
+    // The target kind the soft phone sends for an extension typed in the panel's Extension mode.
+    private const string ExtensionTargetType = "extension";
+
     // The phone reads presence and target kinds as words, the same way the Telephony hub sends call state.
     private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)
     {
@@ -104,6 +107,7 @@ internal static class AgentSoftPhoneTransferEndpoints
         IAuthorizationService authorizationService,
         IAntiforgery antiforgery,
         IContactCenterTransferService transferService,
+        ISoftPhoneExtensionTransferTargetResolver extensionTargets,
         HttpContext httpContext)
     {
         var (userId, refusal) = await AuthorizeCommandAsync(authorizationService, antiforgery, httpContext);
@@ -113,9 +117,11 @@ internal static class AgentSoftPhoneTransferEndpoints
             return refusal;
         }
 
-        if (!TryReadTarget(body, out var targetType))
+        var (targetType, targetId, targetRefusal) = await ReadTargetAsync(body, extensionTargets, "Choose an agent, a queue or a number to transfer to.", httpContext.RequestAborted);
+
+        if (targetRefusal is not null)
         {
-            return TypedResults.Problem(detail: "Choose an agent, a queue or a number to transfer to.", statusCode: StatusCodes.Status400BadRequest);
+            return targetRefusal;
         }
 
         var result = await transferService.TransferAsync(new TransferRequest
@@ -123,7 +129,7 @@ internal static class AgentSoftPhoneTransferEndpoints
             InteractionId = body.InteractionId,
             Type = InteractionTransferType.Blind,
             TargetType = targetType,
-            TargetId = body.TargetId.Trim(),
+            TargetId = targetId,
             InitiatedByUserId = userId,
             Principal = httpContext.User,
         }, httpContext.RequestAborted);
@@ -141,6 +147,7 @@ internal static class AgentSoftPhoneTransferEndpoints
         IAuthorizationService authorizationService,
         IAntiforgery antiforgery,
         IWarmTransferService warmTransferService,
+        ISoftPhoneExtensionTransferTargetResolver extensionTargets,
         HttpContext httpContext)
     {
         var (userId, refusal) = await AuthorizeCommandAsync(authorizationService, antiforgery, httpContext);
@@ -150,9 +157,11 @@ internal static class AgentSoftPhoneTransferEndpoints
             return refusal;
         }
 
-        if (!TryReadTarget(body, out var targetType))
+        var (targetType, targetId, targetRefusal) = await ReadTargetAsync(body, extensionTargets, "Choose an agent or a number to consult.", httpContext.RequestAborted);
+
+        if (targetRefusal is not null)
         {
-            return TypedResults.Problem(detail: "Choose an agent or a number to consult.", statusCode: StatusCodes.Status400BadRequest);
+            return targetRefusal;
         }
 
         var result = await warmTransferService.StartAsync(new WarmTransferRequest
@@ -161,7 +170,7 @@ internal static class AgentSoftPhoneTransferEndpoints
             UserId = userId,
             Principal = httpContext.User,
             TargetType = targetType,
-            TargetId = body.TargetId.Trim(),
+            TargetId = targetId,
         }, httpContext.RequestAborted);
 
         return Consult(result);
@@ -273,6 +282,30 @@ internal static class AgentSoftPhoneTransferEndpoints
         return (userId, null);
     }
 
+    // Where the call goes. An extension the agent typed is the colleague it rings, so it is routed as that agent; one
+    // that rings nobody in the Contact Center is refused with why.
+    private static async Task<(InteractionTransferTargetType TargetType, string TargetId, IResult Refusal)> ReadTargetAsync(
+        SoftPhoneTransferBody body,
+        ISoftPhoneExtensionTransferTargetResolver extensionTargets,
+        string missingTarget,
+        CancellationToken cancellationToken)
+    {
+        if (body is not null &&
+            !string.IsNullOrWhiteSpace(body.InteractionId) &&
+            string.Equals(body.TargetType?.Trim(), ExtensionTargetType, StringComparison.OrdinalIgnoreCase))
+        {
+            var extension = await extensionTargets.ResolveAsync(body.TargetId, cancellationToken);
+
+            return extension.Succeeded
+                ? (InteractionTransferTargetType.Agent, extension.AgentId, null)
+                : (default, null, TypedResults.Problem(detail: extension.Error, statusCode: StatusCodes.Status400BadRequest));
+        }
+
+        return TryReadTarget(body, out var targetType)
+            ? (targetType, body.TargetId.Trim(), null)
+            : (default, null, TypedResults.Problem(detail: missingTarget, statusCode: StatusCodes.Status400BadRequest));
+    }
+
     private static bool TryReadTarget(SoftPhoneTransferBody body, out InteractionTransferTargetType targetType)
     {
         targetType = default;
@@ -316,10 +349,10 @@ internal sealed class SoftPhoneTransferBody
     /// <summary>Gets or sets the interaction the agent is on.</summary>
     public string InteractionId { get; set; }
 
-    /// <summary>Gets or sets the kind of destination: <c>agent</c>, <c>queue</c> or <c>external</c>.</summary>
+    /// <summary>Gets or sets the kind of destination: <c>agent</c>, <c>queue</c>, <c>external</c> or <c>extension</c>.</summary>
     public string TargetType { get; set; }
 
-    /// <summary>Gets or sets the destination: an agent or queue id, an approved destination id, or a number.</summary>
+    /// <summary>Gets or sets the destination: an agent or queue id, an approved destination id, a number, or an extension.</summary>
     public string TargetId { get; set; }
 }
 

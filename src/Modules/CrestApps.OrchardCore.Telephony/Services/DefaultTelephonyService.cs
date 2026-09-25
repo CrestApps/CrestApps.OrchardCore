@@ -143,10 +143,30 @@ public sealed class DefaultTelephonyService : ITelephonyService
             cancellationToken);
 
     /// <inheritdoc/>
-    public Task<TelephonyResult> TransferAsync(TransferRequest request, CancellationToken cancellationToken = default)
+    public async Task<TelephonyResult> TransferAsync(TransferRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        // An extension is a colleague, not a phone number: it is resolved to the user it rings, so the provider can
+        // reach that user's own endpoint the way an extension call does, and one nobody owns fails closed here.
+        if (request.IsExtension)
+        {
+            var resolution = await _extensionResolver.ResolveAsync(request.GetExtension(), cancellationToken);
+
+            if (!resolution.Found)
+            {
+                return TelephonyResult.Failed(S["Extension {0} was not found.", request.To].Value);
+            }
+
+            request.To = resolution.Number;
+            request.TargetUserId = resolution.UserId;
+        }
+
+        return await TransferToDestinationAsync(request, cancellationToken);
+    }
+
+    private Task<TelephonyResult> TransferToDestinationAsync(TransferRequest request, CancellationToken cancellationToken)
+    {
         // A transfer reaches the outside world exactly like a dial does, so it answers to the same policy. The
         // transfer field on the soft phone therefore cannot be used to reach a refused destination. A target the
         // policy cannot parse is left alone here, because a transfer target may also be an internal address the

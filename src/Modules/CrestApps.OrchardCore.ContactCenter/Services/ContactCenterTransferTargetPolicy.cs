@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony.Services;
+using TelephonyTransferRequest = CrestApps.OrchardCore.Telephony.Models.TransferRequest;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;
 
@@ -62,5 +63,23 @@ public sealed class ContactCenterTransferTargetPolicy : ITransferTargetPolicy
 
         return TransferTargetDecision.Refuse(
             "The requested transfer destination is not available. Choose an approved destination, agent, or queue.");
+    }
+
+    /// <inheritdoc/>
+    public Task<TransferTargetDecision> ResolveAsync(TelephonyTransferRequest request, ClaimsPrincipal user, CancellationToken cancellationToken = default)
+    {
+        if (request?.IsExtension != true)
+        {
+            return ResolveAsync(request?.To, user, cancellationToken);
+        }
+
+        // An extension rings a colleague inside the phone system, not an outside destination the catalog curates, so it
+        // is not looked up there; the telephony service resolves it to the user it rings and refuses one nobody owns.
+        // Only digits are an extension, so marking a typed number as one is no way round the catalog.
+        var extension = request.GetExtension();
+
+        return Task.FromResult(extension is null
+            ? TransferTargetDecision.Refuse("Enter the extension as digits only.")
+            : TransferTargetDecision.Allow(extension));
     }
 }

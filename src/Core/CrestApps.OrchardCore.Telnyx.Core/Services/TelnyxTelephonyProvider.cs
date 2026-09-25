@@ -440,14 +440,28 @@ public sealed partial class TelnyxTelephonyProvider :
     public Task<TelephonyResult> TransferAsync(TransferRequest request, CancellationToken cancellationToken = default)
         => TransferCoreAsync(request, cancellationToken);
 
-    private Task<TelephonyResult> TransferCoreAsync(TransferRequest request, CancellationToken cancellationToken)
+    private async Task<TelephonyResult> TransferCoreAsync(TransferRequest request, CancellationToken cancellationToken)
     {
         if (request is null || string.IsNullOrWhiteSpace(request.To))
         {
-            return Task.FromResult(TelephonyResult.Failed(S["A destination is required to transfer a call."].Value));
+            return TelephonyResult.Failed(S["A destination is required to transfer a call."].Value);
         }
 
-        var body = new Dictionary<string, object> { ["to"] = request.To };
+        var destination = request.To;
+
+        // An extension is not a number Telnyx can dial. The colleague is reached on the SIP address their browser is
+        // registered on -- the same address an extension call rings -- and is unreachable while it has none.
+        if (request.IsExtension)
+        {
+            destination = await ResolveUserSipEndpointAsync(request.TargetUserId, cancellationToken);
+
+            if (destination is null)
+            {
+                return TelephonyResult.Failed(S["Extension {0} is not available right now.", request.To].Value);
+            }
+        }
+
+        var body = new Dictionary<string, object> { ["to"] = destination };
 
         if (!string.IsNullOrWhiteSpace(_options.DefaultOutboundCallerId))
         {
@@ -456,7 +470,7 @@ public sealed partial class TelnyxTelephonyProvider :
 
         var state = request.Mode == TransferMode.Warm ? CallState.Connected : CallState.Disconnected;
 
-        return ExecuteActionAsync(
+        return await ExecuteActionAsync(
             request.CallId,
             "transfer",
             body,
@@ -486,22 +500,33 @@ public sealed partial class TelnyxTelephonyProvider :
 
         try
         {
-            // Create the conference from the primary call, then join the remaining calls into it.
-            var createResult = await _apiClient.CreateConferenceAsync(conferenceName, primaryCallId, cancellationToken: cancellationToken);
+            // A merge that names its conference is adding calls to one already running, which the primary call is in:
+            // the others join it. Creating another from the primary would take it out of the first.
+            var conferenceId = string.IsNullOrWhiteSpace(request.ConferenceName)
+                ? null
+                : (await _apiClient.FindConferenceByNameAsync(conferenceName, cancellationToken)).ConferenceId;
 
-            if (!createResult.Succeeded || string.IsNullOrWhiteSpace(createResult.ConferenceId))
+            if (string.IsNullOrWhiteSpace(conferenceId))
             {
-                _logger.LogError(
-                    "Telnyx rejected a conference creation request with status code {StatusCode}. Response: {Response}",
-                    createResult.StatusCode,
-                    createResult.ErrorBody.SanitizeLogValue());
+                // Create the conference from the primary call, then join the remaining calls into it.
+                var createResult = await _apiClient.CreateConferenceAsync(conferenceName, primaryCallId, cancellationToken: cancellationToken);
 
-                return TelephonyResult.Failed(S["Telnyx could not merge the calls."].Value);
+                if (!createResult.Succeeded || string.IsNullOrWhiteSpace(createResult.ConferenceId))
+                {
+                    _logger.LogError(
+                        "Telnyx rejected a conference creation request with status code {StatusCode}. Response: {Response}",
+                        createResult.StatusCode,
+                        createResult.ErrorBody.SanitizeLogValue());
+
+                    return TelephonyResult.Failed(S["Telnyx could not merge the calls."].Value);
+                }
+
+                conferenceId = createResult.ConferenceId;
             }
 
             foreach (var secondaryCallId in callIds.Skip(1))
             {
-                var joinResult = await _apiClient.JoinConferenceAsync(createResult.ConferenceId, secondaryCallId, cancellationToken: cancellationToken);
+                var joinResult = await _apiClient.JoinConferenceAsync(conferenceId, secondaryCallId, cancellationToken: cancellationToken);
 
                 if (!joinResult.Succeeded)
                 {
@@ -520,7 +545,9 @@ public sealed partial class TelnyxTelephonyProvider :
                 new Dictionary<string, object>
                 {
                     ["isConference"] = true,
-                    ["conferenceId"] = createResult.ConferenceId,
+                    ["conferenceId"] = conferenceId,
+                    // The soft phone names this conference when it adds a call to it.
+                    ["conferenceName"] = conferenceName,
                     ["participantCount"] = callIds.Count,
                 }));
         }

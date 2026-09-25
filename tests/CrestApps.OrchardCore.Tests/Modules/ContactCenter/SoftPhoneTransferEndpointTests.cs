@@ -89,6 +89,7 @@ public sealed class SoftPhoneTransferEndpointTests
             new AllowAll(),
             Antiforgery(valid: true),
             transferService.Object,
+            ExtensionTargets(),
             SignedIn());
 
         var body = Assert.IsType<SoftPhoneTransferResponse>(Assert.IsAssignableFrom<IValueHttpResult>(result).Value);
@@ -117,6 +118,7 @@ public sealed class SoftPhoneTransferEndpointTests
             new AllowAll(),
             Antiforgery(valid: true),
             transferService.Object,
+            ExtensionTargets(),
             SignedIn());
 
         var body = Assert.IsType<SoftPhoneTransferResponse>(Assert.IsAssignableFrom<IValueHttpResult>(result).Value);
@@ -134,6 +136,7 @@ public sealed class SoftPhoneTransferEndpointTests
             new AllowAll(),
             Antiforgery(valid: false),
             transferService.Object,
+            ExtensionTargets(),
             SignedIn());
 
         Assert.Equal(StatusCodes.Status400BadRequest, Assert.IsAssignableFrom<IStatusCodeHttpResult>(result).StatusCode);
@@ -156,9 +159,73 @@ public sealed class SoftPhoneTransferEndpointTests
             new AllowAll(),
             Antiforgery(valid: true),
             transferService.Object,
+            ExtensionTargets(),
             SignedIn());
 
         transferService.Verify(service => service.TransferAsync(It.Is<TransferRequest>(request => request.TargetType == expected), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // Bug: an extension typed into the transfer panel was refused as an incomplete phone number. It now arrives as an
+    // extension, and is routed to the agent it rings exactly as picking that agent would route it.
+    [Fact]
+    public async Task Transfer_ToAnExtension_RoutesToTheAgentItRings()
+    {
+        var transferService = new Mock<IContactCenterTransferService>();
+        transferService
+            .Setup(service => service.TransferAsync(It.IsAny<TransferRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TransferResult.Success("The call is ringing for Bea."));
+
+        var result = await AgentSoftPhoneTransferEndpoints.HandleTransferAsync(
+            new SoftPhoneTransferBody { InteractionId = "interaction-1", TargetType = "extension", TargetId = "2" },
+            new AllowAll(),
+            Antiforgery(valid: true),
+            transferService.Object,
+            ExtensionTargets(("2", "agent-b")),
+            SignedIn());
+
+        Assert.True(Assert.IsType<SoftPhoneTransferResponse>(Assert.IsAssignableFrom<IValueHttpResult>(result).Value).Succeeded);
+        transferService.Verify(service => service.TransferAsync(
+            It.Is<TransferRequest>(request => request.TargetType == InteractionTransferTargetType.Agent && request.TargetId == "agent-b"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Transfer_ToAnExtensionThatIsNotAnAgent_IsRefusedWithWhy_AndNothingMoves()
+    {
+        var transferService = new Mock<IContactCenterTransferService>();
+
+        var result = await AgentSoftPhoneTransferEndpoints.HandleTransferAsync(
+            new SoftPhoneTransferBody { InteractionId = "interaction-1", TargetType = "extension", TargetId = "7" },
+            new AllowAll(),
+            Antiforgery(valid: true),
+            transferService.Object,
+            ExtensionTargets(),
+            SignedIn());
+
+        var problem = Assert.IsType<ProblemHttpResult>(result);
+        Assert.Equal(StatusCodes.Status400BadRequest, problem.StatusCode);
+        Assert.Contains("7", problem.ProblemDetails.Detail);
+        transferService.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task ConsultStart_ToAnExtension_ConsultsTheAgentItRings()
+    {
+        var warm = new Mock<IWarmTransferService>();
+        warm.Setup(service => service.StartAsync(It.IsAny<WarmTransferRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new WarmTransferResult { Succeeded = true, ConsultId = "consult-1", Status = ConsultCallStatus.Initiated, TargetType = InteractionTransferTargetType.Agent, TargetId = "agent-b" });
+
+        await AgentSoftPhoneTransferEndpoints.HandleConsultStartAsync(
+            new SoftPhoneTransferBody { InteractionId = "interaction-1", TargetType = "extension", TargetId = "2" },
+            new AllowAll(),
+            Antiforgery(valid: true),
+            warm.Object,
+            ExtensionTargets(("2", "agent-b")),
+            SignedIn());
+
+        warm.Verify(service => service.StartAsync(
+            It.Is<WarmTransferRequest>(request => request.TargetType == InteractionTransferTargetType.Agent && request.TargetId == "agent-b"),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -173,6 +240,7 @@ public sealed class SoftPhoneTransferEndpointTests
             new AllowAll(),
             Antiforgery(valid: true),
             warm.Object,
+            ExtensionTargets(),
             SignedIn());
 
         var body = Assert.IsType<SoftPhoneConsultResponse>(Assert.IsAssignableFrom<IValueHttpResult>(result).Value);
@@ -224,6 +292,24 @@ public sealed class SoftPhoneTransferEndpointTests
             new DefaultHttpContext());
 
         Assert.Equal(StatusCodes.Status401Unauthorized, Assert.IsType<ProblemHttpResult>(result).StatusCode);
+    }
+
+    private static FakeExtensionTargets ExtensionTargets(params (string Extension, string AgentId)[] agents)
+        => new(agents.ToDictionary(agent => agent.Extension, agent => agent.AgentId));
+
+    private sealed class FakeExtensionTargets : ISoftPhoneExtensionTransferTargetResolver
+    {
+        private readonly Dictionary<string, string> _agents;
+
+        public FakeExtensionTargets(Dictionary<string, string> agents)
+        {
+            _agents = agents;
+        }
+
+        public Task<SoftPhoneExtensionTransferTarget> ResolveAsync(string extension, CancellationToken cancellationToken = default)
+            => Task.FromResult(_agents.TryGetValue(extension ?? string.Empty, out var agentId)
+                ? SoftPhoneExtensionTransferTarget.Agent(agentId)
+                : SoftPhoneExtensionTransferTarget.Refused($"Extension {extension} was not found."));
     }
 
     private static FakeDirectory Directory(SoftPhoneTransferDirectory directory = null)
