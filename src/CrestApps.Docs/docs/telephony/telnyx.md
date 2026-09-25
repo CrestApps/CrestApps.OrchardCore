@@ -229,6 +229,23 @@ Contact Center's transfer endpoints (see [How to transfer a call](../contact-cen
 - Agent legs are bridged with `park_after_unbridge: self`, so moving the caller into the consult conference
   parks the agent's leg instead of hanging it up. When a call ends, the Contact Center releases any agent leg
   still up.
+- **To an extension** — an extension typed in the panel's extension mode is sent to the Contact Center as an
+  `extension` target and resolved to the agent it rings, then transferred (or consulted) exactly as that agent.
+
+A call that is not a Contact Center call is transferred with the provider's own `transfer` action. An extension
+target (`TransferRequest.IsExtension`) is not dialed as digits: it is sent to the SIP address the colleague's
+browser is registered on (the same address an extension call rings), and is refused as *not available right now*
+while they have no live registration.
+
+A call the agent dials from the keypad is placed by the browser's own Telnyx SDK on the credential connection,
+which reports no Call Control events, so the platform has no `call_control_id` for it: it can be neither
+transferred nor merged. The soft phone says so in the transfer panel and disables its checkbox in the
+active-call list.
+
+Merging calls creates a conference named `conf-{first call}` from the first call and joins the others. The merge
+result carries that name as `conferenceName`; a later merge that names it (adding a call to the running
+conference) finds the conference (`GET /v2/conferences?filter[name]=…`) and joins only the new calls, creating it
+again only when it has ended.
 
 ## DID → agent routing
 

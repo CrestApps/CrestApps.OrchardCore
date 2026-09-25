@@ -164,7 +164,11 @@ If the provider does not advertise Hold, the button is hidden.
 **Prerequisites:** an active call and provider **Transfer** capability.
 
 1. Click **Transfer** on the soft phone. The transfer panel opens inside the phone, in place of the keypad; the back arrow returns to the keypad.
-2. Search the directory by name or extension and pick an entry, or type the number or extension to transfer to. The phone refuses its own number and an incomplete number before anything is sent.
+2. Search the directory by name or extension and pick an entry, or type where to send the call. Like the keypad, the panel has a **Transfer to an extension** / **Transfer to a phone number** toggle under the field:
+   - In **number** mode the field is the keypad's country-flag field: the number is read and checked the way the keypad checks one, so an incomplete number and the phone system's own number are refused before anything is sent.
+   - In **extension** mode type the colleague's extension (for example `2`); it is sent as an extension, never dialed as a phone number.
+
+   Picking someone from the directory works in either mode.
 3. When the call offers both, choose **Blind** (the call is sent straight to them) or **Warm** (you speak to them first). A call that supports only one shows no choice.
 4. Click **Transfer** (or press Enter).
 
@@ -175,6 +179,8 @@ When the call came to you through the Contact Center (a queue, a direct line or 
 - **Agents** — every other agent with their extension and presence. Only agents shown as **Available** can be picked; the others are listed so you can see why.
 - **Queues** — every enabled queue, with how many callers are waiting in it.
 - **Outside numbers** — the approved external destinations, when you have the **Transfer Contact Center calls externally** permission. A number that is not on that list can be typed only when an administrator turned on **Let agents transfer to numbers that are not on this list** (*Settings → Contact Center*). Emergency, premium-rate and the contact center's own numbers are always refused.
+
+An extension typed in extension mode is the agent it rings: the transfer (blind or warm) goes to that agent exactly as if you had picked them from the list. An extension that belongs to nobody, or to someone who is not a Contact Center agent, is refused with the reason.
 
 **Blind transfer**
 
@@ -194,6 +200,8 @@ If the person you consulted hangs up or does not answer within 30 seconds, the c
 
 :::caution Provider differences
 Transfer support is provider-dependent. The bundled **Asterisk** provider supports **blind transfer** and a **two-call conference** but rejects warm (consultative) transfer. **Dialpad** exposes its own transfer and merge actions when configured. **Telnyx** supports every Contact Center transfer above, including the consult. Only the actions the active provider supports are shown.
+
+On **Telnyx**, a call you dial yourself from the keypad is placed by the browser directly, and the phone system has no hold on it: it cannot be transferred or merged. The transfer panel says so instead of offering a target, and its line in **Active calls** shows a disabled checkbox. Calls that came to you through the Contact Center, and extension calls, can be transferred and merged.
 :::
 
 :::note Screencast
@@ -204,9 +212,12 @@ Transfer support is provider-dependent. The bundled **Asterisk** provider suppor
 
 **Prerequisites:** two active calls (for example the original caller on hold plus a second call) and provider **Merge** capability.
 
-1. With two or more calls up, the soft phone's **Active calls** list shows **Merge calls** and names the calls it will join. To join only some of three or more calls, tick those calls first.
-2. Click **Merge calls**. The calls are merged; no provider call id is required.
-3. The conference is listed under its own **Conference** heading with its participants. Each participant has its own hang-up button, which ends only that participant's call.
+1. With two or more calls up, the soft phone's **Active calls** list on the keypad shows a checkbox beside every call and a **Merge calls** button, which stays disabled until two or more calls are ticked.
+2. Tick the calls to join, or tick **Select all**. The button then reads **Merge 2 calls**, **Merge 3 calls** and so on, and the line beside it names the calls it joins.
+3. Click it. The calls are merged; no provider call id is required.
+4. The conference is listed under its own **Conference** heading with its participants. Each participant has its own hang-up button, which ends only that participant's call.
+
+To add another call to a running conference, tick any participant of the conference and the new call; the button reads **Add to conference**, and the new call joins the same conference rather than starting a second one.
 
 :::note Screencast
 `contact-center-agent-conference.mp4`
