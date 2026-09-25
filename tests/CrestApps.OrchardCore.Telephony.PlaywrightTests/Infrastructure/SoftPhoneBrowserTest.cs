@@ -4,7 +4,7 @@ using Microsoft.Playwright;
 namespace CrestApps.OrchardCore.Telephony.PlaywrightTests.Infrastructure;
 
 /// <summary>
-/// Starts a fresh harness server for each test, opens its pages in the run's shared headless Chromium, and carries the
+/// Starts a fresh harness server for each test, opens its pages in one of the run's shared headless Chromium browsers, and carries the
 /// page helpers the soft phone browser tests share.
 /// </summary>
 public abstract class SoftPhoneBrowserTest : IAsyncLifetime
@@ -15,7 +15,7 @@ public abstract class SoftPhoneBrowserTest : IAsyncLifetime
     protected SoftPhoneTestServer Server { get; private set; } = null!;
 
     /// <summary>
-    /// Gets the browser, shared by the whole run: every page a test opens is in a context of its own, closed when the
+    /// Gets the browser, shared with other tests: every page a test opens is in a context of its own, closed when the
     /// test ends.
     /// </summary>
     protected TestBrowser Browser { get; private set; } = null!;
@@ -29,7 +29,7 @@ public abstract class SoftPhoneBrowserTest : IAsyncLifetime
         Server = new SoftPhoneTestServer();
         await Server.StartAsync();
 
-        Browser = new TestBrowser(fixture.Browser);
+        Browser = new TestBrowser(fixture.NextBrowser());
     }
 
     /// <inheritdoc/>
