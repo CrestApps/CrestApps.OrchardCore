@@ -157,6 +157,10 @@ public sealed class QueuesStartup : StartupBase
             .AddScoped(sp => new Lazy<IQueueTreatmentDeadlineEnforcer>(sp.GetRequiredService<IQueueTreatmentDeadlineEnforcer>))
             .AddScoped<IContactCenterEventHandler, QueueTreatmentDeadlineEventHandler>();
 
+        // The deadlines are in process, so a restart loses them; the tenant re-arms them for the open work once it has
+        // started, rather than leaving a ringing offer to the once-a-minute sweep.
+        services.AddScoped<IModularTenantEvents, ContactCenterDeadlineRearm>();
+
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ReservationExpiryBackgroundTask>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, DirectRingTimeoutBackgroundTask>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, OrphanedActivityRecoveryBackgroundTask>());
