@@ -61,7 +61,7 @@ internal static class AgentSoftPhoneEndpoints
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.SignIntoQueues))
         {
-            return TypedResults.Forbid();
+            return ContactCenterApiResults.Forbidden();
         }
 
         if (!await ContactCenterEndpointAntiforgery.ValidateRequestAsync(antiforgery, httpContext))
@@ -73,7 +73,7 @@ internal static class AgentSoftPhoneEndpoints
 
         if (string.IsNullOrEmpty(userId))
         {
-            return TypedResults.Forbid();
+            return ContactCenterApiResults.Forbidden();
         }
 
         await queuedVoiceWorkOfferService.OfferForUserAsync(userId, httpContext.RequestAborted);
@@ -88,14 +88,14 @@ internal static class AgentSoftPhoneEndpoints
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.SignIntoQueues))
         {
-            return TypedResults.Forbid();
+            return ContactCenterApiResults.Forbidden();
         }
 
         var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         if (string.IsNullOrEmpty(userId))
         {
-            return TypedResults.Forbid();
+            return ContactCenterApiResults.Forbidden();
         }
 
         var pendingIncomingCallOfferService = pendingIncomingCallOfferServices.FirstOrDefault();
@@ -120,14 +120,14 @@ internal static class AgentSoftPhoneEndpoints
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.SignIntoQueues))
         {
-            return TypedResults.Forbid();
+            return ContactCenterApiResults.Forbidden();
         }
 
         var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         if (string.IsNullOrEmpty(userId))
         {
-            return TypedResults.Forbid();
+            return ContactCenterApiResults.Forbidden();
         }
 
         var provider = await telephonyProviderResolver.GetAsync();
@@ -186,7 +186,7 @@ internal static class AgentSoftPhoneEndpoints
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.SignIntoQueues))
         {
-            return TypedResults.Forbid();
+            return ContactCenterApiResults.Forbidden();
         }
 
         if (!await ContactCenterEndpointAntiforgery.ValidateRequestAsync(antiforgery, httpContext))
@@ -198,7 +198,7 @@ internal static class AgentSoftPhoneEndpoints
 
         if (string.IsNullOrEmpty(userId))
         {
-            return TypedResults.Forbid();
+            return ContactCenterApiResults.Forbidden();
         }
 
         foreach (var revoker in credentialRevokers)

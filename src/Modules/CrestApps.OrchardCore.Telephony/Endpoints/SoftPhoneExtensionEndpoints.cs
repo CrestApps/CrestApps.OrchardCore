@@ -36,14 +36,14 @@ internal static class SoftPhoneExtensionEndpoints
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, TelephonyPermissions.UseSoftPhone))
         {
-            return TypedResults.Forbid();
+            return SoftPhoneApiResults.Forbidden();
         }
 
         var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         if (string.IsNullOrEmpty(userId))
         {
-            return TypedResults.Forbid();
+            return SoftPhoneApiResults.Forbidden();
         }
 
         var request = httpContext.Request;

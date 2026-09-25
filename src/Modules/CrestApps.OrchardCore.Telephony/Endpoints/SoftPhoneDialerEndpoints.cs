@@ -40,7 +40,7 @@ internal static class SoftPhoneDialerEndpoints
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, TelephonyPermissions.UseSoftPhone))
         {
-            return TypedResults.Forbid();
+            return SoftPhoneApiResults.Forbidden();
         }
 
         try
@@ -56,7 +56,7 @@ internal static class SoftPhoneDialerEndpoints
 
         if (string.IsNullOrEmpty(userId))
         {
-            return TypedResults.Forbid();
+            return SoftPhoneApiResults.Forbidden();
         }
 
         number = number?.Trim();

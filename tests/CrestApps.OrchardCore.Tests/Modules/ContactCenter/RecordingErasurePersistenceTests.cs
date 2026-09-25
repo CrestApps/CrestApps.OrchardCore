@@ -46,7 +46,7 @@ public sealed class RecordingErasurePersistenceTests
                 await Assert.ThrowsAsync<InvalidOperationException>(
                     () => service.EraseAsync(
                         "interaction-1",
-                        "dpo-1",
+                        ContactCenterActor.Supervisor("dpo-1"),
                         "gdpr-subject-request",
                         TestContext.Current.CancellationToken));
             }
@@ -98,7 +98,7 @@ public sealed class RecordingErasurePersistenceTests
                 // Act
                 var decision = await service.EraseAsync(
                     "interaction-1",
-                    "dpo-1",
+                    ContactCenterActor.Supervisor("dpo-1"),
                     "gdpr-subject-request",
                     TestContext.Current.CancellationToken);
                 await session.SaveChangesAsync(TestContext.Current.CancellationToken);

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.ContactCenter.Core;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using Microsoft.AspNetCore.Antiforgery;
@@ -37,7 +38,7 @@ internal static class RecordingErasureEndpoint
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.ManageInteractions))
         {
-            return TypedResults.Forbid();
+            return ContactCenterApiResults.Forbidden();
         }
 
         if (!await ContactCenterEndpointAntiforgery.ValidateRequestAsync(antiforgery, httpContext))
@@ -56,14 +57,14 @@ internal static class RecordingErasureEndpoint
 
         if (string.IsNullOrEmpty(actorId))
         {
-            return TypedResults.Forbid();
+            return ContactCenterApiResults.Forbidden();
         }
 
         // Erasure performs durable writes (pointer clears, tombstone, outbox media-deletion enqueue) that must not be
         // torn by a caller who disconnects, so the operation is not bound to the request abort token.
         var decision = await recordingAccessGovernanceService.EraseAsync(
             request.InteractionId,
-            actorId,
+            ContactCenterActor.Supervisor(actorId),
             request.Reason,
             CancellationToken.None);
 

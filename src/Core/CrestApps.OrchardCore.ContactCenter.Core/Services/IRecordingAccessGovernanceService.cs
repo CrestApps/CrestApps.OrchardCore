@@ -13,13 +13,13 @@ public interface IRecordingAccessGovernanceService
     /// audit trail.
     /// </summary>
     /// <param name="interactionId">The identifier of the interaction whose recording was accessed.</param>
-    /// <param name="actorId">The identifier of the actor that accessed the recording.</param>
+    /// <param name="actor">Who accessed the recording: the kind of actor and their user id, recorded on the audit event.</param>
     /// <param name="purpose">The stated purpose for accessing the recording.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns><see langword="true"/> when the access was audited; otherwise, <see langword="false"/> when the interaction has no captured recording to access.</returns>
     Task<bool> RecordAccessAsync(
         string interactionId,
-        string actorId,
+        ContactCenterActor actor,
         string purpose,
         CancellationToken cancellationToken = default);
 
@@ -29,13 +29,13 @@ public interface IRecordingAccessGovernanceService
     /// through the published erasure event.
     /// </summary>
     /// <param name="interactionId">The identifier of the interaction whose recording should be erased.</param>
-    /// <param name="actorId">The identifier of the actor that requested erasure.</param>
+    /// <param name="actor">Who requested the erasure: the kind of actor and their user id, recorded on the audit event.</param>
     /// <param name="reason">The stated reason for the erasure request.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A decision describing whether the recording reference was erased or why erasure was denied.</returns>
     Task<RecordingErasureDecision> EraseAsync(
         string interactionId,
-        string actorId,
+        ContactCenterActor actor,
         string reason,
         CancellationToken cancellationToken = default);
 }

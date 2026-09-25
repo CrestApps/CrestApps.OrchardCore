@@ -44,10 +44,12 @@ public sealed class RecordingAccessGovernanceService : IRecordingAccessGovernanc
     /// <inheritdoc/>
     public async Task<bool> RecordAccessAsync(
         string interactionId,
-        string actorId,
+        ContactCenterActor actor,
         string purpose,
         CancellationToken cancellationToken = default)
     {
+        actor ??= ContactCenterActor.System;
+
         if (string.IsNullOrEmpty(interactionId))
         {
             return false;
@@ -60,11 +62,11 @@ public sealed class RecordingAccessGovernanceService : IRecordingAccessGovernanc
             return false;
         }
 
-        var accessedEvent = BuildEvent(interaction, ContactCenterConstants.Events.RecordingAccessed, actorId);
+        var accessedEvent = BuildEvent(interaction, ContactCenterConstants.Events.RecordingAccessed, actor);
 
         accessedEvent.SetData(new RecordingAccessedEventData
         {
-            ActorId = actorId,
+            ActorId = actor.Id,
             Purpose = purpose,
             RecordingReference = interaction.RecordingReference,
         });
@@ -77,10 +79,12 @@ public sealed class RecordingAccessGovernanceService : IRecordingAccessGovernanc
     /// <inheritdoc/>
     public async Task<RecordingErasureDecision> EraseAsync(
         string interactionId,
-        string actorId,
+        ContactCenterActor actor,
         string reason,
         CancellationToken cancellationToken = default)
     {
+        actor ??= ContactCenterActor.System;
+
         if (string.IsNullOrEmpty(interactionId))
         {
             return RecordingErasureDecision.Deny(ContactCenterConstants.RecordingErasureDenyReason.NoRecording);
@@ -104,7 +108,7 @@ public sealed class RecordingAccessGovernanceService : IRecordingAccessGovernanc
             // prior partial failure did, clear it now so it cannot resurrect access to media that no longer exists.
             await ClearMirroredReferenceAsync(interaction.ItemId, cancellationToken);
 
-            await PublishErasureDeniedAsync(interaction, actorId, ContactCenterConstants.RecordingErasureDenyReason.NoRecording);
+            await PublishErasureDeniedAsync(interaction, actor, ContactCenterConstants.RecordingErasureDenyReason.NoRecording);
 
             return RecordingErasureDecision.Deny(ContactCenterConstants.RecordingErasureDenyReason.NoRecording);
         }
@@ -113,7 +117,7 @@ public sealed class RecordingAccessGovernanceService : IRecordingAccessGovernanc
         // released, so the request is denied and audited rather than silently ignored.
         if (interaction.RecordingLegalHold)
         {
-            await PublishErasureDeniedAsync(interaction, actorId, ContactCenterConstants.RecordingErasureDenyReason.LegalHold);
+            await PublishErasureDeniedAsync(interaction, actor, ContactCenterConstants.RecordingErasureDenyReason.LegalHold);
 
             return RecordingErasureDecision.Deny(ContactCenterConstants.RecordingErasureDenyReason.LegalHold);
         }
@@ -142,11 +146,11 @@ public sealed class RecordingAccessGovernanceService : IRecordingAccessGovernanc
         // otherwise the mirrored handle would survive erasure and could resurrect access to the deleted media.
         await ClearMirroredReferenceAsync(interaction.ItemId, cancellationToken);
 
-        var erasedEvent = BuildEvent(interaction, ContactCenterConstants.Events.RecordingErased, actorId);
+        var erasedEvent = BuildEvent(interaction, ContactCenterConstants.Events.RecordingErased, actor);
 
         erasedEvent.SetData(new RecordingErasedEventData
         {
-            ActorId = actorId,
+            ActorId = actor.Id,
             Reason = reason,
             RecordingReference = erasedReference,
         });
@@ -168,27 +172,30 @@ public sealed class RecordingAccessGovernanceService : IRecordingAccessGovernanc
         }
     }
 
-    private async Task PublishErasureDeniedAsync(Interaction interaction, string actorId, string denyReasonCode)
+    private async Task PublishErasureDeniedAsync(Interaction interaction, ContactCenterActor actor, string denyReasonCode)
     {
-        var deniedEvent = BuildEvent(interaction, ContactCenterConstants.Events.RecordingErasureDenied, actorId);
+        var deniedEvent = BuildEvent(interaction, ContactCenterConstants.Events.RecordingErasureDenied, actor);
 
         deniedEvent.SetData(new RecordingErasureDeniedEventData
         {
-            ActorId = actorId,
+            ActorId = actor.Id,
             DenyReasonCode = denyReasonCode,
         });
 
         await _publisher.PublishAsync(deniedEvent, CancellationToken.None);
     }
 
-    private static InteractionEvent BuildEvent(Interaction interaction, string eventType, string actorId)
+    // The audit contract never leaves an actor unspecified: every recording access and erasure names both who acted and
+    // in what capacity (an agent on their own voicemail, a supervisor handling an erasure request, the platform).
+    private static InteractionEvent BuildEvent(Interaction interaction, string eventType, ContactCenterActor actor)
         => new()
         {
             EventType = eventType,
             InteractionId = interaction.ItemId,
             AggregateType = nameof(Interaction),
             AggregateId = interaction.ItemId,
-            ActorId = actorId,
+            ActorId = actor.Id,
+            ActorType = actor.Type,
             SourceComponent = ContactCenterConstants.Components.Interactions,
         };
 }

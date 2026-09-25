@@ -4050,8 +4050,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public interface IRecordingAccessGovernanceService
     {
-        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.RecordingErasureDecision> EraseAsync(string interactionId, string actorId, string reason, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<bool> RecordAccessAsync(string interactionId, string actorId, string purpose, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.RecordingErasureDecision> EraseAsync(string interactionId, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterActor actor, string reason, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> RecordAccessAsync(string interactionId, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterActor actor, string purpose, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IRecordingGovernancePolicy
     {
@@ -4588,8 +4588,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public sealed class RecordingAccessGovernanceService : CrestApps.OrchardCore.ContactCenter.Core.Services.IRecordingAccessGovernanceService
     {
         public RecordingAccessGovernanceService(CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallSessionManager callSessionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventPublisher publisher, OrchardCore.Modules.IClock clock) { }
-        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.RecordingErasureDecision> EraseAsync(string interactionId, string actorId, string reason, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<bool> RecordAccessAsync(string interactionId, string actorId, string purpose, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.RecordingErasureDecision> EraseAsync(string interactionId, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterActor actor, string reason, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> RecordAccessAsync(string interactionId, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterActor actor, string purpose, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class RecordingGovernancePolicy : CrestApps.OrchardCore.ContactCenter.Core.Services.IRecordingGovernancePolicy
     {

@@ -79,6 +79,9 @@ public sealed class RecordingMediaDeletionHandler : IContactCenterEventHandler
             CorrelationId = interactionEvent.CorrelationId ?? interactionEvent.InteractionId,
             CausationId = interactionEvent.ItemId,
             ActorId = data.ActorId,
+
+            // The deletion is the erasure's consequence, so it is recorded as the same actor's act.
+            ActorType = interactionEvent.ActorType,
             SourceComponent = ContactCenterConstants.Components.Interactions,
             IdempotencyKey = $"recording-media-deleted:{interactionEvent.ItemId}",
         };

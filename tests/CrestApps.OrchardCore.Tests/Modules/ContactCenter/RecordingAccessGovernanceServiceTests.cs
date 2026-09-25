@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony.Models;
 using Moq;
 using OrchardCore.Modules;
@@ -25,13 +26,14 @@ public sealed class RecordingAccessGovernanceServiceTests
         var service = new RecordingAccessGovernanceService(interactionManager.Object, CreateCallSessionManager().Object, publisher.Object, CreateClock());
 
         // Act
-        var audited = await service.RecordAccessAsync("int1", "supervisor-1", "quality-review", TestContext.Current.CancellationToken);
+        var audited = await service.RecordAccessAsync("int1", ContactCenterActor.Supervisor("supervisor-1"), "quality-review", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(audited);
         Assert.NotNull(published);
         Assert.Equal(ContactCenterConstants.Events.RecordingAccessed, published.EventType);
         Assert.Equal("supervisor-1", published.ActorId);
+        Assert.Equal(ContactCenterActorType.Supervisor, published.ActorType);
 
         var data = published.GetData<RecordingAccessedEventData>();
 
@@ -51,7 +53,7 @@ public sealed class RecordingAccessGovernanceServiceTests
         var service = new RecordingAccessGovernanceService(interactionManager.Object, CreateCallSessionManager().Object, publisher.Object, CreateClock());
 
         // Act
-        var audited = await service.RecordAccessAsync("int1", "supervisor-1", "quality-review", TestContext.Current.CancellationToken);
+        var audited = await service.RecordAccessAsync("int1", ContactCenterActor.Supervisor("supervisor-1"), "quality-review", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(audited);
@@ -83,7 +85,7 @@ public sealed class RecordingAccessGovernanceServiceTests
         var service = new RecordingAccessGovernanceService(interactionManager.Object, CreateCallSessionManager().Object, publisher.Object, CreateClock(erasureInstant));
 
         // Act
-        var decision = await service.EraseAsync("int1", "dpo-1", "gdpr-subject-request", TestContext.Current.CancellationToken);
+        var decision = await service.EraseAsync("int1", ContactCenterActor.Supervisor("dpo-1"), "gdpr-subject-request", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(decision.Erased);
@@ -124,7 +126,7 @@ public sealed class RecordingAccessGovernanceServiceTests
         var service = new RecordingAccessGovernanceService(interactionManager.Object, callSessionManager.Object, publisher.Object, CreateClock());
 
         // Act
-        var decision = await service.EraseAsync("int1", "dpo-1", "gdpr-subject-request", TestContext.Current.CancellationToken);
+        var decision = await service.EraseAsync("int1", ContactCenterActor.Supervisor("dpo-1"), "gdpr-subject-request", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(decision.Erased);
@@ -147,7 +149,7 @@ public sealed class RecordingAccessGovernanceServiceTests
         var service = new RecordingAccessGovernanceService(interactionManager.Object, callSessionManager.Object, publisher.Object, CreateClock());
 
         // Act
-        var decision = await service.EraseAsync("int1", "dpo-1", "gdpr-subject-request", TestContext.Current.CancellationToken);
+        var decision = await service.EraseAsync("int1", ContactCenterActor.Supervisor("dpo-1"), "gdpr-subject-request", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(decision.Erased);
@@ -171,7 +173,7 @@ public sealed class RecordingAccessGovernanceServiceTests
         var service = new RecordingAccessGovernanceService(interactionManager.Object, CreateCallSessionManager().Object, publisher.Object, CreateClock());
 
         // Act
-        var decision = await service.EraseAsync("int1", "dpo-1", "gdpr-subject-request", TestContext.Current.CancellationToken);
+        var decision = await service.EraseAsync("int1", ContactCenterActor.Supervisor("dpo-1"), "gdpr-subject-request", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(decision.Erased);
@@ -204,7 +206,7 @@ public sealed class RecordingAccessGovernanceServiceTests
         var service = new RecordingAccessGovernanceService(interactionManager.Object, CreateCallSessionManager().Object, publisher.Object, CreateClock());
 
         // Act
-        var decision = await service.EraseAsync("int1", "dpo-1", "gdpr-subject-request", TestContext.Current.CancellationToken);
+        var decision = await service.EraseAsync("int1", ContactCenterActor.Supervisor("dpo-1"), "gdpr-subject-request", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(decision.Erased);
@@ -232,7 +234,7 @@ public sealed class RecordingAccessGovernanceServiceTests
         var service = new RecordingAccessGovernanceService(interactionManager.Object, CreateCallSessionManager().Object, publisher.Object, CreateClock());
 
         // Act
-        var decision = await service.EraseAsync("missing", "dpo-1", "gdpr-subject-request", TestContext.Current.CancellationToken);
+        var decision = await service.EraseAsync("missing", ContactCenterActor.Supervisor("dpo-1"), "gdpr-subject-request", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(decision.Erased);

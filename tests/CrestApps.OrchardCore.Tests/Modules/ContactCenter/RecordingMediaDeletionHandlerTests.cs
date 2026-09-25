@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Handlers;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -41,6 +42,36 @@ public sealed class RecordingMediaDeletionHandlerTests
 
         Assert.Equal("dpo-1", data.ActorId);
         Assert.Equal("storage/int1", data.RecordingReference);
+    }
+
+    [Fact]
+    public async Task HandleAsync_AttributesTheConfirmationToWhoeverErasedTheRecording()
+    {
+        // Arrange
+        // The audit contract never leaves an actor unspecified. The media deletion is the erasure's consequence, so it
+        // is recorded as the same actor's act: a supervisor's erasure is confirmed as the supervisor's.
+        var mediaStore = new Mock<IRecordingMediaStore>();
+        mediaStore
+            .Setup(m => m.DeleteAsync("storage/int1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        var publisher = new Mock<IContactCenterEventPublisher>();
+        InteractionEvent published = null;
+        publisher
+            .Setup(p => p.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<InteractionEvent, CancellationToken>((e, _) => published = e)
+            .Returns(Task.CompletedTask);
+
+        var handler = CreateHandler(mediaStore.Object, publisher.Object);
+        var erasedEvent = CreateErasedEvent("storage/int1");
+        erasedEvent.ActorType = ContactCenterActorType.Supervisor;
+
+        // Act
+        await handler.HandleAsync(erasedEvent, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(published);
+        Assert.Equal(ContactCenterActorType.Supervisor, published.ActorType);
+        Assert.Equal("dpo-1", published.ActorId);
     }
 
     [Fact]

@@ -23,7 +23,7 @@ public sealed class SoftPhoneExtensionEndpointsTests
             httpContext);
 
         // Assert
-        Assert.IsType<ForbidHttpResult>(result);
+        Assert.Equal(StatusCodes.Status403Forbidden, Assert.IsType<ProblemHttpResult>(result).StatusCode);
     }
 
     [Fact]
@@ -39,7 +39,7 @@ public sealed class SoftPhoneExtensionEndpointsTests
             httpContext);
 
         // Assert
-        Assert.IsType<ForbidHttpResult>(result);
+        Assert.Equal(StatusCodes.Status403Forbidden, Assert.IsType<ProblemHttpResult>(result).StatusCode);
     }
 
     [Fact]

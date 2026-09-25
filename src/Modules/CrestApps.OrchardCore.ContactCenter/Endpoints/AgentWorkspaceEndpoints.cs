@@ -89,7 +89,7 @@ internal static partial class AgentWorkspaceEndpoints
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.SignIntoQueues))
         {
-            return TypedResults.Forbid();
+            return ContactCenterApiResults.Forbidden();
         }
 
         var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -166,7 +166,7 @@ internal static partial class AgentWorkspaceEndpoints
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.SignIntoQueues))
         {
-            return TypedResults.Forbid();
+            return ContactCenterApiResults.Forbidden();
         }
 
         if (!await ContactCenterEndpointAntiforgery.ValidateRequestAsync(antiforgery, httpContext))
@@ -194,7 +194,7 @@ internal static partial class AgentWorkspaceEndpoints
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.SignIntoQueues))
         {
-            return TypedResults.Forbid();
+            return ContactCenterApiResults.Forbidden();
         }
 
         if (!await ContactCenterEndpointAntiforgery.ValidateRequestAsync(antiforgery, httpContext))
@@ -219,21 +219,21 @@ internal static partial class AgentWorkspaceEndpoints
             OmnichannelConstants.Permissions.CompleteActivity,
             activity))
         {
-            return TypedResults.Forbid();
+            return ContactCenterApiResults.Forbidden();
         }
 
         var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         if (string.IsNullOrEmpty(userId))
         {
-            return TypedResults.Forbid();
+            return ContactCenterApiResults.Forbidden();
         }
 
         var profile = await agentManager.FindByUserIdAsync(userId, httpContext.RequestAborted);
 
         if (profile is null || !await AgentOwnsWorkAsync(profile, request.ActivityId, interactionManager, activityManager, httpContext.RequestAborted))
         {
-            return TypedResults.Forbid();
+            return ContactCenterApiResults.Forbidden();
         }
 
         activity.DispositionId = request.DispositionId;
@@ -265,7 +265,7 @@ internal static partial class AgentWorkspaceEndpoints
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.SecurePauseRecording))
         {
-            return TypedResults.Forbid();
+            return ContactCenterApiResults.Forbidden();
         }
 
         if (!await ContactCenterEndpointAntiforgery.ValidateRequestAsync(antiforgery, httpContext))
@@ -312,7 +312,7 @@ internal static partial class AgentWorkspaceEndpoints
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.SecurePauseRecording))
         {
-            return TypedResults.Forbid();
+            return ContactCenterApiResults.Forbidden();
         }
 
         if (!await ContactCenterEndpointAntiforgery.ValidateRequestAsync(antiforgery, httpContext))
@@ -347,284 +347,5 @@ internal static partial class AgentWorkspaceEndpoints
             result.Reason,
             result.IsPaused,
         });
-    }
-
-    /// <summary>
-    /// Streams a voicemail recording to the agent it was left for. The recipient check restricts playback to the
-    /// owning agent, and every grant is routed through the recording-access governance service so it is authorized
-    /// and written to the recording-access audit trail before any media is opened.
-    /// </summary>
-    internal static async Task<IResult> HandleVoicemailMediaAsync(
-        string interactionId,
-        IInteractionManager interactionManager,
-        IAgentProfileManager agentProfileManager,
-        ITelephonyInteractionStore telephonyInteractionStore,
-        HttpContext httpContext)
-    {
-        if (httpContext.User.Identity?.IsAuthenticated != true)
-        {
-            return TypedResults.Challenge();
-        }
-
-        var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-        if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(interactionId))
-        {
-            return TypedResults.Forbid();
-        }
-
-        // A voicemail that will not play returns 404 through several distinct branches; logging the specific reason
-        // turns an otherwise silent "nothing happens" into a diagnosable cause (a missing recording, a governance
-        // feature that is not enabled, media that has not finished ingesting, and so on).
-        var logger = httpContext.RequestServices.GetService<ILoggerFactory>()?.CreateLogger("ContactCenterVoicemailMedia");
-
-        void LogNotAvailable(string reason)
-        {
-            if (logger?.IsEnabled(LogLevel.Debug) == true)
-            {
-                logger.LogDebug("Voicemail media for interaction {InteractionId} is unavailable: {Reason}.", interactionId.SanitizeLogValue(), reason);
-            }
-        }
-
-        var interaction = await ResolveVoicemailInteractionAsync(
-            interactionId,
-            userId,
-            interactionManager,
-            telephonyInteractionStore,
-            httpContext.RequestAborted);
-
-        // Only a voicemail interaction is playable through this endpoint; a normal call recording is governed and
-        // surfaced elsewhere, so this endpoint deliberately refuses to expose it.
-        if (interaction is null || !IsVoicemailInteraction(interaction))
-        {
-            LogNotAvailable(interaction is null ? "the interaction was not found" : "the interaction is not flagged as a voicemail");
-
-            return TypedResults.NotFound();
-        }
-
-        // The voicemail may be played only by the agent it was left for. The recipient's agent-profile id is stamped
-        // on the interaction when it is sent to voicemail, so resolve it and compare the owning user.
-        var recipientAgentId = ResolveVoicemailRecipientAgentId(interaction);
-        var recipientAgent = string.IsNullOrEmpty(recipientAgentId)
-            ? null
-            : await agentProfileManager.FindByIdAsync(recipientAgentId, httpContext.RequestAborted);
-
-        if (recipientAgent is null || !string.Equals(recipientAgent.UserId, userId, StringComparison.Ordinal))
-        {
-            LogNotAvailable(recipientAgent is null
-                ? "the voicemail has no resolvable recipient agent"
-                : "the requesting user is not the voicemail recipient");
-
-            return TypedResults.Forbid();
-        }
-
-        // The recording may not have finished ingesting yet (the caller just hung up, or the durable ingest job has
-        // not run). Treat that as "not yet available" rather than an error.
-        if (string.IsNullOrEmpty(interaction.RecordingReference) ||
-            interaction.TechnicalMetadata is null ||
-            !interaction.TechnicalMetadata.TryGetValue(ContactCenterConstants.RecordingMetadata.StorageReference, out var storageReferenceValue) ||
-            storageReferenceValue?.ToString() is not { Length: > 0 } storageReference)
-        {
-            LogNotAvailable("the interaction carries no recording storage reference yet");
-
-            return TypedResults.NotFound();
-        }
-
-        // Gate and audit the access. RecordAccessAsync writes the RecordingAccessed audit event and returns false
-        // when there is no recording to access, so playback shares the same governance trail as any other recording.
-        // The governance service and the media store are owned by the recording feature; when it is not enabled
-        // there is nothing to play, so treat a missing service as "not available" rather than failing hard.
-        var recordingAccessGovernanceService = httpContext.RequestServices.GetService<IRecordingAccessGovernanceService>();
-
-        if (recordingAccessGovernanceService is null)
-        {
-            LogNotAvailable("the recording governance service is not registered (the Recording Governance feature is not enabled)");
-
-            return TypedResults.NotFound();
-        }
-
-        // Audited against the interaction that was resolved, not the identifier the soft phone asked with: the two
-        // differ whenever the inbox row carries its own, and an audit trail keyed to a soft-phone row cannot be
-        // followed back to the recording it is about.
-        var granted = await recordingAccessGovernanceService.RecordAccessAsync(
-            interaction.ItemId,
-            userId,
-            "voicemail-playback",
-            httpContext.RequestAborted);
-
-        if (!granted)
-        {
-            LogNotAvailable("recording access was not granted by governance");
-
-            return TypedResults.NotFound();
-        }
-
-        var mediaStore = httpContext.RequestServices.GetService<IRecordingMediaStore>();
-
-        if (mediaStore is null)
-        {
-            LogNotAvailable("no recording media store is registered");
-
-            return TypedResults.NotFound();
-        }
-
-        var stream = await mediaStore.OpenReadAsync(storageReference, httpContext.RequestAborted);
-
-        if (stream is null)
-        {
-            LogNotAvailable("the media store has no bytes for the recording storage reference");
-
-            return TypedResults.NotFound();
-        }
-
-        return Results.Stream(stream, "audio/mpeg");
-    }
-
-    internal static async Task<IResult> HandleDeleteVoicemailAsync(
-        string interactionId,
-        IInteractionManager interactionManager,
-        IAgentProfileManager agentProfileManager,
-        ITelephonyInteractionStore telephonyInteractionStore,
-        IAntiforgery antiforgery,
-        HttpContext httpContext)
-    {
-        if (httpContext.User.Identity?.IsAuthenticated != true)
-        {
-            return TypedResults.Challenge();
-        }
-
-        var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-        if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(interactionId))
-        {
-            return TypedResults.Forbid();
-        }
-
-        // Deleting a voicemail changes state, so it is a POST guarded by antiforgery, unlike the media GET.
-        if (!await ContactCenterEndpointAntiforgery.ValidateRequestAsync(antiforgery, httpContext))
-        {
-            return TypedResults.BadRequest();
-        }
-
-        var interaction = await ResolveVoicemailInteractionAsync(
-            interactionId,
-            userId,
-            interactionManager,
-            telephonyInteractionStore,
-            httpContext.RequestAborted);
-
-        if (interaction is null || !IsVoicemailInteraction(interaction))
-        {
-            return TypedResults.NotFound();
-        }
-
-        // A voicemail may be deleted only by the agent it was left for -- the same ownership rule as playback.
-        var recipientAgentId = ResolveVoicemailRecipientAgentId(interaction);
-        var recipientAgent = string.IsNullOrEmpty(recipientAgentId)
-            ? null
-            : await agentProfileManager.FindByIdAsync(recipientAgentId, httpContext.RequestAborted);
-
-        if (recipientAgent is null || !string.Equals(recipientAgent.UserId, userId, StringComparison.Ordinal))
-        {
-            return TypedResults.Forbid();
-        }
-
-        // Delete the encrypted media first, while the storage reference is still on the interaction. The media store
-        // is owned by the Telephony recording feature; a governance erase alone would not remove the bytes here
-        // because the media-deletion event handler lives in the (separately enabled) full call-recording feature.
-        if (interaction.TechnicalMetadata is not null &&
-            interaction.TechnicalMetadata.TryGetValue(ContactCenterConstants.RecordingMetadata.StorageReference, out var storageReferenceValue) &&
-            storageReferenceValue?.ToString() is { Length: > 0 } storageReference)
-        {
-            var mediaStore = httpContext.RequestServices.GetService<IRecordingMediaStore>();
-
-            if (mediaStore is not null)
-            {
-                await mediaStore.DeleteAsync(storageReference, httpContext.RequestAborted);
-            }
-        }
-
-        // Then run the recording-governance erase (audit trail + clearing the interaction's retrieval handle and
-        // erasure tombstone) when the governance service is available, so a later playback cannot resurrect it.
-        var governance = httpContext.RequestServices.GetService<IRecordingAccessGovernanceService>();
-
-        if (governance is not null)
-        {
-            // Erased by the resolved interaction's identifier, for the same reason the playback audit uses it: an
-            // erase recorded against a soft-phone row would leave the recording's own tombstone unwritten.
-            await governance.EraseAsync(interaction.ItemId, userId, "voicemail-deleted", httpContext.RequestAborted);
-        }
-
-        // Finally remove the soft-phone projection so the voicemail leaves the recipient's inbox. It is keyed by the
-        // provider call id, which the projection mirrors from the interaction.
-        if (!string.IsNullOrEmpty(interaction.ProviderInteractionId))
-        {
-            var projection = await telephonyInteractionStore.FindByCallIdAsync(userId, interaction.ProviderInteractionId, httpContext.RequestAborted);
-
-            if (projection is not null)
-            {
-                await telephonyInteractionStore.DeleteAsync(projection, httpContext.RequestAborted);
-            }
-        }
-
-        return TypedResults.Ok();
-    }
-
-    /// <summary>
-    /// Finds the platform interaction behind the voicemail the soft phone is asking about.
-    /// </summary>
-    /// <remarks>
-    /// The soft phone addresses a voicemail by the identifier on its own inbox row, and that is the platform
-    /// interaction's identifier only when the platform projected the row. A call the soft phone sent to voicemail
-    /// itself carries a generated identifier instead, and looking that up as an interaction found nothing — so
-    /// the voicemail could be neither played nor deleted, and both endpoints answered "not found" about a
-    /// recording sitting in plain sight in the agent's inbox.
-    /// <para>
-    /// The inbox row knows the call it was recorded on, and the interaction can be found by that. The row is read
-    /// as the signed-in user's own, so an identifier belonging to somebody else resolves to nothing rather than to
-    /// their voicemail; the recipient check the callers perform afterwards still applies either way.
-    /// </para>
-    /// </remarks>
-    private static async Task<Interaction> ResolveVoicemailInteractionAsync(
-        string interactionId,
-        string userId,
-        IInteractionManager interactionManager,
-        ITelephonyInteractionStore telephonyInteractionStore,
-        CancellationToken cancellationToken)
-    {
-        var interaction = await interactionManager.FindByIdAsync(interactionId, cancellationToken);
-
-        if (interaction is not null)
-        {
-            return interaction;
-        }
-
-        var projection = await telephonyInteractionStore.FindByInteractionIdAsync(userId, interactionId, cancellationToken);
-
-        if (projection is null || string.IsNullOrEmpty(projection.CallId))
-        {
-            return null;
-        }
-
-        return await interactionManager.FindByProviderInteractionIdAsync(projection.CallId, cancellationToken);
-    }
-
-    private static bool IsVoicemailInteraction(Interaction interaction)
-    {
-        return interaction.TechnicalMetadata is not null &&
-            interaction.TechnicalMetadata.TryGetValue(ContactCenterConstants.Voicemail.ProjectionMetadataKey, out var value) &&
-            (value is bool boolean ? boolean : bool.TryParse(value?.ToString(), out var parsed) && parsed);
-    }
-
-    private static string ResolveVoicemailRecipientAgentId(Interaction interaction)
-    {
-        if (interaction.TechnicalMetadata is not null &&
-            interaction.TechnicalMetadata.TryGetValue(ContactCenterConstants.Voicemail.RecipientAgentMetadataKey, out var recipient) &&
-            recipient?.ToString() is { Length: > 0 } recipientAgentId)
-        {
-            return recipientAgentId;
-        }
-
-        return interaction.AgentId;
     }
 }
