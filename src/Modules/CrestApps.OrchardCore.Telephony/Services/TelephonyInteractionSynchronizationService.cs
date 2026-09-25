@@ -29,6 +29,7 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
     private readonly TimeSpan _lockExpiration;
     private readonly TimeSpan _newInteractionGracePeriod;
     private readonly TimeSpan _clientRecordedCallMaxAge;
+    private readonly TimeSpan _clientRecordedCallSilenceTimeout;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TelephonyInteractionSynchronizationService"/> class.
@@ -62,6 +63,7 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
         _lockExpiration = coordinationOptions.Value.InteractionLockExpiration;
         _newInteractionGracePeriod = coordinationOptions.Value.NewInteractionGracePeriod;
         _clientRecordedCallMaxAge = coordinationOptions.Value.ClientRecordedCallMaxAge;
+        _clientRecordedCallSilenceTimeout = coordinationOptions.Value.ClientRecordedCallSilenceTimeout;
     }
 
     /// <inheritdoc/>
@@ -209,9 +211,10 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
         // up. There is nothing here to reconcile against, and the client settles it when the call ends. Treating
         // it as an orphan announced a terminal state to the soft phone that was still on the call -- which then
         // hung up its own live session -- on the first sweep after the call passed the minute mark. The only case
-        // left for the sweep is a browser that vanished mid-call and never reported the end; that is caught by
-        // age, and removed quietly, since there is no live phone left to tell and a late announcement could only
-        // reach a phone that has since started another call.
+        // left for the sweep is a browser that vanished mid-call and never reported the end. The phone reports each
+        // call it still has up, so one it has stopped reporting is settled as of the last report (see
+        // ClientRecordedCallPolicy); one past the maximum age is removed. Both quietly: there is no live phone left to
+        // tell, and a late announcement could only reach a phone that has since started another call.
         if (string.IsNullOrWhiteSpace(interaction.ProviderName))
         {
             if (interaction.StartedUtc != default &&
@@ -230,11 +233,14 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
                 }, true);
             }
 
+            var settled = ClientRecordedCallPolicy.HasGoneSilent(interaction, _clock.UtcNow, _clientRecordedCallSilenceTimeout) &&
+                await SettleUnreportedAsync(interaction, cancellationToken);
+
             return (new TelephonyCallLookupResult
             {
                 Succeeded = true,
                 Found = false,
-            }, false);
+            }, settled);
         }
 
         var provider = await _providerResolver.GetAsync(interaction.ProviderName);
@@ -362,6 +368,31 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
         }
 
         return (lookup, changed);
+    }
+
+    // Settles a client-recorded call the soft phone stopped reporting. The decision is taken again against the version
+    // the store reads inside its retry scope, so a report that landed after the sweep read the call keeps it alive.
+    private async Task<bool> SettleUnreportedAsync(TelephonyInteraction interaction, CancellationToken cancellationToken)
+    {
+        var utcNow = _clock.UtcNow;
+        var settled = false;
+
+        await _interactionStore.UpdateByIdAsync(
+            interaction.InteractionId,
+            candidate => settled = ClientRecordedCallPolicy.HasGoneSilent(candidate, utcNow, _clientRecordedCallSilenceTimeout) &&
+                ClientRecordedCallPolicy.SettleUnreported(candidate),
+            cancellationToken);
+
+        if (settled && _logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Settled client-recorded telephony interaction {InteractionId} for call {CallId}: the soft phone stopped reporting it more than {SilenceTimeout} ago.",
+                interaction.InteractionId.SanitizeLogValue(),
+                interaction.CallId.SanitizeLogValue(),
+                _clientRecordedCallSilenceTimeout);
+        }
+
+        return settled;
     }
 
     private async Task RemoveOrphanAsync(

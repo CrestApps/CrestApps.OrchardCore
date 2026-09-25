@@ -81,6 +81,10 @@ public sealed class Startup : StartupBase
                 options => options.ClientRecordedCallMaxAge > options.NewInteractionGracePeriod,
                 "'CrestApps_Telephony:Coordination:ClientRecordedCallMaxAge' must exceed 'NewInteractionGracePeriod', otherwise reconciliation can disconnect a browser-originated call that is still in progress.")
             .Validate(
+                options => options.ClientRecordedCallSilenceTimeout > options.NewInteractionGracePeriod &&
+                    options.ClientRecordedCallSilenceTimeout < options.ClientRecordedCallMaxAge,
+                "'CrestApps_Telephony:Coordination:ClientRecordedCallSilenceTimeout' must exceed 'NewInteractionGracePeriod' and stay under 'ClientRecordedCallMaxAge', otherwise reconciliation settles a browser-originated call the soft phone is still reporting, or deletes one before it could be settled.")
+            .Validate(
                 options => options.TokenRefreshLockTimeout > TimeSpan.Zero,
                 "'CrestApps_Telephony:Coordination:TokenRefreshLockTimeout' must be greater than zero.")
             .Validate(
@@ -119,6 +123,7 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<ITelephonyInteractionStore, DefaultTelephonyInteractionStore>();
         services.AddScoped<ITelephonyInteractionSynchronizationService, TelephonyInteractionSynchronizationService>();
+        services.AddScoped<ClientRecordedCallRecorder>();
 
         // Internal extension registry: the provider-neutral system of record that maps a dialed extension
         // number to an on-platform user. Providers translate the resolved user into their own live endpoint.

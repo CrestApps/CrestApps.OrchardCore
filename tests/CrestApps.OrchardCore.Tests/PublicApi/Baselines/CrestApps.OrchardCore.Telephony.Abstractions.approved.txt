@@ -446,6 +446,13 @@ namespace CrestApps.OrchardCore.Telephony.Models
         Disconnected = 5,
         Failed = 6,
     }
+    public sealed class ClientRecordedCallActivity
+    {
+        public ClientRecordedCallActivity() { }
+        public System.DateTime? ConnectedUtc { get; set; }
+        public bool EndedUnreported { get; set; }
+        public System.DateTime? LastReportedUtc { get; set; }
+    }
     public sealed class DialRequest
     {
         public DialRequest() { }

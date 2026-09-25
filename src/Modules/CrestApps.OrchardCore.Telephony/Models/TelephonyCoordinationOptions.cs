@@ -36,6 +36,15 @@ public sealed class TelephonyCoordinationOptions
     public TimeSpan ClientRecordedCallMaxAge { get; set; } = TimeSpan.FromHours(4);
 
     /// <summary>
+    /// Gets or sets how long an in-progress interaction the client recorded itself may go without the soft phone
+    /// reporting it still up before reconciliation settles it, as of the last report heard. The phone reports its calls
+    /// every thirty seconds while they last, so this only elapses once the phone is gone -- a page that crashed, an app
+    /// closed mid-call -- or its hub connection has been down for this long. The record is settled, not removed, and the
+    /// soft phone is not told: a phone that is still on the call keeps it.
+    /// </summary>
+    public TimeSpan ClientRecordedCallSilenceTimeout { get; set; } = TimeSpan.FromMinutes(5);
+
+    /// <summary>
     /// Gets or sets how long a caller waits to acquire the per-user OAuth token-refresh lock before giving up.
     /// While one request refreshes a user's tokens, its peers wait here for that refresh to land rather than
     /// starting a competing refresh that would rotate the replacement token out from under it.

@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
+using OrchardCore.Entities;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -418,6 +419,96 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
         client.Verify(value => value.CallStateChanged(It.IsAny<TelephonyCall>()), Times.Never);
     }
 
+    // Bug: the agent held a keypad call, dialed a second number, and both calls dropped. The phone never reported the
+    // first call's end, so its history stayed "in progress" with no end time -- for good, short of a four-hour ceiling
+    // that would then have deleted it. A call the phone stopped reporting is settled, at the last moment the phone was
+    // heard from, without telling a phone that is no longer there.
+    [Fact]
+    public async Task ReconcileActiveInteractionsAsync_WhenAClientRecordedCallStoppedBeingReported_SettlesItAtTheLastReport()
+    {
+        // Arrange
+        var interaction = CreateInteraction("browser-1790295290897");
+        interaction.ProviderName = null;
+        interaction.StartedUtc = _now.AddMinutes(-20);
+        interaction.Put(new ClientRecordedCallActivity
+        {
+            LastReportedUtc = _now.AddMinutes(-18),
+            ConnectedUtc = _now.AddMinutes(-19.5),
+        });
+        var store = new Mock<ITelephonyInteractionStore>();
+        store
+            .Setup(value => value.GetActiveAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([interaction]);
+        store.SetupRetryingUpdates(interaction);
+        var (hubContext, client) = CreateHubContext();
+        var service = CreateService(store, hubContext, new TelephonyCallLookupResult(), lockAcquired: true);
+
+        // Act
+        var changed = await service.ReconcileActiveInteractionsAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(1, changed);
+        Assert.Equal(CallOutcome.Completed, interaction.Outcome);
+        Assert.Equal(_now.AddMinutes(-18), interaction.EndedUtc);
+        Assert.Equal(120, interaction.DurationSeconds);
+        Assert.True(ActivityOf(interaction).EndedUnreported);
+        store.Verify(value => value.DeleteAsync(It.IsAny<TelephonyInteraction>(), It.IsAny<CancellationToken>()), Times.Never);
+        client.Verify(value => value.CallStateChanged(It.IsAny<TelephonyCall>()), Times.Never);
+    }
+
+    // A call the phone never reported as anything but placed -- the record a phone older than the reports leaves --
+    // is settled as it started: never connected, no talk time.
+    [Fact]
+    public async Task ReconcileActiveInteractionsAsync_WhenAClientRecordedCallWasNeverReported_SettlesItAsNeverConnected()
+    {
+        // Arrange
+        var interaction = CreateInteraction("browser-1790295317044");
+        interaction.ProviderName = null;
+        interaction.StartedUtc = _now.AddMinutes(-10);
+        var store = new Mock<ITelephonyInteractionStore>();
+        store
+            .Setup(value => value.GetActiveAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([interaction]);
+        store.SetupRetryingUpdates(interaction);
+        var (hubContext, _) = CreateHubContext();
+        var service = CreateService(store, hubContext, new TelephonyCallLookupResult(), lockAcquired: true);
+
+        // Act
+        var changed = await service.ReconcileActiveInteractionsAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(1, changed);
+        Assert.Equal(CallOutcome.Canceled, interaction.Outcome);
+        Assert.Equal(interaction.StartedUtc, interaction.EndedUtc);
+        Assert.Equal(0, interaction.DurationSeconds);
+    }
+
+    // A call the phone still reports is up, however long ago it started.
+    [Fact]
+    public async Task ReconcileActiveInteractionsAsync_WhenAClientRecordedCallIsStillReported_LeavesItInProgress()
+    {
+        // Arrange
+        var interaction = CreateInteraction("browser-1790295290897");
+        interaction.ProviderName = null;
+        interaction.StartedUtc = _now.AddMinutes(-40);
+        interaction.Put(new ClientRecordedCallActivity { LastReportedUtc = _now.AddSeconds(-30), ConnectedUtc = _now.AddMinutes(-39) });
+        var store = new Mock<ITelephonyInteractionStore>();
+        store
+            .Setup(value => value.GetActiveAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([interaction]);
+        store.SetupRetryingUpdates(interaction);
+        var (hubContext, _) = CreateHubContext();
+        var service = CreateService(store, hubContext, new TelephonyCallLookupResult(), lockAcquired: true);
+
+        // Act
+        var changed = await service.ReconcileActiveInteractionsAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(0, changed);
+        Assert.Equal(CallOutcome.InProgress, interaction.Outcome);
+        Assert.Null(interaction.EndedUtc);
+    }
+
     // Bug: a Contact Center offer rings the agent's phone while the caller's own leg is live (answered by the platform
     // to play hold music). The provider can only say that leg is alive, and the sweep told the ringing phone the call
     // was "Connected": the incoming-call prompt vanished and the phone showed a call in progress that nobody had
@@ -566,6 +657,9 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
 
         return (hubContext, client);
     }
+
+    private static ClientRecordedCallActivity ActivityOf(TelephonyInteraction interaction)
+        => interaction.TryGet<ClientRecordedCallActivity>(out var activity) ? activity : null;
 
     private static TelephonyInteraction CreateInteraction(string callId = "call-1")
     {
