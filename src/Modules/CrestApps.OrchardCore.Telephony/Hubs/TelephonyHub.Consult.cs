@@ -1,6 +1,7 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.Telephony.Hubs;
 
@@ -50,6 +51,7 @@ public sealed partial class TelephonyHub
 
         request.Metadata ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         request.Metadata[TelephonyConstants.RequestMetadata.SoftPhoneUserId] = Context.UserIdentifier;
+        request.Metadata[TelephonyConstants.RequestMetadata.SoftPhoneConnectionId] = Context.ConnectionId;
         request.Metadata.Remove(TelephonyConstants.RequestMetadata.SoftPhoneUserDisplayName);
 
         var displayName = Context.GetHttpContext()?.User?.Identity?.Name;
@@ -71,6 +73,11 @@ public sealed partial class TelephonyHub
              call?.Metadata is not null &&
              call.Metadata.TryGetValue(TelephonyConstants.CallMetadata.ConsultOf, out var consultOf) &&
              !string.IsNullOrWhiteSpace(consultOf?.ToString()));
+
+    // The transfer panel asks where a consult stands every couple of seconds while it rings; logged at Information like
+    // every other command, those polls buried the lines worth reading.
+    internal static LogLevel HubActionLogLevel(string actionName)
+        => string.Equals(actionName, "GetConsult", StringComparison.Ordinal) ? LogLevel.Debug : LogLevel.Information;
 
     private static string DescribeConsultRequest(ConsultTransferRequest request)
         => request is null

@@ -1,6 +1,7 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Telnyx.Models;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.Telnyx.Services;
@@ -70,26 +71,83 @@ public sealed partial class TelnyxTelephonyProvider
         // put the call in the other window, which was not expecting it.
         var live = await _credentialStore.ListLiveByUserAsync(userId.Trim(), _clock.UtcNow, cancellationToken);
         var credential = live.FirstOrDefault(candidate => string.Equals(candidate.CredentialId, credentialId, StringComparison.Ordinal));
+        var reason = WhyCannotRingBack(credential);
 
+        return reason is null ? (SoftPhoneEndpoint(credential), null) : (null, reason);
+    }
+
+    // The phone a warm transfer's consult rings: the agent's own, which asked for it. The phone names the credential it is
+    // registered on, but a page opened before phones named it names none, and one whose credential was renewed may name
+    // the one it replaced -- and refusing the consult then left an agent whose phone was ready unable to transfer warm.
+    // So an unusable name falls back to the caller's own credential registered from the connection that asked, else to
+    // their most recently registered one. Only the caller's own credentials are ever considered.
+    private async Task<(string Endpoint, string Reason)> ResolveConsultSoftPhoneAsync(
+        string userId,
+        string credentialId,
+        string connectionId,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return (null, "the transfer names no user");
+        }
+
+        var live = await _credentialStore.ListLiveByUserAsync(userId.Trim(), _clock.UtcNow, cancellationToken);
+        var named = string.IsNullOrWhiteSpace(credentialId)
+            ? null
+            : live.FirstOrDefault(candidate => string.Equals(candidate.CredentialId, credentialId, StringComparison.Ordinal));
+
+        if (named is not null && WhyCannotRingBack(named) is null)
+        {
+            return (SoftPhoneEndpoint(named), null);
+        }
+
+        var ringable = TelnyxAgentCredentialSelection.OrderByDeliveryPreference(live.Where(candidate => WhyCannotRingBack(candidate) is null));
+        var fallback = ringable.FirstOrDefault(candidate =>
+                !string.IsNullOrWhiteSpace(connectionId) &&
+                string.Equals(candidate.RegisteredConnectionId, connectionId, StringComparison.Ordinal)) ??
+            (ringable.Count > 0 ? ringable[0] : null);
+
+        if (fallback is null)
+        {
+            return (null, named is not null ? WhyCannotRingBack(named) : "no phone of the user can be rung back for the consult");
+        }
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "A warm transfer from the soft phone of user '{UserId}' named no credential that can be rung back; the consult rings the user's registered credential '{CredentialId}' instead.",
+                userId.SanitizeLogValue(),
+                fallback.CredentialId.SanitizeLogValue());
+        }
+
+        return (SoftPhoneEndpoint(fallback), null);
+    }
+
+    // Why a credential cannot be rung back for a leg its phone answers itself, or null when it can.
+    private static string WhyCannotRingBack(TelnyxAgentCredential credential)
+    {
         if (credential is null || string.IsNullOrWhiteSpace(credential.SipUsername))
         {
-            return (null, "the phone's credential is not live");
+            return "the phone's credential is not live";
         }
 
         if (!credential.RegisteredUtc.HasValue)
         {
-            return (null, "the phone has not registered on its credential");
+            return "the phone has not registered on its credential";
         }
 
         // A phone that predates this answers nothing it did not ask for, and would ring its own call as an incoming one.
-        if (credential.ClientCapabilities?.Contains(TelephonyConstants.SoftPhoneClientCapabilities.BridgedDialLeg, StringComparer.Ordinal) != true)
-        {
-            return (null, "the phone does not answer a leg rung back to it");
-        }
+        return credential.ClientCapabilities?.Contains(TelephonyConstants.SoftPhoneClientCapabilities.BridgedDialLeg, StringComparer.Ordinal) == true
+            ? null
+            : "the phone does not answer a leg rung back to it";
+    }
 
+    private string SoftPhoneEndpoint(TelnyxAgentCredential credential)
+    {
         var sipDomain = string.IsNullOrWhiteSpace(_options.SipDomain) ? TelnyxConstants.DefaultSipDomain : _options.SipDomain;
 
-        return ($"sip:{credential.SipUsername}@{sipDomain}", null);
+        return $"sip:{credential.SipUsername}@{sipDomain}";
     }
 
     private TelephonyResult BridgeUnavailable()

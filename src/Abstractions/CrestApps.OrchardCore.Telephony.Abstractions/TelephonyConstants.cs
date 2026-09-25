@@ -100,6 +100,13 @@ public static class TelephonyConstants
         public const string SoftPhoneCredentialId = "softPhoneCredentialId";
 
         /// <summary>
+        /// Identifies the hub connection a soft phone command came from, stamped by the server (never taken from the
+        /// client). A provider that rings the caller's own phone back -- a warm transfer's consult -- prefers the
+        /// credential registered from this connection when the request names no live credential of its own.
+        /// </summary>
+        public const string SoftPhoneConnectionId = "softPhoneConnectionId";
+
+        /// <summary>
         /// The display name of the user placing a soft phone command, stamped by the server (never taken from the
         /// client) so a colleague a call is handed to can be told who handed it over.
         /// </summary>

@@ -317,7 +317,8 @@ A **warm transfer** rings the agent's own phone for a consult -- a second call, 
 dial. When it answers, a colleague is rung on a transfer leg and joined with the consult leg in a conference
 `consult-{consult leg}` (two browser legs pass audio both ways only through Telnyx's mixer; neither joins with
 `end_conference_on_exit`), and a number is dialed and bridged like a keypad dial. The consult is marked answered (`s`) when
-the destination answers, and the transfer panel follows it through the hub's `GetConsult`:
+the destination answers, and the transfer panel follows it through the hub's `GetConsult` (logged at `Debug`, since
+it polls every couple of seconds):
 
 - **Complete** (`CompleteConsult`, only once the destination answered): a colleague leaves the consult conference
   (`POST /v2/conferences/{id}/actions/leave`, which parks their leg) and is handed the party as above; an outside number is
@@ -330,6 +331,12 @@ the destination answers, and the transfer panel follows it through the hub's `Ge
 - **The agent hangs up the consult** (or closes the phone) after the destination answered: the transfer completes, as on
   most phone systems. Before the destination answered, the consult is cancelled; if the agent's first leg is gone too, its
   caller is released.
+
+The consult rings a credential of the transferring user only, one that is live, registered and reported
+`bridged-dial-leg`: the one the request names when it qualifies, else the one registered from the hub connection the
+transfer came from, else the user's most recently registered one. A page opened before the soft phone named its
+credential on a transfer, or one whose credential was renewed since, still gets its consult -- a colleague who took
+over a handed-over call can transfer it warm -- and only a user with no such credential at all is told to transfer blind.
 
 On the colleague's phone the transfer leg rings with **Answer** and **Decline** (no voicemail), showing the caller's number
 and *Transferred by* and the agent's name; the phone recognizes it by its client state or the `X-Transfer-Leg` header and, once

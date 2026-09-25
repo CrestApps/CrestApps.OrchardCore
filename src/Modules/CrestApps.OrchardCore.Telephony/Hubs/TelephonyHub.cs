@@ -835,11 +835,11 @@ public sealed partial class TelephonyHub : Hub<ITelephonyClient>
             }
         });
 
-        if (_logger.IsEnabled(LogLevel.Information))
+        if (_logger.IsEnabled(HubActionLogLevel(actionName)))
         {
             var completionRequest = BuildLogRequest(requestFactory);
 
-            _logger.LogInformation(
+            _logger.Log(HubActionLogLevel(actionName),
                 "Telephony hub action {Action} completed for user {UserId}. Request: {Request}. Succeeded={Succeeded}, Error={Error}, CallId={CallId}, CallState={CallState}.",
                 actionName,
                 RedactedUserId(),
@@ -927,12 +927,12 @@ public sealed partial class TelephonyHub : Hub<ITelephonyClient>
 
     private void LogHubActionStart(string actionName, Func<string> requestFactory)
     {
-        if (!_logger.IsEnabled(LogLevel.Information))
+        if (!_logger.IsEnabled(HubActionLogLevel(actionName)))
         {
             return;
         }
 
-        _logger.LogInformation(
+        _logger.Log(HubActionLogLevel(actionName),
             "Telephony hub action {Action} started for user {UserId} on connection {ConnectionId}. Request: {Request}.",
             actionName,
             RedactedUserId(),

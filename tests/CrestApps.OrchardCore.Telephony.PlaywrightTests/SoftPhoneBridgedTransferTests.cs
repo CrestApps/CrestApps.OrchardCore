@@ -154,6 +154,46 @@ public sealed class SoftPhoneBridgedTransferTests : SoftPhoneBrowserTest
         Assert.Contains("Hold:xfer-9", Server.Provider.HoldCommands);
     }
 
+    // Bug: a colleague who took over a handed-over call was told "Your phone cannot be rung for the consult right now" when
+    // they transferred it warm. The phone that took it over names its credential for the consult like any other.
+    [Fact]
+    public async Task ACallAColleagueHandsOver_CanBeTransferredWarm_WithAConsultOnThisPhone()
+    {
+        // Arrange
+        var page = await OpenTelnyxPhoneAsync();
+        Server.Provider.TrackCall(new TelephonyCall
+        {
+            CallId = "xfer-9",
+            From = "+17025550101",
+            Direction = CallDirection.Inbound,
+            State = CallState.Ringing,
+            ProviderName = "InMemory",
+            StartedUtc = DateTimeOffset.UtcNow,
+        });
+        await page.EvaluateAsync("() => window.fakeTelnyx.ringTransferLeg('xfer-9', '+17025550101', 'Agent One')");
+        await page.Locator("[data-telephony-incoming]").WaitForAsync();
+        await page.ClickAsync("[data-telephony-incoming-answer]");
+        await page.WaitForFunctionAsync("() => window.fakeTelnyx.byLeg('xfer-9').answers === 1");
+        await page.EvaluateAsync(
+            "() => window.telephonySoftPhone.getInstance().getConnection().invoke('PublishTrackedCallState', { callId: 'xfer-9', from: '+17025550101', direction: 1, state: 3, providerName: 'InMemory' })");
+        await page.WaitForFunctionAsync(
+            "() => ['Connected', 3].includes((window.telephonySoftPhone.getInstance().getActiveCalls().find(call => call.callId === 'xfer-9') || {}).state)");
+
+        // Act
+        await StartTransferAsync(page, warm: true, extension: "3");
+
+        // Assert - a warm transfer of this call, naming this phone for the consult, followed as a consult.
+        await WaitForAsync(() => Server.Provider.GetTransferRequestCount() == 1);
+        var transfer = Server.Provider.GetLastTransfer();
+        Assert.Equal("xfer-9", transfer.CallId);
+        Assert.Equal(TransferMode.Warm, transfer.Mode);
+        Assert.Equal("fake-credential-1", transfer.Metadata[TelephonyConstants.RequestMetadata.SoftPhoneCredentialId]);
+        await page.Locator("[data-telephony-consult]").WaitForAsync();
+        Assert.Contains("Calling 3", await page.Locator("[data-telephony-consult-status]").InnerTextAsync());
+        Assert.True(await page.Locator("[data-telephony-transfer-error]").IsHiddenAsync());
+        await CaptureAsync(page, "handed-over-call-warm-transfer");
+    }
+
     [Fact]
     public async Task DecliningACallAColleagueHandsOver_HangsUpItsLeg()
     {

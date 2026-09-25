@@ -196,12 +196,11 @@ public sealed class TelnyxBridgedTransferTests
     [Fact]
     public async Task WarmTransferFromAPhoneThatCannotBeRungBack_IsRefused_BeforeAnythingIsDialed()
     {
-        // Arrange - the request names a credential that is not this user's.
+        // Arrange - the caller's only phone predates answering a leg rung back to it.
         var handler = new RecordingHttpMessageHandler()
             .RespondWith(HttpStatusCode.OK, TelnyxBridgedDialTests.CallStatus(TelnyxBridgedDialTests.AgentLeg(peer: RemoteLeg)));
-        var provider = CreateProvider(handler, []);
+        var provider = CreateProvider(handler, [], [Credential("credential-1", "gencred1", "connection-1", capable: false)]);
         var request = ExtensionTransfer(TransferMode.Warm);
-        request.Metadata[TelephonyConstants.RequestMetadata.SoftPhoneCredentialId] = "someone-elses-credential";
 
         // Act
         var result = await provider.StartAttendedTransferAsync(request, TestContext.Current.CancellationToken);
@@ -209,6 +208,52 @@ public sealed class TelnyxBridgedTransferTests
         // Assert
         Assert.False(result.Succeeded);
         Assert.Equal([$"GET /v2/calls/{AgentLeg}"], handler.Requests.Select(Describe));
+    }
+
+    // Bug: a colleague who took over a handed-over call could not transfer it warm -- "Your phone cannot be rung for the
+    // consult right now" -- although their phone was registered and able to take the consult. Their page had been open
+    // since before the phone started naming its credential on a transfer, so the request named none, and the consult
+    // rang only a credential the request named. The consult now rings the caller's own phone whichever way it is found:
+    // the credential named, else the one registered from the connection that asked, else their newest registered one.
+    [Theory]
+    [InlineData(null, "connection-1", "gencred1")]
+    [InlineData("a-credential-renewed-since", "connection-1", "gencred1")]
+    [InlineData("someone-elses-credential", "connection-1", "gencred1")]
+    [InlineData(null, "connection-2", "gencred2")]
+    [InlineData(null, "a-connection-that-registered-nothing", "gencred2")]
+    [InlineData("credential-1", "connection-2", "gencred1")]
+    public async Task WarmTransferOfAHandedOverCall_RingsTheCallersOwnPhone_EvenWhenTheRequestNamesNoLiveCredential(
+        string namedCredential,
+        string connectionId,
+        string expectedSipUser)
+    {
+        // Arrange - two windows, each registered on a credential of its own; the second registered last.
+        var handler = new RecordingHttpMessageHandler()
+            .RespondWith(HttpStatusCode.OK, Status(alive: true, HandedOverState()))
+            .RespondWith(HttpStatusCode.OK, $$$"""{"data":{"call_control_id":"{{{ConsultLeg}}}"}}""")
+            .AlwaysRespondWith(HttpStatusCode.OK, Ok);
+        var provider = CreateProvider(handler, [],
+        [
+            Credential("credential-2", "gencred2", "connection-2", capable: true, registeredMinute: 40),
+            Credential("credential-1", "gencred1", "connection-1", capable: true, registeredMinute: 30),
+            Credential("credential-3", "gencred3", "connection-3", capable: false, registeredMinute: 50),
+        ]);
+        var request = ExtensionTransfer(TransferMode.Warm);
+        request.Metadata.Remove(TelephonyConstants.RequestMetadata.SoftPhoneCredentialId);
+        request.Metadata[TelephonyConstants.RequestMetadata.SoftPhoneConnectionId] = connectionId;
+
+        if (namedCredential is not null)
+        {
+            request.Metadata[TelephonyConstants.RequestMetadata.SoftPhoneCredentialId] = namedCredential;
+        }
+
+        // Act
+        var result = await provider.StartAttendedTransferAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded, result.Error);
+        Assert.Equal($"sip:{expectedSipUser}@sip.telnyx.com", ReadString(handler.Requests[1].Body, "to"));
+        Assert.Equal(AgentLeg, result.Call.Metadata[TelephonyConstants.CallMetadata.ConsultOf]);
     }
 
     [Theory]
@@ -478,7 +523,23 @@ public sealed class TelnyxBridgedTransferTests
         return document.RootElement.TryGetProperty(property, out _);
     }
 
-    private static TelnyxTelephonyProvider CreateProvider(RecordingHttpMessageHandler handler, List<TelephonyInteraction> history)
+    private static TelnyxAgentCredential Credential(string credentialId, string sipUsername, string connectionId, bool capable, int registeredMinute = 30)
+        => new()
+        {
+            UserId = "user-1",
+            CredentialId = credentialId,
+            SipUsername = sipUsername,
+            IssuedUtc = new DateTime(2026, 1, 1, 11, 0, 0, DateTimeKind.Utc),
+            ExpiresUtc = new DateTime(2026, 1, 1, 14, 0, 0, DateTimeKind.Utc),
+            RegisteredUtc = new DateTime(2026, 1, 1, 11, registeredMinute, 0, DateTimeKind.Utc),
+            RegisteredConnectionId = connectionId,
+            ClientCapabilities = capable ? [TelephonyConstants.SoftPhoneClientCapabilities.BridgedDialLeg] : [],
+        };
+
+    private static TelnyxTelephonyProvider CreateProvider(
+        RecordingHttpMessageHandler handler,
+        List<TelephonyInteraction> history,
+        IReadOnlyList<TelnyxAgentCredential> liveCredentials = null)
     {
         var options = new TelnyxOptions
         {
@@ -492,19 +553,7 @@ public sealed class TelnyxBridgedTransferTests
 
         var credentials = new Mock<ITelnyxAgentCredentialStore>();
         credentials.Setup(x => x.ListLiveByUserAsync("user-1", It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(
-            [
-                new TelnyxAgentCredential
-                {
-                    UserId = "user-1",
-                    CredentialId = "credential-1",
-                    SipUsername = "gencred1",
-                    IssuedUtc = new DateTime(2026, 1, 1, 11, 0, 0, DateTimeKind.Utc),
-                    ExpiresUtc = new DateTime(2026, 1, 1, 14, 0, 0, DateTimeKind.Utc),
-                    RegisteredUtc = new DateTime(2026, 1, 1, 11, 30, 0, DateTimeKind.Utc),
-                    ClientCapabilities = [TelephonyConstants.SoftPhoneClientCapabilities.BridgedDialLeg],
-                },
-            ]);
+            .ReturnsAsync(liveCredentials ?? [Credential("credential-1", "gencred1", "connection-1", capable: true)]);
 
         var resolver = new Mock<ITelnyxAgentEndpointResolver>();
         resolver.Setup(x => x.ResolveAsync("user-2", It.IsAny<CancellationToken>())).ReturnsAsync(ColleagueEndpoint);

@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Http.Connections.Features;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Environment.Shell;
@@ -407,9 +408,46 @@ public sealed class TelephonyHubAuthorizationTests
         Assert.Null(await store.FindByCallIdAsync("user-1", "leg-9", TestContext.Current.CancellationToken));
     }
 
+    [Fact]
+    public async Task Transfer_NamesTheConnectionItCameFrom_SoTheProviderCanRingThePhoneThatAsked()
+    {
+        // Arrange
+        using var harness = CreateHarness("user-1", [new TelephonyInteraction { UserId = "user-1", CallId = "call-1" }]);
+        TransferRequest sent = null;
+        harness.TelephonyService
+            .Setup(value => value.TransferAsync(It.IsAny<TransferRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<TransferRequest, CancellationToken>((request, _) => sent = request)
+            .ReturnsAsync(TelephonyResult.Success());
+
+        // Act
+        await InvokeInShellAsync(harness, hub => hub.Transfer(new TransferRequest
+        {
+            CallId = "call-1",
+            To = "2",
+            IsExtension = true,
+            Mode = TransferMode.Warm,
+            Metadata = new Dictionary<string, string> { [TelephonyConstants.RequestMetadata.SoftPhoneConnectionId] = "somebody-elses-connection" },
+        }));
+
+        // Assert
+        Assert.Equal("connection-1", sent.Metadata[TelephonyConstants.RequestMetadata.SoftPhoneConnectionId]);
+    }
+
+    // The transfer panel asks where a consult stands every couple of seconds; a line each at Information buried the log.
+    [Theory]
+    [InlineData("GetConsult", LogLevel.Debug)]
+    [InlineData("CompleteConsult", LogLevel.Information)]
+    [InlineData("CancelConsult", LogLevel.Information)]
+    [InlineData("Transfer", LogLevel.Information)]
+    public void HubActions_AreLoggedAtInformation_ExceptTheConsultPoll(string action, LogLevel expected)
+    {
+        Assert.Equal(expected, TelephonyHub.HubActionLogLevel(action));
+    }
+
     private static HubAuthorizationHarness CreateHarness(
         string userId,
-        IEnumerable<TelephonyInteraction> interactions = null)
+        IEnumerable<TelephonyInteraction> interactions = null,
+        Action<IServiceCollection> configure = null)
     {
         var telephonyService = new Mock<ITelephonyService>();
         var targetPolicy = new Mock<ITransferTargetPolicy>();
@@ -430,8 +468,11 @@ public sealed class TelephonyHubAuthorizationTests
             .AddSingleton<ITelephonyInteractionStore>(store)
             .AddSingleton(targetPolicy.Object)
             .AddSingleton<IClock>(new StubClock(new DateTime(2026, 9, 25, 12, 0, 0, DateTimeKind.Utc)))
-            .AddSingleton(shellHost.Object)
-            .BuildServiceProvider();
+            .AddSingleton(shellHost.Object);
+
+        configure?.Invoke(services);
+
+        var serviceProvider = services.BuildServiceProvider();
 
         // The hub resolves scoped services through ShellScope.UsingChildScopeAsync, which requires an
         // ambient shell scope whose IShellHost can produce child scopes. Returning child scopes over the
@@ -439,7 +480,7 @@ public sealed class TelephonyHubAuthorizationTests
         var shellContext = new ShellContext
         {
             Settings = shellSettings,
-            ServiceProvider = services,
+            ServiceProvider = serviceProvider,
             IsActivated = true,
         };
         shellHost
@@ -457,7 +498,7 @@ public sealed class TelephonyHubAuthorizationTests
 
         return new HubAuthorizationHarness(
             hub,
-            services,
+            serviceProvider,
             shellContext,
             telephonyService,
             commandExecutor);

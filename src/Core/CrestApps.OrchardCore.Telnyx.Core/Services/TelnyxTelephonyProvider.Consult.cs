@@ -59,8 +59,11 @@ public sealed partial class TelnyxTelephonyProvider
     private async Task<TelephonyResult> StartConsultAsync(TransferRequest request, string destination, BridgedDial bridge, CancellationToken cancellationToken)
     {
         var userId = ReadRequestMetadata(request, TelephonyConstants.RequestMetadata.SoftPhoneUserId);
-        var credentialId = ReadRequestMetadata(request, TelephonyConstants.RequestMetadata.SoftPhoneCredentialId);
-        var (agentEndpoint, reason) = await ResolveDialingSoftPhoneAsync(userId, credentialId, cancellationToken);
+        var (agentEndpoint, reason) = await ResolveConsultSoftPhoneAsync(
+            userId,
+            ReadRequestMetadata(request, TelephonyConstants.RequestMetadata.SoftPhoneCredentialId),
+            ReadRequestMetadata(request, TelephonyConstants.RequestMetadata.SoftPhoneConnectionId),
+            cancellationToken);
 
         if (agentEndpoint is null)
         {

@@ -315,6 +315,7 @@ namespace CrestApps.OrchardCore.Telephony
         {
             public const string FenceToken = "commandFenceToken";
             public const string IdempotencyKey = "idempotencyKey";
+            public const string SoftPhoneConnectionId = "softPhoneConnectionId";
             public const string SoftPhoneCredentialId = "softPhoneCredentialId";
             public const string SoftPhoneUserDisplayName = "softPhoneUserDisplayName";
             public const string SoftPhoneUserId = "softPhoneUserId";
