@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace CrestApps.OrchardCore.Telnyx.Services;
 
 /// <summary>
@@ -77,6 +79,48 @@ public sealed partial class TelnyxApiClient
         string conferenceId,
         CancellationToken cancellationToken = default)
         => PostConferenceActionAsync(conferenceId, "end", body: null, cancellationToken);
+
+    /// <summary>
+    /// Lists a conference's participants (<c>GET /conferences/{id}/participants</c>) as their call control ids and
+    /// statuses (<c>joining</c>, <c>joined</c> or <c>left</c>); an empty list when Telnyx could not be read.
+    /// </summary>
+    /// <param name="conferenceId">The conference.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    public async Task<IReadOnlyList<TelnyxConferenceParticipant>> ListConferenceParticipantsAsync(
+        string conferenceId,
+        CancellationToken cancellationToken = default)
+    {
+        var (result, json) = await SendAsync(
+            HttpMethod.Get,
+            $"conferences/{Uri.EscapeDataString(conferenceId ?? string.Empty)}/participants",
+            body: null,
+            retryable: true,
+            cancellationToken);
+
+        if (!result.Succeeded ||
+            json is not JsonElement root ||
+            !root.TryGetProperty("data", out var data) ||
+            data.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        var participants = new List<TelnyxConferenceParticipant>();
+
+        foreach (var item in data.EnumerateArray())
+        {
+            if (item.ValueKind == JsonValueKind.Object &&
+                item.TryGetProperty("call_control_id", out var callControlId) &&
+                callControlId.ValueKind == JsonValueKind.String)
+            {
+                participants.Add(new TelnyxConferenceParticipant(
+                    callControlId.GetString(),
+                    item.TryGetProperty("status", out var status) && status.ValueKind == JsonValueKind.String ? status.GetString() : null));
+            }
+        }
+
+        return participants;
+    }
 
     /// <summary>
     /// Sends a conference action. Not retried: none of these is safe to repeat blindly on a live call.

@@ -103,8 +103,19 @@ public sealed partial class TelnyxTelephonyProvider
             foreach (var secondary in legs.Skip(1))
             {
                 // A dialed number joins as its dialed party and an extension call as its colleague; the agent's own leg
-                // for it stays where it is.
+                // for it stays where it is. The colleague first leaves the extension's own conference, which would
+                // otherwise hang them up when it ends (see ReleaseColleagueAsync).
+                var extensionConferenceId = secondary.Kind == MergeLegKind.Extension
+                    ? await ReleaseColleagueAsync(secondary, cancellationToken)
+                    : null;
+
                 var joinResult = await _apiClient.JoinConferenceAsync(conferenceId, secondary.PartyLegId, cancellationToken: cancellationToken);
+
+                if (!joinResult.Succeeded && !string.IsNullOrWhiteSpace(extensionConferenceId) && !TelnyxApiErrors.IsAlreadyInConference(joinResult))
+                {
+                    // Parked and joined nowhere, the colleague would hear nothing: they go back to the call they were on.
+                    await _apiClient.JoinConferenceAsync(extensionConferenceId, secondary.PartyLegId, cancellationToken: cancellationToken);
+                }
 
                 // Merging calls already in the conference again (a second press of Merge) leaves them where they are.
                 if (!joinResult.Succeeded && TelnyxApiErrors.IsAlreadyInConference(joinResult))
@@ -244,6 +255,12 @@ public sealed partial class TelnyxTelephonyProvider
         MergeLeg primary,
         CancellationToken cancellationToken)
     {
+        // An extension call's colleague first leaves the extension's own conference, which would otherwise hang them up
+        // when it ends (see ReleaseColleagueAsync).
+        var extensionConferenceId = primary.Kind == MergeLegKind.Extension
+            ? await ReleaseColleagueAsync(primary, cancellationToken)
+            : null;
+
         // A dialed number's party, or an extension call's colleague, moves into the new conference detached from the
         // agent's leg, so its leaving does not reach back for the agent; any other call joins it as it is.
         var created = primary.Kind == MergeLegKind.Call
@@ -258,6 +275,12 @@ public sealed partial class TelnyxTelephonyProvider
                     "Telnyx refused to move the colleague's leg {CallId} into a new conference ({StatusCode}); the extension call's own conference is used, and the agent leaving it will end it.",
                     primary.PartyLegId.SanitizeLogValue(),
                     created.StatusCode);
+
+                // The colleague left it a moment ago: they go back into it first.
+                if (!string.IsNullOrWhiteSpace(extensionConferenceId))
+                {
+                    await _apiClient.JoinConferenceAsync(extensionConferenceId, primary.PartyLegId, cancellationToken: cancellationToken);
+                }
 
                 return (await AdoptExtensionConferenceAsync(primary, cancellationToken), ExtensionConferenceName(primary.CallId));
             }
@@ -325,6 +348,40 @@ public sealed partial class TelnyxTelephonyProvider
                 "Telnyx refused to detach the colleague's leg {CallId} of a merged extension call ({StatusCode}); their hanging up will end the conference.",
                 primary.PartyLegId.SanitizeLogValue(),
                 detached.StatusCode);
+        }
+
+        return conference.ConferenceId;
+    }
+
+    // Takes an extension call's colleague out of the extension's own conference before they are moved into the merge's,
+    // and returns that conference's id when they left it, or null.
+    //
+    // The orchestrator made that conference from the colleague's leg, and the agent's extension leg joined it with
+    // end_conference_on_exit. A call that created a conference stays bound to it after joining another: live, a colleague
+    // joined into a merge's conference was hung up (cause time_limit) the moment the agent's extension leg hung up and
+    // the extension's conference ended, and the dialed party was left alone. Leaving the conference ("removes a call leg
+    // from a conference and moves it back to parked state") frees the call: a caller that left the conference it was
+    // created from outlived it ending. The agent's extension leg stays behind alone, and its end ends nobody else's call.
+    private async Task<string> ReleaseColleagueAsync(MergeLeg extension, CancellationToken cancellationToken)
+    {
+        var conference = await _apiClient.FindConferenceByNameAsync(ExtensionConferenceName(extension.CallId), cancellationToken);
+
+        if (!conference.Succeeded || string.IsNullOrWhiteSpace(conference.ConferenceId))
+        {
+            return null;
+        }
+
+        var left = await _apiClient.LeaveConferenceAsync(conference.ConferenceId, extension.PartyLegId, cancellationToken);
+
+        if (!left.Succeeded)
+        {
+            // Already out of it (merged before), or Telnyx refused: the merge goes on, as it did before.
+            _logger.LogWarning(
+                "Telnyx did not take the colleague's leg {CallId} out of the extension call's conference ({StatusCode}); if they are still bound to it, the agent's extension leg ending will hang them up.",
+                extension.PartyLegId.SanitizeLogValue(),
+                left.StatusCode);
+
+            return null;
         }
 
         return conference.ConferenceId;

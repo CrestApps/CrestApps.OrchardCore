@@ -284,6 +284,14 @@ is sent to the dialed party's leg, read back from the agent leg's client state (
     `end_conference_on_exit`, which leaves the extension's own conference empty.
   - Only if Telnyx refuses to move the colleague is the extension's own conference the merge's. In that case the agent
     leaving still ends it, and the provider logs a warning saying so.
+  - Either way, the colleague first **leaves** the extension's own conference (`POST /v2/conferences/{id}/actions/leave`)
+    before joining the merge's conference or leading a new one. The orchestrator created that conference from the
+    colleague's leg, and a call that created a conference stays bound to it after joining another. Live, a colleague
+    moved by a join alone was hung up (cause `time_limit`) as soon as the agent's extension leg hung up and ended the
+    extension's conference. That left the dialed party alone. Telnyx's
+    [Leave a conference](https://developers.telnyx.com/api-reference/conference-commands/leave-a-conference) "removes a call
+    leg from a conference and moves it back to parked state". A call that left the conference it was created from this
+    way has been seen live to outlive that conference ending.
 
   The agent leg of an extension call records the colleague's leg in its client state for this, and hanging that leg up
   releases the colleague as well. An extension call whose colleague has not answered cannot be merged yet.
@@ -323,6 +331,10 @@ differ:
 - A call that is another party's own leg, such as a Contact Center caller's, is never hung up by leaving.
 - With only one other party left, the phone does not leave. It hangs up as usual, so nobody is left alone in a
   conference.
+- A party can drop between the phone deciding to leave and the leave arriving. So after hanging up the agent's leg, the
+  provider reads the conference named by the call's `conferenceName` (`GET /v2/conferences/{id}/participants`). It counts
+  the participants that are still up and are not one of the agent's own legs. If one party or fewer is left, it ends the
+  conference rather than leave them on a silent line.
 
 **End for all** sends the hang-up of the call the conference was made from flagged `conferenceEnd`, with its
 `conferenceName`. The provider finds the conference by name (`GET /v2/conferences?filter[name]=…`) and ends it with

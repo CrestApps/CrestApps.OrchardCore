@@ -97,7 +97,14 @@ public sealed partial class TelnyxTelephonyProvider
                     party.StatusCode);
             }
 
-            return await HangupCallAsync(call, cancellationToken);
+            var hungUp = await HangupCallAsync(call, cancellationToken);
+
+            if (hungUp.Succeeded)
+            {
+                await EndConferenceLeftWithOnePartyAsync(ReadMetadataText(call.Metadata, ConferenceNameMetadataKey), call.CallId, cancellationToken);
+            }
+
+            return hungUp;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -148,6 +155,79 @@ public sealed partial class TelnyxTelephonyProvider
         }
 
         return await HangupCallAsync(call, cancellationToken);
+    }
+
+    // With the agent gone, a conference one party is still in has that party talking to nobody: it is ended, which hangs
+    // them up, rather than leaving them on a silent line. The soft phone leaves only while two or more parties are in it,
+    // but a party can drop in the meantime. The agent's own legs still in it -- the phone's other leave requests in
+    // flight -- are not parties. Best effort: a conference that cannot be read is left as it is.
+    private async Task EndConferenceLeftWithOnePartyAsync(string conferenceName, string leavingCallId, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(conferenceName))
+        {
+            return;
+        }
+
+        try
+        {
+            var conference = await _apiClient.FindConferenceByNameAsync(conferenceName, cancellationToken);
+
+            if (!conference.Succeeded || string.IsNullOrWhiteSpace(conference.ConferenceId))
+            {
+                return;
+            }
+
+            var participants = await _apiClient.ListConferenceParticipantsAsync(conference.ConferenceId, cancellationToken);
+            var parties = 0;
+
+            foreach (var participant in participants)
+            {
+                if (string.Equals(participant.CallControlId, leavingCallId, StringComparison.Ordinal) ||
+                    string.Equals(participant.Status, "left", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var status = await _apiClient.GetCallStatusAsync(participant.CallControlId, cancellationToken);
+
+                if (!status.Succeeded || !status.IsAlive)
+                {
+                    continue;
+                }
+
+                if (TelnyxOutboundBridgeState.TryParseEncoded(status.ClientState, out var state) &&
+                    state.Intent == TelnyxOutboundBridgeState.AgentLegIntent)
+                {
+                    continue;
+                }
+
+                parties++;
+            }
+
+            // An empty list is a conference that could not be read, or one already over; either way nothing to end.
+            if (participants.Count == 0 || parties > 1)
+            {
+                return;
+            }
+
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "The agent left conference '{ConferenceName}' with {PartyCount} other party in it; ending it rather than leaving them alone.",
+                    conferenceName.SanitizeLogValue(),
+                    parties);
+            }
+
+            await _apiClient.EndConferenceAsync(conference.ConferenceId, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "The Telnyx conference '{ConferenceName}' could not be read after the agent left it.", conferenceName.SanitizeLogValue());
+        }
     }
 
     // A metadata value as text, whether it arrived as a string or as the JSON the hub deserialized it to.

@@ -36,13 +36,15 @@ public sealed class TelnyxMergeExtensionCallTests
             .RespondWith(HttpStatusCode.OK, TelnyxBridgedDialTests.CallStatus(TelnyxBridgedDialTests.AgentLeg(peer: RemoteLeg)))
             .RespondWith(HttpStatusCode.OK, TelnyxBridgedDialTests.CallStatus(ExtensionAgentState(peer: ColleagueLeg)))
             .RespondWith(HttpStatusCode.OK, """{"data":{"id":"conference-1"}}""")
+            .RespondWith(HttpStatusCode.OK, """{"data":{"result":"ok"}}""")
+            .RespondWith(HttpStatusCode.OK, $$$"""{"data":[{"id":"conference-ext","name":"ext-{{{ExtensionAgentLeg}}}"}]}""")
             .AlwaysRespondWith(HttpStatusCode.OK, """{"data":{"result":"ok"}}""");
         var provider = CreateProvider(handler);
 
         // Act
         var result = await provider.MergeAsync(new MergeRequest { CallIds = [KeypadAgentLeg, ExtensionAgentLeg] }, TestContext.Current.CancellationToken);
 
-        // Assert
+        // Assert - the colleague leaves the extension's own conference, which they created, before joining the merge's.
         Assert.True(result.Succeeded);
         Assert.Equal(
             [
@@ -50,12 +52,15 @@ public sealed class TelnyxMergeExtensionCallTests
                 $"GET /v2/calls/{ExtensionAgentLeg}",
                 "POST /v2/conferences",
                 "POST /v2/conferences/conference-1/actions/join",
+                $"GET /v2/conferences?filter[name]=ext-{ExtensionAgentLeg}",
+                "POST /v2/conferences/conference-ext/actions/leave",
                 "POST /v2/conferences/conference-1/actions/join",
             ],
             handler.Requests.Select(Describe));
         Assert.Equal(RemoteLeg, ReadString(handler.Requests[2].Body, "call_control_id"));
         Assert.Equal(KeypadAgentLeg, ReadString(handler.Requests[3].Body, "call_control_id"));
-        Assert.Equal(ColleagueLeg, ReadString(handler.Requests[4].Body, "call_control_id"));
+        Assert.Equal(ColleagueLeg, ReadString(handler.Requests[5].Body, "call_control_id"));
+        Assert.Equal(ColleagueLeg, ReadString(handler.Requests[6].Body, "call_control_id"));
         Assert.DoesNotContain(handler.Requests, request => request.Body?.Contains(ExtensionAgentLeg, StringComparison.Ordinal) == true);
     }
 
