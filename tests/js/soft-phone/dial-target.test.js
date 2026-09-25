@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/dial-target.js';
 
-const { resolveDialTarget, shouldOfferDial, isSameNumber, resolvePeerNumber, shouldShowCallNumber } = globalThis.CrestAppsSoftPhone;
+const { resolveDialTarget, shouldOfferDial, isSameNumber, resolvePeerNumber, shouldShowCallNumber, planNumberField } = globalThis.CrestAppsSoftPhone;
 
 const ownNumber = '+15550100200';
 
@@ -126,5 +126,49 @@ describe('shouldShowCallNumber', () => {
 
     it('treats missing options as nothing entered', () => {
         expect(shouldShowCallNumber()).toBe(true);
+    });
+});
+
+// Live: after an extension call ended with another call still held, the keypad field kept showing "Test 2 · ext 2" --
+// the ended call's label -- because the held call had nothing to write over it, and the field only cleared once no call
+// was left at all. What the field shows is tied to the call it shows it for.
+describe('planNumberField', () => {
+    const extensionCall = { callId: 'ext-call', stateName: 'Connected', extensionLabel: 'Test 2 · ext 2', peerNumber: 'Test 2' };
+
+    it('shows an extension call as the person it rings', () => {
+        expect(planNumberField(extensionCall)).toEqual({ action: 'label', value: 'Test 2 · ext 2', callId: 'ext-call' });
+    });
+
+    it('shows any other call\'s number', () => {
+        expect(planNumberField({ callId: 'c1', stateName: 'Connected', peerNumber: '+17024993350' }))
+            .toEqual({ action: 'number', value: '+17024993350', callId: 'c1' });
+    });
+
+    it('clears a label left by a call that is over, when the held call now current has nothing to show', () => {
+        expect(planNumberField({ callId: 'held', stateName: 'OnHold', peerNumber: '', isCallDisplay: true, displayCallId: 'ext-call' }))
+            .toEqual({ action: 'clear', value: '', callId: '' });
+    });
+
+    it('keeps what the agent entered on hold', () => {
+        expect(planNumberField({ callId: 'held', stateName: 'OnHold', peerNumber: '+17024993350', agentEntered: true }))
+            .toEqual({ action: 'keep', value: '', callId: '' });
+    });
+
+    it('clears a call\'s label once no call is left', () => {
+        expect(planNumberField({ callId: '', isCallDisplay: true, displayCallId: 'ext-call' })).toEqual({ action: 'clear', value: '', callId: '' });
+    });
+
+    it('leaves an entry of the agent\'s own alone once no call is left', () => {
+        expect(planNumberField({ callId: '', isCallDisplay: false })).toEqual({ action: 'keep', value: '', callId: '' });
+    });
+
+    it('shows the number being dialed until the call appears', () => {
+        expect(planNumberField({ callId: '', pendingDial: true, pendingDialNumber: '2' })).toEqual({ action: 'pending', value: '2', callId: '' });
+        expect(planNumberField({ callId: '', pendingDial: true, pendingDialNumber: '' })).toEqual({ action: 'keep', value: '', callId: '' });
+    });
+
+    it('treats a call that is not up as no call', () => {
+        expect(planNumberField({ callId: 'gone', stateName: 'Disconnected', isCallDisplay: true, displayCallId: 'gone' }))
+            .toEqual({ action: 'clear', value: '', callId: '' });
     });
 });

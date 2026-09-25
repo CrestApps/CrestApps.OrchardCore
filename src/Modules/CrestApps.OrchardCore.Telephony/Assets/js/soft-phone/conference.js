@@ -145,12 +145,14 @@
             : '';
     }
 
-    function row(item, strings, escapeHtml, inConference) {
+    function row(item, strings, escapeHtml, inConference, withCheck) {
         var reason = item.selectable ? '' : unselectableText(item.unselectableReason, strings);
-        var check = '<input type="checkbox" class="telephony-soft-phone__active-call-check" data-telephony-conference-call="' +
-            escapeHtml(item.callId) + '"' + (item.selected && item.selectable ? ' checked' : '') +
-            (item.selectable ? '' : ' disabled') + (reason ? ' title="' + escapeHtml(reason) + '"' : '') + ' aria-label="' +
-            escapeHtml(format(strings.selectCall || 'Select {0}', item.number)) + '" />';
+        var check = withCheck
+            ? '<input type="checkbox" class="telephony-soft-phone__active-call-check" data-telephony-conference-call="' +
+                escapeHtml(item.callId) + '"' + (item.selected && item.selectable ? ' checked' : '') +
+                (item.selectable ? '' : ' disabled') + (reason ? ' title="' + escapeHtml(reason) + '"' : '') + ' aria-label="' +
+                escapeHtml(format(strings.selectCall || 'Select {0}', item.number)) + '" />'
+            : '';
         var hangup = inConference && item.canHangup
             ? '<button type="button" class="telephony-soft-phone__participant-hangup" data-telephony-participant-hangup="' +
                 escapeHtml(item.callId) + '" title="' + escapeHtml(format(strings.hangupParticipant || 'Hang up {0}', item.number)) +
@@ -208,6 +210,11 @@
         var participants = calls.filter(function (call) { return call.inConference; });
         var others = calls.filter(function (call) { return !call.inConference; });
         var html = '';
+        var merge = model.merge || {};
+        // A checkbox only means something while there is something to merge: once every call is in the conference,
+        // ticking them again would only ask the provider to join them a second time. A call that cannot be merged keeps
+        // its disabled checkbox, which says why.
+        var withChecks = !!(merge.offered || merge.blocked);
 
         if (participants.length) {
             html += '<div class="telephony-soft-phone__conference" data-telephony-conference role="group" aria-label="' +
@@ -216,13 +223,11 @@
                 '<i class="fa-solid fa-users" aria-hidden="true"></i> ' +
                 escapeHtml(format(strings.conferenceParticipants || 'Conference · {0} participants', participants.length)) +
                 '</div>' +
-                participants.map(function (call) { return row(call, strings, escapeHtml, true); }).join('') +
+                participants.map(function (call) { return row(call, strings, escapeHtml, true, withChecks); }).join('') +
                 '</div>';
         }
 
-        html += others.map(function (call) { return row(call, strings, escapeHtml, false); }).join('');
-
-        var merge = model.merge || {};
+        html += others.map(function (call) { return row(call, strings, escapeHtml, false, withChecks); }).join('');
 
         if (merge.blocked) {
             html += '<div class="telephony-soft-phone__merge-note" data-telephony-merge-blocked>' +
@@ -237,6 +242,150 @@
         return html;
     }
 
+    // ---- What the phone remembers about the conferences it made ----
+    //
+    // A provider may keep no conference flag on a call (Telnyx keeps none), so each time the phone read its calls again
+    // the conference a merge made fell apart on screen into separate lines, each with a checkbox and Merge offered again
+    // -- and a second Merge asked the provider to join calls already in the conference. The phone now remembers which
+    // calls each merge joined and stamps that back onto every report of them. It also remembers a participant who left
+    // on their own while their leg stayed up as the agent's way into the conference (the colleague of the extension call
+    // the conference was made from): that leg is no longer listed.
+
+    function createConferenceMemory() {
+        return { members: {} };
+    }
+
+    function memberOf(memory, callId) {
+        return memory && memory.members && callId && Object.prototype.hasOwnProperty.call(memory.members, callId)
+            ? memory.members[callId]
+            : null;
+    }
+
+    function membersByKey(memory, key) {
+        return Object.keys((memory && memory.members) || {}).filter(function (callId) {
+            return memory.members[callId].key === key;
+        });
+    }
+
+    // Records the conference a merge made or added to: { callIds, primaryCallId, conferenceName } (see
+    // conferenceAfterMerge). Calls added to a conference already remembered join it.
+    function rememberConference(memory, conference) {
+        if (!memory || !conference || !conference.callIds || !conference.callIds.length) {
+            return;
+        }
+
+        var existing = conference.callIds.map(function (callId) { return memberOf(memory, callId); }).filter(Boolean)[0];
+        var key = existing ? existing.key : String(conference.primaryCallId || conference.callIds[0]);
+
+        conference.callIds.forEach(function (callId) {
+            var member = memberOf(memory, callId);
+
+            memory.members[callId] = { key: key, left: !!(member && member.left) };
+        });
+
+        membersByKey(memory, key).forEach(function (callId) {
+            memory.members[callId].primaryCallId = String(conference.primaryCallId || key);
+            memory.members[callId].conferenceName = String(conference.conferenceName || '');
+        });
+    }
+
+    // Stamps a remembered conference onto a report of one of its calls, counting only the participants still in it.
+    function applyConferenceMemory(memory, call) {
+        var member = call ? memberOf(memory, call.callId) : null;
+
+        if (!member) {
+            return call;
+        }
+
+        call.metadata = call.metadata || {};
+        call.metadata.isConference = true;
+        call.metadata.conferencePrimaryCallId = member.primaryCallId || member.key;
+        call.metadata.conferenceName = member.conferenceName || metadataText(call, 'conferenceName');
+        call.metadata.participantCount = membersByKey(memory, member.key).filter(function (callId) {
+            return !memory.members[callId].left;
+        }).length;
+
+        return call;
+    }
+
+    // The participant of this call hung up while the call's own leg carries on in the conference.
+    function markParticipantLeft(memory, callId) {
+        var member = memberOf(memory, callId);
+
+        if (member) {
+            member.left = true;
+        }
+    }
+
+    function forgetConferenceCall(memory, callId) {
+        if (memberOf(memory, callId)) {
+            delete memory.members[callId];
+        }
+    }
+
+    // Every call of the conference this call is in, itself included; [] for a call in none.
+    function conferenceMembers(memory, callId) {
+        var member = memberOf(memory, callId);
+
+        return member ? membersByKey(memory, member.key) : [];
+    }
+
+    // The calls to list: a conference call whose participant has left is not one.
+    function visibleConferenceCalls(memory, calls) {
+        return (calls || []).filter(function (call) {
+            var member = call ? memberOf(memory, call.callId) : null;
+
+            return !(member && member.left);
+        });
+    }
+
+    // Whether these calls are already all in one conference, so merging them again would change nothing.
+    function isOneConference(memory, callIds) {
+        if (!callIds || callIds.length < 2) {
+            return false;
+        }
+
+        var first = memberOf(memory, callIds[0]);
+
+        return !!first && callIds.every(function (callId) {
+            var member = memberOf(memory, callId);
+
+            return !!member && member.key === first.key;
+        });
+    }
+
+    // The legs still up in a conference nobody is left in: once its last participant is gone the agent is talking to
+    // nobody, and those legs are hung up so the conference ends.
+    //   liveCallIds - the calls still up.
+    function conferenceLegsWithoutParticipants(memory, liveCallIds) {
+        var live = (liveCallIds || []).filter(function (callId) { return !!memberOf(memory, callId); });
+        var keys = [];
+
+        live.forEach(function (callId) {
+            var key = memory.members[callId].key;
+
+            if (keys.indexOf(key) === -1) {
+                keys.push(key);
+            }
+        });
+
+        return keys.reduce(function (legs, key) {
+            var ofKey = live.filter(function (callId) { return memory.members[callId].key === key; });
+            var present = ofKey.some(function (callId) { return !memory.members[callId].left; });
+
+            return present ? legs : legs.concat(ofKey);
+        }, []);
+    }
+
+    softPhone.createConferenceMemory = createConferenceMemory;
+    softPhone.rememberConference = rememberConference;
+    softPhone.applyConferenceMemory = applyConferenceMemory;
+    softPhone.markParticipantLeft = markParticipantLeft;
+    softPhone.forgetConferenceCall = forgetConferenceCall;
+    softPhone.conferenceMembers = conferenceMembers;
+    softPhone.visibleConferenceCalls = visibleConferenceCalls;
+    softPhone.isOneConference = isOneConference;
+    softPhone.conferenceLegsWithoutParticipants = conferenceLegsWithoutParticipants;
     softPhone.planMerge = planMerge;
     softPhone.conferenceAfterMerge = conferenceAfterMerge;
     softPhone.buildActiveCallsHtml = buildActiveCallsHtml;

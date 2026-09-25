@@ -79,7 +79,37 @@
         }
     }
 
+    // The intent the platform stamps on a leg it rings at a call's destination: this phone is the one being called.
+    var DESTINATION_LEG_INTENT = 'ob-dest';
+
+    // Whether the leg is one the platform rang at this phone as somebody's destination -- a colleague calling this
+    // agent's extension -- rather than this phone's own leg of a call it placed. Read from the leg's client state.
+    function isDestinationLeg(options) {
+        if (!options) {
+            return false;
+        }
+
+        var read = softPhone.readProviderClientState;
+        var state = typeof read === 'function' ? read(options.clientState || options.client_state) : null;
+
+        return !!(state && state.i === DESTINATION_LEG_INTENT);
+    }
+
+    // Whether an inbound leg arriving now is answered without ringing. Only an arm decides, and only once: nothing the
+    // phone remembers about an earlier call does. A leg that is somebody's call to this phone -- a colleague's extension
+    // call, a call handed over -- always rings, and leaves the arm for the phone's own leg.
+    //   leg - { clientState | client_state, transferLeg }.
+    function shouldAutoAnswerInboundLeg(arm, now, leg) {
+        if (leg && (leg.transferLeg || isDestinationLeg(leg))) {
+            return false;
+        }
+
+        return consumeAutoAnswer(arm, now) !== '';
+    }
+
     softPhone.AUTO_ANSWER_WINDOW_MS = AUTO_ANSWER_WINDOW_MS;
+    softPhone.isDestinationLeg = isDestinationLeg;
+    softPhone.shouldAutoAnswerInboundLeg = shouldAutoAnswerInboundLeg;
     softPhone.EXTENSION_CALL_KEY = EXTENSION_CALL_KEY;
     softPhone.autoAnswerOfferKey = offerKey;
     softPhone.createAutoAnswerArm = createAutoAnswerArm;

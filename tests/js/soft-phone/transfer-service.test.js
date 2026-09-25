@@ -7,8 +7,54 @@ const {
     serviceDirectoryEntries,
     serviceModes,
     resolveServiceTarget,
-    createTransferService
+    createTransferService,
+    createCallContextMemory,
+    carryCallContext,
+    forgetCallContext
 } = globalThis.CrestAppsSoftPhone;
+
+// Live: on a Contact Center call over Telnyx the transfer panel listed only extensions. The phone reads its calls again
+// every few seconds, and the provider's report of the call names no interaction; it replaced the Contact Center's report,
+// so the call stopped naming its interaction and the panel stopped using the Contact Center.
+describe('carryCallContext', () => {
+    const contactCenterReport = () => ({
+        callId: 'cc-1',
+        state: 'Connected',
+        metadata: { interactionId: 'int-1', activityItemId: 'act-1', queueId: 'q-1', callSessionId: 's-1', recordingState: 'Recording' }
+    });
+
+    it('keeps the interaction on a later report of the call that names none', () => {
+        const memory = createCallContextMemory();
+        carryCallContext(memory, contactCenterReport());
+
+        const later = carryCallContext(memory, { callId: 'cc-1', state: 'Connected' });
+
+        expect(later.metadata).toEqual({ interactionId: 'int-1', activityItemId: 'act-1', queueId: 'q-1', callSessionId: 's-1' });
+        expect(createTransferService({ urls: { targetsUrl: '/t', transferUrl: '/x' }, fetch: () => null }).applies(later)).toBe(true);
+    });
+
+    it('lets a report that names an interaction replace the one remembered', () => {
+        const memory = createCallContextMemory();
+        carryCallContext(memory, contactCenterReport());
+        carryCallContext(memory, { callId: 'cc-1', metadata: { interactionId: 'int-2' } });
+
+        expect(carryCallContext(memory, { callId: 'cc-1' }).metadata.interactionId).toBe('int-2');
+    });
+
+    it('stamps nothing on another call, or once the call is forgotten', () => {
+        const memory = createCallContextMemory();
+        carryCallContext(memory, contactCenterReport());
+
+        expect(carryCallContext(memory, { callId: 'other' }).metadata).toBeUndefined();
+
+        forgetCallContext(memory, 'cc-1');
+        expect(carryCallContext(memory, { callId: 'cc-1' }).metadata).toBeUndefined();
+    });
+
+    it('tolerates a report without a call', () => {
+        expect(carryCallContext(createCallContextMemory(), null)).toBeNull();
+    });
+});
 
 const strings = {
     transferGroupAgents: 'Agents',

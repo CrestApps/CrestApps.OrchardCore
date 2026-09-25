@@ -111,6 +111,13 @@ public static class TelephonyConstants
         /// client) so a colleague a call is handed to can be told who handed it over.
         /// </summary>
         public const string SoftPhoneUserDisplayName = "softPhoneUserDisplayName";
+
+        /// <summary>
+        /// Marks a hang-up the soft phone sends from one participant's row of a conference: it ends that participant
+        /// alone. A provider whose call is also the agent's own way into the conference hangs up only the participant's
+        /// leg, and answers with the call still up and <see cref="CallMetadata.ParticipantLeft"/> set.
+        /// </summary>
+        public const string ConferenceParticipant = "conferenceParticipant";
     }
 
     /// <summary>
@@ -124,6 +131,13 @@ public static class TelephonyConstants
         /// as an extension call and redialed by extension from the Recent tab.
         /// </summary>
         public const string ExtensionNumber = "extensionNumber";
+
+        /// <summary>
+        /// Set on the answer to a conference participant's hang-up (see
+        /// <see cref="RequestMetadata.ConferenceParticipant"/>) when the participant left but the call itself stays up,
+        /// carrying the agent in the conference. The soft phone stops listing it as a participant.
+        /// </summary>
+        public const string ParticipantLeft = "participantLeft";
 
         /// <summary>
         /// The leg a transfer or consult rings, which the soft phone follows until the transfer is over. The soft

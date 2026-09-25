@@ -292,6 +292,7 @@ namespace CrestApps.OrchardCore.Telephony
             public const string ConsultOf = "consultOf";
             public const string ConsultStatus = "consultStatus";
             public const string ExtensionNumber = "extensionNumber";
+            public const string ParticipantLeft = "participantLeft";
         }
         public static class ConsultStatuses
         {
@@ -313,6 +314,7 @@ namespace CrestApps.OrchardCore.Telephony
         }
         public static class RequestMetadata
         {
+            public const string ConferenceParticipant = "conferenceParticipant";
             public const string FenceToken = "commandFenceToken";
             public const string IdempotencyKey = "idempotencyKey";
             public const string SoftPhoneConnectionId = "softPhoneConnectionId";

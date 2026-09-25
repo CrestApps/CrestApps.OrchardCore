@@ -120,6 +120,8 @@
             ["dialPhoneNumber"] = T["Dial phone number"].Value,
             ["numberPlaceholder"] = T["Enter a number"].Value,
             ["extensionPlaceholder"] = T["Enter an extension"].Value,
+            ["extensionSearchPlaceholder"] = T["Search a name, or enter an extension"].Value,
+            ["keypadExtensionResults"] = T["Matching extensions"].Value,
             ["numberLabel"] = T["Phone number"].Value,
             ["extensionLabel"] = T["Extension"].Value,
             ["transferTitle"] = T["Transfer call"].Value,
@@ -460,6 +462,8 @@
                     </button>
                 </div>
                 <div class="telephony-soft-phone__extension-hint" data-telephony-extension-hint aria-live="polite" hidden></div>
+                @* The extensions matching a name typed in extension mode (see Assets/js/soft-phone/keypad-search.js). *@
+                <div class="telephony-soft-phone__keypad-results" data-telephony-keypad-results hidden></div>
 
                 <div class="telephony-soft-phone__error alert alert-danger" data-telephony-error hidden></div>
 

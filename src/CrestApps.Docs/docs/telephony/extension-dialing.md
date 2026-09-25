@@ -72,6 +72,15 @@ On the soft phone, toggle **Dial extension**, enter the extension, and dial. The
 verbatim (it is not canonicalized to E.164) and **skips outbound compliance screening**, because an internal
 extension is not consumer outreach.
 
+In extension mode the keypad's field is a plain search box, like the transfer panel's: type part of a colleague's
+name and the extensions of the people it matches are listed under the field; pick one to call it, or press **Enter**
+when the name narrows the list to one person. Digits still call the extension they are. Your own extension is never
+listed. **Recent** calls an extension call back as that extension.
+
+An extension call to you always rings with **Answer** and **Decline**. The phone answers a leg without ringing only
+for a call it placed itself or an offer the agent just accepted, and only that one leg: a leg the platform rings at
+you as somebody's destination never is.
+
 The call is always resolved and bridged **server-side** — the browser cannot originate directly to a
 colleague because it does not know the target's ephemeral provider endpoint:
 
@@ -102,6 +111,18 @@ While on a call, an extension can be added as a conference participant through
 `AddExtensionToConference`. The provider rings the resolved target and joins their leg to the existing
 conversation. This complements the existing **merge** operation, which conferences calls that are already
 active.
+
+After a merge the soft phone shows the calls as one conference, with each participant listed under it, and offers
+no second merge of them; it remembers the conference itself, because a provider such as Telnyx says nothing of it
+when the phone reads its calls again. A merge that names calls already in the conference changes nothing (Telnyx's
+"already joined" refusal is read as done). A merge of a Contact Center caller with an extension call is led by the
+extension call, which carries the agent into its own conference.
+
+Each participant's row has its own hang-up, which ends that participant only. The extension call a conference was
+made from is also the agent's own way into it, so its hang-up (`Hangup` with the `conferenceParticipant` request
+metadata) hangs up the colleague's leg alone and answers with the call still up and `participantLeft` set; the phone
+stops listing it. Once nobody is left, the agent's remaining legs are hung up. The main hang-up ends the whole
+conference.
 
 ## The provider contract
 

@@ -97,9 +97,9 @@
     var autoAnswerOfferKey = softPhoneModules.autoAnswerOfferKey;
     var createAutoAnswerArm = softPhoneModules.createAutoAnswerArm;
     var armAutoAnswer = softPhoneModules.armAutoAnswer;
-    var consumeAutoAnswer = softPhoneModules.consumeAutoAnswer;
     var disarmAutoAnswer = softPhoneModules.disarmAutoAnswer;
     var disarmOtherOffers = softPhoneModules.disarmOtherOffers;
+    var shouldAutoAnswerInboundLeg = softPhoneModules.shouldAutoAnswerInboundLeg;
 
     var BRIDGED_DIAL_LEG_CAPABILITY = softPhoneModules.BRIDGED_DIAL_LEG_CAPABILITY;
     var planKeypadDial = softPhoneModules.planKeypadDial;
@@ -131,6 +131,20 @@
     var planMerge = softPhoneModules.planMerge;
     var conferenceAfterMerge = softPhoneModules.conferenceAfterMerge;
     var buildActiveCallsHtml = softPhoneModules.buildActiveCallsHtml;
+    var createConferenceMemory = softPhoneModules.createConferenceMemory;
+    var rememberConference = softPhoneModules.rememberConference;
+    var applyConferenceMemory = softPhoneModules.applyConferenceMemory;
+    var markParticipantLeft = softPhoneModules.markParticipantLeft;
+    var forgetConferenceCall = softPhoneModules.forgetConferenceCall;
+    var conferenceMembers = softPhoneModules.conferenceMembers;
+    var visibleConferenceCalls = softPhoneModules.visibleConferenceCalls;
+    var isOneConference = softPhoneModules.isOneConference;
+    var conferenceLegsWithoutParticipants = softPhoneModules.conferenceLegsWithoutParticipants;
+    var planNumberField = softPhoneModules.planNumberField;
+    var keypadExtensionMatches = softPhoneModules.keypadExtensionMatches;
+    var resolveKeypadExtension = softPhoneModules.resolveKeypadExtension;
+    var buildKeypadExtensionResultsHtml = softPhoneModules.buildKeypadExtensionResultsHtml;
+    var transferRefusalMessage = softPhoneModules.transferRefusalMessage;
     var transferModes = softPhoneModules.transferModes;
     var createTransferPanel = softPhoneModules.createTransferPanel;
 
@@ -144,6 +158,9 @@
     var ownExtensionsOf = softPhoneModules.ownExtensions;
     var readExtension = softPhoneModules.readExtension;
     var createTransferService = softPhoneModules.createTransferService;
+    var createCallContextMemory = softPhoneModules.createCallContextMemory;
+    var carryCallContext = softPhoneModules.carryCallContext;
+    var forgetCallContext = softPhoneModules.forgetCallContext;
     var serviceDirectoryEntries = softPhoneModules.serviceDirectoryEntries;
     var serviceModes = softPhoneModules.serviceModes;
     var resolveServiceTarget = softPhoneModules.resolveServiceTarget;
@@ -1895,7 +1912,7 @@
                 // server, whose reports drive its leg (see soft-phone/bridged-transfer.js).
                 var transferLeg = typeof readTransferLegTag === 'function' ? readTransferLegTag(call.options || {}) : null;
                 var autoAnswer = !transferLeg && (typeof context.shouldAutoAnswerInbound !== 'function' ||
-                    context.shouldAutoAnswerInbound());
+                    context.shouldAutoAnswerInbound(call.options || {}));
 
                 if (autoAnswer) {
                     currentCall = call;
@@ -2531,6 +2548,7 @@
             dialModeToggle: rootElement.querySelector('[data-telephony-dial-mode-toggle]'),
             dialModeLabel: rootElement.querySelector('[data-telephony-dial-mode-label]'),
             extensionHint: rootElement.querySelector('[data-telephony-extension-hint]'),
+            keypadResults: rootElement.querySelector('[data-telephony-keypad-results]'),
             error: rootElement.querySelector('[data-telephony-error]'),
             micRetry: rootElement.querySelector('[data-telephony-mic-retry]'),
             settingsToggle: rootElement.querySelector('[data-telephony-settings-toggle]'),
@@ -2608,6 +2626,12 @@
         var currentCall = null;
         var activeCalls = {};
         var conferenceSelections = {};
+        // The conferences this phone's merges made, stamped back onto every report of their calls (see
+        // soft-phone/conference.js).
+        var conferenceMemory = createConferenceMemory();
+        // The interaction each Contact Center call names, kept across the provider's reports of it, which name none
+        // (see soft-phone/transfer-service.js).
+        var callContexts = createCallContextMemory();
         // A Contact Center call is transferred through the Contact Center's own endpoints when the tenant publishes
         // them; every other call through the provider (see soft-phone/transfer-service.js).
         var transferService = createTransferService
@@ -2729,6 +2753,10 @@
             onChange: function () { render(); }
         });
         var numberIsCallDisplay = false;
+        // The call whose label or number the field is showing.
+        var numberDisplayCallId = '';
+        // What the keypad's extension search list last drew.
+        var keypadResultsHtml = '';
         // Whether the number field holds something the agent entered since it last showed a call's number. On hold
         // that entry is the number to add, and a render must not write the held call's number back over it.
         var numberEnteredByAgent = false;
@@ -3070,6 +3098,7 @@
             // is now typing -- e.g. entering "2" but dialing the previous "6183".
             clearPendingDial();
             numberIsCallDisplay = false;
+            numberDisplayCallId = '';
             numberEnteredByAgent = false;
 
             if (dom.number) {
@@ -3081,8 +3110,43 @@
             }
         }
 
+        // In extension mode the field is a plain search box, for a name or an extension's digits: the country-flag input
+        // drops every key that is not a digit. A phone number goes back into the country-flag field.
+        function applyKeypadInputMode() {
+            if (!dom.number) {
+                return;
+            }
+
+            if (extensionMode) {
+                if (telInput && typeof telInput.destroy === 'function') {
+                    try {
+                        telInput.destroy();
+                    } catch (error) { /* already gone */ }
+                }
+
+                telInput = null;
+                dom.number.setAttribute('type', 'text');
+                dom.number.setAttribute('inputmode', 'text');
+                dom.number.setAttribute('autocomplete', 'off');
+
+                return;
+            }
+
+            dom.number.setAttribute('type', 'tel');
+            dom.number.setAttribute('inputmode', 'tel');
+
+            if (!telInput) {
+                telInput = enhancePhoneInput(dom.number, phoneInputOptions());
+
+                if (telInput) {
+                    preventCountryDropdownScroll();
+                }
+            }
+        }
+
         function setDialMode(isExtension) {
             extensionMode = !!isExtension;
+            applyKeypadInputMode();
 
             rootElement.classList.toggle('telephony-soft-phone--extension', extensionMode);
 
@@ -3098,7 +3162,7 @@
 
             if (dom.number) {
                 dom.number.setAttribute('placeholder', extensionMode
-                    ? (strings.extensionPlaceholder || 'Enter an extension')
+                    ? (strings.extensionSearchPlaceholder || 'Search a name, or enter an extension')
                     : (strings.numberPlaceholder || 'Enter a number'));
                 dom.number.setAttribute('aria-label', extensionMode
                     ? (strings.extensionLabel || 'Extension')
@@ -4512,9 +4576,20 @@
                 // leg is expected, so arm the media adapter to answer it automatically rather than ring for it.
                 armAutoAnswer(inboundAutoAnswer, EXTENSION_CALL_KEY, Date.now());
 
+                // A refused extension call rings nothing back: the arm goes, or it answers the next caller instead.
                 return ensureBrowserAudio().then(function () {
                     return invoke('DialExtension', { extension: number });
-                }).then(settleDial).catch(failDial);
+                }).then(function (result) {
+                    if (!result || result.succeeded === false) {
+                        disarmAutoAnswer(inboundAutoAnswer, EXTENSION_CALL_KEY);
+                    }
+
+                    return settleDial(result);
+                }).catch(function (error) {
+                    disarmAutoAnswer(inboundAutoAnswer, EXTENSION_CALL_KEY);
+
+                    return failDial(error);
+                });
             }
 
             // A provider that connects keypad dials itself rings this browser's own leg for the number, exactly as an
@@ -5230,17 +5305,12 @@
             armAutoAnswer(inboundAutoAnswer, autoAnswerOfferKey(reservationId), Date.now());
         }
 
-        // Called by the media adapter for each inbound provider leg to decide whether to auto-answer. A Contact
-        // Center offer the agent just accepted (incomingHandled/incomingAcceptPending), an offer accepted from
-        // the docked agent bar rather than from the phone (the armed window), and a freshly placed extension
-        // call (also the armed window) are expected legs; all are consumed here so a later, genuine incoming
-        // call still rings.
-        function consumeInboundAutoAnswer() {
-            if (incomingHandled || incomingAcceptPending) {
-                return true;
-            }
-
-            return consumeAutoAnswer(inboundAutoAnswer, Date.now()) !== '';
+        // Called by the media adapter for each inbound provider leg to decide whether to auto-answer. Only an arm
+        // decides, once: the offer the agent just accepted, an offer accepted from the docked agent bar, or a call this
+        // phone just placed. "The agent answered" is not one -- it outlived the call it was about and had every later
+        // colleague's call answered on arrival (see soft-phone/auto-answer.js).
+        function consumeInboundAutoAnswer(options) {
+            return shouldAutoAnswerInboundLeg(inboundAutoAnswer, Date.now(), options || {});
         }
 
         // The offer on screen, as the offer-leg rules need it.
@@ -5600,6 +5670,11 @@
                     if (stateName === 'Disconnected') {
                         removeActiveCall(ring.callId);
                         delete browserCallControllers[ring.callId];
+
+                        // The answer was for this call; with it over, nothing is being answered.
+                        if (!currentCall) {
+                            incomingHandled = false;
+                        }
                         // Renew the credential now if this (possibly very long) answered call outlasted it (item 8).
                         renewBrowserAudioIfNeeded();
                     } else {
@@ -5857,6 +5932,41 @@
 
             dom.extensionHint.textContent = name;
             dom.extensionHint.hidden = !name;
+            renderKeypadResults(extensionMode && entering && dom.number ? dom.number.value : '', name);
+        }
+
+        // The extensions matching a name typed in extension mode, each dialing its extension when picked (see
+        // soft-phone/keypad-search.js). An extension typed in full whose person the hint already names needs no list.
+        function renderKeypadResults(query, hintedName) {
+            if (!dom.keypadResults) {
+                return;
+            }
+
+            var matches = keypadExtensionMatches(extensionDirectory, query, strings);
+
+            if (hintedName && matches.length === 1) {
+                matches = [];
+            }
+
+            var html = buildKeypadExtensionResultsHtml(matches, strings, escapeHtml);
+
+            // Redrawn only when the list changes, so a render between press and release never swallows a pick.
+            if (keypadResultsHtml !== html) {
+                dom.keypadResults.innerHTML = html;
+                keypadResultsHtml = html;
+            }
+
+            dom.keypadResults.hidden = !html;
+        }
+
+        function dialPickedExtension(extension) {
+            if (!extension || activeCommand || (currentCall && normalizeState(currentCall.state) !== 'OnHold')) {
+                return;
+            }
+
+            clearNumberInput();
+            showError(null);
+            placeCall(extension, true);
         }
 
         function metadataBoolean(call, key) {
@@ -5901,9 +6011,71 @@
             rememberAgentHold(agentHolds, callId, false);
             rememberAgentMute(agentMutes, callId, false);
             delete extensionCallNumbers[callId];
+            forgetConferenceCall(conferenceMemory, callId);
+            forgetCallContext(callContexts, callId);
 
             if (currentCall && currentCall.callId === callId) {
-                currentCall = getActiveCalls()[0] || null;
+                currentCall = visibleConferenceCalls(conferenceMemory, getActiveCalls())[0] || getActiveCalls()[0] || null;
+            }
+        }
+
+        // The conference this call is in, as calls; [] when it is in none.
+        function conferenceCallsOf(callId) {
+            return conferenceMembers(conferenceMemory, callId).map(function (id) {
+                return activeCalls[id];
+            }).filter(Boolean);
+        }
+
+        // Hangs up one participant of a conference. When the call is also the agent's own way into the conference (the
+        // extension call the conference was made from), the provider hangs up the participant's leg alone and says so:
+        // the call stays up, no longer listed. Once nobody is left, the agent's remaining legs are hung up.
+        function hangupParticipant(callId) {
+            var call = callId ? activeCalls[callId] : null;
+
+            if (!call || !connection || activeCommand) {
+                return;
+            }
+
+            var metadata = Object.assign({}, call.metadata || {});
+
+            metadata.conferenceParticipant = true;
+            activeCommand = 'Hangup';
+            render();
+
+            connection.invoke('Hangup', { callId: callId, metadata: metadata }).then(function (result) {
+                if (result && result.succeeded !== false && result.call && metadataBoolean(result.call, 'participantLeft')) {
+                    showError(null);
+                    markParticipantLeft(conferenceMemory, callId);
+
+                    if (currentCall && currentCall.callId === callId) {
+                        currentCall = visibleConferenceCalls(conferenceMemory, getActiveCalls())[0] || currentCall;
+                    }
+
+                    return;
+                }
+
+                // A provider that cannot end the call no longer knows it: it is cleared here rather than left stuck.
+                if (!applyCommandResult(result)) {
+                    removeActiveCall(callId);
+                }
+            }).catch(function (error) {
+                showError(error && error.message ? error.message : String(error));
+                removeActiveCall(callId);
+            }).finally(function () {
+                activeCommand = null;
+                endConferenceWithNobodyLeft();
+                render();
+            });
+        }
+
+        // A conference whose last participant is gone leaves the agent talking to nobody: its legs are hung up.
+        function endConferenceWithNobodyLeft() {
+            var legs = conferenceLegsWithoutParticipants(conferenceMemory, Object.keys(activeCalls)).map(function (id) {
+                return activeCalls[id];
+            }).filter(Boolean);
+
+            if (legs.length) {
+                hangupAll(legs);
             }
         }
 
@@ -5978,6 +6150,9 @@
             applyAgentHold(call);
             applyAgentMute(call);
             rememberExtensionCall(call);
+            carryCallContext(callContexts, call);
+            // A provider that keeps no conference on its calls reports a merged call as a call of its own.
+            applyConferenceMemory(conferenceMemory, call);
 
             var stateName = normalizeState(call.state);
 
@@ -6307,8 +6482,9 @@
                 return;
             }
 
-            var calls = getActiveCalls();
-            show(dom.activeCalls, calls.length > 1);
+            // A participant who left while their leg carries the agent in the conference is not listed.
+            var calls = visibleConferenceCalls(conferenceMemory, getActiveCalls());
+            show(dom.activeCalls, calls.length > 1 || calls.some(function (call) { return metadataBoolean(call, 'isConference'); }));
 
             var plan = currentMergePlan();
             var canMergeCalls = has(CAPABILITIES.Merge);
@@ -6387,7 +6563,7 @@
             Array.prototype.forEach.call(dom.activeCallsList.querySelectorAll('[data-telephony-participant-hangup]'), function (button) {
                 button.disabled = !!activeCommand;
                 button.addEventListener('click', function () {
-                    hangupCall(button.getAttribute('data-telephony-participant-hangup'));
+                    hangupParticipant(button.getAttribute('data-telephony-participant-hangup'));
                 });
             });
 
@@ -6397,8 +6573,55 @@
             });
         }
 
+        // The number field: the current call's label or number, the number being dialed, or the agent's own entry. A
+        // call's label is shown for that call only, so it goes when the call does, even while a held call with nothing
+        // of its own to show is current again (see soft-phone/dial-target.js).
+        function renderNumberField(stateName, active) {
+            if (currentCall && active) {
+                // The dial has materialized into a real call, so the pending-dial state is done. Clear it now rather than
+                // letting its 30s timer keep it alive, or the old number would come back over a fresh entry.
+                clearPendingDial();
+            }
+
+            var field = planNumberField({
+                callId: currentCall ? currentCall.callId : '',
+                stateName: stateName,
+                peerNumber: currentCall ? getPeerNumber(currentCall) : '',
+                // A call to an extension is shown as the person it rings, never run through the number formatter.
+                extensionLabel: currentCall && callExtensionNumber(currentCall) ? callDisplayLabel(currentCall) : '',
+                agentEntered: numberEnteredByAgent,
+                isCallDisplay: numberIsCallDisplay,
+                displayCallId: numberDisplayCallId,
+                pendingDial: pendingDial,
+                pendingDialNumber: pendingDialNumber
+            });
+
+            if (field.action === 'clear') {
+                clearNumberInput();
+
+                return;
+            }
+
+            if (field.action === 'keep') {
+                return;
+            }
+
+            if (field.action === 'label') {
+                dom.number.value = field.value;
+            } else {
+                setNumberDisplay(field.value);
+            }
+
+            numberIsCallDisplay = true;
+            numberDisplayCallId = field.callId;
+
+            if (field.action !== 'pending') {
+                numberEnteredByAgent = false;
+            }
+        }
+
         function currentMergePlan() {
-            return planMerge(getActiveCalls(), conferenceSelections, {
+            return planMerge(visibleConferenceCalls(conferenceMemory, getActiveCalls()), conferenceSelections, {
                 stateOf: function (call) { return normalizeState(call && call.state); },
                 isConference: function (call) { return metadataBoolean(call, 'isConference'); }
             });
@@ -6609,38 +6832,8 @@
             setStatus(formatCallStatus(baseStatus, currentCallElapsedSeconds()));
             scheduleCallTimer();
 
-            if (dom.number && currentCall && (active || stateName === 'OnHold')) {
-                // The dial has materialized into a real call, so the pending-dial state is done. Clear it now
-                // rather than letting its 30s timer keep it alive -- otherwise, once this call ends, render()
-                // would fall back into the pendingDial branch and re-show the old number over a fresh entry.
-                clearPendingDial();
-
-                var peerNumber = getPeerNumber(currentCall);
-                // A call to an extension is shown as the person it rings, never run through the number formatter.
-                var extensionLabel = callExtensionNumber(currentCall) ? callDisplayLabel(currentCall) : '';
-
-                // On hold the field keeps a number the agent entered to add a call (see soft-phone/dial-target.js).
-                if ((peerNumber || extensionLabel) && shouldShowCallNumber({ stateName: stateName, agentEntered: numberEnteredByAgent })) {
-                    if (extensionLabel) {
-                        dom.number.value = extensionLabel;
-                    } else {
-                        setNumberDisplay(peerNumber);
-                    }
-
-                    numberIsCallDisplay = true;
-                    numberEnteredByAgent = false;
-                }
-            } else if (dom.number && pendingDial && !currentCall) {
-                // Mirror the active-call look while the dial is in flight: show the number being connected
-                // in the input so the widget does not visibly change when the first real status update
-                // arrives. The input is held read-only by the disabled logic below, exactly as during a call.
-                if (pendingDialNumber) {
-                    setNumberDisplay(pendingDialNumber);
-                    numberIsCallDisplay = true;
-                }
-            } else if (dom.number && canDial && numberIsCallDisplay) {
-                clearNumberInput();
-                numberIsCallDisplay = false;
+            if (dom.number) {
+                renderNumberField(stateName, active);
             }
 
             // On hold the dial button would sit first in the row, where Hold was a moment ago, over the held call's
@@ -6790,9 +6983,19 @@
                 callsBeforeLookup = null;
             }
 
-            // A held call the server no longer reports is over; its hold goes with it.
+            // A held call the server no longer reports is over; its hold goes with it, and its place in a conference.
             pruneAgentHolds(agentHolds, Object.keys(activeCalls));
             pruneAgentMutes(agentMutes, Object.keys(activeCalls));
+            Object.keys(conferenceMemory.members).forEach(function (callId) {
+                if (!activeCalls[callId]) {
+                    forgetConferenceCall(conferenceMemory, callId);
+                }
+            });
+            Object.keys(callContexts).forEach(function (callId) {
+                if (!activeCalls[callId]) {
+                    forgetCallContext(callContexts, callId);
+                }
+            });
 
             currentCall = previousCallId && activeCalls[previousCallId]
                 ? activeCalls[previousCallId]
@@ -6901,6 +7104,25 @@
         }
 
         function dial() {
+            // An extension is read from what was typed -- its digits, or the one person a name narrows the directory to
+            // (see soft-phone/keypad-search.js) -- never from the digits scattered through a name or a call's label.
+            if (extensionMode && !numberIsCallDisplay) {
+                var picked = resolveKeypadExtension(extensionDirectory, dom.number ? dom.number.value : '', strings);
+
+                if (picked.refused) {
+                    reportDiagnostic('info', 'dial-refused', 'A dial was refused: ' + picked.refused + '.', '');
+                    showError(picked.refused === 'empty'
+                        ? (strings.extensionRequired || 'Enter an extension to call.')
+                        : transferRefusalMessage(strings, picked.refused));
+
+                    return;
+                }
+
+                dialPickedExtension(picked.extension);
+
+                return;
+            }
+
             // Only a number the agent entered. While a call is held the field keeps showing that call's number, and
             // for a call the platform bridged here that is the tenant's own caller id (see soft-phone/dial-target.js).
             var target = resolveDialTarget({
@@ -6981,6 +7203,15 @@
                 return;
             }
 
+            // The agent hanging up a conference ends it: every call in it, not the one row that happens to be current.
+            var conference = conferenceCallsOf(call.callId);
+
+            if (conference.length > 1) {
+                hangupAll(conference);
+
+                return;
+            }
+
             var callId = call.callId;
 
             // If the provider cannot end the call -- for example a stale call restored from the server that the
@@ -6997,33 +7228,10 @@
             });
         }
 
-        // Hangs up one call of several -- a single participant of a conference -- without touching the others.
-        function hangupCall(callId) {
-            var call = callId ? activeCalls[callId] : null;
 
-            if (!call) {
-                return;
-            }
-
-            if (call.browserOriginated && browserCallControllers[callId]) {
-                Promise.resolve(browserCallControllers[callId].terminate()).catch(function () { });
-
-                return;
-            }
-
-            invoke('Hangup', { callId: callId, metadata: call.metadata || null }).then(function (result) {
-                if (result && result.succeeded === false) {
-                    removeActiveCall(callId);
-                    render();
-                }
-            }).catch(function () {
-                removeActiveCall(callId);
-                render();
-            });
-        }
-
-        function hangupAll() {
-            var calls = getActiveCalls();
+        // Hangs up every call, or only the calls given (a conference's).
+        function hangupAll(only) {
+            var calls = Array.isArray(only) ? only : getActiveCalls();
 
             // End browser-originated calls directly on their SIP sessions; they have no server-side call.
             calls.filter(function (call) {
@@ -7301,6 +7509,13 @@
             var plan = currentMergePlan();
             var callIds = plan.callIds;
 
+            // Calls already in one conference: merging them again changes nothing, and the provider would refuse it.
+            if (isOneConference(conferenceMemory, callIds)) {
+                showError(null);
+
+                return;
+            }
+
             if (!plan.canMerge || callIds.length < 2) {
                 showError(strings.selectCallsToMerge || 'Select at least two calls to conference.');
 
@@ -7329,6 +7544,9 @@
                 var conference = conferenceAfterMerge(getActiveCalls(), plan, result, {
                     isConference: function (call) { return metadataBoolean(call, 'isConference'); }
                 });
+
+                // Remembered, so the next report of these calls -- which may say nothing of a conference -- keeps them one.
+                rememberConference(conferenceMemory, conference);
 
                 conference.callIds.forEach(function (callId) {
                     var call = activeCalls[callId];
@@ -7841,7 +8059,11 @@
                 rememberAcceptedOffer(acceptedOfferIds, offerReservationId, Date.now());
             }
 
-            answerHeldOfferLeg(offerReservationId);
+            // With no leg held for it, the platform rings this browser's leg for the offer now: that one leg is expected.
+            if (!answerHeldOfferLeg(offerReservationId)) {
+                armAutoAnswer(inboundAutoAnswer, autoAnswerOfferKey(offerReservationId), Date.now());
+            }
+
             incomingAcceptPending = true;
             announceOfferHandled(true, offerReservationId);
 
@@ -7856,6 +8078,7 @@
                     }
 
                     hangupAnsweredOfferLeg(offerReservationId);
+                    disarmAutoAnswer(inboundAutoAnswer, autoAnswerOfferKey(offerReservationId));
                     showError(strings.offerUnavailable || 'This call is no longer available.');
                     incomingContext = null;
                     removeActiveCall(id);
@@ -8850,6 +9073,8 @@
 
                         activeCalls = {};
                         conferenceSelections = {};
+                        conferenceMemory = createConferenceMemory();
+                        callContexts = createCallContextMemory();
 
                         keptBrowserCalls.forEach(function (existing) {
                             activeCalls[existing.callId] = existing;
@@ -8866,6 +9091,11 @@
 
                         if (!currentCall) {
                             incomingHandled = false;
+                        }
+
+                        // The conference's last participant hung up: the agent's legs into it go too.
+                        if (!activeCommand) {
+                            endConferenceWithNobodyLeft();
                         }
 
                         if (!tracked) {
@@ -9230,6 +9460,13 @@
                         dom.number.select();
                     }
                 });
+                // Typing over a call's label or number starts a fresh entry, as a keypad press does: the label is never
+                // part of what is dialed.
+                dom.number.addEventListener('beforeinput', function () {
+                    if (numberIsCallDisplay) {
+                        clearNumberInput();
+                    }
+                });
                 dom.number.addEventListener('keydown', function (event) {
                     if (event.key !== 'Enter' || event.isComposing) {
                         return;
@@ -9239,6 +9476,16 @@
 
                     if ((!currentCall || normalizeState(currentCall.state) === 'OnHold') && !activeCommand) {
                         dial();
+                    }
+                });
+            }
+
+            if (dom.keypadResults) {
+                dom.keypadResults.addEventListener('click', function (event) {
+                    var button = event.target && event.target.closest ? event.target.closest('[data-telephony-keypad-extension]') : null;
+
+                    if (button) {
+                        dialPickedExtension(button.getAttribute('data-telephony-keypad-extension'));
                     }
                 });
             }

@@ -1,0 +1,162 @@
+using System.Text.Json;
+using CrestApps.OrchardCore.Telephony.PlaywrightTests.Infrastructure;
+using Microsoft.Playwright;
+
+namespace CrestApps.OrchardCore.Telephony.PlaywrightTests;
+
+/// <summary>
+/// A conference after the merge that made it, on a provider that keeps no conference on its calls (Telnyx keeps none):
+/// it stays one conference on screen, it is never merged a second time, and each participant is hung up on their own.
+/// </summary>
+/// <remarks>
+/// Live, a merge worked, and a few seconds later the phone read its calls again: the provider's reports said nothing of
+/// a conference, so the calls went back to separate lines, each with a checkbox, and Merge was offered once more. Pressed,
+/// it asked the provider to join calls already in the conference, which it refused. And the conference had been made
+/// from an extension call: that call's leg is the agent's own way into the conference, so hanging it up to drop the
+/// colleague ended the conference for everybody.
+/// </remarks>
+public sealed class SoftPhoneConferenceFollowUpTests : SoftPhoneBrowserTest
+{
+    [Fact]
+    public async Task AfterAMerge_TheCallsStayOneConference_WhenTheProviderReportsThemAgain_AndAreNotOfferedForMergeAgain()
+    {
+        // Arrange
+        var (page, first, second) = await MergeTwoCallsAsync();
+
+        // Act - the provider reports each call again, as it does on every refresh, with nothing of the conference.
+        await ReportConnectedAsync(page, first);
+        await ReportConnectedAsync(page, second);
+        await page.WaitForTimeoutAsync(300);
+
+        // Assert
+        Assert.Equal(2, await page.Locator("[data-telephony-conference-participant]").CountAsync());
+        Assert.Contains("2 participants", await page.Locator("[data-telephony-conference]").InnerTextAsync(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, await page.Locator("[data-telephony-conference-call]").CountAsync());
+        Assert.Equal(0, await page.Locator("[data-telephony-merge-calls]").CountAsync());
+        await CaptureAsync(page, "conference-after-refresh");
+
+        // A merge asked for anyway changes nothing and asks the provider for nothing.
+        await page.EvaluateAsync("() => window.telephonySoftPhone.getInstance().merge()");
+        await page.WaitForTimeoutAsync(200);
+        Assert.Equal(1, Server.Provider.GetMergeRequestCount());
+    }
+
+    [Fact]
+    public async Task HangingUpOneParticipant_DropsOnlyThatParty_AndTheLastOneEndsTheConference()
+    {
+        // Arrange - the conference was made from `primary`, whose leg is the agent's own way into it.
+        var (page, first, second) = await MergeTwoCallsAsync();
+        var primary = (await LastMergeAsync(page)).GetProperty("callIds")[0].GetString();
+        var other = primary == first ? second : first;
+
+        // Act - drop the conference's first party.
+        await page.ClickAsync($"[data-telephony-participant-hangup=\"{primary}\"]");
+
+        // Assert - that party alone: its leg stays up, the other party stays in the conference.
+        await WaitForAsync(() => Server.Provider.HangupCommands.Contains($"{primary}:participant"));
+        await page.WaitForFunctionAsync("() => document.querySelectorAll('[data-telephony-conference-participant]').length === 1");
+        Assert.Equal(1, await page.Locator($"[data-telephony-conference-participant=\"{other}\"]").CountAsync());
+        Assert.Contains("1 participant", await page.Locator("[data-telephony-conference]").InnerTextAsync(), StringComparison.OrdinalIgnoreCase);
+        Assert.Single(Server.Provider.HangupCommands);
+        await ReportConnectedAsync(page, primary);
+        await page.WaitForTimeoutAsync(200);
+        Assert.Equal(0, await page.Locator($"[data-telephony-conference-participant=\"{primary}\"]").CountAsync());
+        await CaptureAsync(page, "conference-one-participant-left");
+
+        // Act - drop the last party.
+        await page.ClickAsync($"[data-telephony-participant-hangup=\"{other}\"]");
+
+        // Assert - with nobody left, the agent's leg into the conference is hung up too.
+        await WaitForAsync(() => Server.Provider.HangupCommands.Contains($"{other}:participant") && Server.Provider.HangupCommands.Contains(primary));
+        await page.WaitForFunctionAsync("() => window.telephonySoftPhone.getInstance().getActiveCalls().length === 0");
+    }
+
+    [Fact]
+    public async Task HangingUpTheConference_EndsEveryCallInIt()
+    {
+        // Arrange
+        var (page, first, second) = await MergeTwoCallsAsync();
+
+        // Act
+        await page.ClickAsync("[data-telephony-hangup]");
+
+        // Assert
+        await WaitForAsync(() => Server.Provider.HangupCommands.Contains(first) && Server.Provider.HangupCommands.Contains(second));
+        Assert.DoesNotContain(Server.Provider.HangupCommands, command => command.EndsWith(":participant", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task TheConferenceRows_NameEachParty_ByNumberOrByThePersonAnExtensionRings()
+    {
+        // Arrange - a call held, and an extension call up, as a Contact Center caller and a colleague would be.
+        Server.Provider.KeepNoConferenceState();
+        var page = await OpenAsync("?styled", DesktopAppViewport);
+        await page.ClickAsync("[data-telephony-toggle]");
+        await DialAndConnectAsync(page, "+17024993350");
+        var cell = await GetCurrentCallIdAsync(page);
+        await HoldAsync(page);
+        await page.EvaluateAsync(
+            """
+            () => window.telephonySoftPhone.getInstance().getConnection().invoke('PublishTrackedCallState', {
+                callId: 'ext-call-1', to: 'jdoe', direction: 0, state: 3, providerName: 'InMemory', startedUtc: new Date().toISOString(),
+                metadata: { extensionNumber: '2' }
+            })
+            """);
+        await page.Locator("[data-telephony-merge-select-all]").WaitForAsync();
+
+        // Act
+        await page.Locator("[data-telephony-merge-select-all]").CheckAsync();
+        await page.ClickAsync("[data-telephony-merge-calls]");
+        await page.Locator("[data-telephony-conference]").WaitForAsync();
+
+        // Assert - every row says who it is, and its hang-up says whom it hangs up.
+        var extensionRow = page.Locator("[data-telephony-conference-participant=\"ext-call-1\"]");
+        var cellRow = page.Locator($"[data-telephony-conference-participant=\"{cell}\"]");
+        Assert.Contains("Jane Doe · ext 2", await extensionRow.InnerTextAsync());
+        Assert.Contains("(702) 499-3350", await cellRow.InnerTextAsync());
+        Assert.Equal("Hang up Jane Doe · ext 2", await extensionRow.Locator("[data-telephony-participant-hangup]").GetAttributeAsync("aria-label"));
+        Assert.Contains("499-3350", await cellRow.Locator("[data-telephony-participant-hangup]").GetAttributeAsync("aria-label"));
+        await CaptureAsync(page, "conference-rows-named");
+    }
+
+    // Two calls up and merged, on a provider that keeps no conference on them.
+    private async Task<(IPage Page, string First, string Second)> MergeTwoCallsAsync()
+    {
+        Server.Provider.KeepNoConferenceState();
+        var page = await OpenAsync("?styled", DesktopAppViewport);
+        await page.ClickAsync("[data-telephony-toggle]");
+        await DialAndConnectAsync(page, "+15551234567");
+        var first = await GetCurrentCallIdAsync(page);
+        await HoldAsync(page);
+        await DialAndConnectAsync(page, "+15557654321");
+        var second = await GetCurrentCallIdAsync(page);
+        await page.Locator("[data-telephony-merge-select-all]").CheckAsync();
+        await page.ClickAsync("[data-telephony-merge-calls]");
+        await page.Locator("[data-telephony-conference]").WaitForAsync();
+        await WaitForAsync(() => Server.Provider.GetMergeRequestCount() == 1);
+
+        return (page, first, second);
+    }
+
+    private static async Task ReportConnectedAsync(IPage page, string callId)
+        => await page.EvaluateAsync(
+            """
+            callId => window.telephonySoftPhone.getInstance().getConnection().invoke('PublishCallState', {
+                callId, direction: 0, state: 3, providerName: 'InMemory'
+            })
+            """,
+            callId);
+
+    private static Task<JsonElement> LastMergeAsync(IPage page)
+        => page.EvaluateAsync<JsonElement>("() => window.telephonySoftPhone.getInstance().getConnection().invoke('GetLastMerge')");
+
+    private static async Task WaitForAsync(Func<bool> condition)
+    {
+        for (var attempt = 0; attempt < 100 && !condition(); attempt++)
+        {
+            await Task.Delay(100);
+        }
+
+        Assert.True(condition());
+    }
+}

@@ -3,7 +3,20 @@ import { describe, expect, it } from 'vitest';
 import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/call-legs.js';
 import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/conference.js';
 
-const { planMerge, conferenceAfterMerge, buildActiveCallsHtml } = globalThis.CrestAppsSoftPhone;
+const {
+    planMerge,
+    conferenceAfterMerge,
+    buildActiveCallsHtml,
+    createConferenceMemory,
+    rememberConference,
+    applyConferenceMemory,
+    markParticipantLeft,
+    forgetConferenceCall,
+    conferenceMembers,
+    visibleConferenceCalls,
+    isOneConference,
+    conferenceLegsWithoutParticipants
+} = globalThis.CrestAppsSoftPhone;
 
 const escapeHtml = value => String(value == null ? '' : value)
     .replace(/&/g, '&amp;')
@@ -257,6 +270,23 @@ describe('buildActiveCallsHtml', () => {
         expect(html).toContain('aria-label="Hang up (555) 765-4321"');
     });
 
+    // Live: after a merge the conference's calls still carried a checkbox each, so Merge was pressed again on the calls
+    // already in it, and the provider refused ("Participant must not join the same conference twice").
+    it('draws no checkbox when there is nothing left to merge with', () => {
+        const html = buildActiveCallsHtml({
+            calls: [
+                { callId: 'a', number: 'Jane Doe · ext 2', state: 'In conference', inConference: true, canHangup: true, selectable: true },
+                { callId: 'b', number: '(702) 499-3350', state: 'In conference', inConference: true, canHangup: true, selectable: true }
+            ],
+            merge: { offered: false }
+        }, strings, escapeHtml);
+
+        expect(html).not.toContain('data-telephony-conference-call');
+        expect(html).toContain('data-telephony-participant-hangup="a"');
+        expect(html).toContain('aria-label="Hang up Jane Doe · ext 2"');
+        expect(html).toContain('aria-label="Hang up (702) 499-3350"');
+    });
+
     it('offers no participant hang-up when the provider cannot hang up', () => {
         const html = buildActiveCallsHtml({
             calls: [{ callId: 'a', number: '1', state: 'In conference', inConference: true, canHangup: false }]
@@ -274,5 +304,102 @@ describe('buildActiveCallsHtml', () => {
         expect(html).not.toContain('<b>');
         expect(html).not.toContain('<i>');
         expect(html).not.toContain('"><x');
+    });
+});
+
+// Live: a merge's conference lasted on screen until the phone next read its calls. The provider keeps no conference flag
+// on a call, so every refresh put the calls back as separate lines -- each with a checkbox and Merge offered again.
+describe('the conference memory', () => {
+    const merged = { callIds: ['ext-leg', 'cell-leg'], primaryCallId: 'ext-leg', conferenceName: 'ext-ext-leg' };
+    const report = callId => ({ callId, state: 'Connected', metadata: {} });
+
+    it('stamps a merged call\'s conference back onto a report that no longer carries it', () => {
+        const memory = createConferenceMemory();
+        rememberConference(memory, merged);
+
+        const call = applyConferenceMemory(memory, report('cell-leg'));
+
+        expect(call.metadata).toMatchObject({
+            isConference: true,
+            conferencePrimaryCallId: 'ext-leg',
+            conferenceName: 'ext-ext-leg',
+            participantCount: 2
+        });
+    });
+
+    it('leaves a call that was never merged as it is', () => {
+        const memory = createConferenceMemory();
+        rememberConference(memory, merged);
+
+        expect(applyConferenceMemory(memory, report('other')).metadata).toEqual({});
+    });
+
+    it('offers no second merge of the calls it already joined', () => {
+        const memory = createConferenceMemory();
+        rememberConference(memory, merged);
+        const calls = [report('ext-leg'), report('cell-leg')].map(call => applyConferenceMemory(memory, call));
+
+        expect(planMerge(calls, {}).offered).toBe(false);
+        expect(isOneConference(memory, ['cell-leg', 'ext-leg'])).toBe(true);
+        expect(isOneConference(memory, ['cell-leg', 'third'])).toBe(false);
+        expect(isOneConference(memory, ['cell-leg'])).toBe(false);
+    });
+
+    it('still offers to add a new call to the conference', () => {
+        const memory = createConferenceMemory();
+        rememberConference(memory, merged);
+        const calls = [report('ext-leg'), report('cell-leg'), report('third')].map(call => applyConferenceMemory(memory, call));
+
+        expect(planMerge(calls, { 'cell-leg': true, third: true })).toMatchObject({
+            offered: true,
+            canMerge: true,
+            addsToConference: true,
+            callIds: ['ext-leg', 'third'],
+            conferenceName: 'ext-ext-leg'
+        });
+    });
+
+    it('adds the calls a later merge joins to the same conference', () => {
+        const memory = createConferenceMemory();
+        rememberConference(memory, merged);
+        rememberConference(memory, { callIds: ['ext-leg', 'cell-leg', 'third'], primaryCallId: 'ext-leg', conferenceName: 'ext-ext-leg' });
+
+        expect(conferenceMembers(memory, 'third').sort()).toEqual(['cell-leg', 'ext-leg', 'third']);
+        expect(applyConferenceMemory(memory, report('third')).metadata.participantCount).toBe(3);
+    });
+
+    // A participant whose party was hung up on its own (the colleague of the extension call the conference was made
+    // from) leaves its leg behind as the agent's own way into the conference: it is no longer listed.
+    it('hides a participant who left while its leg carries on, and counts only those still there', () => {
+        const memory = createConferenceMemory();
+        rememberConference(memory, merged);
+        markParticipantLeft(memory, 'ext-leg');
+        const calls = [report('ext-leg'), report('cell-leg')].map(call => applyConferenceMemory(memory, call));
+
+        expect(visibleConferenceCalls(memory, calls).map(call => call.callId)).toEqual(['cell-leg']);
+        expect(calls[1].metadata.participantCount).toBe(1);
+        expect(conferenceLegsWithoutParticipants(memory, ['ext-leg', 'cell-leg'])).toEqual([]);
+    });
+
+    it('names the legs left behind once nobody is left in the conference', () => {
+        const memory = createConferenceMemory();
+        rememberConference(memory, merged);
+        markParticipantLeft(memory, 'ext-leg');
+        forgetConferenceCall(memory, 'cell-leg');
+
+        expect(conferenceLegsWithoutParticipants(memory, ['ext-leg'])).toEqual(['ext-leg']);
+        expect(conferenceLegsWithoutParticipants(memory, [])).toEqual([]);
+    });
+
+    it('forgets a call that ended, and the conference with its last call', () => {
+        const memory = createConferenceMemory();
+        rememberConference(memory, merged);
+        forgetConferenceCall(memory, 'cell-leg');
+
+        expect(applyConferenceMemory(memory, report('cell-leg')).metadata).toEqual({});
+        expect(applyConferenceMemory(memory, report('ext-leg')).metadata.participantCount).toBe(1);
+
+        forgetConferenceCall(memory, 'ext-leg');
+        expect(conferenceMembers(memory, 'ext-leg')).toEqual([]);
     });
 });

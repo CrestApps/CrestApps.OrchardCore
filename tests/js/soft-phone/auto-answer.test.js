@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/offer-leg.js';
 import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/auto-answer.js';
 
 const {
@@ -11,6 +12,8 @@ const {
     consumeAutoAnswer,
     disarmAutoAnswer,
     disarmOtherOffers,
+    shouldAutoAnswerInboundLeg,
+    isDestinationLeg,
 } = globalThis.CrestAppsSoftPhone;
 
 const now = 5_000_000;
@@ -94,5 +97,52 @@ describe('the inbound auto-answer arm', () => {
         armAutoAnswer(arm, autoAnswerOfferKey('res-2'), now + 10);
 
         expect(consumeAutoAnswer(arm, now + 20)).toBe('offer:res-2');
+    });
+});
+
+// Live: once a colleague's extension call had been answered, every later one was answered on arrival -- no ring, no
+// Answer, nothing on screen -- because "the agent answered a ring" was kept for good and read as "the next leg is
+// expected". Only an arm decides now, and a leg the platform rang at this phone as somebody's destination never uses one.
+describe('shouldAutoAnswerInboundLeg', () => {
+    const encode = state => btoa(JSON.stringify(state));
+
+    it('rings a leg nothing was armed for', () => {
+        const arm = createAutoAnswerArm();
+
+        expect(shouldAutoAnswerInboundLeg(arm, now, {})).toBe(false);
+    });
+
+    it('answers the one leg an arm is for, and rings the next', () => {
+        const arm = createAutoAnswerArm();
+        armAutoAnswer(arm, EXTENSION_CALL_KEY, now);
+
+        expect(shouldAutoAnswerInboundLeg(arm, now + 500, {})).toBe(true);
+        expect(shouldAutoAnswerInboundLeg(arm, now + 600, {})).toBe(false);
+    });
+
+    it('rings a colleague\'s call to this phone even while an arm is live, and keeps the arm for the phone\'s own leg', () => {
+        const arm = createAutoAnswerArm();
+        armAutoAnswer(arm, EXTENSION_CALL_KEY, now);
+        const colleague = { clientState: encode({ i: 'ob-dest', p: 'v3:caller-leg', v: 'user-2' }) };
+
+        expect(shouldAutoAnswerInboundLeg(arm, now + 100, colleague)).toBe(false);
+        expect(arm.key).toBe(EXTENSION_CALL_KEY);
+        expect(shouldAutoAnswerInboundLeg(arm, now + 200, { clientState: encode({ i: 'ob-agent', d: 'sip:x@y' }) })).toBe(true);
+    });
+
+    it('rings a call a colleague hands over, and keeps the arm', () => {
+        const arm = createAutoAnswerArm();
+        armAutoAnswer(arm, EXTENSION_CALL_KEY, now);
+
+        expect(shouldAutoAnswerInboundLeg(arm, now + 100, { transferLeg: true })).toBe(false);
+        expect(arm.key).toBe(EXTENSION_CALL_KEY);
+    });
+
+    it('reads the destination tag however the provider hands client state over', () => {
+        expect(isDestinationLeg({ clientState: JSON.stringify({ i: 'ob-dest' }) })).toBe(true);
+        expect(isDestinationLeg({ client_state: encode({ i: 'ob-dest' }) })).toBe(true);
+        expect(isDestinationLeg({ clientState: encode({ i: 'ob-agent' }) })).toBe(false);
+        expect(isDestinationLeg({})).toBe(false);
+        expect(isDestinationLeg(null)).toBe(false);
     });
 });

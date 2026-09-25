@@ -14,6 +14,11 @@ internal static class TelnyxApiErrors
     public const string CallAlreadyEndedCode = "90018";
 
     /// <summary>
+    /// The code Telnyx refuses a conference join with when the call is already a participant of that conference.
+    /// </summary>
+    public const string AlreadyInConferenceCode = "90044";
+
+    /// <summary>
     /// Gets whether Telnyx refused the command because the call has already ended.
     /// </summary>
     /// <param name="result">The refused command's result.</param>
@@ -23,6 +28,20 @@ internal static class TelnyxApiErrors
     /// Only the error code is trusted, not the status alone: a 422 also means an invalid command on a live call.
     /// </remarks>
     public static bool IsCallAlreadyEnded(TelnyxApiResult result)
+        => HasErrorCode(result, CallAlreadyEndedCode);
+
+    /// <summary>
+    /// Gets whether Telnyx refused a conference join because the call is already in the conference: the join has
+    /// nothing left to do.
+    /// </summary>
+    /// <param name="result">The refused join's result.</param>
+    /// <returns><see langword="true"/> when the refusal says the call already joined.</returns>
+    public static bool IsAlreadyInConference(TelnyxApiResult result)
+        => HasErrorCode(result, AlreadyInConferenceCode);
+
+    // Whether a 422 refusal carries the given Telnyx error code. The status alone is not trusted: a 422 also means an
+    // invalid command on a live call.
+    private static bool HasErrorCode(TelnyxApiResult result, string expectedCode)
     {
         if (result is null ||
             result.Succeeded ||
@@ -45,7 +64,7 @@ internal static class TelnyxApiErrors
             {
                 if (error.ValueKind == JsonValueKind.Object &&
                     error.TryGetProperty("code", out var code) &&
-                    string.Equals(code.ToString(), CallAlreadyEndedCode, StringComparison.Ordinal))
+                    string.Equals(code.ToString(), expectedCode, StringComparison.Ordinal))
                 {
                     return true;
                 }
@@ -53,7 +72,7 @@ internal static class TelnyxApiErrors
         }
         catch (JsonException)
         {
-            // Not the error document Telnyx sends, so nothing in it can be read as the call having ended.
+            // Not the error document Telnyx sends, so nothing in it can be read as that refusal.
         }
 
         return false;

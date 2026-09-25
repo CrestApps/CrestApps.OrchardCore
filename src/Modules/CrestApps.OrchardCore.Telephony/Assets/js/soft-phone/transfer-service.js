@@ -275,6 +275,63 @@
         };
     }
 
+    // What a Contact Center report says about the call beyond its state, which the provider's own report of the same call
+    // does not: the phone reads its calls again every few seconds, and a provider's report used to replace the Contact
+    // Center's, so the call stopped naming its interaction and the transfer panel fell back to the provider's
+    // directory -- the phone system's extensions only. It is remembered per call and stamped back onto a report that
+    // names none.
+    var CALL_CONTEXT_KEYS = ['interactionId', 'activityItemId', 'queueId', 'callSessionId'];
+
+    function createCallContextMemory() {
+        return {};
+    }
+
+    function carryCallContext(memory, call) {
+        if (!call || !call.callId || !memory) {
+            return call;
+        }
+
+        var metadata = call.metadata || {};
+        var reported = {};
+
+        CALL_CONTEXT_KEYS.forEach(function (key) {
+            if (metadata[key] != null && metadata[key] !== '') {
+                reported[key] = metadata[key];
+            }
+        });
+
+        if (reported.interactionId) {
+            memory[call.callId] = reported;
+
+            return call;
+        }
+
+        var remembered = Object.prototype.hasOwnProperty.call(memory, call.callId) ? memory[call.callId] : null;
+
+        if (!remembered) {
+            return call;
+        }
+
+        call.metadata = call.metadata || {};
+
+        CALL_CONTEXT_KEYS.forEach(function (key) {
+            if (remembered[key] != null && (call.metadata[key] == null || call.metadata[key] === '')) {
+                call.metadata[key] = remembered[key];
+            }
+        });
+
+        return call;
+    }
+
+    function forgetCallContext(memory, callId) {
+        if (memory && callId) {
+            delete memory[callId];
+        }
+    }
+
+    softPhone.createCallContextMemory = createCallContextMemory;
+    softPhone.carryCallContext = carryCallContext;
+    softPhone.forgetCallContext = forgetCallContext;
     softPhone.serviceDirectoryEntries = serviceDirectoryEntries;
     softPhone.serviceModes = serviceModes;
     softPhone.resolveServiceTarget = resolveServiceTarget;

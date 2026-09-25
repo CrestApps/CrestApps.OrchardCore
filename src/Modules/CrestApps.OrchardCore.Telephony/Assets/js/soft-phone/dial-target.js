@@ -115,6 +115,47 @@
         };
     }
 
+    // The states in which a call is up on screen (the soft phone's isActive).
+    var LIVE_STATES = ['Connected', 'OnHold', 'Connecting', 'Ringing'];
+
+    // What the number field shows, decided on every render. A call's label or number is shown for that call only: when
+    // the call it named is over, the field no longer shows it, even while another call (a held one with no number of
+    // its own) is current.
+    //   callId, stateName        - the current call, if any.
+    //   peerNumber, extensionLabel - what that call would show ("Jane Doe · ext 2" for an extension call).
+    //   agentEntered             - the field holds something the agent entered since it last showed a call.
+    //   isCallDisplay            - the field is showing a call's label or number, not an entry.
+    //   displayCallId            - the call it shows it for.
+    //   pendingDial, pendingDialNumber - a dial in flight with no call yet.
+    // Returns { action: 'label' | 'number' | 'pending' | 'clear' | 'keep', value, callId }.
+    function planNumberField(options) {
+        options = options || {};
+
+        var keep = { action: 'keep', value: '', callId: '' };
+        var clear = { action: 'clear', value: '', callId: '' };
+        var callUp = !!options.callId && LIVE_STATES.indexOf(options.stateName) !== -1;
+
+        if (callUp) {
+            var label = options.extensionLabel ? String(options.extensionLabel) : '';
+            var number = options.peerNumber ? String(options.peerNumber) : '';
+
+            if ((label || number) && shouldShowCallNumber({ stateName: options.stateName, agentEntered: options.agentEntered })) {
+                return label
+                    ? { action: 'label', value: label, callId: options.callId }
+                    : { action: 'number', value: number, callId: options.callId };
+            }
+
+            return options.isCallDisplay && options.displayCallId && options.displayCallId !== options.callId ? clear : keep;
+        }
+
+        if (options.pendingDial && !options.callId) {
+            return options.pendingDialNumber ? { action: 'pending', value: String(options.pendingDialNumber), callId: '' } : keep;
+        }
+
+        return options.isCallDisplay ? clear : keep;
+    }
+
+    softPhone.planNumberField = planNumberField;
     softPhone.isSameNumber = isSameNumber;
     softPhone.resolvePeerNumber = resolvePeerNumber;
     softPhone.resolveDialTarget = resolveDialTarget;

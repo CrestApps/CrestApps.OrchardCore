@@ -248,10 +248,10 @@ public sealed class TelnyxMergeExtensionCallTests
             ClientState = Encoding.UTF8.GetString(Convert.FromBase64String(state.ToClientState())),
         };
 
-    private static string Describe(RecordingHttpMessageHandler.RecordedRequest request)
+    internal static string Describe(RecordingHttpMessageHandler.RecordedRequest request)
         => $"{request.Method} {Uri.UnescapeDataString(request.Path)}";
 
-    private static string ReadString(string json, string property)
+    internal static string ReadString(string json, string property)
     {
         using var document = JsonDocument.Parse(json);
 
@@ -276,7 +276,7 @@ public sealed class TelnyxMergeExtensionCallTests
             new TelnyxApiRetryPolicy(TimeSpan.Zero),
             NullLogger<TelnyxApiClient>.Instance);
 
-    private static TelnyxTelephonyProvider CreateProvider(RecordingHttpMessageHandler handler)
+    internal static TelnyxTelephonyProvider CreateProvider(RecordingHttpMessageHandler handler)
     {
         var options = Options();
         var clock = new Mock<IClock>();

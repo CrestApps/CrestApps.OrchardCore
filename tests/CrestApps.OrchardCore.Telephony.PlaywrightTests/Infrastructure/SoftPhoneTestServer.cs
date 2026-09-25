@@ -312,6 +312,7 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
                             <input type="tel" data-telephony-number />
                             <button type="button" data-telephony-dial-mode-toggle aria-pressed="false"><span data-telephony-dial-mode-label>Dial extension</span></button>
                             <div data-telephony-extension-hint hidden></div>
+                            <div class="telephony-soft-phone__keypad-results" data-telephony-keypad-results hidden></div>
                             <div data-telephony-error hidden></div>
                             <div class="telephony-soft-phone__active-calls" data-telephony-active-calls hidden>
                                 <div class="telephony-soft-phone__active-calls-list" data-telephony-active-calls-list></div>
@@ -319,6 +320,7 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
                             <div class="telephony-soft-phone__transfer-panel" data-telephony-transfer-panel hidden></div>
                             <div data-telephony-keypad-panel>
                                 <button type="button" data-telephony-key="1">1</button>
+                                <button type="button" data-telephony-key="2">2</button>
                             </div>
                             <button type="button" data-telephony-dial>Call</button>
                             <button type="button" data-telephony-hold hidden>Hold</button>

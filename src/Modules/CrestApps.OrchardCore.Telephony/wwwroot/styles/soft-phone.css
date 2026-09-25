@@ -486,6 +486,48 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.telephony-soft-phone__keypad-results {
+  padding: 0 0.85rem 0.35rem;
+}
+.telephony-soft-phone__keypad-results-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 9.5rem;
+  overflow-y: auto;
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  border-radius: 0.375rem;
+}
+.telephony-soft-phone__keypad-result {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0.35rem 0.6rem;
+  border: 0;
+  border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+  background: transparent;
+  color: var(--bs-body-color, #212529);
+  font-size: 0.85rem;
+  text-align: left;
+}
+.telephony-soft-phone__keypad-result:last-child {
+  border-bottom: 0;
+}
+.telephony-soft-phone__keypad-result:hover, .telephony-soft-phone__keypad-result:focus-visible {
+  background: var(--bs-tertiary-bg, #f8f9fa);
+}
+.telephony-soft-phone__keypad-result-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.telephony-soft-phone__keypad-result-extension {
+  flex-shrink: 0;
+  color: var(--bs-secondary-color, #6c757d);
+  font-size: 0.78rem;
+}
 .telephony-soft-phone--extension .iti__country-container {
   display: none;
 }

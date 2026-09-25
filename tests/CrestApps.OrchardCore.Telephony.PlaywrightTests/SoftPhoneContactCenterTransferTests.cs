@@ -169,6 +169,46 @@ public sealed class SoftPhoneContactCenterTransferTests : SoftPhoneBrowserTest
         Assert.DoesNotContain(await CommandsAsync(page), command => command.GetProperty("kind").GetString() == "targets");
     }
 
+    // Live: on a Contact Center call over Telnyx, the transfer panel offered only the phone system's extensions, and a
+    // search for a queue found nobody. The phone reads its calls again every few seconds, and the provider's report of
+    // the call names no interaction; that report replaced the Contact Center's, the call no longer named its
+    // interaction, and the panel took the provider's path.
+    [Fact]
+    public async Task TransferPanel_OnAContactCenterCall_KeepsTheContactCentersDirectory_AfterTheProviderReportsTheCallAgain()
+    {
+        // Arrange - a provider with no directory of its own, whose phone system has extensions, as Telnyx.
+        Server.Provider.RemoveDirectory();
+        var page = await OpenOnAContactCenterCallAsync("?transferService&styled");
+
+        // The provider's own report of the call, which knows nothing of the Contact Center.
+        await page.EvaluateAsync(
+            """
+            () => window.telephonySoftPhone.getInstance().getConnection().invoke(
+                'PublishCallState',
+                { callId: 'cc-call-1', from: '+15557000001', direction: 1, state: 3, providerName: 'InMemory' })
+            """);
+        await page.WaitForTimeoutAsync(200);
+
+        // Act
+        await page.ClickAsync("[data-telephony-transfer]");
+
+        // Assert - the agents and queues, from this call's interaction, and a transfer through the Contact Center.
+        var bea = page.Locator("[data-telephony-directory-destination=\"agent:agent-bea\"]");
+        await bea.WaitForAsync();
+        Assert.Equal(1, await page.Locator("[data-telephony-directory-destination=\"queue:queue-sales\"]").CountAsync());
+        Assert.Contains(await CommandsAsync(page), command => command.GetProperty("kind").GetString() == "targets" &&
+            command.GetProperty("interactionId").GetString() == InteractionId);
+        await CaptureAsync(page, "cc-transfer-directory-after-provider-report");
+
+        await bea.ClickAsync();
+        await page.ClickAsync("[data-telephony-transfer-confirm]");
+
+        var transfer = await WaitForCommandAsync(page, "transfer");
+        Assert.Equal(InteractionId, transfer.GetProperty("interactionId").GetString());
+        Assert.Equal("agent-bea", transfer.GetProperty("targetId").GetString());
+        Assert.Equal(0, await page.EvaluateAsync<int>("() => window.telephonySoftPhone.getInstance().getConnection().invoke('GetTransferRequestCount')"));
+    }
+
     private async Task<IPage> OpenOnAContactCenterCallAsync(string query)
     {
         var page = await OpenAsync(query, DesktopAppViewport);

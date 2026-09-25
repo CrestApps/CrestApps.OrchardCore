@@ -1,4 +1,5 @@
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
 
@@ -62,6 +63,14 @@ public sealed partial class TelnyxTelephonyProvider
                 legs.Add(leg);
             }
 
+            // A new conference is led by a call that carries the agent into it -- a dialed number's or an extension
+            // call's agent leg -- rather than by another call's own leg: a conference made from a Contact Center
+            // caller's leg would take it off the agent's leg it is bridged to, and leave the agent outside.
+            if (string.IsNullOrWhiteSpace(request.ConferenceName))
+            {
+                legs = [.. legs.Where(leg => leg.Kind != MergeLegKind.Call), .. legs.Where(leg => leg.Kind == MergeLegKind.Call)];
+            }
+
             var primary = legs[0];
             var conferenceName = string.IsNullOrWhiteSpace(request.ConferenceName)
                 ? $"conf-{primary.CallId}"
@@ -88,6 +97,17 @@ public sealed partial class TelnyxTelephonyProvider
                 // A dialed number joins as its dialed party and an extension call as its colleague; the agent's own leg
                 // for it stays where it is.
                 var joinResult = await _apiClient.JoinConferenceAsync(conferenceId, secondary.PartyLegId, cancellationToken: cancellationToken);
+
+                // Merging calls already in the conference again (a second press of Merge) leaves them where they are.
+                if (!joinResult.Succeeded && TelnyxApiErrors.IsAlreadyInConference(joinResult))
+                {
+                    if (_logger.IsEnabled(LogLevel.Debug))
+                    {
+                        _logger.LogDebug("Telnyx leg {CallId} is already in conference {ConferenceId}; nothing to join.", secondary.PartyLegId.SanitizeLogValue(), conferenceId.SanitizeLogValue());
+                    }
+
+                    continue;
+                }
 
                 if (!joinResult.Succeeded)
                 {
@@ -122,6 +142,66 @@ public sealed partial class TelnyxTelephonyProvider
 
             return TelephonyResult.Failed(S["Telnyx could not merge the calls."].Value);
         }
+    }
+
+    // Whether the soft phone sent this hang-up from one participant's row of a conference.
+    private static bool IsConferenceParticipantHangup(CallReference call)
+        => call?.Metadata is not null &&
+            call.Metadata.TryGetValue(TelephonyConstants.RequestMetadata.ConferenceParticipant, out var value) &&
+            string.Equals(value?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+
+    // Hangs up one participant of a conference. The call the conference was made from is also the agent's own way into
+    // it (joined with end_conference_on_exit), and its party was detached from it by the merge: hanging up the call would
+    // end the conference for everybody, so only the party's leg is hung up and the call is reported still up, its
+    // participant gone. Any other call is hung up as it is -- a parked agent leg releases its party with it.
+    private async Task<TelephonyResult> HangupConferenceParticipantAsync(CallReference call, CancellationToken cancellationToken)
+    {
+        if (_options.IsConfigured && !string.IsNullOrWhiteSpace(call.CallId))
+        {
+            try
+            {
+                var leg = await FindMergeLegAsync(call.CallId, cancellationToken);
+
+                if (leg is not null &&
+                    !string.IsNullOrWhiteSpace(leg.PartyLegId) &&
+                    !string.Equals(leg.PartyLegId, leg.CallId, StringComparison.Ordinal))
+                {
+                    var party = await _apiClient.GetCallStatusAsync(leg.PartyLegId, cancellationToken);
+
+                    if (party.Succeeded &&
+                        TelnyxOutboundBridgeState.TryParseEncoded(party.ClientState, out var partyState) &&
+                        partyState.Detached == true)
+                    {
+                        var metadata = call.Metadata is null
+                            ? new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+                            : new Dictionary<string, object>(call.Metadata, StringComparer.OrdinalIgnoreCase);
+
+                        metadata[TelephonyConstants.CallMetadata.ParticipantLeft] = true;
+
+                        return await ExecuteActionAsync(
+                            leg.PartyLegId,
+                            "hangup",
+                            body: null,
+                            () => BuildCall(call.CallId, CallState.Connected, metadata),
+                            cancellationToken,
+                            succeedWhenMissing: true,
+                            succeedWhenEnded: true);
+                    }
+                }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while reading the Telnyx conference participant {CallId} to hang up.", call.CallId.SanitizeLogValue());
+
+                return TelephonyResult.Failed(S["Telnyx could not hang up the participant."].Value);
+            }
+        }
+
+        return await HangupCallAsync(call, cancellationToken);
     }
 
     // How a call takes part in a merge, or null for an extension call whose colleague's leg is not known yet.

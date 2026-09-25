@@ -38,6 +38,7 @@
       "Assets/js/soft-phone/phone-input.js",
       "Assets/js/soft-phone/extension-names.js",
       "Assets/js/soft-phone/transfer-target.js",
+      "Assets/js/soft-phone/keypad-search.js",
       "Assets/js/soft-phone/transfer-service.js",
       "Assets/js/soft-phone/consult-state.js",
       "Assets/js/soft-phone/bridged-transfer.js",

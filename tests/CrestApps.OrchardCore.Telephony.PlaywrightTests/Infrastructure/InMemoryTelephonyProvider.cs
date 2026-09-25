@@ -45,6 +45,9 @@ public sealed class InMemoryTelephonyProvider :
     private int _extensionDirectoryRequestCount;
     private int _extensionDialCount;
     private DialRequest _lastDial;
+    private ExtensionDialRequest _lastExtensionDial;
+    private volatile bool _noConferenceState;
+    private readonly ConcurrentDictionary<string, byte> _conferenceAnchors = new();
     private SendDigitsRequest _lastDigits;
     private volatile bool _consultTransfer;
     private readonly ConcurrentDictionary<string, (string Status, bool CallEnded)> _consultStatuses = new();
@@ -141,9 +144,34 @@ public sealed class InMemoryTelephonyProvider :
     public TelephonyResult DialExtension(ExtensionDialRequest request)
     {
         Interlocked.Increment(ref _extensionDialCount);
+        Volatile.Write(ref _lastExtensionDial, request);
 
         return TelephonyResult.Failed("The test harness places no extension calls.");
     }
+
+    /// <summary>
+    /// Gets the last extension call the phone asked for.
+    /// </summary>
+    public ExtensionDialRequest GetLastExtensionDial()
+    {
+        return Volatile.Read(ref _lastExtensionDial);
+    }
+
+    /// <summary>
+    /// Has the provider keep no conference on the calls it merges, as Telnyx keeps none: the merge's answer says the
+    /// calls are one conference, every later report of them does not. The call a merge made its conference from is, as
+    /// an extension call's is on Telnyx, the agent's own way into it: hanging up its participant alone leaves it up.
+    /// </summary>
+    public void KeepNoConferenceState()
+    {
+        _noConferenceState = true;
+    }
+
+    /// <summary>
+    /// Gets the hang-ups the phone sent, in order, as "callId", or "callId:participant" for one sent from a conference
+    /// participant's row.
+    /// </summary>
+    public ConcurrentQueue<string> HangupCommands { get; } = new();
 
     /// <summary>
     /// Gets how many extension calls the phone asked for.
@@ -247,8 +275,31 @@ public sealed class InMemoryTelephonyProvider :
     {
         Interlocked.Increment(ref _hangupRequestCount);
 
+        var participant = call?.Metadata is not null &&
+            call.Metadata.TryGetValue(TelephonyConstants.RequestMetadata.ConferenceParticipant, out var flag) &&
+            string.Equals(flag?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+
+        HangupCommands.Enqueue(participant ? $"{call.CallId}:participant" : call?.CallId);
+
+        // The participant of the call the conference was made from leaves; the call stays up, carrying the agent.
+        if (participant && _conferenceAnchors.ContainsKey(call.CallId) && _calls.TryGetValue(call.CallId, out var anchor))
+        {
+            return Task.FromResult(TelephonyResult.Success(new TelephonyCall
+            {
+                CallId = anchor.CallId,
+                From = anchor.From,
+                To = anchor.To,
+                State = CallState.Connected,
+                Direction = anchor.Direction,
+                ProviderName = anchor.ProviderName,
+                StartedUtc = anchor.StartedUtc,
+                Metadata = new Dictionary<string, object> { [TelephonyConstants.CallMetadata.ParticipantLeft] = true },
+            }));
+        }
+
         if (call?.CallId is not null)
         {
+            _conferenceAnchors.TryRemove(call.CallId, out _);
             _calls.TryRemove(call.CallId, out _);
             _publishedCallIds.TryRemove(call.CallId, out _);
         }
@@ -461,6 +512,7 @@ public sealed class InMemoryTelephonyProvider :
         Volatile.Write(ref _lastMerge, request);
 
         var callIds = request?.GetCallIds() ?? [];
+        var conferenceName = string.IsNullOrWhiteSpace(request?.ConferenceName) ? $"conf-{(callIds.Count > 0 ? callIds[0] : null)}" : request.ConferenceName;
 
         foreach (var callId in callIds)
         {
@@ -468,19 +520,51 @@ public sealed class InMemoryTelephonyProvider :
             {
                 call.State = CallState.Connected;
                 call.IsOnHold = false;
+
+                if (_noConferenceState)
+                {
+                    continue;
+                }
+
                 call.Metadata["isConference"] = true;
                 call.Metadata["participantCount"] = callIds.Count;
 
                 // Named like a real provider's conference, so adding a call to it later can name it back.
-                call.Metadata["conferenceName"] = string.IsNullOrWhiteSpace(request.ConferenceName)
-                    ? $"conf-{callIds[0]}"
-                    : request.ConferenceName;
+                call.Metadata["conferenceName"] = conferenceName;
             }
         }
 
-        return Task.FromResult(callIds.Count >= 2
-            ? TelephonyResult.Success(_calls[callIds[0]])
-            : TelephonyResult.Failed("At least two calls are required."));
+        if (callIds.Count < 2 || !_calls.TryGetValue(callIds[0], out var primary))
+        {
+            return Task.FromResult(TelephonyResult.Failed("At least two calls are required."));
+        }
+
+        if (!_noConferenceState)
+        {
+            return Task.FromResult(TelephonyResult.Success(primary));
+        }
+
+        if (string.IsNullOrWhiteSpace(request.ConferenceName))
+        {
+            _conferenceAnchors[primary.CallId] = 0;
+        }
+
+        return Task.FromResult(TelephonyResult.Success(new TelephonyCall
+        {
+            CallId = primary.CallId,
+            From = primary.From,
+            To = primary.To,
+            State = CallState.Connected,
+            Direction = primary.Direction,
+            ProviderName = primary.ProviderName,
+            StartedUtc = primary.StartedUtc,
+            Metadata = new Dictionary<string, object>
+            {
+                ["isConference"] = true,
+                ["participantCount"] = callIds.Count,
+                ["conferenceName"] = conferenceName,
+            },
+        }));
     }
 
     public Task<TelephonyResult> SendDigitsAsync(SendDigitsRequest request, CancellationToken cancellationToken = default)
