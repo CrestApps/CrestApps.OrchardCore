@@ -38,6 +38,7 @@
     //   options.ownNumbers()   - the tenant's own outbound caller ids.
     //   options.loadDirectory() - a promise of directory entries, or null when there is none.
     //   options.allowNumbers() - whether a typed number is offered (defaults to true).
+    //   options.extensionName(number) - the name of whoever an extension rings, or '' (see soft-phone/extension-names.js).
     //   options.blockedReason() - why this call cannot be transferred at all ('' when it can; see transferBlockedReason).
     //   options.enhanceNumberInput(input) - attaches the keypad's country-flag input to the panel's field; returns the
     //                            intl-tel-input instance, or null.
@@ -63,6 +64,10 @@
 
         function modes() {
             return typeof options.modes === 'function' ? options.modes() : ['blind'];
+        }
+
+        function extensionName(number) {
+            return number && typeof options.extensionName === 'function' ? options.extensionName(number) || '' : '';
         }
 
         function allowNumbers() {
@@ -436,7 +441,7 @@
             // An extension is somewhere inside the phone system, so it is offered whether or not outside numbers are.
             if (query && softPhone.isNumberLike(query) && (extensionMode || allowNumbers())) {
                 var typed = extensionMode
-                    ? format(label(strings, 'transferToExtensionNumber', 'Transfer to extension {0}'), softPhone.readExtension(query) || query)
+                    ? softPhone.transferToExtensionLabel(strings, softPhone.readExtension(query) || query, extensionName(softPhone.readExtension(query)))
                     : format(label(strings, 'transferToNumber', 'Transfer to {0}'), formatNumber(query) || query);
 
                 html += '<button type="button" class="telephony-soft-phone__transfer-option telephony-soft-phone__transfer-option--number" ' +

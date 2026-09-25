@@ -40,6 +40,8 @@ public sealed class InMemoryTelephonyProvider :
     private volatile bool _bridgedDial;
     private volatile bool _bridgeUnavailable;
     private volatile bool _muteIsLocal;
+    private volatile bool _noDirectory;
+    private int _extensionDirectoryRequestCount;
     private DialRequest _lastDial;
     private SendDigitsRequest _lastDigits;
 
@@ -59,7 +61,7 @@ public sealed class InMemoryTelephonyProvider :
                 TelephonyCapabilities.SendDigits |
                 TelephonyCapabilities.ReceiveCalls |
                 TelephonyCapabilities.Voicemail |
-                TelephonyCapabilities.Directory |
+                (_noDirectory ? TelephonyCapabilities.None : TelephonyCapabilities.Directory) |
                 (_attendedTransfer ? TelephonyCapabilities.AttendedTransfer : TelephonyCapabilities.None) |
                 (_bridgedDial ? TelephonyCapabilities.BridgedDial : TelephonyCapabilities.None);
         }
@@ -84,6 +86,42 @@ public sealed class InMemoryTelephonyProvider :
     public void KeepNoMuteState()
     {
         _muteIsLocal = true;
+    }
+
+    /// <summary>
+    /// Has the provider keep no directory of its own, as Telnyx keeps none: the phone offers the phone system's
+    /// extensions instead.
+    /// </summary>
+    public void RemoveDirectory()
+    {
+        _noDirectory = true;
+    }
+
+    /// <summary>
+    /// Gets the phone system's extensions and who each rings, as the server names them.
+    /// </summary>
+    public IReadOnlyList<TelephonyExtensionDirectoryEntry> Extensions { get; } =
+    [
+        new() { Extension = "2", DisplayName = "Jane Doe", UserName = "jdoe" },
+        new() { Extension = "3", DisplayName = "Sam Lee", UserName = "slee" },
+    ];
+
+    /// <summary>
+    /// Records a read of the extensions and returns them.
+    /// </summary>
+    public TelephonyExtensionDirectoryResult GetExtensionDirectory()
+    {
+        Interlocked.Increment(ref _extensionDirectoryRequestCount);
+
+        return new TelephonyExtensionDirectoryResult { Succeeded = true, Entries = Extensions };
+    }
+
+    /// <summary>
+    /// Gets how many times the phone read the extensions.
+    /// </summary>
+    public int GetExtensionDirectoryRequestCount()
+    {
+        return Volatile.Read(ref _extensionDirectoryRequestCount);
     }
 
     /// <summary>

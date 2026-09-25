@@ -150,6 +150,9 @@
             ["transferGroupQueues"] = T["Queues"].Value,
             ["transferGroupExternal"] = T["Outside numbers"].Value,
             ["transferExtension"] = T["Ext {0}"].Value,
+            ["transferGroupExtensions"] = T["Extensions"].Value,
+            ["transferToExtensionNamed"] = T["Transfer to extension {0} · {1}"].Value,
+            ["extensionWithName"] = T["{0} · ext {1}"].Value,
             ["transferWaiting"] = T["{0} waiting"].Value,
             ["presenceAvailable"] = T["Available"].Value,
             ["presenceBusy"] = T["On a call"].Value,
@@ -453,6 +456,7 @@
                         <span data-telephony-dial-mode-label>@T["Dial extension"]</span>
                     </button>
                 </div>
+                <div class="telephony-soft-phone__extension-hint" data-telephony-extension-hint aria-live="polite" hidden></div>
 
                 <div class="telephony-soft-phone__error alert alert-danger" data-telephony-error hidden></div>
 

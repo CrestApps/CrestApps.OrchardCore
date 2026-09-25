@@ -310,6 +310,8 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
                     <div data-telephony-body>
                         <div data-telephony-view="keypad">
                             <input type="tel" data-telephony-number />
+                            <button type="button" data-telephony-dial-mode-toggle aria-pressed="false"><span data-telephony-dial-mode-label>Dial extension</span></button>
+                            <div data-telephony-extension-hint hidden></div>
                             <div data-telephony-error hidden></div>
                             <div class="telephony-soft-phone__active-calls" data-telephony-active-calls hidden>
                                 <div class="telephony-soft-phone__active-calls-list" data-telephony-active-calls-list></div>

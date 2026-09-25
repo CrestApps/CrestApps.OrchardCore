@@ -222,14 +222,14 @@ public sealed partial class TelephonyHub : Hub<ITelephonyClient>
             // Stamp the caller's identity so a provider that delivers audio to a per-user browser endpoint can
             // resolve this agent's live soft-phone registration and bridge the internal call to their browser.
             request.CallerUserId = Context.UserIdentifier;
-            // Carry the caller's display name so the target's ringing prompt can show who is calling instead of
-            // only the internal caller-id number.
+            // Carry the caller's name so the target's ringing prompt shows who is calling instead of the internal
+            // caller-id number: the sign-in name here, replaced by the display name before the dial (preflight).
             request.CallerDisplayName = Context.GetHttpContext()?.User?.Identity?.Name;
             request.Metadata ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             request.Metadata[TelephonyConstants.RequestMetadata.SoftPhoneUserId] = Context.UserIdentifier;
         }
 
-        return ExecuteAsync("DialExtension", () => DescribeExtensionDialRequest(request), (service, token) => service.DialExtensionAsync(request, token));
+        return ExecuteAsync("DialExtension", () => DescribeExtensionDialRequest(request), (service, token) => service.DialExtensionAsync(request, token), preflight: (services, token) => StampCallerDisplayNameAsync(services, request, token));
     }
 
     /// <summary>

@@ -145,6 +145,11 @@ public sealed class TestTelephonyHub : Hub<ITelephonyClient>
         return _provider.GetDirectoryAsync();
     }
 
+    public Task<TelephonyExtensionDirectoryResult> GetExtensionDirectory()
+    {
+        return Task.FromResult(_provider.GetExtensionDirectory());
+    }
+
     public Task<int> GetDialRequestCount()
     {
         return Task.FromResult(_provider.GetDialRequestCount());
@@ -286,6 +291,20 @@ public sealed class TestTelephonyHub : Hub<ITelephonyClient>
                 StartedUtc = new DateTime(2024, 1, 1, 9, 30, 0, DateTimeKind.Utc),
             },
         };
+
+        // An extension call, stored with the username it rang at the time.
+        interactions.Add(new TelephonyInteraction
+        {
+            InteractionId = "int-ext-1",
+            CallId = "call-ext-1",
+            ProviderName = _provider.Name.Name,
+            To = "jdoe",
+            IsExtension = true,
+            ExtensionNumber = "2",
+            Direction = CallDirection.Outbound,
+            Outcome = CallOutcome.Completed,
+            StartedUtc = new DateTime(2024, 1, 1, 9, 0, 0, DateTimeKind.Utc),
+        });
 
         interactions.AddRange(_voicemailInbox.List());
 

@@ -573,6 +573,16 @@
         }
     }
 
+    // Who the extension being typed rings, under the keypad's field.
+    &__extension-hint {
+        padding: 0 0.85rem 0.35rem;
+        color: var(--bs-secondary-color, #6c757d);
+        font-size: 0.8rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
     &--extension {
         .iti__country-container {
             display: none;

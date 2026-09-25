@@ -129,7 +129,10 @@ public sealed class Startup : StartupBase
         // number to an on-platform user. Providers translate the resolved user into their own live endpoint.
         services.AddScoped<ITelephonyExtensionStore, TelephonyExtensionStore>();
         services.AddScoped<ITelephonyExtensionManager, TelephonyExtensionManager>();
-        services.AddScoped<ITelephonyExtensionResolver, TelephonyExtensionResolver>();
+        // Extensions name the person they ring as the site names its users (see TelephonyExtensionNames).
+        services.AddScoped<ITelephonyUserDisplayNames, TelephonyUserDisplayNames>();
+        services.AddScoped<ITelephonyExtensionResolver, DisplayNameTelephonyExtensionResolver>();
+        services.AddScoped<ITelephonyExtensionDirectory, TelephonyExtensionDirectory>();
         services.AddIndexProvider<TelephonyExtensionIndexProvider>();
         services.AddDataMigration<TelephonyExtensionIndexMigrations>();
         services.AddDisplayDriver<TelephonyExtension, TelephonyExtensionDisplayDriver>();

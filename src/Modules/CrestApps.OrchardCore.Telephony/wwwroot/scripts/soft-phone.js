@@ -3475,6 +3475,137 @@
   softPhone.readTransferNumber = readTransferNumber;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*
+ * Who an extension rings, by name.
+ *
+ * An extension on its own -- "2" -- tells the agent nothing about who they are about to call or transfer to. The server
+ * names the person behind each extension as the site names its users (their display name, else their username), and
+ * the phone reads that list once and keeps it, so a name can be shown beside an extension wherever one appears: the
+ * transfer panel's "Transfer to extension 2 · Jane Doe", the keypad while an extension is typed, the call on screen
+ * ("Jane Doe · ext 2") and the Recent list. Nothing is looked up per keystroke.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // How long the list is trusted before the phone reads it again, when something asks for a name.
+  var EXTENSION_DIRECTORY_MAX_AGE_MS = 5 * 60 * 1000;
+  function text(value) {
+    return value == null ? '' : String(value).trim();
+  }
+  function label(strings, key, fallback) {
+    return strings && typeof strings[key] === 'string' && strings[key] ? strings[key] : fallback;
+  }
+  function format(template, values) {
+    return String(template).replace(/\{(\d+)\}/g, function (match, index) {
+      var value = values[Number(index)];
+      return value === undefined ? match : String(value);
+    });
+  }
+
+  // The phone's copy of the server's extensions: { names: { number: name }, loadedAt }.
+  function createExtensionDirectory() {
+    return {
+      names: {},
+      loadedAt: 0
+    };
+  }
+
+  // Replaces the copy with the entries the server sent ({ extension, displayName }).
+  function storeExtensionEntries(directory, entries, now) {
+    if (!directory) {
+      return;
+    }
+    var names = {};
+    (entries || []).forEach(function (entry) {
+      var number = text(entry && entry.extension);
+      var name = text(entry && entry.displayName);
+      if (number && name && name !== number) {
+        names[number] = name;
+      }
+    });
+    directory.names = names;
+    directory.loadedAt = now || Date.now();
+  }
+
+  // Whether the copy should be read again: never read, or older than the maximum age.
+  function shouldReloadExtensions(directory, now) {
+    return !directory || !directory.loadedAt || now - directory.loadedAt >= EXTENSION_DIRECTORY_MAX_AGE_MS;
+  }
+
+  // The name of whoever the extension rings, or '' when the phone does not know it.
+  function extensionName(directory, number) {
+    var key = text(number);
+    return directory && directory.names && key && Object.prototype.hasOwnProperty.call(directory.names, key) ? directory.names[key] : '';
+  }
+
+  // Whether a value a call or history entry carries is a name worth showing: not empty, not the extension itself, not a
+  // SIP address and not a number.
+  function isPersonName(value, number) {
+    var candidate = text(value);
+    return !!candidate && candidate !== text(number) && !/^sips?:/i.test(candidate) && !/^[+\d\s().\-]+$/.test(candidate);
+  }
+
+  // "Jane Doe · ext 2", or the bare extension when nobody is known to be behind it.
+  //   name   - the name the directory gives, or '' (see extensionName).
+  //   number - the extension.
+  //   fallbackName - a name the call itself carries (the provider's display name for it), used when the directory
+  //                  has none.
+  function describeExtension(strings, name, number, fallbackName) {
+    var extension = text(number);
+    var person = text(name) || (isPersonName(fallbackName, extension) ? text(fallbackName) : '');
+    if (!extension) {
+      return person;
+    }
+    return person ? format(label(strings, 'extensionWithName', '{0} · ext {1}'), [person, extension]) : extension;
+  }
+
+  // The transfer panel's offer for a typed extension: "Transfer to extension 2 · Jane Doe", or without the name when
+  // the phone does not know who it rings.
+  function transferToExtensionLabel(strings, number, name) {
+    var person = text(name);
+    return person ? format(label(strings, 'transferToExtensionNamed', 'Transfer to extension {0} · {1}'), [number, person]) : format(label(strings, 'transferToExtensionNumber', 'Transfer to extension {0}'), [number]);
+  }
+
+  // The extension a call was placed to, as the server stamped it on the call.
+  function callExtensionNumber(call) {
+    var metadata = call && call.metadata;
+    return metadata ? text(metadata.extensionNumber) : '';
+  }
+
+  // The transfer panel's rows for the phone system's extensions, when the provider has no directory of its own: each
+  // is sent as an extension, never dialed as a phone number.
+  function extensionDirectoryEntries(directory, strings) {
+    var names = directory && directory.names || {};
+    return Object.keys(names).sort(function (left, right) {
+      return names[left].localeCompare(names[right]) || left.localeCompare(right);
+    }).map(function (number) {
+      return {
+        id: 'extension:' + number,
+        name: names[number],
+        destination: number,
+        detail: format(label(strings, 'transferExtension', 'Ext {0}'), [number]),
+        extension: number,
+        isExtension: true,
+        kind: 'agent',
+        group: label(strings, 'transferGroupExtensions', 'Extensions')
+      };
+    });
+  }
+  softPhone.EXTENSION_DIRECTORY_MAX_AGE_MS = EXTENSION_DIRECTORY_MAX_AGE_MS;
+  softPhone.createExtensionDirectory = createExtensionDirectory;
+  softPhone.storeExtensionEntries = storeExtensionEntries;
+  softPhone.shouldReloadExtensions = shouldReloadExtensions;
+  softPhone.extensionName = extensionName;
+  softPhone.describeExtension = describeExtension;
+  softPhone.transferToExtensionLabel = transferToExtensionLabel;
+  softPhone.callExtensionNumber = callExtensionNumber;
+  softPhone.extensionDirectoryEntries = extensionDirectoryEntries;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
  * Who a call may be transferred to, and how.
  *
  * The transfer button used to open the browser's own "Transfer to number" prompt. Inside the desktop app's narrow
@@ -3542,7 +3673,7 @@
   }
 
   // The fields a transfer service's entries carry beyond a provider entry's, kept as they are.
-  var SERVICE_ENTRY_FIELDS = ['kind', 'targetType', 'targetId', 'group', 'presence', 'status', 'disabled'];
+  var SERVICE_ENTRY_FIELDS = ['kind', 'targetType', 'targetId', 'group', 'presence', 'status', 'disabled', 'isExtension'];
 
   // A directory entry as the panel shows it: { id, name, destination, detail }, plus what a transfer service's entry
   // says about what it is (see soft-phone/transfer-service.js).
@@ -3631,9 +3762,10 @@
       };
     };
     if (selected && selected.destination) {
+      // A picked extension is sent as one, so the provider rings the colleague rather than dialing the digits.
       return {
         destination: String(selected.destination),
-        isExtension: false,
+        isExtension: !!selected.isExtension,
         label: String(selected.name || selected.destination),
         refused: ''
       };
@@ -4111,6 +4243,7 @@
   //   options.ownNumbers()   - the tenant's own outbound caller ids.
   //   options.loadDirectory() - a promise of directory entries, or null when there is none.
   //   options.allowNumbers() - whether a typed number is offered (defaults to true).
+  //   options.extensionName(number) - the name of whoever an extension rings, or '' (see soft-phone/extension-names.js).
   //   options.blockedReason() - why this call cannot be transferred at all ('' when it can; see transferBlockedReason).
   //   options.enhanceNumberInput(input) - attaches the keypad's country-flag input to the panel's field; returns the
   //                            intl-tel-input instance, or null.
@@ -4148,6 +4281,9 @@
     var telInput = null;
     function modes() {
       return typeof options.modes === 'function' ? options.modes() : ['blind'];
+    }
+    function extensionName(number) {
+      return number && typeof options.extensionName === 'function' ? options.extensionName(number) || '' : '';
     }
     function allowNumbers() {
       return typeof options.allowNumbers === 'function' ? options.allowNumbers() !== false : true;
@@ -4401,7 +4537,7 @@
 
       // An extension is somewhere inside the phone system, so it is offered whether or not outside numbers are.
       if (query && softPhone.isNumberLike(query) && (extensionMode || allowNumbers())) {
-        var typed = extensionMode ? format(label(strings, 'transferToExtensionNumber', 'Transfer to extension {0}'), softPhone.readExtension(query) || query) : format(label(strings, 'transferToNumber', 'Transfer to {0}'), formatNumber(query) || query);
+        var typed = extensionMode ? softPhone.transferToExtensionLabel(strings, softPhone.readExtension(query) || query, extensionName(softPhone.readExtension(query))) : format(label(strings, 'transferToNumber', 'Transfer to {0}'), formatNumber(query) || query);
         html += '<button type="button" class="telephony-soft-phone__transfer-option telephony-soft-phone__transfer-option--number" ' + 'data-telephony-transfer-option data-telephony-transfer-number>' + '<i class="fa-solid ' + (extensionMode ? 'fa-hashtag' : 'fa-phone') + '" aria-hidden="true"></i>' + '<span class="telephony-soft-phone__directory-name">' + escapeHtml(typed) + '</span></button>';
       }
       if (state.loading) {
@@ -5541,6 +5677,14 @@
   var buildActiveCallsHtml = softPhoneModules.buildActiveCallsHtml;
   var transferModes = softPhoneModules.transferModes;
   var createTransferPanel = softPhoneModules.createTransferPanel;
+  var createExtensionDirectory = softPhoneModules.createExtensionDirectory;
+  var storeExtensionEntries = softPhoneModules.storeExtensionEntries;
+  var shouldReloadExtensions = softPhoneModules.shouldReloadExtensions;
+  var extensionName = softPhoneModules.extensionName;
+  var describeExtension = softPhoneModules.describeExtension;
+  var callExtensionNumber = softPhoneModules.callExtensionNumber;
+  var extensionDirectoryEntries = softPhoneModules.extensionDirectoryEntries;
+  var readExtension = softPhoneModules.readExtension;
   var createTransferService = softPhoneModules.createTransferService;
   var serviceDirectoryEntries = softPhoneModules.serviceDirectoryEntries;
   var serviceModes = softPhoneModules.serviceModes;
@@ -7571,6 +7715,7 @@
       number: rootElement.querySelector('[data-telephony-number]'),
       dialModeToggle: rootElement.querySelector('[data-telephony-dial-mode-toggle]'),
       dialModeLabel: rootElement.querySelector('[data-telephony-dial-mode-label]'),
+      extensionHint: rootElement.querySelector('[data-telephony-extension-hint]'),
       error: rootElement.querySelector('[data-telephony-error]'),
       micRetry: rootElement.querySelector('[data-telephony-mic-retry]'),
       settingsToggle: rootElement.querySelector('[data-telephony-settings-toggle]'),
@@ -7693,6 +7838,10 @@
           return [];
         });
       },
+      // Who a typed extension rings, for "Transfer to extension 2 · Jane Doe".
+      extensionName: function (number) {
+        return extensionNameFor(number);
+      },
       allowNumbers: function () {
         return !serviceTransferCall() || !!(serviceDirectory && serviceDirectory.canTransferExternally && serviceDirectory.allowExternalNumbers);
       },
@@ -7778,6 +7927,13 @@
     // Calls the agent muted and has not unmuted, by call id. With browser audio the mute happens here and the
     // server keeps reporting the call unmuted, so this, not the server, says whether the agent is muted.
     var agentMutes = {};
+    // The phone system's extensions and who each rings, read from the server once and kept, and the extension each
+    // call on screen was placed to (see soft-phone/extension-names.js).
+    var extensionDirectory = createExtensionDirectory();
+    var extensionDirectoryLoading = null;
+    var extensionCallNumbers = {};
+    // The Recent list as last shown, so it can be named again once the extensions arrive.
+    var lastHistoryItems = null;
     // The calls as they stood before an active-call lookup replaced them, while that lookup is being applied.
     var callsBeforeLookup = null;
     // Audible inbound-call alert, started/stopped from renderIncoming so an away agent hears a ringing call.
@@ -8067,6 +8223,11 @@
         dom.number.setAttribute('aria-label', extensionMode ? strings.extensionLabel || 'Extension' : strings.numberLabel || 'Phone number');
       }
       clearNumberInput();
+
+      // The names shown while an extension is typed.
+      if (extensionMode) {
+        loadExtensionDirectory(false);
+      }
       if (dom.number) {
         dom.number.focus();
       }
@@ -10311,6 +10472,73 @@
     function getPeerNumber(call) {
       return resolvePeerNumber(call, ownOutboundNumbers());
     }
+
+    // Reads the phone system's extensions and who each rings, once, and again only when the copy has aged (see
+    // soft-phone/extension-names.js); `force` reads it now. Resolves to the copy, as it stands if the read fails.
+    function loadExtensionDirectory(force) {
+      if (!connection || connection.state !== 'Connected') {
+        return Promise.resolve(extensionDirectory);
+      }
+      if (extensionDirectoryLoading) {
+        return extensionDirectoryLoading;
+      }
+      if (!force && !shouldReloadExtensions(extensionDirectory, Date.now())) {
+        return Promise.resolve(extensionDirectory);
+      }
+      extensionDirectoryLoading = connection.invoke('GetExtensionDirectory').then(function (result) {
+        if (result && result.succeeded !== false) {
+          storeExtensionEntries(extensionDirectory, result.entries || [], Date.now());
+          render();
+          if (activeTab === 'history' && lastHistoryItems) {
+            renderHistory(lastHistoryItems);
+          }
+        }
+        return extensionDirectory;
+      }).catch(function () {
+        return extensionDirectory;
+      }).finally(function () {
+        extensionDirectoryLoading = null;
+      });
+      return extensionDirectoryLoading;
+    }
+    function extensionNameFor(number) {
+      return extensionName(extensionDirectory, number);
+    }
+
+    // How a call is named on screen: "Jane Doe · ext 2" for a call to an extension, else the other party's number.
+    function callDisplayLabel(call) {
+      var extension = callExtensionNumber(call);
+      if (extension) {
+        return describeExtension(strings, extensionNameFor(extension), extension, getPeerNumber(call));
+      }
+      return formatPhoneNumber(getPeerNumber(call));
+    }
+
+    // A later report of a call may not carry the extension it was placed to; the first one that did is remembered.
+    function rememberExtensionCall(call) {
+      var extension = callExtensionNumber(call);
+      if (extension) {
+        extensionCallNumbers[call.callId] = extension;
+      } else if (extensionCallNumbers[call.callId]) {
+        call.metadata = call.metadata || {};
+        call.metadata.extensionNumber = extensionCallNumbers[call.callId];
+      }
+    }
+
+    // While an extension is typed on the keypad, the name of whoever it rings, under the field.
+    function renderExtensionHint() {
+      if (!dom.extensionHint) {
+        return;
+      }
+
+      // Only while the agent is entering an extension: not over a call on screen (a held one excepted, since the
+      // agent may be entering an extension to add).
+      var callState = currentCall ? normalizeState(currentCall.state) : 'Idle';
+      var entering = !numberIsCallDisplay && (!isActive(callState) || callState === 'OnHold');
+      var name = extensionMode && entering && dom.number ? extensionNameFor(readExtension(dom.number.value)) : '';
+      dom.extensionHint.textContent = name;
+      dom.extensionHint.hidden = !name;
+    }
     function metadataBoolean(call, key) {
       if (!call || !call.metadata || !Object.prototype.hasOwnProperty.call(call.metadata, key)) {
         return false;
@@ -10344,6 +10572,7 @@
       delete callConnectedAt[callId];
       rememberAgentHold(agentHolds, callId, false);
       rememberAgentMute(agentMutes, callId, false);
+      delete extensionCallNumbers[callId];
       if (currentCall && currentCall.callId === callId) {
         currentCall = getActiveCalls()[0] || null;
       }
@@ -10404,6 +10633,7 @@
       }
       applyAgentHold(call);
       applyAgentMute(call);
+      rememberExtensionCall(call);
       var stateName = normalizeState(call.state);
       if (!isActive(stateName)) {
         removeActiveCall(call.callId);
@@ -10688,7 +10918,7 @@
           var callId = call.callId || '';
           return {
             callId: callId,
-            number: formatPhoneNumber(getPeerNumber(call)) || callId,
+            number: callDisplayLabel(call) || callId,
             state: statusTextForCall(call),
             current: !!(currentCall && currentCall.callId === callId),
             selectable: canMergeCalls && canConferenceCall(call),
@@ -10706,7 +10936,7 @@
           allSelected: plan.allSelected,
           blocked: canMergeCalls ? plan.blocked : '',
           numbers: plan.calls.map(function (call) {
-            return formatPhoneNumber(getPeerNumber(call)) || call.callId;
+            return callDisplayLabel(call) || call.callId;
           })
         }
       }, strings, escapeHtml);
@@ -10766,6 +10996,7 @@
     function render() {
       renderIncoming();
       ensureActiveTab();
+      renderExtensionHint();
 
       // The mic-permission Retry affordance (item 9) is shown whenever a permission/device issue is
       // outstanding, independent of the connection state below.
@@ -10927,13 +11158,19 @@
         // would fall back into the pendingDial branch and re-show the old number over a fresh entry.
         clearPendingDial();
         var peerNumber = getPeerNumber(currentCall);
+        // A call to an extension is shown as the person it rings, never run through the number formatter.
+        var extensionLabel = callExtensionNumber(currentCall) ? callDisplayLabel(currentCall) : '';
 
         // On hold the field keeps a number the agent entered to add a call (see soft-phone/dial-target.js).
-        if (peerNumber && shouldShowCallNumber({
+        if ((peerNumber || extensionLabel) && shouldShowCallNumber({
           stateName: stateName,
           agentEntered: numberEnteredByAgent
         })) {
-          setNumberDisplay(peerNumber);
+          if (extensionLabel) {
+            dom.number.value = extensionLabel;
+          } else {
+            setNumberDisplay(peerNumber);
+          }
           numberIsCallDisplay = true;
           numberEnteredByAgent = false;
         }
@@ -11382,14 +11619,21 @@
 
       // The soft phone picks the target in its own panel, never the browser's prompt (see soft-phone/transfer-panel.js).
       transferPanel.open({
-        callLabel: formatPhoneNumber(getPeerNumber(currentCall))
+        callLabel: callDisplayLabel(currentCall)
       });
     }
 
     // The provider's directory entries for the transfer panel, or null when the provider has no directory.
+    // A provider without a directory of its own is offered the phone system's extensions, each by the name of the
+    // person it rings; with none of those either, there is no directory.
     function loadTransferDirectory() {
-      if (!has(CAPABILITIES.Directory) || !connection) {
+      if (!connection) {
         return null;
+      }
+      if (!has(CAPABILITIES.Directory)) {
+        return loadExtensionDirectory(false).then(function (directory) {
+          return extensionDirectoryEntries(directory, strings);
+        });
       }
       return connection.invoke('GetDirectory').then(function (result) {
         if (!result || result.succeeded === false) {
@@ -12592,6 +12836,7 @@
       if (!dom.historyList) {
         return;
       }
+      lastHistoryItems = items;
       if (!items.length) {
         dom.historyList.innerHTML = '<div class="telephony-soft-phone__history-empty">' + escapeHtml(strings.noInteractions || 'No recent calls.') + '</div>';
         return;
@@ -12622,7 +12867,9 @@
         }
         // Extension targets are display names, not numbers, so they are shown verbatim; phone numbers are
         // run through the display formatter.
-        var displayNumber = escapeHtml(isExtension ? number || dialTarget || label : formatPhoneNumber(number) || number || label);
+        // An extension call is named after the person the extension rings now ("Jane Doe · ext 2"), else the
+        // name the entry was stored with.
+        var displayNumber = escapeHtml(isExtension ? describeExtension(strings, extensionNameFor(dialTarget), dialTarget, number) || number || label : formatPhoneNumber(number) || number || label);
         var cls = 'telephony-soft-phone__history-item' + (missed ? ' telephony-soft-phone__history-item--missed' : '') + (inProgress ? ' telephony-soft-phone__history-item--active' : '');
 
         // The row itself no longer dials; a dedicated Call button on the right places the call.
@@ -12818,6 +13065,8 @@
       // inbound calls while idle -- not only while placing a call.
       registerBrowserAudioForInbound();
       return Promise.all([refreshCapabilities(), refreshConnectionStatus()]).then(function () {
+        // Who each extension rings, for the names shown beside extensions; never holds the call list up.
+        loadExtensionDirectory(true);
         return restoreActiveCall();
       }).then(function () {
         // Whatever happened while the hub was away -- a call the SDK lost, a call that ended with no hub

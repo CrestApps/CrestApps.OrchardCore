@@ -173,6 +173,7 @@ namespace CrestApps.OrchardCore.Telephony.Hubs
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyConnectionStatus> GetConnectionStatus() { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyClientCredentials> GetCredentials() { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyDirectoryResult> GetDirectory() { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyExtensionDirectoryResult> GetExtensionDirectory() { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction>> GetInteractions(int count) { }
         public System.Threading.Tasks.Task<int> GetUnreadVoicemailCount() { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> Hangup(CrestApps.OrchardCore.Telephony.Models.CallReference call) { }
@@ -285,6 +286,20 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public System.TimeSpan NewInteractionGracePeriod { get; set; }
         public System.TimeSpan TokenRefreshLockExpiration { get; set; }
         public System.TimeSpan TokenRefreshLockTimeout { get; set; }
+    }
+    public sealed class TelephonyExtensionDirectoryEntry
+    {
+        public TelephonyExtensionDirectoryEntry() { }
+        public string DisplayName { get; set; }
+        public string Extension { get; set; }
+        public string UserName { get; set; }
+    }
+    public sealed class TelephonyExtensionDirectoryResult
+    {
+        public TelephonyExtensionDirectoryResult() { }
+        public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Telephony.Models.TelephonyExtensionDirectoryEntry> Entries { get; set; }
+        public string Error { get; set; }
+        public bool Succeeded { get; set; }
     }
     public sealed class TelephonyUserConnections
     {

@@ -72,7 +72,7 @@
     }
 
     // The fields a transfer service's entries carry beyond a provider entry's, kept as they are.
-    var SERVICE_ENTRY_FIELDS = ['kind', 'targetType', 'targetId', 'group', 'presence', 'status', 'disabled'];
+    var SERVICE_ENTRY_FIELDS = ['kind', 'targetType', 'targetId', 'group', 'presence', 'status', 'disabled', 'isExtension'];
 
     // A directory entry as the panel shows it: { id, name, destination, detail }, plus what a transfer service's entry
     // says about what it is (see soft-phone/transfer-service.js).
@@ -173,7 +173,8 @@
         };
 
         if (selected && selected.destination) {
-            return { destination: String(selected.destination), isExtension: false, label: String(selected.name || selected.destination), refused: '' };
+            // A picked extension is sent as one, so the provider rings the colleague rather than dialing the digits.
+            return { destination: String(selected.destination), isExtension: !!selected.isExtension, label: String(selected.name || selected.destination), refused: '' };
         }
 
         var text = options.query == null ? '' : String(options.query).trim();
