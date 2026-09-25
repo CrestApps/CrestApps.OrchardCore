@@ -175,6 +175,9 @@
         return { action: 'hold', reservationId: reservationId };
     }
 
+    // Shared with the other rules that read what an incoming leg says about itself (see soft-phone/bridged-transfer.js).
+    softPhone.readProviderClientState = readClientState;
+    softPhone.readProviderHeader = readHeader;
     softPhone.readOfferLegTag = readOfferLegTag;
     softPhone.classifyOfferLeg = classifyOfferLeg;
     softPhone.rememberAcceptedOffer = rememberAcceptedOffer;

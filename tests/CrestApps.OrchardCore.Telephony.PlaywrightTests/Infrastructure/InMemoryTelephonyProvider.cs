@@ -15,6 +15,7 @@ public sealed class InMemoryTelephonyProvider :
     ITelephonyHoldProvider,
     ITelephonyMuteProvider,
     ITelephonyTransferProvider,
+    ITelephonyConsultTransferProvider,
     ITelephonyConferenceProvider,
     ITelephonyDtmfProvider,
     ITelephonyVoicemailProvider,
@@ -44,6 +45,8 @@ public sealed class InMemoryTelephonyProvider :
     private int _extensionDirectoryRequestCount;
     private DialRequest _lastDial;
     private SendDigitsRequest _lastDigits;
+    private volatile bool _consultTransfer;
+    private readonly ConcurrentDictionary<string, (string Status, bool CallEnded)> _consultStatuses = new();
 
     public LocalizedString Name => new("InMemory", "InMemory");
 
@@ -228,6 +231,8 @@ public sealed class InMemoryTelephonyProvider :
 
     public Task<TelephonyResult> HoldAsync(CallReference call, CancellationToken cancellationToken = default)
     {
+        HoldCommands.Enqueue($"Hold:{call?.CallId}");
+
         return Update(call?.CallId, c =>
         {
             c.State = CallState.OnHold;
@@ -237,6 +242,8 @@ public sealed class InMemoryTelephonyProvider :
 
     public Task<TelephonyResult> ResumeAsync(CallReference call, CancellationToken cancellationToken = default)
     {
+        HoldCommands.Enqueue($"Resume:{call?.CallId}");
+
         return Update(call?.CallId, c =>
         {
             c.State = CallState.Connected;
@@ -284,8 +291,135 @@ public sealed class InMemoryTelephonyProvider :
         Interlocked.Increment(ref _transferRequestCount);
         Volatile.Write(ref _lastTransfer, request);
 
+        if (_consultTransfer && request?.CallId is not null && _calls.ContainsKey(request.CallId))
+        {
+            return Task.FromResult(StartConsultTransfer(request));
+        }
+
         return Update(request?.CallId, c => c.State = CallState.Connected);
     }
+
+    /// <summary>
+    /// Has the provider carry transfers out the way Telnyx does for a call it connected: a blind transfer rings its
+    /// destination and leaves the call held here until it answers; a warm one places a consult call back to the phone.
+    /// Either is followed through GetConsult, and finished through CompleteConsult or CancelConsult.
+    /// </summary>
+    public void EnableConsultTransfer()
+    {
+        _consultTransfer = true;
+    }
+
+    /// <summary>
+    /// Sets where a transfer stands, as the provider would report it once its destination answers or leaves.
+    /// </summary>
+    public void SetConsultStatus(string consultId, string status, bool callEnded = false)
+    {
+        _consultStatuses[consultId] = (status, callEnded);
+    }
+
+    /// <summary>
+    /// Gets the consult commands the phone sent, in order, as "Method:callId:consultCallId".
+    /// </summary>
+    public ConcurrentQueue<string> ConsultCommands { get; } = new();
+
+    /// <summary>
+    /// Gets the hold and resume commands the phone sent, in order, as "Hold:callId" or "Resume:callId".
+    /// </summary>
+    public ConcurrentQueue<string> HoldCommands { get; } = new();
+
+    /// <summary>
+    /// Gets the leg the last transfer rang: a blind transfer's leg, or a warm transfer's consult call.
+    /// </summary>
+    public string LastConsultId { get; private set; }
+
+    public Task<TelephonyResult> GetConsultAsync(ConsultTransferRequest request, CancellationToken cancellationToken = default)
+    {
+        ConsultCommands.Enqueue($"GetConsult:{request?.CallId}:{request?.ConsultCallId}");
+
+        return Task.FromResult(ConsultResult(request, null));
+    }
+
+    public Task<TelephonyResult> CompleteConsultAsync(ConsultTransferRequest request, CancellationToken cancellationToken = default)
+    {
+        ConsultCommands.Enqueue($"CompleteConsult:{request?.CallId}:{request?.ConsultCallId}");
+
+        return Task.FromResult(ConsultResult(request, TelephonyConstants.ConsultStatuses.Completed));
+    }
+
+    public Task<TelephonyResult> CancelConsultAsync(ConsultTransferRequest request, CancellationToken cancellationToken = default)
+    {
+        ConsultCommands.Enqueue($"CancelConsult:{request?.CallId}:{request?.ConsultCallId}");
+
+        if (request?.ConsultCallId is not null)
+        {
+            _calls.TryRemove(request.ConsultCallId, out _);
+        }
+
+        return Task.FromResult(ConsultResult(request, TelephonyConstants.ConsultStatuses.Cancelled));
+    }
+
+    private TelephonyResult StartConsultTransfer(TransferRequest request)
+    {
+        var call = _calls[request.CallId];
+
+        if (request.Mode != TransferMode.Warm)
+        {
+            var legId = $"xfer-{Interlocked.Increment(ref _counter)}";
+
+            _consultStatuses[legId] = (TelephonyConstants.ConsultStatuses.Ringing, false);
+            LastConsultId = legId;
+            call.State = CallState.OnHold;
+            call.IsOnHold = true;
+
+            return TelephonyResult.Success(ConsultCall(call.CallId, legId, CallState.OnHold, TelephonyConstants.ConsultStatuses.Ringing, false));
+        }
+
+        var consult = ConsultCall($"consult-{Interlocked.Increment(ref _counter)}", null, CallState.Connecting, TelephonyConstants.ConsultStatuses.Ringing, false);
+
+        consult.Metadata[TelephonyConstants.CallMetadata.ConsultId] = consult.CallId;
+        consult.Metadata[TelephonyConstants.CallMetadata.ConsultOf] = call.CallId;
+        consult.Direction = CallDirection.Outbound;
+        consult.To = request.To;
+        consult.StartedUtc = DateTimeOffset.UtcNow;
+        _consultStatuses[consult.CallId] = (TelephonyConstants.ConsultStatuses.Ringing, false);
+        LastConsultId = consult.CallId;
+        _calls[consult.CallId] = consult;
+        _latestCall = consult;
+
+        return TelephonyResult.Success(consult);
+    }
+
+    private TelephonyResult ConsultResult(ConsultTransferRequest request, string settled)
+    {
+        if (request?.ConsultCallId is null || !_consultStatuses.TryGetValue(request.ConsultCallId, out var current))
+        {
+            return TelephonyResult.Failed("The transfer could not be found.");
+        }
+
+        if (settled is not null)
+        {
+            current = (settled, false);
+            _consultStatuses[request.ConsultCallId] = current;
+        }
+
+        return TelephonyResult.Success(ConsultCall(request.CallId, request.ConsultCallId, CallState.Connected, current.Status, current.CallEnded));
+    }
+
+    private static TelephonyCall ConsultCall(string callId, string consultId, CallState state, string status, bool callEnded)
+        => new()
+        {
+            CallId = callId,
+            State = state,
+            IsOnHold = state == CallState.OnHold,
+            ProviderName = "InMemory",
+            Metadata = new Dictionary<string, object>
+            {
+                [TelephonyConstants.CallMetadata.ConsultId] = consultId,
+                [TelephonyConstants.CallMetadata.ConsultStatus] = status,
+                [TelephonyConstants.CallMetadata.ConsultLive] = status is TelephonyConstants.ConsultStatuses.Ringing or TelephonyConstants.ConsultStatuses.Connected,
+                [TelephonyConstants.CallMetadata.ConsultCallEnded] = callEnded,
+            },
+        };
 
     public Task<TelephonyResult> MergeAsync(MergeRequest request, CancellationToken cancellationToken = default)
     {

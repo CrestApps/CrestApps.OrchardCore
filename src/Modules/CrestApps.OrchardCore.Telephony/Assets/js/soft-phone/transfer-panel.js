@@ -559,14 +559,21 @@
             setError('');
 
             var targetName = state.selected ? state.selected.name : (resolved.target && resolved.target.label) || '';
+            var submitted = state;
             var pending = typeof options.transfer === 'function'
                 ? options.transfer(resolved.target, softPhone.transferModeValue(state.mode), state.mode)
                 : null;
+
+            // While the transfer is being asked for, the call on screen may change under the panel -- a warm transfer's
+            // consult is a new call, still connecting -- and the panel stays open for its answer.
+            submitted.submitting = true;
 
             // A refused hub transfer is reported by the phone's own error line, as every other command is; a refused
             // service transfer carries its reason, which is shown here. Either way the panel stays open so the agent
             // can pick someone else.
             Promise.resolve(pending).then(function (result) {
+                submitted.submitting = false;
+
                 if (!state.open) {
                     return;
                 }
@@ -582,7 +589,15 @@
                 } else if (result && result.error) {
                     setError(result.error);
                 }
-            }).catch(function () { });
+            }).catch(function () {
+                submitted.submitting = false;
+            });
+        }
+
+        // Whether the panel is waiting on a transfer it asked for, or following one that is still going on. The phone
+        // keeps it open then, whatever the call on screen is doing.
+        function isBusy() {
+            return !!(state.open && (state.submitting || (state.consult && state.consult.view && state.consult.view.live)));
         }
 
         function stopPolling() {
@@ -666,13 +681,14 @@
             var message = view.message;
 
             if (!view.live && !byAgent && previous) {
-                message = softPhone.consultEndedMessage(previous, consult, state.consult.name, strings, {}) || message;
+                message = softPhone.consultEndedMessage(previous, consult, state.consult.name, strings, { callEnded: !!(consult && consult.callEnded) }) || message;
             }
 
             parts.consultStatus.textContent = message;
             parts.consultComplete.disabled = !view.canComplete;
             parts.consultCancel.disabled = !view.canCancel;
-            parts.consultComplete.hidden = !view.live;
+            // A blind transfer completes itself when the destination answers; there is nothing for the agent to complete.
+            parts.consultComplete.hidden = !view.live || !!(consult && consult.blind);
             parts.consultCancel.hidden = !view.live;
             parts.consultDone.hidden = view.live;
 
@@ -717,6 +733,7 @@
             open: open,
             close: close,
             isOpen: isOpen,
+            isBusy: isBusy,
             submit: submit
         };
     }

@@ -2130,6 +2130,10 @@
       reservationId: reservationId
     };
   }
+
+  // Shared with the other rules that read what an incoming leg says about itself (see soft-phone/bridged-transfer.js).
+  softPhone.readProviderClientState = readClientState;
+  softPhone.readProviderHeader = readHeader;
   softPhone.readOfferLegTag = readOfferLegTag;
   softPhone.classifyOfferLeg = classifyOfferLeg;
   softPhone.rememberAcceptedOffer = rememberAcceptedOffer;
@@ -4203,6 +4207,151 @@
   softPhone.consultEndedMessage = consultEndedMessage;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*
+ * Transferring a call the provider connected on the server (a number dialed from the keypad on Telnyx), and taking one
+ * over from a colleague.
+ *
+ * A blind transfer of such a call used to hand the other party straight to the colleague. Their phone got a leg nobody
+ * had recorded, so it treated the call as one it had dialed itself and could not transfer it again; a warm transfer was
+ * refused outright. Now the provider rings the destination on a leg of its own and the call stays here, held, until
+ * that leg answers -- the transfer panel follows it as a consult, blind or warm -- and a colleague's phone recognizes
+ * the leg it is rung on, rings it with Answer and Decline, and follows it as a call the platform tracks.
+ *
+ * These are the pure decisions; soft-phone.js wires them to the hub and the media adapter.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // Must match CrestApps.OrchardCore.Telnyx.Services.TelnyxOutboundBridgeState.TransferLegIntent and
+  // TelnyxTransferCommands.TransferLegSipHeader.
+  var TRANSFER_LEG_INTENT = 'ob-xfer';
+  var TRANSFER_LEG_HEADER = 'x-transfer-leg';
+
+  // Must match CrestApps.OrchardCore.Telephony.TelephonyConstants.CallMetadata and ConsultStatuses.
+  var LIVE_STATUSES = ['ringing', 'connected'];
+  function text(value) {
+    return value == null ? '' : String(value);
+  }
+  function isTrue(value) {
+    return value === true || value === 'true' || value === 'True';
+  }
+
+  // What an incoming provider leg says about a call a colleague is handing over: { legId, partyNumber, transferredBy },
+  // or null for any other leg. The leg names itself in its client state and in a SIP header, for an SDK that exposes
+  // only one of them.
+  function readTransferLegTag(options) {
+    options = options || {};
+    var legId = text(options.telnyxCallControlId || options.callControlId);
+    var readState = softPhone.readProviderClientState;
+    var readHeader = softPhone.readProviderHeader;
+    var state = typeof readState === 'function' ? readState(options.clientState || options.client_state) : null;
+    var header = typeof readHeader === 'function' ? readHeader(options.customHeaders || options.custom_headers, TRANSFER_LEG_HEADER) : '';
+    if (!legId) {
+      return null;
+    }
+    if (state && state.i === TRANSFER_LEG_INTENT) {
+      return {
+        legId: legId,
+        partyNumber: text(state.m),
+        transferredBy: text(state.n)
+      };
+    }
+    if (header) {
+      return {
+        legId: legId,
+        partyNumber: header === '1' ? '' : header,
+        transferredBy: ''
+      };
+    }
+    return null;
+  }
+
+  // The Transfer request for a call the provider carries out itself. The phone names the credential it is registered on,
+  // so a warm transfer's consult rings this phone -- the server checks that it is the caller's.
+  function providerTransferRequest(callId, target, mode, credentialId) {
+    var request = {
+      callId: callId,
+      to: target && target.destination,
+      mode: mode,
+      isExtension: !!(target && target.isExtension)
+    };
+    if (credentialId) {
+      request.metadata = {
+        softPhoneCredentialId: credentialId
+      };
+    }
+    return request;
+  }
+
+  // The transfer a command's call reports, as the transfer panel follows it: { id, callId, status, live, callEnded,
+  // blind }, or null when the call carries none (the provider handed the call over at once, the old way).
+  //   call - the call the command returned: the call being transferred, or (warm) the consult's own call.
+  function consultFromCall(call) {
+    var metadata = call && call.metadata;
+    if (!metadata || !metadata.consultId) {
+      return null;
+    }
+    var status = text(metadata.consultStatus) || 'cancelled';
+    var consultOf = text(metadata.consultOf);
+    return {
+      id: text(metadata.consultId),
+      callId: consultOf || text(call.callId),
+      status: status,
+      live: metadata.consultLive === undefined ? LIVE_STATUSES.indexOf(status) >= 0 : isTrue(metadata.consultLive),
+      callEnded: isTrue(metadata.consultCallEnded),
+      blind: !consultOf && text(metadata.consultId) !== text(call.callId)
+    };
+  }
+
+  // The follow-up request for a consult the panel is showing.
+  function consultRequest(consult) {
+    return {
+      callId: consult ? consult.callId : '',
+      consultCallId: consult ? consult.id : ''
+    };
+  }
+
+  // A GetConsult/CompleteConsult/CancelConsult result as the transfer panel reads one. A consult followed from a blind
+  // transfer stays blind.
+  function consultCommandResult(result, previous) {
+    if (!result || result.succeeded === false) {
+      return {
+        succeeded: false,
+        error: result && result.error ? result.error : ''
+      };
+    }
+    var consult = consultFromCall(result.call);
+    if (consult && previous) {
+      consult.blind = !!previous.blind;
+      consult.callId = previous.callId || consult.callId;
+    }
+    return {
+      succeeded: true,
+      consult: consult
+    };
+  }
+
+  // Whether the call is held before a provider transfer: the party waits on this call's own hold tone while the
+  // destination is rung (and, warm, while the agent talks to them on the consult). Only a provider that connects calls
+  // on the server does this, and only for a call it tracks.
+  function shouldHoldBeforeTransfer(options) {
+    options = options || {};
+    var call = options.call;
+    return !!(options.bridgedDial && call && call.callId && !call.browserOriginated && !call.isOnHold && !options.serviceCall);
+  }
+  softPhone.TRANSFER_LEG_INTENT = TRANSFER_LEG_INTENT;
+  softPhone.readTransferLegTag = readTransferLegTag;
+  softPhone.providerTransferRequest = providerTransferRequest;
+  softPhone.consultFromCall = consultFromCall;
+  softPhone.consultRequest = consultRequest;
+  softPhone.consultCommandResult = consultCommandResult;
+  softPhone.shouldHoldBeforeTransfer = shouldHoldBeforeTransfer;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
  * The soft phone's own transfer panel.
  *
  * Transferring a call used to open the browser's "Transfer to number" prompt whenever the provider had no directory.
@@ -4625,12 +4774,18 @@
       }
       setError('');
       var targetName = state.selected ? state.selected.name : resolved.target && resolved.target.label || '';
+      var submitted = state;
       var pending = typeof options.transfer === 'function' ? options.transfer(resolved.target, softPhone.transferModeValue(state.mode), state.mode) : null;
+
+      // While the transfer is being asked for, the call on screen may change under the panel -- a warm transfer's
+      // consult is a new call, still connecting -- and the panel stays open for its answer.
+      submitted.submitting = true;
 
       // A refused hub transfer is reported by the phone's own error line, as every other command is; a refused
       // service transfer carries its reason, which is shown here. Either way the panel stays open so the agent
       // can pick someone else.
       Promise.resolve(pending).then(function (result) {
+        submitted.submitting = false;
         if (!state.open) {
           return;
         }
@@ -4643,7 +4798,15 @@
         } else if (result && result.error) {
           setError(result.error);
         }
-      }).catch(function () {});
+      }).catch(function () {
+        submitted.submitting = false;
+      });
+    }
+
+    // Whether the panel is waiting on a transfer it asked for, or following one that is still going on. The phone
+    // keeps it open then, whatever the call on screen is doing.
+    function isBusy() {
+      return !!(state.open && (state.submitting || state.consult && state.consult.view && state.consult.view.live));
     }
     function stopPolling() {
       if (pollTimer) {
@@ -4709,12 +4872,15 @@
       state.consult.view = view;
       var message = view.message;
       if (!view.live && !byAgent && previous) {
-        message = softPhone.consultEndedMessage(previous, consult, state.consult.name, strings, {}) || message;
+        message = softPhone.consultEndedMessage(previous, consult, state.consult.name, strings, {
+          callEnded: !!(consult && consult.callEnded)
+        }) || message;
       }
       parts.consultStatus.textContent = message;
       parts.consultComplete.disabled = !view.canComplete;
       parts.consultCancel.disabled = !view.canCancel;
-      parts.consultComplete.hidden = !view.live;
+      // A blind transfer completes itself when the destination answers; there is nothing for the agent to complete.
+      parts.consultComplete.hidden = !view.live || !!(consult && consult.blind);
       parts.consultCancel.hidden = !view.live;
       parts.consultDone.hidden = view.live;
       if (view.live) {
@@ -4752,6 +4918,7 @@
       open: open,
       close: close,
       isOpen: isOpen,
+      isBusy: isBusy,
       submit: submit
     };
   }
@@ -5690,6 +5857,12 @@
   var serviceModes = softPhoneModules.serviceModes;
   var resolveServiceTarget = softPhoneModules.resolveServiceTarget;
   var transferBlockedReason = softPhoneModules.transferBlockedReason;
+  var readTransferLegTag = softPhoneModules.readTransferLegTag;
+  var providerTransferRequest = softPhoneModules.providerTransferRequest;
+  var consultFromCall = softPhoneModules.consultFromCall;
+  var consultRequest = softPhoneModules.consultRequest;
+  var consultCommandResult = softPhoneModules.consultCommandResult;
+  var shouldHoldBeforeTransfer = softPhoneModules.shouldHoldBeforeTransfer;
   var enhancePhoneInput = softPhoneModules.enhancePhoneInput;
   var readPhoneInput = softPhoneModules.readPhoneInput;
   var showInAppConfirm = softPhoneModules.showInAppConfirm;
@@ -7167,7 +7340,11 @@
         // leg it just accepted are inbound calls the agent is expecting, so they are answered
         // automatically. An unsolicited inbound leg -- a colleague dialing this agent's extension -- must
         // ring with an Answer/Decline prompt instead of connecting silently.
-        var autoAnswer = typeof context.shouldAutoAnswerInbound !== 'function' || context.shouldAutoAnswerInbound();
+        // A colleague handing this agent a call rings a leg the platform placed and tracks: it rings like any
+        // incoming call, and once answered it is a platform call -- held, transferred and merged through the
+        // server, whose reports drive its leg (see soft-phone/bridged-transfer.js).
+        var transferLeg = typeof readTransferLegTag === 'function' ? readTransferLegTag(call.options || {}) : null;
+        var autoAnswer = !transferLeg && (typeof context.shouldAutoAnswerInbound !== 'function' || context.shouldAutoAnswerInbound());
         if (autoAnswer) {
           currentCall = call;
           notePlatformLeg(legs, call);
@@ -7178,14 +7355,21 @@
         var caller = extractCaller(call);
         var controller = {
           callerName: caller.name,
-          callerNumber: caller.number,
+          callerNumber: transferLeg && transferLeg.partyNumber || caller.number,
+          platformCallId: transferLeg ? transferLeg.legId : '',
+          transferredBy: transferLeg ? transferLeg.transferredBy : '',
           // Answer the ringing leg and, from here on, drive its state through onState just like an
           // originated call (so the core sees Connected/Disconnected and can clean up).
           answer: function (onState) {
             currentCall = call;
+
             // A colleague's direct call: the soft phone drives it through its own session, not the
-            // server's reports.
-            noteBrowserLeg(legs, call);
+            // server's reports. A call handed over is the platform's, and its reports drive the leg.
+            if (transferLeg) {
+              notePlatformLeg(legs, call);
+            } else {
+              noteBrowserLeg(legs, call);
+            }
             inboundRingingCall = null;
             trackCall(callNotifiers, call.id, onState);
             answerInboundCall(call);
@@ -7862,12 +8046,7 @@
         // The provider is told an extension is one, so it rings the colleague's phone rather than dialing
         // the digits as a phone number.
         if (!call) {
-          return invoke('Transfer', {
-            callId: currentCallId(),
-            to: target.destination,
-            mode: mode,
-            isExtension: !!target.isExtension
-          });
+          return transferThroughProvider(target, mode, modeName);
         }
         if (modeName !== 'warm') {
           return transferService.transfer(call, target);
@@ -7881,15 +8060,25 @@
       },
       getConsult: function (consult) {
         var call = serviceTransferCall();
-        return call ? transferService.getConsult(call, consult.id) : Promise.resolve(null);
+        return call ? transferService.getConsult(call, consult.id) : providerConsultCommand('GetConsult', consult);
       },
       completeConsult: function (consult) {
         var call = serviceTransferCall();
-        return call ? transferService.completeConsult(call, consult.id) : Promise.resolve(null);
+        return call ? transferService.completeConsult(call, consult.id) : providerConsultCommand('CompleteConsult', consult);
       },
       cancelConsult: function (consult) {
         var call = serviceTransferCall();
-        return call ? transferService.cancelConsult(call, consult.id) : Promise.resolve(null);
+        if (call) {
+          return transferService.cancelConsult(call, consult.id);
+        }
+
+        // Called off, the call is the agent's again: it comes off the hold it waited on.
+        return providerConsultCommand('CancelConsult', consult).then(function (result) {
+          if (result && result.succeeded !== false) {
+            resumeCallAfterTransfer(consult.callId);
+          }
+          return result;
+        });
       },
       onChange: function () {
         render();
@@ -10268,28 +10457,37 @@
       if (browserInboundRing && browserInboundRing.callId !== null) {
         removeActiveCall(browserInboundRing.callId);
       }
-      var callId = 'browser-in-' + Date.now();
+
+      // A call a colleague is handing over is the platform's own call, under the id of the leg it rings: the
+      // server tracks it and this user's history already has it, so from here on it is a call like a keypad dial.
+      var platform = !!controller.platformCallId;
+      var callId = platform ? controller.platformCallId : 'browser-in-' + Date.now();
       browserInboundRing = {
         callId: callId,
-        controller: controller
+        controller: controller,
+        platform: platform
       };
       var call = {
         callId: callId,
         state: 'Ringing',
         direction: 'Inbound',
-        from: controller.callerName || controller.callerNumber || '',
+        from: platform ? controller.callerNumber || controller.callerName || '' : controller.callerName || controller.callerNumber || '',
         to: '',
         startedUtc: new Date().toISOString(),
         isMuted: false,
         isOnHold: false,
-        browserOriginated: true,
-        browserInbound: true,
+        browserOriginated: !platform,
+        browserInbound: !platform,
         metadata: {}
       };
       upsertActiveCall(call, true);
 
-      // A direct extension call carries no Contact Center offer context.
-      incomingContext = null;
+      // A direct extension call carries no Contact Center offer context. A call handed over says who by.
+      incomingContext = platform && controller.transferredBy ? {
+        properties: {
+          queue: (strings.transferredBy || 'Transferred by {0}').replace('{0}', controller.transferredBy)
+        }
+      } : null;
       incomingHandled = false;
       incomingAcceptPending = false;
       setActiveTab('keypad');
@@ -10310,8 +10508,13 @@
         existing.state = 'Connecting';
         upsertActiveCall(existing, true);
       }
-      browserCallControllers[ring.callId] = ring.controller;
-      watchBrowserCalls();
+
+      // A call handed over by a colleague is held, muted and transferred through the server, like a keypad dial;
+      // only a colleague's direct call is driven through the SDK here.
+      if (!ring.platform) {
+        browserCallControllers[ring.callId] = ring.controller;
+        watchBrowserCalls();
+      }
       togglePanel(true);
       try {
         ring.controller.answer(function (stateName) {
@@ -11038,12 +11241,15 @@
         return !!activeCalls[callId];
       });
       var currentIsConference = metadataBoolean(currentCall, 'isConference');
-      if (transferPanel.isOpen() && !liveMedia) {
+
+      // A transfer being asked for, or a consult under way, keeps the panel up while its consult call connects.
+      var transferBusy = transferPanel.isBusy();
+      if (transferPanel.isOpen() && !liveMedia && !transferBusy) {
         transferPanel.close();
       }
       var transferOpen = transferPanel.isOpen();
       renderActiveCalls();
-      show(dom.transferPanel, transferOpen && liveMedia);
+      show(dom.transferPanel, transferOpen && (liveMedia || transferBusy));
       show(dom.keypadPanel, !transferOpen);
       if (dom.transfer) {
         var transferButtonText = transferOpen ? strings.keypad || 'Keypad' : strings.transfer || 'Transfer';
@@ -11623,6 +11829,79 @@
       });
     }
 
+    // A transfer the provider carries out itself. On a provider that connects calls on the server, the destination is
+    // rung while the caller waits on this call's hold tone, and the panel follows that as a consult -- warm, on a
+    // consult call the provider rings back to this phone; blind, until the destination answers or does not (see
+    // soft-phone/bridged-transfer.js). Any other provider hands the call over at once, as before.
+    function transferThroughProvider(target, mode, modeName) {
+      var callId = currentCallId();
+      var warm = modeName === 'warm';
+      var hold = shouldHoldBeforeTransfer({
+        bridgedDial: has(CAPABILITIES.BridgedDial),
+        call: currentCall,
+        serviceCall: false
+      }) ? holdCallForTransfer() : Promise.resolve(null);
+      return hold.then(function () {
+        // A consult rings this phone back, on a leg it answers without ringing, like a keypad dial.
+        if (warm) {
+          armAutoAnswer(inboundAutoAnswer, EXTENSION_CALL_KEY, Date.now());
+        }
+        return invoke('Transfer', providerTransferRequest(callId, target, mode, browserAudioCredentialId(browserAudioSession)));
+      }).then(function (result) {
+        var consult = result && result.succeeded !== false ? consultFromCall(result.call) : null;
+        if (warm && !consult) {
+          disarmAutoAnswer(inboundAutoAnswer, EXTENSION_CALL_KEY);
+        }
+        return consult ? {
+          succeeded: true,
+          consult: consult
+        } : result;
+      });
+    }
+    function holdCallForTransfer() {
+      var call = currentCallReference();
+      if (!call) {
+        return Promise.resolve(null);
+      }
+      rememberAgentHold(agentHolds, call.callId, true);
+      var pending = invoke('Hold', call);
+      settleHoldCommand(pending, call.callId, false);
+      return pending;
+    }
+
+    // Follows or finishes a transfer the provider is carrying out. Sent straight to the hub: the panel polls while
+    // the destination rings, and a poll must neither wait on nor block the agent's own commands.
+    function providerConsultCommand(method, consult) {
+      if (!connection || !consult || !consult.callId) {
+        return Promise.resolve(null);
+      }
+      return connection.invoke(method, consultRequest(consult)).then(function (result) {
+        return consultCommandResult(result, consult);
+      }).catch(function (error) {
+        return {
+          succeeded: false,
+          error: error && error.message ? error.message : String(error)
+        };
+      });
+    }
+
+    // The transfer was called off: the call held for it comes off hold, on the leg that carries it.
+    function resumeCallAfterTransfer(callId) {
+      var call = callId ? activeCalls[callId] : null;
+      if (!call || !call.isOnHold && !isAgentHeld(agentHolds, callId)) {
+        return;
+      }
+      rememberAgentHold(agentHolds, callId, false);
+      invoke('Resume', {
+        callId: callId,
+        metadata: call.metadata || null
+      }).then(function (result) {
+        if (result && result.succeeded !== false && activeCalls[callId]) {
+          notifyBrowserAudio(activeCalls[callId]);
+        }
+      }).catch(function () {});
+    }
+
     // The provider's directory entries for the transfer panel, or null when the provider has no directory.
     // A provider without a directory of its own is offered the phone system's extensions, each by the name of the
     // person it rings; with none of those either, there is no directory.
@@ -11817,7 +12096,9 @@
         dom.incomingQueue.textContent = queueText || '';
         dom.incomingQueue.hidden = !queueText;
       }
-      show(dom.incomingVoicemail, has(CAPABILITIES.Voicemail));
+
+      // A call a colleague is handing over goes back to them when it is declined; it has no voicemail of its own.
+      show(dom.incomingVoicemail, has(CAPABILITIES.Voicemail) && !(browserInboundRing && browserInboundRing.platform));
 
       // While a Contact Center offer is being accepted the accept is a server round-trip; disable the
       // offer controls so the agent gets instant feedback and cannot act on the offer again mid-flight.

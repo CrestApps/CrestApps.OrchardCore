@@ -229,6 +229,21 @@ public static class FakeTelnyxSdk
                 return call.id;
             };
 
+            // Rings the browser with a leg the platform placed to hand this agent a colleague's call: tagged as a transfer
+            // leg in client state, naming the party and who is handing it over.
+            fake.ringTransferLeg = function (legId, partyNumber, transferredBy) {
+                var call = new Call(fake.client, {
+                    telnyxCallControlId: legId,
+                    clientState: btoa(JSON.stringify({ i: 'ob-xfer', p: 'party-leg', h: 'colleague-leg', m: partyNumber, n: transferredBy })),
+                    customHeaders: [{ name: 'X-Transfer-Leg', value: partyNumber }],
+                    remoteCallerNumber: '+17785550000'
+                }, 'inbound');
+
+                call.setState('ringing');
+
+                return call.id;
+            };
+
             // Whether the browser dialed anything itself through the SDK.
             fake.placedCount = function () {
                 return fake.calls.filter(function (call) { return call.direction === 'outbound'; }).length;

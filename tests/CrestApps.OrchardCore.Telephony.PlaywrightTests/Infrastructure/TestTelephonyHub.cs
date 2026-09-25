@@ -93,6 +93,21 @@ public sealed class TestTelephonyHub : Hub<ITelephonyClient>
         return _provider.MergeAsync(request);
     }
 
+    public Task<TelephonyResult> GetConsult(ConsultTransferRequest request)
+    {
+        return _provider.GetConsultAsync(request);
+    }
+
+    public Task<TelephonyResult> CompleteConsult(ConsultTransferRequest request)
+    {
+        return _provider.CompleteConsultAsync(request);
+    }
+
+    public Task<TelephonyResult> CancelConsult(ConsultTransferRequest request)
+    {
+        return _provider.CancelConsultAsync(request);
+    }
+
     public Task<TelephonyResult> SendDigits(SendDigitsRequest request)
     {
         return _provider.SendDigitsAsync(request);
