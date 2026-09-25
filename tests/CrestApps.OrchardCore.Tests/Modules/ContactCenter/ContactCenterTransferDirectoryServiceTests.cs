@@ -5,7 +5,9 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
+using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Core.Models;
+using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.AspNetCore.Authorization;
@@ -97,13 +99,25 @@ public sealed class ContactCenterTransferDirectoryServiceTests
         Assert.False(blindOnly.SupportsConsult);
     }
 
+    [Fact]
+    public async Task GetAsync_DoesNotOfferWarmTransfer_WhenTheCallsTelephonyProviderCannotHoldForAConsult()
+    {
+        // A provider whose Contact Center adapter can place a consult but whose telephony side never reports the
+        // destination answering would leave the agent watching "Calling..." with no way to complete.
+        var directory = await CreateService(providerConsults: true, telephonyConsults: false)
+            .GetAsync("user-a", Principal(), "Telnyx", TestContext.Current.CancellationToken);
+
+        Assert.False(directory.SupportsConsult);
+    }
+
     private static ClaimsPrincipal Principal()
         => new(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "user-a")], "Test"));
 
     private static ContactCenterTransferDirectoryService CreateService(
         bool canTransferExternally = true,
         bool allowUnlistedNumbers = false,
-        bool providerConsults = true)
+        bool providerConsults = true,
+        bool telephonyConsults = true)
     {
         var agents = new[]
         {
@@ -161,6 +175,13 @@ public sealed class ContactCenterTransferDirectoryServiceTests
         var providerResolver = new Mock<IContactCenterVoiceProviderResolver>();
         providerResolver.Setup(resolver => resolver.Get(It.IsAny<string>())).Returns(provider.Object);
 
+        var telephonyProvider = new Mock<ITelephonyProvider>();
+        telephonyProvider.SetupGet(value => value.Capabilities).Returns(telephonyConsults
+            ? TelephonyCapabilities.Transfer | TelephonyCapabilities.AttendedTransfer
+            : TelephonyCapabilities.Transfer);
+        var telephonyResolver = new Mock<ITelephonyProviderResolver>();
+        telephonyResolver.Setup(resolver => resolver.GetAsync(It.IsAny<string>())).ReturnsAsync(telephonyProvider.Object);
+
         return new ContactCenterTransferDirectoryService(
             agentManager.Object,
             interactionManager.Object,
@@ -169,6 +190,7 @@ public sealed class ContactCenterTransferDirectoryServiceTests
             [extensionManager.Object],
             authorizationService.Object,
             SiteServiceFactory.Create(settings),
-            providerResolver.Object);
+            providerResolver.Object,
+            telephonyResolver.Object);
     }
 }

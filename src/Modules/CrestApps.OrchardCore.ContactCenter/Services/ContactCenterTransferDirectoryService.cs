@@ -4,7 +4,9 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
+using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Core.Services;
+using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.Authorization;
 using OrchardCore.Settings;
 
@@ -23,6 +25,7 @@ internal sealed class ContactCenterTransferDirectoryService : IContactCenterTran
     private readonly IAuthorizationService _authorizationService;
     private readonly ISiteService _siteService;
     private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
+    private readonly ITelephonyProviderResolver _telephonyProviderResolver;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterTransferDirectoryService"/> class.
@@ -35,8 +38,10 @@ internal sealed class ContactCenterTransferDirectoryService : IContactCenterTran
         IEnumerable<ITelephonyExtensionManager> extensionManagers,
         IAuthorizationService authorizationService,
         ISiteService siteService,
-        IContactCenterVoiceProviderResolver voiceProviderResolver)
+        IContactCenterVoiceProviderResolver voiceProviderResolver,
+        ITelephonyProviderResolver telephonyProviderResolver)
     {
+        _telephonyProviderResolver = telephonyProviderResolver;
         _agentManager = agentManager;
         _interactionManager = interactionManager;
         _queueManager = queueManager;
@@ -50,9 +55,15 @@ internal sealed class ContactCenterTransferDirectoryService : IContactCenterTran
     /// <inheritdoc />
     public async Task<SoftPhoneTransferDirectory> GetAsync(string userId, ClaimsPrincipal principal, string providerName, CancellationToken cancellationToken = default)
     {
+        // A consult needs both halves: the Contact Center adapter that places it, and a telephony provider that holds
+        // the caller for it and reports the destination answering. With only the first, the agent would watch the
+        // consult ring forever with Complete never enabled.
+        var telephonyProvider = await _telephonyProviderResolver.GetAsync(providerName);
         var directory = new SoftPhoneTransferDirectory
         {
-            SupportsConsult = _voiceProviderResolver.Get(providerName) is IContactCenterVoiceAttendedTransferProvider,
+            SupportsConsult = _voiceProviderResolver.Get(providerName) is IContactCenterVoiceAttendedTransferProvider &&
+                telephonyProvider is not null &&
+                telephonyProvider.Capabilities.HasFlag(TelephonyCapabilities.AttendedTransfer),
         };
 
         await AddAgentsAsync(directory, userId, cancellationToken);
