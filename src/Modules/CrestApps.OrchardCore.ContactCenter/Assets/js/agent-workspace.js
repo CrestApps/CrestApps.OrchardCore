@@ -86,7 +86,8 @@
         var strings = config.strings;
         var state = null;
         var serverOffsetMs = 0;
-        var activeSignature = null;
+        var panels = window.CrestAppsContactCenter;
+        var activeChanged = panels.createChangeGate();
         var offerSignature = null;
         var queuesSignature = null;
         var connectionStatusKey = null;
@@ -279,20 +280,19 @@
             }
 
             var active = state.activeInteraction;
-            var signature = active ? active.interactionId + ':' + active.status + ':' + (active.recordingState || '') : null;
 
-            if (signature === activeSignature) {
+            // The first state always draws, so a workspace opened with nothing to do shows the empty card rather
+            // than a blank one (see shared/workspace-panels.js).
+            if (!activeChanged(panels.activeInteractionSignature(active))) {
                 return;
             }
 
-            activeSignature = signature;
-
             if (!active) {
-                refs.active.innerHTML =
-                    '<div class="cc-empty">' +
-                        '<div class="cc-empty__icon"><i class="fa-regular fa-circle-check"></i></div>' +
-                        '<div>' + escapeHtml(label('noActiveCall', 'You have no active interaction. Available work will ring here.')) + '</div>' +
-                    '</div>';
+                refs.active.innerHTML = panels.emptyStateHtml({
+                    icon: 'fa-solid fa-headset',
+                    title: label('noActiveCall', 'No active interactions right now'),
+                    hint: label('noActiveCallHint', 'Incoming calls and messages you accept will appear here.')
+                });
 
                 return;
             }
@@ -388,7 +388,11 @@
             var history = state.recentHistory || [];
 
             if (!history.length) {
-                refs.history.innerHTML = '<li class="cc-empty">' + escapeHtml(label('noHistory', 'No recent interactions.')) + '</li>';
+                refs.history.innerHTML = panels.emptyStateHtml({
+                    icon: 'fa-solid fa-clock-rotate-left',
+                    title: label('noHistory', 'No recent interactions'),
+                    hint: label('noHistoryHint', 'Calls and messages you finish will be listed here.')
+                }, 'li');
 
                 return;
             }

@@ -362,6 +362,16 @@
   margin-bottom: 0.5rem;
 }
 
+.cc-empty__title {
+  font-weight: 600;
+  color: var(--bs-body-color, #212529);
+}
+
+.cc-empty__hint {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+}
+
 /* History list. */
 .cc-history {
   list-style: none;

@@ -10,6 +10,7 @@
       "Assets/js/shared/agent-presence.js",
       "Assets/js/shared/coalesced-refresh.js",
       "Assets/js/shared/offer-actions.js",
+      "Assets/js/shared/workspace-panels.js",
       "Assets/js/agent-workspace.js"
     ],
     "output": "wwwroot/scripts/agent-workspace.js"
