@@ -201,7 +201,7 @@ If the person you consulted hangs up or does not answer within 30 seconds, the c
 :::caution Provider differences
 Transfer support is provider-dependent. The bundled **Asterisk** provider supports **blind transfer** and a **two-call conference** but rejects warm (consultative) transfer. **Dialpad** exposes its own transfer and merge actions when configured. **Telnyx** supports every Contact Center transfer above, including the consult. Only the actions the active provider supports are shown.
 
-On **Telnyx**, a call you dial yourself from the keypad is placed by the browser directly, and the phone system has no hold on it: it cannot be transferred or merged. The transfer panel says so instead of offering a target, and its line in **Active calls** shows a disabled checkbox. Calls that came to you through the Contact Center, and extension calls, can be transferred and merged.
+On **Telnyx**, a number you dial from the keypad is connected by the phone system: your phone rings its own line for a moment and answers it by itself, and the number is dialed from there. Such a call can be transferred (blind, to a number or an extension) and merged like any other; the phone system refuses a warm transfer of it, so transfer it blind or merge the colleague in. If the phone system cannot connect the call that way -- for example your phone is still registering -- the phone dials the number itself, and that call cannot be transferred or merged: the transfer panel says so instead of offering a target, and its line in **Active calls** shows a disabled checkbox.
 :::
 
 :::note Screencast

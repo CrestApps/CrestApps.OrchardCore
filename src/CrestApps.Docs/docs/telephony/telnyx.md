@@ -237,15 +237,49 @@ target (`TransferRequest.IsExtension`) is not dialed as digits: it is sent to th
 browser is registered on (the same address an extension call rings), and is refused as *not available right now*
 while they have no live registration.
 
-A call the agent dials from the keypad is placed by the browser's own Telnyx SDK on the credential connection,
-which reports no Call Control events, so the platform has no `call_control_id` for it: it can be neither
-transferred nor merged. The soft phone says so in the transfer panel and disables its checkbox in the
-active-call list.
-
 Merging calls creates a conference named `conf-{first call}` from the first call and joins the others. The merge
 result carries that name as `conferenceName`; a later merge that names it (adding a call to the running
 conference) finds the conference (`GET /v2/conferences?filter[name]=…`) and joins only the new calls, creating it
 again only when it has ended.
+
+### Numbers dialed from the keypad
+
+A call the browser dials through its own Telnyx SDK goes out on the credential connection, which reports no Call
+Control events, so the platform would have no `call_control_id` for it. Telnyx therefore advertises `BridgedDial`, and
+the soft phone asks the platform to place a keypad dial instead, naming the credential it is registered on:
+
+1. The provider rings that credential from the Call Control connection (`POST /v2/calls` to
+   `sip:{credential}@sip.telnyx.com`, client state intent `ob-agent`), exactly as for an extension call; the phone answers
+   its own leg without ringing. It rings only a credential of the dialing user that is live, registered, and whose client
+   reported `bridged-dial-leg` -- the window that dialed, not whichever registered last.
+2. When the browser answers, the number is dialed from the tenant's caller id through the outbound voice profile, and the
+   number's `call_control_id` is written onto the agent leg (`PUT /v2/calls/{agent}/actions/client_state_update`).
+3. When the number answers, the two are bridged on the agent leg with `park_after_unbridge: self`, as a Contact Center
+   agent leg is.
+
+The soft phone tracks the agent leg, but Telnyx's commands act on the leg they are given, so every command on such a call
+is sent to the dialed party's leg, read back from the agent leg's client state (`GET /v2/calls/{agent}`):
+
+- **Transfer** (blind, to a number or an extension) moves the dialed party
+  (`POST /v2/calls/{party}/actions/transfer`; an extension is its registered SIP address, and the transfer command carries
+  no outbound voice profile) and then hangs up the agent's parked leg. A warm transfer of such a call is refused.
+- **Merge** creates the conference from the first call's dialed party, which parks the agent's first leg, joins that leg
+  with `end_conference_on_exit` (the agent leaving ends the conference), and joins every other call's dialed party. The
+  agent's other legs stay parked, one per participant, so hanging up a participant's line ends that participant.
+  **Add to conference** joins only the new call's dialed party.
+- **Digits** are sent from the dialed party's leg (`send_dtmf` plays tones to the far end of the leg it is sent on).
+- **Hang-up** from either side ends both: the agent's leg ending hangs up the dialed party (also while it is still
+  ringing), and the dialed party ending -- answered or not -- hangs up the agent's leg. A leg the platform transferred or
+  moved into a conference is marked detached in its client state and no longer takes the other with it.
+
+If the credential cannot be rung (not live, not registered, a client that predates this) or Telnyx refuses the agent
+leg outright, nothing was dialed: the provider logs a warning with the reason and answers `bridge-unavailable`, and the
+phone dials the number from the browser as before. Such a call still cannot be transferred or merged, and the soft phone
+says so in the transfer panel and disables its checkbox in the active-call list. An agent leg Telnyx did not confirm
+(a timeout) is not dialed again from the browser.
+
+The agent hears no ringback while the number rings: the agent's leg is answered and silent until the number answers,
+as on an extension call.
 
 ## DID → agent routing
 
