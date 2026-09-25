@@ -38,6 +38,12 @@ public sealed class TelephonyExtensionDirectoryResult
     public IReadOnlyList<TelephonyExtensionDirectoryEntry> Entries { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the extensions of the user reading the directory. They are not among <see cref="Entries"/>: calling
+    /// or transferring to one's own extension only rings one's own phone, so the soft phone refuses them.
+    /// </summary>
+    public IReadOnlyList<string> OwnExtensions { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets why the extensions could not be read.
     /// </summary>
     public string Error { get; set; }

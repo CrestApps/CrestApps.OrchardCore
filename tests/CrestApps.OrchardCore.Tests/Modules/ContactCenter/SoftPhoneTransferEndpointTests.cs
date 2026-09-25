@@ -208,6 +208,26 @@ public sealed class SoftPhoneTransferEndpointTests
         transferService.VerifyNoOtherCalls();
     }
 
+    // Whose extension a typed one is depends on who typed it: the resolver is told, so it can refuse the agent's own.
+    [Fact]
+    public async Task TransferAndConsult_ToAnExtension_ResolveItForTheSignedInAgent()
+    {
+        var targets = ExtensionTargets(("2", "agent-b"));
+        var transferService = new Mock<IContactCenterTransferService>();
+        transferService
+            .Setup(service => service.TransferAsync(It.IsAny<TransferRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TransferResult.Success("The call is ringing."));
+        var warm = new Mock<IWarmTransferService>();
+        warm.Setup(service => service.StartAsync(It.IsAny<WarmTransferRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new WarmTransferResult { Succeeded = true, ConsultId = "consult-1", Status = ConsultCallStatus.Initiated });
+        var body = new SoftPhoneTransferBody { InteractionId = "interaction-1", TargetType = "extension", TargetId = "2" };
+
+        await AgentSoftPhoneTransferEndpoints.HandleTransferAsync(body, new AllowAll(), Antiforgery(valid: true), transferService.Object, targets, SignedIn());
+        await AgentSoftPhoneTransferEndpoints.HandleConsultStartAsync(body, new AllowAll(), Antiforgery(valid: true), warm.Object, targets, SignedIn());
+
+        Assert.Equal(["user-1", "user-1"], targets.RequestingUserIds);
+    }
+
     [Fact]
     public async Task ConsultStart_ToAnExtension_ConsultsTheAgentItRings()
     {
@@ -306,10 +326,16 @@ public sealed class SoftPhoneTransferEndpointTests
             _agents = agents;
         }
 
-        public Task<SoftPhoneExtensionTransferTarget> ResolveAsync(string extension, CancellationToken cancellationToken = default)
-            => Task.FromResult(_agents.TryGetValue(extension ?? string.Empty, out var agentId)
+        public List<string> RequestingUserIds { get; } = [];
+
+        public Task<SoftPhoneExtensionTransferTarget> ResolveAsync(string extension, string requestingUserId, CancellationToken cancellationToken = default)
+        {
+            RequestingUserIds.Add(requestingUserId);
+
+            return Task.FromResult(_agents.TryGetValue(extension ?? string.Empty, out var agentId)
                 ? SoftPhoneExtensionTransferTarget.Agent(agentId)
                 : SoftPhoneExtensionTransferTarget.Refused($"Extension {extension} was not found."));
+        }
     }
 
     private static FakeDirectory Directory(SoftPhoneTransferDirectory directory = null)

@@ -67,6 +67,18 @@ describe('enhancePhoneInput', () => {
         expect(intlTelInput).toHaveBeenCalledWith(input, { containerClass: 'x-iti', dropdownParent: 'body', initialCountry: 'ca' });
     });
 
+    // Bug: the transfer panel's field refused every letter, so a colleague could not be searched by name. intl-tel-input
+    // is strict by default and drops any key that is not a digit; the panel's field asks for it not to be.
+    it('turns off intl-tel-input\'s strict keys when asked, so a name can be typed into the field', () => {
+        const intlTelInput = vi.fn(() => ({}));
+
+        enhancePhoneInput({}, { intlTelInput, strictMode: false });
+        expect(intlTelInput.mock.calls[0][1].strictMode).toBe(false);
+
+        enhancePhoneInput({}, { intlTelInput });
+        expect('strictMode' in intlTelInput.mock.calls[1][1]).toBe(false);
+    });
+
     it('leaves the field plain when intl-tel-input is not loaded', () => {
         expect(enhancePhoneInput({}, { intlTelInput: undefined })).toBeNull();
         expect(enhancePhoneInput(null, { intlTelInput: vi.fn() })).toBeNull();

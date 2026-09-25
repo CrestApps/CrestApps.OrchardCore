@@ -16,6 +16,13 @@ internal interface ITelephonyExtensionDirectory
     Task<IReadOnlyList<TelephonyExtensionDirectoryEntry>> ListAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Lists the extensions a user may call or transfer to -- everybody's but their own -- and names their own apart.
+    /// </summary>
+    /// <param name="userId">The user reading the directory.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<TelephonyExtensionDirectoryResult> ListForUserAsync(string userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets the name to show for a user: how a caller placing an extension call is shown to the person it rings.
     /// </summary>
     /// <param name="userId">The user.</param>
@@ -44,23 +51,30 @@ internal sealed class TelephonyExtensionDirectory : ITelephonyExtensionDirectory
     /// <inheritdoc/>
     public async Task<IReadOnlyList<TelephonyExtensionDirectoryEntry>> ListAsync(CancellationToken cancellationToken = default)
     {
-        var extensions = (await _store.GetAllAsync(cancellationToken))
-            .Where(extension => !string.IsNullOrWhiteSpace(extension?.Number) && !string.IsNullOrWhiteSpace(extension.UserId))
-            .ToArray();
+        var extensions = await ListExtensionsAsync(cancellationToken);
 
         // Every user in one query, not one per extension.
         var names = await _userDisplayNames.GetAsync(extensions.Select(extension => extension.UserId), cancellationToken);
 
-        return extensions
-            .Select(extension => new TelephonyExtensionDirectoryEntry
-            {
-                Extension = extension.Number.Trim(),
-                DisplayName = Describe(extension, names),
-                UserName = extension.UserName,
-            })
-            .OrderBy(entry => entry.DisplayName, StringComparer.CurrentCultureIgnoreCase)
-            .ThenBy(entry => entry.Extension, StringComparer.Ordinal)
+        return Name(extensions, names);
+    }
+
+    /// <inheritdoc/>
+    public async Task<TelephonyExtensionDirectoryResult> ListForUserAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        var extensions = await ListExtensionsAsync(cancellationToken);
+        var own = extensions
+            .Where(extension => !string.IsNullOrEmpty(userId) && string.Equals(extension.UserId, userId, StringComparison.Ordinal))
             .ToArray();
+        var others = extensions.Except(own).ToArray();
+        var names = await _userDisplayNames.GetAsync(others.Select(extension => extension.UserId), cancellationToken);
+
+        return new TelephonyExtensionDirectoryResult
+        {
+            Succeeded = true,
+            Entries = Name(others, names),
+            OwnExtensions = own.Select(extension => extension.Number.Trim()).Order(StringComparer.Ordinal).ToArray(),
+        };
     }
 
     /// <inheritdoc/>
@@ -75,6 +89,24 @@ internal sealed class TelephonyExtensionDirectory : ITelephonyExtensionDirectory
 
         return names.TryGetValue(userId, out var name) ? name : null;
     }
+
+    // The extensions that ring somebody.
+    private async Task<TelephonyExtension[]> ListExtensionsAsync(CancellationToken cancellationToken)
+        => (await _store.GetAllAsync(cancellationToken))
+            .Where(extension => !string.IsNullOrWhiteSpace(extension?.Number) && !string.IsNullOrWhiteSpace(extension.UserId))
+            .ToArray();
+
+    private static TelephonyExtensionDirectoryEntry[] Name(IEnumerable<TelephonyExtension> extensions, IReadOnlyDictionary<string, string> names)
+        => extensions
+            .Select(extension => new TelephonyExtensionDirectoryEntry
+            {
+                Extension = extension.Number.Trim(),
+                DisplayName = Describe(extension, names),
+                UserName = extension.UserName,
+            })
+            .OrderBy(entry => entry.DisplayName, StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(entry => entry.Extension, StringComparer.Ordinal)
+            .ToArray();
 
     internal static string Describe(TelephonyExtension extension, IReadOnlyDictionary<string, string> names)
         => TelephonyExtensionNames.Choose(

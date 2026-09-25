@@ -34,7 +34,10 @@
     //   isCallDisplay - whether the field is only showing the current call's number, not something the agent entered.
     //   liveCall      - whether a call is already in progress (the dial adds a call to it).
     //   ownNumbers    - the tenant's own outbound caller ids.
-    // Returns { number, refused }: the number to dial, or '' with why it was refused ('call-display' | 'own-number').
+    //   isExtension   - whether the keypad is dialing an extension.
+    //   ownExtensions - the agent's own extensions, which only ring the phone doing the dialing.
+    // Returns { number, refused }: the number to dial, or '' with why it was refused ('call-display' | 'own-number' |
+    // 'own-extension').
     function resolveDialTarget(options) {
         options = options || {};
 
@@ -46,6 +49,10 @@
 
         if (options.isCallDisplay) {
             return { number: '', refused: 'call-display' };
+        }
+
+        if (options.isExtension && (options.ownExtensions || []).some(function (own) { return String(own).trim() === number.trim(); })) {
+            return { number: '', refused: 'own-extension' };
         }
 
         if (options.liveCall && (options.ownNumbers || []).some(function (own) { return isSameNumber(number, own); })) {

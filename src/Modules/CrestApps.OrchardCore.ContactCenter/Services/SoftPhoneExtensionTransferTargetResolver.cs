@@ -14,9 +14,10 @@ internal interface ISoftPhoneExtensionTransferTargetResolver
     /// Resolves an extension to the Contact Center agent it rings.
     /// </summary>
     /// <param name="extension">The extension the agent typed.</param>
+    /// <param name="requestingUserId">The user transferring the call, whose own extensions are refused.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The agent, or why the extension cannot be transferred to.</returns>
-    Task<SoftPhoneExtensionTransferTarget> ResolveAsync(string extension, CancellationToken cancellationToken = default);
+    Task<SoftPhoneExtensionTransferTarget> ResolveAsync(string extension, string requestingUserId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -81,7 +82,7 @@ internal sealed class SoftPhoneExtensionTransferTargetResolver : ISoftPhoneExten
     }
 
     /// <inheritdoc/>
-    public async Task<SoftPhoneExtensionTransferTarget> ResolveAsync(string extension, CancellationToken cancellationToken = default)
+    public async Task<SoftPhoneExtensionTransferTarget> ResolveAsync(string extension, string requestingUserId, CancellationToken cancellationToken = default)
     {
         var number = extension?.Trim();
 
@@ -100,6 +101,12 @@ internal sealed class SoftPhoneExtensionTransferTargetResolver : ISoftPhoneExten
         if (!resolution.Found)
         {
             return SoftPhoneExtensionTransferTarget.Refused(S["Extension {0} was not found.", number].Value);
+        }
+
+        // The agent's own extension rings the phone they are transferring from.
+        if (!string.IsNullOrEmpty(requestingUserId) && string.Equals(resolution.UserId, requestingUserId, StringComparison.Ordinal))
+        {
+            return SoftPhoneExtensionTransferTarget.Refused(S["That's your own extension."].Value);
         }
 
         var agent = await _agentManager.FindByUserIdAsync(resolution.UserId, cancellationToken);

@@ -43,6 +43,7 @@ public sealed class InMemoryTelephonyProvider :
     private volatile bool _muteIsLocal;
     private volatile bool _noDirectory;
     private int _extensionDirectoryRequestCount;
+    private int _extensionDialCount;
     private DialRequest _lastDial;
     private SendDigitsRequest _lastDigits;
     private volatile bool _consultTransfer;
@@ -103,11 +104,26 @@ public sealed class InMemoryTelephonyProvider :
     /// <summary>
     /// Gets the phone system's extensions and who each rings, as the server names them.
     /// </summary>
-    public IReadOnlyList<TelephonyExtensionDirectoryEntry> Extensions { get; } =
+    public IReadOnlyList<TelephonyExtensionDirectoryEntry> Extensions { get; private set; } =
     [
         new() { Extension = "2", DisplayName = "Jane Doe", UserName = "jdoe" },
         new() { Extension = "3", DisplayName = "Sam Lee", UserName = "slee" },
     ];
+
+    /// <summary>
+    /// Gets the extensions of the signed-in user, as the server names them to the phone.
+    /// </summary>
+    public IReadOnlyList<string> OwnExtensions { get; private set; } = [];
+
+    /// <summary>
+    /// Replaces the phone system's extensions and names the signed-in user's own. The own extensions are listed too, as
+    /// a server that did not leave them out would list them, so the phone is seen to leave them out itself.
+    /// </summary>
+    public void UseExtensions(IReadOnlyList<string> ownExtensions, params TelephonyExtensionDirectoryEntry[] extensions)
+    {
+        Extensions = extensions;
+        OwnExtensions = ownExtensions;
+    }
 
     /// <summary>
     /// Records a read of the extensions and returns them.
@@ -116,7 +132,25 @@ public sealed class InMemoryTelephonyProvider :
     {
         Interlocked.Increment(ref _extensionDirectoryRequestCount);
 
-        return new TelephonyExtensionDirectoryResult { Succeeded = true, Entries = Extensions };
+        return new TelephonyExtensionDirectoryResult { Succeeded = true, Entries = Extensions, OwnExtensions = OwnExtensions };
+    }
+
+    /// <summary>
+    /// Records an extension call the phone asked for; the harness places none.
+    /// </summary>
+    public TelephonyResult DialExtension(ExtensionDialRequest request)
+    {
+        Interlocked.Increment(ref _extensionDialCount);
+
+        return TelephonyResult.Failed("The test harness places no extension calls.");
+    }
+
+    /// <summary>
+    /// Gets how many extension calls the phone asked for.
+    /// </summary>
+    public int GetExtensionDialCount()
+    {
+        return Volatile.Read(ref _extensionDialCount);
     }
 
     /// <summary>

@@ -117,7 +117,7 @@ internal static class AgentSoftPhoneTransferEndpoints
             return refusal;
         }
 
-        var (targetType, targetId, targetRefusal) = await ReadTargetAsync(body, extensionTargets, "Choose an agent, a queue or a number to transfer to.", httpContext.RequestAborted);
+        var (targetType, targetId, targetRefusal) = await ReadTargetAsync(body, userId, extensionTargets, "Choose an agent, a queue or a number to transfer to.", httpContext.RequestAborted);
 
         if (targetRefusal is not null)
         {
@@ -157,7 +157,7 @@ internal static class AgentSoftPhoneTransferEndpoints
             return refusal;
         }
 
-        var (targetType, targetId, targetRefusal) = await ReadTargetAsync(body, extensionTargets, "Choose an agent or a number to consult.", httpContext.RequestAborted);
+        var (targetType, targetId, targetRefusal) = await ReadTargetAsync(body, userId, extensionTargets, "Choose an agent or a number to consult.", httpContext.RequestAborted);
 
         if (targetRefusal is not null)
         {
@@ -283,9 +283,10 @@ internal static class AgentSoftPhoneTransferEndpoints
     }
 
     // Where the call goes. An extension the agent typed is the colleague it rings, so it is routed as that agent; one
-    // that rings nobody in the Contact Center is refused with why.
+    // that rings nobody in the Contact Center, or the agent themselves, is refused with why.
     private static async Task<(InteractionTransferTargetType TargetType, string TargetId, IResult Refusal)> ReadTargetAsync(
         SoftPhoneTransferBody body,
+        string userId,
         ISoftPhoneExtensionTransferTargetResolver extensionTargets,
         string missingTarget,
         CancellationToken cancellationToken)
@@ -294,7 +295,7 @@ internal static class AgentSoftPhoneTransferEndpoints
             !string.IsNullOrWhiteSpace(body.InteractionId) &&
             string.Equals(body.TargetType?.Trim(), ExtensionTargetType, StringComparison.OrdinalIgnoreCase))
         {
-            var extension = await extensionTargets.ResolveAsync(body.TargetId, cancellationToken);
+            var extension = await extensionTargets.ResolveAsync(body.TargetId, userId, cancellationToken);
 
             return extension.Succeeded
                 ? (InteractionTransferTargetType.Agent, extension.AgentId, null)

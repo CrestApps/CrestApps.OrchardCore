@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Tests.Doubles;
+using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Services;
@@ -283,6 +284,43 @@ public sealed class DefaultTelephonyServiceTests
         Assert.True(request.IsExtension);
         Assert.Equal("2", request.To);
         Assert.Equal("user-2", request.TargetUserId);
+    }
+
+    // A transfer to one's own extension would ring the phone that is already on the call.
+    [Theory]
+    [InlineData(TransferMode.Blind)]
+    [InlineData(TransferMode.Warm)]
+    public async Task TransferAsync_ToTheTransferringUsersOwnExtension_IsRefusedWithoutReachingTheProvider(TransferMode mode)
+    {
+        // Arrange
+        var provider = new RecordingTelephonyProvider
+        {
+            Capabilities = TelephonyCapabilities.Transfer | TelephonyCapabilities.AttendedTransfer,
+        };
+        var service = new DefaultTelephonyService(
+            new StubTelephonyProviderResolver(provider),
+            new DefaultOutboundCallScreeningService([]),
+            new StubTelephonyExtensionResolver(new Dictionary<string, ExtensionResolution>
+            {
+                ["1"] = new() { Found = true, Number = "1", UserId = "user-1", DisplayName = "Mike Alhayek" },
+            }),
+            DialDestinationPolicyFactory.Create(),
+            new PassThroughStringLocalizer<DefaultTelephonyService>());
+
+        // Act
+        var result = await service.TransferAsync(new TransferRequest
+        {
+            CallId = "call-1",
+            To = "1",
+            IsExtension = true,
+            Mode = mode,
+            Metadata = new Dictionary<string, string> { [TelephonyConstants.RequestMetadata.SoftPhoneUserId] = "user-1" },
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Equal("That's your own extension.", result.Error);
+        Assert.Null(provider.LastOperation);
     }
 
     [Fact]

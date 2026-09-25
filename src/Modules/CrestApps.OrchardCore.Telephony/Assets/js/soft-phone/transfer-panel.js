@@ -8,7 +8,9 @@
  * phone's transfer service carries out becomes a consult the panel follows until the agent completes or cancels it.
  * Like the keypad, the panel has a Number / Extension toggle: a number goes into the keypad's own country-flag field
  * and is checked as the keypad checks one, and an extension is sent as an extension rather than refused as a short
- * phone number. A call this browser placed itself cannot be transferred at all, and the panel says so.
+ * phone number. Either way a colleague can be searched by name: the field used to refuse every letter, because the
+ * country-flag input drops any key that is not a digit. A call this browser placed itself cannot be transferred at
+ * all, and the panel says so; nor can a call go to the agent's own extension.
  * The decisions it makes live in soft-phone/transfer-target.js, soft-phone/transfer-service.js and
  * soft-phone/consult-state.js; this file only draws them and wires them to the call.
  *
@@ -36,6 +38,7 @@
     //   options.formatNumber   - formats a number for display.
     //   options.modes()        - the supported modes (see transferModes).
     //   options.ownNumbers()   - the tenant's own outbound caller ids.
+    //   options.ownExtensions() - the agent's own extensions: never listed, and refused when typed.
     //   options.loadDirectory() - a promise of directory entries, or null when there is none.
     //   options.allowNumbers() - whether a typed number is offered (defaults to true).
     //   options.extensionName(number) - the name of whoever an extension rings, or '' (see soft-phone/extension-names.js).
@@ -246,10 +249,7 @@
                 modes: []
             };
 
-            // The same country-flag field the keypad dials from, so a number is read and checked the way the keypad
-            // reads and checks one.
-            releaseNumberInput();
-            telInput = typeof options.enhanceNumberInput === 'function' ? options.enhanceNumberInput(parts.input) || null : null;
+            applyDialModeInput();
 
             parts.dialMode.addEventListener('click', function () {
                 setDialMode(state.dialMode === 'extension' ? 'number' : 'extension');
@@ -284,7 +284,7 @@
                 var destination = target.getAttribute('data-telephony-directory-destination');
 
                 if (destination !== null) {
-                    var entry = softPhone.filterTransferTargets(state.entries, '').filter(function (candidate) {
+                    var entry = visibleEntries('').filter(function (candidate) {
                         return candidate.destination === destination;
                     })[0];
 
@@ -370,6 +370,7 @@
             }
 
             setError('');
+            applyDialModeInput();
             renderDialMode();
             renderResults();
 
@@ -378,13 +379,33 @@
             }
         }
 
+        // A number goes into the keypad's own country-flag field, so it is read and checked the way the keypad reads and
+        // checks one -- with its strict keys off, since a name is searched from the same field. An extension has no
+        // country: the field is a plain search box, for a name or the extension's digits.
+        function applyDialModeInput() {
+            releaseNumberInput();
+
+            if (!parts.input) {
+                return;
+            }
+
+            parts.input.setAttribute('type', state.dialMode === 'extension' ? 'text' : 'tel');
+            telInput = state.dialMode !== 'extension' && typeof options.enhanceNumberInput === 'function'
+                ? options.enhanceNumberInput(parts.input) || null
+                : null;
+        }
+
+        function ownExtensions() {
+            return typeof options.ownExtensions === 'function' ? options.ownExtensions() || [] : [];
+        }
+
         function renderDialMode() {
             var extension = state.dialMode === 'extension';
 
             container.classList.toggle('telephony-soft-phone__transfer-panel--extension', extension);
 
             if (parts.input) {
-                parts.input.setAttribute('inputmode', extension ? 'numeric' : 'tel');
+                parts.input.setAttribute('inputmode', extension ? 'text' : 'tel');
                 parts.input.setAttribute('data-telephony-transfer-dial-mode-value', state.dialMode);
                 parts.input.setAttribute('placeholder', extension
                     ? label(strings, 'transferExtensionPlaceholder', 'Search a name, or enter an extension')
@@ -427,19 +448,31 @@
                 '<span class="telephony-soft-phone__directory-destination">' + escapeHtml(entry.detail) + '</span></button>';
         }
 
+        // The directory entries matching what was typed, the agent's own extensions left out.
+        function visibleEntries(query) {
+            return softPhone.filterTransferTargets(state.entries, query).filter(function (entry) {
+                return !softPhone.ownExtensionRefusal({ selected: entry, ownExtensions: ownExtensions() });
+            });
+        }
+
         function renderResults() {
             if (!parts.results || state.consult) {
                 return;
             }
 
-            var matches = softPhone.filterTransferTargets(state.entries, state.query);
+            var matches = visibleEntries(state.query);
             var html = '';
             var query = String(state.query || '').trim();
 
             var extensionMode = state.dialMode === 'extension';
+            var ownTyped = softPhone.ownExtensionRefusal({ dialMode: state.dialMode, query: query, ownExtensions: ownExtensions() });
 
-            // An extension is somewhere inside the phone system, so it is offered whether or not outside numbers are.
-            if (query && softPhone.isNumberLike(query) && (extensionMode || allowNumbers())) {
+            if (ownTyped) {
+                // The agent's own extension would only ring the phone they are transferring from.
+                html += '<div class="telephony-soft-phone__directory-empty" data-telephony-transfer-own>' +
+                    escapeHtml(refusalMessage(ownTyped)) + '</div>';
+            } else if (query && softPhone.isNumberLike(query) && (extensionMode || allowNumbers())) {
+                // An extension is somewhere inside the phone system, so it is offered whether or not outside numbers are.
                 var typed = extensionMode
                     ? softPhone.transferToExtensionLabel(strings, softPhone.readExtension(query) || query, extensionName(softPhone.readExtension(query)))
                     : format(label(strings, 'transferToNumber', 'Transfer to {0}'), formatNumber(query) || query);
@@ -497,27 +530,29 @@
         }
 
         function refusalMessage(refused) {
-            switch (refused) {
-                case 'own-number':
-                    return label(strings, 'transferOwnNumber', 'That is this phone system\'s own number. Choose who to transfer the call to.');
-                case 'invalid-number':
-                    return label(strings, 'transferInvalidNumber', 'Enter a complete phone number, or switch to an extension.');
-                case 'invalid-extension':
-                    return label(strings, 'transferInvalidExtension', 'Enter the extension as digits only.');
-                case 'browser-call':
-                    return label(strings, 'transferBrowserCall', 'This call was dialed straight from this phone, so the phone system cannot transfer it. Ask the other person to call the destination, or hang up and dial it.');
-                case 'unavailable':
-                    return label(strings, 'transferAgentUnavailable', 'That agent cannot take a call right now. Choose someone who is available.');
-                case 'warm-queue':
-                    return label(strings, 'transferWarmQueue', 'A queue cannot be consulted. Choose an agent or a number, or send the call to the queue with a blind transfer.');
-                case 'external-not-allowed':
-                    return label(strings, 'transferNumberNotAllowed', 'Transfers to numbers that are not on the approved list are turned off. Choose from the list.');
-                default:
-                    return label(strings, 'transferTargetRequired', 'Choose who to transfer the call to, or enter a number.');
-            }
+            return softPhone.transferRefusalMessage(strings, refused);
         }
 
         function resolveTarget() {
+            // A name the list narrowed to one person picks them, so Enter transfers without a click.
+            var typed = state.selected ? { entry: null, refused: '' } : softPhone.pickTypedMatch(visibleEntries(state.query), state.query);
+
+            if (typed.entry) {
+                state.selected = typed.entry;
+                renderResults();
+            }
+
+            var own = typed.refused || softPhone.ownExtensionRefusal({
+                dialMode: state.dialMode,
+                query: state.query,
+                selected: state.selected,
+                ownExtensions: ownExtensions()
+            });
+
+            if (own) {
+                return { target: null, refused: own };
+            }
+
             state.number = state.dialMode === 'extension' || !parts.input
                 ? null
                 : softPhone.readTransferNumber(parts.input.value, telInput);

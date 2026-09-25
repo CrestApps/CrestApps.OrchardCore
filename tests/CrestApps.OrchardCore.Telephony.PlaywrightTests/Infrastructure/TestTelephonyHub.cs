@@ -165,6 +165,11 @@ public sealed class TestTelephonyHub : Hub<ITelephonyClient>
         return Task.FromResult(_provider.GetExtensionDirectory());
     }
 
+    public Task<TelephonyResult> DialExtension(ExtensionDialRequest request)
+    {
+        return Task.FromResult(_provider.DialExtension(request));
+    }
+
     public Task<int> GetDialRequestCount()
     {
         return Task.FromResult(_provider.GetDialRequestCount());

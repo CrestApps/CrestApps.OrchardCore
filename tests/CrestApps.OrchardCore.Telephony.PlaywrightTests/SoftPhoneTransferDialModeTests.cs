@@ -140,7 +140,9 @@ public sealed class SoftPhoneTransferDialModeTests : SoftPhoneBrowserTest
 
         // Assert
         Assert.True(await panel.Locator(".iti__selected-country").IsHiddenAsync());
-        Assert.Equal("numeric", await page.Locator("[data-telephony-transfer-input]").GetAttributeAsync("inputmode"));
+        // A plain search box: a colleague is found by name as well as by the extension's digits.
+        Assert.Equal("text", await page.Locator("[data-telephony-transfer-input]").GetAttributeAsync("inputmode"));
+        Assert.Equal("text", await page.Locator("[data-telephony-transfer-input]").GetAttributeAsync("type"));
         await AssertFitsTheWindowAsync(page, "[data-telephony-transfer-panel]");
         await CaptureAsync(page, "transfer-extension-mode");
 

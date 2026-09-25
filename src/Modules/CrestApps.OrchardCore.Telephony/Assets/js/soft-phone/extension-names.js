@@ -34,18 +34,20 @@
         });
     }
 
-    // The phone's copy of the server's extensions: { names: { number: name }, loadedAt }.
+    // The phone's copy of the server's extensions: { names: { number: name }, own: [number], loadedAt }. `own` are the
+    // agent's own extensions, which only ring the agent's own phone, so they are never offered or dialed.
     function createExtensionDirectory() {
-        return { names: {}, loadedAt: 0 };
+        return { names: {}, own: [], loadedAt: 0 };
     }
 
-    // Replaces the copy with the entries the server sent ({ extension, displayName }).
-    function storeExtensionEntries(directory, entries, now) {
+    // Replaces the copy with the entries the server sent ({ extension, displayName }) and the agent's own extensions.
+    function storeExtensionEntries(directory, entries, now, ownExtensions) {
         if (!directory) {
             return;
         }
 
         var names = {};
+        var own = (ownExtensions || []).map(text).filter(Boolean);
 
         (entries || []).forEach(function (entry) {
             var number = text(entry && entry.extension);
@@ -57,7 +59,20 @@
         });
 
         directory.names = names;
+        directory.own = own;
         directory.loadedAt = now || Date.now();
+    }
+
+    // The agent's own extensions, as the server named them.
+    function ownExtensions(directory) {
+        return directory && Array.isArray(directory.own) ? directory.own.slice() : [];
+    }
+
+    // Whether the extension is one of the agent's own.
+    function isOwnExtension(directory, number) {
+        var key = text(number);
+
+        return !!key && ownExtensions(directory).indexOf(key) !== -1;
     }
 
     // Whether the copy should be read again: never read, or older than the maximum age.
@@ -118,11 +133,13 @@
     }
 
     // The transfer panel's rows for the phone system's extensions, when the provider has no directory of its own: each
-    // is sent as an extension, never dialed as a phone number.
+    // is sent as an extension, never dialed as a phone number. The agent's own are left out.
     function extensionDirectoryEntries(directory, strings) {
         var names = (directory && directory.names) || {};
 
-        return Object.keys(names).sort(function (left, right) {
+        return Object.keys(names).filter(function (number) {
+            return !isOwnExtension(directory, number);
+        }).sort(function (left, right) {
             return names[left].localeCompare(names[right]) || left.localeCompare(right);
         }).map(function (number) {
             return {
@@ -141,6 +158,8 @@
     softPhone.EXTENSION_DIRECTORY_MAX_AGE_MS = EXTENSION_DIRECTORY_MAX_AGE_MS;
     softPhone.createExtensionDirectory = createExtensionDirectory;
     softPhone.storeExtensionEntries = storeExtensionEntries;
+    softPhone.ownExtensions = ownExtensions;
+    softPhone.isOwnExtension = isOwnExtension;
     softPhone.shouldReloadExtensions = shouldReloadExtensions;
     softPhone.extensionName = extensionName;
     softPhone.describeExtension = describeExtension;

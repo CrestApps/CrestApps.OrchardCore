@@ -1,5 +1,7 @@
 ﻿using System.Security.Claims;
 using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Telephony.Core.Models;
+using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Services;
@@ -408,6 +410,32 @@ public sealed class TelephonyHubAuthorizationTests
         Assert.Null(await store.FindByCallIdAsync("user-1", "leg-9", TestContext.Current.CancellationToken));
     }
 
+    // The list a colleague is picked from is everybody but the agent: their own extension only rings them back.
+    [Fact]
+    public async Task GetExtensionDirectory_LeavesOutTheCallersOwnExtensions_AndTellsThePhoneWhichAreTheirs()
+    {
+        // Arrange
+        var extensions = new Mock<ITelephonyExtensionStore>();
+        extensions
+            .Setup(store => store.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(
+            [
+                new TelephonyExtension { Number = "1", UserId = "user-1", UserName = "mike" },
+                new TelephonyExtension { Number = "2", UserId = "user-2", UserName = "test2" },
+            ]);
+        using var harness = CreateHarness("user-1", configure: services => services
+            .AddSingleton<ITelephonyExtensionDirectory>(new TelephonyExtensionDirectory(extensions.Object, new NoUserDisplayNames())));
+        TelephonyExtensionDirectoryResult result = null;
+
+        // Act
+        await new ShellScope(harness.ShellContext).UsingServiceScopeAsync(async _ => result = await harness.Hub.GetExtensionDirectory());
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Equal(["2"], result.Entries.Select(entry => entry.Extension));
+        Assert.Equal(["1"], result.OwnExtensions);
+    }
+
     [Fact]
     public async Task Transfer_NamesTheConnectionItCameFrom_SoTheProviderCanRingThePhoneThatAsked()
     {
@@ -573,6 +601,12 @@ public sealed class TelephonyHubAuthorizationTests
         {
             ServiceProvider.Dispose();
         }
+    }
+
+    private sealed class NoUserDisplayNames : ITelephonyUserDisplayNames
+    {
+        public Task<IReadOnlyDictionary<string, string>> GetAsync(IEnumerable<string> userIds, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyDictionary<string, string>>(new Dictionary<string, string>());
     }
 
     private sealed class PassThroughTelephonyCommandExecutor : ITelephonyCommandExecutor

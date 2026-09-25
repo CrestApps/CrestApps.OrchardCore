@@ -117,6 +117,22 @@ public sealed class ExtensionCallingTests
         Assert.Null(provider.LastDialRequest);
     }
 
+    // Dialing one's own extension only rings the phone doing the dialing.
+    [Fact]
+    public async Task DialExtension_ToTheCallersOwnExtension_IsRefused_AndTheProviderIsNotCalled()
+    {
+        var provider = new ExtensionDialRecordingProvider();
+        var service = CreateService(provider, ResolverFor("1", "user-1", "Mike"));
+
+        var result = await service.DialExtensionAsync(
+            new ExtensionDialRequest { Extension = "1", CallerUserId = "user-1" },
+            TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal("That's your own extension.", result.Error);
+        Assert.Null(provider.LastDialRequest);
+    }
+
     [Fact]
     public async Task DialExtension_WhenExtensionBlank_Fails()
     {

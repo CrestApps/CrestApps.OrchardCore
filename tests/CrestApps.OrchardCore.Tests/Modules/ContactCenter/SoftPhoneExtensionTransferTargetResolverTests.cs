@@ -22,11 +22,29 @@ public sealed class SoftPhoneExtensionTransferTargetResolverTests
             new AgentProfile { ItemId = "agent-2", UserId = "user-2" });
 
         // Act
-        var target = await resolver.ResolveAsync(" 2 ", TestContext.Current.CancellationToken);
+        var target = await resolver.ResolveAsync(" 2 ", "user-1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(target.Succeeded);
         Assert.Equal("agent-2", target.AgentId);
+    }
+
+    // The agent's own extension would ring the phone they are transferring from.
+    [Fact]
+    public async Task ResolveAsync_TheRequestingAgentsOwnExtension_IsRefused()
+    {
+        // Arrange
+        var resolver = CreateResolver(
+            new Dictionary<string, ExtensionResolution> { ["1"] = Found("1", "user-1") },
+            new AgentProfile { ItemId = "agent-1", UserId = "user-1" });
+
+        // Act
+        var target = await resolver.ResolveAsync("1", "user-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(target.Succeeded);
+        Assert.Null(target.AgentId);
+        Assert.Equal("That's your own extension.", target.Error);
     }
 
     [Fact]
@@ -36,7 +54,7 @@ public sealed class SoftPhoneExtensionTransferTargetResolverTests
         var resolver = CreateResolver(new Dictionary<string, ExtensionResolution>());
 
         // Act
-        var target = await resolver.ResolveAsync("7", TestContext.Current.CancellationToken);
+        var target = await resolver.ResolveAsync("7", "user-1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(target.Succeeded);
@@ -51,7 +69,7 @@ public sealed class SoftPhoneExtensionTransferTargetResolverTests
         var resolver = CreateResolver(new Dictionary<string, ExtensionResolution> { ["3"] = Found("3", "user-3") });
 
         // Act
-        var target = await resolver.ResolveAsync("3", TestContext.Current.CancellationToken);
+        var target = await resolver.ResolveAsync("3", "user-1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(target.Succeeded);
@@ -72,7 +90,7 @@ public sealed class SoftPhoneExtensionTransferTargetResolverTests
             new PassThroughStringLocalizer<SoftPhoneExtensionTransferTargetResolver>());
 
         // Act
-        var target = await resolver.ResolveAsync(value, TestContext.Current.CancellationToken);
+        var target = await resolver.ResolveAsync(value, "user-1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(target.Succeeded);
@@ -89,7 +107,7 @@ public sealed class SoftPhoneExtensionTransferTargetResolverTests
             new PassThroughStringLocalizer<SoftPhoneExtensionTransferTargetResolver>());
 
         // Act
-        var target = await resolver.ResolveAsync("2", TestContext.Current.CancellationToken);
+        var target = await resolver.ResolveAsync("2", "user-1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(target.Succeeded);

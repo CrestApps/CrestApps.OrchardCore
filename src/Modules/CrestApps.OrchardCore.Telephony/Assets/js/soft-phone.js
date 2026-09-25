@@ -141,6 +141,7 @@
     var describeExtension = softPhoneModules.describeExtension;
     var callExtensionNumber = softPhoneModules.callExtensionNumber;
     var extensionDirectoryEntries = softPhoneModules.extensionDirectoryEntries;
+    var ownExtensionsOf = softPhoneModules.ownExtensions;
     var readExtension = softPhoneModules.readExtension;
     var createTransferService = softPhoneModules.createTransferService;
     var serviceDirectoryEntries = softPhoneModules.serviceDirectoryEntries;
@@ -2627,12 +2628,19 @@
                 return serviceTransferCall() && serviceDirectory ? serviceModes(serviceDirectory) : transferModes(capabilities);
             },
             ownNumbers: function () { return ownOutboundNumbers(); },
+            // The agent's own extensions, as the server named them (see soft-phone/extension-names.js).
+            ownExtensions: function () { return ownExtensionsOf(extensionDirectory); },
             blockedReason: function () {
                 return transferBlockedReason({ call: currentCall, serviceApplies: !!serviceTransferCall() });
             },
-            // The keypad's own country-flag field, with the keypad's country (see soft-phone/phone-input.js).
+            // The keypad's own country-flag field, with the keypad's country (see soft-phone/phone-input.js) -- but not
+            // its strict keys, which drop every letter: the panel's field also searches the directory by name.
             enhanceNumberInput: function (input) {
-                return enhancePhoneInput(input, phoneInputOptions());
+                var settings = phoneInputOptions();
+
+                settings.strictMode = false;
+
+                return enhancePhoneInput(input, settings);
             },
             loadDirectory: function () {
                 var call = serviceTransferCall();
@@ -5788,7 +5796,7 @@
 
             extensionDirectoryLoading = connection.invoke('GetExtensionDirectory').then(function (result) {
                 if (result && result.succeeded !== false) {
-                    storeExtensionEntries(extensionDirectory, result.entries || [], Date.now());
+                    storeExtensionEntries(extensionDirectory, result.entries || [], Date.now(), result.ownExtensions || []);
                     render();
 
                     if (activeTab === 'history' && lastHistoryItems) {
@@ -6899,14 +6907,18 @@
                 number: getDialNumber(),
                 isCallDisplay: numberIsCallDisplay,
                 liveCall: hasLiveCall(),
-                ownNumbers: extensionMode ? [] : ownOutboundNumbers()
+                ownNumbers: extensionMode ? [] : ownOutboundNumbers(),
+                isExtension: extensionMode,
+                ownExtensions: ownExtensionsOf(extensionDirectory)
             });
 
             if (target.refused) {
                 reportDiagnostic('info', 'dial-refused', 'A dial was refused: ' + target.refused + '.', '');
-                showError(target.refused === 'own-number'
-                    ? (strings.dialOwnNumber || 'That is this phone system\'s own number. Enter the number you want to add to the call.')
-                    : (strings.dialNumberRequired || 'Enter the number you want to add to the call.'));
+                showError(target.refused === 'own-extension'
+                    ? (strings.ownExtension || 'That\'s your own extension.')
+                    : target.refused === 'own-number'
+                        ? (strings.dialOwnNumber || 'That is this phone system\'s own number. Enter the number you want to add to the call.')
+                        : (strings.dialNumberRequired || 'Enter the number you want to add to the call.'));
 
                 return;
             }

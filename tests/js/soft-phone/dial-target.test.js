@@ -35,6 +35,17 @@ describe('resolveDialTarget', () => {
             .toEqual({ number: ownNumber, refused: '' });
     });
 
+    // Dialing one's own extension only rings the phone doing the dialing.
+    it('refuses the agent own extension, and only as an extension', () => {
+        expect(resolveDialTarget({ number: '1', isExtension: true, ownExtensions: ['1'] }))
+            .toEqual({ number: '', refused: 'own-extension' });
+        expect(resolveDialTarget({ number: ' 1 ', isExtension: true, ownExtensions: ['1'] }).refused).toBe('own-extension');
+        expect(resolveDialTarget({ number: '2', isExtension: true, ownExtensions: ['1'] }))
+            .toEqual({ number: '2', refused: '' });
+        expect(resolveDialTarget({ number: '1', isExtension: false, ownExtensions: ['1'] }))
+            .toEqual({ number: '1', refused: '' });
+    });
+
     it('has nothing to dial without a number', () => {
         expect(resolveDialTarget({ number: '', isCallDisplay: false, liveCall: false, ownNumbers: [] }))
             .toEqual({ number: '', refused: '' });

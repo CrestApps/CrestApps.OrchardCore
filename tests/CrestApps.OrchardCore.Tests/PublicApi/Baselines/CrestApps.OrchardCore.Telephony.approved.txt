@@ -302,6 +302,7 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public TelephonyExtensionDirectoryResult() { }
         public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Telephony.Models.TelephonyExtensionDirectoryEntry> Entries { get; set; }
         public string Error { get; set; }
+        public System.Collections.Generic.IReadOnlyList<string> OwnExtensions { get; set; }
         public bool Succeeded { get; set; }
     }
     public sealed class TelephonyUserConnections

@@ -158,6 +158,14 @@ public sealed class DefaultTelephonyService : ITelephonyService
                 return TelephonyResult.Failed(S["Extension {0} was not found.", request.To].Value);
             }
 
+            // Blind or warm, a transfer to one's own extension rings the phone already on the call.
+            if (request.Metadata is not null &&
+                request.Metadata.TryGetValue(TelephonyConstants.RequestMetadata.SoftPhoneUserId, out var transferringUserId) &&
+                IsOwnExtension(resolution, transferringUserId))
+            {
+                return OwnExtension();
+            }
+
             request.To = resolution.Number;
             request.TargetUserId = resolution.UserId;
         }
@@ -336,6 +344,12 @@ public sealed class DefaultTelephonyService : ITelephonyService
             return TelephonyResult.Failed(S["Extension {0} was not found.", request.Extension].Value);
         }
 
+        // One's own extension only rings the phone doing the dialing.
+        if (IsOwnExtension(resolution, request.CallerUserId))
+        {
+            return OwnExtension();
+        }
+
         request.TargetUserId = resolution.UserId;
         request.TargetDisplayName = resolution.DisplayName;
 
@@ -474,4 +488,10 @@ public sealed class DefaultTelephonyService : ITelephonyService
 
         return await operation(contract, cancellationToken);
     }
+
+    private static bool IsOwnExtension(ExtensionResolution resolution, string userId)
+        => !string.IsNullOrWhiteSpace(userId) && string.Equals(resolution.UserId, userId.Trim(), StringComparison.Ordinal);
+
+    private TelephonyResult OwnExtension()
+        => TelephonyResult.Failed(S["That's your own extension."].Value);
 }

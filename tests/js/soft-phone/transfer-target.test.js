@@ -9,6 +9,9 @@ const {
     isSameLine,
     filterTransferTargets,
     resolveTransferTarget,
+    pickTypedMatch,
+    ownExtensionRefusal,
+    transferRefusalMessage,
     transferBlockedReason,
     toInternationalNumber
 } = globalThis.CrestAppsSoftPhone;
@@ -77,6 +80,75 @@ describe('filterTransferTargets', () => {
 
     it('matches nothing when nobody fits', () => {
         expect(filterTransferTargets(entries, 'Zed')).toEqual([]);
+    });
+});
+
+// Bug: a name typed into the transfer panel never got as far as the list -- the field refused letters -- and a name the
+// list narrowed to one person still had to be clicked before Enter would transfer to them.
+describe('pickTypedMatch', () => {
+    const colleagues = [
+        { id: 'extension:2', name: 'Test 2', destination: '2', detail: 'Ext 2', isExtension: true, kind: 'agent' },
+        { id: 'extension:3', name: 'Sam Lee', destination: '3', detail: 'Ext 3', isExtension: true, kind: 'agent' },
+        { id: 'extension:4', name: 'Sam Stone', destination: '4', detail: 'Ext 4', isExtension: true, kind: 'agent' }
+    ];
+
+    it('narrows the list by name, case-insensitively', () => {
+        expect(filterTransferTargets(colleagues, 'test').map(entry => entry.name)).toEqual(['Test 2']);
+        expect(filterTransferTargets(colleagues, 'SAM').map(entry => entry.name)).toEqual(['Sam Lee', 'Sam Stone']);
+    });
+
+    it('narrows the list by the digits of an extension', () => {
+        expect(filterTransferTargets(colleagues, '3').map(entry => entry.name)).toEqual(['Sam Lee']);
+    });
+
+    it('picks the one person a typed name matches', () => {
+        expect(pickTypedMatch(colleagues, 'Test')).toEqual({ entry: expect.objectContaining({ destination: '2', name: 'Test 2' }), refused: '' });
+        expect(resolveTransferTarget({ selected: pickTypedMatch(colleagues, ' test ').entry }))
+            .toEqual({ destination: '2', isExtension: true, label: 'Test 2', refused: '' });
+    });
+
+    it('asks which one when a name matches several people, and says so when it matches nobody', () => {
+        expect(pickTypedMatch(colleagues, 'Sam')).toEqual({ entry: null, refused: 'several-match' });
+        expect(pickTypedMatch(colleagues, 'Zed')).toEqual({ entry: null, refused: 'no-match' });
+    });
+
+    // A bare number is an extension or a phone number, offered as "Transfer to extension 3 · Sam Lee".
+    it('leaves digits, and an empty field, to the extension and number rules', () => {
+        expect(pickTypedMatch(colleagues, '3')).toEqual({ entry: null, refused: '' });
+        expect(pickTypedMatch(colleagues, '(702) 555-0199')).toEqual({ entry: null, refused: '' });
+        expect(pickTypedMatch(colleagues, '  ')).toEqual({ entry: null, refused: '' });
+        expect(pickTypedMatch([], 'Test')).toEqual({ entry: null, refused: 'no-match' });
+    });
+});
+
+// The agent's own extension would only ring the phone they are transferring from.
+describe('ownExtensionRefusal', () => {
+    it('refuses the agent own extension typed in extension mode', () => {
+        expect(ownExtensionRefusal({ dialMode: 'extension', query: '1', ownExtensions: ['1'] })).toBe('own-extension');
+        expect(ownExtensionRefusal({ dialMode: 'extension', query: ' 1 ', ownExtensions: ['1'] })).toBe('own-extension');
+        expect(ownExtensionRefusal({ dialMode: 'extension', query: '2', ownExtensions: ['1'] })).toBe('');
+        expect(ownExtensionRefusal({ dialMode: 'extension', query: 'Test', ownExtensions: ['1'] })).toBe('');
+    });
+
+    it('refuses a picked entry that is the agent own extension', () => {
+        expect(ownExtensionRefusal({ selected: { destination: '1', isExtension: true }, ownExtensions: ['1'] })).toBe('own-extension');
+        expect(ownExtensionRefusal({ selected: { destination: 'agent:a-1', extension: '1', kind: 'agent' }, ownExtensions: ['1'] })).toBe('own-extension');
+        expect(ownExtensionRefusal({ selected: { destination: '2', isExtension: true }, ownExtensions: ['1'] })).toBe('');
+    });
+
+    it('leaves a phone number, or a phone that knows no extension of its own, alone', () => {
+        expect(ownExtensionRefusal({ dialMode: 'number', query: '1', ownExtensions: ['1'] })).toBe('');
+        expect(ownExtensionRefusal({ dialMode: 'extension', query: '1', ownExtensions: [] })).toBe('');
+        expect(ownExtensionRefusal({ dialMode: 'extension', query: '1' })).toBe('');
+    });
+});
+
+describe('transferRefusalMessage', () => {
+    it('says why, in the phone own words when the page localized them', () => {
+        expect(transferRefusalMessage({}, 'own-extension')).toBe('That\'s your own extension.');
+        expect(transferRefusalMessage({ ownExtension: 'C\'est votre poste.' }, 'own-extension')).toBe('C\'est votre poste.');
+        expect(transferRefusalMessage({}, 'several-match')).toContain('Choose one');
+        expect(transferRefusalMessage(null, 'something-else')).toBe('Choose who to transfer the call to, or enter a number.');
     });
 });
 

@@ -24,7 +24,9 @@
     // Enhances a number field with intl-tel-input, the way the keypad's field is. A country is always selected,
     // otherwise intl-tel-input cannot read a national number as an international one.
     //   input   - the field.
-    //   options - { intlTelInput, initialCountry, containerClass, dropdownParent }.
+    //   options - { intlTelInput, initialCountry, containerClass, dropdownParent, strictMode }.
+    // intl-tel-input is strict by default: it drops every key that is not a digit. A field that also searches by name
+    // (the transfer panel's) passes strictMode: false, or no letter ever reaches it.
     // Returns the intl-tel-input instance, or null when intl-tel-input is not loaded.
     function enhancePhoneInput(input, options) {
         options = options || {};
@@ -40,6 +42,10 @@
 
         if (options.initialCountry) {
             settings.initialCountry = options.initialCountry;
+        }
+
+        if (typeof options.strictMode === 'boolean') {
+            settings.strictMode = options.strictMode;
         }
 
         return options.intlTelInput(input, settings);

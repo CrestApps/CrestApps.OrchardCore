@@ -52,6 +52,20 @@ method) and keeps the list, reading it again only after five minutes; nothing is
 provider has no directory of its own (Telnyx), the transfer panel lists these extensions, and picking one
 transfers to it as an extension.
 
+The transfer panel's field searches that list by name as well as by number, in either of its modes: type
+**Test** and the list narrows to **Test 2 · Ext 2**; when a name narrows it to one person, **Enter** transfers to
+them. Digits still offer **Transfer to extension 2 · Test 2**. In the phone-number mode the field keeps its
+country flag for numbers; in the extension mode it is a plain search box.
+
+## Your own extension
+
+The directory a user reads leaves out their own extensions, and tells the soft phone which they are. Calling or
+transferring to your own extension would only ring the phone you are using, so it is refused with
+**That's your own extension.** — by the soft phone before anything is sent, and by the server for an extension
+call (`DialExtension`), a blind or warm transfer through the provider, and an extension typed into a Contact Center
+call's transfer panel. A Contact Center agent cannot pick themselves either: the agent list leaves them out, and
+the Contact Center refuses a transfer to the agent already on the call.
+
 ## Placing an extension call
 
 On the soft phone, toggle **Dial extension**, enter the extension, and dial. The dialed value is sent

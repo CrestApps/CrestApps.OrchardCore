@@ -13,6 +13,8 @@ const {
     transferToExtensionLabel,
     callExtensionNumber,
     extensionDirectoryEntries,
+    isOwnExtension,
+    ownExtensions,
     filterTransferTargets,
     resolveTransferTarget,
 } = globalThis.CrestAppsSoftPhone;
@@ -114,5 +116,38 @@ describe('extensionDirectoryEntries', () => {
 
     it('is nothing without a directory', () => {
         expect(extensionDirectoryEntries(null, {})).toEqual([]);
+    });
+
+    // The agent is not someone to transfer to: their own extension only rings their own phone.
+    it('leaves out the agent own extensions, even when the server listed them', () => {
+        const directory = createExtensionDirectory();
+        storeExtensionEntries(directory, [
+            { extension: '1', displayName: 'Mike Alhayek' },
+            { extension: '2', displayName: 'Test 2' },
+        ], 1000, ['1']);
+
+        expect(extensionDirectoryEntries(directory, {}).map(entry => entry.destination)).toEqual(['2']);
+    });
+});
+
+describe('isOwnExtension', () => {
+    it('knows the agent own extensions from what the server said, however they are written', () => {
+        const directory = createExtensionDirectory();
+        storeExtensionEntries(directory, [{ extension: '2', displayName: 'Test 2' }], 1000, [' 1 ', '11']);
+
+        expect(isOwnExtension(directory, '1')).toBe(true);
+        expect(isOwnExtension(directory, ' 11')).toBe(true);
+        expect(isOwnExtension(directory, '2')).toBe(false);
+        expect(isOwnExtension(directory, '')).toBe(false);
+        expect(isOwnExtension(null, '1')).toBe(false);
+    });
+
+    it('knows none before the server has said, or from a server that does not say', () => {
+        const directory = createExtensionDirectory();
+
+        expect(isOwnExtension(directory, '1')).toBe(false);
+        storeExtensionEntries(directory, [{ extension: '1', displayName: 'Mike Alhayek' }], 1000);
+        expect(isOwnExtension(directory, '1')).toBe(false);
+        expect(ownExtensions(directory)).toEqual([]);
     });
 });

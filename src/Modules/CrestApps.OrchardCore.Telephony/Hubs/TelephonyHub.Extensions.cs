@@ -38,11 +38,10 @@ public sealed partial class TelephonyHub
 
             var directory = scope.ServiceProvider.GetService<ITelephonyExtensionDirectory>();
 
-            result = new TelephonyExtensionDirectoryResult
-            {
-                Succeeded = true,
-                Entries = directory is null ? [] : await directory.ListAsync(Context.ConnectionAborted),
-            };
+            // Everybody but the caller: their own extension only rings their own phone.
+            result = directory is null
+                ? new TelephonyExtensionDirectoryResult { Succeeded = true }
+                : await directory.ListForUserAsync(Context.UserIdentifier, Context.ConnectionAborted);
         });
 
         if (_logger.IsEnabled(LogLevel.Information))

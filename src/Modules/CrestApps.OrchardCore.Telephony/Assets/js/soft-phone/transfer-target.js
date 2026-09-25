@@ -210,6 +210,66 @@
         return { destination: number, isExtension: false, label: text, refused: '' };
     }
 
+    // The directory entry a typed name picks, so Enter transfers to the one person the list narrowed to: { entry, refused }.
+    // A name matching several people is refused as 'several-match', one matching nobody as 'no-match'. Digits, and an
+    // empty field, pick nothing: they are an extension or a number, offered as one (see resolveTransferTarget).
+    function pickTypedMatch(entries, query) {
+        var text = query == null ? '' : String(query).trim();
+
+        if (!text || isNumberLike(text)) {
+            return { entry: null, refused: '' };
+        }
+
+        var matches = filterTransferTargets(entries, text);
+
+        if (matches.length === 1) {
+            return { entry: matches[0], refused: '' };
+        }
+
+        return { entry: null, refused: matches.length ? 'several-match' : 'no-match' };
+    }
+
+    // 'own-extension' when the transfer would go to the agent's own extension, which only rings the phone they are
+    // transferring from; else ''.
+    //   dialMode, query - the panel's Number / Extension toggle and what was typed.
+    //   selected        - the entry the agent picked, if any: an extension, or an agent with an extension.
+    //   ownExtensions   - the agent's own extensions, as the server named them.
+    function ownExtensionRefusal(options) {
+        options = options || {};
+
+        var own = (options.ownExtensions || []).map(function (number) { return String(number).trim(); }).filter(Boolean);
+        var selected = options.selected;
+        var candidate = selected
+            ? String(selected.isExtension ? selected.destination : (selected.extension || ''))
+            : (options.dialMode === 'extension' ? readExtension(options.query) : '');
+
+        return candidate && own.indexOf(candidate.trim()) !== -1 ? 'own-extension' : '';
+    }
+
+    // What the transfer panel says for each refusal: [string key, fallback].
+    var REFUSAL_MESSAGES = {
+        'own-number': ['transferOwnNumber', 'That is this phone system\'s own number. Choose who to transfer the call to.'],
+        'invalid-number': ['transferInvalidNumber', 'Enter a complete phone number, or switch to an extension.'],
+        'invalid-extension': ['transferInvalidExtension', 'Enter the extension as digits only.'],
+        'own-extension': ['ownExtension', 'That\'s your own extension.'],
+        'several-match': ['transferSeveralMatch', 'More than one person matches. Choose one from the list.'],
+        'no-match': ['directoryNoMatch', 'Nobody in the directory matches.'],
+        'browser-call': ['transferBrowserCall', 'This call was dialed straight from this phone, so the phone system cannot transfer it. Ask the other person to call the destination, or hang up and dial it.'],
+        'unavailable': ['transferAgentUnavailable', 'That agent cannot take a call right now. Choose someone who is available.'],
+        'warm-queue': ['transferWarmQueue', 'A queue cannot be consulted. Choose an agent or a number, or send the call to the queue with a blind transfer.'],
+        'external-not-allowed': ['transferNumberNotAllowed', 'Transfers to numbers that are not on the approved list are turned off. Choose from the list.']
+    };
+
+    // The localized sentence for a refusal (see resolveTransferTarget, pickTypedMatch and ownExtensionRefusal).
+    function transferRefusalMessage(strings, refused) {
+        var message = Object.prototype.hasOwnProperty.call(REFUSAL_MESSAGES, refused)
+            ? REFUSAL_MESSAGES[refused]
+            : ['transferTargetRequired', 'Choose who to transfer the call to, or enter a number.'];
+        var localized = strings && strings[message[0]];
+
+        return typeof localized === 'string' && localized ? localized : message[1];
+    }
+
     // Why the phone cannot transfer this call itself, or ''. A call dialed from this browser runs in the provider SDK
     // alone: the server holds no handle on it, so a transfer command for it can only fail. A transfer service that
     // carries the call's transfer (see soft-phone/transfer-service.js) is not bound by that.
@@ -231,5 +291,8 @@
     softPhone.toInternationalNumber = toInternationalNumber;
     softPhone.readExtension = readExtension;
     softPhone.resolveTransferTarget = resolveTransferTarget;
+    softPhone.pickTypedMatch = pickTypedMatch;
+    softPhone.ownExtensionRefusal = ownExtensionRefusal;
+    softPhone.transferRefusalMessage = transferRefusalMessage;
     softPhone.transferBlockedReason = transferBlockedReason;
 }(typeof globalThis !== 'undefined' ? globalThis : window));
