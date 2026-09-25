@@ -87,17 +87,13 @@ public sealed class TransferKeepsTheCallerTests
     }
 
     [Fact]
-    public async Task BlindToQueue_IsNotOfferedBackToTheAgentWhoTransferredIt_ButWaitsWithTheQueuesTreatment()
+    public async Task BlindToQueue_WithAnotherAgentFree_GoesToThem_NotBackToTheAgentWhoTransferredIt()
     {
         await using var fixture = await CreateAsync();
 
         // A direct call leaves no after-call work, so releasing the agent makes them Available the moment the call
-        // leaves them -- in time for the very offer that follows. Nobody else is free.
-        var interaction = await fixture.FindInteractionAsync();
-        interaction.QueueId = ContactCenterConstants.DirectRouting.QueueId;
-        await fixture.Harness.InteractionManager.UpdateAsync(interaction, cancellationToken: TestContext.Current.CancellationToken);
-        await fixture.Harness.PresenceManager.SetPresenceAsync(UserB, AgentPresenceStatus.Break, "Lunch", TestContext.Current.CancellationToken);
-        await fixture.Harness.CommitAsync();
+        // leaves them -- in time for the very offer that follows, and the longest idle of the two.
+        var interaction = await fixture.UseDirectCallAsync();
 
         var result = await fixture.TransferService.TransferAsync(
             BlindRequest(InteractionTransferTargetType.Queue, SupportQueueId, interaction.ItemId),
@@ -107,11 +103,53 @@ public sealed class TransferKeepsTheCallerTests
         Assert.True(result.Succeeded, result.Reason);
         Assert.Equal(AgentPresenceStatus.Available, await fixture.Harness.GetPresenceAsync(AgentA));
         Assert.Empty(await fixture.Reservations.GetActiveByAgentAsync(AgentA, TestContext.Current.CancellationToken));
+        Assert.Single(await fixture.Reservations.GetActiveByAgentAsync(AgentB, TestContext.Current.CancellationToken));
+        Assert.Contains(AgentA, (await fixture.QueueItems.FindByActivityIdAsync(ActivityId, TestContext.Current.CancellationToken)).ExcludedAgentIds);
+    }
 
-        var queueItem = await fixture.QueueItems.FindByActivityIdAsync(ActivityId, TestContext.Current.CancellationToken);
-        Assert.Equal(SupportQueueId, queueItem.QueueId);
-        Assert.Equal(QueueItemStatus.Waiting, queueItem.Status);
-        Assert.Contains(AgentA, queueItem.ExcludedAgentIds);
+    [Fact]
+    public async Task BlindToQueue_WhenTheOnlyOtherAgentDeclines_IsOfferedBackToTheAgentWhoTransferredIt()
+    {
+        await using var fixture = await CreateAsync();
+
+        // Live: the agent the caller was transferred to declined, and the caller then waited in silence until they hung
+        // up, although the agent who transferred them was free the whole time.
+        var interaction = await fixture.UseDirectCallAsync();
+
+        await fixture.TransferService.TransferAsync(
+            BlindRequest(InteractionTransferTargetType.Queue, SupportQueueId, interaction.ItemId),
+            TestContext.Current.CancellationToken);
+        await fixture.Harness.CommitAsync();
+
+        var offered = Assert.Single(await fixture.Reservations.GetActiveByAgentAsync(AgentB, TestContext.Current.CancellationToken));
+        Assert.True((await fixture.CallCommands.DeclineInboundOfferAsync(offered.ItemId, UserB, TestContext.Current.CancellationToken)).Succeeded);
+        await fixture.Harness.CommitAsync();
+
+        var offeredTo = await fixture.Offers.OfferNextAsync(SupportQueueId, TestContext.Current.CancellationToken);
+        await fixture.Harness.CommitAsync();
+
+        Assert.Equal(UserA, offeredTo);
+        Assert.Single(await fixture.Reservations.GetActiveByAgentAsync(AgentA, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task BlindToQueue_WithNobodyElseFree_IsOfferedBackToTheAgentWhoTransferredIt()
+    {
+        await using var fixture = await CreateAsync();
+
+        // Nobody else can take the call: it is better rung back to the agent who sent it than left on hold with an agent
+        // free.
+        var interaction = await fixture.UseDirectCallAsync();
+        await fixture.Harness.PresenceManager.SetPresenceAsync(UserB, AgentPresenceStatus.Break, "Lunch", TestContext.Current.CancellationToken);
+        await fixture.Harness.CommitAsync();
+
+        var result = await fixture.TransferService.TransferAsync(
+            BlindRequest(InteractionTransferTargetType.Queue, SupportQueueId, interaction.ItemId),
+            TestContext.Current.CancellationToken);
+        await fixture.Harness.CommitAsync();
+
+        Assert.True(result.Succeeded, result.Reason);
+        Assert.Single(await fixture.Reservations.GetActiveByAgentAsync(AgentA, TestContext.Current.CancellationToken));
         Assert.Contains(fixture.Treatment.HoldMusicStarted, played => played.CallId == fixture.CallId);
     }
 

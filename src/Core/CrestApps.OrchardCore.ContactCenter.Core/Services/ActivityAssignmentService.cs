@@ -212,7 +212,8 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
             return null;
         }
 
-        // The same rule routing applies: the agent who transferred the call into this queue is not offered it back.
+        // A direct offer names one agent and has nobody else to try, so it is never what hands a call straight back to
+        // the agent who transferred it away; queue routing offers it to them once nobody else can take it.
         if (ActivityRoutingService.IsExcluded(queueItem, agentId))
         {
             if (_logger.IsEnabled(LogLevel.Information))

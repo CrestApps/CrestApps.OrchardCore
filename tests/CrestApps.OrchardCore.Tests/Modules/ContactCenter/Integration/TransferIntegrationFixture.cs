@@ -68,6 +68,8 @@ internal sealed class TransferIntegrationFixture : IAsyncDisposable
 
     public IContactCenterCallCommandService CallCommands { get; private set; }
 
+    public IVoiceQueueOfferService Offers { get; private set; }
+
     public IActivityReservationManager Reservations => Harness.Services.GetRequiredService<IActivityReservationManager>();
 
     public IQueueItemManager QueueItems => Harness.Services.GetRequiredService<IQueueItemManager>();
@@ -128,6 +130,20 @@ internal sealed class TransferIntegrationFixture : IAsyncDisposable
 
     public async Task<Interaction> FindInteractionAsync()
         => await Harness.FindInteractionByActivityAsync(ActivityId);
+
+    /// <summary>
+    /// Makes the agent's call a direct one, which leaves them no after-call work: released by a transfer, they are
+    /// Available again at once.
+    /// </summary>
+    public async Task<Interaction> UseDirectCallAsync()
+    {
+        var interaction = await FindInteractionAsync();
+        interaction.QueueId = ContactCenterConstants.DirectRouting.QueueId;
+        await Harness.InteractionManager.UpdateAsync(interaction, cancellationToken: TestContext.Current.CancellationToken);
+        await Harness.CommitAsync();
+
+        return interaction;
+    }
 
     public async Task<CallSession> FindSessionAsync()
         => await Sessions.FindByInteractionIdAsync((await FindInteractionAsync()).ItemId, TestContext.Current.CancellationToken);
@@ -204,7 +220,7 @@ internal sealed class TransferIntegrationFixture : IAsyncDisposable
         var queueService = ActivatorUtilities.CreateInstance<ActivityQueueService>(services, queueManager.Object, businessHours.Object, (IQueueTreatmentProvider)Treatment);
         var reservationService = ActivatorUtilities.CreateInstance<ActivityReservationService>(services, queueManager.Object, (IActivityQueueService)queueService, (IAgentAvailabilityService)availability);
         var withdrawalService = ActivatorUtilities.CreateInstance<QueuedWorkWithdrawalService>(services, (IActivityQueueService)queueService, (IActivityReservationService)reservationService);
-        var routingService = new ActivityRoutingService([new LongestIdleRoutingStrategy()], clock);
+        var routingService = new ActivityRoutingService([new LongestIdleRoutingStrategy()]);
         var assignmentService = ActivatorUtilities.CreateInstance<ActivityAssignmentService>(
             services,
             (IActivityQueueManager)queueManager.Object,
@@ -219,6 +235,8 @@ internal sealed class TransferIntegrationFixture : IAsyncDisposable
             (IActivityReservationService)reservationService,
             (IActivityReservationReclaimer)reservationService,
             Mock.Of<IProviderVoiceOfferSynchronizationService>());
+
+        Offers = offerService;
 
         var agentRelease = new TransferAgentReleaseService(
             services.GetRequiredService<IInteractionManager>(),

@@ -6,13 +6,12 @@ using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
-using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter.Integration;
 
 /// <summary>
 /// A caller whose offer an agent turns down, or lets ring out, goes to the next agent in line rather than back to the
-/// one who did not take them. Live, a queue with two Available agents offered one caller to the same agent five times
+/// one who did not take them -- unless nobody else can take the call, when it is offered to them again at once. Live, a queue with two Available agents offered one caller to the same agent five times
 /// in a row -- two declines, a missed offer, two more declines -- and never once to the other: the agent who declined
 /// was still the longest idle, so routing picked them again every time. Runs the real queue, reservation, routing and
 /// assignment services, and the decline command, over the harness's SQLite store.
@@ -96,7 +95,7 @@ public sealed class DeclinedOfferRoutingTests
     }
 
     [Fact]
-    public async Task TheOnlyAvailableAgent_WhoDeclines_IsNotRungStraightBack_AndTheCallerKeepsWaiting()
+    public async Task TheOnlyAvailableAgent_WhoDeclines_IsOfferedTheCallAgainStraightAway()
     {
         // Arrange
         await using var context = await DeclineContext.CreateAsync(signInB: false);
@@ -104,16 +103,30 @@ public sealed class DeclinedOfferRoutingTests
 
         // Act
         await context.DeclineAsync(first, UserA);
-        var straightAfter = await context.OfferNextAsync();
-
-        context.Harness.Clock.Advance(ActivityRoutingService.DeclinedOfferRetryDelay);
-        var afterTheRetryDelay = await context.OfferNextAsync();
+        var second = await context.OfferNextAsync();
 
         // Assert
-        // In between, the queue's own no-agent handling applies: the caller waits with its treatment, and its maximum
-        // wait or overflow still moves them on.
-        Assert.Null(straightAfter);
-        Assert.Equal(AgentA, afterTheRetryDelay?.AgentId);
+        // Nobody else can take the call; the caller is rung through to the only free agent again rather than held.
+        Assert.NotNull(second);
+        Assert.NotEqual(first.ItemId, second.ItemId);
+        Assert.Equal(AgentA, second.AgentId);
+    }
+
+    [Fact]
+    public async Task ADecline_HangsUpTheDeclinedOffersLeg_BeforeTheCallIsOfferedAgain()
+    {
+        // Arrange
+        // What keeps an immediate re-offer from ringing over the one just turned down: the phone's leg for the declined
+        // offer is released before the decline is published, and publishing it is what routes the next offer.
+        await using var context = await DeclineContext.CreateAsync(signInB: false);
+        var first = await context.OfferNextAsync();
+
+        // Act
+        await context.DeclineAsync(first, UserA);
+
+        // Assert
+        Assert.Equal([(first.ItemId, 0)], context.ReleasedLegs);
+        Assert.Single(context.Harness.PublishedEvents, e => e.EventType == ContactCenterConstants.Events.OfferDeclined && e.AggregateId == first.ItemId);
     }
 
     [Fact]
@@ -174,6 +187,11 @@ public sealed class DeclinedOfferRoutingTests
         public ActivityAssignmentService AssignmentService { get; private set; }
 
         public ContactCenterCallCommandService CallCommands { get; private set; }
+
+        /// <summary>
+        /// Gets each pre-dialed leg released, with how many declines had been published when it was.
+        /// </summary>
+        public List<(string ReservationId, int DeclinesPublished)> ReleasedLegs { get; } = [];
 
         public static async Task<DeclineContext> CreateAsync(bool preferStickyAgent = false, string stickyAgentUserId = null, bool signInB = true)
         {
@@ -266,7 +284,7 @@ public sealed class DeclinedOfferRoutingTests
                 new CapacityRoutingStrategy(),
                 new StickyAgentRoutingStrategy(),
                 new LongestIdleRoutingStrategy(),
-            ], services.GetRequiredService<IClock>());
+            ]);
 
             ReservationService = reservationService;
             AssignmentService = ActivatorUtilities.CreateInstance<ActivityAssignmentService>(
@@ -278,6 +296,14 @@ public sealed class DeclinedOfferRoutingTests
                 businessHours.Object,
                 new SignedInAgents(Harness, availability));
 
+            var preDial = new Mock<IAgentPreDialCoordinator>();
+            preDial
+                .Setup(coordinator => coordinator.ReleaseAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Callback((string reservationId, CancellationToken _) => ReleasedLegs.Add((
+                    reservationId,
+                    Harness.PublishedEvents.Count(e => e.EventType == ContactCenterConstants.Events.OfferDeclined))))
+                .Returns(Task.CompletedTask);
+
             CallCommands = ActivatorUtilities.CreateInstance<ContactCenterCallCommandService>(
                 services,
                 (IActivityReservationService)reservationService,
@@ -286,7 +312,7 @@ public sealed class DeclinedOfferRoutingTests
                 Mock.Of<IContactCenterVoiceProviderResolver>(),
                 (IActivityQueueService)queueService,
                 Enumerable.Empty<IContactCenterOfferAnsweredNotifier>(),
-                Mock.Of<IAgentPreDialCoordinator>());
+                preDial.Object);
         }
     }
 

@@ -99,15 +99,16 @@ public sealed class QueueItem : CatalogItem, IModifiedUtcAwareModel
     public string StickyAgentUserId { get; set; }
 
     /// <summary>
-    /// Gets or sets the agents this item is never offered to, such as the agent who transferred the call into this
-    /// queue. Routing and direct offers both skip them; the item waits for somebody else rather than going back.
+    /// Gets or sets the agents who sent this item away, such as the agent who transferred the call into this queue.
+    /// Routing offers it back to them only when nobody else who can take it is available, and a direct offer never
+    /// names them.
     /// </summary>
     public IList<string> ExcludedAgentIds { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the agents who declined this item or let its offer ring out, earliest first. Unlike
-    /// <see cref="ExcludedAgentIds"/> this is not permanent: routing offers the item to somebody who has not turned it
-    /// down yet, and only once everybody who could take it has, starts another round in the order they declined.
+    /// Gets or sets the agents who declined this item or let its offer ring out, earliest first. Routing offers the
+    /// item to somebody who has not turned it down first, and once everybody who could take it has, offers it again in
+    /// the order they declined -- to the same agent again when they are the only one who can take it.
     /// </summary>
     public IList<string> DeclinedAgentIds { get; set; } = [];
 

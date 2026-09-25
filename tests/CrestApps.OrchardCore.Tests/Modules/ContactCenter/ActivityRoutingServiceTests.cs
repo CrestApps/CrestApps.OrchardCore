@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.Tests.Modules.ContactCenter.Integration;
 
 using OrchardCore.Modules;
 using Moq;
@@ -89,7 +88,7 @@ public sealed class ActivityRoutingServiceTests
     }
 
     [Fact]
-    public async Task SelectAgentAsync_NeverPicksAnAgentTheItemExcludes_EvenWhenTheyAreTheStickyAgent()
+    public async Task SelectAgentAsync_DoesNotPickTheAgentWhoTransferredTheCallAway_WhileAnotherCanTakeIt_EvenWhenTheyAreTheStickyAgent()
     {
         // Arrange
         // The agent who just transferred the call away is also the one the customer last worked with, and the one who
@@ -98,7 +97,7 @@ public sealed class ActivityRoutingServiceTests
         [
             new StickyAgentRoutingStrategy(),
             new LongestIdleRoutingStrategy(),
-        ], new TestClock());
+        ]);
         var queue = new ActivityQueue { ItemId = "q1", PreferStickyAgent = true };
         var item = new QueueItem { ItemId = "i1", QueueId = "q1", StickyAgentUserId = "u1", ExcludedAgentIds = ["a1"] };
         var transferringAgent = new AgentProfile { ItemId = "a1", UserId = "u1", PresenceChangedUtc = new DateTime(2026, 1, 1) };
@@ -118,7 +117,7 @@ public sealed class ActivityRoutingServiceTests
     }
 
     [Fact]
-    public async Task SelectAgentAsync_WhenTheOnlyAvailableAgentIsExcluded_AssignsNobody()
+    public async Task SelectAgentAsync_WhenTheOnlyAvailableAgentTransferredTheCallAway_OffersItBackToThem()
     {
         // Arrange
         var service = CreateService();
@@ -134,8 +133,81 @@ public sealed class ActivityRoutingServiceTests
             TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(decision.Succeeded);
-        Assert.Null(decision.Agent);
+        // Nobody else can take the call; the caller is better rung back to them than left on hold with an agent free.
+        Assert.True(decision.Succeeded);
+        Assert.Same(transferringAgent, decision.Agent);
+    }
+
+    [Fact]
+    public async Task SelectAgentAsync_WhenTheOnlyOtherAgentDeclines_OffersTheCallBackToTheAgentWhoTransferredIt()
+    {
+        // Arrange
+        // Live: the caller was transferred into the queue by a2, offered to a1, and a1 declined; the caller then waited
+        // until they hung up, with a2 free the whole time. a2 is next, and a1 again only when a2 cannot take the call.
+        var service = CreateService();
+        var queue = new ActivityQueue { ItemId = "q1" };
+        var item = new QueueItem { ItemId = "i1", QueueId = "q1", ExcludedAgentIds = ["a2"], DeclinedAgentIds = ["a1"], LastDeclinedUtc = _now };
+        var decliner = new AgentProfile { ItemId = "a1", UserId = "u1", IdleSinceUtc = new DateTime(2026, 1, 2) };
+        var transferringAgent = new AgentProfile { ItemId = "a2", UserId = "u2", IdleSinceUtc = new DateTime(2026, 1, 1) };
+
+        // Act
+        var withBoth = await service.SelectAgentAsync(queue, item, [Availability(transferringAgent), Availability(decliner)], TestContext.Current.CancellationToken);
+        var withTheTransferrerOnly = await service.SelectAgentAsync(queue, item, [Availability(transferringAgent)], TestContext.Current.CancellationToken);
+        var withTheDeclinerOnly = await service.SelectAgentAsync(queue, item, [Availability(decliner)], TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Same(transferringAgent, withBoth.Agent);
+        Assert.Same(transferringAgent, withTheTransferrerOnly.Agent);
+        Assert.Same(decliner, withTheDeclinerOnly.Agent);
+    }
+
+    [Fact]
+    public async Task SelectAgentAsync_AnEarlierDecliner_ComesBeforeTheAgentWhoTransferredTheCallAway()
+    {
+        // Arrange
+        // a3 transferred the call in; a1 declined it, then a2 did. a1 has waited longest since turning it down, a3 comes
+        // after the decliners who are not the latest, and a2, who has just declined, comes last.
+        var service = CreateService();
+        var queue = new ActivityQueue { ItemId = "q1" };
+        var item = new QueueItem { ItemId = "i1", QueueId = "q1", ExcludedAgentIds = ["a3"], DeclinedAgentIds = ["a1", "a2"], LastDeclinedUtc = _now };
+        var earlierDecliner = new AgentProfile { ItemId = "a1", UserId = "u1", IdleSinceUtc = new DateTime(2026, 1, 3) };
+        var latestDecliner = new AgentProfile { ItemId = "a2", UserId = "u2", IdleSinceUtc = new DateTime(2026, 1, 1) };
+        var transferringAgent = new AgentProfile { ItemId = "a3", UserId = "u3", IdleSinceUtc = new DateTime(2026, 1, 2) };
+
+        // Act
+        var withAll = await service.SelectAgentAsync(
+            queue,
+            item,
+            [Availability(latestDecliner), Availability(transferringAgent), Availability(earlierDecliner)],
+            TestContext.Current.CancellationToken);
+        var withoutTheEarlierDecliner = await service.SelectAgentAsync(
+            queue,
+            item,
+            [Availability(latestDecliner), Availability(transferringAgent)],
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Same(earlierDecliner, withAll.Agent);
+        Assert.Same(transferringAgent, withoutTheEarlierDecliner.Agent);
+    }
+
+    [Fact]
+    public async Task SelectAgentAsync_TheAgentWhoTransferredTheCallAway_AndDeclinedIt_ComesBeforeTheAgentWhoDeclinedLast()
+    {
+        // Arrange
+        // a2 sent the call away, was offered it back as the only one free, and declined; a1 declined after that. a1 has
+        // just turned it down, so a2 is next.
+        var service = CreateService();
+        var queue = new ActivityQueue { ItemId = "q1" };
+        var item = new QueueItem { ItemId = "i1", QueueId = "q1", ExcludedAgentIds = ["a2"], DeclinedAgentIds = ["a2", "a1"], LastDeclinedUtc = _now };
+        var laterDecliner = new AgentProfile { ItemId = "a1", UserId = "u1" };
+        var transferringAgent = new AgentProfile { ItemId = "a2", UserId = "u2" };
+
+        // Act
+        var decision = await service.SelectAgentAsync(queue, item, [Availability(transferringAgent), Availability(laterDecliner)], TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Same(transferringAgent, decision.Agent);
     }
 
     [Fact]
@@ -197,7 +269,7 @@ public sealed class ActivityRoutingServiceTests
         [
             new StickyAgentRoutingStrategy(),
             new LongestIdleRoutingStrategy(),
-        ], new TestClock());
+        ]);
         var queue = new ActivityQueue { ItemId = "q1", PreferStickyAgent = true };
         var item = new QueueItem { ItemId = "i1", QueueId = "q1", StickyAgentUserId = "u1", DeclinedAgentIds = ["a1"], LastDeclinedUtc = _now };
         var stickyAgent = new AgentProfile { ItemId = "a1", UserId = "u1", IdleSinceUtc = new DateTime(2026, 1, 1) };
@@ -241,32 +313,29 @@ public sealed class ActivityRoutingServiceTests
     }
 
     [Fact]
-    public async Task SelectAgentAsync_TheOnlyAgent_WhoJustDeclined_IsNotOfferedItAgainUntilTheRetryDelayHasPassed()
+    public async Task SelectAgentAsync_TheOnlyAgent_WhoJustDeclined_IsOfferedItAgainStraightAway()
     {
         // Arrange
-        var clock = new TestClock();
-        var service = new ActivityRoutingService([new LongestIdleRoutingStrategy()], clock);
+        // Nobody else can take the call, so it is better rung again than left on hold with an agent free.
+        var service = new ActivityRoutingService([new LongestIdleRoutingStrategy()]);
         var queue = new ActivityQueue { ItemId = "q1" };
         var item = new QueueItem { ItemId = "i1", QueueId = "q1", DeclinedAgentIds = ["a1"], LastDeclinedUtc = _now };
         var onlyAgent = new AgentProfile { ItemId = "a1", UserId = "u1" };
 
         // Act
-        var justAfter = await service.SelectAgentAsync(queue, item, [Availability(onlyAgent)], TestContext.Current.CancellationToken);
-        clock.Advance(ActivityRoutingService.DeclinedOfferRetryDelay);
-        var afterTheDelay = await service.SelectAgentAsync(queue, item, [Availability(onlyAgent)], TestContext.Current.CancellationToken);
+        var decision = await service.SelectAgentAsync(queue, item, [Availability(onlyAgent)], TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(justAfter.Succeeded);
-        Assert.True(afterTheDelay.Succeeded);
-        Assert.Same(onlyAgent, afterTheDelay.Agent);
+        Assert.True(decision.Succeeded);
+        Assert.Same(onlyAgent, decision.Agent);
     }
 
     [Fact]
-    public async Task SelectAgentAsync_ADeclinerIsStillSkipped_WhenTheOnlyOtherAgentIsAtCapacity()
+    public async Task SelectAgentAsync_AnAgentOnAnotherCall_DoesNotHoldTheCallBackFromTheDecliner()
     {
         // Arrange
-        // A round is over only when everyone who could take the call has turned it down; somebody on another call has
-        // not, so the decliner is not offered it again yet.
+        // A round is judged against who can take the call now. The other agent is at capacity, so the decliner is the
+        // only one who can, and is offered it again rather than the caller waiting for the other call to end.
         var service = CreateServiceWithCapacity();
         var queue = new ActivityQueue { ItemId = "q1" };
         var item = new QueueItem { ItemId = "i1", QueueId = "q1", DeclinedAgentIds = ["a1"], LastDeclinedUtc = _now };
@@ -281,10 +350,11 @@ public sealed class ActivityRoutingServiceTests
             TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(decision.Succeeded);
+        Assert.True(decision.Succeeded);
+        Assert.Same(decliner, decision.Agent);
     }
 
-    private static readonly DateTime _now = new TestClock().UtcNow;
+    private static readonly DateTime _now = new(2026, 9, 25, 20, 11, 27, DateTimeKind.Utc);
 
     private static ActivityRoutingService CreateService()
     {
@@ -292,7 +362,7 @@ public sealed class ActivityRoutingServiceTests
         [
             new RequiredSkillsRoutingStrategy(Mock.Of<IClock>()),
             new LongestIdleRoutingStrategy(),
-        ], new TestClock());
+        ]);
     }
 
     private static ActivityRoutingService CreateServiceWithCapacity()
@@ -302,7 +372,7 @@ public sealed class ActivityRoutingServiceTests
             new RequiredSkillsRoutingStrategy(Mock.Of<IClock>()),
             new CapacityRoutingStrategy(),
             new LongestIdleRoutingStrategy(),
-        ], new TestClock());
+        ]);
     }
 
     // Routing now reads the availability snapshot the caller already produced, so a candidate carries its own
