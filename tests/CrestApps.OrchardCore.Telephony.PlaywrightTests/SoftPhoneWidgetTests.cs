@@ -80,7 +80,8 @@ public sealed class SoftPhoneWidgetTests : SoftPhoneBrowserTest
         await page.PressAsync("[data-telephony-number]", "Enter");
 
         // Assert
-        await page.WaitForFunctionAsync(
+        await WaitForPromiseAsync(
+            page,
             "([count]) => window.telephonySoftPhone.getInstance().getConnection().invoke('GetDialRequestCount').then(value => value === count + 1)",
             new[] { baselineCount });
 
@@ -273,7 +274,8 @@ public sealed class SoftPhoneWidgetTests : SoftPhoneBrowserTest
         await merge.ClickAsync();
 
         // Assert
-        await page.WaitForFunctionAsync(
+        await WaitForPromiseAsync(
+            page,
             "([count]) => window.telephonySoftPhone.getInstance().getConnection().invoke('GetMergeRequestCount').then(value => value === count + 1)",
             new[] { baselineCount });
         await page.WaitForFunctionAsync("() => !document.querySelector('[data-telephony-merge-calls]')");
@@ -300,7 +302,8 @@ public sealed class SoftPhoneWidgetTests : SoftPhoneBrowserTest
         await page.ClickAsync("[data-telephony-transfer-confirm]");
 
         // Assert
-        await page.WaitForFunctionAsync(
+        await WaitForPromiseAsync(
+            page,
             "([count]) => window.telephonySoftPhone.getInstance().getConnection().invoke('GetTransferRequestCount').then(value => value === count + 1)",
             new[] { baselineCount });
         Assert.True(await page.Locator("[data-telephony-transfer-panel]").IsHiddenAsync());
@@ -349,11 +352,16 @@ public sealed class SoftPhoneWidgetTests : SoftPhoneBrowserTest
         var baselineCount = await page.EvaluateAsync<int>(
             "() => window.telephonySoftPhone.getInstance().getConnection().invoke('GetHangupRequestCount')");
 
-        // Act
+        // Act - the phone asks before ending every call, and the agent confirms.
         await page.ClickAsync("[data-telephony-hangup-all]");
+        var confirm = page.Locator("[data-telephony-confirm]");
+        await confirm.WaitForAsync();
+        Assert.Contains("Hang up all 2 calls?", await confirm.InnerTextAsync());
+        await page.ClickAsync("[data-telephony-confirm-accept]");
 
         // Assert
-        await page.WaitForFunctionAsync(
+        await WaitForPromiseAsync(
+            page,
             "([count]) => window.telephonySoftPhone.getInstance().getConnection().invoke('GetHangupRequestCount').then(value => value === count + 2)",
             new[] { baselineCount });
     }

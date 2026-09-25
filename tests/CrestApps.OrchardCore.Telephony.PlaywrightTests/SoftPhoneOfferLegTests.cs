@@ -66,8 +66,10 @@ public sealed class SoftPhoneOfferLegTests : SoftPhoneBrowserTest
         await ReportCallStateAsync(page, "call-one", 5);
         await page.WaitForTimeoutAsync(200);
 
-        // A second offer rings, and the platform rings its leg to the browser, which holds it.
-        await ShowOfferAsync(page, "call-two", "res-two", expiresInMs: 2500);
+        // A second offer rings, and the platform rings its leg to the browser, which holds it. Its deadline is real time,
+        // so it leaves room for the steps before the offer is checked still ringing: at 2.5 seconds a busy machine let it
+        // expire first.
+        await ShowOfferAsync(page, "call-two", "res-two", expiresInMs: 8000);
         await RingOfferLegAsync(page, "res-two", "leg-two");
 
         // Act: the server reports the caller's live leg as connected while the offer is still ringing.
@@ -86,7 +88,7 @@ public sealed class SoftPhoneOfferLegTests : SoftPhoneBrowserTest
         await page.Locator("[data-telephony-incoming]").WaitForAsync(new LocatorWaitForOptions
         {
             State = WaitForSelectorState.Hidden,
-            Timeout = 8000,
+            Timeout = 20000,
         });
         Assert.Equal(0, await LegCountAsync(page, "leg-two", "answers"));
         Assert.Equal(1, await LegCountAsync(page, "leg-two", "hangups"));

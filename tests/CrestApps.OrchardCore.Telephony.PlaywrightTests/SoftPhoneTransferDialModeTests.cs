@@ -289,7 +289,8 @@ public sealed class SoftPhoneTransferDialModeTests : SoftPhoneBrowserTest
 
     private static async Task<JsonElement> WaitForTransferAsync(IPage page)
     {
-        await page.WaitForFunctionAsync(
+        await WaitForPromiseAsync(
+            page,
             "() => window.telephonySoftPhone.getInstance().getConnection().invoke('GetTransferRequestCount').then(value => value === 1)");
 
         return await page.EvaluateAsync<JsonElement>(
@@ -298,7 +299,8 @@ public sealed class SoftPhoneTransferDialModeTests : SoftPhoneBrowserTest
 
     private static async Task<JsonElement> WaitForCommandAsync(IPage page, string kind)
     {
-        await page.WaitForFunctionAsync(
+        await WaitForPromiseAsync(
+            page,
             "(kind) => fetch('/test/transfer-commands').then(response => response.json()).then(commands => commands.some(command => command.kind === kind))",
             kind);
 

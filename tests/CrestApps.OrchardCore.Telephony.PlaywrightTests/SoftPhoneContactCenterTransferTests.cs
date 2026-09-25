@@ -216,6 +216,16 @@ public sealed class SoftPhoneContactCenterTransferTests : SoftPhoneBrowserTest
 
         await page.ClickAsync("[data-telephony-toggle]");
 
+        // The provider carries the call and reports it, knowing nothing of the Contact Center. Untracked, the phone's
+        // periodic read of its calls (every five seconds) dropped the call mid-test whenever a busy machine made the
+        // test run that long.
+        await page.EvaluateAsync(
+            """
+            () => window.telephonySoftPhone.getInstance().getConnection().invoke(
+                'PublishTrackedCallState',
+                { callId: 'cc-call-1', from: '+15557000001', direction: 1, state: 3, providerName: 'InMemory' })
+            """);
+
         // A connected inbound call the Contact Center routed to this agent: it names its interaction.
         await page.EvaluateAsync(
             """
@@ -247,7 +257,8 @@ public sealed class SoftPhoneContactCenterTransferTests : SoftPhoneBrowserTest
 
     private static async Task<JsonElement> WaitForCommandAsync(IPage page, string kind)
     {
-        await page.WaitForFunctionAsync(
+        await WaitForPromiseAsync(
+            page,
             "(kind) => fetch('/test/transfer-commands').then(response => response.json()).then(commands => commands.some(command => command.kind === kind))",
             kind);
 

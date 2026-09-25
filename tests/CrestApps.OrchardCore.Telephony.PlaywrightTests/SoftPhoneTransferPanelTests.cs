@@ -168,7 +168,8 @@ public sealed class SoftPhoneTransferPanelTests : SoftPhoneBrowserTest
 
     private static async Task<JsonElement> WaitForTransferAsync(IPage page)
     {
-        await page.WaitForFunctionAsync(
+        await WaitForPromiseAsync(
+            page,
             "() => window.telephonySoftPhone.getInstance().getConnection().invoke('GetTransferRequestCount').then(value => value === 1)");
 
         return await page.EvaluateAsync<JsonElement>(

@@ -112,7 +112,8 @@ public sealed class SoftPhoneCallStateTests : SoftPhoneBrowserTest
 
         await page.ReloadAsync();
         await WaitForConnectedAsync(page);
-        await page.WaitForFunctionAsync(
+        await WaitForPromiseAsync(
+            page,
             """
             async baseline => {
                 const connection = window.telephonySoftPhone.getInstance().getConnection();

@@ -4,8 +4,8 @@ using Microsoft.Playwright;
 namespace CrestApps.OrchardCore.Telephony.PlaywrightTests.Infrastructure;
 
 /// <summary>
-/// Starts a fresh harness server and headless Chromium for each test, and carries the page helpers the soft phone
-/// browser tests share.
+/// Starts a fresh harness server for each test, opens its pages in the run's shared headless Chromium, and carries the
+/// page helpers the soft phone browser tests share.
 /// </summary>
 public abstract class SoftPhoneBrowserTest : IAsyncLifetime
 {
@@ -15,46 +15,31 @@ public abstract class SoftPhoneBrowserTest : IAsyncLifetime
     protected SoftPhoneTestServer Server { get; private set; } = null!;
 
     /// <summary>
-    /// Gets the browser.
+    /// Gets the browser, shared by the whole run: every page a test opens is in a context of its own, closed when the
+    /// test ends.
     /// </summary>
-    protected IBrowser Browser { get; private set; } = null!;
-
-    private IPlaywright _playwright;
+    protected TestBrowser Browser { get; private set; } = null!;
 
     /// <inheritdoc/>
     public async ValueTask InitializeAsync()
     {
-        var exitCode = Microsoft.Playwright.Program.Main(["install", "chromium"]);
-
-        if (exitCode != 0)
-        {
-            throw new InvalidOperationException($"Playwright browser installation failed with exit code {exitCode}.");
-        }
+        var fixture = await TestContext.Current.GetFixture<PlaywrightBrowserFixture>()
+            ?? throw new InvalidOperationException($"The {nameof(PlaywrightBrowserFixture)} assembly fixture is not registered.");
 
         Server = new SoftPhoneTestServer();
         await Server.StartAsync();
 
-        _playwright = await Playwright.CreateAsync();
-        Browser = await _playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
-        {
-            Headless = true,
-
-            // The soft phone sends a real MediaStreamTrack: it swaps the capture into a long-lived send stream, so a
-            // scripted stand-in for getUserMedia no longer gets as far as the media adapter. Chromium's fake capture
-            // device gives it a real track without a microphone or a permission prompt.
-            Args = ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"],
-        });
+        Browser = new TestBrowser(fixture.Browser);
     }
 
     /// <inheritdoc/>
     public async ValueTask DisposeAsync()
     {
+        // The pages go first, so their phones leave the hub before the server stops.
         if (Browser is not null)
         {
             await Browser.DisposeAsync();
         }
-
-        _playwright?.Dispose();
 
         if (Server is not null)
         {
@@ -112,8 +97,13 @@ public abstract class SoftPhoneBrowserTest : IAsyncLifetime
     }
 
     /// <summary>
-    /// Waits for the phone's hub connection.
+    /// Waits for the phone's hub connection, and for the phone to finish reading its calls once connected.
     /// </summary>
+    /// <remarks>
+    /// The connection reports connected before the phone has read its calls back, and that read replaces the calls it
+    /// shows. A test that set an offer or a call in between lost it once the read came back, which a busy machine made
+    /// likely.
+    /// </remarks>
     protected static async Task WaitForConnectedAsync(IPage page)
     {
         await page.WaitForFunctionAsync(
@@ -125,6 +115,30 @@ public abstract class SoftPhoneBrowserTest : IAsyncLifetime
                 return connection && connection.state === 'Connected';
             }
             """);
+        await page.EvaluateAsync("() => document.querySelector('#telephony-soft-phone').__telephonySoftPhone.started");
+    }
+
+    /// <summary>
+    /// Waits until <paramref name="expression"/>, a page function that returns a promise (a hub call or a fetch), resolves
+    /// to <see langword="true"/>.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="IPage.WaitForFunctionAsync"/> cannot wait on one: it takes the returned promise itself as a truthy
+    /// answer and returns at once, so a wait on a hub counter or a fetched list never waited at all.
+    /// </remarks>
+    protected static async Task WaitForPromiseAsync(IPage page, string expression, object arg = null, int timeoutMs = 30000)
+    {
+        var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+
+        while (!await page.EvaluateAsync<bool>(expression, arg))
+        {
+            if (DateTime.UtcNow > deadline)
+            {
+                throw new TimeoutException($"Timeout {timeoutMs}ms exceeded waiting for: {expression}");
+            }
+
+            await Task.Delay(50);
+        }
     }
 
     /// <summary>
@@ -149,16 +163,22 @@ public abstract class SoftPhoneBrowserTest : IAsyncLifetime
     }
 
     /// <summary>
-    /// Has the provider report the state of the call it last changed, as a real provider's event would.
+    /// Has the provider report the state of the call it last changed, as a real provider's event would, once the dial
+    /// has reached it.
     /// </summary>
+    /// <remarks>
+    /// A dial on the browser's audio first takes the microphone and starts the media adapter, so it can reach the
+    /// provider well after the click; half a second, the budget this once had, was not always enough on a busy machine.
+    /// </remarks>
     protected static async Task PublishLatestCallStateAsync(IPage page)
     {
         await page.EvaluateAsync(
             """
             async () => {
                 const connection = window.telephonySoftPhone.getInstance().getConnection();
+                const deadline = Date.now() + 10000;
 
-                for (let attempt = 0; attempt < 20; attempt++) {
+                while (Date.now() < deadline) {
                     const published = await connection.invoke('PublishLatestCallState');
 
                     if (published) {

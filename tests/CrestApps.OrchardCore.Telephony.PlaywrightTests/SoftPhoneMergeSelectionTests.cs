@@ -183,7 +183,8 @@ public sealed class SoftPhoneMergeSelectionTests : SoftPhoneBrowserTest
 
     private static async Task<JsonElement> WaitForMergeAsync(IPage page, int count)
     {
-        await page.WaitForFunctionAsync(
+        await WaitForPromiseAsync(
+            page,
             "(count) => window.telephonySoftPhone.getInstance().getConnection().invoke('GetMergeRequestCount').then(value => value === count)",
             count);
 

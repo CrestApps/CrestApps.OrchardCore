@@ -33,7 +33,8 @@ public sealed class SoftPhoneMergeCallsTests : SoftPhoneBrowserTest
         await merge.ClickAsync();
 
         // Assert - one merge of both calls, and the conference is listed with both participants.
-        await page.WaitForFunctionAsync(
+        await WaitForPromiseAsync(
+            page,
             "([count]) => window.telephonySoftPhone.getInstance().getConnection().invoke('GetMergeRequestCount').then(value => value === count + 1)",
             new[] { baselineCount });
         var conference = page.Locator("[data-telephony-conference]");
@@ -60,7 +61,8 @@ public sealed class SoftPhoneMergeCallsTests : SoftPhoneBrowserTest
         await page.Locator("[data-telephony-participant-hangup]").Nth(0).ClickAsync();
 
         // Assert - exactly one hang-up, for that participant; the other call stays up.
-        await page.WaitForFunctionAsync(
+        await WaitForPromiseAsync(
+            page,
             "([count]) => window.telephonySoftPhone.getInstance().getConnection().invoke('GetHangupRequestCount').then(value => value === count + 1)",
             new[] { baselineCount });
         await page.WaitForFunctionAsync(
