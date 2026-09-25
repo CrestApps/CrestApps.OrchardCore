@@ -242,43 +242,41 @@ public sealed class TelnyxBridgedDialTests
         // Arrange
         var handler = new RecordingHttpMessageHandler()
             .RespondWith(HttpStatusCode.OK, CallStatus(AgentLeg(peer: "remote-a")))
-            .RespondWith(HttpStatusCode.OK, """{"data":{"id":"conference-1"}}""")
-            .RespondWith(HttpStatusCode.OK, """{"data":{"result":"ok"}}""")
             .RespondWith(HttpStatusCode.OK, CallStatus(AgentLeg(peer: "remote-b")))
-            .RespondWith(HttpStatusCode.OK, """{"data":{"result":"ok"}}""")
             .RespondWith(HttpStatusCode.OK, CallStatus(AgentLeg(peer: "remote-c")))
-            .RespondWith(HttpStatusCode.OK, """{"data":{"result":"ok"}}""");
+            .RespondWith(HttpStatusCode.OK, """{"data":{"id":"conference-1"}}""")
+            .AlwaysRespondWith(HttpStatusCode.OK, """{"data":{"result":"ok"}}""");
         var provider = CreateProvider(handler, Credentials());
 
         // Act
         var result = await provider.MergeAsync(new MergeRequest { CallIds = ["agent-a", "agent-b", "agent-c"] }, TestContext.Current.CancellationToken);
 
-        // Assert
+        // Assert - every call is read before anything moves.
         Assert.True(result.Succeeded);
         Assert.Equal(
             [
                 "GET /v2/calls/agent-a",
+                "GET /v2/calls/agent-b",
+                "GET /v2/calls/agent-c",
                 "POST /v2/conferences",
                 "POST /v2/conferences/conference-1/actions/join",
-                "GET /v2/calls/agent-b",
                 "POST /v2/conferences/conference-1/actions/join",
-                "GET /v2/calls/agent-c",
                 "POST /v2/conferences/conference-1/actions/join",
             ],
             handler.Requests.Select(Describe));
 
         // The conference is made from the first dialed party, which is detached so its leaving does not end it for
         // everyone else; the agent joins once, on the first leg, and leaving ends the conference.
-        var create = handler.Requests[1];
+        var create = handler.Requests[3];
         Assert.Equal("remote-a", ReadString(create.Body, "call_control_id"));
         Assert.Equal("conf-agent-a", ReadString(create.Body, "name"));
         Assert.True(TelnyxOutboundBridgeState.TryParseEncoded(ReadString(create.Body, "client_state"), out var firstParty));
         Assert.True(firstParty.Detached);
 
-        Assert.Equal("agent-a", ReadString(handler.Requests[2].Body, "call_control_id"));
-        Assert.True(ReadBoolean(handler.Requests[2].Body, "end_conference_on_exit"));
+        Assert.Equal("agent-a", ReadString(handler.Requests[4].Body, "call_control_id"));
+        Assert.True(ReadBoolean(handler.Requests[4].Body, "end_conference_on_exit"));
 
-        Assert.Equal("remote-b", ReadString(handler.Requests[4].Body, "call_control_id"));
+        Assert.Equal("remote-b", ReadString(handler.Requests[5].Body, "call_control_id"));
         Assert.Equal("remote-c", ReadString(handler.Requests[6].Body, "call_control_id"));
 
         // No leg of the agent's own is joined twice, and none is hung up: each stays with its participant.
@@ -291,8 +289,9 @@ public sealed class TelnyxBridgedDialTests
     {
         // Arrange
         var handler = new RecordingHttpMessageHandler()
-            .RespondWith(HttpStatusCode.OK, """{"data":[{"id":"conference-1","name":"conf-agent-a"}]}""")
+            .RespondWith(HttpStatusCode.OK, CallStatus(AgentLeg(peer: "remote-a").AsDetached()))
             .RespondWith(HttpStatusCode.OK, CallStatus(AgentLeg(peer: "remote-d")))
+            .RespondWith(HttpStatusCode.OK, """{"data":[{"id":"conference-1","name":"conf-agent-a"}]}""")
             .RespondWith(HttpStatusCode.OK, """{"data":{"result":"ok"}}""");
         var provider = CreateProvider(handler, Credentials());
 
@@ -305,12 +304,13 @@ public sealed class TelnyxBridgedDialTests
         Assert.True(result.Succeeded);
         Assert.Equal(
             [
-                "GET /v2/conferences?filter[name]=conf-agent-a",
+                "GET /v2/calls/agent-a",
                 "GET /v2/calls/agent-d",
+                "GET /v2/conferences?filter[name]=conf-agent-a",
                 "POST /v2/conferences/conference-1/actions/join",
             ],
             handler.Requests.Select(Describe));
-        Assert.Equal("remote-d", ReadString(handler.Requests[2].Body, "call_control_id"));
+        Assert.Equal("remote-d", ReadString(handler.Requests[3].Body, "call_control_id"));
     }
 
     [Fact]

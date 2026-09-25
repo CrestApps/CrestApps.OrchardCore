@@ -19,9 +19,15 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator
     {
         var destinationLegCallControlId = await DialDestinationAsync(agentLegCallControlId, state, cancellationToken);
 
-        // An internal extension call is joined through a conference and keeps its own rules.
+        // An internal extension call is joined through a conference and keeps its own rules, but its agent leg still
+        // names the colleague's leg: a merge moves the colleague, not the agent, into the conference it makes.
         if (!string.IsNullOrWhiteSpace(state.VoicemailRecipientUserId))
         {
+            if (!string.IsNullOrWhiteSpace(destinationLegCallControlId))
+            {
+                await RecordPeerAsync(agentLegCallControlId, state, destinationLegCallControlId, cancellationToken);
+            }
+
             return;
         }
 
@@ -32,6 +38,15 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator
             return;
         }
 
+        await RecordPeerAsync(agentLegCallControlId, state, destinationLegCallControlId, cancellationToken);
+    }
+
+    private async Task RecordPeerAsync(
+        string agentLegCallControlId,
+        TelnyxOutboundBridgeState state,
+        string destinationLegCallControlId,
+        CancellationToken cancellationToken)
+    {
         var updated = await _apiClient.UpdateClientStateAsync(
             agentLegCallControlId,
             state.WithPeer(destinationLegCallControlId).ToClientStateJson(),
@@ -40,7 +55,7 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator
         if (!updated.Succeeded)
         {
             _logger.LogWarning(
-                "Telnyx refused to record the dialed number's leg {DestinationLeg} on the agent leg {AgentLeg} ({StatusCode}); the call works, but it cannot be transferred, merged or sent digits.",
+                "Telnyx refused to record the other party's leg {DestinationLeg} on the agent leg {AgentLeg} ({StatusCode}); the call works, but it cannot be transferred, merged or sent digits.",
                 destinationLegCallControlId.SanitizeLogValue(),
                 agentLegCallControlId.SanitizeLogValue(),
                 updated.StatusCode);
@@ -69,9 +84,11 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator
     }
 
     // The agent hung up. The number's leg goes too -- also while it is still ringing, when there is no bridge yet to
-    // take it down -- unless the platform moved it somewhere else first (a transfer or a merge detaches it).
+    // take it down -- unless the platform moved it somewhere else first (a transfer or a merge detaches it). So does the
+    // colleague of an extension call: its own conference ends with the agent's leg, but a merge moves the colleague
+    // into another one, where only this releases them.
     private Task ReleaseRemotePartyAsync(TelnyxOutboundBridgeState state, CancellationToken cancellationToken)
-        => state.IsBridgedDialAgentLeg && state.Detached != true
+        => (state.IsBridgedDialAgentLeg || state.IsExtensionAgentLeg) && state.Detached != true
             ? HangupLegAsync(state.PeerCallControlId, cancellationToken)
             : Task.CompletedTask;
 

@@ -152,6 +152,17 @@ public sealed class TelnyxOutboundBridgeState
             !string.IsNullOrWhiteSpace(PeerCallControlId);
 
     /// <summary>
+    /// Gets a value indicating whether this is the caller's leg of an internal extension call once the colleague's leg
+    /// exists: <see cref="PeerCallControlId"/> is then the colleague, joined with this leg in the conference
+    /// <c>ext-{this leg}</c>.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsExtensionAgentLeg
+        => Intent == AgentLegIntent &&
+            !string.IsNullOrWhiteSpace(VoicemailRecipientUserId) &&
+            !string.IsNullOrWhiteSpace(PeerCallControlId);
+
+    /// <summary>
     /// Returns a copy of this state marked <see cref="Detached"/>.
     /// </summary>
     public TelnyxOutboundBridgeState AsDetached()

@@ -46,22 +46,6 @@ public sealed class TelnyxBridgedDialOrchestrationTests
     }
 
     [Fact]
-    public async Task AgentLegAnsweredOnAnExtensionCall_KeepsItsState()
-    {
-        // Arrange - an extension call is joined through a conference, by its own rules.
-        var handler = new RecordingHttpMessageHandler().AlwaysRespondWith(HttpStatusCode.OK, $$$"""{"data":{"call_control_id":"{{{RemoteLeg}}}"}}""");
-        var orchestrator = CreateOrchestrator(handler);
-        var state = AgentLegState();
-        state.VoicemailRecipientUserId = "user-2";
-
-        // Act
-        await orchestrator.AdvanceAsync(Event("call.answered", AgentLeg, state), TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal(["POST /v2/calls"], handler.Requests.Select(Describe));
-    }
-
-    [Fact]
     public async Task NumberThatCannotBeDialed_HangsUpTheAgentsSilentLeg()
     {
         // Arrange

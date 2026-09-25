@@ -85,7 +85,7 @@ public sealed class TelnyxExtensionVoicemailTests
             AgentAnswered(destination: "sip:agent2@sip.telnyx.com"),
             TestContext.Current.CancellationToken);
 
-        Assert.DoesNotContain("outbound_voice_profile_id", handler.LastRequestBody, StringComparison.Ordinal);
+        Assert.DoesNotContain("outbound_voice_profile_id", handler.RequestBodies[0], StringComparison.Ordinal);
     }
 
     [Fact]
@@ -99,7 +99,7 @@ public sealed class TelnyxExtensionVoicemailTests
             AgentAnswered(destination: "+15551234567"),
             TestContext.Current.CancellationToken);
 
-        Assert.Contains("outbound_voice_profile_id", handler.LastRequestBody, StringComparison.Ordinal);
+        Assert.Contains("outbound_voice_profile_id", handler.RequestBodies[0], StringComparison.Ordinal);
     }
 
     private static TelnyxCallEvent AgentAnswered(string destination)
