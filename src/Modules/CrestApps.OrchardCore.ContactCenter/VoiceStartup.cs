@@ -189,6 +189,9 @@ public sealed class VoiceSoftPhoneStartup : StartupBase
     {
         services
             .AddScoped<IContactCenterEventHandler, ContactCenterSoftPhoneEventHandler>()
+            // Settles the call-history entry of an offer that ended without an accept, which the projection has
+            // already left behind for the next agent.
+            .AddScoped<IContactCenterEventHandler, OfferCallHistorySettlementHandler>()
             // Tells the agent's other open soft phones an offer was answered from inside the accept, so they stop
             // ringing at once instead of when the outbox delivers the durable event.
             .AddScoped<IContactCenterOfferAnsweredNotifier, ContactCenterOfferAnsweredNotifier>()
