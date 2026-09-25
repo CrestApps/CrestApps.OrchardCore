@@ -43,6 +43,7 @@ public sealed class TestTelephonyHub : Hub<ITelephonyClient>
     public Task ReportClientDiagnostic(string level, string code, string message, string context)
     {
         _browserCalls.Diagnostic(code, context);
+        _provider.ClientDiagnosticCodes.Enqueue(code);
 
         return Task.CompletedTask;
     }
@@ -231,13 +232,6 @@ public sealed class TestTelephonyHub : Hub<ITelephonyClient>
     {
         var call = _provider.DisconnectLatestCall();
         await Clients.Caller.CallStateChanged(call);
-    }
-
-    public Task ReportClientDiagnostic(string level, string code, string message, string context)
-    {
-        _provider.ClientDiagnosticCodes.Enqueue(code);
-
-        return Task.CompletedTask;
     }
 
     public Task ReportCallQuality(CallQualityReport report)
