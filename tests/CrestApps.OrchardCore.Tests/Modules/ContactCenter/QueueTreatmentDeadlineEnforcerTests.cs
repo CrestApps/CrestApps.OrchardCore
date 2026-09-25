@@ -186,6 +186,23 @@ public sealed class QueueTreatmentDeadlineEnforcerTests
     }
 
     [Fact]
+    public async Task RunDueAsync_TakesNoLock_ForAQueueWhoseTreatmentPlaysNothing()
+    {
+        // Arrange
+        // The minute sweep asks this of every queue, and most have nothing configured. The lock is held elsewhere, so a
+        // pass that asked for it first would come back with a retry instead of with nothing to do.
+        var item = CreateItem(enteredUtc: _now);
+        var (enforcer, _, treatment, _) = CreateEnforcer([item], lockAcquired: false, settings: new QueueTreatmentSettings());
+
+        // Act
+        var next = await enforcer.RunDueAsync("queue-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(next);
+        treatment.Verify(value => value.RunDueAsync(It.IsAny<ActivityQueue>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task RunAndArmAsync_HoldsTheDeadlineThePassReturns()
     {
         // Arrange
@@ -249,13 +266,14 @@ public sealed class QueueTreatmentDeadlineEnforcerTests
 
     private static (QueueTreatmentDeadlineEnforcer Enforcer, Mock<IContactCenterDeadlineScheduler> Scheduler, Mock<IQueueTreatmentService> Treatment, Mock<ISession> Session) CreateEnforcer(
         IReadOnlyCollection<QueueItem> waiting,
-        bool lockAcquired = true)
+        bool lockAcquired = true,
+        QueueTreatmentSettings settings = null)
     {
         var queue = new ActivityQueue
         {
             ItemId = "queue-1",
             Enabled = true,
-            Treatment = new QueueTreatmentSettings
+            Treatment = settings ?? new QueueTreatmentSettings
             {
                 WelcomeMessage = "Thanks for calling.",
                 AnnouncementIntervalSeconds = 30,

@@ -101,6 +101,14 @@ public sealed class QueueTreatmentDeadlineEnforcer : IQueueTreatmentDeadlineEnfo
     {
         ArgumentException.ThrowIfNullOrEmpty(queueId);
 
+        // Before the lock: the sweep asks this of every queue each minute, and most play nothing at all.
+        var queue = await FindTreatedQueueAsync(queueId, cancellationToken);
+
+        if (queue is null)
+        {
+            return null;
+        }
+
         (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             $"ContactCenterQueueTreatment:{queueId}",
             _lockTimeout,
@@ -113,13 +121,6 @@ public sealed class QueueTreatmentDeadlineEnforcer : IQueueTreatmentDeadlineEnfo
         }
 
         await using var acquiredLock = locker;
-
-        var queue = await FindTreatedQueueAsync(queueId, cancellationToken);
-
-        if (queue is null)
-        {
-            return null;
-        }
 
         await _treatmentService.RunDueAsync(queue, cancellationToken);
 
@@ -203,6 +204,6 @@ public sealed class QueueTreatmentDeadlineEnforcer : IQueueTreatmentDeadlineEnfo
         var queue = await _queueManager.FindByIdAsync(queueId, cancellationToken);
 
         // A disabled queue still has callers on hold in it, and they still hear it, as they did under the sweep.
-        return queue?.Treatment is null ? null : queue;
+        return queue?.Treatment is { } settings && QueueTreatmentPolicy.PlaysAnything(settings) ? queue : null;
     }
 }

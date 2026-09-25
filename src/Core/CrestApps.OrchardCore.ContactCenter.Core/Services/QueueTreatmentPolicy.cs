@@ -56,6 +56,17 @@ public static class QueueTreatmentPolicy
     }
 
     /// <summary>
+    /// Whether a queue's treatment ever has anything for a caller: a welcome, hold music, a callback offer, or a
+    /// periodic update that says something.
+    /// </summary>
+    /// <param name="options">The queue's treatment options.</param>
+    internal static bool PlaysAnything(QueueTreatmentSettings options)
+        => !string.IsNullOrWhiteSpace(options.WelcomeMessage)
+            || !string.IsNullOrWhiteSpace(options.HoldMusicMediaId)
+            || !string.IsNullOrWhiteSpace(options.CallbackDtmfKey)
+            || (options.AnnouncementIntervalSeconds > 0 && (options.AnnouncePosition || options.AnnounceEstimatedWait));
+
+    /// <summary>
     /// Returns when <see cref="GetNextStep"/> will next have something for a waiting caller, or <see langword="null"/>
     /// when nothing more is ever due. A time at or before now means a step is due already.
     /// </summary>
