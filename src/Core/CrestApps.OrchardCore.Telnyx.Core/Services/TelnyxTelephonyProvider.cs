@@ -584,7 +584,8 @@ public sealed partial class TelnyxTelephonyProvider :
         Func<TelephonyCall> onSuccess,
         CancellationToken cancellationToken,
         bool succeedWhenMissing = false,
-        bool succeedWhenEnded = false)
+        bool succeedWhenEnded = false,
+        bool refusalIsHandledByCaller = false)
     {
         if (string.IsNullOrWhiteSpace(callId))
         {
@@ -620,6 +621,22 @@ public sealed partial class TelnyxTelephonyProvider :
                 }
 
                 var payload = response.ErrorBody ?? string.Empty;
+
+                // The caller checks what the refusal means and logs it only when it is a failure.
+                if (refusalIsHandledByCaller)
+                {
+                    if (_logger.IsEnabled(LogLevel.Debug))
+                    {
+                        _logger.LogDebug(
+                            "Telnyx refused the '{Action}' request for call {CallId} with status code {StatusCode}. Response: {Response}",
+                            action,
+                            callId.SanitizeLogValue(),
+                            response.StatusCode,
+                            payload.SanitizeLogValue());
+                    }
+
+                    return TelephonyResult.Failed(S["Telnyx could not complete the requested operation."].Value);
+                }
 
                 _logger.LogError(
                     "Telnyx rejected the '{Action}' request for call {CallId} with status code {StatusCode}. Response: {Response}",

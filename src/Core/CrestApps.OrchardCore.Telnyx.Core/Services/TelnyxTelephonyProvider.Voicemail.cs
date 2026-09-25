@@ -1,6 +1,8 @@
 using System.Text.Json;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Telephony.Models;
+using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.Telnyx.Services;
 
@@ -32,11 +34,16 @@ public sealed partial class TelnyxTelephonyProvider
         // That refusal used to abort the whole thing, so a caller who reached voicemail from a queue — already
         // connected, by definition — was never greeted and never recorded. They heard the hold music stop and
         // then nothing. The answer exists to guarantee a live leg, so a refusal that means the leg is already
-        // live is the goal, not a failure.
-        var answered = await ExecuteActionAsync(callId, "answer", body: null, () => null, cancellationToken, succeedWhenMissing: true);
+        // live is the goal, not a failure -- and is not logged as one: a caller the platform dialed out to and then
+        // handed to a queue reaches voicemail this way every time.
+        var answered = await ExecuteActionAsync(callId, "answer", body: null, () => null, cancellationToken, succeedWhenMissing: true, refusalIsHandledByCaller: true);
 
         if (!answered.Succeeded && !await IsAlreadyLiveAsync(callId, cancellationToken))
         {
+            _logger.LogWarning(
+                "Could not send Telnyx call {CallId} to voicemail: the answer was refused and the call is no longer live.",
+                callId.SanitizeLogValue());
+
             return answered;
         }
 

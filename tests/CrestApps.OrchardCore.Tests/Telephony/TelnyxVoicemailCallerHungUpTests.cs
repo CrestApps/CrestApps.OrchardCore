@@ -84,6 +84,53 @@ public sealed class TelnyxVoicemailCallerHungUpTests
         Assert.DoesNotContain(logger.Entries, entry => entry.Level >= LogLevel.Warning);
     }
 
+    [Fact]
+    public async Task AnAnswerRefusedBecauseTheCallerIsAlreadyOnTheLine_IsNotLoggedAsAnError()
+    {
+        // Arrange
+        // A caller the platform dialed out to, handed from an AI voice agent to a queue and then sent to voicemail,
+        // is already connected: Telnyx refuses the answer for an outbound call (90102), the leg is found live, and the
+        // caller is greeted. Live, that refusal still put an ERROR in the log for a voicemail that was left normally.
+        var handler = new RecordingHttpMessageHandler()
+            .RespondWith(HttpStatusCode.UnprocessableEntity, """{"errors":[{"code":"90102","title":"Invalid command","detail":"Can not issue an answer command on an outbound call."}]}""")
+            .RespondWith(HttpStatusCode.OK, """{"data":{"is_alive":true}}""")
+            .AlwaysRespondWith(HttpStatusCode.OK, """{"data":{"result":"ok"}}""");
+        var logger = new RecordingLogger<TelnyxTelephonyProvider>();
+        var provider = CreateProvider(handler, logger);
+
+        // Act
+        var result = await provider.SendToVoicemailAsync(
+            new CallReference
+            {
+                CallId = "ctrl-1",
+                Metadata = new Dictionary<string, object> { ["interactionId"] = "interaction-1" },
+            },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Contains(handler.Requests, request => request.Path.Contains("/actions/speak", StringComparison.Ordinal));
+        Assert.DoesNotContain(logger.Entries, entry => entry.Level >= LogLevel.Warning);
+    }
+
+    [Fact]
+    public async Task AnAnswerRefusedForALegThatIsGone_IsStillLogged()
+    {
+        // Arrange
+        var handler = new RecordingHttpMessageHandler()
+            .RespondWith(HttpStatusCode.UnprocessableEntity, """{"errors":[{"code":"90102","detail":"Can not issue an answer command on an outbound call."}]}""")
+            .AlwaysRespondWith(HttpStatusCode.OK, """{"data":{"is_alive":false}}""");
+        var logger = new RecordingLogger<TelnyxTelephonyProvider>();
+        var provider = CreateProvider(handler, logger);
+
+        // Act
+        var result = await provider.SendToVoicemailAsync(new CallReference { CallId = "ctrl-1" }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Contains(logger.Entries, entry => entry.Level >= LogLevel.Warning);
+    }
+
     private static TelnyxOptions CreateOptions()
         => new()
         {
