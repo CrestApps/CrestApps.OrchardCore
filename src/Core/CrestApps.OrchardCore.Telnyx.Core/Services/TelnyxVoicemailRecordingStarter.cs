@@ -64,16 +64,17 @@ public sealed class TelnyxVoicemailRecordingStarter : ITelnyxVoicemailRecordingS
             {
                 var payload = response.ErrorBody ?? string.Empty;
 
-                // A 404 means the leg is already gone (the caller hung up during or right after the greeting), which
-                // is an expected race with nothing to record. Any other rejection is logged with the provider's
-                // response so the actual reason is visible.
-                if (response.StatusCode == HttpStatusCode.NotFound)
+                // A 404, or a 422 "Call has already ended" (90018), means the leg is already gone: the caller hung up
+                // during or right after the greeting, an expected race with nothing to record. Any other rejection is
+                // logged with the provider's response so the actual reason is visible.
+                if (response.StatusCode == HttpStatusCode.NotFound || TelnyxApiErrors.IsCallAlreadyEnded(response))
                 {
                     if (_logger.IsEnabled(LogLevel.Debug))
                     {
                         _logger.LogDebug(
-                            "Voicemail record_start for call {CallControlId} was not accepted (404); the caller likely hung up before leaving a message.",
-                            callControlId.SanitizeLogValue());
+                            "Voicemail record_start for call {CallControlId} was not accepted ({StatusCode}); the caller hung up before leaving a message.",
+                            callControlId.SanitizeLogValue(),
+                            response.StatusCode);
                     }
                 }
                 else

@@ -56,7 +56,9 @@ public sealed partial class TelnyxTelephonyProvider
         // audio greeting (a publicly reachable URL) is played with playback_start; otherwise the per-agent (or
         // default) text greeting is spoken with text-to-speech.
         //
-        // Best-effort: a greeting hiccup must not fail the overall action, which has already answered the call.
+        // Best-effort: a greeting hiccup must not fail the overall action, which has already answered the call. A
+        // caller who hung up once answered is refused as "Call has already ended" (90018): they chose not to leave a
+        // message, which is an ordinary outcome and not logged as an error.
         var greetingClientState = string.IsNullOrWhiteSpace(voicemailInteractionId)
             ? null
             : TelnyxRecordingClientState.ForVoicemailGreeting(voicemailInteractionId, recipientUserId).ToClientState();
@@ -76,7 +78,8 @@ public sealed partial class TelnyxTelephonyProvider
                     ["play_beep"] = true,
                 },
                 () => null,
-                cancellationToken);
+                cancellationToken,
+                succeedWhenEnded: true);
         }
 
         // Prefer a Telnyx-hosted greeting (media_name in Telnyx Media Storage) the agent recorded or uploaded, then a
@@ -102,7 +105,7 @@ public sealed partial class TelnyxTelephonyProvider
                 playbackBody["client_state"] = greetingClientState;
             }
 
-            await ExecuteActionAsync(callId, "playback_start", playbackBody, () => null, cancellationToken);
+            await ExecuteActionAsync(callId, "playback_start", playbackBody, () => null, cancellationToken, succeedWhenEnded: true);
         }
         else
         {
@@ -124,7 +127,7 @@ public sealed partial class TelnyxTelephonyProvider
                 speakBody["client_state"] = greetingClientState;
             }
 
-            await ExecuteActionAsync(callId, "speak", speakBody, () => null, cancellationToken);
+            await ExecuteActionAsync(callId, "speak", speakBody, () => null, cancellationToken, succeedWhenEnded: true);
         }
 
         return TelephonyResult.Success(BuildCall(callId, CallState.Connected, call.Metadata, CallDirection.Inbound));
