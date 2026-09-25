@@ -4033,6 +4033,12 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         System.Threading.Tasks.Task<int> EnforceMaxWaitAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> EnforceMaxWaitAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem item, CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface IQueueTreatmentDeadlineEnforcer
+    {
+        System.Threading.Tasks.Task ArmAsync(string queueId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task RunAndArmAsync(string queueId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.DateTime?> RunDueAsync(string queueId, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IQueueTreatmentService
     {
         System.Threading.Tasks.Task<int> RunDueAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue, System.Threading.CancellationToken cancellationToken = default);
@@ -4559,8 +4565,24 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task<bool> EnforceMaxWaitAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem item, CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue, System.Threading.CancellationToken cancellationToken = default) { }
         public static System.DateTime? GetMaxWaitDueUtc(CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem item, CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue) { }
     }
+    public sealed class QueueTreatmentDeadlineEnforcer : CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueTreatmentDeadlineEnforcer
+    {
+        public QueueTreatmentDeadlineEnforcer(CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterDeadlineScheduler scheduler, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueManager queueManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemManager queueItemManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueTreatmentService treatmentService, OrchardCore.Locking.Distributed.IDistributedLock distributedLock, YesSql.ISession session, OrchardCore.Modules.IClock clock) { }
+        public System.Threading.Tasks.Task ArmAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task RunAndArmAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.DateTime?> RunDueAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
+        public static string GetDeadlineKey(string queueId) { }
+    }
+    public sealed class QueueTreatmentDeadlineEventHandler : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventHandler
+    {
+        public QueueTreatmentDeadlineEventHandler(System.Lazy<CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueTreatmentDeadlineEnforcer> enforcer, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemManager queueItemManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityReservationManager reservationManager) { }
+        public string HandlerId { get; }
+        public CrestApps.OrchardCore.ContactCenter.ContactCenterHandlerReplaySafety ReplaySafety { get; }
+        public System.Threading.Tasks.Task HandleAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent interactionEvent, System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public static class QueueTreatmentPolicy
     {
+        public static System.DateTime? GetNextDueUtc(CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem item, CrestApps.OrchardCore.ContactCenter.Core.Models.QueueTreatmentSettings options) { }
         public static CrestApps.OrchardCore.ContactCenter.Core.Models.QueueTreatmentStep GetNextStep(CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem item, CrestApps.OrchardCore.ContactCenter.Core.Models.QueueTreatmentSettings options, System.DateTime nowUtc) { }
     }
     public sealed class QueueTreatmentService : CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueTreatmentService

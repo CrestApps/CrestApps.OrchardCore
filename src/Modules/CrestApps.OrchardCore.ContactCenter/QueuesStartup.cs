@@ -152,6 +152,10 @@ public sealed class QueuesStartup : StartupBase
             .AddScoped<IQueueWaitDeadlineEnforcer, QueueWaitDeadlineEnforcer>()
             .AddScoped(sp => new Lazy<IQueueWaitDeadlineEnforcer>(sp.GetRequiredService<IQueueWaitDeadlineEnforcer>))
             .AddScoped<IContactCenterEventHandler, QueueWaitDeadlineEventHandler>();
+        services
+            .AddScoped<IQueueTreatmentDeadlineEnforcer, QueueTreatmentDeadlineEnforcer>()
+            .AddScoped(sp => new Lazy<IQueueTreatmentDeadlineEnforcer>(sp.GetRequiredService<IQueueTreatmentDeadlineEnforcer>))
+            .AddScoped<IContactCenterEventHandler, QueueTreatmentDeadlineEventHandler>();
 
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ReservationExpiryBackgroundTask>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, DirectRingTimeoutBackgroundTask>());

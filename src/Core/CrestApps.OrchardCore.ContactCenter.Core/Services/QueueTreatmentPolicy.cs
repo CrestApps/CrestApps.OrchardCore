@@ -54,4 +54,42 @@ public static class QueueTreatmentPolicy
             ? new QueueTreatmentStep(QueueTreatmentStepKind.Announcement, null, null)
             : QueueTreatmentStep.None;
     }
+
+    /// <summary>
+    /// Returns when <see cref="GetNextStep"/> will next have something for a waiting caller, or <see langword="null"/>
+    /// when nothing more is ever due. A time at or before now means a step is due already.
+    /// </summary>
+    /// <param name="item">The waiting item.</param>
+    /// <param name="options">The queue's treatment options.</param>
+    public static DateTime? GetNextDueUtc(QueueItem item, QueueTreatmentSettings options)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        ArgumentNullException.ThrowIfNull(options);
+
+        if (item.TreatmentStepsPlayed == 0 &&
+            (!string.IsNullOrWhiteSpace(options.WelcomeMessage) || !string.IsNullOrWhiteSpace(options.HoldMusicMediaId)))
+        {
+            return item.QueueEnteredUtc;
+        }
+
+        DateTime? dueUtc = null;
+
+        if (!string.IsNullOrWhiteSpace(options.CallbackDtmfKey) && item.CallbackOfferedUtc is null)
+        {
+            dueUtc = item.QueueEnteredUtc.AddSeconds(Math.Max(0, options.CallbackOfferAfterSeconds));
+        }
+
+        // An announcement with nothing to say is never played, so a cadence without content is nothing to wait for.
+        if (options.AnnouncementIntervalSeconds > 0 && (options.AnnouncePosition || options.AnnounceEstimatedWait))
+        {
+            var announcementDueUtc = (item.LastTreatmentUtc ?? item.QueueEnteredUtc).AddSeconds(options.AnnouncementIntervalSeconds);
+
+            if (dueUtc is null || announcementDueUtc < dueUtc)
+            {
+                dueUtc = announcementDueUtc;
+            }
+        }
+
+        return dueUtc;
+    }
 }
