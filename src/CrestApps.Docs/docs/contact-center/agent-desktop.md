@@ -239,8 +239,24 @@ The soft phone keeps your history on two tabs, both of which update in real time
 
 ### 6. Manage your voicemails
 
-- **Play** a voicemail with the ▶ control on its row. Only the agent a voicemail was left for can play it; playback is governed and audited like any other recording.
-- **Delete** voicemails with the checkboxes: tick one or more rows (or **Select all**) and click **Delete**. Deleting removes the entry from your inbox and erases the stored recording.
+- **Play** a voicemail with the ▶ control on its row. Playback is governed and audited like any other recording, and the audit names you, as an agent, as the person who listened.
+- **Delete** voicemails with the checkboxes: tick one or more rows (or **Select all**) and click **Delete**. Deleting removes the entry from your inbox and erases the stored recording. The voicemails are deleted one at a time. If some cannot be deleted, the tab says how many, and each one that is left stays selected with the reason on its row (for example, the recording is under legal hold, or your session has ended). A voicemail whose caller hung up before anything was recorded is removed from your inbox without an erasure entry in the audit, because there was no recording to erase.
+
+#### Who owns a voicemail
+
+One rule decides which voicemails you see, play and delete: a voicemail is yours when it is in **your** soft-phone inbox. You can play and delete exactly the voicemails in your list, and nobody can play or delete a voicemail that is in another user's inbox, whatever identifier they send.
+
+The platform puts a voicemail in an inbox once, when the call reaches voicemail:
+
+| How the call reached voicemail | Whose inbox |
+| --- | --- |
+| A direct call to an agent (their extension, or an entry point that targets them) that was not answered | The agent the call was for. |
+| An agent pressed **Voicemail** on a ringing call | That agent. |
+| A queued call that reached the queue's voicemail on its maximum wait, after an offer to an agent expired | The agent the call was last offered to. |
+
+A queue voicemail is not shared among the queue's members and is not listed for supervisors. A supervisor who must remove a recording uses recording erasure, which is audited as the supervisor's action.
+
+The voicemail endpoints answer a refusal with a status code and a problem body (`401` signed out, `403` not in your inbox, `404` not found, `409` legal hold). They never redirect to the sign-in or access-denied page, so the soft phone can always tell a refused delete from a completed one.
 
 ### 7. Record your voicemail greeting
 

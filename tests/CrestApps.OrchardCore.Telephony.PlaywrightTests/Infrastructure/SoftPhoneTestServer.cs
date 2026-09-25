@@ -21,12 +21,18 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
 
     public string BaseUrl { get; private set; }
 
+    /// <summary>
+    /// Gets the voicemails the harness lists on the Voicemail tab.
+    /// </summary>
+    public TestVoicemailInbox VoicemailInbox => _app.Services.GetRequiredService<TestVoicemailInbox>();
+
     public async Task StartAsync()
     {
         var builder = WebApplication.CreateBuilder();
         builder.Logging.ClearProviders();
 
         builder.Services.AddSingleton<InMemoryTelephonyProvider>();
+        builder.Services.AddSingleton<TestVoicemailInbox>();
         builder.Services
             .AddSignalR()
             .AddJsonProtocol(options =>
@@ -42,8 +48,18 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
             BuildHtml(
                 context.Request.Query.ContainsKey("browserAudio"),
                 context.Request.Query.ContainsKey("embedded"),
-                context.Request.Query["answerCallId"]),
+                context.Request.Query["answerCallId"],
+                context.Request.Query.ContainsKey("voicemail")),
             "text/html; charset=utf-8"));
+
+        // The voicemail delete endpoint, answering a refusal the way the site's cookie authentication did before
+        // the endpoint wrote its own 403: a redirect to a sign-in page that itself answers 200.
+        app.MapPost("/voicemail/{interactionId}/delete", async (string interactionId, TestVoicemailInbox inbox) =>
+            await inbox.TryDeleteAsync(interactionId)
+                ? Results.Ok()
+                : Results.Redirect("/login"));
+        app.MapGet("/login", () => Results.Content("<!DOCTYPE html><html><body>Sign in</body></html>", "text/html; charset=utf-8"));
+
         // The module's own scripts, from its built wwwroot, at the URLs its resource manifest gives them.
         app.MapGet(SoftPhoneAssets.ModuleUrlPrefix + "{**path}", (string path) => ServeModuleAsset(path));
         app.MapGet(SoftPhoneAssets.SignalRUrl, ServeSignalRAsset);
@@ -77,6 +93,22 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
         .Distinct(StringComparer.OrdinalIgnoreCase)
         .ToDictionary(relative => relative, SoftPhoneAssets.ResolveModuleFile, StringComparer.OrdinalIgnoreCase);
 
+    // The widget's Voicemail view, as SoftPhoneWidget.cshtml renders it.
+    private const string VoicemailViewMarkup = """
+        <div class="telephony-soft-phone__view telephony-soft-phone__voicemail" data-telephony-view="voicemail" hidden>
+            <div data-telephony-voicemail-player hidden>
+                <div data-telephony-voicemail-player-info></div>
+                <audio data-telephony-voicemail-audio controls preload="none"></audio>
+            </div>
+            <div data-telephony-voicemail-toolbar hidden>
+                <label><input type="checkbox" data-telephony-voicemail-select-all><span>Select all</span></label>
+                <button type="button" data-telephony-voicemail-delete disabled>Delete</button>
+            </div>
+            <div data-telephony-voicemail-error role="alert" hidden></div>
+            <div data-telephony-voicemail-list></div>
+        </div>
+        """;
+
     private static IResult ServeModuleAsset(string path)
     {
         if (string.IsNullOrEmpty(path) || !_moduleAssets.TryGetValue(path, out var file) || !File.Exists(file))
@@ -100,7 +132,7 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
         return Results.Stream(stream, "application/javascript");
     }
 
-    private static string BuildHtml(bool browserAudio, bool embedded = false, string answerCallId = null)
+    private static string BuildHtml(bool browserAudio, bool embedded = false, string answerCallId = null, bool voicemail = false)
     {
         var config = new Dictionary<string, object>
         {
@@ -132,6 +164,12 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
                 ["browserAudioUnavailable"] = "The browser audio adapter is unavailable.",
             },
         };
+
+        if (voicemail)
+        {
+            config["voicemailDeleteEnabled"] = true;
+            config["voicemailDeleteUrlTemplate"] = "/voicemail/__INTERACTION_ID__/delete";
+        }
 
         var configJson = JsonSerializer.Serialize(config);
 
@@ -205,6 +243,7 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
                         <div data-telephony-view="history" data-telephony-history hidden>
                             <div data-telephony-history-list></div>
                         </div>
+                        {{(voicemail ? VoicemailViewMarkup : string.Empty)}}
                         <div data-telephony-view="contact-center" hidden>
                             <span>Contact Center Work</span>
                         </div>
@@ -212,6 +251,7 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
                     <div data-telephony-footer hidden>
                         <button type="button" data-telephony-tab="keypad" aria-selected="true">Keypad</button>
                         <button type="button" data-telephony-tab="history" aria-selected="false">Recent</button>
+                        {{(voicemail ? "<button type=\"button\" data-telephony-tab=\"voicemail\" aria-selected=\"false\">Voicemail</button>" : string.Empty)}}
                         <button type="button" data-telephony-tab="contact-center" aria-selected="false">Work</button>
                     </div>
                 </div>

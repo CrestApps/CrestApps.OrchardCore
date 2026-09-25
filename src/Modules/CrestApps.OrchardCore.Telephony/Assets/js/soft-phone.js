@@ -2257,6 +2257,7 @@
             voicemailPlayer: rootElement.querySelector('[data-telephony-voicemail-player]'),
             voicemailPlayerInfo: rootElement.querySelector('[data-telephony-voicemail-player-info]'),
             voicemailToolbar: rootElement.querySelector('[data-telephony-voicemail-toolbar]'),
+            voicemailError: rootElement.querySelector('[data-telephony-voicemail-error]'),
             voicemailDelete: rootElement.querySelector('[data-telephony-voicemail-delete]'),
             voicemailSelectAll: rootElement.querySelector('[data-telephony-voicemail-select-all]')
         };
@@ -7457,6 +7458,22 @@
             });
         }
 
+        // Why each voicemail the last delete left behind was not deleted, by id; the list renders them selected.
+        var voicemailDeleteFailures = {};
+
+        // The phone's own error line sits in the keypad view, out of sight while the Voicemail tab is open, so the
+        // tab reports its outcome in its own line when the page has one.
+        function showVoicemailError(message) {
+            if (!dom.voicemailError) {
+                showError(message);
+
+                return;
+            }
+
+            dom.voicemailError.textContent = message || '';
+            dom.voicemailError.hidden = !message;
+        }
+
         function voicemailDeleteEnabled() {
             return config.voicemailDeleteEnabled === true && !!config.voicemailDeleteUrlTemplate && !!dom.voicemailDelete;
         }
@@ -7544,11 +7561,15 @@
                 var formattedNumber = formatPhoneNumber(number);
                 var time = formatTime(interaction.startedUtc);
                 var unread = !interaction.voicemailReadUtc;
+                // A voicemail the last delete could not remove stays selected and says why.
+                var deleteFailure = voicemailDeleteFailures[interaction.interactionId];
                 var cls = 'telephony-soft-phone__voicemail-item' +
-                    (unread ? ' telephony-soft-phone__voicemail-item--unread' : '');
+                    (unread ? ' telephony-soft-phone__voicemail-item--unread' : '') +
+                    (deleteFailure ? ' telephony-soft-phone__voicemail-item--delete-failed' : '');
 
                 var selectMarkup = canDelete
                     ? '<input type="checkbox" class="telephony-soft-phone__voicemail-select" data-telephony-voicemail-select ' +
+                        (deleteFailure ? 'checked ' : '') +
                         'data-telephony-voicemail-id="' + escapeHtml(interaction.interactionId || '') + '" ' +
                         'aria-label="' + escapeHtml(strings.selectVoicemail || 'Select voicemail') + '">'
                     : '';
@@ -7565,6 +7586,10 @@
                     'role="button" tabindex="0">' +
                     '<span class="telephony-soft-phone__history-number">' + escapeHtml(formattedNumber || number || (strings.voicemailLabel || 'Voicemail')) + '</span>' +
                     '<span class="telephony-soft-phone__history-meta">' + escapeHtml(time) + '</span>' +
+                    (deleteFailure
+                        ? '<span class="telephony-soft-phone__voicemail-error" role="alert">' +
+                            escapeHtml(softPhoneModules.voicemailDeleteFailureText(deleteFailure, strings)) + '</span>'
+                        : '') +
                     '</div>' +
                     '<button type="button" class="telephony-soft-phone__call-btn" data-telephony-history-number="' + escapeHtml(number) + '" ' +
                     'title="' + escapeHtml(strings.callBack || 'Call back') + '" aria-label="' + escapeHtml(strings.callBack || 'Call back') + '"><i class="fa-solid fa-phone"></i></button>' +
@@ -7583,6 +7608,8 @@
             Array.prototype.forEach.call(dom.voicemailList.querySelectorAll('[data-telephony-voicemail-select]'), function (checkbox) {
                 checkbox.addEventListener('change', updateVoicemailDeleteButton);
             });
+
+            updateVoicemailDeleteButton();
 
             // Clicking (or keyboard-activating) the voicemail body -- the caller/time area, distinct from the
             // play and call-back icons -- marks that voicemail as read.
@@ -7637,21 +7664,19 @@
                 headers['RequestVerificationToken'] = config.antiForgeryToken;
             }
 
-            var deletions = ids.map(function (id) {
-                var url = buildVoicemailDeleteUrl(id);
+            // One at a time, each answer read for what it is (a redirect is never a deletion), so a voicemail the
+            // server would not delete is reported and left selected rather than silently left behind.
+            headers['X-Requested-With'] = 'XMLHttpRequest';
+            voicemailDeleteFailures = {};
 
-                if (!url) {
-                    return Promise.resolve();
-                }
+            softPhoneModules.deleteVoicemailsInTurn(ids, function (id) {
+                return fetch(buildVoicemailDeleteUrl(id), { method: 'POST', headers: headers, redirect: 'manual' });
+            }).then(function (outcome) {
+                outcome.failed.forEach(function (failure) {
+                    voicemailDeleteFailures[failure.id] = failure.reason;
+                });
 
-                return fetch(url, { method: 'POST', headers: headers });
-            });
-
-            Promise.all(deletions).then(function () {
-                loadVoicemails();
-                refreshVoicemailBadge();
-            }).catch(function () {
-                showError(strings.voicemailDeleteFailed || 'The voicemail could not be deleted.');
+                showVoicemailError(softPhoneModules.describeVoicemailDeleteFailures(outcome, strings));
                 loadVoicemails();
                 refreshVoicemailBadge();
             });

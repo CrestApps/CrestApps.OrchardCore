@@ -312,6 +312,14 @@
   background-color: #d23f3f;
   vertical-align: middle;
 }
+.telephony-soft-phone__voicemail-item--delete-failed {
+  background-color: var(--bs-danger-bg-subtle, #f8d7da);
+}
+.telephony-soft-phone__voicemail-error {
+  font-size: 0.72rem;
+  color: var(--bs-danger-text-emphasis, #842029);
+  white-space: normal;
+}
 .telephony-soft-phone__voicemail-body {
   display: flex;
   flex-direction: column;

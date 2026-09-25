@@ -10,10 +10,12 @@ namespace CrestApps.OrchardCore.Telephony.PlaywrightTests.Infrastructure;
 public sealed class TestTelephonyHub : Hub<ITelephonyClient>
 {
     private readonly InMemoryTelephonyProvider _provider;
+    private readonly TestVoicemailInbox _voicemailInbox;
 
-    public TestTelephonyHub(InMemoryTelephonyProvider provider)
+    public TestTelephonyHub(InMemoryTelephonyProvider provider, TestVoicemailInbox voicemailInbox)
     {
         _provider = provider;
+        _voicemailInbox = voicemailInbox;
     }
 
     public Task<TelephonyResult> Dial(DialRequest request)
@@ -211,6 +213,8 @@ public sealed class TestTelephonyHub : Hub<ITelephonyClient>
                 StartedUtc = new DateTime(2024, 1, 1, 9, 30, 0, DateTimeKind.Utc),
             },
         };
+
+        interactions.AddRange(_voicemailInbox.List());
 
         return Task.FromResult<IEnumerable<TelephonyInteraction>>(interactions.Take(count));
     }

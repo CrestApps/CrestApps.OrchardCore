@@ -376,6 +376,16 @@
                 vertical-align: middle;
             }
         }
+
+        &--delete-failed {
+            background-color: var(--bs-danger-bg-subtle, #f8d7da);
+        }
+    }
+
+    &__voicemail-error {
+        font-size: 0.72rem;
+        color: var(--bs-danger-text-emphasis, #842029);
+        white-space: normal;
     }
 
     &__voicemail-body {

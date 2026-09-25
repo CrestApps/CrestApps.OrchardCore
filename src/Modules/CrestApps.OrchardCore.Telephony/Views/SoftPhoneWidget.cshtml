@@ -140,6 +140,15 @@
             ["voicemailUnavailable"] = T["This voicemail is still processing. Try again in a moment."].Value,
             ["voicemailPlaybackFailed"] = T["The voicemail could not be played."].Value,
             ["voicemailDeleteFailed"] = T["The voicemail could not be deleted."].Value,
+            ["voicemailDeletePartiallyFailed"] = T["{0} of {1} voicemails could not be deleted. They are still selected."].Value,
+            ["voicemailDeleteRefused"] = T["The server refused the request. Reload the page and try again."].Value,
+            ["voicemailDeleteExpired"] = T["The page is out of date. Reload it and try again."].Value,
+            ["voicemailDeleteSignedOut"] = T["You are signed out. Sign in again and retry."].Value,
+            ["voicemailDeleteForbidden"] = T["You do not have access to this voicemail."].Value,
+            ["voicemailDeleteNotFound"] = T["This voicemail no longer exists."].Value,
+            ["voicemailDeleteLegalHold"] = T["This voicemail is under legal hold and must be kept."].Value,
+            ["voicemailDeleteNetwork"] = T["The server could not be reached."].Value,
+            ["voicemailDeleteServerFailed"] = T["The server could not delete it."].Value,
             ["selectVoicemail"] = T["Select voicemail"].Value,
             ["deleteSelected"] = T["Delete"].Value,
             ["noVoicemails"] = T["No voicemails."].Value,
@@ -459,6 +468,7 @@
                     </label>
                     <button type="button" class="telephony-soft-phone__voicemail-delete" data-telephony-voicemail-delete disabled>@T["Delete"]</button>
                 </div>
+                <div class="telephony-soft-phone__error alert alert-danger" data-telephony-voicemail-error role="alert" hidden></div>
                 <div class="telephony-soft-phone__voicemail-list" data-telephony-voicemail-list></div>
             </div>
 
