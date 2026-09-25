@@ -32,6 +32,9 @@ permission). Each extension has:
 | **Display name** | A name for the extension itself (for example `Front desk`). Leave it empty, or equal to the user name, to show the user's own display name. |
 | **Enabled** | A disabled extension is not dialable and is skipped by the resolver. |
 
+In the list, each entry shows its extension number as a grey badge with a `#` icon, then the display name, then the
+user name as a separate badge with a person icon, so the number never reads as part of the name.
+
 ## Who an extension rings, by name
 
 Wherever the soft phone shows an extension it also shows who it rings: the transfer panel offers

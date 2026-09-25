@@ -4,5 +4,7 @@
 
 @if (!string.IsNullOrEmpty(Model.Value.UserName))
 {
-    <span class="badge ta-badge">@Model.Value.UserName</span>
+    <span class="badge ta-badge" title="@T["User name"]">
+        <i class="fa-solid fa-user" aria-hidden="true"></i><span class="visually-hidden">@T["User name"]</span> @Model.Value.UserName
+    </span>
 }

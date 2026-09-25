@@ -8,7 +8,10 @@
 <div class="ocat-wrapper">
     <label asp-for="Number" class="ocat-label ocat-label-required">@T["Extension number"]</label>
     <div class="ocat-end">
-        <input asp-for="Number" class="form-control" autofocus />
+        <div class="input-group">
+            <span class="input-group-text" title="@T["Extension number"]"><i class="fa-solid fa-hashtag" aria-hidden="true"></i></span>
+            <input asp-for="Number" class="form-control font-monospace" inputmode="numeric" autofocus />
+        </div>
         <span asp-validation-for="Number" class="text-danger"></span>
         <span class="hint">@T["The number an agent dials to reach this user, for example 1001. Must be unique."]</span>
     </div>

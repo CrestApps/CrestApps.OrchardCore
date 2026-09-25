@@ -2,7 +2,11 @@
 
 @model ShapeViewModel<TelephonyExtension>
 
-<h5 class="mb-0">
-    <code>@Model.Value.Number</code>
-    <span class="ms-2">@Model.Value.DisplayName</span>
+<h5 class="mb-0 d-flex align-items-center flex-wrap gap-2">
+    @* The number is a badge of its own so it never reads as part of the name beside it. A label on a plain span
+       is not announced, so screen readers get a visually hidden one; the title is the pointer tooltip. *@
+    <span class="badge text-bg-secondary font-monospace" title="@T["Extension number"]">
+        <i class="fa-solid fa-hashtag" aria-hidden="true"></i><span class="visually-hidden">@T["Extension number"]</span> @Model.Value.Number
+    </span>
+    <span>@Model.Value.DisplayName</span>
 </h5>
