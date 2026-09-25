@@ -204,7 +204,7 @@ internal sealed class TransferIntegrationFixture : IAsyncDisposable
         var queueService = ActivatorUtilities.CreateInstance<ActivityQueueService>(services, queueManager.Object, businessHours.Object, (IQueueTreatmentProvider)Treatment);
         var reservationService = ActivatorUtilities.CreateInstance<ActivityReservationService>(services, queueManager.Object, (IActivityQueueService)queueService, (IAgentAvailabilityService)availability);
         var withdrawalService = ActivatorUtilities.CreateInstance<QueuedWorkWithdrawalService>(services, (IActivityQueueService)queueService, (IActivityReservationService)reservationService);
-        var routingService = new ActivityRoutingService([new LongestIdleRoutingStrategy()]);
+        var routingService = new ActivityRoutingService([new LongestIdleRoutingStrategy()], clock);
         var assignmentService = ActivatorUtilities.CreateInstance<ActivityAssignmentService>(
             services,
             (IActivityQueueManager)queueManager.Object,

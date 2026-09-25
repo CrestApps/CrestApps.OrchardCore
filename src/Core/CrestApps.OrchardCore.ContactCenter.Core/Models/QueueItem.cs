@@ -105,6 +105,35 @@ public sealed class QueueItem : CatalogItem, IModifiedUtcAwareModel
     public IList<string> ExcludedAgentIds { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the agents who declined this item or let its offer ring out, earliest first. Unlike
+    /// <see cref="ExcludedAgentIds"/> this is not permanent: routing offers the item to somebody who has not turned it
+    /// down yet, and only once everybody who could take it has, starts another round in the order they declined.
+    /// </summary>
+    public IList<string> DeclinedAgentIds { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets when the most recent agent in <see cref="DeclinedAgentIds"/> turned the item down.
+    /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
+    public DateTime? LastDeclinedUtc { get; set; }
+
+    /// <summary>
+    /// Records that an agent declined the item or let its offer ring out, moving them to the end of
+    /// <see cref="DeclinedAgentIds"/> when they had turned it down before.
+    /// </summary>
+    /// <param name="agentId">The agent profile identifier.</param>
+    /// <param name="declinedUtc">When they turned it down.</param>
+    public void RecordDecline(string agentId, DateTime declinedUtc)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(agentId);
+
+        DeclinedAgentIds ??= [];
+        DeclinedAgentIds.Remove(agentId);
+        DeclinedAgentIds.Add(agentId);
+        LastDeclinedUtc = declinedUtc;
+    }
+
+    /// <summary>
     /// Gets or sets the identifier of the queue this item overflowed from, when it was moved by overflow handling.
     /// </summary>
     public string OverflowedFromQueueId { get; set; }

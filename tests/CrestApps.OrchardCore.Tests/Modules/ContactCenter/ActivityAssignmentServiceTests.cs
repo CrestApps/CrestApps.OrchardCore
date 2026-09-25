@@ -436,7 +436,7 @@ public sealed class ActivityAssignmentServiceTests
         [
             new RequiredSkillsRoutingStrategy(Mock.Of<IClock>()),
             new LongestIdleRoutingStrategy(),
-        ]);
+        ], Mock.Of<IClock>());
     }
 
     // The coordination timings are options now, so a test uses the shipped defaults rather than a value it

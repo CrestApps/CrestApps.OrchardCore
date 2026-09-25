@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -7,15 +8,23 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// </summary>
 public sealed class ActivityRoutingService : IActivityRoutingService
 {
+    /// <summary>
+    /// How long the only agent able to take an item must wait, after declining it, before it is offered to them again.
+    /// </summary>
+    public static readonly TimeSpan DeclinedOfferRetryDelay = TimeSpan.FromMinutes(1);
+
     private readonly IEnumerable<IActivityRoutingStrategy> _strategies;
+    private readonly IClock _clock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ActivityRoutingService"/> class.
     /// </summary>
     /// <param name="strategies">The routing strategies to apply.</param>
-    public ActivityRoutingService(IEnumerable<IActivityRoutingStrategy> strategies)
+    /// <param name="clock">The clock a declined offer's retry delay is measured against.</param>
+    public ActivityRoutingService(IEnumerable<IActivityRoutingStrategy> strategies, IClock clock)
     {
         _strategies = strategies;
+        _clock = clock;
     }
 
     /// <inheritdoc/>
@@ -46,6 +55,10 @@ public sealed class ActivityRoutingService : IActivityRoutingService
         {
             await strategy.ApplyAsync(context, cancellationToken);
         }
+
+        // After the strategies, so a round of declines is judged against who can actually take the call, and so a
+        // sticky or longest-idle boost cannot put an agent who just turned the call down back at the front.
+        DeclinedOfferRouting.Apply(queueItem, candidates, _clock.UtcNow);
 
         if (candidates.Count == 0)
         {

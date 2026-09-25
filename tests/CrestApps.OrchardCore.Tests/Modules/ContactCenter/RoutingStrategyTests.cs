@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Tests.Modules.ContactCenter.Integration;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -19,7 +20,7 @@ public sealed class RoutingStrategyTests
         var justFinished = new AgentProfile { ItemId = "a1", LastWorkCompletedUtc = _now };
         var finishedLongAgo = new AgentProfile { ItemId = "a2", LastWorkCompletedUtc = _now.AddMinutes(-30) };
 
-        var service = new ActivityRoutingService([new RoundRobinRoutingStrategy()]);
+        var service = new ActivityRoutingService([new RoundRobinRoutingStrategy()], new TestClock());
 
         // Act
         var decision = await service.SelectAgentAsync(queue, item, [Availability(justFinished), Availability(finishedLongAgo)], TestContext.Current.CancellationToken);
@@ -38,7 +39,7 @@ public sealed class RoutingStrategyTests
         var recentlyAssigned = new AgentProfile { ItemId = "a1", LastAssignedUtc = _now };
         var leastRecentlyAssigned = new AgentProfile { ItemId = "a2", LastAssignedUtc = _now.AddMinutes(-30) };
 
-        var service = new ActivityRoutingService([new RoundRobinRoutingStrategy()]);
+        var service = new ActivityRoutingService([new RoundRobinRoutingStrategy()], new TestClock());
 
         // Act
         var decision = await service.SelectAgentAsync(queue, item, [Availability(recentlyAssigned), Availability(leastRecentlyAssigned)], TestContext.Current.CancellationToken);
@@ -57,7 +58,7 @@ public sealed class RoutingStrategyTests
         var busyAgent = new AgentProfile { ItemId = "a1" };
         var freeAgent = new AgentProfile { ItemId = "a2" };
 
-        var service = new ActivityRoutingService([new LeastBusyRoutingStrategy()]);
+        var service = new ActivityRoutingService([new LeastBusyRoutingStrategy()], new TestClock());
 
         // Act
         var decision = await service.SelectAgentAsync(
@@ -92,7 +93,7 @@ public sealed class RoutingStrategyTests
             IdleSinceUtc = _now.AddMinutes(-30),
         };
 
-        var service = new ActivityRoutingService([new LongestIdleRoutingStrategy()]);
+        var service = new ActivityRoutingService([new LongestIdleRoutingStrategy()], new TestClock());
 
         // Act
         var decision = await service.SelectAgentAsync(queue, item, [Availability(justOffACall), Availability(genuinelyIdle)], TestContext.Current.CancellationToken);
@@ -111,7 +112,7 @@ public sealed class RoutingStrategyTests
         var longestIdleAgent = new AgentProfile { ItemId = "a1", UserId = "u1", PresenceChangedUtc = _now.AddMinutes(-10) };
         var stickyAgent = new AgentProfile { ItemId = "a2", UserId = "u2", PresenceChangedUtc = _now };
 
-        var service = new ActivityRoutingService([new StickyAgentRoutingStrategy(), new LongestIdleRoutingStrategy()]);
+        var service = new ActivityRoutingService([new StickyAgentRoutingStrategy(), new LongestIdleRoutingStrategy()], new TestClock());
 
         // Act
         var decision = await service.SelectAgentAsync(queue, item, [Availability(longestIdleAgent), Availability(stickyAgent)], TestContext.Current.CancellationToken);
@@ -130,7 +131,7 @@ public sealed class RoutingStrategyTests
         var longestIdleButJustFinished = new AgentProfile { ItemId = "a1", IdleSinceUtc = _now.AddMinutes(-30), LastWorkCompletedUtc = _now };
         var newerButFinishedLongAgo = new AgentProfile { ItemId = "a2", IdleSinceUtc = _now, LastWorkCompletedUtc = _now.AddMinutes(-30) };
 
-        var service = new ActivityRoutingService([new LongestIdleRoutingStrategy(), new RoundRobinRoutingStrategy()]);
+        var service = new ActivityRoutingService([new LongestIdleRoutingStrategy(), new RoundRobinRoutingStrategy()], new TestClock());
 
         // Act
         var decision = await service.SelectAgentAsync(queue, item, [Availability(longestIdleButJustFinished), Availability(newerButFinishedLongAgo)], TestContext.Current.CancellationToken);

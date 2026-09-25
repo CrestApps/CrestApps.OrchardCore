@@ -2011,6 +2011,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public System.DateTime? CallbackAcceptedUtc { get; set; }
         [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.YesSql.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? CallbackOfferedUtc { get; set; }
+        public System.Collections.Generic.IList<string> DeclinedAgentIds { get; set; }
         [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.YesSql.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? DequeuedUtc { get; set; }
         public string DialerProfileId { get; set; }
@@ -2019,6 +2020,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public System.Collections.Generic.IList<string> ExcludedAgentIds { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
         public bool IsSettled { get; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.YesSql.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
+        public System.DateTime? LastDeclinedUtc { get; set; }
         [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.YesSql.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? LastTreatmentUtc { get; set; }
         [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.YesSql.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
@@ -2037,6 +2040,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string StickyAgentUserId { get; set; }
         public int TreatmentStepsPlayed { get; set; }
         public bool CanTransitionTo(CrestApps.OrchardCore.ContactCenter.Models.QueueItemStatus status) { }
+        public void RecordDecline(string agentId, System.DateTime declinedUtc) { }
         public CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem RestorePersistedStatus(CrestApps.OrchardCore.ContactCenter.Models.QueueItemStatus status) { }
         public void TransitionTo(CrestApps.OrchardCore.ContactCenter.Models.QueueItemStatus status) { }
     }
@@ -2614,7 +2618,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public sealed class ActivityRoutingService : CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityRoutingService
     {
-        public ActivityRoutingService(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityRoutingStrategy> strategies) { }
+        public static readonly System.TimeSpan DeclinedOfferRetryDelay;
+        public ActivityRoutingService(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityRoutingStrategy> strategies, OrchardCore.Modules.IClock clock) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityRoutingDecision> SelectAgentAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue, CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem queueItem, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentAvailability> availability, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class AgentAvailabilityRecoveryService : CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentAvailabilityRecoveryService

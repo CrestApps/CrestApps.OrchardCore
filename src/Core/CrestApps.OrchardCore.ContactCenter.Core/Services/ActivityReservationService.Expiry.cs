@@ -296,6 +296,13 @@ public sealed partial class ActivityReservationService
             if (requeue)
             {
                 queueItem.TransitionTo(QueueItemStatus.Waiting);
+
+                // An agent who declined the caller, or let them ring out, is not offered them straight back.
+                if (IsTurnedDownByTheAgent(status, reservation))
+                {
+                    queueItem.RecordDecline(reservation.AgentId, now);
+                }
+
                 await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
             }
             else
@@ -429,6 +436,21 @@ public sealed partial class ActivityReservationService
             : status == ReservationStatus.Expired
                 ? queue?.UnansweredOfferAction ?? UnansweredOfferAction.Requeue
                 : UnansweredOfferAction.Requeue;
+
+    /// <summary>
+    /// Whether the released offer was turned down by the agent it rang -- declined, or left to ring out -- in a queue
+    /// with other agents to offer it to next.
+    /// </summary>
+    /// <remarks>
+    /// A caller who hangs up, or an offer the platform withdraws, is cancelled rather than rejected, and says nothing
+    /// about the agent. A direct line rings only the agent it belongs to, and a campaign's virtual queue carries
+    /// outbound inventory the dialer paces, so neither has a next agent in line.
+    /// </remarks>
+    private static bool IsTurnedDownByTheAgent(ReservationStatus status, ActivityReservation reservation)
+        => status is ReservationStatus.Rejected or ReservationStatus.Expired &&
+            !string.IsNullOrEmpty(reservation.AgentId) &&
+            !ContactCenterConstants.IsDirectRoutingQueue(reservation.QueueId) &&
+            !ContactCenterConstants.IsCampaignQueue(reservation.QueueId);
 
     private static bool IsDirectVoicemailEnabled(Interaction interaction)
     {
