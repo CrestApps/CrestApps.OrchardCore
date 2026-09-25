@@ -10,4 +10,9 @@ public class ContactCenterExternalTransferSettingsViewModel
     /// the settings page.
     /// </summary>
     public List<ContactCenterExternalDestinationViewModel> Destinations { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets a value indicating whether agents may transfer to numbers that are not in <see cref="Destinations"/>.
+    /// </summary>
+    public bool AllowUnlistedNumbers { get; set; }
 }

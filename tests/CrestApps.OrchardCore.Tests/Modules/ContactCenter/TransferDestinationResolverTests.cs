@@ -349,18 +349,92 @@ public sealed class TransferDestinationResolverTests
         Assert.Equal("The requested transfer destination is not available.", result.FailureReason);
     }
 
+    // A tenant that allows unlisted numbers lets an agent type one, still behind the dial policy and never to itself
+
+    [Fact]
+    public async Task ResolveAsync_WhenUnlistedNumbersAreAllowed_ResolvesTheTypedNumber()
+    {
+        var resolver = BuildResolver(new AllowAuthorizationService(), new ContactCenterExternalTransferSettings { AllowUnlistedNumbers = true });
+
+        var result = await resolver.ResolveAsync(new TransferRequest
+        {
+            TargetType = InteractionTransferTargetType.External,
+            TargetId = " +15557654321 ",
+        }, new ClaimsPrincipal(new ClaimsIdentity("test")), TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(InteractionTransferTargetType.External, result.TargetType);
+        Assert.Equal("+15557654321", result.ResolvedTarget);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_WhenUnlistedNumbersAreAllowed_RefusesTheContactCentersOwnNumber()
+    {
+        var resolver = BuildResolver(
+            new AllowAuthorizationService(),
+            new ContactCenterExternalTransferSettings { AllowUnlistedNumbers = true },
+            ownNumbers: ["+15557654321"]);
+
+        var result = await resolver.ResolveAsync(new TransferRequest
+        {
+            TargetType = InteractionTransferTargetType.External,
+            TargetId = "+15557654321",
+        }, new ClaimsPrincipal(new ClaimsIdentity("test")), TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal("A call cannot be transferred to one of this contact center's own numbers.", result.FailureReason);
+    }
+
+    [Theory]
+    [InlineData("911")]
+    [InlineData("+19005551234")]
+    [InlineData("5557654321")]
+    public async Task ResolveAsync_WhenUnlistedNumbersAreAllowed_StillRefusesWhatTheDialPolicyRefuses(string targetId)
+    {
+        var resolver = BuildResolver(new AllowAuthorizationService(), new ContactCenterExternalTransferSettings { AllowUnlistedNumbers = true });
+
+        var result = await resolver.ResolveAsync(new TransferRequest
+        {
+            TargetType = InteractionTransferTargetType.External,
+            TargetId = targetId,
+        }, new ClaimsPrincipal(new ClaimsIdentity("test")), TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_WhenUnlistedNumbersAreAllowed_StillRequiresTheExternalTransferPermission()
+    {
+        var resolver = BuildResolver(new DenyAuthorizationService(), new ContactCenterExternalTransferSettings { AllowUnlistedNumbers = true });
+
+        var result = await resolver.ResolveAsync(new TransferRequest
+        {
+            TargetType = InteractionTransferTargetType.External,
+            TargetId = "+15557654321",
+        }, new ClaimsPrincipal(new ClaimsIdentity("test")), TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+    }
+
     // Helpers
 
     private static TransferDestinationResolver BuildResolver(
         IAuthorizationService authorizationService,
-        ContactCenterExternalTransferSettings settings)
+        ContactCenterExternalTransferSettings settings,
+        string[] ownNumbers = null)
     {
+        var ownNumberSource = new Mock<CrestApps.OrchardCore.ContactCenter.IContactCenterOwnNumberSource>();
+        ownNumberSource
+            .Setup(source => source.GetOwnNumbersAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ownNumbers ?? []);
+
         return new TransferDestinationResolver(
             authorizationService,
             Mock.Of<IAgentProfileManager>(),
             Mock.Of<IActivityQueueManager>(),
             SiteServiceFactory.Create(settings),
-            DialDestinationPolicyFactory.Create());
+            DialDestinationPolicyFactory.Create(),
+            [ownNumberSource.Object]);
     }
 
     private sealed class AllowAuthorizationService : IAuthorizationService

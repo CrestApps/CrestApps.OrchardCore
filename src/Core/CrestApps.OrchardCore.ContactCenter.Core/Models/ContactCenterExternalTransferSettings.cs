@@ -12,4 +12,12 @@ public sealed class ContactCenterExternalTransferSettings
     /// Only entries that are present and enabled are reachable via an external transfer.
     /// </summary>
     public List<ContactCenterExternalDestination> Destinations { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets a value indicating whether an agent who may transfer externally may also send a caller to a
+    /// number that is not in <see cref="Destinations"/>, typed into the soft phone. Off by default: only the curated
+    /// catalog is reachable until an administrator opts in. Even when on, the number must pass the platform's dial
+    /// policy (no emergency or premium-rate numbers) and may not be one of the contact center's own numbers.
+    /// </summary>
+    public bool AllowUnlistedNumbers { get; set; }
 }

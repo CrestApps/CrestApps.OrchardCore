@@ -70,6 +70,7 @@ public sealed class ContactCenterExternalTransferSettingsDisplayDriver
                         Enabled = d.Enabled,
                     })
                     .ToList();
+                model.AllowUnlistedNumbers = settings.AllowUnlistedNumbers;
             })
             .Location("Content:5#External transfer destinations")
             .OnGroup(SettingsGroupId)
@@ -146,6 +147,7 @@ public sealed class ContactCenterExternalTransferSettingsDisplayDriver
         if (context.Updater.ModelState.IsValid)
         {
             settings.Destinations = destinations;
+            settings.AllowUnlistedNumbers = model.AllowUnlistedNumbers;
         }
 
         return Edit(site, settings, context);

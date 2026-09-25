@@ -59,11 +59,21 @@ public sealed class TransferDestinationResolutionResult
     /// </summary>
     /// <returns>The denied destination result.</returns>
     public static TransferDestinationResolutionResult Denied()
+        => Denied(reason: null);
+
+    /// <summary>
+    /// Creates a failed resolution that tells the agent why the destination was refused.
+    /// </summary>
+    /// <param name="reason">The reason, or <see langword="null"/> for the generic refusal.</param>
+    /// <returns>A failed <see cref="TransferDestinationResolutionResult"/>.</returns>
+    public static TransferDestinationResolutionResult Denied(string reason)
     {
         return new TransferDestinationResolutionResult
         {
             Succeeded = false,
-            FailureReason = "The requested transfer destination is not available.",
+            FailureReason = string.IsNullOrWhiteSpace(reason)
+                ? "The requested transfer destination is not available."
+                : reason,
         };
     }
 }

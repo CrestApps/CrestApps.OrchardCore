@@ -19,6 +19,7 @@ public sealed class TransferDestinationResolver : ITransferDestinationResolver
     private readonly IActivityQueueManager _queueManager;
     private readonly ISiteService _siteService;
     private readonly IDialDestinationPolicy _destinationPolicy;
+    private readonly IEnumerable<IContactCenterOwnNumberSource> _ownNumberSources;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TransferDestinationResolver"/> class.
@@ -28,18 +29,21 @@ public sealed class TransferDestinationResolver : ITransferDestinationResolver
     /// <param name="queueManager">The queue manager used to resolve queue destinations.</param>
     /// <param name="siteService">The site service used to read the tenant-scoped approved-destination catalog.</param>
     /// <param name="destinationPolicy">The safety policy deciding which destinations may be reached.</param>
+    /// <param name="ownNumberSources">The sources naming the contact center's own numbers, which are never a transfer destination.</param>
     public TransferDestinationResolver(
         IAuthorizationService authorizationService,
         IAgentProfileManager agentManager,
         IActivityQueueManager queueManager,
         ISiteService siteService,
-        IDialDestinationPolicy destinationPolicy)
+        IDialDestinationPolicy destinationPolicy,
+        IEnumerable<IContactCenterOwnNumberSource> ownNumberSources)
     {
         _authorizationService = authorizationService;
         _agentManager = agentManager;
         _queueManager = queueManager;
         _siteService = siteService;
         _destinationPolicy = destinationPolicy;
+        _ownNumberSources = ownNumberSources ?? [];
     }
 
     /// <inheritdoc/>
@@ -109,6 +113,11 @@ public sealed class TransferDestinationResolver : ITransferDestinationResolver
         var entry = settings.Destinations
             .FirstOrDefault(d => string.Equals(d.Id, targetId, StringComparison.OrdinalIgnoreCase));
 
+        if (entry is null && settings.AllowUnlistedNumbers)
+        {
+            return await ResolveUnlistedNumberAsync(targetId.Trim());
+        }
+
         if (entry is null || !entry.Enabled)
         {
             return TransferDestinationResolutionResult.Denied();
@@ -120,5 +129,25 @@ public sealed class TransferDestinationResolver : ITransferDestinationResolver
         }
 
         return TransferDestinationResolutionResult.Success(InteractionTransferTargetType.External, entry.E164Address);
+    }
+
+    // A number the agent typed. The tenant opted in to reaching numbers outside the catalog, but not to reaching
+    // anything: the dial policy still refuses emergency, premium-rate and malformed numbers, and a number the
+    // contact center owns would ring straight back into it.
+    private async Task<TransferDestinationResolutionResult> ResolveUnlistedNumberAsync(string number)
+    {
+        var decision = _destinationPolicy.Evaluate(number, new DialDestinationContext { Operation = DialDestinationOperation.Transfer });
+
+        if (!decision.IsAllowed)
+        {
+            return TransferDestinationResolutionResult.Denied(decision.Reason);
+        }
+
+        if (await ContactCenterOwnNumbers.ContainsAsync(_ownNumberSources, number))
+        {
+            return TransferDestinationResolutionResult.Denied("A call cannot be transferred to one of this contact center's own numbers.");
+        }
+
+        return TransferDestinationResolutionResult.Success(InteractionTransferTargetType.External, number);
     }
 }

@@ -56,6 +56,8 @@ public sealed class InboundVoiceStartup : StartupBase
         services
             .AddScoped<IContactCenterEntryPointStore, ContactCenterEntryPointStore>()
             .AddScoped<IContactCenterEntryPointManager, ContactCenterEntryPointManager>()
+            // The numbers customers dial in on are the contact center's own, so no transfer is ever sent back to one.
+            .AddScoped<IContactCenterOwnNumberSource, EntryPointOwnNumberSource>()
             // Entry-point phone menus. They belong here because the menu lives on the entry point: the
             // resolver reads it, and the base feature has no entry points to read.
             .AddScoped<IIvrExecutionService, IvrExecutionService>()

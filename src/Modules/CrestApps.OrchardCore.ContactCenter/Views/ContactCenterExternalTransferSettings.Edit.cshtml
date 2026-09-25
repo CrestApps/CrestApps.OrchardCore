@@ -76,3 +76,13 @@
     </div>
 </div>
 
+<div class="ocat-wrapper">
+    <div class="ocat-end">
+        <div class="form-check">
+            <input type="checkbox" asp-for="AllowUnlistedNumbers" class="form-check-input" />
+            <label class="form-check-label" asp-for="AllowUnlistedNumbers">@T["Let agents transfer to numbers that are not on this list"]</label>
+            <span class="hint dashed">@T["When checked, an agent who may transfer externally can type any number in the soft phone's transfer panel. The number must still be in international format, and emergency, premium-rate and this contact center's own numbers are always refused. When unchecked, only the destinations above are reachable."]</span>
+        </div>
+    </div>
+</div>
+
