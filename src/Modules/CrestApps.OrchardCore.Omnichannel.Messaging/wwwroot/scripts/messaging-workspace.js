@@ -119,7 +119,26 @@
       return bubble && bubble.inbound;
     }).length;
   }
+
+  // A link built from page data only ever leads back into this site over http(s), returned as a path, so a crafted
+  // value such as a javascript: URL or another site's address can never become a clickable link.
+  function sameOriginUrl(value, baseUrl) {
+    if (!value) {
+      return null;
+    }
+    try {
+      var base = new URL(String(baseUrl));
+      var url = new URL(String(value), base);
+      if ((url.protocol === 'http:' || url.protocol === 'https:') && url.origin === base.origin) {
+        return url.pathname + url.search + url.hash;
+      }
+    } catch (e) {
+      // A value that is not a URL is simply not linked.
+    }
+    return null;
+  }
   messaging.unseenInboundCount = unseenInboundCount;
+  messaging.sameOriginUrl = sameOriginUrl;
   messaging.maxTicks = maxTicks;
   messaging.classifyInbound = classifyInbound;
   messaging.tabBadgeCount = tabBadgeCount;
@@ -439,9 +458,10 @@
     bodyElement.className = 'toast-body';
     // textContent (not innerHTML) so message content can never inject markup.
     bodyElement.textContent = body || '';
-    if (href) {
+    var safeHref = messaging.sameOriginUrl(href, root.location.href);
+    if (safeHref) {
       var link = document.createElement('a');
-      link.href = href;
+      link.href = safeHref;
       link.className = 'd-block mt-2 fw-semibold';
       link.textContent = viewText;
       bodyElement.appendChild(link);

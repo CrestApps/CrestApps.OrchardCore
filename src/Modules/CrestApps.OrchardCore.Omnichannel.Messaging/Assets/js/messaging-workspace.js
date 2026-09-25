@@ -314,9 +314,11 @@
         // textContent (not innerHTML) so message content can never inject markup.
         bodyElement.textContent = body || '';
 
-        if (href) {
+        var safeHref = messaging.sameOriginUrl(href, root.location.href);
+
+        if (safeHref) {
             var link = document.createElement('a');
-            link.href = href;
+            link.href = safeHref;
             link.className = 'd-block mt-2 fw-semibold';
             link.textContent = viewText;
             bodyElement.appendChild(link);
