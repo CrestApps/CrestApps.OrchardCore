@@ -109,7 +109,7 @@ public sealed class TelnyxOrphanedCallReconciler
                     call.CallControlId,
                     cancellationToken);
 
-                if (known is not null)
+                if (known is not null || await IsLegOfKnownCallAsync(call, cancellationToken))
                 {
                     continue;
                 }
@@ -142,6 +142,24 @@ public sealed class TelnyxOrphanedCallReconciler
             OrphansFound = found,
             OrphansEnded = ended,
         };
+    }
+
+    // The platform dials some legs only to reach somebody for a call it does track -- the number an agent dialed from the
+    // soft phone is one -- and records no interaction for them. Such a leg names the tracked call it belongs to in its
+    // client state; while that call is known, the leg is part of it, not an orphan.
+    private async Task<bool> IsLegOfKnownCallAsync(TelnyxActiveCall call, CancellationToken cancellationToken)
+    {
+        if (!TelnyxOutboundBridgeState.TryParseEncoded(call.ClientState, out var state) ||
+            state.Intent != TelnyxOutboundBridgeState.DestinationLegIntent ||
+            string.IsNullOrWhiteSpace(state.PeerCallControlId))
+        {
+            return false;
+        }
+
+        return await _interactionStore.FindByProviderCallIdAsync(
+            TelnyxConstants.ProviderTechnicalName,
+            state.PeerCallControlId,
+            cancellationToken) is not null;
     }
 
     private async Task<bool> EndOrphanAsync(string callControlId, CancellationToken cancellationToken)

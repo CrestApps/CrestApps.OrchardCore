@@ -22,6 +22,12 @@ public sealed class TelephonyResult
     public string Error { get; init; }
 
     /// <summary>
+    /// Gets a machine-readable reason for a failure (see <see cref="TelephonyConstants.ErrorCodes"/>), when the
+    /// provider gave one.
+    /// </summary>
+    public string ErrorCode { get; init; }
+
+    /// <summary>
     /// Gets the call affected by the operation, when applicable.
     /// </summary>
     public TelephonyCall Call { get; init; }
@@ -41,6 +47,15 @@ public sealed class TelephonyResult
     /// <returns>A failed <see cref="TelephonyResult"/>.</returns>
     public static TelephonyResult Failed(string error)
         => new() { Succeeded = false, Error = error };
+
+    /// <summary>
+    /// Creates a failed result that names why it failed.
+    /// </summary>
+    /// <param name="error">The error message describing the failure.</param>
+    /// <param name="errorCode">The machine-readable reason (see <see cref="TelephonyConstants.ErrorCodes"/>).</param>
+    /// <returns>A failed <see cref="TelephonyResult"/>.</returns>
+    public static TelephonyResult Failed(string error, string errorCode)
+        => new() { Succeeded = false, Error = error, ErrorCode = errorCode };
 
     /// <summary>
     /// Creates a result for an operation whose provider outcome could not be determined.

@@ -25,6 +25,7 @@ public static class TelephonyCapabilityContracts
         [TelephonyCapabilities.Directory] = typeof(ITelephonyDirectoryProvider),
         [TelephonyCapabilities.ExtensionDial] = typeof(ITelephonyExtensionDialProvider),
         [TelephonyCapabilities.ExtensionConference] = typeof(ITelephonyExtensionDialProvider),
+        [TelephonyCapabilities.BridgedDial] = typeof(ITelephonyCallControlProvider),
     }.ToFrozenDictionary();
 
     /// <summary>

@@ -133,6 +133,72 @@ public sealed class TelnyxOutboundBridgeState
     [JsonPropertyName("r")]
     public string ReservationId { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the leg no longer belongs to the leg in <see cref="PeerCallControlId"/>:
+    /// the platform transferred it, moved it into a conference, or released it on purpose. The end of a detached leg
+    /// says nothing about its former partner, so it is never hung up with it.
+    /// </summary>
+    [JsonPropertyName("x")]
+    public bool? Detached { get; set; }
+
+    /// <summary>
+    /// Gets a value indicating whether this is the agent leg of a number dialed from the soft phone and connected on
+    /// the server, once the number's leg exists: <see cref="PeerCallControlId"/> is then the remote party.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsBridgedDialAgentLeg
+        => Intent == AgentLegIntent &&
+            string.IsNullOrWhiteSpace(VoicemailRecipientUserId) &&
+            !string.IsNullOrWhiteSpace(PeerCallControlId);
+
+    /// <summary>
+    /// Returns a copy of this state marked <see cref="Detached"/>.
+    /// </summary>
+    public TelnyxOutboundBridgeState AsDetached()
+    {
+        var copy = (TelnyxOutboundBridgeState)MemberwiseClone();
+        copy.Detached = true;
+
+        return copy;
+    }
+
+    /// <summary>
+    /// Returns a copy of this state that names <paramref name="peerCallControlId"/> as the leg it is connected to.
+    /// </summary>
+    /// <param name="peerCallControlId">The other leg.</param>
+    public TelnyxOutboundBridgeState WithPeer(string peerCallControlId)
+    {
+        var copy = (TelnyxOutboundBridgeState)MemberwiseClone();
+        copy.PeerCallControlId = peerCallControlId;
+
+        return copy;
+    }
+
+    /// <summary>
+    /// Attempts to parse a <c>client_state</c> value exactly as Telnyx returns it (base64-encoded).
+    /// </summary>
+    /// <param name="encodedClientState">The base64 value.</param>
+    /// <param name="state">The parsed state when successful.</param>
+    /// <returns><see langword="true"/> when the value is one of this feature's outbound-bridge states.</returns>
+    public static bool TryParseEncoded(string encodedClientState, out TelnyxOutboundBridgeState state)
+    {
+        state = null;
+
+        if (string.IsNullOrWhiteSpace(encodedClientState))
+        {
+            return false;
+        }
+
+        try
+        {
+            return TryParse(Encoding.UTF8.GetString(Convert.FromBase64String(encodedClientState.Trim())), out state);
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+    }
+
     private static readonly JsonSerializerOptions _options = new(JsonSerializerDefaults.Web)
     {
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,

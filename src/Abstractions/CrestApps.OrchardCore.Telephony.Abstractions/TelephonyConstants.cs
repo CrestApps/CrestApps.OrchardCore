@@ -43,9 +43,29 @@ public static class TelephonyConstants
         public const string HeldOfferLeg = "held-offer-leg";
 
         /// <summary>
+        /// The client answers, without ringing, the leg the platform rings back to it for a number it just dialed from
+        /// the keypad (see <see cref="Models.TelephonyCapabilities.BridgedDial"/>), and shows that call as the one it
+        /// placed.
+        /// </summary>
+        public const string BridgedDialLeg = "bridged-dial-leg";
+
+        /// <summary>
         /// Every capability a client may report. Anything else a client sends is ignored.
         /// </summary>
-        public static readonly IReadOnlyCollection<string> All = [HeldOfferLeg];
+        public static readonly IReadOnlyCollection<string> All = [HeldOfferLeg, BridgedDialLeg];
+    }
+
+    /// <summary>
+    /// Machine-readable reasons a telephony operation failed, carried on <see cref="Models.TelephonyResult.ErrorCode"/>
+    /// for a caller that acts on the reason rather than only showing it.
+    /// </summary>
+    public static class ErrorCodes
+    {
+        /// <summary>
+        /// The provider could not connect a keypad dial through the agent's own browser leg, and no leg of the call was
+        /// created, so the soft phone may place the call itself.
+        /// </summary>
+        public const string BridgeUnavailable = "bridge-unavailable";
     }
 
     /// <summary>
@@ -69,6 +89,15 @@ public static class TelephonyConstants
         /// registration so an outbound call can be bridged to their browser.
         /// </summary>
         public const string SoftPhoneUserId = "softPhoneUserId";
+
+        /// <summary>
+        /// Identifies the credential the dialing soft phone is registered on, sent with a keypad dial the soft phone
+        /// asks the provider to connect through its own browser leg (see
+        /// <see cref="Models.TelephonyCapabilities.BridgedDial"/>). The provider rings that credential only when it
+        /// belongs to <see cref="SoftPhoneUserId"/>, is live, is registered and reported
+        /// <see cref="SoftPhoneClientCapabilities.BridgedDialLeg"/>.
+        /// </summary>
+        public const string SoftPhoneCredentialId = "softPhoneCredentialId";
     }
 
     /// <summary>

@@ -88,7 +88,8 @@ public sealed partial class TelnyxTelephonyProvider :
             TelephonyCapabilities.Voicemail |
             TelephonyCapabilities.ReceiveCalls |
             TelephonyCapabilities.ExtensionDial |
-            TelephonyCapabilities.ExtensionConference;
+            TelephonyCapabilities.ExtensionConference |
+            TelephonyCapabilities.BridgedDial;
 
     /// <inheritdoc/>
     public TelephonyAudioCapabilities AudioCapabilities => TelephonyAudioCapabilities.Browser;
@@ -136,6 +137,15 @@ public sealed partial class TelnyxTelephonyProvider :
         }
 
         var callerId = string.IsNullOrWhiteSpace(request.From) ? _options.DefaultOutboundCallerId : request.From;
+
+        // A number dialed on the soft phone's keypad, which names the credential the phone is registered on: ring that
+        // phone and connect it to the number here, or tell the phone to dial it itself.
+        var softPhoneCredentialId = TryGetMetadataValue(request.Metadata, TelephonyConstants.RequestMetadata.SoftPhoneCredentialId);
+
+        if (softPhoneCredentialId is not null)
+        {
+            return await DialThroughSoftPhoneAsync(request, callerId, softPhoneCredentialId, cancellationToken);
+        }
 
         // When the caller has a live browser soft-phone registration, ring their browser first and let the
         // webhook orchestration dial the destination and bridge the two legs, so the agent hears the call in
@@ -424,12 +434,7 @@ public sealed partial class TelnyxTelephonyProvider :
             return Task.FromResult(TelephonyResult.Failed(S["Digits are required."].Value));
         }
 
-        return ExecuteActionAsync(
-            request.CallId,
-            "send_dtmf",
-            new Dictionary<string, object> { ["digits"] = request.Digits },
-            () => null,
-            cancellationToken);
+        return SendDigitsCoreAsync(request, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -461,6 +466,14 @@ public sealed partial class TelnyxTelephonyProvider :
             }
         }
 
+        // A number dialed from the soft phone is carried on the agent's own leg; the party to move is the one it dialed.
+        var bridge = _options.IsConfigured ? await FindBridgedDialAsync(request.CallId, cancellationToken) : null;
+
+        if (bridge is not null)
+        {
+            return await TransferBridgedDialAsync(request, destination, bridge, cancellationToken);
+        }
+
         var body = new Dictionary<string, object> { ["to"] = destination };
 
         if (!string.IsNullOrWhiteSpace(_options.DefaultOutboundCallerId))
@@ -476,91 +489,6 @@ public sealed partial class TelnyxTelephonyProvider :
             body,
             () => BuildCall(request.CallId, state, metadata: null),
             cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public async Task<TelephonyResult> MergeAsync(MergeRequest request, CancellationToken cancellationToken = default)
-    {
-        var callIds = request?.GetCallIds();
-
-        if (callIds is null || callIds.Count < 2)
-        {
-            return TelephonyResult.Failed(S["At least two calls are required to merge calls."].Value);
-        }
-
-        if (!_options.IsConfigured)
-        {
-            return NotConfigured();
-        }
-
-        var primaryCallId = callIds[0];
-        var conferenceName = string.IsNullOrWhiteSpace(request.ConferenceName)
-            ? $"conf-{primaryCallId}"
-            : request.ConferenceName;
-
-        try
-        {
-            // A merge that names its conference is adding calls to one already running, which the primary call is in:
-            // the others join it. Creating another from the primary would take it out of the first.
-            var conferenceId = string.IsNullOrWhiteSpace(request.ConferenceName)
-                ? null
-                : (await _apiClient.FindConferenceByNameAsync(conferenceName, cancellationToken)).ConferenceId;
-
-            if (string.IsNullOrWhiteSpace(conferenceId))
-            {
-                // Create the conference from the primary call, then join the remaining calls into it.
-                var createResult = await _apiClient.CreateConferenceAsync(conferenceName, primaryCallId, cancellationToken: cancellationToken);
-
-                if (!createResult.Succeeded || string.IsNullOrWhiteSpace(createResult.ConferenceId))
-                {
-                    _logger.LogError(
-                        "Telnyx rejected a conference creation request with status code {StatusCode}. Response: {Response}",
-                        createResult.StatusCode,
-                        createResult.ErrorBody.SanitizeLogValue());
-
-                    return TelephonyResult.Failed(S["Telnyx could not merge the calls."].Value);
-                }
-
-                conferenceId = createResult.ConferenceId;
-            }
-
-            foreach (var secondaryCallId in callIds.Skip(1))
-            {
-                var joinResult = await _apiClient.JoinConferenceAsync(conferenceId, secondaryCallId, cancellationToken: cancellationToken);
-
-                if (!joinResult.Succeeded)
-                {
-                    _logger.LogError(
-                        "Telnyx rejected a conference join request with status code {StatusCode}. Response: {Response}",
-                        joinResult.StatusCode,
-                        joinResult.ErrorBody.SanitizeLogValue());
-
-                    return TelephonyResult.Failed(S["Telnyx could not merge the calls."].Value);
-                }
-            }
-
-            return TelephonyResult.Success(BuildCall(
-                primaryCallId,
-                CallState.Connected,
-                new Dictionary<string, object>
-                {
-                    ["isConference"] = true,
-                    ["conferenceId"] = conferenceId,
-                    // The soft phone names this conference when it adds a call to it.
-                    ["conferenceName"] = conferenceName,
-                    ["participantCount"] = callIds.Count,
-                }));
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "An error occurred while merging Telnyx calls.");
-
-            return TelephonyResult.Failed(S["Telnyx could not merge the calls."].Value);
-        }
     }
 
     /// <inheritdoc/>

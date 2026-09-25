@@ -34,6 +34,30 @@ public sealed class TelnyxOrphanedCallReconcilerTests
         Assert.Single(handler.Requests);
     }
 
+    // The number an agent dialed from the soft phone is a leg the platform dialed only to reach them; it has no
+    // interaction of its own, and ending it as an orphan would cut the agent's call off after two minutes.
+    [Fact]
+    public async Task TheDialedLegOfACallThePlatformKnows_IsNotAnOrphan()
+    {
+        // Arrange
+        var state = new TelnyxOutboundBridgeState
+        {
+            Intent = TelnyxOutboundBridgeState.DestinationLegIntent,
+            PeerCallControlId = "agent-leg-1",
+        }.ToClientState();
+        var handler = new RecordingHttpMessageHandler().AlwaysRespondWith(HttpStatusCode.OK, $$"""
+            { "data": [ { "call_control_id": "remote-leg-1", "call_duration": 600, "client_state": "{{state}}" } ] }
+            """);
+        var reconciler = CreateReconciler(handler, KnownCalls("agent-leg-1"), TelnyxOrphanedCallHandling.EndCall);
+
+        // Act
+        var result = await reconciler.ReconcileAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(0, result.OrphansFound);
+        Assert.Single(handler.Requests);
+    }
+
     [Fact]
     public async Task ACallNothingHasARecordOf_IsFound()
     {

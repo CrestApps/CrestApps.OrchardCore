@@ -84,4 +84,14 @@ public enum TelephonyCapabilities
     /// target user and joining their leg to the existing conversation.
     /// </summary>
     ExtensionConference = 1 << 13,
+
+    /// <summary>
+    /// The provider places a number dialed on the soft phone's keypad by ringing the agent's own registered browser and
+    /// connecting that leg to the number on the server, so the call is one the platform controls: it can be
+    /// transferred, merged and sent digits like any server-placed call. A dial that asks for this names the soft
+    /// phone's credential (<see cref="TelephonyConstants.RequestMetadata.SoftPhoneCredentialId"/>); a provider that
+    /// cannot connect it that way answers <see cref="TelephonyConstants.ErrorCodes.BridgeUnavailable"/>, and the soft
+    /// phone places the call from the browser instead.
+    /// </summary>
+    BridgedDial = 1 << 14,
 }

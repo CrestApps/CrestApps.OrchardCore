@@ -73,7 +73,11 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
             // The agent's browser answered the leg we rang; dial the destination it wanted to reach.
             if (isAnswered && _options.IsConfigured && !string.IsNullOrWhiteSpace(state.Destination))
             {
-                await DialDestinationAsync(agentLegCallControlId: callEvent.CallControlId, state, cancellationToken);
+                await ConnectAgentLegAsync(callEvent.CallControlId, state, cancellationToken);
+            }
+            else if (IsHangup(callEvent) && _options.IsConfigured)
+            {
+                await ReleaseRemotePartyAsync(state, cancellationToken);
             }
 
             return TelnyxOutboundBridgeLeg.AgentLeg;
@@ -87,7 +91,7 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
             if (isAnswered && !string.IsNullOrWhiteSpace(state.PeerCallControlId))
             {
                 if (_options.IsConfigured &&
-                    await BridgeAsync(destinationLegCallControlId: callEvent.CallControlId, agentLegCallControlId: state.PeerCallControlId, cancellationToken, parkAfterUnbridge: true))
+                    await BridgeAsync(callControlId: callEvent.CallControlId, otherCallControlId: state.PeerCallControlId, cancellationToken, parkAfterUnbridge: true))
                 {
                     // The caller has been listening to the queue while the agent was reached. Now that they are
                     // joined the music stops -- not before, which left the caller in dead air for the second or
@@ -187,7 +191,7 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
             }
             else
             {
-                await BridgeAsync(destinationLegCallControlId: callEvent.CallControlId, agentLegCallControlId: state.PeerCallControlId, cancellationToken);
+                await BridgeDialedNumberAsync(agentLegCallControlId: state.PeerCallControlId, destinationLegCallControlId: callEvent.CallControlId, cancellationToken);
             }
 
             return TelnyxOutboundBridgeLeg.DestinationLeg;
@@ -225,6 +229,12 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
                 // up). The two legs are joined through a conference, so ending one participant does not end the
                 // other; hang up the caller's (agent) leg too so the call clears for both. Idempotent: if the
                 // caller hung up first (which ended the conference and this leg), the agent leg is already gone.
+                await HangupLegAsync(state.PeerCallControlId, cancellationToken);
+            }
+            else if (state.Detached != true)
+            {
+                // The number the agent dialed hung up, answered or not: busy, unanswered, refused, or the end of the
+                // conversation. The agent's leg is bridged with park_after_unbridge, so nothing ends it but this.
                 await HangupLegAsync(state.PeerCallControlId, cancellationToken);
             }
         }
@@ -456,7 +466,7 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
     }
 
 
-    private async Task DialDestinationAsync(string agentLegCallControlId, TelnyxOutboundBridgeState agentState, CancellationToken cancellationToken)
+    private async Task<string> DialDestinationAsync(string agentLegCallControlId, TelnyxOutboundBridgeState agentState, CancellationToken cancellationToken)
     {
         var body = new Dictionary<string, object>
         {
@@ -526,7 +536,11 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
                     "Telnyx rejected the destination leg of an outbound bridge with status code {StatusCode}. Response: {Response}",
                     result.StatusCode,
                     result.ErrorBody.SanitizeLogValue());
+
+                return null;
             }
+
+            return result.CallControlId;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -535,6 +549,8 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
         catch (Exception ex)
         {
             _logger.LogError(ex, "An error occurred while dialing the destination leg of a Telnyx outbound bridge.");
+
+            return null;
         }
     }
 
@@ -612,7 +628,7 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "An error occurred while hanging up the peer leg {CallControlId} of an internal extension call.", callControlId.SanitizeLogValue());
+            _logger.LogWarning(ex, "An error occurred while hanging up the peer leg {CallControlId} of a bridged call.", callControlId.SanitizeLogValue());
         }
     }
 
@@ -640,12 +656,13 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
         }
     }
 
-    private async Task<bool> BridgeAsync(string destinationLegCallControlId, string agentLegCallControlId, CancellationToken cancellationToken, bool parkAfterUnbridge = false)
+    // The bridge is issued on callControlId, so park_after_unbridge applies to that leg.
+    private async Task<bool> BridgeAsync(string callControlId, string otherCallControlId, CancellationToken cancellationToken, bool parkAfterUnbridge = false)
     {
         var body = new Dictionary<string, object>
         {
-            ["call_control_id"] = agentLegCallControlId,
-            ["command_id"] = $"ob-bridge-{destinationLegCallControlId}",
+            ["call_control_id"] = otherCallControlId,
+            ["command_id"] = $"ob-bridge-{callControlId}",
         };
 
         if (parkAfterUnbridge)
@@ -655,7 +672,7 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
 
         try
         {
-            var result = await _apiClient.PostCallActionAsync(destinationLegCallControlId, "bridge", body, cancellationToken);
+            var result = await _apiClient.PostCallActionAsync(callControlId, "bridge", body, cancellationToken);
 
             if (!result.Succeeded)
             {

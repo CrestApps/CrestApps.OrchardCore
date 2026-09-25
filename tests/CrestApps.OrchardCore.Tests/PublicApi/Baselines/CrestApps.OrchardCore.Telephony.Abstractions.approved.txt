@@ -279,6 +279,10 @@ namespace CrestApps.OrchardCore.Telephony
         {
             public const string ExtensionNumber = "extensionNumber";
         }
+        public static class ErrorCodes
+        {
+            public const string BridgeUnavailable = "bridge-unavailable";
+        }
         public static class Feature
         {
             public const string Area = "CrestApps.OrchardCore.Telephony";
@@ -290,6 +294,7 @@ namespace CrestApps.OrchardCore.Telephony
         {
             public const string FenceToken = "commandFenceToken";
             public const string IdempotencyKey = "idempotencyKey";
+            public const string SoftPhoneCredentialId = "softPhoneCredentialId";
             public const string SoftPhoneUserId = "softPhoneUserId";
         }
         public static class RouteNames
@@ -301,6 +306,7 @@ namespace CrestApps.OrchardCore.Telephony
         }
         public static class SoftPhoneClientCapabilities
         {
+            public const string BridgedDialLeg = "bridged-dial-leg";
             public const string HeldOfferLeg = "held-offer-leg";
             public static readonly System.Collections.Generic.IReadOnlyCollection<string> All;
         }
@@ -809,6 +815,7 @@ namespace CrestApps.OrchardCore.Telephony.Models
         AttendedTransfer = 2048,
         ExtensionDial = 4096,
         ExtensionConference = 8192,
+        BridgedDial = 16384,
     }
     public sealed class TelephonyClientCredentials
     {
@@ -886,9 +893,11 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public TelephonyResult() { }
         public CrestApps.OrchardCore.Telephony.Models.TelephonyCall Call { get; init; }
         public string Error { get; init; }
+        public string ErrorCode { get; init; }
         public bool OutcomeUnknown { get; init; }
         public bool Succeeded { get; init; }
         public static CrestApps.OrchardCore.Telephony.Models.TelephonyResult Failed(string error) { }
+        public static CrestApps.OrchardCore.Telephony.Models.TelephonyResult Failed(string error, string errorCode) { }
         public static CrestApps.OrchardCore.Telephony.Models.TelephonyResult Success(CrestApps.OrchardCore.Telephony.Models.TelephonyCall call = null) { }
         public static CrestApps.OrchardCore.Telephony.Models.TelephonyResult Unknown(string error) { }
     }

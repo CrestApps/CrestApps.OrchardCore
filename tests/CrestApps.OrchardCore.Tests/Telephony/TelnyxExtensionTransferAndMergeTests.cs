@@ -23,6 +23,9 @@ public sealed class TelnyxExtensionTransferAndMergeTests
 {
     private const string ColleagueEndpoint = "sip:gencred2@sip.telnyx.com";
 
+    // A call's status as Telnyx reports it for a call that is not a number dialed from the soft phone.
+    private const string NotADialedNumber = """{"data":{"call_control_id":"ctrl-a","is_alive":true}}""";
+
     [Theory]
     [InlineData(TransferMode.Blind)]
     [InlineData(TransferMode.Warm)]
@@ -38,11 +41,10 @@ public sealed class TelnyxExtensionTransferAndMergeTests
             ? await provider.StartAttendedTransferAsync(request, TestContext.Current.CancellationToken)
             : await provider.TransferAsync(request, TestContext.Current.CancellationToken);
 
-        // Assert
+        // Assert - the call is read first, to learn whether it is a number dialed from the soft phone; it is not.
         Assert.True(result.Succeeded);
-        var transfer = Assert.Single(handler.Requests);
-        Assert.Equal("/v2/calls/ctrl-1/actions/transfer", transfer.Path);
-        Assert.Equal(ColleagueEndpoint, ReadString(transfer.Body, "to"));
+        Assert.Equal(["/v2/calls/ctrl-1", "/v2/calls/ctrl-1/actions/transfer"], handler.Requests.Select(request => request.Path));
+        Assert.Equal(ColleagueEndpoint, ReadString(handler.Requests[1].Body, "to"));
     }
 
     [Fact]
@@ -94,7 +96,7 @@ public sealed class TelnyxExtensionTransferAndMergeTests
 
         // Assert
         Assert.True(result.Succeeded);
-        Assert.Equal("+17025550199", ReadString(Assert.Single(handler.Requests).Body, "to"));
+        Assert.Equal("+17025550199", ReadString(handler.Requests[^1].Body, "to"));
     }
 
     [Fact]
@@ -116,12 +118,14 @@ public sealed class TelnyxExtensionTransferAndMergeTests
         Assert.Equal(
             [
                 "GET /v2/conferences?filter[name]=conf-ctrl-a",
+                "GET /v2/calls/ctrl-n",
                 "POST /v2/conferences/conference-1/actions/join",
+                "GET /v2/calls/ctrl-m",
                 "POST /v2/conferences/conference-1/actions/join",
             ],
             handler.Requests.Select(request => $"{request.Method} {Uri.UnescapeDataString(request.Path)}"));
-        Assert.Equal("ctrl-n", ReadString(handler.Requests[1].Body, "call_control_id"));
-        Assert.Equal("ctrl-m", ReadString(handler.Requests[2].Body, "call_control_id"));
+        Assert.Equal("ctrl-n", ReadString(handler.Requests[2].Body, "call_control_id"));
+        Assert.Equal("ctrl-m", ReadString(handler.Requests[4].Body, "call_control_id"));
         Assert.Equal("conf-ctrl-a", result.Call.Metadata["conferenceName"]);
     }
 
@@ -131,6 +135,7 @@ public sealed class TelnyxExtensionTransferAndMergeTests
         // Arrange
         var handler = new RecordingHttpMessageHandler()
             .RespondWith(HttpStatusCode.OK, """{"data":[]}""")
+            .RespondWith(HttpStatusCode.OK, NotADialedNumber)
             .RespondWith(HttpStatusCode.OK, """{"data":{"id":"conference-2"}}""")
             .AlwaysRespondWith(HttpStatusCode.OK, """{"data":{"result":"ok"}}""");
         var provider = CreateProvider(handler, ResolverFor("user-2", ColleagueEndpoint));
@@ -142,9 +147,9 @@ public sealed class TelnyxExtensionTransferAndMergeTests
 
         // Assert
         Assert.True(result.Succeeded);
-        Assert.Equal("POST /v2/conferences", $"{handler.Requests[1].Method} {handler.Requests[1].Path}");
-        Assert.Equal("ctrl-a", ReadString(handler.Requests[1].Body, "call_control_id"));
-        Assert.Equal("POST /v2/conferences/conference-2/actions/join", $"{handler.Requests[2].Method} {handler.Requests[2].Path}");
+        Assert.Equal("POST /v2/conferences", $"{handler.Requests[2].Method} {handler.Requests[2].Path}");
+        Assert.Equal("ctrl-a", ReadString(handler.Requests[2].Body, "call_control_id"));
+        Assert.Equal("POST /v2/conferences/conference-2/actions/join", $"{handler.Requests[4].Method} {handler.Requests[4].Path}");
     }
 
     [Fact]
@@ -152,6 +157,7 @@ public sealed class TelnyxExtensionTransferAndMergeTests
     {
         // Arrange
         var handler = new RecordingHttpMessageHandler()
+            .RespondWith(HttpStatusCode.OK, NotADialedNumber)
             .RespondWith(HttpStatusCode.OK, """{"data":{"id":"conference-3"}}""")
             .AlwaysRespondWith(HttpStatusCode.OK, """{"data":{"result":"ok"}}""");
         var provider = CreateProvider(handler, ResolverFor("user-2", ColleagueEndpoint));
@@ -161,8 +167,8 @@ public sealed class TelnyxExtensionTransferAndMergeTests
 
         // Assert - one conference, and all three calls in it.
         Assert.True(result.Succeeded);
-        Assert.Equal("POST /v2/conferences", $"{handler.Requests[0].Method} {handler.Requests[0].Path}");
-        Assert.Equal(3, handler.Requests.Count);
+        Assert.Equal("POST /v2/conferences", $"{handler.Requests[1].Method} {handler.Requests[1].Path}");
+        Assert.Equal(2, handler.Requests.Count(request => request.Path.EndsWith("/actions/join", StringComparison.Ordinal)));
         Assert.Equal("conf-ctrl-a", result.Call.Metadata["conferenceName"]);
         Assert.Equal(3, result.Call.Metadata["participantCount"]);
     }
