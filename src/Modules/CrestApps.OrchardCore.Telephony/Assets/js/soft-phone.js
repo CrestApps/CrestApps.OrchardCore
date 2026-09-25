@@ -116,6 +116,7 @@
     var allLegs = softPhoneModules.allLegs;
     var canConferenceCall = softPhoneModules.canConferenceCall;
     var planMerge = softPhoneModules.planMerge;
+    var conferenceAfterMerge = softPhoneModules.conferenceAfterMerge;
     var buildActiveCallsHtml = softPhoneModules.buildActiveCallsHtml;
     var transferModes = softPhoneModules.transferModes;
     var createTransferPanel = softPhoneModules.createTransferPanel;
@@ -123,6 +124,9 @@
     var serviceDirectoryEntries = softPhoneModules.serviceDirectoryEntries;
     var serviceModes = softPhoneModules.serviceModes;
     var resolveServiceTarget = softPhoneModules.resolveServiceTarget;
+    var transferBlockedReason = softPhoneModules.transferBlockedReason;
+    var enhancePhoneInput = softPhoneModules.enhancePhoneInput;
+    var readPhoneInput = softPhoneModules.readPhoneInput;
     var showInAppConfirm = softPhoneModules.showInAppConfirm;
 
     var createCallNotifiers = softPhoneModules.createCallNotifiers;
@@ -2577,6 +2581,13 @@
                 return serviceTransferCall() && serviceDirectory ? serviceModes(serviceDirectory) : transferModes(capabilities);
             },
             ownNumbers: function () { return ownOutboundNumbers(); },
+            blockedReason: function () {
+                return transferBlockedReason({ call: currentCall, serviceApplies: !!serviceTransferCall() });
+            },
+            // The keypad's own country-flag field, with the keypad's country (see soft-phone/phone-input.js).
+            enhanceNumberInput: function (input) {
+                return enhancePhoneInput(input, phoneInputOptions());
+            },
             loadDirectory: function () {
                 var call = serviceTransferCall();
 
@@ -2604,6 +2615,8 @@
                     ? resolveServiceTarget({
                         query: panelState.query,
                         selected: panelState.selected,
+                        dialMode: panelState.dialMode,
+                        number: panelState.number,
                         mode: panelState.mode,
                         directory: serviceDirectory,
                         ownNumbers: ownOutboundNumbers()
@@ -2613,8 +2626,10 @@
             transfer: function (target, mode, modeName) {
                 var call = serviceTransferCall();
 
+                // The provider is told an extension is one, so it rings the colleague's phone rather than dialing
+                // the digits as a phone number.
                 if (!call) {
-                    return invoke('Transfer', { callId: currentCallId(), to: target, mode: mode });
+                    return invoke('Transfer', { callId: currentCallId(), to: target.destination, mode: mode, isExtension: !!target.isExtension });
                 }
 
                 if (modeName !== 'warm') {
@@ -2884,18 +2899,19 @@
         var initialCountry = resolveInitialCountry();
         var extensionMode = false;
 
-        if (dom.number && typeof window.intlTelInput === 'function') {
-            var telInputOptions = {
+        // The keypad's field and the transfer panel's share these settings, so both read a number the same way.
+        function phoneInputOptions() {
+            return {
+                intlTelInput: window.intlTelInput,
+                initialCountry: initialCountry,
                 containerClass: 'telephony-soft-phone__number-iti',
                 dropdownParent: document.body
             };
+        }
 
-            if (initialCountry) {
-                telInputOptions.initialCountry = initialCountry;
-            }
+        telInput = enhancePhoneInput(dom.number, phoneInputOptions());
 
-            telInput = window.intlTelInput(dom.number, telInputOptions);
-
+        if (telInput) {
             preventCountryDropdownScroll();
         }
 
@@ -2947,49 +2963,8 @@
 
             // In extension mode the destination is an internal extension, not a dialable phone number,
             // so it is sent verbatim and the country selector is ignored.
-            if (extensionMode) {
-                return raw;
-            }
-
-            // A number the user already entered in international form is dialed as-is.
-            if (raw.charAt(0) === '+') {
-                return raw;
-            }
-
-            var visibleDigits = raw.replace(/\D/g, '');
-
-            if (telInput && typeof telInput.getNumber === 'function') {
-                // Only trust the intl-tel-input E.164 output for real, valid phone numbers. Short
-                // strings such as internal extensions are not valid numbers, so they are dialed
-                // verbatim instead of being turned into a bogus "+1101" style destination.
-                var isValid = typeof telInput.isValidNumber !== 'function' || telInput.isValidNumber();
-
-                if (isValid) {
-                    var e164 = telInput.getNumber();
-
-                    // Guard against intl-tel-input desyncing (e.g. a keypad edit that did not update its
-                    // internal state): only accept its E.164 when its digits actually contain what the user
-                    // sees, so the dialed number can never differ from the visible number.
-                    if (e164 && e164.charAt(0) === '+' &&
-                        (visibleDigits === '' || e164.replace(/\D/g, '').indexOf(visibleDigits) !== -1)) {
-                        return e164;
-                    }
-                }
-            }
-
-            // Fall back to the visible number, prefixed with the selected country's dial code so it stays
-            // routable. This path guarantees the dialed number matches what is on screen.
-            if (visibleDigits && telInput && typeof telInput.getSelectedCountryData === 'function') {
-                var dialCode = (telInput.getSelectedCountryData() || {}).dialCode;
-
-                if (dialCode) {
-                    return visibleDigits.indexOf(dialCode) === 0
-                        ? '+' + visibleDigits
-                        : '+' + dialCode + visibleDigits;
-                }
-            }
-
-            return raw;
+            // A phone number is read the way the country-flag field reads one (see soft-phone/phone-input.js).
+            return extensionMode ? raw : readPhoneInput(raw, telInput);
         }
 
         function setNumberDisplay(value) {
@@ -6072,9 +6047,10 @@
             show(dom.activeCalls, calls.length > 1);
 
             var plan = currentMergePlan();
+            var canMergeCalls = has(CAPABILITIES.Merge);
 
-            // The conference's participants, the other calls, and the Merge action naming the calls it joins (see
-            // soft-phone/conference.js).
+            // A checkbox beside every line, the conference's participants, the other calls, and the Merge action for
+            // the ticked ones (see soft-phone/conference.js).
             dom.activeCallsList.innerHTML = buildActiveCallsHtml({
                 calls: calls.map(function (call) {
                     var callId = call.callId || '';
@@ -6084,14 +6060,20 @@
                         number: formatPhoneNumber(getPeerNumber(call)) || callId,
                         state: statusTextForCall(call),
                         current: !!(currentCall && currentCall.callId === callId),
-                        selectable: canConferenceCall(call),
+                        selectable: canMergeCalls && canConferenceCall(call),
+                        unselectableReason: canConferenceCall(call) ? '' : 'browser-call',
                         selected: !!conferenceSelections[callId],
                         inConference: metadataBoolean(call, 'isConference'),
                         canHangup: has(CAPABILITIES.Hangup)
                     };
                 }),
                 merge: {
-                    available: plan.available && has(CAPABILITIES.Merge),
+                    offered: plan.offered && canMergeCalls,
+                    canMerge: plan.canMerge,
+                    selectedCount: plan.selectedCount,
+                    addsToConference: plan.addsToConference,
+                    allSelected: plan.allSelected,
+                    blocked: canMergeCalls ? plan.blocked : '',
                     numbers: plan.calls.map(function (call) {
                         return formatPhoneNumber(getPeerNumber(call)) || call.callId;
                     })
@@ -6124,6 +6106,20 @@
                 });
             });
 
+            Array.prototype.forEach.call(dom.activeCallsList.querySelectorAll('[data-telephony-merge-select-all]'), function (checkbox) {
+                checkbox.addEventListener('change', function () {
+                    conferenceSelections = {};
+
+                    if (checkbox.checked) {
+                        plan.eligibleCallIds.forEach(function (callId) {
+                            conferenceSelections[callId] = true;
+                        });
+                    }
+
+                    render();
+                });
+            });
+
             Array.prototype.forEach.call(dom.activeCallsList.querySelectorAll('[data-telephony-participant-hangup]'), function (button) {
                 button.disabled = !!activeCommand;
                 button.addEventListener('click', function () {
@@ -6132,7 +6128,7 @@
             });
 
             Array.prototype.forEach.call(dom.activeCallsList.querySelectorAll('[data-telephony-merge-calls]'), function (button) {
-                button.disabled = !!activeCommand;
+                button.disabled = !!activeCommand || !plan.canMerge;
                 button.addEventListener('click', merge);
             });
         }
@@ -6924,37 +6920,56 @@
         }
 
         function merge() {
-            var callIds = currentMergePlan().callIds;
+            var plan = currentMergePlan();
+            var callIds = plan.callIds;
 
-            if (callIds.length < 2) {
+            if (!plan.canMerge || callIds.length < 2) {
                 showError(strings.selectCallsToMerge || 'Select at least two calls to conference.');
 
                 return;
             }
 
-            invoke('Merge', {
-                callIds: callIds
-            }).then(function (result) {
-                if (result && result.succeeded !== false) {
-                    callIds.forEach(function (callId) {
-                        var call = activeCalls[callId];
+            // Adding to a running conference names it, so the provider joins the new calls to it rather than making a
+            // second one from its first participant.
+            var request = { callIds: callIds };
 
-                        if (!call) {
-                            return;
-                        }
+            if (plan.addsToConference && plan.conferenceName) {
+                request.conferenceName = plan.conferenceName;
+            }
 
-                        call.state = 'Connected';
-                        call.isOnHold = false;
-                        // Joining the conference is the agent taking these calls off hold.
-                        rememberAgentHold(agentHolds, callId, false);
-                        call.metadata = call.metadata || {};
-                        call.metadata.isConference = true;
-                        call.metadata.participantCount = callIds.length;
-                    });
+            invoke('Merge', request).then(function (result) {
+                if (!result || result.succeeded === false) {
+                    // The provider may have joined some of the calls before it refused the rest; the calls' own state is
+                    // read again rather than guessed. The refusal itself is on the error line.
+                    scheduleActiveCallsRefresh();
 
-                    conferenceSelections = {};
-                    render();
+                    return;
                 }
+
+                var conference = conferenceAfterMerge(getActiveCalls(), plan, result, {
+                    isConference: function (call) { return metadataBoolean(call, 'isConference'); }
+                });
+
+                conference.callIds.forEach(function (callId) {
+                    var call = activeCalls[callId];
+
+                    if (!call) {
+                        return;
+                    }
+
+                    call.state = 'Connected';
+                    call.isOnHold = false;
+                    // Joining the conference is the agent taking these calls off hold.
+                    rememberAgentHold(agentHolds, callId, false);
+                    call.metadata = call.metadata || {};
+                    call.metadata.isConference = true;
+                    call.metadata.participantCount = conference.callIds.length;
+                    call.metadata.conferencePrimaryCallId = conference.primaryCallId;
+                    call.metadata.conferenceName = conference.conferenceName;
+                });
+
+                conferenceSelections = {};
+                render();
             });
         }
 

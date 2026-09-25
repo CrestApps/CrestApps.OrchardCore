@@ -6,7 +6,7 @@ namespace CrestApps.OrchardCore.Telephony.PlaywrightTests;
 /// <summary>
 /// Joining calls into a conference. With one call held and a second call up, agents could not see how to join them:
 /// Merge only appeared, as an unlabelled icon, once two checkboxes were ticked. These tests hold the phone to offering a
-/// labelled Merge that names the calls it joins, and to showing the conference it makes.
+/// labelled Merge beside the call lines that names the calls it joins, and to showing the conference it makes.
 /// </summary>
 public sealed class SoftPhoneMergeCallsTests : SoftPhoneBrowserTest
 {
@@ -17,13 +17,15 @@ public sealed class SoftPhoneMergeCallsTests : SoftPhoneBrowserTest
         var page = await CreateHeldAndActiveCallAsync();
         var baselineCount = await InvokeCountAsync(page, "GetMergeRequestCount");
 
-        // Assert - Merge is offered without ticking anything, and names both calls.
+        // Assert - Merge is offered as soon as two calls could be joined, and once both are ticked names them.
         var merge = page.Locator("[data-telephony-merge-calls]");
         await merge.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        await page.Locator("[data-telephony-merge-select-all]").CheckAsync();
+        merge = page.Locator("[data-telephony-merge-calls]");
         var summary = await page.Locator("[data-telephony-merge-summary]").InnerTextAsync();
         Assert.Contains("(555) 123-4567", summary);
         Assert.Contains("(555) 765-4321", summary);
-        Assert.Contains("Merge calls", await merge.InnerTextAsync());
+        Assert.Contains("Merge 2 calls", await merge.InnerTextAsync());
         await AssertFitsTheWindowAsync(page, "[data-telephony-active-calls]");
         await CaptureAsync(page, "merge-offered");
 
@@ -48,6 +50,7 @@ public sealed class SoftPhoneMergeCallsTests : SoftPhoneBrowserTest
     {
         // Arrange
         var page = await CreateHeldAndActiveCallAsync();
+        await page.Locator("[data-telephony-merge-select-all]").CheckAsync();
         await page.ClickAsync("[data-telephony-merge-calls]");
         await page.Locator("[data-telephony-participant-hangup]").Nth(1).WaitForAsync();
         var baselineCount = await InvokeCountAsync(page, "GetHangupRequestCount");

@@ -61,7 +61,8 @@ public sealed class SoftPhoneTransferPanelTests : SoftPhoneBrowserTest
         // Assert
         var transfer = await WaitForTransferAsync(page);
         Assert.Equal(callId, transfer.GetProperty("callId").GetString());
-        Assert.Equal("7025550199", transfer.GetProperty("to").GetString());
+        Assert.Equal("+17025550199", transfer.GetProperty("to").GetString());
+        Assert.False(transfer.GetProperty("isExtension").GetBoolean());
         Assert.Equal(0, transfer.GetProperty("mode").GetInt32());
         await page.WaitForFunctionAsync("() => document.querySelector('[data-telephony-transfer-panel]').hidden");
         Assert.Empty(dialogs);
@@ -132,6 +133,7 @@ public sealed class SoftPhoneTransferPanelTests : SoftPhoneBrowserTest
 
         // Act
         await warm.ClickAsync();
+        await page.ClickAsync("[data-telephony-transfer-dial-mode]");
         await page.FillAsync("[data-telephony-transfer-input]", "2001");
         await CaptureAsync(page, "transfer-panel-warm");
         await page.PressAsync("[data-telephony-transfer-input]", "Enter");
@@ -139,6 +141,7 @@ public sealed class SoftPhoneTransferPanelTests : SoftPhoneBrowserTest
         // Assert
         var transfer = await WaitForTransferAsync(page);
         Assert.Equal("2001", transfer.GetProperty("to").GetString());
+        Assert.True(transfer.GetProperty("isExtension").GetBoolean());
         Assert.Equal(1, transfer.GetProperty("mode").GetInt32());
         Assert.Empty(dialogs);
     }

@@ -170,6 +170,11 @@ public sealed class TestTelephonyHub : Hub<ITelephonyClient>
         return Task.FromResult(_provider.GetLastTransfer());
     }
 
+    public Task<MergeRequest> GetLastMerge()
+    {
+        return Task.FromResult(_provider.GetLastMerge());
+    }
+
     public Task SetDialDelay(int milliseconds)
     {
         _provider.SetDialDelay(milliseconds);

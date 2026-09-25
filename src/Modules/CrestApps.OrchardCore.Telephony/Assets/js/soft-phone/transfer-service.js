@@ -24,10 +24,6 @@
         return String(template).replace('{0}', value);
     }
 
-    function digitsOf(value) {
-        return value == null ? '' : String(value).replace(/\D+/g, '');
-    }
-
     function presenceLabel(presence, strings) {
         var key = 'presence' + String(presence || '');
 
@@ -113,35 +109,17 @@
         return directory && directory.supportsConsult ? ['blind', 'warm'] : ['blind'];
     }
 
-    // A typed number in international format, or '' when it cannot be read as one. A number without a country code
-    // is read as North American only when it has exactly the ten digits one has; anything else must start with +.
-    function toInternationalNumber(value) {
-        var text = value == null ? '' : String(value).trim();
-        var digits = digitsOf(text);
-
-        if (text.charAt(0) === '+') {
-            return digits.length >= 8 && digits.length <= 15 ? '+' + digits : '';
-        }
-
-        if (digits.length === 10) {
-            return '+1' + digits;
-        }
-
-        if (digits.length === 11 && digits.charAt(0) === '1') {
-            return '+' + digits;
-        }
-
-        return '';
-    }
-
     // What the service should transfer the call to.
-    //   selected   - the entry the agent picked, if any.
+    //   selected   - the entry the agent picked, if any; it wins in either dial mode.
     //   query      - what the agent typed.
+    //   dialMode   - 'number' (the default) or 'extension', as the panel's Number / Extension toggle is set.
+    //   number     - in number mode, what the country-flag input read from the query: { value, valid }.
     //   mode       - 'blind' or 'warm'.
     //   directory  - the service's directory (for whether outside numbers may be typed).
     //   ownNumbers - the tenant's own numbers, which are never a destination.
     // Returns { targetType, targetId, label, refused }, refused being '' or one of
-    // 'empty' | 'unavailable' | 'warm-queue' | 'external-not-allowed' | 'invalid-number' | 'own-number'.
+    // 'empty' | 'unavailable' | 'warm-queue' | 'external-not-allowed' | 'invalid-number' | 'invalid-extension' |
+    // 'own-number'. An extension is sent as targetType 'extension': the server resolves it to the agent it rings.
     function resolveServiceTarget(options) {
         options = options || {};
 
@@ -164,6 +142,18 @@
 
         var text = options.query == null ? '' : String(options.query).trim();
 
+        if (options.dialMode === 'extension') {
+            if (!text) {
+                return refuse('empty');
+            }
+
+            var extension = softPhone.readExtension(text);
+
+            return extension
+                ? { targetType: 'extension', targetId: extension, label: text, refused: '' }
+                : refuse('invalid-extension');
+        }
+
         if (!text || !softPhone.isNumberLike(text)) {
             return refuse('empty');
         }
@@ -174,11 +164,12 @@
             return refuse('external-not-allowed');
         }
 
-        if ((options.ownNumbers || []).some(function (own) { return softPhone.isSameLine(text, own); })) {
+        var reading = options.number || null;
+        var number = reading ? (reading.valid ? String(reading.value || '') : '') : softPhone.toInternationalNumber(text);
+
+        if ((options.ownNumbers || []).some(function (own) { return softPhone.isSameLine(text, own) || softPhone.isSameLine(number, own); })) {
             return refuse('own-number');
         }
-
-        var number = toInternationalNumber(text);
 
         if (!number) {
             return refuse('invalid-number');
@@ -286,7 +277,6 @@
 
     softPhone.serviceDirectoryEntries = serviceDirectoryEntries;
     softPhone.serviceModes = serviceModes;
-    softPhone.toInternationalNumber = toInternationalNumber;
     softPhone.resolveServiceTarget = resolveServiceTarget;
     softPhone.createTransferService = createTransferService;
 }(typeof globalThis !== 'undefined' ? globalThis : window));

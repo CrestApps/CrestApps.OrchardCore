@@ -896,18 +896,41 @@
         }
     }
 
-    // The Merge action names the calls it will join, so the agent can see what a click does before making it.
+    &__active-call-check:disabled {
+        cursor: not-allowed;
+        opacity: 0.45;
+    }
+
+    // The Merge action names the calls it will join, so the agent can see what a click does before making it. Select
+    // all, the summary and the button wrap onto two rows in the desktop app's narrow window rather than squeezing.
     &__merge-bar {
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.35rem 0.5rem;
         padding: 0.45rem 0.5rem;
         border-top: 1px solid var(--bs-border-color, #dee2e6);
         background-color: var(--bs-tertiary-bg, #f8f9fa);
     }
 
+    &__merge-select-all {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        margin: 0;
+        color: var(--bs-secondary-color, #6c757d);
+        font-size: 0.72rem;
+        white-space: nowrap;
+        cursor: pointer;
+
+        input {
+            margin: 0;
+        }
+    }
+
     &__merge-summary {
-        flex: 1 1 auto;
+        flex: 1 1 8rem;
         min-width: 0;
         color: var(--bs-body-color, #212529);
         font-size: 0.72rem;
@@ -920,7 +943,24 @@
         display: inline-flex;
         align-items: center;
         gap: 0.35rem;
+        margin-left: auto;
         white-space: nowrap;
+    }
+
+    // Why the calls on screen cannot be joined: a call dialed from this phone has no server-side handle to merge.
+    &__merge-note {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.35rem;
+        padding: 0.4rem 0.5rem;
+        border-top: 1px solid var(--bs-border-color, #dee2e6);
+        color: var(--bs-secondary-color, #6c757d);
+        font-size: 0.7rem;
+        line-height: 1.3;
+
+        > i {
+            margin-top: 0.1rem;
+        }
     }
 
     &__transfer-panel {
@@ -978,6 +1018,48 @@
         margin: 0.3rem 0 0.45rem;
         color: var(--bs-secondary-color, #6c757d);
         font-size: 0.7rem;
+    }
+
+    // The destination field and, under it, the Number / Extension toggle the keypad has.
+    &__transfer-entry {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+
+        .iti {
+            display: block;
+            width: 100%;
+        }
+
+        .telephony-soft-phone__dial-mode {
+            margin-top: 0.3rem;
+        }
+    }
+
+    // An extension has no country, so the flag is put away the way the keypad puts it away.
+    &__transfer-panel--extension {
+        .iti__country-container {
+            display: none;
+        }
+
+        .telephony-soft-phone__transfer-input {
+            padding-left: 0.5rem !important;
+        }
+    }
+
+    &__transfer-blocked {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.45rem;
+        padding: 0.5rem 0.25rem;
+        color: var(--bs-body-color, #212529);
+        font-size: 0.78rem;
+        line-height: 1.35;
+
+        > i {
+            margin-top: 0.15rem;
+            color: var(--telephony-accent);
+        }
     }
 
     &__transfer-input {

@@ -33,6 +33,7 @@
       "Assets/js/soft-phone/browser-calls.js",
       "Assets/js/soft-phone/remote-elements.js",
       "Assets/js/soft-phone/dial-target.js",
+      "Assets/js/soft-phone/phone-input.js",
       "Assets/js/soft-phone/transfer-target.js",
       "Assets/js/soft-phone/transfer-service.js",
       "Assets/js/soft-phone/consult-state.js",

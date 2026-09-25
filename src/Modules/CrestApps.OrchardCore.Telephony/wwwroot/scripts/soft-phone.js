@@ -2431,8 +2431,11 @@
  *
  * With one call held and a second call up, the only way to join them was to tick a checkbox beside each call in the
  * active-call list and then find an unlabelled icon among the call buttons, which only appeared once two boxes were
- * ticked. Agents did not find it. The phone now offers a labelled Merge action whenever two or more calls can be joined,
- * naming the calls it will join, and lists a conference's participants under their own heading, each with a hang-up.
+ * ticked. Agents did not find it. The phone then offered a labelled Merge that joined every call it could, which with
+ * three or more calls up was not what the agent meant. Now every call line carries its own checkbox, in the keypad view
+ * where the lines are listed; Merge is offered as soon as two lines could be joined, names how many it joins, and does
+ * something only once two or more are ticked. A running conference counts as one line: ticking it and another call adds
+ * that call to the conference. A conference's participants are listed under their own heading, each with a hang-up.
  *
  * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
  * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
@@ -2448,6 +2451,10 @@
     var value = call && call.metadata ? call.metadata.isConference : false;
     return value === true || value === 1 || value === 'true' || value === 'True';
   }
+  function metadataText(call, key) {
+    var value = call && call.metadata ? call.metadata[key] : null;
+    return value == null ? '' : String(value);
+  }
 
   // Merging is a server command over calls the server tracks (see soft-phone/call-legs.js); a call this browser
   // placed itself is never part of one.
@@ -2455,48 +2462,136 @@
     return typeof softPhone.canConferenceCall === 'function' ? softPhone.canConferenceCall(call) : !!(call && call.callId && !call.browserOriginated);
   }
 
-  // Which calls a Merge would join.
+  // What a Merge would do with the calls the agent ticked.
   //   calls      - the active calls.
   //   selections - { callId: true } for the calls the agent ticked.
   //   options    - { stateOf(call) -> 'Connected' | 'OnHold' | ..., isConference(call) -> bool }.
-  // Returns { available, callIds, calls, usesSelection }. Two or more ticked calls are merged on their own; otherwise
-  // every call that can join is. Nothing is offered when the calls are already one conference.
+  // Returns:
+  //   offered          - two or more lines could be joined, so the Merge action is shown.
+  //   canMerge         - two or more of them are ticked, so the Merge action does something.
+  //   selectedCount    - how many lines are ticked; a running conference counts as one line.
+  //   callIds          - the calls the merge command names: the conference's own call first when adding to it.
+  //   calls            - the ticked calls.
+  //   addsToConference - one of the ticked lines is a running conference the others join.
+  //   conferenceName   - that conference's name, when the provider gave it one.
+  //   eligibleCallIds  - every call that can be ticked, for Select all.
+  //   allSelected      - every call that can be ticked is.
+  //   blocked          - 'browser-call' when a call on screen cannot be merged because this browser placed it.
   function planMerge(calls, selections, options) {
     options = options || {};
+    selections = selections || {};
     var stateOf = options.stateOf || defaultStateOf;
     var isConference = options.isConference || defaultIsConference;
-    var eligible = (calls || []).filter(function (call) {
+    var live = (calls || []).filter(function (call) {
       var state = stateOf(call);
-      return canJoin(call) && (state === 'Connected' || state === 'OnHold');
+      return call && (state === 'Connected' || state === 'OnHold');
     });
-    var selected = eligible.filter(function (call) {
-      return !!(selections && selections[call.callId]);
+    var eligible = live.filter(canJoin);
+    var participants = eligible.filter(isConference);
+    var others = eligible.filter(function (call) {
+      return !isConference(call);
     });
-    var usesSelection = selected.length >= 2;
-    var chosen = usesSelection ? selected : eligible;
-    var alreadyMerged = chosen.length > 0 && chosen.every(isConference);
+    var ticked = function (call) {
+      return !!selections[call.callId];
+    };
+    var conferenceTicked = participants.some(ticked);
+    var tickedOthers = others.filter(ticked);
+    var units = (participants.length ? 1 : 0) + others.length;
+    var selectedCount = (conferenceTicked ? 1 : 0) + tickedOthers.length;
+    var canMerge = selectedCount >= 2;
+    var primary = null;
+    var conferenceName = '';
+    if (participants.length) {
+      // A provider's report of one participant replaces what the phone noted on it, so the conference's own call
+      // and name are read from whichever participant still carries them.
+      var primaryId = participants.map(function (call) {
+        return metadataText(call, 'conferencePrimaryCallId');
+      }).filter(Boolean)[0];
+      primary = participants.filter(function (call) {
+        return call.callId === primaryId;
+      })[0] || participants[0];
+      conferenceName = metadataText(primary, 'conferenceName') || participants.map(function (call) {
+        return metadataText(call, 'conferenceName');
+      }).filter(Boolean)[0] || '';
+    }
+    var chosen = conferenceTicked ? [primary].concat(tickedOthers) : tickedOthers;
     return {
-      available: chosen.length >= 2 && !alreadyMerged,
-      callIds: chosen.map(function (call) {
+      offered: units >= 2,
+      canMerge: canMerge,
+      selectedCount: selectedCount,
+      callIds: canMerge ? chosen.map(function (call) {
+        return call.callId;
+      }) : [],
+      calls: (conferenceTicked ? participants.filter(ticked) : []).concat(tickedOthers),
+      addsToConference: canMerge && conferenceTicked,
+      conferenceName: conferenceTicked ? conferenceName : '',
+      eligibleCallIds: eligible.map(function (call) {
         return call.callId;
       }),
-      calls: chosen,
-      usesSelection: usesSelection
+      allSelected: eligible.length > 0 && eligible.every(ticked),
+      blocked: live.length > eligible.length ? 'browser-call' : ''
+    };
+  }
+
+  // The conference a merge that succeeded made: every call now in it, the call it was made from and its name, which
+  // the next "add to conference" names so the provider joins that conference rather than making another.
+  //   calls   - the active calls.
+  //   plan    - the plan the merge was sent from (see planMerge).
+  //   result  - the provider's answer: its call is the call the conference was made from, and may carry the name.
+  //   options - { isConference(call) -> bool }.
+  // Returns { callIds, primaryCallId, conferenceName }.
+  function conferenceAfterMerge(calls, plan, result, options) {
+    options = options || {};
+    var isConference = options.isConference || defaultIsConference;
+    var callIds = plan.addsToConference ? (calls || []).filter(isConference).map(function (call) {
+      return call.callId;
+    }) : [];
+    (plan.callIds || []).forEach(function (callId) {
+      if (callIds.indexOf(callId) === -1) {
+        callIds.push(callId);
+      }
+    });
+    var resultCall = result && result.call ? result.call : null;
+    return {
+      callIds: callIds,
+      primaryCallId: plan.addsToConference || !resultCall || !resultCall.callId ? (plan.callIds || [])[0] || '' : String(resultCall.callId),
+      conferenceName: metadataText(resultCall, 'conferenceName') || plan.conferenceName || ''
     };
   }
   function format(template, value) {
     return String(template).replace('{0}', value);
   }
+  function unselectableText(reason, strings) {
+    return reason === 'browser-call' ? strings.cannotMergeBrowserCall || 'A call dialed from this phone cannot be merged into a conference.' : '';
+  }
   function row(item, strings, escapeHtml, inConference) {
-    var check = item.selectable ? '<input type="checkbox" class="telephony-soft-phone__active-call-check" data-telephony-conference-call="' + escapeHtml(item.callId) + '"' + (item.selected ? ' checked' : '') + ' aria-label="' + escapeHtml(format(strings.selectCall || 'Select {0}', item.number)) + '" />' : '';
+    var reason = item.selectable ? '' : unselectableText(item.unselectableReason, strings);
+    var check = '<input type="checkbox" class="telephony-soft-phone__active-call-check" data-telephony-conference-call="' + escapeHtml(item.callId) + '"' + (item.selected && item.selectable ? ' checked' : '') + (item.selectable ? '' : ' disabled') + (reason ? ' title="' + escapeHtml(reason) + '"' : '') + ' aria-label="' + escapeHtml(format(strings.selectCall || 'Select {0}', item.number)) + '" />';
     var hangup = inConference && item.canHangup ? '<button type="button" class="telephony-soft-phone__participant-hangup" data-telephony-participant-hangup="' + escapeHtml(item.callId) + '" title="' + escapeHtml(format(strings.hangupParticipant || 'Hang up {0}', item.number)) + '" aria-label="' + escapeHtml(format(strings.hangupParticipant || 'Hang up {0}', item.number)) + '">' + '<i class="fa-solid fa-phone-slash" aria-hidden="true"></i></button>' : '';
     return '<div class="telephony-soft-phone__active-call' + (item.current ? ' is-current' : '') + (inConference ? ' is-participant' : '') + '"' + (inConference ? ' data-telephony-conference-participant="' + escapeHtml(item.callId) + '"' : '') + '>' + check + '<button type="button" class="telephony-soft-phone__active-call-select" data-telephony-call-select="' + escapeHtml(item.callId) + '">' + '<span class="telephony-soft-phone__active-call-number">' + escapeHtml(item.number) + '</span>' + '<span class="telephony-soft-phone__active-call-state">' + escapeHtml(item.state) + '</span>' + '</button>' + hangup + '</div>';
   }
+  function mergeBarHtml(merge, strings, escapeHtml) {
+    var names = (merge.numbers || []).join(' + ');
+    var summary;
+    var action;
+    if (!merge.canMerge) {
+      summary = strings.mergeSelectHint || 'Tick two or more calls to merge them.';
+      action = strings.mergeCalls || 'Merge calls';
+    } else if (merge.addsToConference) {
+      summary = format(strings.addToConferenceSummary || 'Add {0} to the conference.', names);
+      action = strings.addToConference || 'Add to conference';
+    } else {
+      summary = format(strings.mergeSummary || 'Join {0} in one conference.', names);
+      action = format(strings.mergeSelectedCalls || 'Merge {0} calls', merge.selectedCount);
+    }
+    return '<div class="telephony-soft-phone__merge-bar">' + '<label class="telephony-soft-phone__merge-select-all">' + '<input type="checkbox" data-telephony-merge-select-all' + (merge.allSelected ? ' checked' : '') + ' /> ' + '<span>' + escapeHtml(strings.selectAllCalls || 'Select all') + '</span></label>' + '<span class="telephony-soft-phone__merge-summary" data-telephony-merge-summary role="status">' + escapeHtml(summary) + '</span>' + '<button type="button" class="btn btn-sm btn-primary telephony-soft-phone__merge-calls" data-telephony-merge-calls' + (merge.canMerge ? '' : ' disabled') + '>' + '<i class="fa-solid fa-code-merge" aria-hidden="true"></i> ' + escapeHtml(action) + '</button></div>';
+  }
 
-  // The active-call list: the conference's participants under their own heading, the other calls, and -- when calls
-  // can be joined -- the Merge action naming them.
-  //   model - { calls: [{ callId, number, state, current, selectable, selected, inConference, canHangup }],
-  //             merge: { available, numbers: [] } }
+  // The active-call list: a checkbox beside every line, the conference's participants under their own heading, the
+  // other calls, and -- when two or more lines could be joined -- the Merge action for the ticked ones.
+  //   model - { calls: [{ callId, number, state, current, selectable, unselectableReason, selected, inConference,
+  //                       canHangup }],
+  //             merge: { offered, canMerge, selectedCount, addsToConference, allSelected, numbers: [], blocked } }
   function buildActiveCallsHtml(model, strings, escapeHtml) {
     model = model || {};
     strings = strings || {};
@@ -2517,13 +2612,16 @@
       return row(call, strings, escapeHtml, false);
     }).join('');
     var merge = model.merge || {};
-    if (merge.available) {
-      var names = (merge.numbers || []).join(' + ');
-      html += '<div class="telephony-soft-phone__merge-bar">' + '<span class="telephony-soft-phone__merge-summary" data-telephony-merge-summary>' + escapeHtml(format(strings.mergeSummary || 'Join {0} in one conference.', names)) + '</span>' + '<button type="button" class="btn btn-sm btn-primary telephony-soft-phone__merge-calls" data-telephony-merge-calls>' + '<i class="fa-solid fa-code-merge" aria-hidden="true"></i> ' + escapeHtml(strings.mergeCalls || 'Merge calls') + '</button></div>';
+    if (merge.blocked) {
+      html += '<div class="telephony-soft-phone__merge-note" data-telephony-merge-blocked>' + '<i class="fa-solid fa-circle-info" aria-hidden="true"></i> ' + escapeHtml(unselectableText(merge.blocked, strings)) + '</div>';
+    }
+    if (merge.offered) {
+      html += mergeBarHtml(merge, strings, escapeHtml);
     }
     return html;
   }
   softPhone.planMerge = planMerge;
+  softPhone.conferenceAfterMerge = conferenceAfterMerge;
   softPhone.buildActiveCallsHtml = buildActiveCallsHtml;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*
@@ -2996,6 +3094,104 @@
   softPhone.shouldShowCallNumber = shouldShowCallNumber;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*
+ * Reading a phone number from a field the country-flag input (intl-tel-input) enhances.
+ *
+ * The keypad and the transfer panel both take a phone number this way, and a transfer used to read it its own way: a
+ * plain text box that accepted anything of two digits or more as a number, so an extension typed into it was checked
+ * as a phone number it could never be, and a real number was sent without a country code. The two now share the
+ * keypad's field -- the same flag, the same country, the same completeness check -- and these are the decisions that
+ * field makes.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+  function normalize(value) {
+    return typeof softPhone.normalizeDialNumber === 'function' ? softPhone.normalizeDialNumber(value) : String(value || '').trim();
+  }
+
+  // Enhances a number field with intl-tel-input, the way the keypad's field is. A country is always selected,
+  // otherwise intl-tel-input cannot read a national number as an international one.
+  //   input   - the field.
+  //   options - { intlTelInput, initialCountry, containerClass, dropdownParent }.
+  // Returns the intl-tel-input instance, or null when intl-tel-input is not loaded.
+  function enhancePhoneInput(input, options) {
+    options = options || {};
+    if (!input || typeof options.intlTelInput !== 'function') {
+      return null;
+    }
+    var settings = {
+      containerClass: options.containerClass,
+      dropdownParent: options.dropdownParent
+    };
+    if (options.initialCountry) {
+      settings.initialCountry = options.initialCountry;
+    }
+    return options.intlTelInput(input, settings);
+  }
+
+  // The number a field holds, as it would be dialed: in international form whenever it can be.
+  //   raw      - what the field shows.
+  //   telInput - its intl-tel-input instance, if any.
+  function readPhoneInput(raw, telInput) {
+    var value = normalize(raw);
+
+    // A number the user already entered in international form is dialed as-is.
+    if (value.charAt(0) === '+') {
+      return value;
+    }
+    var visibleDigits = value.replace(/\D/g, '');
+    if (telInput && typeof telInput.getNumber === 'function') {
+      // Only trust the intl-tel-input E.164 output for real, valid phone numbers. Short strings are not valid
+      // numbers, so they are not turned into a bogus "+1101" style destination here.
+      var isValid = typeof telInput.isValidNumber !== 'function' || telInput.isValidNumber();
+      if (isValid) {
+        var e164 = telInput.getNumber();
+
+        // Guard against intl-tel-input desyncing (e.g. a keypad edit that did not update its internal state):
+        // only accept its E.164 when its digits actually contain what the user sees, so the dialed number can
+        // never differ from the visible number.
+        if (e164 && e164.charAt(0) === '+' && (visibleDigits === '' || e164.replace(/\D/g, '').indexOf(visibleDigits) !== -1)) {
+          return e164;
+        }
+      }
+    }
+
+    // Fall back to the visible number, prefixed with the selected country's dial code so it stays routable. This
+    // path guarantees the dialed number matches what is on screen.
+    if (visibleDigits && telInput && typeof telInput.getSelectedCountryData === 'function') {
+      var dialCode = (telInput.getSelectedCountryData() || {}).dialCode;
+      if (dialCode) {
+        return visibleDigits.indexOf(dialCode) === 0 ? '+' + visibleDigits : '+' + dialCode + visibleDigits;
+      }
+    }
+    return value;
+  }
+
+  // The number a transfer would be sent to: { value, valid }. With intl-tel-input the keypad's own completeness
+  // check decides; without it the field is read as an international or ten-digit North American number.
+  function readTransferNumber(raw, telInput) {
+    if (telInput && typeof telInput.isValidNumber === 'function') {
+      var value = readPhoneInput(raw, telInput);
+      return {
+        value: value,
+        valid: !!telInput.isValidNumber() && value.charAt(0) === '+'
+      };
+    }
+    var number = typeof softPhone.toInternationalNumber === 'function' ? softPhone.toInternationalNumber(raw) : '';
+    return {
+      value: number,
+      valid: !!number
+    };
+  }
+  softPhone.enhancePhoneInput = enhancePhoneInput;
+  softPhone.readPhoneInput = readPhoneInput;
+  softPhone.readTransferNumber = readTransferNumber;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
  * Who a call may be transferred to, and how.
  *
  * The transfer button used to open the browser's own "Transfer to number" prompt. Inside the desktop app's narrow
@@ -3106,64 +3302,105 @@
     });
   }
 
+  // A typed number in international format, or '' when it cannot be read as one. A number without a country code
+  // is read as North American only when it has exactly the ten digits one has; anything else must start with +.
+  function toInternationalNumber(value) {
+    var text = value == null ? '' : String(value).trim();
+    var digits = digitsOf(text);
+    if (text.charAt(0) === '+') {
+      return digits.length >= 8 && digits.length <= 15 ? '+' + digits : '';
+    }
+    if (digits.length === 10) {
+      return '+1' + digits;
+    }
+    if (digits.length === 11 && digits.charAt(0) === '1') {
+      return '+' + digits;
+    }
+    return '';
+  }
+
+  // The digits of a typed extension, or '' when what was typed is not one. An extension is only digits, which may
+  // be spaced or dashed the way people write them; a leading + makes it a phone number, not an extension.
+  function readExtension(value) {
+    var text = value == null ? '' : String(value).trim();
+    var digits = digitsOf(text);
+    return /^[\d\s-]+$/.test(text) && digits.length >= 1 && digits.length <= 15 ? digits : '';
+  }
+
   // What to transfer the call to.
   //   query      - what the agent typed.
-  //   selected   - the directory entry the agent picked, if any ({ destination, name }).
+  //   dialMode   - 'number' (the default) or 'extension', as the panel's Number / Extension toggle is set.
+  //   number     - in number mode, what the country-flag input read from the query: { value, valid }. Without one
+  //                the query is read as an international or ten-digit North American number.
+  //   selected   - the directory entry the agent picked, if any ({ destination, name }); it wins in either mode.
   //   ownNumbers - the tenant's own outbound caller ids.
-  // Returns { destination, label, refused }: where to send the call, or '' with why it was refused
-  // ('empty' | 'invalid-number' | 'own-number').
+  // Returns { destination, isExtension, label, refused }: where to send the call and whether it is an internal
+  // extension, or '' with why it was refused ('empty' | 'invalid-number' | 'invalid-extension' | 'own-number').
   function resolveTransferTarget(options) {
     options = options || {};
     var selected = options.selected;
+    var refuse = function (reason) {
+      return {
+        destination: '',
+        isExtension: false,
+        label: '',
+        refused: reason
+      };
+    };
     if (selected && selected.destination) {
       return {
         destination: String(selected.destination),
+        isExtension: false,
         label: String(selected.name || selected.destination),
         refused: ''
       };
     }
     var text = options.query == null ? '' : String(options.query).trim();
     if (!text) {
-      return {
-        destination: '',
-        label: '',
-        refused: 'empty'
-      };
+      return refuse('empty');
     }
-    if (!isNumberLike(text)) {
-      // A SIP address or a provider directory id: the provider resolves it, and the server's transfer policy
-      // decides whether it may be reached.
-      return {
-        destination: text,
+    if (options.dialMode === 'extension') {
+      var extension = readExtension(text);
+      return extension ? {
+        destination: extension,
+        isExtension: true,
         label: text,
         refused: ''
-      };
+      } : refuse('invalid-extension');
     }
-    var international = text.charAt(0) === '+';
-    var digits = digitsOf(text);
-    var validLength = international ? digits.length >= 8 && digits.length <= 15 : digits.length >= 2 && digits.length <= 15;
-    if (!validLength) {
-      return {
-        destination: '',
-        label: '',
-        refused: 'invalid-number'
-      };
+    if (!isNumberLike(text)) {
+      // A name nobody in the directory was picked for.
+      return refuse('empty');
     }
+    var reading = options.number || {
+      value: toInternationalNumber(text),
+      valid: !!toInternationalNumber(text)
+    };
+    var number = reading.value ? String(reading.value) : '';
     if ((options.ownNumbers || []).some(function (own) {
-      return isSameLine(text, own);
+      return isSameLine(text, own) || isSameLine(number, own);
     })) {
-      return {
-        destination: '',
-        label: '',
-        refused: 'own-number'
-      };
+      return refuse('own-number');
     }
-    var destination = (international ? '+' : '') + digits;
+    if (!reading.valid || !number) {
+      return refuse('invalid-number');
+    }
     return {
-      destination: destination,
+      destination: number,
+      isExtension: false,
       label: text,
       refused: ''
     };
+  }
+
+  // Why the phone cannot transfer this call itself, or ''. A call dialed from this browser runs in the provider SDK
+  // alone: the server holds no handle on it, so a transfer command for it can only fail. A transfer service that
+  // carries the call's transfer (see soft-phone/transfer-service.js) is not bound by that.
+  //   call           - the call to transfer.
+  //   serviceApplies - whether a transfer service carries this call's transfer.
+  function transferBlockedReason(options) {
+    options = options || {};
+    return options.call && options.call.browserOriginated && !options.serviceApplies ? 'browser-call' : '';
   }
   softPhone.TRANSFER_MODE_VALUES = TRANSFER_MODE_VALUES;
   softPhone.isSameLine = isSameLine;
@@ -3172,7 +3409,10 @@
   softPhone.isNumberLike = isNumberLike;
   softPhone.normalizeDirectoryEntry = normalizeDirectoryEntry;
   softPhone.filterTransferTargets = filterTransferTargets;
+  softPhone.toInternationalNumber = toInternationalNumber;
+  softPhone.readExtension = readExtension;
   softPhone.resolveTransferTarget = resolveTransferTarget;
+  softPhone.transferBlockedReason = transferBlockedReason;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*
  * Transfers a server-side transfer service carries out, rather than the telephony provider.
@@ -3196,9 +3436,6 @@
   }
   function format(template, value) {
     return String(template).replace('{0}', value);
-  }
-  function digitsOf(value) {
-    return value == null ? '' : String(value).replace(/\D+/g, '');
   }
   function presenceLabel(presence, strings) {
     var key = 'presence' + String(presence || '');
@@ -3276,31 +3513,17 @@
     return directory && directory.supportsConsult ? ['blind', 'warm'] : ['blind'];
   }
 
-  // A typed number in international format, or '' when it cannot be read as one. A number without a country code
-  // is read as North American only when it has exactly the ten digits one has; anything else must start with +.
-  function toInternationalNumber(value) {
-    var text = value == null ? '' : String(value).trim();
-    var digits = digitsOf(text);
-    if (text.charAt(0) === '+') {
-      return digits.length >= 8 && digits.length <= 15 ? '+' + digits : '';
-    }
-    if (digits.length === 10) {
-      return '+1' + digits;
-    }
-    if (digits.length === 11 && digits.charAt(0) === '1') {
-      return '+' + digits;
-    }
-    return '';
-  }
-
   // What the service should transfer the call to.
-  //   selected   - the entry the agent picked, if any.
+  //   selected   - the entry the agent picked, if any; it wins in either dial mode.
   //   query      - what the agent typed.
+  //   dialMode   - 'number' (the default) or 'extension', as the panel's Number / Extension toggle is set.
+  //   number     - in number mode, what the country-flag input read from the query: { value, valid }.
   //   mode       - 'blind' or 'warm'.
   //   directory  - the service's directory (for whether outside numbers may be typed).
   //   ownNumbers - the tenant's own numbers, which are never a destination.
   // Returns { targetType, targetId, label, refused }, refused being '' or one of
-  // 'empty' | 'unavailable' | 'warm-queue' | 'external-not-allowed' | 'invalid-number' | 'own-number'.
+  // 'empty' | 'unavailable' | 'warm-queue' | 'external-not-allowed' | 'invalid-number' | 'invalid-extension' |
+  // 'own-number'. An extension is sent as targetType 'extension': the server resolves it to the agent it rings.
   function resolveServiceTarget(options) {
     options = options || {};
     var selected = options.selected;
@@ -3327,6 +3550,18 @@
       };
     }
     var text = options.query == null ? '' : String(options.query).trim();
+    if (options.dialMode === 'extension') {
+      if (!text) {
+        return refuse('empty');
+      }
+      var extension = softPhone.readExtension(text);
+      return extension ? {
+        targetType: 'extension',
+        targetId: extension,
+        label: text,
+        refused: ''
+      } : refuse('invalid-extension');
+    }
     if (!text || !softPhone.isNumberLike(text)) {
       return refuse('empty');
     }
@@ -3334,12 +3569,13 @@
     if (!directory.canTransferExternally || !directory.allowExternalNumbers) {
       return refuse('external-not-allowed');
     }
+    var reading = options.number || null;
+    var number = reading ? reading.valid ? String(reading.value || '') : '' : softPhone.toInternationalNumber(text);
     if ((options.ownNumbers || []).some(function (own) {
-      return softPhone.isSameLine(text, own);
+      return softPhone.isSameLine(text, own) || softPhone.isSameLine(number, own);
     })) {
       return refuse('own-number');
     }
-    var number = toInternationalNumber(text);
     if (!number) {
       return refuse('invalid-number');
     }
@@ -3465,7 +3701,6 @@
   }
   softPhone.serviceDirectoryEntries = serviceDirectoryEntries;
   softPhone.serviceModes = serviceModes;
-  softPhone.toInternationalNumber = toInternationalNumber;
   softPhone.resolveServiceTarget = resolveServiceTarget;
   softPhone.createTransferService = createTransferService;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
@@ -3560,6 +3795,9 @@
  * window. The panel replaces it inside the phone: the agent searches the directory or types a number, picks blind or
  * warm when the call offers both, and goes back to the keypad without leaving the phone. A warm transfer that the
  * phone's transfer service carries out becomes a consult the panel follows until the agent completes or cancels it.
+ * Like the keypad, the panel has a Number / Extension toggle: a number goes into the keypad's own country-flag field
+ * and is checked as the keypad checks one, and an extension is sent as an extension rather than refused as a short
+ * phone number. A call this browser placed itself cannot be transferred at all, and the panel says so.
  * The decisions it makes live in soft-phone/transfer-target.js, soft-phone/transfer-service.js and
  * soft-phone/consult-state.js; this file only draws them and wires them to the call.
  *
@@ -3590,9 +3828,15 @@
   //   options.ownNumbers()   - the tenant's own outbound caller ids.
   //   options.loadDirectory() - a promise of directory entries, or null when there is none.
   //   options.allowNumbers() - whether a typed number is offered (defaults to true).
+  //   options.blockedReason() - why this call cannot be transferred at all ('' when it can; see transferBlockedReason).
+  //   options.enhanceNumberInput(input) - attaches the keypad's country-flag input to the panel's field; returns the
+  //                            intl-tel-input instance, or null.
   //   options.resolveTarget(state) - resolves the target itself ({ refused, ... }), or null to use the provider rules.
+  //                            state carries the query, the picked entry, the blind/warm mode, the Number / Extension
+  //                            dialMode and, in number mode, what the flag input read ({ value, valid }).
   //   options.transfer(target, modeValue, modeName) - performs the transfer; resolves to the command result. A result
-  //                            with a live `consult` opens the consult view.
+  //                            with a live `consult` opens the consult view. Without resolveTarget, target is
+  //                            { destination, isExtension, label } (see resolveTransferTarget).
   //   options.getConsult(consult), options.completeConsult(consult), options.cancelConsult(consult)
   //                          - follow and finish a consult; each resolves to a result with the consult's state.
   //   options.onChange()     - called when the panel opens or closes, so the phone re-renders around it.
@@ -3610,6 +3854,7 @@
       query: '',
       selected: null,
       mode: 'blind',
+      dialMode: 'number',
       entries: [],
       loading: false,
       error: '',
@@ -3617,6 +3862,7 @@
     };
     var parts = {};
     var pollTimer = null;
+    var telInput = null;
     function modes() {
       return typeof options.modes === 'function' ? options.modes() : ['blind'];
     }
@@ -3642,11 +3888,18 @@
         query: '',
         selected: null,
         mode: supported.length ? supported[0] : 'blind',
+        dialMode: 'number',
         entries: [],
         loading: false,
         error: '',
         consult: null
       };
+      var blocked = typeof options.blockedReason === 'function' ? options.blockedReason() : '';
+      if (blocked) {
+        renderBlocked(context || {}, blocked);
+        changed();
+        return;
+      }
       renderShell(context || {});
       loadDirectory();
       changed();
@@ -3654,16 +3907,26 @@
         parts.input.focus();
       }
     }
+    function releaseNumberInput() {
+      if (telInput && typeof telInput.destroy === 'function') {
+        try {
+          telInput.destroy();
+        } catch (error) {/* already gone */}
+      }
+      telInput = null;
+    }
     function close() {
       if (!state.open) {
         return;
       }
       stopPolling();
+      releaseNumberInput();
       state.open = false;
       state.entries = [];
       state.consult = null;
       if (container) {
         container.innerHTML = '';
+        container.classList.remove('telephony-soft-phone__transfer-panel--extension');
       }
       parts = {};
       changed();
@@ -3693,20 +3956,44 @@
         }
       });
     }
-    function renderShell(context) {
+    function headerHtml(context) {
       var title = context.callLabel ? format(label(strings, 'transferCallOf', 'Transfer {0}'), context.callLabel) : label(strings, 'transferTitle', 'Transfer call');
-      container.innerHTML = '<div class="telephony-soft-phone__transfer-header">' + '<button type="button" class="telephony-soft-phone__settings-back" data-telephony-transfer-back title="' + escapeHtml(label(strings, 'back', 'Back')) + '" aria-label="' + escapeHtml(label(strings, 'back', 'Back')) + '">' + '<i class="fa-solid fa-arrow-left" aria-hidden="true"></i></button>' + '<span class="telephony-soft-phone__transfer-title" data-telephony-transfer-title>' + escapeHtml(title) + '</span>' + '</div>' + '<div data-telephony-transfer-modes-slot></div>' + '<input type="text" class="telephony-soft-phone__transfer-input" data-telephony-transfer-input autocomplete="off" inputmode="text" ' + 'placeholder="' + escapeHtml(label(strings, 'transferSearchPlaceholder', 'Search a name, or enter a number')) + '" ' + 'aria-label="' + escapeHtml(label(strings, 'transferDestination', 'Transfer destination')) + '" />' + '<div class="telephony-soft-phone__transfer-error" data-telephony-transfer-error role="alert" hidden></div>' + '<div class="telephony-soft-phone__transfer-results" data-telephony-transfer-results></div>' + '<div class="telephony-soft-phone__transfer-actions" data-telephony-transfer-actions>' + '<button type="button" class="btn btn-sm btn-outline-secondary" data-telephony-transfer-cancel>' + escapeHtml(label(strings, 'cancel', 'Cancel')) + '</button>' + '<button type="button" class="btn btn-sm btn-primary" data-telephony-transfer-confirm>' + escapeHtml(label(strings, 'transfer', 'Transfer')) + '</button>' + '</div>';
+      return '<div class="telephony-soft-phone__transfer-header">' + '<button type="button" class="telephony-soft-phone__settings-back" data-telephony-transfer-back title="' + escapeHtml(label(strings, 'back', 'Back')) + '" aria-label="' + escapeHtml(label(strings, 'back', 'Back')) + '">' + '<i class="fa-solid fa-arrow-left" aria-hidden="true"></i></button>' + '<span class="telephony-soft-phone__transfer-title" data-telephony-transfer-title>' + escapeHtml(title) + '</span>' + '</div>';
+    }
+
+    // A call the phone cannot transfer says so in place of the form, rather than letting the agent pick a target
+    // for a command that can only fail.
+    function renderBlocked(context, reason) {
+      container.innerHTML = headerHtml(context) + '<div class="telephony-soft-phone__transfer-blocked" data-telephony-transfer-blocked="' + escapeHtml(reason) + '" role="status">' + '<i class="fa-solid fa-circle-info" aria-hidden="true"></i> ' + escapeHtml(refusalMessage(reason)) + '</div>' + '<div class="telephony-soft-phone__transfer-actions">' + '<button type="button" class="btn btn-sm btn-outline-secondary" data-telephony-transfer-cancel>' + escapeHtml(label(strings, 'back', 'Back')) + '</button></div>';
+      parts = {};
+      container.querySelector('[data-telephony-transfer-back]').addEventListener('click', close);
+      container.querySelector('[data-telephony-transfer-cancel]').addEventListener('click', close);
+    }
+    function renderShell(context) {
+      container.innerHTML = headerHtml(context) + '<div data-telephony-transfer-modes-slot></div>' + '<div class="telephony-soft-phone__transfer-entry">' + '<input type="tel" class="telephony-soft-phone__transfer-input" data-telephony-transfer-input autocomplete="off" />' + '<button type="button" class="telephony-soft-phone__dial-mode" data-telephony-transfer-dial-mode aria-pressed="false">' + '<i class="fa-solid fa-hashtag" aria-hidden="true"></i> <span data-telephony-transfer-dial-mode-label></span></button>' + '</div>' + '<div class="telephony-soft-phone__transfer-error" data-telephony-transfer-error role="alert" hidden></div>' + '<div class="telephony-soft-phone__transfer-results" data-telephony-transfer-results></div>' + '<div class="telephony-soft-phone__transfer-actions" data-telephony-transfer-actions>' + '<button type="button" class="btn btn-sm btn-outline-secondary" data-telephony-transfer-cancel>' + escapeHtml(label(strings, 'cancel', 'Cancel')) + '</button>' + '<button type="button" class="btn btn-sm btn-primary" data-telephony-transfer-confirm>' + escapeHtml(label(strings, 'transfer', 'Transfer')) + '</button>' + '</div>';
       parts = {
         back: container.querySelector('[data-telephony-transfer-back]'),
         modesSlot: container.querySelector('[data-telephony-transfer-modes-slot]'),
+        entry: container.querySelector('.telephony-soft-phone__transfer-entry'),
         input: container.querySelector('[data-telephony-transfer-input]'),
         error: container.querySelector('[data-telephony-transfer-error]'),
         results: container.querySelector('[data-telephony-transfer-results]'),
         actions: container.querySelector('[data-telephony-transfer-actions]'),
         confirm: container.querySelector('[data-telephony-transfer-confirm]'),
+        dialMode: container.querySelector('[data-telephony-transfer-dial-mode]'),
+        dialModeLabel: container.querySelector('[data-telephony-transfer-dial-mode-label]'),
         hint: null,
         modes: []
       };
+
+      // The same country-flag field the keypad dials from, so a number is read and checked the way the keypad
+      // reads and checks one.
+      releaseNumberInput();
+      telInput = typeof options.enhanceNumberInput === 'function' ? options.enhanceNumberInput(parts.input) || null : null;
+      parts.dialMode.addEventListener('click', function () {
+        setDialMode(state.dialMode === 'extension' ? 'number' : 'extension');
+      });
+      renderDialMode();
       parts.back.addEventListener('click', close);
       container.querySelector('[data-telephony-transfer-cancel]').addEventListener('click', close);
       parts.confirm.addEventListener('click', submit);
@@ -3780,6 +4067,39 @@
         parts.hint.textContent = state.mode === 'warm' ? label(strings, 'transferWarmHint', 'You speak to them before the call is handed over.') : label(strings, 'transferBlindHint', 'The call is sent straight to them.');
       }
     }
+
+    // Number or extension, as the keypad's "Dial extension" toggle sets it: a number is read by the country-flag
+    // input and checked for completeness, an extension is sent as its digits and never read as a phone number.
+    function setDialMode(dialMode) {
+      state.dialMode = dialMode === 'extension' ? 'extension' : 'number';
+      state.query = '';
+      state.selected = null;
+      if (parts.input) {
+        parts.input.value = '';
+      }
+      setError('');
+      renderDialMode();
+      renderResults();
+      if (parts.input) {
+        parts.input.focus();
+      }
+    }
+    function renderDialMode() {
+      var extension = state.dialMode === 'extension';
+      container.classList.toggle('telephony-soft-phone__transfer-panel--extension', extension);
+      if (parts.input) {
+        parts.input.setAttribute('inputmode', extension ? 'numeric' : 'tel');
+        parts.input.setAttribute('data-telephony-transfer-dial-mode-value', state.dialMode);
+        parts.input.setAttribute('placeholder', extension ? label(strings, 'transferExtensionPlaceholder', 'Search a name, or enter an extension') : label(strings, 'transferSearchPlaceholder', 'Search a name, or enter a number'));
+        parts.input.setAttribute('aria-label', extension ? label(strings, 'transferExtensionDestination', 'Extension to transfer to') : label(strings, 'transferDestination', 'Transfer destination'));
+      }
+      if (parts.dialMode) {
+        parts.dialMode.setAttribute('aria-pressed', extension ? 'true' : 'false');
+      }
+      if (parts.dialModeLabel) {
+        parts.dialModeLabel.textContent = extension ? label(strings, 'transferToPhoneNumber', 'Transfer to a phone number') : label(strings, 'transferToExtension', 'Transfer to an extension');
+      }
+    }
     function entryHtml(entry) {
       var selected = !!(state.selected && state.selected.destination === entry.destination);
       var icon = KIND_ICONS[entry.kind] || 'fa-user';
@@ -3794,8 +4114,12 @@
       var matches = softPhone.filterTransferTargets(state.entries, state.query);
       var html = '';
       var query = String(state.query || '').trim();
-      if (query && softPhone.isNumberLike(query) && allowNumbers()) {
-        html += '<button type="button" class="telephony-soft-phone__transfer-option telephony-soft-phone__transfer-option--number" ' + 'data-telephony-transfer-option data-telephony-transfer-number>' + '<i class="fa-solid fa-phone" aria-hidden="true"></i>' + '<span class="telephony-soft-phone__directory-name">' + escapeHtml(format(label(strings, 'transferToNumber', 'Transfer to {0}'), formatNumber(query) || query)) + '</span></button>';
+      var extensionMode = state.dialMode === 'extension';
+
+      // An extension is somewhere inside the phone system, so it is offered whether or not outside numbers are.
+      if (query && softPhone.isNumberLike(query) && (extensionMode || allowNumbers())) {
+        var typed = extensionMode ? format(label(strings, 'transferToExtensionNumber', 'Transfer to extension {0}'), softPhone.readExtension(query) || query) : format(label(strings, 'transferToNumber', 'Transfer to {0}'), formatNumber(query) || query);
+        html += '<button type="button" class="telephony-soft-phone__transfer-option telephony-soft-phone__transfer-option--number" ' + 'data-telephony-transfer-option data-telephony-transfer-number>' + '<i class="fa-solid ' + (extensionMode ? 'fa-hashtag' : 'fa-phone') + '" aria-hidden="true"></i>' + '<span class="telephony-soft-phone__directory-name">' + escapeHtml(typed) + '</span></button>';
       }
       if (state.loading) {
         html += '<div class="telephony-soft-phone__directory-empty">' + escapeHtml(label(strings, 'directoryLoading', 'Loading the directory...')) + '</div>';
@@ -3832,7 +4156,11 @@
         case 'own-number':
           return label(strings, 'transferOwnNumber', 'That is this phone system\'s own number. Choose who to transfer the call to.');
         case 'invalid-number':
-          return label(strings, 'transferInvalidNumber', 'Enter a complete phone number or extension.');
+          return label(strings, 'transferInvalidNumber', 'Enter a complete phone number, or switch to an extension.');
+        case 'invalid-extension':
+          return label(strings, 'transferInvalidExtension', 'Enter the extension as digits only.');
+        case 'browser-call':
+          return label(strings, 'transferBrowserCall', 'This call was dialed straight from this phone, so the phone system cannot transfer it. Ask the other person to call the destination, or hang up and dial it.');
         case 'unavailable':
           return label(strings, 'transferAgentUnavailable', 'That agent cannot take a call right now. Choose someone who is available.');
         case 'warm-queue':
@@ -3844,6 +4172,7 @@
       }
     }
     function resolveTarget() {
+      state.number = state.dialMode === 'extension' || !parts.input ? null : softPhone.readTransferNumber(parts.input.value, telInput);
       var resolved = typeof options.resolveTarget === 'function' ? options.resolveTarget(state) : null;
       if (resolved) {
         return {
@@ -3854,10 +4183,12 @@
       var target = softPhone.resolveTransferTarget({
         query: state.query,
         selected: state.selected,
+        dialMode: state.dialMode,
+        number: state.number,
         ownNumbers: typeof options.ownNumbers === 'function' ? options.ownNumbers() : []
       });
       return {
-        target: target.destination,
+        target: target,
         refused: target.refused
       };
     }
@@ -3928,8 +4259,8 @@
       if (parts.modesSlot) {
         parts.modesSlot.innerHTML = '';
       }
-      if (parts.input) {
-        parts.input.hidden = true;
+      if (parts.entry) {
+        parts.entry.hidden = true;
       }
 
       // Leaving the panel mid-consult would leave the caller on hold with nobody deciding what happens to them,
@@ -4912,6 +5243,7 @@
   var allLegs = softPhoneModules.allLegs;
   var canConferenceCall = softPhoneModules.canConferenceCall;
   var planMerge = softPhoneModules.planMerge;
+  var conferenceAfterMerge = softPhoneModules.conferenceAfterMerge;
   var buildActiveCallsHtml = softPhoneModules.buildActiveCallsHtml;
   var transferModes = softPhoneModules.transferModes;
   var createTransferPanel = softPhoneModules.createTransferPanel;
@@ -4919,6 +5251,9 @@
   var serviceDirectoryEntries = softPhoneModules.serviceDirectoryEntries;
   var serviceModes = softPhoneModules.serviceModes;
   var resolveServiceTarget = softPhoneModules.resolveServiceTarget;
+  var transferBlockedReason = softPhoneModules.transferBlockedReason;
+  var enhancePhoneInput = softPhoneModules.enhancePhoneInput;
+  var readPhoneInput = softPhoneModules.readPhoneInput;
   var showInAppConfirm = softPhoneModules.showInAppConfirm;
   var createCallNotifiers = softPhoneModules.createCallNotifiers;
   var trackCall = softPhoneModules.trackCall;
@@ -7038,6 +7373,16 @@
       ownNumbers: function () {
         return ownOutboundNumbers();
       },
+      blockedReason: function () {
+        return transferBlockedReason({
+          call: currentCall,
+          serviceApplies: !!serviceTransferCall()
+        });
+      },
+      // The keypad's own country-flag field, with the keypad's country (see soft-phone/phone-input.js).
+      enhanceNumberInput: function (input) {
+        return enhancePhoneInput(input, phoneInputOptions());
+      },
       loadDirectory: function () {
         var call = serviceTransferCall();
         serviceDirectory = null;
@@ -7059,6 +7404,8 @@
         return serviceTransferCall() ? resolveServiceTarget({
           query: panelState.query,
           selected: panelState.selected,
+          dialMode: panelState.dialMode,
+          number: panelState.number,
           mode: panelState.mode,
           directory: serviceDirectory,
           ownNumbers: ownOutboundNumbers()
@@ -7066,11 +7413,15 @@
       },
       transfer: function (target, mode, modeName) {
         var call = serviceTransferCall();
+
+        // The provider is told an extension is one, so it rings the colleague's phone rather than dialing
+        // the digits as a phone number.
         if (!call) {
           return invoke('Transfer', {
             callId: currentCallId(),
-            to: target,
-            mode: mode
+            to: target.destination,
+            mode: mode,
+            isExtension: !!target.isExtension
           });
         }
         if (modeName !== 'warm') {
@@ -7321,15 +7672,18 @@
     var telInput = null;
     var initialCountry = resolveInitialCountry();
     var extensionMode = false;
-    if (dom.number && typeof window.intlTelInput === 'function') {
-      var telInputOptions = {
+
+    // The keypad's field and the transfer panel's share these settings, so both read a number the same way.
+    function phoneInputOptions() {
+      return {
+        intlTelInput: window.intlTelInput,
+        initialCountry: initialCountry,
         containerClass: 'telephony-soft-phone__number-iti',
         dropdownParent: document.body
       };
-      if (initialCountry) {
-        telInputOptions.initialCountry = initialCountry;
-      }
-      telInput = window.intlTelInput(dom.number, telInputOptions);
+    }
+    telInput = enhancePhoneInput(dom.number, phoneInputOptions());
+    if (telInput) {
       preventCountryDropdownScroll();
     }
 
@@ -7370,41 +7724,8 @@
 
       // In extension mode the destination is an internal extension, not a dialable phone number,
       // so it is sent verbatim and the country selector is ignored.
-      if (extensionMode) {
-        return raw;
-      }
-
-      // A number the user already entered in international form is dialed as-is.
-      if (raw.charAt(0) === '+') {
-        return raw;
-      }
-      var visibleDigits = raw.replace(/\D/g, '');
-      if (telInput && typeof telInput.getNumber === 'function') {
-        // Only trust the intl-tel-input E.164 output for real, valid phone numbers. Short
-        // strings such as internal extensions are not valid numbers, so they are dialed
-        // verbatim instead of being turned into a bogus "+1101" style destination.
-        var isValid = typeof telInput.isValidNumber !== 'function' || telInput.isValidNumber();
-        if (isValid) {
-          var e164 = telInput.getNumber();
-
-          // Guard against intl-tel-input desyncing (e.g. a keypad edit that did not update its
-          // internal state): only accept its E.164 when its digits actually contain what the user
-          // sees, so the dialed number can never differ from the visible number.
-          if (e164 && e164.charAt(0) === '+' && (visibleDigits === '' || e164.replace(/\D/g, '').indexOf(visibleDigits) !== -1)) {
-            return e164;
-          }
-        }
-      }
-
-      // Fall back to the visible number, prefixed with the selected country's dial code so it stays
-      // routable. This path guarantees the dialed number matches what is on screen.
-      if (visibleDigits && telInput && typeof telInput.getSelectedCountryData === 'function') {
-        var dialCode = (telInput.getSelectedCountryData() || {}).dialCode;
-        if (dialCode) {
-          return visibleDigits.indexOf(dialCode) === 0 ? '+' + visibleDigits : '+' + dialCode + visibleDigits;
-        }
-      }
-      return raw;
+      // A phone number is read the way the country-flag field reads one (see soft-phone/phone-input.js).
+      return extensionMode ? raw : readPhoneInput(raw, telInput);
     }
     function setNumberDisplay(value) {
       if (!dom.number) {
@@ -9980,9 +10301,10 @@
       var calls = getActiveCalls();
       show(dom.activeCalls, calls.length > 1);
       var plan = currentMergePlan();
+      var canMergeCalls = has(CAPABILITIES.Merge);
 
-      // The conference's participants, the other calls, and the Merge action naming the calls it joins (see
-      // soft-phone/conference.js).
+      // A checkbox beside every line, the conference's participants, the other calls, and the Merge action for
+      // the ticked ones (see soft-phone/conference.js).
       dom.activeCallsList.innerHTML = buildActiveCallsHtml({
         calls: calls.map(function (call) {
           var callId = call.callId || '';
@@ -9991,14 +10313,20 @@
             number: formatPhoneNumber(getPeerNumber(call)) || callId,
             state: statusTextForCall(call),
             current: !!(currentCall && currentCall.callId === callId),
-            selectable: canConferenceCall(call),
+            selectable: canMergeCalls && canConferenceCall(call),
+            unselectableReason: canConferenceCall(call) ? '' : 'browser-call',
             selected: !!conferenceSelections[callId],
             inConference: metadataBoolean(call, 'isConference'),
             canHangup: has(CAPABILITIES.Hangup)
           };
         }),
         merge: {
-          available: plan.available && has(CAPABILITIES.Merge),
+          offered: plan.offered && canMergeCalls,
+          canMerge: plan.canMerge,
+          selectedCount: plan.selectedCount,
+          addsToConference: plan.addsToConference,
+          allSelected: plan.allSelected,
+          blocked: canMergeCalls ? plan.blocked : '',
           numbers: plan.calls.map(function (call) {
             return formatPhoneNumber(getPeerNumber(call)) || call.callId;
           })
@@ -10025,6 +10353,17 @@
           render();
         });
       });
+      Array.prototype.forEach.call(dom.activeCallsList.querySelectorAll('[data-telephony-merge-select-all]'), function (checkbox) {
+        checkbox.addEventListener('change', function () {
+          conferenceSelections = {};
+          if (checkbox.checked) {
+            plan.eligibleCallIds.forEach(function (callId) {
+              conferenceSelections[callId] = true;
+            });
+          }
+          render();
+        });
+      });
       Array.prototype.forEach.call(dom.activeCallsList.querySelectorAll('[data-telephony-participant-hangup]'), function (button) {
         button.disabled = !!activeCommand;
         button.addEventListener('click', function () {
@@ -10032,7 +10371,7 @@
         });
       });
       Array.prototype.forEach.call(dom.activeCallsList.querySelectorAll('[data-telephony-merge-calls]'), function (button) {
-        button.disabled = !!activeCommand;
+        button.disabled = !!activeCommand || !plan.canMerge;
         button.addEventListener('click', merge);
       });
     }
@@ -10671,31 +11010,50 @@
       });
     }
     function merge() {
-      var callIds = currentMergePlan().callIds;
-      if (callIds.length < 2) {
+      var plan = currentMergePlan();
+      var callIds = plan.callIds;
+      if (!plan.canMerge || callIds.length < 2) {
         showError(strings.selectCallsToMerge || 'Select at least two calls to conference.');
         return;
       }
-      invoke('Merge', {
+
+      // Adding to a running conference names it, so the provider joins the new calls to it rather than making a
+      // second one from its first participant.
+      var request = {
         callIds: callIds
-      }).then(function (result) {
-        if (result && result.succeeded !== false) {
-          callIds.forEach(function (callId) {
-            var call = activeCalls[callId];
-            if (!call) {
-              return;
-            }
-            call.state = 'Connected';
-            call.isOnHold = false;
-            // Joining the conference is the agent taking these calls off hold.
-            rememberAgentHold(agentHolds, callId, false);
-            call.metadata = call.metadata || {};
-            call.metadata.isConference = true;
-            call.metadata.participantCount = callIds.length;
-          });
-          conferenceSelections = {};
-          render();
+      };
+      if (plan.addsToConference && plan.conferenceName) {
+        request.conferenceName = plan.conferenceName;
+      }
+      invoke('Merge', request).then(function (result) {
+        if (!result || result.succeeded === false) {
+          // The provider may have joined some of the calls before it refused the rest; the calls' own state is
+          // read again rather than guessed. The refusal itself is on the error line.
+          scheduleActiveCallsRefresh();
+          return;
         }
+        var conference = conferenceAfterMerge(getActiveCalls(), plan, result, {
+          isConference: function (call) {
+            return metadataBoolean(call, 'isConference');
+          }
+        });
+        conference.callIds.forEach(function (callId) {
+          var call = activeCalls[callId];
+          if (!call) {
+            return;
+          }
+          call.state = 'Connected';
+          call.isOnHold = false;
+          // Joining the conference is the agent taking these calls off hold.
+          rememberAgentHold(agentHolds, callId, false);
+          call.metadata = call.metadata || {};
+          call.metadata.isConference = true;
+          call.metadata.participantCount = conference.callIds.length;
+          call.metadata.conferencePrimaryCallId = conference.primaryCallId;
+          call.metadata.conferenceName = conference.conferenceName;
+        });
+        conferenceSelections = {};
+        render();
       });
     }
     function pressKey(value) {

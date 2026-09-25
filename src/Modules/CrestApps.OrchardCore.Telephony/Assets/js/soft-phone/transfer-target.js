@@ -125,48 +125,99 @@
         });
     }
 
+    // A typed number in international format, or '' when it cannot be read as one. A number without a country code
+    // is read as North American only when it has exactly the ten digits one has; anything else must start with +.
+    function toInternationalNumber(value) {
+        var text = value == null ? '' : String(value).trim();
+        var digits = digitsOf(text);
+
+        if (text.charAt(0) === '+') {
+            return digits.length >= 8 && digits.length <= 15 ? '+' + digits : '';
+        }
+
+        if (digits.length === 10) {
+            return '+1' + digits;
+        }
+
+        if (digits.length === 11 && digits.charAt(0) === '1') {
+            return '+' + digits;
+        }
+
+        return '';
+    }
+
+    // The digits of a typed extension, or '' when what was typed is not one. An extension is only digits, which may
+    // be spaced or dashed the way people write them; a leading + makes it a phone number, not an extension.
+    function readExtension(value) {
+        var text = value == null ? '' : String(value).trim();
+        var digits = digitsOf(text);
+
+        return /^[\d\s-]+$/.test(text) && digits.length >= 1 && digits.length <= 15 ? digits : '';
+    }
+
     // What to transfer the call to.
     //   query      - what the agent typed.
-    //   selected   - the directory entry the agent picked, if any ({ destination, name }).
+    //   dialMode   - 'number' (the default) or 'extension', as the panel's Number / Extension toggle is set.
+    //   number     - in number mode, what the country-flag input read from the query: { value, valid }. Without one
+    //                the query is read as an international or ten-digit North American number.
+    //   selected   - the directory entry the agent picked, if any ({ destination, name }); it wins in either mode.
     //   ownNumbers - the tenant's own outbound caller ids.
-    // Returns { destination, label, refused }: where to send the call, or '' with why it was refused
-    // ('empty' | 'invalid-number' | 'own-number').
+    // Returns { destination, isExtension, label, refused }: where to send the call and whether it is an internal
+    // extension, or '' with why it was refused ('empty' | 'invalid-number' | 'invalid-extension' | 'own-number').
     function resolveTransferTarget(options) {
         options = options || {};
 
         var selected = options.selected;
+        var refuse = function (reason) {
+            return { destination: '', isExtension: false, label: '', refused: reason };
+        };
 
         if (selected && selected.destination) {
-            return { destination: String(selected.destination), label: String(selected.name || selected.destination), refused: '' };
+            return { destination: String(selected.destination), isExtension: false, label: String(selected.name || selected.destination), refused: '' };
         }
 
         var text = options.query == null ? '' : String(options.query).trim();
 
         if (!text) {
-            return { destination: '', label: '', refused: 'empty' };
+            return refuse('empty');
+        }
+
+        if (options.dialMode === 'extension') {
+            var extension = readExtension(text);
+
+            return extension
+                ? { destination: extension, isExtension: true, label: text, refused: '' }
+                : refuse('invalid-extension');
         }
 
         if (!isNumberLike(text)) {
-            // A SIP address or a provider directory id: the provider resolves it, and the server's transfer policy
-            // decides whether it may be reached.
-            return { destination: text, label: text, refused: '' };
+            // A name nobody in the directory was picked for.
+            return refuse('empty');
         }
 
-        var international = text.charAt(0) === '+';
-        var digits = digitsOf(text);
-        var validLength = international ? digits.length >= 8 && digits.length <= 15 : digits.length >= 2 && digits.length <= 15;
+        var reading = options.number || { value: toInternationalNumber(text), valid: !!toInternationalNumber(text) };
+        var number = reading.value ? String(reading.value) : '';
 
-        if (!validLength) {
-            return { destination: '', label: '', refused: 'invalid-number' };
+        if ((options.ownNumbers || []).some(function (own) { return isSameLine(text, own) || isSameLine(number, own); })) {
+            return refuse('own-number');
         }
 
-        if ((options.ownNumbers || []).some(function (own) { return isSameLine(text, own); })) {
-            return { destination: '', label: '', refused: 'own-number' };
+        if (!reading.valid || !number) {
+            return refuse('invalid-number');
         }
 
-        var destination = (international ? '+' : '') + digits;
+        return { destination: number, isExtension: false, label: text, refused: '' };
+    }
 
-        return { destination: destination, label: text, refused: '' };
+    // Why the phone cannot transfer this call itself, or ''. A call dialed from this browser runs in the provider SDK
+    // alone: the server holds no handle on it, so a transfer command for it can only fail. A transfer service that
+    // carries the call's transfer (see soft-phone/transfer-service.js) is not bound by that.
+    //   call           - the call to transfer.
+    //   serviceApplies - whether a transfer service carries this call's transfer.
+    function transferBlockedReason(options) {
+        options = options || {};
+
+        return options.call && options.call.browserOriginated && !options.serviceApplies ? 'browser-call' : '';
     }
 
     softPhone.TRANSFER_MODE_VALUES = TRANSFER_MODE_VALUES;
@@ -176,5 +227,8 @@
     softPhone.isNumberLike = isNumberLike;
     softPhone.normalizeDirectoryEntry = normalizeDirectoryEntry;
     softPhone.filterTransferTargets = filterTransferTargets;
+    softPhone.toInternationalNumber = toInternationalNumber;
+    softPhone.readExtension = readExtension;
     softPhone.resolveTransferTarget = resolveTransferTarget;
+    softPhone.transferBlockedReason = transferBlockedReason;
 }(typeof globalThis !== 'undefined' ? globalThis : window));

@@ -35,6 +35,7 @@ public sealed class InMemoryTelephonyProvider :
     private int _lookupRequestCount;
     private int _lookupDelayMilliseconds;
     private TransferRequest _lastTransfer;
+    private MergeRequest _lastMerge;
     private volatile bool _attendedTransfer;
 
     public LocalizedString Name => new("InMemory", "InMemory");
@@ -176,6 +177,7 @@ public sealed class InMemoryTelephonyProvider :
     public Task<TelephonyResult> MergeAsync(MergeRequest request, CancellationToken cancellationToken = default)
     {
         Interlocked.Increment(ref _mergeRequestCount);
+        Volatile.Write(ref _lastMerge, request);
 
         var callIds = request?.GetCallIds() ?? [];
 
@@ -187,6 +189,11 @@ public sealed class InMemoryTelephonyProvider :
                 call.IsOnHold = false;
                 call.Metadata["isConference"] = true;
                 call.Metadata["participantCount"] = callIds.Count;
+
+                // Named like a real provider's conference, so adding a call to it later can name it back.
+                call.Metadata["conferenceName"] = string.IsNullOrWhiteSpace(request.ConferenceName)
+                    ? $"conf-{callIds[0]}"
+                    : request.ConferenceName;
             }
         }
 
@@ -400,6 +407,11 @@ public sealed class InMemoryTelephonyProvider :
     public TransferRequest GetLastTransfer()
     {
         return Volatile.Read(ref _lastTransfer);
+    }
+
+    public MergeRequest GetLastMerge()
+    {
+        return Volatile.Read(ref _lastMerge);
     }
 
     public void SetDialDelay(int milliseconds)

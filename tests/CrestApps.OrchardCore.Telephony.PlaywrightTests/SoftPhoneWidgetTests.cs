@@ -258,16 +258,18 @@ public sealed class SoftPhoneWidgetTests : SoftPhoneBrowserTest
         var merge = page.Locator("[data-telephony-merge-calls]");
         var summary = page.Locator("[data-telephony-merge-summary]");
 
-        // Assert - with nothing ticked, Merge joins every call, and says so.
+        // Assert - with nothing ticked, Merge is offered but waits for the agent to pick the calls.
         Assert.True(await merge.IsVisibleAsync());
-        Assert.Equal(3, CountOf(await summary.InnerTextAsync(), "(555)"));
+        Assert.True(await merge.IsDisabledAsync());
+        Assert.Equal(0, CountOf(await summary.InnerTextAsync(), "(555)"));
 
-        // Act - ticking two calls narrows the merge to them.
+        // Act - ticking two calls merges just them; ticking the third merges all three.
         var selections = page.Locator("[data-telephony-conference-call]");
         await selections.Nth(0).CheckAsync();
         await selections.Nth(1).CheckAsync();
         Assert.Equal(2, CountOf(await summary.InnerTextAsync(), "(555)"));
         await selections.Nth(2).CheckAsync();
+        Assert.Equal(3, CountOf(await summary.InnerTextAsync(), "(555)"));
         await merge.ClickAsync();
 
         // Assert

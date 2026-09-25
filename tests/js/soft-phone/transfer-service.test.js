@@ -7,7 +7,6 @@ const {
     serviceDirectoryEntries,
     serviceModes,
     resolveServiceTarget,
-    toInternationalNumber,
     createTransferService
 } = globalThis.CrestAppsSoftPhone;
 
@@ -73,15 +72,6 @@ describe('serviceModes', () => {
     });
 });
 
-describe('toInternationalNumber', () => {
-    it('keeps an international number and reads a ten-digit North American number as +1', () => {
-        expect(toInternationalNumber('+44 20 7123 4567')).toBe('+442071234567');
-        expect(toInternationalNumber('(702) 555-0199')).toBe('+17025550199');
-        expect(toInternationalNumber('17025550199')).toBe('+17025550199');
-        expect(toInternationalNumber('5550199')).toBe('');
-    });
-});
-
 describe('resolveServiceTarget', () => {
     const entries = serviceDirectoryEntries(directory, strings);
 
@@ -120,6 +110,39 @@ describe('resolveServiceTarget', () => {
     it('asks for a choice when nothing was picked and no number typed', () => {
         expect(resolveServiceTarget({ query: 'Bea', mode: 'blind', directory }).refused).toBe('empty');
         expect(resolveServiceTarget({ query: '', mode: 'blind', directory }).refused).toBe('empty');
+    });
+
+    it('sends the number the country-flag input read, and refuses one it says is incomplete', () => {
+        const allowing = { ...directory, allowExternalNumbers: true };
+
+        expect(resolveServiceTarget({ query: '(555) 765-4321', number: { value: '+15557654321', valid: true }, mode: 'blind', directory: allowing }))
+            .toEqual({ targetType: 'external', targetId: '+15557654321', label: '(555) 765-4321', refused: '' });
+        expect(resolveServiceTarget({ query: '555 765', number: { value: '+1555765', valid: false }, mode: 'blind', directory: allowing }).refused)
+            .toBe('invalid-number');
+        expect(resolveServiceTarget({ query: '(702) 555-0100', number: { value: '+17025550100', valid: true }, mode: 'blind', directory: allowing, ownNumbers: ['+17025550100'] }).refused)
+            .toBe('own-number');
+    });
+
+    // Bug: an extension typed into the panel was checked as a phone number. It is somewhere inside the contact center,
+    // so it is sent as an extension -- the server resolves it to the agent it rings -- whether or not outside numbers
+    // may be typed.
+    it('sends a typed extension as an extension, blind or warm', () => {
+        expect(resolveServiceTarget({ query: '2', dialMode: 'extension', mode: 'blind', directory }))
+            .toEqual({ targetType: 'extension', targetId: '2', label: '2', refused: '' });
+        expect(resolveServiceTarget({ query: '2', dialMode: 'extension', mode: 'warm', directory }))
+            .toMatchObject({ targetType: 'extension', targetId: '2', refused: '' });
+    });
+
+    it('refuses what cannot be an extension', () => {
+        expect(resolveServiceTarget({ query: 'Bea', dialMode: 'extension', mode: 'blind', directory }).refused).toBe('invalid-extension');
+        expect(resolveServiceTarget({ query: '  ', dialMode: 'extension', mode: 'blind', directory }).refused).toBe('empty');
+    });
+
+    it('still sends a picked agent in extension mode', () => {
+        const entries = serviceDirectoryEntries(directory, strings);
+
+        expect(resolveServiceTarget({ selected: entries[0], query: '2', dialMode: 'extension', mode: 'blind', directory }))
+            .toEqual({ targetType: 'agent', targetId: 'agent-b', label: 'Bea Baker', refused: '' });
     });
 });
 
@@ -160,6 +183,18 @@ describe('createTransferService', () => {
         expect(init.method).toBe('POST');
         expect(init.headers.RequestVerificationToken).toBe('token-1');
         expect(JSON.parse(init.body)).toEqual({ interactionId: 'i 1', targetType: 'agent', targetId: 'agent-b' });
+    });
+
+    it('names an extension as an extension on the transfer and the consult it posts', async () => {
+        const fetch = vi.fn(() => respond({ succeeded: true }));
+        const service = createTransferService({ urls, fetch });
+        const call = { metadata: { interactionId: 'i1' } };
+
+        await service.transfer(call, { targetType: 'extension', targetId: '2' });
+        await service.startConsult(call, { targetType: 'extension', targetId: '2' });
+
+        expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({ interactionId: 'i1', targetType: 'extension', targetId: '2' });
+        expect(JSON.parse(fetch.mock.calls[1][1].body)).toEqual({ interactionId: 'i1', targetType: 'extension', targetId: '2' });
     });
 
     it('reports a refused request as a failure with the server\'s reason rather than throwing', async () => {

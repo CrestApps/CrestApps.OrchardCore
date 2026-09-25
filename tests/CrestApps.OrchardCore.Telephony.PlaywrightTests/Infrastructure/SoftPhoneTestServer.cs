@@ -24,6 +24,16 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
     /// </summary>
     public const string MediaAdapterQueryKey = "mediaAdapter";
 
+    /// <summary>
+    /// The query string key that loads intl-tel-input, the country-flag number input the widget depends on, so the
+    /// keypad and the transfer panel read and check numbers as they do in the site. It is left out otherwise (see
+    /// <see cref="SoftPhoneAssets.OmittedDependencies"/>).
+    /// </summary>
+    public const string IntlTelInputQueryKey = "intlTelInput";
+
+    private const string IntlTelInputScriptUrl = "/vendors/intl-tel-input/intlTelInputWithUtils.min.js";
+    private const string IntlTelInputStylesheetUrl = "/vendors/intl-tel-input/intlTelInput.min.css";
+
     private WebApplication _app;
 
     public string BaseUrl { get; private set; }
@@ -77,9 +87,15 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
                     attendedTransfer: attendedTransfer,
                     mediaAdapter: context.Request.Query[MediaAdapterQueryKey],
                     browserMediaAdapterName: context.RequestServices.GetRequiredService<InMemoryTelephonyProvider>().BrowserMediaAdapterName,
-                    transferService: context.Request.Query.ContainsKey("transferService")),
+                    transferService: context.Request.Query.ContainsKey("transferService"),
+                    intlTelInput: context.Request.Query.ContainsKey(IntlTelInputQueryKey)),
                 "text/html; charset=utf-8");
         });
+
+        // The country-flag number input the widget depends on, served from the Resources module's vendored copy for a
+        // page that asks for it (?intlTelInput).
+        app.MapGet(IntlTelInputScriptUrl, () => ServeVendorAsset("js/intlTelInputWithUtils.min.js", "application/javascript"));
+        app.MapGet(IntlTelInputStylesheetUrl, () => ServeVendorAsset("css/intlTelInput.min.css", "text/css"));
 
         // The Contact Center's soft-phone transfer endpoints, answered in memory.
         app.Services.GetRequiredService<TestTransferService>().Map(app);
@@ -160,6 +176,20 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
         return Results.File(file, contentType);
     }
 
+    private static IResult ServeVendorAsset(string relativePath, string contentType)
+    {
+        var file = Path.GetFullPath(Path.Combine(
+            SoftPhoneAssets.ModuleDirectory,
+            "..",
+            "CrestApps.OrchardCore.Resources",
+            "wwwroot",
+            "vendors",
+            "intl-tel-input",
+            relativePath));
+
+        return File.Exists(file) ? Results.File(file, contentType) : Results.NotFound();
+    }
+
     private static IResult ServeSignalRAsset()
     {
         var stream = typeof(OrchardCoreSignalRStartup).Assembly.GetManifestResourceStream(SignalRResourceName);
@@ -171,7 +201,7 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
         return Results.Stream(stream, "application/javascript");
     }
 
-    private static string BuildHtml(bool browserAudio, bool embedded = false, string answerCallId = null, bool voicemail = false, bool styled = false, bool attendedTransfer = false, string mediaAdapter = null, string browserMediaAdapterName = "in-memory", bool transferService = false)
+    private static string BuildHtml(bool browserAudio, bool embedded = false, string answerCallId = null, bool voicemail = false, bool styled = false, bool attendedTransfer = false, string mediaAdapter = null, string browserMediaAdapterName = "in-memory", bool transferService = false, bool intlTelInput = false)
     {
         var adapterName = !string.IsNullOrEmpty(mediaAdapter)
             ? mediaAdapter
@@ -222,6 +252,12 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
             };
         }
 
+        if (intlTelInput)
+        {
+            // As the site configures it: the country the keypad starts on.
+            config["defaultCountryCode"] = "us";
+        }
+
         if (voicemail)
         {
             config["voicemailDeleteEnabled"] = true;
@@ -239,12 +275,18 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
             ? $"<div class=\"softphone-standalone\" data-softphone-embedded=\"true\" data-softphone-answer-call-id=\"{encodedAnswerCallId}\">"
             : string.Empty;
         var embeddedClose = embedded ? "</div>" : string.Empty;
-        var scripts = string.Join(Environment.NewLine + "    ", ScriptUrls.Select(url => $"<script src=\"{url}\"></script>"));
+        var scriptUrls = intlTelInput ? ScriptUrls.Prepend(IntlTelInputScriptUrl) : ScriptUrls;
+        var scripts = string.Join(Environment.NewLine + "    ", scriptUrls.Select(url => $"<script src=\"{url}\"></script>"));
         // A styled page gives the root the widget's class, so the stylesheet's variables apply, but keeps it in the page
         // flow rather than floating in a corner, so a test can measure what it draws.
         var stylesheet = styled
             ? $"<link rel=\"stylesheet\" href=\"{StylesheetUrl}\" /><style>#telephony-soft-phone.telephony-soft-phone {{ position: static; }}</style>"
             : string.Empty;
+
+        if (intlTelInput)
+        {
+            stylesheet = $"<link rel=\"stylesheet\" href=\"{IntlTelInputStylesheetUrl}\" />" + stylesheet;
+        }
         var rootClass = styled ? " class=\"telephony-soft-phone\"" : string.Empty;
 
         return $$"""

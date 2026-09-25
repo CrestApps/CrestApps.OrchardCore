@@ -8,7 +8,9 @@ const {
     isNumberLike,
     isSameLine,
     filterTransferTargets,
-    resolveTransferTarget
+    resolveTransferTarget,
+    transferBlockedReason,
+    toInternationalNumber
 } = globalThis.CrestAppsSoftPhone;
 
 const TRANSFER = 1 << 5;
@@ -79,42 +81,106 @@ describe('filterTransferTargets', () => {
 });
 
 describe('resolveTransferTarget', () => {
-    it('sends the call to the directory entry the agent picked', () => {
-        expect(resolveTransferTarget({ query: 'al', selected: { destination: '2001', name: 'Alex Agent' }, ownNumbers: [ownNumber] }))
-            .toEqual({ destination: '2001', label: 'Alex Agent', refused: '' });
+    it('sends the call to the directory entry the agent picked, whatever mode the entry box is in', () => {
+        const selected = { destination: '2001', name: 'Alex Agent' };
+
+        expect(resolveTransferTarget({ query: 'al', selected, ownNumbers: [ownNumber] }))
+            .toEqual({ destination: '2001', isExtension: false, label: 'Alex Agent', refused: '' });
+        expect(resolveTransferTarget({ query: 'al', selected, dialMode: 'extension', ownNumbers: [ownNumber] }))
+            .toEqual({ destination: '2001', isExtension: false, label: 'Alex Agent', refused: '' });
     });
 
     it('asks for a target when nothing is picked or typed', () => {
         expect(resolveTransferTarget({ query: '   ', ownNumbers: [] }).refused).toBe('empty');
+        expect(resolveTransferTarget({ query: '', dialMode: 'extension' }).refused).toBe('empty');
         expect(resolveTransferTarget({}).refused).toBe('empty');
     });
 
-    it('sends a typed number as its digits, keeping the international prefix', () => {
-        expect(resolveTransferTarget({ query: '(702) 555-0199', ownNumbers: [ownNumber] }))
-            .toEqual({ destination: '7025550199', label: '(702) 555-0199', refused: '' });
-        expect(resolveTransferTarget({ query: '+44 20 7946 0958', ownNumbers: [ownNumber] }).destination).toBe('+442079460958');
+    it('asks for a target when what was typed in number mode is a name nobody was picked for', () => {
+        expect(resolveTransferTarget({ query: 'sip:alex@example.com', ownNumbers: [ownNumber] }).refused).toBe('empty');
+        expect(resolveTransferTarget({ query: 'Alex', ownNumbers: [ownNumber] }).refused).toBe('empty');
     });
 
-    it('accepts a typed extension', () => {
-        expect(resolveTransferTarget({ query: '2001', ownNumbers: [ownNumber] }).destination).toBe('2001');
+    // Bug: typing extension "2" was refused as "Enter a complete phone number or extension.", because a transfer had
+    // no extension mode and every typed value was checked as a phone number of at least two digits.
+    describe('in extension mode', () => {
+        it('sends a one-digit extension as an extension', () => {
+            expect(resolveTransferTarget({ query: '2', dialMode: 'extension', ownNumbers: [ownNumber] }))
+                .toEqual({ destination: '2', isExtension: true, label: '2', refused: '' });
+        });
+
+        it('sends the digits of a longer extension, however it was spaced', () => {
+            expect(resolveTransferTarget({ query: ' 20 01 ', dialMode: 'extension' }))
+                .toEqual({ destination: '2001', isExtension: true, label: '20 01', refused: '' });
+        });
+
+        it('refuses what cannot be an extension', () => {
+            expect(resolveTransferTarget({ query: 'Alex', dialMode: 'extension' }).refused).toBe('invalid-extension');
+            expect(resolveTransferTarget({ query: '+17025550199', dialMode: 'extension' }).refused).toBe('invalid-extension');
+            expect(resolveTransferTarget({ query: '1234567890123456', dialMode: 'extension' }).refused).toBe('invalid-extension');
+        });
+
+        it('never reads an extension as the tenant own number', () => {
+            expect(resolveTransferTarget({ query: '100', dialMode: 'extension', ownNumbers: ['100'] }))
+                .toMatchObject({ destination: '100', isExtension: true, refused: '' });
+        });
     });
 
-    // The keypad refuses to add a call to the tenant's own number, because it only rings the tenant back. A transfer to
-    // it does the same to the caller, so the panel refuses it too -- however the agent writes the number.
-    it('refuses the tenant own number, with or without its country code', () => {
-        expect(resolveTransferTarget({ query: ownNumber, ownNumbers: [ownNumber] }).refused).toBe('own-number');
-        expect(resolveTransferTarget({ query: '702-555-0100', ownNumbers: [ownNumber] }).refused).toBe('own-number');
+    describe('in number mode', () => {
+        it('refuses a short entry as an incomplete number, the refusal the extension "2" used to get', () => {
+            expect(resolveTransferTarget({ query: '2', dialMode: 'number' }).refused).toBe('invalid-number');
+            expect(resolveTransferTarget({ query: '2', number: { value: '+12', valid: false } }).refused).toBe('invalid-number');
+        });
+
+        it('sends the number the country-flag input read, in international format', () => {
+            expect(resolveTransferTarget({ query: '(702) 555-0199', number: { value: '+17025550199', valid: true }, ownNumbers: [ownNumber] }))
+                .toEqual({ destination: '+17025550199', isExtension: false, label: '(702) 555-0199', refused: '' });
+        });
+
+        it('refuses a number the country-flag input says is incomplete', () => {
+            expect(resolveTransferTarget({ query: '702499', number: { value: '+1702499', valid: false } }).refused).toBe('invalid-number');
+        });
+
+        it('reads a typed number itself when there is no country-flag input', () => {
+            expect(resolveTransferTarget({ query: '(702) 555-0199', ownNumbers: [ownNumber] }))
+                .toEqual({ destination: '+17025550199', isExtension: false, label: '(702) 555-0199', refused: '' });
+            expect(resolveTransferTarget({ query: '+44 20 7946 0958', ownNumbers: [ownNumber] }).destination).toBe('+442079460958');
+            expect(resolveTransferTarget({ query: '+1702', ownNumbers: [] }).refused).toBe('invalid-number');
+            expect(resolveTransferTarget({ query: '1234567890123456', ownNumbers: [] }).refused).toBe('invalid-number');
+        });
+
+        // The keypad refuses to add a call to the tenant's own number, because it only rings the tenant back. A transfer
+        // to it does the same to the caller, so the panel refuses it too -- however the agent writes the number.
+        it('refuses the tenant own number, with or without its country code', () => {
+            expect(resolveTransferTarget({ query: ownNumber, ownNumbers: [ownNumber] }).refused).toBe('own-number');
+            expect(resolveTransferTarget({ query: '702-555-0100', ownNumbers: [ownNumber] }).refused).toBe('own-number');
+            expect(resolveTransferTarget({ query: '(702) 555-0100', number: { value: '+17025550100', valid: true }, ownNumbers: [ownNumber] }).refused)
+                .toBe('own-number');
+        });
+    });
+});
+
+describe('toInternationalNumber', () => {
+    it('keeps an international number and reads a ten-digit North American number as +1', () => {
+        expect(toInternationalNumber('+44 20 7123 4567')).toBe('+442071234567');
+        expect(toInternationalNumber('(702) 555-0199')).toBe('+17025550199');
+        expect(toInternationalNumber('17025550199')).toBe('+17025550199');
+        expect(toInternationalNumber('5550199')).toBe('');
+        expect(toInternationalNumber('2')).toBe('');
+    });
+});
+
+describe('transferBlockedReason', () => {
+    // A call dialed from this browser runs in the provider SDK alone: the server has no handle on it, so a transfer it
+    // is asked for can only fail.
+    it('refuses a call this browser placed itself, unless a transfer service carries the transfer', () => {
+        expect(transferBlockedReason({ call: { callId: 'browser-1', browserOriginated: true } })).toBe('browser-call');
+        expect(transferBlockedReason({ call: { callId: 'browser-1', browserOriginated: true }, serviceApplies: true })).toBe('');
     });
 
-    it('refuses a number too short or too long to be one', () => {
-        expect(resolveTransferTarget({ query: '7', ownNumbers: [] }).refused).toBe('invalid-number');
-        expect(resolveTransferTarget({ query: '+1702', ownNumbers: [] }).refused).toBe('invalid-number');
-        expect(resolveTransferTarget({ query: '1234567890123456', ownNumbers: [] }).refused).toBe('invalid-number');
-    });
-
-    it('passes an address or directory id through for the provider and the server policy to decide', () => {
-        expect(resolveTransferTarget({ query: 'sip:alex@example.com', ownNumbers: [ownNumber] }))
-            .toEqual({ destination: 'sip:alex@example.com', label: 'sip:alex@example.com', refused: '' });
+    it('allows a call the server tracks', () => {
+        expect(transferBlockedReason({ call: { callId: 'v3:abc' } })).toBe('');
+        expect(transferBlockedReason({})).toBe('');
     });
 });
 
