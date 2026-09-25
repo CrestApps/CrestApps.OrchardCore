@@ -5881,6 +5881,34 @@
       return typeof settled[key] === 'number' && now - settled[key] <= SETTLED_OFFER_TTL_MS;
     });
   }
+
+  // Ignore and Voicemail post to the Contact Center and wait about a second for its answer. Live, the buttons stayed
+  // clickable meanwhile, and the second click of a double-click declined the next reservation, offered the moment the
+  // first was declined. A click on an offer's button is taken only once per offer, and a click within this long of the
+  // last one is a double-click, whichever offer it lands on.
+  var OFFER_CLICK_GUARD_MS = 800;
+
+  // Whether a click on an offer's Ignore, Voicemail or Answer is the agent acting on `offer`.
+  //   pending - the offer action under way, { reservationId, at }, or null.
+  //   offer   - the offer on screen, { reservationId }.
+  // Returns 'act', or 'ignore' for a repeat click on the same offer or one landing within the guard of the last.
+  function offerActionClick(pending, offer, now) {
+    if (!pending) {
+      return 'act';
+    }
+    if (isOfferActionPending(pending, offer)) {
+      return 'ignore';
+    }
+    return typeof pending.at === 'number' && now - pending.at < OFFER_CLICK_GUARD_MS ? 'ignore' : 'act';
+  }
+
+  // Whether the action under way is for this offer, so its buttons stay disabled until the request fails.
+  function isOfferActionPending(pending, offer) {
+    return !!(pending && offer && pending.reservationId && pending.reservationId === offer.reservationId);
+  }
+  softPhone.OFFER_CLICK_GUARD_MS = OFFER_CLICK_GUARD_MS;
+  softPhone.offerActionClick = offerActionClick;
+  softPhone.isOfferActionPending = isOfferActionPending;
   softPhone.ANSWER_REGISTRATION_TIMEOUT_MS = ANSWER_REGISTRATION_TIMEOUT_MS;
   softPhone.SETTLED_OFFER_TTL_MS = SETTLED_OFFER_TTL_MS;
   softPhone.answerButtonView = answerButtonView;
@@ -6535,6 +6563,8 @@
   var answerClickAction = softPhoneModules.answerClickAction;
   var isAnswerInProgress = softPhoneModules.isAnswerInProgress;
   var answerButtonView = softPhoneModules.answerButtonView;
+  var offerActionClick = softPhoneModules.offerActionClick;
+  var isOfferActionPending = softPhoneModules.isOfferActionPending;
   var ANSWER_REGISTRATION_TIMEOUT_MS = softPhoneModules.ANSWER_REGISTRATION_TIMEOUT_MS;
   var withTimeout = softPhoneModules.withTimeout;
   var rememberSettledOffer = softPhoneModules.rememberSettledOffer;
@@ -8850,6 +8880,10 @@
     var incomingContext = null;
     var incomingHandled = false;
     var incomingAcceptPending = false;
+    // The offer an Ignore or Voicemail click is being posted for, and when: { reservationId, at } (see
+    // soft-phone/answer-state.js). Its buttons stay disabled until the post fails, and a click landing on the next
+    // offer within a double-click of it is not taken as the agent's.
+    var offerAction = null;
     // The agent clicked Answer on a phone that had to register first; the accept follows once it has.
     var answerRegistering = false;
     // Offers already over -- revoked, or their call ended -- so a late copy of one never opens the modal.
@@ -13287,9 +13321,59 @@
 
       // While a Contact Center offer is being accepted the accept is a server round-trip; disable the
       // offer controls so the agent gets instant feedback and cannot act on the offer again mid-flight.
-      setIncomingControlsBusy(answerInProgress());
+      setIncomingControlsBusy(answerInProgress() || isOfferActionPending(offerAction, currentOfferKey()));
       renderIncomingCards();
       scheduleIncomingExpiry();
+    }
+
+    // The offer on screen, as the offer-action rules name it.
+    function currentOfferKey() {
+      var properties = incomingContext && incomingContext.properties;
+      return {
+        reservationId: properties && properties.reservationId ? String(properties.reservationId) : ''
+      };
+    }
+
+    // Takes a click on an offer's button as the agent's, once: false for a repeat, or a click that landed on the next
+    // offer a moment after acting on the last. Taken, the offer's buttons disable until the request fails.
+    function beginOfferAction() {
+      var offer = currentOfferKey();
+      var now = Date.now();
+      if (offerActionClick(offerAction, offer, now) === 'ignore') {
+        return false;
+      }
+      offerAction = {
+        reservationId: offer.reservationId,
+        at: now
+      };
+      render();
+      return true;
+    }
+
+    // The Contact Center answered a decline or a send-to-voicemail for `reservationId`. It closes that offer only:
+    // the next offer may already be on screen, and must not be cleared -- or told it failed -- by the last one's
+    // answer. A failure gives the buttons back so the agent can try again.
+    function finishOfferAction(reservationId, callId, result) {
+      var stillShown = currentOfferKey().reservationId === String(reservationId || '');
+      if (!result || result.succeeded === false) {
+        if (stillShown) {
+          showError(strings.offerUnavailable || 'This call is no longer available.');
+          offerAction = null;
+          render();
+        }
+        return;
+      }
+      if (stillShown) {
+        clearIncomingOffer();
+        return;
+      }
+
+      // Replaced meanwhile: only the declined offer's own ringing call goes.
+      var declined = callId ? activeCalls[callId] : null;
+      if (declined && normalizeState(declined.state) === 'Ringing' && (!currentCall || currentCall.callId !== callId)) {
+        removeActiveCall(callId);
+        render();
+      }
     }
 
     // From the agent's first click on Answer, including the registration that click may be waiting on.
@@ -13540,8 +13624,9 @@
       });
 
       // Accepting a Contact Center offer is a server round-trip, and it may first wait on a registration;
-      // ignore repeat clicks while either is in flight so the reservation is never accepted twice.
-      if (action === 'ignore') {
+      // ignore repeat clicks while either is in flight so the reservation is never accepted twice. An offer being
+      // declined or sent to voicemail is not answered either, nor is the next offer a moment after either.
+      if (action === 'ignore' || incomingContext && incomingContext.properties && offerActionClick(offerAction, currentOfferKey(), Date.now()) === 'ignore') {
         return;
       }
 
@@ -13668,7 +13753,13 @@
         });
         return;
       }
+
+      // Sent once: a second click -- or one landing on the next offer -- never posts again.
+      if (decision.route === VOICEMAIL_ROUTES.contactCenter && !beginOfferAction()) {
+        return;
+      }
       var declinedReservationId = offer ? offer.reservationId || '' : '';
+      var declinedCallId = currentCallId();
       settleOfferLeg(declinedReservationId, false);
       announceOfferHandled(false, declinedReservationId);
 
@@ -13676,11 +13767,7 @@
       // well answered the caller twice and played the greeting twice.
       if (decision.route === VOICEMAIL_ROUTES.contactCenter) {
         postLifecycle(decision.lifecycleKey).then(function (result) {
-          if (!result || result.succeeded === false) {
-            showError(strings.offerUnavailable || 'This call is no longer available.');
-            return;
-          }
-          clearIncomingOffer();
+          finishOfferAction(declinedReservationId, declinedCallId, result);
         });
         return;
       }
@@ -13699,15 +13786,16 @@
       var call = currentCallReference();
       var hasOffer = incomingContext && incomingContext.properties && incomingContext.properties.declineUrl;
       if (hasOffer) {
+        // Declined once: a second click -- or one landing on the next offer -- never posts another decline.
+        if (!beginOfferAction()) {
+          return;
+        }
         var ignoredReservationId = incomingContext.properties.reservationId || '';
+        var ignoredCallId = currentCallId();
         settleOfferLeg(ignoredReservationId, false);
         announceOfferHandled(false, ignoredReservationId);
         postLifecycle('declineUrl').then(function (result) {
-          if (!result || result.succeeded === false) {
-            showError(strings.offerUnavailable || 'This call is no longer available.');
-            return;
-          }
-          clearIncomingOffer();
+          finishOfferAction(ignoredReservationId, ignoredCallId, result);
         });
         return;
       }

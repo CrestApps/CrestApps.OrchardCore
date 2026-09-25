@@ -89,6 +89,36 @@
         });
     }
 
+    // Ignore and Voicemail post to the Contact Center and wait about a second for its answer. Live, the buttons stayed
+    // clickable meanwhile, and the second click of a double-click declined the next reservation, offered the moment the
+    // first was declined. A click on an offer's button is taken only once per offer, and a click within this long of the
+    // last one is a double-click, whichever offer it lands on.
+    var OFFER_CLICK_GUARD_MS = 800;
+
+    // Whether a click on an offer's Ignore, Voicemail or Answer is the agent acting on `offer`.
+    //   pending - the offer action under way, { reservationId, at }, or null.
+    //   offer   - the offer on screen, { reservationId }.
+    // Returns 'act', or 'ignore' for a repeat click on the same offer or one landing within the guard of the last.
+    function offerActionClick(pending, offer, now) {
+        if (!pending) {
+            return 'act';
+        }
+
+        if (isOfferActionPending(pending, offer)) {
+            return 'ignore';
+        }
+
+        return typeof pending.at === 'number' && now - pending.at < OFFER_CLICK_GUARD_MS ? 'ignore' : 'act';
+    }
+
+    // Whether the action under way is for this offer, so its buttons stay disabled until the request fails.
+    function isOfferActionPending(pending, offer) {
+        return !!(pending && offer && pending.reservationId && pending.reservationId === offer.reservationId);
+    }
+
+    softPhone.OFFER_CLICK_GUARD_MS = OFFER_CLICK_GUARD_MS;
+    softPhone.offerActionClick = offerActionClick;
+    softPhone.isOfferActionPending = isOfferActionPending;
     softPhone.ANSWER_REGISTRATION_TIMEOUT_MS = ANSWER_REGISTRATION_TIMEOUT_MS;
     softPhone.SETTLED_OFFER_TTL_MS = SETTLED_OFFER_TTL_MS;
     softPhone.answerButtonView = answerButtonView;

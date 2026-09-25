@@ -101,3 +101,32 @@ describe('settled offers', () => {
         expect(isOfferSettled(settled, null, 1001)).toBe(false);
     });
 });
+
+// Live: Ignore stayed clickable while its decline was in flight, and the second click of a double-click declined the
+// next reservation, offered the moment the first was declined.
+describe('offerActionClick', () => {
+    const { offerActionClick, isOfferActionPending, OFFER_CLICK_GUARD_MS } = globalThis.CrestAppsSoftPhone;
+    const pending = { reservationId: 'res-a', at: 1000 };
+
+    it('acts on the first click', () => {
+        expect(offerActionClick(null, { reservationId: 'res-a' }, 1000)).toBe('act');
+    });
+
+    it('ignores another click on the offer whose action is under way, however late', () => {
+        expect(offerActionClick(pending, { reservationId: 'res-a' }, 1000 + 60000)).toBe('ignore');
+        expect(isOfferActionPending(pending, { reservationId: 'res-a' })).toBe(true);
+    });
+
+    it('ignores a click that lands on the next offer within a double-click of the last', () => {
+        expect(offerActionClick(pending, { reservationId: 'res-b' }, 1000 + OFFER_CLICK_GUARD_MS - 1)).toBe('ignore');
+        expect(isOfferActionPending(pending, { reservationId: 'res-b' })).toBe(false);
+    });
+
+    it('acts on the next offer once the moment has passed', () => {
+        expect(offerActionClick(pending, { reservationId: 'res-b' }, 1000 + OFFER_CLICK_GUARD_MS)).toBe('act');
+    });
+
+    it('holds nothing for an offer with no reservation', () => {
+        expect(isOfferActionPending({ reservationId: '', at: 1000 }, { reservationId: '' })).toBe(false);
+    });
+});
