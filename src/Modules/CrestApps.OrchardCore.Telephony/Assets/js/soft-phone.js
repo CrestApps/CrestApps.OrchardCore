@@ -1111,6 +1111,9 @@
             outboundMonitor = typeof startOutboundAudioMonitor !== 'function' ? null : startOutboundAudioMonitor({
                 readPeer: function () { return call.peer && call.peer.instance; },
                 isSuppressed: function () {
+                    // This call's own hold audio, looked up without creating one: holding sends a tone, not the mic.
+                    var holdAudio = holdAudioByCall[call.id || ''];
+
                     return (holdAudio && holdAudio.isEngaged()) ||
                         (typeof context.isOutboundSuppressed === 'function' && context.isOutboundSuppressed());
                 },
