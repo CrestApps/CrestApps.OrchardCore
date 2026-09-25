@@ -67,6 +67,38 @@ public class SmsInboundProcessorTests
         Assert.Null(harness.CreatedConversation);
     }
 
+    [Fact]
+    public async Task ExistingConversation_WhileAutomatedActivityActive_YieldsToTheAiPath()
+    {
+        // A contact who texted a person before an automated conversation started already has a human thread. While
+        // the AI is answering them that thread must stay quiet: recording the text here as well is how every
+        // message the AI handled reached the thread twice, and routing it announced a conversation to the queue
+        // and started a first-response clock while the AI was still the one replying.
+        var existing = new SmsConversation
+        {
+            ItemId = "conv-existing",
+            ServiceAddress = "+15553334444",
+            ContactAddress = "+15551112222",
+            OwnerType = SmsConversationOwnerType.Personal,
+            AssignmentStatus = SmsConversationAssignmentStatus.Unassigned,
+            UnreadCount = 2,
+        };
+
+        var harness = new Harness(routing: null, existing: existing)
+        {
+            AutomatedActivity = new OmnichannelActivity { Status = ActivityStatus.AwaitingCustomerAnswer },
+        };
+
+        var message = Harness.InboundMessage("Yes");
+        var conversation = await harness.Processor.ProcessAsync(message, TestContext.Current.CancellationToken);
+
+        Assert.Null(conversation);
+        Assert.Null(message.ConversationId);
+        Assert.Equal(2, existing.UnreadCount);
+        harness.ConversationStore.Verify(s => s.UpdateAsync(It.IsAny<SmsConversation>(), It.IsAny<CancellationToken>()), Times.Never);
+        harness.Notifier.Verify(n => n.NewInboundMessageAsync(It.IsAny<SmsInboundNotification>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     [Theory]
     [InlineData(ActivityStatus.Completed)]
     [InlineData(ActivityStatus.Cancelled)]
@@ -230,6 +262,8 @@ public class SmsInboundProcessorTests
 
         public OmnichannelActivity AutomatedActivity { get; set; }
 
+        public Mock<ISmsConversationStore> ConversationStore { get; } = new();
+
         public SmsInboundProcessor Processor { get; }
 
         /// <summary>
@@ -260,7 +294,7 @@ public class SmsInboundProcessorTests
             activityStore.Setup(s => s.GetAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ActivityInteractionType>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(() => AutomatedActivity);
 
-            var conversationStore = new Mock<ISmsConversationStore>();
+            var conversationStore = ConversationStore;
             var reads = 0;
 
             conversationStore.Setup(s => s.FindByAddressesAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))

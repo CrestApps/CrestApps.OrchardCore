@@ -18,6 +18,7 @@ using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Sms.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.DependencyInjection;
@@ -195,7 +196,12 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
         if (activity is null)
         {
-            _logger.LogWarning("Unable to link incoming SMS message from a customer to an Activity. Channel: {Channel}, Service Address: {ServiceAddress}, Customer Address: {CustomerAddress}", omnichannelEvent.Message.Channel.SanitizeLogValue(), _addressRedactor.Redact(omnichannelEvent.Message.ServiceAddress), _addressRedactor.Redact(omnichannelEvent.Message.CustomerAddress));
+            // No automated conversation on this number is the ordinary case for a person-to-person thread: the SMS
+            // portal's inbound pipeline, another handler on this same event, records and routes it. Not a warning.
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("No automated Activity is linked to the incoming SMS message, so the automated agent leaves it to the other handlers. Channel: {Channel}, Service Address: {ServiceAddress}, Customer Address: {CustomerAddress}", omnichannelEvent.Message.Channel.SanitizeLogValue(), _addressRedactor.Redact(omnichannelEvent.Message.ServiceAddress), _addressRedactor.Redact(omnichannelEvent.Message.CustomerAddress));
+            }
 
             return;
         }
@@ -307,14 +313,9 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
         if (!alreadyStored)
         {
-            await _promptStore.CreateAsync(new AIChatSessionPrompt
-            {
-                ItemId = UniqueId.GenerateId(),
-                SessionId = chatSession.SessionId,
-                Role = ChatRole.User,
-                Content = omnichannelEvent.Message.Content,
-                CreatedUtc = _clock.UtcNow,
-            }, cancellationToken);
+            // The prompt remembers the provider's message id, so the handoff can tell the human thread which text
+            // this was and the thread never records the same message twice.
+            await _promptStore.CreateAsync(SmsHandoffTranscript.CreateCustomerPrompt(chatSession.SessionId, omnichannelEvent.Message, _clock.UtcNow), cancellationToken);
         }
 
         // One AI response per conversation at a time. Register this turn as the active generation, cancelling any
@@ -905,14 +906,9 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
             .Where(prompt => !prompt.IsGeneratedPrompt)
             .ToList();
 
-        var prompts = conversation
-            .Select(prompt => new OmnichannelHandoffMessage
-            {
-                IsInbound = prompt.Role == ChatRole.User,
-                Content = prompt.Content,
-                CreatedUtc = prompt.CreatedUtc,
-            })
-            .ToList();
+        // Each turn carries its prompt id, and each customer text its provider message id, so the human thread
+        // recognises a message it already holds instead of importing it a second time.
+        var prompts = SmsHandoffTranscript.Build(conversation);
 
         // Warm context for the agent taking over: a short AI-written summary of what happened. Best-effort — a
         // summary failure must never block the handoff.

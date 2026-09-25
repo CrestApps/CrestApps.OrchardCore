@@ -72,6 +72,19 @@ public sealed class OmnichannelHandoffRequest
 public sealed class OmnichannelHandoffMessage
 {
     /// <summary>
+    /// Gets or sets the stable identifier of the automated transcript entry this message was taken from. The
+    /// copy in the human thread is keyed by it, so a handoff that is replayed does not import the entry twice.
+    /// </summary>
+    public string Id { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider's identifier for the message when one is known — the customer's inbound texts
+    /// carry it. The human thread keeps it, so a message the inbound pipeline has already recorded (or a later
+    /// redelivery of it) is recognised as the same message rather than written a second time.
+    /// </summary>
+    public string ProviderMessageId { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the message came from the customer (inbound) rather than the
     /// automated agent (outbound).
     /// </summary>

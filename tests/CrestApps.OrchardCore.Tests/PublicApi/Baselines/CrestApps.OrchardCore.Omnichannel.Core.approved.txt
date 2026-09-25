@@ -711,7 +711,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public OmnichannelHandoffMessage() { }
         public string Content { get; set; }
         public System.DateTime CreatedUtc { get; set; }
+        public string Id { get; set; }
         public bool IsInbound { get; set; }
+        public string ProviderMessageId { get; set; }
     }
     public sealed class OmnichannelHandoffRequest
     {

@@ -74,6 +74,10 @@ If you also enable the full Contact Center features, the portal integrates with 
 
 Earlier iterations used a separate "number route" entity; that has been retired. All SMS routing — target, distribution mode, and auto-reply — is stored **on the channel endpoint** and edited on the same screen as the number and its provider. Inbound routing resolves in order: an existing conversation wins first, then the endpoint's routing, then a fallback into the unassigned inbox.
 
+## Hand-off from an automated conversation
+
+While an automated (AI) activity is handling a number, the portal leaves that number's texts to the automated agent, even when a portal conversation for the number already exists. When the automated agent hands off, the whole automated transcript is copied into the portal conversation, so the operator inherits every message, in order, each exactly once. Customer texts keep the provider's message id, which is how a text the thread already holds, or a provider's redelivery of one, is recognised and not recorded again. Threads written before this behaviour are shown with such duplicates collapsed.
+
 ## Per-number provider dispatch
 
 Sending is handled by an `ISmsDispatcher` that resolves the number's provider from its channel endpoint, falls back to the Orchard Core SMS default provider, and dispatches through the matching `ISmsProvider`. This is what lets different numbers on the same tenant send through different carriers.

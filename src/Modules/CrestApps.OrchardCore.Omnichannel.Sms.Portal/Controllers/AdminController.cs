@@ -493,7 +493,7 @@ public sealed class AdminController : Controller
         return View(new SmsThreadViewModel
         {
             Conversation = conversation,
-            Messages = messages,
+            Messages = SmsThreadDeduplicator.Collapse(messages),
             Templates = (await _templateManager.GetAllAsync()).ToArray(),
             ContactDisplayText = titleContact?.DisplayName,
             Contacts = contacts,
@@ -589,15 +589,15 @@ public sealed class AdminController : Controller
             ? new DateTime(afterTicks, DateTimeKind.Utc)
             : DateTime.MinValue;
 
-        var messages = (await _session.Query<OmnichannelMessage, OmnichannelMessageIndex>(
+        var messages = SmsThreadDeduplicator.Collapse((await _session.Query<OmnichannelMessage, OmnichannelMessageIndex>(
                 index => index.ConversationId == id && index.CreatedUtc > after,
                 collection: OmnichannelConstants.CollectionName)
             .OrderBy(index => index.CreatedUtc)
             .ThenBy(index => index.Id)
             .ListAsync())
-            .ToArray();
+            .ToArray());
 
-        if (messages.Length == 0)
+        if (messages.Count == 0)
         {
             return PartialView("_MessageBubbles", Array.Empty<SmsMessageBubbleViewModel>());
         }

@@ -142,27 +142,47 @@ public sealed class SmsInboundProcessor : IOmnichannelEventHandler, ISmsInboundP
         string contactAddress,
         CancellationToken cancellationToken)
     {
+        // Yield to the automated (AI) path while a live automated activity owns the number — whether or not a human
+        // thread already exists for it. The automated handler answers the text, and a handoff copies the whole
+        // automated transcript into the human thread, so that copy is the one writer for these messages. Recording
+        // them here as well put every message the AI handled into the thread twice, and routed, notified and
+        // started the first-response clock on a thread the AI was still answering. Once the activity concludes
+        // (the handoff concludes it), texts flow into the human thread from here again.
+        var automatedActivity = await _activityStore.GetAsync(
+            OmnichannelConstants.Channels.Sms,
+            endpoint.ItemId,
+            message.CustomerAddress,
+            ActivityInteractionType.Automated,
+            cancellationToken);
+
+        if (automatedActivity is not null && !automatedActivity.Status.IsTerminal())
+        {
+            return null;
+        }
+
         var conversation = await _conversationStore.FindByAddressesAsync(serviceAddress, contactAddress, cancellationToken);
+
+        // The provider delivers at least once, and the text that asked for a person reaches here after the
+        // handoff already copied it across. Either way the thread holds this message already: it is not a new
+        // inbound, so it is neither recorded, routed nor announced again.
+        if (conversation is not null &&
+            await _conversationStore.ContainsMessageAsync(conversation.ItemId, message.ProviderMessageId, cancellationToken))
+        {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "The inbound SMS {ProviderMessageId} is already in conversation {ConversationId}; it is not recorded again.",
+                    message.ProviderMessageId.SanitizeLogValue(),
+                    conversation.ItemId.SanitizeLogValue());
+            }
+
+            return conversation;
+        }
 
         var isNew = conversation is null;
 
-        // Yield to the automated (AI) path while it still owns the number and no human thread exists yet. After
-        // an AI-to-human handoff the human SmsConversation already exists, so this guard no longer trips and the
-        // existing-conversation router keeps replies in the human thread.
         if (isNew)
         {
-            var automatedActivity = await _activityStore.GetAsync(
-                OmnichannelConstants.Channels.Sms,
-                endpoint.ItemId,
-                message.CustomerAddress,
-                ActivityInteractionType.Automated,
-                cancellationToken);
-
-            if (automatedActivity is not null && !automatedActivity.Status.IsTerminal())
-            {
-                return null;
-            }
-
             conversation = new SmsConversation
             {
                 ItemId = UniqueId.GenerateId(),
