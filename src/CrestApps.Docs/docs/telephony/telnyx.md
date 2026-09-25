@@ -323,7 +323,10 @@ your platform, encrypted at rest — not left only in Telnyx's cloud.
 
 The Telnyx telephony provider advertises dialing, hang up, hold, resume, mute, blind and attended transfer,
 merge (conference), sending DTMF digits, and receiving inbound calls. Hold and mute are executed by the
-browser media adapter because Telnyx delivers this call's audio to the browser. The Contact Center voice
+browser media adapter because Telnyx delivers this call's audio to the browser. Telnyx therefore never
+reports a call muted, so the soft phone keeps the agent's mute itself: it lasts through state reports, refreshes,
+hold and resume, a merge (a conference is muted or unmuted as a whole) and a replaced microphone, until the agent
+unmutes or the call ends. The Contact Center voice
 provider advertises dialer dialing, agent connect (bridge), call transfer, attended (consult) transfer, and —
 with the Call Recording feature — recording.
 

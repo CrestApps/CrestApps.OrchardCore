@@ -29,8 +29,28 @@ permission). Each extension has:
 | **Name** | A label for the entry. |
 | **Extension number** | The number an agent dials, unique per tenant (for example `1001`). |
 | **User** | The Orchard user the extension rings. |
-| **Display name** | Shown to a colleague who calls the extension. Defaults to the user name. |
+| **Display name** | A name for the extension itself (for example `Front desk`). Leave it empty, or equal to the user name, to show the user's own display name. |
 | **Enabled** | A disabled extension is not dialable and is skipped by the resolver. |
+
+## Who an extension rings, by name
+
+Wherever the soft phone shows an extension it also shows who it rings: the transfer panel offers
+**Transfer to extension 2 · Jane Doe**, the keypad names the person while an extension is typed, a call to an
+extension is shown as **Jane Doe · ext 2**, and so are extension calls in **Recent**. A colleague whose extension
+you ring sees your name on their ringing call.
+
+The name is resolved on the server, in this order:
+
+1. The extension's own **Display name**, when it is set to something other than the user name.
+2. The user's display name, as the site shows users (the CrestApps Users display name settings, for example first
+   and last name). Without the CrestApps Users feature this is the user name.
+3. The user name.
+4. The bare extension number.
+
+The soft phone reads every extension's name in one request when it connects (the `GetExtensionDirectory` hub
+method) and keeps the list, reading it again only after five minutes; nothing is looked up per keystroke. When the
+provider has no directory of its own (Telnyx), the transfer panel lists these extensions, and picking one
+transfers to it as an extension.
 
 ## Placing an extension call
 
