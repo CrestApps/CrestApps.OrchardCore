@@ -36,6 +36,13 @@
   },
   {
     "inputs": [
+      "Assets/js/ivr-menu/ivr-flow-model.js",
+      "Assets/js/ivr-menu/ivr-menu-editor.js"
+    ],
+    "output": "wwwroot/scripts/ivr-menu-editor.js"
+  },
+  {
+    "inputs": [
       "Assets/js/shared/agent-presence.js",
       "Assets/js/shared/coalesced-refresh.js",
       "Assets/js/shared/offer-actions.js",

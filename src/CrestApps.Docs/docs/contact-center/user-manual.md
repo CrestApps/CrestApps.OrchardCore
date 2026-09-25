@@ -104,7 +104,7 @@ The reason sets your presence to the state the administrator mapped it to (for e
 
 1. When routing selects you, a **ringing offer card** appears showing the customer (name or number), the source **queue**, and a **countdown**.
 2. Click **Accept** before the countdown ends.
-3. The reservation is accepted, the media connects, and the work moves into your **active interaction** panel.
+3. The reservation is accepted, the media connects, and the work moves into your **active interaction** panel. (Until then the panel reads **No active interactions right now**.)
    - On providers that ring your device (for example Dialpad), your device rings and you answer there.
    - On server-side delivery (for example the bundled Asterisk path), the call is connected during accept and stays controllable from the soft phone.
 4. If you do nothing before the countdown ends, the offer is revoked and re-routed to another agent.

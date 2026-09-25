@@ -85,6 +85,7 @@ public sealed class InboundVoiceStartup : StartupBase
         // Inbound entry-point administration screens.
         services.AddDisplayDriver<ContactCenterEntryPoint, ContactCenterEntryPointDisplayDriver>();
         services.AddNavigationProvider<ContactCenterEntryPointsAdminMenu>();
+        services.AddResourceConfiguration<ContactCenterIvrMenuEditorResourceConfiguration>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

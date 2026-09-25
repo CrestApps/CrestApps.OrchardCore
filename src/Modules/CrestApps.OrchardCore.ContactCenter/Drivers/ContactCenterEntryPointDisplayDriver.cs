@@ -3,9 +3,11 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Deployments;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.ContactCenter.Drivers;
 
@@ -17,15 +19,19 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
     };
 
     private readonly ContactCenterAdminFormOptionsProvider _optionsProvider;
+    private readonly ISiteService _siteService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterEntryPointDisplayDriver"/> class.
     /// </summary>
     /// <param name="optionsProvider">The admin form options provider.</param>
+    /// <param name="siteService">The site service, which holds the approved external destinations.</param>
     public ContactCenterEntryPointDisplayDriver(
-        ContactCenterAdminFormOptionsProvider optionsProvider)
+        ContactCenterAdminFormOptionsProvider optionsProvider,
+        ISiteService siteService)
     {
         _optionsProvider = optionsProvider;
+        _siteService = siteService;
     }
 
     /// <inheritdoc/>
@@ -71,6 +77,7 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
         };
 
         await _optionsProvider.PopulateEntryPointEditorAsync(viewModel);
+        viewModel.IvrExternalDestinationOptions = await GetExternalDestinationOptionsAsync();
 
         return Initialize<EntryPointViewModel>("ContactCenterEntryPointFields_Edit", model =>
         {
@@ -97,6 +104,7 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
             model.IvrFlowJson = viewModel.IvrFlowJson;
             model.IvrQueueOptions = viewModel.IvrQueueOptions;
             model.IvrAgentOptions = viewModel.IvrAgentOptions;
+            model.IvrExternalDestinationOptions = viewModel.IvrExternalDestinationOptions;
             model.Enabled = viewModel.Enabled;
         }).Location("Content:1");
     }
@@ -154,6 +162,29 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
         entryPoint.IvrFlow = model.IvrFlow;
 
         return await EditAsync(entryPoint, context);
+    }
+
+    // The approved destinations an IVR external transfer may name. A disabled one is still listed, marked, so a
+    // menu that names it reads as a choice to revisit rather than an unknown identifier.
+    private async Task<IList<SelectListItem>> GetExternalDestinationOptionsAsync()
+    {
+        var site = await _siteService.GetSiteSettingsAsync();
+        var settings = site.GetOrCreate<ContactCenterExternalTransferSettings>();
+
+        return settings.Destinations
+            .Where(destination => destination is not null && !string.IsNullOrWhiteSpace(destination.Id))
+            .Select(destination => new SelectListItem(DescribeDestination(destination), destination.Id) { Disabled = !destination.Enabled })
+            .OrderBy(option => option.Text, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+    }
+
+    private static string DescribeDestination(ContactCenterExternalDestination destination)
+    {
+        var name = string.IsNullOrWhiteSpace(destination.DisplayName) ? destination.Id : destination.DisplayName;
+
+        return string.IsNullOrWhiteSpace(destination.E164Address)
+            ? name
+            : $"{name} ({destination.E164Address})";
     }
 
     private static List<string> ParseLines(string text)

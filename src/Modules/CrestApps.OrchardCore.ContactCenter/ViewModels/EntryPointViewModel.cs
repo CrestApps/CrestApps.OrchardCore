@@ -129,14 +129,19 @@ public class EntryPointViewModel
     public IvrFlow IvrFlow { get; set; }
 
     /// <summary>
-    /// The queues an IVR action may route to, shown beside the editor so an operator can copy identifiers.
+    /// The queues an IVR action may route to, offered by the menu editor and listed beside the JSON.
     /// </summary>
     public IList<SelectListItem> IvrQueueOptions { get; set; } = [];
 
     /// <summary>
-    /// The agents an IVR action may route to, shown beside the editor so an operator can copy identifiers.
+    /// The agents an IVR action may route to, offered by the menu editor and listed beside the JSON.
     /// </summary>
     public IList<SelectListItem> IvrAgentOptions { get; set; } = [];
+
+    /// <summary>
+    /// The approved external destinations an IVR external transfer may name, offered by the menu editor.
+    /// </summary>
+    public IList<SelectListItem> IvrExternalDestinationOptions { get; set; } = [];
 
     /// <summary>
     /// Gets or sets a value indicating whether the entry point is enabled.

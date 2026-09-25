@@ -83,9 +83,53 @@ Use this checklist before publishing a new inbound line:
 2. Configure the Subject Flow for that endpoint so inbound activities get the right subject, campaign, disposition list, required-disposition policy, and follow-up subject actions.
 3. Create the target queue, set its SLA, reservation timeout, routing strategy, required skills, and overflow queue.
 4. Attach a business-hours calendar when the queue should pause or overflow outside staffed hours.
-5. Create an **Inbound entry point** for the DID. Set the target queue (or a specific agent), priority, optional welcome/closed messages, the **default voicemail greeting** (spoken to callers who reach voicemail on this line when the agent has no greeting of their own), and the closed action: hold, voicemail, overflow, or reject.
+5. Create an **Inbound entry point** for the DID. Set the target queue (or a specific agent), priority, optional welcome/closed messages, the **default voicemail greeting** (spoken to callers who reach voicemail on this line when the agent has no greeting of their own), and the closed action: hold, voicemail, overflow, or reject. To let callers choose where they go, build an [IVR menu](#building-an-ivr-menu) on the same screen.
 6. Sign at least one skilled agent in to the queue, then place a test call. The expected path is **provider webhook → entry point → queue → reservation → Agent Workspace offer → soft-phone media**.
 7. Watch **Live dashboard** while testing. The queue waiting count should increase before assignment, then the selected agent should move from available to reserved/busy/wrap-up as the call progresses.
+
+### Building an IVR menu
+
+An entry point can play a phone menu ("press 1 for sales, 2 for support") before the caller is routed. The **IVR menu** field on the entry point editor (*Interaction Center → Inbound entry points → Edit*) is a visual editor:
+
+1. With no menu, the field says **No IVR menu** and callers are routed straight to the entry point's target. Click **Build an IVR menu** to start one; **Remove the IVR menu** goes back to no menu.
+2. Each **menu** has a name (renaming it updates every key that opens it), **What callers hear** (the spoken prompt), and an optional **Recorded prompt**: the identifier of a voice media item played instead of the text. A menu needs one or the other.
+3. Each **key** row picks a key (`0`-`9`, `*`, `#`; a key already used on the menu is not offered again), an action, and a target that changes with the action:
+
+   | Action | Stored kind | Target |
+   | --- | --- | --- |
+   | Send to a queue | `RouteToQueue` | A queue, picked from the tenant's queues. |
+   | Send to an agent | `RouteToAgent` | An agent, picked from the tenant's agents. |
+   | Open another menu | `SubMenu` | One of the menus defined here, or **+ New menu** to create one. |
+   | Send to voicemail | `Voicemail` | None. |
+   | Transfer to an approved external number | `ExternalTransfer` | An approved destination from the **External transfer destinations** section of *Settings → Contact Center*. |
+   | Repeat this menu | `Repeat` | None. |
+
+4. **First menu** is the menu callers hear first. **Tries** is how many wrong or missing keys a caller gets before **When the tries run out** takes over; that fallback uses the same actions, or **Route to the entry point target** to route the call the way the entry point would with no menu.
+
+Problems are shown beside the field that has them, with a count at the top: a missing or unknown first menu, a menu with no name or a duplicate name, a silent menu, a menu with no keys, a repeated or invalid key, a key with no action, an action with no target, and a key that opens a menu that does not exist. Two warnings do not block saving: a menu no key or fallback leads to (callers never hear it), and a queue, agent or destination that is no longer in the lists. The server checks the menu again on save and refuses one that cannot run.
+
+Switch on **Advanced: edit JSON** to see or type the menu as JSON. The two views stay in step; JSON that cannot be read keeps the editor in JSON mode, with the reason, until it is fixed or cleared. The JSON is the same shape a deployment plan carries:
+
+```json
+{
+  "RootNodeId": "main",
+  "MaxRetries": 3,
+  "FallbackAction": { "Kind": "RouteToQueue", "TargetId": "QUEUE-ID" },
+  "Nodes": [
+    {
+      "NodeId": "main",
+      "Prompt": "Press 1 for sales or 2 for support.",
+      "PromptMediaId": null,
+      "Options": [
+        { "Digit": "1", "Action": { "Kind": "RouteToQueue", "TargetId": "QUEUE-ID" } },
+        { "Digit": "2", "Action": { "Kind": "SubMenu", "TargetId": "support" } }
+      ]
+    }
+  ]
+}
+```
+
+An empty field means no menu. `TargetId` is `null` for `Voicemail` and `Repeat`.
 
 ## For contact center managers: outbound and callback runbook
 
@@ -150,6 +194,8 @@ If you do not respond before the countdown ends, the offer is revoked and routed
 Dialer work is distinguished from inbound queue offers by its activity source. When Preview, Power, Progressive, Predictive, or generic dialer inventory is assigned to you, the browser opens the assigned activity's shared **Complete activity** page automatically. Inbound work continues to show the ringing offer instead, so it is never redirected before you choose **Accept** or **Decline**.
 
 ### 3. Handle the active interaction
+
+While you have nothing to handle, the panel says **No active interactions right now**: calls and messages you accept appear there. **Recent activity** likewise says **No recent interactions** until you finish your first one.
 
 Once you accept, the **active interaction** panel shows:
 
