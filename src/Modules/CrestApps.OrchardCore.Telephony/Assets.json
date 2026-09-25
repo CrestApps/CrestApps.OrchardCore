@@ -23,6 +23,7 @@
       "Assets/js/soft-phone/hold-audio.js",
       "Assets/js/soft-phone/send-audio.js",
       "Assets/js/soft-phone/agent-hold.js",
+      "Assets/js/soft-phone/agent-mute.js",
       "Assets/js/soft-phone/offer-leg.js",
       "Assets/js/soft-phone/offer-report.js",
       "Assets/js/soft-phone/auto-answer.js",

@@ -144,6 +144,91 @@ public sealed class SoftPhoneBridgedDialTests : SoftPhoneBrowserTest
         Assert.Equal(0, Server.Provider.GetTransferRequestCount());
     }
 
+    // Telnyx mutes a browser leg in the browser and keeps nothing, so every report of the call after the Mute said it was
+    // unmuted: the next refresh turned the agent's microphone back on about five seconds after they pressed Mute.
+    [Fact]
+    public async Task KeypadCall_StaysMuted_ThroughStateReportsRefreshesHoldAndAMicrophoneSwap_UntilTheAgentUnmutes()
+    {
+        // Arrange
+        var page = await OpenTelnyxPhoneAsync();
+        var callId = await DialAsync(page, "+17025550101");
+        var microphone = await SenderTrackAsync(page, callId);
+
+        // Act
+        await page.ClickAsync("[data-telephony-mute]");
+        await AssertMutedAsync(page, callId);
+
+        // Assert - a state push and a periodic refresh, both describing the call as unmuted, leave it muted.
+        await PublishLatestCallStateAsync(page);
+        await AssertMutedAsync(page, callId);
+        await WaitForActiveCallsRefreshAsync(page);
+        await AssertMutedAsync(page, callId);
+
+        // Hold and resume bring the microphone back to the call, still muted.
+        await HoldAsync(page, callId);
+        await page.ClickAsync("[data-telephony-resume]");
+        await page.WaitForFunctionAsync(
+            "callId => (window.telephonySoftPhone.getInstance().getActiveCalls().find(call => call.callId === callId) || {}).isOnHold === false",
+            callId);
+        await WaitForSenderTrackAsync(page, callId, microphone);
+        await AssertMutedAsync(page, callId);
+
+        // A microphone that ends is replaced under the call, and the fresh one is muted too.
+        await page.EvaluateAsync(
+            "legId => window.fakeTelnyx.byLeg(legId).peer.instance.getSenders()[0].track.dispatchEvent(new Event('ended'))",
+            callId);
+        await WaitForAsync(() => Server.Provider.ClientDiagnosticCodes.Contains("microphone-switched"));
+        Assert.NotEqual(microphone, await SenderTrackAsync(page, callId));
+        await AssertMutedAsync(page, callId);
+
+        // Only the agent unmutes.
+        await page.ClickAsync("[data-telephony-unmute]");
+        await page.Locator("[data-telephony-mute]").WaitForAsync();
+        var sending = await page.EvaluateAsync<JsonElement>("legId => window.fakeTelnyx.readSending(legId)", callId);
+        Assert.True(sending.GetProperty("enabled").GetBoolean());
+        await WaitForActiveCallsRefreshAsync(page);
+        Assert.True(await page.Locator("[data-telephony-mute]").IsVisibleAsync());
+    }
+
+    // The agent speaks into every call of a conference through one microphone, so a mute is the conference's: a report
+    // about any one of its calls must not unmute the agent on the rest.
+    [Fact]
+    public async Task MutedConference_StaysMuted_WhenAnyOfItsCallsIsReported()
+    {
+        // Arrange - two numbers dialed, the first held to dial the second, the agent muted on the second, then merged.
+        var page = await OpenTelnyxPhoneAsync();
+        var first = await DialAsync(page, "+17025550101");
+        await HoldAsync(page, first);
+        var second = await DialAsync(page, "+17025550102");
+        await page.ClickAsync("[data-telephony-mute]");
+        await AssertMutedAsync(page, second);
+        await page.Locator("[data-telephony-merge-select-all]").CheckAsync();
+        await page.ClickAsync("[data-telephony-merge-calls]");
+        await page.Locator("[data-telephony-conference]").WaitForAsync();
+
+        // Act - the platform reports each call, unmuted, and refreshes.
+        await PublishLatestCallStateAsync(page);
+        await WaitForActiveCallsRefreshAsync(page);
+
+        // Assert
+        await AssertMutedAsync(page, first);
+        await AssertMutedAsync(page, second);
+        var muted = await page.EvaluateAsync<bool[]>(
+            "() => window.telephonySoftPhone.getInstance().getActiveCalls().map(call => call.isMuted === true)");
+        Assert.Equal(2, muted.Length);
+        Assert.All(muted, Assert.True);
+
+        // Unmuting and muting again in the conference applies to every call of it, not only the one shown.
+        await page.ClickAsync("[data-telephony-unmute]");
+        await page.Locator("[data-telephony-mute]").WaitForAsync();
+        Assert.True(await page.EvaluateAsync<bool>(
+            "() => window.telephonySoftPhone.getInstance().getActiveCalls().every(call => !call.isMuted)"));
+        await page.ClickAsync("[data-telephony-mute]");
+        await WaitForActiveCallsRefreshAsync(page);
+        await AssertMutedAsync(page, first);
+        await AssertMutedAsync(page, second);
+    }
+
     private async Task<IPage> OpenTelnyxPhoneAsync(bool enableBridgedDial = true)
     {
         if (enableBridgedDial)
@@ -152,6 +237,7 @@ public sealed class SoftPhoneBridgedDialTests : SoftPhoneBrowserTest
         }
 
         Server.Provider.BrowserMediaAdapterName = "telnyx-webrtc";
+        Server.Provider.KeepNoMuteState();
 
         var page = await Browser.NewPageAsync(new BrowserNewPageOptions { ViewportSize = DesktopAppViewport });
         await page.AddInitScriptAsync(FakeTelnyxSdk.Script);
@@ -195,6 +281,34 @@ public sealed class SoftPhoneBridgedDialTests : SoftPhoneBrowserTest
         await page.WaitForFunctionAsync(
             "callId => (window.telephonySoftPhone.getInstance().getActiveCalls().find(call => call.callId === callId) || {}).isOnHold === true",
             callId);
+    }
+
+    // The phone shows the call muted, and the agent's microphone is off on the call's leg.
+    private static async Task AssertMutedAsync(IPage page, string callId)
+    {
+        await page.WaitForTimeoutAsync(300);
+        Assert.True(await page.Locator("[data-telephony-unmute]").IsVisibleAsync(), "The phone no longer shows the call muted.");
+        Assert.False(await page.Locator("[data-telephony-mute]").IsVisibleAsync());
+        Assert.True(await page.EvaluateAsync<bool>(
+            "callId => (window.telephonySoftPhone.getInstance().getActiveCalls().find(call => call.callId === callId) || {}).isMuted === true",
+            callId));
+
+        var sending = await page.EvaluateAsync<JsonElement>("legId => window.fakeTelnyx.readSending(legId)", callId);
+        Assert.False(sending.GetProperty("enabled").GetBoolean(), "The agent's microphone is live on a muted call.");
+    }
+
+    // Waits for the phone's own periodic refresh of its active calls to come back.
+    private async Task WaitForActiveCallsRefreshAsync(IPage page)
+    {
+        var lookups = Server.Provider.GetCallLookupRequestCount();
+
+        for (var attempt = 0; attempt < 80 && Server.Provider.GetCallLookupRequestCount() == lookups; attempt++)
+        {
+            await Task.Delay(100);
+        }
+
+        Assert.True(Server.Provider.GetCallLookupRequestCount() > lookups, "The phone never refreshed its calls.");
+        await page.WaitForTimeoutAsync(300);
     }
 
     private static Task<T> LegAsync<T>(IPage page, string legId, string property)

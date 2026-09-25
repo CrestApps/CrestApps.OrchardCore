@@ -76,6 +76,13 @@
     var resolveReportedState = softPhoneModules.resolveReportedState;
     var holdCommandRoute = softPhoneModules.holdCommandRoute;
 
+    var rememberAgentMute = softPhoneModules.rememberAgentMute;
+    var isAgentMuted = softPhoneModules.isAgentMuted;
+    var pruneAgentMutes = softPhoneModules.pruneAgentMutes;
+    var reconcileAgentMute = softPhoneModules.reconcileAgentMute;
+    var muteGroupCallIds = softPhoneModules.muteGroupCallIds;
+    var conferenceMuted = softPhoneModules.conferenceMuted;
+
     var readOfferLegTag = softPhoneModules.readOfferLegTag;
     var classifyOfferLeg = softPhoneModules.classifyOfferLeg;
     var rememberAcceptedOffer = softPhoneModules.rememberAcceptedOffer;
@@ -2699,6 +2706,9 @@
         // Calls the agent put on hold and has not resumed, by call id. With browser audio the hold happens here and
         // the server keeps reporting the call connected, so this, not the server, says whether the call is held.
         var agentHolds = {};
+        // Calls the agent muted and has not unmuted, by call id. With browser audio the mute happens here and the
+        // server keeps reporting the call unmuted, so this, not the server, says whether the agent is muted.
+        var agentMutes = {};
         // The calls as they stood before an active-call lookup replaced them, while that lookup is being applied.
         var callsBeforeLookup = null;
         // Audible inbound-call alert, started/stopped from renderIncoming so an away agent hears a ringing call.
@@ -3389,6 +3399,9 @@
                     return abandon(new Error('No audio track was captured.'));
                 }
 
+                // Muted before it reaches the sender, when the agent is muted.
+                matchMicrophoneToCalls(fresh);
+
                 // Under a live call the sender must take the new track, and a failure there is a failure of the
                 // whole switch: leaving the far end on the old track while the meter shows the new one would be
                 // exactly the lie this replaces. Idle, the swap into the stream below is enough on its own.
@@ -3602,6 +3615,8 @@
             if (fresh && localAudioStream.getAudioTracks().indexOf(fresh) === -1) {
                 localAudioStream.addTrack(fresh);
             }
+
+            matchMicrophoneToCalls(fresh);
 
             if (previousPipeline && previousPipeline !== pipeline) {
                 previousPipeline.dispose();
@@ -4338,9 +4353,24 @@
                 return;
             }
 
-            // The microphone is shared by every call the phone holds -- a call placed from the keypad, and each of the
-            // platform's calls on a leg of its own -- so a report about one call decides it only while that call is
-            // the one the agent is talking on (see soft-phone/keypad-dial.js).
+            var microphoneEnabled = microphoneEnabledAfter(call);
+
+            localAudioStream.getAudioTracks().forEach(function (track) {
+                track.enabled = microphoneEnabled;
+            });
+
+            if (typeof browserAudioSession.handleCallState === 'function') {
+                Promise.resolve(browserAudioSession.handleCallState(call || null)).catch(function (error) {
+                    showError(error && error.message ? error.message : String(error));
+                });
+            }
+        }
+
+        // Whether the shared microphone should be live after a report about `call`. The microphone is shared by every
+        // call the phone holds -- a call placed from the keypad, and each of the platform's calls on a leg of its own --
+        // so a report about one call decides it only while that call is the one the agent is talking on (see
+        // soft-phone/keypad-dial.js).
+        function microphoneEnabledAfter(call) {
             var others = getActiveCalls().filter(function (active) {
                 return active && (!call || active.callId !== call.callId);
             }).map(function (active) {
@@ -4352,19 +4382,17 @@
                     browserOriginated: !!active.browserOriginated
                 };
             });
-            var microphoneEnabled = sharedMicrophoneEnabled(
+            return sharedMicrophoneEnabled(
                 call ? { callId: call.callId, state: normalizeState(call.state), isMuted: !!call.isMuted, isOnHold: !!call.isOnHold } : null,
                 others,
                 function (entry) { return isAgentHeld(agentHolds, entry.callId); });
+        }
 
-            localAudioStream.getAudioTracks().forEach(function (track) {
-                track.enabled = microphoneEnabled;
-            });
-
-            if (typeof browserAudioSession.handleCallState === 'function') {
-                Promise.resolve(browserAudioSession.handleCallState(call || null)).catch(function (error) {
-                    showError(error && error.message ? error.message : String(error));
-                });
+        // A capture that replaces the send track mid-call starts enabled; left so, a new or revived microphone turned
+        // the agent's voice back on under a mute. It takes the state the calls give it instead.
+        function matchMicrophoneToCalls(track) {
+            if (track && hasLiveCall()) {
+                track.enabled = microphoneEnabledAfter(currentCall);
             }
         }
 
@@ -5716,6 +5744,7 @@
             delete conferenceSelections[callId];
             delete callConnectedAt[callId];
             rememberAgentHold(agentHolds, callId, false);
+            rememberAgentMute(agentMutes, callId, false);
 
             if (currentCall && currentCall.callId === callId) {
                 currentCall = getActiveCalls()[0] || null;
@@ -5763,12 +5792,35 @@
             call.isOnHold = outcome.isOnHold;
         }
 
+        // Whether muting a call is done by this browser -- it disables the microphone it sends -- so the provider cannot
+        // see it: a call placed here, or any call whose audio is in the browser.
+        function muteIsPerformedHere(call) {
+            return !!(call && call.browserOriginated) || holdIsPerformedHere();
+        }
+
+        // Applies the agent's own mute to a report of a call, so a report that the call is unmuted -- which is every
+        // report once the provider never saw the mute -- does not turn the agent's microphone back on (see
+        // soft-phone/agent-mute.js).
+        function applyAgentMute(call) {
+            var agentMuted = isAgentMuted(agentMutes, call.callId);
+            var outcome = reconcileAgentMute(call.isMuted, agentMuted, muteIsPerformedHere(call));
+
+            if (outcome.isMuted !== !!call.isMuted && agentMuted) {
+                reportDiagnostic('info', 'agent-mute-kept',
+                    'A report that the call is unmuted did not end the mute the agent placed.', call.callId);
+            }
+
+            rememberAgentMute(agentMutes, call.callId, outcome.agentMuted);
+            call.isMuted = outcome.isMuted;
+        }
+
         function upsertActiveCall(call, select) {
             if (!call || !call.callId) {
                 return;
             }
 
             applyAgentHold(call);
+            applyAgentMute(call);
 
             var stateName = normalizeState(call.state);
 
@@ -6572,6 +6624,7 @@
 
             // A held call the server no longer reports is over; its hold goes with it.
             pruneAgentHolds(agentHolds, Object.keys(activeCalls));
+            pruneAgentMutes(agentMutes, Object.keys(activeCalls));
 
             currentCall = previousCallId && activeCalls[previousCallId]
                 ? activeCalls[previousCallId]
@@ -6900,40 +6953,55 @@
             setCurrentCallHold(false);
         }
 
-        function mute() {
+        // Mutes or unmutes the agent on the call shown -- and, in a conference, on every call of it, since the agent speaks
+        // into all of them through one microphone. Where the mute happens in this browser it is remembered and applied
+        // before the server is told, so no report that crosses the command, or follows it, can undo it
+        // (see soft-phone/agent-mute.js).
+        function setCurrentCallMute(muted) {
+            if (!currentCall) {
+                return;
+            }
+
             var controller = currentBrowserController();
+            var local = !!controller || muteIsPerformedHere(currentCall);
+
+            if (local) {
+                muteGroupCallIds(getActiveCalls(), currentCall).forEach(function (callId) {
+                    rememberAgentMute(agentMutes, callId, muted);
+
+                    if (activeCalls[callId]) {
+                        activeCalls[callId].isMuted = muted;
+                    }
+                });
+
+                currentCall.isMuted = muted;
+            }
 
             if (controller) {
-                controller.setMute(true);
-                currentCall.isMuted = true;
+                controller.setMute(muted);
                 render();
 
                 return;
             }
 
+            if (local) {
+                render();
+                notifyBrowserAudio(currentCall);
+            }
+
             var call = currentCallReference();
 
             if (call) {
-                invoke('Mute', call);
+                invoke(muted ? 'Mute' : 'Unmute', call).catch(function () { });
             }
         }
 
+        function mute() {
+            setCurrentCallMute(true);
+        }
+
         function unmute() {
-            var controller = currentBrowserController();
-
-            if (controller) {
-                controller.setMute(false);
-                currentCall.isMuted = false;
-                render();
-
-                return;
-            }
-
-            var call = currentCallReference();
-
-            if (call) {
-                invoke('Unmute', call);
-            }
+            setCurrentCallMute(false);
         }
 
         function transfer() {
@@ -6987,6 +7055,8 @@
             // Adding to a running conference names it, so the provider joins the new calls to it rather than making a
             // second one from its first participant.
             var request = { callIds: callIds };
+            // The call the agent is talking on as they merge: the conference carries on muted or not as it was.
+            var talkingCallId = currentCallId();
 
             if (plan.addsToConference && plan.conferenceName) {
                 request.conferenceName = plan.conferenceName;
@@ -7022,6 +7092,20 @@
                     call.metadata.conferencePrimaryCallId = conference.primaryCallId;
                     call.metadata.conferenceName = conference.conferenceName;
                 });
+
+                // One microphone speaks into every call of the conference, so they are all muted or none is; a mute
+                // performed here is remembered for each, so a report about any one of them cannot undo it.
+                if (holdIsPerformedHere()) {
+                    var muted = conferenceMuted(conference.callIds, agentMutes, talkingCallId);
+
+                    conference.callIds.forEach(function (callId) {
+                        rememberAgentMute(agentMutes, callId, muted);
+
+                        if (activeCalls[callId]) {
+                            activeCalls[callId].isMuted = muted;
+                        }
+                    });
+                }
 
                 // The agent hears the conference on these calls' legs: whichever was held here is taken off hold -- its
                 // comfort tone stopped and the far end's audio unmuted -- on the leg that carries it.
@@ -8510,6 +8594,7 @@
                         });
 
                         pruneAgentHolds(agentHolds, Object.keys(activeCalls));
+                        pruneAgentMutes(agentMutes, Object.keys(activeCalls));
 
                         currentCall = getActiveCalls()[0] || null;
                         incomingHandled = false;

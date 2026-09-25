@@ -39,6 +39,7 @@ public sealed class InMemoryTelephonyProvider :
     private volatile bool _attendedTransfer;
     private volatile bool _bridgedDial;
     private volatile bool _bridgeUnavailable;
+    private volatile bool _muteIsLocal;
     private DialRequest _lastDial;
     private SendDigitsRequest _lastDigits;
 
@@ -73,6 +74,16 @@ public sealed class InMemoryTelephonyProvider :
     {
         _bridgedDial = true;
         _bridgeUnavailable = unavailable;
+    }
+
+    /// <summary>
+    /// Has the provider mute the way Telnyx does for a call whose audio is in the browser: the Mute and Unmute commands
+    /// answer with the call muted or not, but the provider keeps nothing, so every later report of the call -- a state
+    /// push, the phone's periodic refresh -- says it is unmuted.
+    /// </summary>
+    public void KeepNoMuteState()
+    {
+        _muteIsLocal = true;
     }
 
     /// <summary>
@@ -197,12 +208,37 @@ public sealed class InMemoryTelephonyProvider :
 
     public Task<TelephonyResult> MuteAsync(CallReference call, CancellationToken cancellationToken = default)
     {
-        return Update(call?.CallId, c => c.IsMuted = true);
+        return _muteIsLocal ? Echo(call?.CallId, isMuted: true) : Update(call?.CallId, c => c.IsMuted = true);
     }
 
     public Task<TelephonyResult> UnmuteAsync(CallReference call, CancellationToken cancellationToken = default)
     {
-        return Update(call?.CallId, c => c.IsMuted = false);
+        return _muteIsLocal ? Echo(call?.CallId, isMuted: false) : Update(call?.CallId, c => c.IsMuted = false);
+    }
+
+    // Answers a mute command with the call as the command leaves it, keeping nothing (see KeepNoMuteState).
+    private Task<TelephonyResult> Echo(string callId, bool isMuted)
+    {
+        if (callId is null || !_calls.TryGetValue(callId, out var call))
+        {
+            return Task.FromResult(TelephonyResult.Failed("Call not found."));
+        }
+
+        _latestCall = call;
+
+        return Task.FromResult(TelephonyResult.Success(new TelephonyCall
+        {
+            CallId = call.CallId,
+            From = call.From,
+            To = call.To,
+            State = call.State,
+            Direction = call.Direction,
+            IsMuted = isMuted,
+            IsOnHold = call.IsOnHold,
+            ProviderName = call.ProviderName,
+            StartedUtc = call.StartedUtc,
+            Metadata = new Dictionary<string, object>(call.Metadata ?? new Dictionary<string, object>()),
+        }));
     }
 
     public Task<TelephonyResult> TransferAsync(TransferRequest request, CancellationToken cancellationToken = default)
