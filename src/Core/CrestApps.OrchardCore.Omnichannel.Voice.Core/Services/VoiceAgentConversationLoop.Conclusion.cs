@@ -198,15 +198,22 @@ public sealed partial class VoiceAgentConversationLoop
         }
 
         // Decide the disposition and summary from the (read-only) analysis before touching the activity.
-        // A call nobody spoke on is not the model's to judge, and takes the outcome that tries again later.
-        var disposition = hasConversation
-            ? VoiceCallConclusionPolicy.ChooseDisposition(dispositions, result?.DispositionId)
-            : VoiceCallConclusionPolicy.ChooseUnansweredDisposition(dispositions, allActions, activity.SubjectContentType);
+        // A call nobody spoke on is not the model's to judge, and takes the outcome that tries again later. Nor is
+        // one whose assistant lost its session partway through: the conversation was cut short by us.
+        var sessionLost = activity.TryGet<AIVoiceSessionLost>(out _);
+
+        var disposition = !hasConversation
+            ? VoiceCallConclusionPolicy.ChooseUnansweredDisposition(dispositions, allActions, activity.SubjectContentType)
+            : sessionLost
+                ? VoiceCallConclusionPolicy.ChooseSessionLostDisposition(dispositions, allActions, activity.SubjectContentType, result?.DispositionId)
+                : VoiceCallConclusionPolicy.ChooseDisposition(dispositions, result?.DispositionId);
         var dispositionId = disposition?.ItemId;
 
         var notes = reachedVoicemail
             ? VoiceCallConclusionPolicy.VoicemailNote
-            : VoiceCallConclusionPolicy.ResolveNotes(hasConversation, result?.Summary);
+            : sessionLost
+                ? VoiceCallConclusionPolicy.ResolveSessionLostNotes(hasConversation, result?.Summary)
+                : VoiceCallConclusionPolicy.ResolveNotes(hasConversation, result?.Summary);
 
         // Terminal write. Reload the activity fresh (the analysis above ran a slow LLM call, during which the row
         // may have moved on) and apply the conclusion. The answered call was advanced to InProgress, which keeps
@@ -227,6 +234,11 @@ public sealed partial class VoiceAgentConversationLoop
         // dispositioned without notes: the notes fall back to a default line when the model returns no summary.
         concluded.Notes = notes;
         concluded.DispositionId = dispositionId;
+
+        if (sessionLost)
+        {
+            concluded.TerminalReasonCode = VoiceCallConclusionPolicy.SessionLostReasonCode;
+        }
 
         // Gated subject write-back: only when the inventory-load guard allowed it and the model returned values for
         // known fields. Each value is written into the field's real structure (a TextField's Text property) rather

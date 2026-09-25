@@ -74,7 +74,7 @@ public sealed partial class RealtimeVoiceConversationRunner
 
     private async Task PumpCallerAudioAsync(
         IContactCenterVoiceMediaSession media,
-        IRealtimeConversation conversation,
+        LiveConversation live,
         RealtimeVoiceConversationContext context,
         AssistantBargeIn bargeIn,
         CancellationToken cancellationToken)
@@ -109,10 +109,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                     bargeIn.CallerTalkingOver(now);
                 }
 
-                foreach (var chunk in released)
-                {
-                    await conversation.SendAudioAsync(chunk, cancellationToken);
-                }
+                await SendToModelAsync(live, released, context, cancellationToken);
 
                 if (guard.Openings > openingsLogged)
                 {
@@ -146,6 +143,41 @@ public sealed partial class RealtimeVoiceConversationRunner
     }
 
     /// <summary>
+    /// Sends the caller's audio to whichever session is carrying the call.
+    /// </summary>
+    /// <remarks>
+    /// A send that fails means the session's socket has gone, not the caller: the line is still delivering their
+    /// voice. It used to end this pump, and with it the call. Now the session is marked dead so it can be replaced,
+    /// and the caller's audio keeps being read. While a replacement opens there is nowhere to send it, so it is not.
+    /// </remarks>
+    private async Task SendToModelAsync(
+        LiveConversation live,
+        List<ReadOnlyMemory<byte>> released,
+        RealtimeVoiceConversationContext context,
+        CancellationToken cancellationToken)
+    {
+        var conversation = live.Current;
+
+        if (conversation is null || live.Faulted)
+        {
+            return;
+        }
+
+        try
+        {
+            foreach (var chunk in released)
+            {
+                await conversation.SendAudioAsync(chunk, cancellationToken);
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "The caller's audio could not be sent to the realtime session on activity '{ActivityId}'; the session is treated as lost.", context.Activity?.ItemId.SanitizeLogValue());
+            live.Fault(conversation);
+        }
+    }
+
+    /// <summary>
     /// Records what the echo guard held back on this call, so its barge-in level can be checked against real
     /// lines rather than guessed at.
     /// </summary>
@@ -165,7 +197,9 @@ public sealed partial class RealtimeVoiceConversationRunner
             guard.Openings);
     }
 
-    private async Task PumpAssistantAudioAsync(
+    // Returns whether the session was lost: its stream ended, failed, or reported an error it cannot continue from,
+    // while nothing had asked it to stop. False when it stopped because the call is ending.
+    private async Task<bool> PumpAssistantAudioAsync(
         IContactCenterVoiceMediaSession media,
         IRealtimeConversation conversation,
         RealtimeVoiceConversationContext context,
@@ -174,6 +208,9 @@ public sealed partial class RealtimeVoiceConversationRunner
         CancellationToken cancellationToken)
     {
         var assistantText = new System.Text.StringBuilder();
+
+        // Errors in a row with nothing else between them. One is a refusal; a run of them is a session that is gone.
+        var consecutiveErrors = 0;
 
         // Set once the assistant is finished talking for good, and cleared the moment the customer speaks again.
         var goodbyeSaid = false;
@@ -235,6 +272,8 @@ public sealed partial class RealtimeVoiceConversationRunner
                     Volatile.Write(ref requestsSeen, requests);
                     OnClosingRequested();
                 }
+
+                consecutiveErrors = conversationEvent.Type == RealtimeConversationEventType.Error ? consecutiveErrors + 1 : 0;
 
                 if (conversationEvent.Type is not RealtimeConversationEventType.AssistantAudioDelta
                                             and not RealtimeConversationEventType.AssistantTranscriptDelta &&
@@ -412,23 +451,30 @@ public sealed partial class RealtimeVoiceConversationRunner
                         break;
 
                     case RealtimeConversationEventType.Error:
-                        _meter?.Failed();
-                        _logger.LogError(
-                            "A realtime voice session reported an error on activity '{ActivityId}': {Error}",
-                            context.Activity?.ItemId.SanitizeLogValue(),
-                            conversationEvent.ErrorMessage.SanitizeLogValue());
+                        // Most provider errors are a refusal of one request and leave the session as it was. Live,
+                        // treating every one as the end of the call turned a refused truncation into dead air.
+                        if (!await RideOutErrorAsync(conversation, bargeIn, conversationEvent.ErrorMessage, consecutiveErrors, activityId, cancellationToken))
+                        {
+                            return true;
+                        }
 
-                        return;
+                        break;
                 }
             }
+
+            // The stream ended with nothing having asked it to: the provider closed the session.
+            return !cancellationToken.IsCancellationRequested;
         }
         catch (OperationCanceledException)
         {
-            // The call ended. Nothing to report.
+            // The call ended, or the session was found dead elsewhere. The caller decides which.
+            return false;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "The realtime voice session ended unexpectedly.");
+            _logger.LogWarning(ex, "The realtime voice session on activity '{ActivityId}' ended unexpectedly.", activityId);
+
+            return !cancellationToken.IsCancellationRequested;
         }
     }
 

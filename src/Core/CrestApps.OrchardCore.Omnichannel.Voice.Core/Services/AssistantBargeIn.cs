@@ -48,6 +48,7 @@ internal sealed class AssistantBargeIn
     private readonly List<QueuedSpeech> _queued = [];
     private readonly HashSet<string> _interruptedResponses = new(StringComparer.Ordinal);
     private readonly HashSet<string> _interruptedItems = new(StringComparer.Ordinal);
+    private readonly List<AssistantAudioTruncation> _sent = [];
 
     private long _callerTalkingOverTicks;
     private bool _holdingUnnamedSpeech;
@@ -156,15 +157,67 @@ internal sealed class AssistantBargeIn
                 continue;
             }
 
-            var heard = speech.ItemOffsetTicks + Math.Max(0, nowTicks - speech.StartsTicks);
+            // Never past the end of what was delivered for the item. The provider refuses a cut beyond the audio
+            // it holds for an item, and a refusal used to end the call.
+            var delivered = DeliveredTicks(speech.ItemId);
+            var heard = Math.Min(delivered, speech.ItemOffsetTicks + Math.Max(0, nowTicks - speech.StartsTicks));
 
-            truncations.Add(new AssistantAudioTruncation(speech.ItemId, (int)(heard / TimeSpan.TicksPerMillisecond)));
+            truncations.Add(new AssistantAudioTruncation(
+                speech.ItemId,
+                (int)(heard / TimeSpan.TicksPerMillisecond),
+                (int)(delivered / TimeSpan.TicksPerMillisecond)));
         }
 
         _queued.Clear();
         _holdingUnnamedSpeech = true;
 
+        _sent.Clear();
+        _sent.AddRange(truncations);
+
         return truncations;
+    }
+
+    /// <summary>
+    /// Takes back the cut that asked for <paramref name="requestedMilliseconds"/>, once the provider has refused it.
+    /// </summary>
+    /// <remarks>
+    /// The provider's refusal names only the two lengths, not the item, so the item is found by what was asked for.
+    /// Each cut is handed back at most once: a corrected cut that is refused again is not retried.
+    /// </remarks>
+    /// <param name="requestedMilliseconds">The cut the provider refused, as it quoted it.</param>
+    /// <param name="truncation">The cut that was refused.</param>
+    public bool TryTakeRefused(int requestedMilliseconds, out AssistantAudioTruncation truncation)
+    {
+        var index = _sent.FindIndex(sent => sent.AudioEndMilliseconds == requestedMilliseconds);
+
+        if (index < 0)
+        {
+            truncation = default;
+
+            return false;
+        }
+
+        truncation = _sent[index];
+        _sent.RemoveAt(index);
+
+        return true;
+    }
+
+    // How much of an item's audio has been delivered: the end of its furthest piece still on the line, or, once it
+    // has all played, everything recorded for it.
+    private long DeliveredTicks(string itemId)
+    {
+        var delivered = string.Equals(itemId, _currentItemId, StringComparison.Ordinal) ? _currentItemQueuedTicks : 0;
+
+        foreach (var speech in _queued)
+        {
+            if (string.Equals(speech.ItemId, itemId, StringComparison.Ordinal))
+            {
+                delivered = Math.Max(delivered, speech.ItemOffsetTicks + (speech.EndsTicks - speech.StartsTicks));
+            }
+        }
+
+        return delivered;
     }
 
     /// <summary>

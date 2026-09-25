@@ -50,10 +50,11 @@ public sealed class RealtimeCallCompletionRunner : IRealtimeCallCompletionRunner
         if (_logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation(
-                "Finishing automated call for activity '{ActivityId}' off the request thread (handoff requested: {HandoffRequested}, end requested: {EndCallRequested}).",
+                "Finishing automated call for activity '{ActivityId}' off the request thread (handoff requested: {HandoffRequested}, end requested: {EndCallRequested}, session lost: {SessionLost}).",
                 completion.ActivityId.SanitizeLogValue(),
                 completion.HandoffRequested,
-                completion.EndCallRequested);
+                completion.EndCallRequested,
+                completion.SessionLost);
         }
 
         var scope = await _shellHost.GetScopeAsync(_shellSettings);

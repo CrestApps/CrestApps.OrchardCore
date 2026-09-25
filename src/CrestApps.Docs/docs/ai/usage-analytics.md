@@ -93,7 +93,7 @@ zeros it never measured.
 | **Voicemail** | The call reached a voicemail. |
 | **NoAnswer** | Nobody answered. |
 | **CallerHungUp** | The caller hung up before the assistant ended the conversation. |
-| **Failed** | The call failed, or the live session reported an error. |
+| **Failed** | The call failed, or the live session reported an error it could not continue from, or was lost and could not be replaced. An error that only refuses one request, such as trimming a line the caller talked over, does not fail the session. |
 
 ### Tokens
 

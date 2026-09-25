@@ -62,7 +62,7 @@ public sealed class AssistantBargeInTests
 
         // Assert
         Assert.Equal(
-            [new AssistantAudioTruncation("item-1", 400), new AssistantAudioTruncation("item-2", 0)],
+            [new AssistantAudioTruncation("item-1", 400, 1_000), new AssistantAudioTruncation("item-2", 0, 1_000)],
             truncations);
     }
 
@@ -78,7 +78,7 @@ public sealed class AssistantBargeInTests
         var truncations = bargeIn.Interrupt(_start + Ms(1_300));
 
         // Assert
-        Assert.Equal([new AssistantAudioTruncation("item-2", 300)], truncations);
+        Assert.Equal([new AssistantAudioTruncation("item-2", 300, 1_000)], truncations);
     }
 
     [Fact]
@@ -151,6 +151,40 @@ public sealed class AssistantBargeInTests
 
         // Long after, a new speech start is not this caller's interruption any more.
         Assert.False(bargeIn.IsCallerTalkingOver(_start + window + Ms(1)));
+    }
+
+    [Fact]
+    public void ACut_IsNeverPastTheEndOfWhatWasDeliveredForTheLine()
+    {
+        // Arrange
+        // A line delivered in two pieces with a gap between them, interrupted near the end of the second.
+        var bargeIn = new AssistantBargeIn();
+        bargeIn.Queued("response-1", "item-1", startsTicks: _start, Bytes(3_000), nowTicks: _start);
+        bargeIn.Queued("response-1", "item-1", startsTicks: _start + Ms(3_500), Bytes(2_150), nowTicks: _start + Ms(3_500));
+
+        // Act
+        var truncation = Assert.Single(bargeIn.Interrupt(_start + Ms(5_600)));
+
+        // Assert
+        Assert.Equal(5_150, truncation.DeliveredMilliseconds);
+        Assert.InRange(truncation.AudioEndMilliseconds, 0, truncation.DeliveredMilliseconds);
+    }
+
+    [Fact]
+    public void ACutTheProviderRefused_IsHandedBackOnce_ByTheLengthItAskedFor()
+    {
+        // Arrange
+        // The refusal names only the two lengths ("Audio content of 5150ms is already shorter than 5300ms"), so
+        // the cut is found by what it asked for. Handed back once, so a correction refused again is not retried.
+        var bargeIn = new AssistantBargeIn();
+        bargeIn.Queued("response-1", "item-1", startsTicks: _start, Bytes(1_000), nowTicks: _start);
+        var sent = Assert.Single(bargeIn.Interrupt(_start + Ms(400)));
+
+        // Act & Assert
+        Assert.False(bargeIn.TryTakeRefused(sent.AudioEndMilliseconds + 1, out _));
+        Assert.True(bargeIn.TryTakeRefused(sent.AudioEndMilliseconds, out var refused));
+        Assert.Equal(sent, refused);
+        Assert.False(bargeIn.TryTakeRefused(sent.AudioEndMilliseconds, out _));
     }
 
     private static int Bytes(int milliseconds)

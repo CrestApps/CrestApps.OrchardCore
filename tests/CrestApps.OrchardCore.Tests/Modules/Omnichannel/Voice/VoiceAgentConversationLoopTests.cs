@@ -1375,7 +1375,8 @@ public sealed partial class VoiceAgentConversationLoopTests
                 Mock.Of<ILiquidTemplateManager>(),
                 Mock.Of<IContentManager>(),
                 Clock,
-                NullLogger<VoiceAgentConversationLoop>.Instance);
+                NullLogger<VoiceAgentConversationLoop>.Instance,
+                new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<VoiceAgentConversationLoop>());
         }
 
         /// <summary>

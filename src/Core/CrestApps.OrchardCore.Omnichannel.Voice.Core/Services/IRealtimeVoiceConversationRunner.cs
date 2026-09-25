@@ -138,6 +138,17 @@ public sealed class RealtimeVoiceConversationContext
     public string ContactName { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the live session was lost while the caller was still on the line,
+    /// and could not be brought back.
+    /// </summary>
+    /// <remarks>
+    /// Set by the runner, read by whoever held the call. A session that ends this way has decided nothing — no
+    /// transfer, no goodbye — so without it the caller is left on an open line with nobody talking to them. Live,
+    /// one provider error ended the session and the caller sat in fifty seconds of silence before hanging up.
+    /// </remarks>
+    public bool SessionLost { get; set; }
+
+    /// <summary>
     /// Gets or sets what the session measures from its audio for the usage report: started once the live session
     /// is holding the call, and stopped when it ends.
     /// </summary>

@@ -159,7 +159,8 @@ public sealed partial class VoiceAgentConversationLoop
     /// </remarks>
     /// <param name="activity">The call the session was held for.</param>
     /// <param name="voiceEvent">The provider event the session was started from.</param>
-    private async Task FinishTheCallElsewhereAsync(OmnichannelActivity activity, VoiceAgentEvent voiceEvent)
+    /// <param name="sessionLost">Whether the session was lost with the caller still on the line.</param>
+    private async Task FinishTheCallElsewhereAsync(OmnichannelActivity activity, VoiceAgentEvent voiceEvent, bool sessionLost)
     {
         // Read here, while the turns that recorded them are still this scope's. Everything after this point runs
         // somewhere else and can carry nothing but plain values.
@@ -169,8 +170,10 @@ public sealed partial class VoiceAgentConversationLoop
         // This runs the moment the session is over, so now is when the assistant stopped talking to the caller.
         var sessionEndedUtc = _clock.UtcNow;
 
-        // The caller hung up, or the session never got far enough to decide anything. There is nothing to finish.
-        if (!handoffRequested && !endCallRequested)
+        // The caller hung up, or the session never got far enough to decide anything. There is nothing to finish --
+        // unless the session was lost under a caller who is still there, which is the one case where deciding
+        // nothing means somebody else has to: live, nobody did, and the caller sat in silence until they gave up.
+        if (!handoffRequested && !endCallRequested && !sessionLost)
         {
             return;
         }
@@ -185,6 +188,7 @@ public sealed partial class VoiceAgentConversationLoop
                 HandoffRequested = handoffRequested,
                 EndCallRequested = endCallRequested,
                 EndCallReason = _endCallTurn.Reason,
+                SessionLost = sessionLost,
                 SessionEndedUtc = sessionEndedUtc,
             });
         }
@@ -252,6 +256,15 @@ public sealed partial class VoiceAgentConversationLoop
         if (completion.HandoffRequested)
         {
             await PerformVoiceHandoffAsync(voiceEvent, media, activity, completion.SessionEndedUtc ?? _clock.UtcNow, cancellationToken);
+
+            return;
+        }
+
+        // The session was lost before the conversation finished, and the caller is still waiting for somebody to
+        // say something. A session lost after the goodbye is just a call that is over, and is hung up below.
+        if (completion.SessionLost && !completion.EndCallRequested)
+        {
+            await TakeOverAfterALostSessionAsync(voiceEvent, media, activity, completion.SessionEndedUtc ?? _clock.UtcNow, cancellationToken);
 
             return;
         }

@@ -32,6 +32,17 @@ public static class VoiceCallConclusionPolicy
     public const string VoicemailNote = "The automated call reached voicemail and left a message; nobody spoke with the customer.";
 
     /// <summary>
+    /// The note written for a call whose assistant lost its live session partway through the conversation.
+    /// </summary>
+    public const string SessionLostNote = "The automated assistant lost its connection partway through the call, so the conversation did not finish.";
+
+    /// <summary>
+    /// The terminal reason recorded on a call whose assistant lost its live session, so reports can tell a call
+    /// our side dropped from one the customer ended.
+    /// </summary>
+    public const string SessionLostReasonCode = "ai_session_lost";
+
+    /// <summary>
     /// Whether this call's outcome is the automation's to write.
     /// </summary>
     /// <remarks>
@@ -131,6 +142,56 @@ public static class VoiceCallConclusionPolicy
             return null;
         }
 
+        return FindRetriedDisposition(offered, subjectActions, subjectContentType)
+            ?? ChooseDisposition(offered, modelChoiceId: null);
+    }
+
+    /// <summary>
+    /// The disposition to record for a call whose assistant lost its live session partway through.
+    /// </summary>
+    /// <remarks>
+    /// The conversation was cut short by us, not ended by the customer, so what the review makes of the transcript
+    /// is not an outcome: live, it read the cut-off call as a customer who never engaged and chose "Done", and the
+    /// contact was never tried again. The call takes the outcome the subject's try-again action is wired to. A
+    /// subject with no such action has nothing better to offer, and the review's choice stands.
+    /// </remarks>
+    /// <param name="choices">The dispositions the call may be concluded as.</param>
+    /// <param name="subjectActions">Every configured subject action.</param>
+    /// <param name="subjectContentType">The subject content type of the call being concluded.</param>
+    /// <param name="modelChoiceId">The identifier the review returned, if it ran at all.</param>
+    public static OmnichannelDisposition ChooseSessionLostDisposition(
+        IEnumerable<OmnichannelDisposition> choices,
+        IEnumerable<SubjectAction> subjectActions,
+        string subjectContentType,
+        string modelChoiceId)
+    {
+        var offered = choices as IList<OmnichannelDisposition> ?? choices?.ToList();
+
+        if (offered is null || offered.Count == 0)
+        {
+            return null;
+        }
+
+        return FindRetriedDisposition(offered, subjectActions, subjectContentType)
+            ?? ChooseDisposition(offered, modelChoiceId);
+    }
+
+    /// <summary>
+    /// The notes to record against a call whose assistant lost its live session partway through.
+    /// </summary>
+    /// <param name="hasConversation">Whether anything was said, from <see cref="HasConversation"/>.</param>
+    /// <param name="modelSummary">What the review wrote, when it ran and produced anything.</param>
+    public static string ResolveSessionLostNotes(bool hasConversation, string modelSummary)
+        => !hasConversation || string.IsNullOrWhiteSpace(modelSummary)
+            ? SessionLostNote
+            : SessionLostNote + " " + modelSummary.Trim();
+
+    // The offered disposition the subject's try-again action is wired to, or null when it has none.
+    private static OmnichannelDisposition FindRetriedDisposition(
+        IList<OmnichannelDisposition> offered,
+        IEnumerable<SubjectAction> subjectActions,
+        string subjectContentType)
+    {
         var retriedDispositionIds = (subjectActions ?? [])
             .Where(action => action is not null &&
                 string.Equals(action.Source, OmnichannelConstants.ActionTypes.TryAgain, StringComparison.Ordinal) &&
@@ -139,8 +200,7 @@ public static class VoiceCallConclusionPolicy
             .Select(action => action.DispositionId)
             .ToHashSet(StringComparer.Ordinal);
 
-        return offered.FirstOrDefault(disposition => disposition is not null && retriedDispositionIds.Contains(disposition.ItemId))
-            ?? ChooseDisposition(offered, modelChoiceId: null);
+        return offered.FirstOrDefault(disposition => disposition is not null && retriedDispositionIds.Contains(disposition.ItemId));
     }
 
     /// <summary>

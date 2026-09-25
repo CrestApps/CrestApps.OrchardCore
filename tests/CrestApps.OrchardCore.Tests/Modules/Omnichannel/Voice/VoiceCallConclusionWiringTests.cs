@@ -228,6 +228,50 @@ public sealed class VoiceCallConclusionWiringTests
     }
 
     [Fact]
+    public async Task ACallWhoseAssistantLostItsSession_TriesAgain_RatherThanBeingConcludedDone()
+    {
+        // Arrange
+        // Live: the assistant's session died on a provider error, the caller sat in silence and hung up, and the
+        // review read the cut-off transcript as a customer who never engaged and chose "Done". The contact was
+        // never called again, although nothing about the call had been their doing.
+        var harness = new ConclusionHarness();
+        harness.Activity.Put(new AIVoiceSessionLost { LostUtc = _now });
+        harness.Offers("disposition-done", "Done");
+        harness.Offers("disposition-no-answer", "No answer", OmnichannelConstants.ActionTypes.TryAgain);
+        harness.ModelReturns(dispositionId: "disposition-done", summary: "The customer did not engage and ended the call.");
+
+        // Act
+        await harness.ConcludeAsync();
+
+        // Assert
+        Assert.Equal("disposition-no-answer", harness.WrittenActivity.DispositionId);
+        Assert.Equal("disposition-no-answer", Assert.Single(harness.Executor.Runs).Disposition.ItemId);
+        Assert.StartsWith(VoiceCallConclusionPolicy.SessionLostNote, harness.WrittenActivity.Notes);
+        Assert.Equal(VoiceCallConclusionPolicy.SessionLostReasonCode, harness.WrittenActivity.TerminalReasonCode);
+    }
+
+    [Fact]
+    public async Task ACallWhoseAssistantLostItsSession_WithNothingThatTriesAgain_KeepsTheReviewsOutcome()
+    {
+        // Arrange
+        // A subject with no try-again outcome has nothing better to offer; the review's choice stands, and the
+        // notes still say the conversation was cut short so nobody reads it as the customer's doing.
+        var harness = new ConclusionHarness();
+        harness.Activity.Put(new AIVoiceSessionLost { LostUtc = _now });
+        harness.Offers("disposition-done", "Done");
+        harness.Offers("disposition-interested", "Interested");
+        harness.ModelReturns(dispositionId: "disposition-interested", summary: "The customer wants a quote.");
+
+        // Act
+        await harness.ConcludeAsync();
+
+        // Assert
+        Assert.Equal("disposition-interested", harness.WrittenActivity.DispositionId);
+        Assert.Contains("The customer wants a quote.", harness.WrittenActivity.Notes);
+        Assert.StartsWith(VoiceCallConclusionPolicy.SessionLostNote, harness.WrittenActivity.Notes);
+    }
+
+    [Fact]
     public async Task ACallTheProviderTookForAMachine_WithNoConversation_TriesAgain()
     {
         // Arrange
@@ -612,7 +656,8 @@ public sealed class VoiceCallConclusionWiringTests
                 Mock.Of<ILiquidTemplateManager>(),
                 ContentManager.Object,
                 new StubClock(_now),
-                NullLogger<VoiceAgentConversationLoop>.Instance);
+                NullLogger<VoiceAgentConversationLoop>.Instance,
+                new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<VoiceAgentConversationLoop>());
         }
 
         public OmnichannelActivity Activity { get; }

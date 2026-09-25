@@ -19,6 +19,7 @@ using Fluid;
 using Fluid.Values;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.Entities;
@@ -72,6 +73,8 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
+    internal readonly IStringLocalizer S;
+
     public VoiceAgentConversationLoop(
         IOmnichannelActivityStore activityStore,
         IAIChatSessionManager chatSessionManager,
@@ -95,7 +98,8 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         ILiquidTemplateManager liquidTemplateManager,
         IContentManager contentManager,
         IClock clock,
-        ILogger<VoiceAgentConversationLoop> logger)
+        ILogger<VoiceAgentConversationLoop> logger,
+        IStringLocalizer<VoiceAgentConversationLoop> stringLocalizer)
     {
         _activityStore = activityStore;
         _chatSessionManager = chatSessionManager;
@@ -120,6 +124,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         _contentManager = contentManager;
         _clock = clock;
         _logger = logger;
+        S = stringLocalizer;
     }
 
     /// <inheritdoc/>
@@ -238,10 +243,11 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
 
             var sessionHeldTheCall = false;
             var meter = new AIVoiceSessionMeter(measuresCallerSpeech: true);
+            RealtimeVoiceConversationContext realtime = null;
 
             try
             {
-                sessionHeldTheCall = await _realtimeRunner.RunAsync(new RealtimeVoiceConversationContext
+                sessionHeldTheCall = await _realtimeRunner.RunAsync(realtime = new RealtimeVoiceConversationContext
                 {
                     Activity = activity,
                     Profile = profile,
@@ -301,7 +307,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
                 // down with the request -- still fails after the model has told the caller a person is coming and
                 // the tool has recorded it. Leaving that to the success path put the caller on an open, silent
                 // line with nothing queued and nobody coming.
-                await FinishTheCallElsewhereAsync(activity, voiceEvent);
+                await FinishTheCallElsewhereAsync(activity, voiceEvent, sessionLost: realtime?.SessionLost == true);
                 await RecordRealtimeSessionAsync(voiceEvent, meter, realtimeDeploymentName, sessionHeldTheCall);
             }
 
