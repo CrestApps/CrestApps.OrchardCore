@@ -1,0 +1,15 @@
+[
+  {
+    "inputs": [
+      "Assets/js/shared/messaging-state.js",
+      "Assets/js/messaging-workspace.js"
+    ],
+    "output": "wwwroot/scripts/messaging-workspace.js"
+  },
+  {
+    "inputs": [
+      "Assets/js/messaging-contact-picker.js"
+    ],
+    "output": "wwwroot/scripts/messaging-contact-picker.js"
+  }
+]

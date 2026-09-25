@@ -50,8 +50,10 @@ public sealed class CallTopologyAuthorityTests
         Path.Combine("Modules", "CrestApps.OrchardCore.Telnyx"),
         // The SMS Portal reaches Contact Center Core for agent-profile identity, so it can see CallSession and
         // must be covered by the topology-authority gate even though it never touches live call topology.
-        Path.Combine("Core", "CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core"),
-        Path.Combine("Modules", "CrestApps.OrchardCore.Omnichannel.Sms.Portal"),
+        Path.Combine("Core", "CrestApps.OrchardCore.Omnichannel.Messaging.Core"),
+        Path.Combine("Modules", "CrestApps.OrchardCore.Omnichannel.Messaging"),
+        Path.Combine("Core", "CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Core"),
+        Path.Combine("Modules", "CrestApps.OrchardCore.Omnichannel.Messaging.Sms"),
         Path.Combine("Targets", "CrestApps.OrchardCore.Cms.Core.Targets"),
         Path.Combine("Startup", "CrestApps.Aspire.AppHost"),
         Path.Combine("Startup", "CrestApps.OrchardCore.Cms.Web"),

@@ -319,10 +319,12 @@ public sealed partial class ContactCenterOperationalLogPrivacyTests
             Path.Combine(repositoryRoot, "src", "Modules", "CrestApps.OrchardCore.Asterisk"),
             Path.Combine(repositoryRoot, "src", "Modules", "CrestApps.OrchardCore.Dialpad"),
             Path.Combine(repositoryRoot, "src", "Modules", "CrestApps.OrchardCore.Omnichannel.Sms"),
-            // The SMS Portal is where message bodies and contact numbers actually flow, so it is the tree this
-            // guard most needs to cover; it was outside the scan while the automation module was inside it.
-            Path.Combine(repositoryRoot, "src", "Core", "CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core"),
-            Path.Combine(repositoryRoot, "src", "Modules", "CrestApps.OrchardCore.Omnichannel.Sms.Portal"),
+            // The messaging workspace and its SMS channel are where message bodies and contact numbers actually flow,
+            // so they are the trees this guard most needs to cover.
+            Path.Combine(repositoryRoot, "src", "Core", "CrestApps.OrchardCore.Omnichannel.Messaging.Core"),
+            Path.Combine(repositoryRoot, "src", "Modules", "CrestApps.OrchardCore.Omnichannel.Messaging"),
+            Path.Combine(repositoryRoot, "src", "Core", "CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Core"),
+            Path.Combine(repositoryRoot, "src", "Modules", "CrestApps.OrchardCore.Omnichannel.Messaging.Sms"),
             Path.Combine(repositoryRoot, "src", "Core", "CrestApps.OrchardCore.Telnyx.Core"),
             Path.Combine(repositoryRoot, "src", "Modules", "CrestApps.OrchardCore.Telnyx"),
         ];

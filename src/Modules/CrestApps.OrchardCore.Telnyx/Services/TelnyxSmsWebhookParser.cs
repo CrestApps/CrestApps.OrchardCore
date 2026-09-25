@@ -1,5 +1,5 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Models;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 
 namespace CrestApps.OrchardCore.Telnyx.Services;
 
@@ -46,7 +46,7 @@ public sealed class TelnyxSmsWebhookEvent
     /// <summary>
     /// Gets the normalized delivery status for an outbound receipt.
     /// </summary>
-    public SmsDeliveryStatus DeliveryStatus { get; init; }
+    public MessageDeliveryStatus DeliveryStatus { get; init; }
 
     /// <summary>
     /// Gets the provider error code, when the outbound message failed.
@@ -190,14 +190,14 @@ public static class TelnyxSmsWebhookParser
         return null;
     }
 
-    private static SmsDeliveryStatus MapStatus(string status)
+    private static MessageDeliveryStatus MapStatus(string status)
         => status?.ToLowerInvariant() switch
         {
-            "queued" or "sending" or "gw_timeout" => SmsDeliveryStatus.Queued,
-            "sent" or "delivery_unconfirmed" => SmsDeliveryStatus.Sent,
-            "delivered" or "webhook_delivered" or "received" => SmsDeliveryStatus.Delivered,
-            "delivery_failed" or "sending_failed" or "failed" => SmsDeliveryStatus.Failed,
-            "expired" or "rejected" => SmsDeliveryStatus.Undelivered,
-            _ => SmsDeliveryStatus.Sent,
+            "queued" or "sending" or "gw_timeout" => MessageDeliveryStatus.Queued,
+            "sent" or "delivery_unconfirmed" => MessageDeliveryStatus.Sent,
+            "delivered" or "webhook_delivered" or "received" => MessageDeliveryStatus.Delivered,
+            "delivery_failed" or "sending_failed" or "failed" => MessageDeliveryStatus.Failed,
+            "expired" or "rejected" => MessageDeliveryStatus.Undelivered,
+            _ => MessageDeliveryStatus.Sent,
         };
 }

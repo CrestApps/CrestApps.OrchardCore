@@ -99,7 +99,8 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Omnichannel.Managements` | Omnichannel Management | [Management (CRM)](./omnichannel/management) |
 | `CrestApps.OrchardCore.Omnichannel.Sms` | SMS Omnichannel Automation | [SMS Automation](./omnichannel/sms) |
 | `CrestApps.OrchardCore.Omnichannel.ChannelEndpoints` | Omnichannel Channel Endpoints (dependency only) | [Management (CRM)](./omnichannel/management#channel-endpoint) |
-| `CrestApps.OrchardCore.Omnichannel.Sms.Portal` | SMS Portal | [SMS Portal](./omnichannel/sms-portal) |
+| `CrestApps.OrchardCore.Omnichannel.Messaging` | Omnichannel Messaging Workspace | [Messaging Workspace](./omnichannel/messaging-workspace) |
+| `CrestApps.OrchardCore.Omnichannel.Messaging.Sms` | SMS Messaging Channel | [Messaging Workspace](./omnichannel/messaging-workspace#setting-up-sms) |
 | `CrestApps.OrchardCore.ContactCenter` | Contact Center | [Contact Center](./contact-center/) |
 | `CrestApps.OrchardCore.ContactCenter.AgentServices` | Contact Center Agent Services (dependency only) | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
 | `CrestApps.OrchardCore.ContactCenter.Agents` | Contact Center Agents | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
@@ -118,7 +119,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.ContactCenter.BusinessHours` | Contact Center Business Hours | [Business hours and overflow](./contact-center/agents-queues-dialer#business-hours-and-overflow) |
 | `CrestApps.OrchardCore.ContactCenter.ProviderInbox` | Contact Center Provider Webhook Inbox (dependency only) | [Voice routing](./contact-center/voice-routing) |
 | `CrestApps.OrchardCore.ContactCenter.Recording.Core` | Contact Center Recording Governance (dependency only) | [Recording governance](./contact-center/#recording-governance) |
-| `CrestApps.OrchardCore.Omnichannel.Sms.Portal.RoutedDistribution` | SMS Portal Routed Distribution | [SMS Portal](./omnichannel/sms-portal) |
+| `CrestApps.OrchardCore.Omnichannel.Messaging.RoutedDistribution` | Omnichannel Messaging Routed Distribution | [Messaging Workspace](./omnichannel/messaging-workspace) |
 | `CrestApps.OrchardCore.Omnichannel.Voice` | Automated Voice | [Telnyx AI Voice Agent](./telephony/telnyx#telnyx-ai-voice-agent) |
 
 ## Telephony

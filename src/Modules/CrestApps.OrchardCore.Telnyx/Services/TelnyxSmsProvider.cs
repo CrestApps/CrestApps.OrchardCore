@@ -1,7 +1,8 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -53,7 +54,7 @@ public sealed class TelnyxSmsProvider : ISmsProvider, ISmsDispatchProvider
     }
 
     /// <inheritdoc/>
-    public async Task<SmsDispatchResult> DispatchAsync(SmsMessage message, CancellationToken cancellationToken = default)
+    public async Task<MessageDispatchResult> DispatchAsync(SmsMessage message, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(message);
 
@@ -119,7 +120,7 @@ public sealed class TelnyxSmsProvider : ISmsProvider, ISmsDispatchProvider
                 _logger.LogInformation("Telnyx accepted an outbound SMS. Provider message id: {ProviderMessageId}", providerMessageId);
             }
 
-            return SmsDispatchResult.Success(providerMessageId);
+            return MessageDispatchResult.Success(providerMessageId);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
@@ -150,5 +151,5 @@ public sealed class TelnyxSmsProvider : ISmsProvider, ISmsDispatchProvider
     private static string Truncate(string value)
         => string.IsNullOrEmpty(value) || value.Length <= 500 ? value : value[..500];
 
-    private SmsDispatchResult Failed(string message) => SmsDispatchResult.Failed(S[message]);
+    private MessageDispatchResult Failed(string message) => MessageDispatchResult.Failed(S[message]);
 }

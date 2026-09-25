@@ -4,7 +4,8 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Core.Http;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services;
 using CrestApps.OrchardCore.Telnyx.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -111,15 +112,16 @@ internal static class TelnyxSmsWebhookEndpoint
                     messagingEvent.ErrorCode);
             }
 
-            // Delivery receipts update manual SMS conversations, whose tracking service ships with the SMS Portal
-            // feature. Automated-only deployments do not enable it, so resolve it optionally and skip when absent —
+            // Delivery receipts update manual SMS conversations, whose tracking service ships with the messaging
+            // workspace. Automated-only deployments do not enable it, so resolve it optionally and skip when absent —
             // the inbound path above never needs it, which is why this webhook must not hard-depend on it.
-            var conversationService = httpContext.RequestServices.GetService<ISmsConversationService>();
+            var conversationService = httpContext.RequestServices.GetService<IMessagingConversationService>();
 
             if (conversationService is not null)
             {
-                await conversationService.ApplyDeliveryReceiptAsync(new SmsDeliveryReceipt
+                await conversationService.ApplyDeliveryReceiptAsync(new MessageDeliveryReceipt
                 {
+                    Channel = OmnichannelConstants.Channels.Sms,
                     ServiceAddress = messagingEvent.From,
                     ContactAddress = messagingEvent.To,
                     ProviderMessageId = messagingEvent.ProviderMessageId,

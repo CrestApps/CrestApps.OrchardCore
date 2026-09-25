@@ -1,0 +1,47 @@
+@using System.Text.Json
+@model ComposeViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["New conversation"])</h1></zone>
+
+<form method="post" class="no-multisubmit">
+    @Html.ValidationSummary()
+    <input type="hidden" asp-for="Channel" />
+
+    <div class="mb-3">
+        <label asp-for="EndpointId" class="form-label">@T["Send from"]</label>
+        <select asp-for="EndpointId" asp-items="Model.Endpoints" id="endpoint-select" class="selectpicker show-tick" data-live-search="true" data-width="100%" title="@T["Select the channel and address to send from"]"></select>
+        <span class="hint">@T["The address you pick decides the channel the message is sent on."]</span>
+        <span asp-validation-for="EndpointId" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="ContactAddresses" class="form-label">@T["To (contacts)"]</label>
+        <select asp-for="ContactAddresses" id="recipient-select" class="selectpicker show-tick" multiple data-messaging-contact-picker data-search-url="@Url.RouteUrl("MessagingSearchContacts")" data-endpoint-select="#endpoint-select" data-endpoint-channels="@JsonSerializer.Serialize(Model.EndpointChannels)" data-live-search="true" data-width="100%" title="@T["Search contacts by name or address…"]"></select>
+        <span class="hint">@T["Type a name or address to search the contacts reachable on the selected channel, then select one or more."]</span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Recipients" class="form-label">@T["Additional addresses"]</label>
+        <textarea asp-for="Recipients" class="form-control" rows="2" placeholder="@T["One address per line, or comma-separated"]"></textarea>
+        <span class="hint">@T["One recipient starts a 1:1 conversation; multiple recipients start a group (each gets their own private 1:1 thread)."]</span>
+        <span asp-validation-for="Recipients" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Body" class="form-label">@T["Message"]</label>
+        <textarea asp-for="Body" class="form-control" rows="3"></textarea>
+        <span asp-validation-for="Body" class="text-danger"></span>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button class="btn btn-primary" type="submit">@T["Send"]</button>
+            <a class="btn btn-secondary cancel" role="button" asp-route-action="Index">@T["Cancel"]</a>
+        </div>
+    </div>
+</form>
+
+<script asp-src="~/CrestApps.OrchardCore.Omnichannel.Messaging/scripts/messaging-contact-picker.min.js" debug-src="~/CrestApps.OrchardCore.Omnichannel.Messaging/scripts/messaging-contact-picker.js" depends-on="bootstrap-select" at="Foot"></script>

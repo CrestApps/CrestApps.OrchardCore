@@ -3,9 +3,10 @@ using CrestApps.OrchardCore.Dialpad.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 using CrestApps.OrchardCore.Telnyx.Services;
 using Microsoft.Extensions.Logging.Abstractions;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services;
 using Moq;
 using YesSql;
 
