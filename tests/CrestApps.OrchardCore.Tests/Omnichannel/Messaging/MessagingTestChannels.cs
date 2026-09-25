@@ -32,7 +32,7 @@ internal static class MessagingTestChannels
     /// Creates the SMS channel over the specified dispatcher.
     /// </summary>
     public static SmsMessagingChannel Sms(ISmsDispatcher dispatcher, ISession session = null)
-        => new(dispatcher, session ?? Mock.Of<ISession>(), new PassThroughStringLocalizer<SmsMessagingChannel>());
+        => new(new Lazy<ISmsDispatcher>(() => dispatcher), session ?? Mock.Of<ISession>(), new PassThroughStringLocalizer<SmsMessagingChannel>());
 
     /// <summary>
     /// Creates a registry holding only the SMS channel over the specified dispatcher.

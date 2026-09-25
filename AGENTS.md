@@ -319,7 +319,9 @@ tests/
 
 ### Working with Omnichannel Modules
 - **Base Module**: `CrestApps.OrchardCore.Omnichannel` - unified communication layer
-- **SMS Channel**: `CrestApps.OrchardCore.Omnichannel.Sms` - SMS messaging support
+- **SMS Automation**: `CrestApps.OrchardCore.Omnichannel.Sms` - AI-driven automated SMS conversations
+- **Messaging Workspace**: `CrestApps.OrchardCore.Omnichannel.Messaging` - the channel-agnostic human inbox (customer list + a tab per channel). Channels plug in as features by implementing `IMessagingChannel`; never add channel-specific code to the workspace
+- **SMS Messaging Channel**: `CrestApps.OrchardCore.Omnichannel.Messaging.Sms` - SMS as a channel of the messaging workspace (the reference channel)
 - **Event Grid**: `CrestApps.OrchardCore.Omnichannel.EventGrid` - Azure Event Grid integration
 - **Management UI**: `CrestApps.OrchardCore.Omnichannel.Managements` - admin management interface
 
@@ -346,6 +348,10 @@ runtime MCP skills shipped by the `CrestApps.OrchardCore.AI.Mcp` module (which c
 - **Example**: `.agents/skills/crestapps-phone-provider` — how to add a new telephony/phone provider (Twilio,
   Vonage, …) modeled on the Telnyx implementation, covering every telephony/Contact Center/SMS/media/webhook
   capability contract.
+- **Example**: `.agents/skills/crestapps-messaging-channel` — how to add a new messaging channel (Email, WhatsApp,
+  Messenger, …) to the Omnichannel Messaging workspace, modeled on the SMS channel: the `IMessagingChannel`
+  contract, inbound through the durable provider inbox, channel-only inbound rules, delivery receipts, endpoints,
+  wiring, tests and docs.
 
 ### Frontend Development
 - CSS/SCSS files are in individual module `Assets/` directories

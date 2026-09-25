@@ -17,7 +17,7 @@
 
 <zone Name="Title"><h1>@RenderTitleSegments(T["Messaging"])</h1></zone>
 
-<div class="messaging-workspace d-flex border rounded bg-body overflow-hidden"
+<div class="messaging-workspace d-flex gap-3"
      data-messaging-workspace
      data-hub-url="@(Html.SignalRHubUrl<MessagingHub>())"
      data-inbox-url="@Url.Action("InboxList", new { show, channel = inbox.ChannelFilter, page = inbox.Page, selected = inbox.SelectedCustomerKey })"
@@ -29,7 +29,7 @@
      data-new-message-text="@T["New message"]"
      data-view-text="@T["Open conversation"]">
 
-    <aside class="messaging-inbox d-flex flex-column border-end flex-shrink-0 @(thread is null ? string.Empty : "d-none d-md-flex")">
+    <aside class="messaging-inbox messaging-pane d-flex flex-column flex-shrink-0 @(thread is null && Model.Compose is null ? string.Empty : "d-none d-md-flex")">
         <div class="p-2 border-bottom d-flex flex-column gap-2">
             <div class="d-flex gap-1 align-items-center">
                 <div class="has-search flex-grow-1">
@@ -101,8 +101,12 @@
         </div>
     </aside>
 
-    <section class="messaging-thread d-flex flex-column flex-grow-1 overflow-hidden">
-        @if (thread is null)
+    <section class="messaging-thread messaging-pane d-flex flex-column flex-grow-1 overflow-hidden">
+        @if (Model.Compose is not null)
+        {
+            @await Html.PartialAsync("_Compose", Model.Compose)
+        }
+        else if (thread is null)
         {
             <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 text-muted p-4 text-center">
                 <i class="fa-regular fa-comments fa-3x mb-3" aria-hidden="true"></i>
@@ -129,8 +133,18 @@
     }
 
     .messaging-workspace {
-        height: calc(100vh - var(--oc-top-nav-height, 0px) - 8rem);
+        height: calc(100vh - var(--oc-top-nav-height, 0px) - 5.5rem);
         min-height: 32rem;
+    }
+
+    /* The list and the conversation are two panes of their own, set apart by a gap, rather than one box split by a
+       rule: each carries its own frame and the page background shows between them. */
+    .messaging-pane {
+        background-color: var(--bs-body-bg);
+        border: 1px solid var(--bs-border-color-translucent);
+        border-radius: var(--bs-border-radius-lg);
+        box-shadow: var(--bs-box-shadow-sm);
+        overflow: hidden;
     }
 
     .messaging-inbox {
@@ -143,9 +157,28 @@
         }
     }
 
-    .messaging-inbox-row.active {
-        background-color: var(--bs-secondary-bg);
-        border-inline-start: 3px solid var(--bs-success);
+    /* A flush list inside a framed pane would draw its own rule against the pane's edge. */
+    .messaging-inbox .list-group-item {
+        border-inline: 0;
+    }
+
+    .messaging-inbox .list-group-item:first-child {
+        border-top: 0;
+    }
+
+    /* Bootstrap's active item is white text on the primary colour, which washed the customer's name out on a light
+       row. The selected customer keeps readable text on a subtle tint, marked by an accent bar. */
+    .messaging-inbox-row.active,
+    .messaging-inbox-row.active:hover,
+    .messaging-inbox-row.active:focus {
+        background-color: var(--bs-primary-bg-subtle);
+        color: var(--bs-body-color);
+        border-color: var(--bs-border-color-translucent);
+        box-shadow: inset 3px 0 0 var(--bs-primary);
+    }
+
+    .messaging-inbox-row.active .text-muted {
+        color: var(--bs-secondary-color) !important;
     }
 
     .messaging-inbox-row.messaging-unread .messaging-row-name,

@@ -1,3 +1,4 @@
+@using CrestApps.OrchardCore.Omnichannel.Messaging.Services
 @using CrestApps.OrchardCore.Omnichannel.Messaging.Models
 @model ThreadViewModel
 
@@ -15,6 +16,16 @@
                 <a class="btn btn-sm btn-link px-1 d-md-none" asp-route-action="Index" title="@T["Back to the list"]" aria-label="@T["Back to the list"]">
                     <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
                 </a>
+                <span class="messaging-avatar rounded-circle @AvatarPalette.For(Model.CustomerKey) d-inline-flex align-items-center justify-content-center flex-shrink-0 fw-semibold" aria-hidden="true">
+                    @if (AvatarPalette.Initials(Model.ContactDisplayText) is { } initials)
+                    {
+                        @initials
+                    }
+                    else
+                    {
+                        <i class="fa-solid fa-user"></i>
+                    }
+                </span>
                 <span class="fw-semibold text-truncate">@contactLabel</span>
                 <span class="text-muted small text-nowrap">@Model.ContactAddressDisplay</span>
             </div>
@@ -138,7 +149,7 @@
                         }
                         <textarea name="body" class="form-control bg-transparent border-0 px-3 pt-2" rows="2" placeholder="@T["Reply by {0}…", Model.Channel?.DisplayName]" autofocus required
                                   data-composer-body maxlength="@Model.MaxBodyLength"></textarea>
-                        <div class="d-flex justify-content-between align-items-center px-3 pb-2 gap-2">
+                        <div class="d-flex justify-content-between align-items-center px-3 pb-2 gap-2 pt-1">
                             <div class="d-flex align-items-center gap-2">
                                 @if (Model.Channel is not null)
                                 {
@@ -161,7 +172,7 @@
                                     <span class="text-muted small" data-composer-counter data-max-length="@Model.MaxBodyLength">0 / @Model.MaxBodyLength</span>
                                 }
                             </div>
-                            <button type="submit" class="btn btn-dark rounded" title="@T["Send"]" aria-label="@T["Send"]">
+                            <button type="submit" class="btn btn-dark btn-sm rounded" title="@T["Send"]" aria-label="@T["Send"]">
                                 <i class="fa-solid fa-arrow-up" aria-hidden="true"></i>
                             </button>
                         </div>

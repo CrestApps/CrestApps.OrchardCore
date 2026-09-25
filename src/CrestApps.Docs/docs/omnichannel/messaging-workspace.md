@@ -31,12 +31,15 @@ It is the human counterpart to [SMS Automation](sms), which lets an **AI agent**
 - **Channel tabs.** Above the open conversation, one icon per enabled channel:
   - the channel on screen is highlighted;
   - a channel with unread messages carries a **red badge** with the count, updated live;
+  - the channel on screen also counts the customer's new messages that arrive while you are scrolled up reading
+    history or looking at another browser tab, and clears once you are back at the bottom of the conversation;
   - a channel where the customer has an address but no conversation yet opens the composer on that channel;
   - a channel where the customer cannot be reached is greyed out.
 - **Conversation.** The thread, the composer (canned-response templates, Enter to send), and the customer card with every contact record that matches the address.
+- **New message.** The compose button opens a mail-style composer in the conversation pane, beside the customer list: pick the address to send **From** (which decides the channel), search contacts reachable on that channel for **To**, add other addresses, and write the message. One recipient starts a conversation; several get a private conversation each.
 - **Claim, assign, transfer, close, spam, reopen.** The same on every channel.
 - **Broadcasts.** One message to many recipients as individual 1:1 threads (not a group chat), on any channel that supports them.
-- **Real time.** New messages, delivery receipts and assignment changes are pushed over the workspace's own SignalR hub. A new message for the open conversation is appended, one for the same customer on another channel badges that channel's tab, and any new message moves its customer to the top of the list.
+- **Real time.** New messages, delivery receipts and assignment changes are pushed over the workspace's own SignalR hub. A new message for the open conversation is appended, one for the same customer on another channel badges that channel's tab, and any new message moves its customer to the top of the list with its unread count. If a push is missed (a dropped connection), the open conversation catches up within seconds and the customer list within half a minute on its own.
 
 ## Enable the features
 
@@ -133,7 +136,9 @@ The channel answers only what differs between channels:
 
 Inbound traffic reaches the workspace when the channel's receiver (a webhook, an event handler) calls `IMessagingInboundProcessor.ProcessAsync` with a normalized `OmnichannelMessage` whose `Channel` is the channel's name. The workspace then finds or creates the conversation, routes it, starts the first-response clock, stores the message and notifies the inbox. Rules that belong to one channel only (as the carrier keywords belong to SMS) go in an `IMessagingInboundHandler`. Delivery receipts go to `IMessagingConversationService.ApplyDeliveryReceiptAsync`, naming the channel.
 
-Everything else — routing, ownership, SLA, templates, broadcasts, retries, AI hand-off, permissions and the UI — is shared, so a new channel gets all of it without writing any.
+Everything else — routing, ownership, SLA, templates, broadcasts, retries, AI hand-off, permissions and the UI — is shared, so a new channel gets all of it without writing any. That includes its endpoints: the workspace stores every messaging channel's endpoint address in the channel's normalized form (so inbound traffic matches it), validates it with the channel's `IsValidAddress`, and adds the inbound-routing editor to it.
+
+A step-by-step build guide for AI agents and developers — contracts, wiring, the tests to write and the files to update — lives in the repository at `.agents/skills/crestapps-messaging-channel`.
 
 ## Upgrading from the SMS Portal
 

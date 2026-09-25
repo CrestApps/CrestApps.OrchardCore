@@ -101,6 +101,16 @@
             });
     }
 
+    // A slow safety net for a push that never arrived (a dropped connection, a message for a conversation not open): the
+    // list catches up on its own, without polling hard.
+    if (list) {
+        setInterval(function () {
+            if (!document.hidden) {
+                refreshInbox();
+            }
+        }, 30000);
+    }
+
     // ---- The channel tabs --------------------------------------------------------------------------------------
 
     function badgeTab(channel, count) {
@@ -114,6 +124,27 @@
 
         badge.textContent = String(count);
         badge.classList.toggle('d-none', count <= 0);
+    }
+
+    // The open channel's own tab counts the customer messages that arrived while the agent was scrolled up or away
+    // from the page, and clears once they are back at the bottom of the thread.
+    var unseen = 0;
+
+    function setActiveTabBadge(count) {
+        unseen = count;
+
+        var badge = workspace.querySelector('[data-channel-tab].active [data-channel-tab-badge]');
+
+        if (!badge) { return; }
+
+        badge.textContent = String(count);
+        badge.classList.toggle('d-none', count <= 0);
+    }
+
+    function clearUnseenWhenVisible() {
+        if (unseen > 0 && !document.hidden && isPinnedToBottom()) {
+            setActiveTabBadge(0);
+        }
     }
 
     // ---- The open conversation ---------------------------------------------------------------------------------
@@ -154,7 +185,12 @@
 
                 var incomingNodes = Array.prototype.slice.call(holder.querySelectorAll('.messaging-message'));
                 var fresh = messaging.selectNewBubbles(bubblesOnScreen(), incomingNodes.map(function (node) {
-                    return { id: node.getAttribute('data-message-id'), ticks: node.getAttribute('data-created-ticks'), node: node };
+                    return {
+                        id: node.getAttribute('data-message-id'),
+                        ticks: node.getAttribute('data-created-ticks'),
+                        inbound: node.getAttribute('data-inbound') === 'true',
+                        node: node,
+                    };
                 }));
 
                 if (fresh.length === 0) { return; }
@@ -168,6 +204,15 @@
                 fresh.forEach(function (bubble) { thread.appendChild(bubble.node); });
 
                 if (pinned) { scrollToBottom(); }
+
+                var added = messaging.unseenInboundCount(fresh, pinned && !document.hidden);
+
+                if (added > 0) {
+                    setActiveTabBadge(unseen + added);
+                }
+
+                // The poll found messages the push did not announce, so the list is stale too.
+                refreshInbox();
             })
             .catch(function () { /* transient network error; the next poll retries */ })
             .finally(function () { pulling = false; });
@@ -175,6 +220,9 @@
 
     if (thread) {
         scrollToBottom();
+
+        thread.addEventListener('scroll', clearUnseenWhenVisible, { passive: true });
+        document.addEventListener('visibilitychange', clearUnseenWhenVisible);
 
         // A light fallback poll catches AI replies, messages sent by other agents, and any missed push.
         setInterval(pullThread, 7000);

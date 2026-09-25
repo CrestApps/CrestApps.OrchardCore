@@ -65,7 +65,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services
     }
     public sealed class SmsMessagingChannel : CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.IMessagingChannel
     {
-        public SmsMessagingChannel(CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services.ISmsDispatcher dispatcher, YesSql.ISession session, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services.SmsMessagingChannel> stringLocalizer) { }
+        public SmsMessagingChannel(System.Lazy<CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services.ISmsDispatcher> dispatcher, YesSql.ISession session, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services.SmsMessagingChannel> stringLocalizer) { }
         public CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.MessagingChannelCapabilities Capabilities { get; }
         public Microsoft.Extensions.Localization.LocalizedString DisplayName { get; }
         public string IconCssClass { get; }

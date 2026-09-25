@@ -1015,6 +1015,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Core.Services.BusinessHoursCalendarOption>> GetCalendarOptionsAsync(System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> IsOpenAsync(string calendarId, System.DateTime utcInstant, string timeZoneId, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface IChannelEndpointAddressPolicy
+    {
+        bool AppliesTo(string channel);
+        string Normalize(string channel, string address);
+        Microsoft.Extensions.Localization.LocalizedString Validate(string channel, string address);
+    }
     public interface IContactOptOutResolver
     {
         System.Threading.Tasks.Task<bool> HasOptedOutAsync(OrchardCore.ContentManagement.ContentItem contact, string channel, System.Threading.CancellationToken cancellationToken = default);

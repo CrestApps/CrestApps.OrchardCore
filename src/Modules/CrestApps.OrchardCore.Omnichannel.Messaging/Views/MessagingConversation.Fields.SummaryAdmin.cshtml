@@ -1,4 +1,5 @@
 @using CrestApps.OrchardCore.Omnichannel.Messaging.Models
+@using CrestApps.OrchardCore.Omnichannel.Messaging.Services
 @model ConversationRowViewModel
 
 @{
@@ -6,18 +7,13 @@
     var hasContactName = !string.IsNullOrEmpty(Model.ContactName);
     var name = hasContactName ? Model.ContactName : Model.ContactAddressDisplay;
 
-    // Initials for the avatar: the first letter of the first two words of the name, or a generic glyph for an
-    // unknown sender known only by their address.
-    var initials = hasContactName
-        ? string.Concat(Model.ContactName
-            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Take(2)
-            .Select(word => char.ToUpperInvariant(word[0])))
-        : null;
+    // Initials for the avatar, or a generic glyph for an unknown sender known only by their address.
+    var initials = hasContactName ? AvatarPalette.Initials(Model.ContactName) : null;
+    var avatarClasses = AvatarPalette.For(conversation.GetCustomerKey());
 }
 
 <div class="d-flex gap-2 align-items-start">
-    <div class="messaging-avatar rounded-circle bg-secondary-subtle text-secondary-emphasis d-flex align-items-center justify-content-center flex-shrink-0 fw-semibold">
+    <div class="messaging-avatar rounded-circle @avatarClasses d-flex align-items-center justify-content-center flex-shrink-0 fw-semibold">
         @if (string.IsNullOrEmpty(initials))
         {
             <i class="fa-solid fa-user" aria-hidden="true"></i>

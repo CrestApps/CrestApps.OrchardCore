@@ -190,7 +190,7 @@ public sealed class AdminController : Controller
         await PopulateEndpointsAsync(model);
         model.EndpointId = model.Endpoints.FirstOrDefault(item => item.Selected)?.Value;
 
-        return View(model);
+        return await ComposeViewAsync(model);
     }
 
     [HttpPost]
@@ -251,7 +251,7 @@ public sealed class AdminController : Controller
         {
             await PopulateEndpointsAsync(model, model.EndpointId);
 
-            return View(model);
+            return await ComposeViewAsync(model);
         }
 
         var agent = await _workspaceBuilder.GetCurrentAgentAsync(User);
@@ -267,7 +267,7 @@ public sealed class AdminController : Controller
                 await _notifier.WarningAsync(H["The message could not be sent: {0}", result.Error]);
                 await PopulateEndpointsAsync(model, model.EndpointId);
 
-                return View(model);
+                return await ComposeViewAsync(model);
             }
 
             return RedirectToAction(nameof(Conversation), new { id = result.Message.ConversationId });
@@ -513,6 +513,19 @@ public sealed class AdminController : Controller
             .Split(_recipientSeparators, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    // The composer opens in the conversation pane of the workspace, beside the customer list, rather than on a page of
+    // its own, so starting a conversation never leaves the inbox.
+    private async Task<IActionResult> ComposeViewAsync(ComposeViewModel model)
+    {
+        var agent = await _workspaceBuilder.GetCurrentAgentAsync(User);
+
+        return View("Workspace", new WorkspaceViewModel
+        {
+            Inbox = await _workspaceBuilder.BuildInboxAsync(User, agent, show: null, channel: null, page: 1, selectedCustomerKey: null, HttpContext.RequestAborted),
+            Compose = model,
+        });
     }
 
     private async Task PopulateEndpointsAsync(ComposeViewModel model, string selectedEndpointId = null)

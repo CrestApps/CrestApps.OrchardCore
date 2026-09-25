@@ -166,6 +166,9 @@ public sealed class Startup : StartupBase
 
         // Admin surfaces. Inbound routing is edited on the channel-endpoint screen of every messaging channel's
         // endpoints (no separate routing catalog).
+        // Endpoints of every messaging channel are stored in their channel's normalized form, so inbound traffic matches them.
+        // The channel-endpoint handler of the Omnichannel feature applies it; the workspace only says how.
+        services.AddScoped<IChannelEndpointAddressPolicy, MessagingChannelEndpointAddressPolicy>();
         services.AddDisplayDriver<OmnichannelChannelEndpoint, MessagingEndpointRoutingDisplayDriver>();
         services.AddDisplayDriver<MessagingConversation, MessagingConversationDisplayDriver>();
         services.AddDisplayDriver<MessageTemplate, MessageTemplateDisplayDriver>();

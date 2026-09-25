@@ -107,6 +107,18 @@
         });
     }
 
+    // How many of the newly appended bubbles the agent has not seen yet. A customer's message that lands while the agent
+    // is scrolled up reading history, or has switched to another browser tab, is waiting for them even though it is in
+    // the open thread, so the open channel's tab counts it until they come back to the bottom.
+    function unseenInboundCount(bubbles, seen) {
+        if (seen) {
+            return 0;
+        }
+
+        return (bubbles || []).filter(function (bubble) { return bubble && bubble.inbound; }).length;
+    }
+
+    messaging.unseenInboundCount = unseenInboundCount;
     messaging.maxTicks = maxTicks;
     messaging.classifyInbound = classifyInbound;
     messaging.tabBadgeCount = tabBadgeCount;

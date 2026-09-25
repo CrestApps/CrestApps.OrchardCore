@@ -25,6 +25,7 @@
 
 <div class="messaging-message d-flex flex-column mb-2 @(outbound ? "align-items-end" : "align-items-start")"
      data-message-id="@message.Id"
+     data-inbound="@(message.IsInbound ? "true" : "false")"
      data-created-ticks="@message.CreatedUtc.Ticks">
     <div class="p-2 px-3 rounded-4 @bubbleClass" style="max-width: 80%; min-width: 6rem;">
         <div style="white-space: pre-wrap; word-break: break-word;">@content</div>

@@ -185,7 +185,7 @@ internal static class LegacySmsPortalImport
 
     // The routing editor stored its settings on each endpoint under the portal's type name. The workspace reads them
     // under its own, so the settings are copied across; the old entry is left in place, since it is harmless.
-    private static async Task ImportEndpointRoutingAsync(IServiceProvider serviceProvider, ILogger logger)
+    internal static async Task ImportEndpointRoutingAsync(IServiceProvider serviceProvider, ILogger logger)
     {
         var endpointManager = serviceProvider.GetRequiredService<IOmnichannelChannelEndpointManager>();
         var session = serviceProvider.GetRequiredService<ISession>();
@@ -193,9 +193,12 @@ internal static class LegacySmsPortalImport
 
         foreach (var endpoint in await endpointManager.GetAllAsync())
         {
+            // Most endpoints never had SMS routing (a phone number, an unrouted SMS number), so a missing entry is the
+            // ordinary case and must be skipped, not looked up.
             if (endpoint.Properties is null ||
                 endpoint.Properties.ContainsKey(RoutingSettingsKey) ||
-                endpoint.Properties[LegacyRoutingSettingsKey] is not JsonObject legacy)
+                !endpoint.Properties.TryGetValue(LegacyRoutingSettingsKey, out var legacyNode) ||
+                legacyNode is not JsonObject legacy)
             {
                 continue;
             }

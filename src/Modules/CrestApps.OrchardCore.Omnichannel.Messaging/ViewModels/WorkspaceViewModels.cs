@@ -22,6 +22,11 @@ public class WorkspaceViewModel
     /// Gets or sets the open conversation, or <see langword="null"/> when none is selected.
     /// </summary>
     public ThreadViewModel Thread { get; set; }
+
+    /// <summary>
+    /// Gets or sets the new-message composer shown in place of a conversation, or <see langword="null"/>.
+    /// </summary>
+    public ComposeViewModel Compose { get; set; }
 }
 
 /// <summary>

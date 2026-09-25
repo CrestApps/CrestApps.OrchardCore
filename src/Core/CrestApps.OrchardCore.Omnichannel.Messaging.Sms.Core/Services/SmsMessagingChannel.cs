@@ -29,18 +29,21 @@ public sealed class SmsMessagingChannel : IMessagingChannel
         ObservesQuietHours = true,
     };
 
-    private readonly ISmsDispatcher _dispatcher;
+    // Lazy because the channel is built whenever the channel registry is, including while a channel endpoint is being
+    // saved (the endpoint address policy asks the registry), and the dispatcher itself reads endpoints: resolving it
+    // eagerly closes a dependency cycle the container cannot report, and the scope deadlocks.
+    private readonly Lazy<ISmsDispatcher> _dispatcher;
     private readonly ISession _session;
     private readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsMessagingChannel"/> class.
     /// </summary>
-    /// <param name="dispatcher">The dispatcher that routes a send to the provider owning the number.</param>
+    /// <param name="dispatcher">The dispatcher that routes a send to the provider owning the number, resolved on first send.</param>
     /// <param name="session">The session the contact indexes are read from.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public SmsMessagingChannel(
-        ISmsDispatcher dispatcher,
+        Lazy<ISmsDispatcher> dispatcher,
         ISession session,
         IStringLocalizer<SmsMessagingChannel> stringLocalizer)
     {
@@ -96,7 +99,7 @@ public sealed class SmsMessagingChannel : IMessagingChannel
     {
         ArgumentNullException.ThrowIfNull(message);
 
-        return _dispatcher.SendAsync(
+        return _dispatcher.Value.SendAsync(
             new SmsMessage
             {
                 From = message.ServiceAddress,

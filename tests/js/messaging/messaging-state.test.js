@@ -3,7 +3,25 @@ import { describe, expect, it } from 'vitest';
 
 import '../../../src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/shared/messaging-state.js';
 
-const { classifyInbound, maxTicks, rowMatchesFilter, selectNewBubbles, tabBadgeCount } = globalThis.CrestAppsMessaging;
+const { classifyInbound, maxTicks, rowMatchesFilter, selectNewBubbles, tabBadgeCount, unseenInboundCount } = globalThis.CrestAppsMessaging;
+
+// A customer's message that lands in the open thread while the agent is scrolled up, or on another browser tab, is still
+// waiting for them, so the open channel's tab must count it rather than treat the thread on screen as read.
+describe('unseenInboundCount', () => {
+    const bubbles = [{ inbound: true }, { inbound: false }, { inbound: true }];
+
+    it('counts the customer messages the agent has not seen', () => {
+        expect(unseenInboundCount(bubbles, false)).toBe(2);
+    });
+
+    it('counts nothing when the agent is at the bottom of the visible thread', () => {
+        expect(unseenInboundCount(bubbles, true)).toBe(0);
+    });
+
+    it('never counts the agent\'s own messages', () => {
+        expect(unseenInboundCount([{ inbound: false }], false)).toBe(0);
+    });
+});
 
 // The workspace shows one customer's conversation with a tab per channel. A message for that customer on another
 // channel must badge that channel's tab, never the thread on screen, and a message for anyone else must not be

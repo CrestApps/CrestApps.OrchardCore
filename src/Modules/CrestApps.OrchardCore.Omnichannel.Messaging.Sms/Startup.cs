@@ -40,6 +40,7 @@ public sealed class Startup : StartupBase
         // The built-in SMS service sends through one tenant-default provider only, so a tenant whose numbers span
         // carriers needs the send routed to the provider that owns the sending number.
         services.AddScoped<ISmsDispatcher, SmsDispatcher>();
+        services.AddScoped(sp => new Lazy<ISmsDispatcher>(sp.GetRequiredService<ISmsDispatcher>));
 
         // Every SMS provider webhook raises SmsReceived on the shared Omnichannel event bus; this is what hands those
         // texts to the workspace.
