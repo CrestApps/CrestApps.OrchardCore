@@ -717,7 +717,8 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
 
         harness.Conversation.Queue(
             new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantAudioDelta, Audio = new byte[320] },
-            new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantTranscriptDone, Text = "Bye, take care." });
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantTranscriptDone, Text = "Bye, take care." },
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.ResponseCompleted });
 
         var ended = await Task.WhenAny(run, Task.Delay(TimeSpan.FromSeconds(15), TestContext.Current.CancellationToken)) == run;
 
@@ -760,7 +761,8 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
 
         harness.Conversation.Queue(
             new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantAudioDelta, Audio = new byte[320] },
-            new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantTranscriptDone, Text = "Bye, take care." });
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantTranscriptDone, Text = "Bye, take care." },
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.ResponseCompleted });
 
         await Task.Delay(TimeSpan.FromMilliseconds(500), TestContext.Current.CancellationToken);
 
@@ -1028,8 +1030,10 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         await harness.RunAsync();
 
         // Assert
+        // Converted as the one stream the call is, the way the runner converts it.
+        var line = new IncomingCallAudio(harness.Media.IncomingFormat);
         var expected = frames
-            .SelectMany(frame => RealtimeAudioConverter.ToRealtime(frame, harness.Media.IncomingFormat).ToArray())
+            .SelectMany(frame => line.Decode(frame).ToArray())
             .ToArray();
 
         Assert.Equal(expected, harness.Conversation.SentAudio.SelectMany(chunk => chunk).ToArray());
@@ -1056,8 +1060,10 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         await harness.RunAsync();
 
         // Assert
+        // Converted as the one stream the call is, the way the runner converts it.
+        var line = new IncomingCallAudio(harness.Media.IncomingFormat);
         var expected = frames
-            .SelectMany(frame => RealtimeAudioConverter.ToRealtime(frame, harness.Media.IncomingFormat).ToArray())
+            .SelectMany(frame => line.Decode(frame).ToArray())
             .ToArray();
 
         Assert.Equal(expected, harness.Conversation.SentAudio.SelectMany(chunk => chunk).ToArray());

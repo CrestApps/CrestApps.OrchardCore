@@ -53,6 +53,7 @@ internal sealed class AssistantBargeIn
     private long _callerTalkingOverTicks;
     private bool _holdingUnnamedSpeech;
     private string _currentItemId;
+    private string _openingItemId;
     private long _currentItemQueuedTicks;
 
     /// <summary>
@@ -105,6 +106,9 @@ internal sealed class AssistantBargeIn
     /// <param name="nowTicks">Now, in UTC ticks.</param>
     public void Queued(string responseId, string itemId, long startsTicks, int pcmByteCount, long nowTicks)
     {
+        // The first line that reached the caller is the call's opening, whatever came after it.
+        _openingItemId ??= string.IsNullOrEmpty(itemId) ? null : itemId;
+
         // What has finished playing can no longer be taken back.
         _queued.RemoveAll(speech => speech.EndsTicks <= nowTicks);
 
@@ -119,6 +123,13 @@ internal sealed class AssistantBargeIn
         _queued.Add(new QueuedSpeech(responseId, itemId, _currentItemQueuedTicks, startsTicks, startsTicks + duration));
         _currentItemQueuedTicks += duration;
     }
+
+    /// <summary>
+    /// Whether an item is the call's opening line: the first of the assistant's lines to reach the caller.
+    /// </summary>
+    /// <param name="itemId">The provider's item.</param>
+    public bool IsOpeningLine(string itemId)
+        => !string.IsNullOrEmpty(itemId) && string.Equals(itemId, _openingItemId, StringComparison.Ordinal);
 
     /// <summary>
     /// Notes that the model has moved on to a new turn, after which speech that names nothing is the new line.

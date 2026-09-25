@@ -167,16 +167,56 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         await LetTheCallGoAsync(harness, run);
     }
 
+    [Fact]
+    public async Task TheAnswerToACallerWhoTalkedOverTheAssistant_FadesIn_RatherThanStartingOnAStep()
+    {
+        // Arrange
+        // The line has just been cleared for the caller, so what they hear next starts from silence. A reply that
+        // opens on a loud sample is a click at the start of the assistant's answer.
+        var harness = TalkedOverHarness(TalkingDbfs);
+        var run = harness.RunAsync();
+        await WaitUntilAsync(() => harness.Conversation.SentAudio.Count >= CallerFrames);
+        harness.Conversation.Queue(new RealtimeConversationEvent { Type = RealtimeConversationEventType.UserSpeechStarted });
+        await WaitUntilAsync(() => harness.Media.Clears > 0);
+        var writtenWhenCleared = harness.Media.WrittenAudio.Count;
+
+        var loud = new byte[RealtimeAudioConverter.RealtimeSampleRate * 2 * 40 / 1000];
+
+        for (var i = 0; i < loud.Length; i += 2)
+        {
+            System.Buffers.Binary.BinaryPrimitives.WriteInt16LittleEndian(loud.AsSpan(i, 2), 12_000);
+        }
+
+        // Act
+        harness.Conversation.Queue(
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.ResponseStarted, ResponseId = "response-2" },
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantAudioDelta, ResponseId = "response-2", ItemId = "item-2", Audio = loud });
+        await WaitUntilAsync(() => harness.Media.WrittenAudio.Count > writtenWhenCleared);
+
+        // Assert
+        var first = RealtimeAudioConverter.DecodeMuLawSample(harness.Media.WrittenAudio[writtenWhenCleared][0]);
+        Assert.True(Math.Abs(first) < 1_000, $"The answer starts at {first}.");
+
+        await LetTheCallGoAsync(harness, run);
+    }
+
     private const int CallerFrames = 25;
 
     // Five seconds of the assistant's line handed over at once, the way the model delivers it, with the caller's
-    // audio arriving while it plays.
-    private static RealtimeHarness TalkedOverHarness(double callerDbfs)
+    // audio arriving while it plays. A short opening line goes first unless a test is about the opening itself,
+    // because the opening is never cut back (see TheOpeningLine_IsTakenOffTheLine_ButNeverCutBack).
+    private static RealtimeHarness TalkedOverHarness(double callerDbfs, bool afterTheOpening = true)
     {
         var harness = new RealtimeHarness();
         harness.Conversation.KeepAlive = true;
         harness.Media.KeepAlive = true;
         harness.Media.CallerAudioWaitsForTheAssistant = true;
+
+        if (afterTheOpening)
+        {
+            harness.Conversation.Queue(Speech("response-0", "item-0", milliseconds: 20));
+        }
+
         harness.Conversation.Queue(Speech("response-1", "item-1", milliseconds: 5_000));
 
         for (var i = 0; i < CallerFrames; i++)

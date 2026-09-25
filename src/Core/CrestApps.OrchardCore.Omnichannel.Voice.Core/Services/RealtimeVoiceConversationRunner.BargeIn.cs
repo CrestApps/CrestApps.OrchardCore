@@ -102,6 +102,10 @@ public sealed partial class RealtimeVoiceConversationRunner
         Interlocked.Exchange(ref _assistantSpeechEndsTicks, now);
         Interlocked.Exchange(ref _lastAssistantAudioTicks, now);
 
+        // What had not reached the line yet goes with it, and whatever is said next fades in rather than starting
+        // on a step from the silence the clear leaves behind.
+        _outgoing?.Reset();
+
         try
         {
             await media.ClearOutgoingAsync(cancellationToken);
@@ -114,6 +118,14 @@ public sealed partial class RealtimeVoiceConversationRunner
 
         foreach (var truncation in truncations)
         {
+            // The opening is taken off the line but never cut back. Cutting a line back deletes the provider's text
+            // of it, and for the opening that text is the model's only record of having introduced itself: twice
+            // live, a caller who talked over it was greeted again from the top, four times in fifteen seconds.
+            if (bargeIn.IsOpeningLine(truncation.ItemId))
+            {
+                continue;
+            }
+
             try
             {
                 await conversation.TruncateAssistantAudioAsync(truncation.ItemId, truncation.AudioEndMilliseconds, cancellationToken);
@@ -131,7 +143,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                 "The caller on activity '{ActivityId}' talked over the assistant, so its speech was stopped with {RemainingMilliseconds} ms still to play and {Truncated} line(s) cut back to what was heard ({HeardMilliseconds} ms).",
                 activityId,
                 remainingMilliseconds,
-                truncations.Count,
+                truncations.Count(truncation => !bargeIn.IsOpeningLine(truncation.ItemId)),
                 truncations.Count > 0 ? truncations[0].AudioEndMilliseconds : 0);
         }
     }

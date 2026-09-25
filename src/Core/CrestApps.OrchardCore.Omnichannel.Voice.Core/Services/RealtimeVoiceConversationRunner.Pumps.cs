@@ -87,11 +87,15 @@ public sealed partial class RealtimeVoiceConversationRunner
         var released = new List<ReadOnlyMemory<byte>>(4);
         var openingsLogged = 0;
 
+        // One stream for the whole call, so the filter and resampler carry across packets rather than restarting
+        // fifty times a second under the caller's voice.
+        var incoming = new IncomingCallAudio(media.IncomingFormat);
+
         try
         {
             await foreach (var frame in media.ReadIncomingAsync(cancellationToken))
             {
-                var audio = RealtimeAudioConverter.ToRealtime(frame.Data, media.IncomingFormat);
+                var audio = incoming.Decode(frame.Data);
 
                 if (audio.IsEmpty)
                 {
@@ -334,12 +338,16 @@ public sealed partial class RealtimeVoiceConversationRunner
                             speech = mixed;
                         }
 
-                        var audio = RealtimeAudioConverter.FromRealtime(speech, media.OutgoingFormat);
+                        // Through the call's one stream, so this delta joins the last one seamlessly and only whole
+                        // packets reach the line. Converted delta by delta, every boundary was a faint click.
+                        await WriteToLineAsync(media, _outgoing.Encode(speech), cancellationToken);
 
-                        if (!audio.IsEmpty)
-                        {
-                            await media.WriteOutgoingAsync(new ContactCenterVoiceMediaFrame { Data = audio }, cancellationToken);
-                        }
+                        break;
+
+                    case RealtimeConversationEventType.ResponseCompleted:
+                        // The line is over: fade it out and send its last, padded packet, rather than stopping dead
+                        // on whatever sample it ended on -- which was heard as a click as the assistant finished.
+                        await WriteToLineAsync(media, _outgoing.Finish(), cancellationToken);
 
                         break;
 
@@ -510,12 +518,9 @@ public sealed partial class RealtimeVoiceConversationRunner
                     continue;
                 }
 
-                var bed = RealtimeAudioConverter.FromRealtime(ambience.NextPcmBytes(samplesPerFrame), media.OutgoingFormat);
-
-                if (!bed.IsEmpty)
-                {
-                    await media.WriteOutgoingAsync(new ContactCenterVoiceMediaFrame { Data = bed }, cancellationToken);
-                }
+                // Through the same stream as the voice: converted frame by frame on its own, the bed carried a
+                // click every 20 ms.
+                await WriteToLineAsync(media, _outgoing.Encode(ambience.NextPcmBytes(samplesPerFrame)), cancellationToken);
             }
         }
         catch (OperationCanceledException)
@@ -566,6 +571,11 @@ public sealed partial class RealtimeVoiceConversationRunner
         // keeps each write short, and also means a transcript survives a call that ends abruptly.
         await _session.SaveChangesAsync(cancellationToken);
     }
+
+    private static ValueTask WriteToLineAsync(IContactCenterVoiceMediaSession media, ReadOnlyMemory<byte> audio, CancellationToken cancellationToken)
+        => audio.IsEmpty
+            ? ValueTask.CompletedTask
+            : media.WriteOutgoingAsync(new ContactCenterVoiceMediaFrame { Data = audio }, cancellationToken);
 
     private static Task Settle(Task task)
         => task.ContinueWith(static _ => { }, TaskScheduler.Default);

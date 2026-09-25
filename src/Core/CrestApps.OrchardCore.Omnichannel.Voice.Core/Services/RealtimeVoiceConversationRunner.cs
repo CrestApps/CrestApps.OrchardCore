@@ -85,6 +85,11 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     private AIVoiceSessionMeter _meter;
 
     /// <summary>
+    /// The call's line, as one continuous stream the voice and the room bed are both written through.
+    /// </summary>
+    private OutgoingCallAudio _outgoing;
+
+    /// <summary>
     /// How long the session is given to finish its closing line after the model asks to transfer, before it is
     /// closed and the caller is handed to the queue. Long enough for "connecting you now", short enough that a
     /// caller is never left with the assistant after being promised a person.
@@ -250,6 +255,8 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
             ProviderCallId = context.ProviderCallId,
             InteractionId = context.InteractionId,
         }, cancellationToken);
+
+        _outgoing = new OutgoingCallAudio(media.OutgoingFormat);
 
         var first = await StartConversationAsync(context, conversationSoFar: null, cancellationToken);
 

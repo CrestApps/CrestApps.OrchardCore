@@ -319,7 +319,7 @@ public static class RealtimeAudioConverter
         return data;
     }
 
-    private static byte EncodeALawSample(short sample)
+    internal static byte EncodeALawSample(short sample)
     {
         var sign = (sample >> 8) & 0x80;
 
@@ -354,7 +354,7 @@ public static class RealtimeAudioConverter
         return (byte)((compressed | sign) ^ 0x55);
     }
 
-    private static short DecodeALawSample(byte value)
+    internal static short DecodeALawSample(byte value)
     {
         var inverted = value ^ 0x55;
         var sign = inverted & 0x80;

@@ -202,10 +202,11 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
     public async Task ACallerWhoCutsInOnTheOpeningLine_IsAnswered_RatherThanGreetedAgain()
     {
         // Arrange
-        // Live: the caller said "hello?" as they picked up, the opening was cut back to the half-second they had
-        // heard, and the model -- told to open by introducing itself, and holding a record of an introduction one
-        // word long -- introduced itself again, four times over.
-        var harness = TalkedOverHarness(TalkingDbfs);
+        // Live, twice: the caller talked over the opening, it was cut back to the two or three seconds they had
+        // heard, and the model introduced itself again -- four times in fifteen seconds on the second call. Cutting
+        // a line back deletes the provider's text of it, so the model's record of having introduced itself was a
+        // few seconds of its own audio and nothing else, and its instructions said to open by introducing itself.
+        var harness = TalkedOverHarness(TalkingDbfs, afterTheOpening: false);
         var run = harness.RunAsync();
         await WaitUntilAsync(() => harness.Conversation.SentAudio.Count >= CallerFrames);
 
@@ -217,10 +218,10 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         await WaitUntilAsync(() => harness.StoredPrompts.Any(prompt => prompt.Content == "Hello?"));
 
         // Assert
-        // The interrupted line is cut back rather than removed, so the model still knows it began its opening.
-        var cut = Assert.Single(harness.Conversation.Truncations);
-        Assert.Equal("item-1", cut.ItemId);
-        Assert.True(cut.AudioEndMs > 0);
+        // The caller stops hearing the opening, but it is not cut back: the model keeps the words of its
+        // introduction, which is the only thing that tells it the introduction has been made.
+        Assert.Equal(1, harness.Media.Clears);
+        Assert.Empty(harness.Conversation.Truncations);
 
         // The caller's voice reached the model as they said it, not as silence.
         Assert.Contains(harness.Conversation.SentAudio, frame => frame.Any(sample => sample != 0));
@@ -232,6 +233,32 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         var instructions = harness.Orchestrator.Contexts[0].SystemMessageBuilder.ToString();
         Assert.Contains(VoiceCallGuidance.WhenTalkedOverHeading, instructions);
         Assert.Contains(VoiceCallGuidance.WhenTalkedOver, instructions);
+
+        // Including the two things it got wrong live: saying the opening again, and answering "are you there?" with
+        // it. And the profile's own "how to open the call" is scoped to the first line, not to every "hello?".
+        Assert.Contains("never say it again", VoiceCallGuidance.WhenTalkedOver, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("are you there", VoiceCallGuidance.WhenTalkedOver, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("only to your first line", VoiceCallGuidance.WhenTalkedOver, StringComparison.OrdinalIgnoreCase);
+
+        await LetTheCallGoAsync(harness, run);
+    }
+
+    [Fact]
+    public async Task ALineAfterTheOpening_IsStillCutBackToWhatWasHeard()
+    {
+        // Arrange
+        // Only the opening is kept whole. Anything later the caller talked over is still cut back, so the model does
+        // not carry on as though they had heard all of it.
+        var harness = TalkedOverHarness(TalkingDbfs);
+        var run = harness.RunAsync();
+        await WaitUntilAsync(() => harness.Conversation.SentAudio.Count >= CallerFrames);
+
+        // Act
+        harness.Conversation.Queue(new RealtimeConversationEvent { Type = RealtimeConversationEventType.UserSpeechStarted });
+        await WaitUntilAsync(() => harness.Media.Clears > 0);
+
+        // Assert
+        Assert.Equal("item-1", Assert.Single(harness.Conversation.Truncations).ItemId);
 
         await LetTheCallGoAsync(harness, run);
     }
