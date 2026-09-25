@@ -103,6 +103,10 @@ public sealed class DefaultIncomingCallDispatcher : IIncomingCallDispatcher
                 Direction = call.Direction,
                 Outcome = CallOutcome.InProgress,
                 StartedUtc = call.StartedUtc?.UtcDateTime ?? _clock.UtcNow,
+
+                // It is ringing the user, who has not joined it: a lookup that calls the live call connected must not
+                // tell their phone otherwise.
+                AwaitingAnswer = true,
             };
 
             await _interactionStore.CreateAsync(interaction, cancellationToken);
@@ -122,6 +126,7 @@ public sealed class DefaultIncomingCallDispatcher : IIncomingCallDispatcher
                 if (!candidate.EndedUtc.HasValue)
                 {
                     candidate.Outcome = CallOutcome.InProgress;
+                    candidate.AwaitingAnswer = true;
                 }
 
                 return true;

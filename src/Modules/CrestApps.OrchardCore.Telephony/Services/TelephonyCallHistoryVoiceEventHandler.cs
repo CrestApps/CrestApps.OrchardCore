@@ -155,6 +155,12 @@ public sealed class TelephonyCallHistoryVoiceEventHandler : INormalizedVoiceEven
             interaction.To = providerEvent.ToAddress;
         }
 
+        // On the call, or past it: either way it is no longer ringing the user.
+        if (state is CallState.Connected or CallState.OnHold or CallState.Disconnected or CallState.Failed)
+        {
+            interaction.AwaitingAnswer = false;
+        }
+
         if (state is CallState.Disconnected or CallState.Failed)
         {
             interaction.EndedUtc = now;

@@ -854,6 +854,7 @@ namespace CrestApps.OrchardCore.Telephony.Models
     public sealed class TelephonyInteraction : OrchardCore.Entities.Entity
     {
         public TelephonyInteraction() { }
+        public bool AwaitingAnswer { get; set; }
         public string CallId { get; set; }
         public CrestApps.OrchardCore.Telephony.Models.CallDirection Direction { get; set; }
         public double DurationSeconds { get; set; }

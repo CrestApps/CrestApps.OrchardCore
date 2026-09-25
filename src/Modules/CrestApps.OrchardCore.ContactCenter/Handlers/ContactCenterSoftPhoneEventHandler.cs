@@ -201,6 +201,7 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
                 IsVoicemail = isVoicemail,
             };
 
+            ApplyAnswerState(existing, call);
             ApplyTerminalState(existing, call.State, endedUtc);
             await _telephonyInteractionStore.CreateAsync(existing, cancellationToken);
 
@@ -222,8 +223,23 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
             existing.IsVoicemail = true;
         }
 
+        ApplyAnswerState(existing, call);
         ApplyTerminalState(existing, call.State, endedUtc);
         await _telephonyInteractionStore.UpdateAsync(existing, cancellationToken);
+    }
+
+    // The projected state is the agent's own -- ringing while the offer rings, however live the caller's leg is --
+    // so it is what says whether the agent has joined the call. An outbound call's ringing is the far end's.
+    private static void ApplyAnswerState(TelephonyInteraction interaction, TelephonyCall call)
+    {
+        if (call.State == CallState.Ringing && call.Direction == CallDirection.Inbound)
+        {
+            interaction.AwaitingAnswer = true;
+        }
+        else if (call.State is CallState.Connected or CallState.OnHold or CallState.Disconnected or CallState.Failed)
+        {
+            interaction.AwaitingAnswer = false;
+        }
     }
 
     private static void ApplyTerminalState(TelephonyInteraction interaction, CallState state, DateTime? endedUtc)

@@ -344,6 +344,17 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
         }
 
         var call = NormalizeCall(interaction, lookup.Call);
+
+        // The lookup is of the call, not of this user's part in it. A caller waiting for an agent is on a leg the
+        // platform answered itself, and a provider that can only say a call is alive reports it as connected; handed
+        // to the phone still ringing for it, that showed a call nobody had answered as in progress. Until the user
+        // joins the call, a live call is ringing them. The reported object is the lookup's own, so the result says it.
+        if (interaction.AwaitingAnswer && call.State is CallState.Connecting or CallState.Connected or CallState.OnHold)
+        {
+            call.State = CallState.Ringing;
+            call.IsOnHold = false;
+        }
+
         var changed = false;
 
         // The mutation runs against the version the store reads inside its own retry scope, so a provider snapshot

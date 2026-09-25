@@ -88,6 +88,16 @@ public sealed class TelephonyInteraction : Entity
     public double DurationSeconds { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the call is ringing the owning user, who has not joined it yet.
+    /// </summary>
+    /// <remarks>
+    /// A provider's call lookup is of the call, not of the user's part in it: a caller waiting for an agent is on a
+    /// live leg the platform answered itself, and some providers can only say that the call exists, which reads as
+    /// connected. While this is set, a live call is reported to its owner as ringing, whatever the lookup says.
+    /// </remarks>
+    public bool AwaitingAnswer { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether this interaction is a voicemail left for the owning user (the
     /// caller was sent to voicemail and recorded a message). The soft phone surfaces these as playable voicemail
     /// entries in the history rather than plain missed calls.

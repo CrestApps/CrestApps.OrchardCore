@@ -113,6 +113,7 @@ public sealed class OfferCallHistorySettlementHandler : IContactCenterEventHandl
         var endedUtc = offer.SettledUtc ?? interactionEvent.OccurredUtc;
 
         entry.Outcome = outcome;
+        entry.AwaitingAnswer = false;
         entry.EndedUtc = endedUtc;
         entry.DurationSeconds = entry.StartedUtc == default
             ? 0
