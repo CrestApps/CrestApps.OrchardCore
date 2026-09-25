@@ -69,6 +69,16 @@ public sealed partial class TelnyxApiClient
             cancellationToken);
 
     /// <summary>
+    /// Ends a conference, hanging up every participant still in it.
+    /// </summary>
+    /// <param name="conferenceId">The conference.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    public Task<TelnyxApiResult> EndConferenceAsync(
+        string conferenceId,
+        CancellationToken cancellationToken = default)
+        => PostConferenceActionAsync(conferenceId, "end", body: null, cancellationToken);
+
+    /// <summary>
     /// Sends a conference action. Not retried: none of these is safe to repeat blindly on a live call.
     /// </summary>
     /// <param name="conferenceId">The conference.</param>

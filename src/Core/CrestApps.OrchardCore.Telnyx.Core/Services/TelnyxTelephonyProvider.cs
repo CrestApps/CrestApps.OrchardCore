@@ -383,9 +383,13 @@ public sealed partial class TelnyxTelephonyProvider :
 
     /// <inheritdoc/>
     public Task<TelephonyResult> HangupAsync(CallReference call, CancellationToken cancellationToken = default)
-        => IsConferenceParticipantHangup(call)
-            ? HangupConferenceParticipantAsync(call, cancellationToken)
-            : HangupCallAsync(call, cancellationToken);
+        => HasRequestFlag(call, TelephonyConstants.RequestMetadata.ConferenceLeave)
+            ? LeaveConferenceAsync(call, cancellationToken)
+            : HasRequestFlag(call, TelephonyConstants.RequestMetadata.ConferenceEnd)
+                ? EndConferenceAsync(call, cancellationToken)
+                : HasRequestFlag(call, TelephonyConstants.RequestMetadata.ConferenceParticipant)
+                    ? HangupConferenceParticipantAsync(call, cancellationToken)
+                    : HangupCallAsync(call, cancellationToken);
 
     private Task<TelephonyResult> HangupCallAsync(CallReference call, CancellationToken cancellationToken)
         => ExecuteActionAsync(call?.CallId, "hangup", body: null, () => BuildCall(call?.CallId, CallState.Disconnected, call?.Metadata), cancellationToken, succeedWhenMissing: true, succeedWhenEnded: true);

@@ -187,7 +187,7 @@ public sealed class TelnyxBridgedDialTests
             handler.Requests.Select(Describe));
 
         // The conference is made from the first dialed party, which is detached so its leaving does not end it for
-        // everyone else; the agent joins once, on the first leg, and leaving ends the conference.
+        // everyone else; the agent joins once, on the first leg, and leaving leaves the others connected.
         var create = handler.Requests[3];
         Assert.Equal("remote-a", ReadString(create.Body, "call_control_id"));
         Assert.Equal("conf-agent-a", ReadString(create.Body, "name"));
@@ -195,7 +195,7 @@ public sealed class TelnyxBridgedDialTests
         Assert.True(firstParty.Detached);
 
         Assert.Equal("agent-a", ReadString(handler.Requests[4].Body, "call_control_id"));
-        Assert.True(ReadBoolean(handler.Requests[4].Body, "end_conference_on_exit"));
+        Assert.False(ReadBoolean(handler.Requests[4].Body, "end_conference_on_exit"));
 
         Assert.Equal("remote-b", ReadString(handler.Requests[5].Body, "call_control_id"));
         Assert.Equal("remote-c", ReadString(handler.Requests[6].Body, "call_control_id"));

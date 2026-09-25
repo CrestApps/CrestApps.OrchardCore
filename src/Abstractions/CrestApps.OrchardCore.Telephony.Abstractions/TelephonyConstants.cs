@@ -118,6 +118,19 @@ public static class TelephonyConstants
         /// leg, and answers with the call still up and <see cref="CallMetadata.ParticipantLeft"/> set.
         /// </summary>
         public const string ConferenceParticipant = "conferenceParticipant";
+
+        /// <summary>
+        /// Marks a hang-up the soft phone sends for each of its calls in a conference when the agent leaves it: the
+        /// agent's own leg goes and the other parties stay connected to each other. A provider never hangs up another
+        /// party's own leg for it.
+        /// </summary>
+        public const string ConferenceLeave = "conferenceLeave";
+
+        /// <summary>
+        /// Marks the hang-up the soft phone sends when the agent disconnects everyone in a conference: the provider ends
+        /// the conference named by the call's <c>conferenceName</c> for every participant, then hangs up the call.
+        /// </summary>
+        public const string ConferenceEnd = "conferenceEnd";
     }
 
     /// <summary>
