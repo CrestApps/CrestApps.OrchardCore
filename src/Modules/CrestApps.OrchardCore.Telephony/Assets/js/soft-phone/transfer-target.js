@@ -71,19 +71,34 @@
         return !!text && /^[+\d\s().\-]+$/.test(text) && /\d/.test(text);
     }
 
-    // A provider directory entry as the panel shows it: { id, name, destination, detail }.
+    // The fields a transfer service's entries carry beyond a provider entry's, kept as they are.
+    var SERVICE_ENTRY_FIELDS = ['kind', 'targetType', 'targetId', 'group', 'presence', 'status', 'disabled'];
+
+    // A directory entry as the panel shows it: { id, name, destination, detail }, plus what a transfer service's entry
+    // says about what it is (see soft-phone/transfer-service.js).
     function normalizeDirectoryEntry(entry) {
         entry = entry || {};
 
         var destination = String(entry.destination || entry.extension || entry.phoneNumber || '');
-        var detail = String(entry.extension || entry.phoneNumber || entry.detail || destination);
 
-        return {
+        // A service entry has already said what to show under its name; a provider entry shows its number.
+        var detail = entry.kind
+            ? String(entry.detail == null ? '' : entry.detail)
+            : String(entry.extension || entry.phoneNumber || entry.detail || destination);
+        var normalized = {
             id: String(entry.id || destination),
-            name: String(entry.displayName || destination),
+            name: String(entry.displayName || entry.name || destination),
             destination: destination,
             detail: detail
         };
+
+        SERVICE_ENTRY_FIELDS.forEach(function (field) {
+            if (entry[field] !== undefined) {
+                normalized[field] = entry[field];
+            }
+        });
+
+        return normalized;
     }
 
     // The directory entries matching what the agent typed, by name, extension or number. Entries with nowhere to send

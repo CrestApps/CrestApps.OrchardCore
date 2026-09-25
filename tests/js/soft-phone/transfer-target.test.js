@@ -117,3 +117,22 @@ describe('resolveTransferTarget', () => {
             .toEqual({ destination: 'sip:alex@example.com', label: 'sip:alex@example.com', refused: '' });
     });
 });
+
+describe('filterTransferTargets with a transfer service directory', () => {
+    const entries = [
+        { name: 'Bea Baker', destination: 'agent:agent-bea', detail: 'Ext 201', kind: 'agent', targetType: 'agent', targetId: 'agent-bea', presence: 'Available', status: 'Available', disabled: false, group: 'Agents' },
+        { name: 'Sales', destination: 'queue:queue-sales', detail: '3 waiting', kind: 'queue', targetType: 'queue', targetId: 'queue-sales', group: 'Queues' }
+    ];
+
+    it('keeps what each entry is, and shows the service\'s own detail rather than a number', () => {
+        const [bea, sales] = filterTransferTargets(entries, '');
+
+        expect(bea).toMatchObject({ name: 'Bea Baker', detail: 'Ext 201', kind: 'agent', targetId: 'agent-bea', presence: 'Available', disabled: false, group: 'Agents' });
+        expect(sales).toMatchObject({ name: 'Sales', detail: '3 waiting', kind: 'queue', targetId: 'queue-sales' });
+    });
+
+    it('finds an agent by name or by extension', () => {
+        expect(filterTransferTargets(entries, 'bea').map((entry) => entry.targetId)).toEqual(['agent-bea']);
+        expect(filterTransferTargets(entries, '201').map((entry) => entry.targetId)).toEqual(['agent-bea']);
+    });
+});

@@ -3062,17 +3062,29 @@
     return !!text && /^[+\d\s().\-]+$/.test(text) && /\d/.test(text);
   }
 
-  // A provider directory entry as the panel shows it: { id, name, destination, detail }.
+  // The fields a transfer service's entries carry beyond a provider entry's, kept as they are.
+  var SERVICE_ENTRY_FIELDS = ['kind', 'targetType', 'targetId', 'group', 'presence', 'status', 'disabled'];
+
+  // A directory entry as the panel shows it: { id, name, destination, detail }, plus what a transfer service's entry
+  // says about what it is (see soft-phone/transfer-service.js).
   function normalizeDirectoryEntry(entry) {
     entry = entry || {};
     var destination = String(entry.destination || entry.extension || entry.phoneNumber || '');
-    var detail = String(entry.extension || entry.phoneNumber || entry.detail || destination);
-    return {
+
+    // A service entry has already said what to show under its name; a provider entry shows its number.
+    var detail = entry.kind ? String(entry.detail == null ? '' : entry.detail) : String(entry.extension || entry.phoneNumber || entry.detail || destination);
+    var normalized = {
       id: String(entry.id || destination),
-      name: String(entry.displayName || destination),
+      name: String(entry.displayName || entry.name || destination),
       destination: destination,
       detail: detail
     };
+    SERVICE_ENTRY_FIELDS.forEach(function (field) {
+      if (entry[field] !== undefined) {
+        normalized[field] = entry[field];
+      }
+    });
+    return normalized;
   }
 
   // The directory entries matching what the agent typed, by name, extension or number. Entries with nowhere to send
@@ -3163,13 +3175,14 @@
   softPhone.resolveTransferTarget = resolveTransferTarget;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*
- * The soft phone's own transfer panel.
+ * Transfers a server-side transfer service carries out, rather than the telephony provider.
  *
- * Transferring a call used to open the browser's "Transfer to number" prompt whenever the provider had no directory.
- * The prompt was headed with the site's address, blocked the page, and was cut off inside the desktop app's narrow
- * window. The panel replaces it inside the phone: the agent searches the directory or types a number, picks blind or
- * warm when the provider offers both, and goes back to the keypad without leaving the phone. The decisions it makes
- * live in soft-phone/transfer-target.js; this file only draws them and wires them to the call.
+ * A Contact Center call cannot be transferred by handing the provider a number: an agent or a queue is not somewhere a
+ * provider can dial, and the Contact Center has to route the call, move it off the transferring agent and record the
+ * transfer. When the tenant publishes transfer endpoints (the Contact Center does, and the soft phone's configuration
+ * carries their addresses), a call that belongs to an interaction is transferred through them: the panel lists the
+ * agents with their presence, the queues with who is waiting, and the approved outside numbers, and a warm transfer
+ * becomes a consult the agent completes or cancels. Every other call keeps the provider's own transfer.
  *
  * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
  * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
@@ -3184,16 +3197,405 @@
   function format(template, value) {
     return String(template).replace('{0}', value);
   }
+  function digitsOf(value) {
+    return value == null ? '' : String(value).replace(/\D+/g, '');
+  }
+  function presenceLabel(presence, strings) {
+    var key = 'presence' + String(presence || '');
+    return label(strings, key, String(presence || ''));
+  }
+
+  // The service's directory as the transfer panel lists it. Each entry's destination is unique across kinds, and
+  // targetType/targetId are what the transfer request names.
+  function serviceDirectoryEntries(directory, strings) {
+    if (!directory) {
+      return [];
+    }
+    var entries = [];
+    var agentsGroup = label(strings, 'transferGroupAgents', 'Agents');
+    var queuesGroup = label(strings, 'transferGroupQueues', 'Queues');
+    var externalGroup = label(strings, 'transferGroupExternal', 'Outside numbers');
+    (directory.agents || []).forEach(function (agent) {
+      if (!agent || !agent.id) {
+        return;
+      }
+      entries.push({
+        id: String(agent.id),
+        name: String(agent.name || agent.id),
+        destination: 'agent:' + agent.id,
+        detail: agent.extension ? format(label(strings, 'transferExtension', 'Ext {0}'), agent.extension) : '',
+        extension: agent.extension ? String(agent.extension) : '',
+        kind: 'agent',
+        targetType: 'agent',
+        targetId: String(agent.id),
+        group: agentsGroup,
+        presence: String(agent.presence || ''),
+        status: presenceLabel(agent.presence, strings),
+        disabled: agent.available !== true
+      });
+    });
+    (directory.queues || []).forEach(function (queue) {
+      if (!queue || !queue.id) {
+        return;
+      }
+      entries.push({
+        id: String(queue.id),
+        name: String(queue.name || queue.id),
+        destination: 'queue:' + queue.id,
+        detail: format(label(strings, 'transferWaiting', '{0} waiting'), Number(queue.waiting) || 0),
+        kind: 'queue',
+        targetType: 'queue',
+        targetId: String(queue.id),
+        group: queuesGroup,
+        status: '',
+        disabled: false
+      });
+    });
+    (directory.externalDestinations || []).forEach(function (destination) {
+      if (!destination || !destination.id) {
+        return;
+      }
+      entries.push({
+        id: String(destination.id),
+        name: String(destination.name || destination.number || destination.id),
+        destination: 'external:' + destination.id,
+        detail: String(destination.number || ''),
+        kind: 'external',
+        targetType: 'external',
+        targetId: String(destination.id),
+        group: externalGroup,
+        status: '',
+        disabled: false
+      });
+    });
+    return entries;
+  }
+
+  // Blind always; warm only when the call's provider can hold the caller while the agent consults.
+  function serviceModes(directory) {
+    return directory && directory.supportsConsult ? ['blind', 'warm'] : ['blind'];
+  }
+
+  // A typed number in international format, or '' when it cannot be read as one. A number without a country code
+  // is read as North American only when it has exactly the ten digits one has; anything else must start with +.
+  function toInternationalNumber(value) {
+    var text = value == null ? '' : String(value).trim();
+    var digits = digitsOf(text);
+    if (text.charAt(0) === '+') {
+      return digits.length >= 8 && digits.length <= 15 ? '+' + digits : '';
+    }
+    if (digits.length === 10) {
+      return '+1' + digits;
+    }
+    if (digits.length === 11 && digits.charAt(0) === '1') {
+      return '+' + digits;
+    }
+    return '';
+  }
+
+  // What the service should transfer the call to.
+  //   selected   - the entry the agent picked, if any.
+  //   query      - what the agent typed.
+  //   mode       - 'blind' or 'warm'.
+  //   directory  - the service's directory (for whether outside numbers may be typed).
+  //   ownNumbers - the tenant's own numbers, which are never a destination.
+  // Returns { targetType, targetId, label, refused }, refused being '' or one of
+  // 'empty' | 'unavailable' | 'warm-queue' | 'external-not-allowed' | 'invalid-number' | 'own-number'.
+  function resolveServiceTarget(options) {
+    options = options || {};
+    var selected = options.selected;
+    var refuse = function (reason) {
+      return {
+        targetType: '',
+        targetId: '',
+        label: '',
+        refused: reason
+      };
+    };
+    if (selected && selected.targetType) {
+      if (selected.disabled) {
+        return refuse('unavailable');
+      }
+      if (options.mode === 'warm' && selected.targetType === 'queue') {
+        return refuse('warm-queue');
+      }
+      return {
+        targetType: selected.targetType,
+        targetId: selected.targetId,
+        label: selected.name,
+        refused: ''
+      };
+    }
+    var text = options.query == null ? '' : String(options.query).trim();
+    if (!text || !softPhone.isNumberLike(text)) {
+      return refuse('empty');
+    }
+    var directory = options.directory || {};
+    if (!directory.canTransferExternally || !directory.allowExternalNumbers) {
+      return refuse('external-not-allowed');
+    }
+    if ((options.ownNumbers || []).some(function (own) {
+      return softPhone.isSameLine(text, own);
+    })) {
+      return refuse('own-number');
+    }
+    var number = toInternationalNumber(text);
+    if (!number) {
+      return refuse('invalid-number');
+    }
+    return {
+      targetType: 'external',
+      targetId: number,
+      label: text,
+      refused: ''
+    };
+  }
+
+  // The client for the transfer endpoints.
+  //   options.urls              - { targetsUrl, transferUrl, consultUrl, consultCompleteUrl, consultCancelUrl }.
+  //   options.antiForgeryToken  - sent on every command.
+  //   options.fetch             - the fetch implementation (the browser's by default).
+  function createTransferService(options) {
+    options = options || {};
+    var urls = options.urls || {};
+    var fetchImpl = options.fetch || (typeof root.fetch === 'function' ? root.fetch.bind(root) : null);
+    function interactionOf(call) {
+      return call && call.metadata && call.metadata.interactionId ? String(call.metadata.interactionId) : '';
+    }
+    function applies(call) {
+      return !!(fetchImpl && urls.targetsUrl && urls.transferUrl && interactionOf(call));
+    }
+    function read(response) {
+      return Promise.resolve(response.json ? response.json() : null).catch(function () {
+        return null;
+      }).then(function (body) {
+        if (!response.ok) {
+          // The endpoints answer a refusal with a problem body rather than a redirect, so its reason is
+          // what the agent is shown.
+          return {
+            succeeded: false,
+            error: body && (body.detail || body.error || body.title) || 'The request was refused.'
+          };
+        }
+        return body || {};
+      });
+    }
+    function send(method, url, body) {
+      var headers = {
+        'Accept': 'application/json'
+      };
+      var init = {
+        method: method,
+        credentials: 'same-origin',
+        headers: headers
+      };
+      if (body) {
+        headers['Content-Type'] = 'application/json';
+        init.body = JSON.stringify(body);
+      }
+      if (method !== 'GET' && options.antiForgeryToken) {
+        headers.RequestVerificationToken = options.antiForgeryToken;
+      }
+      return fetchImpl(url, init).then(read).catch(function (error) {
+        return {
+          succeeded: false,
+          error: error && error.message ? error.message : String(error)
+        };
+      });
+    }
+    function query(url, parameters) {
+      var pairs = Object.keys(parameters).filter(function (key) {
+        return parameters[key];
+      }).map(function (key) {
+        return encodeURIComponent(key) + '=' + encodeURIComponent(parameters[key]);
+      });
+      return url + (pairs.length ? (url.indexOf('?') === -1 ? '?' : '&') + pairs.join('&') : '');
+    }
+    function loadDirectory(call) {
+      return send('GET', query(urls.targetsUrl, {
+        interactionId: interactionOf(call)
+      })).then(function (body) {
+        if (body && body.succeeded === false) {
+          throw new Error(body.error);
+        }
+        return body;
+      });
+    }
+    function transfer(call, target) {
+      return send('POST', urls.transferUrl, {
+        interactionId: interactionOf(call),
+        targetType: target.targetType,
+        targetId: target.targetId
+      });
+    }
+    function startConsult(call, target) {
+      return send('POST', urls.consultUrl, {
+        interactionId: interactionOf(call),
+        targetType: target.targetType,
+        targetId: target.targetId
+      });
+    }
+    function getConsult(call, consultId) {
+      return send('GET', query(urls.consultUrl, {
+        interactionId: interactionOf(call),
+        consultId: consultId
+      }));
+    }
+    function completeConsult(call, consultId) {
+      return send('POST', urls.consultCompleteUrl, {
+        interactionId: interactionOf(call),
+        consultId: consultId
+      });
+    }
+    function cancelConsult(call, consultId) {
+      return send('POST', urls.consultCancelUrl, {
+        interactionId: interactionOf(call),
+        consultId: consultId
+      });
+    }
+    return {
+      applies: applies,
+      loadDirectory: loadDirectory,
+      transfer: transfer,
+      startConsult: startConsult,
+      getConsult: getConsult,
+      completeConsult: completeConsult,
+      cancelConsult: cancelConsult
+    };
+  }
+  softPhone.serviceDirectoryEntries = serviceDirectoryEntries;
+  softPhone.serviceModes = serviceModes;
+  softPhone.toInternationalNumber = toInternationalNumber;
+  softPhone.resolveServiceTarget = resolveServiceTarget;
+  softPhone.createTransferService = createTransferService;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * Where a warm transfer's consult stands, as the transfer panel shows it.
+ *
+ * A warm transfer used to be a single request with nothing after it: the agent could not see whether the destination
+ * had answered, and had no way to hand the call over or take it back. The consult is now a state the panel follows --
+ * ringing, then connected, then completed or cancelled -- and these decide what the agent is told and which of
+ * Complete and Cancel they may press at each point.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // How often the panel asks where a live consult stands. The destination answering is what the agent waits on.
+  var CONSULT_POLL_INTERVAL_MS = 1500;
+  function label(strings, key, fallback) {
+    return strings && typeof strings[key] === 'string' && strings[key] ? strings[key] : fallback;
+  }
+  function format(template, value) {
+    return String(template).replace('{0}', value);
+  }
+  function isLive(status) {
+    return status === 'ringing' || status === 'connected';
+  }
+
+  // { status, live, message, canComplete, canCancel } for a consult ({ id, status, live }) with `targetName`.
+  function consultView(consult, targetName, strings) {
+    var status = consult && consult.status ? String(consult.status) : 'cancelled';
+    var live = !!consult && consult.live !== false && isLive(status);
+    var name = targetName || '';
+    var message;
+    switch (status) {
+      case 'connected':
+        message = format(label(strings, 'consultConnected', 'Talking to {0}. The caller is on hold.'), name);
+        break;
+      case 'completed':
+        message = format(label(strings, 'consultCompleted', 'The call was handed to {0}.'), name);
+        break;
+      case 'ringing':
+        message = format(label(strings, 'consultRinging', 'Calling {0}...'), name);
+        break;
+      default:
+        message = label(strings, 'consultCancelled', 'The caller is back with you.');
+        break;
+    }
+    return {
+      status: status,
+      live: live,
+      message: message,
+      // Only a destination who answered can take the caller; completing a ringing consult would hand them to
+      // a phone nobody has picked up.
+      canComplete: live && status === 'connected',
+      canCancel: live
+    };
+  }
+
+  // What to tell the agent when a consult they did not end has ended, or '' while it is still going.
+  //   previousStatus - the status the panel last showed.
+  //   next           - the consult as the server now reports it.
+  //   context        - { callEnded } whether the customer's call is gone.
+  function consultEndedMessage(previousStatus, next, targetName, strings, context) {
+    var status = next && next.status ? String(next.status) : 'cancelled';
+    if (next && next.live !== false && isLive(status)) {
+      return '';
+    }
+    if (context && context.callEnded) {
+      return label(strings, 'consultCallerLeft', 'The caller hung up.');
+    }
+    if (status === 'completed') {
+      return format(label(strings, 'consultCompleted', 'The call was handed to {0}.'), targetName || '');
+    }
+    if (isLive(previousStatus)) {
+      return format(label(strings, 'consultTargetLeft', '{0} did not take the call. The caller is back with you.'), targetName || '');
+    }
+    return label(strings, 'consultCancelled', 'The caller is back with you.');
+  }
+  softPhone.CONSULT_POLL_INTERVAL_MS = CONSULT_POLL_INTERVAL_MS;
+  softPhone.consultView = consultView;
+  softPhone.consultEndedMessage = consultEndedMessage;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * The soft phone's own transfer panel.
+ *
+ * Transferring a call used to open the browser's "Transfer to number" prompt whenever the provider had no directory.
+ * The prompt was headed with the site's address, blocked the page, and was cut off inside the desktop app's narrow
+ * window. The panel replaces it inside the phone: the agent searches the directory or types a number, picks blind or
+ * warm when the call offers both, and goes back to the keypad without leaving the phone. A warm transfer that the
+ * phone's transfer service carries out becomes a consult the panel follows until the agent completes or cancels it.
+ * The decisions it makes live in soft-phone/transfer-target.js, soft-phone/transfer-service.js and
+ * soft-phone/consult-state.js; this file only draws them and wires them to the call.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+  var KIND_ICONS = {
+    agent: 'fa-user',
+    queue: 'fa-users',
+    external: 'fa-phone'
+  };
+  function label(strings, key, fallback) {
+    return strings && typeof strings[key] === 'string' && strings[key] ? strings[key] : fallback;
+  }
+  function format(template, value) {
+    return String(template).replace('{0}', value);
+  }
 
   // Creates the panel inside `container`.
-  //   options.strings       - the phone's localized labels.
-  //   options.escapeHtml    - escapes text for markup.
-  //   options.formatNumber  - formats a number for display.
-  //   options.modes()       - the supported modes (see transferModes).
-  //   options.ownNumbers()  - the tenant's own outbound caller ids.
-  //   options.loadDirectory() - a promise of the provider's directory entries, or null when it has none.
-  //   options.transfer(destination, modeValue) - performs the transfer; resolves to the hub result.
-  //   options.onChange()    - called when the panel opens or closes, so the phone re-renders around it.
+  //   options.strings        - the phone's localized labels.
+  //   options.escapeHtml     - escapes text for markup.
+  //   options.formatNumber   - formats a number for display.
+  //   options.modes()        - the supported modes (see transferModes).
+  //   options.ownNumbers()   - the tenant's own outbound caller ids.
+  //   options.loadDirectory() - a promise of directory entries, or null when there is none.
+  //   options.allowNumbers() - whether a typed number is offered (defaults to true).
+  //   options.resolveTarget(state) - resolves the target itself ({ refused, ... }), or null to use the provider rules.
+  //   options.transfer(target, modeValue, modeName) - performs the transfer; resolves to the command result. A result
+  //                            with a live `consult` opens the consult view.
+  //   options.getConsult(consult), options.completeConsult(consult), options.cancelConsult(consult)
+  //                          - follow and finish a consult; each resolves to a result with the consult's state.
+  //   options.onChange()     - called when the panel opens or closes, so the phone re-renders around it.
   function createTransferPanel(container, options) {
     options = options || {};
     var strings = options.strings || {};
@@ -3210,11 +3612,16 @@
       mode: 'blind',
       entries: [],
       loading: false,
-      error: ''
+      error: '',
+      consult: null
     };
     var parts = {};
+    var pollTimer = null;
     function modes() {
       return typeof options.modes === 'function' ? options.modes() : ['blind'];
+    }
+    function allowNumbers() {
+      return typeof options.allowNumbers === 'function' ? options.allowNumbers() !== false : true;
     }
     function changed() {
       if (typeof options.onChange === 'function') {
@@ -3229,6 +3636,7 @@
         return;
       }
       var supported = modes();
+      stopPolling();
       state = {
         open: true,
         query: '',
@@ -3236,7 +3644,8 @@
         mode: supported.length ? supported[0] : 'blind',
         entries: [],
         loading: false,
-        error: ''
+        error: '',
+        consult: null
       };
       renderShell(context || {});
       loadDirectory();
@@ -3249,8 +3658,10 @@
       if (!state.open) {
         return;
       }
+      stopPolling();
       state.open = false;
       state.entries = [];
+      state.consult = null;
       if (container) {
         container.innerHTML = '';
       }
@@ -3274,31 +3685,29 @@
         state.entries = [];
       }).then(function () {
         state.loading = false;
-        if (state.open) {
+        if (state.open && !state.consult) {
+          // What the call offers can depend on what the directory said (a warm transfer needs a provider
+          // that can hold the caller), so the choice is drawn again now it is known.
+          renderModes();
           renderResults();
         }
       });
     }
     function renderShell(context) {
-      var supported = modes();
       var title = context.callLabel ? format(label(strings, 'transferCallOf', 'Transfer {0}'), context.callLabel) : label(strings, 'transferTitle', 'Transfer call');
-      var modeHtml = '';
-      if (supported.length > 1) {
-        modeHtml = '<div class="telephony-soft-phone__transfer-modes" role="radiogroup" aria-label="' + escapeHtml(label(strings, 'transferType', 'Transfer type')) + '">' + supported.map(function (mode) {
-          var text = mode === 'warm' ? label(strings, 'transferWarm', 'Warm') : label(strings, 'transferBlind', 'Blind');
-          return '<button type="button" role="radio" class="telephony-soft-phone__transfer-mode" data-telephony-transfer-mode="' + mode + '" aria-checked="false">' + escapeHtml(text) + '</button>';
-        }).join('') + '</div>' + '<div class="telephony-soft-phone__transfer-hint" data-telephony-transfer-mode-hint></div>';
-      }
-      container.innerHTML = '<div class="telephony-soft-phone__transfer-header">' + '<button type="button" class="telephony-soft-phone__settings-back" data-telephony-transfer-back title="' + escapeHtml(label(strings, 'back', 'Back')) + '" aria-label="' + escapeHtml(label(strings, 'back', 'Back')) + '">' + '<i class="fa-solid fa-arrow-left" aria-hidden="true"></i></button>' + '<span class="telephony-soft-phone__transfer-title" data-telephony-transfer-title>' + escapeHtml(title) + '</span>' + '</div>' + modeHtml + '<input type="text" class="telephony-soft-phone__transfer-input" data-telephony-transfer-input autocomplete="off" inputmode="text" ' + 'placeholder="' + escapeHtml(label(strings, 'transferSearchPlaceholder', 'Search a name, or enter a number')) + '" ' + 'aria-label="' + escapeHtml(label(strings, 'transferDestination', 'Transfer destination')) + '" />' + '<div class="telephony-soft-phone__transfer-error" data-telephony-transfer-error role="alert" hidden></div>' + '<div class="telephony-soft-phone__transfer-results" data-telephony-transfer-results></div>' + '<div class="telephony-soft-phone__transfer-actions">' + '<button type="button" class="btn btn-sm btn-outline-secondary" data-telephony-transfer-cancel>' + escapeHtml(label(strings, 'cancel', 'Cancel')) + '</button>' + '<button type="button" class="btn btn-sm btn-primary" data-telephony-transfer-confirm>' + escapeHtml(label(strings, 'transfer', 'Transfer')) + '</button>' + '</div>';
+      container.innerHTML = '<div class="telephony-soft-phone__transfer-header">' + '<button type="button" class="telephony-soft-phone__settings-back" data-telephony-transfer-back title="' + escapeHtml(label(strings, 'back', 'Back')) + '" aria-label="' + escapeHtml(label(strings, 'back', 'Back')) + '">' + '<i class="fa-solid fa-arrow-left" aria-hidden="true"></i></button>' + '<span class="telephony-soft-phone__transfer-title" data-telephony-transfer-title>' + escapeHtml(title) + '</span>' + '</div>' + '<div data-telephony-transfer-modes-slot></div>' + '<input type="text" class="telephony-soft-phone__transfer-input" data-telephony-transfer-input autocomplete="off" inputmode="text" ' + 'placeholder="' + escapeHtml(label(strings, 'transferSearchPlaceholder', 'Search a name, or enter a number')) + '" ' + 'aria-label="' + escapeHtml(label(strings, 'transferDestination', 'Transfer destination')) + '" />' + '<div class="telephony-soft-phone__transfer-error" data-telephony-transfer-error role="alert" hidden></div>' + '<div class="telephony-soft-phone__transfer-results" data-telephony-transfer-results></div>' + '<div class="telephony-soft-phone__transfer-actions" data-telephony-transfer-actions>' + '<button type="button" class="btn btn-sm btn-outline-secondary" data-telephony-transfer-cancel>' + escapeHtml(label(strings, 'cancel', 'Cancel')) + '</button>' + '<button type="button" class="btn btn-sm btn-primary" data-telephony-transfer-confirm>' + escapeHtml(label(strings, 'transfer', 'Transfer')) + '</button>' + '</div>';
       parts = {
+        back: container.querySelector('[data-telephony-transfer-back]'),
+        modesSlot: container.querySelector('[data-telephony-transfer-modes-slot]'),
         input: container.querySelector('[data-telephony-transfer-input]'),
         error: container.querySelector('[data-telephony-transfer-error]'),
         results: container.querySelector('[data-telephony-transfer-results]'),
+        actions: container.querySelector('[data-telephony-transfer-actions]'),
         confirm: container.querySelector('[data-telephony-transfer-confirm]'),
-        hint: container.querySelector('[data-telephony-transfer-mode-hint]'),
-        modes: Array.prototype.slice.call(container.querySelectorAll('[data-telephony-transfer-mode]'))
+        hint: null,
+        modes: []
       };
-      container.querySelector('[data-telephony-transfer-back]').addEventListener('click', close);
+      parts.back.addEventListener('click', close);
       container.querySelector('[data-telephony-transfer-cancel]').addEventListener('click', close);
       parts.confirm.addEventListener('click', submit);
       parts.input.addEventListener('input', function () {
@@ -3315,12 +3724,6 @@
           event.preventDefault();
           close();
         }
-      });
-      parts.modes.forEach(function (button) {
-        button.addEventListener('click', function () {
-          state.mode = button.getAttribute('data-telephony-transfer-mode');
-          renderMode();
-        });
       });
       parts.results.addEventListener('click', function (event) {
         var target = event.target && event.target.closest ? event.target.closest('[data-telephony-transfer-option]') : null;
@@ -3342,6 +3745,29 @@
           submit();
         }
       });
+      renderModes();
+    }
+    function renderModes() {
+      if (!parts.modesSlot) {
+        return;
+      }
+      var supported = modes();
+      if (supported.indexOf(state.mode) === -1) {
+        state.mode = supported.length ? supported[0] : 'blind';
+      }
+      parts.modesSlot.innerHTML = supported.length > 1 ? '<div class="telephony-soft-phone__transfer-modes" role="radiogroup" aria-label="' + escapeHtml(label(strings, 'transferType', 'Transfer type')) + '">' + supported.map(function (mode) {
+        var text = mode === 'warm' ? label(strings, 'transferWarm', 'Warm') : label(strings, 'transferBlind', 'Blind');
+        return '<button type="button" role="radio" class="telephony-soft-phone__transfer-mode" data-telephony-transfer-mode="' + mode + '" aria-checked="false">' + escapeHtml(text) + '</button>';
+      }).join('') + '</div>' + '<div class="telephony-soft-phone__transfer-hint" data-telephony-transfer-mode-hint></div>' : '';
+      parts.hint = parts.modesSlot.querySelector('[data-telephony-transfer-mode-hint]');
+      parts.modes = Array.prototype.slice.call(parts.modesSlot.querySelectorAll('[data-telephony-transfer-mode]'));
+      parts.modes.forEach(function (button) {
+        button.addEventListener('click', function () {
+          state.mode = button.getAttribute('data-telephony-transfer-mode');
+          setError('');
+          renderMode();
+        });
+      });
       renderMode();
     }
     function renderMode() {
@@ -3354,23 +3780,35 @@
         parts.hint.textContent = state.mode === 'warm' ? label(strings, 'transferWarmHint', 'You speak to them before the call is handed over.') : label(strings, 'transferBlindHint', 'The call is sent straight to them.');
       }
     }
+    function entryHtml(entry) {
+      var selected = !!(state.selected && state.selected.destination === entry.destination);
+      var icon = KIND_ICONS[entry.kind] || 'fa-user';
+      var presence = entry.presence ? ' data-telephony-presence="' + escapeHtml(entry.presence) + '"' : '';
+      var status = entry.status ? '<span class="telephony-soft-phone__directory-presence telephony-soft-phone__directory-presence--' + escapeHtml(String(entry.presence || '').toLowerCase()) + '">' + escapeHtml(entry.status) + '</span>' : '';
+      return '<button type="button" class="telephony-soft-phone__directory-entry telephony-soft-phone__transfer-option' + (selected ? ' is-selected' : '') + (entry.disabled ? ' is-unavailable' : '') + '" data-telephony-transfer-option data-telephony-directory-destination="' + escapeHtml(entry.destination) + '"' + presence + ' aria-pressed="' + (selected ? 'true' : 'false') + '"' + (entry.disabled ? ' aria-disabled="true"' : '') + '>' + '<i class="fa-solid ' + icon + '" aria-hidden="true"></i>' + '<span class="telephony-soft-phone__directory-name">' + escapeHtml(entry.name) + '</span>' + status + '<span class="telephony-soft-phone__directory-destination">' + escapeHtml(entry.detail) + '</span></button>';
+    }
     function renderResults() {
-      if (!parts.results) {
+      if (!parts.results || state.consult) {
         return;
       }
       var matches = softPhone.filterTransferTargets(state.entries, state.query);
       var html = '';
       var query = String(state.query || '').trim();
-      if (query && softPhone.isNumberLike(query)) {
+      if (query && softPhone.isNumberLike(query) && allowNumbers()) {
         html += '<button type="button" class="telephony-soft-phone__transfer-option telephony-soft-phone__transfer-option--number" ' + 'data-telephony-transfer-option data-telephony-transfer-number>' + '<i class="fa-solid fa-phone" aria-hidden="true"></i>' + '<span class="telephony-soft-phone__directory-name">' + escapeHtml(format(label(strings, 'transferToNumber', 'Transfer to {0}'), formatNumber(query) || query)) + '</span></button>';
       }
       if (state.loading) {
         html += '<div class="telephony-soft-phone__directory-empty">' + escapeHtml(label(strings, 'directoryLoading', 'Loading the directory...')) + '</div>';
       } else if (matches.length) {
-        html += '<div class="telephony-soft-phone__transfer-group" role="presentation">' + escapeHtml(label(strings, 'directory', 'Directory')) + '</div>' + matches.map(function (entry) {
-          var selected = !!(state.selected && state.selected.destination === entry.destination);
-          return '<button type="button" class="telephony-soft-phone__directory-entry telephony-soft-phone__transfer-option' + (selected ? ' is-selected' : '') + '" data-telephony-transfer-option data-telephony-directory-destination="' + escapeHtml(entry.destination) + '" aria-pressed="' + (selected ? 'true' : 'false') + '">' + '<i class="fa-solid fa-user" aria-hidden="true"></i>' + '<span class="telephony-soft-phone__directory-name">' + escapeHtml(entry.name) + '</span>' + '<span class="telephony-soft-phone__directory-destination">' + escapeHtml(entry.detail) + '</span></button>';
-        }).join('');
+        var group = null;
+        matches.forEach(function (entry) {
+          var entryGroup = entry.group || label(strings, 'directory', 'Directory');
+          if (entryGroup !== group) {
+            group = entryGroup;
+            html += '<div class="telephony-soft-phone__transfer-group" role="presentation">' + escapeHtml(group) + '</div>';
+          }
+          html += entryHtml(entry);
+        });
       } else if (state.entries.length && query) {
         html += '<div class="telephony-soft-phone__directory-empty">' + escapeHtml(label(strings, 'directoryNoMatch', 'Nobody in the directory matches.')) + '</div>';
       } else if (!query) {
@@ -3390,37 +3828,175 @@
       }
     }
     function refusalMessage(refused) {
-      if (refused === 'own-number') {
-        return label(strings, 'transferOwnNumber', 'That is this phone system\'s own number. Choose who to transfer the call to.');
+      switch (refused) {
+        case 'own-number':
+          return label(strings, 'transferOwnNumber', 'That is this phone system\'s own number. Choose who to transfer the call to.');
+        case 'invalid-number':
+          return label(strings, 'transferInvalidNumber', 'Enter a complete phone number or extension.');
+        case 'unavailable':
+          return label(strings, 'transferAgentUnavailable', 'That agent cannot take a call right now. Choose someone who is available.');
+        case 'warm-queue':
+          return label(strings, 'transferWarmQueue', 'A queue cannot be consulted. Choose an agent or a number, or send the call to the queue with a blind transfer.');
+        case 'external-not-allowed':
+          return label(strings, 'transferNumberNotAllowed', 'Transfers to numbers that are not on the approved list are turned off. Choose from the list.');
+        default:
+          return label(strings, 'transferTargetRequired', 'Choose who to transfer the call to, or enter a number.');
       }
-      if (refused === 'invalid-number') {
-        return label(strings, 'transferInvalidNumber', 'Enter a complete phone number or extension.');
-      }
-      return label(strings, 'transferTargetRequired', 'Choose who to transfer the call to, or enter a number.');
     }
-    function submit() {
+    function resolveTarget() {
+      var resolved = typeof options.resolveTarget === 'function' ? options.resolveTarget(state) : null;
+      if (resolved) {
+        return {
+          target: resolved,
+          refused: resolved.refused
+        };
+      }
       var target = softPhone.resolveTransferTarget({
         query: state.query,
         selected: state.selected,
         ownNumbers: typeof options.ownNumbers === 'function' ? options.ownNumbers() : []
       });
-      if (target.refused) {
-        setError(refusalMessage(target.refused));
+      return {
+        target: target.destination,
+        refused: target.refused
+      };
+    }
+    function submit() {
+      if (state.consult) {
+        return;
+      }
+      var resolved = resolveTarget();
+      if (resolved.refused) {
+        setError(refusalMessage(resolved.refused));
         if (parts.input) {
           parts.input.focus();
         }
         return;
       }
       setError('');
-      var pending = typeof options.transfer === 'function' ? options.transfer(target.destination, softPhone.transferModeValue(state.mode)) : null;
+      var targetName = state.selected ? state.selected.name : resolved.target && resolved.target.label || '';
+      var pending = typeof options.transfer === 'function' ? options.transfer(resolved.target, softPhone.transferModeValue(state.mode), state.mode) : null;
 
-      // A refused transfer is reported by the phone's own error line, as every other command is; the panel stays
-      // open so the agent can pick someone else.
+      // A refused hub transfer is reported by the phone's own error line, as every other command is; a refused
+      // service transfer carries its reason, which is shown here. Either way the panel stays open so the agent
+      // can pick someone else.
       Promise.resolve(pending).then(function (result) {
+        if (!state.open) {
+          return;
+        }
+        if (result && result.consult && result.consult.live) {
+          showConsult(result.consult, targetName);
+          return;
+        }
         if (result && result.succeeded !== false) {
           close();
+        } else if (result && result.error) {
+          setError(result.error);
         }
       }).catch(function () {});
+    }
+    function stopPolling() {
+      if (pollTimer) {
+        root.clearTimeout(pollTimer);
+        pollTimer = null;
+      }
+    }
+    function schedulePoll() {
+      stopPolling();
+      if (!state.consult || !state.consult.view.live || typeof options.getConsult !== 'function') {
+        return;
+      }
+      pollTimer = root.setTimeout(function () {
+        pollTimer = null;
+        if (!state.open || !state.consult) {
+          return;
+        }
+        Promise.resolve(options.getConsult(state.consult.consult)).then(function (result) {
+          if (state.open && state.consult && result && result.consult) {
+            updateConsult(result.consult, false);
+          }
+        }).catch(function () {}).then(schedulePoll);
+      }, softPhone.CONSULT_POLL_INTERVAL_MS || 1500);
+    }
+    function showConsult(consult, targetName) {
+      state.consult = {
+        consult: consult,
+        name: targetName,
+        view: null,
+        message: ''
+      };
+      if (parts.modesSlot) {
+        parts.modesSlot.innerHTML = '';
+      }
+      if (parts.input) {
+        parts.input.hidden = true;
+      }
+
+      // Leaving the panel mid-consult would leave the caller on hold with nobody deciding what happens to them,
+      // so while it runs the only ways out are the consult's own Complete and Cancel.
+      if (parts.back) {
+        parts.back.hidden = true;
+      }
+      parts.results.innerHTML = '<div class="telephony-soft-phone__consult" data-telephony-consult>' + '<i class="fa-solid fa-user-clock" aria-hidden="true"></i>' + '<span class="telephony-soft-phone__consult-status" data-telephony-consult-status role="status" aria-live="polite"></span>' + '</div>';
+      parts.actions.innerHTML = '<button type="button" class="btn btn-sm btn-outline-danger" data-telephony-consult-cancel>' + escapeHtml(label(strings, 'consultCancel', 'Cancel transfer')) + '</button>' + '<button type="button" class="btn btn-sm btn-primary" data-telephony-consult-complete>' + escapeHtml(label(strings, 'consultComplete', 'Complete transfer')) + '</button>' + '<button type="button" class="btn btn-sm btn-primary" data-telephony-consult-done hidden>' + escapeHtml(label(strings, 'consultDone', 'Back to the call')) + '</button>';
+      parts.consultStatus = parts.results.querySelector('[data-telephony-consult-status]');
+      parts.consultCancel = parts.actions.querySelector('[data-telephony-consult-cancel]');
+      parts.consultComplete = parts.actions.querySelector('[data-telephony-consult-complete]');
+      parts.consultDone = parts.actions.querySelector('[data-telephony-consult-done]');
+      parts.consultComplete.addEventListener('click', function () {
+        finishConsult(options.completeConsult);
+      });
+      parts.consultCancel.addEventListener('click', function () {
+        finishConsult(options.cancelConsult);
+      });
+      parts.consultDone.addEventListener('click', close);
+      updateConsult(consult, true);
+    }
+    function updateConsult(consult, byAgent) {
+      var previous = state.consult.view ? state.consult.view.status : '';
+      var view = softPhone.consultView(consult, state.consult.name, strings);
+      state.consult.consult = consult;
+      state.consult.view = view;
+      var message = view.message;
+      if (!view.live && !byAgent && previous) {
+        message = softPhone.consultEndedMessage(previous, consult, state.consult.name, strings, {}) || message;
+      }
+      parts.consultStatus.textContent = message;
+      parts.consultComplete.disabled = !view.canComplete;
+      parts.consultCancel.disabled = !view.canCancel;
+      parts.consultComplete.hidden = !view.live;
+      parts.consultCancel.hidden = !view.live;
+      parts.consultDone.hidden = view.live;
+      if (view.live) {
+        schedulePoll();
+      } else {
+        stopPolling();
+      }
+    }
+    function finishConsult(command) {
+      if (!state.consult || typeof command !== 'function') {
+        return;
+      }
+      parts.consultComplete.disabled = true;
+      parts.consultCancel.disabled = true;
+      stopPolling();
+      Promise.resolve(command(state.consult.consult)).then(function (result) {
+        if (!state.open || !state.consult) {
+          return;
+        }
+        if (result && result.succeeded !== false) {
+          close();
+          return;
+        }
+
+        // Refused -- most often completing before the destination answered. The consult goes on as it was.
+        setError(result && result.error ? result.error : label(strings, 'failed', 'Call failed'));
+        updateConsult(state.consult.consult, true);
+      }).catch(function () {
+        if (state.open && state.consult) {
+          updateConsult(state.consult.consult, true);
+        }
+      });
     }
     return {
       open: open,
@@ -4339,6 +4915,10 @@
   var buildActiveCallsHtml = softPhoneModules.buildActiveCallsHtml;
   var transferModes = softPhoneModules.transferModes;
   var createTransferPanel = softPhoneModules.createTransferPanel;
+  var createTransferService = softPhoneModules.createTransferService;
+  var serviceDirectoryEntries = softPhoneModules.serviceDirectoryEntries;
+  var serviceModes = softPhoneModules.serviceModes;
+  var resolveServiceTarget = softPhoneModules.resolveServiceTarget;
   var showInAppConfirm = softPhoneModules.showInAppConfirm;
   var createCallNotifiers = softPhoneModules.createCallNotifiers;
   var trackCall = softPhoneModules.trackCall;
@@ -6436,24 +7016,84 @@
     var currentCall = null;
     var activeCalls = {};
     var conferenceSelections = {};
+    // A Contact Center call is transferred through the Contact Center's own endpoints when the tenant publishes
+    // them; every other call through the provider (see soft-phone/transfer-service.js).
+    var transferService = createTransferService ? createTransferService({
+      urls: config.transferService || {},
+      antiForgeryToken: config.antiForgeryToken
+    }) : null;
+    var serviceDirectory = null;
+    function serviceTransferCall() {
+      return transferService && transferService.applies(currentCall) ? currentCall : null;
+    }
+
     // The transfer panel draws itself into the keypad view (see soft-phone/transfer-panel.js).
     var transferPanel = createTransferPanel(dom.transferPanel, {
       strings: strings,
       escapeHtml: escapeHtml,
       formatNumber: formatPhoneNumber,
       modes: function () {
-        return transferModes(capabilities);
+        return serviceTransferCall() && serviceDirectory ? serviceModes(serviceDirectory) : transferModes(capabilities);
       },
       ownNumbers: function () {
         return ownOutboundNumbers();
       },
-      loadDirectory: loadTransferDirectory,
-      transfer: function (destination, mode) {
-        return invoke('Transfer', {
-          callId: currentCallId(),
-          to: destination,
-          mode: mode
+      loadDirectory: function () {
+        var call = serviceTransferCall();
+        serviceDirectory = null;
+        if (!call) {
+          return loadTransferDirectory();
+        }
+        return transferService.loadDirectory(call).then(function (directory) {
+          serviceDirectory = directory || {};
+          return serviceDirectoryEntries(serviceDirectory, strings);
+        }).catch(function (error) {
+          showError(error && error.message ? error.message : String(error));
+          return [];
         });
+      },
+      allowNumbers: function () {
+        return !serviceTransferCall() || !!(serviceDirectory && serviceDirectory.canTransferExternally && serviceDirectory.allowExternalNumbers);
+      },
+      resolveTarget: function (panelState) {
+        return serviceTransferCall() ? resolveServiceTarget({
+          query: panelState.query,
+          selected: panelState.selected,
+          mode: panelState.mode,
+          directory: serviceDirectory,
+          ownNumbers: ownOutboundNumbers()
+        }) : null;
+      },
+      transfer: function (target, mode, modeName) {
+        var call = serviceTransferCall();
+        if (!call) {
+          return invoke('Transfer', {
+            callId: currentCallId(),
+            to: target,
+            mode: mode
+          });
+        }
+        if (modeName !== 'warm') {
+          return transferService.transfer(call, target);
+        }
+
+        // The consult is heard on this call's own line: an agent who held the caller first would otherwise
+        // talk to the colleague through the hold tone. The server holds the caller for the consult.
+        return Promise.resolve(call.isOnHold ? resume() : null).then(function () {
+          return transferService.startConsult(call, target);
+        });
+      },
+      getConsult: function (consult) {
+        var call = serviceTransferCall();
+        return call ? transferService.getConsult(call, consult.id) : Promise.resolve(null);
+      },
+      completeConsult: function (consult) {
+        var call = serviceTransferCall();
+        return call ? transferService.completeConsult(call, consult.id) : Promise.resolve(null);
+      },
+      cancelConsult: function (consult) {
+        var call = serviceTransferCall();
+        return call ? transferService.cancelConsult(call, consult.id) : Promise.resolve(null);
       },
       onChange: function () {
         render();

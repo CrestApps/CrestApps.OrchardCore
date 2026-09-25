@@ -119,6 +119,10 @@
     var buildActiveCallsHtml = softPhoneModules.buildActiveCallsHtml;
     var transferModes = softPhoneModules.transferModes;
     var createTransferPanel = softPhoneModules.createTransferPanel;
+    var createTransferService = softPhoneModules.createTransferService;
+    var serviceDirectoryEntries = softPhoneModules.serviceDirectoryEntries;
+    var serviceModes = softPhoneModules.serviceModes;
+    var resolveServiceTarget = softPhoneModules.resolveServiceTarget;
     var showInAppConfirm = softPhoneModules.showInAppConfirm;
 
     var createCallNotifiers = softPhoneModules.createCallNotifiers;
@@ -2553,16 +2557,90 @@
         var currentCall = null;
         var activeCalls = {};
         var conferenceSelections = {};
+        // A Contact Center call is transferred through the Contact Center's own endpoints when the tenant publishes
+        // them; every other call through the provider (see soft-phone/transfer-service.js).
+        var transferService = createTransferService
+            ? createTransferService({ urls: config.transferService || {}, antiForgeryToken: config.antiForgeryToken })
+            : null;
+        var serviceDirectory = null;
+
+        function serviceTransferCall() {
+            return transferService && transferService.applies(currentCall) ? currentCall : null;
+        }
+
         // The transfer panel draws itself into the keypad view (see soft-phone/transfer-panel.js).
         var transferPanel = createTransferPanel(dom.transferPanel, {
             strings: strings,
             escapeHtml: escapeHtml,
             formatNumber: formatPhoneNumber,
-            modes: function () { return transferModes(capabilities); },
+            modes: function () {
+                return serviceTransferCall() && serviceDirectory ? serviceModes(serviceDirectory) : transferModes(capabilities);
+            },
             ownNumbers: function () { return ownOutboundNumbers(); },
-            loadDirectory: loadTransferDirectory,
-            transfer: function (destination, mode) {
-                return invoke('Transfer', { callId: currentCallId(), to: destination, mode: mode });
+            loadDirectory: function () {
+                var call = serviceTransferCall();
+
+                serviceDirectory = null;
+
+                if (!call) {
+                    return loadTransferDirectory();
+                }
+
+                return transferService.loadDirectory(call).then(function (directory) {
+                    serviceDirectory = directory || {};
+
+                    return serviceDirectoryEntries(serviceDirectory, strings);
+                }).catch(function (error) {
+                    showError(error && error.message ? error.message : String(error));
+
+                    return [];
+                });
+            },
+            allowNumbers: function () {
+                return !serviceTransferCall() || !!(serviceDirectory && serviceDirectory.canTransferExternally && serviceDirectory.allowExternalNumbers);
+            },
+            resolveTarget: function (panelState) {
+                return serviceTransferCall()
+                    ? resolveServiceTarget({
+                        query: panelState.query,
+                        selected: panelState.selected,
+                        mode: panelState.mode,
+                        directory: serviceDirectory,
+                        ownNumbers: ownOutboundNumbers()
+                    })
+                    : null;
+            },
+            transfer: function (target, mode, modeName) {
+                var call = serviceTransferCall();
+
+                if (!call) {
+                    return invoke('Transfer', { callId: currentCallId(), to: target, mode: mode });
+                }
+
+                if (modeName !== 'warm') {
+                    return transferService.transfer(call, target);
+                }
+
+                // The consult is heard on this call's own line: an agent who held the caller first would otherwise
+                // talk to the colleague through the hold tone. The server holds the caller for the consult.
+                return Promise.resolve(call.isOnHold ? resume() : null).then(function () {
+                    return transferService.startConsult(call, target);
+                });
+            },
+            getConsult: function (consult) {
+                var call = serviceTransferCall();
+
+                return call ? transferService.getConsult(call, consult.id) : Promise.resolve(null);
+            },
+            completeConsult: function (consult) {
+                var call = serviceTransferCall();
+
+                return call ? transferService.completeConsult(call, consult.id) : Promise.resolve(null);
+            },
+            cancelConsult: function (consult) {
+                var call = serviceTransferCall();
+
+                return call ? transferService.cancelConsult(call, consult.id) : Promise.resolve(null);
             },
             onChange: function () { render(); }
         });

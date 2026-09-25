@@ -46,6 +46,7 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
         builder.Services.AddSingleton<InMemoryTelephonyProvider>();
         builder.Services.AddSingleton<TestVoicemailInbox>();
         builder.Services.AddSingleton<BrowserCallLog>();
+        builder.Services.AddSingleton<TestTransferService>();
         builder.Services
             .AddSignalR()
             .AddJsonProtocol(options =>
@@ -75,9 +76,13 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
                     styled: context.Request.Query.ContainsKey("styled"),
                     attendedTransfer: attendedTransfer,
                     mediaAdapter: context.Request.Query[MediaAdapterQueryKey],
-                    browserMediaAdapterName: context.RequestServices.GetRequiredService<InMemoryTelephonyProvider>().BrowserMediaAdapterName),
+                    browserMediaAdapterName: context.RequestServices.GetRequiredService<InMemoryTelephonyProvider>().BrowserMediaAdapterName,
+                    transferService: context.Request.Query.ContainsKey("transferService")),
                 "text/html; charset=utf-8");
         });
+
+        // The Contact Center's soft-phone transfer endpoints, answered in memory.
+        app.Services.GetRequiredService<TestTransferService>().Map(app);
 
         // The voicemail delete endpoint, answering a refusal the way the site's cookie authentication did before
         // the endpoint wrote its own 403: a redirect to a sign-in page that itself answers 200.
@@ -166,7 +171,7 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
         return Results.Stream(stream, "application/javascript");
     }
 
-    private static string BuildHtml(bool browserAudio, bool embedded = false, string answerCallId = null, bool voicemail = false, bool styled = false, bool attendedTransfer = false, string mediaAdapter = null, string browserMediaAdapterName = "in-memory")
+    private static string BuildHtml(bool browserAudio, bool embedded = false, string answerCallId = null, bool voicemail = false, bool styled = false, bool attendedTransfer = false, string mediaAdapter = null, string browserMediaAdapterName = "in-memory", bool transferService = false)
     {
         var adapterName = !string.IsNullOrEmpty(mediaAdapter)
             ? mediaAdapter
@@ -202,6 +207,20 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
                 ["browserAudioUnavailable"] = "The browser audio adapter is unavailable.",
             },
         };
+
+        if (transferService)
+        {
+            // As SoftPhoneWidget.cshtml renders it when the Contact Center publishes its transfer endpoints.
+            config["antiForgeryToken"] = TestTransferService.AntiForgeryToken;
+            config["transferService"] = new Dictionary<string, string>
+            {
+                ["targetsUrl"] = TestTransferService.TargetsUrl,
+                ["transferUrl"] = TestTransferService.TransferUrl,
+                ["consultUrl"] = TestTransferService.ConsultUrl,
+                ["consultCompleteUrl"] = TestTransferService.ConsultCompleteUrl,
+                ["consultCancelUrl"] = TestTransferService.ConsultCancelUrl,
+            };
+        }
 
         if (voicemail)
         {

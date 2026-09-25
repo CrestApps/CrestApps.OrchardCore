@@ -64,10 +64,22 @@
     // value is empty, so the client falls back to its path derivation exactly as before.
     var registrationConfigUrl = Url.RouteUrl("ContactCenterAgentSoftPhoneRegistrationConfig");
 
+    // The Contact Center's transfer endpoints, resolved by route name like the voicemail ones: when the module is not
+    // enabled nothing resolves, and every call is transferred through the provider as before.
+    var transferService = new Dictionary<string, string>
+    {
+        ["targetsUrl"] = Url.RouteUrl("ContactCenterSoftPhoneTransferTargets") ?? string.Empty,
+        ["transferUrl"] = Url.RouteUrl("ContactCenterSoftPhoneTransfer") ?? string.Empty,
+        ["consultUrl"] = Url.RouteUrl("ContactCenterSoftPhoneConsultStart") ?? string.Empty,
+        ["consultCompleteUrl"] = Url.RouteUrl("ContactCenterSoftPhoneConsultComplete") ?? string.Empty,
+        ["consultCancelUrl"] = Url.RouteUrl("ContactCenterSoftPhoneConsultCancel") ?? string.Empty,
+    };
+
     var config = new Dictionary<string, object>
     {
         ["hubUrl"] = hubUrl,
         ["registrationConfigUrl"] = registrationConfigUrl ?? string.Empty,
+        ["transferService"] = transferService,
         ["voicemailPlaybackEnabled"] = !string.IsNullOrEmpty(voicemailMediaUrlTemplate),
         ["voicemailMediaUrlTemplate"] = voicemailMediaUrlTemplate ?? string.Empty,
         ["voicemailDeleteEnabled"] = !string.IsNullOrEmpty(voicemailDeleteUrlTemplate),
@@ -124,6 +136,35 @@
             ["transferTargetRequired"] = T["Choose who to transfer the call to, or enter a number."].Value,
             ["transferInvalidNumber"] = T["Enter a complete phone number or extension."].Value,
             ["transferOwnNumber"] = T["That is this phone system's own number. Choose who to transfer the call to."].Value,
+            ["transferAgentUnavailable"] = T["That agent cannot take a call right now. Choose someone who is available."].Value,
+            ["transferWarmQueue"] = T["A queue cannot be consulted. Choose an agent or a number, or send the call to the queue with a blind transfer."].Value,
+            ["transferNumberNotAllowed"] = T["Transfers to numbers that are not on the approved list are turned off. Choose from the list."].Value,
+            ["transferGroupAgents"] = T["Agents"].Value,
+            ["transferGroupQueues"] = T["Queues"].Value,
+            ["transferGroupExternal"] = T["Outside numbers"].Value,
+            ["transferExtension"] = T["Ext {0}"].Value,
+            ["transferWaiting"] = T["{0} waiting"].Value,
+            ["presenceAvailable"] = T["Available"].Value,
+            ["presenceBusy"] = T["On a call"].Value,
+            ["presenceReserved"] = T["Being offered a call"].Value,
+            ["presenceWrapUp"] = T["Wrap-up"].Value,
+            ["presenceBreak"] = T["On break"].Value,
+            ["presenceRequestBreak"] = T["Going on break"].Value,
+            ["presenceAway"] = T["Away"].Value,
+            ["presenceDoNotDisturb"] = T["Do not disturb"].Value,
+            ["presenceMeeting"] = T["In a meeting"].Value,
+            ["presenceTraining"] = T["In training"].Value,
+            ["presenceAfterHoursUnavailable"] = T["Unavailable"].Value,
+            ["presenceOffline"] = T["Offline"].Value,
+            ["consultRinging"] = T["Calling {0}..."].Value,
+            ["consultConnected"] = T["Talking to {0}. The caller is on hold."].Value,
+            ["consultCompleted"] = T["The call was handed to {0}."].Value,
+            ["consultCancelled"] = T["The caller is back with you."].Value,
+            ["consultTargetLeft"] = T["{0} did not take the call. The caller is back with you."].Value,
+            ["consultCallerLeft"] = T["The caller hung up."].Value,
+            ["consultComplete"] = T["Complete transfer"].Value,
+            ["consultCancel"] = T["Cancel transfer"].Value,
+            ["consultDone"] = T["Back to the call"].Value,
             ["back"] = T["Back"].Value,
             ["directory"] = T["Directory"].Value,
             ["directoryEmpty"] = T["No directory entries are available."].Value,

@@ -34,6 +34,8 @@
       "Assets/js/soft-phone/remote-elements.js",
       "Assets/js/soft-phone/dial-target.js",
       "Assets/js/soft-phone/transfer-target.js",
+      "Assets/js/soft-phone/transfer-service.js",
+      "Assets/js/soft-phone/consult-state.js",
       "Assets/js/soft-phone/transfer-panel.js",
       "Assets/js/soft-phone/in-app-confirm.js",
       "Assets/js/soft-phone/incoming-card.js",
