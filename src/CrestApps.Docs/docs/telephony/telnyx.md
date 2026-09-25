@@ -260,13 +260,21 @@ the soft phone asks the platform to place a keypad dial instead, naming the cred
 The soft phone tracks the agent leg, but Telnyx's commands act on the leg they are given, so every command on such a call
 is sent to the dialed party's leg, read back from the agent leg's client state (`GET /v2/calls/{agent}`):
 
-- **Transfer** (blind, to a number or an extension) moves the dialed party
-  (`POST /v2/calls/{party}/actions/transfer`; an extension is its registered SIP address, and the transfer command carries
-  no outbound voice profile) and then hangs up the agent's parked leg. A warm transfer of such a call is refused.
+- **Transfer** rings the destination first and hands the dialed party over only when it answers (see
+  [Transferring a keypad call](#transferring-a-keypad-call)).
 - **Merge** creates the conference from the first call's dialed party, which parks the agent's first leg, joins that leg
   with `end_conference_on_exit` (the agent leaving ends the conference), and joins every other call's dialed party. The
   agent's other legs stay parked, one per participant, so hanging up a participant's line ends that participant.
-  **Add to conference** joins only the new call's dialed party.
+  **Add to conference** joins only the new call's dialed party. Every call is read before anything moves, so a call that
+  cannot be merged refuses the merge with nothing changed.
+- **Merging an extension call** never moves the agent's own leg: that leg is already in the extension's conference
+  (`ext-{agent leg}`) with `end_conference_on_exit`, and taking it out ended that conference, hung up the colleague, and
+  -- through the colleague's hang-up -- the agent's leg too, leaving the other party alone in a new conference. An
+  extension call first in the merge lends its own conference (the colleague is marked detached, so their leaving does not
+  end it); later in the merge, its colleague joins and the agent's leg stays behind in its own conference, the way a
+  dialed number's agent leg stays parked. The agent leg of an extension call records the colleague's leg in its client
+  state for this, and hanging that leg up releases the colleague as well. An extension call whose colleague has not
+  answered cannot be merged yet.
 - **Digits** are sent from the dialed party's leg (`send_dtmf` plays tones to the far end of the leg it is sent on).
 - **Hang-up** from either side ends both: the agent's leg ending hangs up the dialed party (also while it is still
   ringing), and the dialed party ending -- answered or not -- hangs up the agent's leg. A leg the platform transferred or
@@ -280,6 +288,54 @@ says so in the transfer panel and disables its checkbox in the active-call list.
 
 The agent hears no ringback while the number rings: the agent's leg is answered and silent until the number answers,
 as on an extension call.
+
+### Transferring a keypad call
+
+A transfer used to hand the dialed party straight to the destination with `actions/transfer`. The colleague it reached got
+a leg the platform had not placed -- no client state naming the party, nothing in their call history -- so their phone
+treated it as a call it had dialed itself and could not transfer it again, and a destination that did not answer left the
+party alone on a parked line. A warm transfer was refused. Now the soft phone holds the call (its usual hold tone, sent on
+that call's own leg), and the provider rings the destination on a leg of its own (client state intent `ob-xfer`), leaving
+the party with the agent until that leg answers.
+
+| Step | Telnyx command | Leg | Notes |
+| --- | --- | --- | --- |
+| Ring a colleague | `POST /v2/calls` | new transfer leg | To the colleague's registered SIP address, no outbound voice profile, `from_display_name` = the party's number, SIP header `X-Transfer-Leg`, `timeout_secs: 30`. Recorded in the colleague's history as a ringing incoming call. |
+| Ring a number | `POST /v2/calls` | new transfer leg | Through the outbound voice profile. |
+| Wait | `PUT /v2/calls/{id}/actions/client_state_update` | agent leg, party leg | Both name the ringing leg: the agent hanging up keeps the party for the transfer, and the party hanging up releases the ringing leg. |
+| Hand over | `POST /v2/calls/{transfer leg}/actions/bridge` with `call_control_id: {party}` | transfer leg | A colleague's leg is bridged with `park_after_unbridge: self`, like the agent's was. Bridging takes the party out of the agent's bridge, which parks the agent's leg. |
+| Rewrite | `client_state_update` | transfer leg, party leg | A colleague's leg becomes an `ob-agent` leg naming the party, exactly like a keypad dial, so it can be held, transferred and merged again. Two outside parties each name the other as the leg to release (`w`). |
+| Release | `POST /v2/calls/{agent}/actions/hangup` (client state detached) | agent leg | Its hang-up no longer reaches back for the party. |
+
+A **blind transfer** hands the party over as soon as the destination answers. If the destination declines, is busy or
+does not answer within 30 seconds, the party is still with the agent, held; the agent resumes the call. If the agent has
+hung up in the meantime, a colleague's caller is sent to that colleague's voicemail (as an unanswered extension call is),
+and a caller whose outside destination did not answer is released.
+
+A **warm transfer** rings the agent's own phone for a consult -- a second call, `ob-agent` with the call it consults about
+(`o`) and that call's party (`y`) in its client state, which the phone answers without ringing, exactly like a keypad
+dial. When it answers, a colleague is rung on a transfer leg and joined with the consult leg in a conference
+`consult-{consult leg}` (two browser legs pass audio both ways only through Telnyx's mixer; neither joins with
+`end_conference_on_exit`), and a number is dialed and bridged like a keypad dial. The consult is marked answered (`s`) when
+the destination answers, and the transfer panel follows it through the hub's `GetConsult`:
+
+- **Complete** (`CompleteConsult`, only once the destination answered): a colleague leaves the consult conference
+  (`POST /v2/conferences/{id}/actions/leave`, which parks their leg) and is handed the party as above; an outside number is
+  bridged to the party directly. Both of the agent's legs are then hung up, detached.
+- **Cancel** (`CancelConsult`): the consult leg is hung up as not answered, which releases the destination, and the soft
+  phone takes the call off hold.
+- **The destination hangs up** during the consult: the consult leg is hung up and the call is the agent's again, still held.
+- **The caller hangs up** during the consult: the agent's first leg goes with them, and the consult carries on as an
+  ordinary call.
+- **The agent hangs up the consult** (or closes the phone) after the destination answered: the transfer completes, as on
+  most phone systems. Before the destination answered, the consult is cancelled; if the agent's first leg is gone too, its
+  caller is released.
+
+On the colleague's phone the transfer leg rings with **Answer** and **Decline** (no voicemail), showing the caller's number
+and *Transferred by* and the agent's name; the phone recognizes it by its client state or the `X-Transfer-Leg` header and, once
+answered, follows it as a call the platform tracks rather than one it dialed. Declining it is the transfer not being
+answered. A call that is not a keypad dial (an extension call, a call the browser dialed itself) is transferred the old
+way, and a call dialed from the browser still says in the transfer panel that it cannot be transferred.
 
 ## DID → agent routing
 
