@@ -48,6 +48,11 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
     /// </summary>
     public InMemoryTelephonyProvider Provider => _app.Services.GetRequiredService<InMemoryTelephonyProvider>();
 
+    /// <summary>
+    /// Gets the Contact Center supervisor surfaces the harness serves: the live dashboard and the supervisor phone banner.
+    /// </summary>
+    public SupervisorHarness Supervisor => _app.Services.GetRequiredService<SupervisorHarness>();
+
     public async Task StartAsync()
     {
         var builder = WebApplication.CreateBuilder();
@@ -57,6 +62,7 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
         builder.Services.AddSingleton<TestVoicemailInbox>();
         builder.Services.AddSingleton<BrowserCallLog>();
         builder.Services.AddSingleton<TestTransferService>();
+        builder.Services.AddSingleton<SupervisorHarness>();
         builder.Services
             .AddSignalR()
             .AddJsonProtocol(options =>
@@ -91,7 +97,8 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
                     intlTelInput: context.Request.Query.ContainsKey(IntlTelInputQueryKey),
                     widget: context.Request.Query.ContainsKey("widget"),
                     dark: context.Request.Query.ContainsKey("dark"),
-                    host: context.Request.Query.ContainsKey("host")),
+                    host: context.Request.Query.ContainsKey("host"),
+                    supervisorPhone: context.Request.Query.ContainsKey(SupervisorHarness.SupervisorPhoneQueryKey)),
                 "text/html; charset=utf-8");
         });
 
@@ -102,6 +109,9 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
 
         // The Contact Center's soft-phone transfer endpoints, answered in memory.
         app.Services.GetRequiredService<TestTransferService>().Map(app);
+
+        // The Contact Center's live dashboard and supervisor phone banner, from its built scripts.
+        app.Services.GetRequiredService<SupervisorHarness>().Map(app);
 
         // The voicemail delete endpoint, answering a refusal the way the site's cookie authentication did before
         // the endpoint wrote its own 403: a redirect to a sign-in page that itself answers 200.
@@ -204,7 +214,7 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
         return Results.Stream(stream, "application/javascript");
     }
 
-    private static string BuildHtml(bool browserAudio, bool embedded = false, string answerCallId = null, bool voicemail = false, bool styled = false, bool attendedTransfer = false, string mediaAdapter = null, string browserMediaAdapterName = "in-memory", bool transferService = false, bool intlTelInput = false, bool widget = false, bool dark = false, bool host = false)
+    private static string BuildHtml(bool browserAudio, bool embedded = false, string answerCallId = null, bool voicemail = false, bool styled = false, bool attendedTransfer = false, string mediaAdapter = null, string browserMediaAdapterName = "in-memory", bool transferService = false, bool intlTelInput = false, bool widget = false, bool dark = false, bool host = false, bool supervisorPhone = false)
     {
         var adapterName = !string.IsNullOrEmpty(mediaAdapter)
             ? mediaAdapter
@@ -281,6 +291,14 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
         var scriptUrls = intlTelInput ? ScriptUrls.Prepend(IntlTelInputScriptUrl) : ScriptUrls;
         var scripts = string.Join(Environment.NewLine + "    ", scriptUrls.Select(url => $"<script src=\"{url}\"></script>"));
 
+        // A supervisor's phone: the Contact Center's engagement banner, which its script moves above the call list.
+        var supervisorBanner = supervisorPhone ? SupervisorHarness.SupervisorPhoneMarkup() : string.Empty;
+
+        if (supervisorPhone)
+        {
+            scripts += Environment.NewLine + SupervisorHarness.SupervisorPhoneScripts();
+        }
+
         // The real widget's markup, floating or wrapped as the standalone page wraps it (see SoftPhoneWidgetPage).
         if (widget)
         {
@@ -313,6 +331,7 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
                 <div data-telephony-panel hidden>
                     <audio data-telephony-remote-audio autoplay></audio>
                     <span data-telephony-status>Ready</span>
+                    {{supervisorBanner}}
                     <button type="button" data-telephony-close>Close</button>
                     <div data-telephony-unavailable hidden><span data-telephony-unavailable-text></span></div>
                     <div data-telephony-connect-panel hidden><button type="button" data-telephony-connect>Connect</button></div>

@@ -102,6 +102,12 @@
     var disarmOtherOffers = softPhoneModules.disarmOtherOffers;
     var shouldAutoAnswerInboundLeg = softPhoneModules.shouldAutoAnswerInboundLeg;
     var canArmForOffer = softPhoneModules.canArmForOffer;
+    var createMonitorLegArms = softPhoneModules.createMonitorLegArms;
+    var armMonitorLegFor = softPhoneModules.armMonitorLeg;
+    var disarmMonitorLegFor = softPhoneModules.disarmMonitorLeg;
+    var readMonitorLegTag = softPhoneModules.readMonitorLegTag;
+    var claimMonitorLegArm = softPhoneModules.claimMonitorLegArm;
+    var monitorLegAction = softPhoneModules.monitorLegAction;
     var planEntryStart = softPhoneModules.planEntryStart;
     var planEntryEnd = softPhoneModules.planEntryEnd;
 
@@ -919,6 +925,9 @@
         // Legs the platform rang for a Contact Center offer that is still ringing on screen, handed to the core to
         // hold (unanswered, and not rung as a call of their own) until the agent accepts or declines the offer.
         var heldOfferCalls = [];
+        // Legs the platform rang a supervisor's phone on to listen to a call (see soft-phone/monitor-leg.js). The core
+        // answers the one it armed for; they are never the current call and never a row in the call list.
+        var monitorCalls = [];
         var disposed = false;
 
         // Media-quality sampler state for the active call. A getStats sample is taken every few seconds while a
@@ -1840,6 +1849,34 @@
             };
         }
 
+        // The core's handle on a supervisor's monitor leg: answered on the same media path as any inbound leg, but left out
+        // of the current call, so the phone's own calls are untouched by it.
+        function createMonitorLegController(call) {
+            return {
+                legId: (call.options && call.options.telnyxCallControlId) || '',
+                isRinging: function () {
+                    return !disposed && call.state === 'ringing';
+                },
+                answer: function () {
+                    if (!disposed && !isTelnyxTerminalState(call.state)) {
+                        answerInboundCall(call);
+                    }
+                },
+                hangup: function () {
+                    return terminateCall(call);
+                },
+                setMute: function (mute) {
+                    try {
+                        if (mute) {
+                            call.muteAudio();
+                        } else {
+                            call.unmuteAudio();
+                        }
+                    } catch (error) { /* best effort */ }
+                }
+            };
+        }
+
         // Best-effort extraction of the calling party from an inbound Telnyx call, used to label the ring
         // prompt. The SDK surfaces it under a few names depending on version; a display name is preferred over
         // a raw number, and both fall back to empty so the core can show a generic "Incoming call".
@@ -1897,6 +1934,26 @@
                 return;
             }
 
+            // A supervisor's monitor leg: its audio plays once media flows, and its state is the core's to report.
+            var monitorIndex = monitorCalls.indexOf(call);
+
+            if (monitorIndex >= 0) {
+                if (call.state === 'active') {
+                    ensureRemotePlayback(call);
+                }
+
+                if (isTelnyxTerminalState(call.state)) {
+                    monitorCalls.splice(monitorIndex, 1);
+                    releaseCallMedia(call);
+                }
+
+                if (typeof context.onMonitorLegState === 'function') {
+                    context.onMonitorLegState((call.options && call.options.telnyxCallControlId) || '', call.state);
+                }
+
+                return;
+            }
+
             if (call.direction === 'inbound' && call.state === 'ringing' &&
                 call !== currentCall && call !== inboundRingingCall && !disposed) {
                 // The leg the platform rang for an offer that is still ringing on screen. It is the core's to hold
@@ -1908,6 +1965,19 @@
                 if (typeof takeOfferLeg === 'function') {
                     heldOfferCalls.push(call);
                     takeOfferLeg(createOfferLegController(call));
+
+                    return;
+                }
+
+                // The leg a supervisor's phone is rung on to listen to a call: answered by itself when it is the one
+                // this phone asked for, hung up otherwise, and never rung or taken by the ordinary auto-answer.
+                var takeMonitorLeg = typeof context.claimMonitorLeg === 'function'
+                    ? context.claimMonitorLeg(call.options || {})
+                    : null;
+
+                if (typeof takeMonitorLeg === 'function') {
+                    monitorCalls.push(call);
+                    takeMonitorLeg(createMonitorLegController(call));
 
                     return;
                 }
@@ -2979,6 +3049,12 @@
         // ringing. It names what it is for and is dropped when that is over (see soft-phone/auto-answer.js); a genuine
         // incoming call arriving without it armed still rings.
         var inboundAutoAnswer = createAutoAnswerArm();
+
+        // The monitor legs this supervisor's phone was told to expect, by token, and the ones it answered (see
+        // soft-phone/monitor-leg.js). Separate from the arm above: an engagement never answers anybody's call.
+        var monitorLegArms = createMonitorLegArms();
+        var monitorLegs = {};
+        var monitorLegListeners = [];
 
         // One-shot auto-answer for the extension "answer from the OS notification" handoff. When the standalone
         // page is opened as /softphone?answerCallId=ID, the phone answers exactly the offer whose call id matches
@@ -4318,6 +4394,9 @@
                         // declines, never rung as a call of its own.
                         claimOfferLeg: claimOfferLeg,
                         onOfferLegEnded: handleOfferLegEnded,
+                        // A supervisor's monitor leg: answered by itself only when this phone asked for it.
+                        claimMonitorLeg: claimMonitorLeg,
+                        onMonitorLegState: handleMonitorLegState,
                         onInboundRing: handleBrowserInboundRing,
                         onInboundRingCanceled: clearBrowserInboundRing,
                         // Media-quality telemetry (item 2): the adapter samples the live peer connection and
@@ -5366,6 +5445,98 @@
         // colleague's call answered on arrival (see soft-phone/auto-answer.js).
         function consumeInboundAutoAnswer(options) {
             return shouldAutoAnswerInboundLeg(inboundAutoAnswer, Date.now(), options || {});
+        }
+
+        // A supervisor's engagement: the platform is about to ring this phone with a leg carrying `token`. `info` is
+        // handed back with the leg's events ({ interactionId, agentName, mode }).
+        function armMonitorLeg(token, info) {
+            return armMonitorLegFor(monitorLegArms, token, Date.now(), info);
+        }
+
+        // The engagement is over before its leg arrived, or its leg is to be let go.
+        function disarmMonitorLeg(token) {
+            disarmMonitorLegFor(monitorLegArms, token);
+        }
+
+        function hangupMonitorLeg(token) {
+            var leg = token ? monitorLegs[token] : null;
+
+            if (leg && leg.controller) {
+                Promise.resolve(leg.controller.hangup()).catch(function () { });
+            }
+        }
+
+        function onMonitorLeg(listener) {
+            if (typeof listener === 'function') {
+                monitorLegListeners.push(listener);
+            }
+        }
+
+        function emitMonitorLeg(event) {
+            monitorLegListeners.forEach(function (listener) {
+                try {
+                    listener(event);
+                } catch (error) { /* a listener's failure is its own */ }
+            });
+        }
+
+        // Called by the media adapter for an inbound leg: a handler for a monitor leg, or null for any other leg.
+        function claimMonitorLeg(options) {
+            var tag = readMonitorLegTag(options || {});
+
+            if (!tag) {
+                return null;
+            }
+
+            return function (controller) {
+                settleMonitorLeg(tag, controller, Date.now());
+            };
+        }
+
+        // The real-time message and the provider's invite race; a leg that arrives first waits a moment for its arm.
+        function settleMonitorLeg(tag, controller, arrivedAt) {
+            var action = monitorLegAction(monitorLegArms, tag, Date.now(), arrivedAt);
+
+            if (action === 'wait' && controller.isRinging()) {
+                window.setTimeout(function () {
+                    settleMonitorLeg(tag, controller, arrivedAt);
+                }, 150);
+
+                return;
+            }
+
+            var arm = action === 'answer' ? claimMonitorLegArm(monitorLegArms, tag, Date.now()) : null;
+
+            if (!arm || !controller.isRinging()) {
+                reportDiagnostic('info', 'monitor-leg-refused', 'A monitor leg this phone did not ask for was hung up.', tag.legId || '');
+                Promise.resolve(controller.hangup()).catch(function () { });
+
+                return;
+            }
+
+            monitorLegs[tag.token] = { controller: controller, legId: tag.legId, info: arm.info };
+            reportDiagnostic('info', 'monitor-leg-answered', 'The phone answered the monitor leg it asked for.', tag.legId || '');
+            controller.answer();
+            emitMonitorLeg({ type: 'answering', token: tag.token, legId: tag.legId, info: arm.info });
+        }
+
+        function handleMonitorLegState(legId, state) {
+            var token = Object.keys(monitorLegs).find(function (candidate) {
+                return monitorLegs[candidate].legId === legId;
+            });
+
+            if (!token) {
+                return;
+            }
+
+            var leg = monitorLegs[token];
+
+            if (isTelnyxTerminalState(state)) {
+                delete monitorLegs[token];
+                emitMonitorLeg({ type: 'ended', token: token, legId: legId, info: leg.info });
+            } else if (state === 'active') {
+                emitMonitorLeg({ type: 'connected', token: token, legId: legId, info: leg.info });
+            }
         }
 
         // The offer on screen, as the offer-leg rules need it.
@@ -10057,6 +10228,12 @@
             // Lets the Contact Center layer declare that a routed leg is on its way to this browser, so the
             // media adapter answers it instead of ringing it as an unsolicited incoming call.
             armInboundAutoAnswer: armInboundAutoAnswer,
+            // A supervisor's engagement (the Contact Center supervision layer): expect the monitor leg carrying a token,
+            // hear about it as it is answered, connects and ends, and let it go.
+            armMonitorLeg: armMonitorLeg,
+            disarmMonitorLeg: disarmMonitorLeg,
+            hangupMonitorLeg: hangupMonitorLeg,
+            onMonitorLeg: onMonitorLeg,
             // Answers (accepted) or hangs up (not) the leg held for an offer; returns whether a held leg was answered.
             settleOfferLeg: settleOfferLeg,
             setIncomingOffer: setIncomingOffer,

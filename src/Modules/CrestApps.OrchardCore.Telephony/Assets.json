@@ -27,6 +27,7 @@
       "Assets/js/soft-phone/offer-leg.js",
       "Assets/js/soft-phone/offer-report.js",
       "Assets/js/soft-phone/auto-answer.js",
+      "Assets/js/soft-phone/monitor-leg.js",
       "Assets/js/soft-phone/offer-ring.js",
       "Assets/js/soft-phone/offer-deadline.js",
       "Assets/js/soft-phone/call-legs.js",

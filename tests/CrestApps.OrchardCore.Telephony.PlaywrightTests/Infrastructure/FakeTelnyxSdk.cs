@@ -260,6 +260,27 @@ public static class FakeTelnyxSdk
                 return call.id;
             };
 
+            // Rings the browser with the leg the platform places at a supervisor's own phone to play them a call: tagged as a
+            // monitor leg with its one-off token in client state and in the X-Monitor-Leg header, or in the header alone,
+            // as the SDK that hands over no client state delivers it.
+            fake.ringMonitorLeg = function (legId, token, headerOnly) {
+                var options = {
+                    telnyxCallControlId: legId,
+                    customHeaders: [{ name: 'X-Monitor-Leg', value: token }],
+                    remoteCallerNumber: '+15550000000'
+                };
+
+                if (!headerOnly) {
+                    options.clientState = btoa(JSON.stringify({ i: 'cc-sv', p: 'customer-leg', y: 'agent-leg', l: token }));
+                }
+
+                var call = new Call(fake.client, options, 'inbound');
+
+                call.setState('ringing');
+
+                return call.id;
+            };
+
             // Whether the browser dialed anything itself through the SDK.
             fake.placedCount = function () {
                 return fake.calls.filter(function (call) { return call.direction === 'outbound'; }).length;
