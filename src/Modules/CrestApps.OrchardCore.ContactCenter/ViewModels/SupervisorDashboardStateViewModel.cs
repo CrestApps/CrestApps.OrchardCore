@@ -18,6 +18,11 @@ public sealed class SupervisorDashboardStateViewModel
     public IList<SupervisorAgentViewModel> Agents { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the campaigns the agents on the board are signed in to, by name, which the board filters by.
+    /// </summary>
+    public IList<SupervisorCampaignViewModel> Campaigns { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the total number of items waiting across all queues.
     /// </summary>
     public int TotalWaiting { get; set; }

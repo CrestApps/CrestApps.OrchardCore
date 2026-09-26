@@ -1,11 +1,13 @@
 using System.Security.Claims;
 using CrestApps.Core.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
@@ -13,6 +15,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules;
 using OrchardCore.Users;
 using OrchardCore.Users.Indexes;
@@ -195,6 +198,8 @@ internal static class SupervisorDashboardEndpoints
                 PresenceStatus = agent.PresenceStatus.ToString(),
                 PresenceReason = agent.PresenceReason,
                 QueueCount = agent.QueueIds.Count,
+                QueueIds = agent.QueueIds.Where(authorizedQueueIds.Contains).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
+                CampaignIds = (agent.CampaignIds ?? []).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
                 ActiveInteractions = activeInteractions,
                 ActiveInteractionId = canMonitorActiveInteraction ? activeInteraction?.ItemId : null,
                 AvailableMonitoringModes = availableMonitoringModes
@@ -218,7 +223,39 @@ internal static class SupervisorDashboardEndpoints
             }
         }
 
+        model.Campaigns = await ResolveCampaignsAsync(model.Agents, httpContext.RequestServices, httpContext.RequestAborted);
+
         return TypedResults.Ok(model);
+    }
+
+    // The campaigns the board's agents are signed in to, by name: what the campaign filter offers. Campaigns are an
+    // optional feature, so without their catalog there is nothing to offer.
+    private static async Task<IList<SupervisorCampaignViewModel>> ResolveCampaignsAsync(
+        IEnumerable<SupervisorAgentViewModel> agents,
+        IServiceProvider services,
+        CancellationToken cancellationToken)
+    {
+        var signedIn = agents
+            .SelectMany(agent => agent.CampaignIds)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (signedIn.Count == 0 || services.GetService<ICatalogManager<OmnichannelCampaign>>() is not { } campaignManager)
+        {
+            return [];
+        }
+
+        var names = (await campaignManager.GetAllAsync(cancellationToken))
+            .Where(campaign => campaign is not null && signedIn.Contains(campaign.ItemId))
+            .ToDictionary(campaign => campaign.ItemId, campaign => campaign.DisplayText, StringComparer.OrdinalIgnoreCase);
+
+        return signedIn
+            .Select(id => new SupervisorCampaignViewModel
+            {
+                Id = id,
+                Name = names.TryGetValue(id, out var name) && !string.IsNullOrWhiteSpace(name) ? name : id,
+            })
+            .OrderBy(campaign => campaign.Name, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
     }
 
     private static async Task<bool> IsQueueAuthorizedAsync(

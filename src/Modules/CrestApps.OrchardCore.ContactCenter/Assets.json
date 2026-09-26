@@ -18,6 +18,7 @@
   {
     "inputs": [
       "Assets/js/shared/supervisor-actions.js",
+      "Assets/js/shared/agent-board-filters.js",
       "Assets/js/supervisor-interventions.js",
       "Assets/js/supervisor-dashboard.js"
     ],

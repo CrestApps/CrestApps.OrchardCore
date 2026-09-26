@@ -367,6 +367,105 @@
   contactCenter.escapeSupervisorHtml = escapeHtml;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*
+ * The live dashboard's agent board filters: the queue and campaign an agent is signed in to, their status, and their
+ * name. A large contact center has too many agents to scan, so the supervisor narrows the board to the ones they are
+ * looking for. The board is filtered in the browser from the state the dashboard already polls, so a filter answers at
+ * once and costs the server nothing.
+ *
+ * Concatenated ahead of the dashboard by the module asset pipeline. It attaches to a shared namespace rather than
+ * exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var contactCenter = root.CrestAppsContactCenter = root.CrestAppsContactCenter || {};
+
+  // The status groups, in the order the filter offers them. They group presence the way the queue tiles count it, so a
+  // filter and a tile agree on who is busy or not ready; onCall is anybody on a call, whatever their presence says.
+  var STATUS_FILTERS = ['available', 'busy', 'onCall', 'notReady', 'offline'];
+  var BUSY_STATUSES = {
+    Reserved: true,
+    Busy: true,
+    WrapUp: true
+  };
+  function agentStatusGroup(status) {
+    if (!status || status === 'Offline') {
+      return 'offline';
+    }
+    if (status === 'Available') {
+      return 'available';
+    }
+    return BUSY_STATUSES[status] ? 'busy' : 'notReady';
+  }
+
+  // An agent is on a call when they handle a Contact Center interaction or a phone call of their own (a number dialed
+  // from the keypad, an extension call).
+  function isOnCall(agent) {
+    return !!(agent.activeInteractionId || agent.phoneCall || agent.activeInteractions > 0);
+  }
+
+  // Lower case, without accents, so "catia" finds "Cátia".
+  function fold(text) {
+    var value = String(text || '').toLowerCase();
+    return typeof value.normalize === 'function' ? value.normalize('NFD').replace(/[̀-ͯ]/g, '') : value;
+  }
+  function contains(list, id) {
+    return Array.isArray(list) && list.indexOf(id) >= 0;
+  }
+
+  // The agents that pass every filter that is on, in the order the server sent them.
+  function filterSupervisorAgents(agents, filters) {
+    var chosen = filters || {};
+    var search = fold(chosen.search).trim();
+    return (agents || []).filter(function (agent) {
+      if (!agent) {
+        return false;
+      }
+      if (chosen.queueId && !contains(agent.queueIds, chosen.queueId)) {
+        return false;
+      }
+      if (chosen.campaignId && !contains(agent.campaignIds, chosen.campaignId)) {
+        return false;
+      }
+      if (chosen.status === 'onCall') {
+        if (!isOnCall(agent)) {
+          return false;
+        }
+      } else if (chosen.status && agentStatusGroup(agent.presenceStatus) !== chosen.status) {
+        return false;
+      }
+      return !search || fold(agent.displayName || agent.userId).indexOf(search) >= 0;
+    });
+  }
+  function hasId(list, id) {
+    return (list || []).some(function (item) {
+      return item && item.id === id;
+    });
+  }
+
+  // The filters to apply now: a queue or campaign the board no longer has, or a status it does not know -- remembered
+  // from an earlier visit -- would hide every agent, so it is dropped.
+  function normalizeAgentBoardFilters(filters, state) {
+    var chosen = filters || {};
+    var current = state || {};
+    return {
+      queueId: typeof chosen.queueId === 'string' && hasId(current.queues, chosen.queueId) ? chosen.queueId : '',
+      campaignId: typeof chosen.campaignId === 'string' && hasId(current.campaigns, chosen.campaignId) ? chosen.campaignId : '',
+      status: STATUS_FILTERS.indexOf(chosen.status) >= 0 ? chosen.status : '',
+      search: typeof chosen.search === 'string' ? chosen.search : ''
+    };
+  }
+  function agentBoardFiltersActive(filters) {
+    var chosen = filters || {};
+    return !!(chosen.queueId || chosen.campaignId || chosen.status || String(chosen.search || '').trim());
+  }
+  contactCenter.AGENT_STATUS_FILTERS = STATUS_FILTERS;
+  contactCenter.agentStatusGroup = agentStatusGroup;
+  contactCenter.filterSupervisorAgents = filterSupervisorAgents;
+  contactCenter.normalizeAgentBoardFilters = normalizeAgentBoardFilters;
+  contactCenter.agentBoardFiltersActive = agentBoardFiltersActive;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
  * The live dashboard's supervisor interventions: Listen / Whisper / Barge, Stop, Take over, and the More menu (End call,
  * Transfer, Record, the agent's state, Message), with the confirm and form panels they open.
  *
@@ -863,6 +962,24 @@
   'use strict';
 
   var REFRESH_INTERVAL_MS = 10000;
+
+  // Where a supervisor's agent board filters are kept between visits, in their own browser only.
+  var FILTERS_STORAGE_KEY = 'crestapps.contactCenter.dashboard.agentFilters';
+  function readStoredFilters() {
+    try {
+      var raw = window.localStorage.getItem(FILTERS_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (error) {
+      return null;
+    }
+  }
+  function storeFilters(filters) {
+    try {
+      window.localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(filters));
+    } catch (error) {
+      // A private window, or storage turned off: the filters just are not remembered.
+    }
+  }
   function parseConfig(root) {
     var raw = root.getAttribute('data-config');
     if (!raw) {
@@ -899,10 +1016,114 @@
       summary: root.querySelector('[data-cc-summary]'),
       tiles: root.querySelector('[data-cc-tiles]'),
       board: root.querySelector('[data-cc-board]'),
+      boardCount: root.querySelector('[data-cc-board-count]'),
+      filters: root.querySelector('[data-cc-board-filters]'),
       connection: root.querySelector('[data-cc-connection]'),
       error: root.querySelector('[data-cc-error]'),
       qualityAlerts: root.querySelector('[data-cc-quality-alerts]')
     };
+    var contactCenter = window.CrestAppsContactCenter || {};
+
+    // The agent board's filters (see shared/agent-board-filters.js), remembered from the supervisor's last visit.
+    var filters = readStoredFilters() || {};
+    function filterControl(name) {
+      return refs.filters ? refs.filters.querySelector('[data-cc-filter="' + name + '"]') : null;
+    }
+    function filterOption(text, value) {
+      var option = document.createElement('option');
+      option.textContent = text;
+      option.value = value;
+      return option;
+    }
+
+    // The queue and campaign options follow the state: rebuilt only when the list itself changed, so a poll never
+    // resets a select the supervisor is using.
+    function syncFilterOptions(select, items, cacheKey) {
+      if (!select) {
+        return;
+      }
+      var signature = (items || []).map(function (item) {
+        return item.id + '\u0001' + (item.name || item.id);
+      }).join('\u0002');
+      if (lastHtml[cacheKey] === signature) {
+        return;
+      }
+      lastHtml[cacheKey] = signature;
+      var allOption = select.options.length ? select.options[0] : null;
+      while (select.options.length > 1) {
+        select.remove(1);
+      }
+      (items || []).forEach(function (item) {
+        select.add(filterOption(item.name || item.id, item.id));
+      });
+      if (!allOption) {
+        select.add(filterOption('', ''), 0);
+      }
+    }
+    function syncFilterControls(state) {
+      if (!refs.filters) {
+        return;
+      }
+      syncFilterOptions(filterControl('queueId'), state.queues, 'filterQueues');
+      syncFilterOptions(filterControl('campaignId'), state.campaigns, 'filterCampaigns');
+
+      // The campaign filter only means something when an agent on the board is signed in to a campaign.
+      var campaign = filterControl('campaignId');
+      if (campaign && campaign.parentElement) {
+        campaign.parentElement.hidden = !(state.campaigns || []).length;
+      }
+      filters = typeof contactCenter.normalizeAgentBoardFilters === 'function' ? contactCenter.normalizeAgentBoardFilters(filters, state) : filters;
+      ['search', 'queueId', 'campaignId', 'status'].forEach(function (name) {
+        var control = filterControl(name);
+        if (control && control !== document.activeElement && control.value !== (filters[name] || '')) {
+          control.value = filters[name] || '';
+        }
+      });
+      var clear = refs.filters.querySelector('[data-cc-filter-clear]');
+      if (clear) {
+        clear.disabled = typeof contactCenter.agentBoardFiltersActive === 'function' ? !contactCenter.agentBoardFiltersActive(filters) : true;
+      }
+    }
+    function bindFilters() {
+      if (!refs.filters) {
+        return;
+      }
+      function applyFrom(control) {
+        filters[control.getAttribute('data-cc-filter')] = control.value;
+        storeFilters(filters);
+        if (lastState) {
+          syncFilterControls(lastState);
+          renderBoard(lastState);
+        }
+      }
+      refs.filters.addEventListener('input', function (event) {
+        if (event.target && event.target.matches('[data-cc-filter="search"]')) {
+          applyFrom(event.target);
+        }
+      });
+      refs.filters.addEventListener('change', function (event) {
+        if (event.target && event.target.matches('select[data-cc-filter]')) {
+          applyFrom(event.target);
+        }
+      });
+      var clear = refs.filters.querySelector('[data-cc-filter-clear]');
+      if (clear) {
+        clear.addEventListener('click', function () {
+          filters = {};
+          storeFilters(filters);
+          ['search', 'queueId', 'campaignId', 'status'].forEach(function (name) {
+            var control = filterControl(name);
+            if (control) {
+              control.value = '';
+            }
+          });
+          if (lastState) {
+            syncFilterControls(lastState);
+            renderBoard(lastState);
+          }
+        });
+      }
+    }
 
     // The latest call-quality alert for each agent, until a supervisor dismisses it.
     var qualityAlerts = {};
@@ -974,9 +1195,15 @@
       if (!refs.board) {
         return;
       }
-      var agents = state.agents || [];
-      if (!agents.length) {
+      var allAgents = state.agents || [];
+      var agents = typeof contactCenter.filterSupervisorAgents === 'function' ? contactCenter.filterSupervisorAgents(allAgents, filters) : allAgents;
+      renderBoardCount(agents.length, allAgents.length);
+      if (!allAgents.length) {
         setRegionHtml(refs.board, 'board', '<div class="cc-empty">' + escapeHtml(label('noAgents', 'No agents are configured.')) + '</div>');
+        return;
+      }
+      if (!agents.length) {
+        setRegionHtml(refs.board, 'board', '<div class="cc-empty">' + escapeHtml(label('noMatchingAgents', 'No agents match these filters.')) + '</div>');
         return;
       }
       var serverNow = Date.parse(state.serverTimeUtc || '');
@@ -997,6 +1224,15 @@
       // The actions are delegated from the board (see supervisor-interventions.js), so a redraw needs no rebinding.
       setRegionHtml(refs.board, 'board', boardHtml);
     }
+    function renderBoardCount(shown, total) {
+      if (!refs.boardCount) {
+        return;
+      }
+      var text = shown === total ? format(label('agentCount', '{0} agents'), total) : format(label('filteredAgentCount', '{0} of {1} agents'), shown, total);
+      if (refs.boardCount.textContent !== text) {
+        refs.boardCount.textContent = text;
+      }
+    }
     function watchQueues(state) {
       if (!realtime) {
         return;
@@ -1011,6 +1247,7 @@
     function render(state) {
       renderSummary(state);
       renderTiles(state);
+      syncFilterControls(state);
       renderBoard(state);
       watchQueues(state);
     }
@@ -1096,6 +1333,7 @@
     if (interventions) {
       interventions.bind(refs.board);
     }
+    bindFilters();
     if (window.contactCenterRealTime && config.hubUrl) {
       realtime = window.contactCenterRealTime.connect({
         hubUrl: config.hubUrl,

@@ -25,6 +25,9 @@
             ["longestWait"] = T["Longest wait"].Value,
             ["slaBreaches"] = T["SLA breaches"].Value,
             ["noAgents"] = T["No agents are configured."].Value,
+            ["noMatchingAgents"] = T["No agents match these filters."].Value,
+            ["agentCount"] = T["{0} agents"].Value,
+            ["filteredAgentCount"] = T["{0} of {1} agents"].Value,
             ["activeInteractions"] = T["Active interactions"].Value,
             ["monitor"] = T["Monitor"].Value,
             ["whisper"] = T["Whisper"].Value,
@@ -122,8 +125,47 @@
     <div class="visually-hidden" data-cc-intervention-status role="status" aria-live="polite"></div>
 
     <div class="cc-panel">
-        <div class="cc-panel__header" id="ccDashboardAgents">@T["Agents"]</div>
+        <div class="cc-panel__header d-flex align-items-center justify-content-between gap-2">
+            <span id="ccDashboardAgents">@T["Agents"]</span>
+            <span class="small text-body-secondary fw-normal" data-cc-board-count role="status" aria-live="polite"></span>
+        </div>
         <div class="cc-panel__body">
+            @* The board filters by the queue and campaign an agent is signed in to, their status and their name (see
+               Assets/js/shared/agent-board-filters.js). The queue and campaign options come with each state refresh. *@
+            <div class="row g-2 align-items-end mb-3" data-cc-board-filters role="search" aria-label="@T["Filter agents"]">
+                <div class="col-12 col-md-3">
+                    <label class="form-label small mb-1" for="ccBoardSearch">@T["Agent"]</label>
+                    <input type="search" class="form-control form-control-sm" id="ccBoardSearch" data-cc-filter="search" placeholder="@T["Search by name"]" autocomplete="off" />
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label small mb-1" for="ccBoardQueue">@T["Signed-in queue"]</label>
+                    <select class="form-select form-select-sm" id="ccBoardQueue" data-cc-filter="queueId">
+                        <option value="">@T["All queues"]</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label small mb-1" for="ccBoardCampaign">@T["Signed-in campaign"]</label>
+                    <select class="form-select form-select-sm" id="ccBoardCampaign" data-cc-filter="campaignId">
+                        <option value="">@T["All campaigns"]</option>
+                    </select>
+                </div>
+                <div class="col-8 col-md-2">
+                    <label class="form-label small mb-1" for="ccBoardStatus">@T["Status"]</label>
+                    <select class="form-select form-select-sm" id="ccBoardStatus" data-cc-filter="status">
+                        <option value="">@T["All statuses"]</option>
+                        <option value="available">@T["Available"]</option>
+                        <option value="busy">@T["Busy"]</option>
+                        <option value="onCall">@T["On a call"]</option>
+                        <option value="notReady">@T["Not ready"]</option>
+                        <option value="offline">@T["Offline"]</option>
+                    </select>
+                </div>
+                <div class="col-4 col-md-2 text-end">
+                    <button type="button" class="btn btn-sm btn-outline-secondary w-100" data-cc-filter-clear disabled>
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i> @T["Clear"]
+                    </button>
+                </div>
+            </div>
             <div class="cc-board" data-cc-board role="status" aria-live="polite" aria-labelledby="ccDashboardAgents"></div>
         </div>
     </div>

@@ -36,6 +36,16 @@ public sealed class SupervisorAgentViewModel
     public int QueueCount { get; set; }
 
     /// <summary>
+    /// Gets or sets the queues the agent is signed in to that the viewing supervisor oversees, which the board filters by.
+    /// </summary>
+    public IList<string> QueueIds { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the campaigns the agent is signed in to, which the board filters by.
+    /// </summary>
+    public IList<string> CampaignIds { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the number of interactions the agent is currently handling.
     /// </summary>
     public int ActiveInteractions { get; set; }
