@@ -196,6 +196,25 @@ public sealed class VoiceQueueOfferServiceTests
         harness.AssertReservationNotReleased();
     }
 
+    // A caller who asked to be called back has hung up: there is no call until the agent accepts and the platform dials
+    // them. Live, releasing the reservation re-reserved the same agent every second and the callback never rang.
+    [Fact]
+    public async Task WhenAQueuedCallbackHasNoInteractionYet_TheReservationIsKept()
+    {
+        // Arrange
+        var harness = new OfferHarness();
+        harness.Reserve("agent-1", "activity-1");
+        harness.WithAgent("agent-1", "user-1");
+        harness.WithActivity("activity-1", ActivitySources.Callback);
+
+        // Act
+        var userId = await harness.Service.OfferNextAsync("queue-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(userId);
+        harness.AssertReservationNotReleased();
+    }
+
     [Fact]
     public async Task WhenAnOutboundCallHasNoInteraction_TheReservationIsReleased()
     {

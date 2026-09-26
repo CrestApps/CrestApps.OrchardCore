@@ -19,7 +19,9 @@ public static class AgentOfferKindHelper
     /// </returns>
     public static AgentOfferKind FromActivitySource(string activitySource)
     {
-        if (string.Equals(activitySource, ActivitySources.PreviewDial, StringComparison.OrdinalIgnoreCase))
+        // A queued callback is a call the agent places, like a preview dial: the caller hung up after asking for it.
+        if (string.Equals(activitySource, ActivitySources.PreviewDial, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(activitySource, ActivitySources.Callback, StringComparison.OrdinalIgnoreCase))
         {
             return AgentOfferKind.PreviewDial;
         }

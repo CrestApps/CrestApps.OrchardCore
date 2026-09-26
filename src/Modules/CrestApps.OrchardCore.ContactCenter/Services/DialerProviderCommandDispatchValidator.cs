@@ -54,7 +54,10 @@ public sealed class DialerProviderCommandDispatchValidator : IProviderCommandDis
             return false;
         }
 
-        var profile = await _profileManager.FindByIdAsync(command.DialerProfileId, cancellationToken);
+        // A queued callback is dialed with the platform's built-in callback profile, which is never stored.
+        var profile = QueueCallbackDialerProfile.IsCallbackProfile(command.DialerProfileId)
+            ? QueueCallbackDialerProfile.Create()
+            : await _profileManager.FindByIdAsync(command.DialerProfileId, cancellationToken);
         var activity = await _activityManager.FindByIdAsync(command.ActivityItemId, cancellationToken);
 
         if (profile is null || activity is null)

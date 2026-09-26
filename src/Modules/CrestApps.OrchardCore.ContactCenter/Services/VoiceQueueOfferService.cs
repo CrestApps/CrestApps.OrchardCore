@@ -128,13 +128,16 @@ public sealed class VoiceQueueOfferService : IVoiceQueueOfferService
 
                 case OfferOutcome.NoInteraction:
                     // A preview dial reserves the agent before the call exists - that is what preview means - so
-                    // its reservation is kept. Every other kind of outbound work with no interaction is a
-                    // reservation holding capacity for a call that will never ring, and is released.
+                    // its reservation is kept, and so is a queued callback's: the caller hung up, and there is no call
+                    // until the agent accepts and the platform dials them. Every other kind of outbound work with no
+                    // interaction is a reservation holding capacity for a call that will never ring, and is released.
+                    // Live, releasing a callback's re-reserved the same agent every second and the callback never rang.
                     var activity = await _activityManager.FindByIdAsync(reservation.ActivityItemId, cancellationToken);
 
                     if (activity is null ||
                         string.Equals(activity.Source, ActivitySources.Inbound, StringComparison.OrdinalIgnoreCase) ||
-                        !string.Equals(activity.Source, ActivitySources.PreviewDial, StringComparison.OrdinalIgnoreCase))
+                        !(string.Equals(activity.Source, ActivitySources.PreviewDial, StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(activity.Source, ActivitySources.Callback, StringComparison.OrdinalIgnoreCase)))
                     {
                         await _reservationService.RejectAsync(reservation.ItemId, cancellationToken);
                     }

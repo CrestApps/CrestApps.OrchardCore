@@ -101,6 +101,43 @@ public sealed class ContactCenterCallCommandServiceTests
             Times.Never);
     }
 
+    // A queued callback has no dialer profile of its own: it is dialed with the platform's built-in callback profile,
+    // from the default caller id, and the caller who asked for it is never refused as do-not-call.
+    [Fact]
+    public async Task AcceptInboundOfferAsync_WhenActivityIsAQueuedCallback_DialsTheCallerWithTheCallbackProfile()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.SetupPendingReservation();
+        harness.ActivityManager
+            .Setup(manager => manager.FindByIdAsync("act1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OmnichannelActivity { ItemId = "act1", Source = ActivitySources.Callback, PreferredDestination = "+17025550100" });
+        harness.DialerAttemptService
+            .Setup(service => service.TryDialAsync(It.IsAny<DialerProfile>(), It.IsAny<ActivityReservation>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.AcceptInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        harness.DialerAttemptService.Verify(
+            attemptService => attemptService.TryDialAsync(
+                It.Is<DialerProfile>(profile =>
+                    profile.ItemId == QueueCallbackDialerProfile.Id &&
+                    profile.CallerId == null &&
+                    !profile.RespectDoNotCall &&
+                    !profile.EnforceCallingWindow),
+                It.Is<ActivityReservation>(reservation => reservation.ItemId == "r1"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        harness.ReservationService.Verify(
+            service => service.AcceptAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     [Theory]
     [InlineData(InteractionStatus.Ended)]
     [InlineData(InteractionStatus.Failed)]

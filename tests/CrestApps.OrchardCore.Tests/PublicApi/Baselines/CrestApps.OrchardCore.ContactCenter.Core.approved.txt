@@ -2052,6 +2052,12 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         Overflowed = 1,
         Voicemail = 2,
     }
+    public static class QueueCallbackDialerProfile
+    {
+        public const string Id = "__queue-callback__";
+        public static CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile Create() { }
+        public static bool IsCallbackProfile(string profileId) { }
+    }
     public sealed class QueueItem : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel
     {
         public QueueItem() { }

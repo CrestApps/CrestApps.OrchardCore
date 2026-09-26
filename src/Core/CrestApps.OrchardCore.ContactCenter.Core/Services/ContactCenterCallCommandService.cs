@@ -122,6 +122,16 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
         {
             var activity = await _activityManager.FindByIdAsync(reservation.ActivityItemId, cancellationToken);
 
+            // A queued callback is dialed like a preview dial, with the platform's own callback profile: it is not
+            // campaign work and has no stored profile of its own.
+            if (string.Equals(activity?.Source, ActivitySources.Callback, StringComparison.OrdinalIgnoreCase) &&
+                _dialerAttemptService is not null)
+            {
+                return await _dialerAttemptService.TryDialAsync(QueueCallbackDialerProfile.Create(), reservation, cancellationToken)
+                    ? CallCommandResult.Success("The callback was started.", requiresDeviceAnswer: false)
+                    : CallCommandResult.Failure("The callback could not be started.");
+            }
+
             if (activity?.Source == ActivitySources.PreviewDial &&
                 _dialerAttemptService is not null &&
                 !string.IsNullOrWhiteSpace(reservation.DialerProfileId))

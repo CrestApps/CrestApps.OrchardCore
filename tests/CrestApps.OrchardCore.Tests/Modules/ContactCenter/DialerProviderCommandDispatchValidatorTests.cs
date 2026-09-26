@@ -99,6 +99,38 @@ public sealed class DialerProviderCommandDispatchValidatorTests
         Assert.False(result);
     }
 
+    // The callback profile is built in, never stored: a dial made with it must not be refused as having lost its profile.
+    [Fact]
+    public async Task CanDispatchAsync_ForTheBuiltInCallbackProfile_ValidatesWithoutAStoredProfile()
+    {
+        // Arrange
+        var activity = new OmnichannelActivity { ItemId = "activity-1", Source = ActivitySources.Callback };
+        var profileManager = new Mock<IDialerProfileManager>(MockBehavior.Strict);
+        var activityManager = new Mock<IOmnichannelActivityManager>();
+        activityManager
+            .Setup(value => value.FindByIdAsync("activity-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(activity);
+        var eligibilityService = new Mock<IDialerEligibilityService>();
+        eligibilityService
+            .Setup(value => value.EvaluateAsync(
+                It.Is<DialerEligibilityContext>(context => context.Profile.ItemId == QueueCallbackDialerProfile.Id && context.Activity == activity),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DialerEligibilityResult.Eligible());
+        var validator = new DialerProviderCommandDispatchValidator(
+            profileManager.Object,
+            activityManager.Object,
+            eligibilityService.Object,
+            NullLogger<DialerProviderCommandDispatchValidator>.Instance);
+        var command = Command();
+        command.DialerProfileId = QueueCallbackDialerProfile.Id;
+
+        // Act
+        var result = await validator.CanDispatchAsync(command, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result);
+    }
+
     private static ProviderCommand Command()
     {
         return new ProviderCommand
