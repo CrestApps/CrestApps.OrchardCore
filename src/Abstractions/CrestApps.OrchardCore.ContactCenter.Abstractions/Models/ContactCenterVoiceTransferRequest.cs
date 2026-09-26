@@ -31,6 +31,13 @@ public sealed class ContactCenterVoiceTransferRequest
     public string Target { get; set; }
 
     /// <summary>
+    /// Gets or sets the number presented to the destination as the caller, or <see langword="null"/> for the
+    /// provider's default. A caller sent on from a phone menu is presented as the number they dialled, so the
+    /// destination sees which line the call came through.
+    /// </summary>
+    public string CallerId { get; set; }
+
+    /// <summary>
     /// Gets or sets provider-specific metadata.
     /// </summary>
     public IDictionary<string, string> Metadata { get; set; } = new Dictionary<string, string>();

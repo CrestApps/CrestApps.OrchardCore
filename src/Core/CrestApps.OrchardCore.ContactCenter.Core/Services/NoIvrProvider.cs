@@ -10,6 +10,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 public sealed class NoIvrProvider : IIvrProvider
 {
     /// <inheritdoc/>
+    public Task<bool> AnswerAsync(string providerCallId, CancellationToken cancellationToken = default)
+        => Task.FromResult(false);
+
+    /// <inheritdoc/>
     public Task<bool> PromptAsync(
         string providerCallId,
         string text,

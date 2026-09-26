@@ -17,7 +17,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Services;
 /// Default <see cref="IInboundVoiceCallProcessor"/> implementation. It routes inbound voice calls into CRM
 /// activities and interactions while Telephony remains responsible for media execution.
 /// </summary>
-public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
+public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
 {
     private const string ServiceAddressMetadataKey = "serviceAddress";
     private const string RoutingTerminalReasonMetadataKey = "routing_terminal_reason";
@@ -235,14 +235,18 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
         ActivityQueue queue = null;
         string unavailableQueueReasonCode = null;
 
+        // An open entry point with a phone menu routes nowhere yet: the caller's choice decides that, so there is no
+        // target to resolve, validate or admit to here. A closed one still applies its closed action first.
+        var hasMenu = HasMenu(plan);
+
         // A specific-agent entry point rings the named agent directly (a personal line). The call is carried
         // under the synthetic direct-routing queue rather than a real queue, so there is nothing to resolve or
         // validate here and it is never offered to anyone other than the named agent.
-        var isDirect = plan is { RouteToAgent: true } && !string.IsNullOrEmpty(plan.TargetAgentId);
+        var isDirect = !hasMenu && plan is { RouteToAgent: true } && !string.IsNullOrEmpty(plan.TargetAgentId);
 
         if (plan is not null)
         {
-            if (!isDirect && plan.ShouldQueue)
+            if (!hasMenu && !isDirect && plan.ShouldQueue)
             {
                 if (string.IsNullOrEmpty(plan.TargetQueueId))
                 {
@@ -330,6 +334,11 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
                 cancellationToken);
 
             return result;
+        }
+
+        if (hasMenu)
+        {
+            return await StartMenuAsync(plan, interaction, result, cancellationToken);
         }
 
         if (!isDirect && queue is null)

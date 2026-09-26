@@ -18,4 +18,12 @@ public interface IEntryPointFlowResolver
     /// <param name="interaction">The caller's interaction.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     Task<IvrFlow> FindFlowAsync(Interaction interaction, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns the entry point whose menu this call is in, or <see langword="null"/> when it is in none. The entry
+    /// point also says where a caller who leaves the menu without choosing is put through to.
+    /// </summary>
+    /// <param name="interaction">The caller's interaction.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<ContactCenterEntryPoint> FindEntryPointAsync(Interaction interaction, CancellationToken cancellationToken = default);
 }

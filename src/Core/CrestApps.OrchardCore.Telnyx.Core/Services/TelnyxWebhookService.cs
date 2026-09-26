@@ -110,6 +110,14 @@ public sealed partial class TelnyxWebhookService : ITelnyxWebhookService
             return recordingHandled ? TelnyxWebhookResult.Updated : TelnyxWebhookResult.Ignored;
         }
 
+        // A key press on an entry-point menu. It is not a call-state transition either, and it carries no state token,
+        // so it has to be recognised before state mapping: mapped first, it was dropped as unmappable and every menu
+        // choice a caller made went nowhere.
+        if (string.Equals(callEvent.EventType?.Trim(), TelnyxConstants.Gather.EndedEventType, StringComparison.OrdinalIgnoreCase))
+        {
+            return await HandleGatherEndedAsync(callEvent, cancellationToken);
+        }
+
         if (string.IsNullOrEmpty(callEvent.CallControlId) || !TryMapState(callEvent, out var state))
         {
             return TelnyxWebhookResult.Ignored;
@@ -138,20 +146,6 @@ public sealed partial class TelnyxWebhookService : ITelnyxWebhookService
         if (handled)
         {
             return TelnyxWebhookResult.Updated;
-        }
-
-        // A key press on an entry-point menu. It arrives on its own event type and means something different
-        // from an inbound call: the call is already tracked, and this says where in the menu the caller has got.
-        if (string.Equals(callEvent.EventType?.Trim(), "call.gather.ended", StringComparison.OrdinalIgnoreCase) &&
-            await _digitsSink.HandleDigitsAsync(new InboundVoiceDigitsEvent
-            {
-                ProviderName = TelnyxConstants.ProviderTechnicalName,
-                ProviderCallId = callEvent.CallControlId,
-                Digits = callEvent.Digits,
-                DeliveryId = callEvent.EventId,
-            }, cancellationToken))
-        {
-            return TelnyxWebhookResult.Routed;
         }
 
         if (IsInbound(callEvent.Direction) &&

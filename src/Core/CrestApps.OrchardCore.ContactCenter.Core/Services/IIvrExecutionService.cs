@@ -1,4 +1,4 @@
-﻿using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 public interface IIvrExecutionService
 {
     /// <summary>
-    /// Plays the first menu, or reports that this entry point has none.
+    /// Answers the caller and plays the first menu, or reports that this entry point has none.
     /// </summary>
     /// <param name="interaction">The caller's interaction.</param>
     /// <param name="flow">The menu on the entry point, when it has one.</param>
@@ -30,4 +30,13 @@ public interface IIvrExecutionService
         string digits,
         string deliveryId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Records that the caller has left the menu without choosing, such as by hanging up, so nothing reported
+    /// afterwards moves them.
+    /// </summary>
+    /// <param name="interaction">The caller's interaction.</param>
+    /// <param name="reason">Why they left.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task EndAsync(Interaction interaction, string reason, CancellationToken cancellationToken = default);
 }

@@ -131,6 +131,34 @@ public static class TelnyxConstants
     }
 
     /// <summary>
+    /// What a phone menu is played and collected with. See the Telnyx Call Control reference for
+    /// <c>gather_using_speak</c>, <c>gather_using_audio</c> and the <c>call.gather.ended</c> webhook.
+    /// </summary>
+    public static class Gather
+    {
+        /// <summary>
+        /// The webhook Telnyx sends when a digit collection ends, carrying <c>digits</c> and <c>status</c>.
+        /// </summary>
+        public const string EndedEventType = "call.gather.ended";
+
+        /// <summary>
+        /// How long the caller has to press a key after the menu finishes. Telnyx waits a minute by default, which
+        /// is a minute of silence for a caller who did not hear the options.
+        /// </summary>
+        public const int TimeoutMillis = 8000;
+
+        /// <summary>
+        /// The voice menus are spoken in. It matches the voicemail greeting, the platform's other spoken prompt.
+        /// </summary>
+        public const string Voice = "female";
+
+        /// <summary>
+        /// The language menus are spoken in.
+        /// </summary>
+        public const string Language = "en-US";
+    }
+
+    /// <summary>
     /// Contains constants for Telnyx call recording and its secure ingestion into the encrypted media store.
     /// </summary>
     public static class Recording

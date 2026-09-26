@@ -454,6 +454,32 @@ public static partial class ContactCenterConstants
         /// </summary>
         public const string AiHandoffRequested = "AiHandoffRequested";
 
+        // ---- Activity audit: entry-point phone menus ----
+
+        /// <summary>
+        /// Raised each time a caller is played a phone menu: the first menu, a sub-menu, or the same menu again
+        /// after a missed or wrong key.
+        /// </summary>
+        public const string IvrMenuEntered = "IvrMenuEntered";
+
+        /// <summary>
+        /// Raised when a phone menu reports what the caller did: the key pressed, a key the menu does not accept, or
+        /// nothing before it timed out.
+        /// </summary>
+        public const string IvrDigitsReceived = "IvrDigitsReceived";
+
+        /// <summary>
+        /// Raised when a caller's choice on a phone menu sends them somewhere: a queue, an agent, voicemail or an
+        /// external number.
+        /// </summary>
+        public const string IvrActionTaken = "IvrActionTaken";
+
+        /// <summary>
+        /// Raised when a caller runs out of tries on a phone menu, or chose something that could not be reached, and
+        /// the menu's fallback decides where they go.
+        /// </summary>
+        public const string IvrFallbackTaken = "IvrFallbackTaken";
+
         /// <summary>
         /// Raised when an agent's extension call to or from a colleague starts ringing.
         /// </summary>

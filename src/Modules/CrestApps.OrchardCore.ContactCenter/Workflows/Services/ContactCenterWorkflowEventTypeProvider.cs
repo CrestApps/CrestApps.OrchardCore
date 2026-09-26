@@ -140,6 +140,10 @@ public sealed class ContactCenterWorkflowEventTypeProvider : IContactCenterWorkf
             new SelectListItem(S["AI handoff requested"].Value, ContactCenterConstants.Events.AiHandoffRequested) { Group = calls },
             new SelectListItem(S["Extension call started"].Value, ContactCenterConstants.Events.ExtensionCallStarted) { Group = calls },
             new SelectListItem(S["Extension call ended"].Value, ContactCenterConstants.Events.ExtensionCallEnded) { Group = calls },
+            new SelectListItem(S["Phone menu entered"].Value, ContactCenterConstants.Events.IvrMenuEntered) { Group = calls },
+            new SelectListItem(S["Phone menu key pressed"].Value, ContactCenterConstants.Events.IvrDigitsReceived) { Group = calls },
+            new SelectListItem(S["Phone menu action taken"].Value, ContactCenterConstants.Events.IvrActionTaken) { Group = calls },
+            new SelectListItem(S["Phone menu fallback taken"].Value, ContactCenterConstants.Events.IvrFallbackTaken) { Group = calls },
         ];
     }
 }

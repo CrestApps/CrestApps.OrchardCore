@@ -70,6 +70,12 @@ public static class TelnyxCallEventParser
                 TranscriptionIsFinal = ReadNestedBool(payload, "transcription_data", "is_final"),
                 Digits = ReadString(payload, "digits"),
 
+                // Read only for the gather event, for the same reason as the detection result below: "status" is too
+                // common a field name to trust on any other event.
+                GatherStatus = eventType.Equals(TelnyxConstants.Gather.EndedEventType, StringComparison.OrdinalIgnoreCase)
+                    ? ReadString(payload, "status")
+                    : null,
+
                 // Read only for the detection events: "result" is a common enough field name that another event
                 // carrying one must not be mistaken for a verdict on who answered.
                 MachineDetectionResult = eventType.StartsWith("call.machine.", StringComparison.OrdinalIgnoreCase)

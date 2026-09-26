@@ -63,6 +63,8 @@ public sealed class InboundVoiceStartup : StartupBase
             .AddScoped<IIvrExecutionService, IvrExecutionService>()
             .AddScoped<IEntryPointFlowResolver, EntryPointFlowResolver>()
             .AddScoped<IInboundVoiceDigitsSink, InboundVoiceDigitsSink>()
+            .AddScoped<IIvrCallRouter, IvrCallRouter>()
+            .AddScoped<IIvrExternalTransferService, IvrExternalTransferService>()
             .AddScoped<IEntryPointResolver, EntryPointResolver>()
             .AddScoped<IPendingIncomingCallOfferService, PendingIncomingCallOfferService>()
             .AddScoped<QueuedVoiceWorkOfferScopeContext>()

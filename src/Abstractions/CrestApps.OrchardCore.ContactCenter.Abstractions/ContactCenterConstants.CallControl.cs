@@ -121,5 +121,11 @@ public static partial class ContactCenterConstants
         /// event.
         /// </summary>
         public const string HangupSource = "hangup_source";
+
+        /// <summary>
+        /// The key under which an inbound call's interaction keeps the number the caller dialled: the contact
+        /// center's own line, which is what a call sent on from that line presents as its caller.
+        /// </summary>
+        public const string ServiceAddress = "serviceAddress";
     }
 }

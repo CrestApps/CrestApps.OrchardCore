@@ -17,7 +17,7 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
-public sealed class InboundVoiceServiceTests
+public sealed partial class InboundVoiceServiceTests
 {
     private static readonly DateTime _now = new(2026, 6, 28, 12, 0, 0, DateTimeKind.Utc);
 
@@ -1331,12 +1331,15 @@ public sealed class InboundVoiceServiceTests
 
         public Mock<IDistributedLock> DistributedLock { get; } = new();
 
+        public Mock<IIvrCallRouter> IvrRouter { get; } = new();
+
         public TestContactCenterScopeExecutor ScopeExecutor { get; }
 
         public Harness()
         {
             var services = new ServiceCollection();
             services.AddSingleton(ProviderCommandProcessor.Object);
+            services.AddSingleton(IvrRouter.Object);
             ScopeExecutor = new TestContactCenterScopeExecutor(services.BuildServiceProvider())
             {
                 ScheduleAfterCommitResult = true,

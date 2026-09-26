@@ -1733,7 +1733,9 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public IvrFlowState() { }
         public System.Collections.Generic.IList<string> AppliedDeliveryIds { get; set; }
         public int Attempts { get; set; }
+        public bool Completed { get; set; }
         public string CurrentNodeId { get; set; }
+        public System.Collections.Generic.IList<CrestApps.OrchardCore.ContactCenter.Core.Models.IvrPathEntry> Path { get; set; }
     }
     public sealed class IvrFlowValidationError
     {
@@ -1772,9 +1774,19 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public CrestApps.OrchardCore.ContactCenter.Core.Models.IvrAction Action { get; set; }
         public string Digit { get; set; }
     }
+    public sealed class IvrPathEntry
+    {
+        public IvrPathEntry() { }
+        public string Digits { get; set; }
+        public string NodeId { get; set; }
+        public System.DateTime OccurredUtc { get; set; }
+        public string Result { get; set; }
+    }
     public readonly struct IvrStep : System.IEquatable<CrestApps.OrchardCore.ContactCenter.Core.Models.IvrStep>
     {
         public IvrStep(CrestApps.OrchardCore.ContactCenter.Core.Models.IvrStepKind Kind, string NodeId, string Prompt, string PromptMediaId, string TargetId) { }
+        public bool IsFallback { get; init; }
+        public bool IsRetry { get; init; }
         public CrestApps.OrchardCore.ContactCenter.Core.Models.IvrStepKind Kind { get; init; }
         public string NodeId { get; init; }
         public string Prompt { get; init; }
@@ -3378,6 +3390,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         public const string EntryPointMetadataKey = "ivrEntryPointId";
         public EntryPointFlowResolver(CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEntryPointManager entryPointManager) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint> FindEntryPointAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.IvrFlow> FindFlowAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class EntryPointOwnNumberSource : CrestApps.OrchardCore.ContactCenter.IContactCenterOwnNumberSource
@@ -3400,6 +3413,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public static class EntryPointRoutingPlanner
     {
         public static CrestApps.OrchardCore.ContactCenter.Core.Models.EntryPointRoutingPlan CreatePlan(CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint entryPoint, bool isOpen) { }
+        public static int ResolveDirectRingTimeout(CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint entryPoint) { }
     }
     public static class EstimatedWaitTimeCalculator
     {
@@ -3920,6 +3934,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public interface IEntryPointFlowResolver
     {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint> FindEntryPointAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.IvrFlow> FindFlowAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IEntryPointResolver
@@ -3943,6 +3958,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public interface IInboundVoiceCallProcessor
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.InboundVoiceRoutingResult> RouteInboundAsync(CrestApps.OrchardCore.ContactCenter.Models.InboundVoiceEvent inboundEvent, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> SendToVoicemailAsync(string activityItemId, string reasonCode, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> SendWaitingToVoicemailAsync(string activityItemId, string reasonCode, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> TimeoutDirectHoldAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default);
     }
@@ -4006,10 +4022,20 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> GetRecentByAgentAsync(string agentId, int take, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.Core.Models.PageResult<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> PageByStatusAsync(int page, int pageSize, CrestApps.OrchardCore.ContactCenter.Models.InteractionStatus status, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface IIvrCallRouter
+    {
+        System.Threading.Tasks.Task RouteAsync(string interactionId, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint entryPoint, CrestApps.OrchardCore.ContactCenter.Core.Models.IvrStep step, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task StartAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IIvrExecutionService
     {
+        System.Threading.Tasks.Task EndAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, string reason, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.IvrStep> HandleDigitsAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, CrestApps.OrchardCore.ContactCenter.Core.Models.IvrFlow flow, string digits, string deliveryId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.IvrStep> StartAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, CrestApps.OrchardCore.ContactCenter.Core.Models.IvrFlow flow, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IIvrExternalTransferService
+    {
+        System.Threading.Tasks.Task<bool> TransferAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, string destinationId, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IOrderedEntryPointResolver
     {
@@ -4256,7 +4282,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public sealed class InboundVoiceDigitsSink : CrestApps.OrchardCore.ContactCenter.Services.IInboundVoiceDigitsSink
     {
-        public InboundVoiceDigitsSink(CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IEntryPointFlowResolver flowResolver, CrestApps.OrchardCore.ContactCenter.Core.Services.IIvrExecutionService ivrExecutionService, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueService queueService, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.InboundVoiceDigitsSink> logger) { }
+        public InboundVoiceDigitsSink(CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IEntryPointFlowResolver flowResolver, CrestApps.OrchardCore.ContactCenter.Core.Services.IIvrExecutionService ivrExecutionService, CrestApps.OrchardCore.ContactCenter.Core.Services.IIvrCallRouter callRouter, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterAuditRecorder auditRecorder, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.InboundVoiceDigitsSink> logger) { }
         public System.Threading.Tasks.Task<bool> HandleDigitsAsync(CrestApps.OrchardCore.ContactCenter.Services.InboundVoiceDigitsEvent digitsEvent, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class InboundVoiceEventSink : CrestApps.OrchardCore.ContactCenter.IInboundVoiceEventSink
@@ -4360,13 +4386,28 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public static CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionTransferHistoryEntry FindPending(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public static CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionTransferHistoryEntry Open(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, string fromAgentId, CrestApps.OrchardCore.ContactCenter.Models.InteractionTransferTargetType targetType, string targetId, System.DateTime requestedUtc, string result) { }
     }
+    public sealed class IvrCallRouter : CrestApps.OrchardCore.ContactCenter.Core.Services.IIvrCallRouter
+    {
+        public const string UnroutableVoicemailReasonCode = "ivr_unroutable_voicemail";
+        public const string VoicemailReasonCode = "ivr_voicemail";
+        public IvrCallRouter(CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IEntryPointFlowResolver flowResolver, CrestApps.OrchardCore.ContactCenter.Core.Services.IIvrExecutionService ivrExecutionService, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueManager queueManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueLimitService queueLimitService, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueService queueService, CrestApps.OrchardCore.ContactCenter.Core.Services.IVoiceQueueOfferService offerService, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueTreatmentService treatmentService, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IInboundVoiceCallProcessor inboundProcessor, CrestApps.OrchardCore.ContactCenter.Core.Services.IIvrExternalTransferService externalTransfers, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterAuditRecorder auditRecorder, YesSql.ISession session, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.IvrCallRouter> logger) { }
+        public System.Threading.Tasks.Task RouteAsync(string interactionId, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint entryPoint, CrestApps.OrchardCore.ContactCenter.Core.Models.IvrStep step, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task StartAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public sealed class IvrExecutionService : CrestApps.OrchardCore.ContactCenter.Core.Services.IIvrExecutionService
     {
         public const string StateMetadataKey = "ivrFlowState";
-        public IvrExecutionService(CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Services.IIvrProvider ivrProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.IvrExecutionService> logger) { }
+        public IvrExecutionService(CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Services.IIvrProvider ivrProvider, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterAuditRecorder auditRecorder, YesSql.ISession session, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.IvrExecutionService> logger) { }
+        public System.Threading.Tasks.Task EndAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, string reason, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.IvrStep> HandleDigitsAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, CrestApps.OrchardCore.ContactCenter.Core.Models.IvrFlow flow, string digits, string deliveryId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.IvrStep> StartAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, CrestApps.OrchardCore.ContactCenter.Core.Models.IvrFlow flow, System.Threading.CancellationToken cancellationToken = default) { }
         public static CrestApps.OrchardCore.ContactCenter.Core.Models.IvrFlowState ReadState(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
+    }
+    public sealed class IvrExternalTransferService : CrestApps.OrchardCore.ContactCenter.Core.Services.IIvrExternalTransferService
+    {
+        public const string ReasonCode = "ivr_external_transfer";
+        public IvrExternalTransferService(OrchardCore.Settings.ISiteService siteService, CrestApps.OrchardCore.Telephony.Services.IDialDestinationPolicy destinationPolicy, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.IContactCenterOwnNumberSource> ownNumberSources, CrestApps.OrchardCore.ContactCenter.IContactCenterVoiceProviderResolver voiceProviderResolver, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterWorkStateService workStateService, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterActivityWriter activityWriter, CrestApps.OrchardCore.ContactCenter.Core.Services.IProviderVoiceEventService providerVoiceEventService, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterAuditRecorder auditRecorder, YesSql.ISession session, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.IvrExternalTransferService> logger) { }
+        public System.Threading.Tasks.Task<bool> TransferAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, string destinationId, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public static class IvrFlowStateMachine
     {
@@ -4410,6 +4451,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public sealed class NoIvrProvider : CrestApps.OrchardCore.ContactCenter.Services.IIvrProvider
     {
         public NoIvrProvider() { }
+        public System.Threading.Tasks.Task<bool> AnswerAsync(string providerCallId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<bool> PromptAsync(string providerCallId, string text, string mediaId, string validDigits, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class NoProviderCallStateSynchronizationService : CrestApps.OrchardCore.ContactCenter.Core.Services.IProviderCallStateSynchronizationService

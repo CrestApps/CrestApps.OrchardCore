@@ -47,9 +47,7 @@ public static class EntryPointRoutingPlanner
 
                 // A ring window of 0 disables voicemail downstream: the caller keeps ringing and is held for the
                 // agent. Voicemail on → the configured (or default) window; voicemail off → 0.
-                plan.RingTimeoutSeconds = entryPoint.VoicemailEnabled
-                    ? ResolveRingTimeout(entryPoint.RingTimeoutSeconds)
-                    : 0;
+                plan.RingTimeoutSeconds = ResolveDirectRingTimeout(entryPoint);
             }
             else
             {
@@ -92,6 +90,22 @@ public static class EntryPointRoutingPlanner
         }
 
         return plan;
+    }
+
+    /// <summary>
+    /// Gets how long a call this entry point sends straight to one agent rings before it goes to voicemail: the
+    /// configured (or default) window when voicemail is on, or 0 when it is off and the caller is held for the agent.
+    /// A phone-menu choice that rings one agent follows the same rule as a personal line.
+    /// </summary>
+    /// <param name="entryPoint">The entry point.</param>
+    /// <returns>The ring window in seconds, or 0 when voicemail is disabled.</returns>
+    public static int ResolveDirectRingTimeout(ContactCenterEntryPoint entryPoint)
+    {
+        ArgumentNullException.ThrowIfNull(entryPoint);
+
+        return entryPoint.VoicemailEnabled
+            ? ResolveRingTimeout(entryPoint.RingTimeoutSeconds)
+            : 0;
     }
 
     private static int ResolveRingTimeout(int ringTimeoutSeconds)

@@ -44,4 +44,41 @@ public sealed class InboundVoiceDigitsEvent
     /// has already been advanced by.
     /// </summary>
     public string DeliveryId { get; set; }
+
+    /// <summary>
+    /// Gets or sets how the provider says the collection ended. A collection that ended because the caller hung up,
+    /// or because the platform replaced the menu with something else, is not a choice and must not move the caller.
+    /// </summary>
+    public InboundVoiceDigitsOutcome Outcome { get; set; }
+}
+
+/// <summary>
+/// How a provider's digit collection ended.
+/// </summary>
+public enum InboundVoiceDigitsOutcome
+{
+    /// <summary>
+    /// The caller pressed a key the menu accepts.
+    /// </summary>
+    Collected,
+
+    /// <summary>
+    /// The caller pressed a key the menu does not accept.
+    /// </summary>
+    Invalid,
+
+    /// <summary>
+    /// The caller pressed nothing before the menu timed out.
+    /// </summary>
+    TimedOut,
+
+    /// <summary>
+    /// The caller hung up while the menu was playing.
+    /// </summary>
+    CallerHungUp,
+
+    /// <summary>
+    /// The collection was stopped by another command on the call, such as the platform moving the caller on.
+    /// </summary>
+    Cancelled,
 }

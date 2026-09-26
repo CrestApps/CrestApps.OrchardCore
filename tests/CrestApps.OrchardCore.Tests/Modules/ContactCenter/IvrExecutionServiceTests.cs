@@ -1,7 +1,9 @@
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
+using CrestApps.OrchardCore.Tests.Modules.ContactCenter.Integration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
@@ -211,6 +213,173 @@ public sealed class IvrExecutionServiceTests
             ],
         };
 
+    [Fact]
+    public async Task StartingAMenu_AnswersTheCallerBeforePlayingIt()
+    {
+        // Arrange
+        // A ringing call cannot hear anything, and Telnyx refuses to collect digits on one: the menu was never
+        // audible because nothing answered the caller first.
+        var harness = new IvrHarness();
+
+        // Act
+        await harness.StartAsync(SalesOrSupport());
+
+        // Assert
+        Assert.Equal(["commit", "answer:call-1", "prompt:root"], harness.Sequence);
+    }
+
+    [Fact]
+    public async Task AKeyPress_CommitsTheCallersPositionBeforeTheNextMenuIsPlayed()
+    {
+        // Arrange
+        // The provider's events for the call write the same interaction. A position still uncommitted when the next
+        // menu is already playing is lost to that conflict, and the caller's next key is read against the wrong menu.
+        var harness = new IvrHarness();
+        await harness.StartAsync(MenuWithSubMenu());
+        harness.Sequence.Clear();
+
+        // Act
+        await harness.HandleDigitsAsync(MenuWithSubMenu(), "1", "delivery-1");
+
+        // Assert
+        Assert.Equal(["commit", "prompt:products"], harness.Sequence);
+    }
+
+    [Fact]
+    public async Task ARoutingChoice_CommitsWithTheRoutingRatherThanAheadOfIt()
+    {
+        // Arrange
+        // Committed on its own, a choice whose routing then lost a concurrency conflict was retried against a caller
+        // already marked as out of the menu, and the retry put them nowhere.
+        var harness = new IvrHarness();
+        await harness.StartAsync(SalesOrSupport());
+        harness.Sequence.Clear();
+
+        // Act
+        await harness.HandleDigitsAsync(SalesOrSupport(), "2", "delivery-1");
+
+        // Assert
+        Assert.DoesNotContain("commit", harness.Sequence);
+        Assert.True(harness.ReadState().Completed);
+    }
+
+    [Fact]
+    public async Task AMenuThatCannotBePlayed_SendsTheCallerToTheEntryPointsTarget()
+    {
+        // Arrange
+        // A refused prompt is a caller on a silent line waiting for a key press that cannot come.
+        var harness = new IvrHarness();
+        harness.Provider.PromptSucceeds = false;
+
+        // Act
+        var outcome = await harness.StartAsync(SalesOrSupport());
+
+        // Assert
+        Assert.Equal(IvrStepKind.Done, outcome.Kind);
+        Assert.True(outcome.IsFallback);
+        Assert.True(harness.ReadState().Completed);
+    }
+
+    [Fact]
+    public async Task OnceTheCallerHasBeenRouted_LaterKeyPressesDoNothing()
+    {
+        // Arrange
+        // A queue's callback offer collects a key on the same call. Read as a menu choice, it moved a caller who was
+        // already waiting for an agent.
+        var harness = new IvrHarness();
+        await harness.StartAsync(SalesOrSupport());
+        await harness.HandleDigitsAsync(SalesOrSupport(), "1", "delivery-1");
+        harness.Provider.Prompts.Clear();
+
+        // Act
+        var outcome = await harness.HandleDigitsAsync(SalesOrSupport(), "2", "delivery-2");
+
+        // Assert
+        Assert.Equal(IvrStepKind.Ignored, outcome.Kind);
+        Assert.Empty(harness.Provider.Prompts);
+    }
+
+    [Fact]
+    public async Task TheCallersRoute_IsRecordedAsTheyGo()
+    {
+        // Arrange
+        var harness = new IvrHarness();
+        await harness.StartAsync(MenuWithSubMenu());
+
+        // Act
+        await harness.HandleDigitsAsync(MenuWithSubMenu(), "1", "delivery-1");
+        await harness.HandleDigitsAsync(MenuWithSubMenu(), "1", "delivery-2");
+
+        // Assert
+        Assert.Equal(
+            [
+                ContactCenterConstants.Events.IvrMenuEntered,
+                ContactCenterConstants.Events.IvrDigitsReceived,
+                ContactCenterConstants.Events.IvrMenuEntered,
+                ContactCenterConstants.Events.IvrDigitsReceived,
+                ContactCenterConstants.Events.IvrActionTaken,
+            ],
+            harness.Audit.Select(entry => entry.EventType));
+        Assert.Equal("queue-new", harness.Audit[^1].Data.Target);
+        Assert.Equal(["Menu", "Menu:products", "RouteToQueue:queue-new"], harness.ReadState().Path.Select(entry => entry.Result));
+    }
+
+    [Fact]
+    public async Task RunningOutOfTries_IsRecordedAsTheFallback()
+    {
+        // Arrange
+        var harness = new IvrHarness();
+        var flow = SalesOrSupport();
+        flow.MaxRetries = 1;
+        await harness.StartAsync(flow);
+
+        // Act
+        await harness.HandleDigitsAsync(flow, digits: null, "delivery-1");
+
+        // Assert
+        Assert.Equal(ContactCenterConstants.Events.IvrFallbackTaken, harness.Audit[^1].EventType);
+        Assert.Equal("RetriesExhausted", harness.Audit[^1].Data.Reason);
+    }
+
+    [Fact]
+    public async Task ARedeliveredKeyPress_IsNotRecordedTwice()
+    {
+        // Arrange
+        var harness = new IvrHarness();
+        await harness.StartAsync(MenuWithSubMenu());
+        await harness.HandleDigitsAsync(MenuWithSubMenu(), "1", "delivery-1");
+
+        // Act
+        await harness.HandleDigitsAsync(MenuWithSubMenu(), "1", "delivery-1");
+
+        // Assert
+        Assert.Single(harness.Audit, entry => entry.EventType == ContactCenterConstants.Events.IvrDigitsReceived);
+        Assert.Equal(2, harness.ReadState().Path.Count);
+    }
+
+    [Fact]
+    public void TheCallersPosition_SurvivesTheInteractionBeingReloaded()
+    {
+        // Arrange
+        // YesSql hands an untyped metadata value back as an ExpandoObject. Reading it through ToString() threw, so a
+        // reloaded caller had no position and their next key press sent them to the entry point's target.
+        var interaction = new Interaction { ItemId = "interaction-1" };
+        dynamic stored = new System.Dynamic.ExpandoObject();
+        stored.CurrentNodeId = "support";
+        stored.Attempts = 2L;
+        stored.AppliedDeliveryIds = new List<object> { "delivery-1" };
+        stored.Completed = false;
+        interaction.TechnicalMetadata[IvrExecutionService.StateMetadataKey] = stored;
+
+        // Act
+        var state = IvrExecutionService.ReadState(interaction);
+
+        // Assert
+        Assert.Equal("support", state.CurrentNodeId);
+        Assert.Equal(2, state.Attempts);
+        Assert.Equal(["delivery-1"], state.AppliedDeliveryIds);
+    }
+
     private sealed class IvrHarness
     {
         private readonly Interaction _interaction;
@@ -227,13 +396,45 @@ public sealed class IvrExecutionServiceTests
             _interactionManager.Setup(x => x.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(_interaction);
 
+            Provider = new RecordingIvrProvider(Sequence);
+
+            var session = new Mock<global::YesSql.ISession>();
+            session.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+                .Callback(() => Sequence.Add("commit"))
+                .Returns(Task.CompletedTask);
+
+            var audit = new Mock<IContactCenterAuditRecorder>();
+            audit.Setup(x => x.RecordCallAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<CallLifecycleEventData>(),
+                    It.IsAny<DateTime>(),
+                    It.IsAny<ContactCenterActor>(),
+                    It.IsAny<string>(),
+                    It.IsAny<CancellationToken>()))
+                .Callback<string, CallLifecycleEventData, DateTime, ContactCenterActor, string, CancellationToken>((eventType, data, _, _, key, _) =>
+                {
+                    // The real recorder is idempotent on the key; so is this one.
+                    if (!Audit.Any(entry => entry.Key == key))
+                    {
+                        Audit.Add((eventType, data, key));
+                    }
+                })
+                .Returns(Task.CompletedTask);
+
             Service = new IvrExecutionService(
                 _interactionManager.Object,
                 Provider,
+                audit.Object,
+                session.Object,
+                new TestClock(),
                 NullLogger<IvrExecutionService>.Instance);
         }
 
-        public RecordingIvrProvider Provider { get; } = new();
+        public List<string> Sequence { get; } = [];
+
+        public List<(string EventType, CallLifecycleEventData Data, string Key)> Audit { get; } = [];
+
+        public RecordingIvrProvider Provider { get; }
 
         public IvrExecutionService Service { get; }
 
@@ -255,13 +456,30 @@ public sealed class IvrExecutionServiceTests
     /// </summary>
     private sealed class RecordingIvrProvider : IIvrProvider
     {
+        private readonly List<string> _sequence;
+
+        public RecordingIvrProvider(List<string> sequence)
+        {
+            _sequence = sequence;
+        }
+
         public List<(string Text, string ValidDigits)> Prompts { get; } = [];
+
+        public bool PromptSucceeds { get; set; } = true;
+
+        public Task<bool> AnswerAsync(string providerCallId, CancellationToken cancellationToken = default)
+        {
+            _sequence.Add($"answer:{providerCallId}");
+
+            return Task.FromResult(true);
+        }
 
         public Task<bool> PromptAsync(string providerCallId, string text, string mediaId, string validDigits, CancellationToken cancellationToken = default)
         {
             Prompts.Add((text, validDigits));
+            _sequence.Add($"prompt:{(text.StartsWith("Press 1 for new", StringComparison.Ordinal) ? "products" : "root")}");
 
-            return Task.FromResult(true);
+            return Task.FromResult(PromptSucceeds);
         }
     }
 }

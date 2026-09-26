@@ -88,10 +88,21 @@ public static class IvrFlowStateMachine
             return Retry(flow, state, node);
         }
 
-        return Apply(flow, state, option.Action, node);
+        return Apply(flow, state, option.Action, node, isFallback: false);
     }
 
-    private static IvrStep Apply(IvrFlow flow, IvrFlowState state, IvrAction action, IvrNode node)
+    private static IvrStep Apply(IvrFlow flow, IvrFlowState state, IvrAction action, IvrNode node, bool isFallback)
+    {
+        var step = Resolve(flow, state, action, node, isFallback);
+
+        // A step the fallback chose is the fallback's even when it is a menu; a retry it caused is not a retry of
+        // the fallback, so only mark what the machine has not already marked.
+        return isFallback && !step.IsFallback && !step.IsRetry
+            ? step with { IsFallback = true }
+            : step;
+    }
+
+    private static IvrStep Resolve(IvrFlow flow, IvrFlowState state, IvrAction action, IvrNode node, bool isFallback)
     {
         switch (action.Kind)
         {
@@ -100,7 +111,11 @@ public static class IvrFlowStateMachine
 
                 if (child is null)
                 {
-                    return Retry(flow, state, node);
+                    // A fallback that names a missing menu has nowhere left to retry, so it ends the menu the way no
+                    // fallback at all would rather than looping on it.
+                    return isFallback
+                        ? IvrStep.Done with { IsFallback = true }
+                        : Retry(flow, state, node);
                 }
 
                 state.CurrentNodeId = child.NodeId;
@@ -111,9 +126,11 @@ public static class IvrFlowStateMachine
                 return Prompt(child);
 
             case IvrActionKind.Repeat:
-                state.Attempts = 0;
-
-                return Prompt(node);
+                // Asking to hear the menu again is a try like a missed key. Resetting the count here let a caller
+                // who kept asking loop forever without ever reaching the fallback or a person.
+                return isFallback
+                    ? IvrStep.Done with { IsFallback = true }
+                    : Retry(flow, state, node);
 
             case IvrActionKind.RouteToQueue:
                 return new IvrStep(IvrStepKind.RouteToQueue, node.NodeId, null, null, action.TargetId);
@@ -128,7 +145,9 @@ public static class IvrFlowStateMachine
                 return new IvrStep(IvrStepKind.ExternalTransfer, node.NodeId, null, null, action.TargetId);
 
             default:
-                return Retry(flow, state, node);
+                return isFallback
+                    ? IvrStep.Done with { IsFallback = true }
+                    : Retry(flow, state, node);
         }
     }
 
@@ -138,14 +157,14 @@ public static class IvrFlowStateMachine
 
         if (state.Attempts < Math.Max(1, flow.MaxRetries))
         {
-            return Prompt(node);
+            return Prompt(node) with { IsRetry = true };
         }
 
         // Out of retries. A caller who cannot work the menu still has to reach somebody, so the fallback is
         // taken rather than the prompt repeating until they hang up.
         return flow.FallbackAction is null
-            ? IvrStep.Done
-            : Apply(flow, state, flow.FallbackAction, node);
+            ? IvrStep.Done with { IsFallback = true }
+            : Apply(flow, state, flow.FallbackAction, node, isFallback: true);
     }
 
     private static IvrStep Prompt(IvrNode node)

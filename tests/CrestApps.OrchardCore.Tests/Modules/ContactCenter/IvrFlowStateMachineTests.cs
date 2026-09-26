@@ -187,6 +187,82 @@ public sealed class IvrFlowStateMachineTests
         Assert.Equal(0, state.Attempts);
     }
 
+    [Fact]
+    public void PressingRepeat_ReplaysTheMenuAndCountsAsATry()
+    {
+        // Arrange
+        // Repeat used to reset the caller's tries, so a caller who kept asking for the menu again never reached the
+        // fallback and was never put through to anybody. It counts as a try like a missed key does.
+        var flow = Flow(maxRetries: 2);
+        flow.Nodes[0].Options.Add(new IvrOption { Digit = "9", Action = new IvrAction { Kind = IvrActionKind.Repeat } });
+        var state = new IvrFlowState { CurrentNodeId = "root" };
+
+        // Act
+        var first = IvrFlowStateMachine.Advance(flow, state, "9", deliveryId: "g1");
+        var second = IvrFlowStateMachine.Advance(flow, state, "9", deliveryId: "g2");
+
+        // Assert
+        Assert.Equal(IvrStepKind.Prompt, first.Kind);
+        Assert.Equal("root", first.NodeId);
+        Assert.True(first.IsRetry);
+        Assert.Equal(IvrStepKind.RouteToQueue, second.Kind);
+        Assert.Equal("fallback", second.TargetId);
+        Assert.True(second.IsFallback);
+    }
+
+    [Fact]
+    public void RunningOutOfTries_IsMarkedAsTheFallback_AndAChoiceIsNot()
+    {
+        // Arrange
+        // The audit trail has to tell a caller who chose a queue from one the fallback sent there.
+        var flow = Flow(maxRetries: 1);
+        var chose = new IvrFlowState { CurrentNodeId = "root" };
+        var missed = new IvrFlowState { CurrentNodeId = "root" };
+
+        // Act
+        var choice = IvrFlowStateMachine.Advance(flow, chose, "1", deliveryId: "g1");
+        var fallback = IvrFlowStateMachine.Advance(flow, missed, digits: null, deliveryId: "g1");
+
+        // Assert
+        Assert.False(choice.IsFallback);
+        Assert.True(fallback.IsFallback);
+    }
+
+    [Fact]
+    public void RunningOutOfTries_WithNoFallback_IsMarkedAsTheFallbackToo()
+    {
+        // Arrange
+        // No fallback means the entry point's own target, and that is still the fallback deciding.
+        var flow = Flow(maxRetries: 1);
+        flow.FallbackAction = null;
+        var state = new IvrFlowState { CurrentNodeId = "root" };
+
+        // Act
+        var step = IvrFlowStateMachine.Advance(flow, state, digits: null, deliveryId: "g1");
+
+        // Assert
+        Assert.Equal(IvrStepKind.Done, step.Kind);
+        Assert.True(step.IsFallback);
+    }
+
+    [Fact]
+    public void AMissedKey_IsMarkedAsARetry_AndEnteringASubMenuIsNot()
+    {
+        // Arrange
+        var flow = Flow();
+        var missed = new IvrFlowState { CurrentNodeId = "root" };
+        var entered = new IvrFlowState { CurrentNodeId = "root" };
+
+        // Act
+        var retry = IvrFlowStateMachine.Advance(flow, missed, "7", deliveryId: "g1");
+        var subMenu = IvrFlowStateMachine.Advance(flow, entered, "2", deliveryId: "g1");
+
+        // Assert
+        Assert.True(retry.IsRetry);
+        Assert.False(subMenu.IsRetry);
+        Assert.Equal("support", subMenu.NodeId);
+    }
+
     [Theory]
     [InlineData("1", "2", "1")]
     [InlineData("2", "2", "2")]

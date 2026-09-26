@@ -118,6 +118,10 @@ namespace CrestApps.OrchardCore.ContactCenter
             public const string InteractionTransferDenied = "InteractionTransferDenied";
             public const string InteractionTransferred = "InteractionTransferred";
             public const string InteractionUpdated = "InteractionUpdated";
+            public const string IvrActionTaken = "IvrActionTaken";
+            public const string IvrDigitsReceived = "IvrDigitsReceived";
+            public const string IvrFallbackTaken = "IvrFallbackTaken";
+            public const string IvrMenuEntered = "IvrMenuEntered";
             public const string ManualDialSuppressed = "ManualDialSuppressed";
             public const string OfferAccepted = "OfferAccepted";
             public const string OfferCancelled = "OfferCancelled";
@@ -227,6 +231,7 @@ namespace CrestApps.OrchardCore.ContactCenter
             public const string AnswerClassification = "amd_answer_classification";
             public const string HangupSource = "hangup_source";
             public const string ProviderHangupCause = "provider_hangup_cause";
+            public const string ServiceAddress = "serviceAddress";
             public const string SipHangupCause = "sip_hangup_cause";
         }
         public static class TransferMetadata
@@ -740,6 +745,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
     public sealed class ContactCenterVoiceTransferRequest
     {
         public ContactCenterVoiceTransferRequest() { }
+        public string CallerId { get; set; }
         public string InteractionId { get; set; }
         public System.Collections.Generic.IDictionary<string, string> Metadata { get; set; }
         public string ProviderCallId { get; set; }
@@ -989,6 +995,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Services
     }
     public interface IIvrProvider
     {
+        System.Threading.Tasks.Task<bool> AnswerAsync(string providerCallId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> PromptAsync(string providerCallId, string text, string mediaId, string validDigits, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IQueueTreatmentProvider
@@ -1003,7 +1010,16 @@ namespace CrestApps.OrchardCore.ContactCenter.Services
         public InboundVoiceDigitsEvent() { }
         public string DeliveryId { get; set; }
         public string Digits { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Services.InboundVoiceDigitsOutcome Outcome { get; set; }
         public string ProviderCallId { get; set; }
         public string ProviderName { get; set; }
+    }
+    public enum InboundVoiceDigitsOutcome
+    {
+        Collected = 0,
+        Invalid = 1,
+        TimedOut = 2,
+        CallerHungUp = 3,
+        Cancelled = 4,
     }
 }

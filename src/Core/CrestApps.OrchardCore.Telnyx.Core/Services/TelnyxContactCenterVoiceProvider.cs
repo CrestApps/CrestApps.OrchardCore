@@ -285,10 +285,12 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
 
         try
         {
+            // The caller identity the destination sees: the request's (a caller sent on from a phone menu is shown as
+            // the line they dialled), else the tenant's outbound caller id.
             var result = await _apiClient.TransferAsync(
                 request.ProviderCallId.Trim(),
                 request.Target,
-                _options.DefaultOutboundCallerId,
+                string.IsNullOrWhiteSpace(request.CallerId) ? _options.DefaultOutboundCallerId : request.CallerId.Trim(),
                 cancellationToken: cancellationToken);
 
             if (!result.Succeeded)

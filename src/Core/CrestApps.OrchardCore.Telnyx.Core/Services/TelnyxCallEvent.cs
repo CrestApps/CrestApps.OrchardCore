@@ -98,6 +98,12 @@ public sealed class TelnyxCallEvent
     public string Digits { get; set; }
 
     /// <summary>
+    /// Gets or sets how a <c>call.gather.ended</c> collection ended: <c>valid</c>, <c>invalid</c>, <c>timeout</c>,
+    /// <c>call_hangup</c>, <c>cancelled</c> or <c>cancelled_amd</c>.
+    /// </summary>
+    public string GatherStatus { get; set; }
+
+    /// <summary>
     /// Gets or sets the answering machine detection result, on a <c>call.machine.*</c> event: who answered
     /// (<c>human</c>, <c>machine</c>, <c>not_sure</c>, and the premium variants) or how the greeting ended
     /// (<c>beep_detected</c>, <c>no_beep_detected</c>, <c>ended</c>).

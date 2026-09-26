@@ -57,6 +57,17 @@ public readonly record struct IvrStep(
     string TargetId)
 {
     /// <summary>
+    /// Gets a value indicating whether the caller is hearing a menu again because they missed it, pressed a key it
+    /// does not accept, or asked for it to be repeated.
+    /// </summary>
+    public bool IsRetry { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating whether the menu's fallback decided this step, because the caller ran out of tries.
+    /// </summary>
+    public bool IsFallback { get; init; }
+
+    /// <summary>
     /// Nothing to do: the event described a menu the caller has already left.
     /// </summary>
     public static IvrStep Ignored { get; } = new(IvrStepKind.Ignored, null, null, null, null);

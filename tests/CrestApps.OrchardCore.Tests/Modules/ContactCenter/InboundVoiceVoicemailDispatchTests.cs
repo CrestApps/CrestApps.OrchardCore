@@ -154,6 +154,81 @@ public sealed class InboundVoiceVoicemailDispatchTests
         Assert.NotNull(harness.Interaction.EndedUtc);
     }
 
+    [Fact]
+    public async Task ACallerInNoQueue_IsSentAGreeting()
+    {
+        // Arrange
+        // A caller who chose voicemail from an entry point's phone menu has never been queued. The only voicemail
+        // path there was required a waiting queue item, so the choice left them on the line.
+        var harness = new Harness();
+        harness.QueueItem = null;
+
+        // Act
+        var moved = await harness.Processor.SendToVoicemailAsync(ActivityId, "ivr_voicemail", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(moved);
+        Assert.Equal(ProviderCommandType.SendToVoicemail, harness.RegisteredCommand.CommandType);
+        Assert.Contains("\"reasonCode\":\"ivr_voicemail\"", harness.RegisteredCommand.RequestPayload, StringComparison.Ordinal);
+        harness.QueueService.Verify(
+            service => service.DequeueAsync(It.IsAny<QueueItem>(), It.IsAny<QueueItemStatus>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ACallerStillWaitingInAQueue_LeavesItOnTheWayToVoicemail()
+    {
+        // Arrange
+        var harness = new Harness();
+
+        // Act
+        var moved = await harness.Processor.SendToVoicemailAsync(ActivityId, "ivr_voicemail", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(moved);
+        harness.QueueService.Verify(
+            service => service.DequeueAsync(harness.QueueItem, QueueItemStatus.Removed, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Theory]
+    [InlineData(QueueItemStatus.Reserved)]
+    [InlineData(QueueItemStatus.Assigned)]
+    public async Task ACallerAlreadyOfferedOrTaken_IsLeftAlone(QueueItemStatus status)
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.QueueItem.TransitionTo(QueueItemStatus.Reserved);
+
+        if (status == QueueItemStatus.Assigned)
+        {
+            harness.QueueItem.TransitionTo(QueueItemStatus.Assigned);
+        }
+
+        // Act
+        var moved = await harness.Processor.SendToVoicemailAsync(ActivityId, "ivr_voicemail", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(moved);
+        Assert.Null(harness.RegisteredCommand);
+    }
+
+    [Fact]
+    public async Task ACallerWhoHasAlreadyHungUp_IsNotSentToVoicemail()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.QueueItem = null;
+        harness.Interaction.TransitionTo(InteractionStatus.Ended);
+
+        // Act
+        var moved = await harness.Processor.SendToVoicemailAsync(ActivityId, "ivr_voicemail", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(moved);
+        Assert.Null(harness.RegisteredCommand);
+    }
+
     /// <summary>
     /// The collaborators the voicemail path touches, with the rest of the processor's dependencies stubbed.
     /// </summary>
@@ -254,7 +329,7 @@ public sealed class InboundVoiceVoicemailDispatchTests
 
         public Mock<IActivityQueueService> QueueService { get; }
 
-        public QueueItem QueueItem { get; }
+        public QueueItem QueueItem { get; set; }
 
         public Interaction Interaction { get; }
 

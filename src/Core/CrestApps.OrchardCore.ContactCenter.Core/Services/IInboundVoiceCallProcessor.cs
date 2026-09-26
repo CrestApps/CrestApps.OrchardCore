@@ -40,4 +40,15 @@ public interface IInboundVoiceCallProcessor
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns><see langword="true"/> when the caller was sent to voicemail; otherwise <see langword="false"/>.</returns>
     Task<bool> SendWaitingToVoicemailAsync(string activityItemId, string reasonCode, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sends a live inbound caller who is not held by an offer to voicemail, whether or not they are waiting in a
+    /// queue: a caller who chose voicemail from an entry point's phone menu is in no queue at all. A caller already
+    /// offered to or taken by an agent is left alone and this returns <see langword="false"/>.
+    /// </summary>
+    /// <param name="activityItemId">The activity whose call is sent to voicemail.</param>
+    /// <param name="reasonCode">The reason recorded against the activity and interaction.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns><see langword="true"/> when the caller was sent to voicemail; otherwise <see langword="false"/>.</returns>
+    Task<bool> SendToVoicemailAsync(string activityItemId, string reasonCode, CancellationToken cancellationToken = default);
 }

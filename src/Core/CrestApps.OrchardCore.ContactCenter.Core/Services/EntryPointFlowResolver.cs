@@ -32,6 +32,10 @@ public sealed class EntryPointFlowResolver : IEntryPointFlowResolver
 
     /// <inheritdoc/>
     public async Task<IvrFlow> FindFlowAsync(Interaction interaction, CancellationToken cancellationToken = default)
+        => (await FindEntryPointAsync(interaction, cancellationToken))?.IvrFlow;
+
+    /// <inheritdoc/>
+    public async Task<ContactCenterEntryPoint> FindEntryPointAsync(Interaction interaction, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(interaction);
 
@@ -42,8 +46,6 @@ public sealed class EntryPointFlowResolver : IEntryPointFlowResolver
             return null;
         }
 
-        var entryPoint = await _entryPointManager.FindByIdAsync(entryPointId, cancellationToken);
-
-        return entryPoint?.IvrFlow;
+        return await _entryPointManager.FindByIdAsync(entryPointId, cancellationToken);
     }
 }
