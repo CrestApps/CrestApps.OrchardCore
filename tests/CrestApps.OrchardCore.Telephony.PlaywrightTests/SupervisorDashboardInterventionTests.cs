@@ -231,6 +231,56 @@ public sealed class SupervisorDashboardInterventionTests : SoftPhoneBrowserTest
     }
 
     [Fact]
+    public async Task AnAgentOnANumberTheyDialed_IsShownOnACall_AndCanBeListenedTo_TakenOverAndEnded()
+    {
+        // Arrange - a number dialed from the keypad: no interaction, so the row names the phone call instead.
+        const string key = "phone:user-2:v3:agent-leg";
+        var agent = new JsonObject
+        {
+            ["agentId"] = "agent-2",
+            ["userId"] = "user-2",
+            ["displayName"] = "Bea Agent",
+            ["presenceStatus"] = "Available",
+            ["activeInteractions"] = 0,
+            ["activeInteractionId"] = key,
+            ["availableMonitoringModes"] = new JsonArray("Monitor", "Whisper", "Barge"),
+            ["availableInterventions"] = new JsonArray("TakeOver", "EndCall"),
+            ["phoneCall"] = new JsonObject
+            {
+                ["direction"] = "Outbound",
+                ["party"] = "+17025550100",
+                ["isExtension"] = false,
+                ["startedUtc"] = "2026-09-25T18:09:00Z",
+            },
+        };
+        var state = State(agent);
+        state["serverTimeUtc"] = "2026-09-25T18:10:05Z";
+        Server.Supervisor.State = state;
+        var page = await Browser.NewPageAsync(new BrowserNewPageOptions { ViewportSize = new ViewportSize { Width = 1280, Height = 800 } });
+        await page.GotoAsync(Server.BaseUrl + SupervisorHarness.DashboardUrl);
+        await page.Locator(".cc-agent").WaitForAsync();
+
+        // Assert - it reads as a call, not as Available, and offers what a Contact Center call does, less the interaction's.
+        Assert.Equal("On a call · → +17025550100 · 1:05", (await page.Locator(".cc-agent__state").InnerTextAsync()).Trim());
+        Assert.True(await page.Locator($"[data-cc-engage='{key}'][data-cc-mode='Whisper']").IsVisibleAsync());
+        Assert.True(await page.Locator($"[data-cc-takeover='{key}']").IsEnabledAsync());
+        await CaptureAsync(page, "dashboard-agent-on-phone-call");
+
+        await page.ClickAsync("[data-cc-more='agent-2']");
+        await page.Locator("[data-cc-menu='agent-2']").WaitForAsync();
+        Assert.Equal(0, await page.Locator("[data-cc-action='transfer'], [data-cc-action='record-on'], [data-cc-action='record-off']").CountAsync());
+        await page.Keyboard.PressAsync("Escape");
+
+        // Act
+        await page.ClickAsync($"[data-cc-engage='{key}'][data-cc-mode='Monitor']");
+
+        // Assert - the phone call is engaged by its key, as an interaction is by its id.
+        var post = await WaitForPostAsync("engage");
+        Assert.Equal(key, post["interactionId"]);
+        Assert.Equal("Monitor", post["mode"]);
+    }
+
+    [Fact]
     public async Task TheActions_FitTheDesktopAppWindow()
     {
         // Arrange

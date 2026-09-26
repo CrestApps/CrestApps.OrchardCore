@@ -13,6 +13,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Services;
 /// to it and how, which interventions its provider and their permissions allow, and -- for a call they cannot monitor
 /// at all -- why not.
 /// </summary>
+/// <remarks>
+/// An agent's own phone call -- a number they dialed from the keypad, or an extension call at either end -- is described
+/// too. It has no interaction, so the row names it with a <see cref="PhoneCallKey"/> instead, and says what the call is.
+/// </remarks>
 internal sealed class SupervisorDashboardInterventionDescriber
 {
     /// <summary>The supervisor can take the call over.</summary>
@@ -27,13 +31,10 @@ internal sealed class SupervisorDashboardInterventionDescriber
     /// <summary>The supervisor can turn the call's recording on or off.</summary>
     public const string Record = "Record";
 
-    // How many active phone calls are read to find agents on a call that is not a Contact Center interaction.
-    private const int ActiveCallScanLimit = 500;
-
     private readonly ICallSessionManager _callSessionManager;
     private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
     private readonly bool _canRecord;
-    private readonly ITelephonyInteractionStore _telephonyInteractions;
+    private readonly IContactCenterPhoneCallSupervisionService _phoneCalls;
 
     internal readonly IStringLocalizer S;
 
@@ -41,39 +42,25 @@ internal sealed class SupervisorDashboardInterventionDescriber
         ICallSessionManager callSessionManager,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
         IEnumerable<IContactCenterRecordingService> recordingServices,
-        IEnumerable<ITelephonyInteractionStore> telephonyInteractions,
+        IContactCenterPhoneCallSupervisionService phoneCalls,
         IStringLocalizer<SupervisorDashboardInterventionDescriber> stringLocalizer)
     {
         _callSessionManager = callSessionManager;
         _voiceProviderResolver = voiceProviderResolver;
         _canRecord = recordingServices.Any();
-        _telephonyInteractions = telephonyInteractions.FirstOrDefault();
+        _phoneCalls = phoneCalls;
         S = stringLocalizer;
     }
 
     /// <summary>
-    /// Finds which of the given users are on a phone call right now -- one placed from the keypad, an extension call --
-    /// that the platform did not route as a Contact Center interaction.
+    /// Finds which of the given users are on a phone call right now -- one placed from the keypad, an extension call at
+    /// either end -- that the platform did not route as a Contact Center interaction.
     /// </summary>
     /// <param name="userIds">The users with no live Contact Center interaction.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    /// <returns>The users on such a call.</returns>
-    public async Task<ISet<string>> FindUsersOnOtherCallsAsync(IEnumerable<string> userIds, CancellationToken cancellationToken)
-    {
-        var wanted = new HashSet<string>(userIds.Where(userId => !string.IsNullOrEmpty(userId)), StringComparer.Ordinal);
-
-        if (wanted.Count == 0 || _telephonyInteractions is null)
-        {
-            return new HashSet<string>(StringComparer.Ordinal);
-        }
-
-        var active = await _telephonyInteractions.GetActiveAsync(ActiveCallScanLimit, cancellationToken);
-
-        return active
-            .Where(call => call is not null && wanted.Contains(call.UserId))
-            .Select(call => call.UserId)
-            .ToHashSet(StringComparer.Ordinal);
-    }
+    /// <returns>Each such user's call, by user.</returns>
+    public Task<IReadOnlyDictionary<string, AgentPhoneCall>> FindPhoneCallsAsync(IEnumerable<string> userIds, CancellationToken cancellationToken)
+        => _phoneCalls.FindCallsAsync(userIds, cancellationToken);
 
     /// <summary>
     /// Fills in what the supervisor can do about an agent's call.
@@ -82,21 +69,21 @@ internal sealed class SupervisorDashboardInterventionDescriber
     /// <param name="interaction">The agent's live interaction the supervisor may see, or <see langword="null"/>.</param>
     /// <param name="supervisorUserId">The supervisor.</param>
     /// <param name="canIntervene">Whether the supervisor holds the intervention permission.</param>
-    /// <param name="onOtherCall">Whether the agent is on a call that is not a Contact Center interaction.</param>
+    /// <param name="phoneCall">The agent's own phone call when they are on no interaction, or <see langword="null"/>.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     public async Task DescribeAsync(
         SupervisorAgentViewModel row,
         Interaction interaction,
         string supervisorUserId,
         bool canIntervene,
-        bool onOtherCall,
+        AgentPhoneCall phoneCall,
         CancellationToken cancellationToken)
     {
         if (interaction is null)
         {
-            if (onOtherCall)
+            if (phoneCall is not null)
             {
-                row.MonitoringUnavailableReason = S["On a call that is not a Contact Center interaction (a number dialed from the soft phone or an extension call), so it cannot be monitored."];
+                await DescribePhoneCallAsync(row, phoneCall, supervisorUserId, canIntervene, cancellationToken);
             }
 
             return;
@@ -146,5 +133,59 @@ internal sealed class SupervisorDashboardInterventionDescriber
         {
             row.AvailableInterventions.Add(Record);
         }
+    }
+
+    // An agent's own phone call: what it is, and -- unless it is the supervisor's own, or its provider cannot join it --
+    // the modes and interventions a Contact Center call offers, less the transfer and the recording, which are the
+    // interaction's.
+    private async Task DescribePhoneCallAsync(
+        SupervisorAgentViewModel row,
+        AgentPhoneCall phoneCall,
+        string supervisorUserId,
+        bool canIntervene,
+        CancellationToken cancellationToken)
+    {
+        row.PhoneCall = new SupervisorPhoneCallViewModel
+        {
+            Direction = phoneCall.Direction.ToString(),
+            Party = phoneCall.Party,
+            IsExtension = phoneCall.IsExtension,
+            StartedUtc = phoneCall.StartedUtc,
+        };
+
+        IReadOnlyCollection<MonitorMode> modes = string.Equals(phoneCall.UserId, supervisorUserId, StringComparison.Ordinal)
+            ? []
+            : _phoneCalls.GetAvailableModes(phoneCall);
+
+        if (modes.Count == 0)
+        {
+            row.MonitoringUnavailableReason = S["On a phone call this voice provider cannot let a supervisor join, so it cannot be monitored."];
+
+            return;
+        }
+
+        row.ActiveInteractionId = phoneCall.Key;
+        row.AvailableMonitoringModes = modes.Select(mode => mode.ToString()).ToArray();
+
+        var engagement = await _phoneCalls.FindEngagementAsync(phoneCall.Key, supervisorUserId, cancellationToken);
+
+        if (engagement is not null && !engagement.TookOver)
+        {
+            row.MonitorMode = engagement.Mode.ToString();
+            row.MonitorConnected = engagement.ConnectedUtc.HasValue;
+        }
+
+        if (!canIntervene)
+        {
+            return;
+        }
+
+        // Releasing either colleague ends an extension call, so only a number the agent dialed can be taken over.
+        if (!phoneCall.IsExtension)
+        {
+            row.AvailableInterventions.Add(TakeOver);
+        }
+
+        row.AvailableInterventions.Add(EndCall);
     }
 }

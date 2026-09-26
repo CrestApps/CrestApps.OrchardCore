@@ -334,7 +334,29 @@
       flipped: flipped
     };
   }
+
+  // What an agent on a phone call of their own (a number dialed from the keypad, an extension call) is doing, for their
+  // row: "On a call · +17025550100 · 1:05". Empty when the agent is on no such call.
+  //   phoneCall: { direction: 'Outbound'|'Inbound', party, isExtension, startedUtc }; nowMs: the server's clock, in ms.
+  function phoneCallSummary(phoneCall, nowMs, labels) {
+    if (!phoneCall) {
+      return '';
+    }
+    var parts = [text(labels, 'onACall', 'On a call')];
+    var started = Date.parse(phoneCall.startedUtc || '');
+    if (phoneCall.party) {
+      parts.push((phoneCall.direction === 'Inbound' ? '← ' : '→ ') + phoneCall.party);
+    }
+    if (isFinite(started) && isFinite(nowMs)) {
+      var seconds = Math.max(0, Math.floor((nowMs - started) / 1000));
+      var minutes = Math.floor(seconds / 60);
+      var rest = seconds % 60;
+      parts.push(minutes + ':' + (rest < 10 ? '0' : '') + rest);
+    }
+    return parts.join(' · ');
+  }
   contactCenter.supervisorMenuPlacement = menuPlacement;
+  contactCenter.supervisorPhoneCallSummary = phoneCallSummary;
   contactCenter.MONITOR_PHASES = PHASES;
   contactCenter.supervisorAgentActions = agentActions;
   contactCenter.supervisorAgentActionsHtml = agentActionsHtml;
@@ -957,9 +979,13 @@
         setRegionHtml(refs.board, 'board', '<div class="cc-empty">' + escapeHtml(label('noAgents', 'No agents are configured.')) + '</div>');
         return;
       }
+      var serverNow = Date.parse(state.serverTimeUtc || '');
       var boardHtml = agents.map(function (agent) {
         var status = agent.presenceStatus || 'Offline';
-        var detail = agent.presenceReason || status;
+
+        // An agent on a phone call of their own says so, whatever their presence: what they dialed, and for how long.
+        var phoneCall = window.CrestAppsContactCenter && typeof window.CrestAppsContactCenter.supervisorPhoneCallSummary === 'function' ? window.CrestAppsContactCenter.supervisorPhoneCallSummary(agent.phoneCall, isFinite(serverNow) ? serverNow : Date.now(), strings) : '';
+        var detail = phoneCall || agent.presenceReason || status;
 
         // Listen / Whisper / Barge, Stop and Take over under the name, and the More menu's kebab at the far right
         // of the name row (see supervisor-interventions.js).

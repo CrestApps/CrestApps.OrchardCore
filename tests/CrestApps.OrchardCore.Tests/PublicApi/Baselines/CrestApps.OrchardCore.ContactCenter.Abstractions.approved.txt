@@ -384,6 +384,13 @@ namespace CrestApps.OrchardCore.ContactCenter
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceProviderResult> EngageAsync(CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceMonitoringRequest request, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceProviderResult> StopAsync(CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceMonitoringRequest request, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface IContactCenterVoicePhoneCallMonitoringProvider
+    {
+        bool CanMonitorPhoneCall(bool isExtension, bool isOutbound);
+        System.Threading.Tasks.Task HangupPhoneCallLegAsync(string legId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.ContactCenterPhoneCallMonitoringTarget> ResolvePhoneCallAsync(string callId, bool isExtension, bool monitorsCallee, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceProviderResult> TakeOverPhoneCallAsync(CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceMonitoringRequest request, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IContactCenterVoiceProvider
     {
         CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceProviderCapabilities Capabilities { get; }
@@ -638,6 +645,16 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         public string InteractionId { get; set; }
         public System.Collections.Generic.IDictionary<string, string> Metadata { get; set; }
         public string QueueId { get; set; }
+    }
+    public sealed class ContactCenterPhoneCallMonitoringTarget
+    {
+        public const string ConferenceMetadataKey = "conferenceName";
+        public ContactCenterPhoneCallMonitoringTarget() { }
+        public string AgentLegId { get; set; }
+        public bool CanTakeOver { get; set; }
+        public string ConferenceName { get; set; }
+        public string OtherPartyLegId { get; set; }
+        public string ProviderCallId { get; set; }
     }
     public sealed class ContactCenterQueueCallRequest
     {

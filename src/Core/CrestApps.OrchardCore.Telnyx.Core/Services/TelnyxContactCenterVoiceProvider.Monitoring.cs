@@ -89,7 +89,7 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
                 Intent = TelnyxOutboundBridgeState.ContactCenterSupervisorLegIntent,
                 PeerCallControlId = customerLegId,
                 PartyCallControlId = request.AgentLegId.Trim(),
-                ConferenceName = TelnyxSupervisedConference.ConferenceName(customerLegId),
+                ConferenceName = SupervisedConferenceName(request),
                 SupervisorRole = TelnyxSupervisedConference.RoleFor(request.Mode.ToString()),
                 RingUserId = request.SupervisorId.Trim(),
                 MonitorToken = token,
@@ -193,7 +193,7 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
         var supervisorLegId = request.SupervisorLegId.Trim();
         var role = TelnyxSupervisedConference.RoleFor(request.Mode.ToString());
 
-        if (await SupervisedConference.SwitchRoleAsync(TelnyxSupervisedConference.ConferenceName(request.ProviderCallId.Trim()), supervisorLegId, role, request.AgentLegId?.Trim(), cancellationToken))
+        if (await SupervisedConference.SwitchRoleAsync(SupervisedConferenceName(request), supervisorLegId, role, request.AgentLegId?.Trim(), cancellationToken))
         {
             return MonitoringSuccess(request);
         }
@@ -238,7 +238,7 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
         var supervisorLegId = request.SupervisorLegId.Trim();
 
         // The supervisor is heard by the customer before the agent goes, so the customer is never alone on the line.
-        if (!await SupervisedConference.SwitchRoleAsync(TelnyxSupervisedConference.ConferenceName(customerLegId), supervisorLegId, "barge", agentLegId, cancellationToken))
+        if (!await SupervisedConference.SwitchRoleAsync(SupervisedConferenceName(request), supervisorLegId, "barge", agentLegId, cancellationToken))
         {
             return Failure("takeover_failed", "You are not connected to the call yet, so it cannot be taken over.");
         }

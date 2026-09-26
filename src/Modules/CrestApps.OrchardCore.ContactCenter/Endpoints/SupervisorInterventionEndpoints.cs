@@ -53,6 +53,11 @@ internal static class SupervisorInterventionEndpoints
         HttpContext httpContext)
         => scope.RunAsync(httpContext, request.InteractionId, async supervisorId =>
         {
+            if (PhoneCallKey.IsPhoneCall(request.InteractionId))
+            {
+                return await scope.PhoneCalls.StopAsync(request.InteractionId, supervisorId, httpContext.User, httpContext.RequestAborted);
+            }
+
             var session = await sessions.FindByInteractionIdAsync(request.InteractionId, httpContext.RequestAborted);
             var engagement = session?.ActiveMonitorSessions.FirstOrDefault(monitorSession =>
                 string.Equals(monitorSession.SupervisorUserId, supervisorId, StringComparison.Ordinal));
@@ -67,24 +72,27 @@ internal static class SupervisorInterventionEndpoints
         IContactCenterMonitoringService monitoring,
         CallScope scope,
         HttpContext httpContext)
-        => scope.RunAsync(httpContext, request.InteractionId, supervisorId =>
-            monitoring.SwitchModeAsync(request.InteractionId, supervisorId, httpContext.User, request.Mode, httpContext.RequestAborted));
+        => scope.RunAsync(httpContext, request.InteractionId, supervisorId => PhoneCallKey.IsPhoneCall(request.InteractionId)
+            ? scope.PhoneCalls.SwitchModeAsync(request.InteractionId, supervisorId, httpContext.User, request.Mode, httpContext.RequestAborted)
+            : monitoring.SwitchModeAsync(request.InteractionId, supervisorId, httpContext.User, request.Mode, httpContext.RequestAborted));
 
     private static Task<IResult> HandleTakeOverAsync(
         [FromForm] InteractionRequest request,
         IContactCenterSupervisorInterventionService interventions,
         CallScope scope,
         HttpContext httpContext)
-        => scope.RunAsync(httpContext, request.InteractionId, supervisorId =>
-            interventions.TakeOverAsync(request.InteractionId, supervisorId, httpContext.User, httpContext.RequestAborted));
+        => scope.RunAsync(httpContext, request.InteractionId, supervisorId => PhoneCallKey.IsPhoneCall(request.InteractionId)
+            ? scope.PhoneCalls.TakeOverAsync(request.InteractionId, supervisorId, httpContext.User, httpContext.RequestAborted)
+            : interventions.TakeOverAsync(request.InteractionId, supervisorId, httpContext.User, httpContext.RequestAborted));
 
     private static Task<IResult> HandleEndCallAsync(
         [FromForm] InteractionRequest request,
         IContactCenterSupervisorInterventionService interventions,
         CallScope scope,
         HttpContext httpContext)
-        => scope.RunAsync(httpContext, request.InteractionId, supervisorId =>
-            interventions.EndCallAsync(request.InteractionId, supervisorId, httpContext.User, httpContext.RequestAborted));
+        => scope.RunAsync(httpContext, request.InteractionId, supervisorId => PhoneCallKey.IsPhoneCall(request.InteractionId)
+            ? scope.PhoneCalls.EndCallAsync(request.InteractionId, supervisorId, httpContext.User, httpContext.RequestAborted)
+            : interventions.EndCallAsync(request.InteractionId, supervisorId, httpContext.User, httpContext.RequestAborted));
 
     private static Task<IResult> HandleTransferAsync(
         [FromForm] TransferRequestForm request,
@@ -147,13 +155,18 @@ internal static class SupervisorInterventionEndpoints
             IAuthorizationService authorizationService,
             IAntiforgery antiforgery,
             IInteractionManager interactionManager,
-            ISupervisorQueueAuthorizationService supervisorQueueAuthorizationService)
+            ISupervisorQueueAuthorizationService supervisorQueueAuthorizationService,
+            IContactCenterPhoneCallSupervisionService phoneCalls)
         {
             _authorizationService = authorizationService;
             _antiforgery = antiforgery;
             _interactionManager = interactionManager;
             _supervisorQueueAuthorizationService = supervisorQueueAuthorizationService;
+            PhoneCalls = phoneCalls;
         }
+
+        // An agent's own phone call, named with a PhoneCallKey where a Contact Center call is named by its interaction.
+        public IContactCenterPhoneCallSupervisionService PhoneCalls { get; }
 
         public async Task<IResult> RunAsync(HttpContext httpContext, string interactionId, Func<string, Task<SupervisorEngagementResult>> action)
         {
@@ -167,6 +180,14 @@ internal static class SupervisorInterventionEndpoints
             if (string.IsNullOrEmpty(interactionId))
             {
                 return TypedResults.BadRequest();
+            }
+
+            // A phone call has no interaction: the supervisor may act on it when they oversee a queue its agent works.
+            if (PhoneCallKey.IsPhoneCall(interactionId))
+            {
+                return await PhoneCalls.IsAuthorizedAsync(httpContext.User, supervisorId, interactionId, httpContext.RequestAborted)
+                    ? ToResult(await action(supervisorId))
+                    : TypedResults.NotFound();
             }
 
             var interaction = await _interactionManager.FindByIdAsync(interactionId, httpContext.RequestAborted);

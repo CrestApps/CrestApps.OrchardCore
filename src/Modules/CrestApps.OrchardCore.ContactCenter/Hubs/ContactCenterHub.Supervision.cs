@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.SignalR.Core;
 using Microsoft.AspNetCore.Authorization;
@@ -27,7 +28,9 @@ public sealed partial class ContactCenterHub
         await _scopeExecutor.ExecuteAsync<ContactCenterSupervisionHubScopeContext>(async services =>
         {
             result = await EnsureSupervisedAsync(services, interactionId)
-                ?? await services.MonitoringService.SwitchModeAsync(interactionId, userId, Context.User, mode, HubConnectionWork.MustComplete);
+                ?? (PhoneCallKey.IsPhoneCall(interactionId)
+                    ? await services.PhoneCalls.SwitchModeAsync(interactionId, userId, Context.User, mode, HubConnectionWork.MustComplete)
+                    : await services.MonitoringService.SwitchModeAsync(interactionId, userId, Context.User, mode, HubConnectionWork.MustComplete));
         });
 
         return result;
@@ -49,6 +52,13 @@ public sealed partial class ContactCenterHub
 
             if (result is not null)
             {
+                return;
+            }
+
+            if (PhoneCallKey.IsPhoneCall(interactionId))
+            {
+                result = await services.PhoneCalls.StopAsync(interactionId, userId, Context.User, HubConnectionWork.MustComplete);
+
                 return;
             }
 
@@ -79,6 +89,15 @@ public sealed partial class ContactCenterHub
         if (services.MonitoringService is null)
         {
             return SupervisorEngagementResult.Failure("Supervisor monitoring is not available.");
+        }
+
+        // An agent's own phone call has no interaction: the supervisor acts on it when they oversee a queue its agent works.
+        if (PhoneCallKey.IsPhoneCall(interactionId))
+        {
+            return services.PhoneCalls is not null &&
+                await services.PhoneCalls.IsAuthorizedAsync(principal, Context.UserIdentifier, interactionId, HubConnectionWork.MustComplete)
+                ? null
+                : SupervisorEngagementResult.Failure("The call could not be found.");
         }
 
         var interaction = string.IsNullOrEmpty(interactionId)

@@ -172,9 +172,15 @@
                 return;
             }
 
+            var serverNow = Date.parse(state.serverTimeUtc || '');
             var boardHtml = agents.map(function (agent) {
                 var status = agent.presenceStatus || 'Offline';
-                var detail = agent.presenceReason || status;
+
+                // An agent on a phone call of their own says so, whatever their presence: what they dialed, and for how long.
+                var phoneCall = window.CrestAppsContactCenter && typeof window.CrestAppsContactCenter.supervisorPhoneCallSummary === 'function'
+                    ? window.CrestAppsContactCenter.supervisorPhoneCallSummary(agent.phoneCall, isFinite(serverNow) ? serverNow : Date.now(), strings)
+                    : '';
+                var detail = phoneCall || agent.presenceReason || status;
 
                 // Listen / Whisper / Barge, Stop and Take over under the name, and the More menu's kebab at the far right
                 // of the name row (see supervisor-interventions.js).

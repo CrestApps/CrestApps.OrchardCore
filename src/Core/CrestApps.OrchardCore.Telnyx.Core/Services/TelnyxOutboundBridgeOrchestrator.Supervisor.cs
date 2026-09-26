@@ -32,15 +32,22 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator
             // A leg the platform released itself (a stop, a transfer, the call ending) was recorded by whatever released
             // it. Reporting it again wrote the call's record a second time while the stop was still writing it, and the
             // stop failed on the conflict (live: POST dashboard/stop answered 500 with a ConcurrencyException).
-            if (_supervisorLegEventSink is not null && state.Detached != true)
+            if (state.Detached != true)
             {
-                await _supervisorLegEventSink.OnEndedAsync(
-                    TelnyxConstants.ProviderTechnicalName,
-                    state.PeerCallControlId,
-                    callEvent.CallControlId,
-                    callEvent.OccurredUtc,
-                    ResolveAgentLegFailureCause(callEvent),
-                    cancellationToken);
+                // The first sink that knows the leg handles it: a Contact Center call's, or an agent's own phone call's.
+                foreach (var sink in _supervisorLegEventSinks)
+                {
+                    if (await sink.OnEndedAsync(
+                        TelnyxConstants.ProviderTechnicalName,
+                        state.PeerCallControlId,
+                        callEvent.CallControlId,
+                        callEvent.OccurredUtc,
+                        ResolveAgentLegFailureCause(callEvent),
+                        cancellationToken))
+                    {
+                        break;
+                    }
+                }
             }
 
             // A supervisor who hung up on their own phone leaves the call where it is; once nobody is listening it goes
@@ -60,7 +67,9 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator
 
     private async Task JoinSupervisorAsync(string supervisorLegId, TelnyxOutboundBridgeState state, CancellationToken cancellationToken)
     {
-        var conferenceId = await _supervisedConference.EnsureAsync(state.PeerCallControlId, state.PartyCallControlId, cancellationToken);
+        var conferenceId = TelnyxSupervisedConference.IsOwnConference(state.ConferenceName, state.PeerCallControlId)
+            ? await _supervisedConference.EnsureAsync(state.PeerCallControlId, state.PartyCallControlId, cancellationToken)
+            : await _supervisedConference.FindRunningAsync(state.ConferenceName, cancellationToken);
         var role = string.IsNullOrWhiteSpace(state.SupervisorRole) ? "monitor" : state.SupervisorRole;
 
         if (string.IsNullOrWhiteSpace(conferenceId) ||
@@ -77,13 +86,16 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator
             return;
         }
 
-        if (_supervisorLegEventSink is not null)
+        foreach (var sink in _supervisorLegEventSinks)
         {
-            await _supervisorLegEventSink.OnAnsweredAsync(
+            if (await sink.OnAnsweredAsync(
                 TelnyxConstants.ProviderTechnicalName,
                 state.PeerCallControlId,
                 supervisorLegId,
-                cancellationToken);
+                cancellationToken))
+            {
+                break;
+            }
         }
     }
 }

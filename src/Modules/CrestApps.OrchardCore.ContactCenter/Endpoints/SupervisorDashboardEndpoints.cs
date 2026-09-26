@@ -164,7 +164,7 @@ internal static class SupervisorDashboardEndpoints
             session,
             displayNameProvider,
             httpContext.RequestAborted);
-        var usersOnOtherCalls = await interventions.FindUsersOnOtherCallsAsync(
+        var phoneCalls = await interventions.FindPhoneCallsAsync(
             scopedAgents.Where(agent => !activeInteractionsByAgent.ContainsKey(agent.ItemId)).Select(agent => agent.UserId),
             httpContext.RequestAborted);
 
@@ -207,7 +207,7 @@ internal static class SupervisorDashboardEndpoints
                 canMonitorActiveInteraction ? activeInteraction : null,
                 supervisorId,
                 model.CanIntervene,
-                usersOnOtherCalls.Contains(agent.UserId ?? string.Empty),
+                activeInteraction is null && phoneCalls.TryGetValue(agent.UserId ?? string.Empty, out var phoneCall) ? phoneCall : null,
                 httpContext.RequestAborted);
 
             model.Agents.Add(row);
@@ -361,6 +361,7 @@ internal static class SupervisorDashboardEndpoints
         IEnumerable<IContactCenterMonitoringService> monitoringServices,
         IInteractionManager interactionManager,
         ISupervisorQueueAuthorizationService supervisorQueueAuthorizationService,
+        IContactCenterPhoneCallSupervisionService phoneCalls,
         HttpContext httpContext)
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.MonitorContactCenter))
@@ -390,6 +391,23 @@ internal static class SupervisorDashboardEndpoints
         if (string.IsNullOrEmpty(supervisorId))
         {
             return TypedResults.Forbid();
+        }
+
+        // An agent's own phone call: the supervisor may listen to it when they oversee a queue its agent works.
+        if (PhoneCallKey.IsPhoneCall(request.InteractionId))
+        {
+            if (!await phoneCalls.IsAuthorizedAsync(httpContext.User, supervisorId, request.InteractionId, httpContext.RequestAborted))
+            {
+                return TypedResults.NotFound();
+            }
+
+            var phoneResult = await phoneCalls.EngageAsync(request.InteractionId, supervisorId, httpContext.User, request.Mode, httpContext.RequestAborted);
+
+            return TypedResults.Ok(new
+            {
+                phoneResult.Succeeded,
+                ErrorMessage = phoneResult.Reason,
+            });
         }
 
         var interaction = await interactionManager.FindByIdAsync(request.InteractionId, httpContext.RequestAborted);

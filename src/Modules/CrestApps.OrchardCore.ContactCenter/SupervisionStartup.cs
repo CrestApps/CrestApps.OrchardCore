@@ -28,6 +28,16 @@ public sealed class SupervisionStartup : StartupBase
             .AddScoped<IContactCenterSupervisorInterventionService, ContactCenterSupervisorInterventionService>()
             .AddScoped<SupervisorDashboardInterventionDescriber>()
             .AddScoped<SupervisorInterventionEndpoints.CallScope>();
+
+        // Listening to, coaching, joining, taking over and ending an agent's own phone call: a number they dialed from
+        // the keypad, or an extension call. Its supervisor legs are reported after a Contact Center call's sink passes.
+        services
+            .AddScoped<IPhoneCallEngagementStore, DistributedCachePhoneCallEngagementStore>()
+            .AddScoped<ContactCenterPhoneCallSupervisionService>()
+            .AddScoped<IContactCenterPhoneCallSupervisionService>(sp => sp.GetRequiredService<ContactCenterPhoneCallSupervisionService>())
+            .AddScoped<ISupervisorLegEventSink>(sp => sp.GetRequiredService<ContactCenterPhoneCallSupervisionService>())
+            .AddScoped(sp => new Lazy<IContactCenterPhoneCallSupervisionService>(sp.GetRequiredService<IContactCenterPhoneCallSupervisionService>))
+            .AddScoped<ITelephonyCallObserver, PhoneCallSupervisionReleaseObserver>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

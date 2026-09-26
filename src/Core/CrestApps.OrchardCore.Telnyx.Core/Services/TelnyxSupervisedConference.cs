@@ -45,6 +45,36 @@ internal sealed class TelnyxSupervisedConference
         => $"cc-sv-{customerLegId}";
 
     /// <summary>
+    /// Whether a supervisor leg names the conference the platform moves a bridged call into for supervision (or names
+    /// none), rather than a conference the call already runs in -- an extension call's own, which is joined as it is.
+    /// </summary>
+    /// <param name="conferenceName">The conference the supervisor's leg names.</param>
+    /// <param name="customerLegId">The call's leg the supervised conference is named for.</param>
+    /// <returns><see langword="true"/> when the call is to be moved into its supervised conference.</returns>
+    public static bool IsOwnConference(string conferenceName, string customerLegId)
+        => string.IsNullOrWhiteSpace(conferenceName) ||
+            string.Equals(conferenceName.Trim(), ConferenceName(customerLegId), StringComparison.Ordinal);
+
+    /// <summary>
+    /// Finds a conference a call already runs in, without making one or moving anybody: an extension call's own
+    /// conference was made from the caller's leg, and a conference made from any other leg would bind that leg to it.
+    /// </summary>
+    /// <param name="conferenceName">The conference.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The conference id, or <see langword="null"/> when it is not running.</returns>
+    public async Task<string> FindRunningAsync(string conferenceName, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(conferenceName))
+        {
+            return null;
+        }
+
+        var conference = await _apiClient.FindLiveConferenceByNameAsync(conferenceName.Trim(), cancellationToken);
+
+        return string.IsNullOrWhiteSpace(conference.ConferenceId) ? null : conference.ConferenceId;
+    }
+
+    /// <summary>
     /// The Telnyx supervisor role for a Contact Center monitoring mode name.
     /// </summary>
     /// <param name="mode">The mode name: Monitor, Whisper or Barge.</param>

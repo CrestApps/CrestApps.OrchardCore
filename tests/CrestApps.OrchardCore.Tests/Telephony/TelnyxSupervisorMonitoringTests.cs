@@ -531,7 +531,7 @@ public sealed class TelnyxSupervisorMonitoringTests
         return resolver.Object;
     }
 
-    private static TelnyxCallEvent Answered(string leg, TelnyxOutboundBridgeState state)
+    internal static TelnyxCallEvent Answered(string leg, TelnyxOutboundBridgeState state)
         => new()
         {
             EventType = "call.answered",
@@ -539,7 +539,7 @@ public sealed class TelnyxSupervisorMonitoringTests
             ClientState = state.ToClientStateJson(),
         };
 
-    private static TelnyxCallEvent Hangup(string leg, TelnyxOutboundBridgeState state)
+    internal static TelnyxCallEvent Hangup(string leg, TelnyxOutboundBridgeState state)
         => new()
         {
             EventType = "call.hangup",
@@ -548,10 +548,11 @@ public sealed class TelnyxSupervisorMonitoringTests
             ClientState = state.ToClientStateJson(),
         };
 
-    private static TelnyxOutboundBridgeOrchestrator CreateOrchestrator(
+    internal static TelnyxOutboundBridgeOrchestrator CreateOrchestrator(
         HttpMessageHandler handler,
         ISupervisorLegEventSink sink,
-        IContactCenterAgentLegFailureService failureService = null)
+        IContactCenterAgentLegFailureService failureService = null,
+        ISupervisorLegEventSink nextSink = null)
     {
         var options = new TelnyxOptions
         {
@@ -579,6 +580,6 @@ public sealed class TelnyxSupervisorMonitoringTests
             [],
             [],
             [],
-            supervisorLegEventSinks: [sink]);
+            supervisorLegEventSinks: nextSink is null ? [sink] : [sink, nextSink]);
     }
 }

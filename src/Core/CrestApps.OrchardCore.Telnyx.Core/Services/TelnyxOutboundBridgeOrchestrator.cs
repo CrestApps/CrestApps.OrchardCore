@@ -29,7 +29,7 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
     private readonly TelnyxOptions _options;
     private readonly TelnyxTransferCommands _transfers;
     private readonly ITelnyxAgentEndpointResolver _agentEndpointResolver;
-    private readonly ISupervisorLegEventSink _supervisorLegEventSink;
+    private readonly ISupervisorLegEventSink[] _supervisorLegEventSinks;
     private readonly TelnyxSupervisedConference _supervisedConference;
 
     public TelnyxOutboundBridgeOrchestrator(
@@ -56,7 +56,7 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
         _consultLegEventSink = consultLegEventSinks?.FirstOrDefault();
         _transfers = new TelnyxTransferCommands(apiClient, _options, interactionStore, clock, logger);
         _agentEndpointResolver = agentEndpointResolver;
-        _supervisorLegEventSink = supervisorLegEventSinks?.FirstOrDefault();
+        _supervisorLegEventSinks = supervisorLegEventSinks?.Where(sink => sink is not null).ToArray() ?? [];
         _supervisedConference = new TelnyxSupervisedConference(apiClient, logger);
     }
 

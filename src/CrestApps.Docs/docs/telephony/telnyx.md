@@ -267,12 +267,30 @@ The live dashboard lists the other interventions too — **End call**, **Transfe
 **Record** on or off, the agent's state, and a **Message** to the agent's phone; see the
 [Agent & Supervisor User Manual](../contact-center/user-manual.md).
 
-:::note What can be monitored
-Only calls the Contact Center routed are monitorable — the calls that are Contact Center interactions. A number an agent
-dialed from the keypad and an internal extension call are phone calls of the agent's own, not interactions; the dashboard
-shows **Cannot be monitored** on an agent who is on one. With a supervisor barging, the barge audio is part of what the
-caller's leg hears, so a call recording running on that leg includes it; a monitoring or whispering supervisor is not
-heard by the caller and is not in the caller's recording.
+### An agent's own phone calls
+
+A number an agent dialed from the keypad and an internal extension call are phone calls of the agent's own, not
+Contact Center interactions, but they can be monitored too. The dashboard shows such an agent as **On a call**, with the
+number or colleague and how long the call has lasted, whatever their presence.
+
+- **A number dialed from the keypad** runs on the server the way a Contact Center call does: the agent's leg bridged to
+  the number's leg with `park_after_unbridge=self`, the number's leg written onto the agent's leg's client state. It is
+  supervised the same way — the number's leg makes the conference `cc-sv-{number leg}`, the agent's leg joins it, and
+  when the last supervisor leaves both leave it (which frees the number's leg from the conference it made) and are
+  bridged again. **Take over** releases the agent's leg marked detached and points the number's leg at the supervisor's
+  leg, so the number hanging up ends the supervisor's call, and the supervisor hanging up ends the number's.
+- **An extension call** already runs in its own conference, `ext-{caller leg}`, made from the caller's own leg (see
+  below). The supervisor joins that conference as it is, for either colleague — no new conference is made and nobody
+  moves, so no leg is bound to a conference it has to outlive — and **Stop** only hangs the supervisor's leg up. It
+  cannot be taken over, since each colleague's end hangs the other up.
+
+Transfer and Record are the interaction's, so a phone call offers neither. A call the soft phone placed itself (when the
+server could not bridge it) has no leg the platform controls, and still shows **Cannot be monitored**. Supervisors still
+on a phone call are let go when it ends.
+
+:::note Recordings
+With a supervisor barging, the barge audio is part of what the caller's leg hears, so a call recording running on that
+leg includes it; a monitoring or whispering supervisor is not heard by the caller and is not in the caller's recording.
 :::
 
 ## Transfers

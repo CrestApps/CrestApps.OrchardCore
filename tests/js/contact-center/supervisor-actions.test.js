@@ -270,3 +270,32 @@ describe('placing the More menu', () => {
         expect(placed.left + menu.width).toBeLessThanOrEqual(430 - 8);
     });
 });
+
+// An agent on a number they dialed from the keypad, or on an extension call, is on a call too: the board says so, with
+// who they are talking to and for how long, instead of showing them as Available.
+describe('an agent on a phone call of their own', () => {
+    const { supervisorPhoneCallSummary } = globalThis.CrestAppsContactCenter;
+    const now = Date.parse('2026-09-25T18:10:05Z');
+
+    it('reads On a call, the number dialed and how long it has lasted', () => {
+        expect(supervisorPhoneCallSummary({ direction: 'Outbound', party: '+17025550100', startedUtc: '2026-09-25T18:09:00Z' }, now, {}))
+            .toBe('On a call · → +17025550100 · 1:05');
+    });
+
+    it('marks a call that came in', () => {
+        expect(supervisorPhoneCallSummary({ direction: 'Inbound', party: 'Ann Agent', startedUtc: '2026-09-25T18:10:00Z' }, now, {}))
+            .toBe('On a call · ← Ann Agent · 0:05');
+    });
+
+    it('never shows a negative duration for a clock that is behind', () => {
+        expect(supervisorPhoneCallSummary({ direction: 'Outbound', party: 'x', startedUtc: '2026-09-25T18:11:00Z' }, now, {})).toContain('0:00');
+    });
+
+    it('is localized, and says only On a call when nothing else is known', () => {
+        expect(supervisorPhoneCallSummary({}, now, { onACall: 'En llamada' })).toBe('En llamada');
+    });
+
+    it('is empty for an agent on no such call', () => {
+        expect(supervisorPhoneCallSummary(null, now, {})).toBe('');
+    });
+});

@@ -14,13 +14,15 @@ internal sealed class ContactCenterSupervisionHubScopeContext
         ISupervisorQueueAuthorizationService supervisorQueueAuthorizationService,
         IInteractionManager interactionManager,
         IEnumerable<ICallSessionManager> callSessionManagers,
-        IEnumerable<IContactCenterMonitoringService> monitoringServices)
+        IEnumerable<IContactCenterMonitoringService> monitoringServices,
+        IEnumerable<IContactCenterPhoneCallSupervisionService> phoneCallServices)
     {
         AuthorizationService = authorizationService;
         SupervisorQueueAuthorizationService = supervisorQueueAuthorizationService;
         InteractionManager = interactionManager;
         CallSessionManager = callSessionManagers.FirstOrDefault();
         MonitoringService = monitoringServices.FirstOrDefault();
+        PhoneCalls = phoneCallServices.FirstOrDefault();
     }
 
     public IAuthorizationService AuthorizationService { get; }
@@ -32,4 +34,7 @@ internal sealed class ContactCenterSupervisionHubScopeContext
     public ICallSessionManager CallSessionManager { get; }
 
     public IContactCenterMonitoringService MonitoringService { get; }
+
+    // An agent's own phone call, which the supervisor's phone names with a PhoneCallKey; part of the live dashboard.
+    public IContactCenterPhoneCallSupervisionService PhoneCalls { get; }
 }

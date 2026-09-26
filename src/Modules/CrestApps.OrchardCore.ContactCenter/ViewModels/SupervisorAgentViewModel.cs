@@ -76,4 +76,37 @@ public sealed class SupervisorAgentViewModel
     /// Gets or sets why the agent's call cannot be monitored, when they are on one that cannot.
     /// </summary>
     public string MonitoringUnavailableReason { get; set; }
+
+    /// <summary>
+    /// Gets or sets the agent's own phone call -- a number they dialed from the keypad, or an extension call -- when they
+    /// are on one and on no Contact Center interaction. <see cref="ActiveInteractionId"/> then names it with a phone call
+    /// key when it can be monitored.
+    /// </summary>
+    public SupervisorPhoneCallViewModel PhoneCall { get; set; }
+}
+
+/// <summary>
+/// Represents an agent's own phone call on the supervisor dashboard agent board.
+/// </summary>
+public sealed class SupervisorPhoneCallViewModel
+{
+    /// <summary>
+    /// Gets or sets which way the call goes for the agent, by name: Outbound or Inbound.
+    /// </summary>
+    public string Direction { get; set; }
+
+    /// <summary>
+    /// Gets or sets who the agent is talking to: the number dialed, or the colleague.
+    /// </summary>
+    public string Party { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the call is an internal extension call.
+    /// </summary>
+    public bool IsExtension { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the call started.
+    /// </summary>
+    public DateTime StartedUtc { get; set; }
 }

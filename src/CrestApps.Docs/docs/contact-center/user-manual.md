@@ -414,7 +414,7 @@ Supervisors prepare the environment and monitor operations. The configuration sc
 2. Click **Listen** on that agent's card. You listen to the live call silently; neither party hears you.
 3. The card shows **You: Listen** (or **Connecting your phone…** until your phone answers), and your soft phone shows a **Monitoring** banner with the agent's name. The banner, not a call row, is how your phone shows it.
 
-The action invokes the provider first and only records the audited monitoring event after the provider confirms success. If the provider does not support the action, the button is not shown; an agent on a call that cannot be monitored — one that is not a Contact Center interaction, such as a number they dialed from the keypad or an extension call, or one whose provider does not support monitoring — shows **Cannot be monitored**, with the reason in its tooltip.
+The action invokes the provider first and only records the audited monitoring event after the provider confirms success. If the provider does not support the action, the button is not shown; an agent on a number they dialed from the keypad or on an extension call shows **On a call** with the number or colleague and the call's length, and can be listened to, coached, joined and ended like a Contact Center call (a keypad call can also be taken over; neither can be transferred or recorded from the dashboard). An agent on a call that cannot be monitored — one whose provider does not support monitoring, or a call the soft phone placed by itself — shows **Cannot be monitored**, with the reason in its tooltip.
 
 ### Switch mode, or stop
 
