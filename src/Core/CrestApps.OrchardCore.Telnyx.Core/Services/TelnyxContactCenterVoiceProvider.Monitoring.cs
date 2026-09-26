@@ -15,16 +15,20 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 /// (the one the resolver every agent dial uses picks: registered first) with a leg that carries the intent
 /// <see cref="TelnyxOutboundBridgeState.ContactCenterSupervisorLegIntent"/> and the one-off token the phone was told to
 /// expect, in its client state and in the <see cref="TelnyxConstants.MonitorLegSipHeader"/> header. The phone answers
-/// that leg by itself. When it answers, the orchestrator moves the call from its bridge into a conference and joins the
-/// supervisor as a Telnyx <c>whisper</c> supervisor naming who hears them: the agent while listening (the phone keeps its
-/// microphone off) or coaching, everybody on the call when joining it. Nobody is ever muted and the <c>monitor</c> role is
-/// never used -- live, either left the customer and the agent unable to hear each other. See TelnyxSupervisedConference.
+/// that leg by itself.
 /// </para>
 /// <para>
-/// Changing mode changes who hears the participant in place, confirmed by reading the conference back; the supervisor is
-/// never rung again. Stopping hangs the supervisor's leg up and, once nobody is listening, puts the call back on its
-/// bridge. A takeover makes the supervisor heard by everybody and releases the agent's leg, marked detached so its hang-up
-/// does not end the call.
+/// A call on a two-leg bridge -- a Contact Center call, a number dialed from the keypad -- is supervised where it is: the
+/// leg is dialed with <c>supervise_call_control_id</c> naming the agent's leg and a <c>supervisor_role</c>, and Telnyx
+/// attaches it to the call when it answers (<c>monitor</c> heard by nobody, <c>whisper</c> by the agent alone,
+/// <c>barge</c> by both). A mode is changed on the supervisor's own leg (<c>switch_supervisor_role</c>), stopping only hangs
+/// that leg up, and a takeover bridges the customer to it before the agent's leg is released. Nobody is moved. Live,
+/// moving the call into a conference for the supervisor left the customer and the agent unable to hear each other, or the
+/// supervisor, in every mode.
+/// </para>
+/// <para>
+/// An extension call already runs in a conference of its own, and the supervisor joins it there (see
+/// TelnyxSupervisedConference).
 /// </para>
 /// </remarks>
 public sealed partial class TelnyxContactCenterVoiceProvider :
@@ -76,7 +80,10 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
         }
 
         var customerLegId = request.ProviderCallId.Trim();
+        var agentLegId = request.AgentLegId.Trim();
         var token = string.IsNullOrWhiteSpace(request.MonitorToken) ? Guid.NewGuid().ToString("N") : request.MonitorToken.Trim();
+        var role = TelnyxSupervisedConference.RoleFor(request.Mode.ToString());
+        var inPlace = SupervisesInPlace(request);
 
         var originate = new TelnyxOriginateRequest
         {
@@ -88,13 +95,21 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
             {
                 Intent = TelnyxOutboundBridgeState.ContactCenterSupervisorLegIntent,
                 PeerCallControlId = customerLegId,
-                PartyCallControlId = request.AgentLegId.Trim(),
-                ConferenceName = SupervisedConferenceName(request),
-                SupervisorRole = TelnyxSupervisedConference.RoleFor(request.Mode.ToString()),
+                PartyCallControlId = agentLegId,
+                ConferenceName = inPlace ? null : SupervisedConferenceName(request),
+                SupervisesInPlace = inPlace ? true : null,
+                SupervisorRole = role,
                 RingUserId = request.SupervisorId.Trim(),
                 MonitorToken = token,
             }.ToClientStateJson(),
         };
+
+        if (inPlace)
+        {
+            // Telnyx attaches the leg to the agent's when it answers: a whisper is heard by the agent alone.
+            originate.AdditionalFields["supervise_call_control_id"] = agentLegId;
+            originate.AdditionalFields["supervisor_role"] = role;
+        }
 
         // A browser credential is reached as an internal SIP address, never through the outbound voice profile. The
         // header is what the phone matches the leg to the engagement it asked for.
@@ -169,6 +184,12 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
             return Failure("monitor_stop_outcome_unknown", "Telnyx could not be reached to stop the supervisor engagement.");
         }
 
+        if (SupervisesInPlace(request))
+        {
+            // Nothing was moved for the supervisor: the call is as it was.
+            return MonitoringSuccess(request);
+        }
+
         await SupervisedConference.RestoreIfUnsupervisedAsync(
             request.ProviderCallId?.Trim(),
             request.AgentLegId?.Trim(),
@@ -193,7 +214,9 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
         var supervisorLegId = request.SupervisorLegId.Trim();
         var role = TelnyxSupervisedConference.RoleFor(request.Mode.ToString());
 
-        if (await SupervisedConference.SwitchRoleAsync(SupervisedConferenceName(request), supervisorLegId, role, request.AgentLegId?.Trim(), cancellationToken))
+        if (SupervisesInPlace(request)
+            ? (await _apiClient.SwitchSupervisorRoleAsync(supervisorLegId, role, cancellationToken)).Succeeded
+            : await SupervisedConference.SwitchRoleAsync(SupervisedConferenceName(request), supervisorLegId, role, request.AgentLegId?.Trim(), cancellationToken))
         {
             return MonitoringSuccess(request);
         }
@@ -238,7 +261,37 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
         var supervisorLegId = request.SupervisorLegId.Trim();
 
         // The supervisor is heard by the customer before the agent goes, so the customer is never alone on the line.
-        if (!await SupervisedConference.SwitchRoleAsync(SupervisedConferenceName(request), supervisorLegId, "barge", agentLegId, cancellationToken))
+        if (SupervisesInPlace(request))
+        {
+            var heard = await _apiClient.SwitchSupervisorRoleAsync(supervisorLegId, "barge", cancellationToken);
+
+            if (!heard.Succeeded)
+            {
+                return Failure("takeover_failed", "You are not connected to the call yet, so it cannot be taken over.");
+            }
+
+            // The customer is bridged to the supervisor's own leg, which takes them off the agent's (parked by its own
+            // bridge's park_after_unbridge=self) and leaves the supervisor's leg parked, not hung up, if it is unbridged
+            // later -- as every agent leg is.
+            var bridged = await _apiClient.PostCallActionAsync(supervisorLegId, "bridge", new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["call_control_id"] = customerLegId,
+                ["park_after_unbridge"] = "self",
+            }, cancellationToken);
+
+            if (!bridged.Succeeded)
+            {
+                _logger.LogError(
+                    "Telnyx refused to bridge call '{CustomerLegId}' to supervisor leg '{SupervisorLegId}' for a takeover with status code {StatusCode}; the agent stays on the call. Response: {Response}",
+                    customerLegId.SanitizeLogValue(),
+                    supervisorLegId.SanitizeLogValue(),
+                    bridged.StatusCode,
+                    bridged.ErrorBody.SanitizeLogValue());
+
+                return Failure("takeover_failed", "The call could not be handed to you.");
+            }
+        }
+        else if (!await SupervisedConference.SwitchRoleAsync(SupervisedConferenceName(request), supervisorLegId, "barge", agentLegId, cancellationToken))
         {
             return Failure("takeover_failed", "You are not connected to the call yet, so it cannot be taken over.");
         }
@@ -296,6 +349,11 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
                 supervisorLegId.SanitizeLogValue());
         }
     }
+
+    // A call on a two-leg bridge is supervised where it is; one that runs in a conference of its own -- an extension call,
+    // which the request names -- is joined there.
+    private static bool SupervisesInPlace(ContactCenterVoiceMonitoringRequest request)
+        => TelnyxSupervisedConference.IsOwnConference(SupervisedConferenceName(request), request.ProviderCallId?.Trim());
 
     private static TelnyxOutboundBridgeState DetachedSupervisorState(ContactCenterVoiceMonitoringRequest request)
         => new()

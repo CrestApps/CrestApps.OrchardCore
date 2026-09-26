@@ -193,7 +193,7 @@ public sealed class TelnyxPhoneCallMonitoringTests
     }
 
     [Fact]
-    public async Task SupervisorAnswers_OnAKeypadCall_TheNumbersLegMakesTheConference_AndTheAgentsLegJoinsIt()
+    public async Task SupervisorAnswers_OnAKeypadCall_TheSupervisorIsOnTheAgentsLeg_AndNobodyIsMoved()
     {
         // Arrange
         var api = KeypadCall();
@@ -205,18 +205,9 @@ public sealed class TelnyxPhoneCallMonitoringTests
         await orchestrator.AdvanceAsync(TelnyxSupervisorMonitoringTests.Answered(Supervisor, state), TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(
-            [
-                "GET conferences",
-                "POST conferences",
-                "POST conferences/conf-1/actions/join",
-                "GET conferences/conf-1/participants",
-                "POST conferences/conf-1/actions/join",
-                "GET conferences/conf-1/participants",
-            ],
-            api.Commands);
-        Assert.Equal(NumberLeg, api.BodyOf("POST", "conferences").GetProperty("call_control_id").GetString());
-        Assert.Equal([NumberLeg, AgentLeg, Supervisor], api.Conferences["conf-1"].Participants);
+        Assert.Equal([$"POST calls/{Supervisor}/actions/switch_supervisor_role"], api.Commands);
+        Assert.Empty(api.Conferences);
+        Assert.Empty(api.Bridges);
         Assert.Empty(api.HungUp);
     }
 
@@ -244,6 +235,40 @@ public sealed class TelnyxPhoneCallMonitoringTests
         Assert.Equal([AgentLeg, ColleagueLeg], update.GetProperty("whisper_call_control_ids").EnumerateArray().Select(item => item.GetString()));
     }
 
+    // Live, a change of a conference supervisor's role answered 200 and changed nothing.
+    [Fact]
+    public async Task SwitchMode_OnAnExtensionCall_WhenTelnyxDoesNotApplyTheChange_TheSupervisorLeavesAndRejoinsHeardByTheirNewMode()
+    {
+        // Arrange
+        var api = ExtensionCall();
+        api.IgnoreParticipantUpdates = true;
+        api.Conferences["conf-1"].Participants.Add(Supervisor);
+        api.Conferences["conf-1"].Whispers[Supervisor] = [ColleagueLeg];
+        var provider = TelnyxContactCenterProviderFactory.Create(api, Resolver());
+        var request = ExtensionRequest(MonitorMode.Barge);
+        request.SupervisorLegId = Supervisor;
+
+        // Act
+        var result = await provider.SwitchModeAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Equal(
+            [
+                "GET conferences",
+                "GET conferences/conf-1/participants",
+                "POST conferences/conf-1/actions/update",
+                "GET conferences/conf-1/participants",
+                "POST conferences/conf-1/actions/leave",
+                "POST conferences/conf-1/actions/join",
+                "GET conferences/conf-1/participants",
+            ],
+            api.Commands);
+        Assert.Equal([AgentLeg, ColleagueLeg], api.Conferences["conf-1"].Whispers[Supervisor]);
+        Assert.Contains(Supervisor, api.Conferences["conf-1"].Participants);
+        Assert.Empty(api.HungUp);
+    }
+
     [Fact]
     public async Task Stop_OnAnExtensionCall_HangsUpOnlyTheSupervisor_AndMovesNobody()
     {
@@ -268,9 +293,9 @@ public sealed class TelnyxPhoneCallMonitoringTests
     [Fact]
     public async Task TakeOver_OfAKeypadCall_ReleasesTheAgent_AndTheNumbersEndNowEndsTheSupervisorsCall()
     {
-        // Arrange - the call is in its supervised conference, the supervisor on it.
+        // Arrange - the supervisor is on the agent's leg.
         var api = KeypadCall();
-        api.WithConference(KeypadConference, NumberLeg, AgentLeg, Supervisor);
+        api.WithLeg(Supervisor, KeypadSupervisorState("whisper"));
         var provider = TelnyxContactCenterProviderFactory.Create(api, Resolver());
         var request = KeypadRequest(MonitorMode.Barge);
         request.SupervisorLegId = Supervisor;
@@ -278,14 +303,13 @@ public sealed class TelnyxPhoneCallMonitoringTests
         // Act
         var result = await provider.TakeOverPhoneCallAsync(request, TestContext.Current.CancellationToken);
 
-        // Assert - heard by the number first, then the agent is let go, marked so its end does not end the call.
+        // Assert - heard by the number first, bridged to it, then the agent is let go, marked so its end does not end the
+        // call.
         Assert.True(result.Succeeded);
         Assert.Equal(
             [
-                "GET conferences",
-                "GET conferences/conf-1/participants",
-                "POST conferences/conf-1/actions/update",
-                "GET conferences/conf-1/participants",
+                $"POST calls/{Supervisor}/actions/switch_supervisor_role",
+                $"POST calls/{Supervisor}/actions/bridge",
                 $"GET calls/{AgentLeg}",
                 $"POST calls/{AgentLeg}/actions/hangup",
                 $"GET calls/{NumberLeg}",
@@ -297,7 +321,7 @@ public sealed class TelnyxPhoneCallMonitoringTests
         Assert.True(released.Detached);
         Assert.True(TelnyxOutboundBridgeState.TryParse(api.LegStates[NumberLeg], out var number));
         Assert.Equal(Supervisor, number.PeerCallControlId);
-        Assert.Equal([NumberLeg, Supervisor], api.Conferences["conf-1"].Participants);
+        Assert.Equal((Supervisor, NumberLeg, "self"), Assert.Single(api.Bridges));
     }
 
     [Fact]
@@ -404,7 +428,7 @@ public sealed class TelnyxPhoneCallMonitoringTests
             Intent = TelnyxOutboundBridgeState.ContactCenterSupervisorLegIntent,
             PeerCallControlId = NumberLeg,
             PartyCallControlId = AgentLeg,
-            ConferenceName = KeypadConference,
+            SupervisesInPlace = true,
             SupervisorRole = role,
             RingUserId = "supervisor-user",
             MonitorToken = "token-1",

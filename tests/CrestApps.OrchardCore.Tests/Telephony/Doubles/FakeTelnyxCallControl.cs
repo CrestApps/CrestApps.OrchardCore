@@ -36,6 +36,12 @@ internal sealed class FakeTelnyxCallControl : HttpMessageHandler
     /// <summary>Gets the legs whose conference join Telnyx refuses.</summary>
     public HashSet<string> RefuseJoinFor { get; } = new(StringComparer.Ordinal);
 
+    /// <summary>Gets the legs that have not been answered yet: a role switch or a bridge on one is refused.</summary>
+    public HashSet<string> Unanswered { get; } = new(StringComparer.Ordinal);
+
+    /// <summary>Gets the legs a bridge issued on is refused.</summary>
+    public HashSet<string> RefuseBridgeFor { get; } = new(StringComparer.Ordinal);
+
     /// <summary>Gets or sets a value indicating whether a conference create is refused.</summary>
     public bool RefuseCreate { get; set; }
 
@@ -129,6 +135,16 @@ internal sealed class FakeTelnyxCallControl : HttpMessageHandler
             if (HungUp.Contains(leg))
             {
                 return Json(HttpStatusCode.UnprocessableEntity, new { errors = new[] { new { code = "90018" } } });
+            }
+
+            if (Unanswered.Contains(leg) && action is "switch_supervisor_role" or "bridge")
+            {
+                return Json(HttpStatusCode.UnprocessableEntity, new { errors = new[] { new { code = "90034", title = "Call not answered yet" } } });
+            }
+
+            if (action == "bridge" && RefuseBridgeFor.Contains(leg))
+            {
+                return Json(HttpStatusCode.UnprocessableEntity, new { errors = new[] { new { code = "90000" } } });
             }
 
             if (body.ValueKind == JsonValueKind.Object && body.TryGetProperty("client_state", out _))

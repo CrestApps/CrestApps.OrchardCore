@@ -86,6 +86,14 @@ public sealed class TelnyxOutboundBridgeState
     public string SupervisorRole { get; set; }
 
     /// <summary>
+    /// Gets or sets, on a supervisor leg, whether Telnyx attaches it to the agent's leg itself when it answers
+    /// (<c>supervise_call_control_id</c> on the dial) rather than it joining a conference: a call on a two-leg bridge is
+    /// supervised where it is, and only an extension call, which already runs in a conference, is joined there.
+    /// </summary>
+    [JsonPropertyName("z")]
+    public bool? SupervisesInPlace { get; set; }
+
+    /// <summary>
     /// Gets or sets, on a supervisor leg, the one-off token the supervisor's phone was told to expect, so it answers this
     /// leg by itself and no other.
     /// </summary>

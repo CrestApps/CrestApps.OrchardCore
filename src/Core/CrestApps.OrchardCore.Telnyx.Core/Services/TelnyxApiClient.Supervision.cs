@@ -240,6 +240,21 @@ public sealed partial class TelnyxApiClient
     }
 
     /// <summary>
+    /// Changes the role of a supervisor leg Telnyx attached to a bridged call
+    /// (<c>POST /calls/{id}/actions/switch_supervisor_role</c>), in place: the leg stays up and nobody is moved.
+    /// </summary>
+    /// <param name="supervisorLegId">The supervisor's leg.</param>
+    /// <param name="role"><c>monitor</c>, <c>whisper</c> or <c>barge</c>.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <remarks>See <see href="https://developers.telnyx.com/api-reference/call-commands/switch-supervisor-role"/>.</remarks>
+    public Task<TelnyxApiResult> SwitchSupervisorRoleAsync(string supervisorLegId, string role, CancellationToken cancellationToken = default)
+        => PostCallActionAsync(
+            supervisorLegId,
+            "switch_supervisor_role",
+            new Dictionary<string, object>(StringComparer.Ordinal) { ["role"] = role },
+            cancellationToken);
+
+    /// <summary>
     /// Reads a conference's name by its id.
     /// </summary>
     /// <param name="conferenceId">The conference.</param>
