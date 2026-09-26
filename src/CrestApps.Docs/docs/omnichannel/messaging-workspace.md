@@ -37,7 +37,12 @@ It is the human counterpart to [SMS Automation](sms), which lets an **AI agent**
   - a channel where the customer cannot be reached is greyed out.
 - **Conversation.** The thread, the composer (canned-response templates, Enter to send), and the customer card with every contact record that matches the address.
 - **New message.** The compose button opens a mail-style composer in the conversation pane, beside the customer list: pick the address to send **From** (which decides the channel), search contacts reachable on that channel for **To**, add other addresses, and write the message. One recipient starts a conversation; several get a private conversation each.
-- **Claim, assign, transfer, close, spam, reopen.** The same on every channel. Replying to a conversation nobody holds claims it for you, under the same rules as **Claim**; replying never takes a conversation from the agent who already holds it.
+- **Claim, transfer, close, spam, reopen.** The same on every channel. Replying to a conversation nobody holds claims it for you, under the same rules as **Claim**; replying never takes a conversation from the agent who already holds it.
+- **Transfer.** **Transfer** in the conversation header hands the conversation to another person, searched by name, or, when Contact Center Work Distribution is enabled, sends it **back to a team**'s shared inbox for any member to claim. It stays the same conversation, so its whole history goes with it, and the customer is not told. An optional note for the recipient is kept in the conversation's history and never sent to the customer.
+  - Whoever holds the conversation may transfer it, and so may a supervisor with `ViewAllMessagingConversations`. A conversation nobody holds is claimed first; a supervisor can assign it directly.
+  - Only people who can use the messaging workspace are offered, and never the person who already holds it.
+  - A team's conversation handed to one of its members stays the team's; handed to someone outside the team, it becomes that person's own conversation, since they could not open it otherwise.
+  - The recipient's list picks the conversation up at once, with a notice saying who sent it; the sender's list drops it. The thread shows *Transferred from A to B* at the point it happened.
 - **Broadcasts.** One message to many recipients as individual 1:1 threads (not a group chat), on any channel that supports them.
 - **Real time.** New messages, delivery receipts and assignment changes are pushed over the workspace's own SignalR hub. A new message for the open conversation is appended, one for the same customer on another channel badges that channel's tab, and any new message moves its customer to the top of the list with its unread count. If a push is missed (a dropped connection), the open conversation catches up within seconds and the customer list within half a minute on its own.
 
@@ -95,7 +100,7 @@ While an automated (AI) activity is handling a contact on an endpoint, the works
 | Permission | Grants |
 | --- | --- |
 | `UseMessagingWorkspace` | Use the workspace on the endpoints you own or serve. |
-| `ViewAllMessagingConversations` | See every conversation (supervisors), and transfer them. |
+| `ViewAllMessagingConversations` | See every conversation (supervisors), and transfer any of them. The holder of a conversation can transfer it without this. |
 | `SendGroupMessages` | Send broadcasts and multi-recipient messages. |
 | `SendMessagesDuringQuietHours` | Send outside business hours on a channel that observes quiet hours without being told off. |
 | `ManageMessaging` | Manage templates and endpoint routing. |

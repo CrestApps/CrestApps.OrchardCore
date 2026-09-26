@@ -18,6 +18,7 @@
     var view = {
         conversationId: workspace.getAttribute('data-conversation-id') || null,
         customerKey: workspace.getAttribute('data-customer-key') || null,
+        agentId: workspace.getAttribute('data-agent-id') || null,
     };
 
     var hubUrl = workspace.getAttribute('data-hub-url');
@@ -27,6 +28,10 @@
     var availabilityUrl = workspace.getAttribute('data-availability-url');
     var newMessageText = workspace.getAttribute('data-new-message-text');
     var viewText = workspace.getAttribute('data-view-text');
+    var someoneText = workspace.getAttribute('data-someone-text');
+    var transferredToYouText = workspace.getAttribute('data-transferred-to-you-text');
+    var transferredToTeamText = workspace.getAttribute('data-transferred-to-team-text');
+    var transferredAwayText = workspace.getAttribute('data-transferred-away-text');
 
     var list = workspace.querySelector('[data-inbox-list]');
     var search = workspace.querySelector('[data-inbox-search]');
@@ -282,6 +287,53 @@
         });
     }
 
+    // ---- Transfer ----------------------------------------------------------------------------------------------
+
+    // The dialog is rendered with the conversation but moved to the end of the document, so it stacks above the
+    // workspace panes rather than inside them.
+    var transferModal = workspace.querySelector('[data-transfer-modal]');
+
+    if (transferModal) {
+        document.body.appendChild(transferModal);
+
+        var transferForm = transferModal.querySelector('[data-transfer-form]');
+        var transferRequired = transferModal.querySelector('[data-transfer-required]');
+
+        var transferType = function () {
+            var checked = transferForm.querySelector('[data-transfer-type]:checked');
+
+            return checked ? checked.value : 'Agent';
+        };
+
+        // Only the picker for the kind of target chosen is shown; the other keeps its selection but is not read.
+        var showTransferTarget = function () {
+            var type = transferType();
+
+            transferForm.querySelectorAll('[data-transfer-target]').forEach(function (section) {
+                section.classList.toggle('d-none', section.getAttribute('data-transfer-target') !== type);
+            });
+
+            if (transferRequired) { transferRequired.classList.add('d-none'); }
+        };
+
+        transferForm.querySelectorAll('[data-transfer-type]').forEach(function (radio) {
+            radio.addEventListener('change', showTransferTarget);
+        });
+
+        showTransferTarget();
+
+        transferForm.addEventListener('submit', function (event) {
+            var inputName = messaging.transferTargetInputName(transferType());
+            var chosen = transferForm.querySelector('input[type="hidden"][name="' + inputName + '"]');
+
+            if (!chosen || !chosen.value) {
+                event.preventDefault();
+
+                if (transferRequired) { transferRequired.classList.remove('d-none'); }
+            }
+        });
+    }
+
     // ---- Toasts ------------------------------------------------------------------------------------------------
 
     function showToast(title, body, href) {
@@ -363,6 +415,34 @@
         refreshInbox();
     }
 
+    function conversationHref(conversationId) {
+        return conversationId
+            ? conversationUrlTemplate.replace('__ID__', encodeURIComponent(conversationId))
+            : null;
+    }
+
+    // A conversation changed hands: the list always catches up, and a transfer also says who moved it where.
+    function onAssigned(notification) {
+        var by = (notification && notification.transferredByName) || someoneText;
+        var to = (notification && notification.transferredToName) || someoneText;
+
+        switch (messaging.classifyAssignment(notification, view)) {
+            case 'to-me':
+                showToast(messaging.formatText(transferredToYouText, [by]), '', conversationHref(notification.conversationId));
+                break;
+
+            case 'to-team':
+                showToast(messaging.formatText(transferredToTeamText, [by, to]), '', conversationHref(notification.conversationId));
+                break;
+
+            case 'away':
+                showToast(messaging.formatText(transferredAwayText, [to]), '', null);
+                break;
+        }
+
+        refreshInbox();
+    }
+
     if (root.signalR && hubUrl) {
         try {
             var connection = new root.signalR.HubConnectionBuilder()
@@ -371,7 +451,7 @@
                 .build();
 
             connection.on('NewInboundMessage', onInbound);
-            connection.on('ConversationAssigned', refreshInbox);
+            connection.on('ConversationAssigned', onAssigned);
             connection.on('MessageDeliveryUpdated', function (notification) {
                 if (notification && notification.conversationId === view.conversationId) {
                     pullThread();

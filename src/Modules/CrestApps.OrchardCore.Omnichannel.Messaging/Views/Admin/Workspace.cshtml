@@ -27,7 +27,12 @@
      data-customer-key="@thread?.CustomerKey"
      data-messages-url="@(thread is null ? null : Url.Action("ThreadMessages", new { id = thread.Conversation.ItemId }))"
      data-new-message-text="@T["New message"]"
-     data-view-text="@T["Open conversation"]">
+     data-view-text="@T["Open conversation"]"
+     data-agent-id="@inbox.CurrentAgentId"
+     data-someone-text="@T["Someone"]"
+     data-transferred-to-you-text="@T["{0} transferred a conversation to you"].Value"
+     data-transferred-to-team-text="@T["{0} sent a conversation to {1}"].Value"
+     data-transferred-away-text="@T["This conversation was transferred to {0}"].Value">
 
     <aside class="messaging-inbox messaging-pane d-flex flex-column flex-shrink-0 @(thread is null && Model.Compose is null ? string.Empty : "d-none d-md-flex")">
         <div class="p-2 border-bottom d-flex flex-column gap-2">
