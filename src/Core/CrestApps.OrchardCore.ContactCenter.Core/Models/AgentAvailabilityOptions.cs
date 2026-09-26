@@ -14,4 +14,10 @@ public sealed class AgentAvailabilityOptions
     /// Gets or sets the maximum time an agent may remain in after-call wrap-up before capacity is recovered.
     /// </summary>
     public TimeSpan MaximumWrapUpDuration { get; set; } = TimeSpan.FromMinutes(15);
+
+    /// <summary>
+    /// Gets or sets how long after the call an agent accepted has ended the agent may still be Busy before recovery
+    /// returns them to work. A call's own end releases the agent within moments; recovery picks up what it missed.
+    /// </summary>
+    public TimeSpan OrphanedBusyGracePeriod { get; set; } = TimeSpan.FromMinutes(1);
 }
