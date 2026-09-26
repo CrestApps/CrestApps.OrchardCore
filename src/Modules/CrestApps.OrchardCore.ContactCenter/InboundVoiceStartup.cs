@@ -65,6 +65,10 @@ public sealed class InboundVoiceStartup : StartupBase
             .AddScoped<IInboundVoiceDigitsSink, InboundVoiceDigitsSink>()
             .AddScoped<IIvrCallRouter, IvrCallRouter>()
             .AddScoped<IIvrExternalTransferService, IvrExternalTransferService>()
+            // Whether a menu's transfer to an outside number connected, so a failed one reroutes the caller.
+            .AddScoped<IExternalTransferOutcomeSink, IvrExternalTransferOutcomeSink>()
+            // A waiting caller's answer to the queue's callback offer arrives on the same key-press path as a menu.
+            .AddScoped<IQueueCallbackOfferResponder, QueueCallbackOfferResponder>()
             .AddScoped<IEntryPointResolver, EntryPointResolver>()
             .AddScoped<IPendingIncomingCallOfferService, PendingIncomingCallOfferService>()
             .AddScoped<QueuedVoiceWorkOfferScopeContext>()

@@ -125,9 +125,10 @@ public sealed partial class TelnyxTelephonyProvider
             {
                 ["payload"] = greeting,
                 ["payload_type"] = "text",
-                ["voice"] = "female",
-                ["language"] = "en-US",
             };
+
+            // The tenant's voice and language, the same the phone menu and the queue's prompts are spoken in.
+            TelnyxPrompts.ApplySpeech(speakBody, _options);
 
             if (greetingClientState is not null)
             {

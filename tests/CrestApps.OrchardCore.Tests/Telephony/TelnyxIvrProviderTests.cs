@@ -57,6 +57,23 @@ public sealed class TelnyxIvrProviderTests
     }
 
     [Fact]
+    public async Task ASpokenMenu_IsSpokenInTheTenantsVoiceAndLanguage()
+    {
+        // Arrange
+        // The voice used to be fixed; a tenant whose callers speak another language had every menu read in US English.
+        var handler = new RecordingHttpMessageHandler().AlwaysRespondWith(HttpStatusCode.OK);
+        var provider = CreateProvider(handler, options: new TelnyxOptions { TtsVoice = "AWS.Polly.Lupe-Neural", TtsLanguage = "es-US" });
+
+        // Act
+        await provider.PromptAsync("ctrl-1", "Para ventas, oprima 1.", mediaId: null, "1", TestContext.Current.CancellationToken);
+
+        // Assert
+        using var body = JsonDocument.Parse(handler.Requests[0].Body);
+        Assert.Equal("AWS.Polly.Lupe-Neural", body.RootElement.GetProperty("voice").GetString());
+        Assert.Equal("es-US", body.RootElement.GetProperty("language").GetString());
+    }
+
+    [Fact]
     public async Task AMenu_IsCollectedOnce_SoTheFlowDecidesWhatAMissedKeyMeans()
     {
         // Arrange
@@ -225,7 +242,7 @@ public sealed class TelnyxIvrProviderTests
         Assert.False(played);
     }
 
-    private static TelnyxIvrProvider CreateProvider(HttpMessageHandler handler, VoiceMediaItem media = null)
+    private static TelnyxIvrProvider CreateProvider(HttpMessageHandler handler, VoiceMediaItem media = null, TelnyxOptions options = null)
     {
         var httpClient = new HttpClient(handler)
         {
@@ -246,6 +263,10 @@ public sealed class TelnyxIvrProviderTests
         mediaManager.Setup(x => x.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns<string, CancellationToken>((id, _) => ValueTask.FromResult(media is not null && id == media.ItemId ? media : null));
 
-        return new TelnyxIvrProvider(apiClient, mediaManager.Object, NullLogger<TelnyxIvrProvider>.Instance);
+        return new TelnyxIvrProvider(
+            apiClient,
+            mediaManager.Object,
+            new TestOptionsMonitor<TelnyxOptions>(options ?? new TelnyxOptions()),
+            NullLogger<TelnyxIvrProvider>.Instance);
     }
 }

@@ -91,6 +91,54 @@ public sealed class InboundVoiceDigitsSinkTests
     }
 
     [Fact]
+    public async Task AKeyPressAfterTheCallerLeftTheMenu_IsTheAnswerToTheQueuesCallbackOffer()
+    {
+        // Arrange
+        // The queue offered a callback and collected the caller's key on the call the menu had used. Nothing took
+        // that key, so a caller who pressed to be called back heard their music stop and stayed on hold.
+        var harness = new DigitsHarness { CallbackOfferClaims = true };
+        harness.CompleteMenu();
+
+        // Act
+        var handled = await harness.PressAsync("1");
+
+        // Assert
+        Assert.True(handled);
+        Assert.Equal("1", harness.CallbackAnswers.Single().Digits);
+        Assert.Empty(harness.Flow.Deliveries);
+        Assert.Empty(harness.Routed);
+    }
+
+    [Fact]
+    public async Task AKeyPressOnAQueueLineWithNoMenu_IsTheAnswerToTheQueuesCallbackOffer()
+    {
+        // Arrange
+        var harness = new DigitsHarness { CallbackOfferClaims = true, EntryPointHasFlow = false };
+
+        // Act
+        var handled = await harness.PressAsync("1");
+
+        // Assert
+        Assert.True(handled);
+        Assert.Single(harness.CallbackAnswers);
+    }
+
+    [Fact]
+    public async Task AKeyPressInTheMenu_IsNeverTakenAsACallbackAnswer()
+    {
+        // Arrange
+        var harness = new DigitsHarness { CallbackOfferClaims = true };
+        harness.WithMenuChoice(new IvrStep(IvrStepKind.RouteToQueue, "root", null, null, "queue-support"));
+
+        // Act
+        await harness.PressAsync("1");
+
+        // Assert
+        Assert.Empty(harness.CallbackAnswers);
+        Assert.Single(harness.Routed);
+    }
+
+    [Fact]
     public async Task PressingNothing_IsStillDeliveredToTheFlow()
     {
         // Arrange
@@ -207,11 +255,17 @@ public sealed class InboundVoiceDigitsSinkTests
                 .Callback<string, CallLifecycleEventData, DateTime, ContactCenterActor, string, CancellationToken>((eventType, _, _, _, key, _) => Audit.Add((eventType, key)))
                 .Returns(Task.CompletedTask);
 
+            var callbackOffers = new Mock<IQueueCallbackOfferResponder>();
+            callbackOffers.Setup(x => x.HandleAsync(It.IsAny<Interaction>(), It.IsAny<InboundVoiceDigitsEvent>(), It.IsAny<CancellationToken>()))
+                .Callback<Interaction, InboundVoiceDigitsEvent, CancellationToken>((_, digitsEvent, _) => CallbackAnswers.Add(digitsEvent))
+                .ReturnsAsync(() => CallbackOfferClaims);
+
             Sink = new InboundVoiceDigitsSink(
                 interactionManager.Object,
                 entryPointResolver.Object,
                 Flow,
                 router.Object,
+                callbackOffers.Object,
                 audit.Object,
                 new TestClock(),
                 NullLogger<InboundVoiceDigitsSink>.Instance);
@@ -222,6 +276,10 @@ public sealed class InboundVoiceDigitsSinkTests
         public InboundVoiceDigitsSink Sink { get; }
 
         public bool EntryPointHasFlow { get; set; } = true;
+
+        public bool CallbackOfferClaims { get; set; }
+
+        public List<InboundVoiceDigitsEvent> CallbackAnswers { get; } = [];
 
         public List<(string InteractionId, string EntryPointId, IvrStep Step)> Routed { get; } = [];
 

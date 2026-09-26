@@ -61,6 +61,8 @@ internal sealed class TelnyxOptionsConfigurations : IConfigureOptions<TelnyxOpti
         options.EchoTestDestination = settings.EchoTestDestination?.Trim();
         options.OrphanedCallHandling = settings.OrphanedCallHandling;
         options.AnsweringMachineDetection = settings.AnsweringMachineDetection;
+        options.TtsVoice = string.IsNullOrWhiteSpace(settings.TtsVoice) ? TelnyxConstants.Speech.DefaultVoice : settings.TtsVoice.Trim();
+        options.TtsLanguage = string.IsNullOrWhiteSpace(settings.TtsLanguage) ? TelnyxConstants.Speech.DefaultLanguage : settings.TtsLanguage.Trim();
 
         options.ApiBaseUrl = ResolveApiBaseUrl(settings.ApiBaseUrl);
     }

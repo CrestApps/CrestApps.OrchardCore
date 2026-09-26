@@ -76,7 +76,9 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
             ContactCenterVoiceProviderCapabilities.Whisper |
             ContactCenterVoiceProviderCapabilities.Barge |
             // The outbound-bridge orchestration stops the caller's playback once it has bridged the agent in.
-            ContactCenterVoiceProviderCapabilities.HoldMusicStopsOnAgentBridge;
+            ContactCenterVoiceProviderCapabilities.HoldMusicStopsOnAgentBridge |
+            // A transfer that asks for it marks the leg it rings, whose answer or hang-up the webhook reports.
+            ContactCenterVoiceProviderCapabilities.TransferOutcomeReporting;
 
     /// <inheritdoc/>
     public VoiceProviderDeliveryModel DeliveryModel => VoiceProviderDeliveryModel.ServerSideAcd;
@@ -291,11 +293,19 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
         {
             // The caller identity the destination sees: the request's (a caller sent on from a phone menu is shown as
             // the line they dialled), else the tenant's outbound caller id.
+            // A transfer that must know whether it worked marks the leg it rings: Telnyx sends call.hangup for that
+            // leg when the transfer fails and leaves the caller's leg up, and the mark is how that hang-up is traced
+            // back to the caller.
+            var targetLegState = ReportsOutcome(request)
+                ? TelnyxCallFlowClientState.ForTransferLeg(request.InteractionId).ToJson()
+                : null;
+
             var result = await _apiClient.TransferAsync(
                 request.ProviderCallId.Trim(),
                 request.Target,
                 string.IsNullOrWhiteSpace(request.CallerId) ? _options.DefaultOutboundCallerId : request.CallerId.Trim(),
-                cancellationToken: cancellationToken);
+                cancellationToken: cancellationToken,
+                targetLegClientState: targetLegState);
 
             if (!result.Succeeded)
             {
@@ -344,6 +354,13 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
         return await _agentEndpointResolver.ResolveAsync(request.AgentUserId, cancellationToken);
     }
 
+
+    private static bool ReportsOutcome(ContactCenterVoiceTransferRequest request)
+        => !string.IsNullOrWhiteSpace(request.InteractionId) &&
+            request.Metadata is not null &&
+            request.Metadata.TryGetValue(ContactCenterConstants.TransferMetadata.ReportOutcome, out var value) &&
+            bool.TryParse(value, out var reports) &&
+            reports;
 
     // One shape, on the result type. This stays as a local name so every call site reads the same.
     private static ContactCenterVoiceProviderResult Failure(string errorCode, string errorMessage)

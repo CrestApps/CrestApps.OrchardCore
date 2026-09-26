@@ -29,8 +29,69 @@ public sealed class IvrCallRouterTests
         Assert.Equal(("activity-1", "queue-support", InteractionPriority.High), harness.Enqueued.Single());
         Assert.Equal(["queue-support"], harness.OfferedQueues);
         Assert.Equal("queue-support", harness.Interaction.QueueId);
-        Assert.Equal(("queue-support", "call-1"), harness.HoldMusic.Single());
+        Assert.Equal(("queue-support", "call-1"), harness.WaitingAudio.Single());
         Assert.Empty(harness.Treatments);
+    }
+
+    [Fact]
+    public async Task AQueueChoiceThatPlaysNothing_GivesTheCallerARingingToneWhileTheyWait()
+    {
+        // Arrange
+        // The menu answered the caller, so the network stopped ringing them. A queue with no treatment at all left
+        // them in dead silence until an agent picked up, which sounds exactly like a dropped call.
+        var harness = new RouterHarness();
+
+        // Act
+        await harness.RouteAsync(new IvrStep(IvrStepKind.RouteToQueue, "root", null, null, "queue-support"));
+
+        // Assert
+        Assert.Equal(["queue-support"], harness.Treatments);
+        Assert.Equal(("queue-support", "call-1"), harness.WaitingAudio.Single());
+    }
+
+    [Fact]
+    public async Task AQueueChoiceWithItsOwnTreatment_LeavesTheCallerToIt()
+    {
+        // Arrange
+        var harness = new RouterHarness();
+        harness.Queues["queue-support"].Treatment = new QueueTreatmentSettings { HoldMusicMediaId = "media-1" };
+
+        // Act
+        await harness.RouteAsync(new IvrStep(IvrStepKind.RouteToQueue, "root", null, null, "queue-support"));
+
+        // Assert
+        Assert.Equal(["queue-support"], harness.Treatments);
+        Assert.Empty(harness.WaitingAudio);
+    }
+
+    [Fact]
+    public async Task AnAgentChoice_PlaysTheLinesQueueMusicWhileTheAgentRings()
+    {
+        // Arrange
+        // Caller silence while a chosen agent rang: the menu had answered them, so no ringback, and nothing was played.
+        var harness = new RouterHarness();
+
+        // Act
+        await harness.RouteAsync(new IvrStep(IvrStepKind.RouteToAgent, "root", null, null, "agent-7"));
+
+        // Assert
+        Assert.Equal(("queue-main", "call-1"), harness.WaitingAudio.Single());
+    }
+
+    [Fact]
+    public async Task AnAgentChoiceOnAPersonalLine_PlaysARingingToneWhileTheAgentRings()
+    {
+        // Arrange
+        var harness = new RouterHarness();
+        harness.EntryPoint.TargetType = EntryPointTargetType.Agent;
+        harness.EntryPoint.TargetAgentId = "agent-owner";
+        harness.EntryPoint.TargetQueueId = null;
+
+        // Act
+        await harness.RouteAsync(new IvrStep(IvrStepKind.RouteToAgent, "root", null, null, "agent-7"));
+
+        // Assert
+        Assert.Equal((null, "call-1"), harness.WaitingAudio.Single());
     }
 
     [Fact]
@@ -46,7 +107,7 @@ public sealed class IvrCallRouterTests
 
         // Assert
         Assert.Equal(["queue-support"], harness.Treatments);
-        Assert.Empty(harness.HoldMusic);
+        Assert.DoesNotContain(harness.WaitingAudio, entry => entry.QueueId == "queue-main");
     }
 
     [Fact]
@@ -175,6 +236,89 @@ public sealed class IvrCallRouterTests
     }
 
     [Fact]
+    public async Task AVoicemailChoiceOnAQueueLine_LeavesTheMessageInTheLinesVoicemailInbox()
+    {
+        // Arrange
+        // A queue line has no agent of its own, so the message was recorded and delivered to nobody.
+        var harness = new RouterHarness();
+        harness.EntryPoint.VoicemailRecipientAgentId = "agent-supervisor";
+
+        // Act
+        await harness.RouteAsync(new IvrStep(IvrStepKind.Voicemail, "root", null, null, null));
+
+        // Assert
+        Assert.Equal("agent-supervisor", harness.Interaction.TechnicalMetadata[ContactCenterConstants.Voicemail.MailboxAgentMetadataKey]);
+        Assert.False(harness.Interaction.TechnicalMetadata.ContainsKey(ContactCenterConstants.DirectRouting.TargetAgentMetadataKey));
+        Assert.Single(harness.Voicemails);
+    }
+
+    [Fact]
+    public async Task AFailedExternalTransfer_TakesTheMenusFallback()
+    {
+        // Arrange
+        // The destination was busy or did not answer. The caller was still on the line, and was dropped.
+        var harness = new RouterHarness();
+        harness.EntryPoint.IvrFlow.FallbackAction = new IvrAction { Kind = IvrActionKind.RouteToQueue, TargetId = "queue-support" };
+
+        // Act
+        await harness.Router.RecoverFailedTransferAsync("interaction-1", "dest-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("queue-support", harness.Enqueued.Single().QueueId);
+        Assert.Empty(harness.ExternalTransfers);
+    }
+
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData(IvrActionKind.ExternalTransfer, "dest-1")]
+    [InlineData(IvrActionKind.SubMenu, "root")]
+    [InlineData(IvrActionKind.Repeat, null)]
+    public async Task AFailedExternalTransfer_WithNoUsableFallback_GoesToTheEntryPointsTarget(IvrActionKind? kind, string targetId)
+    {
+        // Arrange
+        // No fallback, a fallback that would ring the same number again, or one that would replay a menu the caller
+        // has already chosen from: the caller goes to the line's own target instead.
+        var harness = new RouterHarness();
+        harness.EntryPoint.IvrFlow.FallbackAction = kind is null ? null : new IvrAction { Kind = kind.Value, TargetId = targetId };
+
+        // Act
+        await harness.Router.RecoverFailedTransferAsync("interaction-1", "dest-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("queue-main", harness.Enqueued.Single().QueueId);
+        Assert.Empty(harness.ExternalTransfers);
+    }
+
+    [Fact]
+    public async Task AFailedExternalTransfer_WhoseFallbackIsAnotherNumber_RingsThatNumber()
+    {
+        // Arrange
+        var harness = new RouterHarness();
+        harness.EntryPoint.IvrFlow.FallbackAction = new IvrAction { Kind = IvrActionKind.ExternalTransfer, TargetId = "dest-2" };
+
+        // Act
+        await harness.Router.RecoverFailedTransferAsync("interaction-1", "dest-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(["dest-2"], harness.ExternalTransfers);
+    }
+
+    [Fact]
+    public async Task AFailedExternalTransfer_ForACallerWhoHasGone_RoutesNothing()
+    {
+        // Arrange
+        var harness = new RouterHarness();
+        harness.Interaction.TransitionTo(InteractionStatus.Ended);
+
+        // Act
+        await harness.Router.RecoverFailedTransferAsync("interaction-1", "dest-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(harness.Enqueued);
+        Assert.Empty(harness.Voicemails);
+    }
+
+    [Fact]
     public async Task AnExternalChoice_IsTransferred()
     {
         // Arrange
@@ -294,7 +438,7 @@ public sealed class IvrCallRouterTests
 
     private sealed class RouterHarness
     {
-        private readonly Dictionary<string, ActivityQueue> _queues = new(StringComparer.Ordinal)
+        public Dictionary<string, ActivityQueue> Queues { get; } = new(StringComparer.Ordinal)
         {
             ["queue-main"] = new ActivityQueue { ItemId = "queue-main", Name = "Main", Enabled = true },
             ["queue-support"] = new ActivityQueue { ItemId = "queue-support", Name = "Support", Enabled = true },
@@ -335,7 +479,7 @@ public sealed class IvrCallRouterTests
 
             var queueManager = new Mock<IActivityQueueManager>();
             queueManager.Setup(x => x.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .Returns<string, CancellationToken>((id, _) => ValueTask.FromResult(id is not null && _queues.TryGetValue(id, out var queue) ? queue : null));
+                .Returns<string, CancellationToken>((id, _) => ValueTask.FromResult(id is not null && Queues.TryGetValue(id, out var queue) ? queue : null));
 
             var limits = new Mock<IQueueLimitService>();
             limits.Setup(x => x.AdmitAsync(It.IsAny<ActivityQueue>(), It.IsAny<CancellationToken>()))
@@ -358,8 +502,8 @@ public sealed class IvrCallRouterTests
             treatment.Setup(x => x.RunDueAsync(It.IsAny<ActivityQueue>(), It.IsAny<CancellationToken>()))
                 .Callback<ActivityQueue, CancellationToken>((queue, _) => Treatments.Add(queue.ItemId))
                 .ReturnsAsync(1);
-            treatment.Setup(x => x.StartHoldMusicAsync(It.IsAny<ActivityQueue>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .Callback<ActivityQueue, string, CancellationToken>((queue, callId, _) => HoldMusic.Add((queue.ItemId, callId)))
+            treatment.Setup(x => x.StartWaitingAudioAsync(It.IsAny<ActivityQueue>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Callback<ActivityQueue, string, CancellationToken>((queue, callId, _) => WaitingAudio.Add((queue?.ItemId, callId)))
                 .Returns(Task.CompletedTask);
 
             var agents = new Mock<IAgentProfileManager>();
@@ -429,7 +573,7 @@ public sealed class IvrCallRouterTests
 
         public List<string> Treatments { get; } = [];
 
-        public List<(string QueueId, string CallId)> HoldMusic { get; } = [];
+        public List<(string QueueId, string CallId)> WaitingAudio { get; } = [];
 
         public List<(string ActivityId, string Reason)> Voicemails { get; } = [];
 

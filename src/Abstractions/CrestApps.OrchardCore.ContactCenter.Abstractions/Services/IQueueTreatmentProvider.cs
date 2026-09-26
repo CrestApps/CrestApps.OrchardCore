@@ -34,6 +34,32 @@ public interface IQueueTreatmentProvider
     Task StopHoldMusicAsync(string providerCallId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Plays a ringing tone on the caller's leg until something else is played or playback is stopped.
+    /// </summary>
+    /// <remarks>
+    /// For a caller the platform has already answered — to hear a phone menu — who is now waiting for a person with
+    /// no hold music to hear: an agent's phone ringing, or a queue that plays nothing. The network's own ringback
+    /// ended when the call was answered, and silence sounds like a dropped call. It is stopped the same way hold
+    /// music is.
+    /// </remarks>
+    /// <param name="providerCallId">The provider's identifier for the caller's leg.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task StartRingbackAsync(string providerCallId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Tells the caller one last thing, then ends the call once it has been said.
+    /// </summary>
+    /// <remarks>
+    /// Ending the call straight after asking the provider to speak would cut the message off, so a provider ends it
+    /// when it reports the speech finished; one that cannot speak it ends the call at once rather than leaving the
+    /// caller on a silent line.
+    /// </remarks>
+    /// <param name="providerCallId">The provider's identifier for the caller's leg.</param>
+    /// <param name="text">What to say.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task EndWithMessageAsync(string providerCallId, string text, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Offers the caller a choice and collects a single key press.
     /// </summary>
     /// <param name="providerCallId">The provider's identifier for the caller's leg.</param>

@@ -149,12 +149,14 @@ public sealed partial class TelnyxApiClient
     /// <param name="to">The destination.</param>
     /// <param name="from">The caller identity to present, when it differs from the leg's.</param>
     /// <param name="clientState">The opaque state echoed back on every event for the leg.</param>
+    /// <param name="targetLegClientState">The state echoed back on every event for the leg the transfer rings.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     public Task<TelnyxApiResult> TransferAsync(
         string callControlId,
         string to,
         string from = null,
         string clientState = null,
+        string targetLegClientState = null,
         CancellationToken cancellationToken = default)
     {
         var body = new Dictionary<string, object>(StringComparer.Ordinal) { ["to"] = to };
@@ -167,6 +169,11 @@ public sealed partial class TelnyxApiClient
         if (!string.IsNullOrWhiteSpace(clientState))
         {
             body["client_state"] = EncodeClientState(clientState);
+        }
+
+        if (!string.IsNullOrWhiteSpace(targetLegClientState))
+        {
+            body["target_leg_client_state"] = EncodeClientState(targetLegClientState);
         }
 
         return PostActionAsync(callControlId, "transfer", body, retryable: false, cancellationToken);

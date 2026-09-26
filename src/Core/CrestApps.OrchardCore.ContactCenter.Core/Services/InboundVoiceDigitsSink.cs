@@ -22,6 +22,7 @@ public sealed class InboundVoiceDigitsSink : IInboundVoiceDigitsSink
     private readonly IEntryPointFlowResolver _flowResolver;
     private readonly IIvrExecutionService _ivrExecutionService;
     private readonly IIvrCallRouter _callRouter;
+    private readonly IQueueCallbackOfferResponder _callbackOffers;
     private readonly IContactCenterAuditRecorder _auditRecorder;
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -33,6 +34,7 @@ public sealed class InboundVoiceDigitsSink : IInboundVoiceDigitsSink
     /// <param name="flowResolver">The lookup from a live call to the menu it is in.</param>
     /// <param name="ivrExecutionService">The menu runtime.</param>
     /// <param name="callRouter">The router that puts the caller where the menu decided.</param>
+    /// <param name="callbackOffers">What acts on a waiting caller's answer to the queue's callback offer.</param>
     /// <param name="auditRecorder">The recorder a caller who hangs up in the menu is written to.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
@@ -41,6 +43,7 @@ public sealed class InboundVoiceDigitsSink : IInboundVoiceDigitsSink
         IEntryPointFlowResolver flowResolver,
         IIvrExecutionService ivrExecutionService,
         IIvrCallRouter callRouter,
+        IQueueCallbackOfferResponder callbackOffers,
         IContactCenterAuditRecorder auditRecorder,
         IClock clock,
         ILogger<InboundVoiceDigitsSink> logger)
@@ -49,6 +52,7 @@ public sealed class InboundVoiceDigitsSink : IInboundVoiceDigitsSink
         _flowResolver = flowResolver;
         _ivrExecutionService = ivrExecutionService;
         _callRouter = callRouter;
+        _callbackOffers = callbackOffers;
         _auditRecorder = auditRecorder;
         _clock = clock;
         _logger = logger;
@@ -79,16 +83,12 @@ public sealed class InboundVoiceDigitsSink : IInboundVoiceDigitsSink
         var entryPoint = await _flowResolver.FindEntryPointAsync(interaction, cancellationToken);
         var flow = entryPoint?.IvrFlow;
 
-        if (flow is null)
+        // A caller who has left the menu, or never had one, is somewhere else now: a queue's callback offer collects a
+        // key on the same call, and treating it as a menu choice would move somebody already waiting for an agent.
+        // It is the offer's answer, and was dropped here until the offer had somebody to act on it.
+        if (flow is null || IvrExecutionService.ReadState(interaction).Completed)
         {
-            return false;
-        }
-
-        // A caller who has left the menu is somewhere else now: a queue's callback offer, for one, collects a key
-        // on the same call, and treating it as a menu choice would move somebody already waiting for an agent.
-        if (IvrExecutionService.ReadState(interaction).Completed)
-        {
-            return false;
+            return await _callbackOffers.HandleAsync(interaction, digitsEvent, cancellationToken);
         }
 
         switch (digitsEvent.Outcome)

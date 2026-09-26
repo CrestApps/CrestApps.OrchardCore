@@ -248,6 +248,17 @@
     </div>
 </div>
 
+<div class="ocat-wrapper" asp-validation-class-for="VoicemailRecipientAgentId" data-entry-point-queue-field>
+    <label asp-for="VoicemailRecipientAgentId" class="ocat-label">@T["Voicemail inbox"]</label>
+    <div class="ocat-end">
+        <select asp-for="VoicemailRecipientAgentId" asp-items="Model.VoicemailRecipientAgentOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select an agent"]" data-width="100%" title="@T["No inbox"]">
+            <option value="">@T["No inbox"]</option>
+        </select>
+        <span asp-validation-for="VoicemailRecipientAgentId" class="text-danger"></span>
+        <span class="hint">@T["The agent (for example a supervisor) whose Voicemail tab receives messages left on this queue line when no agent was offered the call: a caller who chose voicemail from the menu, or was sent there because the queue was full or they waited too long. A message for an agent who let the call ring out still goes to that agent."]</span>
+    </div>
+</div>
+
 <div class="ocat-wrapper" asp-validation-class-for="IvrFlowJson">
     <label asp-for="IvrFlowJson" class="ocat-label">@T["IVR menu"]</label>
     <div class="ocat-end" data-ivr-menu-editor data-ivr-loading data-config="@JsonSerializer.Serialize(ivrEditorConfig)">

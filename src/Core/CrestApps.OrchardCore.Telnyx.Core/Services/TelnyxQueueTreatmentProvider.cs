@@ -2,21 +2,28 @@ using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Telnyx.Services;
 
 /// <summary>
 /// Makes a waiting caller on a Telnyx leg hear what the queue's treatment policy decided is due: a spoken update,
-/// hold music, or a prompt that collects a key press.
+/// hold music, a ringing tone, or a prompt that collects a key press.
 /// </summary>
 /// <remarks>
 /// Nothing here throws. Treatment runs on a timer across every waiting caller, and a leg that has just hung up
 /// would otherwise take the sweep down and leave everybody else in silence.
+/// <para>
+/// Every spoken command carries the tenant's voice and language: Telnyx lists <c>voice</c> as required on both
+/// <c>speak</c> and <c>gather_using_speak</c> and refuses the command without it, so the callback offer used to be
+/// refused outright and the caller never heard it.
+/// </para>
 /// </remarks>
 public sealed class TelnyxQueueTreatmentProvider : IQueueTreatmentProvider
 {
     private readonly TelnyxApiClient _apiClient;
     private readonly IVoiceMediaItemManager _voiceMediaItemManager;
+    private readonly IOptionsMonitor<TelnyxOptions> _options;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -24,14 +31,17 @@ public sealed class TelnyxQueueTreatmentProvider : IQueueTreatmentProvider
     /// </summary>
     /// <param name="apiClient">The typed Telnyx client.</param>
     /// <param name="voiceMediaItemManager">The voice media catalog, used to resolve a clip to its provider name.</param>
+    /// <param name="options">The tenant's Telnyx options, for the voice and language prompts are spoken in.</param>
     /// <param name="logger">The logger.</param>
     public TelnyxQueueTreatmentProvider(
         TelnyxApiClient apiClient,
         IVoiceMediaItemManager voiceMediaItemManager,
+        IOptionsMonitor<TelnyxOptions> options,
         ILogger<TelnyxQueueTreatmentProvider> logger)
     {
         _apiClient = apiClient;
         _voiceMediaItemManager = voiceMediaItemManager;
+        _options = options;
         _logger = logger;
     }
 
@@ -43,7 +53,13 @@ public sealed class TelnyxQueueTreatmentProvider : IQueueTreatmentProvider
             return;
         }
 
-        var result = await _apiClient.SpeakAsync(providerCallId, text, cancellationToken: cancellationToken);
+        var options = _options.CurrentValue;
+        var result = await _apiClient.SpeakAsync(
+            providerCallId,
+            text,
+            TelnyxPrompts.ResolveVoice(options),
+            TelnyxPrompts.ResolveLanguage(options),
+            cancellationToken: cancellationToken);
 
         Report(result.Succeeded, "speak", providerCallId);
     }
@@ -73,6 +89,30 @@ public sealed class TelnyxQueueTreatmentProvider : IQueueTreatmentProvider
     }
 
     /// <inheritdoc/>
+    public async Task StartRingbackAsync(string providerCallId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(providerCallId))
+        {
+            return;
+        }
+
+        // Sent as the audio itself rather than a URL or a stored clip, so it needs nothing hosted or uploaded; looped
+        // until the agent is bridged in (the bridge stops the caller's playback) or the caller is sent elsewhere
+        // (leaving the queue stops it).
+        var result = await _apiClient.PostCallActionAsync(
+            providerCallId,
+            "playback_start",
+            new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["playback_content"] = TelnyxRingbackTone.Base64Wav,
+                ["loop"] = "infinity",
+            },
+            cancellationToken);
+
+        Report(result.Succeeded, "playback_start", providerCallId);
+    }
+
+    /// <inheritdoc/>
     public async Task StopHoldMusicAsync(string providerCallId, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(providerCallId))
@@ -93,9 +133,68 @@ public sealed class TelnyxQueueTreatmentProvider : IQueueTreatmentProvider
             return;
         }
 
-        var result = await _apiClient.GatherAsync(providerCallId, text, acceptKey, cancellationToken: cancellationToken);
+        var body = new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            ["payload"] = text,
+            ["payload_type"] = "text",
+
+            // Any key is collected, not only the one that accepts: a caller who presses something else has answered
+            // "no", and is put straight back to their music rather than left to wait out the timeout in silence.
+            ["valid_digits"] = "0123456789*#",
+            ["minimum_digits"] = 1,
+            ["maximum_digits"] = 1,
+
+            // The key that accepts must never be the one that ends collection with nothing collected.
+            ["terminating_digit"] = TelnyxPrompts.PickTerminatingDigit(acceptKey),
+
+            // Asked once. Telnyx replays the prompt up to three times by default, which to a caller who has already
+            // decided to keep waiting is the queue nagging them with their music off.
+            ["maximum_tries"] = 1,
+            ["timeout_millis"] = TelnyxConstants.Gather.TimeoutMillis,
+        };
+
+        TelnyxPrompts.ApplySpeech(body, _options.CurrentValue);
+
+        var result = await _apiClient.PostCallActionAsync(providerCallId, "gather_using_speak", body, cancellationToken);
 
         Report(result.Succeeded, "gather_using_speak", providerCallId);
+    }
+
+    /// <inheritdoc/>
+    public async Task EndWithMessageAsync(string providerCallId, string text, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(providerCallId))
+        {
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(text))
+        {
+            var options = _options.CurrentValue;
+
+            // The hang-up is issued when Telnyx reports the speech ended (call.speak.ended carries this state back),
+            // so the caller hears the whole message.
+            var spoken = await _apiClient.SpeakAsync(
+                providerCallId,
+                text,
+                TelnyxPrompts.ResolveVoice(options),
+                TelnyxPrompts.ResolveLanguage(options),
+                TelnyxCallFlowClientState.ForHangUpAfterSpeech().ToJson(),
+                cancellationToken);
+
+            if (spoken.Succeeded)
+            {
+                return;
+            }
+
+            Report(spoken.Succeeded, "speak", providerCallId);
+        }
+
+        // Nothing could be said, so nothing will report that it finished: the call is ended now rather than left open
+        // on a silent line.
+        var hungUp = await _apiClient.HangupAsync(providerCallId, cancellationToken);
+
+        Report(hungUp.Succeeded, "hangup", providerCallId);
     }
 
     /// <summary>

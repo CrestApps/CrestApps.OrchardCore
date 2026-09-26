@@ -35,6 +35,13 @@ public static partial class ContactCenterConstants
         /// that agent's live endpoint. The client never supplies this; the transfer service resolves it server-side.
         /// </summary>
         public const string AgentUserId = "transferAgentUserId";
+
+        /// <summary>
+        /// Asks a provider that advertises <see cref="Models.ContactCenterVoiceProviderCapabilities.TransferOutcomeReporting"/>
+        /// to report, through <see cref="Services.IExternalTransferOutcomeSink"/>, whether the leg the transfer rings is
+        /// answered or fails, so a caller whose transfer fails can be put somewhere else rather than dropped.
+        /// </summary>
+        public const string ReportOutcome = "transferReportOutcome";
     }
 
     /// <summary>

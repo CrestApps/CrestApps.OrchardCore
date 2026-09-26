@@ -117,6 +117,16 @@ public class EntryPointViewModel
     public string VoicemailGreetingText { get; set; }
 
     /// <summary>
+    /// Gets or sets the agent whose Voicemail tab receives messages left on a queue line.
+    /// </summary>
+    public string VoicemailRecipientAgentId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the agents who can hold the line's voicemail inbox.
+    /// </summary>
+    public IList<SelectListItem> VoicemailRecipientAgentOptions { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the IVR menu tree as JSON, or empty for an entry point that routes straight to its target.
     /// </summary>
     public string IvrFlowJson { get; set; }

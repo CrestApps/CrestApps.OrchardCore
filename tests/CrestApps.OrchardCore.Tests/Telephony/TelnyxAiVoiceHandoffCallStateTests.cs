@@ -235,6 +235,12 @@ public sealed class TelnyxAiVoiceHandoffCallStateTests
                 orchestrator,
                 [],
                 [],
+                new NoExternalTransferOutcomeSink(),
+                new TelnyxApiClient(
+                    new HttpClient(new RefusingHttpMessageHandler()) { BaseAddress = new Uri("https://api.telnyx.test/v2/") },
+                    new OptionsWrapper<TelnyxOptions>(new TelnyxOptions { ApiBaseUrl = "https://api.telnyx.test/v2/", ApiKey = "KEY" }),
+                    new TelnyxApiRetryPolicy(TimeSpan.Zero),
+                    NullLogger<TelnyxApiClient>.Instance),
                 clock.Object,
                 NullLogger<TelnyxWebhookService>.Instance);
 

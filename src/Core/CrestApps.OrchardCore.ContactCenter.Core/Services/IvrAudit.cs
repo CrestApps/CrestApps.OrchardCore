@@ -38,6 +38,7 @@ internal static class IvrAudit
         AddDetail(data, "digits", step.Digits);
         AddDetail(data, "action", step.Action);
         AddDetail(data, "entryPointId", step.EntryPointId);
+        AddDetail(data, "hangupCause", step.HangupCause);
 
         if (step.Attempt.HasValue)
         {
@@ -101,4 +102,9 @@ internal readonly record struct IvrAuditStep
     /// Gets the entry point whose menu it is.
     /// </summary>
     public string EntryPointId { get; init; }
+
+    /// <summary>
+    /// Gets the provider's reason a leg the step depended on ended, such as a transfer's destination being busy.
+    /// </summary>
+    public string HangupCause { get; init; }
 }

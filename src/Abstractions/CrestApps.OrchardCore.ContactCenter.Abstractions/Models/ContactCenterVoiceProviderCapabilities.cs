@@ -99,4 +99,11 @@ public enum ContactCenterVoiceProviderCapabilities
     /// line; one that does not has the music stopped when the offer is accepted, before the agent is connected.
     /// </summary>
     HoldMusicStopsOnAgentBridge = 1 << 15,
+
+    /// <summary>
+    /// The provider reports whether the leg a transfer rings is answered or fails, through
+    /// <see cref="Services.IExternalTransferOutcomeSink"/>, when a transfer asks for it. A transfer on a provider
+    /// that does not is treated as complete once the provider accepts it.
+    /// </summary>
+    TransferOutcomeReporting = 1 << 16,
 }

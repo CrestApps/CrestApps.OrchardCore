@@ -145,6 +145,23 @@ public sealed class QueueTreatmentService : IQueueTreatmentService
         return _treatmentProvider.StartHoldMusicAsync(providerCallId, mediaId, cancellationToken);
     }
 
+    /// <inheritdoc/>
+    public Task StartWaitingAudioAsync(ActivityQueue queue, string providerCallId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(providerCallId))
+        {
+            return Task.CompletedTask;
+        }
+
+        var mediaId = queue?.Treatment?.HoldMusicMediaId;
+
+        // Silence is only what a queue asks for while the network is still ringing the caller. Once the platform has
+        // answered them there is no ringing tone unless something plays one, and a quiet line is a dropped call.
+        return string.IsNullOrWhiteSpace(mediaId)
+            ? _treatmentProvider.StartRingbackAsync(providerCallId, cancellationToken)
+            : _treatmentProvider.StartHoldMusicAsync(providerCallId, mediaId, cancellationToken);
+    }
+
     /// <summary>
     /// Plays one step, and says whether the caller actually heard anything.
     /// </summary>
@@ -174,6 +191,9 @@ public sealed class QueueTreatmentService : IQueueTreatmentService
                 return true;
 
             case QueueTreatmentStepKind.CallbackOffer:
+                // The music is stopped so the offer is heard over nothing, rather than queued behind a loop that never
+                // ends or mixed into it; the caller's answer starts it again when they keep waiting.
+                await _treatmentProvider.StopHoldMusicAsync(providerCallId, cancellationToken);
                 await _treatmentProvider.OfferChoiceAsync(
                     providerCallId,
                     BuildCallbackPrompt(step.DtmfKey),

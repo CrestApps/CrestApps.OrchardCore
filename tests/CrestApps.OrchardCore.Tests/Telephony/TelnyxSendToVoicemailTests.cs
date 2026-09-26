@@ -89,7 +89,50 @@ public sealed class TelnyxSendToVoicemailTests
         Assert.DoesNotContain(handler.Requests, request => request.Method == HttpMethod.Get);
     }
 
-    private static TelnyxTelephonyProvider CreateProvider(RecordingHttpMessageHandler handler)
+    [Fact]
+    public async Task TheGreeting_IsSpokenInTheTenantsVoiceAndLanguage()
+    {
+        // Arrange
+        // The greeting was always "female" in US English, whatever language the line's callers speak.
+        var handler = new RecordingHttpMessageHandler()
+            .AlwaysRespondWith(HttpStatusCode.OK, """{"data":{"result":"ok"}}""");
+
+        var provider = CreateProvider(handler, voice: "AWS.Polly.Lupe-Neural", language: "es-US");
+
+        // Act
+        await provider.SendToVoicemailAsync(
+            new CallReference { CallId = "ctrl-1" },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        var speak = handler.Requests.Single(request => request.Path.EndsWith("/actions/speak", StringComparison.Ordinal));
+        using var body = System.Text.Json.JsonDocument.Parse(speak.Body);
+        Assert.Equal("AWS.Polly.Lupe-Neural", body.RootElement.GetProperty("voice").GetString());
+        Assert.Equal("es-US", body.RootElement.GetProperty("language").GetString());
+    }
+
+    [Fact]
+    public async Task TheGreeting_WithNoVoiceChosen_KeepsThePlatformDefault()
+    {
+        // Arrange
+        var handler = new RecordingHttpMessageHandler()
+            .AlwaysRespondWith(HttpStatusCode.OK, """{"data":{"result":"ok"}}""");
+
+        var provider = CreateProvider(handler);
+
+        // Act
+        await provider.SendToVoicemailAsync(
+            new CallReference { CallId = "ctrl-1" },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        var speak = handler.Requests.Single(request => request.Path.EndsWith("/actions/speak", StringComparison.Ordinal));
+        using var body = System.Text.Json.JsonDocument.Parse(speak.Body);
+        Assert.Equal("female", body.RootElement.GetProperty("voice").GetString());
+        Assert.Equal("en-US", body.RootElement.GetProperty("language").GetString());
+    }
+
+    private static TelnyxTelephonyProvider CreateProvider(RecordingHttpMessageHandler handler, string voice = null, string language = null)
     {
         var httpClient = new HttpClient(handler)
         {
@@ -103,6 +146,16 @@ public sealed class TelnyxSendToVoicemailTests
             ApiKey = "test-api-key",
             ConnectionId = "test-connection",
         };
+
+        if (voice is not null)
+        {
+            options.TtsVoice = voice;
+        }
+
+        if (language is not null)
+        {
+            options.TtsLanguage = language;
+        }
 
         var apiClient = new TelnyxApiClient(
             httpClient,

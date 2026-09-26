@@ -99,6 +99,36 @@ public sealed partial class InboundVoiceServiceTests
         Assert.Equal("q-main", interaction.QueueId);
     }
 
+    [Fact]
+    public async Task ACallToAQueueLine_CarriesTheLinesVoicemailInbox()
+    {
+        // Arrange
+        // A queue line's caller who reaches voicemail with no agent of their own left a message in nobody's inbox.
+        // The line's inbox travels with the call from the moment it arrives, so every path to voicemail finds it.
+        var (harness, interaction) = MenuHarness(isOpen: true, voicemailRecipientAgentId: "agent-inbox");
+        var service = harness.CreateService();
+
+        // Act
+        await service.HandleInboundAsync(MenuCall(), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("agent-inbox", interaction.TechnicalMetadata[ContactCenterConstants.Voicemail.MailboxAgentMetadataKey]);
+    }
+
+    [Fact]
+    public async Task ACallToALineWithNoVoicemailInbox_CarriesNone()
+    {
+        // Arrange
+        var (harness, interaction) = MenuHarness(isOpen: true);
+        var service = harness.CreateService();
+
+        // Act
+        await service.HandleInboundAsync(MenuCall(), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(interaction.TechnicalMetadata.ContainsKey(ContactCenterConstants.Voicemail.MailboxAgentMetadataKey));
+    }
+
     private static InboundVoiceEvent MenuCall()
         => new()
         {
@@ -108,7 +138,7 @@ public sealed partial class InboundVoiceServiceTests
             ToAddress = "+15553334444",
         };
 
-    private static (Harness Harness, Interaction Interaction) MenuHarness(bool isOpen, string rootNodeId = "root")
+    private static (Harness Harness, Interaction Interaction) MenuHarness(bool isOpen, string rootNodeId = "root", string voicemailRecipientAgentId = null)
     {
         var harness = new Harness();
         harness.SetupNoContext();
@@ -129,6 +159,7 @@ public sealed partial class InboundVoiceServiceTests
             TargetType = EntryPointTargetType.Queue,
             TargetQueueId = "q-main",
             ClosedAction = EntryPointClosedAction.Voicemail,
+            VoicemailRecipientAgentId = voicemailRecipientAgentId,
             IvrFlow = new IvrFlow
             {
                 RootNodeId = rootNodeId,

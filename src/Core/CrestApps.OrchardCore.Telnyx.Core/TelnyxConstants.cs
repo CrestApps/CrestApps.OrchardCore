@@ -153,16 +153,25 @@ public static class TelnyxConstants
         /// is a minute of silence for a caller who did not hear the options.
         /// </summary>
         public const int TimeoutMillis = 8000;
+    }
+
+    /// <summary>
+    /// What the platform's spoken prompts (phone menus, the voicemail greeting, a queue's callback offer and its
+    /// confirmation) are said in when the tenant has not chosen otherwise on the Telnyx settings page. Telnyx
+    /// requires a <c>voice</c> on every <c>speak</c> and <c>gather_using_speak</c> and refuses the command without
+    /// one, which the caller hears as silence.
+    /// </summary>
+    public static class Speech
+    {
+        /// <summary>
+        /// The default text-to-speech voice.
+        /// </summary>
+        public const string DefaultVoice = "female";
 
         /// <summary>
-        /// The voice menus are spoken in. It matches the voicemail greeting, the platform's other spoken prompt.
+        /// The default text-to-speech language.
         /// </summary>
-        public const string Voice = "female";
-
-        /// <summary>
-        /// The language menus are spoken in.
-        /// </summary>
-        public const string Language = "en-US";
+        public const string DefaultLanguage = "en-US";
     }
 
     /// <summary>

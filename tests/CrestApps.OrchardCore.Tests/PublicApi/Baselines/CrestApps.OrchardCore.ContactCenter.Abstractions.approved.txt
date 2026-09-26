@@ -244,6 +244,7 @@ namespace CrestApps.OrchardCore.ContactCenter
         public static class TransferMetadata
         {
             public const string AgentUserId = "transferAgentUserId";
+            public const string ReportOutcome = "transferReportOutcome";
         }
         public static class Voicemail
         {
@@ -251,6 +252,7 @@ namespace CrestApps.OrchardCore.ContactCenter
             public const string GreetingMediaNameMetadataKey = "voicemailGreetingMediaName";
             public const string GreetingMediaUrlMetadataKey = "voicemailGreetingMediaUrl";
             public const string GreetingTextMetadataKey = "voicemailGreetingText";
+            public const string MailboxAgentMetadataKey = "voicemailMailboxAgentId";
             public const string ProjectionMetadataKey = "agentVoicemailProjection";
             public const string RecipientAgentMetadataKey = "agentVoicemailRecipientAgentId";
         }
@@ -735,6 +737,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         SecureCapture = 8192,
         SecureCaptureMasking = 16384,
         HoldMusicStopsOnAgentBridge = 32768,
+        TransferOutcomeReporting = 65536,
     }
     public sealed class ContactCenterVoiceProviderResult
     {
@@ -1027,11 +1030,26 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
 }
 namespace CrestApps.OrchardCore.ContactCenter.Services
 {
+    public sealed class ExternalTransferOutcome
+    {
+        public ExternalTransferOutcome() { }
+        public bool Answered { get; set; }
+        public bool CallerLeft { get; set; }
+        public string DeliveryId { get; set; }
+        public string HangupCause { get; set; }
+        public string InteractionId { get; set; }
+        public string ProviderLegId { get; set; }
+        public string ProviderName { get; set; }
+    }
     public interface IAgentQueueMembershipReader
     {
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<string>> GetAgentIdsForQueueAsync(string queueId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<string>> GetQueueIdsForAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> IsMemberAsync(string agentId, string queueId, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IExternalTransferOutcomeSink
+    {
+        System.Threading.Tasks.Task<bool> HandleAsync(CrestApps.OrchardCore.ContactCenter.Services.ExternalTransferOutcome outcome, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IInboundVoiceDigitsSink
     {
@@ -1044,9 +1062,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Services
     }
     public interface IQueueTreatmentProvider
     {
+        System.Threading.Tasks.Task EndWithMessageAsync(string providerCallId, string text, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task OfferChoiceAsync(string providerCallId, string text, string acceptKey, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task SpeakAsync(string providerCallId, string text, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task StartHoldMusicAsync(string providerCallId, string mediaId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task StartRingbackAsync(string providerCallId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task StopHoldMusicAsync(string providerCallId, System.Threading.CancellationToken cancellationToken = default);
     }
     public sealed class InboundVoiceDigitsEvent

@@ -499,6 +499,7 @@ internal sealed class RecordingQueueTreatmentProvider : IQueueTreatmentProvider
     public Task StartHoldMusicAsync(string providerCallId, string mediaId, CancellationToken cancellationToken = default)
     {
         HoldMusicStarted.Add((providerCallId, mediaId));
+        Commands.Add($"music:{mediaId}");
 
         return Task.CompletedTask;
     }
@@ -506,10 +507,37 @@ internal sealed class RecordingQueueTreatmentProvider : IQueueTreatmentProvider
     public Task StopHoldMusicAsync(string providerCallId, CancellationToken cancellationToken = default)
     {
         HoldMusicStopped.Add(providerCallId);
+        Commands.Add("stop");
 
         return Task.CompletedTask;
     }
 
+    public List<string> Commands { get; } = [];
+
+    public List<string> RingbackStarted { get; } = [];
+
+    public List<(string CallId, string Text)> EndedWithMessage { get; } = [];
+
     public Task OfferChoiceAsync(string providerCallId, string text, string acceptKey, CancellationToken cancellationToken = default)
-        => Task.CompletedTask;
+    {
+        Commands.Add($"offer:{acceptKey}");
+
+        return Task.CompletedTask;
+    }
+
+    public Task StartRingbackAsync(string providerCallId, CancellationToken cancellationToken = default)
+    {
+        RingbackStarted.Add(providerCallId);
+        Commands.Add("ringback");
+
+        return Task.CompletedTask;
+    }
+
+    public Task EndWithMessageAsync(string providerCallId, string text, CancellationToken cancellationToken = default)
+    {
+        EndedWithMessage.Add((providerCallId, text));
+        Commands.Add("end-with-message");
+
+        return Task.CompletedTask;
+    }
 }

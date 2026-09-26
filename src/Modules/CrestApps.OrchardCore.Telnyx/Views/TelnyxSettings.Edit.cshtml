@@ -122,6 +122,18 @@
             </div>
 
             <div class="mb-3">
+                <label asp-for="TtsVoice">@T["Text-to-speech voice"]</label>
+                <input type="text" class="form-control" asp-for="TtsVoice" placeholder="@TelnyxConstants.Speech.DefaultVoice" />
+                <span class="hint">@T["The voice phone menus, the voicemail greeting and a queue's callback offer are spoken in: female, male, or a Telnyx voice name in the form Provider.Model.VoiceId, such as AWS.Polly.Joanna-Neural. Leave blank for {0}.", TelnyxConstants.Speech.DefaultVoice]</span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="TtsLanguage">@T["Text-to-speech language"]</label>
+                <input type="text" class="form-control" asp-for="TtsLanguage" placeholder="@TelnyxConstants.Speech.DefaultLanguage" />
+                <span class="hint">@T["The language those prompts are spoken in, such as en-US or es-ES. Telnyx ignores it for AWS Polly voices, which have a language of their own. Leave blank for {0}.", TelnyxConstants.Speech.DefaultLanguage]</span>
+            </div>
+
+            <div class="mb-3">
                 <label asp-for="SipWebSocketUrl">@T["SIP WebSocket URL"]</label>
                 <input type="text" class="form-control" asp-for="SipWebSocketUrl" placeholder="wss://sip.telnyx.com" />
             </div>

@@ -165,6 +165,54 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
         Assert.Equal("interaction-1", publishedEvent.InteractionId);
     }
 
+    [Theory]
+    [InlineData(null, "agent-inbox")]
+    [InlineData("agent-7", "agent-7")]
+    public async Task ExecuteAsync_SendToVoicemail_ACallWithNoAgentOfItsOwn_GoesToTheEntryPointsVoicemailInbox(string? directAgentId, string expectedRecipient)
+    {
+        // Arrange
+        // A queue line's caller who chose voicemail from the menu, or was sent there because the queue was full, had
+        // no recipient: the message was recorded and landed in nobody's inbox. A call that is for a specific agent
+        // still goes to that agent.
+        var telephonyService = new Mock<ITelephonyService>(MockBehavior.Strict);
+        SetupTelephonySuccess(
+            telephonyService,
+            ProviderCommandType.SendToVoicemail,
+            _ => TelephonyResult.Success(new TelephonyCall { CallId = "provider-call-77" }));
+
+        var interaction = new Interaction { ItemId = "interaction-1" }
+            .RestorePersistedStatus(InteractionStatus.Ringing);
+        interaction.TechnicalMetadata[ContactCenterConstants.Voicemail.MailboxAgentMetadataKey] = "agent-inbox";
+
+        if (directAgentId is not null)
+        {
+            interaction.TechnicalMetadata[ContactCenterConstants.DirectRouting.TargetAgentMetadataKey] = directAgentId;
+        }
+
+        var interactionManager = new Mock<IInteractionManager>(MockBehavior.Strict);
+        interactionManager
+            .Setup(manager => manager.FindByIdAsync("interaction-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+        interactionManager
+            .Setup(manager => manager.UpdateAsync(interaction, It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()))
+            .Returns(ValueTask.CompletedTask);
+
+        var publisher = new Mock<IContactCenterEventPublisher>(MockBehavior.Strict);
+        publisher
+            .Setup(value => value.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var executor = CreateExecutor(ProviderCommandType.SendToVoicemail, telephonyService, interactionManager, publisher, CreateClock());
+        var command = CreateCommand(ProviderCommandType.SendToVoicemail);
+
+        // Act
+        var result = await executor.ExecuteAsync(command, CreateClaim(command), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Equal(expectedRecipient, interaction.TechnicalMetadata[ContactCenterConstants.Voicemail.RecipientAgentMetadataKey]);
+    }
+
     [Fact]
     public async Task ExecuteAsync_SendToVoicemail_PassesRecipientAgentGreetingToTheProvider()
     {

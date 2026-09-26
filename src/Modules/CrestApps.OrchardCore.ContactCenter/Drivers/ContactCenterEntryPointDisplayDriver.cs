@@ -70,6 +70,7 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
             WelcomeMessage = entryPoint.WelcomeMessage,
             ClosedMessage = entryPoint.ClosedMessage,
             VoicemailGreetingText = entryPoint.VoicemailGreetingText,
+            VoicemailRecipientAgentId = entryPoint.VoicemailRecipientAgentId,
             IvrFlowJson = entryPoint.IvrFlow is null
                 ? null
                 : JsonSerializer.Serialize(entryPoint.IvrFlow, _ivrDisplayOptions),
@@ -78,6 +79,11 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
 
         await _optionsProvider.PopulateEntryPointEditorAsync(viewModel);
         viewModel.IvrExternalDestinationOptions = await GetExternalDestinationOptionsAsync();
+
+        // The same agents a line can ring, as a separate list so the two pickers never share a selection.
+        viewModel.VoicemailRecipientAgentOptions = viewModel.TargetAgentOptions?
+            .Select(option => new SelectListItem(option.Text, option.Value) { Disabled = option.Disabled })
+            .ToList() ?? [];
 
         return Initialize<EntryPointViewModel>("ContactCenterEntryPointFields_Edit", model =>
         {
@@ -101,6 +107,8 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
             model.WelcomeMessage = viewModel.WelcomeMessage;
             model.ClosedMessage = viewModel.ClosedMessage;
             model.VoicemailGreetingText = viewModel.VoicemailGreetingText;
+            model.VoicemailRecipientAgentId = viewModel.VoicemailRecipientAgentId;
+            model.VoicemailRecipientAgentOptions = viewModel.VoicemailRecipientAgentOptions;
             model.IvrFlowJson = viewModel.IvrFlowJson;
             model.IvrQueueOptions = viewModel.IvrQueueOptions;
             model.IvrAgentOptions = viewModel.IvrAgentOptions;
@@ -154,6 +162,11 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
         entryPoint.WelcomeMessage = model.WelcomeMessage?.Trim();
         entryPoint.ClosedMessage = model.ClosedMessage?.Trim();
         entryPoint.VoicemailGreetingText = string.IsNullOrWhiteSpace(model.VoicemailGreetingText) ? null : model.VoicemailGreetingText.Trim();
+
+        // Only a queue line needs an inbox of its own; a personal line's messages always go to its agent.
+        entryPoint.VoicemailRecipientAgentId = !isAgentTarget && !string.IsNullOrWhiteSpace(model.VoicemailRecipientAgentId)
+            ? model.VoicemailRecipientAgentId.Trim()
+            : null;
         entryPoint.Enabled = model.Enabled;
 
         // The menu tree is edited as JSON. The binder parses it and reports malformed JSON against the field;

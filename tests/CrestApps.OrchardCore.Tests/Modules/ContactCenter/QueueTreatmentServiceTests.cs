@@ -189,6 +189,56 @@ public sealed class QueueTreatmentServiceTests
     }
 
     [Fact]
+    public async Task TheCallbackOffer_StopsTheHoldMusicBeforeItIsSpoken()
+    {
+        // Arrange
+        // The music loops forever. Spoken over it, or queued behind it, the offer was never heard, so the caller
+        // could not accept it; their answer starts the music again.
+        var harness = new TreatmentHarness();
+        harness.Settings.WelcomeMessage = null;
+        harness.Settings.CallbackDtmfKey = "1";
+        harness.WithWaitingCaller("item-1", waitedSeconds: 120, stepsPlayed: 1);
+
+        // Act
+        await harness.RunAsync();
+
+        // Assert
+        Assert.Equal(["stop", "offer"], harness.Provider.Sequence);
+    }
+
+    [Fact]
+    public async Task WaitingAudio_IsTheQueuesHoldMusic_WhenItHasSome()
+    {
+        // Arrange
+        var harness = new TreatmentHarness();
+
+        // Act
+        await harness.Service.StartWaitingAudioAsync(harness.Queue, "call-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("https://example.test/hold.mp3", harness.Provider.HoldMusic.Single());
+        Assert.Empty(harness.Provider.Ringback);
+    }
+
+    [Fact]
+    public async Task WaitingAudio_IsARingingTone_WhenThereIsNoMusic()
+    {
+        // Arrange
+        // A caller the menu answered no longer hears the network ring. With no music to play they heard nothing at
+        // all while an agent's phone rang, which is indistinguishable from a dropped call.
+        var harness = new TreatmentHarness();
+        harness.Settings.HoldMusicMediaId = null;
+
+        // Act
+        await harness.Service.StartWaitingAudioAsync(harness.Queue, "call-1", TestContext.Current.CancellationToken);
+        await harness.Service.StartWaitingAudioAsync(queue: null, "call-2", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(["call-1", "call-2"], harness.Provider.Ringback);
+        Assert.Empty(harness.Provider.HoldMusic);
+    }
+
+    [Fact]
     public async Task ACallerWithNoLiveLeg_IsSkippedRatherThanRecordedAsTreated()
     {
         // Arrange
@@ -374,6 +424,7 @@ public sealed class QueueTreatmentServiceTests
         public Task StopHoldMusicAsync(string providerCallId, CancellationToken cancellationToken = default)
         {
             StoppedHoldMusic.Add(providerCallId);
+            Sequence.Add("stop");
 
             return Task.CompletedTask;
         }
@@ -405,9 +456,24 @@ public sealed class QueueTreatmentServiceTests
         {
             Fail(providerCallId);
             Offers.Add(text);
+            Sequence.Add("offer");
 
             return Task.CompletedTask;
         }
+
+        public List<string> Ringback { get; } = [];
+
+        public List<string> Sequence { get; } = [];
+
+        public Task StartRingbackAsync(string providerCallId, CancellationToken cancellationToken = default)
+        {
+            Ringback.Add(providerCallId);
+
+            return Task.CompletedTask;
+        }
+
+        public Task EndWithMessageAsync(string providerCallId, string text, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
 
         private void Fail(string providerCallId)
         {

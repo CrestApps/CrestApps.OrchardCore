@@ -309,7 +309,8 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
             serviceAddress,
             isDirect ? plan.TargetAgentId : null,
             isDirect ? plan.RingTimeoutSeconds : (int?)null,
-            plan?.VoicemailGreetingText);
+            plan?.VoicemailGreetingText,
+            isDirect ? null : plan?.EntryPoint?.VoicemailRecipientAgentId);
         result.InteractionId = interaction.ItemId;
 
         if (plan is not null && !plan.ShouldQueue)
@@ -679,7 +680,8 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
         string serviceAddress,
         string directTargetAgentId,
         int? directRingTimeoutSeconds,
-        string voicemailGreetingText)
+        string voicemailGreetingText,
+        string voicemailMailboxAgentId)
     {
         var interaction = await _interactionManager.NewAsync();
         interaction.Channel = InteractionChannel.Voice;
@@ -713,6 +715,12 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
         if (!string.IsNullOrWhiteSpace(voicemailGreetingText))
         {
             interaction.TechnicalMetadata[ContactCenterConstants.Voicemail.EntryPointGreetingTextMetadataKey] = voicemailGreetingText;
+        }
+
+        // Whose inbox a message goes to when the call has no agent of its own (a queue line's caller).
+        if (!string.IsNullOrWhiteSpace(voicemailMailboxAgentId))
+        {
+            interaction.TechnicalMetadata[ContactCenterConstants.Voicemail.MailboxAgentMetadataKey] = voicemailMailboxAgentId;
         }
 
         foreach (var entry in inboundEvent.Metadata)

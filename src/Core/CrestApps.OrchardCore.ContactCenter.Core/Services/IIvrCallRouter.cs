@@ -25,4 +25,13 @@ public interface IIvrCallRouter
     /// <param name="step">What the menu decided.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     Task RouteAsync(string interactionId, ContactCenterEntryPoint entryPoint, IvrStep step, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Puts a caller whose transfer to an outside number failed where the menu's fallback sends callers, or, when the
+    /// fallback is a menu or is the same number that just failed, through to the entry point's own target.
+    /// </summary>
+    /// <param name="interactionId">The caller's interaction.</param>
+    /// <param name="failedDestinationId">The approved destination that did not answer.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task RecoverFailedTransferAsync(string interactionId, string failedDestinationId, CancellationToken cancellationToken = default);
 }

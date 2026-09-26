@@ -43,11 +43,45 @@ internal sealed class IvrIntegrationFixture : IAsyncDisposable
 
     public List<string> ExternalTransfers { get; } = [];
 
+    public List<CallbackRequest> Callbacks { get; } = [];
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the tenant has callbacks enabled, so a scheduled callback is kept.
+    /// </summary>
+    public bool CallbacksEnabled { get; set; } = true;
+
+    public Dictionary<string, ActivityQueue> Queues { get; } = new(StringComparer.Ordinal)
+    {
+        [SupportQueueId] = new ActivityQueue
+        {
+            ItemId = SupportQueueId,
+            Name = "Support",
+            Enabled = true,
+            Treatment = new QueueTreatmentSettings { HoldMusicMediaId = "https://media.example.test/support.mp3" },
+        },
+        [SalesQueueId] = new ActivityQueue
+        {
+            ItemId = SalesQueueId,
+            Name = "Sales",
+            Enabled = true,
+            Treatment = new QueueTreatmentSettings { HoldMusicMediaId = "https://media.example.test/sales.mp3" },
+        },
+    };
+
+    public IQueueTreatmentService TreatmentService { get; private set; }
+
+    public IActivityReservationService Reservations { get; private set; }
+
+    public OmnichannelActivity FindActivity()
+        => Harness.Services.GetRequiredService<InMemoryOmnichannelActivities>().Get(ActivityId);
+
     public ContactCenterEntryPoint EntryPoint { get; } = CreateEntryPoint();
 
     public IIvrCallRouter Router { get; private set; }
 
     public IInboundVoiceDigitsSink Sink { get; private set; }
+
+    public IExternalTransferOutcomeSink TransferOutcomes { get; private set; }
 
     public IReadOnlyList<InteractionEvent> Events => Harness.PublishedEvents;
 
@@ -204,23 +238,7 @@ internal sealed class IvrIntegrationFixture : IAsyncDisposable
         var services = Harness.Services;
         var clock = services.GetRequiredService<IClock>();
 
-        var queues = new Dictionary<string, ActivityQueue>(StringComparer.Ordinal)
-        {
-            [SupportQueueId] = new ActivityQueue
-            {
-                ItemId = SupportQueueId,
-                Name = "Support",
-                Enabled = true,
-                Treatment = new QueueTreatmentSettings { HoldMusicMediaId = "https://media.example.test/support.mp3" },
-            },
-            [SalesQueueId] = new ActivityQueue
-            {
-                ItemId = SalesQueueId,
-                Name = "Sales",
-                Enabled = true,
-                Treatment = new QueueTreatmentSettings { HoldMusicMediaId = "https://media.example.test/sales.mp3" },
-            },
-        };
+        var queues = Queues;
 
         var queueManager = new Mock<IActivityQueueManager>();
         queueManager
@@ -248,9 +266,11 @@ internal sealed class IvrIntegrationFixture : IAsyncDisposable
             availability,
             clock,
             NullLogger<QueueTreatmentService>.Instance);
+        TreatmentService = treatment;
 
         var queueService = ActivatorUtilities.CreateInstance<ActivityQueueService>(services, queueManager.Object, businessHours.Object, (IQueueTreatmentProvider)Treatment);
         var reservationService = ActivatorUtilities.CreateInstance<ActivityReservationService>(services, queueManager.Object, (IActivityQueueService)queueService, (IAgentAvailabilityService)availability);
+        Reservations = reservationService;
         var withdrawalService = ActivatorUtilities.CreateInstance<QueuedWorkWithdrawalService>(services, (IActivityQueueService)queueService, (IActivityReservationService)reservationService);
         var assignmentService = ActivatorUtilities.CreateInstance<ActivityAssignmentService>(
             services,
@@ -292,6 +312,9 @@ internal sealed class IvrIntegrationFixture : IAsyncDisposable
             .Setup(value => value.TransferAsync(It.IsAny<Interaction>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Callback<Interaction, string, CancellationToken>((_, destination, _) => ExternalTransfers.Add(destination))
             .ReturnsAsync(true);
+        external
+            .Setup(value => value.FailAsync(It.IsAny<Interaction>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => ExternalTransfers.LastOrDefault());
 
         Router = new IvrCallRouter(
             services.GetRequiredService<IInteractionManager>(),
@@ -310,11 +333,55 @@ internal sealed class IvrIntegrationFixture : IAsyncDisposable
             clock,
             NullLogger<IvrCallRouter>.Instance);
 
+        TransferOutcomes = new IvrExternalTransferOutcomeSink(
+            services.GetRequiredService<IInteractionManager>(),
+            external.Object,
+            Router,
+            NullLogger<IvrExternalTransferOutcomeSink>.Instance);
+
+        var callbackService = new Mock<ICallbackService>();
+        callbackService
+            .Setup(value => value.ScheduleAsync(It.IsAny<CallbackRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((CallbackRequest request, CancellationToken _) =>
+            {
+                if (!CallbacksEnabled)
+                {
+                    return null;
+                }
+
+                Callbacks.Add(request);
+
+                return request;
+            });
+
+        // The confirmation is said after the commit; the harness runs it inline, on the recording provider.
+        var afterCommit = new Mock<IContactCenterScopeExecutor>();
+        afterCommit.Setup(value => value.ScheduleAfterCommit(It.IsAny<Func<IQueueTreatmentProvider, Task>>())).Returns(false);
+
+        var callbackOffers = new QueueCallbackOfferResponder(
+            services.GetRequiredService<IQueueItemManager>(),
+            queueManager.Object,
+            new QueuedCallbackService(
+                callbackService.Object,
+                services.GetRequiredService<IQueueItemManager>(),
+                queueService,
+                clock,
+                NullLogger<QueuedCallbackService>.Instance),
+            treatment,
+            services.GetRequiredService<IInteractionManager>(),
+            services.GetRequiredService<IContactCenterWorkStateService>(),
+            services.GetRequiredService<IContactCenterActivityWriter>(),
+            afterCommit.Object,
+            Treatment,
+            clock,
+            NullLogger<QueueCallbackOfferResponder>.Instance);
+
         Sink = new InboundVoiceDigitsSink(
             services.GetRequiredService<IInteractionManager>(),
             flowResolver,
             ivr,
             Router,
+            callbackOffers,
             services.GetRequiredService<IContactCenterAuditRecorder>(),
             clock,
             NullLogger<InboundVoiceDigitsSink>.Instance);

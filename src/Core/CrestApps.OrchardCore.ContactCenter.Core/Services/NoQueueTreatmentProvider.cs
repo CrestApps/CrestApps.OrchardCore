@@ -24,4 +24,12 @@ public sealed class NoQueueTreatmentProvider : IQueueTreatmentProvider
     /// <inheritdoc/>
     public Task OfferChoiceAsync(string providerCallId, string text, string acceptKey, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public Task StartRingbackAsync(string providerCallId, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public Task EndWithMessageAsync(string providerCallId, string text, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
 }

@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Telnyx.Services;
 using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Modules.ContactCenter.Integration;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
@@ -42,7 +43,28 @@ public sealed class TelnyxIvrExternalTransferTests
     }
 
     [Fact]
-    public async Task ATransferredCall_IsSettledAndAudited()
+    public async Task ATransferTelnyxTakes_IsNotSettledUntilTheDestinationAnswers()
+    {
+        // Arrange
+        // Telnyx accepting the transfer only means it is ringing the destination, which can still be busy or not
+        // answer; the caller is then still on the line. Settling the call here ended it for a caller nobody was
+        // talking to.
+        var harness = new TransferHarness();
+
+        // Act
+        await harness.TransferAsync("dest-billing");
+
+        // Assert
+        Assert.Empty(harness.Ingested);
+        Assert.NotEqual(ActivityStatus.Completed, harness.Activity.Status);
+        Assert.Equal("dest-billing", harness.Interaction.TechnicalMetadata[IvrExternalTransferService.PendingDestinationMetadataKey]);
+        var audit = harness.Audit.Single();
+        Assert.Equal(ContactCenterConstants.Events.IvrActionTaken, audit.EventType);
+        Assert.Equal("ExternalTransferRinging", audit.Data.Reason);
+    }
+
+    [Fact]
+    public async Task TheLegTheTransferRings_IsMarkedSoItsAnswerOrHangupComesBackToTheCaller()
     {
         // Arrange
         var harness = new TransferHarness();
@@ -51,12 +73,75 @@ public sealed class TelnyxIvrExternalTransferTests
         await harness.TransferAsync("dest-billing");
 
         // Assert
+        using var body = JsonDocument.Parse(harness.Http.RequestBodies.Single());
+        var encoded = body.RootElement.GetProperty("target_leg_client_state").GetString();
+        var decoded = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(encoded));
+        Assert.True(TelnyxCallFlowClientState.TryParse(decoded, out var state));
+        Assert.Equal(TelnyxCallFlowClientState.TransferLegIntent, state.Intent);
+        Assert.Equal("interaction-1", state.InteractionId);
+        Assert.False(body.RootElement.TryGetProperty("client_state", out _));
+    }
+
+    [Fact]
+    public async Task ATransferTheDestinationAnswered_IsSettledAndAudited()
+    {
+        // Arrange
+        var harness = new TransferHarness();
+        await harness.TransferAsync("dest-billing");
+
+        // Act
+        var completed = await harness.Service.CompleteAsync(harness.Interaction, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(completed);
         Assert.Equal(VoiceCallState.Transferred, harness.Ingested.Single().State);
         Assert.Equal(ActivityStatus.Completed, harness.Activity.Status);
         Assert.Equal(IvrExternalTransferService.ReasonCode, harness.Activity.TerminalReasonCode);
-        var audit = harness.Audit.Single();
+        var audit = harness.Audit.Last();
         Assert.Equal(ContactCenterConstants.Events.IvrActionTaken, audit.EventType);
+        Assert.Equal("ExternalTransferCompleted", audit.Data.Reason);
         Assert.Equal("+17025551234", audit.Data.Target);
+        Assert.False(harness.Interaction.TechnicalMetadata.ContainsKey(IvrExternalTransferService.PendingDestinationMetadataKey));
+    }
+
+    [Fact]
+    public async Task ATransferTheDestinationNeverAnswered_IsAuditedWithTheCause_AndHandedBack()
+    {
+        // Arrange
+        var harness = new TransferHarness();
+        await harness.TransferAsync("dest-billing");
+
+        // Act
+        var failed = await harness.Service.FailAsync(harness.Interaction, "user_busy", callerLeft: false, TestContext.Current.CancellationToken);
+        var completedAfterwards = await harness.Service.CompleteAsync(harness.Interaction, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("dest-billing", failed);
+        Assert.False(completedAfterwards);
+        Assert.Empty(harness.Ingested);
+        Assert.NotEqual(ActivityStatus.Completed, harness.Activity.Status);
+        var audit = harness.Audit.Last();
+        Assert.Equal(ContactCenterConstants.Events.IvrFallbackTaken, audit.EventType);
+        Assert.Equal("ExternalTransferFailed", audit.Data.Reason);
+        Assert.Equal("user_busy", audit.Data.Details["hangupCause"]);
+        Assert.Equal("+17025551234", audit.Data.Target);
+    }
+
+    [Fact]
+    public async Task AnOutcomeForATransferThatIsNotWaiting_ChangesNothing()
+    {
+        // Arrange
+        var harness = new TransferHarness();
+
+        // Act
+        var failed = await harness.Service.FailAsync(harness.Interaction, "user_busy", callerLeft: false, TestContext.Current.CancellationToken);
+        var completed = await harness.Service.CompleteAsync(harness.Interaction, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(failed);
+        Assert.False(completed);
+        Assert.Empty(harness.Audit);
+        Assert.Empty(harness.Ingested);
     }
 
     [Theory]

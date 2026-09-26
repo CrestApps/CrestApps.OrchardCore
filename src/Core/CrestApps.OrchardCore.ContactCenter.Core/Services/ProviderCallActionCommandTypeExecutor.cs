@@ -216,11 +216,12 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
         // The reservation and call session release their agent association when the offer is released, so record the
         // recipient agent explicitly. The offer-timeout path carries the agent on the request; the direct-to-agent
         // path carries the target agent in interaction metadata.
+        // A call with no agent of its own — a queue line's caller — falls back to the entry point's voicemail inbox;
+        // without it the message was recorded and delivered to nobody.
         var recipientAgentId = !string.IsNullOrWhiteSpace(request.AgentId)
             ? request.AgentId
-            : interaction.TechnicalMetadata.TryGetValue(ContactCenterConstants.DirectRouting.TargetAgentMetadataKey, out var targetAgent)
-                ? targetAgent?.ToString()
-                : null;
+            : ReadMetadataString(interaction, ContactCenterConstants.DirectRouting.TargetAgentMetadataKey)
+                ?? ReadMetadataString(interaction, ContactCenterConstants.Voicemail.MailboxAgentMetadataKey);
 
         string greetingText = null;
         string greetingMediaUrl = null;
@@ -486,6 +487,14 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
             ProviderCallId = request.ProviderCallId,
         }, cancellationToken);
     }
+
+    // Agent identifiers are written as strings, and a string metadata value comes back from the store as one.
+    private static string ReadMetadataString(Interaction interaction, string key)
+        => interaction.TechnicalMetadata.TryGetValue(key, out var value) &&
+            value?.ToString() is { Length: > 0 } text &&
+            !string.IsNullOrWhiteSpace(text)
+            ? text
+            : null;
 
     private static bool IsTerminal(InteractionStatus status)
     {

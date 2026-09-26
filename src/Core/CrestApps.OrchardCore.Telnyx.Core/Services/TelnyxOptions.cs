@@ -114,6 +114,16 @@ public sealed class TelnyxOptions
     public TelnyxAnsweringMachineDetection AnsweringMachineDetection { get; set; }
 
     /// <summary>
+    /// Gets or sets the text-to-speech voice every spoken prompt uses. Never empty: Telnyx refuses speech without one.
+    /// </summary>
+    public string TtsVoice { get; set; } = TelnyxConstants.Speech.DefaultVoice;
+
+    /// <summary>
+    /// Gets or sets the language every spoken prompt is said in.
+    /// </summary>
+    public string TtsLanguage { get; set; } = TelnyxConstants.Speech.DefaultLanguage;
+
+    /// <summary>
     /// Gets a value indicating whether the provider has the minimum configuration required to place and
     /// control calls: an API key and a Call Control connection identifier.
     /// </summary>

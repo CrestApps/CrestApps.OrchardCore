@@ -175,6 +175,15 @@ public static partial class ContactCenterConstants
         /// a dialed number can define the message its callers hear without each agent configuring one.
         /// </summary>
         public const string EntryPointGreetingTextMetadataKey = "voicemailEntryPointGreetingText";
+
+        /// <summary>
+        /// The interaction-metadata key that carries the agent-profile identifier of the entry point's voicemail
+        /// inbox, stamped when the inbound call is created. A message left by a caller the call has no agent for — a
+        /// queue line's caller who chose voicemail from its menu, or reached it because the queue was full or they
+        /// waited too long before anybody was offered the call — is delivered to this agent's inbox rather than to
+        /// nobody's.
+        /// </summary>
+        public const string MailboxAgentMetadataKey = "voicemailMailboxAgentId";
     }
 
     /// <summary>

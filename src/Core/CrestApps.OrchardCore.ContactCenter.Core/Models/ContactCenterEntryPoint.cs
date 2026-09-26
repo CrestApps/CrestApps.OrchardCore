@@ -74,6 +74,15 @@ public sealed class ContactCenterEntryPoint : CatalogItem, INameAwareModel, IMod
     public string VoicemailGreetingText { get; set; }
 
     /// <summary>
+    /// Gets or sets the agent profile whose soft-phone Voicemail tab receives messages left on this line when the call
+    /// has no agent of its own: a queue line's caller who chooses voicemail from the menu, or reaches it because the
+    /// queue is full or they waited past its limit before anyone was offered the call. A message for a specific
+    /// agent — a personal line, or an offer that agent let ring out — still goes to that agent. When empty, such a
+    /// message is recorded but lands in no inbox.
+    /// </summary>
+    public string VoicemailRecipientAgentId { get; set; }
+
+    /// <summary>
     /// Gets or sets the identifier of the business-hours calendar that gates when the entry point is open.
     /// When empty, the entry point is always open.
     /// </summary>

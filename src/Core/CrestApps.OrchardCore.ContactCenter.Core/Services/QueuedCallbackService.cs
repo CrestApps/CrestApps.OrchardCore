@@ -16,6 +16,7 @@ public sealed class QueuedCallbackService : IQueuedCallbackService
 {
     private readonly ICallbackService _callbackService;
     private readonly IQueueItemManager _queueItemManager;
+    private readonly IActivityQueueService _queueService;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -25,11 +26,13 @@ public sealed class QueuedCallbackService : IQueuedCallbackService
     public QueuedCallbackService(
         ICallbackService callbackService,
         IQueueItemManager queueItemManager,
+        IActivityQueueService queueService,
         IClock clock,
         ILogger<QueuedCallbackService> logger)
     {
         _callbackService = callbackService;
         _queueItemManager = queueItemManager;
+        _queueService = queueService;
         _clock = clock;
         _logger = logger;
     }
@@ -54,7 +57,7 @@ public sealed class QueuedCallbackService : IQueuedCallbackService
 
         var now = _clock.UtcNow;
 
-        await _callbackService.ScheduleAsync(
+        var scheduled = await _callbackService.ScheduleAsync(
             new CallbackRequest
             {
                 ItemId = IdGenerator.GenerateId(),
@@ -70,15 +73,29 @@ public sealed class QueuedCallbackService : IQueuedCallbackService
             },
             cancellationToken);
 
-        item.CallbackAcceptedUtc = now;
-
-        // Leaving the item waiting would have an agent offered a caller who has already hung up.
-        if (item.CanTransitionTo(QueueItemStatus.Removed))
+        // A tenant without callbacks stores nothing, so nothing would ever call this caller back. Telling them it was
+        // arranged and hanging up on them is the worst outcome there is; they are left waiting instead.
+        if (scheduled is null)
         {
-            item.TransitionTo(QueueItemStatus.Removed);
+            _logger.LogWarning(
+                "A caller on queue '{QueueId}' accepted a callback, but callbacks are not enabled on this tenant, so none could be scheduled; the caller keeps waiting.",
+                item.QueueId.SanitizeLogValue());
+
+            return false;
         }
 
-        await _queueItemManager.UpdateAsync(item, cancellationToken: cancellationToken);
+        item.CallbackAcceptedUtc = now;
+
+        // Leaving the item waiting would have an agent offered a caller who has already hung up. It leaves the way
+        // any other caller does, so whatever is playing to them is stopped and the queue's history records it.
+        if (item.CanTransitionTo(QueueItemStatus.Removed))
+        {
+            await _queueService.DequeueAsync(item, QueueItemStatus.Removed, cancellationToken);
+        }
+        else
+        {
+            await _queueItemManager.UpdateAsync(item, cancellationToken: cancellationToken);
+        }
 
         if (_logger.IsEnabled(LogLevel.Information))
         {

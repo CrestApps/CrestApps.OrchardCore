@@ -49,7 +49,30 @@ public sealed class QueuedCallbackTests
         await harness.Service.AcceptAsync(item, "+16502530000", TestContext.Current.CancellationToken);
 
         // Assert
+        // It leaves through the queue, like any other caller who leaves, so whatever was playing to them stops and
+        // the queue's history records it.
         Assert.Equal(QueueItemStatus.Removed, item.Status);
+        Assert.Equal([("i1", QueueItemStatus.Removed)], harness.Dequeued);
+        Assert.Equal(_now, item.CallbackAcceptedUtc);
+    }
+
+    [Fact]
+    public async Task Accepting_WhenTheTenantHasNoCallbacks_IsRefusedAndTheCallerKeepsWaiting()
+    {
+        // Arrange
+        // Without callbacks enabled nothing is stored, so nothing would ever call this caller back. Treating the
+        // unstored request as scheduled told them it was arranged and took them out of the queue.
+        var harness = new Harness { CallbacksEnabled = false };
+        var item = Item(enqueuedUtc: _now.AddMinutes(-8));
+
+        // Act
+        var accepted = await harness.Service.AcceptAsync(item, "+16502530000", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(accepted);
+        Assert.Null(item.CallbackAcceptedUtc);
+        Assert.Equal(QueueItemStatus.Waiting, item.Status);
+        Assert.Empty(harness.Dequeued);
     }
 
     [Fact]
@@ -105,6 +128,10 @@ public sealed class QueuedCallbackTests
 
         public CallbackRequest Scheduled { get; private set; }
 
+        public bool CallbacksEnabled { get; set; } = true;
+
+        public List<(string ItemId, QueueItemStatus Status)> Dequeued { get; } = [];
+
         public QueuedCallbackService Service { get; }
 
         public Harness()
@@ -113,10 +140,25 @@ public sealed class QueuedCallbackTests
                 .Setup(service => service.ScheduleAsync(It.IsAny<CallbackRequest>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((CallbackRequest request, CancellationToken _) =>
                 {
+                    if (!CallbacksEnabled)
+                    {
+                        return null;
+                    }
+
                     Scheduled = request;
 
                     return request;
                 });
+
+            var queueService = new Mock<IActivityQueueService>();
+            queueService
+                .Setup(service => service.DequeueAsync(It.IsAny<QueueItem>(), It.IsAny<QueueItemStatus>(), It.IsAny<CancellationToken>()))
+                .Callback<QueueItem, QueueItemStatus, CancellationToken>((item, status, _) =>
+                {
+                    item.TransitionTo(status);
+                    Dequeued.Add((item.ItemId, status));
+                })
+                .Returns(Task.CompletedTask);
 
             var queueItemManager = new Mock<IQueueItemManager>();
             queueItemManager
@@ -129,6 +171,7 @@ public sealed class QueuedCallbackTests
             Service = new QueuedCallbackService(
                 CallbackService.Object,
                 queueItemManager.Object,
+                queueService.Object,
                 clock.Object,
                 NullLogger<QueuedCallbackService>.Instance);
         }

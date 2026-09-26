@@ -221,16 +221,17 @@ public sealed class IvrCallRouter : IIvrCallRouter
                 !string.IsNullOrEmpty(offeredUserId));
         }
 
-        // The caller was answered to hear the menu, so from here on they hear whatever the queue plays rather than a
-        // ringing tone: an offered caller is no longer a waiting one and would get nothing from the treatment pass,
-        // so they get the music; a waiting one gets the queue's treatment now rather than at the next sweep.
+        // The caller was answered to hear the menu, so the network is no longer ringing them: from here on they hear
+        // whatever the queue plays. An offered caller is no longer a waiting one and would get nothing from the
+        // treatment pass, so they get the music, or a ringing tone on a queue without any; a waiting one gets the
+        // queue's treatment now rather than at the next sweep.
         if (string.IsNullOrEmpty(offeredUserId))
         {
-            await RunTreatmentAsync(effectiveQueue, cancellationToken);
+            await RunTreatmentAsync(effectiveQueue, interaction.ProviderInteractionId, cancellationToken);
         }
         else
         {
-            await StartHoldMusicAsync(effectiveQueue, interaction.ProviderInteractionId, cancellationToken);
+            await StartWaitingAudioAsync(effectiveQueue, interaction.ProviderInteractionId, cancellationToken);
         }
     }
 
@@ -277,6 +278,62 @@ public sealed class IvrCallRouter : IIvrCallRouter
                 interaction.ItemId.SanitizeLogValue(),
                 string.IsNullOrEmpty(offeredUserId) ? "held for the agent" : "ringing");
         }
+
+        // The menu answered the caller, so nothing is ringing on their side any more: while the agent's phone rings,
+        // or while they are held for the agent, they hear the entry point's queue music when it routes to a queue,
+        // and a ringing tone otherwise. It stops when the agent is joined or the caller goes to voicemail.
+        var holdQueue = entryPoint.TargetType == EntryPointTargetType.Queue && !string.IsNullOrEmpty(entryPoint.TargetQueueId)
+            ? await _queueManager.FindByIdAsync(entryPoint.TargetQueueId, cancellationToken)
+            : null;
+
+        await StartWaitingAudioAsync(holdQueue, interaction.ProviderInteractionId, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task RecoverFailedTransferAsync(string interactionId, string failedDestinationId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(interactionId);
+
+        var interaction = await _interactionManager.FindByIdAsync(interactionId, cancellationToken);
+
+        if (interaction is null || interaction.IsSettled)
+        {
+            return;
+        }
+
+        var entryPoint = await _flowResolver.FindEntryPointAsync(interaction, cancellationToken);
+
+        if (entryPoint is null)
+        {
+            _logger.LogWarning(
+                "The entry point for interaction '{InteractionId}' no longer exists, so the caller whose transfer failed cannot be put through anywhere.",
+                interactionId.SanitizeLogValue());
+
+            return;
+        }
+
+        await RouteAsync(interactionId, entryPoint, FallbackAfterFailedTransfer(entryPoint.IvrFlow, failedDestinationId), cancellationToken);
+    }
+
+    // What the menu does with a caller who has nowhere else to go is also what it does with one whose chosen number did
+    // not answer. A fallback that is a menu is not replayed — the caller has already made their choice — and one that
+    // is the number that just failed would ring it again, so both go to the entry point's own target instead.
+    private static IvrStep FallbackAfterFailedTransfer(IvrFlow flow, string failedDestinationId)
+    {
+        var fallback = flow?.FallbackAction;
+
+        var kind = fallback?.Kind switch
+        {
+            IvrActionKind.RouteToQueue => IvrStepKind.RouteToQueue,
+            IvrActionKind.RouteToAgent => IvrStepKind.RouteToAgent,
+            IvrActionKind.Voicemail => IvrStepKind.Voicemail,
+            IvrActionKind.ExternalTransfer when !string.Equals(fallback.TargetId, failedDestinationId, StringComparison.OrdinalIgnoreCase) => IvrStepKind.ExternalTransfer,
+            _ => IvrStepKind.Done,
+        };
+
+        return kind == IvrStepKind.Done
+            ? IvrStep.Done with { IsFallback = true }
+            : new IvrStep(kind, null, null, null, fallback.TargetId) { IsFallback = true };
     }
 
     private async Task SendToVoicemailAsync(
@@ -291,6 +348,17 @@ public sealed class IvrCallRouter : IIvrCallRouter
             !interaction.TechnicalMetadata.ContainsKey(ContactCenterConstants.DirectRouting.TargetAgentMetadataKey))
         {
             interaction.TechnicalMetadata[ContactCenterConstants.DirectRouting.TargetAgentMetadataKey] = entryPoint.TargetAgentId;
+            await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
+        }
+
+        // A queue line has no agent of its own, so a message left on it went to nobody's inbox and was never heard.
+        // It goes to the entry point's voicemail inbox, when one is set. The call normally carries it from when it
+        // arrived; a call that does not is given it here.
+        if (entryPoint.TargetType != EntryPointTargetType.Agent &&
+            !string.IsNullOrEmpty(entryPoint.VoicemailRecipientAgentId) &&
+            !interaction.TechnicalMetadata.ContainsKey(ContactCenterConstants.Voicemail.MailboxAgentMetadataKey))
+        {
+            interaction.TechnicalMetadata[ContactCenterConstants.Voicemail.MailboxAgentMetadataKey] = entryPoint.VoicemailRecipientAgentId;
             await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
         }
 
@@ -355,7 +423,7 @@ public sealed class IvrCallRouter : IIvrCallRouter
             $"ivr:reroute:{interaction.ItemId}:{reason}:{targetId}:{action}",
             cancellationToken);
 
-    private async Task RunTreatmentAsync(ActivityQueue queue, CancellationToken cancellationToken)
+    private async Task RunTreatmentAsync(ActivityQueue queue, string providerCallId, CancellationToken cancellationToken)
     {
         try
         {
@@ -368,9 +436,15 @@ public sealed class IvrCallRouter : IIvrCallRouter
             // The caller is in the queue either way; losing the music must not lose the call.
             _logger.LogWarning(ex, "Could not start queue treatment for a caller routed from an entry-point menu to queue '{QueueId}'.", queue.ItemId.SanitizeLogValue());
         }
+
+        // A queue that plays nothing at all was left to the network's ringing tone, which ended when the menu answered.
+        if (queue.Treatment is null || !QueueTreatmentPolicy.PlaysAnything(queue.Treatment))
+        {
+            await StartWaitingAudioAsync(queue, providerCallId, cancellationToken);
+        }
     }
 
-    private async Task StartHoldMusicAsync(ActivityQueue queue, string providerCallId, CancellationToken cancellationToken)
+    private async Task StartWaitingAudioAsync(ActivityQueue queue, string providerCallId, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(providerCallId))
         {
@@ -379,11 +453,12 @@ public sealed class IvrCallRouter : IIvrCallRouter
 
         try
         {
-            await _treatmentService.StartHoldMusicAsync(queue, providerCallId, cancellationToken);
+            await _treatmentService.StartWaitingAudioAsync(queue, providerCallId, cancellationToken);
         }
         catch (Exception ex) when (ex is not OperationCanceledException and not ConcurrencyException)
         {
-            _logger.LogWarning(ex, "Could not start hold music for a caller routed from an entry-point menu to queue '{QueueId}'.", queue.ItemId.SanitizeLogValue());
+            // The caller is on their way to a person either way; losing the audio must not lose the call.
+            _logger.LogWarning(ex, "Could not start the waiting audio for a caller routed from an entry-point menu on call '{CallId}'.", providerCallId.SanitizeLogValue());
         }
     }
 }

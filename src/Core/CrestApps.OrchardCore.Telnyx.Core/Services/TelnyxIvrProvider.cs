@@ -2,6 +2,7 @@ using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Telnyx.Services;
 
@@ -17,12 +18,9 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 /// </remarks>
 public sealed class TelnyxIvrProvider : IIvrProvider
 {
-    // The keys a menu can use, in the order a terminating key is picked from: '#' is Telnyx's default, and a key the
-    // menu itself offers must not be the one that ends collection with nothing collected.
-    private const string TerminatingDigitCandidates = "#*0987654321";
-
     private readonly TelnyxApiClient _apiClient;
     private readonly IVoiceMediaItemManager _voiceMediaItemManager;
+    private readonly IOptionsMonitor<TelnyxOptions> _options;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -30,14 +28,17 @@ public sealed class TelnyxIvrProvider : IIvrProvider
     /// </summary>
     /// <param name="apiClient">The typed Telnyx client.</param>
     /// <param name="voiceMediaItemManager">The voice media catalog, used to resolve a recorded menu to its Telnyx name.</param>
+    /// <param name="options">The tenant's Telnyx options, for the voice and language menus are spoken in.</param>
     /// <param name="logger">The logger.</param>
     public TelnyxIvrProvider(
         TelnyxApiClient apiClient,
         IVoiceMediaItemManager voiceMediaItemManager,
+        IOptionsMonitor<TelnyxOptions> options,
         ILogger<TelnyxIvrProvider> logger)
     {
         _apiClient = apiClient;
         _voiceMediaItemManager = voiceMediaItemManager;
+        _options = options;
         _logger = logger;
     }
 
@@ -80,7 +81,7 @@ public sealed class TelnyxIvrProvider : IIvrProvider
         if (!string.IsNullOrWhiteSpace(validDigits))
         {
             body["valid_digits"] = validDigits;
-            body["terminating_digit"] = PickTerminatingDigit(validDigits);
+            body["terminating_digit"] = TelnyxPrompts.PickTerminatingDigit(validDigits);
         }
 
         // Recorded audio wins over synthesized speech when the menu has it: a tenant who recorded their menu did
@@ -119,11 +120,11 @@ public sealed class TelnyxIvrProvider : IIvrProvider
             return false;
         }
 
-        // Telnyx requires a voice for speech; without one the command is refused and the caller hears nothing.
+        // Telnyx requires a voice for speech; without one the command is refused and the caller hears nothing. The
+        // voice and language are the tenant's, the same ones the voicemail greeting and a queue's callback offer use.
         body["payload"] = text;
         body["payload_type"] = "text";
-        body["voice"] = TelnyxConstants.Gather.Voice;
-        body["language"] = TelnyxConstants.Gather.Language;
+        TelnyxPrompts.ApplySpeech(body, _options.CurrentValue);
 
         var result = await _apiClient.PostCallActionAsync(providerCallId, "gather_using_speak", body, cancellationToken);
 
@@ -154,19 +155,5 @@ public sealed class TelnyxIvrProvider : IIvrProvider
         }
 
         return ("media_name", item.MediaReference);
-    }
-
-    private static string PickTerminatingDigit(string validDigits)
-    {
-        foreach (var candidate in TerminatingDigitCandidates)
-        {
-            if (!validDigits.Contains(candidate, StringComparison.Ordinal))
-            {
-                return candidate.ToString();
-            }
-        }
-
-        // Every key is an option. One key is collected at a time, so the first press ends collection anyway.
-        return "#";
     }
 }

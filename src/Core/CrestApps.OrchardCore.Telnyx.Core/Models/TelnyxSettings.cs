@@ -130,4 +130,18 @@ public sealed class TelnyxSettings
     /// to the provider's premium detection.
     /// </summary>
     public TelnyxAnsweringMachineDetection AnsweringMachineDetection { get; set; }
+
+    /// <summary>
+    /// Gets or sets the text-to-speech voice the platform's spoken prompts use: phone menus, the voicemail greeting,
+    /// and a queue's callback offer. Either a legacy value (<c>female</c>, <c>male</c>) or a
+    /// <c>Provider.Model.VoiceId</c> name such as <c>AWS.Polly.Joanna-Neural</c>. Empty uses
+    /// <see cref="TelnyxConstants.Speech.DefaultVoice"/>.
+    /// </summary>
+    public string TtsVoice { get; set; }
+
+    /// <summary>
+    /// Gets or sets the language the platform's spoken prompts are said in, such as <c>en-US</c>. Empty uses
+    /// <see cref="TelnyxConstants.Speech.DefaultLanguage"/>.
+    /// </summary>
+    public string TtsLanguage { get; set; }
 }

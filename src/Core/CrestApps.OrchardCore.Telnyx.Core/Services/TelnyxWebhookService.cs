@@ -21,6 +21,8 @@ public sealed partial class TelnyxWebhookService : ITelnyxWebhookService
     private readonly ITelnyxOutboundBridgeOrchestrator _outboundBridgeOrchestrator;
     private readonly IEnumerable<ITelnyxRecordingSavedHandler> _recordingSavedHandlers;
     private readonly IEnumerable<ICallQualityObserver> _callQualityObservers;
+    private readonly IExternalTransferOutcomeSink _transferOutcomeSink;
+    private readonly TelnyxApiClient _apiClient;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -34,6 +36,8 @@ public sealed partial class TelnyxWebhookService : ITelnyxWebhookService
     /// The optional handlers for finished recordings. When Contact Center Voice is enabled a handler ingests the
     /// recording into the encrypted media store; when none are registered, saved-recording events are ignored.
     /// </param>
+    /// <param name="transferOutcomeSink">Where the outcome of an external transfer's destination leg is reported.</param>
+    /// <param name="apiClient">The typed Telnyx client, for the hang-up after a last message.</param>
     /// <param name="clock">The clock used to stamp event times.</param>
     /// <param name="logger">The logger.</param>
     public TelnyxWebhookService(
@@ -43,6 +47,8 @@ public sealed partial class TelnyxWebhookService : ITelnyxWebhookService
         ITelnyxOutboundBridgeOrchestrator outboundBridgeOrchestrator,
         IEnumerable<ITelnyxRecordingSavedHandler> recordingSavedHandlers,
         IEnumerable<ICallQualityObserver> callQualityObservers,
+        IExternalTransferOutcomeSink transferOutcomeSink,
+        TelnyxApiClient apiClient,
         IClock clock,
         ILogger<TelnyxWebhookService> logger)
     {
@@ -52,6 +58,8 @@ public sealed partial class TelnyxWebhookService : ITelnyxWebhookService
         _outboundBridgeOrchestrator = outboundBridgeOrchestrator;
         _recordingSavedHandlers = recordingSavedHandlers;
         _callQualityObservers = callQualityObservers;
+        _transferOutcomeSink = transferOutcomeSink;
+        _apiClient = apiClient;
         _clock = clock;
         _logger = logger;
     }
@@ -116,6 +124,13 @@ public sealed partial class TelnyxWebhookService : ITelnyxWebhookService
         if (string.Equals(callEvent.EventType?.Trim(), TelnyxConstants.Gather.EndedEventType, StringComparison.OrdinalIgnoreCase))
         {
             return await HandleGatherEndedAsync(callEvent, cancellationToken);
+        }
+
+        // A leg or a message the platform asked to hear back about: an external transfer's destination leg, or the
+        // end of a last message after which the call is hung up.
+        if (await HandleCallFlowAsync(callEvent, cancellationToken) is { } callFlowResult)
+        {
+            return callFlowResult;
         }
 
         if (string.IsNullOrEmpty(callEvent.CallControlId) || !TryMapState(callEvent, out var state))

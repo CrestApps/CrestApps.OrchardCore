@@ -110,6 +110,7 @@ public sealed class Startup : StartupBase
         // tenants that have never enabled Contact Center, so the digits sink needs a no-op fallback. Contact
         // Center's own registration takes over whenever it is enabled, whichever startup runs first.
         services.TryAddScoped<IInboundVoiceDigitsSink, NoInboundVoiceDigitsSink>();
+        services.TryAddScoped<IExternalTransferOutcomeSink, NoExternalTransferOutcomeSink>();
 
         services.AddIndexProvider<TelnyxAgentCredentialIndexProvider>();
         services.AddDataMigration<TelnyxAgentCredentialMigrations>();

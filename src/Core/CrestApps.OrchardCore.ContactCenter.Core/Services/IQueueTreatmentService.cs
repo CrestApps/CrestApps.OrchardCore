@@ -28,4 +28,20 @@ public interface IQueueTreatmentService
     /// <param name="providerCallId">The caller's live leg.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     Task StartHoldMusicAsync(ActivityQueue queue, string providerCallId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gives a caller the platform has already answered something to hear while they wait for a person: the queue's
+    /// hold music when it has some, and otherwise a ringing tone.
+    /// </summary>
+    /// <remarks>
+    /// A caller answered to hear a phone menu who chose an agent, or a queue with no music, heard nothing at all while
+    /// the agent's phone rang: the network's ringback ended when the menu answered them. Whatever is started here is
+    /// stopped the way hold music is — when the agent is joined, or when the caller leaves the queue for voicemail or
+    /// anywhere else.
+    /// </remarks>
+    /// <param name="queue">The queue whose music is played, or <see langword="null"/> when there is none, such as a
+    /// call ringing one agent directly.</param>
+    /// <param name="providerCallId">The caller's live leg.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task StartWaitingAudioAsync(ActivityQueue queue, string providerCallId, CancellationToken cancellationToken = default);
 }

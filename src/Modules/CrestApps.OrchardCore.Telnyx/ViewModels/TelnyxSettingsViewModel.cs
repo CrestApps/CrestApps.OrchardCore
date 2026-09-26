@@ -125,6 +125,16 @@ public class TelnyxSettingsViewModel
     public TelnyxAnsweringMachineDetection AnsweringMachineDetection { get; set; }
 
     /// <summary>
+    /// Gets or sets the text-to-speech voice spoken prompts use.
+    /// </summary>
+    public string TtsVoice { get; set; }
+
+    /// <summary>
+    /// Gets or sets the language spoken prompts are said in.
+    /// </summary>
+    public string TtsLanguage { get; set; }
+
+    /// <summary>
     /// Gets or sets the optional REST API base address override.
     /// </summary>
     public string ApiBaseUrl { get; set; }
