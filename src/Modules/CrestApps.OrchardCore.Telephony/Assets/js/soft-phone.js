@@ -1867,7 +1867,7 @@
 
             monitorMediaProbes.push(call);
 
-            var remaining = 6;
+            var remaining = 18;
             var probe = function () {
                 var peer = call && call.peer && call.peer.instance;
 
@@ -1880,8 +1880,11 @@
                 var directions = (typeof peer.getTransceivers === 'function' ? peer.getTransceivers() : []).map(function (transceiver) {
                     var track = transceiver.sender && transceiver.sender.track;
 
+                    var shared = !!(track && context.localStream && typeof context.localStream.getAudioTracks === 'function' &&
+                        context.localStream.getAudioTracks().indexOf(track) >= 0);
+
                     return (transceiver.currentDirection || transceiver.direction || '?') +
-                        (track ? '/' + (track.enabled ? 'on' : 'off') + '/' + track.readyState : '/no-track');
+                        (track ? '/' + (track.enabled ? 'on' : 'off') + '/' + track.readyState + (shared ? '/shared' : '/own') : '/no-track');
                 }).join(',');
 
                 Promise.resolve(typeof peer.getStats === 'function' ? peer.getStats() : null).then(function (stats) {
