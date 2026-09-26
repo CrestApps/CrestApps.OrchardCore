@@ -295,6 +295,15 @@
   }
   contactCenter.supervisorMessageHtml = supervisorMessageHtml;
   contactCenter.MONITOR_MODES = MONITOR_MODES;
+  // An agent id quoted into an attribute selector ([data-x="…"]). The browser's CSS.escape is used where it has one;
+  // otherwise backslashes are escaped before quotes, so neither can end the string early or change what it matches.
+  function attributeSelectorValue(value, css) {
+    if (css && typeof css.escape === 'function') {
+      return css.escape(value);
+    }
+    return String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  }
+  contactCenter.attributeSelectorValue = attributeSelectorValue;
   contactCenter.MONITOR_PHASES = PHASES;
   contactCenter.supervisorAgentActions = agentActions;
   contactCenter.supervisorAgentActionsHtml = agentActionsHtml;
@@ -441,7 +450,7 @@
       }
     }
     function cssEscape(value) {
-      return window.CSS && typeof window.CSS.escape === 'function' ? window.CSS.escape(value) : String(value).replace(/"/g, '\\"');
+      return contactCenter.attributeSelectorValue(value, window.CSS);
     }
     function toggleMenu(agentId) {
       openMenuAgentId = openMenuAgentId === agentId ? null : agentId;

@@ -154,7 +154,7 @@
         }
 
         function cssEscape(value) {
-            return window.CSS && typeof window.CSS.escape === 'function' ? window.CSS.escape(value) : String(value).replace(/"/g, '\\"');
+            return contactCenter.attributeSelectorValue(value, window.CSS);
         }
 
         function toggleMenu(agentId) {
