@@ -11,9 +11,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels;
-using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -21,7 +19,6 @@ using OrchardCore.ContentManagement;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.Modules;
-using OrchardCore.Users;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Services;
@@ -43,8 +40,8 @@ public sealed class MessagingWorkspaceBuilder
     private readonly IMessageTemplateManager _templateManager;
     private readonly IAgentProfileManager _agentProfileManager;
     private readonly IMessagingAvailabilityService _availabilityService;
-    private readonly UserManager<IUser> _userManager;
-    private readonly IDisplayNameProvider _displayNameProvider;
+    private readonly IMessagingAgentNameProvider _agentNames;
+    private readonly bool _supportsQueues;
     private readonly IContentManager _contentManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly MessagingQuietHoursGuard _quietHoursGuard;
@@ -62,8 +59,8 @@ public sealed class MessagingWorkspaceBuilder
         IMessageTemplateManager templateManager,
         IAgentProfileManager agentProfileManager,
         IMessagingAvailabilityService availabilityService,
-        UserManager<IUser> userManager,
-        IDisplayNameProvider displayNameProvider,
+        IMessagingAgentNameProvider agentNames,
+        IEnumerable<IActivityQueueManager> queueManagers,
         IContentManager contentManager,
         IAuthorizationService authorizationService,
         MessagingQuietHoursGuard quietHoursGuard,
@@ -80,8 +77,9 @@ public sealed class MessagingWorkspaceBuilder
         _templateManager = templateManager;
         _agentProfileManager = agentProfileManager;
         _availabilityService = availabilityService;
-        _userManager = userManager;
-        _displayNameProvider = displayNameProvider;
+        _agentNames = agentNames;
+        // Queues are a feature of their own; without it a conversation can only be transferred to a person.
+        _supportsQueues = queueManagers.Any();
         _contentManager = contentManager;
         _authorizationService = authorizationService;
         _quietHoursGuard = quietHoursGuard;
@@ -168,6 +166,7 @@ public sealed class MessagingWorkspaceBuilder
         if (currentAgent is not null)
         {
             viewModel.HasAgentProfile = true;
+            viewModel.CurrentAgentId = currentAgent.ItemId;
             viewModel.Available = _availabilityService.Get(currentAgent).Available;
         }
 
@@ -258,6 +257,10 @@ public sealed class MessagingWorkspaceBuilder
 
         var messages = await GetMessagesAsync(conversation.ItemId, beforeUtc, cancellationToken);
 
+        // A full page came back, so there is at least one more bubble before it worth offering.
+        var hasEarlierMessages = messages.Count == ThreadPageSize;
+        var canTransfer = await AuthorizeAsync(user, conversation, ConversationOperation.Transfer);
+
         // Warn, do not block: an agent who genuinely needs to reach a customer out of hours can still send, but they
         // do it knowing what time it is where the customer is. Only channels that observe quiet hours are judged.
         var quietHours = channel?.Capabilities.ObservesQuietHours == true
@@ -284,6 +287,7 @@ public sealed class MessagingWorkspaceBuilder
             SupportsSubject = channel?.Capabilities.SupportsSubject == true,
             MaxBodyLength = channel?.Capabilities.MaxBodyLength,
             Messages = messages,
+            Events = ThreadTimeline.ForPage(conversation.History, messages, beforeUtc, hasEarlierMessages),
             Templates = (await _templateManager.GetAllAsync(cancellationToken)).ToArray(),
             ContactDisplayText = titleContact?.DisplayName,
             Contacts = contacts,
@@ -291,12 +295,13 @@ public sealed class MessagingWorkspaceBuilder
             // A conversation on a channel that is no longer enabled can still be read, but nothing can leave on it.
             CanClaim = await AuthorizeAsync(user, conversation, ConversationOperation.Claim),
             CanChangeStatus = await AuthorizeAsync(user, conversation, ConversationOperation.Close),
+            CanTransfer = canTransfer,
+            CanTransferToQueue = canTransfer && _supportsQueues,
             CanSend = channel is not null && await AuthorizeAsync(user, conversation, ConversationOperation.Send),
             IsQuietHours = quietHours.IsQuietHours,
             QuietHoursReason = quietHours.Reason,
             CanSendDuringQuietHours = await _authorizationService.AuthorizeAsync(user, MessagingPermissions.SendDuringQuietHours),
-            // A full page came back, so there is at least one more bubble before it worth offering.
-            HasEarlierMessages = messages.Count == ThreadPageSize,
+            HasEarlierMessages = hasEarlierMessages,
             EarliestMessageTicks = messages.Count > 0 ? messages[0].CreatedUtc.Ticks : 0,
         };
     }
@@ -458,9 +463,8 @@ public sealed class MessagingWorkspaceBuilder
             .ToArray());
     }
 
-    // Resolves the display name of each distinct human agent that sent a message in the thread, keyed by agent id.
-    // The name comes from the underlying user through IDisplayNameProvider (the real full name), falling back to the
-    // agent profile's own labels only when the user cannot be resolved — so a bubble never shows a raw id.
+    // Resolves the display name of each distinct human agent that sent a message in the thread, keyed by agent id, so a
+    // bubble never shows a raw id.
     private async Task<IReadOnlyDictionary<string, string>> ResolveAgentNamesAsync(IEnumerable<OmnichannelMessage> messages)
     {
         var agentIds = messages
@@ -473,29 +477,7 @@ public sealed class MessagingWorkspaceBuilder
 
         foreach (var agentId in agentIds)
         {
-            var agent = await _agentProfileManager.FindByIdAsync(agentId);
-
-            if (agent is null)
-            {
-                continue;
-            }
-
-            string name = null;
-
-            if (!string.IsNullOrEmpty(agent.UserId))
-            {
-                var user = await _userManager.FindByIdAsync(agent.UserId);
-
-                if (user is not null)
-                {
-                    name = await _displayNameProvider.GetAsync(user);
-                }
-            }
-
-            name = !string.IsNullOrWhiteSpace(name)
-                ? name
-                : !string.IsNullOrEmpty(agent.DisplayName) ? agent.DisplayName
-                : !string.IsNullOrEmpty(agent.UserName) ? agent.UserName : agent.Name;
+            var name = await _agentNames.GetDisplayNameAsync(agentId);
 
             if (!string.IsNullOrEmpty(name))
             {

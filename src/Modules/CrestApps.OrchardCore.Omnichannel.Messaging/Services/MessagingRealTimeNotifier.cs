@@ -44,12 +44,19 @@ public sealed class MessagingRealTimeNotifier : IMessagingRealTimeNotifier
     /// <inheritdoc/>
     public Task ConversationAssignedAsync(MessagingAssignmentNotification notification, CancellationToken cancellationToken = default)
     {
-        // Tell the assigned agent it landed in their inbox, and the owning queue so other members drop it.
+        // Tell the assigned agent it landed in their inbox, the owning queue so other members drop it, and whoever
+        // held it before a transfer so it leaves their inbox too.
         var tasks = new List<Task>();
 
         if (!string.IsNullOrEmpty(notification.AssignedAgentId))
         {
             tasks.Add(_hubContext.Clients.Group(ForGroup(MessagingHub.AgentGroup(notification.AssignedAgentId))).ConversationAssigned(notification));
+        }
+
+        if (!string.IsNullOrEmpty(notification.PreviousAgentId) &&
+            !string.Equals(notification.PreviousAgentId, notification.AssignedAgentId, StringComparison.Ordinal))
+        {
+            tasks.Add(_hubContext.Clients.Group(ForGroup(MessagingHub.AgentGroup(notification.PreviousAgentId))).ConversationAssigned(notification));
         }
 
         if (!string.IsNullOrEmpty(notification.OwnerQueueId))

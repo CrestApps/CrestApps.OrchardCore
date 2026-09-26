@@ -38,6 +38,12 @@
                         </button>
                     </form>
                 }
+                @if (Model.CanTransfer)
+                {
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#messaging-transfer-modal" title="@T["Hand this conversation to someone else, with its whole history."]">
+                        <i class="fa-solid fa-share me-1" aria-hidden="true"></i>@T["Transfer"]
+                    </button>
+                }
                 @if (Model.CanChangeStatus && conversation.Status == ConversationStatus.Open)
                 {
                     <form asp-route-action="SetStatus" asp-route-id="@conversation.ItemId" method="post" class="d-inline">
@@ -100,22 +106,29 @@
             {
                 <div class="text-muted" data-empty>@T["No messages yet."]</div>
             }
-            else
-            {
+            @{
                 DateTime? lastDay = null;
 
-                foreach (var message in Model.Messages)
+                // Transfers sit among the messages at the point they happened.
+                foreach (var item in ThreadTimeline.Merge(Model.Messages, Model.Events))
                 {
                     // A day separator whenever the calendar date changes.
-                    var localDay = message.CreatedUtc.ToLocalTime().Date;
+                    var localDay = item.OccurredUtc.ToLocalTime().Date;
                     if (lastDay != localDay)
                     {
                         lastDay = localDay;
                         <div class="text-center my-3">
-                            <span class="badge rounded-pill text-bg-light border">@message.CreatedUtc.ToLocalTime().ToString("D")</span>
+                            <span class="badge rounded-pill text-bg-light border">@item.OccurredUtc.ToLocalTime().ToString("D")</span>
                         </div>
                     }
 
+                    if (item.Event is not null)
+                    {
+                        @await Html.PartialAsync("_ThreadEvent", item.Event)
+                        continue;
+                    }
+
+                    var message = item.Message;
                     string agentName = null;
                     if (!message.IsInbound && !string.IsNullOrEmpty(message.SentByAgentId))
                     {
@@ -263,3 +276,90 @@
         </div>
     </div>
 </div>
+
+@if (Model.CanTransfer)
+{
+    @* Handing the conversation on: to a person who works messaging, or back to a team's shared pool. The page moves
+       the dialog to the end of the document so it stacks above the workspace panes. *@
+    <div class="modal fade" id="messaging-transfer-modal" tabindex="-1" aria-labelledby="messaging-transfer-title" aria-hidden="true" data-transfer-modal>
+        <div class="modal-dialog">
+            <form method="post" asp-route-action="Transfer" asp-route-id="@conversation.ItemId" class="modal-content" data-transfer-form>
+                <div class="modal-header">
+                    <h5 class="modal-title" id="messaging-transfer-title">@T["Transfer conversation"]</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Close"]"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small">@T["It stays the same conversation, so its whole history goes with it. The customer is not told."]</p>
+
+                    @if (Model.CanTransferToQueue)
+                    {
+                        <div class="btn-group w-100 mb-3" role="group" aria-label="@T["Transfer to"]">
+                            <input type="radio" class="btn-check" name="targetType" id="messaging-transfer-to-agent" value="@nameof(ConversationRouteTargetType.Agent)" autocomplete="off" checked data-transfer-type />
+                            <label class="btn btn-outline-primary" for="messaging-transfer-to-agent"><i class="fa-solid fa-user me-1" aria-hidden="true"></i>@T["A person"]</label>
+                            <input type="radio" class="btn-check" name="targetType" id="messaging-transfer-to-queue" value="@nameof(ConversationRouteTargetType.Queue)" autocomplete="off" data-transfer-type />
+                            <label class="btn btn-outline-primary" for="messaging-transfer-to-queue"><i class="fa-solid fa-users me-1" aria-hidden="true"></i>@T["Back to a team"]</label>
+                        </div>
+                    }
+                    else
+                    {
+                        <input type="hidden" name="targetType" value="@nameof(ConversationRouteTargetType.Agent)" />
+                    }
+
+                    <div class="mb-3" data-transfer-target="@nameof(ConversationRouteTargetType.Agent)">
+                        <label class="form-label d-block">@T["Person"]</label>
+                        @await Component.InvokeAsync("ItemSelector", new
+                        {
+                            id = "messaging-transfer-agent-selector",
+                            inputName = "targetAgentId",
+                            endpoint = Url.Action("TransferAgents", new { id = conversation.ItemId }),
+                            multiple = false,
+                            enableSearch = true,
+                            buttonText = T["Select a person"].Value,
+                            searchPlaceholder = T["Search by name"].Value,
+                            emptyResultsText = T["Nobody else who works messaging conversations matches."].Value,
+                            noSelectionText = T["Nobody selected."].Value,
+                            selectedItemsLabel = T["Selected person"].Value,
+                            availableItemsLabel = T["People who work messaging conversations"].Value,
+                        })
+                    </div>
+
+                    @if (Model.CanTransferToQueue)
+                    {
+                        <div class="mb-3 d-none" data-transfer-target="@nameof(ConversationRouteTargetType.Queue)">
+                            <label class="form-label d-block">@T["Team"]</label>
+                            @await Component.InvokeAsync("ItemSelector", new
+                            {
+                                id = "messaging-transfer-queue-selector",
+                                inputName = "targetQueueId",
+                                endpoint = Url.Action("TransferQueues", new { id = conversation.ItemId }),
+                                multiple = false,
+                                enableSearch = true,
+                                buttonText = T["Select a team"].Value,
+                                searchPlaceholder = T["Search teams"].Value,
+                                emptyResultsText = T["No team matches."].Value,
+                                noSelectionText = T["No team selected."].Value,
+                                selectedItemsLabel = T["Selected team"].Value,
+                                availableItemsLabel = T["Teams"].Value,
+                            })
+                            <span class="hint">@T["The conversation goes back to the team's shared inbox for any member to claim."]</span>
+                        </div>
+                    }
+
+                    <div class="alert alert-warning py-2 small d-none" role="alert" data-transfer-required>@T["Choose who to transfer the conversation to."]</div>
+
+                    <div>
+                        <label for="messaging-transfer-note" class="form-label">@T["Note for the recipient"] <span class="text-muted small">@T["(optional)"]</span></label>
+                        <textarea id="messaging-transfer-note" name="note" class="form-control" rows="2" maxlength="500"></textarea>
+                        <span class="hint">@T["Kept in the conversation's history for your team. It is never sent to the customer."]</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">@T["Cancel"]</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-share me-1" aria-hidden="true"></i>@T["Transfer"]
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+}

@@ -137,6 +137,51 @@
     }
     return null;
   }
+
+  // Classifies a notification that a conversation changed hands against who is looking. A transfer reaches the
+  // recipient, the team whose pool it went to and whoever held it before, and each is told something different.
+  //   'to-me'   - it was transferred to the viewing agent: say who sent it.
+  //   'away'    - the conversation on screen was moved on by somebody else: say where it went.
+  //   'to-team' - it was sent back to a team's shared pool the viewer serves: say so.
+  //   'refresh' - a claim, a routed assignment, or the viewer's own transfer: only the list needs to catch up.
+  function classifyAssignment(notification, view) {
+    if (!notification || !notification.isTransfer) {
+      return 'refresh';
+    }
+    var agentId = view && view.agentId;
+
+    // The sender already knows; their page is already on its way back to the list.
+    if (agentId && notification.transferredByAgentId === agentId) {
+      return 'refresh';
+    }
+    if (agentId && notification.assignedAgentId === agentId) {
+      return 'to-me';
+    }
+    if (view && view.conversationId && notification.conversationId === view.conversationId) {
+      return 'away';
+    }
+    if (!notification.assignedAgentId && notification.ownerQueueId) {
+      return 'to-team';
+    }
+    return 'refresh';
+  }
+
+  // Fills the numbered placeholders ({0}, {1}, ...) of a localized text the page carries for script to complete.
+  function formatText(template, values) {
+    var args = values || [];
+    return String(template || '').replace(/\{(\d+)\}/g, function (match, index) {
+      var value = args[Number(index)];
+      return value === undefined || value === null ? '' : String(value);
+    });
+  }
+
+  // The transfer form carries a picker for a person and one for a team; only the chosen one must hold a selection.
+  function transferTargetInputName(targetType) {
+    return targetType === 'Queue' ? 'targetQueueId' : 'targetAgentId';
+  }
+  messaging.classifyAssignment = classifyAssignment;
+  messaging.formatText = formatText;
+  messaging.transferTargetInputName = transferTargetInputName;
   messaging.unseenInboundCount = unseenInboundCount;
   messaging.sameOriginUrl = sameOriginUrl;
   messaging.maxTicks = maxTicks;
@@ -162,7 +207,8 @@
   }
   var view = {
     conversationId: workspace.getAttribute('data-conversation-id') || null,
-    customerKey: workspace.getAttribute('data-customer-key') || null
+    customerKey: workspace.getAttribute('data-customer-key') || null,
+    agentId: workspace.getAttribute('data-agent-id') || null
   };
   var hubUrl = workspace.getAttribute('data-hub-url');
   var inboxUrl = workspace.getAttribute('data-inbox-url');
@@ -171,6 +217,10 @@
   var availabilityUrl = workspace.getAttribute('data-availability-url');
   var newMessageText = workspace.getAttribute('data-new-message-text');
   var viewText = workspace.getAttribute('data-view-text');
+  var someoneText = workspace.getAttribute('data-someone-text');
+  var transferredToYouText = workspace.getAttribute('data-transferred-to-you-text');
+  var transferredToTeamText = workspace.getAttribute('data-transferred-to-team-text');
+  var transferredAwayText = workspace.getAttribute('data-transferred-away-text');
   var list = workspace.querySelector('[data-inbox-list]');
   var search = workspace.querySelector('[data-inbox-search]');
   var thread = workspace.querySelector('[data-thread]');
@@ -431,6 +481,46 @@
     });
   }
 
+  // ---- Transfer ----------------------------------------------------------------------------------------------
+
+  // The dialog is rendered with the conversation but moved to the end of the document, so it stacks above the
+  // workspace panes rather than inside them.
+  var transferModal = workspace.querySelector('[data-transfer-modal]');
+  if (transferModal) {
+    document.body.appendChild(transferModal);
+    var transferForm = transferModal.querySelector('[data-transfer-form]');
+    var transferRequired = transferModal.querySelector('[data-transfer-required]');
+    var transferType = function () {
+      var checked = transferForm.querySelector('[data-transfer-type]:checked');
+      return checked ? checked.value : 'Agent';
+    };
+
+    // Only the picker for the kind of target chosen is shown; the other keeps its selection but is not read.
+    var showTransferTarget = function () {
+      var type = transferType();
+      transferForm.querySelectorAll('[data-transfer-target]').forEach(function (section) {
+        section.classList.toggle('d-none', section.getAttribute('data-transfer-target') !== type);
+      });
+      if (transferRequired) {
+        transferRequired.classList.add('d-none');
+      }
+    };
+    transferForm.querySelectorAll('[data-transfer-type]').forEach(function (radio) {
+      radio.addEventListener('change', showTransferTarget);
+    });
+    showTransferTarget();
+    transferForm.addEventListener('submit', function (event) {
+      var inputName = messaging.transferTargetInputName(transferType());
+      var chosen = transferForm.querySelector('input[type="hidden"][name="' + inputName + '"]');
+      if (!chosen || !chosen.value) {
+        event.preventDefault();
+        if (transferRequired) {
+          transferRequired.classList.remove('d-none');
+        }
+      }
+    });
+  }
+
   // ---- Toasts ------------------------------------------------------------------------------------------------
 
   function showToast(title, body, href) {
@@ -499,11 +589,32 @@
     }
     refreshInbox();
   }
+  function conversationHref(conversationId) {
+    return conversationId ? conversationUrlTemplate.replace('__ID__', encodeURIComponent(conversationId)) : null;
+  }
+
+  // A conversation changed hands: the list always catches up, and a transfer also says who moved it where.
+  function onAssigned(notification) {
+    var by = notification && notification.transferredByName || someoneText;
+    var to = notification && notification.transferredToName || someoneText;
+    switch (messaging.classifyAssignment(notification, view)) {
+      case 'to-me':
+        showToast(messaging.formatText(transferredToYouText, [by]), '', conversationHref(notification.conversationId));
+        break;
+      case 'to-team':
+        showToast(messaging.formatText(transferredToTeamText, [by, to]), '', conversationHref(notification.conversationId));
+        break;
+      case 'away':
+        showToast(messaging.formatText(transferredAwayText, [to]), '', null);
+        break;
+    }
+    refreshInbox();
+  }
   if (root.signalR && hubUrl) {
     try {
       var connection = new root.signalR.HubConnectionBuilder().withUrl(hubUrl).withAutomaticReconnect().build();
       connection.on('NewInboundMessage', onInbound);
-      connection.on('ConversationAssigned', refreshInbox);
+      connection.on('ConversationAssigned', onAssigned);
       connection.on('MessageDeliveryUpdated', function (notification) {
         if (notification && notification.conversationId === view.conversationId) {
           pullThread();

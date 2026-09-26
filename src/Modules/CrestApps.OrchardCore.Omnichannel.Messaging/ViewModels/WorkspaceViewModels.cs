@@ -126,6 +126,12 @@ public class InboxViewModel
 
     public bool HasAgentProfile { get; set; }
 
+    /// <summary>
+    /// Gets or sets the viewing agent's profile, so the page can tell a conversation sent to them from one sent to a
+    /// colleague.
+    /// </summary>
+    public string CurrentAgentId { get; set; }
+
     public bool Available { get; set; }
 
     public MessagingInboxFilter Filter { get; set; } = MessagingInboxFilter.All;
@@ -222,6 +228,11 @@ public class ThreadViewModel
 
     public IReadOnlyList<OmnichannelMessage> Messages { get; set; } = [];
 
+    /// <summary>
+    /// Gets or sets the conversation's history entries (its transfers) that belong with the page of messages shown.
+    /// </summary>
+    public IReadOnlyList<MessagingConversationEvent> Events { get; set; } = [];
+
     public string Body { get; set; }
 
     public IReadOnlyList<MessageTemplate> Templates { get; set; } = [];
@@ -235,6 +246,17 @@ public class ThreadViewModel
     public bool CanClaim { get; set; }
 
     public bool CanChangeStatus { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the viewer may hand the conversation to somebody else: they hold it, or
+    /// they supervise the workspace.
+    /// </summary>
+    public bool CanTransfer { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the conversation can also be sent back to a team's shared pool.
+    /// </summary>
+    public bool CanTransferToQueue { get; set; }
 
     public bool CanSend { get; set; }
 

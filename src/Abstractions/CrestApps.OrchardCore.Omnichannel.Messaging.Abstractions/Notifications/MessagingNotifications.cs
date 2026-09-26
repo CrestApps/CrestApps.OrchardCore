@@ -81,6 +81,32 @@ public sealed class MessagingAssignmentNotification
     /// Gets or sets the identifier of the queue the conversation belongs to, when queue-owned.
     /// </summary>
     public string OwnerQueueId { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether a person handed the conversation over (a transfer), rather than it
+    /// being claimed or routed, so the recipient's workspace can say who sent it to them.
+    /// </summary>
+    public bool IsTransfer { get; set; }
+
+    /// <summary>
+    /// Gets or sets the agent who held the conversation before the change, so their inbox can drop it.
+    /// </summary>
+    public string PreviousAgentId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the agent who made a transfer.
+    /// </summary>
+    public string TransferredByAgentId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the display name of the person who made a transfer.
+    /// </summary>
+    public string TransferredByName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the display name of the person or team a transfer went to.
+    /// </summary>
+    public string TransferredToName { get; set; }
 }
 
 /// <summary>

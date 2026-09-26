@@ -27,6 +27,8 @@ public sealed class AdminController : Controller
 
     private readonly IMessagingConversationStore _conversationStore;
     private readonly IMessagingConversationService _conversationService;
+    private readonly IMessagingConversationTransferService _transferService;
+    private readonly MessagingTransferTargets _transferTargets;
     private readonly IMessagingBroadcastManager _broadcastManager;
     private readonly IMessagingChannelResolver _channelResolver;
     private readonly IOmnichannelChannelEndpointManager _endpointManager;
@@ -42,6 +44,8 @@ public sealed class AdminController : Controller
     public AdminController(
         IMessagingConversationStore conversationStore,
         IMessagingConversationService conversationService,
+        IMessagingConversationTransferService transferService,
+        MessagingTransferTargets transferTargets,
         IMessagingBroadcastManager broadcastManager,
         IMessagingChannelResolver channelResolver,
         IOmnichannelChannelEndpointManager endpointManager,
@@ -55,6 +59,8 @@ public sealed class AdminController : Controller
     {
         _conversationStore = conversationStore;
         _conversationService = conversationService;
+        _transferService = transferService;
+        _transferTargets = transferTargets;
         _broadcastManager = broadcastManager;
         _channelResolver = channelResolver;
         _endpointManager = endpointManager;
@@ -479,27 +485,117 @@ public sealed class AdminController : Controller
         return RedirectToAction(nameof(Conversation), new { id });
     }
 
-    [HttpPost]
-    [Admin("messaging/conversation/{id}/transfer", "MessagingTransfer")]
-    public async Task<IActionResult> Transfer(string id, string targetAgentId)
+    // The people the open conversation can be handed to, as {value, text} pairs for the searchable picker. Only those
+    // who may transfer the conversation see who they could send it to.
+    [Admin("messaging/conversation/{id}/transfer/agents", "MessagingTransferAgents")]
+    public async Task<IActionResult> TransferAgents(string id, string query)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, MessagingPermissions.ViewAllConversations))
+        var (conversation, refusal) = await FindTransferableAsync(id);
+
+        if (refusal is not null)
         {
-            return Forbid();
+            return refusal;
         }
 
-        var result = await _conversationService.AssignAsync(id, targetAgentId, User);
+        return Json(await _transferTargets.SearchAgentsAsync(conversation, query, HttpContext.RequestAborted));
+    }
+
+    // The teams whose shared pool the open conversation can be sent back to, for the same picker.
+    [Admin("messaging/conversation/{id}/transfer/queues", "MessagingTransferQueues")]
+    public async Task<IActionResult> TransferQueues(string id, string query)
+    {
+        var (conversation, refusal) = await FindTransferableAsync(id);
+
+        if (refusal is not null)
+        {
+            return refusal;
+        }
+
+        return Json(await _transferTargets.SearchQueuesAsync(conversation, query, HttpContext.RequestAborted));
+    }
+
+    // Hands the conversation to another person, or back to a team's shared pool. Whoever holds the conversation may
+    // do it, and so may a supervisor; an unclaimed conversation is claimed first. It stays the same conversation, so
+    // its whole history goes with it.
+    [HttpPost]
+    [Admin("messaging/conversation/{id}/transfer", "MessagingTransfer")]
+    public async Task<IActionResult> Transfer(string id, ConversationRouteTargetType targetType, string targetAgentId, string targetQueueId, string note)
+    {
+        var (_, refusal) = await FindTransferableAsync(id);
+
+        if (refusal is not null)
+        {
+            return refusal;
+        }
+
+        var targetId = targetType == ConversationRouteTargetType.Queue ? targetQueueId : targetAgentId;
+
+        // The picker only offers people who can work messaging conversations; a crafted post is held to the same rule,
+        // since a conversation sent to someone who cannot open the workspace would be stranded.
+        if (targetType == ConversationRouteTargetType.Agent &&
+            !string.IsNullOrWhiteSpace(targetId) &&
+            !await _transferTargets.IsEligibleAgentAsync(targetId, HttpContext.RequestAborted))
+        {
+            await _notifier.WarningAsync(H["The conversation could not be transferred: {0}", S["That person cannot work messaging conversations."]]);
+
+            return RedirectToAction(nameof(Conversation), new { id });
+        }
+
+        var agent = await _workspaceBuilder.GetCurrentAgentAsync(User);
+
+        var result = await _transferService.TransferAsync(new MessagingTransferRequest
+        {
+            ConversationId = id,
+            TargetType = targetType,
+            TargetId = targetId,
+            Note = note,
+            ActingAgentId = agent?.ItemId,
+            Principal = User,
+        }, HttpContext.RequestAborted);
 
         if (!result.Succeeded)
         {
             await _notifier.WarningAsync(H["The conversation could not be transferred: {0}", result.Error]);
+
+            return RedirectToAction(nameof(Conversation), new { id });
         }
-        else
+
+        if (string.IsNullOrEmpty(result.Event?.ToName))
         {
             await _notifier.SuccessAsync(H["The conversation was transferred."]);
         }
+        else
+        {
+            await _notifier.SuccessAsync(H["The conversation was transferred to {0}.", result.Event.ToName]);
+        }
 
-        return RedirectToAction(nameof(Conversation), new { id });
+        // Handing a conversation on usually means the sender can no longer open it, so they go back to their list
+        // rather than to a page that would refuse them.
+        return await _workspaceBuilder.AuthorizeAsync(User, result.Conversation, ConversationOperation.View)
+            ? RedirectToAction(nameof(Conversation), new { id })
+            : RedirectToAction(nameof(Index));
+    }
+
+    private async Task<(MessagingConversation Conversation, IActionResult Refusal)> FindTransferableAsync(string id)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, MessagingPermissions.UseMessagingWorkspace))
+        {
+            return (null, Forbid());
+        }
+
+        var conversation = await _conversationStore.FindByIdAsync(id);
+
+        if (conversation is null)
+        {
+            return (null, NotFound());
+        }
+
+        if (!await _workspaceBuilder.AuthorizeAsync(User, conversation, ConversationOperation.Transfer))
+        {
+            return (null, Forbid());
+        }
+
+        return (conversation, null);
     }
 
     private static List<string> ParseRecipients(string text)

@@ -80,6 +80,11 @@ public sealed class Startup : StartupBase
         // Two-way send, through whichever channel the conversation runs on.
         services.AddScoped<IMessagingConversationService, MessagingConversationService>();
 
+        // Handing a conversation to another person or back to a team, and the names the workspace shows for agents.
+        services
+            .AddScoped<IMessagingConversationTransferService, MessagingConversationTransferService>()
+            .AddScoped<IMessagingAgentNameProvider, MessagingAgentNameProvider>();
+
         // Per-thread authorization: the workspace permission grants the workspace, this decides which threads
         // inside it a caller owns or serves. The handler narrows the workspace permission when a conversation is
         // supplied as the authorization resource.
@@ -177,7 +182,8 @@ public sealed class Startup : StartupBase
         // The workspace page's view assembly and the composer's contact search.
         services
             .AddScoped<MessagingWorkspaceBuilder>()
-            .AddScoped<MessagingContactSearch>();
+            .AddScoped<MessagingContactSearch>()
+            .AddScoped<MessagingTransferTargets>();
 
         // Permissions.
         services.AddPermissionProvider<MessagingPermissionProvider>();

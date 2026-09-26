@@ -116,4 +116,70 @@ public sealed class SmsRealTimeNotifierTests
         unassignedClient.Verify(client => client.MessageDeliveryUpdated(notification), Times.Once);
         allClient.Verify(client => client.MessageDeliveryUpdated(It.IsAny<MessagingDeliveryNotification>()), Times.Never);
     }
+
+    [Fact]
+    public async Task ConversationAssignedAsync_WhenTransferred_AlsoReachesThePreviousHolder()
+    {
+        // Arrange
+        var recipientClient = new Mock<IMessagingHubClient>();
+        var previousClient = new Mock<IMessagingHubClient>();
+        var clients = new Mock<IHubClients<IMessagingHubClient>>();
+
+        clients
+            .Setup(hubClients => hubClients.Group(TenantSignalRGroupName.ForGroup("TenantA", MessagingHub.AgentGroup("agent-b"))))
+            .Returns(recipientClient.Object);
+        clients
+            .Setup(hubClients => hubClients.Group(TenantSignalRGroupName.ForGroup("TenantA", MessagingHub.AgentGroup("agent-a"))))
+            .Returns(previousClient.Object);
+
+        var hubContext = new Mock<IHubContext<MessagingHub, IMessagingHubClient>>();
+        hubContext.SetupGet(context => context.Clients).Returns(clients.Object);
+
+        var notifier = new MessagingRealTimeNotifier(hubContext.Object, new ShellSettings { Name = "TenantA" });
+
+        var notification = new MessagingAssignmentNotification
+        {
+            ConversationId = "conv-1",
+            AssignedAgentId = "agent-b",
+            PreviousAgentId = "agent-a",
+            IsTransfer = true,
+        };
+
+        // Act
+        await notifier.ConversationAssignedAsync(notification, TestContext.Current.CancellationToken);
+
+        // Assert
+        recipientClient.Verify(client => client.ConversationAssigned(notification), Times.Once);
+        previousClient.Verify(client => client.ConversationAssigned(notification), Times.Once);
+    }
+
+    [Fact]
+    public async Task ConversationAssignedAsync_WhenThePreviousHolderIsTheAssignee_SendsItOnce()
+    {
+        // Arrange
+        var agentClient = new Mock<IMessagingHubClient>();
+        var clients = new Mock<IHubClients<IMessagingHubClient>>();
+
+        clients
+            .Setup(hubClients => hubClients.Group(TenantSignalRGroupName.ForGroup("TenantA", MessagingHub.AgentGroup("agent-a"))))
+            .Returns(agentClient.Object);
+
+        var hubContext = new Mock<IHubContext<MessagingHub, IMessagingHubClient>>();
+        hubContext.SetupGet(context => context.Clients).Returns(clients.Object);
+
+        var notifier = new MessagingRealTimeNotifier(hubContext.Object, new ShellSettings { Name = "TenantA" });
+
+        var notification = new MessagingAssignmentNotification
+        {
+            ConversationId = "conv-1",
+            AssignedAgentId = "agent-a",
+            PreviousAgentId = "agent-a",
+        };
+
+        // Act
+        await notifier.ConversationAssignedAsync(notification, TestContext.Current.CancellationToken);
+
+        // Assert
+        agentClient.Verify(client => client.ConversationAssigned(notification), Times.Once);
+    }
 }

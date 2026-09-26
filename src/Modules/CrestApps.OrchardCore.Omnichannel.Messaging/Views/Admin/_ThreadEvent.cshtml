@@ -1,0 +1,45 @@
+@using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models
+@model MessagingConversationEvent
+
+@{
+    // The names were captured when the transfer happened. A team is named as one, so "to Billing" is not read as a
+    // person called Billing. GetString formats the text here; it is encoded once, as an argument of the sentence.
+    var to = !string.IsNullOrEmpty(Model.ToQueueId)
+        ? T.GetString("the {0} team", string.IsNullOrWhiteSpace(Model.ToName) ? T.GetString("unknown").Value : Model.ToName).Value
+        : string.IsNullOrWhiteSpace(Model.ToName) ? T.GetString("another agent").Value : Model.ToName;
+    var from = Model.FromName;
+    var actor = Model.ActorName;
+    var actorIsSender = !string.IsNullOrEmpty(Model.ActorAgentId) && string.Equals(Model.ActorAgentId, Model.FromAgentId, StringComparison.OrdinalIgnoreCase);
+}
+
+<div class="messaging-history-event d-flex flex-column align-items-center text-center text-muted small my-3" data-history-event>
+    <span class="badge rounded-pill text-bg-light border fw-normal text-wrap px-3 py-2">
+        <i class="fa-solid fa-share me-1" aria-hidden="true"></i>
+        @if (string.IsNullOrWhiteSpace(from))
+        {
+            if (string.IsNullOrWhiteSpace(actor))
+            {
+                @T["Transferred to {0}", to]
+            }
+            else
+            {
+                @T["{0} transferred this conversation to {1}", actor, to]
+            }
+        }
+        else if (string.IsNullOrWhiteSpace(actor) || actorIsSender)
+        {
+            @T["Transferred from {0} to {1}", from, to]
+        }
+        else
+        {
+            @T["{0} transferred this conversation from {1} to {2}", actor, from, to]
+        }
+        <span class="ms-1">&middot; @Model.OccurredUtc.ToLocalTime().ToString("t")</span>
+    </span>
+    @if (!string.IsNullOrWhiteSpace(Model.Note))
+    {
+        <span class="mt-1 fst-italic" style="max-width: 80%; white-space: pre-wrap; word-break: break-word;" title="@T["An internal note for the team; the customer never sees it."]">
+            <i class="fa-regular fa-note-sticky me-1" aria-hidden="true"></i>@Model.Note
+        </span>
+    }
+</div>

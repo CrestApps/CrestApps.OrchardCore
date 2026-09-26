@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 /// The default <see cref="IMessagingConversationAuthorizationService"/>. A supervisor holding
 /// <see cref="MessagingPermissions.ViewAllConversations"/> may do anything; every other caller is resolved to
 /// an agent profile and may only act on the threads they own, are assigned, or serve through a queue they belong
-/// to. Queue membership is confirmed against the agent entitlement policy, so the Agent Entitlements feature
+/// to; the holder of a thread may also transfer it. Queue membership is confirmed against the agent entitlement policy, so the Agent Entitlements feature
 /// narrows messaging access the same way it narrows queue sign-in.
 /// </summary>
 public sealed class MessagingConversationAuthorizationService : IMessagingConversationAuthorizationService
@@ -53,12 +53,9 @@ public sealed class MessagingConversationAuthorizationService : IMessagingConver
             return true;
         }
 
-        // Moving a thread to another agent stays a supervisor action.
-        if (operation == ConversationOperation.Transfer)
-        {
-            return false;
-        }
-
+        // Transfer needs no rule of its own: whoever holds a thread may hand it on, and the rules below only grant an
+        // unclaimed thread the reading, claiming and replying that taking it involves, so an unclaimed thread has to be
+        // claimed before it can be passed to somebody else.
         var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
 
         if (string.IsNullOrEmpty(userId))

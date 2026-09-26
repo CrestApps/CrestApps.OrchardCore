@@ -139,6 +139,58 @@
         return null;
     }
 
+    // Classifies a notification that a conversation changed hands against who is looking. A transfer reaches the
+    // recipient, the team whose pool it went to and whoever held it before, and each is told something different.
+    //   'to-me'   - it was transferred to the viewing agent: say who sent it.
+    //   'away'    - the conversation on screen was moved on by somebody else: say where it went.
+    //   'to-team' - it was sent back to a team's shared pool the viewer serves: say so.
+    //   'refresh' - a claim, a routed assignment, or the viewer's own transfer: only the list needs to catch up.
+    function classifyAssignment(notification, view) {
+        if (!notification || !notification.isTransfer) {
+            return 'refresh';
+        }
+
+        var agentId = view && view.agentId;
+
+        // The sender already knows; their page is already on its way back to the list.
+        if (agentId && notification.transferredByAgentId === agentId) {
+            return 'refresh';
+        }
+
+        if (agentId && notification.assignedAgentId === agentId) {
+            return 'to-me';
+        }
+
+        if (view && view.conversationId && notification.conversationId === view.conversationId) {
+            return 'away';
+        }
+
+        if (!notification.assignedAgentId && notification.ownerQueueId) {
+            return 'to-team';
+        }
+
+        return 'refresh';
+    }
+
+    // Fills the numbered placeholders ({0}, {1}, ...) of a localized text the page carries for script to complete.
+    function formatText(template, values) {
+        var args = values || [];
+
+        return String(template || '').replace(/\{(\d+)\}/g, function (match, index) {
+            var value = args[Number(index)];
+
+            return value === undefined || value === null ? '' : String(value);
+        });
+    }
+
+    // The transfer form carries a picker for a person and one for a team; only the chosen one must hold a selection.
+    function transferTargetInputName(targetType) {
+        return targetType === 'Queue' ? 'targetQueueId' : 'targetAgentId';
+    }
+
+    messaging.classifyAssignment = classifyAssignment;
+    messaging.formatText = formatText;
+    messaging.transferTargetInputName = transferTargetInputName;
     messaging.unseenInboundCount = unseenInboundCount;
     messaging.sameOriginUrl = sameOriginUrl;
     messaging.maxTicks = maxTicks;

@@ -131,6 +131,129 @@ public sealed class SmsPortalAdminControllerTests
         Assert.IsType<NotFoundResult>(result);
     }
 
+    [Fact]
+    public async Task Transfer_WhenTheCallerMayNotTransferIt_ReturnsForbid_AndNeverTransfers()
+    {
+        var conversation = CreateForeignConversation();
+        var transferService = new Mock<IMessagingConversationTransferService>();
+        var controller = CreateController(
+            conversation,
+            allowConversation: true,
+            transferService: transferService,
+            deniedOperations: new HashSet<ConversationOperation> { ConversationOperation.Transfer });
+
+        var result = await controller.Transfer(ConversationId, ConversationRouteTargetType.Agent, "agent-2", targetQueueId: null, note: null);
+
+        Assert.IsType<ForbidResult>(result);
+        transferService.Verify(
+            service => service.TransferAsync(It.IsAny<MessagingTransferRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Transfer_ToSomeoneWhoCannotUseMessaging_IsRefused_AndNeverTransfers()
+    {
+        // No user stands behind the target's agent profile, so they could never open what they were sent.
+        var conversation = CreateForeignConversation();
+        var transferService = new Mock<IMessagingConversationTransferService>();
+        var controller = CreateController(conversation, allowConversation: true, transferService: transferService, targetUser: null);
+
+        var result = await controller.Transfer(ConversationId, ConversationRouteTargetType.Agent, "agent-2", targetQueueId: null, note: null);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(AdminController.Conversation), redirect.ActionName);
+        transferService.Verify(
+            service => service.TransferAsync(It.IsAny<MessagingTransferRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Transfer_ToAPerson_PassesTheTargetNoteAndCaller_AndReturnsTheSenderToTheirList()
+    {
+        var conversation = CreateForeignConversation();
+        var transferService = new Mock<IMessagingConversationTransferService>();
+
+        transferService
+            .Setup(service => service.TransferAsync(It.IsAny<MessagingTransferRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MessagingTransferResult
+            {
+                Succeeded = true,
+                Conversation = conversation,
+                Event = new MessagingConversationEvent { ToName = "Bea Recipient" },
+            });
+
+        // After the transfer the sender may no longer open the conversation.
+        var controller = CreateController(
+            conversation,
+            allowConversation: true,
+            transferService: transferService,
+            deniedOperations: new HashSet<ConversationOperation> { ConversationOperation.View },
+            targetUser: Mock.Of<IUser>());
+
+        var result = await controller.Transfer(ConversationId, ConversationRouteTargetType.Agent, "agent-2", targetQueueId: "ignored-queue", note: "Invoice question");
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(AdminController.Index), redirect.ActionName);
+        transferService.Verify(
+            service => service.TransferAsync(
+                It.Is<MessagingTransferRequest>(request =>
+                    request.ConversationId == ConversationId &&
+                    request.TargetType == ConversationRouteTargetType.Agent &&
+                    request.TargetId == "agent-2" &&
+                    request.Note == "Invoice question" &&
+                    request.ActingAgentId == "agent-1" &&
+                    request.Principal != null),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Transfer_ToATeam_UsesTheQueueTarget()
+    {
+        var conversation = CreateForeignConversation();
+        var transferService = new Mock<IMessagingConversationTransferService>();
+
+        transferService
+            .Setup(service => service.TransferAsync(It.IsAny<MessagingTransferRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MessagingTransferResult { Succeeded = true, Conversation = conversation });
+
+        var controller = CreateController(conversation, allowConversation: true, transferService: transferService);
+
+        var result = await controller.Transfer(ConversationId, ConversationRouteTargetType.Queue, "ignored-agent", targetQueueId: "queue-1", note: null);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(AdminController.Conversation), redirect.ActionName);
+        transferService.Verify(
+            service => service.TransferAsync(
+                It.Is<MessagingTransferRequest>(request => request.TargetType == ConversationRouteTargetType.Queue && request.TargetId == "queue-1"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task TransferAgents_WhenTheCallerMayNotTransferIt_ReturnsForbid()
+    {
+        var conversation = CreateForeignConversation();
+        var controller = CreateController(
+            conversation,
+            allowConversation: true,
+            deniedOperations: new HashSet<ConversationOperation> { ConversationOperation.Transfer });
+
+        var result = await controller.TransferAgents(ConversationId, query: null);
+
+        Assert.IsType<ForbidResult>(result);
+    }
+
+    [Fact]
+    public async Task TransferQueues_WhenTheThreadDoesNotExist_ReturnsNotFound()
+    {
+        var controller = CreateController(conversation: null, allowConversation: true);
+
+        var result = await controller.TransferQueues(ConversationId, query: null);
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
     private static MessagingConversation CreateForeignConversation()
         => new()
         {
@@ -147,7 +270,10 @@ public sealed class SmsPortalAdminControllerTests
     private static AdminController CreateController(
         MessagingConversation conversation,
         bool allowConversation,
-        Mock<IMessagingConversationService> conversationService = null)
+        Mock<IMessagingConversationService> conversationService = null,
+        Mock<IMessagingConversationTransferService> transferService = null,
+        ISet<ConversationOperation> deniedOperations = null,
+        IUser targetUser = null)
     {
         var conversationStore = new Mock<IMessagingConversationStore>();
 
@@ -165,7 +291,29 @@ public sealed class SmsPortalAdminControllerTests
         clock.SetupGet(instance => instance.UtcNow).Returns(DateTime.UtcNow);
 
         var channels = MessagingTestChannels.Resolver(MessagingTestChannels.AcceptingDispatcher().Object);
-        var authorizationService = new ConversationAuthorizationService(allowConversation);
+        var authorizationService = new ConversationAuthorizationService(allowConversation, deniedOperations);
+
+        agentProfileManager
+            .Setup(manager => manager.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string agentId, CancellationToken _) => new AgentProfile { ItemId = agentId, UserId = "user-of-" + agentId });
+
+        var userManager = MockUserManager();
+        userManager
+            .Setup(manager => manager.FindByIdAsync(It.IsAny<string>()))
+            .ReturnsAsync(targetUser);
+
+        var principalFactory = new Mock<IUserClaimsPrincipalFactory<IUser>>();
+        principalFactory
+            .Setup(factory => factory.CreateAsync(It.IsAny<IUser>()))
+            .ReturnsAsync(new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "target-user")], "Test")));
+
+        var transferTargets = new MessagingTransferTargets(
+            agentProfileManager.Object,
+            [],
+            userManager.Object,
+            principalFactory.Object,
+            authorizationService,
+            Mock.Of<IDisplayNameProvider>());
 
         var workspaceBuilder = new MessagingWorkspaceBuilder(
             conversationStore.Object,
@@ -174,8 +322,8 @@ public sealed class SmsPortalAdminControllerTests
             Mock.Of<IMessageTemplateManager>(),
             agentProfileManager.Object,
             Mock.Of<IMessagingAvailabilityService>(),
-            MockUserManager().Object,
-            Mock.Of<IDisplayNameProvider>(),
+            Mock.Of<IMessagingAgentNameProvider>(),
+            [],
             Mock.Of<IContentManager>(),
             authorizationService,
             new MessagingQuietHoursGuard(
@@ -193,6 +341,8 @@ public sealed class SmsPortalAdminControllerTests
         var controller = new AdminController(
             conversationStore.Object,
             (conversationService ?? new Mock<IMessagingConversationService>()).Object,
+            (transferService ?? new Mock<IMessagingConversationTransferService>()).Object,
+            transferTargets,
             Mock.Of<IMessagingBroadcastManager>(),
             channels,
             Mock.Of<IOmnichannelChannelEndpointManager>(),
@@ -236,10 +386,12 @@ public sealed class SmsPortalAdminControllerTests
     private sealed class ConversationAuthorizationService : IAuthorizationService
     {
         private readonly bool _allowConversation;
+        private readonly ISet<ConversationOperation> _deniedOperations;
 
-        public ConversationAuthorizationService(bool allowConversation)
+        public ConversationAuthorizationService(bool allowConversation, ISet<ConversationOperation> deniedOperations = null)
         {
             _allowConversation = allowConversation;
+            _deniedOperations = deniedOperations ?? new HashSet<ConversationOperation>();
         }
 
         public Task<AuthorizationResult> AuthorizeAsync(
@@ -247,7 +399,8 @@ public sealed class SmsPortalAdminControllerTests
             object resource,
             IEnumerable<IAuthorizationRequirement> requirements)
         {
-            if (resource is ConversationAuthorizationResource && !_allowConversation)
+            if (resource is ConversationAuthorizationResource conversationResource &&
+                (!_allowConversation || _deniedOperations.Contains(conversationResource.Operation)))
             {
                 return Task.FromResult(AuthorizationResult.Failed());
             }
