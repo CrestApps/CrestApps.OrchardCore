@@ -17,6 +17,7 @@ public sealed class AgentAvailabilityRecoveryService : IAgentAvailabilityRecover
     private readonly IInteractionManager _interactionManager;
     private readonly IAgentPresenceManager _presenceManager;
     private readonly IActivityReservationManager _reservationManager;
+    private readonly IInteractionEventStore _eventStore;
     private readonly AgentAvailabilityOptions _options;
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -28,6 +29,7 @@ public sealed class AgentAvailabilityRecoveryService : IAgentAvailabilityRecover
     /// <param name="interactionManager">The interaction manager.</param>
     /// <param name="presenceManager">The agent presence manager.</param>
     /// <param name="reservationManager">The reservation manager.</param>
+    /// <param name="eventStore">The event log the agents' state changes are read from.</param>
     /// <param name="options">The availability policy.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
@@ -36,6 +38,7 @@ public sealed class AgentAvailabilityRecoveryService : IAgentAvailabilityRecover
         IInteractionManager interactionManager,
         IAgentPresenceManager presenceManager,
         IActivityReservationManager reservationManager,
+        IInteractionEventStore eventStore,
         IOptions<AgentAvailabilityOptions> options,
         IClock clock,
         ILogger<AgentAvailabilityRecoveryService> logger)
@@ -44,6 +47,7 @@ public sealed class AgentAvailabilityRecoveryService : IAgentAvailabilityRecover
         _interactionManager = interactionManager;
         _presenceManager = presenceManager;
         _reservationManager = reservationManager;
+        _eventStore = eventStore;
         _options = options.Value;
         _clock = clock;
         _logger = logger;
@@ -53,50 +57,51 @@ public sealed class AgentAvailabilityRecoveryService : IAgentAvailabilityRecover
     public async Task<int> RecoverAsync(CancellationToken cancellationToken = default)
         => await RecoverWrapUpAsync(cancellationToken) + await RecoverOrphanedBusyAsync(cancellationToken);
 
-    // An agent is Busy from the moment they accept an offer until the call's end releases them. When that release is
-    // missed -- live, a callback whose agent leg failed left the agent Busy with nothing on the line, and a supervisor's
-    // Set Available waited for work that would never end -- the agent is returned to work once every call they accepted
-    // is over and the grace period has passed. An accepted offer with no call yet (a preview dial or callback still being
-    // placed), a live call, and Busy with no offer of their own (a consult, a call taken over) are all left alone.
+    // An agent is Busy from the moment they accept an offer, answer a colleague's consult or take a call over, until the
+    // call's end releases them. When that release is missed -- live, a callback whose agent leg failed left the agent
+    // Busy with nothing on the line, and a supervisor's Set Available waited for work that would never end -- the agent
+    // is returned to work once the call that made them Busy is over and the grace period has passed.
+    //
+    // What made them Busy is read from their own state history rather than from their accepted reservations: accepted
+    // reservations are never closed, so they pile up across the day (one of them an offer whose call was never placed),
+    // and a consult or a take-over makes an agent Busy with no reservation at all. The state change into Busy names the
+    // call, or the reservation that leads to it; anything that cannot be traced to a call that is over is left alone,
+    // and so is an agent with any live interaction of their own.
     private async Task<int> RecoverOrphanedBusyAsync(CancellationToken cancellationToken)
     {
         var agents = await _agentManager.GetByPresenceAsync(AgentPresenceStatus.Busy, cancellationToken) ?? [];
+
+        if (agents.Count == 0)
+        {
+            return 0;
+        }
+
+        var now = _clock.UtcNow;
+        var latestChanges = (await _eventStore.GetLatestBeforeAsync(
+            nameof(AgentProfile),
+            [ContactCenterConstants.Events.AgentStateChanged],
+            agents.Select(agent => agent.ItemId),
+            now,
+            cancellationToken) ?? [])
+            .GroupBy(interactionEvent => interactionEvent.AggregateId, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.OrderBy(interactionEvent => interactionEvent.OccurredUtc).Last(), StringComparer.Ordinal);
         var recovered = 0;
 
         foreach (var agent in agents)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var accepted = (await _reservationManager.GetActiveByAgentAsync(agent.ItemId, cancellationToken) ?? [])
-                .Where(reservation => reservation.Status == ReservationStatus.Accepted)
-                .ToList();
-
-            if (accepted.Count == 0)
+            if (!latestChanges.TryGetValue(agent.ItemId, out var latestChange))
             {
                 continue;
             }
 
-            Interaction lastEnded = null;
-            var stillWorking = false;
+            var interaction = await FindWorkThatMadeBusyAsync(latestChange.GetData<AgentStateChangedEventData>(), cancellationToken);
 
-            foreach (var reservation in accepted)
-            {
-                var interaction = await _interactionManager.FindByActivityIdAsync(reservation.ActivityItemId, cancellationToken);
-
-                if (interaction is null || !interaction.IsSettled)
-                {
-                    stillWorking = true;
-
-                    break;
-                }
-
-                if (lastEnded is null || (interaction.EndedUtc ?? DateTime.MinValue) > (lastEnded.EndedUtc ?? DateTime.MinValue))
-                {
-                    lastEnded = interaction;
-                }
-            }
-
-            if (stillWorking || lastEnded is null || (lastEnded.EndedUtc ?? DateTime.MinValue) + _options.OrphanedBusyGracePeriod > _clock.UtcNow)
+            if (interaction is null ||
+                !interaction.IsSettled ||
+                (interaction.EndedUtc ?? DateTime.MinValue) + _options.OrphanedBusyGracePeriod > now ||
+                await _interactionManager.CountActiveByAgentAsync(agent.ItemId, cancellationToken) > 0)
             {
                 continue;
             }
@@ -106,7 +111,7 @@ public sealed class AgentAvailabilityRecoveryService : IAgentAvailabilityRecover
                 await _presenceManager.CompleteWorkAsync(agent.ItemId, new AgentStateChangeContext
                 {
                     Source = AgentStateChangeSources.Reconciled,
-                    InteractionId = lastEnded.ItemId,
+                    InteractionId = interaction.ItemId,
                 }, cancellationToken);
             }
             catch (InvalidOperationException ex)
@@ -122,15 +127,42 @@ public sealed class AgentAvailabilityRecoveryService : IAgentAvailabilityRecover
             if (_logger.IsEnabled(LogLevel.Information))
             {
                 _logger.LogInformation(
-                    "Returned Contact Center agent '{AgentId}' to work: they were Busy after the call '{InteractionId}' they accepted had ended.",
+                    "Returned Contact Center agent '{AgentId}' to work: they were still Busy after the call '{InteractionId}' that made them Busy had ended.",
                     agent.ItemId.SanitizeLogValue(),
-                    lastEnded.ItemId.SanitizeLogValue());
+                    interaction.ItemId.SanitizeLogValue());
             }
 
             recovered++;
         }
 
         return recovered;
+    }
+
+    // The call behind the agent's move into Busy: the one the change names, or the one the accepted reservation it
+    // names leads to. Nothing is returned when the latest change is not into Busy, since the profile and its history
+    // then disagree and there is nothing safe to act on.
+    private async Task<Interaction> FindWorkThatMadeBusyAsync(AgentStateChangedEventData change, CancellationToken cancellationToken)
+    {
+        if (change is null || change.CurrentState != AgentPresenceStatus.Busy)
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrEmpty(change.InteractionId))
+        {
+            return await _interactionManager.FindByIdAsync(change.InteractionId, cancellationToken);
+        }
+
+        if (string.IsNullOrEmpty(change.ReservationId))
+        {
+            return null;
+        }
+
+        var reservation = await _reservationManager.FindByIdAsync(change.ReservationId, cancellationToken);
+
+        return string.IsNullOrEmpty(reservation?.ActivityItemId)
+            ? null
+            : await _interactionManager.FindByActivityIdAsync(reservation.ActivityItemId, cancellationToken);
     }
 
     private async Task<int> RecoverWrapUpAsync(CancellationToken cancellationToken)
