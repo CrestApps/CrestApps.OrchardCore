@@ -41,26 +41,6 @@
         return minutes > 0 ? minutes + 'm ' + seconds + 's' : seconds + 's';
     }
 
-    function post(url, token, payload) {
-        var body = new URLSearchParams();
-
-        Object.keys(payload || {}).forEach(function (key) {
-            if (payload[key] !== undefined && payload[key] !== null) {
-                body.append(key, payload[key]);
-            }
-        });
-
-        return fetch(url, {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'RequestVerificationToken': token || ''
-            },
-            body: body.toString()
-        });
-    }
-
     function init(root) {
         var config = parseConfig(root);
         var strings = config.strings;
@@ -195,27 +175,9 @@
             var boardHtml = agents.map(function (agent) {
                 var status = agent.presenceStatus || 'Offline';
                 var detail = agent.presenceReason || status;
-                var availableModes = agent.availableMonitoringModes || [];
-                var modeButtons = {
-                    Monitor: ['btn-outline-secondary', label('monitor', 'Monitor')],
-                    Whisper: ['btn-outline-secondary', label('whisper', 'Whisper')],
-                    Barge: ['btn-outline-secondary', label('barge', 'Barge')]
-                };
-                var actions = '';
 
-                if (agent.activeInteractionId && availableModes.length) {
-                    actions = '<span class="cc-agent__actions">' + availableModes.map(function (mode) {
-                        var button = modeButtons[mode];
-
-                        if (!button) {
-                            return '';
-                        }
-
-                        return '<button type="button" class="btn btn-sm ' + button[0] + '" data-cc-engage="' +
-                            escapeHtml(agent.activeInteractionId) + '" data-cc-mode="' + escapeHtml(mode) + '">' +
-                            escapeHtml(button[1]) + '</button>';
-                    }).join('') + '</span>';
-                }
+                // Listen / Whisper / Barge, Stop, Take over and the More menu (see supervisor-interventions.js).
+                var actions = interventions ? interventions.actionsHtml(agent, state) : '';
 
                 return '<div class="cc-agent">' +
                     '<span class="cc-presence__dot is-' + status.toLowerCase() + '"></span>' +
@@ -228,15 +190,8 @@
                 '</div>';
             }).join('');
 
-            if (!setRegionHtml(refs.board, 'board', boardHtml)) {
-                return;
-            }
-
-            refs.board.querySelectorAll('[data-cc-engage]').forEach(function (button) {
-                button.addEventListener('click', function () {
-                    engage(button.getAttribute('data-cc-engage'), button.getAttribute('data-cc-mode'), button);
-                });
-            });
+            // The actions are delegated from the board (see supervisor-interventions.js), so a redraw needs no rebinding.
+            setRegionHtml(refs.board, 'board', boardHtml);
         }
 
         function watchQueues(state) {
@@ -321,35 +276,46 @@
                 .then(function (state) {
                     if (state) {
                         lastAgents = state.agents || [];
-                        render(state);
+                        lastState = state;
+
+                        if (interventions) {
+                            interventions.onState(state);
+                        }
+
+                        // An open menu is not pulled out from under the supervisor; the board catches up when it closes.
+                        if (interventions && interventions.isMenuOpen()) {
+                            renderSummary(state);
+                            renderTiles(state);
+                            watchQueues(state);
+                        } else {
+                            render(state);
+                        }
+
                         renderQualityAlerts();
                     }
                 })
                 .catch(function () { });
         }
 
-        function engage(interactionId, mode, button) {
-            if (!config.engageUrl || !interactionId || !mode) {
-                return;
-            }
-
-            button.disabled = true;
-
-            post(config.engageUrl, config.antiForgeryToken, {
-                interactionId: interactionId,
-                mode: mode
-            })
-                .then(function (response) { return response.ok ? response.json() : { succeeded: false }; })
-                .then(function (result) {
-                    if (!result || !result.succeeded) {
-                        showError((result && result.errorMessage) || label('engagementFailed', 'The supervisor action could not be started.'));
-                    } else {
-                        clearError();
+        var lastState = null;
+        var interventions = typeof window.CrestAppsContactCenter === 'object' &&
+            typeof window.CrestAppsContactCenter.createSupervisorInterventions === 'function'
+            ? window.CrestAppsContactCenter.createSupervisorInterventions({
+                root: root,
+                config: config,
+                refresh: refresh,
+                redraw: function () {
+                    if (lastState) {
+                        renderBoard(lastState);
                     }
-                })
-                .finally(function () {
-                    button.disabled = false;
-                });
+                },
+                showError: showError,
+                clearError: clearError
+            })
+            : null;
+
+        if (interventions) {
+            interventions.bind(refs.board);
         }
 
         if (window.contactCenterRealTime && config.hubUrl) {
@@ -375,6 +341,11 @@
                 onRecordingStateChanged: refresh,
                 onCallQualityAlert: onCallQualityAlert
             });
+
+            // The supervisor's own engagement moved on (their phone answered, a mode changed, a call ended).
+            if (realtime && realtime.connection) {
+                realtime.connection.on('SupervisorEngagementChanged', refresh);
+            }
         }
 
         refresh();

@@ -613,6 +613,51 @@
         });
     }
 
+    function showSupervisorMessage(root, notification) {
+        if (!notification || typeof presence.supervisorMessageHtml !== 'function') {
+            return;
+        }
+
+        var html = presence.supervisorMessageHtml(notification, {
+            messageFrom: root.getAttribute('data-contact-center-message-from'),
+            messageFromSupervisor: root.getAttribute('data-contact-center-message-from-supervisor'),
+            dismiss: root.getAttribute('data-contact-center-message-dismiss')
+        });
+
+        if (!html) {
+            return;
+        }
+
+        var phone = root.closest('.telephony-soft-phone') || document.body;
+        var list = phone.querySelector('[data-cc-supervisor-messages]');
+
+        if (!list) {
+            list = document.createElement('div');
+            list.setAttribute('data-cc-supervisor-messages', '');
+            list.addEventListener('click', function (event) {
+                var dismiss = event.target.closest('[data-cc-dismiss-message]');
+
+                if (dismiss) {
+                    var message = dismiss.closest('[data-cc-supervisor-message]');
+
+                    if (message) {
+                        message.remove();
+                    }
+                }
+            });
+
+            var anchor = phone.querySelector('[data-telephony-active-calls]') || phone.querySelector('[data-telephony-error]');
+
+            if (anchor && anchor.parentNode) {
+                anchor.parentNode.insertBefore(list, anchor);
+            } else {
+                phone.appendChild(list);
+            }
+        }
+
+        list.insertAdjacentHTML('afterbegin', html);
+    }
+
     function wireSoftPhone(root, api) {
         if (!root || !api || api.__contactCenterQueuedVoiceSyncBound) {
             return;
@@ -699,6 +744,11 @@
                         preservePendingAccept: accepted && acceptPending
                     });
                 }
+            });
+
+            // A supervisor's message: shown where the phone shows its calls, whatever tab is open, until dismissed.
+            client.connection.on('SupervisorMessage', function (notification) {
+                showSupervisorMessage(root, notification);
             });
         }
 

@@ -587,8 +587,35 @@
 .cc-agent__actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 0.35rem;
   justify-content: flex-end;
+}
+
+.cc-agent:has(.cc-agent__more) {
+  flex-wrap: wrap;
+}
+.cc-agent:has(.cc-agent__more) .cc-agent__actions {
+  flex: 1 1 100%;
+  justify-content: flex-start;
+}
+
+.cc-agent__more {
+  position: relative;
+  display: inline-block;
+}
+
+.cc-agent__menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 1050;
+  min-width: 12rem;
+}
+
+.cc-agent__monitor,
+.cc-agent__unavailable {
+  white-space: nowrap;
 }
 
 .cc-agent__body {

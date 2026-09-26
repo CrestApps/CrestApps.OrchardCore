@@ -10,6 +10,7 @@
         ["hubUrl"] = Model.HubUrl,
         ["stateUrl"] = Model.StateUrl,
         ["engageUrl"] = Model.EngageUrl,
+        ["interventionUrls"] = Model.InterventionUrls,
         ["antiForgeryToken"] = antiForgeryToken,
         ["strings"] = new Dictionary<string, string>
         {
@@ -29,6 +30,52 @@
             ["whisper"] = T["Whisper"].Value,
             ["barge"] = T["Barge"].Value,
             ["engagementFailed"] = T["The supervisor action could not be started."].Value,
+            ["listen"] = T["Listen"].Value,
+            ["listenHint"] = T["Listen: nobody hears you."].Value,
+            ["whisperHint"] = T["Whisper: only the agent hears you."].Value,
+            ["bargeHint"] = T["Barge: the agent and the customer hear you."].Value,
+            ["modes"] = T["Monitoring mode"].Value,
+            ["engagedAs"] = T["You: {0}"].Value,
+            ["connecting"] = T["Connecting your phone…"].Value,
+            ["stop"] = T["Stop"].Value,
+            ["takeOver"] = T["Take over"].Value,
+            ["takeOverHint"] = T["You take the call; the agent is released."].Value,
+            ["takeOverJoin"] = T["Joins the call on your phone, then takes it; the agent is released."].Value,
+            ["takeOverJoining"] = T["Joining the call on your phone to take it over…"].Value,
+            ["more"] = T["More"].Value,
+            ["endCall"] = T["End call…"].Value,
+            ["transfer"] = T["Transfer…"].Value,
+            ["recordOn"] = T["Start recording"].Value,
+            ["recordOff"] = T["Stop recording"].Value,
+            ["setAvailable"] = T["Set Available"].Value,
+            ["setNotReady"] = T["Set Not ready"].Value,
+            ["setBreak"] = T["Set Break"].Value,
+            ["signOut"] = T["Sign out of queues"].Value,
+            ["message"] = T["Message…"].Value,
+            ["cannotMonitor"] = T["Cannot be monitored"].Value,
+            ["panelTitle"] = T["{0}: {1}"].Value,
+            ["endCallTitle"] = T["End call"].Value,
+            ["signOutTitle"] = T["Sign out"].Value,
+            ["transferTitle"] = T["Transfer call"].Value,
+            ["messageTitle"] = T["Message"].Value,
+            ["endCallConfirm"] = T["End {0}'s call for everyone on it?"].Value,
+            ["endCallButton"] = T["End call"].Value,
+            ["signOutConfirm"] = T["Sign {0} out of their queues?"].Value,
+            ["signOutButton"] = T["Sign out"].Value,
+            ["transferTo"] = T["Transfer to"].Value,
+            ["transferNumber"] = T["Number (for a phone number)"].Value,
+            ["transferButton"] = T["Transfer"].Value,
+            ["toQueue"] = T["Queue: {0}"].Value,
+            ["toAgent"] = T["Agent: {0}"].Value,
+            ["toNumber"] = T["A phone number"].Value,
+            ["availableAgents"] = T["Available agents"].Value,
+            ["transferTargetRequired"] = T["Choose where to transfer the call."].Value,
+            ["messageTo"] = T["Message to {0}"].Value,
+            ["sendButton"] = T["Send"].Value,
+            ["messageRequired"] = T["Type a message to send."].Value,
+            ["cancel"] = T["Cancel"].Value,
+            ["actionDone"] = T["Done."].Value,
+            ["unavailableAction"] = T["This action is not available."].Value,
             ["connected"] = T["Connected"].Value,
             ["reconnecting"] = T["Connection lost. Reconnecting..."].Value,
             ["disconnected"] = T["Disconnected. Live updates are paused."].Value,
@@ -67,6 +114,10 @@
             <div class="cc-tiles" data-cc-tiles role="status" aria-live="polite" aria-labelledby="ccDashboardQueues"></div>
         </div>
     </div>
+
+    @* The confirm and form panels a supervisor's intervention opens (see Assets/js/supervisor-interventions.js). *@
+    <div data-cc-intervention-panel hidden></div>
+    <div class="visually-hidden" data-cc-intervention-status role="status" aria-live="polite"></div>
 
     <div class="cc-panel">
         <div class="cc-panel__header" id="ccDashboardAgents">@T["Agents"]</div>

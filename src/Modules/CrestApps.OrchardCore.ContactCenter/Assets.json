@@ -17,13 +17,23 @@
   },
   {
     "inputs": [
+      "Assets/js/shared/supervisor-actions.js",
+      "Assets/js/supervisor-interventions.js",
       "Assets/js/supervisor-dashboard.js"
     ],
     "output": "wwwroot/scripts/supervisor-dashboard.js"
   },
   {
     "inputs": [
+      "Assets/js/shared/supervisor-actions.js",
+      "Assets/js/contact-center-supervisor-phone.js"
+    ],
+    "output": "wwwroot/scripts/contact-center-supervisor-phone.js"
+  },
+  {
+    "inputs": [
       "Assets/js/shared/agent-presence.js",
+      "Assets/js/shared/supervisor-actions.js",
       "Assets/js/contact-center-soft-phone.js"
     ],
     "output": "wwwroot/scripts/contact-center-soft-phone.js"

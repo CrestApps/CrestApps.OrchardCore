@@ -569,8 +569,39 @@
 .cc-agent__actions {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: 0.35rem;
     justify-content: flex-end;
+}
+
+// With a supervisor's actions the row wraps: the agent on the first line, what can be done about their call below it,
+// so the name is never squeezed out by the buttons in a narrow card.
+.cc-agent:has(.cc-agent__more) {
+    flex-wrap: wrap;
+
+    .cc-agent__actions {
+        flex: 1 1 100%;
+        justify-content: flex-start;
+    }
+}
+
+// The supervisor's More menu on an agent row: anchored under its button, above the rows that follow.
+.cc-agent__more {
+    position: relative;
+    display: inline-block;
+}
+
+.cc-agent__menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    z-index: 1050;
+    min-width: 12rem;
+}
+
+.cc-agent__monitor,
+.cc-agent__unavailable {
+    white-space: nowrap;
 }
 
 .cc-agent__body {

@@ -4,6 +4,727 @@
 */
 
 /*
+ * What a supervisor can do about an agent's call, and how it reads: the live dashboard's per-agent actions (Listen,
+ * Whisper, Barge, Take over, and a More menu with End call, Transfer, Record, the agent's state and a message), and the
+ * engagement banner the supervisor's own soft phone shows while they are on a call (who they are listening to, a mode
+ * switcher, and Stop -- or Hang up, once they have taken the call over).
+ *
+ * The server says what is possible (the modes the call's provider supports, the interventions the supervisor's
+ * permission allows, whether they are engaged and connected); these helpers only decide how it looks. Every string is
+ * the page's localized one, with an English fallback.
+ *
+ * Concatenated ahead of the scripts that use it by the module asset pipeline. It attaches to a shared namespace
+ * rather than exporting, so the same file runs in the browser bundles and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var contactCenter = root.CrestAppsContactCenter = root.CrestAppsContactCenter || {};
+
+  // The engagement modes, in the order they are offered.
+  var MONITOR_MODES = ['Monitor', 'Whisper', 'Barge'];
+
+  // Where an engagement is, from the supervisor's click to its end.
+  var PHASES = {
+    requested: 'requested',
+    connecting: 'connecting',
+    connected: 'connected',
+    tookOver: 'tookOver',
+    ended: 'ended'
+  };
+  function text(labels, key, fallback) {
+    return labels && labels[key] || fallback;
+  }
+  function format(template) {
+    var args = Array.prototype.slice.call(arguments, 1);
+    return String(template).replace(/\{(\d+)\}/g, function (match, index) {
+      return args[index] !== undefined ? args[index] : match;
+    });
+  }
+  function escapeHtml(value) {
+    return String(value === undefined || value === null ? '' : value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function modeLabel(mode, labels) {
+    switch (mode) {
+      case 'Whisper':
+        return text(labels, 'whisper', 'Whisper');
+      case 'Barge':
+        return text(labels, 'barge', 'Barge');
+      default:
+        return text(labels, 'listen', 'Listen');
+    }
+  }
+
+  // What the supervisor hears and who hears them, per mode.
+  function modeHint(mode, labels) {
+    switch (mode) {
+      case 'Whisper':
+        return text(labels, 'whisperHint', 'Only the agent hears you.');
+      case 'Barge':
+        return text(labels, 'bargeHint', 'The agent and the customer hear you.');
+      default:
+        return text(labels, 'listenHint', 'Nobody hears you.');
+    }
+  }
+  function has(list, value) {
+    return Array.isArray(list) && list.indexOf(value) >= 0;
+  }
+
+  // The dashboard's actions for one agent row.
+  //   agent: a row of the dashboard state; state: { canIntervene, canMessage }; labels: localized strings.
+  // Returns { modes: [{ mode, label, pressed, action }], stop, takeOver: { disabled, title } | null,
+  //           menu: [{ action, label, danger }], engagedLabel, unavailable }.
+  function agentActions(agent, state, labels) {
+    var actions = {
+      modes: [],
+      stop: false,
+      takeOver: null,
+      menu: [],
+      engagedLabel: '',
+      unavailable: agent && agent.monitoringUnavailableReason || ''
+    };
+    if (!agent) {
+      return actions;
+    }
+    var interactionId = agent.activeInteractionId;
+    var engaged = !!(interactionId && agent.monitorMode);
+    var interventions = agent.availableInterventions || [];
+    if (interactionId) {
+      MONITOR_MODES.forEach(function (mode) {
+        if (!has(agent.availableMonitoringModes, mode)) {
+          return;
+        }
+        actions.modes.push({
+          mode: mode,
+          label: modeLabel(mode, labels),
+          pressed: engaged && agent.monitorMode === mode,
+          // Engaged, a mode button changes the mode on the same leg; otherwise it rings the supervisor.
+          action: engaged ? 'switch' : 'engage'
+        });
+      });
+      if (engaged) {
+        actions.stop = true;
+        actions.engagedLabel = agent.monitorConnected ? format(text(labels, 'engagedAs', 'You: {0}'), modeLabel(agent.monitorMode, labels)) : text(labels, 'connecting', 'Connecting your phone…');
+      }
+      if (has(interventions, 'TakeOver')) {
+        var ready = engaged && agent.monitorConnected;
+
+        // Not on the call yet: it barges in first, and takes the call over once the supervisor's phone is on it.
+        actions.takeOver = {
+          disabled: engaged && !agent.monitorConnected,
+          joinFirst: !engaged,
+          title: ready ? text(labels, 'takeOverHint', 'You take the call; the agent is released.') : text(labels, 'takeOverJoin', 'Joins the call on your phone, then takes it; the agent is released.')
+        };
+      }
+      if (has(interventions, 'EndCall')) {
+        actions.menu.push({
+          action: 'end-call',
+          label: text(labels, 'endCall', 'End call…'),
+          danger: true
+        });
+      }
+      if (has(interventions, 'Transfer')) {
+        actions.menu.push({
+          action: 'transfer',
+          label: text(labels, 'transfer', 'Transfer…')
+        });
+      }
+      if (has(interventions, 'Record')) {
+        var recording = agent.recordingState === 'Recording';
+        actions.menu.push({
+          action: recording ? 'record-off' : 'record-on',
+          label: recording ? text(labels, 'recordOff', 'Stop recording') : text(labels, 'recordOn', 'Start recording')
+        });
+      }
+    }
+    if (state && state.canIntervene) {
+      actions.menu.push({
+        action: 'state:Available',
+        label: text(labels, 'setAvailable', 'Set Available')
+      });
+      actions.menu.push({
+        action: 'state:Away',
+        label: text(labels, 'setNotReady', 'Set Not ready')
+      });
+      actions.menu.push({
+        action: 'state:Break',
+        label: text(labels, 'setBreak', 'Set Break')
+      });
+      actions.menu.push({
+        action: 'state:SignOut',
+        label: text(labels, 'signOut', 'Sign out of queues'),
+        danger: true
+      });
+    }
+    if (state && state.canMessage) {
+      actions.menu.push({
+        action: 'message',
+        label: text(labels, 'message', 'Message…')
+      });
+    }
+    return actions;
+  }
+
+  // The HTML of one agent row's actions. `openMenu` is whether this row's More menu is open.
+  function agentActionsHtml(agent, state, labels, openMenu) {
+    var actions = agentActions(agent, state, labels);
+    var id = escapeHtml(agent.agentId);
+    var interactionId = escapeHtml(agent.activeInteractionId || '');
+    var html = '';
+    if (actions.engagedLabel) {
+      html += '<span class="badge text-bg-info cc-agent__monitor" data-cc-monitor-state>' + escapeHtml(actions.engagedLabel) + '</span>';
+    }
+    if (actions.modes.length) {
+      html += '<span class="btn-group btn-group-sm" role="group" aria-label="' + escapeHtml(text(labels, 'modes', 'Monitoring mode')) + '">' + actions.modes.map(function (mode) {
+        return '<button type="button" class="btn btn-sm ' + (mode.pressed ? 'btn-primary' : 'btn-outline-secondary') + '"' + ' data-cc-' + mode.action + '="' + interactionId + '" data-cc-mode="' + escapeHtml(mode.mode) + '"' + ' aria-pressed="' + (mode.pressed ? 'true' : 'false') + '"' + ' title="' + escapeHtml(modeHint(mode.mode, labels)) + '">' + escapeHtml(mode.label) + '</button>';
+      }).join('') + '</span>';
+    }
+    if (actions.stop) {
+      html += '<button type="button" class="btn btn-sm btn-outline-danger" data-cc-stop="' + interactionId + '">' + escapeHtml(text(labels, 'stop', 'Stop')) + '</button>';
+    }
+    if (actions.takeOver) {
+      html += '<button type="button" class="btn btn-sm btn-outline-warning" data-cc-takeover="' + interactionId + '"' + (actions.takeOver.joinFirst ? ' data-cc-join-first="true"' : '') + (actions.takeOver.disabled ? ' disabled aria-disabled="true"' : '') + ' title="' + escapeHtml(actions.takeOver.title) + '">' + escapeHtml(text(labels, 'takeOver', 'Take over')) + '</button>';
+    }
+    if (actions.menu.length) {
+      var menuId = 'cc-agent-menu-' + id;
+      html += '<span class="cc-agent__more">' + '<button type="button" class="btn btn-sm btn-outline-secondary" data-cc-more="' + id + '" aria-haspopup="menu"' + ' aria-expanded="' + (openMenu ? 'true' : 'false') + '" aria-controls="' + menuId + '">' + escapeHtml(text(labels, 'more', 'More')) + ' <span aria-hidden="true">&#9662;</span></button>' + '<span class="cc-agent__menu dropdown-menu' + (openMenu ? ' show' : '') + '" role="menu" id="' + menuId + '"' + ' data-cc-menu="' + id + '"' + (openMenu ? '' : ' hidden') + '>' + actions.menu.map(function (item) {
+        return '<button type="button" role="menuitem" class="dropdown-item' + (item.danger ? ' text-danger' : '') + '"' + ' data-cc-action="' + escapeHtml(item.action) + '" data-cc-agent="' + id + '" data-cc-interaction="' + interactionId + '">' + escapeHtml(item.label) + '</button>';
+      }).join('') + '</span></span>';
+    }
+    if (actions.unavailable) {
+      html += '<span class="cc-agent__unavailable text-muted small" role="note" title="' + escapeHtml(actions.unavailable) + '">' + '<i class="fa-solid fa-circle-info" aria-hidden="true"></i> ' + escapeHtml(text(labels, 'cannotMonitor', 'Cannot be monitored')) + '<span class="visually-hidden">: ' + escapeHtml(actions.unavailable) + '</span></span>';
+    }
+    return html ? '<span class="cc-agent__actions">' + html + '</span>' : '';
+  }
+
+  // The supervisor's phone's view of their engagement after an event.
+  //   current: the engagement, or null; event: { source: 'hub'|'phone', state|type, ... }.
+  function nextEngagement(current, event) {
+    if (!event) {
+      return current;
+    }
+    if (event.source === 'hub') {
+      var notification = event.notification || {};
+      switch (notification.state) {
+        case 'Requested':
+          return {
+            interactionId: notification.interactionId,
+            token: notification.monitorToken,
+            agentName: notification.agentName || '',
+            mode: notification.mode || 'Monitor',
+            phase: PHASES.requested,
+            reason: ''
+          };
+        case 'Connected':
+          return current && current.interactionId === notification.interactionId && current.phase !== PHASES.ended && current.phase !== PHASES.tookOver ? Object.assign({}, current, {
+            phase: PHASES.connected
+          }) : current;
+        case 'ModeChanged':
+          return current && current.interactionId === notification.interactionId ? Object.assign({}, current, {
+            mode: notification.mode || current.mode
+          }) : current;
+        case 'TookOver':
+          return current && current.interactionId === notification.interactionId ? Object.assign({}, current, {
+            phase: PHASES.tookOver,
+            mode: 'Barge'
+          }) : current;
+        case 'Ended':
+          return current && current.interactionId === notification.interactionId ? Object.assign({}, current, {
+            phase: PHASES.ended,
+            reason: notification.reason || ''
+          }) : current;
+        default:
+          return current;
+      }
+    }
+    if (!current || event.token && current.token && event.token !== current.token) {
+      return current;
+    }
+    switch (event.type) {
+      case 'answering':
+        return current.phase === PHASES.requested ? Object.assign({}, current, {
+          phase: PHASES.connecting
+        }) : current;
+      case 'connected':
+        return current.phase === PHASES.requested || current.phase === PHASES.connecting ? Object.assign({}, current, {
+          phase: PHASES.connected
+        }) : current;
+      case 'ended':
+      case 'refused':
+        return Object.assign({}, current, {
+          phase: PHASES.ended
+        });
+      default:
+        return current;
+    }
+  }
+
+  // The HTML of the supervisor's engagement banner in their soft phone, or '' when there is none to show.
+  function monitorBannerHtml(engagement, labels) {
+    if (!engagement || engagement.phase === PHASES.ended) {
+      return '';
+    }
+    var name = engagement.agentName || text(labels, 'anAgent', 'an agent');
+    var tookOver = engagement.phase === PHASES.tookOver;
+    var title;
+    if (tookOver) {
+      title = format(text(labels, 'tookOver', 'You took over {0}\'s call'), name);
+    } else if (engagement.phase === PHASES.connected) {
+      title = format(text(labels, 'monitoring', 'Monitoring {0}'), name);
+    } else {
+      title = format(text(labels, 'connectingTo', 'Connecting to {0}\'s call…'), name);
+    }
+    var html = '<div class="telephony-soft-phone__monitor-title d-flex align-items-center gap-1 mb-1">' + '<i class="fa-solid fa-headset" aria-hidden="true"></i>' + '<strong data-cc-monitor-title>' + escapeHtml(title) + '</strong></div>';
+    if (!tookOver) {
+      html += '<div class="telephony-soft-phone__monitor-hint small" data-cc-monitor-hint>' + escapeHtml(modeHint(engagement.mode, labels)) + '</div>' + '<div class="btn-group btn-group-sm w-100" role="radiogroup" aria-label="' + escapeHtml(text(labels, 'modes', 'Monitoring mode')) + '">' + MONITOR_MODES.map(function (mode) {
+        var checked = engagement.mode === mode;
+        return '<button type="button" role="radio" class="btn btn-sm ' + (checked ? 'btn-primary' : 'btn-outline-primary') + '"' + ' aria-checked="' + (checked ? 'true' : 'false') + '" data-cc-monitor-mode="' + mode + '"' + (engagement.phase === PHASES.connected ? '' : ' disabled') + '>' + escapeHtml(modeLabel(mode, labels)) + '</button>';
+      }).join('') + '</div>';
+    }
+    html += '<button type="button" class="btn btn-sm btn-outline-danger w-100 mt-1" data-cc-monitor-stop>' + escapeHtml(tookOver ? text(labels, 'hangUp', 'Hang up') : text(labels, 'stop', 'Stop')) + '</button>';
+    return html;
+  }
+
+  // The HTML of a supervisor's message on the agent's soft phone.
+  function supervisorMessageHtml(notification, labels) {
+    if (!notification || !notification.text) {
+      return '';
+    }
+    var from = notification.fromName ? format(text(labels, 'messageFrom', 'Message from {0}'), notification.fromName) : text(labels, 'messageFromSupervisor', 'Message from your supervisor');
+    return '<div class="alert alert-info alert-dismissible py-2 small mb-2" role="alert" data-cc-supervisor-message="' + escapeHtml(notification.messageId || '') + '">' + '<strong>' + escapeHtml(from) + '</strong><div>' + escapeHtml(notification.text) + '</div>' + '<button type="button" class="btn-close" data-cc-dismiss-message aria-label="' + escapeHtml(text(labels, 'dismiss', 'Dismiss')) + '"></button>' + '</div>';
+  }
+  contactCenter.supervisorMessageHtml = supervisorMessageHtml;
+  contactCenter.MONITOR_MODES = MONITOR_MODES;
+  contactCenter.MONITOR_PHASES = PHASES;
+  contactCenter.supervisorAgentActions = agentActions;
+  contactCenter.supervisorAgentActionsHtml = agentActionsHtml;
+  contactCenter.nextMonitorEngagement = nextEngagement;
+  contactCenter.monitorBannerHtml = monitorBannerHtml;
+  contactCenter.monitorModeLabel = modeLabel;
+  contactCenter.escapeSupervisorHtml = escapeHtml;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * The live dashboard's supervisor interventions: Listen / Whisper / Barge, Stop, Take over, and the More menu (End call,
+ * Transfer, Record, the agent's state, Message), with the confirm and form panels they open.
+ *
+ * The dashboard script owns the page and its polling; this owns what the per-agent actions do. The rows are redrawn
+ * whenever the state changes, so everything here is delegated from the board and the panel, and what is open (a menu,
+ * a panel) is remembered across redraws. How the actions read lives in shared/supervisor-actions.js.
+ *
+ * Concatenated after shared/supervisor-actions.js and ahead of supervisor-dashboard.js.
+ */
+(function (window, document) {
+  'use strict';
+
+  var contactCenter = window.CrestAppsContactCenter = window.CrestAppsContactCenter || {};
+
+  // How long a Take over that had to barge in first waits for the supervisor's phone to connect.
+  var TAKEOVER_JOIN_TIMEOUT_MS = 30000;
+
+  // Each panel's title: the localized string's key and its fallback.
+  var PANEL_TITLES = {
+    'end-call': ['endCallTitle', 'End call'],
+    'sign-out': ['signOutTitle', 'Sign out'],
+    transfer: ['transferTitle', 'Transfer call'],
+    message: ['messageTitle', 'Message']
+  };
+  function createSupervisorInterventions(options) {
+    var root = options.root;
+    var config = options.config || {};
+    var strings = config.strings || {};
+    var urls = config.interventionUrls || {};
+    var escape = contactCenter.escapeSupervisorHtml;
+    var panel = root.querySelector('[data-cc-intervention-panel]');
+    var status = root.querySelector('[data-cc-intervention-status]');
+    var openMenuAgentId = null;
+    var openPanel = null;
+    var pendingTakeovers = {};
+    var lastState = {
+      agents: [],
+      queues: []
+    };
+    function label(key, fallback) {
+      return strings[key] || fallback;
+    }
+    function format(template) {
+      var args = Array.prototype.slice.call(arguments, 1);
+      return String(template).replace(/\{(\d+)\}/g, function (match, index) {
+        return args[index] !== undefined ? args[index] : match;
+      });
+    }
+    function findAgent(agentId) {
+      return (lastState.agents || []).find(function (agent) {
+        return agent.agentId === agentId;
+      });
+    }
+    function findAgentByInteraction(interactionId) {
+      return (lastState.agents || []).find(function (agent) {
+        return agent.activeInteractionId === interactionId;
+      });
+    }
+    function announce(message, isError) {
+      if (isError) {
+        options.showError(message);
+        return;
+      }
+      options.clearError();
+      if (status) {
+        status.textContent = message || '';
+      }
+    }
+    function post(name, payload) {
+      var url = name === 'engage' ? config.engageUrl : urls[name];
+      if (!url) {
+        return Promise.resolve({
+          succeeded: false,
+          errorMessage: label('unavailableAction', 'This action is not available.')
+        });
+      }
+      var body = new URLSearchParams();
+      Object.keys(payload || {}).forEach(function (key) {
+        if (payload[key] !== undefined && payload[key] !== null) {
+          body.append(key, payload[key]);
+        }
+      });
+      return fetch(url, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'RequestVerificationToken': config.antiForgeryToken || ''
+        },
+        body: body.toString()
+      }).then(function (response) {
+        return response.ok ? response.json() : {
+          succeeded: false
+        };
+      }).catch(function () {
+        return {
+          succeeded: false
+        };
+      });
+    }
+
+    // Runs an action, reports how it went, and refreshes the board.
+    function act(name, payload, button, done) {
+      if (button) {
+        button.disabled = true;
+      }
+      return post(name, payload).then(function (result) {
+        if (!result || !result.succeeded) {
+          announce(result && result.errorMessage || label('engagementFailed', 'The supervisor action could not be started.'), true);
+        } else {
+          announce(result.message || label('actionDone', 'Done.'));
+          if (typeof done === 'function') {
+            done(result);
+          }
+        }
+        if (button) {
+          button.disabled = false;
+        }
+        options.refresh();
+        return result;
+      });
+    }
+    function closeMenu(restoreFocus) {
+      var agentId = openMenuAgentId;
+      if (!agentId) {
+        return;
+      }
+      openMenuAgentId = null;
+      options.redraw();
+      if (restoreFocus) {
+        var trigger = root.querySelector('[data-cc-more="' + cssEscape(agentId) + '"]');
+        if (trigger) {
+          trigger.focus();
+        }
+      }
+    }
+    function cssEscape(value) {
+      return window.CSS && typeof window.CSS.escape === 'function' ? window.CSS.escape(value) : String(value).replace(/"/g, '\\"');
+    }
+    function toggleMenu(agentId) {
+      openMenuAgentId = openMenuAgentId === agentId ? null : agentId;
+      options.redraw();
+      if (openMenuAgentId) {
+        var first = root.querySelector('[data-cc-menu="' + cssEscape(agentId) + '"] [role="menuitem"]');
+        if (first) {
+          first.focus();
+        }
+      }
+    }
+    function showPanel(kind, agent) {
+      openPanel = {
+        kind: kind,
+        agentId: agent.agentId,
+        interactionId: agent.activeInteractionId
+      };
+      renderPanel();
+      var focusable = panel && panel.querySelector('select, textarea, input, button');
+      if (focusable) {
+        focusable.focus();
+      }
+    }
+    function closePanel() {
+      openPanel = null;
+      renderPanel();
+    }
+    function transferOptions() {
+      var queues = (lastState.queues || []).map(function (queue) {
+        return '<option value="Queue:' + escape(queue.id) + '">' + escape(format(label('toQueue', 'Queue: {0}'), queue.name)) + '</option>';
+      }).join('');
+      var agents = (lastState.agents || []).filter(function (agent) {
+        return agent.presenceStatus === 'Available' && (!openPanel || agent.agentId !== openPanel.agentId);
+      }).map(function (agent) {
+        return '<option value="Agent:' + escape(agent.agentId) + '">' + escape(format(label('toAgent', 'Agent: {0}'), agent.displayName || agent.userId)) + '</option>';
+      }).join('');
+      return (queues ? '<optgroup label="' + escape(label('queues', 'Queues')) + '">' + queues + '</optgroup>' : '') + (agents ? '<optgroup label="' + escape(label('availableAgents', 'Available agents')) + '">' + agents + '</optgroup>' : '') + '<option value="External:">' + escape(label('toNumber', 'A phone number')) + '</option>';
+    }
+    function renderPanel() {
+      if (!panel) {
+        return;
+      }
+      var agent = openPanel ? findAgent(openPanel.agentId) : null;
+      if (!openPanel || !agent) {
+        openPanel = null;
+        panel.innerHTML = '';
+        panel.hidden = true;
+        return;
+      }
+      var name = agent.displayName || agent.userId;
+      var body;
+      var confirm;
+      switch (openPanel.kind) {
+        case 'end-call':
+          body = '<p class="mb-2">' + escape(format(label('endCallConfirm', 'End {0}\'s call for everyone on it?'), name)) + '</p>';
+          confirm = label('endCallButton', 'End call');
+          break;
+        case 'sign-out':
+          body = '<p class="mb-2">' + escape(format(label('signOutConfirm', 'Sign {0} out of their queues?'), name)) + '</p>';
+          confirm = label('signOutButton', 'Sign out');
+          break;
+        case 'transfer':
+          body = '<label class="form-label" for="ccTransferTarget">' + escape(label('transferTo', 'Transfer to')) + '</label>' + '<select class="form-select form-select-sm mb-2" id="ccTransferTarget" data-cc-transfer-target>' + transferOptions() + '</select>' + '<label class="form-label" for="ccTransferNumber">' + escape(label('transferNumber', 'Number (for a phone number)')) + '</label>' + '<input type="tel" class="form-control form-control-sm mb-2" id="ccTransferNumber" data-cc-transfer-number autocomplete="off" />';
+          confirm = label('transferButton', 'Transfer');
+          break;
+        case 'message':
+          body = '<label class="form-label" for="ccAgentMessage">' + escape(format(label('messageTo', 'Message to {0}'), name)) + '</label>' + '<textarea class="form-control form-control-sm mb-2" id="ccAgentMessage" rows="2" maxlength="500" data-cc-message-text></textarea>';
+          confirm = label('sendButton', 'Send');
+          break;
+        default:
+          openPanel = null;
+          panel.hidden = true;
+          return;
+      }
+      panel.innerHTML = '<div class="cc-panel mb-3" role="dialog" aria-modal="false" aria-labelledby="ccInterventionTitle">' + '<div class="cc-panel__header" id="ccInterventionTitle">' + escape(format(label('panelTitle', '{0}: {1}'), name, label(PANEL_TITLES[openPanel.kind][0], PANEL_TITLES[openPanel.kind][1]))) + '</div>' + '<div class="cc-panel__body">' + body + '<div class="d-flex gap-2">' + '<button type="button" class="btn btn-sm ' + (openPanel.kind === 'end-call' || openPanel.kind === 'sign-out' ? 'btn-danger' : 'btn-primary') + '" data-cc-panel-confirm>' + escape(confirm) + '</button>' + '<button type="button" class="btn btn-sm btn-outline-secondary" data-cc-panel-cancel>' + escape(label('cancel', 'Cancel')) + '</button>' + '</div></div></div>';
+      panel.hidden = false;
+    }
+    function confirmPanel(button) {
+      var current = openPanel;
+      if (!current) {
+        return;
+      }
+      switch (current.kind) {
+        case 'end-call':
+          act('endCall', {
+            interactionId: current.interactionId
+          }, button, closePanel);
+          break;
+        case 'sign-out':
+          act('agentState', {
+            agentId: current.agentId,
+            status: 'SignOut'
+          }, button, closePanel);
+          break;
+        case 'transfer':
+          var choice = (panel.querySelector('[data-cc-transfer-target]') || {}).value || '';
+          var separator = choice.indexOf(':');
+          var targetType = separator > 0 ? choice.substring(0, separator) : '';
+          var targetId = separator > 0 ? choice.substring(separator + 1) : '';
+          if (targetType === 'External') {
+            targetId = ((panel.querySelector('[data-cc-transfer-number]') || {}).value || '').trim();
+          }
+          if (!targetType || !targetId) {
+            announce(label('transferTargetRequired', 'Choose where to transfer the call.'), true);
+            return;
+          }
+          act('transfer', {
+            interactionId: current.interactionId,
+            targetType: targetType,
+            targetId: targetId
+          }, button, closePanel);
+          break;
+        case 'message':
+          var message = ((panel.querySelector('[data-cc-message-text]') || {}).value || '').trim();
+          if (!message) {
+            announce(label('messageRequired', 'Type a message to send.'), true);
+            return;
+          }
+          act('message', {
+            agentId: current.agentId,
+            text: message
+          }, button, closePanel);
+          break;
+      }
+    }
+    function runMenuAction(action, agentId, interactionId, button) {
+      var agent = findAgent(agentId);
+      closeMenu(false);
+      if (!agent) {
+        return;
+      }
+      if (action === 'end-call' || action === 'transfer' || action === 'message') {
+        showPanel(action, agent);
+        return;
+      }
+      if (action === 'record-on' || action === 'record-off') {
+        act('recording', {
+          interactionId: interactionId,
+          record: action === 'record-on' ? 'true' : 'false'
+        }, button);
+        return;
+      }
+      if (action.indexOf('state:') === 0) {
+        var state = action.substring('state:'.length);
+        if (state === 'SignOut') {
+          showPanel('sign-out', agent);
+          return;
+        }
+        act('agentState', {
+          agentId: agentId,
+          status: state
+        }, button);
+      }
+    }
+    function takeOver(button) {
+      var interactionId = button.getAttribute('data-cc-takeover');
+      if (button.getAttribute('data-cc-join-first') === 'true') {
+        // Not on the call yet: barge in, and take the call over once the supervisor's phone is on it.
+        act('engage', {
+          interactionId: interactionId,
+          mode: 'Barge'
+        }, button, function () {
+          pendingTakeovers[interactionId] = Date.now();
+          announce(label('takeOverJoining', 'Joining the call on your phone to take it over…'));
+        });
+        return;
+      }
+      act('takeover', {
+        interactionId: interactionId
+      }, button);
+    }
+    function onBoardClick(event) {
+      var target = event.target.closest('button');
+      if (!target || !root.contains(target) || target.disabled) {
+        return;
+      }
+      if (target.hasAttribute('data-cc-engage')) {
+        act('engage', {
+          interactionId: target.getAttribute('data-cc-engage'),
+          mode: target.getAttribute('data-cc-mode')
+        }, target);
+      } else if (target.hasAttribute('data-cc-switch')) {
+        act('switch', {
+          interactionId: target.getAttribute('data-cc-switch'),
+          mode: target.getAttribute('data-cc-mode')
+        }, target);
+      } else if (target.hasAttribute('data-cc-stop')) {
+        act('stop', {
+          interactionId: target.getAttribute('data-cc-stop')
+        }, target);
+      } else if (target.hasAttribute('data-cc-takeover')) {
+        takeOver(target);
+      } else if (target.hasAttribute('data-cc-more')) {
+        toggleMenu(target.getAttribute('data-cc-more'));
+      } else if (target.hasAttribute('data-cc-action')) {
+        runMenuAction(target.getAttribute('data-cc-action'), target.getAttribute('data-cc-agent'), target.getAttribute('data-cc-interaction'), target);
+      }
+    }
+    function onBoardKeydown(event) {
+      var menu = event.target.closest('[role="menu"]');
+      if (event.key === 'Escape' && openMenuAgentId) {
+        event.preventDefault();
+        closeMenu(true);
+        return;
+      }
+      if (!menu || event.key !== 'ArrowDown' && event.key !== 'ArrowUp') {
+        return;
+      }
+      var items = Array.prototype.slice.call(menu.querySelectorAll('[role="menuitem"]'));
+      var index = items.indexOf(document.activeElement);
+      var next = event.key === 'ArrowDown' ? index + 1 : index - 1;
+      event.preventDefault();
+      if (items.length) {
+        items[(next + items.length) % items.length].focus();
+      }
+    }
+    function bind(board) {
+      if (board) {
+        board.addEventListener('click', onBoardClick);
+        board.addEventListener('keydown', onBoardKeydown);
+      }
+      if (panel) {
+        panel.addEventListener('click', function (event) {
+          var target = event.target.closest('button');
+          if (!target) {
+            return;
+          }
+          if (target.hasAttribute('data-cc-panel-confirm')) {
+            confirmPanel(target);
+          } else if (target.hasAttribute('data-cc-panel-cancel')) {
+            closePanel();
+          }
+        });
+        panel.addEventListener('keydown', function (event) {
+          if (event.key === 'Escape') {
+            closePanel();
+          }
+        });
+      }
+      document.addEventListener('click', function (event) {
+        if (openMenuAgentId && !event.target.closest('.cc-agent__more')) {
+          closeMenu(false);
+        }
+      });
+    }
+
+    // The new state: a Take over that had to barge in first goes ahead once the supervisor's phone is on the call.
+    function onState(state) {
+      lastState = state || lastState;
+      Object.keys(pendingTakeovers).forEach(function (interactionId) {
+        var agent = findAgentByInteraction(interactionId);
+        if (!agent || Date.now() - pendingTakeovers[interactionId] > TAKEOVER_JOIN_TIMEOUT_MS) {
+          delete pendingTakeovers[interactionId];
+          return;
+        }
+        if (agent.monitorMode && agent.monitorConnected) {
+          delete pendingTakeovers[interactionId];
+          act('takeover', {
+            interactionId: interactionId
+          }, null);
+        }
+      });
+
+      // A panel stays as the supervisor left it -- a half-typed message is theirs -- unless its agent is gone.
+      if (openPanel && !findAgent(openPanel.agentId)) {
+        closePanel();
+      }
+    }
+    return {
+      actionsHtml: function (agent, state) {
+        return contactCenter.supervisorAgentActionsHtml(agent, state, strings, openMenuAgentId === agent.agentId);
+      },
+      bind: bind,
+      onState: onState,
+      // Whether a redraw now would pull the rows out from under the supervisor.
+      isMenuOpen: function () {
+        return !!openMenuAgentId;
+      }
+    };
+  }
+  contactCenter.createSupervisorInterventions = createSupervisorInterventions;
+})(window, document);
+/*
  * Contact Center supervisor dashboard client.
  *
  * Binds the supervisor dashboard page to the real-time Contact Center hub and the dashboard state
@@ -40,23 +761,6 @@
     var minutes = Math.floor(totalSeconds / 60);
     var seconds = Math.floor(totalSeconds % 60);
     return minutes > 0 ? minutes + 'm ' + seconds + 's' : seconds + 's';
-  }
-  function post(url, token, payload) {
-    var body = new URLSearchParams();
-    Object.keys(payload || {}).forEach(function (key) {
-      if (payload[key] !== undefined && payload[key] !== null) {
-        body.append(key, payload[key]);
-      }
-    });
-    return fetch(url, {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'RequestVerificationToken': token || ''
-      },
-      body: body.toString()
-    });
   }
   function init(root) {
     var config = parseConfig(root);
@@ -151,32 +855,14 @@
       var boardHtml = agents.map(function (agent) {
         var status = agent.presenceStatus || 'Offline';
         var detail = agent.presenceReason || status;
-        var availableModes = agent.availableMonitoringModes || [];
-        var modeButtons = {
-          Monitor: ['btn-outline-secondary', label('monitor', 'Monitor')],
-          Whisper: ['btn-outline-secondary', label('whisper', 'Whisper')],
-          Barge: ['btn-outline-secondary', label('barge', 'Barge')]
-        };
-        var actions = '';
-        if (agent.activeInteractionId && availableModes.length) {
-          actions = '<span class="cc-agent__actions">' + availableModes.map(function (mode) {
-            var button = modeButtons[mode];
-            if (!button) {
-              return '';
-            }
-            return '<button type="button" class="btn btn-sm ' + button[0] + '" data-cc-engage="' + escapeHtml(agent.activeInteractionId) + '" data-cc-mode="' + escapeHtml(mode) + '">' + escapeHtml(button[1]) + '</button>';
-          }).join('') + '</span>';
-        }
+
+        // Listen / Whisper / Barge, Stop, Take over and the More menu (see supervisor-interventions.js).
+        var actions = interventions ? interventions.actionsHtml(agent, state) : '';
         return '<div class="cc-agent">' + '<span class="cc-presence__dot is-' + status.toLowerCase() + '"></span>' + '<span class="cc-agent__body">' + '<span class="cc-agent__name">' + escapeHtml(agent.displayName || agent.userId) + '</span>' + '<span class="cc-agent__state badge ta-badge text-bg-secondary">' + escapeHtml(detail) + '</span>' + '</span>' + '<span class="cc-badge-count" title="' + escapeHtml(label('activeInteractions', 'Active interactions')) + '">' + agent.activeInteractions + '</span>' + actions + '</div>';
       }).join('');
-      if (!setRegionHtml(refs.board, 'board', boardHtml)) {
-        return;
-      }
-      refs.board.querySelectorAll('[data-cc-engage]').forEach(function (button) {
-        button.addEventListener('click', function () {
-          engage(button.getAttribute('data-cc-engage'), button.getAttribute('data-cc-mode'), button);
-        });
-      });
+
+      // The actions are delegated from the board (see supervisor-interventions.js), so a redraw needs no rebinding.
+      setRegionHtml(refs.board, 'board', boardHtml);
     }
     function watchQueues(state) {
       if (!realtime) {
@@ -244,32 +930,38 @@
       }).then(function (state) {
         if (state) {
           lastAgents = state.agents || [];
-          render(state);
+          lastState = state;
+          if (interventions) {
+            interventions.onState(state);
+          }
+
+          // An open menu is not pulled out from under the supervisor; the board catches up when it closes.
+          if (interventions && interventions.isMenuOpen()) {
+            renderSummary(state);
+            renderTiles(state);
+            watchQueues(state);
+          } else {
+            render(state);
+          }
           renderQualityAlerts();
         }
       }).catch(function () {});
     }
-    function engage(interactionId, mode, button) {
-      if (!config.engageUrl || !interactionId || !mode) {
-        return;
-      }
-      button.disabled = true;
-      post(config.engageUrl, config.antiForgeryToken, {
-        interactionId: interactionId,
-        mode: mode
-      }).then(function (response) {
-        return response.ok ? response.json() : {
-          succeeded: false
-        };
-      }).then(function (result) {
-        if (!result || !result.succeeded) {
-          showError(result && result.errorMessage || label('engagementFailed', 'The supervisor action could not be started.'));
-        } else {
-          clearError();
+    var lastState = null;
+    var interventions = typeof window.CrestAppsContactCenter === 'object' && typeof window.CrestAppsContactCenter.createSupervisorInterventions === 'function' ? window.CrestAppsContactCenter.createSupervisorInterventions({
+      root: root,
+      config: config,
+      refresh: refresh,
+      redraw: function () {
+        if (lastState) {
+          renderBoard(lastState);
         }
-      }).finally(function () {
-        button.disabled = false;
-      });
+      },
+      showError: showError,
+      clearError: clearError
+    }) : null;
+    if (interventions) {
+      interventions.bind(refs.board);
     }
     if (window.contactCenterRealTime && config.hubUrl) {
       realtime = window.contactCenterRealTime.connect({
@@ -294,6 +986,11 @@
         onRecordingStateChanged: refresh,
         onCallQualityAlert: onCallQualityAlert
       });
+
+      // The supervisor's own engagement moved on (their phone answered, a mode changed, a call ended).
+      if (realtime && realtime.connection) {
+        realtime.connection.on('SupervisorEngagementChanged', refresh);
+      }
     }
     refresh();
     window.setInterval(refresh, REFRESH_INTERVAL_MS);
