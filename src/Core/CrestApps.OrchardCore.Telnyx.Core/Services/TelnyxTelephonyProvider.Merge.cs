@@ -19,18 +19,20 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 /// party with it), and a participant hanging up releases its leg.
 /// </para>
 /// <para>
-/// An internal extension call is already a conference, <c>ext-{agent leg}</c>, which the agent's leg joined with
-/// <c>end_conference_on_exit</c>, and Telnyx cannot change that once joined. So an extension call is merged by its
-/// colleague. A dialed number leads a merge whenever there is one, and the colleague joins its conference while the
-/// agent's leg stays behind in its own, the way a dialed number's agent leg stays parked. With no dialed number, the
-/// colleague is moved into a new conference and the agent's leg joins it without <c>end_conference_on_exit</c>, leaving
-/// the extension call's own conference empty. Only when Telnyx refuses that is the extension call's own conference the
-/// merge's, and then the agent leaving it still ends it.
+/// An internal extension call is already a conference, <c>ext-{agent leg}</c>, made from the agent's leg with the
+/// colleague as an ordinary participant (see TelnyxOutboundBridgeOrchestrator.ExtensionConference.cs). A call that
+/// created a conference is hung up when that conference is ended, wherever it has gone since, so a merge never lets a
+/// party's call become bound to a conference the agent's leaving could end. A dialed number leads a merge whenever there
+/// is one, and the colleague joins its conference while the agent's extension leg stays behind in its own, the way a
+/// dialed number's agent leg stays parked. With no dialed number, a new conference is made from the first colleague, and
+/// the agent's extension leg leaves its own conference (<c>actions/leave</c>) and joins the new one without
+/// <c>end_conference_on_exit</c>: the old one, empty, expires, and a call that left the conference it created that way
+/// outlives it.
 /// </para>
 /// <para>
-/// Every call is read before anything moves, so a call that cannot be merged refuses the merge with nothing changed.
-/// The first party is detached from the agent's first leg as it moves, because that leg is now the agent in the
-/// conference: the party leaving must not end the conference for everyone else.
+/// Every call is read before anything moves, so a call that cannot be merged -- one whose party has not answered yet --
+/// refuses the merge with nothing changed. A merge that fails once calls have moved puts them back where they were (see
+/// TelnyxTelephonyProvider.MergeRollback.cs), and a retry that finds the conference of its name already made uses it.
 /// </para>
 /// </remarks>
 public sealed partial class TelnyxTelephonyProvider
@@ -50,6 +52,9 @@ public sealed partial class TelnyxTelephonyProvider
             return NotConfigured();
         }
 
+        var moves = new List<MergeMove>();
+        string conferenceId = null;
+
         try
         {
             var legs = new List<MergeLeg>(callIds.Count);
@@ -58,9 +63,13 @@ public sealed partial class TelnyxTelephonyProvider
             {
                 var leg = await FindMergeLegAsync(callId, cancellationToken);
 
-                if (leg is null)
+                if (leg is null || leg.State?.PeerAnswered == false)
                 {
-                    return TelephonyResult.Failed(S["An extension call cannot be merged until the colleague has answered it."].Value);
+                    // Telnyx refuses to join a call nobody has answered ("Call not answered yet"): refused here, before
+                    // anything moves.
+                    return TelephonyResult.Failed(
+                        S["A call you are merging has not been answered yet. Merge the calls once they pick up."].Value,
+                        TelephonyConstants.ErrorCodes.NotAnswered);
                 }
 
                 legs.Add(leg);
@@ -86,16 +95,18 @@ public sealed partial class TelnyxTelephonyProvider
 
             // A merge that names its conference is adding calls to one already running, which the primary call is in:
             // the others join it. Creating another from the primary would take it out of the first.
-            var conferenceId = string.IsNullOrWhiteSpace(request.ConferenceName)
+            conferenceId = string.IsNullOrWhiteSpace(request.ConferenceName)
                 ? null
-                : (await _apiClient.FindConferenceByNameAsync(conferenceName, cancellationToken)).ConferenceId;
+                : (await _apiClient.FindLiveConferenceByNameAsync(conferenceName, cancellationToken)).ConferenceId;
 
             if (string.IsNullOrWhiteSpace(conferenceId))
             {
-                (conferenceId, conferenceName) = await CreateConferenceFromAsync(conferenceName, primary, cancellationToken);
+                (conferenceId, conferenceName) = await CreateConferenceFromAsync(conferenceName, primary, moves, cancellationToken);
 
                 if (conferenceId is null)
                 {
+                    await RollBackMergeAsync(moves, conferenceId, cancellationToken);
+
                     return TelephonyResult.Failed(S["Telnyx could not merge the calls."].Value);
                 }
             }
@@ -103,21 +114,10 @@ public sealed partial class TelnyxTelephonyProvider
             foreach (var secondary in legs.Skip(1))
             {
                 // A dialed number joins as its dialed party and an extension call as its colleague; the agent's own leg
-                // for it stays where it is. The colleague first leaves the extension's own conference, which would
-                // otherwise hang them up when it ends (see ReleaseColleagueAsync).
-                var extensionConferenceId = secondary.Kind == MergeLegKind.Extension
-                    ? await ReleaseColleagueAsync(secondary, cancellationToken)
-                    : null;
-
+                // for it stays where it is.
                 var joinResult = await _apiClient.JoinConferenceAsync(conferenceId, secondary.PartyLegId, cancellationToken: cancellationToken);
 
-                if (!joinResult.Succeeded && !string.IsNullOrWhiteSpace(extensionConferenceId) && !TelnyxApiErrors.IsAlreadyInConference(joinResult))
-                {
-                    // Parked and joined nowhere, the colleague would hear nothing: they go back to the call they were on.
-                    await _apiClient.JoinConferenceAsync(extensionConferenceId, secondary.PartyLegId, cancellationToken: cancellationToken);
-                }
-
-                // Merging calls already in the conference again (a second press of Merge) leaves them where they are.
+                // Merging calls already in the conference again (a second press of Merge, or a retry) leaves them there.
                 if (!joinResult.Succeeded && TelnyxApiErrors.IsAlreadyInConference(joinResult))
                 {
                     if (_logger.IsEnabled(LogLevel.Debug))
@@ -131,12 +131,16 @@ public sealed partial class TelnyxTelephonyProvider
                 if (!joinResult.Succeeded)
                 {
                     _logger.LogError(
-                        "Telnyx rejected a conference join request with status code {StatusCode}. Response: {Response}",
+                        "Telnyx rejected a conference join request with status code {StatusCode}; the merge is rolled back. Response: {Response}",
                         joinResult.StatusCode,
                         joinResult.ErrorBody.SanitizeLogValue());
 
+                    await RollBackMergeAsync(moves, conferenceId, cancellationToken);
+
                     return TelephonyResult.Failed(S["Telnyx could not merge the calls."].Value);
                 }
+
+                moves.Add(new MergeMove(MergeMoveKind.PartyJoined, secondary, null));
             }
 
             return TelephonyResult.Success(BuildCall(
@@ -159,8 +163,144 @@ public sealed partial class TelnyxTelephonyProvider
         {
             _logger.LogError(ex, "An error occurred while merging Telnyx calls.");
 
+            await RollBackMergeAsync(moves, conferenceId, CancellationToken.None);
+
             return TelephonyResult.Failed(S["Telnyx could not merge the calls."].Value);
         }
+    }
+
+    // Makes the conference the primary call leads, and moves the agent into it, recording each move for a rollback; or,
+    // for an extension call whose colleague Telnyx will not move, adopts the extension call's own conference. Returns it
+    // with its name, or (null, name) when Telnyx refused. A conference of that name left by an earlier attempt is used.
+    private async Task<(string ConferenceId, string ConferenceName)> CreateConferenceFromAsync(
+        string conferenceName,
+        MergeLeg primary,
+        List<MergeMove> moves,
+        CancellationToken cancellationToken)
+    {
+        // A dialed number's party, or an extension call's colleague, moves into the new conference detached from the
+        // agent's leg, so its leaving does not reach back for the agent; any other call joins it as it is.
+        var created = primary.Kind == MergeLegKind.Call
+            ? await _apiClient.CreateConferenceAsync(conferenceName, primary.CallId, cancellationToken: cancellationToken)
+            : await _apiClient.CreateConferenceWithStateAsync(conferenceName, primary.PartyLegId, DetachedPartyState(primary.CallId).ToClientStateJson(), cancellationToken);
+        var conferenceId = created.Succeeded ? created.ConferenceId : null;
+
+        if (string.IsNullOrWhiteSpace(conferenceId) && TelnyxApiErrors.IsConferenceNameTaken(created))
+        {
+            // Made by an attempt that did not finish: the party joins it (or is in it already).
+            conferenceId = await RejoinExistingConferenceAsync(conferenceName, primary, cancellationToken);
+        }
+
+        if (string.IsNullOrWhiteSpace(conferenceId))
+        {
+            if (primary.Kind == MergeLegKind.Extension)
+            {
+                _logger.LogWarning(
+                    "Telnyx refused to move the colleague's leg {CallId} into a new conference ({StatusCode}); the extension call's own conference is used.",
+                    primary.PartyLegId.SanitizeLogValue(),
+                    created.StatusCode);
+
+                return (await AdoptExtensionConferenceAsync(primary, cancellationToken), ExtensionConferenceName(primary.CallId));
+            }
+
+            _logger.LogError(
+                "Telnyx rejected a conference creation request with status code {StatusCode}. Response: {Response}",
+                created.StatusCode,
+                created.ErrorBody.SanitizeLogValue());
+
+            return (null, conferenceName);
+        }
+
+        moves.Add(new MergeMove(MergeMoveKind.PrimaryPartyMoved, primary, null));
+
+        if (primary.Kind == MergeLegKind.Call)
+        {
+            return (conferenceId, conferenceName);
+        }
+
+        // An extension call's agent leg leaves its own conference first, rather than being moved by the join: that
+        // conference, now empty, expires, and a call that left the conference it created outlives it ending.
+        var extensionConferenceId = primary.Kind == MergeLegKind.Extension
+            ? await LeaveExtensionConferenceAsync(primary.CallId, cancellationToken)
+            : null;
+
+        // The agent joins the conference on the leg its party left: the leg the bridge parked, or an extension call's
+        // leg. Without end_conference_on_exit, the agent leaving leaves the others connected.
+        var joined = await _apiClient.JoinConferenceWithStateAsync(
+            conferenceId,
+            primary.CallId,
+            endConferenceOnExit: false,
+            clientStateJson: null,
+            cancellationToken);
+
+        if (!joined.Succeeded && !TelnyxApiErrors.IsAlreadyInConference(joined))
+        {
+            _logger.LogError(
+                "Telnyx rejected joining the agent's leg {CallId} to conference '{ConferenceName}' with status code {StatusCode}. Response: {Response}",
+                primary.CallId.SanitizeLogValue(),
+                conferenceName.SanitizeLogValue(),
+                joined.StatusCode,
+                joined.ErrorBody.SanitizeLogValue());
+
+            moves.Add(new MergeMove(MergeMoveKind.AgentLeftExtensionConference, primary, extensionConferenceId));
+
+            return (null, conferenceName);
+        }
+
+        moves.Add(new MergeMove(MergeMoveKind.AgentJoined, primary, extensionConferenceId));
+
+        return (conferenceId, conferenceName);
+    }
+
+    // The conference an earlier, unfinished attempt made under this name: the primary's party joins it again (a party
+    // already in it stays), detached as a new conference would have made it.
+    private async Task<string> RejoinExistingConferenceAsync(string conferenceName, MergeLeg primary, CancellationToken cancellationToken)
+    {
+        var existing = await _apiClient.FindLiveConferenceByNameAsync(conferenceName, cancellationToken);
+
+        if (!existing.Succeeded || string.IsNullOrWhiteSpace(existing.ConferenceId))
+        {
+            return null;
+        }
+
+        var partyLegId = primary.Kind == MergeLegKind.Call ? primary.CallId : primary.PartyLegId;
+        var joined = await _apiClient.JoinConferenceAsync(existing.ConferenceId, partyLegId, cancellationToken: cancellationToken);
+
+        if (!joined.Succeeded && !TelnyxApiErrors.IsAlreadyInConference(joined))
+        {
+            return null;
+        }
+
+        if (primary.Kind != MergeLegKind.Call)
+        {
+            await _apiClient.UpdateClientStateAsync(partyLegId, DetachedPartyState(primary.CallId).ToClientStateJson(), cancellationToken);
+        }
+
+        return existing.ConferenceId;
+    }
+
+    // Takes the agent's extension leg out of its call's own conference, and returns that conference's id, or null when it
+    // is not running.
+    private async Task<string> LeaveExtensionConferenceAsync(string agentLegCallControlId, CancellationToken cancellationToken)
+    {
+        var conference = await _apiClient.FindLiveConferenceByNameAsync(ExtensionConferenceName(agentLegCallControlId), cancellationToken);
+
+        if (!conference.Succeeded || string.IsNullOrWhiteSpace(conference.ConferenceId))
+        {
+            return null;
+        }
+
+        var left = await _apiClient.LeaveConferenceAsync(conference.ConferenceId, agentLegCallControlId, cancellationToken);
+
+        if (!left.Succeeded)
+        {
+            _logger.LogWarning(
+                "Telnyx did not take the agent's extension leg {CallId} out of its conference ({StatusCode}); it is moved by the join instead.",
+                agentLegCallControlId.SanitizeLogValue(),
+                left.StatusCode);
+        }
+
+        return conference.ConferenceId;
     }
 
     // Whether the soft phone flagged this hang-up with a request metadata key (see TelephonyConstants.RequestMetadata).
@@ -248,83 +388,8 @@ public sealed partial class TelnyxTelephonyProvider
         return new MergeLeg(callId, callId, MergeLegKind.Call, state);
     }
 
-    // Makes the conference the primary call leads -- or, for an extension call whose colleague Telnyx will not move,
-    // adopts the extension call's own -- and returns it with its name, or (null, name) when Telnyx refused.
-    private async Task<(string ConferenceId, string ConferenceName)> CreateConferenceFromAsync(
-        string conferenceName,
-        MergeLeg primary,
-        CancellationToken cancellationToken)
-    {
-        // An extension call's colleague first leaves the extension's own conference, which would otherwise hang them up
-        // when it ends (see ReleaseColleagueAsync).
-        var extensionConferenceId = primary.Kind == MergeLegKind.Extension
-            ? await ReleaseColleagueAsync(primary, cancellationToken)
-            : null;
-
-        // A dialed number's party, or an extension call's colleague, moves into the new conference detached from the
-        // agent's leg, so its leaving does not reach back for the agent; any other call joins it as it is.
-        var created = primary.Kind == MergeLegKind.Call
-            ? await _apiClient.CreateConferenceAsync(conferenceName, primary.CallId, cancellationToken: cancellationToken)
-            : await _apiClient.CreateConferenceWithStateAsync(conferenceName, primary.PartyLegId, DetachedPartyState(primary.CallId).ToClientStateJson(), cancellationToken);
-
-        if (!created.Succeeded || string.IsNullOrWhiteSpace(created.ConferenceId))
-        {
-            if (primary.Kind == MergeLegKind.Extension)
-            {
-                _logger.LogWarning(
-                    "Telnyx refused to move the colleague's leg {CallId} into a new conference ({StatusCode}); the extension call's own conference is used, and the agent leaving it will end it.",
-                    primary.PartyLegId.SanitizeLogValue(),
-                    created.StatusCode);
-
-                // The colleague left it a moment ago: they go back into it first.
-                if (!string.IsNullOrWhiteSpace(extensionConferenceId))
-                {
-                    await _apiClient.JoinConferenceAsync(extensionConferenceId, primary.PartyLegId, cancellationToken: cancellationToken);
-                }
-
-                return (await AdoptExtensionConferenceAsync(primary, cancellationToken), ExtensionConferenceName(primary.CallId));
-            }
-
-            _logger.LogError(
-                "Telnyx rejected a conference creation request with status code {StatusCode}. Response: {Response}",
-                created.StatusCode,
-                created.ErrorBody.SanitizeLogValue());
-
-            return (null, conferenceName);
-        }
-
-        if (primary.Kind == MergeLegKind.Call)
-        {
-            return (created.ConferenceId, conferenceName);
-        }
-
-        // The agent joins the conference on the leg its party left: the leg the bridge parked, or an extension call's
-        // leg, which leaves its own conference empty behind it. Without end_conference_on_exit, the agent leaving leaves
-        // the others connected.
-        var joined = await _apiClient.JoinConferenceWithStateAsync(
-            created.ConferenceId,
-            primary.CallId,
-            endConferenceOnExit: false,
-            clientStateJson: null,
-            cancellationToken);
-
-        if (!joined.Succeeded)
-        {
-            _logger.LogError(
-                "Telnyx rejected joining the agent's leg {CallId} to conference '{ConferenceName}' with status code {StatusCode}. Response: {Response}",
-                primary.CallId.SanitizeLogValue(),
-                conferenceName.SanitizeLogValue(),
-                joined.StatusCode,
-                joined.ErrorBody.SanitizeLogValue());
-
-            return (null, conferenceName);
-        }
-
-        return (created.ConferenceId, conferenceName);
-    }
-
-    // The extension call's own conference becomes the merge's. The agent's leg stays in it as it is -- leaving it is
-    // still the agent leaving, and ends it -- and the colleague is detached, so their hanging up leaves the others on.
+    // The extension call's own conference becomes the merge's. The agent's leg stays in it as it is, and the colleague is
+    // detached, so their hanging up leaves the others on.
     private async Task<string> AdoptExtensionConferenceAsync(MergeLeg primary, CancellationToken cancellationToken)
     {
         var name = ExtensionConferenceName(primary.CallId);
@@ -353,39 +418,6 @@ public sealed partial class TelnyxTelephonyProvider
         return conference.ConferenceId;
     }
 
-    // Takes an extension call's colleague out of the extension's own conference before they are moved into the merge's,
-    // and returns that conference's id when they left it, or null.
-    //
-    // The orchestrator made that conference from the colleague's leg, and the agent's extension leg joined it with
-    // end_conference_on_exit. A call that created a conference stays bound to it after joining another: live, a colleague
-    // joined into a merge's conference was hung up (cause time_limit) the moment the agent's extension leg hung up and
-    // the extension's conference ended, and the dialed party was left alone. Leaving the conference ("removes a call leg
-    // from a conference and moves it back to parked state") frees the call: a caller that left the conference it was
-    // created from outlived it ending. The agent's extension leg stays behind alone, and its end ends nobody else's call.
-    private async Task<string> ReleaseColleagueAsync(MergeLeg extension, CancellationToken cancellationToken)
-    {
-        var conference = await _apiClient.FindConferenceByNameAsync(ExtensionConferenceName(extension.CallId), cancellationToken);
-
-        if (!conference.Succeeded || string.IsNullOrWhiteSpace(conference.ConferenceId))
-        {
-            return null;
-        }
-
-        var left = await _apiClient.LeaveConferenceAsync(conference.ConferenceId, extension.PartyLegId, cancellationToken);
-
-        if (!left.Succeeded)
-        {
-            // Already out of it (merged before), or Telnyx refused: the merge goes on, as it did before.
-            _logger.LogWarning(
-                "Telnyx did not take the colleague's leg {CallId} out of the extension call's conference ({StatusCode}); if they are still bound to it, the agent's extension leg ending will hang them up.",
-                extension.PartyLegId.SanitizeLogValue(),
-                left.StatusCode);
-
-            return null;
-        }
-
-        return conference.ConferenceId;
-    }
 
     // Named after the caller's leg by the orchestrator when it connects an internal extension call.
     internal static string ExtensionConferenceName(string agentLegCallControlId)

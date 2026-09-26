@@ -155,6 +155,10 @@
     var planConferenceHangup = softPhoneModules.planConferenceHangup;
     var planConferenceEnd = softPhoneModules.planConferenceEnd;
     var planInCallControls = softPhoneModules.planInCallControls;
+    var friendlyCallLabel = softPhoneModules.friendlyCallLabel;
+    var createCallPartyMemory = softPhoneModules.createCallPartyMemory;
+    var carryCallParty = softPhoneModules.carryCallParty;
+    var forgetCallParty = softPhoneModules.forgetCallParty;
     var planNumberField = softPhoneModules.planNumberField;
     var keypadExtensionMatches = softPhoneModules.keypadExtensionMatches;
     var resolveKeypadExtension = softPhoneModules.resolveKeypadExtension;
@@ -2716,6 +2720,9 @@
         // The conferences this phone's merges made, stamped back onto every report of their calls (see
         // soft-phone/conference.js).
         var conferenceMemory = createConferenceMemory();
+        // Whom each call is with, from the first report that said, for the reports that do not (see
+        // soft-phone/call-labels.js).
+        var callParties = createCallPartyMemory();
         // The interaction each Contact Center call names, kept across the provider's reports of it, which name none
         // (see soft-phone/transfer-service.js).
         var callContexts = createCallContextMemory();
@@ -6077,6 +6084,13 @@
             return statusTextForState(normalizeState(call && call.state));
         }
 
+        // A line's label: whom it is with -- the person an extension rings, the number, the caller -- never an id.
+        function lineLabel(call) {
+            return friendlyCallLabel(
+                callDisplayLabel(call),
+                isContactCenterCall(call) ? (strings.caller || 'Caller') : (strings.participant || 'Participant'));
+        }
+
         // A line's state in the active-call list: Active, On hold, or what the header would say.
         function lineStateText(call) {
             if (!metadataBoolean(call, 'isConference') && normalizeState(call && call.state) === 'Connected') {
@@ -6276,6 +6290,7 @@
             rememberAgentMute(agentMutes, callId, false);
             delete extensionCallNumbers[callId];
             forgetConferenceCall(conferenceMemory, callId);
+            forgetCallParty(callParties, callId);
             forgetCallContext(callContexts, callId);
 
             if (currentCall && currentCall.callId === callId) {
@@ -6411,6 +6426,7 @@
                 return;
             }
 
+            carryCallParty(callParties, call);
             applyAgentHold(call);
             applyAgentMute(call);
             rememberExtensionCall(call);
@@ -6769,13 +6785,14 @@
 
                     return {
                         callId: callId,
-                        number: callDisplayLabel(call) || callId,
+                        number: lineLabel(call),
                         state: lineStateText(call),
                         stateKind: lineStateKind(call),
                         elapsed: lineElapsedText(callId),
                         current: !!(currentCall && currentCall.callId === callId),
-                        selectable: canMergeCalls && canConferenceCall(call),
-                        unselectableReason: canConferenceCall(call) ? '' : 'browser-call',
+                        // A line still connecting or ringing cannot be merged: nobody has answered it yet.
+                        selectable: canMergeCalls && canConferenceCall(call) && (lineState === 'Connected' || lineState === 'OnHold'),
+                        unselectableReason: !canConferenceCall(call) ? 'browser-call' : (lineState === 'Connected' || lineState === 'OnHold') ? '' : 'not-answered',
                         selected: !!conferenceSelections[callId],
                         inConference: metadataBoolean(call, 'isConference'),
                         canHangup: has(CAPABILITIES.Hangup)
@@ -6789,7 +6806,7 @@
                     allSelected: plan.allSelected,
                     blocked: canMergeCalls ? plan.blocked : '',
                     numbers: plan.calls.map(function (call) {
-                        return callDisplayLabel(call) || call.callId;
+                        return lineLabel(call);
                     })
                 }
             }, strings, escapeHtml);
@@ -6882,6 +6899,11 @@
             }
 
             if (field.action === 'keep') {
+                return;
+            }
+
+            // Never an id in the field: a call whose report names nobody shows nothing rather than its own id.
+            if (!friendlyCallLabel(field.value, '')) {
                 return;
             }
 

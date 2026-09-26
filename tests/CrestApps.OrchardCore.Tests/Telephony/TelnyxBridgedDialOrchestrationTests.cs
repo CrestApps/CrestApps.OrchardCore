@@ -92,7 +92,9 @@ public sealed class TelnyxBridgedDialOrchestrationTests
 
         // Assert
         Assert.Equal(TelnyxOutboundBridgeLeg.DestinationLeg, leg);
-        var bridge = Assert.Single(handler.Requests);
+        // Then the agent leg is read, to note that the number answered.
+        var bridge = handler.Requests[0];
+        Assert.Equal($"GET /v2/calls/{AgentLeg}", Describe(handler.Requests[1]));
         Assert.Equal($"POST /v2/calls/{AgentLeg}/actions/bridge", Describe(bridge));
         Assert.Equal(RemoteLeg, ReadString(bridge.Body, "call_control_id"));
         Assert.Equal("self", ReadString(bridge.Body, "park_after_unbridge"));

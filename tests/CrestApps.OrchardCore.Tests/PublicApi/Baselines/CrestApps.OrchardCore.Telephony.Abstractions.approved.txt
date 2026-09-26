@@ -304,6 +304,7 @@ namespace CrestApps.OrchardCore.Telephony
         public static class ErrorCodes
         {
             public const string BridgeUnavailable = "bridge-unavailable";
+            public const string NotAnswered = "not-answered";
         }
         public static class Feature
         {

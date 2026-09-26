@@ -35,8 +35,8 @@ public sealed class TelnyxConferenceParticipantTests
         var handler = new RecordingHttpMessageHandler()
             .RespondWith(HttpStatusCode.OK, TelnyxBridgedDialTests.CallStatus(TelnyxMergeExtensionCallTests.ExtensionAgentState(peer: ColleagueLeg)))
             .RespondWith(HttpStatusCode.OK, _callerStatus)
-            .RespondWith(HttpStatusCode.OK, """{"data":[]}""")
             .RespondWith(HttpStatusCode.OK, """{"data":{"id":"conference-1"}}""")
+            .RespondWith(HttpStatusCode.OK, """{"data":[]}""")
             .RespondWith(HttpStatusCode.OK, """{"data":{"result":"ok"}}""")
             .RespondWith(HttpStatusCode.UnprocessableEntity, AlreadyJoined);
         var provider = TelnyxMergeExtensionCallTests.CreateProvider(handler);
@@ -57,8 +57,8 @@ public sealed class TelnyxConferenceParticipantTests
         var handler = new RecordingHttpMessageHandler()
             .RespondWith(HttpStatusCode.OK, TelnyxBridgedDialTests.CallStatus(TelnyxMergeExtensionCallTests.ExtensionAgentState(peer: ColleagueLeg)))
             .RespondWith(HttpStatusCode.OK, _callerStatus)
-            .RespondWith(HttpStatusCode.OK, """{"data":[]}""")
             .RespondWith(HttpStatusCode.OK, """{"data":{"id":"conference-1"}}""")
+            .RespondWith(HttpStatusCode.OK, """{"data":[]}""")
             .RespondWith(HttpStatusCode.OK, """{"data":{"result":"ok"}}""")
             .RespondWith(HttpStatusCode.UnprocessableEntity, """{"errors":[{"code":"90018","title":"Call has already ended"}]}""");
         var provider = TelnyxMergeExtensionCallTests.CreateProvider(handler);

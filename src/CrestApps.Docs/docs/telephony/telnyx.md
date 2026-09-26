@@ -337,30 +337,41 @@ is sent to the dialed party's leg, read back from the agent leg's client state (
 - **Merge** creates the conference from the first call's dialed party, which parks the agent's first leg. That leg joins
   the conference *without* `end_conference_on_exit`, so the agent can leave while the others stay connected. Every other
   call's dialed party joins too. The agent's other legs stay parked, one per participant, so hanging up a participant's
-  line ends that participant. **Add to conference** joins only the new call's dialed party. Every call is read before
-  anything moves, so a call that cannot be merged refuses the merge with nothing changed.
-- **Merging an extension call** is done through the colleague. The agent's own leg is already in the extension's
-  conference (`ext-{agent leg}`) with `end_conference_on_exit`, which Telnyx cannot change once a leg has joined: the
-  conference participant update command only sets `supervisor_role`.
+  line ends that participant. **Add to conference** joins only the new call's dialed party.
+- **Nothing moves until everything can.** Every call is read before anything moves. A call whose party has not
+  answered yet is refused up front with "A call you are merging has not been answered yet" (`ErrorCode` =
+  `not-answered`). The orchestrator marks the agent's leg `PeerAnswered` (`j`) `false` when it dials the party and
+  `true` when the party answers, because Telnyx refuses to join an unanswered call ("Call not answered yet", 90034).
+- **A merge that fails part way is undone.** Each party leaves the conference again with `actions/leave`, a dialed party
+  is re-attached and bridged back to its agent leg, and a colleague rejoins their extension call's conference. The
+  conference is never ended, because ending it would hang up the party it was made from; empty, it expires.
+- **A retry reuses the conference.** If an earlier attempt left a conference of the same name (create refused with
+  90033, "Conference with given name already exists"), the retry finds it
+  (`GET /v2/conferences?filter[name]=…&filter[status]=in_progress`) and uses it.
+- **An extension call's own conference.** When the colleague answers, the orchestrator makes `ext-{agent leg}` *from
+  the agent's own leg* and joins the colleague to it, with nobody joined with `end_conference_on_exit`. The agent's leg
+  ending still hangs up the colleague, and the colleague's ending still hangs up the agent's leg, through the
+  orchestrator.
+
+  It used to be made from the colleague's leg, with the agent's leg joined with `end_conference_on_exit`. Telnyx hangs up
+  the call a conference was created from (cause `time_limit`) when that conference is ended, wherever that call has gone
+  since. Twice live, a colleague merged into another conference was hung up the moment the agent left and the extension
+  call's conference ended: once after moving by a join, once after `actions/leave` and a join. That left the dialed party
+  alone.
+- **Merging an extension call** moves the colleague, never makes them the creator of a conference the agent's leaving
+  could end:
   - A dialed number leads any merge it is part of, whatever order the phone names the calls in. The colleague joins its
-    conference, and the agent's extension leg stays behind in its own conference, the way a dialed number's agent leg
-    stays parked.
-  - With no dialed number in the merge, the colleague is moved into a new conference, `conf-{agent leg}`, marked detached
-    so their leaving does not reach back for the agent. The agent's extension leg then joins it without
-    `end_conference_on_exit`, which leaves the extension's own conference empty.
-  - Only if Telnyx refuses to move the colleague is the extension's own conference the merge's. In that case the agent
-    leaving still ends it, and the provider logs a warning saying so.
-  - Either way, the colleague first **leaves** the extension's own conference (`POST /v2/conferences/{id}/actions/leave`)
-    before joining the merge's conference or leading a new one. The orchestrator created that conference from the
-    colleague's leg, and a call that created a conference stays bound to it after joining another. Live, a colleague
-    moved by a join alone was hung up (cause `time_limit`) as soon as the agent's extension leg hung up and ended the
-    extension's conference. That left the dialed party alone. Telnyx's
-    [Leave a conference](https://developers.telnyx.com/api-reference/conference-commands/leave-a-conference) "removes a call
-    leg from a conference and moves it back to parked state". A call that left the conference it was created from this
-    way has been seen live to outlive that conference ending.
+    conference, and the agent's extension leg stays behind alone in its own conference, the way a dialed number's agent
+    leg stays parked. When the agent leaves, that conference goes with the agent's leg and takes nobody else with it.
+  - With no dialed number in the merge (two extension calls, or a Contact Center caller and an extension call), a new
+    conference, `conf-{agent leg}`, is made from the first colleague, marked detached. The agent's extension leg leaves
+    its own conference with `actions/leave` and joins the new one without `end_conference_on_exit`. The old conference,
+    now empty, expires. A call that left the conference it created this way has been seen live to outlive it expiring;
+    it is only a forced end that takes the creator down.
+  - If Telnyx refuses to make the new conference, the extension call's own conference is the merge's.
 
   The agent leg of an extension call records the colleague's leg in its client state for this, and hanging that leg up
-  releases the colleague as well. An extension call whose colleague has not answered cannot be merged yet.
+  releases the colleague as well.
 - **Digits** are sent from the dialed party's leg (`send_dtmf` plays tones to the far end of the leg it is sent on).
 - **Hang-up** from either side ends both: the agent's leg ending hangs up the dialed party (also while it is still
   ringing), and the dialed party ending -- answered or not -- hangs up the agent's leg. A leg the platform transferred or

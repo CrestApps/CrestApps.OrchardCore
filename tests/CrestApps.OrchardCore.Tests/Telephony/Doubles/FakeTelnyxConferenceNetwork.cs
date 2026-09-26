@@ -10,20 +10,23 @@ namespace CrestApps.OrchardCore.Tests.Telephony.Doubles;
 /// through to who is still on the line.
 /// </summary>
 /// <remarks>
-/// <para>What it models:</para>
+/// <para>What it models, from Telnyx's documentation and from what was seen live:</para>
 /// <list type="bullet">
-/// <item>A call joined to a conference leaves the one it was in.</item>
-/// <item>A conference ends when a participant joined with <c>end_conference_on_exit</c> leaves it, when it is ended
-/// (<c>actions/end</c>), or when its last participant leaves (Telnyx: "Conferences will expire after all participants
-/// have left"). Ending it hangs up everyone still in it.</item>
-/// <item>The call a conference was created from stays bound to it until it leaves it with <c>actions/leave</c> ("moves it
-/// back to parked state"): moved away by joining another conference, it is still hung up, with cause
-/// <c>time_limit</c>, when its first conference ends. Seen live: an extension call's colleague, moved into a merge's
-/// conference by a join, was hung up with <c>time_limit</c> the moment the extension's own conference ended. A caller
-/// that left the conference it was created from with <c>actions/leave</c> outlived that conference ending.</item>
+/// <item>A call joined to a conference leaves the one it was in. <c>actions/leave</c> parks it.</item>
+/// <item>A conference is <em>ended</em> when a participant joined with <c>end_conference_on_exit</c> leaves it, or by
+/// <c>actions/end</c>; it <em>expires</em> when its last participant leaves ("Conferences will expire after all
+/// participants have left"). Either way everyone still in it is hung up.</item>
+/// <item>The call a conference was created from stays bound to it wherever it goes: when that conference is ended it is
+/// hung up with cause <c>time_limit</c>, even after it left with <c>actions/leave</c> and joined another conference (seen
+/// live twice: an extension call's colleague, merged into another conference, was hung up the moment the agent's leg
+/// with <c>end_conference_on_exit</c> hung up). A creator that left with <c>actions/leave</c> outlives its conference
+/// expiring (seen live: a parked caller left the conference it was created from, which expired, and was answered later).
+/// A creator moved by a join alone is taken as hung up by its conference expiring too, since that was never seen.</item>
+/// <item>A call that has not been answered cannot join or create a conference (<c>90034</c>, "Call not answered yet"),
+/// and a conference name that is in use cannot be created again (<c>90033</c>).</item>
 /// </list>
 /// <para>
-/// Every leg that ends is queued as a <c>call.hangup</c> event carrying its client state, so a test can hand them to the
+/// Every leg that ends is queued as a <c>call.hangup</c> event carrying its client state, so a test can hand it to the
 /// outbound-bridge orchestrator, which releases the other half of a pair the way it does live.
 /// </para>
 /// </remarks>
@@ -31,10 +34,11 @@ internal sealed class FakeTelnyxConferenceNetwork : HttpMessageHandler
 {
     private readonly Dictionary<string, Leg> _legs = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Conference> _conferences = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _refusedJoins = new(StringComparer.Ordinal);
     private int _conferenceCount;
 
     /// <summary>
-    /// The commands sent, as "METHOD path", in order.
+    /// The commands sent, as "METHOD path?query", in order.
     /// </summary>
     public List<string> Commands { get; } = [];
 
@@ -46,11 +50,22 @@ internal sealed class FakeTelnyxConferenceNetwork : HttpMessageHandler
     /// <summary>
     /// Adds a live leg carrying <paramref name="state"/>.
     /// </summary>
-    public void AddLeg(string callControlId, TelnyxOutboundBridgeState state)
-        => _legs[callControlId] = new Leg { Id = callControlId, ClientState = state?.ToClientState() };
+    public void AddLeg(string callControlId, TelnyxOutboundBridgeState state, bool answered = true)
+        => _legs[callControlId] = new Leg { Id = callControlId, ClientState = state?.ToClientState(), Answered = answered };
 
     /// <summary>
-    /// Makes a conference named <paramref name="name"/> from <paramref name="creatorLegId"/>.
+    /// The leg answers; returns its <c>call.answered</c> event, carrying its client state, for the orchestrator.
+    /// </summary>
+    public TelnyxCallEvent Answer(string legId)
+    {
+        var leg = _legs[legId];
+        leg.Answered = true;
+
+        return new TelnyxCallEvent { EventType = "call.answered", CallControlId = legId, ClientState = Decode(leg.ClientState) };
+    }
+
+    /// <summary>
+    /// Makes a conference named <paramref name="name"/> from <paramref name="creatorLegId"/>, as an earlier attempt would.
     /// </summary>
     public string CreateConference(string name, string creatorLegId)
     {
@@ -61,11 +76,14 @@ internal sealed class FakeTelnyxConferenceNetwork : HttpMessageHandler
         return conference.Id;
     }
 
-    /// <summary>
-    /// Joins a leg to a conference, as the orchestrator does when it connects an extension call.
-    /// </summary>
     public void JoinConference(string conferenceId, string legId, bool endConferenceOnExit)
         => Join(_conferences[conferenceId], _legs[legId], endConferenceOnExit);
+
+    /// <summary>
+    /// Has Telnyx refuse to join <paramref name="legId"/> to any conference.
+    /// </summary>
+    public void RefuseJoinsOf(string legId)
+        => _refusedJoins.Add(legId);
 
     /// <summary>
     /// A party hangs up on their own.
@@ -77,10 +95,16 @@ internal sealed class FakeTelnyxConferenceNetwork : HttpMessageHandler
         => _legs.TryGetValue(legId, out var leg) && leg.Alive;
 
     /// <summary>
-    /// The live legs in the running conference named <paramref name="name"/>, or none when it is not running.
+    /// The live legs in the running conference named <paramref name="name"/>, in ordinal order, or none.
     /// </summary>
     public IReadOnlyList<string> MembersOf(string name)
         => _conferences.Values.FirstOrDefault(conference => conference.Active && conference.Name == name)?.Members.Order(StringComparer.Ordinal).ToList() ?? [];
+
+    /// <summary>
+    /// The state a leg carries now.
+    /// </summary>
+    public TelnyxOutboundBridgeState StateOf(string legId)
+        => TelnyxOutboundBridgeState.TryParseEncoded(_legs[legId].ClientState, out var state) ? state : null;
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
@@ -92,125 +116,160 @@ internal sealed class FakeTelnyxConferenceNetwork : HttpMessageHandler
 
         Commands.Add($"{request.Method} {path.Replace("/v2/", string.Empty, StringComparison.Ordinal)}{query}");
 
-        // calls/{id}, calls/{id}/actions/{action}
         if (segments.Length >= 3 && segments[1] == "calls")
         {
-            if (!_legs.TryGetValue(segments[2], out var leg))
-            {
-                return Respond(HttpStatusCode.NotFound, """{"errors":[{"code":"90015","title":"Call not found"}]}""");
-            }
-
-            if (segments.Length == 3 && request.Method == HttpMethod.Get)
-            {
-                return Respond(HttpStatusCode.OK, JsonSerializer.Serialize(new
-                {
-                    data = new { call_control_id = leg.Id, is_alive = leg.Alive, client_state = leg.ClientState },
-                }));
-            }
-
-            if (!leg.Alive)
-            {
-                return Ended();
-            }
-
-            switch (segments[^1])
-            {
-                case "client_state_update":
-                    leg.ClientState = Read(json, "client_state");
-                    return Ok();
-                case "hangup":
-                    Hangup(leg, "normal_clearing");
-                    return Ok();
-            }
-
-            return Ok();
+            return Call(request, segments, json);
         }
 
-        // conferences, conferences/{id}/actions/{action}, conferences/{id}/participants
         if (segments.Length >= 2 && segments[1] == "conferences")
         {
-            if (segments.Length == 2 && request.Method == HttpMethod.Get)
-            {
-                var name = query.StartsWith("?filter[name]=", StringComparison.Ordinal) ? query["?filter[name]=".Length..] : null;
-                var found = _conferences.Values.Where(conference => conference.Active && conference.Name == name)
-                    .Select(conference => new { id = conference.Id, name = conference.Name });
-
-                return Respond(HttpStatusCode.OK, JsonSerializer.Serialize(new { data = found }));
-            }
-
-            if (segments.Length == 2 && request.Method == HttpMethod.Post)
-            {
-                var creator = _legs[Read(json, "call_control_id")];
-
-                if (!creator.Alive)
-                {
-                    return Ended();
-                }
-
-                creator.ClientState = Read(json, "client_state") ?? creator.ClientState;
-
-                return Respond(HttpStatusCode.OK, JsonSerializer.Serialize(new { data = new { id = CreateConference(Read(json, "name"), creator.Id) } }));
-            }
-
-            if (!_conferences.TryGetValue(segments[2], out var target) || !target.Active)
-            {
-                return Respond(HttpStatusCode.UnprocessableEntity, """{"errors":[{"code":"90039","title":"Conference has already ended"}]}""");
-            }
-
-            if (segments[^1] == "participants")
-            {
-                return Respond(HttpStatusCode.OK, JsonSerializer.Serialize(new
-                {
-                    data = target.Members.Select(member => new { call_control_id = member, status = "joined" }),
-                }));
-            }
-
-            switch (segments[^1])
-            {
-                case "join":
-                    var joining = _legs[Read(json, "call_control_id")];
-
-                    if (!joining.Alive)
-                    {
-                        return Ended();
-                    }
-
-                    if (target.Members.Contains(joining.Id))
-                    {
-                        return Respond(HttpStatusCode.UnprocessableEntity, """{"errors":[{"code":"90044","title":"Participant must not join the same conference twice."}]}""");
-                    }
-
-                    Join(target, joining, json.RootElement.TryGetProperty("end_conference_on_exit", out var endOnExit) && endOnExit.GetBoolean());
-                    return Ok();
-                case "leave":
-                    var leaving = _legs[Read(json, "call_control_id")];
-
-                    if (leaving.ConferenceId != target.Id)
-                    {
-                        return Respond(HttpStatusCode.UnprocessableEntity, """{"errors":[{"code":"90045","title":"Call is not in the conference"}]}""");
-                    }
-
-                    Remove(leaving, releaseCreator: true);
-                    return Ok();
-                case "end":
-                    End(target);
-                    return Ok();
-            }
+            return ConferenceCommand(request, segments, query, json);
         }
 
         return Ok();
     }
 
+    private HttpResponseMessage Call(HttpRequestMessage request, string[] segments, JsonDocument json)
+    {
+        if (!_legs.TryGetValue(segments[2], out var leg))
+        {
+            return Respond(HttpStatusCode.NotFound, """{"errors":[{"code":"90015","title":"Call not found"}]}""");
+        }
+
+        if (segments.Length == 3 && request.Method == HttpMethod.Get)
+        {
+            return Respond(HttpStatusCode.OK, JsonSerializer.Serialize(new
+            {
+                data = new { call_control_id = leg.Id, is_alive = leg.Alive, client_state = leg.ClientState },
+            }));
+        }
+
+        if (!leg.Alive)
+        {
+            return Ended();
+        }
+
+        switch (segments[^1])
+        {
+            case "client_state_update":
+                leg.ClientState = Read(json, "client_state");
+                break;
+            case "hangup":
+                Hangup(leg, "normal_clearing");
+                break;
+        }
+
+        return Ok();
+    }
+
+    private HttpResponseMessage ConferenceCommand(HttpRequestMessage request, string[] segments, string query, JsonDocument json)
+    {
+        if (segments.Length == 2 && request.Method == HttpMethod.Get)
+        {
+            var name = NameFilter(query);
+            var found = _conferences.Values.Where(conference => conference.Active && conference.Name == name)
+                .Select(conference => new { id = conference.Id, name = conference.Name, status = "in_progress" });
+
+            return Respond(HttpStatusCode.OK, JsonSerializer.Serialize(new { data = found }));
+        }
+
+        if (segments.Length == 2 && request.Method == HttpMethod.Post)
+        {
+            var creator = _legs[Read(json, "call_control_id")];
+            var name = Read(json, "name");
+
+            if (_conferences.Values.Any(conference => conference.Active && conference.Name == name))
+            {
+                return Respond(HttpStatusCode.UnprocessableEntity, """{"errors":[{"code":"90033","title":"Conference with given name already exists"}]}""");
+            }
+
+            if (Refusal(creator) is { } refused)
+            {
+                return refused;
+            }
+
+            creator.ClientState = Read(json, "client_state") ?? creator.ClientState;
+
+            return Respond(HttpStatusCode.OK, JsonSerializer.Serialize(new { data = new { id = CreateConference(name, creator.Id) } }));
+        }
+
+        if (!_conferences.TryGetValue(segments[2], out var target) || !target.Active)
+        {
+            return Respond(HttpStatusCode.UnprocessableEntity, """{"errors":[{"code":"90039","title":"Conference has already ended"}]}""");
+        }
+
+        if (segments[^1] == "participants")
+        {
+            return Respond(HttpStatusCode.OK, JsonSerializer.Serialize(new
+            {
+                data = target.Members.Select(member => new { call_control_id = member, status = "joined" }),
+            }));
+        }
+
+        switch (segments[^1])
+        {
+            case "join":
+                var joining = _legs[Read(json, "call_control_id")];
+
+                if (Refusal(joining) is { } refused)
+                {
+                    return refused;
+                }
+
+                if (target.Members.Contains(joining.Id))
+                {
+                    return Respond(HttpStatusCode.UnprocessableEntity, """{"errors":[{"code":"90044","title":"Participant must not join the same conference twice."}]}""");
+                }
+
+                Join(target, joining, json.RootElement.TryGetProperty("end_conference_on_exit", out var endOnExit) && endOnExit.GetBoolean());
+                break;
+            case "leave":
+                var leaving = _legs[Read(json, "call_control_id")];
+
+                if (leaving.ConferenceId != target.Id)
+                {
+                    return Respond(HttpStatusCode.UnprocessableEntity, """{"errors":[{"code":"90045","title":"Call is not in the conference"}]}""");
+                }
+
+                if (target.CreatorId == leaving.Id)
+                {
+                    target.CreatorLeft = true;
+                }
+
+                Remove(leaving);
+                break;
+            case "end":
+                End(target, forced: true);
+                break;
+        }
+
+        return Ok();
+    }
+
+    private HttpResponseMessage Refusal(Leg leg)
+    {
+        if (!leg.Alive)
+        {
+            return Ended();
+        }
+
+        if (!leg.Answered)
+        {
+            return Respond(HttpStatusCode.UnprocessableEntity, """{"errors":[{"code":"90034","title":"Call not answered yet"}]}""");
+        }
+
+        return _refusedJoins.Contains(leg.Id) ? Ended() : null;
+    }
+
     private void Join(Conference conference, Leg leg, bool endConferenceOnExit)
     {
-        // Joining another conference takes the leg out of the one it was in, but not off the one it created.
-        Remove(leg, releaseCreator: false);
+        Remove(leg);
         conference.Members.Add(leg.Id);
         leg.ConferenceId = conference.Id;
         leg.EndConferenceOnExit = endConferenceOnExit;
     }
 
-    private void Remove(Leg leg, bool releaseCreator)
+    private void Remove(Leg leg)
     {
         if (leg.ConferenceId is null || !_conferences.TryGetValue(leg.ConferenceId, out var conference))
         {
@@ -223,18 +282,17 @@ internal sealed class FakeTelnyxConferenceNetwork : HttpMessageHandler
         var endsIt = leg.EndConferenceOnExit;
         leg.EndConferenceOnExit = false;
 
-        if (releaseCreator && conference.CreatorId == leg.Id)
+        if (endsIt)
         {
-            conference.CreatorBound = false;
+            End(conference, forced: true);
         }
-
-        if (endsIt || conference.Members.Count == 0)
+        else if (conference.Members.Count == 0)
         {
-            End(conference);
+            End(conference, forced: false);
         }
     }
 
-    private void End(Conference conference)
+    private void End(Conference conference, bool forced)
     {
         if (!conference.Active)
         {
@@ -251,7 +309,7 @@ internal sealed class FakeTelnyxConferenceNetwork : HttpMessageHandler
 
         conference.Members.Clear();
 
-        if (conference.CreatorBound && _legs.TryGetValue(conference.CreatorId, out var creator))
+        if ((forced || !conference.CreatorLeft) && _legs.TryGetValue(conference.CreatorId, out var creator))
         {
             Hangup(creator, "time_limit");
         }
@@ -265,15 +323,33 @@ internal sealed class FakeTelnyxConferenceNetwork : HttpMessageHandler
         }
 
         leg.Alive = false;
-        Remove(leg, releaseCreator: false);
+        Remove(leg);
         PendingEvents.Enqueue(new TelnyxCallEvent
         {
             EventType = "call.hangup",
             CallControlId = leg.Id,
             HangupCause = cause,
-            ClientState = leg.ClientState is null ? null : Encoding.UTF8.GetString(Convert.FromBase64String(leg.ClientState)),
+            ClientState = Decode(leg.ClientState),
         });
     }
+
+    private static string NameFilter(string query)
+    {
+        const string Prefix = "?filter[name]=";
+
+        if (!query.StartsWith(Prefix, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        var name = query[Prefix.Length..];
+        var next = name.IndexOf('&', StringComparison.Ordinal);
+
+        return next < 0 ? name : name[..next];
+    }
+
+    private static string Decode(string clientState)
+        => clientState is null ? null : Encoding.UTF8.GetString(Convert.FromBase64String(clientState));
 
     private static string Read(JsonDocument json, string property)
         => json is not null && json.RootElement.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.String
@@ -295,6 +371,8 @@ internal sealed class FakeTelnyxConferenceNetwork : HttpMessageHandler
 
         public bool Alive { get; set; } = true;
 
+        public bool Answered { get; set; } = true;
+
         public string ClientState { get; set; }
 
         public string ConferenceId { get; set; }
@@ -310,7 +388,7 @@ internal sealed class FakeTelnyxConferenceNetwork : HttpMessageHandler
 
         public string CreatorId { get; init; }
 
-        public bool CreatorBound { get; set; } = true;
+        public bool CreatorLeft { get; set; }
 
         public bool Active { get; set; } = true;
 

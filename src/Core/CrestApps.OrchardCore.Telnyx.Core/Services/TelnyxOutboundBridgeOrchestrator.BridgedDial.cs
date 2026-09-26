@@ -50,9 +50,17 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator
         string destinationLegCallControlId,
         CancellationToken cancellationToken)
     {
+        var recorded = state.WithPeer(destinationLegCallControlId);
+
+        // Dialed, not answered yet: a merge waits until it is (see MarkPeerAnsweredAsync).
+        if (!recorded.IsConsultAgentLeg)
+        {
+            recorded.PeerAnswered = false;
+        }
+
         var updated = await _apiClient.UpdateClientStateAsync(
             agentLegCallControlId,
-            state.WithPeer(destinationLegCallControlId).ToClientStateJson(),
+            recorded.ToClientStateJson(),
             cancellationToken);
 
         if (!updated.Succeeded)

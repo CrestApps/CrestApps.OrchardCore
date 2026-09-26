@@ -227,7 +227,7 @@ public sealed class TelnyxBridgedDialTests
             [
                 "GET /v2/calls/agent-a",
                 "GET /v2/calls/agent-d",
-                "GET /v2/conferences?filter[name]=conf-agent-a",
+                "GET /v2/conferences?filter[name]=conf-agent-a&filter[status]=in_progress",
                 "POST /v2/conferences/conference-1/actions/join",
             ],
             handler.Requests.Select(Describe));

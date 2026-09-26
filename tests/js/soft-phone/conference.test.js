@@ -490,6 +490,24 @@ describe('planConferenceHangup', () => {
     });
 });
 
+// Live: Merge was pressed while extension 2 was still ringing, and Telnyx refused it. A line that is still connecting or
+// ringing cannot be merged, and its checkbox says why.
+describe('buildActiveCallsHtml unanswered lines', () => {
+    it('draws a disabled checkbox that says the line is waiting to be answered', () => {
+        const html = buildActiveCallsHtml({
+            calls: [
+                { callId: 'a', number: '(555) 123-4567', state: 'On hold', selectable: true },
+                { callId: 'b', number: 'Jane Doe · ext 2', state: 'Connecting...', selectable: false, unselectableReason: 'not-answered' }
+            ],
+            merge: { offered: false }
+        }, { cannotMergeUnanswered: 'Waiting for them to answer before this call can be merged.' }, escapeHtml);
+
+        expect(html).toMatch(/data-telephony-conference-call="b"[^>]*disabled/);
+        expect(html).toContain('title="Waiting for them to answer before this call can be merged."');
+        expect(html).toContain('data-telephony-merge-waiting');
+    });
+});
+
 describe('buildActiveCallsHtml line details', () => {
     const strings = { hangupParticipant: 'Hang up {0}', conferenceParticipants: 'Conference · {0} participants' };
 

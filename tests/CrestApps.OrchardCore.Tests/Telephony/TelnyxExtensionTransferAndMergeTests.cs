@@ -123,7 +123,7 @@ public sealed class TelnyxExtensionTransferAndMergeTests
                 "GET /v2/calls/ctrl-a",
                 "GET /v2/calls/ctrl-n",
                 "GET /v2/calls/ctrl-m",
-                "GET /v2/conferences?filter[name]=conf-ctrl-a",
+                "GET /v2/conferences?filter[name]=conf-ctrl-a&filter[status]=in_progress",
                 "POST /v2/conferences/conference-1/actions/join",
                 "POST /v2/conferences/conference-1/actions/join",
             ],

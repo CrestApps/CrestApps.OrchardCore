@@ -140,8 +140,13 @@
     }
 
     function unselectableText(reason, strings) {
-        return reason === 'browser-call'
-            ? strings.cannotMergeBrowserCall || 'A call dialed from this phone cannot be merged into a conference.'
+        if (reason === 'browser-call') {
+            return strings.cannotMergeBrowserCall || 'A call dialed from this phone cannot be merged into a conference.';
+        }
+
+        // A line still connecting or ringing: the provider refuses to join a call nobody has answered.
+        return reason === 'not-answered'
+            ? strings.cannotMergeUnanswered || 'Waiting for them to answer before this call can be merged.'
             : '';
     }
 
@@ -223,7 +228,8 @@
         // A checkbox only means something while there is something to merge: once every call is in the conference,
         // ticking them again would only ask the provider to join them a second time. A call that cannot be merged keeps
         // its disabled checkbox, which says why.
-        var withChecks = !!(merge.offered || merge.blocked);
+        var waiting = calls.length > 1 && calls.some(function (call) { return call.unselectableReason === 'not-answered'; });
+        var withChecks = !!(merge.offered || merge.blocked || waiting);
 
         if (participants.length) {
             html += '<div class="telephony-soft-phone__conference" data-telephony-conference role="group" aria-label="' +
@@ -242,6 +248,12 @@
             html += '<div class="telephony-soft-phone__merge-note" data-telephony-merge-blocked>' +
                 '<i class="fa-solid fa-circle-info" aria-hidden="true"></i> ' +
                 escapeHtml(unselectableText(merge.blocked, strings)) + '</div>';
+        }
+
+        if (waiting && !merge.blocked) {
+            html += '<div class="telephony-soft-phone__merge-note" data-telephony-merge-waiting>' +
+                '<i class="fa-solid fa-hourglass-half" aria-hidden="true"></i> ' +
+                escapeHtml(unselectableText('not-answered', strings)) + '</div>';
         }
 
         if (merge.offered) {

@@ -141,6 +141,14 @@ public sealed class TelnyxOutboundBridgeState
     public bool? TargetAnswered { get; set; }
 
     /// <summary>
+    /// Gets or sets, on the agent's leg of a number dialed from the soft phone or of an extension call, whether the party
+    /// in <see cref="PeerCallControlId"/> has answered: <see langword="false"/> from the moment it is dialed until it
+    /// answers. A call whose party has not answered cannot be merged. <see langword="null"/> on a leg that predates this.
+    /// </summary>
+    [JsonPropertyName("j")]
+    public bool? PeerAnswered { get; set; }
+
+    /// <summary>
     /// Gets or sets a leg to hang up when this one ends, for two outside parties the platform joined to each other and
     /// then left: nothing else ties them together.
     /// </summary>

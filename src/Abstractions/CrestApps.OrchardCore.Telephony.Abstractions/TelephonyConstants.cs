@@ -66,6 +66,12 @@ public static class TelephonyConstants
         /// created, so the soft phone may place the call itself.
         /// </summary>
         public const string BridgeUnavailable = "bridge-unavailable";
+
+        /// <summary>
+        /// A call named in a merge has not been answered by the party it rings yet, so nothing was merged: the soft phone
+        /// says so and offers the merge again once they pick up.
+        /// </summary>
+        public const string NotAnswered = "not-answered";
     }
 
     /// <summary>

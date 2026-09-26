@@ -219,12 +219,18 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
                     destinationLegCallControlId: callEvent.CallControlId,
                     cancellationToken);
             }
-            else if (await BridgeDialedNumberAsync(agentLegCallControlId: state.PeerCallControlId, destinationLegCallControlId: callEvent.CallControlId, cancellationToken) &&
-                !string.IsNullOrWhiteSpace(state.TransferOfCallControlId) &&
-                state.Detached != true)
+            else if (await BridgeDialedNumberAsync(agentLegCallControlId: state.PeerCallControlId, destinationLegCallControlId: callEvent.CallControlId, cancellationToken))
             {
-                // The number a consult dialed answered: the agent can now hand the call to it.
-                await MarkConsultAnsweredAsync(state.PeerCallControlId, cancellationToken);
+                if (!string.IsNullOrWhiteSpace(state.TransferOfCallControlId) && state.Detached != true)
+                {
+                    // The number a consult dialed answered: the agent can now hand the call to it.
+                    await MarkConsultAnsweredAsync(state.PeerCallControlId, cancellationToken);
+                }
+                else
+                {
+                    // The number answered: the call can now be merged.
+                    await MarkPeerAnsweredAsync(state.PeerCallControlId, cancellationToken);
+                }
             }
 
             return TelnyxOutboundBridgeLeg.DestinationLeg;
@@ -621,61 +627,6 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
             _logger.LogError(ex, "An error occurred while dialing the destination leg of a Telnyx outbound bridge.");
 
             return null;
-        }
-    }
-
-    // Connect the caller's (agent) leg and the answered destination leg of an internal extension call by placing
-    // both into a conference, instead of a raw two-leg bridge. Two WebRTC legs bridged directly negotiate media
-    // but only pass audio one way on Telnyx; a conference mixes them and each WebRTC leg gets normal two-way
-    // media with the mixer. The conference is named after the agent leg so both legs resolve the same one.
-    private async Task ConnectExtensionViaConferenceAsync(
-        string agentLegCallControlId,
-        string destinationLegCallControlId,
-        CancellationToken cancellationToken)
-    {
-        var conferenceName = $"ext-{agentLegCallControlId}";
-
-        try
-        {
-            // Form the conference from the destination (callee) leg, then join the caller's (agent) leg with
-            // end_conference_on_exit so that when the caller hangs up, Telnyx ends the conference and drops the
-            // callee too. (A conference, unlike a raw bridge, otherwise leaves the remaining participant connected
-            // when the other hangs up.) The reverse direction -- the callee hanging up first -- is handled by the
-            // destination-leg hangup path, which hangs up the caller's leg.
-            var conferenceId = await EnsureConferenceAsync(conferenceName, destinationLegCallControlId, cancellationToken);
-
-            if (string.IsNullOrWhiteSpace(conferenceId))
-            {
-                _logger.LogError(
-                    "Could not resolve the Telnyx conference '{ConferenceName}' to connect an internal extension call.",
-                    conferenceName.SanitizeLogValue());
-
-                return;
-            }
-
-            var joinResult = await _apiClient.JoinConferenceAsync(
-                conferenceId,
-                agentLegCallControlId,
-                endConferenceOnExit: true,
-                commandId: $"ext-join-{agentLegCallControlId}",
-                cancellationToken);
-
-            if (!joinResult.Succeeded)
-            {
-                _logger.LogError(
-                    "Telnyx rejected joining the caller leg to conference '{ConferenceName}' with status code {StatusCode}. Response: {Response}",
-                    conferenceName.SanitizeLogValue(),
-                    joinResult.StatusCode,
-                    joinResult.ErrorBody.SanitizeLogValue());
-            }
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "An error occurred while connecting an internal extension call through a Telnyx conference.");
         }
     }
 

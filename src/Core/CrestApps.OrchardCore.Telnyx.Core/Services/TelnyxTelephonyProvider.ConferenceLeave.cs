@@ -127,7 +127,7 @@ public sealed partial class TelnyxTelephonyProvider
         {
             try
             {
-                var conference = await _apiClient.FindConferenceByNameAsync(conferenceName, cancellationToken);
+                var conference = await _apiClient.FindLiveConferenceByNameAsync(conferenceName, cancellationToken);
 
                 if (conference.Succeeded && !string.IsNullOrWhiteSpace(conference.ConferenceId))
                 {
@@ -170,7 +170,7 @@ public sealed partial class TelnyxTelephonyProvider
 
         try
         {
-            var conference = await _apiClient.FindConferenceByNameAsync(conferenceName, cancellationToken);
+            var conference = await _apiClient.FindLiveConferenceByNameAsync(conferenceName, cancellationToken);
 
             if (!conference.Succeeded || string.IsNullOrWhiteSpace(conference.ConferenceId))
             {

@@ -19,6 +19,19 @@ internal static class TelnyxApiErrors
     public const string AlreadyInConferenceCode = "90044";
 
     /// <summary>
+    /// The code Telnyx refuses a conference create with when a conference of that name already exists (seen live after a
+    /// merge that failed half way).
+    /// </summary>
+    public const string ConferenceNameTakenCode = "90033";
+
+    /// <summary>
+    /// Gets whether Telnyx refused a conference create because a conference of that name exists.
+    /// </summary>
+    /// <param name="result">The refused create's result.</param>
+    public static bool IsConferenceNameTaken(TelnyxApiResult result)
+        => HasErrorCode(result, ConferenceNameTakenCode);
+
+    /// <summary>
     /// Gets whether Telnyx refused the command because the call has already ended.
     /// </summary>
     /// <param name="result">The refused command's result.</param>

@@ -2996,7 +2996,12 @@
     return String(template).replace('{0}', value);
   }
   function unselectableText(reason, strings) {
-    return reason === 'browser-call' ? strings.cannotMergeBrowserCall || 'A call dialed from this phone cannot be merged into a conference.' : '';
+    if (reason === 'browser-call') {
+      return strings.cannotMergeBrowserCall || 'A call dialed from this phone cannot be merged into a conference.';
+    }
+
+    // A line still connecting or ringing: the provider refuses to join a call nobody has answered.
+    return reason === 'not-answered' ? strings.cannotMergeUnanswered || 'Waiting for them to answer before this call can be merged.' : '';
   }
   function row(item, strings, escapeHtml, inConference, withCheck) {
     var reason = item.selectable ? '' : unselectableText(item.unselectableReason, strings);
@@ -3045,7 +3050,10 @@
     // A checkbox only means something while there is something to merge: once every call is in the conference,
     // ticking them again would only ask the provider to join them a second time. A call that cannot be merged keeps
     // its disabled checkbox, which says why.
-    var withChecks = !!(merge.offered || merge.blocked);
+    var waiting = calls.length > 1 && calls.some(function (call) {
+      return call.unselectableReason === 'not-answered';
+    });
+    var withChecks = !!(merge.offered || merge.blocked || waiting);
     if (participants.length) {
       html += '<div class="telephony-soft-phone__conference" data-telephony-conference role="group" aria-label="' + escapeHtml(format(strings.conferenceParticipants || 'Conference · {0} participants', participants.length)) + '">' + '<div class="telephony-soft-phone__conference-heading">' + '<i class="fa-solid fa-users" aria-hidden="true"></i> ' + escapeHtml(format(strings.conferenceParticipants || 'Conference · {0} participants', participants.length)) + '</div>' + participants.map(function (call) {
         return row(call, strings, escapeHtml, true, withChecks);
@@ -3056,6 +3064,9 @@
     }).join('');
     if (merge.blocked) {
       html += '<div class="telephony-soft-phone__merge-note" data-telephony-merge-blocked>' + '<i class="fa-solid fa-circle-info" aria-hidden="true"></i> ' + escapeHtml(unselectableText(merge.blocked, strings)) + '</div>';
+    }
+    if (waiting && !merge.blocked) {
+      html += '<div class="telephony-soft-phone__merge-note" data-telephony-merge-waiting>' + '<i class="fa-solid fa-hourglass-half" aria-hidden="true"></i> ' + escapeHtml(unselectableText('not-answered', strings)) + '</div>';
     }
     if (merge.offered) {
       html += mergeBarHtml(merge, strings, escapeHtml);
@@ -3285,6 +3296,71 @@
   softPhone.planMerge = planMerge;
   softPhone.conferenceAfterMerge = conferenceAfterMerge;
   softPhone.buildActiveCallsHtml = buildActiveCallsHtml;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * What the phone calls each line: a name or a number, never an id.
+ *
+ * Live, a conference row read "v3:UyLVvJ3o7qQklQFQnZpvgJylmV..." -- the provider's id for the agent's own leg -- where
+ * the dialed number belonged, and the phone sometimes showed the conference's id for a moment. The phone reads its calls
+ * again every few seconds, and a provider's report of a call may say nothing of whom it is with; the row then fell back
+ * to the call's id. The numbers a call was first reported with are now remembered and stamped back onto a report that
+ * has none, and a label that is still only an id is replaced by a plain word ("Participant", "Caller").
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // A provider's call control id ("v3:..."), a conference name the platform makes ("conf-...", "ext-...",
+  // "consult-...", "cc-park-..."), a UUID, or a test harness's call id.
+  var ID_PATTERNS = [/^v\d+:/i, /^(conf|ext|consult|cc-[a-z]+)-/i, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, /^call-[0-9a-f-]{8,}$/i];
+  function looksLikeId(value) {
+    return ID_PATTERNS.some(function (pattern) {
+      return pattern.test(value);
+    });
+  }
+
+  // The label to show, or `fallback` when it is empty or only an id.
+  function friendlyCallLabel(label, fallback) {
+    var text = label == null ? '' : String(label).trim();
+    return text && !looksLikeId(text) ? text : fallback || '';
+  }
+  function createCallPartyMemory() {
+    return {};
+  }
+  var PARTY_KEYS = ['from', 'to', 'direction'];
+
+  // Remembers whom a call is with from a report that says, and stamps it onto one that does not.
+  function carryCallParty(memory, call) {
+    if (!call || !call.callId || !memory) {
+      return call;
+    }
+    var remembered = Object.prototype.hasOwnProperty.call(memory, call.callId) ? memory[call.callId] : {};
+    PARTY_KEYS.forEach(function (key) {
+      var value = call[key];
+      if (value != null && value !== '') {
+        remembered[key] = value;
+      } else if (remembered[key] != null) {
+        call[key] = remembered[key];
+      }
+    });
+    if (Object.keys(remembered).length) {
+      memory[call.callId] = remembered;
+    }
+    return call;
+  }
+  function forgetCallParty(memory, callId) {
+    if (memory && callId) {
+      delete memory[callId];
+    }
+  }
+  softPhone.friendlyCallLabel = friendlyCallLabel;
+  softPhone.createCallPartyMemory = createCallPartyMemory;
+  softPhone.carryCallParty = carryCallParty;
+  softPhone.forgetCallParty = forgetCallParty;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*
  * Which in-call controls the phone shows, and how.
@@ -6705,6 +6781,10 @@
   var planConferenceHangup = softPhoneModules.planConferenceHangup;
   var planConferenceEnd = softPhoneModules.planConferenceEnd;
   var planInCallControls = softPhoneModules.planInCallControls;
+  var friendlyCallLabel = softPhoneModules.friendlyCallLabel;
+  var createCallPartyMemory = softPhoneModules.createCallPartyMemory;
+  var carryCallParty = softPhoneModules.carryCallParty;
+  var forgetCallParty = softPhoneModules.forgetCallParty;
   var planNumberField = softPhoneModules.planNumberField;
   var keypadExtensionMatches = softPhoneModules.keypadExtensionMatches;
   var resolveKeypadExtension = softPhoneModules.resolveKeypadExtension;
@@ -8916,6 +8996,9 @@
     // The conferences this phone's merges made, stamped back onto every report of their calls (see
     // soft-phone/conference.js).
     var conferenceMemory = createConferenceMemory();
+    // Whom each call is with, from the first report that said, for the reports that do not (see
+    // soft-phone/call-labels.js).
+    var callParties = createCallPartyMemory();
     // The interaction each Contact Center call names, kept across the provider's reports of it, which name none
     // (see soft-phone/transfer-service.js).
     var callContexts = createCallContextMemory();
@@ -11806,6 +11889,11 @@
       return statusTextForState(normalizeState(call && call.state));
     }
 
+    // A line's label: whom it is with -- the person an extension rings, the number, the caller -- never an id.
+    function lineLabel(call) {
+      return friendlyCallLabel(callDisplayLabel(call), isContactCenterCall(call) ? strings.caller || 'Caller' : strings.participant || 'Participant');
+    }
+
     // A line's state in the active-call list: Active, On hold, or what the header would say.
     function lineStateText(call) {
       if (!metadataBoolean(call, 'isConference') && normalizeState(call && call.state) === 'Connected') {
@@ -11970,6 +12058,7 @@
       rememberAgentMute(agentMutes, callId, false);
       delete extensionCallNumbers[callId];
       forgetConferenceCall(conferenceMemory, callId);
+      forgetCallParty(callParties, callId);
       forgetCallContext(callContexts, callId);
       if (currentCall && currentCall.callId === callId) {
         currentCall = visibleConferenceCalls(conferenceMemory, getActiveCalls())[0] || getActiveCalls()[0] || null;
@@ -12085,6 +12174,7 @@
       if (!call || !call.callId) {
         return;
       }
+      carryCallParty(callParties, call);
       applyAgentHold(call);
       applyAgentMute(call);
       rememberExtensionCall(call);
@@ -12384,13 +12474,14 @@
           callConnectedAt[callId] = connectedAtFor(lineState === 'Connected' || lineState === 'OnHold', callConnectedAt[callId], Date.now());
           return {
             callId: callId,
-            number: callDisplayLabel(call) || callId,
+            number: lineLabel(call),
             state: lineStateText(call),
             stateKind: lineStateKind(call),
             elapsed: lineElapsedText(callId),
             current: !!(currentCall && currentCall.callId === callId),
-            selectable: canMergeCalls && canConferenceCall(call),
-            unselectableReason: canConferenceCall(call) ? '' : 'browser-call',
+            // A line still connecting or ringing cannot be merged: nobody has answered it yet.
+            selectable: canMergeCalls && canConferenceCall(call) && (lineState === 'Connected' || lineState === 'OnHold'),
+            unselectableReason: !canConferenceCall(call) ? 'browser-call' : lineState === 'Connected' || lineState === 'OnHold' ? '' : 'not-answered',
             selected: !!conferenceSelections[callId],
             inConference: metadataBoolean(call, 'isConference'),
             canHangup: has(CAPABILITIES.Hangup)
@@ -12404,7 +12495,7 @@
           allSelected: plan.allSelected,
           blocked: canMergeCalls ? plan.blocked : '',
           numbers: plan.calls.map(function (call) {
-            return callDisplayLabel(call) || call.callId;
+            return lineLabel(call);
           })
         }
       }, strings, escapeHtml);
@@ -12483,6 +12574,11 @@
         return;
       }
       if (field.action === 'keep') {
+        return;
+      }
+
+      // Never an id in the field: a call whose report names nobody shows nothing rather than its own id.
+      if (!friendlyCallLabel(field.value, '')) {
         return;
       }
       if (field.action === 'label') {

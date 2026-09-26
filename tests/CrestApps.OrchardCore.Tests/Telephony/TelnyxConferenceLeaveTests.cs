@@ -49,8 +49,7 @@ public sealed class TelnyxConferenceLeaveTests
         Assert.DoesNotContain(handler.Requests, request => request.Body?.Contains("end_conference_on_exit", StringComparison.Ordinal) == true);
     }
 
-    // The extension call's own conference holds the agent's leg with end_conference_on_exit, which cannot be changed once
-    // joined, so a merge with a dialed number is led by the dialed number, whichever the phone named first.
+    // A dialed number leads a merge with an extension call, whichever the phone named first: its agent leg carries the agent in.
     [Fact]
     public async Task ADialedNumberLeadsAMergeWithAnExtensionCall_WhateverTheOrder()
     {
@@ -59,8 +58,6 @@ public sealed class TelnyxConferenceLeaveTests
             .RespondWith(HttpStatusCode.OK, TelnyxBridgedDialTests.CallStatus(TelnyxMergeExtensionCallTests.ExtensionAgentState(peer: ColleagueLeg)))
             .RespondWith(HttpStatusCode.OK, TelnyxBridgedDialTests.CallStatus(TelnyxBridgedDialTests.AgentLeg(peer: "remote-b")))
             .RespondWith(HttpStatusCode.OK, """{"data":{"id":"conference-1"}}""")
-            .RespondWith(HttpStatusCode.OK, """{"data":{"result":"ok"}}""")
-            .RespondWith(HttpStatusCode.OK, $$$"""{"data":[{"id":"conference-ext","name":"ext-{{{ExtensionAgentLeg}}}"}]}""")
             .AlwaysRespondWith(HttpStatusCode.OK, """{"data":{"result":"ok"}}""");
         var provider = TelnyxMergeExtensionCallTests.CreateProvider(handler);
 
@@ -75,8 +72,6 @@ public sealed class TelnyxConferenceLeaveTests
                 "GET /v2/calls/keypad-agent",
                 "POST /v2/conferences",
                 "POST /v2/conferences/conference-1/actions/join",
-                $"GET /v2/conferences?filter[name]=ext-{ExtensionAgentLeg}",
-                "POST /v2/conferences/conference-ext/actions/leave",
                 "POST /v2/conferences/conference-1/actions/join",
             ],
             handler.Requests.Select(TelnyxMergeExtensionCallTests.Describe));
@@ -84,8 +79,7 @@ public sealed class TelnyxConferenceLeaveTests
         Assert.Equal("conf-keypad-agent", TelnyxMergeExtensionCallTests.ReadString(handler.Requests[2].Body, "name"));
         Assert.Equal("keypad-agent", TelnyxMergeExtensionCallTests.ReadString(handler.Requests[3].Body, "call_control_id"));
         Assert.False(HasProperty(handler.Requests[3].Body, "end_conference_on_exit"));
-        Assert.Equal(ColleagueLeg, TelnyxMergeExtensionCallTests.ReadString(handler.Requests[5].Body, "call_control_id"));
-        Assert.Equal(ColleagueLeg, TelnyxMergeExtensionCallTests.ReadString(handler.Requests[6].Body, "call_control_id"));
+        Assert.Equal(ColleagueLeg, TelnyxMergeExtensionCallTests.ReadString(handler.Requests[4].Body, "call_control_id"));
         Assert.Equal("keypad-agent", result.Call.CallId);
         Assert.Equal("conf-keypad-agent", result.Call.Metadata["conferenceName"]);
     }
@@ -100,31 +94,31 @@ public sealed class TelnyxConferenceLeaveTests
         var handler = new RecordingHttpMessageHandler()
             .RespondWith(HttpStatusCode.OK, _callerStatus)
             .RespondWith(HttpStatusCode.OK, TelnyxBridgedDialTests.CallStatus(TelnyxMergeExtensionCallTests.ExtensionAgentState(peer: ColleagueLeg)))
-            .RespondWith(HttpStatusCode.OK, $$$"""{"data":[{"id":"conference-ext","name":"ext-{{{ExtensionAgentLeg}}}"}]}""")
-            .RespondWith(HttpStatusCode.OK, """{"data":{"result":"ok"}}""")
             .RespondWith(HttpStatusCode.OK, """{"data":{"id":"conference-1"}}""")
+            .RespondWith(HttpStatusCode.OK, $$$"""{"data":[{"id":"conference-ext","name":"ext-{{{ExtensionAgentLeg}}}"}]}""")
             .AlwaysRespondWith(HttpStatusCode.OK, """{"data":{"result":"ok"}}""");
         var provider = TelnyxMergeExtensionCallTests.CreateProvider(handler);
 
         // Act
         var result = await provider.MergeAsync(new MergeRequest { CallIds = [CallerLeg, ExtensionAgentLeg] }, TestContext.Current.CancellationToken);
 
-        // Assert - the colleague leaves the extension's own conference, which they created, before a new one is made from them.
+        // Assert - a new conference is made from the colleague; the agent's extension leg leaves its own conference, which
+        // it created, with actions/leave before joining, so that one expiring cannot take it down.
         Assert.True(result.Succeeded, result.Error);
         Assert.Equal(
             [
                 $"GET /v2/calls/{CallerLeg}",
                 $"GET /v2/calls/{ExtensionAgentLeg}",
-                $"GET /v2/conferences?filter[name]=ext-{ExtensionAgentLeg}",
-                "POST /v2/conferences/conference-ext/actions/leave",
                 "POST /v2/conferences",
+                $"GET /v2/conferences?filter[name]=ext-{ExtensionAgentLeg}&filter[status]=in_progress",
+                "POST /v2/conferences/conference-ext/actions/leave",
                 "POST /v2/conferences/conference-1/actions/join",
                 "POST /v2/conferences/conference-1/actions/join",
             ],
             handler.Requests.Select(TelnyxMergeExtensionCallTests.Describe));
-        Assert.Equal(ColleagueLeg, TelnyxMergeExtensionCallTests.ReadString(handler.Requests[3].Body, "call_control_id"));
+        Assert.Equal(ExtensionAgentLeg, TelnyxMergeExtensionCallTests.ReadString(handler.Requests[4].Body, "call_control_id"));
 
-        var create = handler.Requests[4];
+        var create = handler.Requests[2];
         Assert.Equal(ColleagueLeg, TelnyxMergeExtensionCallTests.ReadString(create.Body, "call_control_id"));
         Assert.Equal($"conf-{ExtensionAgentLeg}", TelnyxMergeExtensionCallTests.ReadString(create.Body, "name"));
         Assert.True(TelnyxOutboundBridgeState.TryParseEncoded(TelnyxMergeExtensionCallTests.ReadString(create.Body, "client_state"), out var colleague));
@@ -145,10 +139,7 @@ public sealed class TelnyxConferenceLeaveTests
         var handler = new RecordingHttpMessageHandler()
             .RespondWith(HttpStatusCode.OK, _callerStatus)
             .RespondWith(HttpStatusCode.OK, TelnyxBridgedDialTests.CallStatus(TelnyxMergeExtensionCallTests.ExtensionAgentState(peer: ColleagueLeg)))
-            .RespondWith(HttpStatusCode.OK, $$$"""{"data":[{"id":"conference-ext","name":"ext-{{{ExtensionAgentLeg}}}"}]}""")
-            .RespondWith(HttpStatusCode.OK, """{"data":{"result":"ok"}}""")
             .RespondWith(HttpStatusCode.UnprocessableEntity, """{"errors":[{"code":"90040","title":"Conference create not allowed"}]}""")
-            .RespondWith(HttpStatusCode.OK, """{"data":{"result":"ok"}}""")
             .RespondWith(HttpStatusCode.OK, $$$"""{"data":[{"id":"conference-ext","name":"ext-{{{ExtensionAgentLeg}}}"}]}""")
             .AlwaysRespondWith(HttpStatusCode.OK, """{"data":{"result":"ok"}}""");
         var provider = TelnyxMergeExtensionCallTests.CreateProvider(handler);
@@ -156,16 +147,13 @@ public sealed class TelnyxConferenceLeaveTests
         // Act
         var result = await provider.MergeAsync(new MergeRequest { CallIds = [CallerLeg, ExtensionAgentLeg] }, TestContext.Current.CancellationToken);
 
-        // Assert - the colleague, who left the extension's conference to lead a new one, goes back into it first.
+        // Assert - nothing moved, so the caller joins the extension call's own conference.
         Assert.True(result.Succeeded, result.Error);
         Assert.Equal(
             [
                 $"GET /v2/calls/{CallerLeg}",
                 $"GET /v2/calls/{ExtensionAgentLeg}",
-                $"GET /v2/conferences?filter[name]=ext-{ExtensionAgentLeg}",
-                "POST /v2/conferences/conference-ext/actions/leave",
                 "POST /v2/conferences",
-                "POST /v2/conferences/conference-ext/actions/join",
                 $"GET /v2/conferences?filter[name]=ext-{ExtensionAgentLeg}",
                 $"PUT /v2/calls/{ColleagueLeg}/actions/client_state_update",
                 "POST /v2/conferences/conference-ext/actions/join",
@@ -288,7 +276,7 @@ public sealed class TelnyxConferenceLeaveTests
         Assert.True(result.Succeeded, result.Error);
         Assert.Equal(
             [
-                "GET /v2/conferences?filter[name]=conf-agent-a",
+                "GET /v2/conferences?filter[name]=conf-agent-a&filter[status]=in_progress",
                 "POST /v2/conferences/conference-1/actions/end",
                 "POST /v2/calls/agent-a/actions/hangup",
             ],
@@ -311,7 +299,7 @@ public sealed class TelnyxConferenceLeaveTests
         // Assert
         Assert.True(result.Succeeded, result.Error);
         Assert.Equal(
-            ["GET /v2/conferences?filter[name]=conf-agent-a", "POST /v2/calls/agent-a/actions/hangup"],
+            ["GET /v2/conferences?filter[name]=conf-agent-a&filter[status]=in_progress", "POST /v2/calls/agent-a/actions/hangup"],
             handler.Requests.Select(TelnyxMergeExtensionCallTests.Describe));
     }
 
