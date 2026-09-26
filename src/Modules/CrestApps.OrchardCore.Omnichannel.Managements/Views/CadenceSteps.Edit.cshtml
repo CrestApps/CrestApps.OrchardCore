@@ -8,33 +8,6 @@
 }
 
 <div class="ocat-wrapper">
-    <label asp-for="DisplayText" class="ocat-label">@T["Name"]</label>
-    <div class="ocat-end">
-        <input asp-for="DisplayText" class="form-control" />
-        <span asp-validation-for="DisplayText" class="text-danger"></span>
-    </div>
-</div>
-
-<div class="ocat-wrapper">
-    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
-    <div class="ocat-end">
-        <textarea asp-for="Description" class="form-control" rows="2"></textarea>
-        <span asp-validation-for="Description" class="text-danger"></span>
-    </div>
-</div>
-
-<div class="ocat-wrapper">
-    <label class="ocat-label">@T["Enabled"]</label>
-    <div class="ocat-end">
-        <div class="form-check">
-            <input type="checkbox" class="form-check-input" asp-for="Enabled" />
-            <label class="form-check-label" asp-for="Enabled">@T["Enabled"]</label>
-        </div>
-        <span class="hint dashed">@T["A disabled cadence never sends follow-ups."]</span>
-    </div>
-</div>
-
-<div class="ocat-wrapper">
     <label class="ocat-label">@T["Follow-up steps"]</label>
     <div class="ocat-end">
         <span class="hint">

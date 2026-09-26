@@ -42,7 +42,7 @@ internal sealed class ContactCenterSkillDisplayDriver : DisplayDriver<ContactCen
             model.Name = skill.Name;
             model.Description = skill.Description;
             model.Enabled = skill.Enabled;
-        }).Location("Content:1");
+        }).Location("Content:1%General;1");
     }
 
     /// <inheritdoc/>

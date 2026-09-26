@@ -446,3 +446,114 @@ describe('editing helpers', () => {
         expect(ivr.ACTION_KINDS.map(kind => ivr.targetTypeOf(kind))).toEqual(['queue', 'agent', 'menu', null, 'external', null]);
     });
 });
+
+// The editor draws the menus the way a caller walks them: a submenu under the key that opens it. The stored flow stays a
+// flat list of named menus, so these are views and edits of that list.
+describe('the menus as a caller walks them', () => {
+    const tree = flow => ivr.buildMenuTree(ivr.fromFlow(flow));
+    const node = (id, options, prompt = 'Hi') => ({ NodeId: id, Prompt: prompt, Options: options });
+    const key = (digit, kind, target) => ({ Digit: digit, Action: { Kind: kind, TargetId: target ?? null } });
+
+    it('nests each submenu under the first key that opens it, and knows the keys that lead there', () => {
+        const result = tree({
+            RootNodeId: 'main',
+            MaxRetries: 3,
+            Nodes: [
+                node('main', [key('1', 'RouteToQueue', 'q'), key('2', 'SubMenu', 'billing')]),
+                node('billing', [key('1', 'SubMenu', 'refunds'), key('9', 'SubMenu', 'main')]),
+                node('refunds', [key('1', 'Voicemail')]),
+            ],
+        });
+
+        expect(result.rootIndex).toBe(0);
+        expect(result.childOf(0, 1)).toBe(1);
+        expect(result.childOf(1, 0)).toBe(2);
+        expect(result.paths[0]).toEqual([]);
+        expect(result.paths[1]).toEqual(['2']);
+        expect(result.paths[2]).toEqual(['2', '1']);
+        expect(result.unused).toEqual([]);
+    });
+
+    // Going back to the main menu, or two keys opening the same menu, is a jump to a menu already drawn, not a copy.
+    it('draws a menu once: a key back to an earlier menu is a jump, not another nesting', () => {
+        const result = tree({
+            RootNodeId: 'main',
+            MaxRetries: 3,
+            Nodes: [
+                node('main', [key('1', 'SubMenu', 'more'), key('2', 'SubMenu', 'more')]),
+                node('more', [key('9', 'SubMenu', 'main')]),
+            ],
+        });
+
+        expect(result.childOf(0, 0)).toBe(1);
+        expect(result.childOf(0, 1)).toBeUndefined();
+        expect(result.childOf(1, 0)).toBeUndefined();
+        expect(result.indexOf('main')).toBe(0);
+        expect(result.indexOf('more')).toBe(1);
+    });
+
+    it('sets aside the menus no key opens, each with its own submenus', () => {
+        const result = tree({
+            RootNodeId: 'main',
+            MaxRetries: 3,
+            Nodes: [
+                node('main', [key('1', 'Voicemail')]),
+                node('orphan', [key('3', 'SubMenu', 'orphan-child')]),
+                node('orphan-child', [key('1', 'Repeat')]),
+            ],
+        });
+
+        expect(result.unused).toEqual([1]);
+        expect(result.childOf(1, 0)).toBe(2);
+    });
+
+    it('starts from the first menu when the first menu named is missing', () => {
+        const result = tree({ RootNodeId: 'gone', MaxRetries: 3, Nodes: [node('a', [key('1', 'Voicemail')])] });
+
+        expect(result.rootIndex).toBe(0);
+    });
+
+    it('adds a submenu under a key, with a name nobody has to choose', () => {
+        const model = ivr.fromFlow({ RootNodeId: 'main', MaxRetries: 3, Nodes: [node('main', [key('1', 'RouteToQueue', 'q'), key('2', 'Voicemail')])] });
+
+        const created = ivr.addSubMenu(model, 0, 1);
+
+        expect(created.nodeId).toBeTruthy();
+        expect(created.nodeId).not.toBe('main');
+        expect(model.nodes[0].options[1].action).toEqual({ kind: 'SubMenu', targetId: created.nodeId });
+        expect(ivr.buildMenuTree(model).childOf(0, 1)).toBe(1);
+        // What is left is filling in the new menu itself: the key, the name and the link to it are all in place.
+        const errors = ivr.validate(model, { queue: [{ value: 'q' }] }).filter(entry => entry.severity === 'error');
+        expect(errors.length).toBeGreaterThan(0);
+        expect(errors.every(entry => entry.path.node === 1)).toBe(true);
+    });
+
+    // Removing a submenu takes its own submenus with it, and a key that jumped to any of them is left to be chosen again.
+    it('removes a submenu with the submenus nested under it, and clears the keys that opened them', () => {
+        const model = ivr.fromFlow({
+            RootNodeId: 'main',
+            MaxRetries: 3,
+            Nodes: [
+                node('main', [key('1', 'SubMenu', 'a'), key('2', 'SubMenu', 'b')]),
+                node('a', [key('1', 'SubMenu', 'a1')]),
+                node('a1', [key('1', 'Voicemail')]),
+                node('b', [key('1', 'SubMenu', 'a1')]),
+            ],
+        });
+
+        ivr.removeSubMenu(model, 1);
+
+        expect(model.nodes.map(entry => entry.nodeId)).toEqual(['main', 'b']);
+        expect(model.nodes[0].options[0].action).toBeNull();
+        expect(model.nodes[1].options[0].action).toBeNull();
+        expect(model.nodes[0].options[1].action).toEqual({ kind: 'SubMenu', targetId: 'b' });
+    });
+
+    it('never removes the main menu as a submenu', () => {
+        const model = ivr.fromFlow({ RootNodeId: 'main', MaxRetries: 3, Nodes: [node('main', [key('1', 'Voicemail')])] });
+
+        ivr.removeSubMenu(model, 0);
+
+        expect(model.nodes).toHaveLength(1);
+    });
+});

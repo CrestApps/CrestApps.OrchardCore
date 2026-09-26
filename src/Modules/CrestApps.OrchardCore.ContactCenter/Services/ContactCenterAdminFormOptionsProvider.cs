@@ -29,6 +29,7 @@ public sealed class ContactCenterAdminFormOptionsProvider
     private readonly UserManager<IUser> _userManager;
     private readonly IDisplayNameProvider _displayNameProvider;
     private readonly IPhoneNumberService _phoneNumberService;
+    private readonly IVoiceMediaItemManager _voiceMediaManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterAdminFormOptionsProvider"/> class.
@@ -54,8 +55,10 @@ public sealed class ContactCenterAdminFormOptionsProvider
         IEnumerable<IContactCenterVoiceProvider> voiceProviders,
         UserManager<IUser> userManager,
         IDisplayNameProvider displayNameProvider,
-        IEnumerable<IPhoneNumberService> phoneNumberServices)
+        IEnumerable<IPhoneNumberService> phoneNumberServices,
+        IVoiceMediaItemManager voiceMediaManager)
     {
+        _voiceMediaManager = voiceMediaManager;
         _campaignManager = campaignManager;
         _queueManager = queueManager;
         _queueGroupManager = queueGroupManager;
@@ -267,6 +270,28 @@ public sealed class ContactCenterAdminFormOptionsProvider
         model.InboundChannelEndpointOptions = await GetInboundChannelEndpointOptionsAsync(model.InboundChannelEndpointId);
         model.BusinessHoursCalendarOptions = await GetBusinessHoursCalendarOptionsAsync(model.BusinessHoursCalendarId);
         model.OverflowQueueOptions = await GetOverflowQueueOptionsAsync(model.OverflowQueueId, model.Id);
+        model.HoldMusicMediaOptions = await GetVoiceMediaOptionsAsync(model.Treatment?.HoldMusicMediaId);
+    }
+
+    /// <summary>
+    /// Builds a picker of the voice media recordings, by name, for a field that plays one (hold music, a recorded
+    /// prompt). A recording that no longer exists but is still selected stays listed, so saving does not silently clear it.
+    /// </summary>
+    /// <param name="selectedMediaId">The selected voice media item identifier.</param>
+    /// <returns>The recordings, ordered by name.</returns>
+    internal async Task<IList<SelectListItem>> GetVoiceMediaOptionsAsync(string selectedMediaId)
+    {
+        var selected = CreateSelectedSet([selectedMediaId], StringComparer.Ordinal);
+        var media = await _voiceMediaManager.GetAllAsync();
+
+        var options = media
+            .OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase)
+            .Select(item => new SelectListItem(string.IsNullOrWhiteSpace(item.Name) ? item.ItemId : item.Name, item.ItemId, selected.Contains(item.ItemId)))
+            .ToList();
+
+        AddMissingSelectedOptions(options, selected, StringComparer.Ordinal);
+
+        return options;
     }
 
     internal async Task PopulateDialerProfileEditorAsync(DialerProfileViewModel model)

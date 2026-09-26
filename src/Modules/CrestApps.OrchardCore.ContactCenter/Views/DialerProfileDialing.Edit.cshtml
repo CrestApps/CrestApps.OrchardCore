@@ -1,0 +1,109 @@
+@model DialerProfileViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<div class="alert alert-info" role="alert">
+    @T["A dialer profile is a reusable set of dialing settings — a mode that sets the pacing, plus provider, caller ID, and compliance rules. You choose the campaign (the records to call) and this profile when you load inventory, so one profile can dial many campaigns. Agents handle the answered calls by signing into the campaign; the routing is set up automatically (queues are only used for inbound routing)."]
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Mode">
+    <label asp-for="Mode" class="ocat-label">@T["Mode"]</label>
+    <div class="ocat-end">
+        <select asp-for="Mode" class="selectpicker show-tick" data-width="100%" title="@T["Select a dialing mode"]" data-dialer-mode-select>
+            <option value="@DialerMode.Preview">@T["Preview"]</option>
+            @if (Model.AutomatedDialerEnabled || Model.Mode == DialerMode.Power)
+            {
+                <option value="@DialerMode.Power">@T["Power"]</option>
+            }
+            @if (Model.AutomatedDialerEnabled || Model.Mode == DialerMode.Progressive)
+            {
+                <option value="@DialerMode.Progressive">@T["Progressive"]</option>
+            }
+        </select>
+        <span asp-validation-for="Mode" class="text-danger"></span>
+        <span class="hint">@T["How calls are paced: Preview is agent-initiated (the agent reviews each record, then dials); Power and Progressive are system-paced (the dialer reserves agents and places calls automatically)."]</span>
+        @if (!Model.AutomatedDialerEnabled)
+        {
+            <span class="hint">@T["Enable the Contact Center Automated Dialer feature to offer the Power and Progressive automated pacing modes."]</span>
+        }
+        <span class="hint">@T["Predictive dialing is disabled until answer-rate forecasting is available."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="ProviderName">
+    <label asp-for="ProviderName" class="ocat-label">@T["Voice call provider"]</label>
+    <div class="ocat-end">
+        <select asp-for="ProviderName" asp-items="Model.ProviderOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a voice call provider"]" data-width="100%" title="@T["Default provider"]">
+            <option value="">@T["Default provider"]</option>
+        </select>
+        <span asp-validation-for="ProviderName" class="text-danger"></span>
+        <span class="hint">@T["The Voice Contact Center Call Router resolves this provider when placing outbound campaign calls. Leave on the default to use the tenant's configured provider."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="CallsPerAgent" data-dialer-modes="Power">
+    <label asp-for="CallsPerAgent" class="ocat-label">@T["Calls per agent"]</label>
+    <div class="ocat-limited">
+        <input asp-for="CallsPerAgent" type="number" min="1" max="@Model.MaxCallsPerAgent" class="form-control" />
+        <span asp-validation-for="CallsPerAgent" class="text-danger"></span>
+        <span class="hint">@T["How many calls Power dialing places per available agent each pacing cycle. Capped at {0} until predictive pacing is available.", Model.MaxCallsPerAgent]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="MaxAttempts" data-dialer-modes="Power Progressive Predictive">
+    <label asp-for="MaxAttempts" class="ocat-label">@T["Max attempts"]</label>
+    <div class="ocat-limited">
+        <input asp-for="MaxAttempts" type="number" min="1" class="form-control" />
+        <span asp-validation-for="MaxAttempts" class="text-danger"></span>
+        <span class="hint">@T["The maximum number of times an unanswered activity is dialed before it is given up."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="RetryDelayMinutes" data-dialer-modes="Power Progressive Predictive">
+    <label asp-for="RetryDelayMinutes" class="ocat-label">@T["Retry delay (minutes)"]</label>
+    <div class="ocat-limited">
+        <input asp-for="RetryDelayMinutes" type="number" min="0" class="form-control" />
+        <span asp-validation-for="RetryDelayMinutes" class="text-danger"></span>
+        <span class="hint">@T["How long to wait before re-dialing an activity that was not answered on a previous attempt."]</span>
+    </div>
+</div>
+
+<script at="Foot" depends-on="bootstrap-select">
+    (function () {
+        var select = document.querySelector('[data-dialer-mode-select]');
+
+        if (!select) {
+            return;
+        }
+
+        var groups = document.querySelectorAll('[data-dialer-modes]');
+
+        function apply() {
+            var mode = select.value;
+
+            groups.forEach(function (group) {
+                var modes = (group.getAttribute('data-dialer-modes') || '').split(/\s+/);
+
+                group.style.display = modes.indexOf(mode) === -1 ? 'none' : '';
+            });
+
+            // A card whose every setting is for other modes (abandonment and safe harbor for an agent-driven mode) is
+            // hidden too, rather than shown empty.
+            document.querySelectorAll('.card').forEach(function (card) {
+                if (!card.querySelector('[data-dialer-modes]')) {
+                    return;
+                }
+
+                var visible = Array.prototype.some.call(card.querySelectorAll('.ocat-wrapper, .ocat-limited-wrapper'), function (field) {
+                    return field.style.display !== 'none';
+                });
+
+                card.style.display = visible ? '' : 'none';
+            });
+        }
+
+        select.addEventListener('change', apply);
+        apply();
+    })();
+</script>

@@ -22,7 +22,7 @@ internal sealed class CadenceDisplayDriver : DisplayDriver<Cadence>
 
     public override IDisplayResult Edit(Cadence schedule, BuildEditorContext context)
     {
-        return Initialize<CadenceViewModel>("CadenceFields_Edit", model =>
+        void Populate(CadenceViewModel model)
         {
             model.DisplayText = schedule.DisplayText;
             model.Description = schedule.Description;
@@ -35,7 +35,11 @@ internal sealed class CadenceDisplayDriver : DisplayDriver<Cadence>
                     Message = step.Message,
                 }).ToList()
                 : [];
-        }).Location("Content:1");
+        }
+
+        return Combine(
+            Initialize<CadenceViewModel>("CadenceGeneral_Edit", Populate).Location("Content:1%General;1"),
+            Initialize<CadenceViewModel>("CadenceSteps_Edit", Populate).Location("Content:1%Follow-up steps;2"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(Cadence schedule, UpdateEditorContext context)

@@ -584,6 +584,125 @@
     }
     return action;
   }
+
+  // The menus the way a caller walks them. The stored flow is a flat list of named menus; the editor draws each menu
+  // once, under the first key that opens it (depth first, in key order), starting from the first menu. A key that opens
+  // a menu already drawn -- back to the main menu, or a second key to the same menu -- is a jump to it, not another
+  // copy. Menus no key reaches are set aside, each with the submenus nested under it.
+  //   rootIndex        - the menu callers hear first (the first one when the first menu named is missing)
+  //   childOf(n, o)    - the menu drawn under option o of menu n, or undefined
+  //   paths[n]         - the keys that lead to menu n from the first menu ([] for it); absent for a set-aside menu
+  //   unused           - the set-aside menus that head their own group, in list order
+  //   indexOf(nodeId)  - a menu's index by its name
+  function buildMenuTree(model) {
+    var nodes = model && model.nodes || [];
+    var indexById = {};
+    var homes = {};
+    var paths = {};
+    var placed = {};
+    var unused = [];
+    nodes.forEach(function (node, index) {
+      var id = text(node.nodeId).trim();
+      if (id && !Object.prototype.hasOwnProperty.call(indexById, id)) {
+        indexById[id] = index;
+      }
+    });
+    var rootId = text(model && model.rootNodeId).trim();
+    var rootIndex = Object.prototype.hasOwnProperty.call(indexById, rootId) ? indexById[rootId] : nodes.length ? 0 : undefined;
+    function walk(index, path) {
+      placed[index] = true;
+      if (path) {
+        paths[index] = path;
+      }
+      (nodes[index].options || []).forEach(function (option, optionIndex) {
+        var action = option && option.action;
+        if (!action || action.kind !== 'SubMenu') {
+          return;
+        }
+        var targetId = text(action.targetId).trim();
+        if (!Object.prototype.hasOwnProperty.call(indexById, targetId)) {
+          return;
+        }
+        var child = indexById[targetId];
+        if (placed[child]) {
+          return;
+        }
+        homes[index + ':' + optionIndex] = child;
+        walk(child, path ? path.concat([text(option.digit).trim() || '?']) : null);
+      });
+    }
+    if (rootIndex !== undefined) {
+      walk(rootIndex, []);
+    }
+    nodes.forEach(function (node, index) {
+      if (!placed[index]) {
+        unused.push(index);
+        walk(index, null);
+      }
+    });
+    return {
+      rootIndex: rootIndex,
+      paths: paths,
+      unused: unused,
+      childOf: function (nodeIndex, optionIndex) {
+        return homes[nodeIndex + ':' + optionIndex];
+      },
+      indexOf: function (nodeId) {
+        var id = text(nodeId).trim();
+        return Object.prototype.hasOwnProperty.call(indexById, id) ? indexById[id] : undefined;
+      }
+    };
+  }
+
+  // Gives option o of menu n a submenu of its own, named for the editor so nobody has to choose a name.
+  function addSubMenu(model, nodeIndex, optionIndex) {
+    var option = model.nodes[nodeIndex] && model.nodes[nodeIndex].options[optionIndex];
+    if (!option) {
+      return null;
+    }
+    var node = addNode(model);
+    option.action = {
+      kind: 'SubMenu',
+      targetId: node.nodeId
+    };
+    return node;
+  }
+
+  // Removes a submenu with the submenus drawn under it. A key that opened any of them -- the key it hangs from, or a
+  // jump from elsewhere -- is left without an action, to be chosen again. The first menu is never removed this way.
+  function removeSubMenu(model, nodeIndex) {
+    var tree = buildMenuTree(model);
+    if (!model.nodes[nodeIndex] || nodeIndex === tree.rootIndex) {
+      return;
+    }
+    var doomed = {};
+    (function collect(index) {
+      doomed[index] = true;
+      (model.nodes[index].options || []).forEach(function (option, optionIndex) {
+        var child = tree.childOf(index, optionIndex);
+        if (child !== undefined && !doomed[child]) {
+          collect(child);
+        }
+      });
+    })(nodeIndex);
+    var removedIds = {};
+    Object.keys(doomed).forEach(function (index) {
+      removedIds[text(model.nodes[index].nodeId).trim()] = true;
+    });
+    model.nodes = model.nodes.filter(function (node, index) {
+      return !doomed[index];
+    });
+    model.nodes.forEach(function (node) {
+      (node.options || []).forEach(function (option) {
+        if (option.action && option.action.kind === 'SubMenu' && removedIds[text(option.action.targetId).trim()]) {
+          option.action = null;
+        }
+      });
+    });
+    if (model.fallback && model.fallback.kind === 'SubMenu' && removedIds[text(model.fallback.targetId).trim()]) {
+      model.fallback = null;
+    }
+  }
   ivr.ACTION_KINDS = ACTION_KINDS;
   ivr.ENUM_ORDER = ENUM_ORDER;
   ivr.TELEPHONE_KEYS = TELEPHONE_KEYS;
@@ -612,6 +731,9 @@
   ivr.renameNode = renameNode;
   ivr.removeNode = removeNode;
   ivr.setActionKind = setActionKind;
+  ivr.buildMenuTree = buildMenuTree;
+  ivr.addSubMenu = addSubMenu;
+  ivr.removeSubMenu = removeSubMenu;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*
  * The entry point's visual IVR menu editor.
@@ -622,7 +744,13 @@
  * every edit, and stays one switch away for anyone who prefers to type it; JSON that cannot be read keeps the
  * editor in that mode, with the reason, rather than throwing an edit away.
  *
- * The model, the JSON round trip and the checks live in ivr-flow-model.js, which has no DOM and is unit tested.
+ * The menus are drawn the way a caller walks them: the first menu at the top, and each submenu nested under the key
+ * that opens it, so nobody names menus or picks them by name. A key that goes back to a menu already drawn is a jump,
+ * labelled by the keys that lead there ("Main menu > 2"). The flow is still stored as a flat list of named menus; the
+ * editor names new ones itself.
+ *
+ * The model, the JSON round trip, the checks and the menu tree live in ivr-flow-model.js, which has no DOM and is unit
+ * tested.
  */
 (function (window, document) {
   'use strict';
@@ -675,7 +803,8 @@
     var catalog = {
       queue: config.queues || [],
       agent: config.agents || [],
-      external: config.externals || []
+      external: config.externals || [],
+      media: config.media || []
     };
     var textarea = root.querySelector('[data-ivr-json]');
     var visual = root.querySelector('[data-ivr-visual]');
@@ -683,6 +812,7 @@
     var toggle = root.querySelector('[data-ivr-advanced-toggle]');
     var message = root.querySelector('[data-ivr-message]');
     var model = ivr.createModel();
+    var tree = ivr.buildMenuTree(model);
     var transientIssues = {};
     var idPrefix = 'ivr' + Math.random().toString(36).slice(2, 8);
     if (!textarea || !visual || !jsonPanel || !toggle) {
@@ -866,21 +996,45 @@
       }
       return options;
     }
-    function menuOptions() {
-      return model.nodes.map(function (node) {
-        return String(node.nodeId || '').trim();
-      }).filter(function (id) {
-        return !!id;
-      }).map(function (id) {
-        return {
-          value: id,
-          text: id
-        };
+
+    // A menu as the caller reaches it: "Main menu", "Main menu > 2 > 1", or, for one no key opens, its stored name.
+    function menuLabel(index) {
+      var path = tree.paths[index];
+      var main = t('mainMenu', 'Main menu');
+      if (path) {
+        return path.length ? [main].concat(path).join(' > ') : main;
+      }
+      return t('unusedMenu', 'Unused menu ({id})', {
+        id: String(model.nodes[index] && model.nodes[index].nodeId || '').trim()
       });
     }
 
+    // The menus a key or the fallback can jump to, by where they are. The menu drawn under this very key is offered
+    // first, as its own submenu.
+    function menuOptions(ownChild) {
+      var options = [];
+      if (ownChild !== undefined && model.nodes[ownChild]) {
+        options.push({
+          value: String(model.nodes[ownChild].nodeId || '').trim(),
+          text: t('ownSubmenu', 'Its submenu, below')
+        });
+      }
+      model.nodes.forEach(function (node, index) {
+        var id = String(node.nodeId || '').trim();
+        if (id && index !== ownChild) {
+          options.push({
+            value: id,
+            text: t('goTo', 'Go to: {menu}', {
+              menu: menuLabel(index)
+            })
+          });
+        }
+      });
+      return options;
+    }
+
     // The target control for a kind: a list of queues, agents, destinations or menus, or nothing at all.
-    function targetControl(field, action, id) {
+    function targetControl(field, action, id, ownChild) {
       var kind = action ? action.kind : '';
       var type = action ? ivr.targetTypeOf(kind) : null;
       var value = action ? String(action.targetId || '').trim() : '';
@@ -906,13 +1060,15 @@
         });
       }
       if (type === 'menu') {
+        // A key can always be given a new submenu of its own; the fallback only jumps to a menu that exists.
+        var isOption = String(field).indexOf('option:') === 0;
         return select(field, [{
           value: '',
           text: t('chooseMenu', 'Choose a menu')
-        }].concat(withUnknown(menuOptions(), value, 'unknownMenu')).concat([{
+        }].concat(withUnknown(menuOptions(ownChild), value, 'unknownMenu')).concat(isOption ? [{
           value: NEW_MENU,
-          text: t('newMenu', '+ New menu')
-        }]), value, {
+          text: t('newSubmenu', '+ New submenu')
+        }] : []), value, {
           id: id,
           'aria-label': t('targetMenu', 'Menu to open')
         });
@@ -965,12 +1121,10 @@
       return options;
     }
     function renderFlowSettings() {
-      var rootId = idPrefix + '-root';
       var retriesId = idPrefix + '-retries';
       var fallbackKindId = idPrefix + '-fallback-kind';
       var fallbackTargetId = idPrefix + '-fallback-target';
       var fallback = model.fallback;
-      var rootValue = String(model.rootNodeId || '').trim();
       return h('div', {
         className: 'card mb-3'
       }, [h('div', {
@@ -978,21 +1132,7 @@
       }, [h('div', {
         className: 'row g-3'
       }, [h('div', {
-        className: 'col-md-4'
-      }, [h('label', {
-        className: 'form-label',
-        for: rootId,
-        text: t('rootMenu', 'First menu')
-      }), select('flow:rootNodeId', [{
-        value: '',
-        text: t('chooseMenu', 'Choose a menu')
-      }].concat(withUnknown(menuOptions(), rootValue, 'unknownMenu')), rootValue, {
-        id: rootId
-      }), h('div', {
-        className: 'form-text',
-        text: t('rootMenuHint', 'The menu callers hear when they reach this entry point.')
-      })]), h('div', {
-        className: 'col-md-2'
+        className: 'col-md-3'
       }, [h('label', {
         className: 'form-label',
         for: retriesId,
@@ -1011,7 +1151,7 @@
         className: 'form-text',
         text: t('maxRetriesHint', 'Wrong or missing keys allowed before the fallback.')
       })]), h('div', {
-        className: 'col-md-6'
+        className: 'col-md-9'
       }, [h('label', {
         className: 'form-label',
         for: fallbackKindId,
@@ -1043,6 +1183,7 @@
       var kindId = idPrefix + '-k-' + nodeIndex + '-' + optionIndex;
       var targetId = idPrefix + '-t-' + nodeIndex + '-' + optionIndex;
       var digit = String(option.digit || '').trim();
+      var ownChild = tree.childOf(nodeIndex, optionIndex);
       var digits = ivr.availableDigits(node, optionIndex).map(function (key) {
         return {
           value: key,
@@ -1098,7 +1239,7 @@
         className: 'visually-hidden',
         for: targetId,
         text: t('target', 'Target')
-      }), targetControl(prefix + ':target', option.action, targetId)]), h('div', {
+      }), targetControl(prefix + ':target', option.action, targetId, ownChild)]), h('div', {
         className: 'col-2 col-md-1 text-end'
       }, [h('button', {
         type: 'button',
@@ -1116,43 +1257,36 @@
         className: 'small mt-1',
         'data-ivr-issues': prefix,
         hidden: true
-      })]);
+      }), ownChild === undefined ? null : h('div', {
+        className: 'ivr-submenu ms-2 ms-md-4 ps-2 ps-md-3 border-start border-2 border-primary-subtle mt-2'
+      }, [renderNode(model.nodes[ownChild], ownChild)])]);
     }
     function renderNode(node, nodeIndex) {
       var nodeId = String(node.nodeId || '').trim();
-      var isRoot = nodeId && nodeId === String(model.rootNodeId || '').trim();
-      var nameId = idPrefix + '-n-' + nodeIndex;
       var promptId = idPrefix + '-p-' + nodeIndex;
       var mediaId = idPrefix + '-m-' + nodeIndex;
       var canAddKey = ivr.availableDigits(node, -1).length > 0;
+      var isUnused = tree.unused.indexOf(nodeIndex) >= 0;
       return h('div', {
         className: 'card mb-3',
         'data-ivr-node-card': String(nodeIndex)
       }, [h('div', {
         className: 'card-header d-flex flex-wrap align-items-center gap-2'
-      }, [h('label', {
-        className: 'form-label mb-0 fw-semibold',
-        for: nameId,
-        text: t('menuName', 'Menu')
-      }), h('input', {
-        className: 'form-control form-control-sm font-monospace w-auto',
-        id: nameId,
-        value: node.nodeId || '',
-        'data-ivr-field': 'node:' + nodeIndex + ':nodeId',
-        'aria-describedby': nameId + '-hint'
-      }), isRoot ? h('span', {
+      }, [h('span', {
+        className: 'fw-semibold',
+        text: menuLabel(nodeIndex)
+      }), nodeIndex === tree.rootIndex ? h('span', {
         className: 'badge text-bg-primary',
         title: t('rootBadgeHint', 'Callers hear this menu first.')
-      }, [icon('fa-solid fa-play me-1'), t('rootBadge', 'First menu')]) : null, h('span', {
-        className: 'visually-hidden',
-        id: nameId + '-hint',
-        text: t('menuNameHint', 'Renaming a menu updates every key that opens it.')
-      }), h('button', {
+      }, [icon('fa-solid fa-play me-1'), t('rootBadge', 'First menu')]) : h('span', {
+        className: 'badge ' + (isUnused ? 'text-bg-warning' : 'text-bg-secondary'),
+        text: isUnused ? t('unusedBadge', 'Not used') : t('submenuBadge', 'Submenu')
+      }), nodeIndex === tree.rootIndex ? null : h('button', {
         type: 'button',
         className: 'btn btn-outline-danger btn-sm ms-auto',
         'data-ivr-command': 'remove-menu',
         'data-ivr-node': String(nodeIndex)
-      }, [icon('fa-solid fa-trash me-1'), t('removeMenu', 'Remove menu')])]), h('div', {
+      }, [icon('fa-solid fa-trash me-1'), t('removeSubmenu', 'Remove submenu')])]), h('div', {
         className: 'card-body'
       }, [h('div', {
         className: 'small mb-2',
@@ -1180,15 +1314,14 @@
         className: 'form-label',
         for: mediaId,
         text: t('promptMedia', 'Recorded prompt (optional)')
-      }), h('input', {
-        className: 'form-control',
-        id: mediaId,
-        value: node.promptMediaId || '',
-        'data-ivr-field': 'node:' + nodeIndex + ':promptMediaId',
-        'data-ivr-text': 'promptMediaId'
+      }), select('node:' + nodeIndex + ':promptMediaId', [{
+        value: '',
+        text: t('speakPrompt', 'None: speak the text above')
+      }].concat(withUnknown(catalog.media, String(node.promptMediaId || '').trim(), 'unknownTarget')), String(node.promptMediaId || '').trim(), {
+        id: mediaId
       }), h('div', {
         className: 'form-text',
-        text: t('promptMediaHint', 'The identifier of a voice media item to play instead of speaking the text above.')
+        text: catalog.media.length ? t('promptMediaHint', 'A voice media recording played instead of speaking the text above.') : t('noMedia', 'No recordings yet. Upload one under Voice media to play it here.')
       })]), h('div', {
         className: 'row g-2 small fw-semibold text-body-secondary d-none d-md-flex pb-1',
         'aria-hidden': 'true'
@@ -1264,6 +1397,7 @@
         field: focusField
       } : captureFocus();
       var children = [];
+      tree = ivr.buildMenuTree(model);
       if (model.nodes.length === 0) {
         children.push(renderEmpty());
       } else {
@@ -1274,16 +1408,26 @@
           hidden: true
         }));
         children.push(renderFlowSettings());
-        model.nodes.forEach(function (node, index) {
-          children.push(renderNode(node, index));
-        });
+        if (tree.rootIndex !== undefined) {
+          children.push(renderNode(model.nodes[tree.rootIndex], tree.rootIndex));
+        }
+        if (tree.unused.length) {
+          children.push(h('div', {
+            className: 'mt-4 mb-2'
+          }, [h('div', {
+            className: 'fw-semibold',
+            text: t('unusedMenus', 'Menus no key opens')
+          }), h('div', {
+            className: 'form-text mt-0',
+            text: t('unusedMenusHint', 'Callers never hear these. Point a key at one, or remove it.')
+          })]));
+          tree.unused.forEach(function (index) {
+            children.push(renderNode(model.nodes[index], index));
+          });
+        }
         children.push(h('div', {
           className: 'd-flex flex-wrap gap-2'
         }, [h('button', {
-          type: 'button',
-          className: 'btn btn-outline-primary btn-sm',
-          'data-ivr-command': 'add-menu'
-        }, [icon('fa-solid fa-plus me-1'), t('addMenu', 'Add menu')]), h('button', {
           type: 'button',
           className: 'btn btn-outline-danger btn-sm ms-auto',
           'data-ivr-command': 'clear'
@@ -1361,7 +1505,14 @@
         render(field);
         return;
       }
-      if (location.scope === 'flow' && location.name === 'rootNodeId') {
+      if (location.scope === 'option' && (location.name === 'kind' && control.value === 'SubMenu' || location.name === 'target' && control.value === NEW_MENU)) {
+        ivr.addSubMenu(model, location.node, location.option);
+        render('node:' + (model.nodes.length - 1) + ':prompt');
+        return;
+      }
+      if (location.scope === 'node' && location.name === 'promptMediaId') {
+        model.nodes[location.node].promptMediaId = control.value;
+      } else if (location.scope === 'flow' && location.name === 'rootNodeId') {
         model.rootNodeId = control.value;
       } else if (location.name === 'digit') {
         model.nodes[location.node].options[location.option].digit = control.value;
@@ -1376,12 +1527,6 @@
         }
       } else if (location.name === 'target') {
         var action = actionAt(location);
-        if (action && control.value === NEW_MENU) {
-          var created = ivr.addNode(model);
-          action.targetId = created.nodeId;
-          render('node:' + (model.nodes.length - 1) + ':nodeId');
-          return;
-        }
         if (action) {
           action.targetId = control.value;
         }
@@ -1401,13 +1546,9 @@
           ivr.addNode(model);
           render('node:0:prompt');
           break;
-        case 'add-menu':
-          ivr.addNode(model);
-          render('node:' + (model.nodes.length - 1) + ':nodeId');
-          break;
         case 'remove-menu':
           transientIssues = {};
-          ivr.removeNode(model, nodeIndex);
+          ivr.removeSubMenu(model, nodeIndex);
           render();
           break;
         case 'add-option':

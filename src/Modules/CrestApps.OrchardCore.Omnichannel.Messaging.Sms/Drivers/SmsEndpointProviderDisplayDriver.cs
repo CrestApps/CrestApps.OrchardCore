@@ -38,7 +38,7 @@ public sealed class SmsEndpointProviderDisplayDriver : DisplayDriver<Omnichannel
                 .Select(entry => new SelectListItem(entry.Key, entry.Key))
                 .OrderBy(item => item.Text)
                 .ToArray();
-        }).Location("Content:2");
+        }).Location("Content:2%General;1");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(OmnichannelChannelEndpoint endpoint, UpdateEditorContext context)

@@ -43,7 +43,7 @@ internal sealed class OmnichannelChannelEndpointDisplayDriver : DisplayDriver<Om
             model.Description = endpoint.Description;
             model.Channel = endpoint.Channel;
             model.Value = endpoint.Value;
-        }).Location("Content:1");
+        }).Location("Content:1%General;1");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(OmnichannelChannelEndpoint endpoint, UpdateEditorContext context)

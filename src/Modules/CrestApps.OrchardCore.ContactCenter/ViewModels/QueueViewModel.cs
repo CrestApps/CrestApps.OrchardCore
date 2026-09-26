@@ -44,6 +44,11 @@ public class QueueViewModel
 
     public IList<SelectListItem> OverflowQueueOptions { get; set; } = [];
 
+    /// <summary>
+    /// Gets or sets the voice media recordings the hold music can be chosen from.
+    /// </summary>
+    public IList<SelectListItem> HoldMusicMediaOptions { get; set; } = [];
+
     [Range(0, int.MaxValue)]
     public int OverflowAfterSeconds { get; set; }
 

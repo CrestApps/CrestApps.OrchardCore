@@ -154,6 +154,11 @@ public class EntryPointViewModel
     public IList<SelectListItem> IvrExternalDestinationOptions { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the voice media recordings a menu can play as its recorded prompt.
+    /// </summary>
+    public IList<SelectListItem> IvrVoiceMediaOptions { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets a value indicating whether the entry point is enabled.
     /// </summary>
     public bool Enabled { get; set; } = true;

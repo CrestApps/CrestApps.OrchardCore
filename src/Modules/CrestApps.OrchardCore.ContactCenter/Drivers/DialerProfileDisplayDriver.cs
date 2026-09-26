@@ -80,7 +80,9 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
 
         var automatedDialerEnabled = await _shellFeaturesManager.IsFeatureEnabledAsync(ContactCenterConstants.Feature.DialerPaced);
 
-        return Initialize<DialerProfileViewModel>("DialerProfileFields_Edit", model =>
+        // Grouped in cards by what they govern. Every card edits the same model under the same prefix, so the one form
+        // still posts all of them together.
+        void Populate(DialerProfileViewModel model)
         {
             model.Id = viewModel.Id;
             model.Name = viewModel.Name;
@@ -105,7 +107,14 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             model.SafeHarborEnabled = viewModel.SafeHarborEnabled;
             model.SafeHarborMessage = viewModel.SafeHarborMessage;
             model.Enabled = viewModel.Enabled;
-        }).Location("Content:1");
+        }
+
+        return Combine(
+            Initialize<DialerProfileViewModel>("DialerProfileGeneral_Edit", Populate).Location("Content:1%General;1"),
+            Initialize<DialerProfileViewModel>("DialerProfileDialing_Edit", Populate).Location("Content:1%Dialing;2"),
+            Initialize<DialerProfileViewModel>("DialerProfileCallerId_Edit", Populate).Location("Content:1%Caller ID;3"),
+            Initialize<DialerProfileViewModel>("DialerProfileCompliance_Edit", Populate).Location("Content:1%Compliance;4"),
+            Initialize<DialerProfileViewModel>("DialerProfileAbandonment_Edit", Populate).Location("Content:1%Abandonment and safe harbor;5"));
     }
 
     /// <inheritdoc/>

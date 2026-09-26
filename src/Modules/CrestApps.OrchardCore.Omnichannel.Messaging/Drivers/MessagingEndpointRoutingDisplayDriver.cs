@@ -30,6 +30,7 @@ public sealed class MessagingEndpointRoutingDisplayDriver : DisplayDriver<Omnich
 {
     private readonly IMessagingChannelResolver _channelResolver;
     private readonly IAgentProfileManager _agentProfileManager;
+    private readonly IActivityQueueManager _queueManager;
     private readonly IShellFeaturesManager _shellFeaturesManager;
     private readonly IClock _clock;
 
@@ -38,12 +39,15 @@ public sealed class MessagingEndpointRoutingDisplayDriver : DisplayDriver<Omnich
     public MessagingEndpointRoutingDisplayDriver(
         IMessagingChannelResolver channelResolver,
         IAgentProfileManager agentProfileManager,
+        IEnumerable<IActivityQueueManager> queueManagers,
         IShellFeaturesManager shellFeaturesManager,
         IClock clock,
         IStringLocalizer<MessagingEndpointRoutingDisplayDriver> stringLocalizer)
     {
         _channelResolver = channelResolver;
         _agentProfileManager = agentProfileManager;
+        // Queues are a feature of their own that the workspace does not require: without it the picker shows the id.
+        _queueManager = queueManagers.FirstOrDefault();
         _shellFeaturesManager = shellFeaturesManager;
         _clock = clock;
         S = stringLocalizer;
@@ -81,6 +85,9 @@ public sealed class MessagingEndpointRoutingDisplayDriver : DisplayDriver<Omnich
                 else
                 {
                     model.QueueId = routing.TargetId;
+
+                    // The picker shows the queue by its name, not its identifier.
+                    model.QueueName = _queueManager is null ? null : (await _queueManager.FindByIdAsync(routing.TargetId))?.Name;
                 }
             }
 
@@ -99,7 +106,7 @@ public sealed class MessagingEndpointRoutingDisplayDriver : DisplayDriver<Omnich
                 [
                     new SelectListItem(S["Shared pool (claim to own)"], nameof(ConversationDistributionMode.SharedPool)),
                 ];
-        }).Location("Content:5");
+        }).Location("Content:1%Inbound routing;2");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(OmnichannelChannelEndpoint endpoint, UpdateEditorContext context)

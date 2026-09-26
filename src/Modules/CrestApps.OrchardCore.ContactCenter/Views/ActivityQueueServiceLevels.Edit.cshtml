@@ -1,0 +1,29 @@
+@using CrestApps.OrchardCore.ContactCenter.Core.Models
+@model QueueViewModel
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="SlaThresholdSeconds">
+    <label asp-for="SlaThresholdSeconds" class="ocat-label">@T["Service Level Agreement (SLA) threshold (seconds)"]</label>
+    <div class="ocat-limited">
+        <input asp-for="SlaThresholdSeconds" class="form-control" />
+        <span asp-validation-for="SlaThresholdSeconds" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="EnableSlaAging">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="EnableSlaAging" class="form-check-input" />
+            <label asp-for="EnableSlaAging" class="form-check-label">@T["Age waiting items past the SLA threshold"]</label>
+        </div>
+        <span class="hint dashed">@T["When enabled, items waiting beyond the SLA threshold gain priority so aging work is routed first."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="FirstResponseTargetSeconds">
+    <label asp-for="FirstResponseTargetSeconds" class="ocat-label">@T["First-response target (seconds)"]</label>
+    <div class="ocat-limited">
+        <input asp-for="FirstResponseTargetSeconds" class="form-control" />
+        <span asp-validation-for="FirstResponseTargetSeconds" class="text-danger"></span>
+        <span class="hint">@T["For messaging work: how long a contact may wait for a first reply before the thread is flagged to supervisors. Set to 0 for no target."]</span>
+    </div>
+</div>

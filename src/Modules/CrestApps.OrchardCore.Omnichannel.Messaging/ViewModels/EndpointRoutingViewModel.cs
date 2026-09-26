@@ -26,6 +26,11 @@ public class EndpointRoutingViewModel
     public string QueueId { get; set; }
 
     /// <summary>
+    /// Gets or sets the routed queue's name, which the queue picker shows.
+    /// </summary>
+    public string QueueName { get; set; }
+
+    /// <summary>
     /// Gets or sets how inbound messages for a queue target are distributed.
     /// </summary>
     public ConversationDistributionMode DistributionMode { get; set; }

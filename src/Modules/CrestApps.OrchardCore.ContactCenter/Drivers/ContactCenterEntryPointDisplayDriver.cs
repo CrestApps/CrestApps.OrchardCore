@@ -79,13 +79,16 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
 
         await _optionsProvider.PopulateEntryPointEditorAsync(viewModel);
         viewModel.IvrExternalDestinationOptions = await GetExternalDestinationOptionsAsync();
+        viewModel.IvrVoiceMediaOptions = await _optionsProvider.GetVoiceMediaOptionsAsync(selectedMediaId: null);
 
         // The same agents a line can ring, as a separate list so the two pickers never share a selection.
         viewModel.VoicemailRecipientAgentOptions = viewModel.TargetAgentOptions?
             .Select(option => new SelectListItem(option.Text, option.Value) { Disabled = option.Disabled })
             .ToList() ?? [];
 
-        return Initialize<EntryPointViewModel>("ContactCenterEntryPointFields_Edit", model =>
+        // Grouped in cards by what they govern. Every card edits the same model under the same prefix, so the one form
+        // still posts all of them together.
+        void Populate(EntryPointViewModel model)
         {
             model.Id = viewModel.Id;
             model.Name = viewModel.Name;
@@ -113,8 +116,16 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
             model.IvrQueueOptions = viewModel.IvrQueueOptions;
             model.IvrAgentOptions = viewModel.IvrAgentOptions;
             model.IvrExternalDestinationOptions = viewModel.IvrExternalDestinationOptions;
+            model.IvrVoiceMediaOptions = viewModel.IvrVoiceMediaOptions;
             model.Enabled = viewModel.Enabled;
-        }).Location("Content:1");
+        }
+
+        return Combine(
+            Initialize<EntryPointViewModel>("ContactCenterEntryPointGeneral_Edit", Populate).Location("Content:1%General;1"),
+            Initialize<EntryPointViewModel>("ContactCenterEntryPointRouting_Edit", Populate).Location("Content:1%Routing;2"),
+            Initialize<EntryPointViewModel>("ContactCenterEntryPointHours_Edit", Populate).Location("Content:1%Hours;3"),
+            Initialize<EntryPointViewModel>("ContactCenterEntryPointMenu_Edit", Populate).Location("Content:1%Welcome and IVR menu;4"),
+            Initialize<EntryPointViewModel>("ContactCenterEntryPointVoicemail_Edit", Populate).Location("Content:1%Voicemail;5"));
     }
 
     /// <inheritdoc/>

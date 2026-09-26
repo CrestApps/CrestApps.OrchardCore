@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.ContactCenter.ViewModels;
 
@@ -27,6 +28,11 @@ public class BusinessHoursCalendarViewModel
     /// Gets or sets the time zone the schedule is evaluated in.
     /// </summary>
     public string TimeZoneId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the time zones the calendar can be evaluated in, by their offset and name.
+    /// </summary>
+    public IList<SelectListItem> TimeZoneOptions { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the per-day open windows.

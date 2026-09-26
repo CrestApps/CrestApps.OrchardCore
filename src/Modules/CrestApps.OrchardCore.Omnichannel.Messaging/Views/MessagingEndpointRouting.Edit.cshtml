@@ -9,11 +9,10 @@
     var queueEndpoint = Url.Content("~/Admin/api/crestapps/contact-center/queues/search");
     var queueInitialJson = string.IsNullOrEmpty(Model.QueueId)
         ? "[]"
-        : System.Text.Json.JsonSerializer.Serialize(new[] { new { value = Model.QueueId, text = Model.QueueId } });
+        : System.Text.Json.JsonSerializer.Serialize(new[] { new { value = Model.QueueId, text = string.IsNullOrWhiteSpace(Model.QueueName) ? Model.QueueId : Model.QueueName } });
 }
 
 <div class="mb-3" data-messaging-routing>
-    <label class="form-label">@T["Inbound routing"]</label>
     <span class="hint d-block mb-2">@T["Where inbound messages on this endpoint go. Leave the target empty to send them to the unassigned inbox."]</span>
 
     <div class="row g-2">

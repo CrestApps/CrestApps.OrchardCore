@@ -56,7 +56,7 @@ internal sealed class TelephonyExtensionDisplayDriver : DisplayDriver<TelephonyE
             model.UserId = extension.UserId;
             model.DisplayName = extension.DisplayName;
             model.Users = await BuildUserListAsync();
-        }).Location("Content:1");
+        }).Location("Content:1%General;1");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(TelephonyExtension extension, UpdateEditorContext context)

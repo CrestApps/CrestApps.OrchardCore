@@ -1,0 +1,29 @@
+@model DialerProfileViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+        <span class="hint">@T["A unique name used to identify this dialer profile in lists and reports."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Description">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Description" class="form-control"></textarea>
+        <span asp-validation-for="Description" class="text-danger"></span>
+        <span class="hint">@T["An optional summary of what this profile dials and who handles it."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Enabled">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="Enabled" class="form-check-input" />
+            <label asp-for="Enabled" class="form-check-label">@T["Enabled"]</label>
+            <span class="hint dashed">@T["When turned off, this profile places no calls and is skipped by the pacing engine."]</span>
+        </div>
+    </div>
+</div>

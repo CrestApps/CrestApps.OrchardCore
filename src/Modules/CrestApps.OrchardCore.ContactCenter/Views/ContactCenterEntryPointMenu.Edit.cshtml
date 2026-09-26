@@ -1,0 +1,193 @@
+@using System.Text.Json
+@model EntryPointViewModel
+
+@{
+    // What the visual IVR menu editor offers, and its words. The editor only fills in the IvrFlowJson field; the
+    // server binds and validates that field exactly as it did when it was typed by hand.
+    static object PickerOptions(IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> options)
+        => options.Select(option => new { value = option.Value, text = option.Text, disabled = option.Disabled }).ToList();
+
+    var disabledSuffix = T["(disabled)"].Value;
+    var ivrEditorConfig = new Dictionary<string, object>
+    {
+        ["queues"] = PickerOptions(Model.IvrQueueOptions),
+        ["agents"] = PickerOptions(Model.IvrAgentOptions),
+        ["media"] = PickerOptions(Model.IvrVoiceMediaOptions),
+        ["externals"] = Model.IvrExternalDestinationOptions
+            .Select(option => new { value = option.Value, text = option.Disabled ? $"{option.Text} {disabledSuffix}" : option.Text, disabled = false })
+            .ToList(),
+        ["kindLabels"] = new Dictionary<string, string>
+        {
+            ["RouteToQueue"] = T["Send to a queue"].Value,
+            ["RouteToAgent"] = T["Send to an agent"].Value,
+            ["SubMenu"] = T["Open a submenu"].Value,
+            ["Voicemail"] = T["Send to voicemail"].Value,
+            ["ExternalTransfer"] = T["Transfer to an approved external number"].Value,
+            ["Repeat"] = T["Repeat this menu"].Value,
+        },
+        ["strings"] = new Dictionary<string, string>
+        {
+            ["emptyTitle"] = T["No IVR menu"].Value,
+            ["emptyHint"] = T["Callers are routed straight to the target selected above."].Value,
+            ["build"] = T["Build an IVR menu"].Value,
+            ["addMenu"] = T["Add menu"].Value,
+            ["clear"] = T["Remove the IVR menu"].Value,
+            ["rootMenu"] = T["First menu"].Value,
+            ["rootMenuHint"] = T["The menu callers hear when they reach this entry point."].Value,
+            ["maxRetries"] = T["Tries"].Value,
+            ["maxRetriesHint"] = T["Wrong or missing keys allowed before the fallback."].Value,
+            ["fallback"] = T["When the tries run out"].Value,
+            ["fallbackHint"] = T["With no fallback, the caller is routed the way this entry point routes calls with no menu."].Value,
+            ["noFallback"] = T["Route to the entry point target"].Value,
+            ["menuName"] = T["Menu"].Value,
+            ["menuNameHint"] = T["Renaming a menu updates every key that opens it."].Value,
+            ["rootBadge"] = T["First menu"].Value,
+            ["rootBadgeHint"] = T["Callers hear this menu first."].Value,
+            ["removeMenu"] = T["Remove menu"].Value,
+            ["prompt"] = T["What callers hear"].Value,
+            ["promptPlaceholder"] = T["Press 1 for sales, 2 for support."].Value,
+            ["promptHint"] = T["Spoken to the caller. Mention every key below."].Value,
+            ["promptMedia"] = T["Recorded prompt (optional)"].Value,
+            ["promptMediaHint"] = T["A voice media recording played instead of speaking the text above."].Value,
+            ["speakPrompt"] = T["None: speak the text above"].Value,
+            ["noMedia"] = T["No recordings yet. Upload one under Voice media to play it here."].Value,
+            ["mainMenu"] = T["Main menu"].Value,
+            ["submenuBadge"] = T["Submenu"].Value,
+            ["unusedBadge"] = T["Not used"].Value,
+            ["unusedMenu"] = T["Unused menu ({id})"].Value,
+            ["unusedMenus"] = T["Menus no key opens"].Value,
+            ["unusedMenusHint"] = T["Callers never hear these. Point a key at one, or remove it."].Value,
+            ["removeSubmenu"] = T["Remove submenu"].Value,
+            ["ownSubmenu"] = T["Its submenu, below"].Value,
+            ["goTo"] = T["Go to: {menu}"].Value,
+            ["newSubmenu"] = T["+ New submenu"].Value,
+            ["key"] = T["Key"].Value,
+            ["action"] = T["Action"].Value,
+            ["target"] = T["Target"].Value,
+            ["targetMenu"] = T["Menu to open"].Value,
+            ["chooseAction"] = T["Choose an action"].Value,
+            ["chooseMenu"] = T["Choose a menu"].Value,
+            ["chooseQueue"] = T["Choose a queue"].Value,
+            ["chooseAgent"] = T["Choose an agent"].Value,
+            ["chooseExternal"] = T["Choose an approved destination"].Value,
+            ["typeTarget"] = T["Identifier"].Value,
+            ["newMenu"] = T["+ New menu"].Value,
+            ["noTarget"] = T["No destination needed."].Value,
+            ["unknownMenu"] = T["Not found: {id}"].Value,
+            ["unknownTarget"] = T["Not found: {id}"].Value,
+            ["unknownKind"] = T["Unknown: {id}"].Value,
+            ["addKey"] = T["Add key"].Value,
+            ["removeKey"] = T["Remove key {digit}"].Value,
+            ["allKeysUsed"] = T["Every key on the keypad is already used."].Value,
+            ["summaryErrors"] = T["{count} problem(s) to fix. The entry point will not save until they are fixed."].Value,
+            ["summaryWarnings"] = T["{count} warning(s) to review."].Value,
+            ["jsonInvalid"] = T["The JSON cannot be shown in the visual editor until it is fixed or cleared: {error}"].Value,
+            ["jsonNotAnObject"] = T["the menu must be a JSON object."].Value,
+            ["issue_maxRetriesInvalid"] = T["Callers need at least one try. Set the tries to 1 or more."].Value,
+            ["issue_rootMissing"] = T["Choose the menu callers hear first."].Value,
+            ["issue_rootNotFound"] = T["The first menu, \"{nodeId}\", does not exist."].Value,
+            ["issue_nodeIdMissing"] = T["Give this menu a name."].Value,
+            ["issue_nodeIdDuplicate"] = T["Another menu is already named \"{nodeId}\"."].Value,
+            ["issue_promptMissing"] = T["Enter what callers hear, or a recorded prompt, so this menu is not silent."].Value,
+            ["issue_noOptions"] = T["Add at least one key, or callers can never leave this menu."].Value,
+            ["issue_digitMissing"] = T["Choose a key."].Value,
+            ["issue_digitInvalid"] = T["\"{digit}\" is not a telephone key (0-9, * or #)."].Value,
+            ["issue_digitDuplicate"] = T["Key {digit} is already used on this menu."].Value,
+            ["issue_actionMissing"] = T["Choose what this key does."].Value,
+            ["issue_kindUnknown"] = T["\"{kind}\" is not an action this editor knows."].Value,
+            ["issue_targetMissing"] = T["Choose where this goes."].Value,
+            ["issue_subMenuNotFound"] = T["The menu \"{targetId}\" does not exist."].Value,
+            ["issue_targetUnknown"] = T["\"{targetId}\" is not in the list. It may have been deleted or disabled."].Value,
+            ["issue_unreachable"] = T["No key or fallback leads here, so callers never hear this menu."].Value,
+            ["issue_renameRefused"] = T["Menu names must be unique and cannot be empty."].Value,
+        },
+    };
+}
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+<script asp-name="contact-center-ivr-menu-editor" at="Foot"></script>
+
+<div class="ocat-wrapper" asp-validation-class-for="WelcomeMessage">
+    <label asp-for="WelcomeMessage" class="ocat-label">@T["Welcome message"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="WelcomeMessage" class="form-control" rows="2"></textarea>
+        <span asp-validation-for="WelcomeMessage" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="IvrFlowJson">
+    <label asp-for="IvrFlowJson" class="ocat-label">@T["IVR menu"]</label>
+    <div class="ocat-end" data-ivr-menu-editor data-ivr-loading data-config="@JsonSerializer.Serialize(ivrEditorConfig)">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+            <span class="hint mt-0">@T["A phone menu callers hear before they are routed. Leave it empty to route callers straight to the target."]</span>
+            <div class="form-check form-switch ms-auto mb-0">
+                <input class="form-check-input" type="checkbox" role="switch" id="IvrMenuAdvancedToggle" data-ivr-advanced-toggle />
+                <label class="form-check-label" for="IvrMenuAdvancedToggle">@T["Advanced: edit JSON"]</label>
+            </div>
+        </div>
+
+        <div class="alert alert-danger py-2" role="alert" data-ivr-message hidden></div>
+
+        @* The visual editor. It is drawn by the menu editor script and keeps the JSON field below in step with every edit. *@
+        <div data-ivr-visual hidden></div>
+
+        @* The field the form posts. Without the script it is the whole editor, as it always was. *@
+        <div data-ivr-json-panel>
+            <textarea asp-for="IvrFlowJson" class="form-control font-monospace" rows="14" spellcheck="false" data-ivr-json placeholder='{
+  "RootNodeId": "main",
+  "MaxRetries": 3,
+  "FallbackAction": { "Kind": "RouteToQueue", "TargetId": "QUEUE-ID" },
+  "Nodes": [
+    {
+      "NodeId": "main",
+      "Prompt": "Press 1 for sales or 2 for support.",
+      "Options": [
+        { "Digit": "1", "Action": { "Kind": "RouteToQueue", "TargetId": "QUEUE-ID" } },
+        { "Digit": "2", "Action": { "Kind": "SubMenu", "TargetId": "support" } }
+      ]
+    }
+  ]
+}'></textarea>
+            <span class="hint">@T["Leave empty to route callers straight to the target. Each menu has a NodeId, a Prompt (or PromptMediaId), and Options keyed by a single telephone key. Action kinds: RouteToQueue and RouteToAgent (TargetId is the queue or agent identifier below), SubMenu (TargetId is another NodeId), Voicemail, Repeat, and ExternalTransfer (TargetId is an approved destination identifier below). After MaxRetries invalid entries the FallbackAction is taken."]</span>
+            @if (Model.IvrQueueOptions.Count > 0 || Model.IvrAgentOptions.Count > 0 || Model.IvrExternalDestinationOptions.Count > 0)
+            {
+                <details class="mt-2">
+                    <summary class="small">@T["Identifiers for RouteToQueue, RouteToAgent and ExternalTransfer"]</summary>
+                    <div class="row small mt-2">
+                        <div class="col-md-4">
+                            <strong>@T["Queues"]</strong>
+                            <ul class="list-unstyled mb-0">
+                                @foreach (var option in Model.IvrQueueOptions)
+                                {
+                                    <li>@option.Text <code>@option.Value</code></li>
+                                }
+                            </ul>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>@T["Agents"]</strong>
+                            <ul class="list-unstyled mb-0">
+                                @foreach (var option in Model.IvrAgentOptions)
+                                {
+                                    <li>@option.Text <code>@option.Value</code></li>
+                                }
+                            </ul>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>@T["Approved external destinations"]</strong>
+                            <ul class="list-unstyled mb-0">
+                                @foreach (var option in Model.IvrExternalDestinationOptions)
+                                {
+                                    <li>@option.Text <code>@option.Value</code></li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                </details>
+            }
+        </div>
+
+        <span asp-validation-for="IvrFlowJson" class="text-danger"></span>
+        <span asp-validation-for="IvrFlow" class="text-danger"></span>
+    </div>
+</div>

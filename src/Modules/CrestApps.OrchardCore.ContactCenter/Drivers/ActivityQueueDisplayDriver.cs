@@ -54,7 +54,9 @@ internal sealed class ActivityQueueDisplayDriver : DisplayDriver<ActivityQueue>
 
         await _optionsProvider.PopulateQueueEditorAsync(viewModel);
 
-        return Initialize<QueueViewModel>("ActivityQueueFields_Edit", model =>
+        // A queue has more settings than one screen can take in, so they are grouped in cards by what they govern.
+        // Every card edits the same model under the same prefix, so the one form still posts all of them together.
+        void Populate(QueueViewModel model)
         {
             model.Id = viewModel.Id;
             model.QueueGroupId = viewModel.QueueGroupId;
@@ -86,8 +88,19 @@ internal sealed class ActivityQueueDisplayDriver : DisplayDriver<ActivityQueue>
             model.MaxWaitAction = viewModel.MaxWaitAction;
             model.FirstResponseTargetSeconds = viewModel.FirstResponseTargetSeconds;
             model.Treatment = viewModel.Treatment;
+            model.HoldMusicMediaOptions = viewModel.HoldMusicMediaOptions;
             model.Enabled = viewModel.Enabled;
-        }).Location("Content:1");
+        }
+
+        return Combine(
+            Initialize<QueueViewModel>("ActivityQueueGeneral_Edit", Populate).Location("Content:1%General;1"),
+            Initialize<QueueViewModel>("ActivityQueueRouting_Edit", Populate).Location("Content:1%Routing;2"),
+            Initialize<QueueViewModel>("ActivityQueueServiceLevels_Edit", Populate).Location("Content:1%Service levels;3"),
+            Initialize<QueueViewModel>("ActivityQueueSkills_Edit", Populate).Location("Content:1%Skills;4"),
+            Initialize<QueueViewModel>("ActivityQueueHoursAndOverflow_Edit", Populate).Location("Content:1%Hours and overflow;5"),
+            Initialize<QueueViewModel>("ActivityQueueLimits_Edit", Populate).Location("Content:1%Limits;6"),
+            Initialize<QueueViewModel>("ActivityQueueWaiting_Edit", Populate).Location("Content:1%While callers wait;7"),
+            Initialize<QueueViewModel>("ActivityQueueCallback_Edit", Populate).Location("Content:1%Callback;8"));
     }
 
     /// <inheritdoc/>

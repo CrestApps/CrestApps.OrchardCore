@@ -41,7 +41,7 @@ internal sealed class ActivityQueueGroupDisplayDriver : DisplayDriver<ActivityQu
             model.Id = group.ItemId;
             model.Name = group.Name;
             model.Description = group.Description;
-        }).Location("Content:1");
+        }).Location("Content:1%General;1");
     }
 
     /// <inheritdoc/>

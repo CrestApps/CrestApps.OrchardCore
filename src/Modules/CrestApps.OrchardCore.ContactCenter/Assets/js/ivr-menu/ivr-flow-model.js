@@ -612,6 +612,152 @@
         return action;
     }
 
+    // The menus the way a caller walks them. The stored flow is a flat list of named menus; the editor draws each menu
+    // once, under the first key that opens it (depth first, in key order), starting from the first menu. A key that opens
+    // a menu already drawn -- back to the main menu, or a second key to the same menu -- is a jump to it, not another
+    // copy. Menus no key reaches are set aside, each with the submenus nested under it.
+    //   rootIndex        - the menu callers hear first (the first one when the first menu named is missing)
+    //   childOf(n, o)    - the menu drawn under option o of menu n, or undefined
+    //   paths[n]         - the keys that lead to menu n from the first menu ([] for it); absent for a set-aside menu
+    //   unused           - the set-aside menus that head their own group, in list order
+    //   indexOf(nodeId)  - a menu's index by its name
+    function buildMenuTree(model) {
+        var nodes = (model && model.nodes) || [];
+        var indexById = {};
+        var homes = {};
+        var paths = {};
+        var placed = {};
+        var unused = [];
+
+        nodes.forEach(function (node, index) {
+            var id = text(node.nodeId).trim();
+
+            if (id && !Object.prototype.hasOwnProperty.call(indexById, id)) {
+                indexById[id] = index;
+            }
+        });
+
+        var rootId = text(model && model.rootNodeId).trim();
+        var rootIndex = Object.prototype.hasOwnProperty.call(indexById, rootId) ? indexById[rootId] : (nodes.length ? 0 : undefined);
+
+        function walk(index, path) {
+            placed[index] = true;
+
+            if (path) {
+                paths[index] = path;
+            }
+
+            (nodes[index].options || []).forEach(function (option, optionIndex) {
+                var action = option && option.action;
+
+                if (!action || action.kind !== 'SubMenu') {
+                    return;
+                }
+
+                var targetId = text(action.targetId).trim();
+
+                if (!Object.prototype.hasOwnProperty.call(indexById, targetId)) {
+                    return;
+                }
+
+                var child = indexById[targetId];
+
+                if (placed[child]) {
+                    return;
+                }
+
+                homes[index + ':' + optionIndex] = child;
+                walk(child, path ? path.concat([text(option.digit).trim() || '?']) : null);
+            });
+        }
+
+        if (rootIndex !== undefined) {
+            walk(rootIndex, []);
+        }
+
+        nodes.forEach(function (node, index) {
+            if (!placed[index]) {
+                unused.push(index);
+                walk(index, null);
+            }
+        });
+
+        return {
+            rootIndex: rootIndex,
+            paths: paths,
+            unused: unused,
+            childOf: function (nodeIndex, optionIndex) {
+                return homes[nodeIndex + ':' + optionIndex];
+            },
+            indexOf: function (nodeId) {
+                var id = text(nodeId).trim();
+
+                return Object.prototype.hasOwnProperty.call(indexById, id) ? indexById[id] : undefined;
+            }
+        };
+    }
+
+    // Gives option o of menu n a submenu of its own, named for the editor so nobody has to choose a name.
+    function addSubMenu(model, nodeIndex, optionIndex) {
+        var option = model.nodes[nodeIndex] && model.nodes[nodeIndex].options[optionIndex];
+
+        if (!option) {
+            return null;
+        }
+
+        var node = addNode(model);
+
+        option.action = { kind: 'SubMenu', targetId: node.nodeId };
+
+        return node;
+    }
+
+    // Removes a submenu with the submenus drawn under it. A key that opened any of them -- the key it hangs from, or a
+    // jump from elsewhere -- is left without an action, to be chosen again. The first menu is never removed this way.
+    function removeSubMenu(model, nodeIndex) {
+        var tree = buildMenuTree(model);
+
+        if (!model.nodes[nodeIndex] || nodeIndex === tree.rootIndex) {
+            return;
+        }
+
+        var doomed = {};
+
+        (function collect(index) {
+            doomed[index] = true;
+
+            (model.nodes[index].options || []).forEach(function (option, optionIndex) {
+                var child = tree.childOf(index, optionIndex);
+
+                if (child !== undefined && !doomed[child]) {
+                    collect(child);
+                }
+            });
+        }(nodeIndex));
+
+        var removedIds = {};
+
+        Object.keys(doomed).forEach(function (index) {
+            removedIds[text(model.nodes[index].nodeId).trim()] = true;
+        });
+
+        model.nodes = model.nodes.filter(function (node, index) {
+            return !doomed[index];
+        });
+
+        model.nodes.forEach(function (node) {
+            (node.options || []).forEach(function (option) {
+                if (option.action && option.action.kind === 'SubMenu' && removedIds[text(option.action.targetId).trim()]) {
+                    option.action = null;
+                }
+            });
+        });
+
+        if (model.fallback && model.fallback.kind === 'SubMenu' && removedIds[text(model.fallback.targetId).trim()]) {
+            model.fallback = null;
+        }
+    }
+
     ivr.ACTION_KINDS = ACTION_KINDS;
     ivr.ENUM_ORDER = ENUM_ORDER;
     ivr.TELEPHONE_KEYS = TELEPHONE_KEYS;
@@ -640,4 +786,7 @@
     ivr.renameNode = renameNode;
     ivr.removeNode = removeNode;
     ivr.setActionKind = setActionKind;
+    ivr.buildMenuTree = buildMenuTree;
+    ivr.addSubMenu = addSubMenu;
+    ivr.removeSubMenu = removeSubMenu;
 }(typeof globalThis !== 'undefined' ? globalThis : window));

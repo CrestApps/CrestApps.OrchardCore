@@ -81,7 +81,7 @@ internal sealed class VoiceMediaItemDisplayDriver : DisplayDriver<VoiceMediaItem
             model.ProviderName = item.ProviderName;
             model.Format = item.Format;
             model.CanUpload = canUpload;
-        }).Location("Content:1");
+        }).Location("Content:1%General;1");
     }
 
     /// <inheritdoc/>

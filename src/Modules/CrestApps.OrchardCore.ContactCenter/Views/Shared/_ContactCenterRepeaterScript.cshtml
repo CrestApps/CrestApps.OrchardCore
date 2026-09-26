@@ -8,6 +8,13 @@
 <script at="Foot">
     (function () {
         function initRepeater(container) {
+            // Several sections of one editor may each include this script: a repeater is bound once.
+            if (container.hasAttribute('data-repeater-bound')) {
+                return;
+            }
+
+            container.setAttribute('data-repeater-bound', '');
+
             var rows = container.querySelector('[data-repeater-rows]');
             var template = container.querySelector('template[data-repeater-template]');
             var addButton = container.querySelector('[data-repeater-add]');
