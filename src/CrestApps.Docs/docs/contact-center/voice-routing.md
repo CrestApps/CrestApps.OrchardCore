@@ -246,20 +246,42 @@ Business hours and the closed action are decided first. A closed entry point app
 
 | Action | What happens to the caller |
 | --- | --- |
-| **Route to queue** | Admitted to the queue like any inbound caller, so a full queue still overflows or goes to voicemail. They are offered to the next agent at once; because they were answered to hear the menu, they hear the queue's hold music while the offer rings, or the queue's treatment (welcome, music, announcements) while they wait. |
-| **Route to agent** | Rings that one agent the way a personal line does: held and re-offered to the agent when they become available, and sent to voicemail when the entry point's ring window runs out (or held indefinitely when the entry point's voicemail is off). |
+| **Route to queue** | Admitted to the queue like any inbound caller, so a full queue still overflows or goes to voicemail. They are offered to the next agent at once; because they were answered to hear the menu, they hear the queue's hold music while the offer rings (a ringing tone when the queue has no music), or the queue's treatment (welcome, music, announcements, callback offer) while they wait. A queue with no treatment at all gives them a ringing tone rather than silence. |
+| **Route to agent** | Rings that one agent the way a personal line does: held and re-offered to the agent when they become available, and sent to voicemail when the entry point's ring window runs out (or held indefinitely when the entry point's voicemail is off). While the agent rings, or the caller is held for them, they hear the hold music of the entry point's queue on a queue line, and a ringing tone on a personal line or a queue with no music. It stops when the agent is joined or the caller is sent to voicemail. |
 | **Sub-menu** | Plays the sub-menu and collects the next key. Tries are counted per menu and start again on each new menu. |
-| **Voicemail** | Sends the caller to voicemail with the entry point's greeting. On a personal-line entry point the message is left for that agent. |
-| **External transfer** | Transfers the caller to an approved destination from **Settings → External transfer destinations**. Only an enabled destination that the dial policy allows, and that is not one of the contact center's own numbers, is reachable. The destination is shown the number the caller dialled. |
+| **Voicemail** | Sends the caller to voicemail with the entry point's greeting. On a personal-line entry point the message is left for that agent; on a queue line it goes to the entry point's **Voicemail inbox** (see [Voicemail on a queue line](#voicemail-on-a-queue-line)). |
+| **External transfer** | Transfers the caller to an approved destination from **Settings → External transfer destinations**. Only an enabled destination that the dial policy allows, and that is not one of the contact center's own numbers, is reachable. The destination is shown the number the caller dialled. The call is settled as transferred only once the destination answers; one that is busy, does not answer or rejects the call puts the caller where the menu's fallback sends callers, or through to the entry point's target (see [A transfer the destination does not answer](#a-transfer-the-destination-does-not-answer)). |
 | **Repeat** | Plays the menu again. It counts as a try, so a caller who keeps asking to hear the menu still reaches the fallback. |
 
 A key the menu does not offer, or no key before the menu times out (8 seconds after the prompt ends), plays the menu again. When the caller has used up the menu's **Tries**, the **When the tries run out** action is taken; with no fallback, the caller is routed to the entry point's own target (its queue or agent). A choice that cannot be reached — a deleted or disabled queue, a missing agent, a disabled or refused external destination, a failed transfer — sends the caller to the entry point's target, and when that cannot be reached either, to voicemail. A caller is never left on the line.
 
 ### Prompts
 
-A menu's **prompt text** is spoken with text-to-speech. A menu with **recorded audio** from the voice media library plays that instead; if the clip can no longer be found, the text is spoken and a warning is logged. With neither, or when the provider refuses the prompt, the caller is routed to the entry point's target.
+A menu's **prompt text** is spoken with text-to-speech, in the voice and language set on the Telnyx settings page (**Text-to-speech voice** and **Text-to-speech language**, `female` and `en-US` when blank). The same voice and language are used for the voicemail greeting, the queue's announcements, and its callback offer and confirmation. A menu with **recorded audio** from the voice media library plays that instead; if the clip can no longer be found, the text is spoken and a warning is logged. With neither, or when the provider refuses the prompt, the caller is routed to the entry point's target.
 
 With Telnyx, a spoken menu is `gather_using_speak` and a recorded one is `gather_using_audio` (by the clip's `media_name`, or `audio_url` for an externally hosted file). Both follow an `answer`. Each collects one key (`minimum_digits` and `maximum_digits` 1), accepts only the keys the menu offers (`valid_digits`), and collects once (`maximum_tries` 1): the menu's own tries decide what a missed key means, rather than Telnyx replaying the prompt on its own. The key arrives on the `call.gather.ended` webhook, whose `status` says how the collection ended: `valid`, `invalid` and `timeout` move the caller through the menu; `call_hangup` records the caller as having abandoned in the menu; `cancelled` is ignored.
+
+### Waiting after the menu
+
+The network plays ringback to a caller only until they are answered, and the menu answered them. From then on whatever they hear is played by the platform: the queue's hold music when there is some, and otherwise a ringing tone (the North American 440 + 480 Hz cadence, two seconds on and four off, sent to Telnyx as `playback_content` and looped). It is stopped the way hold music is — Telnyx stops the caller's playback when it bridges the agent in, and a caller leaving the queue for voicemail, overflow or anywhere else has it stopped as they leave.
+
+### The queue's callback offer
+
+A queue with a **callback key** offers a waiting caller a callback once they have waited its **callback offer delay**: the hold music is stopped, the offer ("press 1 and we will call you back without losing your place in line") is spoken with `gather_using_speak` in the tenant's voice, and one key is collected, once, with the same 8-second timeout as a menu. The caller's answer comes back on the same `call.gather.ended` path as a menu choice, and is acted on only when the caller has no menu in progress and has been played the offer:
+
+- **The callback key** schedules a callback to the number they are calling from, carrying the time they entered the queue so they keep their place in line; takes them out of the queue so no agent is offered a caller who has gone; completes the inbound activity with the reason `queued_callback`; tells them it is arranged; and hangs up once that has been said (the confirmation is spoken with a `cc-bye` client state, and its `call.speak.ended` is what hangs up). The callback is promoted into an outbound callback activity by the callback dispatcher like any other.
+- **Any other key, no key, or a key Telnyx could not read** is "no": the offer is not repeated, their hold music starts again and they keep waiting with the queue's treatment.
+- **A callback that cannot be arranged** — callbacks are not enabled on the tenant (the Contact Center Outbound Dialer feature), or there is no number to call — is not promised: the caller keeps waiting and a warning is logged.
+
+A redelivered key press never schedules a second callback, and a caller who is offered to an agent while the offer is playing is not taken out of the queue by pressing the key.
+
+### A transfer the destination does not answer
+
+The provider accepting an external transfer only means it has started ringing the destination. On Telnyx the leg it rings is marked, and the call stays the contact center's until that leg answers, when it settles as *Transferred* and `IvrActionTaken` is recorded with the reason `ExternalTransferCompleted`. When the leg hangs up first — busy, no answer, rejected — `IvrFallbackTaken` is recorded with the reason `ExternalTransferFailed`, the number and the provider's hangup cause, and the caller is put where the menu's **When the tries run out** action sends callers: a queue, an agent, voicemail, or another outside number. A fallback that is a menu, or is the same number that just failed, sends them to the entry point's own target instead. A caller who hangs up while the destination rings is recorded with `ExternalTransferAbandoned` and routed nowhere.
+
+### Voicemail on a queue line
+
+A personal line's messages go to its agent, and a message left after an agent let a queue offer ring out goes to that agent. A caller on a queue line who reaches voicemail with no agent of their own — they chose voicemail from the menu, the queue was full, or they waited past its limit before anybody was offered the call — used to leave a message that went into nobody's inbox. Set the entry point's **Voicemail inbox** to the agent (for example a supervisor) whose **Voicemail** tab should receive them. The inbox is stamped on the call when it arrives, the greeting is the entry point's **Default voicemail greeting**, and the message is played, marked read and deleted exactly like any other voicemail in that agent's inbox.
 
 ### What is recorded
 
@@ -267,11 +289,11 @@ The caller's route is kept with the call and written to the event log, so the ca
 
 - `IvrMenuEntered` each time a menu is played, with the try number.
 - `IvrDigitsReceived` for each key press or timeout.
-- `IvrActionTaken` when a choice sends the caller somewhere (with the queue, agent or external number).
-- `IvrFallbackTaken` when the tries ran out, or a choice could not be reached and the caller was rerouted.
+- `IvrActionTaken` when a choice sends the caller somewhere (with the queue, agent or external number). An external transfer records it twice: `ExternalTransferRinging` when the destination starts ringing and `ExternalTransferCompleted` when it answers.
+- `IvrFallbackTaken` when the tries ran out, a choice could not be reached and the caller was rerouted, or an external transfer failed (`ExternalTransferFailed`, with the provider's hangup cause).
 - `CallAbandoned` when the caller hangs up in the menu. The platform answered the caller to play the menu, so without it the reports would count a caller who gave up in the menu as answered.
 
-The interaction also carries the whole route (each menu heard, each key pressed, and where it led) in its menu state. Key presses are applied once: a redelivered `call.gather.ended` never moves a caller twice, and once the caller has left the menu, later digit collections on the same call (such as a queue's callback offer) are not read as menu choices.
+The interaction also carries the whole route (each menu heard, each key pressed, and where it led) in its menu state. Key presses are applied once: a redelivered `call.gather.ended` never moves a caller twice, and once the caller has left the menu, later digit collections on the same call are not read as menu choices: a queue's callback offer is answered by the callback offer instead.
 
 ## Outbound routing flow
 

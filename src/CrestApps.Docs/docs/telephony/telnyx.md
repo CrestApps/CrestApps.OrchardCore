@@ -104,6 +104,8 @@ Telnyx** button. The rest appear after you connect:
 | **Default outbound caller id** | After connecting | The E.164 number presented on outbound calls when no per-agent or per-request caller id is supplied. Connect suggests one; editable. Must be a Telnyx-owned number for STIR/SHAKEN attestation. |
 | **Webhook public key** | After connecting | The Telnyx account **Ed25519 public key** (from the portal) used to verify signed webhooks. Stored encrypted. Inbound webhooks are rejected when empty. |
 | **Browser WebRTC (advanced)** | After connecting | Credential lifetime, SIP signaling, codecs, and ICE (STUN/TURN) settings — see [Browser WebRTC settings](#browser-webrtc-settings) for each field. Defaults work out of the box. |
+| **Text-to-speech voice** | After connecting | The voice the platform's spoken prompts use: entry-point phone menus, the voicemail greeting, queue announcements, a queue's callback offer and its confirmation. `female`, `male`, or a Telnyx voice name in the form `Provider.Model.VoiceId`, such as `AWS.Polly.Joanna-Neural`. Blank means `female`. Telnyx requires a voice on every `speak` and `gather_using_speak` and refuses the command without one. |
+| **Text-to-speech language** | After connecting | The language those prompts are spoken in, such as `en-US` or `es-ES`. Blank means `en-US`. Telnyx ignores it for `AWS.Polly` voices, which carry their own language. |
 
 When you enable Telnyx and no default provider is set yet, Telnyx becomes the default automatically. When
 you disable Telnyx while it is the default provider, the default is cleared and the soft phone is disabled
@@ -278,6 +280,14 @@ Contact Center's transfer endpoints (see [How to transfer a call](../contact-cen
   exactly as for a new call, and the music stops.
 - **Blind to an outside number** — `POST /v2/calls/{caller}/actions/transfer` from the platform's default
   caller id, then the call settles as *Transferred* and the agent is released.
+- **From an entry point's phone menu to an outside number** — the same `transfer` action, presenting the number
+  the caller dialled, with `target_leg_client_state` (intent `cc-xfer`, carrying the interaction id) on the leg it
+  rings. Telnyx documents that a transfer which fails sends `call.hangup` for that leg and leaves the caller's leg
+  up for further commands ([Transfer call](https://developers.telnyx.com/api-reference/call-commands/transfer-call)).
+  The call is therefore settled as *Transferred* only when that leg reports `call.answered` or `call.bridged`; a
+  `call.hangup` before that (`user_busy`, `timeout`, `call_rejected` and the like) puts the caller where the menu's
+  fallback sends callers, or through to the entry point's own target. A leg cancelled because the caller hung up
+  (`originator_cancel`) reroutes nobody.
 - **Warm (consult)** — the caller is moved into a conference named `cc-consult-{consultId}`
   (`POST /v2/conferences`) and held there with the queue's hold music (`conferences/{id}/actions/hold`); the
   agent's leg joins the conference, and the destination is rung on a leg of its own (client state intent

@@ -303,8 +303,9 @@ The platform puts a voicemail in an inbox once, when the call reaches voicemail:
 | A direct call to an agent (their extension, or an entry point that targets them) that was not answered | The agent the call was for. |
 | An agent pressed **Voicemail** on a ringing call | That agent. |
 | A queued call that reached the queue's voicemail on its maximum wait, after an offer to an agent expired | The agent the call was last offered to. |
+| A call on a queue line that reached voicemail with no agent of its own (the caller chose voicemail from the phone menu, the queue was full, or they waited too long before anybody was offered the call) | The entry point's **Voicemail inbox** agent. With none set, the message is recorded but is in nobody's inbox. |
 
-A queue voicemail is not shared among the queue's members and is not listed for supervisors. A supervisor who must remove a recording uses recording erasure, which is audited as the supervisor's action.
+A queue voicemail is not shared among the queue's members and is not listed for supervisors. To have a supervisor hear the messages left on a queue line, set the entry point's **Voicemail inbox** to the supervisor's agent profile; the messages then appear in that person's **Voicemail** tab like their own. A supervisor who must remove a recording uses recording erasure, which is audited as the supervisor's action.
 
 The voicemail endpoints answer a refusal with a status code and a problem body (`401` signed out, `403` not in your inbox, `404` not found, `409` legal hold). They never redirect to the sign-in or access-denied page, so the soft phone can always tell a refused delete from a completed one.
 
