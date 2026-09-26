@@ -82,6 +82,7 @@ public static class TelnyxCallEventParser
                     ? ReadString(payload, "result")
                     : null,
                 ClientState = ReadClientState(payload),
+                ConferenceId = ReadString(payload, "conference_id"),
                 FailureReason = ReadString(payload, "failure_reason"),
             };
 

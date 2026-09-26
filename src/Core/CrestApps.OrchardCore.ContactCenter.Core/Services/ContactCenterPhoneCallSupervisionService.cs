@@ -447,6 +447,14 @@ public sealed partial class ContactCenterPhoneCallSupervisionService : IContactC
             return SupervisorEngagementResult.Failure("The voice provider cannot hand this call to a supervisor.");
         }
 
+        // The call is the supervisor's before the provider is asked: releasing the agent's leg ends the agent's call, and
+        // that end comes back while the provider is still answering. Recorded afterwards, the end found a supervisor who
+        // was only listening and let them go -- live, the number was left alone on the line.
+        var previousMode = engagement.Mode;
+        engagement.TookOver = true;
+        engagement.Mode = MonitorMode.Barge;
+        await _engagements.SaveAsync(engagement, cancellationToken);
+
         ContactCenterVoiceProviderResult result;
 
         try
@@ -456,6 +464,7 @@ public sealed partial class ContactCenterPhoneCallSupervisionService : IContactC
         }
         catch (TimeoutException)
         {
+            // The agent may already be gone: the supervisor keeps the call rather than being let go with it.
             return SupervisorEngagementResult.Unknown("The voice provider did not confirm the takeover before the server timeout.");
         }
         catch (OperationCanceledException)
@@ -465,12 +474,15 @@ public sealed partial class ContactCenterPhoneCallSupervisionService : IContactC
 
         if (result?.Succeeded != true || result.OutcomeUnknown)
         {
+            if (result?.OutcomeUnknown != true)
+            {
+                engagement.TookOver = false;
+                engagement.Mode = previousMode;
+                await _engagements.SaveAsync(engagement, CancellationToken.None);
+            }
+
             return SupervisorEngagementResult.Failure(result?.ErrorMessage ?? "The voice provider did not confirm the takeover.");
         }
-
-        engagement.TookOver = true;
-        engagement.Mode = MonitorMode.Barge;
-        await _engagements.SaveAsync(engagement, cancellationToken);
         await NotifyAsync(SupervisorEngagementNotification.TookOver, engagement, agent: null, reason: null);
 
         if (_logger.IsEnabled(LogLevel.Information))

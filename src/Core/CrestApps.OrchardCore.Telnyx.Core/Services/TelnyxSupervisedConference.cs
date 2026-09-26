@@ -14,7 +14,15 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 /// the agent's leg (the move a consult and a caller park already make); the agent's leg then joins, and the two talk
 /// through the conference's mixer as they did through the bridge. Neither hears a tone: the conference is created and
 /// joined with <c>beep_enabled=never</c>, and no hold audio is set, so the customer hears nothing for the moment they
-/// are alone in it. The supervisor's leg joins with a Telnyx supervisor role.
+/// are alone in it.
+/// </para>
+/// <para>
+/// The supervisor always joins as a Telnyx <c>whisper</c> supervisor naming the legs that hear them: the agent while they
+/// listen (their phone keeps its microphone off, so the agent hears nothing) or coach, and everybody else on the call when
+/// they join it. Nobody is ever muted in the conference and the <c>monitor</c> role is never used: live, a conference a
+/// supervisor joined muted, or as <c>monitor</c>, stopped carrying anybody's audio to anybody -- the customer and the agent
+/// could no longer hear each other -- and changing the supervisor afterwards did not bring it back. Every join and change
+/// is read back from Telnyx and logged, and a change Telnyx answered but did not apply is made again by rejoining.
 /// </para>
 /// <para>
 /// The conference is named for the customer's leg, so every supervisor and every node finds the same one. When the
@@ -88,12 +96,36 @@ internal sealed class TelnyxSupervisedConference
         };
 
     /// <summary>
-    /// The legs a supervisor in <paramref name="role"/> is heard by: the agent alone for a whisper, nobody otherwise.
+    /// Whether a supervisor in <paramref name="role"/> is heard by everybody on the call rather than the agent alone.
     /// </summary>
-    public static IReadOnlyCollection<string> WhisperTargets(string role, string agentLegId)
-        => string.Equals(role, "whisper", StringComparison.Ordinal) && !string.IsNullOrWhiteSpace(agentLegId)
-            ? [agentLegId]
-            : null;
+    /// <param name="role">The mode's Telnyx role name, as <see cref="RoleFor"/> gives it.</param>
+    public static bool IsHeardByEverybody(string role)
+        => string.Equals(role, "barge", StringComparison.Ordinal);
+
+    /// <summary>
+    /// The legs a supervisor in <paramref name="role"/> is heard by: everybody else on the call when they join it, the
+    /// agent alone otherwise -- coaching, or listening with the phone's microphone off.
+    /// </summary>
+    /// <param name="role">The mode's Telnyx role name.</param>
+    /// <param name="agentLegId">The monitored agent's leg.</param>
+    /// <param name="participants">The legs in the conference.</param>
+    /// <param name="supervisorLegId">The supervisor's own leg, which never hears itself.</param>
+    public static IReadOnlyList<string> HearersFor(
+        string role,
+        string agentLegId,
+        IEnumerable<string> participants,
+        string supervisorLegId)
+    {
+        if (!IsHeardByEverybody(role) && !string.IsNullOrWhiteSpace(agentLegId))
+        {
+            return [agentLegId];
+        }
+
+        return (participants ?? [])
+            .Where(participant => !string.IsNullOrWhiteSpace(participant) && !string.Equals(participant, supervisorLegId, StringComparison.Ordinal))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+    }
 
     /// <summary>
     /// Returns the running conference of the call, moving the call into one first when it is still on its bridge.
@@ -121,7 +153,10 @@ internal sealed class TelnyxSupervisedConference
             return null;
         }
 
-        var created = await _apiClient.CreateSilentConferenceAsync(name, customerLegId, commandId: name, cancellationToken);
+        // Telnyx ignores a command whose id it has already executed, and the name repeats for every engagement on the
+        // call: each attempt has an id of its own.
+        var attempt = Guid.NewGuid().ToString("N");
+        var created = await _apiClient.CreateSilentConferenceAsync(name, customerLegId, commandId: $"{name}-{attempt}", cancellationToken);
 
         if (!created.Succeeded || string.IsNullOrWhiteSpace(created.ConferenceId))
         {
@@ -145,7 +180,7 @@ internal sealed class TelnyxSupervisedConference
         var joined = await _apiClient.JoinConferenceSilentlyAsync(
             created.ConferenceId,
             agentLegId,
-            commandId: $"{name}-agent-{agentLegId}",
+            commandId: $"{name}-agent-{attempt}",
             cancellationToken: cancellationToken);
 
         if (!joined.Succeeded && !TelnyxApiErrors.IsAlreadyInConference(joined))
@@ -166,15 +201,13 @@ internal sealed class TelnyxSupervisedConference
     }
 
     /// <summary>
-    /// Joins a supervisor's leg to the call's conference in a role.
+    /// Joins a supervisor's leg to the call's conference, heard by the legs their mode names.
     /// </summary>
-    /// <remarks>
-    /// Listening is never Telnyx's <c>monitor</c> supervisor role. Live, every conference a supervisor joined as
-    /// <c>monitor</c> stopped carrying the customer's and the agent's audio to each other (the agent's phone kept receiving
-    /// packets at an inbound level of 0.002, against 0.4 in the same call's conference joined as <c>whisper</c>), and a
-    /// later change of role did not bring it back. A listening supervisor joins as an ordinary participant, muted: they
-    /// hear everybody and nobody hears them.
-    /// </remarks>
+    /// <param name="conferenceId">The conference.</param>
+    /// <param name="supervisorLegId">The supervisor's leg.</param>
+    /// <param name="role">The mode's Telnyx role name.</param>
+    /// <param name="agentLegId">The monitored agent's leg.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     public async Task<bool> JoinSupervisorAsync(
         string conferenceId,
         string supervisorLegId,
@@ -182,18 +215,20 @@ internal sealed class TelnyxSupervisedConference
         string agentLegId,
         CancellationToken cancellationToken)
     {
-        var listening = IsListening(role);
-        var joined = await _apiClient.JoinConferenceSilentlyAsync(
-            conferenceId,
-            supervisorLegId,
-            listening ? null : role,
-            WhisperTargets(role, agentLegId),
-            commandId: $"cc-sv-join-{supervisorLegId}",
-            mute: listening,
-            cancellationToken: cancellationToken);
+        IReadOnlyList<string> participants = null;
+
+        if (IsHeardByEverybody(role) || string.IsNullOrWhiteSpace(agentLegId))
+        {
+            participants = await _apiClient.ListJoinedConferenceParticipantsAsync(conferenceId, cancellationToken);
+        }
+
+        var hearers = HearersFor(role, agentLegId, participants, supervisorLegId);
+        var joined = await JoinHeardByAsync(conferenceId, supervisorLegId, hearers, $"cc-sv-join-{supervisorLegId}", cancellationToken);
 
         if (joined.Succeeded || TelnyxApiErrors.IsAlreadyInConference(joined))
         {
+            await ReadBackAsync(conferenceId, supervisorLegId, role, "joined", cancellationToken);
+
             return true;
         }
 
@@ -208,9 +243,9 @@ internal sealed class TelnyxSupervisedConference
     }
 
     /// <summary>
-    /// Changes a joined supervisor's role.
+    /// Changes who hears a joined supervisor, for their new mode.
     /// </summary>
-    /// <returns><see langword="true"/> when Telnyx changed it; <see langword="false"/> when the call has no running conference or the supervisor is not in it yet.</returns>
+    /// <returns><see langword="true"/> when the supervisor is heard as the mode says; <see langword="false"/> when the call has no running conference or the supervisor is not in it yet.</returns>
     public async Task<bool> SwitchRoleAsync(
         string conferenceName,
         string supervisorLegId,
@@ -225,51 +260,117 @@ internal sealed class TelnyxSupervisedConference
             return false;
         }
 
-        TelnyxApiResult updated;
+        var participants = await _apiClient.ReadJoinedConferenceParticipantsAsync(conference.ConferenceId, cancellationToken);
 
-        if (IsListening(role))
+        if (participants is null || !participants.Any(participant => string.Equals(participant.CallControlId, supervisorLegId, StringComparison.Ordinal)))
         {
-            // Muted before the role goes: a whisperer made an ordinary participant first would be heard by the customer
-            // for a moment.
-            updated = await _apiClient.SetConferenceParticipantMutedAsync(conference.ConferenceId, supervisorLegId, mute: true, cancellationToken);
-
-            if (updated.Succeeded)
-            {
-                updated = await _apiClient.UpdateConferenceSupervisorRoleAsync(conference.ConferenceId, supervisorLegId, "none", whisperCallControlIds: null, cancellationToken);
-            }
-        }
-        else
-        {
-            // The role first, so a listener made to whisper is never heard by the customer on the way.
-            updated = await _apiClient.UpdateConferenceSupervisorRoleAsync(
-                conference.ConferenceId,
-                supervisorLegId,
-                role,
-                WhisperTargets(role, agentLegId),
-                cancellationToken);
-
-            if (updated.Succeeded)
-            {
-                updated = await _apiClient.SetConferenceParticipantMutedAsync(conference.ConferenceId, supervisorLegId, mute: false, cancellationToken);
-            }
+            // Not answered yet: the role the leg joins with is changed instead.
+            return false;
         }
 
-        if (!updated.Succeeded && _logger.IsEnabled(LogLevel.Debug))
+        var hearers = HearersFor(role, agentLegId, participants.Select(participant => participant.CallControlId), supervisorLegId);
+        var updated = await _apiClient.UpdateConferenceSupervisorRoleAsync(conference.ConferenceId, supervisorLegId, WhisperRole, hearers, cancellationToken);
+        var after = await ReadBackAsync(conference.ConferenceId, supervisorLegId, role, "switched", cancellationToken);
+
+        if (updated.Succeeded && IsHeardBy(after, supervisorLegId, hearers))
         {
-            _logger.LogDebug(
-                "Telnyx returned {StatusCode} changing supervisor leg '{SupervisorLegId}' to {Role}. Response: {Response}",
-                updated.StatusCode,
+            return true;
+        }
+
+        // Live, a change of role was answered 200 and changed nothing. Leaving and joining again is a join, which does.
+        _logger.LogWarning(
+            "Telnyx did not change who hears supervisor leg '{SupervisorLegId}' to {Role} ({StatusCode}); the supervisor rejoins the conference.",
+            supervisorLegId.SanitizeLogValue(),
+            role.SanitizeLogValue(),
+            updated.StatusCode);
+
+        await _apiClient.LeaveConferenceAsync(conference.ConferenceId, supervisorLegId, cancellationToken);
+
+        var rejoined = await JoinHeardByAsync(
+            conference.ConferenceId,
+            supervisorLegId,
+            hearers,
+            $"cc-sv-rejoin-{supervisorLegId}-{Guid.NewGuid():N}",
+            cancellationToken);
+
+        await ReadBackAsync(conference.ConferenceId, supervisorLegId, role, "rejoined", cancellationToken);
+
+        if (!rejoined.Succeeded && !TelnyxApiErrors.IsAlreadyInConference(rejoined))
+        {
+            _logger.LogError(
+                "Telnyx refused to rejoin supervisor leg '{SupervisorLegId}' as {Role} with status code {StatusCode}. Response: {Response}",
                 supervisorLegId.SanitizeLogValue(),
                 role.SanitizeLogValue(),
-                updated.ErrorBody.SanitizeLogValue());
+                rejoined.StatusCode,
+                rejoined.ErrorBody.SanitizeLogValue());
+
+            return false;
         }
 
-        return updated.Succeeded;
+        return true;
     }
 
-    // Whether a Contact Center mode's Telnyx role is listening only.
-    private static bool IsListening(string role)
-        => string.IsNullOrWhiteSpace(role) || string.Equals(role, "monitor", StringComparison.Ordinal);
+    // The one Telnyx role a supervisor is given (see the remarks on the class).
+    private const string WhisperRole = "whisper";
+
+    private Task<TelnyxApiResult> JoinHeardByAsync(
+        string conferenceId,
+        string supervisorLegId,
+        IReadOnlyCollection<string> hearers,
+        string commandId,
+        CancellationToken cancellationToken)
+        => _apiClient.JoinConferenceSilentlyAsync(
+            conferenceId,
+            supervisorLegId,
+            WhisperRole,
+            hearers,
+            commandId: commandId,
+            cancellationToken: cancellationToken);
+
+    // Whether Telnyx has the supervisor heard by exactly these legs, and not muted. A list Telnyx did not send is taken on
+    // trust: it says nothing either way.
+    private static bool IsHeardBy(IReadOnlyList<TelnyxConferenceParticipant> participants, string supervisorLegId, IReadOnlyCollection<string> hearers)
+    {
+        var supervisor = participants?.FirstOrDefault(participant => string.Equals(participant.CallControlId, supervisorLegId, StringComparison.Ordinal));
+
+        if (supervisor is null || supervisor.Muted)
+        {
+            return false;
+        }
+
+        return supervisor.WhisperCallControlIds is null ||
+            supervisor.WhisperCallControlIds.ToHashSet(StringComparer.Ordinal).SetEquals(hearers);
+    }
+
+    // Reads the conference back and logs every participant as Telnyx holds it: what the supervisor was actually given, and
+    // whether anybody is muted or on hold -- the evidence a live call that sounds wrong needs.
+    private async Task<IReadOnlyList<TelnyxConferenceParticipant>> ReadBackAsync(
+        string conferenceId,
+        string supervisorLegId,
+        string role,
+        string action,
+        CancellationToken cancellationToken)
+    {
+        var participants = await _apiClient.ReadJoinedConferenceParticipantsAsync(conferenceId, cancellationToken);
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            var described = participants is null
+                ? "(could not be read)"
+                : string.Join("; ", participants.Select(participant =>
+                    $"{participant.CallControlId} status={participant.Status} muted={participant.Muted} on_hold={participant.OnHold} heard_by=[{(participant.WhisperCallControlIds is null ? "?" : string.Join(",", participant.WhisperCallControlIds))}]"));
+
+            _logger.LogInformation(
+                "Supervised conference '{ConferenceId}' after supervisor leg '{SupervisorLegId}' {Action} as {Role}: {Participants}",
+                conferenceId.SanitizeLogValue(),
+                supervisorLegId.SanitizeLogValue(),
+                action,
+                role.SanitizeLogValue(),
+                described.SanitizeLogValue());
+        }
+
+        return participants;
+    }
 
     /// <summary>
     /// Puts the call back on a bridge once no supervisor is left in its conference.

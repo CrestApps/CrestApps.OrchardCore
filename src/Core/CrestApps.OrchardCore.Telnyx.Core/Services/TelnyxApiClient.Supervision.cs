@@ -60,18 +60,20 @@ public sealed partial class TelnyxApiClient
     /// </summary>
     /// <param name="conferenceId">The conference.</param>
     /// <param name="callControlId">The leg to join.</param>
-    /// <param name="supervisorRole">The Telnyx supervisor role (<c>whisper</c>, <c>barge</c>; a listening supervisor joins as a muted ordinary participant instead), or <see langword="null"/> for an ordinary participant.</param>
+    /// <param name="supervisorRole">The Telnyx supervisor role (a supervisor always joins as <c>whisper</c>, naming who hears them), or <see langword="null"/> for an ordinary participant.</param>
     /// <param name="whisperCallControlIds">The legs a whispering supervisor is heard by.</param>
     /// <param name="commandId">The idempotency key.</param>
-    /// <param name="mute">Whether the leg joins muted: heard by nobody, hearing everybody.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <remarks>
+    /// Nobody is ever joined muted: live, a conference a supervisor joined muted (or as Telnyx's <c>monitor</c>) stopped
+    /// carrying anybody's audio to anybody.
+    /// </remarks>
     public async Task<TelnyxApiResult> JoinConferenceSilentlyAsync(
         string conferenceId,
         string callControlId,
         string supervisorRole = null,
         IReadOnlyCollection<string> whisperCallControlIds = null,
         string commandId = null,
-        bool mute = false,
         CancellationToken cancellationToken = default)
     {
         var body = new Dictionary<string, object>(StringComparer.Ordinal)
@@ -79,11 +81,6 @@ public sealed partial class TelnyxApiClient
             ["call_control_id"] = callControlId,
             ["beep_enabled"] = SilentBeep,
         };
-
-        if (mute)
-        {
-            body["mute"] = true;
-        }
 
         AddSupervisorRole(body, supervisorRole, whisperCallControlIds);
 
@@ -135,35 +132,6 @@ public sealed partial class TelnyxApiClient
     }
 
     /// <summary>
-    /// Mutes or unmutes one conference participant (<c>POST /conferences/{id}/actions/mute</c> or <c>unmute</c>). A muted
-    /// participant still hears everybody. The participant is always named: an empty list mutes the whole conference.
-    /// </summary>
-    /// <param name="conferenceId">The conference.</param>
-    /// <param name="callControlId">The participant.</param>
-    /// <param name="mute"><see langword="true"/> to mute, <see langword="false"/> to unmute.</param>
-    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    public async Task<TelnyxApiResult> SetConferenceParticipantMutedAsync(
-        string conferenceId,
-        string callControlId,
-        bool mute,
-        CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrWhiteSpace(callControlId))
-        {
-            return TelnyxApiResult.Failure(null, "A participant is required.");
-        }
-
-        var (result, _) = await SendAsync(
-            HttpMethod.Post,
-            $"conferences/{Uri.EscapeDataString(conferenceId ?? string.Empty)}/actions/{(mute ? "mute" : "unmute")}",
-            new Dictionary<string, object>(StringComparer.Ordinal) { ["call_control_ids"] = new[] { callControlId } },
-            retryable: true,
-            cancellationToken);
-
-        return result;
-    }
-
-    /// <summary>
     /// Finds a conference of the given name that is still running. An ended conference of the same name is not returned.
     /// </summary>
     /// <param name="name">The conference name.</param>
@@ -193,6 +161,16 @@ public sealed partial class TelnyxApiClient
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The call control ids of the participants whose status is not <c>left</c>, or <see langword="null"/> when the list could not be read.</returns>
     public async Task<IReadOnlyList<string>> ListJoinedConferenceParticipantsAsync(string conferenceId, CancellationToken cancellationToken = default)
+        => (await ReadJoinedConferenceParticipantsAsync(conferenceId, cancellationToken))?.Select(participant => participant.CallControlId).ToList();
+
+    /// <summary>
+    /// Lists the participants still joined to a conference, as Telnyx holds them: muted, on hold, and who each whispering
+    /// supervisor is heard by.
+    /// </summary>
+    /// <param name="conferenceId">The conference.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The participants whose status is not <c>left</c>, or <see langword="null"/> when the list could not be read.</returns>
+    public async Task<IReadOnlyList<TelnyxConferenceParticipant>> ReadJoinedConferenceParticipantsAsync(string conferenceId, CancellationToken cancellationToken = default)
     {
         var (result, json) = await SendAsync(
             HttpMethod.Get,
@@ -209,29 +187,83 @@ public sealed partial class TelnyxApiClient
             return null;
         }
 
-        var participants = new List<string>();
+        var participants = new List<TelnyxConferenceParticipant>();
 
         foreach (var item in data.EnumerateArray())
         {
-            if (item.ValueKind != JsonValueKind.Object ||
-                !item.TryGetProperty("call_control_id", out var id) ||
-                id.ValueKind != JsonValueKind.String)
+            if (TryReadConferenceParticipant(item, out var participant) &&
+                !string.Equals(participant.Status, "left", StringComparison.OrdinalIgnoreCase))
             {
-                continue;
+                participants.Add(participant);
             }
-
-            if (item.TryGetProperty("status", out var status) &&
-                status.ValueKind == JsonValueKind.String &&
-                string.Equals(status.GetString(), "left", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            participants.Add(id.GetString());
         }
 
         return participants;
     }
+
+    // One entry of a conference's participants list. A whisper list Telnyx did not send is null, not empty: it says
+    // nothing about who hears the participant.
+    private static bool TryReadConferenceParticipant(JsonElement item, out TelnyxConferenceParticipant participant)
+    {
+        participant = null;
+
+        if (item.ValueKind != JsonValueKind.Object ||
+            !item.TryGetProperty("call_control_id", out var id) ||
+            id.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+
+        List<string> hearers = null;
+
+        if (item.TryGetProperty("whisper_call_control_ids", out var whisper) && whisper.ValueKind == JsonValueKind.Array)
+        {
+            hearers = [];
+
+            foreach (var hearer in whisper.EnumerateArray())
+            {
+                if (hearer.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(hearer.GetString()))
+                {
+                    hearers.Add(hearer.GetString());
+                }
+            }
+        }
+
+        participant = new TelnyxConferenceParticipant(
+            id.GetString(),
+            item.TryGetProperty("status", out var status) && status.ValueKind == JsonValueKind.String ? status.GetString() : null,
+            ReadTrue(item, "muted"),
+            ReadTrue(item, "on_hold"),
+            hearers);
+
+        return true;
+    }
+
+    /// <summary>
+    /// Reads a conference's name by its id.
+    /// </summary>
+    /// <param name="conferenceId">The conference.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The name, or <see langword="null"/> when the conference could not be read.</returns>
+    public async Task<string> GetConferenceNameAsync(string conferenceId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(conferenceId))
+        {
+            return null;
+        }
+
+        var (result, json) = await SendAsync(
+            HttpMethod.Get,
+            $"conferences/{Uri.EscapeDataString(conferenceId)}",
+            body: null,
+            retryable: true,
+            cancellationToken);
+
+        return result.Succeeded ? ReadDataString(json, "name") : null;
+    }
+
+    private static bool ReadTrue(JsonElement item, string propertyName)
+        => item.TryGetProperty(propertyName, out var value) && value.ValueKind == JsonValueKind.True;
 
     private static void AddSupervisorRole(
         Dictionary<string, object> body,

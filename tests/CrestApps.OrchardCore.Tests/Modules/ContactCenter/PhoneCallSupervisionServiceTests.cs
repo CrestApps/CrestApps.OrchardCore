@@ -261,6 +261,57 @@ public sealed class PhoneCallSupervisionServiceTests
         Assert.Null(await fixture.Service.FindEngagementAsync(Key, "sup-user", cancellationToken));
     }
 
+    // Live, the agent's leg hanging up came back from the provider while the takeover was still being asked for, and the
+    // call's end let go of the very supervisor who was taking it: the number was left alone on the line.
+    [Fact]
+    public async Task TakeOver_TheAgentsLegEndingWhileTheProviderIsStillHandingTheCallOver_DoesNotLetTheSupervisorGo()
+    {
+        // Arrange
+        var fixture = await new Fixture().WithKeypadCall().EngagedAsync(MonitorMode.Barge);
+        var cancellationToken = TestContext.Current.CancellationToken;
+        fixture.PhoneCalls
+            .Setup(value => value.TakeOverPhoneCallAsync(It.IsAny<ContactCenterVoiceMonitoringRequest>(), It.IsAny<CancellationToken>()))
+            .Returns(async () =>
+            {
+                await fixture.Service.ReleaseCallAsync(CallId, cancellationToken);
+
+                return new ContactCenterVoiceProviderResult { Succeeded = true };
+            });
+
+        // Act
+        var result = await fixture.Service.TakeOverAsync(Key, "sup-user", Fixture.Principal, cancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded, result.Reason);
+        fixture.Interventions.Verify(value => value.ReleaseSupervisorLegAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        Assert.True((await fixture.Service.FindEngagementAsync(Key, "sup-user", cancellationToken)).TookOver);
+        Assert.DoesNotContain(fixture.Notifier.Engagements, engagement => engagement.State == "Ended");
+    }
+
+    [Fact]
+    public async Task TakeOver_TheProviderRefusing_LeavesTheSupervisorListeningAsBefore()
+    {
+        // Arrange
+        var fixture = await new Fixture().WithKeypadCall().EngagedAsync(MonitorMode.Whisper);
+        var cancellationToken = TestContext.Current.CancellationToken;
+        fixture.PhoneCalls
+            .Setup(value => value.TakeOverPhoneCallAsync(It.IsAny<ContactCenterVoiceMonitoringRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ContactCenterVoiceProviderResult { Succeeded = false, ErrorMessage = "refused" });
+
+        // Act
+        var result = await fixture.Service.TakeOverAsync(Key, "sup-user", Fixture.Principal, cancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        var engagement = await fixture.Service.FindEngagementAsync(Key, "sup-user", cancellationToken);
+        Assert.False(engagement.TookOver);
+        Assert.Equal(MonitorMode.Whisper, engagement.Mode);
+
+        // Not taken over, so the call ending still lets them go.
+        await fixture.Service.ReleaseCallAsync(CallId, cancellationToken);
+        fixture.Interventions.Verify(value => value.ReleaseSupervisorLegAsync("supervisor-leg", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     [Fact]
     public async Task WhenTheCallEnds_EverySupervisorStillOnItIsLetGo()
     {

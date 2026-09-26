@@ -102,13 +102,15 @@ public sealed class TelnyxSupervisorMonitoringTests
         Assert.Empty(api.Requests);
     }
 
-    // Listening joins muted, as an ordinary participant, never with Telnyx's "monitor" role: live, a conference a supervisor
-    // joined as "monitor" stopped carrying the customer's and the agent's audio to each other.
+    // Every mode joins as a whisperer naming who hears the supervisor: the agent while listening (the supervisor's phone
+    // keeps its microphone off) or coaching, everybody on the call when joining it. Live, a supervisor joined muted -- or in
+    // Telnyx's "monitor" role -- left the customer and the agent unable to hear each other, and nothing changed of the
+    // supervisor afterwards brought it back; nobody is ever muted in the conference now.
     [Theory]
-    [InlineData("monitor", null, true, false)]
-    [InlineData("whisper", "whisper", false, true)]
-    [InlineData("barge", "barge", false, false)]
-    public async Task SupervisorAnswers_ABridgedCall_IsMovedIntoASilentConference_WithBothPartiesKept_AndTheSupervisorJoinsInTheirRole(string role, string joinedRole, bool muted, bool whispersToAgent)
+    [InlineData("monitor", false)]
+    [InlineData("whisper", false)]
+    [InlineData("barge", true)]
+    public async Task SupervisorAnswers_ABridgedCall_IsMovedIntoASilentConference_WithBothPartiesKept_AndTheSupervisorJoinsHeardByTheirMode(string role, bool heardByEverybody)
     {
         // Arrange
         var api = BridgedCall();
@@ -125,7 +127,9 @@ public sealed class TelnyxSupervisorMonitoringTests
                 "GET conferences",
                 "POST conferences",
                 "POST conferences/conf-1/actions/join",
+                .. heardByEverybody ? new[] { "GET conferences/conf-1/participants" } : [],
                 "POST conferences/conf-1/actions/join",
+                "GET conferences/conf-1/participants",
             ],
             api.Commands);
 
@@ -144,16 +148,17 @@ public sealed class TelnyxSupervisorMonitoringTests
         Assert.False(joins[0].TryGetProperty("end_conference_on_exit", out _));
 
         Assert.Equal(Supervisor, joins[1].GetProperty("call_control_id").GetString());
-        Assert.Equal(joinedRole, joins[1].TryGetProperty("supervisor_role", out var joinedAs) ? joinedAs.GetString() : null);
-        Assert.Equal(muted, joins[1].TryGetProperty("mute", out var mute) && mute.GetBoolean());
+        Assert.Equal("whisper", joins[1].GetProperty("supervisor_role").GetString());
         Assert.Equal("never", joins[1].GetProperty("beep_enabled").GetString());
-        Assert.DoesNotContain(api.Requests, request => request.Body.ValueKind == JsonValueKind.Object && request.Body.ToString().Contains("\"monitor\"", StringComparison.Ordinal));
-        Assert.Equal(whispersToAgent, joins[1].TryGetProperty("whisper_call_control_ids", out var whisper));
 
-        if (whispersToAgent)
-        {
-            Assert.Equal([Agent], whisper.EnumerateArray().Select(item => item.GetString()));
-        }
+        string[] hearers = heardByEverybody ? [Customer, Agent] : [Agent];
+        Assert.Equal(hearers, joins[1].GetProperty("whisper_call_control_ids").EnumerateArray().Select(item => item.GetString()));
+        Assert.Equal(hearers, api.Conferences["conf-1"].Whispers[Supervisor]);
+
+        // Nobody is muted, and no other supervisor role is ever asked for.
+        Assert.Empty(api.Conferences["conf-1"].Muted);
+        Assert.DoesNotContain(api.Requests, request => request.Body.ValueKind == JsonValueKind.Object && request.Body.TryGetProperty("mute", out _));
+        Assert.DoesNotContain(api.Commands, command => command.EndsWith("/actions/mute", StringComparison.Ordinal));
 
         // Both parties are still on the call, together, and nobody was hung up.
         Assert.Equal([Customer, Agent, Supervisor], api.Conferences["conf-1"].Participants);
@@ -174,8 +179,14 @@ public sealed class TelnyxSupervisorMonitoringTests
         await orchestrator.AdvanceAsync(Answered(Supervisor, SupervisorState("barge")), TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(["GET conferences", "POST conferences/conf-1/actions/join"], api.Commands);
-        Assert.Equal(Supervisor, api.BodyOf("POST", "conferences/conf-1/actions/join").GetProperty("call_control_id").GetString());
+        Assert.Equal(
+            ["GET conferences", "GET conferences/conf-1/participants", "POST conferences/conf-1/actions/join", "GET conferences/conf-1/participants"],
+            api.Commands);
+        var join = api.BodyOf("POST", "conferences/conf-1/actions/join");
+        Assert.Equal(Supervisor, join.GetProperty("call_control_id").GetString());
+
+        // Joining the call is being heard by everybody on it -- the other supervisor too.
+        Assert.Equal([Customer, Agent, "first-supervisor-leg"], join.GetProperty("whisper_call_control_ids").EnumerateArray().Select(item => item.GetString()));
     }
 
     [Fact]
@@ -197,56 +208,46 @@ public sealed class TelnyxSupervisorMonitoringTests
         Assert.DoesNotContain(Agent, api.HungUp);
     }
 
-    [Fact]
-    public async Task SwitchMode_ChangesTheSupervisorsRoleInPlace_WithoutRingingThemAgain()
+    [Theory]
+    [InlineData(MonitorMode.Whisper, false)]
+    [InlineData(MonitorMode.Monitor, false)]
+    [InlineData(MonitorMode.Barge, true)]
+    public async Task SwitchMode_ChangesWhoHearsTheSupervisorInPlace_WithoutRingingThemAgain_OrMutingAnybody(MonitorMode mode, bool heardByEverybody)
     {
         // Arrange
         var api = BridgedCall();
-        api.WithConference(Conference, Customer, Agent, Supervisor);
+        api.WithConference(Conference, Customer, Agent, Supervisor).Whispers[Supervisor] = [Agent];
         var provider = TelnyxContactCenterProviderFactory.Create(api, Resolver());
-        var request = Request(MonitorMode.Whisper);
+        var request = Request(mode);
         request.SupervisorLegId = Supervisor;
 
         // Act
         var result = await provider.SwitchModeAsync(request, TestContext.Current.CancellationToken);
 
-        // Assert - the role first, then heard: a listener is never heard by the customer on the way to whispering.
+        // Assert - one update, then read back to confirm Telnyx applied it.
         Assert.True(result.Succeeded);
-        Assert.Equal(["GET conferences", "POST conferences/conf-1/actions/update", "POST conferences/conf-1/actions/unmute"], api.Commands);
+        Assert.Equal(
+            ["GET conferences", "GET conferences/conf-1/participants", "POST conferences/conf-1/actions/update", "GET conferences/conf-1/participants"],
+            api.Commands);
 
         var update = api.BodyOf("POST", "conferences/conf-1/actions/update");
+        string[] hearers = heardByEverybody ? [Customer, Agent] : [Agent];
         Assert.Equal(Supervisor, update.GetProperty("call_control_id").GetString());
         Assert.Equal("whisper", update.GetProperty("supervisor_role").GetString());
-        Assert.Equal([Agent], update.GetProperty("whisper_call_control_ids").EnumerateArray().Select(item => item.GetString()));
-        Assert.Equal([Supervisor], api.BodyOf("POST", "conferences/conf-1/actions/unmute").GetProperty("call_control_ids").EnumerateArray().Select(item => item.GetString()));
+        Assert.Equal(hearers, update.GetProperty("whisper_call_control_ids").EnumerateArray().Select(item => item.GetString()));
+        Assert.Equal(hearers, api.Conferences["conf-1"].Whispers[Supervisor]);
+        Assert.Empty(api.Conferences["conf-1"].Muted);
+        Assert.Empty(api.HungUp);
     }
 
+    // Live, changing a coaching supervisor to joining the call answered 200 and changed nothing: nobody heard them.
     [Fact]
-    public async Task SwitchMode_ToListen_MutesTheSupervisorFirst_ThenMakesThemAnOrdinaryParticipant_NeverAMonitor()
+    public async Task SwitchMode_WhenTelnyxDoesNotApplyTheChange_TheSupervisorLeavesAndRejoinsHeardByTheirNewMode()
     {
         // Arrange
         var api = BridgedCall();
-        api.WithConference(Conference, Customer, Agent, Supervisor);
-        var provider = TelnyxContactCenterProviderFactory.Create(api, Resolver());
-        var request = Request(MonitorMode.Monitor);
-        request.SupervisorLegId = Supervisor;
-
-        // Act
-        var result = await provider.SwitchModeAsync(request, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.True(result.Succeeded);
-        Assert.Equal(["GET conferences", "POST conferences/conf-1/actions/mute", "POST conferences/conf-1/actions/update"], api.Commands);
-        Assert.Equal([Supervisor], api.BodyOf("POST", "conferences/conf-1/actions/mute").GetProperty("call_control_ids").EnumerateArray().Select(item => item.GetString()));
-        Assert.Equal("none", api.BodyOf("POST", "conferences/conf-1/actions/update").GetProperty("supervisor_role").GetString());
-    }
-
-    [Fact]
-    public async Task SwitchMode_ToBarge_MakesTheSupervisorHeardByEverybody()
-    {
-        // Arrange
-        var api = BridgedCall();
-        api.WithConference(Conference, Customer, Agent, Supervisor);
+        api.IgnoreParticipantUpdates = true;
+        api.WithConference(Conference, Customer, Agent, Supervisor).Whispers[Supervisor] = [Agent];
         var provider = TelnyxContactCenterProviderFactory.Create(api, Resolver());
         var request = Request(MonitorMode.Barge);
         request.SupervisorLegId = Supervisor;
@@ -256,10 +257,24 @@ public sealed class TelnyxSupervisorMonitoringTests
 
         // Assert
         Assert.True(result.Succeeded);
-        Assert.Equal(["GET conferences", "POST conferences/conf-1/actions/update", "POST conferences/conf-1/actions/unmute"], api.Commands);
-        var update = api.BodyOf("POST", "conferences/conf-1/actions/update");
-        Assert.Equal("barge", update.GetProperty("supervisor_role").GetString());
-        Assert.False(update.TryGetProperty("whisper_call_control_ids", out _));
+        Assert.Equal(
+            [
+                "GET conferences",
+                "GET conferences/conf-1/participants",
+                "POST conferences/conf-1/actions/update",
+                "GET conferences/conf-1/participants",
+                "POST conferences/conf-1/actions/leave",
+                "POST conferences/conf-1/actions/join",
+                "GET conferences/conf-1/participants",
+            ],
+            api.Commands);
+
+        var rejoin = api.BodyOf("POST", "conferences/conf-1/actions/join");
+        Assert.Equal(Supervisor, rejoin.GetProperty("call_control_id").GetString());
+        Assert.Equal("whisper", rejoin.GetProperty("supervisor_role").GetString());
+        Assert.Equal([Customer, Agent], api.Conferences["conf-1"].Whispers[Supervisor]);
+        Assert.Equal([Customer, Agent, Supervisor], api.Conferences["conf-1"].Participants);
+        Assert.Empty(api.HungUp);
     }
 
     [Fact]
@@ -359,14 +374,17 @@ public sealed class TelnyxSupervisorMonitoringTests
         Assert.Equal(
             [
                 "GET conferences",
+                "GET conferences/conf-1/participants",
                 "POST conferences/conf-1/actions/update",
-                "POST conferences/conf-1/actions/unmute",
+                "GET conferences/conf-1/participants",
                 $"GET calls/{Agent}",
                 $"POST calls/{Agent}/actions/hangup",
             ],
             api.Commands);
 
-        Assert.Equal("barge", api.BodyOf("POST", "conferences/conf-1/actions/update").GetProperty("supervisor_role").GetString());
+        var update = api.BodyOf("POST", "conferences/conf-1/actions/update");
+        Assert.Equal("whisper", update.GetProperty("supervisor_role").GetString());
+        Assert.Equal([Customer, Agent], update.GetProperty("whisper_call_control_ids").EnumerateArray().Select(item => item.GetString()));
 
         var released = FakeTelnyxCallControl.StateIn(api.BodyOf("POST", $"calls/{Agent}/actions/hangup"));
         Assert.True(released.Detached);

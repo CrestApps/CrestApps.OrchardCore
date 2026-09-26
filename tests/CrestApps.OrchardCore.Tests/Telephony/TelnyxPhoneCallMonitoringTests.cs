@@ -127,10 +127,10 @@ public sealed class TelnyxPhoneCallMonitoringTests
     }
 
     [Theory]
-    [InlineData("monitor", null, true)]
-    [InlineData("whisper", "whisper", false)]
-    [InlineData("barge", "barge", false)]
-    public async Task SupervisorAnswers_OnAnExtensionCall_JoinsItsConferenceAsItIs_WithoutMovingAnybody(string role, string joinedRole, bool muted)
+    [InlineData("monitor", false)]
+    [InlineData("whisper", false)]
+    [InlineData("barge", true)]
+    public async Task SupervisorAnswers_OnAnExtensionCall_JoinsItsConferenceAsItIs_WithoutMovingAnybody(string role, bool heardByEverybody)
     {
         // Arrange
         var api = ExtensionCall();
@@ -143,18 +143,24 @@ public sealed class TelnyxPhoneCallMonitoringTests
         await orchestrator.AdvanceAsync(TelnyxSupervisorMonitoringTests.Answered(Supervisor, state), TestContext.Current.CancellationToken);
 
         // Assert - no conference is made from either colleague's leg, and nobody leaves the one they are in.
-        Assert.Equal(["GET conferences", "POST conferences/conf-1/actions/join"], api.Commands);
+        Assert.Equal(
+            [
+                "GET conferences",
+                .. heardByEverybody ? new[] { "GET conferences/conf-1/participants" } : [],
+                "POST conferences/conf-1/actions/join",
+                "GET conferences/conf-1/participants",
+            ],
+            api.Commands);
 
         var join = api.BodyOf("POST", "conferences/conf-1/actions/join");
         Assert.Equal(Supervisor, join.GetProperty("call_control_id").GetString());
-        Assert.Equal(joinedRole, join.TryGetProperty("supervisor_role", out var joinedAs) ? joinedAs.GetString() : null);
-        Assert.Equal(muted, join.TryGetProperty("mute", out var mute) && mute.GetBoolean());
+        Assert.Equal("whisper", join.GetProperty("supervisor_role").GetString());
+        Assert.False(join.TryGetProperty("mute", out _));
         Assert.False(join.TryGetProperty("end_conference_on_exit", out _));
 
-        if (joinedRole == "whisper")
-        {
-            Assert.Equal([ColleagueLeg], join.GetProperty("whisper_call_control_ids").EnumerateArray().Select(item => item.GetString()));
-        }
+        // The monitored colleague hears a listening or coaching supervisor; joining is heard by both colleagues.
+        string[] hearers = heardByEverybody ? [AgentLeg, ColleagueLeg] : [ColleagueLeg];
+        Assert.Equal(hearers, join.GetProperty("whisper_call_control_ids").EnumerateArray().Select(item => item.GetString()));
 
         Assert.Equal([AgentLeg, ColleagueLeg, Supervisor], api.Conferences["conf-1"].Participants);
         Assert.Empty(api.HungUp);
@@ -199,7 +205,16 @@ public sealed class TelnyxPhoneCallMonitoringTests
         await orchestrator.AdvanceAsync(TelnyxSupervisorMonitoringTests.Answered(Supervisor, state), TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(["GET conferences", "POST conferences", "POST conferences/conf-1/actions/join", "POST conferences/conf-1/actions/join"], api.Commands);
+        Assert.Equal(
+            [
+                "GET conferences",
+                "POST conferences",
+                "POST conferences/conf-1/actions/join",
+                "GET conferences/conf-1/participants",
+                "POST conferences/conf-1/actions/join",
+                "GET conferences/conf-1/participants",
+            ],
+            api.Commands);
         Assert.Equal(NumberLeg, api.BodyOf("POST", "conferences").GetProperty("call_control_id").GetString());
         Assert.Equal([NumberLeg, AgentLeg, Supervisor], api.Conferences["conf-1"].Participants);
         Assert.Empty(api.HungUp);
@@ -220,9 +235,13 @@ public sealed class TelnyxPhoneCallMonitoringTests
 
         // Assert
         Assert.True(result.Succeeded);
-        Assert.Equal(["GET conferences", "POST conferences/conf-1/actions/update", "POST conferences/conf-1/actions/unmute"], api.Commands);
+        Assert.Equal(
+            ["GET conferences", "GET conferences/conf-1/participants", "POST conferences/conf-1/actions/update", "GET conferences/conf-1/participants"],
+            api.Commands);
         Assert.Contains(ExtensionConference, api.Requests[0].Query, StringComparison.Ordinal);
-        Assert.Equal("barge", api.BodyOf("POST", "conferences/conf-1/actions/update").GetProperty("supervisor_role").GetString());
+        var update = api.BodyOf("POST", "conferences/conf-1/actions/update");
+        Assert.Equal("whisper", update.GetProperty("supervisor_role").GetString());
+        Assert.Equal([AgentLeg, ColleagueLeg], update.GetProperty("whisper_call_control_ids").EnumerateArray().Select(item => item.GetString()));
     }
 
     [Fact]
@@ -264,8 +283,9 @@ public sealed class TelnyxPhoneCallMonitoringTests
         Assert.Equal(
             [
                 "GET conferences",
+                "GET conferences/conf-1/participants",
                 "POST conferences/conf-1/actions/update",
-                "POST conferences/conf-1/actions/unmute",
+                "GET conferences/conf-1/participants",
                 $"GET calls/{AgentLeg}",
                 $"POST calls/{AgentLeg}/actions/hangup",
                 $"GET calls/{NumberLeg}",

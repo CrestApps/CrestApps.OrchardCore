@@ -109,13 +109,9 @@ public sealed partial class TelnyxApiClient
 
         foreach (var item in data.EnumerateArray())
         {
-            if (item.ValueKind == JsonValueKind.Object &&
-                item.TryGetProperty("call_control_id", out var callControlId) &&
-                callControlId.ValueKind == JsonValueKind.String)
+            if (TryReadConferenceParticipant(item, out var participant))
             {
-                participants.Add(new TelnyxConferenceParticipant(
-                    callControlId.GetString(),
-                    item.TryGetProperty("status", out var status) && status.ValueKind == JsonValueKind.String ? status.GetString() : null));
+                participants.Add(participant);
             }
         }
 

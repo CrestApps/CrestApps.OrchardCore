@@ -128,6 +128,11 @@ public sealed class TelnyxCallEvent
     public string ClientState { get; set; }
 
     /// <summary>
+    /// Gets or sets the conference a <c>conference.*</c> event is about.
+    /// </summary>
+    public string ConferenceId { get; set; }
+
+    /// <summary>
     /// Gets or sets why Telnyx says an operation failed, when the event reports a failure, such as a media stream
     /// that could not be kept open.
     /// </summary>

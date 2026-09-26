@@ -42,6 +42,12 @@ internal sealed class FakeTelnyxCallControl : HttpMessageHandler
     /// <summary>Gets or sets a value indicating whether an originate is refused.</summary>
     public bool RefuseOriginate { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether a participant update is answered 200 but not applied, as a change of a
+    /// supervisor's role was live: the participant list still shows what they joined with.
+    /// </summary>
+    public bool IgnoreParticipantUpdates { get; set; }
+
     /// <summary>Gives a leg a client state, as if the platform had set it earlier.</summary>
     public FakeTelnyxCallControl WithLeg(string callControlId, TelnyxOutboundBridgeState state)
     {
@@ -186,10 +192,22 @@ internal sealed class FakeTelnyxCallControl : HttpMessageHandler
         if (request.Method == HttpMethod.Get && segments is ["conferences", var listed, "participants"])
         {
             var participants = Conferences.TryGetValue(listed, out var conference)
-                ? conference.Participants.Select(id => new { call_control_id = id, status = "joined" }).ToArray()
+                ? conference.Participants.Select(id => new
+                {
+                    call_control_id = id,
+                    status = "joined",
+                    muted = conference.Muted.Contains(id),
+                    on_hold = false,
+                    whisper_call_control_ids = conference.Whispers.TryGetValue(id, out var hearers) ? hearers : [],
+                }).ToArray()
                 : [];
 
             return Json(HttpStatusCode.OK, new { data = participants });
+        }
+
+        if (request.Method == HttpMethod.Get && segments is ["conferences", var readId] && Conferences.TryGetValue(readId, out var read))
+        {
+            return Json(HttpStatusCode.OK, new { data = new { id = read.Id, name = read.Name, status = read.IsLive ? "in_progress" : "completed" } });
         }
 
         if (segments is ["conferences", var conferenceId, "actions", var conferenceAction] &&
@@ -217,14 +235,43 @@ internal sealed class FakeTelnyxCallControl : HttpMessageHandler
                         LegStates[participant] = DecodeState(body);
                     }
 
+                    target.RecordRole(participant, body);
+
+                    if (body.TryGetProperty("mute", out var joinMuted) && joinMuted.GetBoolean())
+                    {
+                        target.Muted.Add(participant);
+                    }
+
                     break;
                 case "leave":
                     target.Participants.Remove(participant);
+                    target.Whispers.Remove(participant);
+                    target.Muted.Remove(participant);
                     break;
                 case "update":
                     if (!target.Participants.Contains(participant))
                     {
                         return Json(HttpStatusCode.UnprocessableEntity, new { errors = new[] { new { code = "90000" } } });
+                    }
+
+                    if (!IgnoreParticipantUpdates)
+                    {
+                        target.RecordRole(participant, body);
+                    }
+
+                    break;
+                case "mute":
+                case "unmute":
+                    foreach (var muted in body.GetProperty("call_control_ids").EnumerateArray().Select(item => item.GetString()))
+                    {
+                        if (conferenceAction == "mute")
+                        {
+                            target.Muted.Add(muted);
+                        }
+                        else
+                        {
+                            target.Muted.Remove(muted);
+                        }
                     }
 
                     break;
@@ -292,5 +339,26 @@ internal sealed class FakeTelnyxConference
 
     public List<string> Participants { get; } = [];
 
+    /// <summary>Gets the legs each whispering supervisor is heard by.</summary>
+    public Dictionary<string, string[]> Whispers { get; } = new(StringComparer.Ordinal);
+
+    /// <summary>Gets the participants Telnyx has muted.</summary>
+    public HashSet<string> Muted { get; } = new(StringComparer.Ordinal);
+
     public bool IsLive => Participants.Count > 0;
+
+    /// <summary>Keeps the whisper list a join or an update gave a participant.</summary>
+    public void RecordRole(string participant, JsonElement body)
+    {
+        if (body.TryGetProperty("supervisor_role", out var role) &&
+            role.GetString() == "whisper" &&
+            body.TryGetProperty("whisper_call_control_ids", out var hearers))
+        {
+            Whispers[participant] = hearers.EnumerateArray().Select(item => item.GetString()).ToArray();
+        }
+        else if (body.TryGetProperty("supervisor_role", out _))
+        {
+            Whispers.Remove(participant);
+        }
+    }
 }

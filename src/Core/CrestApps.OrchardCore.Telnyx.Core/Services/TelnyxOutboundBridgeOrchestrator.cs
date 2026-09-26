@@ -65,6 +65,11 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
     {
         ArgumentNullException.ThrowIfNull(callEvent);
 
+        if (IsConferenceParticipantLeft(callEvent))
+        {
+            await EndMergedConferenceLeftWithOneAsync(callEvent, cancellationToken);
+        }
+
         if (!TelnyxOutboundBridgeState.TryParse(callEvent.ClientState, out var state))
         {
             return TelnyxOutboundBridgeLeg.None;

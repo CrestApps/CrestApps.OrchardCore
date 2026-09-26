@@ -5494,11 +5494,32 @@
             }
 
             var enabled = microphoneEnabledAfter(null);
+            var tracks = localAudioStream.getAudioTracks();
 
-            localAudioStream.getAudioTracks().forEach(function (track) {
+            tracks.forEach(function (track) {
                 track.enabled = enabled;
             });
+
+            // Whether a supervisor was heard is what a live report of "nobody heard me" turns on: said once per change.
+            var modes = Object.keys(monitorLegs).map(function (token) {
+                return (monitorLegs[token].info && monitorLegs[token].info.mode) || '?';
+            }).join(',');
+            var live = tracks.filter(function (track) {
+                return track.readyState === 'live';
+            }).length;
+            var reported = (enabled ? 'on' : 'off') + '|' + modes + '|' + live;
+
+            if (modes && reported !== lastReportedMonitorMicrophone) {
+                lastReportedMonitorMicrophone = reported;
+                reportDiagnostic(
+                    'info',
+                    'monitor-leg-microphone',
+                    'The supervisor\'s microphone is ' + (enabled ? 'on' : 'off') + ' (' + live + ' live track(s)) for mode ' + modes + '.',
+                    modes);
+            }
         }
+
+        var lastReportedMonitorMicrophone = null;
 
         function hangupMonitorLeg(token) {
             var leg = token ? monitorLegs[token] : null;

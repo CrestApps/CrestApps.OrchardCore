@@ -16,15 +16,15 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 /// <see cref="TelnyxOutboundBridgeState.ContactCenterSupervisorLegIntent"/> and the one-off token the phone was told to
 /// expect, in its client state and in the <see cref="TelnyxConstants.MonitorLegSipHeader"/> header. The phone answers
 /// that leg by itself. When it answers, the orchestrator moves the call from its bridge into a conference and joins the
-/// supervisor: listening as an ordinary participant joined muted (heard by nobody; never Telnyx's <c>monitor</c> role,
-/// which live left the customer and the agent unable to hear each other), coaching with <c>supervisor_role</c>
-/// <c>whisper</c> and <c>whisper_call_control_ids</c> naming the agent's leg (heard by the agent alone), or joining with
-/// <c>barge</c> (heard by both). See TelnyxSupervisedConference.
+/// supervisor as a Telnyx <c>whisper</c> supervisor naming who hears them: the agent while listening (the phone keeps its
+/// microphone off) or coaching, everybody on the call when joining it. Nobody is ever muted and the <c>monitor</c> role is
+/// never used -- live, either left the customer and the agent unable to hear each other. See TelnyxSupervisedConference.
 /// </para>
 /// <para>
-/// Changing mode updates the participant's role in place; the supervisor is never rung again. Stopping hangs the
-/// supervisor's leg up and, once nobody is listening, puts the call back on its bridge. A takeover makes the supervisor
-/// a barging participant and releases the agent's leg, marked detached so its hang-up does not end the call.
+/// Changing mode changes who hears the participant in place, confirmed by reading the conference back; the supervisor is
+/// never rung again. Stopping hangs the supervisor's leg up and, once nobody is listening, puts the call back on its
+/// bridge. A takeover makes the supervisor heard by everybody and releases the agent's leg, marked detached so its hang-up
+/// does not end the call.
 /// </para>
 /// </remarks>
 public sealed partial class TelnyxContactCenterVoiceProvider :
