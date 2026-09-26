@@ -389,7 +389,9 @@
                 digits.push({ value: digit, text: digit });
             }
 
-            return h('div', { className: 'row g-2 align-items-start py-2 border-top ivr-option', 'data-ivr-option': prefix }, [
+            // The border and padding live on a wrapper: on the grid row itself, the gutter's negative top margin pulled
+            // the controls up against the separator line.
+            return h('div', { className: 'border-top py-2 ivr-option', 'data-ivr-option': prefix }, [h('div', { className: 'row g-2 align-items-center' }, [
                 h('div', { className: 'col-4 col-md-2' }, [
                     h('label', { className: 'visually-hidden', for: digitId, text: t('key', 'Key') }),
                     select(prefix + ':digit', [{ value: '', text: '-' }].concat(digits), digit, { id: digitId, className: 'form-select font-monospace' })
@@ -412,9 +414,8 @@
                         title: t('removeKey', 'Remove key {digit}', { digit: digit }),
                         'aria-label': t('removeKey', 'Remove key {digit}', { digit: digit })
                     }, [icon('fa-solid fa-trash')])
-                ]),
-                h('div', { className: 'col-12 small', 'data-ivr-issues': prefix, hidden: true })
-            ]);
+                ])
+            ]), h('div', { className: 'small mt-1', 'data-ivr-issues': prefix, hidden: true })]);
         }
 
         function renderNode(node, nodeIndex) {
@@ -469,7 +470,7 @@
                         }),
                         h('div', { className: 'form-text', text: t('promptMediaHint', 'The identifier of a voice media item to play instead of speaking the text above.') })
                     ]),
-                    h('div', { className: 'row g-2 small text-body-secondary d-none d-md-flex', 'aria-hidden': 'true' }, [
+                    h('div', { className: 'row g-2 small fw-semibold text-body-secondary d-none d-md-flex pb-1', 'aria-hidden': 'true' }, [
                         h('div', { className: 'col-md-2', text: t('key', 'Key') }),
                         h('div', { className: 'col-md-4', text: t('action', 'Action') }),
                         h('div', { className: 'col-md-5', text: t('target', 'Target') })

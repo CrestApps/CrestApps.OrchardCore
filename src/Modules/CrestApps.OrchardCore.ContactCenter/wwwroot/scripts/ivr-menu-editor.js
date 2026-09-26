@@ -1064,9 +1064,14 @@
           text: digit
         });
       }
+
+      // The border and padding live on a wrapper: on the grid row itself, the gutter's negative top margin pulled
+      // the controls up against the separator line.
       return h('div', {
-        className: 'row g-2 align-items-start py-2 border-top ivr-option',
+        className: 'border-top py-2 ivr-option',
         'data-ivr-option': prefix
+      }, [h('div', {
+        className: 'row g-2 align-items-center'
       }, [h('div', {
         className: 'col-4 col-md-2'
       }, [h('label', {
@@ -1107,8 +1112,8 @@
         'aria-label': t('removeKey', 'Remove key {digit}', {
           digit: digit
         })
-      }, [icon('fa-solid fa-trash')])]), h('div', {
-        className: 'col-12 small',
+      }, [icon('fa-solid fa-trash')])])]), h('div', {
+        className: 'small mt-1',
         'data-ivr-issues': prefix,
         hidden: true
       })]);
@@ -1185,7 +1190,7 @@
         className: 'form-text',
         text: t('promptMediaHint', 'The identifier of a voice media item to play instead of speaking the text above.')
       })]), h('div', {
-        className: 'row g-2 small text-body-secondary d-none d-md-flex',
+        className: 'row g-2 small fw-semibold text-body-secondary d-none d-md-flex pb-1',
         'aria-hidden': 'true'
       }, [h('div', {
         className: 'col-md-2',
