@@ -234,6 +234,45 @@ The greeting played is resolved in this order:
 
 The finished recording is ingested into the encrypted media store and surfaced in the recipient agent's **Voicemail** tab in real time. See [Agent Workspace](agent-desktop.md#5-review-recent-activity) for playback and deletion.
 
+## Entry-point phone menus (IVR)
+
+An inbound entry point can carry a phone menu, built with the visual menu editor on the entry point's edit screen. An entry point with no menu (or one whose first menu is missing) routes exactly as it always did.
+
+### When the menu plays
+
+Business hours and the closed action are decided first. A closed entry point applies its closed action (voicemail, reject, hold in queue or overflow) and never plays the menu. An open one answers the caller and plays the first menu instead of queueing them. The menu is started only after inbound routing has committed the call's activity and interaction, so the provider's `call.answered` event always finds the call it belongs to.
+
+### What each key can do
+
+| Action | What happens to the caller |
+| --- | --- |
+| **Route to queue** | Admitted to the queue like any inbound caller, so a full queue still overflows or goes to voicemail. They are offered to the next agent at once; because they were answered to hear the menu, they hear the queue's hold music while the offer rings, or the queue's treatment (welcome, music, announcements) while they wait. |
+| **Route to agent** | Rings that one agent the way a personal line does: held and re-offered to the agent when they become available, and sent to voicemail when the entry point's ring window runs out (or held indefinitely when the entry point's voicemail is off). |
+| **Sub-menu** | Plays the sub-menu and collects the next key. Tries are counted per menu and start again on each new menu. |
+| **Voicemail** | Sends the caller to voicemail with the entry point's greeting. On a personal-line entry point the message is left for that agent. |
+| **External transfer** | Transfers the caller to an approved destination from **Settings → External transfer destinations**. Only an enabled destination that the dial policy allows, and that is not one of the contact center's own numbers, is reachable. The destination is shown the number the caller dialled. |
+| **Repeat** | Plays the menu again. It counts as a try, so a caller who keeps asking to hear the menu still reaches the fallback. |
+
+A key the menu does not offer, or no key before the menu times out (8 seconds after the prompt ends), plays the menu again. When the caller has used up the menu's **Tries**, the **When the tries run out** action is taken; with no fallback, the caller is routed to the entry point's own target (its queue or agent). A choice that cannot be reached — a deleted or disabled queue, a missing agent, a disabled or refused external destination, a failed transfer — sends the caller to the entry point's target, and when that cannot be reached either, to voicemail. A caller is never left on the line.
+
+### Prompts
+
+A menu's **prompt text** is spoken with text-to-speech. A menu with **recorded audio** from the voice media library plays that instead; if the clip can no longer be found, the text is spoken and a warning is logged. With neither, or when the provider refuses the prompt, the caller is routed to the entry point's target.
+
+With Telnyx, a spoken menu is `gather_using_speak` and a recorded one is `gather_using_audio` (by the clip's `media_name`, or `audio_url` for an externally hosted file). Both follow an `answer`. Each collects one key (`minimum_digits` and `maximum_digits` 1), accepts only the keys the menu offers (`valid_digits`), and collects once (`maximum_tries` 1): the menu's own tries decide what a missed key means, rather than Telnyx replaying the prompt on its own. The key arrives on the `call.gather.ended` webhook, whose `status` says how the collection ended: `valid`, `invalid` and `timeout` move the caller through the menu; `call_hangup` records the caller as having abandoned in the menu; `cancelled` is ignored.
+
+### What is recorded
+
+The caller's route is kept with the call and written to the event log, so the call's history shows the path:
+
+- `IvrMenuEntered` each time a menu is played, with the try number.
+- `IvrDigitsReceived` for each key press or timeout.
+- `IvrActionTaken` when a choice sends the caller somewhere (with the queue, agent or external number).
+- `IvrFallbackTaken` when the tries ran out, or a choice could not be reached and the caller was rerouted.
+- `CallAbandoned` when the caller hangs up in the menu. The platform answered the caller to play the menu, so without it the reports would count a caller who gave up in the menu as answered.
+
+The interaction also carries the whole route (each menu heard, each key pressed, and where it led) in its menu state. Key presses are applied once: a redelivered `call.gather.ended` never moves a caller twice, and once the caller has left the menu, later digit collections on the same call (such as a queue's callback offer) are not read as menu choices.
+
 ## Outbound routing flow
 
 ### 1. A dialer profile starts a cycle

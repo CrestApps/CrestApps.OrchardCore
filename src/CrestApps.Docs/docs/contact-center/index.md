@@ -89,7 +89,7 @@ The Contact Center is delivered as a set of feature-gated modules so tenants ena
 - **Supervision** - live queue and agent monitoring with audited supervisor call-control intents.
 - **Analytics** - queue, agent, and campaign metrics and historical reporting.
 
-Inbound entry points, call recording orchestration, outbound compliance gates, the Orchard Core Workflows bridge (available automatically when `OrchardCore.Workflows` is enabled alongside Contact Center), live dashboards, and AI-assist extension points are now present. Multi-step IVR decision trees, provider-side recording storage, quality scorecards, abandonment caps, and predictive dialing remain advanced roadmap items.
+Inbound entry points, call recording orchestration, outbound compliance gates, the Orchard Core Workflows bridge (available automatically when `OrchardCore.Workflows` is enabled alongside Contact Center), live dashboards, and AI-assist extension points are now present. Entry points also carry multi-level phone menus (IVR) that route callers to a queue, an agent, voicemail or an approved external number. Provider-side recording storage, quality scorecards, abandonment caps, and predictive dialing remain advanced roadmap items.
 
 ## Interaction Center admin menu concepts
 
@@ -312,6 +312,6 @@ All Contact Center UI is built with Orchard Core display management: shapes, dis
 
 ## Status
 
-The Contact Center now has a usable voice contact-center MVP: managers can configure agents, skills, queues, business hours, entry points, campaigns, dialer profiles, callbacks, reason codes, and optional workflow automation; agents can sign in, receive offers, handle inbound and outbound calls, disposition work, and review recent history in the CRM; supervisors can monitor queue health and start provider- gated live engagements from the dashboard. The design still deliberately leaves advanced capabilities such as multi-step IVR decision trees, predictive pacing, abandonment caps, quality scorecards, and provider-specific recording storage for later phases.
+The Contact Center now has a usable voice contact-center MVP: managers can configure agents, skills, queues, business hours, entry points, campaigns, dialer profiles, callbacks, reason codes, and optional workflow automation; agents can sign in, receive offers, handle inbound and outbound calls, disposition work, and review recent history in the CRM; supervisors can monitor queue health and start provider- gated live engagements from the dashboard. The design still deliberately leaves advanced capabilities such as predictive pacing, abandonment caps, quality scorecards, and provider-specific recording storage for later phases.
 
 See [Agents, Queues & Dialer](agents-queues-dialer.md) for the setup reference, [Agent desktop & supervisor dashboard](agent-desktop.md) for day-to-day agent and manager workflows, [Workflows automation](workflows.md) for reacting to domain events and driving presence, queueing, callbacks, and recording without code, and [Configuration deployment](configuration-deployment.md) for exporting a configured tenant and replaying it into another environment.

@@ -131,6 +131,8 @@ Switch on **Advanced: edit JSON** to see or type the menu as JSON. The two views
 
 An empty field means no menu. `TargetId` is `null` for `Voicemail` and `Repeat`.
 
+The menu plays only while the entry point is open; a closed entry point applies its closed action instead. What each action does to the caller at run time, how retries and the fallback work, and what the call's history records are described in [Voice Routing → Entry-point phone menus](voice-routing.md#entry-point-phone-menus-ivr).
+
 ## For contact center managers: outbound and callback runbook
 
 Use CRM campaigns and activities as the source of outbound work; the dialer profile only controls execution.
