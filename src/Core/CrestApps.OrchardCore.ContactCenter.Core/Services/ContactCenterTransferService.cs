@@ -30,6 +30,7 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
     private readonly ITelephonyCommandExecutor _commandExecutor;
     private readonly ISession _session;
     private readonly IClock _clock;
+    private readonly IContactCenterMonitoringService _monitoringService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterTransferService"/> class.
@@ -45,6 +46,7 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
     /// <param name="commandExecutor">The executor that provides a bounded server-owned provider-operation token.</param>
     /// <param name="session">The unit of work.</param>
     /// <param name="clock">The clock used to stamp transfer times.</param>
+    /// <param name="monitoringService">The supervisor monitoring, whose engagements a transfer releases.</param>
     public ContactCenterTransferService(
         IInteractionManager interactionManager,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
@@ -56,8 +58,10 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
         IContactCenterEventPublisher publisher,
         ITelephonyCommandExecutor commandExecutor,
         ISession session,
-        IClock clock)
+        IClock clock,
+        IContactCenterMonitoringService monitoringService)
     {
+        _monitoringService = monitoringService;
         _interactionManager = interactionManager;
         _voiceProviderResolver = voiceProviderResolver;
         _callControlAuthorizationService = callControlAuthorizationService;
@@ -112,6 +116,9 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
             Verb = CallControlVerb.Transfer,
             InteractionId = interaction.ItemId,
             ProviderName = interaction.ProviderName,
+
+            // A supervisor moving an agent's call is authorized by the queues they supervise, not by owning the call.
+            SupervisorOperation = request.SupervisorOperation,
         }, cancellationToken);
 
         if (!authorization.Succeeded)
@@ -130,11 +137,21 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
             return TransferResult.Failure(destination.FailureReason);
         }
 
+        // Nobody listening can follow the call where it goes, so every supervisor on it is released first; the call is on
+        // its own bridge again when it moves.
+        if (authorization.CallSession?.ActiveMonitorSessions.Any() == true)
+        {
+            await _monitoringService.ForceDisengageAllAsync(interaction.ItemId, "transfer", CancellationToken.None);
+        }
+
         var context = new TransferRoutingContext
         {
             Interaction = interaction,
             Session = authorization.CallSession,
-            TransferringAgentId = authorization.AgentId ?? request.InitiatedByAgentId ?? interaction.AgentId,
+            // For a supervisor's transfer the boundary names the supervisor; the agent released is the one on the call.
+            TransferringAgentId = request.SupervisorOperation
+                ? authorization.CallSession?.AgentId ?? interaction.AgentId ?? request.InitiatedByAgentId
+                : authorization.AgentId ?? request.InitiatedByAgentId ?? interaction.AgentId,
             TransferringUserId = request.InitiatedByUserId,
             TargetId = destination.ResolvedTarget,
         };

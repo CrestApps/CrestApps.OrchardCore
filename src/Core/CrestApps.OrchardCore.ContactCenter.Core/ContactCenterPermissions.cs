@@ -89,4 +89,11 @@ public static class ContactCenterPermissions
     /// Grants read-only access to the Contact Center historical reports and their exports.
     /// </summary>
     public static readonly Permission ViewReports = new("ViewContactCenterReports", "View Contact Center reports", [MonitorContactCenter, ManageContactCenter]);
+
+    /// <summary>
+    /// Grants a supervisor the interventions that change a live call or an agent rather than only observe them: taking
+    /// a call over, ending it, transferring it, turning its recording on or off, and setting an agent's state. Watching,
+    /// coaching and joining a call, and messaging an agent, need only <see cref="MonitorContactCenter"/>.
+    /// </summary>
+    public static readonly Permission InterveneInCalls = new("ContactCenterInterveneInCalls", "Take over, end, transfer and record live Contact Center calls, and set agents' state", [ManageContactCenter]);
 }

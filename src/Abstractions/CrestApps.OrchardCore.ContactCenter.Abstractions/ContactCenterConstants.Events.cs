@@ -313,6 +313,43 @@ public static partial class ContactCenterConstants
         public const string SupervisorMonitorStopped = "SupervisorMonitorStopped";
 
         /// <summary>
+        /// Raised when an engaged supervisor changes between listening, whispering to the agent and barging, on the
+        /// same leg.
+        /// </summary>
+        public const string SupervisorMonitorModeChanged = "SupervisorMonitorModeChanged";
+
+        /// <summary>
+        /// Raised when a supervisor takes a live call over: the agent is released and the supervisor becomes the agent
+        /// handling it. Its call data names the agent whose part of the call ended.
+        /// </summary>
+        public const string SupervisorTookOver = "SupervisorTookOver";
+
+        /// <summary>
+        /// Raised when a supervisor ends a live call for everyone on it.
+        /// </summary>
+        public const string SupervisorEndedCall = "SupervisorEndedCall";
+
+        /// <summary>
+        /// Raised when a supervisor transfers another agent's live call.
+        /// </summary>
+        public const string SupervisorTransferredCall = "SupervisorTransferredCall";
+
+        /// <summary>
+        /// Raised when a supervisor turns a live call's recording on or off.
+        /// </summary>
+        public const string SupervisorChangedRecording = "SupervisorChangedRecording";
+
+        /// <summary>
+        /// Raised when a supervisor sets an agent's state or signs them out of their queues.
+        /// </summary>
+        public const string SupervisorSetAgentState = "SupervisorSetAgentState";
+
+        /// <summary>
+        /// Raised when a supervisor sends an agent a message.
+        /// </summary>
+        public const string SupervisorMessagedAgent = "SupervisorMessagedAgent";
+
+        /// <summary>
         /// Raised when an agent starts an agent-assisted secure capture, sending the customer to a secure page to
         /// enter sensitive data (such as a payment card or a national identifier) so it is masked from the agent
         /// and never enters the recording.

@@ -26,6 +26,7 @@ internal sealed class ContactCenterPermissionProvider : IPermissionProvider
         ContactCenterPermissions.MonitorContactCenter,
         ContactCenterPermissions.TransferExternally,
         ContactCenterPermissions.ViewReports,
+        ContactCenterPermissions.InterveneInCalls,
     ];
 
     /// <inheritdoc/>
@@ -57,6 +58,7 @@ internal sealed class ContactCenterPermissionProvider : IPermissionProvider
                     ContactCenterPermissions.MonitorContactCenter,
                     ContactCenterPermissions.TransferExternally,
                     ContactCenterPermissions.ViewReports,
+                    ContactCenterPermissions.InterveneInCalls,
                 ],
             },
         ];

@@ -78,4 +78,36 @@ public interface IContactCenterMonitoringService
     Task<int> ForceDisengageAllAsync(
         string interactionId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Force-stops every live supervisor engagement on an interaction on behalf of the platform, recording why: the
+    /// call is being moved somewhere its supervisors cannot follow (a transfer), or must not be heard (a secure pause).
+    /// </summary>
+    /// <param name="interactionId">The interaction identifier whose supervisor engagements should be released.</param>
+    /// <param name="reason">Why the engagements were released, recorded on each stop event.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The number of live supervisor engagements the provider confirmed as stopped.</returns>
+    Task<int> ForceDisengageAllAsync(
+        string interactionId,
+        string reason,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Changes a supervisor's live engagement to another mode. A provider that can change the mode on the supervisor's
+    /// existing leg does so without ringing them again; otherwise the engagement is stopped and started again in the
+    /// new mode. Authorized under the same boundary as starting an engagement, and refused while a sensitive-data
+    /// capture is in progress.
+    /// </summary>
+    /// <param name="interactionId">The interaction identifier.</param>
+    /// <param name="supervisorId">The supervisor whose engagement changes.</param>
+    /// <param name="principal">The authenticated supervisor principal.</param>
+    /// <param name="mode">The new mode.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The result.</returns>
+    Task<SupervisorEngagementResult> SwitchModeAsync(
+        string interactionId,
+        string supervisorId,
+        ClaimsPrincipal principal,
+        MonitorMode mode,
+        CancellationToken cancellationToken = default);
 }

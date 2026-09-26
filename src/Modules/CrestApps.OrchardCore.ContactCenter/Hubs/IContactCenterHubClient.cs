@@ -49,4 +49,17 @@ public interface IContactCenterHubClient
     /// </summary>
     /// <param name="notification">The alert.</param>
     Task CallQualityAlert(CallQualityAlertNotification notification);
+
+    /// <summary>
+    /// Tells a supervisor's own clients about their engagement on a call: their phone is about to be rung for it, they
+    /// are on it, its mode changed, they took the call over, or it ended.
+    /// </summary>
+    /// <param name="notification">The engagement notification.</param>
+    Task SupervisorEngagementChanged(SupervisorEngagementNotification notification);
+
+    /// <summary>
+    /// Delivers a supervisor's message to an agent.
+    /// </summary>
+    /// <param name="notification">The message.</param>
+    Task SupervisorMessage(SupervisorMessageNotification notification);
 }

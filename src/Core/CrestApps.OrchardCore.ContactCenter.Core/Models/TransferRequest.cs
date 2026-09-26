@@ -42,4 +42,10 @@ public sealed class TransferRequest
     /// Gets or sets the authenticated principal used for transfer-destination RBAC.
     /// </summary>
     public ClaimsPrincipal Principal { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether a supervisor is moving another agent's call, authorized against the
+    /// supervisor's queue scope rather than against owning the call. The agent on the call is the one released.
+    /// </summary>
+    public bool SupervisorOperation { get; set; }
 }

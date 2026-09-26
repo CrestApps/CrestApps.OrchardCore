@@ -108,6 +108,13 @@ public sealed class ContactCenterWorkflowEventTypeProvider : IContactCenterWorkf
 
             new SelectListItem(S["Supervisor monitor started"].Value, ContactCenterConstants.Events.SupervisorMonitorStarted) { Group = supervision },
             new SelectListItem(S["Supervisor monitor stopped"].Value, ContactCenterConstants.Events.SupervisorMonitorStopped) { Group = supervision },
+            new SelectListItem(S["Supervisor monitor mode changed"].Value, ContactCenterConstants.Events.SupervisorMonitorModeChanged) { Group = supervision },
+            new SelectListItem(S["Supervisor took a call over"].Value, ContactCenterConstants.Events.SupervisorTookOver) { Group = supervision },
+            new SelectListItem(S["Supervisor ended a call"].Value, ContactCenterConstants.Events.SupervisorEndedCall) { Group = supervision },
+            new SelectListItem(S["Supervisor transferred a call"].Value, ContactCenterConstants.Events.SupervisorTransferredCall) { Group = supervision },
+            new SelectListItem(S["Supervisor changed a call's recording"].Value, ContactCenterConstants.Events.SupervisorChangedRecording) { Group = supervision },
+            new SelectListItem(S["Supervisor set an agent's state"].Value, ContactCenterConstants.Events.SupervisorSetAgentState) { Group = supervision },
+            new SelectListItem(S["Supervisor messaged an agent"].Value, ContactCenterConstants.Events.SupervisorMessagedAgent) { Group = supervision },
 
             new SelectListItem(S["Secure capture started"].Value, ContactCenterConstants.Events.SecureCaptureStarted) { Group = secureCapture },
             new SelectListItem(S["Secure capture completed"].Value, ContactCenterConstants.Events.SecureCaptureCompleted) { Group = secureCapture },

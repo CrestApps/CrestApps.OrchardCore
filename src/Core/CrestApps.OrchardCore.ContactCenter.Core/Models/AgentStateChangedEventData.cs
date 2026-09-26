@@ -142,6 +142,9 @@ public static class AgentStateChangeSources
 
     /// <summary>The agent answered a colleague's consult on a live call and became busy.</summary>
     public const string ConsultAnswered = "ConsultAnswered";
+
+    /// <summary>A supervisor took a live call over and became busy on it.</summary>
+    public const string SupervisorTakeover = "SupervisorTakeover";
 }
 
 /// <summary>

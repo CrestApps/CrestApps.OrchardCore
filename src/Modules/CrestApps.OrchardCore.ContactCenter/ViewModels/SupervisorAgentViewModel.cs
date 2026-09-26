@@ -49,4 +49,31 @@ public sealed class SupervisorAgentViewModel
     /// Gets or sets the executable supervisor engagement modes available for the active interaction.
     /// </summary>
     public IList<string> AvailableMonitoringModes { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the mode of the viewing supervisor's own live engagement on the active interaction, or
+    /// <see langword="null"/> when they are not engaged on it.
+    /// </summary>
+    public string MonitorMode { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the viewing supervisor's engagement is connected: their phone answered.
+    /// </summary>
+    public bool MonitorConnected { get; set; }
+
+    /// <summary>
+    /// Gets or sets the interventions the viewing supervisor can make on the active interaction: TakeOver, EndCall,
+    /// Transfer and Record.
+    /// </summary>
+    public IList<string> AvailableInterventions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the active interaction's recording state, by name.
+    /// </summary>
+    public string RecordingState { get; set; }
+
+    /// <summary>
+    /// Gets or sets why the agent's call cannot be monitored, when they are on one that cannot.
+    /// </summary>
+    public string MonitoringUnavailableReason { get; set; }
 }

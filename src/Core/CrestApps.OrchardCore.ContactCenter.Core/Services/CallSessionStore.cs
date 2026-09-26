@@ -137,8 +137,11 @@ public sealed class CallSessionStore : DocumentCatalog<CallSession, CallSessionI
             }
 
             // Both sides of this comparison are agent-profile identifiers. Comparing the supervisor's user
-            // identifier here would make the guard unfalsifiable, because the two live in different spaces.
-            if (!string.IsNullOrEmpty(monitorSession.SupervisorAgentId) &&
+            // identifier here would make the guard unfalsifiable, because the two live in different spaces. Only a
+            // live engagement is held to it: a supervisor who took the call over is its agent now, and the engagement
+            // they took it over from is its history, not a supervisor listening to themselves.
+            if (monitorSession.IsActive &&
+                !string.IsNullOrEmpty(monitorSession.SupervisorAgentId) &&
                 string.Equals(monitorSession.SupervisorAgentId, record.AgentId, StringComparison.Ordinal))
             {
                 throw new InvalidOperationException("A Contact Center call session supervisor cannot monitor their own agent leg.");

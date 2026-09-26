@@ -17,16 +17,18 @@ public sealed class SupervisorDashboardCapabilityTests
             "supervisor-dashboard.js"));
 
         // Act
+        // The bundle carries the shared action helper (Assets/js/shared/supervisor-actions.js, tested with vitest), which
+        // offers a mode only when the server listed it for the call, and the board draws each agent's actions through it.
         var readsAvailableModes = script.Contains(
-            "var availableModes = agent.availableMonitoringModes || [];",
+            "if (!has(agent.availableMonitoringModes, mode))",
             StringComparison.Ordinal);
-        var rendersAvailableModes = script.Contains(
-            "availableModes.map(function (mode)",
+        var rendersThroughTheHelper = script.Contains(
+            "interventions.actionsHtml(agent, state)",
             StringComparison.Ordinal);
 
         // Assert
         Assert.True(readsAvailableModes);
-        Assert.True(rendersAvailableModes);
+        Assert.True(rendersThroughTheHelper);
         Assert.DoesNotContain(
             "agent.activeInteractionId\n                    ? '<span class=\"cc-agent__actions\">'",
             script,

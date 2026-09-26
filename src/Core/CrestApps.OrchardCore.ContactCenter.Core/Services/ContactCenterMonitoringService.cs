@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <summary>
 /// Provides the default implementation of <see cref="IContactCenterMonitoringService"/>.
 /// </summary>
-public sealed class ContactCenterMonitoringService : IContactCenterMonitoringService
+public sealed partial class ContactCenterMonitoringService : IContactCenterMonitoringService
 {
     private static readonly MonitorMode[] _monitorModes =
     [
@@ -27,6 +27,8 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
     private readonly IContactCenterEventPublisher _publisher;
     private readonly ITelephonyCommandExecutor _commandExecutor;
     private readonly IClock _clock;
+    private readonly ISupervisorEngagementNotifier _notifier;
+    private readonly IAgentProfileManager _agentProfileManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterMonitoringService"/> class.
@@ -38,6 +40,8 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
     /// <param name="commandExecutor">The executor that provides a bounded server-owned provider-operation token.</param>
     /// <param name="callControlAuthorizationService">The shared call-control authorization boundary.</param>
     /// <param name="clock">The clock used to stamp engagement times.</param>
+    /// <param name="notifiers">The real-time notifier that tells the supervisor's own phone and dashboard about the engagement, when real-time is enabled.</param>
+    /// <param name="agentProfileManager">The agent profiles, used to name the agent to the supervisor.</param>
     public ContactCenterMonitoringService(
         IInteractionManager interactionManager,
         ICallSessionManager callSessionManager,
@@ -45,7 +49,9 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
         IContactCenterEventPublisher publisher,
         ITelephonyCommandExecutor commandExecutor,
         ICallControlAuthorizationService callControlAuthorizationService,
-        IClock clock)
+        IClock clock,
+        IEnumerable<ISupervisorEngagementNotifier> notifiers,
+        IAgentProfileManager agentProfileManager)
     {
         _interactionManager = interactionManager;
         _callSessionManager = callSessionManager;
@@ -54,6 +60,8 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
         _publisher = publisher;
         _commandExecutor = commandExecutor;
         _clock = clock;
+        _notifier = notifiers?.FirstOrDefault();
+        _agentProfileManager = agentProfileManager;
     }
 
     /// <inheritdoc/>
@@ -176,6 +184,12 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
             return SupervisorEngagementResult.Failure("A supervisor cannot engage on their own call.");
         }
 
+        // A provider that plays the call to the supervisor's own soft phone rings it with this token, and the phone is
+        // told to expect it first, so it answers that leg by itself and no other.
+        var monitorToken = Guid.NewGuid().ToString("N");
+
+        await NotifyAsync(SupervisorEngagementNotification.Requested, interaction, callSession, supervisorId, mode, monitorToken, reason: null);
+
         try
         {
             var providerResult = await _commandExecutor.ExecuteAsync(commandCancellationToken =>
@@ -185,12 +199,17 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
                     ProviderCallId = providerCallId,
                     SupervisorId = supervisorId,
                     Mode = mode,
+                    AgentLegId = FindAgentLegId(callSession),
+                    MonitorToken = monitorToken,
                 }, commandCancellationToken));
 
             if (providerResult?.Succeeded != true || providerResult.OutcomeUnknown)
             {
-                return SupervisorEngagementResult.Failure(
-                    providerResult?.ErrorMessage ?? $"The voice provider did not confirm the '{mode}' engagement.");
+                var failure = providerResult?.ErrorMessage ?? $"The voice provider did not confirm the '{mode}' engagement.";
+
+                await NotifyAsync(SupervisorEngagementNotification.Ended, interaction, callSession, supervisorId, mode, monitorToken, failure);
+
+                return SupervisorEngagementResult.Failure(failure);
             }
 
             await RecordEngagementStartedAsync(
@@ -296,6 +315,8 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
             return SupervisorEngagementResult.Failure($"The voice provider cannot stop the '{mode}' engagement.");
         }
 
+        var callSession = await _callSessionManager.FindByInteractionIdAsync(interaction.ItemId, cancellationToken);
+
         try
         {
             var providerResult = await _commandExecutor.ExecuteAsync(commandCancellationToken =>
@@ -305,6 +326,8 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
                     ProviderCallId = providerCallId,
                     SupervisorId = supervisorId,
                     Mode = mode,
+                    AgentLegId = FindAgentLegId(callSession),
+                    SupervisorLegId = FindSupervisorLegId(callSession, supervisorId),
                 }, commandCancellationToken));
 
             if (providerResult?.Succeeded != true || providerResult.OutcomeUnknown)
@@ -314,6 +337,7 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
             }
 
             await RecordEngagementStoppedAsync(interaction.ItemId, supervisorId, cancellationToken);
+            await NotifyAsync(SupervisorEngagementNotification.Ended, interaction, callSession, supervisorId, mode, monitorToken: null, reason: null);
 
             var interactionEvent = new InteractionEvent
             {
@@ -348,8 +372,15 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
     }
 
     /// <inheritdoc/>
+    public Task<int> ForceDisengageAllAsync(
+        string interactionId,
+        CancellationToken cancellationToken = default)
+        => ForceDisengageAllAsync(interactionId, "secure-pause", cancellationToken);
+
+    /// <inheritdoc/>
     public async Task<int> ForceDisengageAllAsync(
         string interactionId,
+        string reason,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(interactionId))
@@ -408,6 +439,8 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
                         ProviderCallId = providerCallId,
                         SupervisorId = monitorSession.SupervisorUserId,
                         Mode = monitorSession.Mode,
+                        AgentLegId = FindAgentLegId(callSession),
+                        SupervisorLegId = monitorSession.ProviderLegId,
                     }, commandCancellationToken));
             }
             catch (TimeoutException)
@@ -440,10 +473,11 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
             {
                 ["mode"] = monitorSession.Mode.ToString(),
                 ["supervisorId"] = monitorSession.SupervisorUserId,
-                ["reason"] = "secure-pause",
+                ["reason"] = string.IsNullOrEmpty(reason) ? "secure-pause" : reason,
             });
 
             await _publisher.PublishAsync(interactionEvent, CancellationToken.None);
+            await NotifyAsync(SupervisorEngagementNotification.Ended, interaction, callSession, monitorSession.SupervisorUserId, monitorSession.Mode, monitorToken: null, reason);
 
             stopped++;
         }

@@ -20,6 +20,7 @@ internal sealed class CallHandlingMetrics
         ContactCenterConstants.Events.CallConnected,
         ContactCenterConstants.Events.AgentLegFailed,
         ContactCenterConstants.Events.ConsultCompleted,
+        ContactCenterConstants.Events.SupervisorTookOver,
         ContactCenterConstants.Events.CallHeld,
         ContactCenterConstants.Events.CallResumed,
         ContactCenterConstants.Events.CallEnded,
@@ -344,10 +345,13 @@ internal sealed class CallHandlingMetrics
         public bool Is(string eventType)
             => string.Equals(Event.EventType, eventType, StringComparison.Ordinal);
 
-        // The agent's part of a call ends when the call does, when their own leg drops, or when they hand the caller on.
+        // The agent's part of a call ends when the call does, when their own leg drops, when they hand the caller on, or
+        // when a supervisor takes the call over from them.
         public bool IsAgentEnd(string agentId)
             => Is(ContactCenterConstants.Events.CallEnded) ||
-                ((Is(ContactCenterConstants.Events.AgentLegFailed) || Is(ContactCenterConstants.Events.ConsultCompleted)) &&
+                ((Is(ContactCenterConstants.Events.AgentLegFailed) ||
+                    Is(ContactCenterConstants.Events.ConsultCompleted) ||
+                    Is(ContactCenterConstants.Events.SupervisorTookOver)) &&
                     string.Equals(Data.AgentId, agentId, StringComparison.Ordinal));
     }
 

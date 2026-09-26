@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Antiforgery;
@@ -52,6 +53,7 @@ internal static class SupervisorDashboardEndpoints
         ISession session,
         IDisplayNameProvider displayNameProvider,
         IClock clock,
+        SupervisorDashboardInterventionDescriber interventions,
         HttpContext httpContext)
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.MonitorContactCenter))
@@ -63,6 +65,8 @@ internal static class SupervisorDashboardEndpoints
         var model = new SupervisorDashboardStateViewModel
         {
             ServerTimeUtc = now,
+            CanIntervene = await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.InterveneInCalls),
+            CanMessage = true,
         };
 
         var agents = await ListAgentsAsync(agentManager, httpContext.RequestAborted);
@@ -160,6 +164,9 @@ internal static class SupervisorDashboardEndpoints
             session,
             displayNameProvider,
             httpContext.RequestAborted);
+        var usersOnOtherCalls = await interventions.FindUsersOnOtherCallsAsync(
+            scopedAgents.Where(agent => !activeInteractionsByAgent.ContainsKey(agent.ItemId)).Select(agent => agent.UserId),
+            httpContext.RequestAborted);
 
         foreach (var agent in scopedAgents)
         {
@@ -180,7 +187,7 @@ internal static class SupervisorDashboardEndpoints
                 ? []
                 : await monitoringService.GetAvailableModesAsync(activeInteraction, httpContext.RequestAborted);
 
-            model.Agents.Add(new SupervisorAgentViewModel
+            var row = new SupervisorAgentViewModel
             {
                 AgentId = agent.ItemId,
                 UserId = agent.UserId,
@@ -193,7 +200,17 @@ internal static class SupervisorDashboardEndpoints
                 AvailableMonitoringModes = availableMonitoringModes
                     .Select(mode => mode.ToString())
                     .ToArray(),
-            });
+            };
+
+            await interventions.DescribeAsync(
+                row,
+                canMonitorActiveInteraction ? activeInteraction : null,
+                supervisorId,
+                model.CanIntervene,
+                usersOnOtherCalls.Contains(agent.UserId ?? string.Empty),
+                httpContext.RequestAborted);
+
+            model.Agents.Add(row);
 
             if (agent.PresenceStatus == AgentPresenceStatus.Available)
             {

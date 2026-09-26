@@ -313,7 +313,8 @@ public sealed class ContactCenterTransferServiceTests
                 publisher.Object,
                 commandExecutor ?? new DefaultTelephonyCommandExecutor(Options.Create(new TelephonyCommandOptions()), Mock.Of<IHostApplicationLifetime>()),
                 Mock.Of<ISession>(),
-                clock.Object);
+                clock.Object,
+                Mock.Of<IContactCenterMonitoringService>());
         }
     }
 

@@ -25,6 +25,7 @@ public sealed class WarmTransferService : IWarmTransferService
     private readonly IContactCenterEventPublisher _publisher;
     private readonly ISession _session;
     private readonly IClock _clock;
+    private readonly IContactCenterMonitoringService _monitoringService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="WarmTransferService"/> class.
@@ -44,8 +45,10 @@ public sealed class WarmTransferService : IWarmTransferService
         IProviderVoiceEventService providerVoiceEventService,
         IContactCenterEventPublisher publisher,
         ISession session,
-        IClock clock)
+        IClock clock,
+        IContactCenterMonitoringService monitoringService)
     {
+        _monitoringService = monitoringService;
         _interactionManager = interactionManager;
         _callSessionManager = callSessionManager;
         _authorizationService = authorizationService;
@@ -138,6 +141,13 @@ public sealed class WarmTransferService : IWarmTransferService
         if (!string.IsNullOrEmpty(holdAudio))
         {
             metadata[ContactCenterConstants.AttendedTransferMetadata.HoldAudio] = holdAudio;
+        }
+
+        // Nobody listening can follow the call into the consult's own conference, so every supervisor on it is released
+        // first and the call is on its bridge again when the consult moves it.
+        if (authorization.CallSession.ActiveMonitorSessions.Any())
+        {
+            await _monitoringService.ForceDisengageAllAsync(interaction.ItemId, "consult", CancellationToken.None);
         }
 
         var consult = await _consults.StartAsync(new ConsultTransferRequest

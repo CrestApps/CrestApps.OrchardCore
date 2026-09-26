@@ -20,4 +20,10 @@ public sealed class SupervisorDashboardIndexViewModel
     /// Gets or sets the URL that starts a supervisor live-monitoring engagement.
     /// </summary>
     public string EngageUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets the URLs of the supervisor interventions, by name: stop, switch, takeover, endCall, transfer,
+    /// recording, agentState and message.
+    /// </summary>
+    public IDictionary<string, string> InterventionUrls { get; set; } = new Dictionary<string, string>();
 }

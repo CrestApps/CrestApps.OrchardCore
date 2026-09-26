@@ -526,7 +526,9 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             publisher.Object,
             CreateCommandExecutor(),
             new FakeCallControlAuthorizationService(),
-            new StubClock());
+            new StubClock(),
+            [],
+            Mock.Of<IAgentProfileManager>());
 
         // Act
         var result = await service.EngageAsync("int1", "sup1", MonitorMode.Whisper, TestContext.Current.CancellationToken);
@@ -565,7 +567,9 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             publisher.Object,
             CreateCommandExecutor(),
             new FakeCallControlAuthorizationService(),
-            new StubClock());
+            new StubClock(),
+            [],
+            Mock.Of<IAgentProfileManager>());
 
         // Act
         var result = await service.EngageAsync("int1", "sup1", MonitorMode.Barge, TestContext.Current.CancellationToken);
@@ -618,7 +622,9 @@ public sealed class ContactCenterRecordingAndMonitoringTests
                 AgentId = "agent-profile-1",
                 ProviderCallId = context.ProviderCallId,
             }),
-            new StubClock());
+            new StubClock(),
+            [],
+            Mock.Of<IAgentProfileManager>());
 
         // Act
         var result = await service.EngageAsync("int1", "sup1", MonitorMode.Barge, TestContext.Current.CancellationToken);
@@ -672,7 +678,9 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             publisher.Object,
             CreateCommandExecutor(),
             new FakeCallControlAuthorizationService(),
-            new StubClock());
+            new StubClock(),
+            [],
+            Mock.Of<IAgentProfileManager>());
 
         // Act
         var result = await service.EngageAsync(
@@ -704,7 +712,9 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             publisher.Object,
             new TimeoutTelephonyCommandExecutor(),
             new FakeCallControlAuthorizationService(),
-            new StubClock());
+            new StubClock(),
+            [],
+            Mock.Of<IAgentProfileManager>());
 
         // Act
         var result = await service.EngageAsync(
@@ -748,7 +758,9 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             publisher.Object,
             CreateCommandExecutor(),
             new FakeCallControlAuthorizationService(),
-            new StubClock());
+            new StubClock(),
+            [],
+            Mock.Of<IAgentProfileManager>());
 
         // Act
         var result = await service.EngageAsync("int1", "sup1", MonitorMode.Monitor, TestContext.Current.CancellationToken);
@@ -778,7 +790,9 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             new Mock<IContactCenterEventPublisher>().Object,
             CreateCommandExecutor(),
             new FakeCallControlAuthorizationService(),
-            new StubClock());
+            new StubClock(),
+            [],
+            Mock.Of<IAgentProfileManager>());
 
         // Act
         var modes = await service.GetAvailableModesAsync("int1", TestContext.Current.CancellationToken);
@@ -805,7 +819,9 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             new Mock<IContactCenterEventPublisher>().Object,
             CreateCommandExecutor(),
             new FakeCallControlAuthorizationService(),
-            new StubClock());
+            new StubClock(),
+            [],
+            Mock.Of<IAgentProfileManager>());
 
         // Act
         var modes = await service.GetAvailableModesAsync("int1", TestContext.Current.CancellationToken);
@@ -832,7 +848,9 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             new Mock<IContactCenterEventPublisher>().Object,
             CreateCommandExecutor(),
             new FakeCallControlAuthorizationService(),
-            new StubClock());
+            new StubClock(),
+            [],
+            Mock.Of<IAgentProfileManager>());
 
         // Act
         var modes = await service.GetAvailableModesAsync(interaction, TestContext.Current.CancellationToken);

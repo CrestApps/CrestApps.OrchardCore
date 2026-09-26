@@ -20,7 +20,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Hubs;
 /// in its own OrchardCore shell scope and is authorized against Contact Center permissions.
 /// </summary>
 [Authorize]
-public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
+public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
 {
     private const string WorkLeaseKey = "ContactCenterFeatureWorkLease";
 

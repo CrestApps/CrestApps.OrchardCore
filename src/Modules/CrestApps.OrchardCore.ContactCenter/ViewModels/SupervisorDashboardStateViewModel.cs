@@ -31,4 +31,15 @@ public sealed class SupervisorDashboardStateViewModel
     /// Gets or sets the authoritative server UTC time, used by the client to align local timers.
     /// </summary>
     public DateTime ServerTimeUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the viewing supervisor may take calls over, end and transfer them, turn
+    /// their recording on or off, and set agents' state.
+    /// </summary>
+    public bool CanIntervene { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the viewing supervisor can message agents.
+    /// </summary>
+    public bool CanMessage { get; set; }
 }

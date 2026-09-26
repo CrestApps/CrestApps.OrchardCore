@@ -52,6 +52,11 @@ internal sealed class TransferIntegrationFixture : IAsyncDisposable
 
     public RecordingQueueTreatmentProvider Treatment { get; } = new();
 
+    /// <summary>
+    /// Gets the supervisor monitoring a transfer or a consult releases the call's supervisors through.
+    /// </summary>
+    public Mock<IContactCenterMonitoringService> Monitoring { get; } = new();
+
     public ContactCenterExternalTransferSettings ExternalSettings { get; } = new();
 
     public string CallId { get; private set; }
@@ -284,7 +289,8 @@ internal sealed class TransferIntegrationFixture : IAsyncDisposable
             services.GetRequiredService<IContactCenterEventPublisher>(),
             new DefaultTelephonyCommandExecutor(Options.Create(new TelephonyCommandOptions()), Mock.Of<IHostApplicationLifetime>()),
             Harness.Session,
-            clock);
+            clock,
+            Monitoring.Object);
 
         var consults = new ConsultTransferService(
             services.GetRequiredService<ICallSessionManager>(),
@@ -308,7 +314,8 @@ internal sealed class TransferIntegrationFixture : IAsyncDisposable
             services.GetRequiredService<IProviderVoiceEventService>(),
             services.GetRequiredService<IContactCenterEventPublisher>(),
             Harness.Session,
-            clock);
+            clock,
+            Monitoring.Object);
 
         ConsultLegs = new ConsultLegEventSink(
             services.GetRequiredService<ICallSessionManager>(),

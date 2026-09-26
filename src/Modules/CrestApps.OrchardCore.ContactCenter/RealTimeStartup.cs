@@ -20,8 +20,10 @@ public sealed class RealTimeStartup : StartupBase
     {
         services
             .AddScoped<ContactCenterHubScopeContext>()
+            .AddScoped<ContactCenterSupervisionHubScopeContext>()
             .AddScoped<ContactCenterRealTimeEventScopeContext>()
             .AddScoped<IContactCenterRealTimeNotifier, ContactCenterRealTimeNotifier>()
+            .AddScoped<ISupervisorEngagementNotifier, ContactCenterSupervisorEngagementNotifier>()
             .AddScoped<IContactCenterEventHandler, ContactCenterRealTimeEventHandler>()
             .AddSingleton<ContactCenterHubConnectionRegistry>()
             .AddScoped<ContactCenterRealTimeLifecycleParticipant>()

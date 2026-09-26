@@ -48,6 +48,12 @@ public sealed class MonitorSession
     public DateTime StartedUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets the UTC time the supervisor's leg was put on the call, or <see langword="null"/> while it is still
+    /// being connected. A provider that rings the supervisor's own phone reports it when that phone answers.
+    /// </summary>
+    public DateTime? ConnectedUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets the UTC time the engagement ended, or <see langword="null"/> while it is live.
     /// </summary>
     public DateTime? EndedUtc { get; set; }

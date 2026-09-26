@@ -115,6 +115,9 @@ public sealed class VoiceStartup : StartupBase
             .AddSingleton<IProviderWebhookIngressLimiter, ProviderWebhookIngressLimiter>()
             .AddScoped<IContactCenterTransferService, ContactCenterTransferService>()
             .AddScoped<IContactCenterMonitoringService, ContactCenterMonitoringService>()
+            // What a supervisor's own leg reports, and the supervisors a call still had when it ended.
+            .AddScoped<ISupervisorLegEventSink, SupervisorLegEventSink>()
+            .AddScoped<IContactCenterEventHandler, ContactCenterSupervisorLegReleaseHandler>()
             .AddScoped<ICallControlAuthorizationService, CallControlAuthorizationService>()
             .AddScoped<ITransferDestinationResolver, TransferDestinationResolver>()
             // Attended transfer as the three phases it is, recorded against the call so a supervisor can see a

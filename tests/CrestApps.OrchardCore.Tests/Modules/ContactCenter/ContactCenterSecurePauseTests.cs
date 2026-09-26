@@ -339,7 +339,9 @@ public sealed class ContactCenterSecurePauseTests
             publisher.Object,
             CreateCommandExecutor(),
             new FakeCallControlAuthorizationService(),
-            new StubClock());
+            new StubClock(),
+            [],
+            Mock.Of<IAgentProfileManager>());
 
         // Act
         var result = await service.EngageAsync("int1", "sup1", MonitorMode.Barge, TestContext.Current.CancellationToken);
@@ -492,7 +494,9 @@ public sealed class ContactCenterSecurePauseTests
             publisher.Object,
             CreateCommandExecutor(),
             new FakeCallControlAuthorizationService(),
-            new StubClock());
+            new StubClock(),
+            [],
+            Mock.Of<IAgentProfileManager>());
 
         // Act
         var stopped = await service.ForceDisengageAllAsync("int1", TestContext.Current.CancellationToken);
@@ -567,7 +571,9 @@ public sealed class ContactCenterSecurePauseTests
             publisher.Object,
             CreateCommandExecutor(),
             new FakeCallControlAuthorizationService(),
-            new StubClock());
+            new StubClock(),
+            [],
+            Mock.Of<IAgentProfileManager>());
 
         // Act
         var stopped = await service.ForceDisengageAllAsync("int1", TestContext.Current.CancellationToken);
