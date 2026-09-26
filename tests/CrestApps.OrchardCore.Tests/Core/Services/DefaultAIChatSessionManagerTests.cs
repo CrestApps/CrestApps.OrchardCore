@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using System.Security.Claims;
 using CrestApps.Core;
 using CrestApps.Core.AI;
+using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Security;
 using CrestApps.Core.Data.YesSql;
@@ -55,6 +56,7 @@ public sealed class DefaultAIChatSessionManagerTests
             visitorIdentityResolver.Object,
             new Mock<YSession>().Object,
             promptStore.Object,
+            Mock.Of<IAIChatSessionStore>(),
             [],
             Options.Create(new YesSqlStoreOptions()),
             Mock.Of<Microsoft.Extensions.Logging.ILogger<DefaultAIChatSessionManager>>());
@@ -112,6 +114,7 @@ public sealed class DefaultAIChatSessionManagerTests
             visitorIdentityResolver,
             session,
             new Mock<IAIChatSessionPromptStore>().Object,
+            Mock.Of<IAIChatSessionStore>(),
             [],
             Options.Create(new YesSqlStoreOptions()),
             Mock.Of<Microsoft.Extensions.Logging.ILogger<DefaultAIChatSessionManager>>());

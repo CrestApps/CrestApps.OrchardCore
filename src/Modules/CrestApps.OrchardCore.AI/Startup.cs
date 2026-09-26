@@ -139,6 +139,8 @@ public sealed class Startup : StartupBase
             .AddScoped<ICatalogEntryHandler<AIProfileTemplate>, AIProfileTemplateHandler>()
             .AddScoped<IAIProfileTemplateProvider, ModuleAIProfileTemplateProvider>()
             .AddScoped<IAIProfileTemplateProvider, AppDataAIProfileTemplateProvider>()
+            .AddScoped<AIProfileTemplateProfileFactory>()
+            .AddScoped<ProfileScenarioCatalog>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, SystemPromptTemplateDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateToolsDisplayDriver>()

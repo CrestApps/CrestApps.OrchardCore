@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.AI.Core.Models;
 
 namespace CrestApps.OrchardCore.AI.Services;
 
@@ -12,8 +13,11 @@ internal static class AIProfileTemplateApplicator
         {
             foreach (var property in template.Properties)
             {
+                // These describe the template itself rather than the profile built from it. Scenario metadata in
+                // particular would otherwise ride along onto every profile created from a featured scenario.
                 if (string.Equals(property.Key, nameof(ProfileTemplateMetadata), StringComparison.Ordinal) ||
-                    string.Equals(property.Key, nameof(SystemPromptTemplateMetadata), StringComparison.Ordinal))
+                    string.Equals(property.Key, nameof(SystemPromptTemplateMetadata), StringComparison.Ordinal) ||
+                    string.Equals(property.Key, nameof(ProfileScenarioMetadata), StringComparison.Ordinal))
                 {
                     continue;
                 }
