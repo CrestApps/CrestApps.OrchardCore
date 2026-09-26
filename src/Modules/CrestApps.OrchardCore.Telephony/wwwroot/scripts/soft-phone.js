@@ -2330,6 +2330,17 @@
     return !!reservationId && !!offeredReservations && Object.prototype.hasOwnProperty.call(offeredReservations, reservationId);
   }
 
+  // Whether an accept made elsewhere may arm this phone for the offer's leg. A callback or a preview dial is accepted
+  // from the agent bar and never rings here, so the phone learns of the offer only from the accept: an accept naming
+  // this phone's own user arms it. One naming nobody, or somebody else, arms only for an offer the phone was showing --
+  // the server also sends every offer's settlement to the queue and to supervisors.
+  function canArmForAcceptedOffer(reservationId, offeredReservations, acceptedUserId, ownUserId) {
+    if (canArmForOffer(reservationId, offeredReservations)) {
+      return true;
+    }
+    return !!reservationId && !!acceptedUserId && !!ownUserId && String(acceptedUserId) === String(ownUserId);
+  }
+
   // Whether an inbound leg arriving now is answered without ringing. Only an arm decides, and only once: nothing the
   // phone remembers about an earlier call does. A leg that is somebody's call to this phone -- a colleague's extension
   // call, a call handed over -- always rings, and leaves the arm for the phone's own leg.
@@ -2343,6 +2354,7 @@
   softPhone.AUTO_ANSWER_WINDOW_MS = AUTO_ANSWER_WINDOW_MS;
   softPhone.isDestinationLeg = isDestinationLeg;
   softPhone.canArmForOffer = canArmForOffer;
+  softPhone.canArmForAcceptedOffer = canArmForAcceptedOffer;
   softPhone.shouldAutoAnswerInboundLeg = shouldAutoAnswerInboundLeg;
   softPhone.EXTENSION_CALL_KEY = EXTENSION_CALL_KEY;
   softPhone.autoAnswerOfferKey = offerKey;
@@ -6750,7 +6762,7 @@
   var disarmAutoAnswer = softPhoneModules.disarmAutoAnswer;
   var disarmOtherOffers = softPhoneModules.disarmOtherOffers;
   var shouldAutoAnswerInboundLeg = softPhoneModules.shouldAutoAnswerInboundLeg;
-  var canArmForOffer = softPhoneModules.canArmForOffer;
+  var canArmForAcceptedOffer = softPhoneModules.canArmForAcceptedOffer;
   var createMonitorLegArms = softPhoneModules.createMonitorLegArms;
   var armMonitorLegFor = softPhoneModules.armMonitorLeg;
   var disarmMonitorLegFor = softPhoneModules.disarmMonitorLeg;
@@ -11344,9 +11356,11 @@
     // Arm the one-shot expectation that the next inbound provider leg is the Contact Center leg for the offer
     // (`reservationId`) the agent just accepted elsewhere, so the media adapter answers it automatically rather
     // than ringing it as an unsolicited incoming call and tearing it down. The arm is for that offer alone.
-    function armInboundAutoAnswer(reservationId) {
-      // Only for an offer this phone was offered: the Contact Center layer hears of other agents' accepts too.
-      if (!canArmForOffer(reservationId, offerCallIds)) {
+    //   acceptedUserId, ownUserId - who the accept names, and this phone's user: a callback or a preview dial never
+    //   rings here, so its accept is how the phone learns of it (see soft-phone/auto-answer.js).
+    function armInboundAutoAnswer(reservationId, acceptedUserId, ownUserId) {
+      // Only for this phone's own offer: the Contact Center layer hears of other agents' accepts too.
+      if (!canArmForAcceptedOffer(reservationId, offerCallIds, acceptedUserId, ownUserId)) {
         reportDiagnostic('info', 'auto-answer-arm-refused', 'An accept of an offer this phone was never offered did not arm it to answer the next leg.', reservationId || '');
         return;
       }

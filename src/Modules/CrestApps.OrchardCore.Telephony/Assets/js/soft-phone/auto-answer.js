@@ -114,6 +114,18 @@
             Object.prototype.hasOwnProperty.call(offeredReservations, reservationId);
     }
 
+    // Whether an accept made elsewhere may arm this phone for the offer's leg. A callback or a preview dial is accepted
+    // from the agent bar and never rings here, so the phone learns of the offer only from the accept: an accept naming
+    // this phone's own user arms it. One naming nobody, or somebody else, arms only for an offer the phone was showing --
+    // the server also sends every offer's settlement to the queue and to supervisors.
+    function canArmForAcceptedOffer(reservationId, offeredReservations, acceptedUserId, ownUserId) {
+        if (canArmForOffer(reservationId, offeredReservations)) {
+            return true;
+        }
+
+        return !!reservationId && !!acceptedUserId && !!ownUserId && String(acceptedUserId) === String(ownUserId);
+    }
+
     // Whether an inbound leg arriving now is answered without ringing. Only an arm decides, and only once: nothing the
     // phone remembers about an earlier call does. A leg that is somebody's call to this phone -- a colleague's extension
     // call, a call handed over -- always rings, and leaves the arm for the phone's own leg.
@@ -129,6 +141,7 @@
     softPhone.AUTO_ANSWER_WINDOW_MS = AUTO_ANSWER_WINDOW_MS;
     softPhone.isDestinationLeg = isDestinationLeg;
     softPhone.canArmForOffer = canArmForOffer;
+    softPhone.canArmForAcceptedOffer = canArmForAcceptedOffer;
     softPhone.shouldAutoAnswerInboundLeg = shouldAutoAnswerInboundLeg;
     softPhone.EXTENSION_CALL_KEY = EXTENSION_CALL_KEY;
     softPhone.autoAnswerOfferKey = offerKey;

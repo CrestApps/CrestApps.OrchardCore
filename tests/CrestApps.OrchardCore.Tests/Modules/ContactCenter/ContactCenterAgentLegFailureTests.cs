@@ -80,7 +80,8 @@ public sealed class ContactCenterAgentLegFailureTests
             _auditRecorder,
             new Mock<IProviderVoiceEventService>(MockBehavior.Strict).Object,
             clock.Object,
-            NullLogger<ContactCenterAgentLegFailureService>.Instance);
+            NullLogger<ContactCenterAgentLegFailureService>.Instance,
+            new Mock<IAgentPresenceManager>().Object);
 
         // Act
         var failed = await service.FailAsync("Telnyx", "call-1", HangupCause.Rejected, TestContext.Current.CancellationToken);
@@ -103,6 +104,60 @@ public sealed class ContactCenterAgentLegFailureTests
         Assert.Equal(nameof(HangupCause.Rejected), legFailed.Data.HangupCause);
         Assert.Equal(nameof(CallPartyRole.Agent), legFailed.Data.LegRole);
         Assert.Equal(_now, legFailed.OccurredUtc);
+    }
+
+    // Live: a queued callback's agent leg was refused, the call was settled as failed and the customer released, and the
+    // agent stayed Busy with nothing on the line -- offered no further work until someone reset them by hand.
+    [Fact]
+    public async Task FailAsync_ReturnsTheAgentWhoWasNeverReached_ToWork()
+    {
+        // Arrange
+        var interaction = new Interaction
+        {
+            ItemId = "interaction-1",
+            ProviderName = "Telnyx",
+            ProviderInteractionId = "call-1",
+            AgentId = "agent-1",
+            Direction = InteractionDirection.Outbound,
+            AnsweredUtc = _now.AddSeconds(-5),
+        }.RestorePersistedStatus(InteractionStatus.Connected);
+
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(manager => manager.FindByProviderInteractionIdAsync("Telnyx", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+
+        var telephonyService = new Mock<ITelephonyService>();
+        telephonyService
+            .Setup(service => service.HangupAsync(It.IsAny<CallReference>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TelephonyResult.Success(new TelephonyCall { CallId = "call-1" }));
+
+        var clock = new Mock<IClock>();
+        clock.SetupGet(value => value.UtcNow).Returns(_now);
+
+        var presenceManager = new Mock<IAgentPresenceManager>();
+
+        var service = new ContactCenterAgentLegFailureService(
+            interactionManager.Object,
+            new Mock<ICallSessionManager>().Object,
+            telephonyService.Object,
+            _auditRecorder,
+            new Mock<IProviderVoiceEventService>(MockBehavior.Strict).Object,
+            clock.Object,
+            NullLogger<ContactCenterAgentLegFailureService>.Instance,
+            presenceManager.Object);
+
+        // Act
+        var failed = await service.FailAsync("Telnyx", "call-1", HangupCause.Busy, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(failed);
+        presenceManager.Verify(
+            manager => manager.CompleteWorkAsync(
+                "agent-1",
+                It.Is<AgentStateChangeContext>(context => context.InteractionId == "interaction-1" && context.ChangedUtc == _now),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -135,7 +190,8 @@ public sealed class ContactCenterAgentLegFailureTests
             _auditRecorder,
             new Mock<IProviderVoiceEventService>(MockBehavior.Strict).Object,
             clock.Object,
-            NullLogger<ContactCenterAgentLegFailureService>.Instance);
+            NullLogger<ContactCenterAgentLegFailureService>.Instance,
+            new Mock<IAgentPresenceManager>().Object);
 
         // Act
         var failed = await service.FailAsync("Telnyx", "call-1", HangupCause.Rejected, TestContext.Current.CancellationToken);
@@ -306,7 +362,8 @@ public sealed class ContactCenterAgentLegFailureTests
             _auditRecorder,
             new Mock<IProviderVoiceEventService>(MockBehavior.Strict).Object,
             clock.Object,
-            NullLogger<ContactCenterAgentLegFailureService>.Instance);
+            NullLogger<ContactCenterAgentLegFailureService>.Instance,
+            new Mock<IAgentPresenceManager>().Object);
 
         // Act
         var advanced = await service.RecordAnsweredAsync("Telnyx", "call-1", "agent-leg-1", TestContext.Current.CancellationToken);

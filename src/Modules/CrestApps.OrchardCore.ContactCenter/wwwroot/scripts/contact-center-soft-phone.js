@@ -1080,7 +1080,7 @@
           // the arm is one-shot and for this offer alone, so an accept made in the phone (already covered
           // by its own pending state) is unaffected and a later call is never answered on its strength.
           if (accepted && !answeredHeldLeg && typeof api.armInboundAutoAnswer === 'function') {
-            api.armInboundAutoAnswer(notification.reservationId);
+            api.armInboundAutoAnswer(notification.reservationId, notification.userId, ownUserId);
           }
           api.clearIncomingOffer({
             preserveCurrentCall: accepted && acceptPending,

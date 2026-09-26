@@ -138,7 +138,7 @@
             syncFilterOptions(filterControl('queueId'), state.queues, 'filterQueues');
             syncFilterOptions(filterControl('campaignId'), state.campaigns, 'filterCampaigns');
 
-            // The campaign filter only means something when an agent on the board is signed in to a campaign.
+            // The campaign filter only means something when the tenant has campaigns.
             var campaign = filterControl('campaignId');
 
             if (campaign && campaign.parentElement) {

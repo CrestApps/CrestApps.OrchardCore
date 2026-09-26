@@ -15,6 +15,7 @@ const {
     shouldAutoAnswerInboundLeg,
     isDestinationLeg,
     canArmForOffer,
+    canArmForAcceptedOffer,
 } = globalThis.CrestAppsSoftPhone;
 
 // The arm for an offer accepted elsewhere is only for an offer this phone was showing: an offer it never had is
@@ -28,6 +29,27 @@ describe('canArmForOffer', () => {
         expect(canArmForOffer('res-2', { 'res-1': 'call-1' })).toBe(false);
         expect(canArmForOffer('', { '': 'call-1' })).toBe(false);
         expect(canArmForOffer('res-1', null)).toBe(false);
+    });
+});
+
+// A callback or a preview dial is accepted from the agent bar, and the phone is never shown it as a ringing call: it
+// learns of the offer only from the accept. The accept names its agent, so a named accept for this phone's own user
+// arms it; an accept naming nobody, or someone else, still arms only for an offer the phone was showing. Live, the
+// phone refused the callback's agent leg as busy and the customer was dropped the moment they answered.
+describe('canArmForAcceptedOffer', () => {
+    it('arms for an offer the phone was showing, as before', () => {
+        expect(canArmForAcceptedOffer('res-1', { 'res-1': 'call-1' }, null, 'user-1')).toBe(true);
+    });
+
+    it("arms for this user's own accepted offer that the phone never showed", () => {
+        expect(canArmForAcceptedOffer('res-9', {}, 'user-1', 'user-1')).toBe(true);
+    });
+
+    it("refuses another agent's accept, and an accept that names nobody, for an offer the phone never showed", () => {
+        expect(canArmForAcceptedOffer('res-9', {}, 'user-2', 'user-1')).toBe(false);
+        expect(canArmForAcceptedOffer('res-9', {}, null, 'user-1')).toBe(false);
+        expect(canArmForAcceptedOffer('res-9', {}, 'user-1', null)).toBe(false);
+        expect(canArmForAcceptedOffer('', {}, 'user-1', 'user-1')).toBe(false);
     });
 });
 

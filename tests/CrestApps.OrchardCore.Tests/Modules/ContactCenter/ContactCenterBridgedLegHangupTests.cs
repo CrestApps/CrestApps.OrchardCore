@@ -340,7 +340,8 @@ public sealed class ContactCenterBridgedLegHangupTests
                 new RecordingContactCenterAuditRecorder(),
                 voiceEvents.Object,
                 clock.Object,
-                NullLogger<ContactCenterAgentLegFailureService>.Instance);
+                NullLogger<ContactCenterAgentLegFailureService>.Instance,
+            new Mock<IAgentPresenceManager>().Object);
         }
 
         public ContactCenterAgentLegFailureService Service { get; }

@@ -16,6 +16,7 @@ public sealed partial class ContactCenterAgentLegFailureService : IContactCenter
     private readonly ITelephonyService _telephonyService;
     private readonly IContactCenterAuditRecorder _auditRecorder;
     private readonly IProviderVoiceEventService _providerVoiceEventService;
+    private readonly IAgentPresenceManager _presenceManager;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -29,8 +30,10 @@ public sealed partial class ContactCenterAgentLegFailureService : IContactCenter
         IContactCenterAuditRecorder auditRecorder,
         IProviderVoiceEventService providerVoiceEventService,
         IClock clock,
-        ILogger<ContactCenterAgentLegFailureService> logger)
+        ILogger<ContactCenterAgentLegFailureService> logger,
+        IAgentPresenceManager presenceManager)
     {
+        _presenceManager = presenceManager;
         _interactionManager = interactionManager;
         _callSessionManager = callSessionManager;
         _clock = clock;
@@ -106,6 +109,19 @@ public sealed partial class ContactCenterAgentLegFailureService : IContactCenter
             ContactCenterActor.Provider(providerName),
             $"agent-leg:{ContactCenterConstants.Events.AgentLegFailed}:{agentLeg?.ProviderLegId ?? peerProviderCallId}",
             cancellationToken);
+
+        // The agent was never reached, so they were never on the call: they go back to work rather than being left Busy
+        // with nothing on the line, offered no further work. No wrap-up either: there is nothing to disposition.
+        var agentId = agentLeg?.AgentId ?? session?.AgentId ?? interaction.AgentId;
+
+        if (!string.IsNullOrWhiteSpace(agentId))
+        {
+            await _presenceManager.CompleteWorkAsync(agentId, new AgentStateChangeContext
+            {
+                InteractionId = interaction.ItemId,
+                ChangedUtc = now,
+            }, cancellationToken);
+        }
 
         // Release the customer. They answered and are connected to an agent who was never reached, so leaving
         // the leg up holds them on dead air and keeps billing the call.

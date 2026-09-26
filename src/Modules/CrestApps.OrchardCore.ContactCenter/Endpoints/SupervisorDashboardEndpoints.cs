@@ -254,32 +254,35 @@ internal static class SupervisorDashboardEndpoints
             .Where(queueId => ContactCenterConstants.CampaignQueue.GetCampaignId(queueId) is not null)
             .Concat((agent.CampaignIds ?? []).Where(id => !string.IsNullOrEmpty(id)).Select(ContactCenterConstants.CampaignQueue.CreateId));
 
-    // The campaigns the board's agents are signed in to, by name: what the campaign filter offers. Campaigns are an
-    // optional feature, so without their catalog there is nothing to offer.
+    // Every campaign, by name, for the board's campaign filter, plus any a board agent is signed in to that the catalog no
+    // longer has (shown by its id). A campaign nobody is signed in to is still offered: filtering by it answers "who is on
+    // it" with nobody, which is an answer too. Campaigns are an optional feature; without their catalog there are only
+    // the signed-in ids.
     private static async Task<IList<SupervisorCampaignViewModel>> ResolveCampaignsAsync(
         IEnumerable<SupervisorAgentViewModel> agents,
         IServiceProvider services,
         CancellationToken cancellationToken)
     {
-        var signedIn = agents
-            .SelectMany(agent => agent.CampaignIds)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var names = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-        if (signedIn.Count == 0 || services.GetService<ICatalogManager<OmnichannelCampaign>>() is not { } campaignManager)
+        if (services.GetService<ICatalogManager<OmnichannelCampaign>>() is { } campaignManager)
         {
-            return [];
+            foreach (var campaign in await campaignManager.GetAllAsync(cancellationToken))
+            {
+                if (campaign is not null && !string.IsNullOrEmpty(campaign.ItemId))
+                {
+                    names[campaign.ItemId] = string.IsNullOrWhiteSpace(campaign.DisplayText) ? campaign.ItemId : campaign.DisplayText;
+                }
+            }
         }
 
-        var names = (await campaignManager.GetAllAsync(cancellationToken))
-            .Where(campaign => campaign is not null && signedIn.Contains(campaign.ItemId))
-            .ToDictionary(campaign => campaign.ItemId, campaign => campaign.DisplayText, StringComparer.OrdinalIgnoreCase);
+        foreach (var campaignId in agents.SelectMany(agent => agent.CampaignIds))
+        {
+            names.TryAdd(campaignId, campaignId);
+        }
 
-        return signedIn
-            .Select(id => new SupervisorCampaignViewModel
-            {
-                Id = id,
-                Name = names.TryGetValue(id, out var name) && !string.IsNullOrWhiteSpace(name) ? name : id,
-            })
+        return names
+            .Select(entry => new SupervisorCampaignViewModel { Id = entry.Key, Name = entry.Value })
             .OrderBy(campaign => campaign.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
     }
