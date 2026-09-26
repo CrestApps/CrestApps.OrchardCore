@@ -150,6 +150,28 @@ public sealed class MessagingConversation : CatalogItem, IModifiedUtcAwareModel
     public DateTime? LastAutoReplyUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets the conversation's own history, oldest first: the transfers it went through, with who made them
+    /// and any note left for the recipient. Bounded, so a thread passed around for years does not grow without end.
+    /// </summary>
+    public IList<MessagingConversationEvent> History { get; set; } = [];
+
+    /// <summary>
+    /// Gets the agent holding the thread now: its assignee, or the owner of a personal thread nobody is assigned to.
+    /// </summary>
+    /// <returns>The agent profile identifier, or <see langword="null"/> when nobody holds the thread.</returns>
+    public string GetHolderAgentId()
+    {
+        if (AssignmentStatus == ConversationAssignmentStatus.Assigned && !string.IsNullOrEmpty(AssignedAgentId))
+        {
+            return AssignedAgentId;
+        }
+
+        return OwnerType == ConversationOwnerType.Personal && !string.IsNullOrEmpty(OwnerId)
+            ? OwnerId
+            : null;
+    }
+
+    /// <summary>
     /// Gets the key that identifies the customer behind the thread across channels: the linked contact when there
     /// is one, otherwise the channel and address, since an unknown sender can only be recognised by where they
     /// wrote from.

@@ -461,7 +461,7 @@ public sealed class MessagingConversationService : IMessagingConversationService
         }, cancellationToken);
 
     // A reply claims the thread only when nobody holds it: no agent is assigned, and a personal thread has no
-    // other owner. Claiming it from whoever holds it is a transfer, which is a separate, supervisor-only action.
+    // other owner. Taking it from whoever holds it is a transfer, a separate action the holder or a supervisor takes.
     private static bool IsClaimableBy(MessagingConversation conversation, string agentId)
     {
         if (string.IsNullOrEmpty(agentId))

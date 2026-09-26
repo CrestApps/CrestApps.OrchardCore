@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.Routing;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Environment.Shell;
 
@@ -166,6 +167,47 @@ public sealed class MessagingFeatureActivationTests
 
         // Assert
         Assert.NotNull(resolved);
+    }
+
+    [Fact]
+    public async Task FreshTenant_WorkspaceAlone_ResolvesTransfer_ToPeopleOnly()
+    {
+        // Transferring to a person needs only the workspace; sending a conversation back to a team needs the queues
+        // of Work Distribution, which this tenant does not have.
+        await using var host = await ContactCenterFeatureActivationHost.StartAsync();
+        var tenant = await host.CreateTenantAsync(new ContactCenterTenantProfile
+        {
+            Id = "messaging-transfer-people",
+            ProviderProfile = "none",
+            Features = [MessagingConstants.Feature.Workspace],
+        });
+
+        var (transfer, supportsQueues) = await host.ExecuteInTenantScopeAsync(
+            tenant,
+            services => Task.FromResult((
+                services.GetService<IMessagingConversationTransferService>(),
+                services.GetRequiredService<MessagingTransferTargets>().SupportsQueues)));
+
+        Assert.NotNull(transfer);
+        Assert.False(supportsQueues);
+    }
+
+    [Fact]
+    public async Task FreshTenant_WithWorkDistribution_OffersTransferBackToATeam()
+    {
+        await using var host = await ContactCenterFeatureActivationHost.StartAsync();
+        var tenant = await host.CreateTenantAsync(new ContactCenterTenantProfile
+        {
+            Id = "messaging-transfer-teams",
+            ProviderProfile = "none",
+            Features = [MessagingConstants.Feature.RoutedDistribution],
+        });
+
+        var supportsQueues = await host.ExecuteInTenantScopeAsync(
+            tenant,
+            services => Task.FromResult(services.GetRequiredService<MessagingTransferTargets>().SupportsQueues));
+
+        Assert.True(supportsQueues);
     }
 
     [Fact]

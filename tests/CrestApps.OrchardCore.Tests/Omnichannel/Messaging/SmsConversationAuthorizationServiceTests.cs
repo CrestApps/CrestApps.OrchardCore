@@ -190,9 +190,67 @@ public class SmsConversationAuthorizationServiceTests
     }
 
     [Fact]
-    public async Task AuthorizeAsync_WhenTransferRequestedWithoutSupervisorPermission_Denies()
+    public async Task AuthorizeAsync_WhenTheCallerHoldsTheirOwnPersonalThread_AllowsTransfer()
     {
+        // Whoever is working a conversation can hand it on without asking a supervisor to do it for them.
         var conversation = CreatePersonalConversation(ownerId: AgentId, assignedAgentId: AgentId);
+        var service = CreateService(canViewAll: false, agent: CreateAgent());
+
+        var allowed = await service.AuthorizeAsync(CreatePrincipal(), conversation, ConversationOperation.Transfer, TestContext.Current.CancellationToken);
+
+        Assert.True(allowed);
+    }
+
+    [Fact]
+    public async Task AuthorizeAsync_WhenTheCallerHoldsAQueueThread_AllowsTransfer()
+    {
+        var conversation = CreateQueueConversation(assignedAgentId: AgentId, ConversationAssignmentStatus.Assigned);
+        var service = CreateService(canViewAll: false, agent: CreateAgent(queueIds: [QueueId], allowedQueueIds: [QueueId]));
+
+        var allowed = await service.AuthorizeAsync(CreatePrincipal(), conversation, ConversationOperation.Transfer, TestContext.Current.CancellationToken);
+
+        Assert.True(allowed);
+    }
+
+    [Fact]
+    public async Task AuthorizeAsync_WhenTheThreadBelongsToAnotherAgent_DeniesTransfer()
+    {
+        var conversation = CreatePersonalConversation(ownerId: OtherAgentId, assignedAgentId: OtherAgentId);
+        var service = CreateService(canViewAll: false, agent: CreateAgent());
+
+        var allowed = await service.AuthorizeAsync(CreatePrincipal(), conversation, ConversationOperation.Transfer, TestContext.Current.CancellationToken);
+
+        Assert.False(allowed);
+    }
+
+    [Fact]
+    public async Task AuthorizeAsync_WhenAQueueThreadIsHeldByAnotherMember_DeniesTransfer()
+    {
+        var conversation = CreateQueueConversation(assignedAgentId: OtherAgentId, ConversationAssignmentStatus.Assigned);
+        var service = CreateService(canViewAll: false, agent: CreateAgent(queueIds: [QueueId], allowedQueueIds: [QueueId]));
+
+        var allowed = await service.AuthorizeAsync(CreatePrincipal(), conversation, ConversationOperation.Transfer, TestContext.Current.CancellationToken);
+
+        Assert.False(allowed);
+    }
+
+    [Theory]
+    [InlineData(ConversationAssignmentStatus.Unassigned)]
+    [InlineData(ConversationAssignmentStatus.Pooled)]
+    public async Task AuthorizeAsync_WhenAQueueThreadIsUnclaimed_DeniesTransferToAMember_WhoMustClaimItFirst(ConversationAssignmentStatus assignmentStatus)
+    {
+        var conversation = CreateQueueConversation(assignedAgentId: null, assignmentStatus);
+        var service = CreateService(canViewAll: false, agent: CreateAgent(queueIds: [QueueId], allowedQueueIds: [QueueId]));
+
+        var allowed = await service.AuthorizeAsync(CreatePrincipal(), conversation, ConversationOperation.Transfer, TestContext.Current.CancellationToken);
+
+        Assert.False(allowed);
+    }
+
+    [Fact]
+    public async Task AuthorizeAsync_WhenAPersonalThreadIsUnowned_DeniesTransfer_UntilSomebodyClaimsIt()
+    {
+        var conversation = CreatePersonalConversation(ownerId: null, assignedAgentId: null);
         var service = CreateService(canViewAll: false, agent: CreateAgent());
 
         var allowed = await service.AuthorizeAsync(CreatePrincipal(), conversation, ConversationOperation.Transfer, TestContext.Current.CancellationToken);
