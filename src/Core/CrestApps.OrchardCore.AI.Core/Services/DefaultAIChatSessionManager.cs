@@ -27,6 +27,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
     private readonly IAIVisitorIdentityResolver _visitorIdentityResolver;
     private readonly ISession _session;
     private readonly IAIChatSessionPromptStore _promptStore;
+    private readonly IAIChatSessionStore _sessionStore;
 
     private readonly IEnumerable<IAIChatSessionHandler> _handlers;
     private readonly YesSqlStoreOptions _yesSqlStoreOptions;
@@ -40,6 +41,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
     /// <param name="visitorIdentityResolver">The resolver for stable visitor identity data.</param>
     /// <param name="session">The YesSql session used for persistence.</param>
     /// <param name="promptStore">The store for chat session prompts.</param>
+    /// <param name="sessionStore">The store that writes chat sessions to their documents.</param>
     /// <param name="handlers">The chat session lifecycle handlers.</param>
     /// <param name="logger">The logger instance.</param>
     public DefaultAIChatSessionManager(
@@ -48,6 +50,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         IAIVisitorIdentityResolver visitorIdentityResolver,
         ISession session,
         IAIChatSessionPromptStore promptStore,
+        IAIChatSessionStore sessionStore,
         IEnumerable<IAIChatSessionHandler> handlers,
         IOptions<YesSqlStoreOptions> yesSqlStoreOptions,
         ILogger<DefaultAIChatSessionManager> logger)
@@ -57,6 +60,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         _visitorIdentityResolver = visitorIdentityResolver;
         _session = session;
         _promptStore = promptStore;
+        _sessionStore = sessionStore;
         _handlers = handlers;
         _yesSqlStoreOptions = yesSqlStoreOptions.Value;
         _logger = logger;
@@ -273,15 +277,19 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
     }
 
     /// <summary>
-    /// Persists the specified chat session to the data store.
+    /// Persists the specified chat session to its existing document, or creates one for a new session.
     /// </summary>
     /// <param name="chatSession">The chat session to save.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <remarks>
+    /// Voice mode saves the same instance after every turn's commit, which YesSql no longer tracks. The session
+    /// store matches it to its stored document by session id, so each turn updates one document.
+    /// </remarks>
     public Task SaveAsync(AIChatSession chatSession, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(chatSession);
 
-        return _session.SaveAsync(chatSession, collection: _yesSqlStoreOptions.AICollectionName, cancellationToken: cancellationToken);
+        return _sessionStore.SaveAsync(chatSession, cancellationToken);
     }
 
     /// <summary>

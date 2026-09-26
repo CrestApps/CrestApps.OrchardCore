@@ -2,6 +2,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.Services;
 using CrestApps.Core.Templates.Parsing;
+using CrestApps.OrchardCore.AI.Services;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Extensions;
 
@@ -117,7 +118,10 @@ internal sealed class ModuleAIProfileTemplateProvider : IAIProfileTemplateProvid
 
                     var id = Path.GetFileNameWithoutExtension(fileName);
 
-                    templates.Add(AIProfileTemplateParser.Parse(id, parseResult));
+                    var template = AIProfileTemplateParser.Parse(id, parseResult);
+                    ProfileScenarioMetadataReader.Apply(template, parseResult.Metadata);
+
+                    templates.Add(template);
                 }
                 catch (Exception ex)
                 {
