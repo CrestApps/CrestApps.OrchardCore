@@ -299,10 +299,9 @@
     return actions;
   }
 
-  // The HTML of one agent row's actions. `openMenu` is whether this row's More menu is open.
-  function agentActionsHtml(agent, state, labels, openMenu) {
+  // The HTML of one agent row's call actions: the mode switcher, Stop and Take over (the More menu is agentMenuHtml).
+  function agentActionsHtml(agent, state, labels) {
     var actions = agentActions(agent, state, labels);
-    var id = escapeHtml(agent.agentId);
     var interactionId = escapeHtml(agent.activeInteractionId || '');
     var html = '';
     if (actions.engagedLabel) {
@@ -319,16 +318,26 @@
     if (actions.takeOver) {
       html += '<button type="button" class="btn btn-sm btn-outline-warning" data-cc-takeover="' + interactionId + '"' + (actions.takeOver.joinFirst ? ' data-cc-join-first="true"' : '') + (actions.takeOver.disabled ? ' disabled aria-disabled="true"' : '') + ' title="' + escapeHtml(actions.takeOver.title) + '">' + escapeHtml(text(labels, 'takeOver', 'Take over')) + '</button>';
     }
-    if (actions.menu.length) {
-      var menuId = 'cc-agent-menu-' + id;
-      html += '<span class="cc-agent__more">' + '<button type="button" class="btn btn-sm btn-outline-secondary" data-cc-more="' + id + '" aria-haspopup="menu"' + ' aria-expanded="' + (openMenu ? 'true' : 'false') + '" aria-controls="' + menuId + '">' + escapeHtml(text(labels, 'more', 'More')) + ' <span aria-hidden="true">&#9662;</span></button>' + '<span class="cc-agent__menu dropdown-menu' + (openMenu ? ' show' : '') + '" role="menu" id="' + menuId + '"' + ' data-cc-menu="' + id + '"' + (openMenu ? '' : ' hidden') + '>' + actions.menu.map(function (item) {
-        return '<button type="button" role="menuitem" class="dropdown-item' + (item.danger ? ' text-danger' : '') + '"' + ' data-cc-action="' + escapeHtml(item.action) + '" data-cc-agent="' + id + '" data-cc-interaction="' + interactionId + '">' + escapeHtml(item.label) + '</button>';
-      }).join('') + '</span></span>';
-    }
     if (actions.unavailable) {
       html += '<span class="cc-agent__unavailable text-muted small" role="note" title="' + escapeHtml(actions.unavailable) + '">' + '<i class="fa-solid fa-circle-info" aria-hidden="true"></i> ' + escapeHtml(text(labels, 'cannotMonitor', 'Cannot be monitored')) + '<span class="visually-hidden">: ' + escapeHtml(actions.unavailable) + '</span></span>';
     }
     return html ? '<span class="cc-agent__actions">' + html + '</span>' : '';
+  }
+
+  // The kebab button that opens the agent's More menu, and the menu: '' when the supervisor has nothing to do there. It
+  // sits at the far right of the agent's name row, apart from the call actions under it.
+  function agentMenuHtml(agent, state, labels, openMenu) {
+    var actions = agentActions(agent, state, labels);
+    if (!actions.menu.length) {
+      return '';
+    }
+    var id = escapeHtml(agent.agentId);
+    var interactionId = escapeHtml(agent.activeInteractionId || '');
+    var menuId = 'cc-agent-menu-' + id;
+    var moreLabel = format(text(labels, 'moreActionsFor', 'More actions for {0}'), agent.displayName || agent.userId || '');
+    return '<span class="cc-agent__more">' + '<button type="button" class="btn btn-sm btn-outline-secondary cc-agent__kebab" data-cc-more="' + id + '" aria-haspopup="menu"' + ' aria-expanded="' + (openMenu ? 'true' : 'false') + '" aria-controls="' + menuId + '"' + ' aria-label="' + escapeHtml(moreLabel) + '" title="' + escapeHtml(moreLabel) + '">' + '<i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i></button>' + '<span class="cc-agent__menu dropdown-menu' + (openMenu ? ' show' : '') + '" role="menu" id="' + menuId + '"' + ' data-cc-menu="' + id + '"' + (openMenu ? '' : ' hidden') + '>' + actions.menu.map(function (item) {
+      return '<button type="button" role="menuitem" class="dropdown-item' + (item.danger ? ' text-danger' : '') + '"' + ' data-cc-action="' + escapeHtml(item.action) + '" data-cc-agent="' + id + '" data-cc-interaction="' + interactionId + '">' + escapeHtml(item.label) + '</button>';
+    }).join('') + '</span></span>';
   }
 
   // The supervisor's phone's view of their engagement after an event.
@@ -438,9 +447,32 @@
     return String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   }
   contactCenter.attributeSelectorValue = attributeSelectorValue;
+
+  // Where an agent's More menu goes, in viewport pixels, so it is always fully on screen: under its button with its
+  // right edge on the button's, moved left or right as far as it must to stay inside the viewport, and flipped above the
+  // button when there is no room below it (or pinned to the bottom when there is room nowhere).
+  //   anchor: the button's rect { left, right, top, bottom }; menu: { width, height }; viewport: { width, height }.
+  function menuPlacement(anchor, menu, viewport, margin, gap) {
+    var edge = typeof margin === 'number' ? margin : 8;
+    var offset = typeof gap === 'number' ? gap : 4;
+    var maxLeft = Math.max(edge, viewport.width - menu.width - edge);
+    var left = Math.min(Math.max(anchor.right - menu.width, edge), maxLeft);
+    var below = anchor.bottom + offset;
+    var above = anchor.top - offset - menu.height;
+    var fitsBelow = below + menu.height <= viewport.height - edge;
+    var flipped = !fitsBelow && above >= edge;
+    var top = fitsBelow || !flipped ? Math.max(edge, Math.min(below, viewport.height - menu.height - edge)) : above;
+    return {
+      left: Math.round(left),
+      top: Math.round(top),
+      flipped: flipped
+    };
+  }
+  contactCenter.supervisorMenuPlacement = menuPlacement;
   contactCenter.MONITOR_PHASES = PHASES;
   contactCenter.supervisorAgentActions = agentActions;
   contactCenter.supervisorAgentActionsHtml = agentActionsHtml;
+  contactCenter.supervisorAgentMenuHtml = agentMenuHtml;
   contactCenter.nextMonitorEngagement = nextEngagement;
   contactCenter.monitorBannerHtml = monitorBannerHtml;
   contactCenter.monitorModeLabel = modeLabel;

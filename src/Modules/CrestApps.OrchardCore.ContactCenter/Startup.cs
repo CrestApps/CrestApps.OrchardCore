@@ -226,7 +226,8 @@ public sealed class Startup : StartupBase
 
         services
             .AddScoped<ICallSessionStore, CallSessionStore>()
-            .AddScoped<ICallSessionManager, CallSessionManager>();
+            .AddScoped<ICallSessionManager, CallSessionManager>()
+            .AddScoped<ICallSessionUpdater, ScopedCallSessionUpdater>();
 
         services
             .AddIndexProvider<InteractionIndexProvider>()

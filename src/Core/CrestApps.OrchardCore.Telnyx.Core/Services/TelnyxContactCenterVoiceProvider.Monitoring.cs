@@ -16,9 +16,10 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 /// <see cref="TelnyxOutboundBridgeState.ContactCenterSupervisorLegIntent"/> and the one-off token the phone was told to
 /// expect, in its client state and in the <see cref="TelnyxConstants.MonitorLegSipHeader"/> header. The phone answers
 /// that leg by itself. When it answers, the orchestrator moves the call from its bridge into a conference and joins the
-/// supervisor with a Telnyx <c>supervisor_role</c>: <c>monitor</c> (heard by nobody), <c>whisper</c> with
-/// <c>whisper_call_control_ids</c> naming the agent's leg (heard by the agent alone), or <c>barge</c> (heard by both).
-/// See TelnyxSupervisedConference.
+/// supervisor: listening as an ordinary participant joined muted (heard by nobody; never Telnyx's <c>monitor</c> role,
+/// which live left the customer and the agent unable to hear each other), coaching with <c>supervisor_role</c>
+/// <c>whisper</c> and <c>whisper_call_control_ids</c> naming the agent's leg (heard by the agent alone), or joining with
+/// <c>barge</c> (heard by both). See TelnyxSupervisedConference.
 /// </para>
 /// <para>
 /// Changing mode updates the participant's role in place; the supervisor is never rung again. Stopping hangs the
@@ -192,7 +193,7 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
         var supervisorLegId = request.SupervisorLegId.Trim();
         var role = TelnyxSupervisedConference.RoleFor(request.Mode.ToString());
 
-        if (await SupervisedConference.SwitchRoleAsync(request.ProviderCallId.Trim(), supervisorLegId, role, request.AgentLegId?.Trim(), cancellationToken))
+        if (await SupervisedConference.SwitchRoleAsync(TelnyxSupervisedConference.ConferenceName(request.ProviderCallId.Trim()), supervisorLegId, role, request.AgentLegId?.Trim(), cancellationToken))
         {
             return MonitoringSuccess(request);
         }
@@ -237,7 +238,7 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
         var supervisorLegId = request.SupervisorLegId.Trim();
 
         // The supervisor is heard by the customer before the agent goes, so the customer is never alone on the line.
-        if (!await SupervisedConference.SwitchRoleAsync(customerLegId, supervisorLegId, "barge", agentLegId, cancellationToken))
+        if (!await SupervisedConference.SwitchRoleAsync(TelnyxSupervisedConference.ConferenceName(customerLegId), supervisorLegId, "barge", agentLegId, cancellationToken))
         {
             return Failure("takeover_failed", "You are not connected to the call yet, so it cannot be taken over.");
         }

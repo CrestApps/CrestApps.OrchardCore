@@ -29,6 +29,7 @@ public sealed partial class ContactCenterMonitoringService : IContactCenterMonit
     private readonly IClock _clock;
     private readonly ISupervisorEngagementNotifier _notifier;
     private readonly IAgentProfileManager _agentProfileManager;
+    private readonly ICallSessionUpdater _callSessionUpdater;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterMonitoringService"/> class.
@@ -42,6 +43,7 @@ public sealed partial class ContactCenterMonitoringService : IContactCenterMonit
     /// <param name="clock">The clock used to stamp engagement times.</param>
     /// <param name="notifiers">The real-time notifier that tells the supervisor's own phone and dashboard about the engagement, when real-time is enabled.</param>
     /// <param name="agentProfileManager">The agent profiles, used to name the agent to the supervisor.</param>
+    /// <param name="callSessionUpdater">Writes the engagement onto a fresh copy of the call, since its own webhooks write it too.</param>
     public ContactCenterMonitoringService(
         IInteractionManager interactionManager,
         ICallSessionManager callSessionManager,
@@ -51,7 +53,8 @@ public sealed partial class ContactCenterMonitoringService : IContactCenterMonit
         ICallControlAuthorizationService callControlAuthorizationService,
         IClock clock,
         IEnumerable<ISupervisorEngagementNotifier> notifiers,
-        IAgentProfileManager agentProfileManager)
+        IAgentProfileManager agentProfileManager,
+        ICallSessionUpdater callSessionUpdater)
     {
         _interactionManager = interactionManager;
         _callSessionManager = callSessionManager;
@@ -62,6 +65,7 @@ public sealed partial class ContactCenterMonitoringService : IContactCenterMonit
         _clock = clock;
         _notifier = notifiers?.FirstOrDefault();
         _agentProfileManager = agentProfileManager;
+        _callSessionUpdater = callSessionUpdater;
     }
 
     /// <inheritdoc/>
@@ -213,6 +217,7 @@ public sealed partial class ContactCenterMonitoringService : IContactCenterMonit
             }
 
             await RecordEngagementStartedAsync(
+                interaction.ItemId,
                 callSession,
                 supervisorId,
                 authorization.AgentId,
@@ -486,6 +491,7 @@ public sealed partial class ContactCenterMonitoringService : IContactCenterMonit
     }
 
     private async Task RecordEngagementStartedAsync(
+        string interactionId,
         CallSession callSession,
         string supervisorUserId,
         string supervisorAgentId,
@@ -498,31 +504,45 @@ public sealed partial class ContactCenterMonitoringService : IContactCenterMonit
             return;
         }
 
-        CallTopologyProjector.StartMonitorSession(
-            callSession,
-            IdGenerator.GenerateId(),
-            supervisorUserId,
-            supervisorAgentId,
-            mode,
-            _clock.UtcNow,
-            providerLegId);
+        // Generated once, so a retried write records the same engagement.
+        var monitorSessionId = IdGenerator.GenerateId();
+        var startedUtc = _clock.UtcNow;
 
-        await _callSessionManager.UpdateAsync(callSession, cancellationToken: cancellationToken);
+        await _callSessionUpdater.UpdateAsync(interactionId, current =>
+        {
+            // The supervisor's leg may already have been reported while the provider was being asked.
+            if (current.ActiveMonitorSessions.Any(monitorSession =>
+                string.Equals(monitorSession.SupervisorUserId, supervisorUserId, StringComparison.Ordinal)))
+            {
+                return false;
+            }
+
+            CallTopologyProjector.StartMonitorSession(
+                current,
+                monitorSessionId,
+                supervisorUserId,
+                supervisorAgentId,
+                mode,
+                startedUtc,
+                providerLegId);
+
+            return true;
+        }, cancellationToken);
     }
 
-    private async Task RecordEngagementStoppedAsync(
+    private Task<bool> RecordEngagementStoppedAsync(
         string interactionId,
         string supervisorUserId,
         CancellationToken cancellationToken)
     {
-        var callSession = await _callSessionManager.FindByInteractionIdAsync(interactionId, cancellationToken);
+        var stoppedUtc = _clock.UtcNow;
 
-        if (callSession is null || !CallTopologyProjector.EndMonitorSession(callSession, supervisorUserId, _clock.UtcNow))
-        {
-            return;
-        }
-
-        await _callSessionManager.UpdateAsync(callSession, cancellationToken: cancellationToken);
+        // Stopping restores the call's bridge, and the provider reports that bridge on the same call while this request
+        // is still running: live, writing the copy read before the stop failed with a ConcurrencyException (a 500).
+        return _callSessionUpdater.UpdateAsync(
+            interactionId,
+            current => CallTopologyProjector.EndMonitorSession(current, supervisorUserId, stoppedUtc),
+            cancellationToken);
     }
 
     private static ContactCenterVoiceProviderCapabilities ResolveCapability(MonitorMode mode)

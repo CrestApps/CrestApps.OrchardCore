@@ -6,6 +6,7 @@ import '../../../src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/share
 const {
     supervisorAgentActions,
     supervisorAgentActionsHtml,
+    supervisorAgentMenuHtml,
     nextMonitorEngagement,
     monitorBannerHtml,
 } = globalThis.CrestAppsContactCenter;
@@ -95,18 +96,20 @@ describe('the dashboard actions for an agent', () => {
     });
 
     it('says why a call cannot be monitored', () => {
-        const html = supervisorAgentActionsHtml({ agentId: 'agent-3', monitoringUnavailableReason: 'Not a Contact Center call' }, { canMessage: false }, {}, false);
+        const html = supervisorAgentActionsHtml({ agentId: 'agent-3', monitoringUnavailableReason: 'Not a Contact Center call' }, { canMessage: false }, {});
 
         expect(html).toContain('Not a Contact Center call');
         expect(html).toContain('role="note"');
     });
 
     it('marks the pressed mode for assistive technology and escapes what it shows', () => {
-        const html = supervisorAgentActionsHtml(onCall({ agentId: '<a>', monitorMode: 'Monitor', monitorConnected: true }), supervisor, {}, true);
+        const agent = onCall({ agentId: '<a>', monitorMode: 'Monitor', monitorConnected: true });
+        const html = supervisorAgentActionsHtml(agent, supervisor, {});
+        const menu = supervisorAgentMenuHtml(agent, supervisor, {}, true);
 
         expect(html).toContain('data-cc-switch="int-1" data-cc-mode="Monitor" aria-pressed="true"');
-        expect(html).toContain('aria-expanded="true"');
-        expect(html).not.toContain('<a>');
+        expect(menu).toContain('aria-expanded="true"');
+        expect(html + menu).not.toContain('<a>');
     });
 });
 
@@ -199,5 +202,71 @@ describe('the bundles', () => {
         expect(group).toBeDefined();
         expect(group.inputs.indexOf(helper)).toBeGreaterThanOrEqual(0);
         expect(group.inputs.indexOf(helper)).toBeLessThan(group.inputs.indexOf(script));
+    });
+});
+
+// The More menu opened to the left of its button and slid under the admin sidebar, so its items were cut off. It is a
+// compact kebab button now, and the menu is placed in the viewport, never partly off it.
+describe('the More actions button', () => {
+    it('is a labelled kebab icon with a tooltip, not a text button', () => {
+        const html = supervisorAgentMenuHtml(onCall(), supervisor, {}, false);
+
+        expect(html).toContain('fa-ellipsis-vertical');
+        expect(html).toContain('aria-label="More actions for Ann"');
+        expect(html).toContain('title="More actions for Ann"');
+        expect(html).toContain('aria-expanded="false"');
+        expect(html).toContain(' hidden>');
+        expect(html).not.toContain('&#9662;');
+    });
+
+    it('is apart from the call actions, so it can sit at the far right of the name row', () => {
+        const actions = supervisorAgentActionsHtml(onCall(), supervisor, {});
+
+        expect(actions).not.toContain('data-cc-more');
+        expect(actions).toContain('data-cc-takeover');
+        expect(supervisorAgentMenuHtml(onCall(), supervisor, {}, false)).not.toContain('data-cc-takeover');
+    });
+
+    it('is not shown when the supervisor has nothing to do there', () => {
+        expect(supervisorAgentMenuHtml({ agentId: 'agent-3' }, { canIntervene: false, canMessage: false }, {}, false)).toBe('');
+    });
+});
+
+describe('placing the More menu', () => {
+    const { supervisorMenuPlacement } = globalThis.CrestAppsContactCenter;
+    const viewport = { width: 1400, height: 900 };
+    const menu = { width: 200, height: 300 };
+
+    it('opens under the button with its right edge on the button\'s', () => {
+        expect(supervisorMenuPlacement({ left: 600, right: 632, top: 100, bottom: 130 }, menu, viewport))
+            .toEqual({ left: 432, top: 134, flipped: false });
+    });
+
+    it('moves right rather than off the left edge of the screen', () => {
+        expect(supervisorMenuPlacement({ left: 40, right: 72, top: 100, bottom: 130 }, menu, viewport).left).toBe(8);
+    });
+
+    it('moves left rather than off the right edge', () => {
+        expect(supervisorMenuPlacement({ left: 1390, right: 1450, top: 100, bottom: 130 }, menu, viewport).left).toBe(1192);
+    });
+
+    it('flips above the button when there is no room below', () => {
+        expect(supervisorMenuPlacement({ left: 600, right: 632, top: 800, bottom: 830 }, menu, viewport))
+            .toEqual({ left: 432, top: 496, flipped: true });
+    });
+
+    it('stays on screen when there is room neither above nor below', () => {
+        const placed = supervisorMenuPlacement({ left: 100, right: 132, top: 200, bottom: 230 }, menu, { width: 430, height: 400 });
+
+        expect(placed.flipped).toBe(false);
+        expect(placed.top).toBe(92);
+        expect(placed.top + menu.height).toBeLessThanOrEqual(400 - 8);
+    });
+
+    it('fits a phone-width window', () => {
+        const placed = supervisorMenuPlacement({ left: 300, right: 332, top: 100, bottom: 130 }, menu, { width: 430, height: 740 });
+
+        expect(placed.left).toBe(132);
+        expect(placed.left + menu.width).toBeLessThanOrEqual(430 - 8);
     });
 });

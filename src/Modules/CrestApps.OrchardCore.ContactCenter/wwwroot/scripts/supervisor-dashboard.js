@@ -165,10 +165,9 @@
     return actions;
   }
 
-  // The HTML of one agent row's actions. `openMenu` is whether this row's More menu is open.
-  function agentActionsHtml(agent, state, labels, openMenu) {
+  // The HTML of one agent row's call actions: the mode switcher, Stop and Take over (the More menu is agentMenuHtml).
+  function agentActionsHtml(agent, state, labels) {
     var actions = agentActions(agent, state, labels);
-    var id = escapeHtml(agent.agentId);
     var interactionId = escapeHtml(agent.activeInteractionId || '');
     var html = '';
     if (actions.engagedLabel) {
@@ -185,16 +184,26 @@
     if (actions.takeOver) {
       html += '<button type="button" class="btn btn-sm btn-outline-warning" data-cc-takeover="' + interactionId + '"' + (actions.takeOver.joinFirst ? ' data-cc-join-first="true"' : '') + (actions.takeOver.disabled ? ' disabled aria-disabled="true"' : '') + ' title="' + escapeHtml(actions.takeOver.title) + '">' + escapeHtml(text(labels, 'takeOver', 'Take over')) + '</button>';
     }
-    if (actions.menu.length) {
-      var menuId = 'cc-agent-menu-' + id;
-      html += '<span class="cc-agent__more">' + '<button type="button" class="btn btn-sm btn-outline-secondary" data-cc-more="' + id + '" aria-haspopup="menu"' + ' aria-expanded="' + (openMenu ? 'true' : 'false') + '" aria-controls="' + menuId + '">' + escapeHtml(text(labels, 'more', 'More')) + ' <span aria-hidden="true">&#9662;</span></button>' + '<span class="cc-agent__menu dropdown-menu' + (openMenu ? ' show' : '') + '" role="menu" id="' + menuId + '"' + ' data-cc-menu="' + id + '"' + (openMenu ? '' : ' hidden') + '>' + actions.menu.map(function (item) {
-        return '<button type="button" role="menuitem" class="dropdown-item' + (item.danger ? ' text-danger' : '') + '"' + ' data-cc-action="' + escapeHtml(item.action) + '" data-cc-agent="' + id + '" data-cc-interaction="' + interactionId + '">' + escapeHtml(item.label) + '</button>';
-      }).join('') + '</span></span>';
-    }
     if (actions.unavailable) {
       html += '<span class="cc-agent__unavailable text-muted small" role="note" title="' + escapeHtml(actions.unavailable) + '">' + '<i class="fa-solid fa-circle-info" aria-hidden="true"></i> ' + escapeHtml(text(labels, 'cannotMonitor', 'Cannot be monitored')) + '<span class="visually-hidden">: ' + escapeHtml(actions.unavailable) + '</span></span>';
     }
     return html ? '<span class="cc-agent__actions">' + html + '</span>' : '';
+  }
+
+  // The kebab button that opens the agent's More menu, and the menu: '' when the supervisor has nothing to do there. It
+  // sits at the far right of the agent's name row, apart from the call actions under it.
+  function agentMenuHtml(agent, state, labels, openMenu) {
+    var actions = agentActions(agent, state, labels);
+    if (!actions.menu.length) {
+      return '';
+    }
+    var id = escapeHtml(agent.agentId);
+    var interactionId = escapeHtml(agent.activeInteractionId || '');
+    var menuId = 'cc-agent-menu-' + id;
+    var moreLabel = format(text(labels, 'moreActionsFor', 'More actions for {0}'), agent.displayName || agent.userId || '');
+    return '<span class="cc-agent__more">' + '<button type="button" class="btn btn-sm btn-outline-secondary cc-agent__kebab" data-cc-more="' + id + '" aria-haspopup="menu"' + ' aria-expanded="' + (openMenu ? 'true' : 'false') + '" aria-controls="' + menuId + '"' + ' aria-label="' + escapeHtml(moreLabel) + '" title="' + escapeHtml(moreLabel) + '">' + '<i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i></button>' + '<span class="cc-agent__menu dropdown-menu' + (openMenu ? ' show' : '') + '" role="menu" id="' + menuId + '"' + ' data-cc-menu="' + id + '"' + (openMenu ? '' : ' hidden') + '>' + actions.menu.map(function (item) {
+      return '<button type="button" role="menuitem" class="dropdown-item' + (item.danger ? ' text-danger' : '') + '"' + ' data-cc-action="' + escapeHtml(item.action) + '" data-cc-agent="' + id + '" data-cc-interaction="' + interactionId + '">' + escapeHtml(item.label) + '</button>';
+    }).join('') + '</span></span>';
   }
 
   // The supervisor's phone's view of their engagement after an event.
@@ -304,9 +313,32 @@
     return String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   }
   contactCenter.attributeSelectorValue = attributeSelectorValue;
+
+  // Where an agent's More menu goes, in viewport pixels, so it is always fully on screen: under its button with its
+  // right edge on the button's, moved left or right as far as it must to stay inside the viewport, and flipped above the
+  // button when there is no room below it (or pinned to the bottom when there is room nowhere).
+  //   anchor: the button's rect { left, right, top, bottom }; menu: { width, height }; viewport: { width, height }.
+  function menuPlacement(anchor, menu, viewport, margin, gap) {
+    var edge = typeof margin === 'number' ? margin : 8;
+    var offset = typeof gap === 'number' ? gap : 4;
+    var maxLeft = Math.max(edge, viewport.width - menu.width - edge);
+    var left = Math.min(Math.max(anchor.right - menu.width, edge), maxLeft);
+    var below = anchor.bottom + offset;
+    var above = anchor.top - offset - menu.height;
+    var fitsBelow = below + menu.height <= viewport.height - edge;
+    var flipped = !fitsBelow && above >= edge;
+    var top = fitsBelow || !flipped ? Math.max(edge, Math.min(below, viewport.height - menu.height - edge)) : above;
+    return {
+      left: Math.round(left),
+      top: Math.round(top),
+      flipped: flipped
+    };
+  }
+  contactCenter.supervisorMenuPlacement = menuPlacement;
   contactCenter.MONITOR_PHASES = PHASES;
   contactCenter.supervisorAgentActions = agentActions;
   contactCenter.supervisorAgentActionsHtml = agentActionsHtml;
+  contactCenter.supervisorAgentMenuHtml = agentMenuHtml;
   contactCenter.nextMonitorEngagement = nextEngagement;
   contactCenter.monitorBannerHtml = monitorBannerHtml;
   contactCenter.monitorModeLabel = modeLabel;
@@ -346,6 +378,7 @@
     var panel = root.querySelector('[data-cc-intervention-panel]');
     var status = root.querySelector('[data-cc-intervention-status]');
     var openMenuAgentId = null;
+    var openMenuAnchor = null;
     var openPanel = null;
     var pendingTakeovers = {};
     var lastState = {
@@ -441,6 +474,7 @@
         return;
       }
       openMenuAgentId = null;
+      openMenuAnchor = null;
       options.redraw();
       if (restoreFocus) {
         var trigger = root.querySelector('[data-cc-more="' + cssEscape(agentId) + '"]');
@@ -456,11 +490,54 @@
       openMenuAgentId = openMenuAgentId === agentId ? null : agentId;
       options.redraw();
       if (openMenuAgentId) {
+        positionMenu();
         var first = root.querySelector('[data-cc-menu="' + cssEscape(agentId) + '"] [role="menuitem"]');
         if (first) {
           first.focus();
         }
       }
+    }
+
+    // Puts the open menu next to its button, fully inside the viewport (see shared/supervisor-actions.js).
+    function positionMenu() {
+      if (!openMenuAgentId) {
+        return;
+      }
+      var trigger = root.querySelector('[data-cc-more="' + cssEscape(openMenuAgentId) + '"]');
+      var menu = root.querySelector('[data-cc-menu="' + cssEscape(openMenuAgentId) + '"]');
+      if (!trigger || !menu) {
+        return;
+      }
+      var anchor = trigger.getBoundingClientRect();
+      openMenuAnchor = {
+        left: anchor.left,
+        top: anchor.top
+      };
+      var placed = contactCenter.supervisorMenuPlacement({
+        left: anchor.left,
+        right: anchor.right,
+        top: anchor.top,
+        bottom: anchor.bottom
+      }, {
+        width: menu.offsetWidth,
+        height: menu.offsetHeight
+      }, {
+        width: document.documentElement.clientWidth || window.innerWidth,
+        height: window.innerHeight
+      });
+      menu.style.left = placed.left + 'px';
+      menu.style.top = placed.top + 'px';
+      menu.setAttribute('data-cc-menu-placement', placed.flipped ? 'above' : 'below');
+    }
+
+    // Whether the open menu's button has moved since the menu was placed next to it.
+    function menuButtonMoved() {
+      var trigger = openMenuAgentId ? root.querySelector('[data-cc-more="' + cssEscape(openMenuAgentId) + '"]') : null;
+      if (!trigger || !openMenuAnchor) {
+        return true;
+      }
+      var anchor = trigger.getBoundingClientRect();
+      return Math.abs(anchor.left - openMenuAnchor.left) > 1 || Math.abs(anchor.top - openMenuAnchor.top) > 1;
     }
     function showPanel(kind, agent) {
       openPanel = {
@@ -695,6 +772,22 @@
           closeMenu(false);
         }
       });
+
+      // A menu placed in the viewport no longer follows its button once the page moves, so it closes instead. A
+      // scroll that left the button where it was (one that finished just as the menu opened) is no reason to.
+      window.addEventListener('scroll', function (event) {
+        if (openMenuAgentId && !(event.target && event.target.closest && event.target.closest('.cc-agent__menu')) && menuButtonMoved()) {
+          closeMenu(false);
+        }
+      }, true);
+      window.addEventListener('resize', function () {
+        positionMenu();
+      });
+      document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && openMenuAgentId) {
+          closeMenu(true);
+        }
+      });
     }
 
     // The new state: a Take over that had to barge in first goes ahead once the supervisor's phone is on the call.
@@ -721,7 +814,10 @@
     }
     return {
       actionsHtml: function (agent, state) {
-        return contactCenter.supervisorAgentActionsHtml(agent, state, strings, openMenuAgentId === agent.agentId);
+        return contactCenter.supervisorAgentActionsHtml(agent, state, strings);
+      },
+      menuHtml: function (agent, state) {
+        return contactCenter.supervisorAgentMenuHtml(agent, state, strings, openMenuAgentId === agent.agentId);
       },
       bind: bind,
       onState: onState,
@@ -865,9 +961,11 @@
         var status = agent.presenceStatus || 'Offline';
         var detail = agent.presenceReason || status;
 
-        // Listen / Whisper / Barge, Stop, Take over and the More menu (see supervisor-interventions.js).
+        // Listen / Whisper / Barge, Stop and Take over under the name, and the More menu's kebab at the far right
+        // of the name row (see supervisor-interventions.js).
         var actions = interventions ? interventions.actionsHtml(agent, state) : '';
-        return '<div class="cc-agent">' + '<span class="cc-presence__dot is-' + status.toLowerCase() + '"></span>' + '<span class="cc-agent__body">' + '<span class="cc-agent__name">' + escapeHtml(agent.displayName || agent.userId) + '</span>' + '<span class="cc-agent__state badge ta-badge text-bg-secondary">' + escapeHtml(detail) + '</span>' + '</span>' + '<span class="cc-badge-count" title="' + escapeHtml(label('activeInteractions', 'Active interactions')) + '">' + agent.activeInteractions + '</span>' + actions + '</div>';
+        var menu = interventions ? interventions.menuHtml(agent, state) : '';
+        return '<div class="cc-agent">' + '<span class="cc-presence__dot is-' + status.toLowerCase() + '"></span>' + '<span class="cc-agent__body">' + '<span class="cc-agent__name">' + escapeHtml(agent.displayName || agent.userId) + '</span>' + '<span class="cc-agent__state badge ta-badge text-bg-secondary">' + escapeHtml(detail) + '</span>' + '</span>' + '<span class="cc-badge-count" title="' + escapeHtml(label('activeInteractions', 'Active interactions')) + '">' + agent.activeInteractions + '</span>' + menu + actions + '</div>';
       }).join('');
 
       // The actions are delegated from the board (see supervisor-interventions.js), so a redraw needs no rebinding.

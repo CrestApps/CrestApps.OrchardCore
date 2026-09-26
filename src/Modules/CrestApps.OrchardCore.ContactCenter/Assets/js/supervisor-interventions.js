@@ -33,6 +33,7 @@
         var panel = root.querySelector('[data-cc-intervention-panel]');
         var status = root.querySelector('[data-cc-intervention-status]');
         var openMenuAgentId = null;
+        var openMenuAnchor = null;
         var openPanel = null;
         var pendingTakeovers = {};
         var lastState = { agents: [], queues: [] };
@@ -142,6 +143,7 @@
             }
 
             openMenuAgentId = null;
+            openMenuAnchor = null;
             options.redraw();
 
             if (restoreFocus) {
@@ -162,12 +164,54 @@
             options.redraw();
 
             if (openMenuAgentId) {
+                positionMenu();
+
                 var first = root.querySelector('[data-cc-menu="' + cssEscape(agentId) + '"] [role="menuitem"]');
 
                 if (first) {
                     first.focus();
                 }
             }
+        }
+
+        // Puts the open menu next to its button, fully inside the viewport (see shared/supervisor-actions.js).
+        function positionMenu() {
+            if (!openMenuAgentId) {
+                return;
+            }
+
+            var trigger = root.querySelector('[data-cc-more="' + cssEscape(openMenuAgentId) + '"]');
+            var menu = root.querySelector('[data-cc-menu="' + cssEscape(openMenuAgentId) + '"]');
+
+            if (!trigger || !menu) {
+                return;
+            }
+
+            var anchor = trigger.getBoundingClientRect();
+
+            openMenuAnchor = { left: anchor.left, top: anchor.top };
+
+            var placed = contactCenter.supervisorMenuPlacement(
+                { left: anchor.left, right: anchor.right, top: anchor.top, bottom: anchor.bottom },
+                { width: menu.offsetWidth, height: menu.offsetHeight },
+                { width: document.documentElement.clientWidth || window.innerWidth, height: window.innerHeight });
+
+            menu.style.left = placed.left + 'px';
+            menu.style.top = placed.top + 'px';
+            menu.setAttribute('data-cc-menu-placement', placed.flipped ? 'above' : 'below');
+        }
+
+        // Whether the open menu's button has moved since the menu was placed next to it.
+        function menuButtonMoved() {
+            var trigger = openMenuAgentId ? root.querySelector('[data-cc-more="' + cssEscape(openMenuAgentId) + '"]') : null;
+
+            if (!trigger || !openMenuAnchor) {
+                return true;
+            }
+
+            var anchor = trigger.getBoundingClientRect();
+
+            return Math.abs(anchor.left - openMenuAnchor.left) > 1 || Math.abs(anchor.top - openMenuAnchor.top) > 1;
         }
 
         function showPanel(kind, agent) {
@@ -436,6 +480,24 @@
                     closeMenu(false);
                 }
             });
+
+            // A menu placed in the viewport no longer follows its button once the page moves, so it closes instead. A
+            // scroll that left the button where it was (one that finished just as the menu opened) is no reason to.
+            window.addEventListener('scroll', function (event) {
+                if (openMenuAgentId && !(event.target && event.target.closest && event.target.closest('.cc-agent__menu')) && menuButtonMoved()) {
+                    closeMenu(false);
+                }
+            }, true);
+
+            window.addEventListener('resize', function () {
+                positionMenu();
+            });
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape' && openMenuAgentId) {
+                    closeMenu(true);
+                }
+            });
         }
 
         // The new state: a Take over that had to barge in first goes ahead once the supervisor's phone is on the call.
@@ -465,7 +527,10 @@
 
         return {
             actionsHtml: function (agent, state) {
-                return contactCenter.supervisorAgentActionsHtml(agent, state, strings, openMenuAgentId === agent.agentId);
+                return contactCenter.supervisorAgentActionsHtml(agent, state, strings);
+            },
+            menuHtml: function (agent, state) {
+                return contactCenter.supervisorAgentMenuHtml(agent, state, strings, openMenuAgentId === agent.agentId);
             },
             bind: bind,
             onState: onState,

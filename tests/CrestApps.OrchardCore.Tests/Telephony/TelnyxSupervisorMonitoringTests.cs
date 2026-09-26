@@ -102,11 +102,13 @@ public sealed class TelnyxSupervisorMonitoringTests
         Assert.Empty(api.Requests);
     }
 
+    // Listening joins muted, as an ordinary participant, never with Telnyx's "monitor" role: live, a conference a supervisor
+    // joined as "monitor" stopped carrying the customer's and the agent's audio to each other.
     [Theory]
-    [InlineData("monitor", false)]
-    [InlineData("whisper", true)]
-    [InlineData("barge", false)]
-    public async Task SupervisorAnswers_ABridgedCall_IsMovedIntoASilentConference_WithBothPartiesKept_AndTheSupervisorJoinsInTheirRole(string role, bool whispersToAgent)
+    [InlineData("monitor", null, true, false)]
+    [InlineData("whisper", "whisper", false, true)]
+    [InlineData("barge", "barge", false, false)]
+    public async Task SupervisorAnswers_ABridgedCall_IsMovedIntoASilentConference_WithBothPartiesKept_AndTheSupervisorJoinsInTheirRole(string role, string joinedRole, bool muted, bool whispersToAgent)
     {
         // Arrange
         var api = BridgedCall();
@@ -142,8 +144,10 @@ public sealed class TelnyxSupervisorMonitoringTests
         Assert.False(joins[0].TryGetProperty("end_conference_on_exit", out _));
 
         Assert.Equal(Supervisor, joins[1].GetProperty("call_control_id").GetString());
-        Assert.Equal(role, joins[1].GetProperty("supervisor_role").GetString());
+        Assert.Equal(joinedRole, joins[1].TryGetProperty("supervisor_role", out var joinedAs) ? joinedAs.GetString() : null);
+        Assert.Equal(muted, joins[1].TryGetProperty("mute", out var mute) && mute.GetBoolean());
         Assert.Equal("never", joins[1].GetProperty("beep_enabled").GetString());
+        Assert.DoesNotContain(api.Requests, request => request.Body.ValueKind == JsonValueKind.Object && request.Body.ToString().Contains("\"monitor\"", StringComparison.Ordinal));
         Assert.Equal(whispersToAgent, joins[1].TryGetProperty("whisper_call_control_ids", out var whisper));
 
         if (whispersToAgent)
@@ -206,14 +210,56 @@ public sealed class TelnyxSupervisorMonitoringTests
         // Act
         var result = await provider.SwitchModeAsync(request, TestContext.Current.CancellationToken);
 
-        // Assert
+        // Assert - the role first, then heard: a listener is never heard by the customer on the way to whispering.
         Assert.True(result.Succeeded);
-        Assert.Equal(["GET conferences", "POST conferences/conf-1/actions/update"], api.Commands);
+        Assert.Equal(["GET conferences", "POST conferences/conf-1/actions/update", "POST conferences/conf-1/actions/unmute"], api.Commands);
 
         var update = api.BodyOf("POST", "conferences/conf-1/actions/update");
         Assert.Equal(Supervisor, update.GetProperty("call_control_id").GetString());
         Assert.Equal("whisper", update.GetProperty("supervisor_role").GetString());
         Assert.Equal([Agent], update.GetProperty("whisper_call_control_ids").EnumerateArray().Select(item => item.GetString()));
+        Assert.Equal([Supervisor], api.BodyOf("POST", "conferences/conf-1/actions/unmute").GetProperty("call_control_ids").EnumerateArray().Select(item => item.GetString()));
+    }
+
+    [Fact]
+    public async Task SwitchMode_ToListen_MutesTheSupervisorFirst_ThenMakesThemAnOrdinaryParticipant_NeverAMonitor()
+    {
+        // Arrange
+        var api = BridgedCall();
+        api.WithConference(Conference, Customer, Agent, Supervisor);
+        var provider = TelnyxContactCenterProviderFactory.Create(api, Resolver());
+        var request = Request(MonitorMode.Monitor);
+        request.SupervisorLegId = Supervisor;
+
+        // Act
+        var result = await provider.SwitchModeAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Equal(["GET conferences", "POST conferences/conf-1/actions/mute", "POST conferences/conf-1/actions/update"], api.Commands);
+        Assert.Equal([Supervisor], api.BodyOf("POST", "conferences/conf-1/actions/mute").GetProperty("call_control_ids").EnumerateArray().Select(item => item.GetString()));
+        Assert.Equal("none", api.BodyOf("POST", "conferences/conf-1/actions/update").GetProperty("supervisor_role").GetString());
+    }
+
+    [Fact]
+    public async Task SwitchMode_ToBarge_MakesTheSupervisorHeardByEverybody()
+    {
+        // Arrange
+        var api = BridgedCall();
+        api.WithConference(Conference, Customer, Agent, Supervisor);
+        var provider = TelnyxContactCenterProviderFactory.Create(api, Resolver());
+        var request = Request(MonitorMode.Barge);
+        request.SupervisorLegId = Supervisor;
+
+        // Act
+        var result = await provider.SwitchModeAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Equal(["GET conferences", "POST conferences/conf-1/actions/update", "POST conferences/conf-1/actions/unmute"], api.Commands);
+        var update = api.BodyOf("POST", "conferences/conf-1/actions/update");
+        Assert.Equal("barge", update.GetProperty("supervisor_role").GetString());
+        Assert.False(update.TryGetProperty("whisper_call_control_ids", out _));
     }
 
     [Fact]
@@ -314,6 +360,7 @@ public sealed class TelnyxSupervisorMonitoringTests
             [
                 "GET conferences",
                 "POST conferences/conf-1/actions/update",
+                "POST conferences/conf-1/actions/unmute",
                 $"GET calls/{Agent}",
                 $"POST calls/{Agent}/actions/hangup",
             ],
@@ -386,7 +433,10 @@ public sealed class TelnyxSupervisorMonitoringTests
     }
 
     [Fact]
-    public async Task AReleasedSupervisorLegsHangup_EndsTheEngagement_WithoutMovingTheCall()
+    // Live, a stop's own hang-up came back as a webhook that recorded the engagement's end a second time while the stop was
+    // still recording it, and the stop failed with a ConcurrencyException (dashboard/stop 500). The platform's own release
+    // is recorded by the platform.
+    public async Task AReleasedSupervisorLegsHangup_IsNotReportedAgain_AndDoesNotMoveTheCall()
     {
         // Arrange
         var api = BridgedCall();
@@ -400,7 +450,7 @@ public sealed class TelnyxSupervisorMonitoringTests
         await orchestrator.AdvanceAsync(Hangup(Supervisor, detached), TestContext.Current.CancellationToken);
 
         // Assert
-        sink.Verify(value => value.OnEndedAsync(TelnyxConstants.ProviderTechnicalName, Customer, Supervisor, It.IsAny<DateTime?>(), It.IsAny<HangupCause?>(), It.IsAny<CancellationToken>()), Times.Once);
+        sink.VerifyNoOtherCalls();
         Assert.Empty(api.Requests);
     }
 

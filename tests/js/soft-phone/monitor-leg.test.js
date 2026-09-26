@@ -14,6 +14,8 @@ const {
     readMonitorLegTag,
     claimMonitorLegArm,
     monitorLegAction,
+    monitorLegTalks,
+    anyMonitorLegTalks,
 } = globalThis.CrestAppsSoftPhone;
 
 const now = 9_000_000;
@@ -101,5 +103,33 @@ describe('the soft phone bundle', () => {
         expect(group.inputs).toContain('Assets/js/soft-phone/monitor-leg.js');
         expect(group.inputs.indexOf('Assets/js/soft-phone/offer-leg.js')).toBeLessThan(group.inputs.indexOf('Assets/js/soft-phone/monitor-leg.js'));
         expect(group.inputs.indexOf('Assets/js/soft-phone/monitor-leg.js')).toBeLessThan(group.inputs.indexOf('Assets/js/soft-phone.js'));
+    });
+});
+
+// Live, the phone kept its microphone off on a monitor leg whatever the mode: nobody heard a supervisor who joined a
+// call or took it over. The microphone follows the mode instead.
+describe("the supervisor's microphone on a monitor leg", () => {
+    it('is off while listening', () => {
+        expect(monitorLegTalks('Monitor')).toBe(false);
+    });
+
+    it('is on while coaching the agent and while joining the call', () => {
+        expect(monitorLegTalks('Whisper')).toBe(true);
+        expect(monitorLegTalks('Barge')).toBe(true);
+    });
+
+    it('is off for a mode it does not know', () => {
+        expect(monitorLegTalks(undefined)).toBe(false);
+        expect(monitorLegTalks('barge')).toBe(false);
+    });
+
+    it('is on while any leg the phone holds has the supervisor talking', () => {
+        expect(anyMonitorLegTalks({ a: { info: { mode: 'Monitor' } }, b: { info: { mode: 'Barge' } } })).toBe(true);
+    });
+
+    it('is off when every leg is listening, or there is none', () => {
+        expect(anyMonitorLegTalks({ a: { info: { mode: 'Monitor' } }, b: { info: null }, c: null })).toBe(false);
+        expect(anyMonitorLegTalks({})).toBe(false);
+        expect(anyMonitorLegTalks(null)).toBe(false);
     });
 });

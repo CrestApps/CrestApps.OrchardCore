@@ -3105,7 +3105,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public sealed class ContactCenterMonitoringService : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterMonitoringService
     {
-        public ContactCenterMonitoringService(CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallSessionManager callSessionManager, CrestApps.OrchardCore.ContactCenter.IContactCenterVoiceProviderResolver voiceProviderResolver, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventPublisher publisher, CrestApps.OrchardCore.Telephony.ITelephonyCommandExecutor commandExecutor, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallControlAuthorizationService callControlAuthorizationService, OrchardCore.Modules.IClock clock, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Services.ISupervisorEngagementNotifier> notifiers, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentProfileManager) { }
+        public ContactCenterMonitoringService(CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallSessionManager callSessionManager, CrestApps.OrchardCore.ContactCenter.IContactCenterVoiceProviderResolver voiceProviderResolver, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventPublisher publisher, CrestApps.OrchardCore.Telephony.ITelephonyCommandExecutor commandExecutor, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallControlAuthorizationService callControlAuthorizationService, OrchardCore.Modules.IClock clock, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Services.ISupervisorEngagementNotifier> notifiers, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentProfileManager, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallSessionUpdater callSessionUpdater) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SupervisorEngagementResult> EngageAsync(string interactionId, string supervisorId, CrestApps.OrchardCore.ContactCenter.Models.MonitorMode mode, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SupervisorEngagementResult> EngageAsync(string interactionId, string supervisorId, System.Security.Claims.ClaimsPrincipal principal, CrestApps.OrchardCore.ContactCenter.Models.MonitorMode mode, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<int> ForceDisengageAllAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default) { }
@@ -3226,6 +3226,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
                     CrestApps.OrchardCore.Telephony.ITelephonyCommandExecutor commandExecutor,
                     System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Services.ISupervisorEngagementNotifier> notifiers,
                     OrchardCore.Modules.IClock clock,
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.ICallSessionUpdater callSessionUpdater,
                     Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterSupervisorInterventionService> logger) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SupervisorEngagementResult> EndCallAsync(string interactionId, string supervisorUserId, System.Security.Claims.ClaimsPrincipal principal, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SupervisorEngagementResult> SendMessageAsync(string agentId, string supervisorUserId, string supervisorName, System.Security.Claims.ClaimsPrincipal principal, string text, System.Threading.CancellationToken cancellationToken = default) { }
@@ -3704,6 +3705,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession> FindByProviderCallIdAsync(string providerCallId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession> FindByProviderCallIdAsync(string providerName, string providerCallId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession> FindByProviderLegIdAsync(string providerLegId, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ICallSessionUpdater
+    {
+        System.Threading.Tasks.Task<bool> UpdateAsync(string interactionId, System.Func<CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession, bool> mutate, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> UpdateWithInteractionAsync(string interactionId, System.Func<CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession, CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction, bool> mutate, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface ICallbackRequestManager : CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest>
     {
@@ -4934,6 +4940,12 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public RoundRobinRoutingStrategy() { }
         public int Order { get; }
         public System.Threading.Tasks.ValueTask ApplyAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityRoutingContext context, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ScopedCallSessionUpdater : CrestApps.OrchardCore.ContactCenter.Core.Services.ICallSessionUpdater
+    {
+        public ScopedCallSessionUpdater(CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterScopeExecutor scopeExecutor) { }
+        public System.Threading.Tasks.Task<bool> UpdateAsync(string interactionId, System.Func<CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession, bool> mutate, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> UpdateWithInteractionAsync(string interactionId, System.Func<CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession, CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction, bool> mutate, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public static class SecureCaptureAccessToken
     {

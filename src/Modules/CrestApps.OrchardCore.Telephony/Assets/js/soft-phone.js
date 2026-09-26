@@ -108,6 +108,7 @@
     var readMonitorLegTag = softPhoneModules.readMonitorLegTag;
     var claimMonitorLegArm = softPhoneModules.claimMonitorLegArm;
     var monitorLegAction = softPhoneModules.monitorLegAction;
+    var anyMonitorLegTalks = softPhoneModules.anyMonitorLegTalks;
     var planEntryStart = softPhoneModules.planEntryStart;
     var planEntryEnd = softPhoneModules.planEntryEnd;
 
@@ -4628,6 +4629,12 @@
         // so a report about one call decides it only while that call is the one the agent is talking on (see
         // soft-phone/keypad-dial.js).
         function microphoneEnabledAfter(call) {
+            // A supervisor talking on a monitor leg (coaching, joining, or on a call they took over) is heard on the same
+            // microphone; a monitor leg is no call of the phone's own, so the calls alone would keep it off.
+            if (anyMonitorLegTalks(monitorLegs)) {
+                return true;
+            }
+
             var others = getActiveCalls().filter(function (active) {
                 return active && (!call || active.callId !== call.callId);
             }).map(function (active) {
@@ -5465,6 +5472,34 @@
             disarmMonitorLegFor(monitorLegArms, token);
         }
 
+        // The engagement's mode changed (or it was taken over): the microphone follows whether the supervisor is heard.
+        function setMonitorLegMode(token, mode) {
+            var leg = token ? monitorLegs[token] : null;
+            var arm = token && Object.prototype.hasOwnProperty.call(monitorLegArms, token) ? monitorLegArms[token] : null;
+            var holder = leg || arm;
+
+            if (!holder) {
+                return false;
+            }
+
+            holder.info = Object.assign({}, holder.info || {}, { mode: mode });
+            matchMicrophoneToMonitorLegs();
+
+            return true;
+        }
+
+        function matchMicrophoneToMonitorLegs() {
+            if (!localAudioStream) {
+                return;
+            }
+
+            var enabled = microphoneEnabledAfter(null);
+
+            localAudioStream.getAudioTracks().forEach(function (track) {
+                track.enabled = enabled;
+            });
+        }
+
         function hangupMonitorLeg(token) {
             var leg = token ? monitorLegs[token] : null;
 
@@ -5523,6 +5558,7 @@
 
             monitorLegs[tag.token] = { controller: controller, legId: tag.legId, info: arm.info };
             reportDiagnostic('info', 'monitor-leg-answered', 'The phone answered the monitor leg it asked for.', tag.legId || '');
+            matchMicrophoneToMonitorLegs();
             controller.answer();
             emitMonitorLeg({ type: 'answering', token: tag.token, legId: tag.legId, info: arm.info });
         }
@@ -5540,8 +5576,10 @@
 
             if (isTelnyxTerminalState(state)) {
                 delete monitorLegs[token];
+                matchMicrophoneToMonitorLegs();
                 emitMonitorLeg({ type: 'ended', token: token, legId: legId, info: leg.info });
             } else if (state === 'active') {
+                matchMicrophoneToMonitorLegs();
                 emitMonitorLeg({ type: 'connected', token: token, legId: legId, info: leg.info });
             }
         }
@@ -10255,6 +10293,7 @@
             armMonitorLeg: armMonitorLeg,
             disarmMonitorLeg: disarmMonitorLeg,
             hangupMonitorLeg: hangupMonitorLeg,
+            setMonitorLegMode: setMonitorLegMode,
             onMonitorLeg: onMonitorLeg,
             // Answers (accepted) or hangs up (not) the leg held for an offer; returns whether a held leg was answered.
             settleOfferLeg: settleOfferLeg,

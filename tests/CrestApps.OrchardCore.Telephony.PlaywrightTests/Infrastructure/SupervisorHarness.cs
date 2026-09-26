@@ -52,7 +52,7 @@ public sealed class SupervisorHarness
     /// </summary>
     public void Map(WebApplication app)
     {
-        app.MapGet(DashboardUrl, () => Results.Content(BuildDashboardHtml(), "text/html; charset=utf-8"));
+        app.MapGet(DashboardUrl, (HttpContext context) => Results.Content(BuildDashboardHtml(context.Request.Query["sidebar"]), "text/html; charset=utf-8"));
         app.MapGet(StateUrl, () => Results.Content(State.ToJsonString(), "application/json"));
 
         foreach (var action in _actions)
@@ -121,7 +121,7 @@ public sealed class SupervisorHarness
             <script src="/CrestApps.OrchardCore.ContactCenter/scripts/contact-center-supervisor-phone.js"></script>
             """;
 
-    private static string BuildDashboardHtml()
+    private static string BuildDashboardHtml(string sidebar)
     {
         var config = new Dictionary<string, object>
         {
@@ -144,6 +144,19 @@ public sealed class SupervisorHarness
 
         var telephonyClient = SoftPhoneTestServer.ScriptUrls.Single(url => url.Contains("telephony-client", StringComparison.Ordinal));
 
+        // The admin theme's left navigation: fixed, over the page (z-index 1033, as TheAdmin sets it), 260px wide expanded
+        // and 64px collapsed, with the content pushed right of it. The agents board sits in a panel that clips its content,
+        // as the real page's does.
+        var sidebarWidth = sidebar switch
+        {
+            "expanded" => 260,
+            "collapsed" => 64,
+            _ => 0,
+        };
+        var sidebarHtml = sidebarWidth == 0
+            ? string.Empty
+            : $"<nav id=\"ta-left-sidebar\" style=\"position:fixed;top:0;left:0;bottom:0;width:{sidebarWidth}px;z-index:1033;background:#223;\"></nav>";
+
         return $$"""
             <!DOCTYPE html>
             <html lang="en">
@@ -151,8 +164,11 @@ public sealed class SupervisorHarness
                 <meta charset="utf-8" />
                 <title>Supervisor Dashboard Test</title>
                 <link rel="stylesheet" href="{{ModuleUrlPrefix}}styles/contact-center-workspace.css" />
+                <style>body { margin: 0; } .dropdown-item { display: block; width: 100%; white-space: nowrap; }</style>
             </head>
             <body>
+                {{sidebarHtml}}
+                <div style="margin-left:{{sidebarWidth}}px;padding:8px;">
                 <div class="cc-workspace cc-dashboard" data-cc-dashboard data-config='{{JsonSerializer.Serialize(config)}}'>
                     <span class="cc-connection" data-cc-connection role="status"></span>
                     <div class="cc-error" data-cc-error role="alert" hidden></div>
@@ -161,7 +177,10 @@ public sealed class SupervisorHarness
                     <div data-cc-tiles></div>
                     <div data-cc-intervention-panel hidden></div>
                     <div data-cc-intervention-status role="status"></div>
+                    <div class="cc-panel"><div class="cc-panel__body">
                     <div class="cc-board" data-cc-board role="status" aria-live="polite"></div>
+                    </div></div>
+                </div>
                 </div>
                 <script src="{{telephonyClient}}"></script>
                 <script src="{{ModuleUrlPrefix}}scripts/supervisor-dashboard.js"></script>

@@ -107,6 +107,25 @@
         return now - arrivedAt < MONITOR_ARM_WAIT_MS ? 'wait' : 'hangup';
     }
 
+    // Whether the supervisor is heard on a monitor leg in `mode` (the engagement's mode, as the platform names it).
+    // Listening is silent: the platform joins the supervisor muted, and the phone keeps its microphone off too. Coaching
+    // is heard by the agent, and joining by everyone -- as is a call the supervisor took over, which is on as joined.
+    function monitorLegTalks(mode) {
+        return mode === 'Whisper' || mode === 'Barge';
+    }
+
+    // Whether any monitor leg this phone holds has the supervisor talking. The shared microphone is live while one does:
+    // the phone turns it off whenever it holds no call of its own, and a monitor leg is never one, so live, a supervisor
+    // who joined a call or took it over was heard by nobody.
+    //   legs - the phone's monitor legs, by token: { info: { mode } }
+    function anyMonitorLegTalks(legs) {
+        return Object.keys(legs || {}).some(function (token) {
+            var leg = legs[token];
+
+            return !!(leg && leg.info && monitorLegTalks(leg.info.mode));
+        });
+    }
+
     softPhone.MONITOR_LEG_INTENT = MONITOR_LEG_INTENT;
     softPhone.MONITOR_LEG_HEADER = MONITOR_LEG_HEADER;
     softPhone.MONITOR_ARM_WINDOW_MS = MONITOR_ARM_WINDOW_MS;
@@ -117,4 +136,6 @@
     softPhone.readMonitorLegTag = readMonitorLegTag;
     softPhone.claimMonitorLegArm = claimMonitorLegArm;
     softPhone.monitorLegAction = monitorLegAction;
+    softPhone.monitorLegTalks = monitorLegTalks;
+    softPhone.anyMonitorLegTalks = anyMonitorLegTalks;
 }(typeof globalThis !== 'undefined' ? globalThis : window));

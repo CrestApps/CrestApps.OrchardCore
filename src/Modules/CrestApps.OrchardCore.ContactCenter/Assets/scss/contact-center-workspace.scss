@@ -552,7 +552,8 @@
 /* Agent board. */
 .cc-board {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+    // Never wider than the panel: a card wider than its column was cut off by the panel, More button and all.
+    grid-template-columns: repeat(auto-fill, minmax(min(13rem, 100%), 1fr));
     gap: 0.6rem;
 }
 
@@ -560,6 +561,7 @@
     display: flex;
     align-items: center;
     gap: 0.6rem;
+    min-width: 0;
     padding: 0.6rem 0.75rem;
     background: var(--cc-surface);
     border: 1px solid var(--cc-border);
@@ -572,36 +574,52 @@
     align-items: center;
     gap: 0.35rem;
     justify-content: flex-end;
+    min-width: 0;
+
+    .btn-group {
+        flex-wrap: wrap;
+    }
 }
 
-// With a supervisor's actions the row wraps: the agent on the first line, what can be done about their call below it,
-// so the name is never squeezed out by the buttons in a narrow card.
-.cc-agent:has(.cc-agent__more) {
-    flex-wrap: wrap;
+// With a supervisor's actions the row has two lines: the agent -- and the More menu's kebab at the far right -- on the
+// first, what can be done about their call below it, so the name is never squeezed out by the buttons in a narrow card.
+// A grid, not a wrapping row: however narrow the card, the kebab stays on the name's line and the name shortens instead.
+.cc-agent:has(.cc-agent__actions) {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    gap: 0.5rem;
 
     .cc-agent__actions {
-        flex: 1 1 100%;
+        grid-column: 1 / -1;
         justify-content: flex-start;
     }
 }
 
-// The supervisor's More menu on an agent row: anchored under its button, above the rows that follow.
+// The supervisor's More actions: a compact kebab button at the far right of the agent's name row.
 .cc-agent__more {
-    position: relative;
     display: inline-block;
+    flex: 0 0 auto;
+    align-self: flex-start;
+    margin-left: auto;
 }
 
-// An open menu hangs below its card, so the panel around the board must not clip it.
-.cc-panel:has(.cc-agent__menu.show) {
-    overflow: visible;
+.cc-agent__kebab {
+    min-width: 2rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
 }
 
-.cc-agent__menu {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    z-index: 1050;
+// Its menu is placed in the viewport by the dashboard script (see supervisorMenuPlacement), so no card or panel that
+// clips its content can cut it off, and it sits above the admin sidebar and top bar (z-index 1033 and 1034).
+.cc-agent__menu.dropdown-menu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1056;
     min-width: 12rem;
+    max-height: calc(100vh - 16px);
+    overflow-y: auto;
+    margin: 0;
 }
 
 .cc-agent__monitor,
@@ -619,6 +637,7 @@
 }
 
 .cc-agent__name {
+    max-width: 100%;
     font-weight: 600;
     white-space: nowrap;
     overflow: hidden;

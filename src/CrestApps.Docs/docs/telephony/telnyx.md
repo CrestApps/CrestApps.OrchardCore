@@ -231,22 +231,33 @@ How a call is supervised, command by command:
    leg then [joins](https://developers.telnyx.com/api-reference/conference-commands/join-a-conference) it (`beep_enabled:
    never`, not `end_conference_on_exit`). Nobody is hung up and nobody hears a tone; the caller hears a moment of
    silence.
-3. **The supervisor joins with a supervisor role**
-   ([Join a conference](https://developers.telnyx.com/api-reference/conference-commands/join-a-conference)):
-   `supervisor_role: monitor` (heard by nobody), `whisper` with `whisper_call_control_ids: [agent leg]` (heard by the
-   agent only), or `barge` (heard by both).
-4. **Switching mode** changes the participant in place
+3. **The supervisor joins** ([Join a conference](https://developers.telnyx.com/api-reference/conference-commands/join-a-conference)).
+   **Listen** joins as an ordinary participant with `mute: true` (heard by nobody); **Whisper** joins with
+   `supervisor_role: whisper` and `whisper_call_control_ids: [agent leg]` (heard by the agent only); **Barge** with
+   `supervisor_role: barge` (heard by both).
+   :::warning Listen does not use `supervisor_role: monitor`
+   Live, joining a supervisor with `monitor` left the caller and the agent unable to hear each other for as long as the
+   supervisor listened (the agent's received audio dropped to silence while its packets kept arriving), and changing the
+   role afterwards did not bring it back. A muted participant hears everything and is heard by nobody.
+   :::
+4. **Switching mode** changes the participant in place. To Listen: the supervisor is muted
+   ([Mute participants](https://developers.telnyx.com/api-reference/conference-commands/mute-conference-participants),
+   `POST /v2/conferences/{id}/actions/mute` naming only the supervisor's leg: an empty list mutes everybody), then their
+   role is cleared (`supervisor_role: none`). To Whisper or Barge: the role is set first
    ([Update conference participant](https://developers.telnyx.com/api-reference/conference-commands/update-conference-participant),
-   `POST /v2/conferences/{id}/actions/update` with the new `supervisor_role`). A switch made while the phone is still
-   answering updates the role the leg will join with.
+   `POST /v2/conferences/{id}/actions/update`), then the supervisor is unmuted (`actions/unmute`), so they are never
+   heard by the customer while coaching. A switch made while the phone is still answering updates the role the leg will
+   join with. The supervisor's soft phone follows the mode too: its microphone is off while listening and on while
+   coaching, joining, and after a takeover.
 5. **Stop** hangs up only the supervisor's leg (marked detached in its client state), then — once no supervisor is left —
    takes the caller and the agent out of the conference and bridges them again exactly as before (`bridge` on the agent's
    leg with `park_after_unbridge=self`), so hold, transfer, consult and park keep working on the topology they expect.
    A supervisor hanging up their own phone does the same.
-6. **Take over** switches the supervisor to `barge` first, so the customer is never alone, then hangs up the agent's leg
+6. **Take over** switches the supervisor to `barge` (and unmutes them) first, so the customer is never alone, then hangs up the agent's leg
    with its client state marked detached, so its hang-up does not end the call. The interaction, the call's agent leg, its
    talk time and its after-call work move to the supervisor; the released agent goes to wrap-up (queue calls) or back to
-   ready (direct calls). The supervisor's leg is then the call's agent leg: hanging it up ends the call.
+   ready (direct calls). The supervisor's leg is then the call's agent leg: hanging it up ends the call. The released
+   agent's soft phone is told the call has left it, so its Hang up can no longer end the call on the supervisor.
 
 When the call ends, every supervisor leg still on it is hung up. A transfer or a consult releases the supervisors first,
 since none of them can follow the call where it goes. While a sensitive-data capture has recording paused, no supervisor

@@ -113,33 +113,37 @@ public sealed partial class ContactCenterMonitoringService
             return SupervisorEngagementResult.Unknown($"The change to '{mode}' was interrupted before the provider outcome could be confirmed.");
         }
 
-        // Read again: the provider's leg events may have been recorded while it was being asked.
-        callSession = await _callSessionManager.FindByInteractionIdAsync(interaction.ItemId, cancellationToken);
-        live = callSession?.ActiveMonitorSessions.FirstOrDefault(monitorSession =>
-            string.Equals(monitorSession.SupervisorUserId, supervisorId, StringComparison.Ordinal));
+        var now = _clock.UtcNow;
 
-        if (live is not null)
+        // Written onto a fresh copy: the provider's leg events are recorded on the call while it is being asked.
+        await _callSessionUpdater.UpdateAsync(interaction.ItemId, current =>
         {
-            var now = _clock.UtcNow;
+            var engaged = current.ActiveMonitorSessions.FirstOrDefault(monitorSession =>
+                string.Equals(monitorSession.SupervisorUserId, supervisorId, StringComparison.Ordinal));
 
-            live.Mode = mode;
+            if (engaged is null)
+            {
+                return false;
+            }
+
+            engaged.Mode = mode;
 
             // A barging supervisor is a party of the conversation; listening and whispering are not.
-            if (!string.IsNullOrEmpty(live.ProviderLegId))
+            if (!string.IsNullOrEmpty(engaged.ProviderLegId))
             {
                 if (mode == MonitorMode.Barge)
                 {
-                    CallTopologyProjector.EnsureBridge(callSession, callSession.Bridge?.ProviderBridgeId, now);
-                    CallTopologyProjector.Join(callSession, live.ProviderLegId, CallPartyRole.Supervisor, now, live.SupervisorAgentId);
+                    CallTopologyProjector.EnsureBridge(current, current.Bridge?.ProviderBridgeId, now);
+                    CallTopologyProjector.Join(current, engaged.ProviderLegId, CallPartyRole.Supervisor, now, engaged.SupervisorAgentId);
                 }
                 else
                 {
-                    CallTopologyProjector.Leave(callSession, live.ProviderLegId, now);
+                    CallTopologyProjector.Leave(current, engaged.ProviderLegId, now);
                 }
             }
 
-            await _callSessionManager.UpdateAsync(callSession, cancellationToken: cancellationToken);
-        }
+            return true;
+        }, cancellationToken);
 
         var interactionEvent = new InteractionEvent
         {

@@ -159,7 +159,7 @@ public sealed class SupervisorTakeoverIntegrationTests
             .ReturnsAsync(true);
 
         var callControl = new CallControlAuthorizationService(agents, sessions, interactions, supervisedQueues.Object);
-        var monitoring = new ContactCenterMonitoringService(interactions, sessions, resolver.Object, publisher, executor, callControl, clock, [], agents);
+        var monitoring = new ContactCenterMonitoringService(interactions, sessions, resolver.Object, publisher, executor, callControl, clock, [], agents, new InPlaceCallSessionUpdater(interactions, sessions));
         var sink = new SupervisorLegEventSink(interactions, sessions, services.GetRequiredService<IContactCenterAgentLegFailureService>(), publisher, [], clock);
 
         var interventions = new ContactCenterSupervisorInterventionService(
@@ -181,6 +181,7 @@ public sealed class SupervisorTakeoverIntegrationTests
             executor,
             [],
             clock,
+            new InPlaceCallSessionUpdater(interactions, sessions),
             NullLogger<ContactCenterSupervisorInterventionService>.Instance);
 
         return (monitoring, sink, interventions);

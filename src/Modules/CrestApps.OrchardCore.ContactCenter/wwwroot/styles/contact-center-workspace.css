@@ -570,7 +570,7 @@
 /* Agent board. */
 .cc-board {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(13rem, 100%), 1fr));
   gap: 0.6rem;
 }
 
@@ -578,6 +578,7 @@
   display: flex;
   align-items: center;
   gap: 0.6rem;
+  min-width: 0;
   padding: 0.6rem 0.75rem;
   background: var(--cc-surface);
   border: 1px solid var(--cc-border);
@@ -590,31 +591,44 @@
   align-items: center;
   gap: 0.35rem;
   justify-content: flex-end;
+  min-width: 0;
 }
-
-.cc-agent:has(.cc-agent__more) {
+.cc-agent__actions .btn-group {
   flex-wrap: wrap;
 }
-.cc-agent:has(.cc-agent__more) .cc-agent__actions {
-  flex: 1 1 100%;
+
+.cc-agent:has(.cc-agent__actions) {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  gap: 0.5rem;
+}
+.cc-agent:has(.cc-agent__actions) .cc-agent__actions {
+  grid-column: 1/-1;
   justify-content: flex-start;
 }
 
 .cc-agent__more {
-  position: relative;
   display: inline-block;
+  flex: 0 0 auto;
+  align-self: flex-start;
+  margin-left: auto;
 }
 
-.cc-panel:has(.cc-agent__menu.show) {
-  overflow: visible;
+.cc-agent__kebab {
+  min-width: 2rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
 }
 
-.cc-agent__menu {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  z-index: 1050;
+.cc-agent__menu.dropdown-menu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1056;
   min-width: 12rem;
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
+  margin: 0;
 }
 
 .cc-agent__monitor,
@@ -632,6 +646,7 @@
 }
 
 .cc-agent__name {
+  max-width: 100%;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;

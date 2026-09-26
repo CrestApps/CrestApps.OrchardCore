@@ -29,7 +29,10 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator
         }
         else if (IsHangup(callEvent))
         {
-            if (_supervisorLegEventSink is not null)
+            // A leg the platform released itself (a stop, a transfer, the call ending) was recorded by whatever released
+            // it. Reporting it again wrote the call's record a second time while the stop was still writing it, and the
+            // stop failed on the conflict (live: POST dashboard/stop answered 500 with a ConcurrencyException).
+            if (_supervisorLegEventSink is not null && state.Detached != true)
             {
                 await _supervisorLegEventSink.OnEndedAsync(
                     TelnyxConstants.ProviderTechnicalName,

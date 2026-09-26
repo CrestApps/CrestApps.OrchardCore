@@ -60,9 +60,10 @@ public sealed partial class TelnyxApiClient
     /// </summary>
     /// <param name="conferenceId">The conference.</param>
     /// <param name="callControlId">The leg to join.</param>
-    /// <param name="supervisorRole">The Telnyx supervisor role (<c>monitor</c>, <c>whisper</c>, <c>barge</c>), or <see langword="null"/> for an ordinary participant.</param>
+    /// <param name="supervisorRole">The Telnyx supervisor role (<c>whisper</c>, <c>barge</c>; a listening supervisor joins as a muted ordinary participant instead), or <see langword="null"/> for an ordinary participant.</param>
     /// <param name="whisperCallControlIds">The legs a whispering supervisor is heard by.</param>
     /// <param name="commandId">The idempotency key.</param>
+    /// <param name="mute">Whether the leg joins muted: heard by nobody, hearing everybody.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     public async Task<TelnyxApiResult> JoinConferenceSilentlyAsync(
         string conferenceId,
@@ -70,6 +71,7 @@ public sealed partial class TelnyxApiClient
         string supervisorRole = null,
         IReadOnlyCollection<string> whisperCallControlIds = null,
         string commandId = null,
+        bool mute = false,
         CancellationToken cancellationToken = default)
     {
         var body = new Dictionary<string, object>(StringComparer.Ordinal)
@@ -77,6 +79,11 @@ public sealed partial class TelnyxApiClient
             ["call_control_id"] = callControlId,
             ["beep_enabled"] = SilentBeep,
         };
+
+        if (mute)
+        {
+            body["mute"] = true;
+        }
 
         AddSupervisorRole(body, supervisorRole, whisperCallControlIds);
 
@@ -121,6 +128,35 @@ public sealed partial class TelnyxApiClient
             HttpMethod.Post,
             $"conferences/{Uri.EscapeDataString(conferenceId ?? string.Empty)}/actions/update",
             body,
+            retryable: true,
+            cancellationToken);
+
+        return result;
+    }
+
+    /// <summary>
+    /// Mutes or unmutes one conference participant (<c>POST /conferences/{id}/actions/mute</c> or <c>unmute</c>). A muted
+    /// participant still hears everybody. The participant is always named: an empty list mutes the whole conference.
+    /// </summary>
+    /// <param name="conferenceId">The conference.</param>
+    /// <param name="callControlId">The participant.</param>
+    /// <param name="mute"><see langword="true"/> to mute, <see langword="false"/> to unmute.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    public async Task<TelnyxApiResult> SetConferenceParticipantMutedAsync(
+        string conferenceId,
+        string callControlId,
+        bool mute,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(callControlId))
+        {
+            return TelnyxApiResult.Failure(null, "A participant is required.");
+        }
+
+        var (result, _) = await SendAsync(
+            HttpMethod.Post,
+            $"conferences/{Uri.EscapeDataString(conferenceId ?? string.Empty)}/actions/{(mute ? "mute" : "unmute")}",
+            new Dictionary<string, object>(StringComparer.Ordinal) { ["call_control_ids"] = new[] { callControlId } },
             retryable: true,
             cancellationToken);
 

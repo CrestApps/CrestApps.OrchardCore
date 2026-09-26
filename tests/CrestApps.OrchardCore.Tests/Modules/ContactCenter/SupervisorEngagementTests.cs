@@ -105,6 +105,36 @@ public sealed class SupervisorEngagementTests
         Assert.Equal(SupervisorEngagementNotification.Ended, Assert.Single(notifier.Engagements).State);
     }
 
+    [Fact]
+    public async Task Stop_WritesTheStopOntoAFreshCopyOfTheCall_NotTheCopyReadBeforeTheProviderWasAsked()
+    {
+        // Arrange: live, the stop's own restored bridge was reported on the call (call.bridged) while the request was
+        // still running, and saving the copy the request had read failed on commit (dashboard/stop answered 500).
+        var provider = MonitoringProvider(out var monitoring, out _);
+        monitoring
+            .Setup(value => value.StopAsync(It.IsAny<ContactCenterVoiceMonitoringRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ContactCenterVoiceProviderResult { Succeeded = true });
+        var readBeforeTheStop = Session(engagedMode: MonitorMode.Monitor);
+        var writtenByTheWebhook = Session(engagedMode: MonitorMode.Monitor);
+        Func<CallSession, bool> change = null;
+        var updater = new Mock<ICallSessionUpdater>();
+        updater
+            .Setup(value => value.UpdateAsync("int1", It.IsAny<Func<CallSession, bool>>(), It.IsAny<CancellationToken>()))
+            .Callback<string, Func<CallSession, bool>, CancellationToken>((_, mutate, _) => change = mutate)
+            .ReturnsAsync(true);
+        var service = CreateService(provider, readBeforeTheStop, new RecordingNotifier(), updater: updater.Object);
+
+        // Act
+        var result = await service.StopEngagementAsync("int1", "sup1", null, MonitorMode.Monitor, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        updater.Verify(value => value.UpdateAsync("int1", It.IsAny<Func<CallSession, bool>>(), It.IsAny<CancellationToken>()), Times.Once);
+        Assert.Single(readBeforeTheStop.ActiveMonitorSessions);
+        Assert.True(change(writtenByTheWebhook));
+        Assert.Empty(writtenByTheWebhook.ActiveMonitorSessions);
+    }
+
     [Theory]
     [InlineData(MonitorMode.Monitor, MonitorMode.Whisper)]
     [InlineData(MonitorMode.Whisper, MonitorMode.Barge)]
@@ -302,7 +332,8 @@ public sealed class SupervisorEngagementTests
         CallSession session,
         RecordingNotifier notifier,
         Mock<IContactCenterEventPublisher> publisher = null,
-        RecordingState recordingState = RecordingState.None)
+        RecordingState recordingState = RecordingState.None,
+        ICallSessionUpdater updater = null)
     {
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager
@@ -344,7 +375,8 @@ public sealed class SupervisorEngagementTests
             }),
             new StubClock(),
             [notifier],
-            agents.Object);
+            agents.Object,
+            updater ?? new InPlaceCallSessionUpdater(interactionManager.Object, sessions.Object));
     }
 
     internal sealed class RecordingNotifier : ISupervisorEngagementNotifier

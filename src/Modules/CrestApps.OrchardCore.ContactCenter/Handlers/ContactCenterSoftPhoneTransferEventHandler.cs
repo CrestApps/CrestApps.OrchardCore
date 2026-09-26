@@ -11,12 +11,19 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.ContactCenter.Handlers;
 
 /// <summary>
-/// Ends a transferred call on the soft phone of the agent who transferred it.
+/// Ends a call on the soft phone of the agent it left: the agent who transferred it, or the agent a supervisor took it
+/// over from.
 /// </summary>
 /// <remarks>
+/// <para>
 /// The soft phone learns about a Contact Center call from the call's own events, and those follow whoever has the
 /// call. Once it has been handed on they go to the next agent, so the agent who handed it over was never told it had
 /// left them and kept a call on screen that was no longer theirs.
+/// </para>
+/// <para>
+/// A takeover is the same hand-over. Live, the released agent's phone kept the call listed as theirs after a supervisor
+/// took it, and pressing its Hang up ended the call on the customer the supervisor was now talking to.
+/// </para>
 /// </remarks>
 public sealed class ContactCenterSoftPhoneTransferEventHandler : IContactCenterEventHandler
 {
@@ -60,11 +67,14 @@ public sealed class ContactCenterSoftPhoneTransferEventHandler : IContactCenterE
     {
         ArgumentNullException.ThrowIfNull(interactionEvent);
 
-        if (interactionEvent.EventType != ContactCenterConstants.Events.InteractionTransferred)
+        var takenOver = interactionEvent.EventType == ContactCenterConstants.Events.SupervisorTookOver;
+
+        if (!takenOver && interactionEvent.EventType != ContactCenterConstants.Events.InteractionTransferred)
         {
             return;
         }
 
+        // A transfer names the agent who handed the call on; a takeover names the agent it was taken from.
         var transferringAgentId = interactionEvent.GetData<CallLifecycleEventData>()?.AgentId;
         var interactionId = string.IsNullOrEmpty(interactionEvent.InteractionId) ? interactionEvent.AggregateId : interactionEvent.InteractionId;
 
@@ -110,7 +120,7 @@ public sealed class ContactCenterSoftPhoneTransferEventHandler : IContactCenterE
                 Metadata = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
                 {
                     ["interactionId"] = interaction.ItemId,
-                    ["transferred"] = true,
+                    [takenOver ? "takenOver" : "transferred"] = true,
                 },
             });
     }

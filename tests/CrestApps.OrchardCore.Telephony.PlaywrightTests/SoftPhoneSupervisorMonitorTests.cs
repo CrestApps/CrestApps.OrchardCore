@@ -141,6 +141,67 @@ public sealed class SoftPhoneSupervisorMonitorTests : SoftPhoneBrowserTest
         Assert.False(await page.EvaluateAsync<bool>("() => window.fakeCcHub.invocations.some(call => call.method === 'StopMonitoring')"));
     }
 
+    [Fact]
+    public async Task TheSupervisorsMicrophone_FollowsTheMode_OffWhileListening_OnWhileCoachingOrJoining_AndAfterATakeover()
+    {
+        // Arrange - live, the phone kept its microphone off on the monitor leg whatever the mode: nobody heard a
+        // supervisor who joined the call, or took it over.
+        var page = await OpenSupervisorPhoneAsync();
+        await RequestAsync(page, "tok-1", "Ann Agent");
+        await page.EvaluateAsync("() => window.fakeTelnyx.ringMonitorLeg('sv-1', 'tok-1')");
+        await page.WaitForFunctionAsync("() => window.fakeTelnyx.byLeg('sv-1').state === 'active'");
+        await EmitAsync(page, "Connected", "Monitor");
+
+        // Act & Assert
+        Assert.True(await SendsAsync(page, "sv-1", expected: false), "The supervisor is heard while listening.");
+
+        await EmitAsync(page, "ModeChanged", "Whisper");
+        Assert.True(await SendsAsync(page, "sv-1", expected: true), "The agent cannot hear a coaching supervisor.");
+
+        await EmitAsync(page, "ModeChanged", "Monitor");
+        Assert.True(await SendsAsync(page, "sv-1", expected: false), "The supervisor is still heard after going back to listening.");
+
+        await EmitAsync(page, "ModeChanged", "Barge");
+        Assert.True(await SendsAsync(page, "sv-1", expected: true), "Nobody hears a supervisor who joined the call.");
+
+        await EmitAsync(page, "ModeChanged", "Monitor");
+        await EmitAsync(page, "TookOver", "Barge");
+        Assert.True(await SendsAsync(page, "sv-1", expected: true), "Nobody hears a supervisor who took the call over.");
+    }
+
+    [Fact]
+    public async Task AnEngagementStartedAsAJoin_IsAnsweredWithTheMicrophoneOn()
+    {
+        // Arrange
+        var page = await OpenSupervisorPhoneAsync();
+        await RequestAsync(page, "tok-1", "Ann Agent", "Barge");
+
+        // Act
+        await page.EvaluateAsync("() => window.fakeTelnyx.ringMonitorLeg('sv-1', 'tok-1')");
+        await page.WaitForFunctionAsync("() => window.fakeTelnyx.byLeg('sv-1').state === 'active'");
+
+        // Assert
+        Assert.True(await SendsAsync(page, "sv-1", expected: true), "Nobody hears a supervisor who joined the call.");
+    }
+
+    // Whether the supervisor's leg comes to send live (or silent) audio within a few seconds.
+    private static Task<bool> SendsAsync(IPage page, string leg, bool expected)
+        => page.EvaluateAsync<bool>(
+            """
+            async ([leg, expected]) => {
+                for (let attempt = 0; attempt < 40; attempt++) {
+                    if ((await window.fakeTelnyx.readSending(leg)).enabled === expected) {
+                        return true;
+                    }
+
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+
+                return false;
+            }
+            """,
+            new object[] { leg, expected });
+
     private async Task<IPage> OpenSupervisorPhoneAsync()
     {
         Server.Provider.BrowserMediaAdapterName = "telnyx-webrtc";
@@ -158,10 +219,10 @@ public sealed class SoftPhoneSupervisorMonitorTests : SoftPhoneBrowserTest
     }
 
     // The server telling the supervisor's phone to expect a leg: what ContactCenterMonitoringService sends before ringing it.
-    private static async Task RequestAsync(IPage page, string token, string agentName)
+    private static async Task RequestAsync(IPage page, string token, string agentName, string mode = "Monitor")
         => await page.EvaluateAsync(
-            "([token, agentName]) => window.fakeCcHub.emit('SupervisorEngagementChanged', { state: 'Requested', interactionId: 'int-1', supervisorUserId: 'sup-1', agentName: agentName, mode: 'Monitor', monitorToken: token })",
-            new[] { token, agentName });
+            "([token, agentName, mode]) => window.fakeCcHub.emit('SupervisorEngagementChanged', { state: 'Requested', interactionId: 'int-1', supervisorUserId: 'sup-1', agentName: agentName, mode: mode, monitorToken: token })",
+            new[] { token, agentName, mode });
 
     private static async Task EmitAsync(IPage page, string state, string mode)
         => await page.EvaluateAsync(

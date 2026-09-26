@@ -486,6 +486,7 @@ public sealed class SupervisorInterventionServiceTests
                 new DefaultTelephonyCommandExecutor(Options.Create(new TelephonyCommandOptions()), Mock.Of<IHostApplicationLifetime>()),
                 [Notifier],
                 new StubClock(),
+                new InPlaceCallSessionUpdater(interactions.Object, sessions.Object),
                 NullLogger<ContactCenterSupervisorInterventionService>.Instance);
         }
 

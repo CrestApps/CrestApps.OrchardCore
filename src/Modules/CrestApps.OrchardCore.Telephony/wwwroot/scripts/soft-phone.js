@@ -2445,6 +2445,24 @@
     }
     return now - arrivedAt < MONITOR_ARM_WAIT_MS ? 'wait' : 'hangup';
   }
+
+  // Whether the supervisor is heard on a monitor leg in `mode` (the engagement's mode, as the platform names it).
+  // Listening is silent: the platform joins the supervisor muted, and the phone keeps its microphone off too. Coaching
+  // is heard by the agent, and joining by everyone -- as is a call the supervisor took over, which is on as joined.
+  function monitorLegTalks(mode) {
+    return mode === 'Whisper' || mode === 'Barge';
+  }
+
+  // Whether any monitor leg this phone holds has the supervisor talking. The shared microphone is live while one does:
+  // the phone turns it off whenever it holds no call of its own, and a monitor leg is never one, so live, a supervisor
+  // who joined a call or took it over was heard by nobody.
+  //   legs - the phone's monitor legs, by token: { info: { mode } }
+  function anyMonitorLegTalks(legs) {
+    return Object.keys(legs || {}).some(function (token) {
+      var leg = legs[token];
+      return !!(leg && leg.info && monitorLegTalks(leg.info.mode));
+    });
+  }
   softPhone.MONITOR_LEG_INTENT = MONITOR_LEG_INTENT;
   softPhone.MONITOR_LEG_HEADER = MONITOR_LEG_HEADER;
   softPhone.MONITOR_ARM_WINDOW_MS = MONITOR_ARM_WINDOW_MS;
@@ -2455,6 +2473,8 @@
   softPhone.readMonitorLegTag = readMonitorLegTag;
   softPhone.claimMonitorLegArm = claimMonitorLegArm;
   softPhone.monitorLegAction = monitorLegAction;
+  softPhone.monitorLegTalks = monitorLegTalks;
+  softPhone.anyMonitorLegTalks = anyMonitorLegTalks;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*
  * When the soft phone rings for a Contact Center offer, and when another open page silences it.
@@ -6737,6 +6757,7 @@
   var readMonitorLegTag = softPhoneModules.readMonitorLegTag;
   var claimMonitorLegArm = softPhoneModules.claimMonitorLegArm;
   var monitorLegAction = softPhoneModules.monitorLegAction;
+  var anyMonitorLegTalks = softPhoneModules.anyMonitorLegTalks;
   var planEntryStart = softPhoneModules.planEntryStart;
   var planEntryEnd = softPhoneModules.planEntryEnd;
   var BRIDGED_DIAL_LEG_CAPABILITY = softPhoneModules.BRIDGED_DIAL_LEG_CAPABILITY;
@@ -10642,6 +10663,11 @@
     // so a report about one call decides it only while that call is the one the agent is talking on (see
     // soft-phone/keypad-dial.js).
     function microphoneEnabledAfter(call) {
+      // A supervisor talking on a monitor leg (coaching, joining, or on a call they took over) is heard on the same
+      // microphone; a monitor leg is no call of the phone's own, so the calls alone would keep it off.
+      if (anyMonitorLegTalks(monitorLegs)) {
+        return true;
+      }
       var others = getActiveCalls().filter(function (active) {
         return active && (!call || active.callId !== call.callId);
       }).map(function (active) {
@@ -11345,6 +11371,30 @@
     function disarmMonitorLeg(token) {
       disarmMonitorLegFor(monitorLegArms, token);
     }
+
+    // The engagement's mode changed (or it was taken over): the microphone follows whether the supervisor is heard.
+    function setMonitorLegMode(token, mode) {
+      var leg = token ? monitorLegs[token] : null;
+      var arm = token && Object.prototype.hasOwnProperty.call(monitorLegArms, token) ? monitorLegArms[token] : null;
+      var holder = leg || arm;
+      if (!holder) {
+        return false;
+      }
+      holder.info = Object.assign({}, holder.info || {}, {
+        mode: mode
+      });
+      matchMicrophoneToMonitorLegs();
+      return true;
+    }
+    function matchMicrophoneToMonitorLegs() {
+      if (!localAudioStream) {
+        return;
+      }
+      var enabled = microphoneEnabledAfter(null);
+      localAudioStream.getAudioTracks().forEach(function (track) {
+        track.enabled = enabled;
+      });
+    }
     function hangupMonitorLeg(token) {
       var leg = token ? monitorLegs[token] : null;
       if (leg && leg.controller) {
@@ -11396,6 +11446,7 @@
         info: arm.info
       };
       reportDiagnostic('info', 'monitor-leg-answered', 'The phone answered the monitor leg it asked for.', tag.legId || '');
+      matchMicrophoneToMonitorLegs();
       controller.answer();
       emitMonitorLeg({
         type: 'answering',
@@ -11414,6 +11465,7 @@
       var leg = monitorLegs[token];
       if (isTelnyxTerminalState(state)) {
         delete monitorLegs[token];
+        matchMicrophoneToMonitorLegs();
         emitMonitorLeg({
           type: 'ended',
           token: token,
@@ -11421,6 +11473,7 @@
           info: leg.info
         });
       } else if (state === 'active') {
+        matchMicrophoneToMonitorLegs();
         emitMonitorLeg({
           type: 'connected',
           token: token,
@@ -15380,6 +15433,7 @@
       armMonitorLeg: armMonitorLeg,
       disarmMonitorLeg: disarmMonitorLeg,
       hangupMonitorLeg: hangupMonitorLeg,
+      setMonitorLegMode: setMonitorLegMode,
       onMonitorLeg: onMonitorLeg,
       // Answers (accepted) or hangs up (not) the leg held for an offer; returns whether a held leg was answered.
       settleOfferLeg: settleOfferLeg,

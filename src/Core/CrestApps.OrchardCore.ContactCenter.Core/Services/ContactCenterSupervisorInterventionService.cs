@@ -40,6 +40,7 @@ public sealed partial class ContactCenterSupervisorInterventionService : IContac
     private readonly ITelephonyCommandExecutor _commandExecutor;
     private readonly ISupervisorEngagementNotifier _notifier;
     private readonly IClock _clock;
+    private readonly ICallSessionUpdater _callSessionUpdater;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -64,6 +65,7 @@ public sealed partial class ContactCenterSupervisorInterventionService : IContac
         ITelephonyCommandExecutor commandExecutor,
         IEnumerable<ISupervisorEngagementNotifier> notifiers,
         IClock clock,
+        ICallSessionUpdater callSessionUpdater,
         ILogger<ContactCenterSupervisorInterventionService> logger)
     {
         _interactionManager = interactionManager;
@@ -84,6 +86,7 @@ public sealed partial class ContactCenterSupervisorInterventionService : IContac
         _commandExecutor = commandExecutor;
         _notifier = notifiers?.FirstOrDefault();
         _clock = clock;
+        _callSessionUpdater = callSessionUpdater;
         _logger = logger;
     }
 

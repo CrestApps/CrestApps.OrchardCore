@@ -138,6 +138,13 @@ internal sealed class TelnyxSupervisedConference
     /// <summary>
     /// Joins a supervisor's leg to the call's conference in a role.
     /// </summary>
+    /// <remarks>
+    /// Listening is never Telnyx's <c>monitor</c> supervisor role. Live, every conference a supervisor joined as
+    /// <c>monitor</c> stopped carrying the customer's and the agent's audio to each other (the agent's phone kept receiving
+    /// packets at an inbound level of 0.002, against 0.4 in the same call's conference joined as <c>whisper</c>), and a
+    /// later change of role did not bring it back. A listening supervisor joins as an ordinary participant, muted: they
+    /// hear everybody and nobody hears them.
+    /// </remarks>
     public async Task<bool> JoinSupervisorAsync(
         string conferenceId,
         string supervisorLegId,
@@ -145,13 +152,15 @@ internal sealed class TelnyxSupervisedConference
         string agentLegId,
         CancellationToken cancellationToken)
     {
+        var listening = IsListening(role);
         var joined = await _apiClient.JoinConferenceSilentlyAsync(
             conferenceId,
             supervisorLegId,
-            role,
+            listening ? null : role,
             WhisperTargets(role, agentLegId),
             commandId: $"cc-sv-join-{supervisorLegId}",
-            cancellationToken);
+            mute: listening,
+            cancellationToken: cancellationToken);
 
         if (joined.Succeeded || TelnyxApiErrors.IsAlreadyInConference(joined))
         {
@@ -173,25 +182,47 @@ internal sealed class TelnyxSupervisedConference
     /// </summary>
     /// <returns><see langword="true"/> when Telnyx changed it; <see langword="false"/> when the call has no running conference or the supervisor is not in it yet.</returns>
     public async Task<bool> SwitchRoleAsync(
-        string customerLegId,
+        string conferenceName,
         string supervisorLegId,
         string role,
         string agentLegId,
         CancellationToken cancellationToken)
     {
-        var conference = await _apiClient.FindLiveConferenceByNameAsync(ConferenceName(customerLegId), cancellationToken);
+        var conference = await _apiClient.FindLiveConferenceByNameAsync(conferenceName, cancellationToken);
 
         if (string.IsNullOrWhiteSpace(conference.ConferenceId))
         {
             return false;
         }
 
-        var updated = await _apiClient.UpdateConferenceSupervisorRoleAsync(
-            conference.ConferenceId,
-            supervisorLegId,
-            role,
-            WhisperTargets(role, agentLegId),
-            cancellationToken);
+        TelnyxApiResult updated;
+
+        if (IsListening(role))
+        {
+            // Muted before the role goes: a whisperer made an ordinary participant first would be heard by the customer
+            // for a moment.
+            updated = await _apiClient.SetConferenceParticipantMutedAsync(conference.ConferenceId, supervisorLegId, mute: true, cancellationToken);
+
+            if (updated.Succeeded)
+            {
+                updated = await _apiClient.UpdateConferenceSupervisorRoleAsync(conference.ConferenceId, supervisorLegId, "none", whisperCallControlIds: null, cancellationToken);
+            }
+        }
+        else
+        {
+            // The role first, so a listener made to whisper is never heard by the customer on the way.
+            updated = await _apiClient.UpdateConferenceSupervisorRoleAsync(
+                conference.ConferenceId,
+                supervisorLegId,
+                role,
+                WhisperTargets(role, agentLegId),
+                cancellationToken);
+
+            if (updated.Succeeded)
+            {
+                updated = await _apiClient.SetConferenceParticipantMutedAsync(conference.ConferenceId, supervisorLegId, mute: false, cancellationToken);
+            }
+        }
 
         if (!updated.Succeeded && _logger.IsEnabled(LogLevel.Debug))
         {
@@ -205,6 +236,10 @@ internal sealed class TelnyxSupervisedConference
 
         return updated.Succeeded;
     }
+
+    // Whether a Contact Center mode's Telnyx role is listening only.
+    private static bool IsListening(string role)
+        => string.IsNullOrWhiteSpace(role) || string.Equals(role, "monitor", StringComparison.Ordinal);
 
     /// <summary>
     /// Puts the call back on a bridge once no supervisor is left in its conference.

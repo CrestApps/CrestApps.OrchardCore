@@ -176,8 +176,10 @@
                 var status = agent.presenceStatus || 'Offline';
                 var detail = agent.presenceReason || status;
 
-                // Listen / Whisper / Barge, Stop, Take over and the More menu (see supervisor-interventions.js).
+                // Listen / Whisper / Barge, Stop and Take over under the name, and the More menu's kebab at the far right
+                // of the name row (see supervisor-interventions.js).
                 var actions = interventions ? interventions.actionsHtml(agent, state) : '';
+                var menu = interventions ? interventions.menuHtml(agent, state) : '';
 
                 return '<div class="cc-agent">' +
                     '<span class="cc-presence__dot is-' + status.toLowerCase() + '"></span>' +
@@ -186,6 +188,7 @@
                         '<span class="cc-agent__state badge ta-badge text-bg-secondary">' + escapeHtml(detail) + '</span>' +
                     '</span>' +
                     '<span class="cc-badge-count" title="' + escapeHtml(label('activeInteractions', 'Active interactions')) + '">' + agent.activeInteractions + '</span>' +
+                    menu +
                     actions +
                 '</div>';
             }).join('');

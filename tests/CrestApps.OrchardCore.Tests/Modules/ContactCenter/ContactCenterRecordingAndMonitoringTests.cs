@@ -528,7 +528,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             new FakeCallControlAuthorizationService(),
             new StubClock(),
             [],
-            Mock.Of<IAgentProfileManager>());
+            Mock.Of<IAgentProfileManager>(),
+            new InPlaceCallSessionUpdater(interactionManager.Object, CreateCallSessionManager().Object));
 
         // Act
         var result = await service.EngageAsync("int1", "sup1", MonitorMode.Whisper, TestContext.Current.CancellationToken);
@@ -569,7 +570,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             new FakeCallControlAuthorizationService(),
             new StubClock(),
             [],
-            Mock.Of<IAgentProfileManager>());
+            Mock.Of<IAgentProfileManager>(),
+            new InPlaceCallSessionUpdater(interactionManager.Object, CreateCallSessionManager().Object));
 
         // Act
         var result = await service.EngageAsync("int1", "sup1", MonitorMode.Barge, TestContext.Current.CancellationToken);
@@ -624,7 +626,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             }),
             new StubClock(),
             [],
-            Mock.Of<IAgentProfileManager>());
+            Mock.Of<IAgentProfileManager>(),
+            new InPlaceCallSessionUpdater(interactionManager.Object, CreateCallSessionManager(callSession).Object));
 
         // Act
         var result = await service.EngageAsync("int1", "sup1", MonitorMode.Barge, TestContext.Current.CancellationToken);
@@ -680,7 +683,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             new FakeCallControlAuthorizationService(),
             new StubClock(),
             [],
-            Mock.Of<IAgentProfileManager>());
+            Mock.Of<IAgentProfileManager>(),
+            new InPlaceCallSessionUpdater(interactionManager.Object, CreateCallSessionManager().Object));
 
         // Act
         var result = await service.EngageAsync(
@@ -714,7 +718,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             new FakeCallControlAuthorizationService(),
             new StubClock(),
             [],
-            Mock.Of<IAgentProfileManager>());
+            Mock.Of<IAgentProfileManager>(),
+            new InPlaceCallSessionUpdater(interactionManager.Object, CreateCallSessionManager().Object));
 
         // Act
         var result = await service.EngageAsync(
@@ -760,7 +765,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             new FakeCallControlAuthorizationService(),
             new StubClock(),
             [],
-            Mock.Of<IAgentProfileManager>());
+            Mock.Of<IAgentProfileManager>(),
+            new InPlaceCallSessionUpdater(interactionManager.Object, CreateCallSessionManager().Object));
 
         // Act
         var result = await service.EngageAsync("int1", "sup1", MonitorMode.Monitor, TestContext.Current.CancellationToken);
@@ -792,7 +798,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             new FakeCallControlAuthorizationService(),
             new StubClock(),
             [],
-            Mock.Of<IAgentProfileManager>());
+            Mock.Of<IAgentProfileManager>(),
+            new InPlaceCallSessionUpdater(interactionManager.Object, CreateCallSessionManager().Object));
 
         // Act
         var modes = await service.GetAvailableModesAsync("int1", TestContext.Current.CancellationToken);
@@ -821,7 +828,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             new FakeCallControlAuthorizationService(),
             new StubClock(),
             [],
-            Mock.Of<IAgentProfileManager>());
+            Mock.Of<IAgentProfileManager>(),
+            new InPlaceCallSessionUpdater(interactionManager.Object, CreateCallSessionManager().Object));
 
         // Act
         var modes = await service.GetAvailableModesAsync("int1", TestContext.Current.CancellationToken);
@@ -850,7 +858,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             new FakeCallControlAuthorizationService(),
             new StubClock(),
             [],
-            Mock.Of<IAgentProfileManager>());
+            Mock.Of<IAgentProfileManager>(),
+            new InPlaceCallSessionUpdater(interactionManager.Object, CreateCallSessionManager().Object));
 
         // Act
         var modes = await service.GetAvailableModesAsync(interaction, TestContext.Current.CancellationToken);

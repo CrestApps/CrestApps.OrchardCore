@@ -116,27 +116,31 @@ public sealed partial class ContactCenterSupervisorInterventionService
             return SupervisorEngagementResult.Unknown("The takeover was interrupted before the provider outcome could be confirmed.");
         }
 
-        // Read again: the release of the agent's leg comes back as a provider event that may already be recorded.
-        interaction = await _interactionManager.FindByIdAsync(interaction.ItemId, CancellationToken.None) ?? interaction;
-        session = await _callSessionManager.FindByInteractionIdAsync(interaction.ItemId, CancellationToken.None) ?? session;
-
         var now = _clock.UtcNow;
         var previousAgentId = session.AgentId ?? interaction.AgentId;
         var mode = engagement.Mode;
 
-        CallTopologyProjector.EndLeg(session, agentLegId, now, HangupCause.NormalClearing);
+        // Written onto a fresh copy of both: the release of the agent's leg comes back as a provider event on this very
+        // call while the provider is still being asked, and writing the copy read before it failed on commit.
+        await _callSessionUpdater.UpdateWithInteractionAsync(interaction.ItemId, (current, currentInteraction) =>
+        {
+            previousAgentId = current.AgentId ?? currentInteraction.AgentId ?? previousAgentId;
 
-        // The engagement becomes the handling: the supervisor is no longer listening to the call, they are on it.
-        CallTopologyProjector.EndMonitorSession(session, supervisorUserId, now);
-        CallTopologyProjector.UpsertLeg(session, supervisorLegId, CallPartyRole.Agent, CallLegStatus.Answered, now, agentId: supervisorAgentId);
-        CallTopologyProjector.EnsureBridge(session, session.Bridge?.ProviderBridgeId, now);
-        CallTopologyProjector.Join(session, supervisorLegId, CallPartyRole.Agent, now, supervisorAgentId);
+            CallTopologyProjector.EndLeg(current, agentLegId, now, HangupCause.NormalClearing);
 
-        session.AgentId = supervisorAgentId;
-        interaction.AgentId = supervisorAgentId;
+            // The engagement becomes the handling: the supervisor is no longer listening to the call, they are on it.
+            CallTopologyProjector.EndMonitorSession(current, supervisorUserId, now);
+            CallTopologyProjector.UpsertLeg(current, supervisorLegId, CallPartyRole.Agent, CallLegStatus.Answered, now, agentId: supervisorAgentId);
+            CallTopologyProjector.EnsureBridge(current, current.Bridge?.ProviderBridgeId, now);
+            CallTopologyProjector.Join(current, supervisorLegId, CallPartyRole.Agent, now, supervisorAgentId);
 
-        await _callSessionManager.UpdateAsync(session, cancellationToken: CancellationToken.None);
-        await _interactionManager.UpdateAsync(interaction, cancellationToken: CancellationToken.None);
+            current.AgentId = supervisorAgentId;
+            currentInteraction.AgentId = supervisorAgentId;
+            session = current;
+            interaction = currentInteraction;
+
+            return true;
+        }, CancellationToken.None);
 
         var actor = ContactCenterActor.Supervisor(supervisorUserId);
 

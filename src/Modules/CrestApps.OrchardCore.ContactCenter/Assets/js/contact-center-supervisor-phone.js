@@ -82,6 +82,13 @@
                 });
             }
 
+            // Whether the supervisor is heard follows the mode: silent while listening, heard while coaching or joining,
+            // and on a call they took over. Live, the phone kept its microphone off on every mode.
+            if (engagement.phase !== 'ended' && engagement.token && typeof api.setMonitorLegMode === 'function' &&
+                (!previous || previous.token !== engagement.token || previous.mode !== engagement.mode)) {
+                api.setMonitorLegMode(engagement.token, engagement.mode);
+            }
+
             if (engagement.phase === 'ended' && previous && previous.phase !== 'ended') {
                 // Nothing is expected any more, and a leg still up is let go.
                 api.disarmMonitorLeg(engagement.token);
