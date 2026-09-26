@@ -216,16 +216,23 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
         // The reservation and call session release their agent association when the offer is released, so record the
         // recipient agent explicitly. The offer-timeout path carries the agent on the request; the direct-to-agent
         // path carries the target agent in interaction metadata.
-        // A call with no agent of its own — a queue line's caller — falls back to the entry point's voicemail inbox;
-        // without it the message was recorded and delivered to nobody.
-        var recipientAgentId = !string.IsNullOrWhiteSpace(request.AgentId)
-            ? request.AgentId
-            : ReadMetadataString(interaction, ContactCenterConstants.DirectRouting.TargetAgentMetadataKey)
-                ?? ReadMetadataString(interaction, ContactCenterConstants.Voicemail.MailboxAgentMetadataKey);
+        // A call with no agent of its own — a queue line's caller — falls back to the line's mailbox: the entry point's
+        // voicemail inbox agent, or the shared box of the queue the caller was in. Without either the message was
+        // recorded and delivered to nobody.
+        var recipient = VoicemailDelivery.Resolve(interaction, request.AgentId);
+        var recipientAgentId = recipient.AgentId;
 
         string greetingText = null;
         string greetingMediaUrl = null;
         string greetingMediaName = null;
+
+        // A shared box's message belongs to the queue's team, so no agent is recorded as its recipient: that keeps it out
+        // of every agent's personal Voicemail tab, and the shared voicemail projection files it under the queue instead.
+        // The team has no greeting of its own, so the line's greeting below is the one the caller hears.
+        if (!string.IsNullOrWhiteSpace(recipient.SharedQueueId))
+        {
+            interaction.TechnicalMetadata[ContactCenterConstants.Voicemail.SharedQueueMetadataKey] = recipient.SharedQueueId;
+        }
 
         if (!string.IsNullOrWhiteSpace(recipientAgentId))
         {
@@ -487,14 +494,6 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
             ProviderCallId = request.ProviderCallId,
         }, cancellationToken);
     }
-
-    // Agent identifiers are written as strings, and a string metadata value comes back from the store as one.
-    private static string ReadMetadataString(Interaction interaction, string key)
-        => interaction.TechnicalMetadata.TryGetValue(key, out var value) &&
-            value?.ToString() is { Length: > 0 } text &&
-            !string.IsNullOrWhiteSpace(text)
-            ? text
-            : null;
 
     private static bool IsTerminal(InteractionStatus status)
     {

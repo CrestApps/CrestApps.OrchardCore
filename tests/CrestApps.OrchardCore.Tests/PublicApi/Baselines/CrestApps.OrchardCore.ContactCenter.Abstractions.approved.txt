@@ -256,6 +256,8 @@ namespace CrestApps.OrchardCore.ContactCenter
             public const string MailboxAgentMetadataKey = "voicemailMailboxAgentId";
             public const string ProjectionMetadataKey = "agentVoicemailProjection";
             public const string RecipientAgentMetadataKey = "agentVoicemailRecipientAgentId";
+            public const string SharedMailboxQueueMetadataKey = "voicemailSharedMailboxQueueId";
+            public const string SharedQueueMetadataKey = "voicemailSharedQueueId";
         }
     }
     public sealed class ContactCenterFeatureLifecycleOptions
@@ -826,6 +828,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
     {
         Queue = 0,
         Agent = 1,
+    }
+    public enum EntryPointVoicemailDestination
+    {
+        AgentInbox = 0,
+        QueueSharedBox = 1,
     }
     public sealed class InboundVoiceEvent
     {

@@ -83,6 +83,14 @@ public sealed class ContactCenterEntryPoint : CatalogItem, INameAwareModel, IMod
     public string VoicemailRecipientAgentId { get; set; }
 
     /// <summary>
+    /// Gets or sets where a queue line delivers a message the call has no agent for: the agent inbox named by
+    /// <see cref="VoicemailRecipientAgentId"/> (the default, so an entry point saved before this choice existed keeps
+    /// delivering where it did), or the shared voicemail box of the queue the caller was in. It does not apply to an
+    /// agent-target entry point, whose messages always go to its agent.
+    /// </summary>
+    public EntryPointVoicemailDestination VoicemailDestination { get; set; } = EntryPointVoicemailDestination.AgentInbox;
+
+    /// <summary>
     /// Gets or sets the identifier of the business-hours calendar that gates when the entry point is open.
     /// When empty, the entry point is always open.
     /// </summary>

@@ -116,6 +116,26 @@ public sealed partial class InboundVoiceServiceTests
     }
 
     [Fact]
+    public async Task ACallToAQueueLineDeliveringToTheSharedBox_CarriesTheQueueNotAnAgent()
+    {
+        // Arrange
+        // The line's messages belong to the queue's team, so the call carries the queue whose box receives them and
+        // no single agent's inbox, even when one is still configured from before.
+        var (harness, interaction) = MenuHarness(
+            isOpen: true,
+            voicemailRecipientAgentId: "agent-inbox",
+            voicemailDestination: EntryPointVoicemailDestination.QueueSharedBox);
+        var service = harness.CreateService();
+
+        // Act
+        await service.HandleInboundAsync(MenuCall(), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("q-main", interaction.TechnicalMetadata[ContactCenterConstants.Voicemail.SharedMailboxQueueMetadataKey]);
+        Assert.False(interaction.TechnicalMetadata.ContainsKey(ContactCenterConstants.Voicemail.MailboxAgentMetadataKey));
+    }
+
+    [Fact]
     public async Task ACallToALineWithNoVoicemailInbox_CarriesNone()
     {
         // Arrange
@@ -138,7 +158,11 @@ public sealed partial class InboundVoiceServiceTests
             ToAddress = "+15553334444",
         };
 
-    private static (Harness Harness, Interaction Interaction) MenuHarness(bool isOpen, string rootNodeId = "root", string voicemailRecipientAgentId = null)
+    private static (Harness Harness, Interaction Interaction) MenuHarness(
+        bool isOpen,
+        string rootNodeId = "root",
+        string voicemailRecipientAgentId = null,
+        EntryPointVoicemailDestination voicemailDestination = EntryPointVoicemailDestination.AgentInbox)
     {
         var harness = new Harness();
         harness.SetupNoContext();
@@ -160,6 +184,7 @@ public sealed partial class InboundVoiceServiceTests
             TargetQueueId = "q-main",
             ClosedAction = EntryPointClosedAction.Voicemail,
             VoicemailRecipientAgentId = voicemailRecipientAgentId,
+            VoicemailDestination = voicemailDestination,
             IvrFlow = new IvrFlow
             {
                 RootNodeId = rootNodeId,

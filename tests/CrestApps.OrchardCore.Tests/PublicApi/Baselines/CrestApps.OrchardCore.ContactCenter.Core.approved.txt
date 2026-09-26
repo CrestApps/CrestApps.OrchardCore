@@ -1247,6 +1247,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string TargetAgentId { get; set; }
         public string TargetQueueId { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Models.EntryPointTargetType TargetType { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Models.EntryPointVoicemailDestination VoicemailDestination { get; set; }
         public bool VoicemailEnabled { get; set; }
         public string VoicemailGreetingText { get; set; }
         public string VoicemailRecipientAgentId { get; set; }
@@ -5148,6 +5149,21 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public VoiceMediaItemStore(YesSql.ISession session) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaItem> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaItem>> GetAllAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public static class VoicemailDelivery
+    {
+        public static string GetSharedQueueId(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
+        public static CrestApps.OrchardCore.ContactCenter.Core.Services.VoicemailRecipient Resolve(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, string offeredAgentId = null) { }
+        public static bool StampMailbox(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint entryPoint, string queueId = null) { }
+    }
+    public sealed class VoicemailRecipient : System.IEquatable<CrestApps.OrchardCore.ContactCenter.Core.Services.VoicemailRecipient>
+    {
+        public VoicemailRecipient(string AgentId, string SharedQueueId) { }
+        public string AgentId { get; init; }
+        public string SharedQueueId { get; init; }
+        public static CrestApps.OrchardCore.ContactCenter.Core.Services.VoicemailRecipient None { get; }
+        public static CrestApps.OrchardCore.ContactCenter.Core.Services.VoicemailRecipient ForAgent(string agentId) { }
+        public static CrestApps.OrchardCore.ContactCenter.Core.Services.VoicemailRecipient ForSharedQueue(string queueId) { }
     }
     public sealed class WarmTransferService : CrestApps.OrchardCore.ContactCenter.Core.Services.IWarmTransferService
     {

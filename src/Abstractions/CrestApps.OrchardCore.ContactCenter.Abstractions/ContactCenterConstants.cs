@@ -184,6 +184,22 @@ public static partial class ContactCenterConstants
         /// nobody's.
         /// </summary>
         public const string MailboxAgentMetadataKey = "voicemailMailboxAgentId";
+
+        /// <summary>
+        /// The interaction-metadata key that carries the queue whose shared voicemail box receives a message the call
+        /// has no agent for, stamped when the inbound call arrives on a queue line whose entry point delivers such
+        /// messages to the queue's shared box instead of to one agent's inbox. It records the intent only: where the
+        /// message is actually delivered is decided when the call is sent to voicemail, and is recorded under
+        /// <see cref="SharedQueueMetadataKey"/>.
+        /// </summary>
+        public const string SharedMailboxQueueMetadataKey = "voicemailSharedMailboxQueueId";
+
+        /// <summary>
+        /// The interaction technical-metadata key that records the queue whose shared voicemail box a message was
+        /// delivered to. While set, the message belongs to that queue's team rather than to any one agent, so it is
+        /// kept out of every agent's personal Voicemail tab.
+        /// </summary>
+        public const string SharedQueueMetadataKey = "voicemailSharedQueueId";
     }
 
     /// <summary>

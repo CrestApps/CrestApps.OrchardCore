@@ -213,6 +213,78 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
         Assert.Equal(expectedRecipient, interaction.TechnicalMetadata[ContactCenterConstants.Voicemail.RecipientAgentMetadataKey]);
     }
 
+    [Theory]
+    [InlineData(null, "queue-main")]
+    [InlineData("agent-9", null)]
+    public async Task ExecuteAsync_SendToVoicemail_ALineDeliveringToTheSharedBox_LeavesTheMessageForTheQueue(string? offeredAgentId, string? expectedSharedQueueId)
+    {
+        // Arrange
+        // A queue line whose messages go to the queue's shared box: the message is the team's, not one agent's. An agent
+        // who let the offered call ring out still gets it in their own inbox.
+        var telephonyService = new Mock<ITelephonyService>(MockBehavior.Strict);
+        CallReference? capturedCall = null;
+        SetupTelephonySuccess(
+            telephonyService,
+            ProviderCommandType.SendToVoicemail,
+            call =>
+            {
+                capturedCall = call;
+                return TelephonyResult.Success(new TelephonyCall { CallId = "provider-call-77" });
+            });
+
+        var interaction = new Interaction { ItemId = "interaction-1", QueueId = "queue-main" }
+            .RestorePersistedStatus(InteractionStatus.Ringing);
+        interaction.TechnicalMetadata[ContactCenterConstants.Voicemail.SharedMailboxQueueMetadataKey] = "queue-main";
+        interaction.TechnicalMetadata[ContactCenterConstants.Voicemail.EntryPointGreetingTextMetadataKey] = "You have reached the support team.";
+
+        var interactionManager = new Mock<IInteractionManager>(MockBehavior.Strict);
+        interactionManager
+            .Setup(manager => manager.FindByIdAsync("interaction-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+        interactionManager
+            .Setup(manager => manager.UpdateAsync(interaction, It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()))
+            .Returns(ValueTask.CompletedTask);
+
+        var publisher = new Mock<IContactCenterEventPublisher>(MockBehavior.Strict);
+        publisher
+            .Setup(value => value.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var executor = CreateExecutor(ProviderCommandType.SendToVoicemail, telephonyService, interactionManager, publisher, CreateClock());
+        var command = CreateCommand(
+            ProviderCommandType.SendToVoicemail,
+            requestPayload: JsonSerializer.Serialize(new ProviderCallActionCommandRequest
+            {
+                Initiator = CallControlInitiator.System,
+                ActivityItemId = "activity-1",
+                InteractionId = "interaction-1",
+                QueueId = "queue-main",
+                ProviderCallId = "call-1",
+                AgentId = offeredAgentId,
+            }));
+
+        // Act
+        var result = await executor.ExecuteAsync(command, CreateClaim(command), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.True((bool)interaction.TechnicalMetadata[ContactCenterConstants.Voicemail.ProjectionMetadataKey]);
+
+        if (expectedSharedQueueId is null)
+        {
+            Assert.Equal(offeredAgentId, interaction.TechnicalMetadata[ContactCenterConstants.Voicemail.RecipientAgentMetadataKey]);
+            Assert.False(interaction.TechnicalMetadata.ContainsKey(ContactCenterConstants.Voicemail.SharedQueueMetadataKey));
+        }
+        else
+        {
+            Assert.Equal(expectedSharedQueueId, interaction.TechnicalMetadata[ContactCenterConstants.Voicemail.SharedQueueMetadataKey]);
+            Assert.False(interaction.TechnicalMetadata.ContainsKey(ContactCenterConstants.Voicemail.RecipientAgentMetadataKey));
+
+            // The team's box has no agent greeting, so the line's own greeting is the one the caller hears.
+            Assert.Equal("You have reached the support team.", capturedCall!.Metadata[ContactCenterConstants.Voicemail.GreetingTextMetadataKey]);
+        }
+    }
+
     [Fact]
     public async Task ExecuteAsync_SendToVoicemail_PassesRecipientAgentGreetingToTheProvider()
     {

@@ -79,8 +79,16 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
             return;
         }
 
-        var session = await _callSessionManager.FindByInteractionIdAsync(interaction.ItemId, cancellationToken);
         var isVoicemail = IsVoicemailProjection(interaction);
+
+        // A message in a queue's shared box belongs to the queue's team, not to any one agent. Without this it landed in
+        // the personal Voicemail tab of whichever agent the call was last offered to, as well as in the team's box.
+        if (isVoicemail && VoicemailDelivery.GetSharedQueueId(interaction) is not null)
+        {
+            return;
+        }
+
+        var session = await _callSessionManager.FindByInteractionIdAsync(interaction.ItemId, cancellationToken);
         var agentId = ResolveAgentId(interaction, session, isVoicemail);
 
         if (string.IsNullOrEmpty(agentId))
