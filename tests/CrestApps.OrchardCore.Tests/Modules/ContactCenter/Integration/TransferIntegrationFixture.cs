@@ -39,11 +39,13 @@ internal sealed class TransferIntegrationFixture : IAsyncDisposable
     public const string OwnNumber = "+15550001111";
 
     private readonly IContactCenterVoiceProvider _providerOverride;
+    private readonly IQueueTreatmentProvider _treatmentOverride;
 
-    private TransferIntegrationFixture(DialerModeIntegrationHarness harness, IContactCenterVoiceProvider providerOverride)
+    private TransferIntegrationFixture(DialerModeIntegrationHarness harness, IContactCenterVoiceProvider providerOverride, IQueueTreatmentProvider treatmentOverride)
     {
         Harness = harness;
         _providerOverride = providerOverride;
+        _treatmentOverride = treatmentOverride;
     }
 
     public DialerModeIntegrationHarness Harness { get; }
@@ -51,6 +53,11 @@ internal sealed class TransferIntegrationFixture : IAsyncDisposable
     public FakeTransferVoiceProvider Provider { get; } = new();
 
     public RecordingQueueTreatmentProvider Treatment { get; } = new();
+
+    /// <summary>
+    /// Gets the queues the fixture routes to, by identifier, so a test can change what one plays.
+    /// </summary>
+    public Dictionary<string, ActivityQueue> Queues { get; private set; }
 
     /// <summary>
     /// Gets the supervisor monitoring a transfer or a consult releases the call's supervisors through.
@@ -88,10 +95,12 @@ internal sealed class TransferIntegrationFixture : IAsyncDisposable
     /// and Available.
     /// </summary>
     /// <param name="provider">A real provider to run the transfer against instead of the recording fake.</param>
-    public static async Task<TransferIntegrationFixture> CreateAsync(IContactCenterVoiceProvider provider = null)
+    /// <param name="treatment">A real treatment provider to play the caller's audio through instead of the recording
+    /// fake.</param>
+    public static async Task<TransferIntegrationFixture> CreateAsync(IContactCenterVoiceProvider provider = null, IQueueTreatmentProvider treatment = null)
     {
         var harness = await DialerModeIntegrationHarness.CreateAsync();
-        var fixture = new TransferIntegrationFixture(harness, provider);
+        var fixture = new TransferIntegrationFixture(harness, provider, treatment);
 
         await harness.SignInAgentAsync(AgentA, UserA);
         await harness.SeedQueuedActivityAsync(ActivityId, "+15557000001");
@@ -178,7 +187,7 @@ internal sealed class TransferIntegrationFixture : IAsyncDisposable
         var clock = services.GetRequiredService<IClock>();
 
         var queueManager = new Mock<IActivityQueueManager>();
-        var queues = new Dictionary<string, ActivityQueue>(StringComparer.Ordinal)
+        var queues = Queues = new Dictionary<string, ActivityQueue>(StringComparer.Ordinal)
         {
             [DialerModeIntegrationHarness.QueueId] = new ActivityQueue
             {
@@ -214,15 +223,17 @@ internal sealed class TransferIntegrationFixture : IAsyncDisposable
         providerResolver.Setup(resolver => resolver.Get()).Returns(provider);
 
         var availability = new HarnessAvailabilityService(Harness.AgentManager);
+        var treatmentProvider = _treatmentOverride ?? Treatment;
         var treatment = new QueueTreatmentService(
             services.GetRequiredService<IQueueItemManager>(),
             services.GetRequiredService<IInteractionManager>(),
-            Treatment,
+            treatmentProvider,
             availability,
             clock,
+            new PassThroughStringLocalizer<QueueTreatmentService>(),
             NullLogger<QueueTreatmentService>.Instance);
 
-        var queueService = ActivatorUtilities.CreateInstance<ActivityQueueService>(services, queueManager.Object, businessHours.Object, (IQueueTreatmentProvider)Treatment);
+        var queueService = ActivatorUtilities.CreateInstance<ActivityQueueService>(services, queueManager.Object, businessHours.Object, treatmentProvider);
         var reservationService = ActivatorUtilities.CreateInstance<ActivityReservationService>(services, queueManager.Object, (IActivityQueueService)queueService, (IAgentAvailabilityService)availability);
         var withdrawalService = ActivatorUtilities.CreateInstance<QueuedWorkWithdrawalService>(services, (IActivityQueueService)queueService, (IActivityReservationService)reservationService);
         var routingService = new ActivityRoutingService([new LongestIdleRoutingStrategy()]);
@@ -489,6 +500,8 @@ internal sealed class FakeTransferVoiceProvider :
 /// </summary>
 internal sealed class RecordingQueueTreatmentProvider : IQueueTreatmentProvider
 {
+    public string SpeechLanguage { get; set; }
+
     public List<(string CallId, string MediaId)> HoldMusicStarted { get; } = [];
 
     public List<string> HoldMusicStopped { get; } = [];

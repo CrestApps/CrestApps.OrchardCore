@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -13,6 +14,8 @@ namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter.Integration;
 /// </summary>
 public sealed class IvrCallerWaitIntegrationTests
 {
+    private const string ConfirmationMessage = "Thank you. We will call you back at the number you are calling from, and you will keep your place in line. Goodbye.";
+
     [Fact]
     public async Task AnAgentChoice_PlaysTheLinesMusicWhileTheAgentRings_AndStopsItWhenTheCallGoesToVoicemail()
     {
@@ -75,9 +78,52 @@ public sealed class IvrCallerWaitIntegrationTests
         Assert.Equal(QueueItemStatus.Removed, item.Status);
         Assert.NotNull(item.CallbackAcceptedUtc);
 
-        Assert.Equal((IvrIntegrationFixture.CallId, QueueCallbackOfferResponder.ConfirmationMessage), fixture.Treatment.EndedWithMessage.Single());
+        Assert.Equal((IvrIntegrationFixture.CallId, ConfirmationMessage), fixture.Treatment.EndedWithMessage.Single());
         Assert.Equal(ActivityStatus.Completed, fixture.FindActivity().Status);
         Assert.Equal(QueueCallbackOfferResponder.ReasonCode, fixture.FindActivity().TerminalReasonCode);
+    }
+
+    [Fact]
+    public async Task ACallerWhoTookACallback_IsReportedAsACallbackRequest_NotAsAnAbandon()
+    {
+        // Arrange
+        // The reports counted every caller who pressed to be called back as having given up.
+        await using var fixture = await OfferedACallbackAsync();
+        var enteredUtc = (await fixture.FindQueueItemAsync()).QueueEnteredUtc;
+        fixture.Harness.Clock.Advance(TimeSpan.FromSeconds(40));
+
+        // Act
+        await fixture.PressAsync("1", "gather-callback");
+        await fixture.PressAsync("1", "gather-callback");
+        await fixture.Harness.CommitAsync();
+
+        // Assert
+        var requested = Assert.Single(fixture.Events, value => value.EventType == ContactCenterConstants.Events.CallbackRequested);
+        var data = requested.GetData<CallLifecycleEventData>();
+        Assert.Equal(IvrIntegrationFixture.SalesQueueId, data.QueueId);
+        Assert.Equal((fixture.Harness.Clock.UtcNow - enteredUtc).TotalSeconds, data.DurationSeconds.Value, 3);
+
+        var interaction = await fixture.FindInteractionAsync();
+        var outcomes = InteractionOutcomeClassifier.FromEvents(fixture.Events);
+        Assert.Equal(InteractionOutcome.CallbackRequested, outcomes.Classify(interaction));
+        Assert.Equal(InteractionOutcome.CallbackRequested, InteractionOutcomeClassifier.WithoutEvents.Classify(interaction));
+    }
+
+    [Fact]
+    public async Task TheCallbackConfirmation_IsWordedInTheLanguageTheProviderSpeaks()
+    {
+        // Arrange
+        await using var fixture = await OfferedACallbackAsync();
+        fixture.Treatment.SpeechLanguage = "es-MX";
+        fixture.CallbackLocalizer.Add("es-MX", ConfirmationMessage, "Gracias. Le llamaremos al número desde el que llama y conservará su lugar en la fila. Adiós.");
+
+        // Act
+        await fixture.PressAsync("1", "gather-callback");
+
+        // Assert
+        Assert.Equal(
+            (IvrIntegrationFixture.CallId, "Gracias. Le llamaremos al número desde el que llama y conservará su lugar en la fila. Adiós."),
+            fixture.Treatment.EndedWithMessage.Single());
     }
 
     [Fact]

@@ -232,6 +232,12 @@ public static partial class ContactCenterConstants
         public const string CallSentToVoicemail = "CallSentToVoicemail";
 
         /// <summary>
+        /// Raised when a caller waiting in a queue accepts the queue's callback offer and leaves the call to be called
+        /// back. The call neither was answered nor abandoned: the contact continues as the scheduled callback.
+        /// </summary>
+        public const string CallbackRequested = "CallbackRequested";
+
+        /// <summary>
         /// Raised when an agent accepts an offered interaction.
         /// </summary>
         public const string OfferAccepted = "OfferAccepted";

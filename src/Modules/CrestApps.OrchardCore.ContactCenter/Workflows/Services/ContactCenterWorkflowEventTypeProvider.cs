@@ -137,6 +137,7 @@ public sealed class ContactCenterWorkflowEventTypeProvider : IContactCenterWorkf
             new SelectListItem(S["Agent leg answered"].Value, ContactCenterConstants.Events.AgentLegAnswered) { Group = calls },
             new SelectListItem(S["Agent leg failed"].Value, ContactCenterConstants.Events.AgentLegFailed) { Group = calls },
             new SelectListItem(S["Call abandoned"].Value, ContactCenterConstants.Events.CallAbandoned) { Group = calls },
+            new SelectListItem(S["Callback requested"].Value, ContactCenterConstants.Events.CallbackRequested) { Group = calls },
             new SelectListItem(S["Consult started"].Value, ContactCenterConstants.Events.ConsultStarted) { Group = calls },
             new SelectListItem(S["Consult connected"].Value, ContactCenterConstants.Events.ConsultConnected) { Group = calls },
             new SelectListItem(S["Consult completed"].Value, ContactCenterConstants.Events.ConsultCompleted) { Group = calls },

@@ -15,7 +15,7 @@ using static CrestApps.OrchardCore.ContactCenter.Reports.Services.InteractionMet
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 
-internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilterMetadata, IContactCenterCapabilityDependentReport
+internal sealed partial class EnterpriseInteractionReportProvider : IReport, IReportFilterMetadata, IContactCenterCapabilityDependentReport
 {
     private readonly ISession _session;
     private readonly IInteractionEventStore _eventStore;
@@ -31,7 +31,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
     private InteractionOutcomeClassifier _outcomes = InteractionOutcomeClassifier.WithoutEvents;
 
     private static readonly string[] _executiveMetricRequirements =
-        [null, null, null, null, null, null, null, null, ContactCenterConstants.Feature.Voice, ContactCenterConstants.Feature.Recording];
+        [null, null, null, null, null, null, null, null, null, ContactCenterConstants.Feature.Voice, ContactCenterConstants.Feature.Recording];
 
     private static readonly string[] _interactionDetailRequirements =
         [null, null, null, null, null, null, null, ContactCenterConstants.Feature.Voice, null, null, null, ContactCenterConstants.Feature.Voice];
@@ -182,36 +182,6 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
         };
     }
 
-    private bool IsAvailable(string requiredFeatureId)
-        => requiredFeatureId is null || !_absentFeatureIds.Contains(requiredFeatureId);
-
-    /// <summary>
-    /// Keeps the entries of a fixed layout whose producing capability is enabled. The same requirement list drives
-    /// the columns and every row, so a column and its cells cannot drift apart.
-    /// </summary>
-    private T[] SelectAvailable<T>(IReadOnlyList<T> entries, IReadOnlyList<string> requirements)
-    {
-        if (entries.Count != requirements.Count)
-        {
-            throw new InvalidOperationException(
-                $"A report layout declares {entries.Count} entries but {requirements.Count} capability requirements. " +
-                "The requirement list must have one entry per column so a column and its cells cannot drift apart.");
-        }
-
-        if (_absentFeatureIds.Count == 0)
-        {
-            return [.. entries];
-        }
-
-        return [.. entries.Where((_, position) => IsAvailable(requirements[position]))];
-    }
-
-    private ReportRow SelectAvailableRow(
-        IReadOnlyList<string> cells,
-        IReadOnlyList<string> requirements,
-        ReportRowKind kind = ReportRowKind.Detail)
-        => new(SelectAvailable(cells, requirements), kind);
-
     private IStringLocalizer S => _stringLocalizer;
 
     private ReportDocument BuildExecutiveSummary(
@@ -227,6 +197,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
             new ReportMetric(S["Inbound answered"].Value, ReportFormat.Number(totals.InboundAnswered), ReportFormat.Percent(totals.InboundAnswerRate)),
             new ReportMetric(S["Abandoned"].Value, ReportFormat.Number(totals.Abandoned), ReportFormat.Percent(totals.AbandonmentRate)),
             new ReportMetric(S["Voicemail"].Value, ReportFormat.Number(totals.Voicemail)),
+            new ReportMetric(S["Callback requested"].Value, ReportFormat.Number(totals.CallbackRequested)),
             new ReportMetric(S["Failed"].Value, ReportFormat.Number(totals.Failed)),
             new ReportMetric(S["Avg speed of answer"].Value, ReportFormat.Duration(totals.AverageSpeedOfAnswerSeconds)),
             new ReportMetric(S["Avg handle time"].Value, ReportFormat.Duration(totals.AverageHandleTimeSeconds)),

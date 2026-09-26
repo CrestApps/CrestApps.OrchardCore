@@ -120,7 +120,7 @@ public sealed class TransferredCallRouter : ITransferredCallRouter
         // The offer carried the call under the direct-routing queue, which has no after-call work and no reports of
         // its own. The call still belongs to the queue it came in on, for the agent who takes it and for reporting.
         await RestoreQueueAsync(interaction.ItemId, originalQueueId, cancellationToken);
-        await StartHoldMusicAsync(queue, interaction.ProviderInteractionId, cancellationToken);
+        await StartArrivalAudioAsync(queue, interaction.ProviderInteractionId, offered: true, cancellationToken);
         await _publisher.PublishAsync(
             TransferEventFactory.Transferred(interaction, context.TransferringAgentId, context.TransferringUserId, InteractionTransferType.Blind, InteractionTransferTargetType.Agent, target.ItemId, InteractionTransferHistory.OfferedToAgent, now),
             cancellationToken);
@@ -169,15 +169,10 @@ public sealed class TransferredCallRouter : ITransferredCallRouter
         var offeredUserId = await _offerService.OfferNextAsync(queue.ItemId, cancellationToken);
 
         // Nobody free: the caller is waiting, so the queue's treatment starts now rather than at the next sweep. An
-        // offered caller is no longer a waiting one and would get nothing from that pass, so they get the music.
-        if (string.IsNullOrEmpty(offeredUserId))
-        {
-            await RunTreatmentAsync(queue, cancellationToken);
-        }
-        else
-        {
-            await StartHoldMusicAsync(queue, interaction.ProviderInteractionId, cancellationToken);
-        }
+        // offered caller is no longer a waiting one and would get nothing from that pass, so they get the music. The
+        // caller was answered long ago, so a queue with no music, or no treatment, gives them a ringing tone rather
+        // than silence.
+        await StartArrivalAudioAsync(queue, interaction.ProviderInteractionId, offered: !string.IsNullOrEmpty(offeredUserId), cancellationToken);
 
         await _publisher.PublishAsync(
             TransferEventFactory.Transferred(interaction, context.TransferringAgentId, context.TransferringUserId, InteractionTransferType.Blind, InteractionTransferTargetType.Queue, queue.ItemId, InteractionTransferHistory.WaitingInQueue, now),
@@ -277,13 +272,22 @@ public sealed class TransferredCallRouter : ITransferredCallRouter
     private Task SetQueueAsync(string interactionId, string queueId, CancellationToken cancellationToken)
         => RestoreQueueAsync(interactionId, queueId, cancellationToken);
 
-    private async Task RunTreatmentAsync(ActivityQueue queue, CancellationToken cancellationToken)
+    private async Task StartArrivalAudioAsync(ActivityQueue queue, string providerCallId, bool offered, CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(providerCallId))
+        {
+            return;
+        }
+
         try
         {
             // The treatment pass finds who is waiting by querying the store, so the new queue item is committed first.
-            await _session.SaveChangesAsync(cancellationToken);
-            await _treatmentService.RunDueAsync(queue, cancellationToken);
+            if (!offered)
+            {
+                await _session.SaveChangesAsync(cancellationToken);
+            }
+
+            await _treatmentService.StartForNewArrivalAsync(queue, providerCallId, offered, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -292,28 +296,7 @@ public sealed class TransferredCallRouter : ITransferredCallRouter
         catch (Exception ex)
         {
             // The caller is in the queue either way; losing the music must not lose the call.
-            _logger.LogWarning(ex, "Could not start queue treatment for a caller transferred to queue '{QueueId}'.", queue.ItemId.SanitizeLogValue());
-        }
-    }
-
-    private async Task StartHoldMusicAsync(ActivityQueue queue, string providerCallId, CancellationToken cancellationToken)
-    {
-        if (queue is null || string.IsNullOrWhiteSpace(providerCallId))
-        {
-            return;
-        }
-
-        try
-        {
-            await _treatmentService.StartHoldMusicAsync(queue, providerCallId, cancellationToken);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Could not start hold music for a transferred caller from queue '{QueueId}'.", queue.ItemId.SanitizeLogValue());
+            _logger.LogWarning(ex, "Could not start what a transferred caller hears in queue '{QueueId}'.", (queue?.ItemId).SanitizeLogValue());
         }
     }
 

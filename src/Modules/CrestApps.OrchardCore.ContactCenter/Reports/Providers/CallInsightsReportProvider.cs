@@ -72,6 +72,7 @@ public sealed class CallInsightsReportProvider : ContactCenterReportBase
             new ReportMetric(S["Answered"].Value, ReportFormat.Number(report.Answered), ReportFormat.Percent(report.AnswerRate)),
             new ReportMetric(S["Abandoned"].Value, ReportFormat.Number(report.Abandoned), ReportFormat.Percent(report.AbandonmentRate)),
             new ReportMetric(S["Voicemail"].Value, ReportFormat.Number(report.Voicemail)),
+            new ReportMetric(S["Callback requested"].Value, ReportFormat.Number(report.CallbackRequested)),
             new ReportMetric(S["Failed"].Value, ReportFormat.Number(report.Failed)),
             new ReportMetric(S["Avg handle time"].Value, ReportFormat.Duration(report.AverageHandleTimeSeconds)),
             new ReportMetric(S["Avg speed of answer"].Value, ReportFormat.Duration(report.AverageSpeedOfAnswerSeconds)),

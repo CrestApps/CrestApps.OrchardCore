@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -69,6 +70,11 @@ internal sealed class IvrIntegrationFixture : IAsyncDisposable
     };
 
     public IQueueTreatmentService TreatmentService { get; private set; }
+
+    /// <summary>
+    /// Gets the translations the callback confirmation is worded from.
+    /// </summary>
+    public TranslatingStringLocalizer<QueueCallbackOfferResponder> CallbackLocalizer { get; } = new();
 
     public IActivityReservationService Reservations { get; private set; }
 
@@ -265,6 +271,7 @@ internal sealed class IvrIntegrationFixture : IAsyncDisposable
             Treatment,
             availability,
             clock,
+            new PassThroughStringLocalizer<QueueTreatmentService>(),
             NullLogger<QueueTreatmentService>.Instance);
         TreatmentService = treatment;
 
@@ -373,7 +380,9 @@ internal sealed class IvrIntegrationFixture : IAsyncDisposable
             services.GetRequiredService<IContactCenterActivityWriter>(),
             afterCommit.Object,
             Treatment,
+            services.GetRequiredService<IContactCenterAuditRecorder>(),
             clock,
+            CallbackLocalizer,
             NullLogger<QueueCallbackOfferResponder>.Instance);
 
         Sink = new InboundVoiceDigitsSink(

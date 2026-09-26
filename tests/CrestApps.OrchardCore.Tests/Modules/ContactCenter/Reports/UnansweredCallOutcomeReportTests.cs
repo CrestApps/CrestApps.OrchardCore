@@ -58,10 +58,10 @@ public sealed class UnansweredCallOutcomeReportTests
             var row = Assert.Single(section.Rows, value => value.Cells[0] == QueueName);
             string Cell(string column) => row.Cells[section.Columns.ToList().FindIndex(value => value.Label == column)];
 
-            Assert.Equal("8", Cell("Offered"));
+            Assert.Equal("10", Cell("Offered"));
             Assert.Equal("1", Cell("Answered"));
             Assert.Equal("3", Cell("Abandoned"));
-            Assert.Equal(ReportFormat.Percent(3d / 8), Cell("Abandonment rate"));
+            Assert.Equal(ReportFormat.Percent(3d / 10), Cell("Abandonment rate"));
 
             // From joining the queue to hanging up: 41s, 20s and 30s.
             Assert.Equal(ReportFormat.Duration(91d / 3), Cell("Avg wait before abandon"));
@@ -69,6 +69,11 @@ public sealed class UnansweredCallOutcomeReportTests
 
             // From joining the queue to being sent to voicemail, without the greeting or the message: 73s and 60s.
             Assert.Equal(ReportFormat.Duration(133d / 2), Cell("Avg wait before voicemail"));
+
+            // A caller who took a callback neither abandoned nor was answered: from joining the queue to accepting it,
+            // 45s and 30s.
+            Assert.Equal("2", Cell("Callback requested"));
+            Assert.Equal(ReportFormat.Duration(75d / 2), Cell("Avg wait before callback"));
         }
         finally
         {
@@ -125,11 +130,14 @@ public sealed class UnansweredCallOutcomeReportTests
             Assert.Equal("3", metrics["Abandoned"]);
             Assert.Equal("2", metrics["Voicemail"]);
             Assert.Equal("1", metrics["Failed"]);
+            Assert.Equal("2", metrics["Callback requested"]);
 
             Assert.Equal(1, insights.Answered);
             Assert.Equal(3, insights.Abandoned);
             Assert.Equal(2, insights.Voicemail);
             Assert.Equal(1, insights.Failed);
+            Assert.Equal(2, insights.CallbackRequested);
+            Assert.Contains(insights.ByOutcome, count => count.Label == nameof(InteractionOutcome.CallbackRequested) && count.Count == 2);
         }
         finally
         {
@@ -144,6 +152,8 @@ public sealed class UnansweredCallOutcomeReportTests
     [InlineData("unanswered-offer-voicemail", 73d)]
     [InlineData("hung-up-queued", 30d)]
     [InlineData("answered", 10d)]
+    [InlineData("callback-requested", 45d)]
+    [InlineData("callback-requested-flag-only", 30d)]
     public async Task InteractionDetail_ShowsTheWaitUntilWhatBecameOfTheCall_AndConnectedTimeOnlyForAnAgent(string interactionId, double wait)
     {
         // Arrange
@@ -164,6 +174,69 @@ public sealed class UnansweredCallOutcomeReportTests
 
             Assert.Equal(ReportFormat.Duration(wait), Cell("Wait"));
             Assert.Equal(ReportFormat.Duration(interactionId == "answered" ? 60d : 0d), Cell("Connected"));
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task OutcomeSummary_ListsTheCallbackTakersUnderTheirOwnOutcome()
+    {
+        // Arrange
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var (store, databasePath) = await CreateSeededStoreAsync(cancellationToken);
+
+        try
+        {
+            await using var session = store.CreateSession();
+
+            // Act
+            var document = await RunEnterpriseAsync(session, EnterpriseInteractionReportKind.OutcomePerformance, cancellationToken);
+
+            // Assert
+            var section = Assert.Single(document.Sections);
+            string Cell(string outcome, string column)
+                => Assert.Single(section.Rows, value => value.Cells[0] == outcome).Cells[section.Columns.ToList().FindIndex(value => value.Label == column)];
+
+            Assert.Equal("2", Cell(nameof(InteractionOutcome.CallbackRequested), "Interactions"));
+            Assert.Equal("0", Cell(nameof(InteractionOutcome.CallbackRequested), "Answered"));
+            Assert.Equal("0", Cell(nameof(InteractionOutcome.CallbackRequested), "Abandoned"));
+            Assert.Equal("3", Cell(nameof(InteractionOutcome.Abandoned), "Interactions"));
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task QueuePerformanceAndServiceLevel_LeaveTheCallbackTakersOutOfTheAbandonsAndTheServiceLevel()
+    {
+        // Arrange
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var (store, databasePath) = await CreateSeededStoreAsync(cancellationToken);
+
+        try
+        {
+            await using var session = store.CreateSession();
+
+            // Act
+            var performance = await RunEnterpriseAsync(session, EnterpriseInteractionReportKind.QueuePerformance, cancellationToken);
+            var serviceLevel = await RunEnterpriseAsync(session, EnterpriseInteractionReportKind.QueueServiceLevel, cancellationToken);
+
+            // Assert
+            var performanceSection = Assert.Single(performance.Sections);
+            var performanceRow = Assert.Single(performanceSection.Rows, value => value.Cells[0] == QueueName);
+            string PerformanceCell(string column) => performanceRow.Cells[performanceSection.Columns.ToList().FindIndex(value => value.Label == column)];
+            Assert.Equal("1", PerformanceCell("Answered"));
+            Assert.Equal("3", PerformanceCell("Abandoned"));
+
+            // Only answered and abandoned calls are measured against the service level: 1 + 3.
+            var serviceSection = Assert.Single(serviceLevel.Sections);
+            var serviceRow = Assert.Single(serviceSection.Rows, value => value.Cells[0] == QueueName);
+            Assert.Equal("4", serviceRow.Cells[serviceSection.Columns.ToList().FindIndex(value => value.Label == "Eligible offered")]);
         }
         finally
         {
@@ -340,6 +413,18 @@ public sealed class UnansweredCallOutcomeReportTests
         // The provider could not carry the call.
         await seed.InteractionAsync("provider-failed", InteractionStatus.Failed, created: 600, ended: 601);
 
+        // Waited 45s, pressed the callback key, heard the confirmation and was hung up on. The platform had answered
+        // them to play the queue, which the provider reports as an answer.
+        await seed.InteractionAsync("callback-requested", InteractionStatus.Ended, created: 800, ended: 852, answered: 801, callback: true);
+        await seed.QueuedAsync("callback-requested", at: 802);
+        await seed.LeftQueueAsync("callback-requested", at: 847, waited: 45, state: "Removed");
+        await seed.CallbackRequestedAsync("callback-requested", at: 847, waited: 45);
+
+        // The same after 30s, with the callback's event lost: the flag on the interaction still says what happened.
+        await seed.InteractionAsync("callback-requested-flag-only", InteractionStatus.Ended, created: 900, ended: 935, callback: true);
+        await seed.QueuedAsync("callback-requested-flag-only", at: 900);
+        await seed.LeftQueueAsync("callback-requested-flag-only", at: 930, waited: 30, state: "Removed");
+
         // Still waiting when the report ran.
         await seed.InteractionAsync("still-waiting", InteractionStatus.Created, created: 700, ended: null);
         await seed.QueuedAsync("still-waiting", at: 700);
@@ -366,7 +451,8 @@ public sealed class UnansweredCallOutcomeReportTests
             double? ended,
             double? answered = null,
             string agentId = null,
-            bool voicemail = false)
+            bool voicemail = false,
+            bool callback = false)
         {
             var interaction = new Interaction
             {
@@ -385,6 +471,11 @@ public sealed class UnansweredCallOutcomeReportTests
                 interaction.TechnicalMetadata[ContactCenterConstants.Voicemail.ProjectionMetadataKey] = true;
             }
 
+            if (callback)
+            {
+                interaction.TechnicalMetadata[QueueCallbackOfferResponder.RoutingTerminalReasonMetadataKey] = QueueCallbackOfferResponder.ReasonCode;
+            }
+
             return _session.SaveAsync(interaction, collection: ContactCenterStorage.CollectionName);
         }
 
@@ -396,6 +487,9 @@ public sealed class UnansweredCallOutcomeReportTests
 
         public Task AbandonedAsync(string id, double at, double waited)
             => EventAsync(id, ContactCenterConstants.Events.CallAbandoned, at, new CallLifecycleEventData { QueueId = QueueId, Reason = CallLifecycleReasons.CallerHungUp, DurationSeconds = waited });
+
+        public Task CallbackRequestedAsync(string id, double at, double waited)
+            => EventAsync(id, ContactCenterConstants.Events.CallbackRequested, at, new CallLifecycleEventData { QueueId = QueueId, DurationSeconds = waited });
 
         public Task SentToVoicemailAsync(string id, double at)
             => EventAsync(id, ContactCenterConstants.Events.CallSentToVoicemail, at, data: null);

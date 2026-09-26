@@ -180,44 +180,6 @@ public sealed partial class TelnyxApiClient
     }
 
     /// <summary>
-    /// Speaks a message to the caller.
-    /// </summary>
-    /// <param name="callControlId">The leg to speak on.</param>
-    /// <param name="text">What to say.</param>
-    /// <param name="voice">The voice to say it in.</param>
-    /// <param name="language">The language to say it in.</param>
-    /// <param name="clientState">The opaque state echoed back on every event for the leg.</param>
-    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    public Task<TelnyxApiResult> SpeakAsync(
-        string callControlId,
-        string text,
-        string voice = null,
-        string language = null,
-        string clientState = null,
-        CancellationToken cancellationToken = default)
-    {
-        var body = new Dictionary<string, object>(StringComparer.Ordinal) { ["payload"] = text };
-
-        if (!string.IsNullOrWhiteSpace(voice))
-        {
-            body["voice"] = voice;
-        }
-
-        if (!string.IsNullOrWhiteSpace(language))
-        {
-            body["language"] = language;
-        }
-
-        if (!string.IsNullOrWhiteSpace(clientState))
-        {
-            body["client_state"] = EncodeClientState(clientState);
-        }
-
-        // Not retried: a retry that the provider had accepted would say the same thing to the caller twice.
-        return PostActionAsync(callControlId, "speak", body, retryable: false, cancellationToken);
-    }
-
-    /// <summary>
     /// Starts playing audio to the caller, such as hold music.
     /// </summary>
     /// <param name="callControlId">The leg to play on.</param>
@@ -269,36 +231,6 @@ public sealed partial class TelnyxApiClient
             new Dictionary<string, object>(StringComparer.Ordinal) { ["stop"] = "all" },
             retryable: false,
             cancellationToken);
-
-    /// <summary>
-    /// Speaks a prompt and collects a key press.
-    /// </summary>
-    /// <param name="callControlId">The leg to prompt on.</param>
-    /// <param name="text">The prompt.</param>
-    /// <param name="validDigits">The keys that are accepted.</param>
-    /// <param name="clientState">The opaque state echoed back on every event for the leg.</param>
-    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    public Task<TelnyxApiResult> GatherAsync(
-        string callControlId,
-        string text,
-        string validDigits,
-        string clientState = null,
-        CancellationToken cancellationToken = default)
-    {
-        var body = new Dictionary<string, object>(StringComparer.Ordinal)
-        {
-            ["payload"] = text,
-            ["valid_digits"] = validDigits,
-            ["maximum_digits"] = 1,
-        };
-
-        if (!string.IsNullOrWhiteSpace(clientState))
-        {
-            body["client_state"] = EncodeClientState(clientState);
-        }
-
-        return PostActionAsync(callControlId, "gather_using_speak", body, retryable: false, cancellationToken);
-    }
 
     /// <summary>
     /// Starts recording a call.

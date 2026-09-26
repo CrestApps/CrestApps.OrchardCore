@@ -1670,6 +1670,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         Voicemail = 3,
         Failed = 4,
         NotConnected = 5,
+        CallbackRequested = 6,
     }
     public sealed class InteractionParticipant
     {
@@ -2427,6 +2428,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models.Reports
         public System.Collections.Generic.IList<CrestApps.OrchardCore.ContactCenter.Core.Models.Reports.ContactCenterReportCount> ByChannel { get; set; }
         public System.Collections.Generic.IList<CrestApps.OrchardCore.ContactCenter.Core.Models.Reports.ContactCenterReportCount> ByOutcome { get; set; }
         public System.Collections.Generic.IList<CrestApps.OrchardCore.ContactCenter.Core.Models.Reports.ContactCenterReportCount> ByStatus { get; set; }
+        public long CallbackRequested { get; set; }
         public System.Collections.Generic.IList<CrestApps.OrchardCore.ContactCenter.Core.Models.Reports.CallInsightsDailyPoint> Daily { get; set; }
         public long Failed { get; set; }
         public System.DateTime FromUtc { get; set; }
@@ -4226,6 +4228,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public interface IQueueTreatmentService
     {
         System.Threading.Tasks.Task<int> RunDueAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task StartForNewArrivalAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue, string providerCallId, bool offered, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task StartHoldMusicAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue, string providerCallId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task StartWaitingAudioAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue, string providerCallId, System.Threading.CancellationToken cancellationToken = default);
     }
@@ -4412,10 +4415,12 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionOutcome Classify(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public double GetTalkSeconds(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public double GetWaitBeforeAbandonSeconds(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
+        public double GetWaitBeforeCallbackSeconds(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public double GetWaitBeforeVoicemailSeconds(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public double GetWaitSeconds(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public bool IsAbandoned(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public bool IsAnswered(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
+        public bool IsCallbackRequested(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public bool IsFailed(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public bool IsVoicemail(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public static CrestApps.OrchardCore.ContactCenter.Core.Services.InteractionOutcomeClassifier FromEvents(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent> events) { }
@@ -4780,10 +4785,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public sealed class QueueCallbackOfferResponder : CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueCallbackOfferResponder
     {
-        public const string ConfirmationMessage = "Thank you. We will call you back at the number you are calling from, and you will" +
-            " keep your place in line. Goodbye.";
         public const string ReasonCode = "queued_callback";
-        public QueueCallbackOfferResponder(CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemManager queueItemManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueManager queueManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueuedCallbackService queuedCallbacks, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueTreatmentService treatmentService, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterWorkStateService workStateService, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterActivityWriter activityWriter, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterScopeExecutor scopeExecutor, CrestApps.OrchardCore.ContactCenter.Services.IQueueTreatmentProvider treatmentProvider, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.QueueCallbackOfferResponder> logger) { }
+        public QueueCallbackOfferResponder(CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemManager queueItemManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueManager queueManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueuedCallbackService queuedCallbacks, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueTreatmentService treatmentService, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterWorkStateService workStateService, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterActivityWriter activityWriter, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterScopeExecutor scopeExecutor, CrestApps.OrchardCore.ContactCenter.Services.IQueueTreatmentProvider treatmentProvider, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterAuditRecorder auditRecorder, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.ContactCenter.Core.Services.QueueCallbackOfferResponder> stringLocalizer, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.QueueCallbackOfferResponder> logger) { }
         public System.Threading.Tasks.Task<bool> HandleAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, CrestApps.OrchardCore.ContactCenter.Services.InboundVoiceDigitsEvent digitsEvent, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class QueueItemManager : CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemManager
@@ -4852,8 +4855,9 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public sealed class QueueTreatmentService : CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueTreatmentService
     {
-        public QueueTreatmentService(CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemManager queueItemManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Services.IQueueTreatmentProvider treatmentProvider, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentAvailabilityService availabilityService, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.QueueTreatmentService> logger) { }
+        public QueueTreatmentService(CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemManager queueItemManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Services.IQueueTreatmentProvider treatmentProvider, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentAvailabilityService availabilityService, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.ContactCenter.Core.Services.QueueTreatmentService> stringLocalizer, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.QueueTreatmentService> logger) { }
         public System.Threading.Tasks.Task<int> RunDueAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task StartForNewArrivalAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue, string providerCallId, bool offered, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task StartHoldMusicAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue, string providerCallId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task StartWaitingAudioAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue, string providerCallId, System.Threading.CancellationToken cancellationToken = default) { }
     }
@@ -4984,6 +4988,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public static int GetProficiency(CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile agent, string skillId) { }
         public static System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueSkillRequirement> GetRequirements(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue) { }
         public static bool IsRelaxed(CrestApps.OrchardCore.ContactCenter.Core.Models.QueueSkillRequirement requirement, System.TimeSpan waited) { }
+    }
+    public static class SpokenPromptCulture
+    {
+        public static string Localize(string language, System.Func<string> build) { }
     }
     public sealed class StickyAgentRoutingStrategy : CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityRoutingStrategy
     {

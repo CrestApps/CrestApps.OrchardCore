@@ -104,7 +104,7 @@ Telnyx** button. The rest appear after you connect:
 | **Default outbound caller id** | After connecting | The E.164 number presented on outbound calls when no per-agent or per-request caller id is supplied. Connect suggests one; editable. Must be a Telnyx-owned number for STIR/SHAKEN attestation. |
 | **Webhook public key** | After connecting | The Telnyx account **Ed25519 public key** (from the portal) used to verify signed webhooks. Stored encrypted. Inbound webhooks are rejected when empty. |
 | **Browser WebRTC (advanced)** | After connecting | Credential lifetime, SIP signaling, codecs, and ICE (STUN/TURN) settings — see [Browser WebRTC settings](#browser-webrtc-settings) for each field. Defaults work out of the box. |
-| **Text-to-speech voice** | After connecting | The voice the platform's spoken prompts use: entry-point phone menus, the voicemail greeting, queue announcements, a queue's callback offer and its confirmation. `female`, `male`, or a Telnyx voice name in the form `Provider.Model.VoiceId`, such as `AWS.Polly.Joanna-Neural`. Blank means `female`. Telnyx requires a voice on every `speak` and `gather_using_speak` and refuses the command without one. |
+| **Text-to-speech voice** | After connecting | The voice the platform's spoken prompts use: entry-point phone menus, the voicemail greeting, queue announcements, a queue's callback offer and its confirmation, the AI voice agent's key collection, and the apology read to an orphaned call. `female`, `male`, or a Telnyx voice name in the form `Provider.Model.VoiceId`, such as `AWS.Polly.Joanna-Neural`. Blank means `female`. Telnyx requires a voice on every `speak` and `gather_using_speak` and refuses the command without one. |
 | **Text-to-speech language** | After connecting | The language those prompts are spoken in, such as `en-US` or `es-ES`. Blank means `en-US`. Telnyx ignores it for `AWS.Polly` voices, which carry their own language. |
 
 When you enable Telnyx and no default provider is set yet, Telnyx becomes the default automatically. When
@@ -274,7 +274,10 @@ Contact Center's transfer endpoints (see [How to transfer a call](../contact-cen
   of their own is created from the caller's leg (`POST /v2/conferences`, name `cc-park-…`), which parks the agent's
   leg, and the caller leaves it again (`conferences/{id}/actions/leave`), which parks the caller. Only then is the
   transferring agent's leg taken off the call topology and hung up, while the caller hears the queue's hold music
-  (`playback_start`). If Telnyx refuses to park the caller, the transfer is refused and the call stays with the
+  (`playback_start` on the parked caller's leg), or its treatment when nobody is free. A queue with no music, one
+  whose treatment plays nothing, or a direct call with no queue at all plays the generated ringing tone instead
+  (`playback_start` with `playback_content`, looped), because the caller was answered long ago and nothing on the
+  network rings for them any more. If Telnyx refuses to park the caller, the transfer is refused and the call stays with the
   agent. The call is offered through the normal reservation pipeline, never back to the agent who transferred it:
   with nobody else free it waits in the queue. When the new agent accepts, their leg is joined to the caller
   exactly as for a new call, and the music stops.

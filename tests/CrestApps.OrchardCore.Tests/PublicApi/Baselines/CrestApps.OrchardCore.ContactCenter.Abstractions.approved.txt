@@ -96,6 +96,7 @@ namespace CrestApps.OrchardCore.ContactCenter
             public const string CallUnmuted = "CallUnmuted";
             public const string CallbackCompleted = "CallbackCompleted";
             public const string CallbackPromoted = "CallbackPromoted";
+            public const string CallbackRequested = "CallbackRequested";
             public const string CallbackScheduled = "CallbackScheduled";
             public const string ConsultCancelled = "ConsultCancelled";
             public const string ConsultCompleted = "ConsultCompleted";
@@ -1062,6 +1063,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Services
     }
     public interface IQueueTreatmentProvider
     {
+        string SpeechLanguage { get; }
         System.Threading.Tasks.Task EndWithMessageAsync(string providerCallId, string text, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task OfferChoiceAsync(string providerCallId, string text, string acceptKey, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task SpeakAsync(string providerCallId, string text, System.Threading.CancellationToken cancellationToken = default);

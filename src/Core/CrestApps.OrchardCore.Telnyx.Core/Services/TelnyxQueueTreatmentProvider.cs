@@ -46,6 +46,10 @@ public sealed class TelnyxQueueTreatmentProvider : IQueueTreatmentProvider
     }
 
     /// <inheritdoc/>
+    /// <remarks>The tenant's text-to-speech language, which every prompt on a Telnyx leg is read out in.</remarks>
+    public string SpeechLanguage => TelnyxPrompts.ResolveLanguage(_options.CurrentValue);
+
+    /// <inheritdoc/>
     public async Task SpeakAsync(string providerCallId, string text, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(providerCallId) || string.IsNullOrWhiteSpace(text))

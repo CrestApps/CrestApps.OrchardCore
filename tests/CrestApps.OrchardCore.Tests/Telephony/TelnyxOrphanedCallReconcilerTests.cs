@@ -110,6 +110,34 @@ public sealed class TelnyxOrphanedCallReconcilerTests
     }
 
     [Fact]
+    public async Task TheApologyToAnOrphan_IsSpokenInTheTenantsVoice_AndWordedInItsLanguage()
+    {
+        // Arrange
+        // The apology named no voice, which Telnyx refuses, and was fixed English whatever language the tenant spoke.
+        var handler = ListingOneCall("call-1", durationSeconds: 600);
+        var localizer = new TranslatingStringLocalizer<TelnyxOrphanedCallReconciler>().Add(
+            "es-US",
+            "We're sorry. This call can no longer be completed because of a system interruption. Please call us back. Goodbye.",
+            "Lo sentimos. Esta llamada no puede completarse por una interrupción del sistema. Por favor llámenos de nuevo. Adiós.");
+        var reconciler = CreateReconciler(
+            handler,
+            KnownCalls(),
+            TelnyxOrphanedCallHandling.EndCall,
+            voice: "AWS.Polly.Lupe-Neural",
+            language: "es-US",
+            localizer: localizer);
+
+        // Act
+        await reconciler.ReconcileAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        using var body = System.Text.Json.JsonDocument.Parse(handler.Requests[1].Body);
+        Assert.Equal("AWS.Polly.Lupe-Neural", body.RootElement.GetProperty("voice").GetString());
+        Assert.Equal("es-US", body.RootElement.GetProperty("language").GetString());
+        Assert.StartsWith("Lo sentimos.", body.RootElement.GetProperty("payload").GetString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task AVeryNewCall_IsLeftAlone()
     {
         // Arrange
@@ -203,7 +231,10 @@ public sealed class TelnyxOrphanedCallReconcilerTests
         HttpMessageHandler handler,
         ITelephonyInteractionStore interactions,
         TelnyxOrphanedCallHandling handling,
-        string connectionId = "connection-1")
+        string connectionId = "connection-1",
+        string voice = null,
+        string language = null,
+        Microsoft.Extensions.Localization.IStringLocalizer<TelnyxOrphanedCallReconciler> localizer = null)
     {
         var httpClient = new HttpClient(handler)
         {
@@ -216,6 +247,8 @@ public sealed class TelnyxOrphanedCallReconcilerTests
             ApiKey = "test-api-key",
             ConnectionId = connectionId,
             OrphanedCallHandling = handling,
+            TtsVoice = voice,
+            TtsLanguage = language,
         };
 
         var apiClient = new TelnyxApiClient(
@@ -228,6 +261,7 @@ public sealed class TelnyxOrphanedCallReconcilerTests
             apiClient,
             interactions,
             new TestOptionsMonitor<TelnyxOptions>(options),
+            localizer ?? new PassThroughStringLocalizer<TelnyxOrphanedCallReconciler>(),
             NullLogger<TelnyxOrphanedCallReconciler>.Instance);
     }
 }

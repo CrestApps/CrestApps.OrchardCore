@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using CrestApps.OrchardCore.Telnyx.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -241,6 +242,34 @@ public sealed class TelnyxApiClientTests
     }
 
     [Fact]
+    public async Task SpeakAndGather_WithoutAVoiceOfTheirOwn_NameTheTenantsVoiceAndLanguage()
+    {
+        // Arrange
+        // Telnyx requires "voice" on speak and gather_using_speak. A caller that named none — the orphaned-call
+        // apology, the AI agent's key collection — was refused, which the person on the line hears as silence.
+        var handler = new RecordingHttpMessageHandler().AlwaysRespondWith(HttpStatusCode.OK);
+        var client = CreateClient(handler, new TelnyxOptions { TtsVoice = "AWS.Polly.Lupe-Neural", TtsLanguage = "es-US" });
+
+        // Act
+        await client.SpeakAsync("ctrl-1", "hola", cancellationToken: TestContext.Current.CancellationToken);
+        await client.GatherAsync("ctrl-1", "Oprima 1", "1", cancellationToken: TestContext.Current.CancellationToken);
+        await client.SpeakAsync("ctrl-1", "hello", "female", "en-US", cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        foreach (var request in handler.Requests.Take(2))
+        {
+            using var body = JsonDocument.Parse(request.Body);
+            Assert.Equal("AWS.Polly.Lupe-Neural", body.RootElement.GetProperty("voice").GetString());
+            Assert.Equal("es-US", body.RootElement.GetProperty("language").GetString());
+        }
+
+        // A voice the caller did name is kept.
+        using var named = JsonDocument.Parse(handler.Requests[2].Body);
+        Assert.Equal("female", named.RootElement.GetProperty("voice").GetString());
+        Assert.Equal("en-US", named.RootElement.GetProperty("language").GetString());
+    }
+
+    [Fact]
     public async Task Credentials_AreCreatedAndDeletedOnTheCredentialResource()
     {
         // Arrange
@@ -279,18 +308,18 @@ public sealed class TelnyxApiClientTests
         Assert.True(result.Succeeded);
     }
 
-    private static TelnyxApiClient CreateClient(HttpMessageHandler handler)
+    private static TelnyxApiClient CreateClient(HttpMessageHandler handler, TelnyxOptions tenantOptions = null)
     {
         var httpClient = new HttpClient(handler)
         {
             BaseAddress = new Uri("https://api.telnyx.com/v2/"),
         };
 
-        var options = new OptionsWrapper<TelnyxOptions>(new TelnyxOptions
-        {
-            ApiBaseUrl = "https://api.telnyx.com/v2/",
-            ApiKey = "test-api-key",
-        });
+        tenantOptions ??= new TelnyxOptions();
+        tenantOptions.ApiBaseUrl = "https://api.telnyx.com/v2/";
+        tenantOptions.ApiKey = "test-api-key";
+
+        var options = new OptionsWrapper<TelnyxOptions>(tenantOptions);
 
         return new TelnyxApiClient(
             httpClient,

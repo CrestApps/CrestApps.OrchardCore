@@ -16,6 +16,8 @@ internal sealed class InteractionMetrics
 
     public long Voicemail { get; set; }
 
+    public long CallbackRequested { get; set; }
+
     public long Handled { get; set; }
 
     public long Transferred { get; set; }

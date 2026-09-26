@@ -168,6 +168,62 @@ public sealed class InteractionOutcomeClassifierTests
         Assert.Equal(12, InteractionOutcomeClassifier.WithoutEvents.GetWaitSeconds(interaction), 6);
     }
 
+    [Fact]
+    public void Classify_ACallerWhoTookACallbackFromTheQueue_CallbackRequestedNotAbandonedNorAnswered()
+    {
+        // Arrange: the platform answered them to play the queue, and the call ended once the callback was confirmed.
+        var interaction = Inbound("call-1", InteractionStatus.Ended, answeredAfter: 1, endedAfter: 52);
+        var outcomes = InteractionOutcomeClassifier.FromEvents(
+        [
+            Call(ContactCenterConstants.Events.CallQueued, "call-1", _start.AddSeconds(2)),
+            Call(ContactCenterConstants.Events.CallDequeued, "call-1", _start.AddSeconds(47), durationSeconds: 45),
+            Call(ContactCenterConstants.Events.CallbackRequested, "call-1", _start.AddSeconds(47), durationSeconds: 45),
+        ]);
+
+        // Act
+        var outcome = outcomes.Classify(interaction);
+
+        // Assert
+        Assert.Equal(InteractionOutcome.CallbackRequested, outcome);
+        Assert.False(outcomes.IsAbandoned(interaction));
+        Assert.False(outcomes.IsAnswered(interaction));
+        Assert.True(outcomes.IsCallbackRequested(interaction));
+        Assert.Equal(45, outcomes.GetWaitSeconds(interaction), 6);
+        Assert.Equal(0d, outcomes.GetTalkSeconds(interaction));
+    }
+
+    [Fact]
+    public void Classify_ACallFlaggedAsTakingACallback_CallbackRequestedEvenWithoutItsEvent()
+    {
+        // Arrange: nothing answered it and nothing recorded an abandon, which alone reads as an abandon.
+        var interaction = Inbound("call-1", InteractionStatus.Ended, answeredAfter: null, endedAfter: 40);
+        interaction.TechnicalMetadata[QueueCallbackOfferResponder.RoutingTerminalReasonMetadataKey] = QueueCallbackOfferResponder.ReasonCode;
+
+        // Act
+        var outcome = InteractionOutcomeClassifier.WithoutEvents.Classify(interaction);
+
+        // Assert
+        Assert.Equal(InteractionOutcome.CallbackRequested, outcome);
+    }
+
+    [Fact]
+    public void GetWaitBeforeCallbackSeconds_WithoutTheEventsWait_MeasuresFromJoiningTheQueueToAccepting()
+    {
+        // Arrange
+        var interaction = Inbound("call-1", InteractionStatus.Ended, answeredAfter: null, endedAfter: 70);
+        var outcomes = InteractionOutcomeClassifier.FromEvents(
+        [
+            Call(ContactCenterConstants.Events.CallQueued, "call-1", _start.AddSeconds(5)),
+            Call(ContactCenterConstants.Events.CallbackRequested, "call-1", _start.AddSeconds(65)),
+        ]);
+
+        // Act
+        var wait = outcomes.GetWaitBeforeCallbackSeconds(interaction);
+
+        // Assert
+        Assert.Equal(60, wait, 6);
+    }
+
     private static Interaction Inbound(string id, InteractionStatus status, double? answeredAfter, double? endedAfter)
         => new Interaction
         {

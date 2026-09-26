@@ -53,6 +53,12 @@ public sealed class CallInsightsReport
     public long Voicemail { get; set; }
 
     /// <summary>
+    /// Gets or sets the number of inbound callers who accepted the queue's callback offer instead of waiting. They
+    /// are neither answered nor abandoned.
+    /// </summary>
+    public long CallbackRequested { get; set; }
+
+    /// <summary>
     /// Gets or sets the total talk time, in seconds, across all answered interactions.
     /// </summary>
     public double TotalTalkTimeSeconds { get; set; }

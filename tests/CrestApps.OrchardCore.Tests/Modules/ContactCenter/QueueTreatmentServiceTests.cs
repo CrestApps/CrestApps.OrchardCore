@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Modules;
@@ -239,6 +240,104 @@ public sealed class QueueTreatmentServiceTests
     }
 
     [Fact]
+    public async Task ANewArrivalAnAgentIsBeingRungFor_HearsTheWaitingAudio_ARingingToneWithoutMusic()
+    {
+        // Arrange
+        // A caller transferred or handed on by the AI agent has been answered long ago: with no music, the ring window
+        // was silence.
+        var harness = new TreatmentHarness();
+        harness.Settings.HoldMusicMediaId = null;
+
+        // Act
+        await harness.Service.StartForNewArrivalAsync(harness.Queue, "call-1", offered: true, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(["call-1"], harness.Provider.Ringback);
+        Assert.Empty(harness.Provider.Spoken);
+        harness.AssertNoWaitingCallersWereRead();
+    }
+
+    [Fact]
+    public async Task ANewArrivalWaitingInAQueueThatPlaysNothing_HearsARingingTone()
+    {
+        // Arrange
+        var harness = new TreatmentHarness();
+        harness.Queue.Treatment = new QueueTreatmentSettings();
+
+        // Act
+        await harness.Service.StartForNewArrivalAsync(harness.Queue, "call-1", offered: false, TestContext.Current.CancellationToken);
+        await harness.Service.StartForNewArrivalAsync(queue: null, "call-2", offered: false, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(["call-1", "call-2"], harness.Provider.Ringback);
+        Assert.Empty(harness.Provider.HoldMusic);
+    }
+
+    [Fact]
+    public async Task ANewArrivalWaitingInAQueueWithATreatment_HearsTheTreatment_NotARingingTone()
+    {
+        // Arrange
+        var harness = new TreatmentHarness();
+        harness.WithWaitingCaller("item-1", waitedSeconds: 0);
+
+        // Act
+        await harness.Service.StartForNewArrivalAsync(harness.Queue, "call-item-1", offered: false, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal([harness.Settings.WelcomeMessage], harness.Provider.Spoken);
+        Assert.Equal(["https://example.test/hold.mp3"], harness.Provider.HoldMusic);
+        Assert.Empty(harness.Provider.Ringback);
+    }
+
+    [Fact]
+    public async Task Announcements_AreWordedInTheLanguageTheProviderSpeaks()
+    {
+        // Arrange
+        // The sentences were fixed English, read out by whatever voice the tenant had chosen.
+        var harness = new TreatmentHarness();
+        harness.Provider.SpeechLanguage = "es-ES";
+        harness.Localizer
+            .Add("es-ES", "You are number {0} in line.", "Usted es el número {0} en la fila.")
+            .Add("es-ES", "Your estimated wait is about {0} minutes.", "Su espera estimada es de unos {0} minutos.");
+        harness.Settings.WelcomeMessage = null;
+        harness.Settings.AnnouncePosition = true;
+        harness.Settings.AnnounceEstimatedWait = true;
+        harness.Settings.AverageHandleTimeSeconds = 300;
+        harness.AvailableAgents = 1;
+        harness.WithWaitingCaller("item-1", waitedSeconds: 120, stepsPlayed: 1);
+        harness.WithWaitingCaller("item-2", waitedSeconds: 90, stepsPlayed: 1);
+
+        // Act
+        await harness.RunAsync();
+
+        // Assert
+        Assert.StartsWith("Usted es el número 2 en la fila. Su espera estimada es de unos ", harness.Provider.Spoken[1], StringComparison.Ordinal);
+        Assert.EndsWith(" minutos.", harness.Provider.Spoken[1], StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task TheCallbackOffer_IsWordedInTheLanguageTheProviderSpeaks()
+    {
+        // Arrange
+        var harness = new TreatmentHarness();
+        harness.Provider.SpeechLanguage = "fr-FR";
+        harness.Localizer.Add(
+            "fr-FR",
+            "If you would rather not wait, press {0} and we will call you back without losing your place in line.",
+            "Si vous préférez ne pas attendre, appuyez sur {0} et nous vous rappellerons sans perdre votre place.");
+        harness.Settings.WelcomeMessage = null;
+        harness.Settings.CallbackDtmfKey = "1";
+        harness.Settings.CallbackOfferAfterSeconds = 0;
+        harness.WithWaitingCaller("item-1", waitedSeconds: 120, stepsPlayed: 1);
+
+        // Act
+        await harness.RunAsync();
+
+        // Assert
+        Assert.Equal("Si vous préférez ne pas attendre, appuyez sur 1 et nous vous rappellerons sans perdre votre place.", harness.Provider.Offers.Single());
+    }
+
+    [Fact]
     public async Task ACallerWithNoLiveLeg_IsSkippedRatherThanRecordedAsTreated()
     {
         // Arrange
@@ -361,8 +460,11 @@ public sealed class QueueTreatmentServiceTests
                 Provider,
                 availability.Object,
                 clock.Object,
+                Localizer,
                 NullLogger<QueueTreatmentService>.Instance);
         }
+
+        public TranslatingStringLocalizer<QueueTreatmentService> Localizer { get; } = new();
 
         public QueueTreatmentSettings Settings { get; } = new()
         {
@@ -412,6 +514,8 @@ public sealed class QueueTreatmentServiceTests
     private sealed class RecordingTreatmentProvider : IQueueTreatmentProvider
     {
         private string _failingCallId;
+
+        public string SpeechLanguage { get; set; }
 
         public List<string> Spoken { get; } = [];
 

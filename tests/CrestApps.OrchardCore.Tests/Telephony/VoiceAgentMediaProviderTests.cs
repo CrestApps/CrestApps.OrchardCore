@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using CrestApps.OrchardCore.Telephony.Services;
 using CrestApps.OrchardCore.Telnyx.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
@@ -132,6 +133,42 @@ public sealed class VoiceAgentMediaProviderTests
     }
 
     [Fact]
+    public async Task Gather_NamesTheTenantsVoiceAndLanguage()
+    {
+        // Arrange
+        // Telnyx lists "voice" as required on gather_using_speak and refuses the command without it, so a key the AI
+        // agent asked for was never collected and the caller heard nothing.
+        var handler = new RecordingHttpMessageHandler().AlwaysRespondWith(HttpStatusCode.OK);
+        var provider = CreateProvider(handler, new TelnyxOptions { TtsVoice = "AWS.Polly.Lupe-Neural", TtsLanguage = "es-US" });
+
+        // Act
+        await provider.GatherAsync("ctrl-1", "Oprima 1 para continuar", "12", TestContext.Current.CancellationToken);
+
+        // Assert
+        using var body = JsonDocument.Parse(handler.Requests[0].Body);
+        Assert.Equal("AWS.Polly.Lupe-Neural", body.RootElement.GetProperty("voice").GetString());
+        Assert.Equal("es-US", body.RootElement.GetProperty("language").GetString());
+        Assert.Equal("12", body.RootElement.GetProperty("valid_digits").GetString());
+        Assert.DoesNotContain(body.RootElement.GetProperty("terminating_digit").GetString(), "12", StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Gather_WithoutATenantVoice_NamesTheDefaultVoice()
+    {
+        // Arrange
+        var handler = new RecordingHttpMessageHandler().AlwaysRespondWith(HttpStatusCode.OK);
+        var provider = CreateProvider(handler);
+
+        // Act
+        await provider.GatherAsync("ctrl-1", "Press 1 to continue", "1", TestContext.Current.CancellationToken);
+
+        // Assert
+        using var body = JsonDocument.Parse(handler.Requests[0].Body);
+        Assert.Equal("female", body.RootElement.GetProperty("voice").GetString());
+        Assert.Equal("en-US", body.RootElement.GetProperty("language").GetString());
+    }
+
+    [Fact]
     public async Task Hangup_EndsTheCall()
     {
         // Arrange
@@ -210,20 +247,20 @@ public sealed class VoiceAgentMediaProviderTests
         Assert.Same(telnyx, resolver.GetDefault());
     }
 
-    private static TelnyxVoiceAgentMediaProvider CreateProvider(HttpMessageHandler handler)
+    private static TelnyxVoiceAgentMediaProvider CreateProvider(HttpMessageHandler handler, TelnyxOptions options = null)
     {
         var httpClient = new HttpClient(handler)
         {
             BaseAddress = new Uri("https://api.telnyx.com/v2/"),
         };
 
+        options ??= new TelnyxOptions();
+        options.ApiBaseUrl = "https://api.telnyx.com/v2/";
+        options.ApiKey = "test-api-key";
+
         var apiClient = new TelnyxApiClient(
             httpClient,
-            new OptionsWrapper<TelnyxOptions>(new TelnyxOptions
-            {
-                ApiBaseUrl = "https://api.telnyx.com/v2/",
-                ApiKey = "test-api-key",
-            }),
+            new OptionsWrapper<TelnyxOptions>(options),
             new TelnyxApiRetryPolicy(TimeSpan.Zero),
             NullLogger<TelnyxApiClient>.Instance);
 

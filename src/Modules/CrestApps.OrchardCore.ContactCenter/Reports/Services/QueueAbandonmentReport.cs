@@ -13,7 +13,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Reports.Services;
 /// A caller who hung up before an agent answered abandoned, and the wait before abandoning runs from joining the queue
 /// to hanging up. A caller the platform sent to voicemail did not abandon: they are counted in their own column, with
 /// the wait from joining the queue to leaving it for voicemail, and are left out of the abandonment rate's numerator.
-/// Every call offered counts toward its denominator.
+/// Neither did a caller who took the queue's callback offer: they have their own column too, with the wait from joining
+/// the queue to accepting. Every call offered counts toward the rate's denominator.
 /// </remarks>
 internal static class QueueAbandonmentReport
 {
@@ -41,6 +42,8 @@ internal static class QueueAbandonmentReport
             new ReportColumn(S["Avg wait before abandon"].Value, ReportColumnAlign.End),
             new ReportColumn(S["Voicemail"].Value, ReportColumnAlign.End),
             new ReportColumn(S["Avg wait before voicemail"].Value, ReportColumnAlign.End),
+            new ReportColumn(S["Callback requested"].Value, ReportColumnAlign.End),
+            new ReportColumn(S["Avg wait before callback"].Value, ReportColumnAlign.End),
         };
 
         var offered = interactions.Where(InteractionMetricsCalculator.IsInboundOffered).ToArray();
@@ -69,6 +72,8 @@ internal static class QueueAbandonmentReport
             ReportFormat.Duration(measure.Abandoned.Length > 0 ? measure.Abandoned.Average(measure.Outcomes.GetWaitBeforeAbandonSeconds) : 0d),
             ReportFormat.Number(measure.Voicemail.Length),
             ReportFormat.Duration(measure.Voicemail.Length > 0 ? measure.Voicemail.Average(measure.Outcomes.GetWaitBeforeVoicemailSeconds) : 0d),
+            ReportFormat.Number(measure.CallbackRequested.Length),
+            ReportFormat.Duration(measure.CallbackRequested.Length > 0 ? measure.CallbackRequested.Average(measure.Outcomes.GetWaitBeforeCallbackSeconds) : 0d),
         ];
 
     private static QueueMeasure Measure(Interaction[] interactions, InteractionOutcomeClassifier outcomes)
@@ -78,6 +83,7 @@ internal static class QueueAbandonmentReport
             interactions.LongCount(outcomes.IsAnswered),
             [.. interactions.Where(outcomes.IsAbandoned)],
             [.. interactions.Where(outcomes.IsVoicemail)],
+            [.. interactions.Where(outcomes.IsCallbackRequested)],
             outcomes);
 
     private sealed record QueueMeasure(
@@ -86,6 +92,7 @@ internal static class QueueAbandonmentReport
         long Answered,
         Interaction[] Abandoned,
         Interaction[] Voicemail,
+        Interaction[] CallbackRequested,
         InteractionOutcomeClassifier Outcomes)
     {
         public double AbandonmentRate => Offered > 0 ? (double)Abandoned.Length / Offered : 0d;

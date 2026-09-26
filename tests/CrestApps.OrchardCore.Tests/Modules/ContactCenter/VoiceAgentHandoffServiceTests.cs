@@ -58,8 +58,42 @@ public class VoiceAgentHandoffServiceTests
         // Assert
         Assert.Equal(HandoffDisposition.WaitingInQueue, result.Disposition);
         harness.TreatmentService.Verify(
-            x => x.RunDueAsync(It.IsAny<ActivityQueue>(), It.IsAny<CancellationToken>()),
+            x => x.StartForNewArrivalAsync(It.Is<ActivityQueue>(queue => queue.ItemId == "queue-1"), "call-abc", false, It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("u1")]
+    public async Task ACallerHandedToAQueueWithNoMusic_HearsARingingTone_NotSilence(string offeredUserId)
+    {
+        // Arrange
+        // The AI agent answered the caller long ago, so nothing on the network rings for them: a queue with no music
+        // or no treatment at all left them listening to a dead line.
+        var activity = new OmnichannelActivity
+        {
+            ItemId = "act1",
+            Channel = "Phone",
+            PreferredDestination = "+15551112222",
+            InteractionType = ActivityInteractionType.Automated,
+            Status = ActivityStatus.InProgress,
+        };
+
+        var provider = new Mock<IQueueTreatmentProvider>();
+        var harness = new Harness(activity, offeredUserId, treatmentProvider: provider.Object);
+
+        // Act
+        await harness.Service.RequestHandoffAsync(new OmnichannelHandoffRequest
+        {
+            Activity = activity,
+            TargetQueueId = "queue-1",
+            ProviderName = "Telnyx",
+            ProviderCallId = "call-abc",
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        provider.Verify(x => x.StartRingbackAsync("call-abc", It.IsAny<CancellationToken>()), Times.Once);
+        provider.Verify(x => x.StartHoldMusicAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -90,12 +124,11 @@ public class VoiceAgentHandoffServiceTests
             ProviderCallId = "call-abc",
         }, TestContext.Current.CancellationToken);
 
-        // Assert
+        // Assert: as an offered caller, which gets the waiting audio rather than a pass over the waiting items this
+        // caller is no longer one of.
         harness.TreatmentService.Verify(
-            x => x.StartHoldMusicAsync(It.IsAny<ActivityQueue>(), "call-abc", It.IsAny<CancellationToken>()),
+            x => x.StartForNewArrivalAsync(It.IsAny<ActivityQueue>(), "call-abc", true, It.IsAny<CancellationToken>()),
             Times.Once);
-
-        // And not a pass, which would read the waiting items this caller is no longer one of.
         harness.TreatmentService.Verify(
             x => x.RunDueAsync(It.IsAny<ActivityQueue>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -598,7 +631,7 @@ public class VoiceAgentHandoffServiceTests
 
         public RecordingContactCenterAuditRecorder AuditRecorder { get; } = new();
 
-        public Harness(OmnichannelActivity activity = null, string offeredUserId = null, bool afterHours = false)
+        public Harness(OmnichannelActivity activity = null, string offeredUserId = null, bool afterHours = false, IQueueTreatmentProvider treatmentProvider = null)
         {
             var activityManager = new Mock<IOmnichannelActivityManager>();
             activityManager.Setup(m => m.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -637,6 +670,25 @@ public class VoiceAgentHandoffServiceTests
             OfferService.Setup(o => o.OfferNextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(offeredUserId);
 
+            // With a provider, the real treatment service decides what the caller hears; nobody else is waiting.
+            IQueueTreatmentService treatmentService = TreatmentService.Object;
+
+            if (treatmentProvider is not null)
+            {
+                var queueItems = new Mock<IQueueItemManager>();
+                queueItems.Setup(m => m.GetWaitingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync([]);
+
+                treatmentService = new QueueTreatmentService(
+                    queueItems.Object,
+                    interactionManager.Object,
+                    treatmentProvider,
+                    new Mock<IAgentAvailabilityService>().Object,
+                    clock.Object,
+                    new PassThroughStringLocalizer<QueueTreatmentService>(),
+                    NullLogger<QueueTreatmentService>.Instance);
+            }
+
             Service = new VoiceAgentHandoffService(
                 interactionManager.Object,
                 activityManager.Object,
@@ -649,7 +701,7 @@ public class VoiceAgentHandoffServiceTests
                 CallbackService.Object,
                 DistributedLock,
                 new OptionsWrapper<ContactCenterCoordinationOptions>(new ContactCenterCoordinationOptions()),
-                TreatmentService.Object,
+                treatmentService,
                 new Mock<ISession>().Object,
                 AuditRecorder,
                 NullLogger<VoiceAgentHandoffService>.Instance);

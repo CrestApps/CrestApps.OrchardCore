@@ -17,6 +17,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// </para>
 /// <para>The rules, in order:</para>
 /// <list type="number">
+/// <item>A caller who accepted the queue's callback offer is <see cref="InteractionOutcome.CallbackRequested"/>: they
+/// left the queue to be called back, which is neither an agent answering nor the caller giving up. The routing engine
+/// records <c>CallbackRequested</c>, and the interaction is flagged with the callback's terminal reason, which
+/// survives on history whose event was lost.</item>
 /// <item>A recorded abandon is <see cref="InteractionOutcome.Abandoned"/>, whatever else the call went through: the
 /// routing engine records it only for a caller who left before any agent answered, and the platform answering the
 /// caller itself (to play the queue) is not an agent answering.</item>
@@ -54,6 +58,7 @@ public sealed class InteractionOutcomeClassifier
         ContactCenterConstants.Events.CallDequeued,
         ContactCenterConstants.Events.CallAbandoned,
         ContactCenterConstants.Events.CallSentToVoicemail,
+        ContactCenterConstants.Events.CallbackRequested,
     ];
 
     /// <summary>
@@ -134,6 +139,11 @@ public sealed class InteractionOutcomeClassifier
 
         var call = Find(interaction);
 
+        if (call?.CallbackRequestedUtc is not null || IsFlaggedCallback(interaction))
+        {
+            return InteractionOutcome.CallbackRequested;
+        }
+
         if (call?.AbandonedUtc is not null)
         {
             return InteractionOutcome.Abandoned;
@@ -193,6 +203,39 @@ public sealed class InteractionOutcomeClassifier
     public bool IsFailed(Interaction interaction) => Classify(interaction) == InteractionOutcome.Failed;
 
     /// <summary>
+    /// Gets whether the caller took the queue's callback offer instead of waiting.
+    /// </summary>
+    /// <param name="interaction">The interaction.</param>
+    /// <returns><see langword="true"/> when the outcome is <see cref="InteractionOutcome.CallbackRequested"/>.</returns>
+    public bool IsCallbackRequested(Interaction interaction) => Classify(interaction) == InteractionOutcome.CallbackRequested;
+
+    /// <summary>
+    /// Gets how long a caller waited before accepting a callback: from joining the queue to accepting it. The
+    /// confirmation they were played afterwards is not waiting.
+    /// </summary>
+    /// <param name="interaction">The interaction whose caller took a callback.</param>
+    /// <returns>The wait in seconds. Without the callback on record it is measured to the queue departure, and without
+    /// either it is the whole call, which is all the interaction itself can tell.</returns>
+    public double GetWaitBeforeCallbackSeconds(Interaction interaction)
+    {
+        ArgumentNullException.ThrowIfNull(interaction);
+
+        var call = Find(interaction);
+
+        if (call?.CallbackRequestedUtc is { } requestedUtc)
+        {
+            return call.CallbackRequestedWaitSeconds ?? SecondsBetween(call.FirstQueuedUtc ?? interaction.CreatedUtc, requestedUtc);
+        }
+
+        if (call?.LastDequeuedUtc is { } dequeuedUtc)
+        {
+            return call.LastDequeuedWaitSeconds ?? SecondsBetween(call.FirstQueuedUtc ?? interaction.CreatedUtc, dequeuedUtc);
+        }
+
+        return WholeCallSeconds(interaction);
+    }
+
+    /// <summary>
     /// Gets how long an abandoning caller waited: from joining the queue to hanging up.
     /// </summary>
     /// <param name="interaction">The abandoned interaction.</param>
@@ -241,7 +284,8 @@ public sealed class InteractionOutcomeClassifier
 
     /// <summary>
     /// Gets how long the caller waited, measured to what became of the call: to an agent answering for an answered
-    /// call, to leaving the queue for voicemail for a voicemail, and to hanging up for an abandon.
+    /// call, to leaving the queue for voicemail for a voicemail, to accepting a callback for a callback, and to hanging
+    /// up for an abandon.
     /// </summary>
     /// <param name="interaction">The interaction.</param>
     /// <returns>The wait in seconds, or zero for a call that is still in progress, failed or did not connect.</returns>
@@ -254,6 +298,7 @@ public sealed class InteractionOutcomeClassifier
             InteractionOutcome.Answered => SecondsBetween(interaction.CreatedUtc, interaction.AnsweredUtc.Value),
             InteractionOutcome.Voicemail => GetWaitBeforeVoicemailSeconds(interaction),
             InteractionOutcome.Abandoned => GetWaitBeforeAbandonSeconds(interaction),
+            InteractionOutcome.CallbackRequested => GetWaitBeforeCallbackSeconds(interaction),
             _ => 0d,
         };
     }
@@ -283,6 +328,13 @@ public sealed class InteractionOutcomeClassifier
             interaction.TechnicalMetadata.TryGetValue(ContactCenterConstants.Voicemail.ProjectionMetadataKey, out var value) &&
             (value is bool flagged ? flagged : bool.TryParse(value?.ToString(), out var parsed) && parsed);
 
+    // Written when the callback is arranged. The stored value is a plain string, but a reloaded document can hand back
+    // a JSON element in its place, which reads the same through ToString.
+    private static bool IsFlaggedCallback(Interaction interaction)
+        => interaction.TechnicalMetadata is not null &&
+            interaction.TechnicalMetadata.TryGetValue(QueueCallbackOfferResponder.RoutingTerminalReasonMetadataKey, out var value) &&
+            string.Equals(value?.ToString(), QueueCallbackOfferResponder.ReasonCode, StringComparison.Ordinal);
+
     private static double WholeCallSeconds(Interaction interaction)
         => interaction.EndedUtc.HasValue ? SecondsBetween(interaction.CreatedUtc, interaction.EndedUtc.Value) : 0d;
 
@@ -303,6 +355,10 @@ public sealed class InteractionOutcomeClassifier
 
         public DateTime? SentToVoicemailUtc { get; private set; }
 
+        public DateTime? CallbackRequestedUtc { get; private set; }
+
+        public double? CallbackRequestedWaitSeconds { get; private set; }
+
         // Events arrive oldest first.
         public void Add(InteractionEvent interactionEvent)
         {
@@ -321,6 +377,10 @@ public sealed class InteractionOutcomeClassifier
                     break;
                 case ContactCenterConstants.Events.CallSentToVoicemail:
                     SentToVoicemailUtc ??= interactionEvent.OccurredUtc;
+                    break;
+                case ContactCenterConstants.Events.CallbackRequested:
+                    CallbackRequestedUtc ??= interactionEvent.OccurredUtc;
+                    CallbackRequestedWaitSeconds ??= interactionEvent.GetData<CallLifecycleEventData>()?.DurationSeconds;
                     break;
             }
         }

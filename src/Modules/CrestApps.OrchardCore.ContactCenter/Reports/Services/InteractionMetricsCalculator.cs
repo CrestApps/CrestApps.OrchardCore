@@ -79,6 +79,10 @@ internal static class InteractionMetricsCalculator
             {
                 metrics.Voicemail++;
             }
+            else if (outcome == InteractionOutcome.CallbackRequested)
+            {
+                metrics.CallbackRequested++;
+            }
             else if (outcome == InteractionOutcome.Failed)
             {
                 metrics.Failed++;
@@ -107,7 +111,8 @@ internal static class InteractionMetricsCalculator
                 continue;
             }
 
-            // A call sent to voicemail was neither answered nor abandoned, so it is not in the service level.
+            // A call sent to voicemail, or a caller who took a callback, was neither answered nor abandoned, so it is
+            // not in the service level.
             var outcome = outcomes.Classify(interaction);
 
             if (outcome == InteractionOutcome.Answered)
@@ -167,7 +172,8 @@ internal static class InteractionMetricsCalculator
             queues.TryGetValue(interaction.QueueId ?? string.Empty, out var queue);
             var thresholdSeconds = queue?.SlaThresholdSeconds ?? 0;
 
-            // A call sent to voicemail was neither answered nor abandoned, so it is not in the service level.
+            // A call sent to voicemail, or a caller who took a callback, was neither answered nor abandoned, so it is
+            // not in the service level.
             var outcome = outcomes.Classify(interaction);
 
             if (outcome == InteractionOutcome.Answered)

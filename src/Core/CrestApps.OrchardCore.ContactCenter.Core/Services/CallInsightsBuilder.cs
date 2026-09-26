@@ -77,6 +77,10 @@ internal static class CallInsightsBuilder
             {
                 report.Voicemail++;
             }
+            else if (outcome == InteractionOutcome.CallbackRequested)
+            {
+                report.CallbackRequested++;
+            }
             else if (outcome == InteractionOutcome.Failed)
             {
                 report.Failed++;

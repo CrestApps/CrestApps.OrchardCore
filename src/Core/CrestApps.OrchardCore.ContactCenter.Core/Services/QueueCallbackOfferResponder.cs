@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 
@@ -33,11 +34,10 @@ public sealed class QueueCallbackOfferResponder : IQueueCallbackOfferResponder
     public const string ReasonCode = "queued_callback";
 
     /// <summary>
-    /// What the caller is told once their callback is arranged.
+    /// The interaction metadata key the callback's <see cref="ReasonCode"/> is written under, which the reports read
+    /// when the callback's event is missing.
     /// </summary>
-    public const string ConfirmationMessage = "Thank you. We will call you back at the number you are calling from, and you will keep your place in line. Goodbye.";
-
-    private const string RoutingTerminalReasonMetadataKey = "routing_terminal_reason";
+    internal const string RoutingTerminalReasonMetadataKey = "routing_terminal_reason";
 
     private readonly IQueueItemManager _queueItemManager;
     private readonly IActivityQueueManager _queueManager;
@@ -48,8 +48,11 @@ public sealed class QueueCallbackOfferResponder : IQueueCallbackOfferResponder
     private readonly IContactCenterActivityWriter _activityWriter;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IQueueTreatmentProvider _treatmentProvider;
+    private readonly IContactCenterAuditRecorder _auditRecorder;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+
+    internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="QueueCallbackOfferResponder"/> class.
@@ -64,9 +67,13 @@ public sealed class QueueCallbackOfferResponder : IQueueCallbackOfferResponder
         IContactCenterActivityWriter activityWriter,
         IContactCenterScopeExecutor scopeExecutor,
         IQueueTreatmentProvider treatmentProvider,
+        IContactCenterAuditRecorder auditRecorder,
         IClock clock,
+        IStringLocalizer<QueueCallbackOfferResponder> stringLocalizer,
         ILogger<QueueCallbackOfferResponder> logger)
     {
+        _auditRecorder = auditRecorder;
+        S = stringLocalizer;
         _queueItemManager = queueItemManager;
         _queueManager = queueManager;
         _queuedCallbacks = queuedCallbacks;
@@ -161,6 +168,10 @@ public sealed class QueueCallbackOfferResponder : IQueueCallbackOfferResponder
         interaction.TechnicalMetadata[RoutingTerminalReasonMetadataKey] = ReasonCode;
         await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
 
+        // Nobody answered this call and the caller did not give up on it: the reports count it as its own outcome,
+        // with the wait measured to the moment they chose to be called back.
+        await RecordCallbackRequestedAsync(interaction, item, now, cancellationToken);
+
         await _workStateService.MutateAsync(
             interaction.ActivityItemId,
             workState => workState.TransitionTo(ActivityAssignmentStatus.Released),
@@ -177,10 +188,14 @@ public sealed class QueueCallbackOfferResponder : IQueueCallbackOfferResponder
         // ended after the message rather than left for the caller to hang up on a silent line.
         var providerCallId = interaction.ProviderInteractionId;
 
+        // Worded in the language the provider speaks prompts in, which is not the language of whoever's request this is.
+        var confirmation = SpokenPromptCulture.Localize(_treatmentProvider.SpeechLanguage, () =>
+            S["Thank you. We will call you back at the number you are calling from, and you will keep your place in line. Goodbye."].Value);
+
         if (!_scopeExecutor.ScheduleAfterCommit<IQueueTreatmentProvider>(provider =>
-            provider.EndWithMessageAsync(providerCallId, ConfirmationMessage, CancellationToken.None)))
+            provider.EndWithMessageAsync(providerCallId, confirmation, CancellationToken.None)))
         {
-            await _treatmentProvider.EndWithMessageAsync(providerCallId, ConfirmationMessage, cancellationToken);
+            await _treatmentProvider.EndWithMessageAsync(providerCallId, confirmation, cancellationToken);
         }
 
         if (_logger.IsEnabled(LogLevel.Information))
@@ -192,6 +207,23 @@ public sealed class QueueCallbackOfferResponder : IQueueCallbackOfferResponder
         }
 
         return true;
+    }
+
+    private Task RecordCallbackRequestedAsync(Interaction interaction, QueueItem item, DateTime now, CancellationToken cancellationToken)
+    {
+        var data = ContactCenterCallAudit.ForInteraction(interaction);
+        data.QueueId = item.QueueId;
+        data.Reason = ReasonCode;
+        data.DurationSeconds = ContactCenterCallAudit.QueueWaitSeconds(item, item.DequeuedUtc ?? now);
+        data.Details["queueItemId"] = item.ItemId;
+
+        return _auditRecorder.RecordCallAsync(
+            ContactCenterConstants.Events.CallbackRequested,
+            data,
+            now,
+            new ContactCenterActor(ContactCenterActorType.Customer),
+            $"callback-requested:{interaction.ItemId}",
+            cancellationToken);
     }
 
     private async Task ResumeAsync(ActivityQueue queue, string providerCallId, CancellationToken cancellationToken)

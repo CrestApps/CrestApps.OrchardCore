@@ -7,6 +7,13 @@ namespace CrestApps.OrchardCore.ContactCenter.Services;
 public interface IQueueTreatmentProvider
 {
     /// <summary>
+    /// Gets the language this provider speaks prompts in, such as <c>en-US</c>, so a sentence can be worded in the
+    /// language it will be read out in; <see langword="null"/> when the provider does not say, in which case the
+    /// sentence is worded in the current culture.
+    /// </summary>
+    string SpeechLanguage => null;
+
+    /// <summary>
     /// Speaks a message to the waiting caller.
     /// </summary>
     /// <param name="providerCallId">The provider's identifier for the caller's leg.</param>

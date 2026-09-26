@@ -44,4 +44,20 @@ public interface IQueueTreatmentService
     /// <param name="providerCallId">The caller's live leg.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     Task StartWaitingAudioAsync(ActivityQueue queue, string providerCallId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Starts what a caller who is already on the line hears the moment they are put into a queue — transferred
+    /// there by an agent, or handed there by an AI agent: the waiting audio while an agent is rung for them, and
+    /// otherwise the queue's treatment, falling back to the waiting audio on a queue whose treatment plays nothing.
+    /// </summary>
+    /// <remarks>
+    /// These callers were answered long before they reached the queue, so a queue with no music, or no treatment at
+    /// all, left them in silence. The treatment pass reads waiting callers from the store, so the queue item must be
+    /// committed before this is called for a caller nobody was offered.
+    /// </remarks>
+    /// <param name="queue">The queue, or <see langword="null"/> when there is none.</param>
+    /// <param name="providerCallId">The caller's live leg.</param>
+    /// <param name="offered">Whether an agent is already being rung for the caller.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task StartForNewArrivalAsync(ActivityQueue queue, string providerCallId, bool offered, CancellationToken cancellationToken = default);
 }

@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telnyx;
 using CrestApps.OrchardCore.Telnyx.Services;
@@ -53,5 +54,34 @@ internal static class TelnyxContactCenterProviderFactory
             NullLogger<TelnyxContactCenterVoiceProvider>.Instance,
             monitor.Object,
             localizer.Object);
+    }
+
+    /// <summary>
+    /// A real <see cref="TelnyxQueueTreatmentProvider"/>, so what a caller is played goes to the same recording handler.
+    /// </summary>
+    public static TelnyxQueueTreatmentProvider CreateTreatment(HttpMessageHandler handler)
+    {
+        var options = new TelnyxOptions
+        {
+            IsEnabled = true,
+            ApiKey = "KEY",
+            ConnectionId = "connection-1",
+            ApiBaseUrl = "https://api.telnyx.test/v2/",
+        };
+
+        var monitor = new Mock<IOptionsMonitor<TelnyxOptions>>();
+        monitor.SetupGet(value => value.CurrentValue).Returns(options);
+
+        var apiClient = new TelnyxApiClient(
+            new HttpClient(handler) { BaseAddress = new Uri("https://api.telnyx.test/v2/") },
+            new OptionsWrapper<TelnyxOptions>(options),
+            new TelnyxApiRetryPolicy(TimeSpan.Zero),
+            NullLogger<TelnyxApiClient>.Instance);
+
+        return new TelnyxQueueTreatmentProvider(
+            apiClient,
+            new Mock<IVoiceMediaItemManager>().Object,
+            monitor.Object,
+            NullLogger<TelnyxQueueTreatmentProvider>.Instance);
     }
 }

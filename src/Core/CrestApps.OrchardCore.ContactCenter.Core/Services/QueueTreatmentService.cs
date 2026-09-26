@@ -2,6 +2,7 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 
@@ -20,6 +21,8 @@ public sealed class QueueTreatmentService : IQueueTreatmentService
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="QueueTreatmentService"/> class.
     /// </summary>
@@ -28,6 +31,7 @@ public sealed class QueueTreatmentService : IQueueTreatmentService
     /// <param name="treatmentProvider">The provider that makes the caller hear it.</param>
     /// <param name="availabilityService">The availability service, for the estimate's divisor.</param>
     /// <param name="clock">The clock.</param>
+    /// <param name="stringLocalizer">The localizer the spoken sentences are worded with.</param>
     /// <param name="logger">The logger.</param>
     public QueueTreatmentService(
         IQueueItemManager queueItemManager,
@@ -35,8 +39,10 @@ public sealed class QueueTreatmentService : IQueueTreatmentService
         IQueueTreatmentProvider treatmentProvider,
         IAgentAvailabilityService availabilityService,
         IClock clock,
+        IStringLocalizer<QueueTreatmentService> stringLocalizer,
         ILogger<QueueTreatmentService> logger)
     {
+        S = stringLocalizer;
         _queueItemManager = queueItemManager;
         _interactionManager = interactionManager;
         _treatmentProvider = treatmentProvider;
@@ -162,6 +168,30 @@ public sealed class QueueTreatmentService : IQueueTreatmentService
             : _treatmentProvider.StartHoldMusicAsync(providerCallId, mediaId, cancellationToken);
     }
 
+    /// <inheritdoc/>
+    public async Task StartForNewArrivalAsync(ActivityQueue queue, string providerCallId, bool offered, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(providerCallId))
+        {
+            return;
+        }
+
+        // An offered caller is no longer a waiting one, so a pass would find nobody and play nothing.
+        if (offered || queue is null)
+        {
+            await StartWaitingAudioAsync(queue, providerCallId, cancellationToken);
+
+            return;
+        }
+
+        await RunDueAsync(queue, cancellationToken);
+
+        if (queue.Treatment is null || !QueueTreatmentPolicy.PlaysAnything(queue.Treatment))
+        {
+            await StartWaitingAudioAsync(queue, providerCallId, cancellationToken);
+        }
+    }
+
     /// <summary>
     /// Plays one step, and says whether the caller actually heard anything.
     /// </summary>
@@ -240,18 +270,22 @@ public sealed class QueueTreatmentService : IQueueTreatmentService
             || !string.IsNullOrWhiteSpace(settings.CallbackDtmfKey)
             || (settings.AnnouncementIntervalSeconds > 0 && (settings.AnnouncePosition || settings.AnnounceEstimatedWait));
 
-    private static string BuildCallbackPrompt(string acceptKey)
-        => string.Create(
-            CultureInfo.InvariantCulture,
-            $"If you would rather not wait, press {acceptKey} and we will call you back without losing your place in line.");
+    // The sentences are worded in the language the provider reads them out in: this runs from a timer or a webhook,
+    // where the current culture is nobody's.
+    private string BuildCallbackPrompt(string acceptKey)
+        => SpokenPromptCulture.Localize(_treatmentProvider.SpeechLanguage, () =>
+            S["If you would rather not wait, press {0} and we will call you back without losing your place in line.", acceptKey].Value);
 
-    private static string BuildAnnouncement(QueueTreatmentSettings settings, int position, int availableAgents)
+    private string BuildAnnouncement(QueueTreatmentSettings settings, int position, int availableAgents)
+        => SpokenPromptCulture.Localize(_treatmentProvider.SpeechLanguage, () => BuildAnnouncementText(settings, position, availableAgents));
+
+    private string BuildAnnouncementText(QueueTreatmentSettings settings, int position, int availableAgents)
     {
         var parts = new List<string>(2);
 
         if (settings.AnnouncePosition)
         {
-            parts.Add(string.Create(CultureInfo.InvariantCulture, $"You are number {position} in line."));
+            parts.Add(S["You are number {0} in line.", position.ToString(CultureInfo.CurrentCulture)].Value);
         }
 
         if (settings.AnnounceEstimatedWait)
@@ -268,9 +302,9 @@ public sealed class QueueTreatmentService : IQueueTreatmentService
             {
                 var minutes = Math.Max(1, (int)Math.Round(estimate.Value.TotalMinutes, MidpointRounding.AwayFromZero));
 
-                parts.Add(string.Create(
-                    CultureInfo.InvariantCulture,
-                    $"Your estimated wait is about {minutes} {(minutes == 1 ? "minute" : "minutes")}."));
+                parts.Add(minutes == 1
+                    ? S["Your estimated wait is about 1 minute."].Value
+                    : S["Your estimated wait is about {0} minutes.", minutes.ToString(CultureInfo.CurrentCulture)].Value);
             }
         }
 

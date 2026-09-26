@@ -1,6 +1,8 @@
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telnyx.Models;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -31,13 +33,12 @@ public sealed class TelnyxOrphanedCallReconciler
     /// </summary>
     private const int MaxPages = 20;
 
-    private const string ApologyText =
-        "We're sorry. This call can no longer be completed because of a system interruption. Please call us back. Goodbye.";
-
     private readonly TelnyxApiClient _apiClient;
     private readonly ITelephonyInteractionStore _interactionStore;
     private readonly IOptionsMonitor<TelnyxOptions> _options;
     private readonly ILogger _logger;
+
+    internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TelnyxOrphanedCallReconciler"/> class.
@@ -45,16 +46,19 @@ public sealed class TelnyxOrphanedCallReconciler
     /// <param name="apiClient">The typed Telnyx client.</param>
     /// <param name="interactionStore">The store that says which calls the platform knows about.</param>
     /// <param name="options">The Telnyx options.</param>
+    /// <param name="stringLocalizer">The localizer the apology is worded with.</param>
     /// <param name="logger">The logger.</param>
     public TelnyxOrphanedCallReconciler(
         TelnyxApiClient apiClient,
         ITelephonyInteractionStore interactionStore,
         IOptionsMonitor<TelnyxOptions> options,
+        IStringLocalizer<TelnyxOrphanedCallReconciler> stringLocalizer,
         ILogger<TelnyxOrphanedCallReconciler> logger)
     {
         _apiClient = apiClient;
         _interactionStore = interactionStore;
         _options = options;
+        S = stringLocalizer;
         _logger = logger;
     }
 
@@ -166,7 +170,11 @@ public sealed class TelnyxOrphanedCallReconciler
     {
         // Speak first. Someone whose call ends mid-sentence with no explanation calls straight back, and the
         // second call is as likely to fail as the first.
-        await _apiClient.SpeakAsync(callControlId, ApologyText, cancellationToken: cancellationToken);
+        // Worded in the language the tenant's voice reads it in; the client speaks it in that voice.
+        var apology = SpokenPromptCulture.Localize(TelnyxPrompts.ResolveLanguage(_options.CurrentValue), () =>
+            S["We're sorry. This call can no longer be completed because of a system interruption. Please call us back. Goodbye."].Value);
+
+        await _apiClient.SpeakAsync(callControlId, apology, cancellationToken: cancellationToken);
 
         var hangup = await _apiClient.HangupAsync(callControlId, cancellationToken);
 

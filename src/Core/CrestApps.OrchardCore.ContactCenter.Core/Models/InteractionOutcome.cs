@@ -39,4 +39,11 @@ public enum InteractionOutcome
     /// An outbound attempt ended without the other party answering.
     /// </summary>
     NotConnected,
+
+    /// <summary>
+    /// The caller accepted the queue's offer to be called back instead of waiting. Nobody answered this call, and
+    /// the caller did not give up on it either: the contact continues as the scheduled callback, so it is neither
+    /// answered nor abandoned and is left out of the service level.
+    /// </summary>
+    CallbackRequested,
 }
