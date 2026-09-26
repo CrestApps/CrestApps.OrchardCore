@@ -108,6 +108,7 @@
     var readMonitorLegTag = softPhoneModules.readMonitorLegTag;
     var claimMonitorLegArm = softPhoneModules.claimMonitorLegArm;
     var monitorLegAction = softPhoneModules.monitorLegAction;
+    var monitorLegReplaces = softPhoneModules.monitorLegReplaces;
     var anyMonitorLegTalks = softPhoneModules.anyMonitorLegTalks;
     var planEntryStart = softPhoneModules.planEntryStart;
     var planEntryEnd = softPhoneModules.planEntryEnd;
@@ -1854,6 +1855,59 @@
             };
         }
 
+        // What a supervisor's monitor leg negotiated and sends, reported a few times while it is up. Whether the
+        // supervisor could be heard turns on it: a leg negotiated to receive only never carries the microphone, however
+        // its role is switched later.
+        var monitorMediaProbes = [];
+
+        function reportMonitorLegMedia(call) {
+            if (monitorMediaProbes.indexOf(call) >= 0 || typeof context.reportDiagnostic !== 'function') {
+                return;
+            }
+
+            monitorMediaProbes.push(call);
+
+            var remaining = 6;
+            var probe = function () {
+                var peer = call && call.peer && call.peer.instance;
+
+                if (disposed || !peer || isTelnyxTerminalState(call.state) || remaining-- <= 0) {
+                    monitorMediaProbes.splice(monitorMediaProbes.indexOf(call), 1);
+
+                    return;
+                }
+
+                var directions = (typeof peer.getTransceivers === 'function' ? peer.getTransceivers() : []).map(function (transceiver) {
+                    var track = transceiver.sender && transceiver.sender.track;
+
+                    return (transceiver.currentDirection || transceiver.direction || '?') +
+                        (track ? '/' + (track.enabled ? 'on' : 'off') + '/' + track.readyState : '/no-track');
+                }).join(',');
+
+                Promise.resolve(typeof peer.getStats === 'function' ? peer.getStats() : null).then(function (stats) {
+                    var sent = 0;
+
+                    if (stats && typeof stats.forEach === 'function') {
+                        stats.forEach(function (report) {
+                            if (report.type === 'outbound-rtp' && (report.kind === 'audio' || report.mediaType === 'audio')) {
+                                sent += report.bytesSent || 0;
+                            }
+                        });
+                    }
+
+                    context.reportDiagnostic(
+                        'info',
+                        'monitor-leg-media',
+                        'Monitor leg media: transceivers ' + (directions || 'none') + ', bytes sent ' + sent + '.',
+                        (call.options && call.options.telnyxCallControlId) || '');
+                }).catch(function () { });
+
+                setTimeout(probe, 10000);
+            };
+
+            setTimeout(probe, 3000);
+        }
+
         // The core's handle on a supervisor's monitor leg: answered on the same media path as any inbound leg, but left out
         // of the current call, so the phone's own calls are untouched by it.
         function createMonitorLegController(call) {
@@ -1945,6 +1999,7 @@
             if (monitorIndex >= 0) {
                 if (call.state === 'active') {
                     ensureRemotePlayback(call);
+                    reportMonitorLegMedia(call);
                 }
 
                 if (isTelnyxTerminalState(call.state)) {
@@ -4405,6 +4460,7 @@
                         // A supervisor's monitor leg: answered by itself only when this phone asked for it.
                         claimMonitorLeg: claimMonitorLeg,
                         onMonitorLegState: handleMonitorLegState,
+                        reportDiagnostic: reportDiagnostic,
                         onInboundRing: handleBrowserInboundRing,
                         onInboundRingCanceled: clearBrowserInboundRing,
                         // Media-quality telemetry (item 2): the adapter samples the live peer connection and
@@ -5560,6 +5616,20 @@
 
         // The real-time message and the provider's invite race; a leg that arrives first waits a moment for its arm.
         function settleMonitorLeg(tag, controller, arrivedAt) {
+            // The leg a takeover moves the engagement to: answered in place of the one held, which the platform lets go.
+            if (monitorLegReplaces(monitorLegs, tag)) {
+                if (!controller.isRinging()) {
+                    return;
+                }
+
+                monitorLegs[tag.token] = { controller: controller, legId: tag.legId, info: monitorLegs[tag.token].info };
+                reportDiagnostic('info', 'monitor-leg-replaced', 'The phone answered the leg its engagement moved to.', tag.legId || '');
+                matchMicrophoneToMonitorLegs();
+                controller.answer();
+
+                return;
+            }
+
             var action = monitorLegAction(monitorLegArms, tag, Date.now(), arrivedAt);
 
             if (action === 'wait' && controller.isRinging()) {

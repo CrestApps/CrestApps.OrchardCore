@@ -24,6 +24,7 @@ public sealed class TelnyxSupervisorMonitoringTests
     private const string Customer = "customer-leg";
     private const string Agent = "agent-leg";
     private const string Supervisor = "supervisor-leg";
+    private const string TakeOverLeg = "takeover-leg";
     private const string SupervisorEndpoint = "sip:gencredSupervisor@sip.telnyx.com";
 
     [Theory]
@@ -53,9 +54,11 @@ public sealed class TelnyxSupervisorMonitoringTests
         Assert.False(dial.TryGetProperty("outbound_voice_profile_id", out _));
         Assert.Equal("cc-sv-leg-token-1", dial.GetProperty("command_id").GetString());
 
-        // Telnyx attaches the answered leg to the agent's: a whisper is heard by the agent alone.
+        // Telnyx attaches the answered leg to the agent's: a whisper is heard by the agent alone. Live, a leg dialed to
+        // listen was never heard once switched to whisper or barge, so every leg is dialed as barge and takes its mode
+        // when it answers.
         Assert.Equal(Agent, dial.GetProperty("supervise_call_control_id").GetString());
-        Assert.Equal(role, dial.GetProperty("supervisor_role").GetString());
+        Assert.Equal("barge", dial.GetProperty("supervisor_role").GetString());
 
         var header = Assert.Single(dial.GetProperty("custom_headers").EnumerateArray());
         Assert.Equal(TelnyxConstants.MonitorLegSipHeader, header.GetProperty("name").GetString());
@@ -204,12 +207,17 @@ public sealed class TelnyxSupervisorMonitoringTests
         Assert.Empty(api.Bridges);
     }
 
+    // Live: Telnyx refused to bridge the customer to the supervising leg -- "Supervisor calls do not support commands" --
+    // and the takeover failed. The supervisor's phone is rung with an ordinary leg carrying the engagement's token, the
+    // customer is bridged to that once the phone answers, and only then are the supervising leg and the agent let go.
     [Fact]
-    public async Task TakeOver_MakesTheSupervisorHeardByBoth_BridgesThemToTheCustomer_ThenReleasesOnlyTheAgent_MarkedDetached()
+    public async Task TakeOver_RingsTheSupervisorOnALegTheCustomerCanBeBridgedTo_ThenReleasesTheSupervisingLegAndTheAgent()
     {
         // Arrange
         var api = BridgedCall();
+        api.WithLeg(Customer, CustomerState());
         api.WithLeg(Supervisor, SupervisorState("whisper"));
+        api.NextLegId = TakeOverLeg;
         var provider = TelnyxContactCenterProviderFactory.Create(api, Resolver());
         var request = Request(MonitorMode.Barge);
         request.SupervisorLegId = Supervisor;
@@ -219,10 +227,15 @@ public sealed class TelnyxSupervisorMonitoringTests
 
         // Assert
         Assert.True(result.Succeeded);
+        Assert.Equal(TakeOverLeg, result.ProviderLegId);
         Assert.Equal(
             [
                 $"POST calls/{Supervisor}/actions/switch_supervisor_role",
-                $"POST calls/{Supervisor}/actions/bridge",
+                "POST calls",
+                $"POST calls/{TakeOverLeg}/actions/bridge",
+                $"POST calls/{Supervisor}/actions/hangup",
+                $"GET calls/{Customer}",
+                $"PUT calls/{Customer}/actions/client_state_update",
                 $"GET calls/{Agent}",
                 $"POST calls/{Agent}/actions/hangup",
             ],
@@ -230,24 +243,43 @@ public sealed class TelnyxSupervisorMonitoringTests
 
         Assert.Equal("barge", api.BodyOf("POST", $"calls/{Supervisor}/actions/switch_supervisor_role").GetProperty("role").GetString());
 
-        // The customer is now on the supervisor's own leg, which parks rather than hangs up if it is unbridged later.
-        Assert.Equal((Supervisor, Customer, "self"), Assert.Single(api.Bridges));
+        // An ordinary leg to the supervisor's phone, which answers it by the engagement's token.
+        var dial = api.BodyOf("POST", "calls");
+        Assert.Equal(SupervisorEndpoint, dial.GetProperty("to").GetString());
+        Assert.False(dial.TryGetProperty("supervise_call_control_id", out _));
+        Assert.Equal("cc-sv-take-token-1", dial.GetProperty("command_id").GetString());
+        Assert.Equal("token-1", Assert.Single(dial.GetProperty("custom_headers").EnumerateArray()).GetProperty("value").GetString());
+
+        var takeOverState = FakeTelnyxCallControl.StateIn(dial);
+        Assert.True(takeOverState.TakesOver);
+        Assert.Equal(TelnyxOutboundBridgeState.ContactCenterSupervisorLegIntent, takeOverState.Intent);
+        Assert.Equal("token-1", takeOverState.MonitorToken);
+
+        // The customer is on the new leg, which parks rather than hangs up if it is unbridged later, and names it as the
+        // leg its own end hangs up.
+        Assert.Equal((TakeOverLeg, Customer, "self"), Assert.Single(api.Bridges));
+        Assert.True(TelnyxOutboundBridgeState.TryParse(api.LegStates[Customer], out var customer));
+        Assert.Equal(TakeOverLeg, customer.PeerCallControlId);
+
+        // The supervising leg and the agent go quietly: neither end is reported as the call ending.
+        Assert.True(FakeTelnyxCallControl.StateIn(api.BodyOf("POST", $"calls/{Supervisor}/actions/hangup")).Detached);
 
         var released = FakeTelnyxCallControl.StateIn(api.BodyOf("POST", $"calls/{Agent}/actions/hangup"));
         Assert.True(released.Detached);
         Assert.Equal(TelnyxOutboundBridgeState.ContactCenterAgentLegIntent, released.Intent);
         Assert.Equal(Customer, released.PeerCallControlId);
 
-        Assert.Equal([Agent], api.HungUp);
+        Assert.Equal(new[] { Agent, Supervisor }.Order(StringComparer.Ordinal), api.HungUp.Order(StringComparer.Ordinal));
     }
 
     [Fact]
-    public async Task TakeOver_WhenTheCustomerCannotBeBridgedToTheSupervisor_IsRefused_AndTheAgentStays()
+    public async Task TakeOver_WaitsForTheSupervisorsPhoneToAnswer_BeforeTheCustomerIsBridged()
     {
         // Arrange
         var api = BridgedCall();
         api.WithLeg(Supervisor, SupervisorState("barge"));
-        api.RefuseBridgeFor.Add(Supervisor);
+        api.NextLegId = TakeOverLeg;
+        api.AnswersAfterBridgeAttempts[TakeOverLeg] = 2;
         var provider = TelnyxContactCenterProviderFactory.Create(api, Resolver());
         var request = Request(MonitorMode.Barge);
         request.SupervisorLegId = Supervisor;
@@ -256,8 +288,75 @@ public sealed class TelnyxSupervisorMonitoringTests
         var result = await provider.TakeOverAsync(request, TestContext.Current.CancellationToken);
 
         // Assert
+        Assert.True(result.Succeeded);
+        Assert.Equal(3, api.Commands.Count(command => command == $"POST calls/{TakeOverLeg}/actions/bridge"));
+        Assert.Equal((TakeOverLeg, Customer, "self"), Assert.Single(api.Bridges));
+        Assert.Contains(Agent, api.HungUp);
+    }
+
+    // A request that carries no token (a Contact Center call's) takes it from the supervising leg the phone answered.
+    [Fact]
+    public async Task TakeOver_WithoutTheToken_ReadsItFromTheSupervisingLeg()
+    {
+        // Arrange
+        var api = BridgedCall();
+        api.WithLeg(Supervisor, SupervisorState("barge"));
+        api.NextLegId = TakeOverLeg;
+        var provider = TelnyxContactCenterProviderFactory.Create(api, Resolver());
+        var request = Request(MonitorMode.Barge);
+        request.SupervisorLegId = Supervisor;
+        request.MonitorToken = null;
+
+        // Act
+        var result = await provider.TakeOverAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Equal("token-1", FakeTelnyxCallControl.StateIn(api.BodyOf("POST", "calls")).MonitorToken);
+    }
+
+    [Fact]
+    public async Task TakeOver_WhenTheCustomerCannotBeBridgedToTheSupervisor_IsRefused_AndOnlyTheNewLegIsLetGo()
+    {
+        // Arrange
+        var api = BridgedCall();
+        api.WithLeg(Supervisor, SupervisorState("barge"));
+        api.NextLegId = TakeOverLeg;
+        api.RefuseBridgeFor.Add(TakeOverLeg);
+        var provider = TelnyxContactCenterProviderFactory.Create(api, Resolver());
+        var request = Request(MonitorMode.Barge);
+        request.SupervisorLegId = Supervisor;
+
+        // Act
+        var result = await provider.TakeOverAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert - refused at once, not waited on: only a leg still ringing is tried again.
         Assert.False(result.Succeeded);
-        Assert.Empty(api.HungUp);
+        Assert.Equal(1, api.Commands.Count(command => command == $"POST calls/{TakeOverLeg}/actions/bridge"));
+        Assert.Equal([TakeOverLeg], api.HungUp);
+        Assert.True(FakeTelnyxCallControl.StateIn(api.BodyOf("POST", $"calls/{TakeOverLeg}/actions/hangup")).Detached);
+    }
+
+    // The answer of the leg a takeover rang is the takeover's to act on: it is not the engagement connecting again.
+    [Fact]
+    public async Task TheTakeOverLegAnswering_IsLeftToTheTakeover()
+    {
+        // Arrange
+        var api = BridgedCall();
+        var sink = new Mock<ISupervisorLegEventSink>();
+        var state = SupervisorState("barge");
+        state.TakesOver = true;
+        api.WithLeg(TakeOverLeg, state);
+        var orchestrator = CreateOrchestrator(api, sink.Object);
+
+        // Act
+        await orchestrator.AdvanceAsync(Answered(TakeOverLeg, state), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(api.Commands);
+        sink.Verify(
+            value => value.OnAnsweredAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -380,6 +479,13 @@ public sealed class TelnyxSupervisorMonitoringTests
             Intent = TelnyxOutboundBridgeState.ContactCenterAgentLegIntent,
             PeerCallControlId = Customer,
             RingUserId = "agent-user",
+        };
+
+    private static TelnyxOutboundBridgeState CustomerState()
+        => new()
+        {
+            Intent = TelnyxOutboundBridgeState.ContactCenterAgentLegIntent,
+            PeerCallControlId = Agent,
         };
 
     private static TelnyxOutboundBridgeState SupervisorState(string role)

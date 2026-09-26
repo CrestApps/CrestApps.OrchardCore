@@ -107,6 +107,22 @@
         return now - arrivedAt < MONITOR_ARM_WAIT_MS ? 'wait' : 'hangup';
     }
 
+    // Whether a monitor leg takes the place of one this phone already holds for the same engagement. A supervisor who
+    // takes a call over is rung again with the engagement's token, on an ordinary leg the customer can be bridged to (the
+    // provider takes no command on the supervising leg itself); the phone answers it without an arm, since it is the
+    // engagement it is already on.
+    //   legs - the phone's monitor legs, by token: { legId }
+    //   tag  - the arriving leg's monitor tag: { token, legId }
+    function monitorLegReplaces(legs, tag) {
+        if (!legs || !tag || !tag.token || !Object.prototype.hasOwnProperty.call(legs, tag.token)) {
+            return false;
+        }
+
+        var held = legs[tag.token];
+
+        return !!(held && held.legId && tag.legId && held.legId !== tag.legId);
+    }
+
     // Whether the supervisor is heard on a monitor leg in `mode` (the engagement's mode, as the platform names it).
     // Listening is silent: the platform joins the supervisor muted, and the phone keeps its microphone off too. Coaching
     // is heard by the agent, and joining by everyone -- as is a call the supervisor took over, which is on as joined.
@@ -136,6 +152,7 @@
     softPhone.readMonitorLegTag = readMonitorLegTag;
     softPhone.claimMonitorLegArm = claimMonitorLegArm;
     softPhone.monitorLegAction = monitorLegAction;
+    softPhone.monitorLegReplaces = monitorLegReplaces;
     softPhone.monitorLegTalks = monitorLegTalks;
     softPhone.anyMonitorLegTalks = anyMonitorLegTalks;
 }(typeof globalThis !== 'undefined' ? globalThis : window));

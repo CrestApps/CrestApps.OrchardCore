@@ -106,6 +106,12 @@ public sealed partial class ContactCenterSupervisorInterventionService
             {
                 return SupervisorEngagementResult.Failure(providerResult?.ErrorMessage ?? "The voice provider did not confirm the takeover.");
             }
+
+            // A provider that cannot hand the call to the supervising leg itself rings the supervisor with another one.
+            if (!string.IsNullOrEmpty(providerResult.ProviderLegId))
+            {
+                supervisorLegId = providerResult.ProviderLegId;
+            }
         }
         catch (TimeoutException)
         {

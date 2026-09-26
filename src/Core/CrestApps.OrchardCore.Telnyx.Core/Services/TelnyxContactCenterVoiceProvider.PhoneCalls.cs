@@ -108,35 +108,10 @@ public sealed partial class TelnyxContactCenterVoiceProvider : IContactCenterVoi
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var result = await TakeOverAsync(request, cancellationToken);
-
-        if (result?.Succeeded != true)
-        {
-            return result;
-        }
-
-        // The number's leg named the agent's leg, which it hangs up when it ends. The agent is gone: it names the
-        // supervisor's leg instead, so the number hanging up ends the supervisor's call rather than leaving them alone.
-        var partyLegId = request.ProviderCallId.Trim();
-        var party = await _apiClient.GetCallStatusAsync(partyLegId, cancellationToken);
-
-        if (party.Succeeded && TelnyxOutboundBridgeState.TryParseEncoded(party.ClientState, out var partyState))
-        {
-            var updated = await _apiClient.UpdateClientStateAsync(
-                partyLegId,
-                partyState.WithPeer(request.SupervisorLegId.Trim()).ToClientStateJson(),
-                cancellationToken);
-
-            if (!updated.Succeeded)
-            {
-                _logger.LogWarning(
-                    "Telnyx refused to hand leg '{PartyLegId}' to the supervisor who took the call over ({StatusCode}); when it hangs up, the supervisor stays on alone.",
-                    partyLegId.SanitizeLogValue(),
-                    updated.StatusCode);
-            }
-        }
-
-        return result;
+        // A number dialed from the keypad runs like a Contact Center call, and is taken over the same way: the number's leg
+        // is handed to the leg the supervisor takes it on, so the number hanging up ends the supervisor's call rather than
+        // leaving them alone.
+        return await TakeOverAsync(request, cancellationToken);
     }
 
     /// <inheritdoc/>

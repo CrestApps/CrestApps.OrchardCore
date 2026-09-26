@@ -25,6 +25,18 @@ internal static class TelnyxApiErrors
     public const string ConferenceNameTakenCode = "90033";
 
     /// <summary>
+    /// The code Telnyx refuses a command with when the call it names has not been answered yet.
+    /// </summary>
+    public const string CallNotAnsweredYetCode = "90034";
+
+    /// <summary>
+    /// Gets whether Telnyx refused the command because the call has not been answered yet.
+    /// </summary>
+    /// <param name="result">The refused command's result.</param>
+    public static bool IsCallNotAnsweredYet(TelnyxApiResult result)
+        => HasErrorCode(result, CallNotAnsweredYetCode);
+
+    /// <summary>
     /// Gets whether Telnyx refused a conference create because a conference of that name exists.
     /// </summary>
     /// <param name="result">The refused create's result.</param>

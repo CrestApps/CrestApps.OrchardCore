@@ -68,6 +68,12 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator
 
     private async Task JoinSupervisorAsync(string supervisorLegId, TelnyxOutboundBridgeState state, CancellationToken cancellationToken)
     {
+        // The takeover that rang it is waiting for this answer and bridges the customer to the leg itself.
+        if (state.TakesOver == true)
+        {
+            return;
+        }
+
         if (state.SupervisesInPlace == true)
         {
             await AttachedSupervisorAnsweredAsync(supervisorLegId, state, cancellationToken);

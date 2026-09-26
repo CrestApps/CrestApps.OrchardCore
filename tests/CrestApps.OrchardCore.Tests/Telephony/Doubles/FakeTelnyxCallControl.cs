@@ -42,6 +42,9 @@ internal sealed class FakeTelnyxCallControl : HttpMessageHandler
     /// <summary>Gets the legs a bridge issued on is refused.</summary>
     public HashSet<string> RefuseBridgeFor { get; } = new(StringComparer.Ordinal);
 
+    // Legs still ringing for this many more bridge attempts: a phone that takes a moment to answer.
+    public Dictionary<string, int> AnswersAfterBridgeAttempts { get; } = new(StringComparer.Ordinal);
+
     /// <summary>Gets or sets a value indicating whether a conference create is refused.</summary>
     public bool RefuseCreate { get; set; }
 
@@ -139,6 +142,13 @@ internal sealed class FakeTelnyxCallControl : HttpMessageHandler
 
             if (Unanswered.Contains(leg) && action is "switch_supervisor_role" or "bridge")
             {
+                return Json(HttpStatusCode.UnprocessableEntity, new { errors = new[] { new { code = "90034", title = "Call not answered yet" } } });
+            }
+
+            if (action == "bridge" && AnswersAfterBridgeAttempts.TryGetValue(leg, out var ringing) && ringing > 0)
+            {
+                AnswersAfterBridgeAttempts[leg] = ringing - 1;
+
                 return Json(HttpStatusCode.UnprocessableEntity, new { errors = new[] { new { code = "90034", title = "Call not answered yet" } } });
             }
 

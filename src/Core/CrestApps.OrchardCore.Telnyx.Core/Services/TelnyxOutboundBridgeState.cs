@@ -94,6 +94,14 @@ public sealed class TelnyxOutboundBridgeState
     public bool? SupervisesInPlace { get; set; }
 
     /// <summary>
+    /// Gets or sets whether this is the leg a supervisor takes a call over on: an ordinary leg to their phone, rung
+    /// because Telnyx takes no command on a supervising leg (it cannot be bridged). The takeover bridges the customer to
+    /// it itself, so its answer is not reported as the engagement connecting.
+    /// </summary>
+    [JsonPropertyName("tk")]
+    public bool? TakesOver { get; set; }
+
+    /// <summary>
     /// Gets or sets, on a supervisor leg, the one-off token the supervisor's phone was told to expect, so it answers this
     /// leg by itself and no other.
     /// </summary>

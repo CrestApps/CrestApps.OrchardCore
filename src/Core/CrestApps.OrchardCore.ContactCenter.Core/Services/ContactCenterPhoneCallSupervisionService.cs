@@ -483,6 +483,15 @@ public sealed partial class ContactCenterPhoneCallSupervisionService : IContactC
 
             return SupervisorEngagementResult.Failure(result?.ErrorMessage ?? "The voice provider did not confirm the takeover.");
         }
+
+        // A provider that cannot hand the call to the supervising leg itself rings the supervisor with another one, and
+        // that leg is the supervisor's side of the call from now on.
+        if (!string.IsNullOrEmpty(result.ProviderLegId) && !string.Equals(result.ProviderLegId, engagement.SupervisorLegId, StringComparison.Ordinal))
+        {
+            engagement.SupervisorLegId = result.ProviderLegId;
+            await _engagements.SaveAsync(engagement, CancellationToken.None);
+        }
+
         await NotifyAsync(SupervisorEngagementNotification.TookOver, engagement, agent: null, reason: null);
 
         if (_logger.IsEnabled(LogLevel.Information))

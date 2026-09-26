@@ -296,6 +296,7 @@ public sealed class TelnyxPhoneCallMonitoringTests
         // Arrange - the supervisor is on the agent's leg.
         var api = KeypadCall();
         api.WithLeg(Supervisor, KeypadSupervisorState("whisper"));
+        api.NextLegId = "takeover-leg";
         var provider = TelnyxContactCenterProviderFactory.Create(api, Resolver());
         var request = KeypadRequest(MonitorMode.Barge);
         request.SupervisorLegId = Supervisor;
@@ -303,25 +304,28 @@ public sealed class TelnyxPhoneCallMonitoringTests
         // Act
         var result = await provider.TakeOverPhoneCallAsync(request, TestContext.Current.CancellationToken);
 
-        // Assert - heard by the number first, bridged to it, then the agent is let go, marked so its end does not end the
-        // call.
+        // Assert - heard by the number first, rung on a leg the number is bridged to (Telnyx takes no command on the
+        // supervising leg), then the supervising leg and the agent are let go, marked so their ends do not end the call.
         Assert.True(result.Succeeded);
+        Assert.Equal("takeover-leg", result.ProviderLegId);
         Assert.Equal(
             [
                 $"POST calls/{Supervisor}/actions/switch_supervisor_role",
-                $"POST calls/{Supervisor}/actions/bridge",
-                $"GET calls/{AgentLeg}",
-                $"POST calls/{AgentLeg}/actions/hangup",
+                "POST calls",
+                "POST calls/takeover-leg/actions/bridge",
+                $"POST calls/{Supervisor}/actions/hangup",
                 $"GET calls/{NumberLeg}",
                 $"PUT calls/{NumberLeg}/actions/client_state_update",
+                $"GET calls/{AgentLeg}",
+                $"POST calls/{AgentLeg}/actions/hangup",
             ],
             api.Commands);
-        Assert.Equal([AgentLeg], api.HungUp);
+        Assert.Contains(AgentLeg, api.HungUp);
         Assert.True(TelnyxOutboundBridgeState.TryParse(api.LegStates[AgentLeg], out var released));
         Assert.True(released.Detached);
         Assert.True(TelnyxOutboundBridgeState.TryParse(api.LegStates[NumberLeg], out var number));
-        Assert.Equal(Supervisor, number.PeerCallControlId);
-        Assert.Equal((Supervisor, NumberLeg, "self"), Assert.Single(api.Bridges));
+        Assert.Equal("takeover-leg", number.PeerCallControlId);
+        Assert.Equal(("takeover-leg", NumberLeg, "self"), Assert.Single(api.Bridges));
     }
 
     [Fact]

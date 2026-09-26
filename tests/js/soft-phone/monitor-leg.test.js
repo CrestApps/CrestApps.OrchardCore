@@ -14,6 +14,7 @@ const {
     readMonitorLegTag,
     claimMonitorLegArm,
     monitorLegAction,
+    monitorLegReplaces,
     monitorLegTalks,
     anyMonitorLegTalks,
 } = globalThis.CrestAppsSoftPhone;
@@ -131,5 +132,25 @@ describe("the supervisor's microphone on a monitor leg", () => {
         expect(anyMonitorLegTalks({ a: { info: { mode: 'Monitor' } }, b: { info: null }, c: null })).toBe(false);
         expect(anyMonitorLegTalks({})).toBe(false);
         expect(anyMonitorLegTalks(null)).toBe(false);
+    });
+});
+
+// Live: a takeover failed because the provider takes no command on a supervising leg, so the call cannot be bridged to
+// it. The supervisor is rung again with the engagement's token on an ordinary leg, and the phone answers that in place
+// of the leg it holds.
+describe('the leg a takeover moves the engagement to', () => {
+    it('replaces the leg the phone holds for the same engagement', () => {
+        expect(monitorLegReplaces({ 'tok-1': { legId: 'sv-1' } }, { token: 'tok-1', legId: 'take-1' })).toBe(true);
+    });
+
+    it('is not the leg the phone already holds', () => {
+        expect(monitorLegReplaces({ 'tok-1': { legId: 'sv-1' } }, { token: 'tok-1', legId: 'sv-1' })).toBe(false);
+    });
+
+    it('is nothing the phone holds no engagement for', () => {
+        expect(monitorLegReplaces({ 'tok-1': { legId: 'sv-1' } }, { token: 'tok-2', legId: 'take-1' })).toBe(false);
+        expect(monitorLegReplaces({}, { token: 'tok-1', legId: 'take-1' })).toBe(false);
+        expect(monitorLegReplaces(null, { token: 'tok-1', legId: 'take-1' })).toBe(false);
+        expect(monitorLegReplaces({ 'tok-1': { legId: 'sv-1' } }, { token: '', legId: 'take-1' })).toBe(false);
     });
 });

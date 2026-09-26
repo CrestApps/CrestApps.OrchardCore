@@ -38,6 +38,14 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
     // How long the supervisor's phone is given to answer its own monitor leg; it answers without ringing.
     private const int SupervisorLegTimeoutSeconds = 30;
 
+    // The role every supervising leg is dialed with: one the supervisor can be heard in.
+    private const string SupervisorDialRole = "barge";
+
+    // How long a takeover waits for the supervisor's phone to answer the leg it takes the call on, within the server's
+    // command timeout, and how often it tries the bridge meanwhile.
+    private static readonly TimeSpan _takeOverAnswerWait = TimeSpan.FromSeconds(7);
+    private static readonly TimeSpan _takeOverBridgeRetry = TimeSpan.FromMilliseconds(300);
+
     private TelnyxSupervisedConference _supervisedConference;
 
     private TelnyxSupervisedConference SupervisedConference
@@ -106,9 +114,13 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
 
         if (inPlace)
         {
-            // Telnyx attaches the leg to the agent's when it answers: a whisper is heard by the agent alone.
+            // Telnyx attaches the leg to the agent's when it answers: a whisper is heard by the agent alone. The leg is
+            // always dialed as barge and given its mode when it answers (see TelnyxOutboundBridgeOrchestrator): live, a
+            // leg dialed to listen was never heard after it was switched to whisper or barge, although every switch was
+            // accepted and the phone's microphone was on. The phone keeps its microphone off while listening, so the
+            // moment before the switch carries silence.
             originate.AdditionalFields["supervise_call_control_id"] = agentLegId;
-            originate.AdditionalFields["supervisor_role"] = role;
+            originate.AdditionalFields["supervisor_role"] = SupervisorDialRole;
         }
 
         // A browser credential is reached as an internal SIP address, never through the outbound voice profile. The
@@ -270,26 +282,28 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
                 return Failure("takeover_failed", "You are not connected to the call yet, so it cannot be taken over.");
             }
 
-            // The customer is bridged to the supervisor's own leg, which takes them off the agent's (parked by its own
-            // bridge's park_after_unbridge=self) and leaves the supervisor's leg parked, not hung up, if it is unbridged
-            // later -- as every agent leg is.
-            var bridged = await _apiClient.PostCallActionAsync(supervisorLegId, "bridge", new Dictionary<string, object>(StringComparer.Ordinal)
-            {
-                ["call_control_id"] = customerLegId,
-                ["park_after_unbridge"] = "self",
-            }, cancellationToken);
+            // Telnyx takes no command on a supervising leg ("Supervisor calls do not support commands"), so the customer
+            // cannot be bridged to it. The supervisor's phone is rung with an ordinary leg that carries the engagement's
+            // token, which the phone answers by itself in place of the one it holds, and the customer is bridged to that.
+            var takeOverLegId = await RingTakeOverLegAsync(request, customerLegId, agentLegId, supervisorLegId, cancellationToken);
 
-            if (!bridged.Succeeded)
+            if (string.IsNullOrEmpty(takeOverLegId))
             {
-                _logger.LogError(
-                    "Telnyx refused to bridge call '{CustomerLegId}' to supervisor leg '{SupervisorLegId}' for a takeover with status code {StatusCode}; the agent stays on the call. Response: {Response}",
-                    customerLegId.SanitizeLogValue(),
-                    supervisorLegId.SanitizeLogValue(),
-                    bridged.StatusCode,
-                    bridged.ErrorBody.SanitizeLogValue());
+                return Failure("takeover_failed", "Your soft phone could not be rung to take the call.");
+            }
+
+            if (!await BridgeWhenAnsweredAsync(takeOverLegId, customerLegId, cancellationToken))
+            {
+                await _apiClient.HangupWithStateAsync(takeOverLegId, DetachedSupervisorState(request).ToClientStateJson(), CancellationToken.None);
 
                 return Failure("takeover_failed", "The call could not be handed to you.");
             }
+
+            // The supervising leg hears nothing any more; it goes quietly, since the engagement lives on the new leg.
+            await _apiClient.HangupWithStateAsync(supervisorLegId, DetachedSupervisorState(request).ToClientStateJson(), CancellationToken.None);
+            supervisorLegId = takeOverLegId;
+
+            await HandCustomerToAsync(customerLegId, agentLegId, takeOverLegId, cancellationToken);
         }
         else if (!await SupervisedConference.SwitchRoleAsync(SupervisedConferenceName(request), supervisorLegId, "barge", agentLegId, cancellationToken))
         {
@@ -321,7 +335,157 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
             return Failure("takeover_failed", "The agent could not be released from the call.");
         }
 
-        return MonitoringSuccess(request);
+        return new ContactCenterVoiceProviderResult
+        {
+            Succeeded = true,
+            ProviderName = TechnicalName,
+            ProviderCallId = customerLegId,
+
+            // The leg the call is on now, which is the one to record as the supervisor's.
+            ProviderLegId = supervisorLegId,
+        };
+    }
+
+    // The customer's leg names the agent's as the one it hangs up when it ends. The agent is gone: it names the leg the
+    // call was taken over on instead, so the customer hanging up ends the supervisor's side rather than leaving it parked.
+    private async Task HandCustomerToAsync(string customerLegId, string agentLegId, string takeOverLegId, CancellationToken cancellationToken)
+    {
+        var customer = await _apiClient.GetCallStatusAsync(customerLegId, cancellationToken);
+
+        if (!customer.Succeeded ||
+            !TelnyxOutboundBridgeState.TryParseEncoded(customer.ClientState, out var customerState) ||
+            !string.Equals(customerState.PeerCallControlId, agentLegId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var updated = await _apiClient.UpdateClientStateAsync(customerLegId, customerState.WithPeer(takeOverLegId).ToClientStateJson(), cancellationToken);
+
+        if (!updated.Succeeded)
+        {
+            _logger.LogWarning(
+                "Telnyx refused to hand leg '{CustomerLegId}' to the supervisor who took the call over ({StatusCode}); when it hangs up, the supervisor's leg is left parked.",
+                customerLegId.SanitizeLogValue(),
+                updated.StatusCode);
+        }
+    }
+
+    // Rings the supervisor's phone with the leg they take the call over on. The token is the engagement's, read from the
+    // request or else from the supervising leg the phone answered it on.
+    private async Task<string> RingTakeOverLegAsync(
+        ContactCenterVoiceMonitoringRequest request,
+        string customerLegId,
+        string agentLegId,
+        string supervisorLegId,
+        CancellationToken cancellationToken)
+    {
+        var token = request.MonitorToken?.Trim();
+
+        if (string.IsNullOrEmpty(token))
+        {
+            var supervising = await _apiClient.GetCallStatusAsync(supervisorLegId, cancellationToken);
+
+            if (supervising.Succeeded && TelnyxOutboundBridgeState.TryParseEncoded(supervising.ClientState, out var supervisingState))
+            {
+                token = supervisingState.MonitorToken;
+            }
+        }
+
+        var endpoint = string.IsNullOrWhiteSpace(request.SupervisorId)
+            ? null
+            : await _agentEndpointResolver.ResolveAsync(request.SupervisorId.Trim(), cancellationToken);
+
+        if (string.IsNullOrEmpty(token) || string.IsNullOrWhiteSpace(endpoint))
+        {
+            _logger.LogWarning(
+                "A takeover of call '{CustomerLegId}' could not ring the supervisor's phone: the engagement's token or the phone's address is unknown.",
+                customerLegId.SanitizeLogValue());
+
+            return null;
+        }
+
+        var originate = new TelnyxOriginateRequest
+        {
+            ConnectionId = _options.ConnectionId,
+            To = endpoint,
+            From = _options.DefaultOutboundCallerId,
+            TimeoutSeconds = SupervisorLegTimeoutSeconds,
+            ClientState = new TelnyxOutboundBridgeState
+            {
+                Intent = TelnyxOutboundBridgeState.ContactCenterSupervisorLegIntent,
+                PeerCallControlId = customerLegId,
+                PartyCallControlId = agentLegId,
+                SupervisesInPlace = true,
+                TakesOver = true,
+                SupervisorRole = "barge",
+                RingUserId = request.SupervisorId.Trim(),
+                MonitorToken = token,
+            }.ToClientStateJson(),
+        };
+
+        originate.AdditionalFields["custom_headers"] = new[]
+        {
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["name"] = TelnyxConstants.MonitorLegSipHeader,
+                ["value"] = token,
+            },
+        };
+        originate.AdditionalFields["command_id"] = $"cc-sv-take-{token}";
+
+        var leg = await _apiClient.OriginateAsync(originate, cancellationToken);
+
+        if (!leg.Succeeded || string.IsNullOrWhiteSpace(leg.CallControlId))
+        {
+            _logger.LogError(
+                "Telnyx rejected the takeover leg for call '{CustomerLegId}' with status code {StatusCode}. Response: {Response}",
+                customerLegId.SanitizeLogValue(),
+                leg.StatusCode,
+                leg.ErrorBody.SanitizeLogValue());
+
+            return null;
+        }
+
+        return leg.CallControlId;
+    }
+
+    // Bridges the customer to the takeover leg as soon as the supervisor's phone has answered it. A leg still ringing is
+    // refused as not answered yet, so the bridge is tried again until it holds, is refused for another reason, or the
+    // wait is over.
+    private async Task<bool> BridgeWhenAnsweredAsync(string takeOverLegId, string customerLegId, CancellationToken cancellationToken)
+    {
+        var deadline = DateTime.UtcNow + _takeOverAnswerWait;
+        TelnyxApiResult bridged;
+
+        while (true)
+        {
+            // The customer leaves the agent's leg, which its own bridge's park_after_unbridge=self parks rather than
+            // hangs up; the takeover leg is parked, not hung up, if it is unbridged later -- as every agent leg is.
+            bridged = await _apiClient.PostCallActionAsync(takeOverLegId, "bridge", new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["call_control_id"] = customerLegId,
+                ["park_after_unbridge"] = "self",
+            }, cancellationToken);
+
+            if (bridged.Succeeded || !TelnyxApiErrors.IsCallNotAnsweredYet(bridged) || DateTime.UtcNow + _takeOverBridgeRetry > deadline)
+            {
+                break;
+            }
+
+            await Task.Delay(_takeOverBridgeRetry, cancellationToken);
+        }
+
+        if (!bridged.Succeeded)
+        {
+            _logger.LogError(
+                "Telnyx refused to bridge call '{CustomerLegId}' to takeover leg '{TakeOverLegId}' with status code {StatusCode}; the agent stays on the call. Response: {Response}",
+                customerLegId.SanitizeLogValue(),
+                takeOverLegId.SanitizeLogValue(),
+                bridged.StatusCode,
+                bridged.ErrorBody.SanitizeLogValue());
+        }
+
+        return bridged.Succeeded;
     }
 
     /// <inheritdoc/>
