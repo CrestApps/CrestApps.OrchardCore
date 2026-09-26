@@ -85,9 +85,10 @@ public sealed class DefaultContactCenterEventPublisher : IContactCenterEventPubl
         {
             if (_logger.IsEnabled(LogLevel.Debug))
             {
+                // The key names the event; its type is left out of the log, since some types (a shared voicemail's)
+                // describe a caller's message.
                 _logger.LogDebug(
-                    "Skipping duplicate Contact Center event '{EventType}' with idempotency key '{IdempotencyKey}'.",
-                    interactionEvent.EventType,
+                    "Skipping duplicate Contact Center event with idempotency key '{IdempotencyKey}'.",
                     interactionEvent.IdempotencyKey.SanitizeLogValue());
             }
 
