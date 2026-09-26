@@ -45,6 +45,16 @@ public sealed class SupervisorQueueAuthorizationService : ISupervisorQueueAuthor
 
         var supervisor = await _agentManager.FindByUserIdAsync(userId, cancellationToken);
 
-        return supervisor?.AllowedQueueIds?.Contains(queueId, StringComparer.OrdinalIgnoreCase) == true;
+        if (supervisor is null)
+        {
+            return false;
+        }
+
+        // A campaign's work runs under a queue of its own that is never stored: it is the campaign's supervisor's to
+        // oversee, as well as whoever holds the queue itself.
+        var campaignId = ContactCenterConstants.CampaignQueue.GetCampaignId(queueId);
+
+        return supervisor.AllowedQueueIds?.Contains(queueId, StringComparer.OrdinalIgnoreCase) == true ||
+            (!string.IsNullOrEmpty(campaignId) && supervisor.AllowedCampaignIds?.Contains(campaignId, StringComparer.OrdinalIgnoreCase) == true);
     }
 }

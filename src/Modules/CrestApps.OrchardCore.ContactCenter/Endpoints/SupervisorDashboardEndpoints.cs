@@ -145,8 +145,24 @@ internal static class SupervisorDashboardEndpoints
             model.TotalWaiting += waitingCount;
         }
 
+        // A campaign's work runs under a queue of its own that is never stored, so no queue tile shows it; an agent signed
+        // in only to campaigns is still on the board of a supervisor who oversees one of them.
+        foreach (var campaignQueueId in agents.SelectMany(CampaignQueueIds).Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (await IsQueueAuthorizedAsync(
+                supervisorQueueAuthorizationService,
+                queueAuthorizationCache,
+                httpContext.User,
+                supervisorId,
+                campaignQueueId,
+                httpContext.RequestAborted))
+            {
+                authorizedQueueIds.Add(campaignQueueId);
+            }
+        }
+
         var scopedAgents = agents
-            .Where(agent => agent.QueueIds.Any(authorizedQueueIds.Contains))
+            .Where(agent => agent.QueueIds.Any(authorizedQueueIds.Contains) || CampaignQueueIds(agent).Any(authorizedQueueIds.Contains))
             .ToArray();
         var scopedAgentIds = scopedAgents
             .Select(agent => agent.ItemId)
@@ -198,7 +214,10 @@ internal static class SupervisorDashboardEndpoints
                 PresenceStatus = agent.PresenceStatus.ToString(),
                 PresenceReason = agent.PresenceReason,
                 QueueCount = agent.QueueIds.Count,
-                QueueIds = agent.QueueIds.Where(authorizedQueueIds.Contains).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
+                QueueIds = agent.QueueIds
+                    .Where(queueId => authorizedQueueIds.Contains(queueId) && ContactCenterConstants.CampaignQueue.GetCampaignId(queueId) is null)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray(),
                 CampaignIds = (agent.CampaignIds ?? []).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
                 ActiveInteractions = activeInteractions,
                 ActiveInteractionId = canMonitorActiveInteraction ? activeInteraction?.ItemId : null,
@@ -227,6 +246,13 @@ internal static class SupervisorDashboardEndpoints
 
         return TypedResults.Ok(model);
     }
+
+    // The queues a campaign agent's outbound work runs under: one per campaign they are signed in to, whether sign-in
+    // recorded it among their queues or only among their campaigns.
+    private static IEnumerable<string> CampaignQueueIds(AgentProfile agent)
+        => agent.QueueIds
+            .Where(queueId => ContactCenterConstants.CampaignQueue.GetCampaignId(queueId) is not null)
+            .Concat((agent.CampaignIds ?? []).Where(id => !string.IsNullOrEmpty(id)).Select(ContactCenterConstants.CampaignQueue.CreateId));
 
     // The campaigns the board's agents are signed in to, by name: what the campaign filter offers. Campaigns are an
     // optional feature, so without their catalog there is nothing to offer.

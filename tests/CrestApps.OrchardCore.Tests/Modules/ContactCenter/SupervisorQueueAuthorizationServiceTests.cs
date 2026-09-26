@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -113,6 +114,46 @@ public sealed class SupervisorQueueAuthorizationServiceTests
 
         // Assert
         Assert.True(authorized);
+    }
+
+    // A campaign's work runs under a queue of its own that is never stored (ContactCenterConstants.CampaignQueue): a
+    // supervisor oversees it when they are allowed the campaign, so its agents are on their board and its calls can be
+    // monitored.
+    [Theory]
+    [InlineData("campaign-1", true)]
+    [InlineData("CAMPAIGN-1", true)]
+    [InlineData("campaign-other", false)]
+    public async Task IsAuthorizedAsync_ForACampaignsQueue_FollowsTheCampaignEntitlement(string allowedCampaignId, bool expected)
+    {
+        // Arrange
+        var service = CreateService(
+            permitted: true,
+            supervisor: new AgentProfile { UserId = "user-1", AllowedCampaignIds = [allowedCampaignId] });
+
+        // Act
+        var authorized = await service.IsAuthorizedAsync(
+            CreatePrincipal(),
+            "user-1",
+            ContactCenterConstants.CampaignQueue.CreateId("campaign-1"),
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(expected, authorized);
+    }
+
+    [Fact]
+    public async Task IsAuthorizedAsync_ACampaignEntitlement_DoesNotOpenAPersistedQueueOfTheSameName()
+    {
+        // Arrange
+        var service = CreateService(
+            permitted: true,
+            supervisor: new AgentProfile { UserId = "user-1", AllowedCampaignIds = ["queue-1"] });
+
+        // Act
+        var authorized = await service.IsAuthorizedAsync(CreatePrincipal(), "user-1", "queue-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(authorized);
     }
 
     private static SupervisorQueueAuthorizationService CreateService(bool permitted, AgentProfile supervisor)
