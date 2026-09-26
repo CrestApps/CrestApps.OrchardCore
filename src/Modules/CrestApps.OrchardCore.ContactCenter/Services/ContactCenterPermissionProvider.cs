@@ -27,6 +27,8 @@ internal sealed class ContactCenterPermissionProvider : IPermissionProvider
         ContactCenterPermissions.TransferExternally,
         ContactCenterPermissions.ViewReports,
         ContactCenterPermissions.InterveneInCalls,
+        ContactCenterPermissions.AccessSharedVoicemail,
+        ContactCenterPermissions.ManageSharedVoicemail,
     ];
 
     /// <inheritdoc/>
@@ -59,6 +61,11 @@ internal sealed class ContactCenterPermissionProvider : IPermissionProvider
                     ContactCenterPermissions.TransferExternally,
                     ContactCenterPermissions.ViewReports,
                     ContactCenterPermissions.InterveneInCalls,
+
+                    // A queue's shared voicemail is the team's, and not every agent on a queue should hear it, so
+                    // agents are not granted it by default: a tenant grants it to the roles that answer the box.
+                    ContactCenterPermissions.AccessSharedVoicemail,
+                    ContactCenterPermissions.ManageSharedVoicemail,
                 ],
             },
         ];

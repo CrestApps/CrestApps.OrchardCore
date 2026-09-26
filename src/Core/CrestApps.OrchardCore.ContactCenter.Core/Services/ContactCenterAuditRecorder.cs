@@ -154,6 +154,31 @@ public sealed class ContactCenterAuditRecorder : IContactCenterAuditRecorder
         return _publisher.PublishAsync(interactionEvent, cancellationToken);
     }
 
+    /// <inheritdoc/>
+    public Task RecordSharedVoicemailAsync(string eventType, SharedVoicemailEventData data, ContactCenterActor actor, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(eventType);
+        ArgumentNullException.ThrowIfNull(data);
+        ArgumentException.ThrowIfNullOrEmpty(data.SharedVoicemailId);
+
+        var occurredUtc = Resolve(data.OccurredUtc);
+        data.OccurredUtc = occurredUtc;
+
+        var interactionEvent = Create(
+            eventType,
+            nameof(SharedVoicemail),
+            data.SharedVoicemailId,
+            data.InteractionId,
+            occurredUtc,
+            actor,
+            ContactCenterConstants.Components.SharedVoicemail,
+            $"shared-voicemail:{eventType}:{data.SharedVoicemailId}:{Stamp(occurredUtc)}");
+
+        interactionEvent.SetData(data);
+
+        return _publisher.PublishAsync(interactionEvent, cancellationToken);
+    }
+
     private static InteractionEvent Create(
         string eventType,
         string aggregateType,

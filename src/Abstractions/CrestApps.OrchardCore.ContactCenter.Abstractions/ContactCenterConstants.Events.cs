@@ -232,6 +232,36 @@ public static partial class ContactCenterConstants
         public const string CallSentToVoicemail = "CallSentToVoicemail";
 
         /// <summary>
+        /// Raised when a voicemail lands in a queue's shared voicemail box.
+        /// </summary>
+        public const string SharedVoicemailReceived = "SharedVoicemailReceived";
+
+        /// <summary>
+        /// Raised when a user claims a message in a queue's shared voicemail box, saying they will handle it.
+        /// </summary>
+        public const string SharedVoicemailClaimed = "SharedVoicemailClaimed";
+
+        /// <summary>
+        /// Raised when a claimed or resolved message in a queue's shared voicemail box is returned to the team unclaimed.
+        /// </summary>
+        public const string SharedVoicemailReleased = "SharedVoicemailReleased";
+
+        /// <summary>
+        /// Raised when a message in a queue's shared voicemail box is marked as dealt with.
+        /// </summary>
+        public const string SharedVoicemailResolved = "SharedVoicemailResolved";
+
+        /// <summary>
+        /// Raised when a user asks for the caller who left a message in a queue's shared voicemail box to be called back.
+        /// </summary>
+        public const string SharedVoicemailCallbackRequested = "SharedVoicemailCallbackRequested";
+
+        /// <summary>
+        /// Raised when a message is deleted from a queue's shared voicemail box.
+        /// </summary>
+        public const string SharedVoicemailDeleted = "SharedVoicemailDeleted";
+
+        /// <summary>
         /// Raised when a caller waiting in a queue accepts the queue's callback offer and leaves the call to be called
         /// back. The call neither was answered nor abandoned: the contact continues as the scheduled callback.
         /// </summary>

@@ -264,6 +264,11 @@ public static partial class ContactCenterConstants
         public const string CallSessions = "CallSessions";
 
         /// <summary>
+        /// The shared queue voicemail box component.
+        /// </summary>
+        public const string SharedVoicemail = "SharedVoicemail";
+
+        /// <summary>
         /// The real-time agent and supervisor experience component.
         /// </summary>
         public const string RealTime = "RealTime";

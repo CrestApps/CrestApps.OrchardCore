@@ -60,6 +60,7 @@ public sealed class ContactCenterRetentionCoverageTests
         ["ContactCenterWorkState"] = "ModifiedUtc",
         ["SecureCaptureSession"] = "ModifiedUtc",
         ["CallQualityRecord"] = "ObservedUtc",
+        ["SharedVoicemail"] = "ResolvedUtc",
     };
 
     /// <summary>
@@ -94,6 +95,8 @@ public sealed class ContactCenterRetentionCoverageTests
         // A capture is settled once the customer completed it, the agent cancelled it, or its window expired; a
         // collecting capture is the live claim and is never purged.
         ["SecureCaptureSession"] = ["SecureCaptureState.Completed", "SecureCaptureState.Cancelled", "SecureCaptureState.Expired"],
+        // A message is settled once the team marked it as dealt with; a new or claimed message is work still waiting.
+        ["SharedVoicemail"] = ["SharedVoicemailStatus.Resolved"],
     };
 
     /// <summary>
@@ -189,6 +192,10 @@ public sealed class ContactCenterRetentionCoverageTests
         [
             ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ContactCenterWorkStateService.cs", "MutateAsync", "workState.ModifiedUtc = "),
         ],
+        ["SharedVoicemail"] =
+        [
+            ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/SharedVoicemailService.cs", "ResolveAsync", "voicemail.ResolvedUtc = "),
+        ],
         ["SecureCaptureSession"] =
         [
             ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/SecureCaptureService.cs", "SubmitAsync", "session.ModifiedUtc = "),
@@ -224,6 +231,8 @@ public sealed class ContactCenterRetentionCoverageTests
         // held under the same legal hold as the interaction it belongs to.
         ["SecureCaptureSession"] = (true, false, 0),
         ["CallQualityRecord"] = (false, false, 0),
+        // The caller's number and name, and how the team handled their message, are held like the callback they lead to.
+        ["SharedVoicemail"] = (true, false, 0),
     };
 
     [Fact]
@@ -668,6 +677,7 @@ public sealed class ContactCenterRetentionCoverageTests
             ProviderCommandRetentionDays = 1,
             AgentSessionRetentionDays = 1,
             CallbackRequestRetentionDays = 1,
+            SharedVoicemailRetentionDays = 1,
             EventMetricRetentionDays = 1,
             CallQualityRecordRetentionDays = 1,
             ProcessedEventRetentionDays = 1,

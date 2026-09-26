@@ -471,6 +471,7 @@ Retention is configured under `CrestApps:ContactCenter:Retention`. Every window 
 | `ProviderCommandRetentionDays` | Provider commands |
 | `AgentSessionRetentionDays` | Agent sessions |
 | `CallbackRequestRetentionDays` | Callback requests |
+| `SharedVoicemailRetentionDays` | Shared voicemail messages, once marked as done |
 | `EventMetricRetentionDays` | Daily event metrics |
 | `CallQualityRecordRetentionDays` | Call quality records |
 | `ProcessedEventRetentionDays` | Processed-event markers |
@@ -559,6 +560,7 @@ Every persisted Contact Center data category is classified in code by `ContactCe
 | Interaction | Sensitive personal | Yes | `InteractionRetentionDays`, floored by legal-hold, once ended | Anonymize (+ external recording erasure) |
 | Call session | Sensitive personal | Yes | `CallSessionRetentionDays`, floored by legal-hold, once ended | Anonymize (+ external recording erasure) |
 | Callback request | Personal | No | `CallbackRequestRetentionDays`, floored by legal-hold, once resolved | Anonymize |
+| Shared voicemail | Personal | No | `SharedVoicemailRetentionDays`, floored by legal-hold, once marked as done; the recording stays on its interaction | Retention expiry |
 | Agent session | Personal | No | `AgentSessionRetentionDays`, from last heartbeat | Anonymize |
 | Agent profile | Personal | No | Agent account lifecycle | Anonymize |
 | Event outbox message | Personal | No | `OutboxMessageRetentionDays`, once completed or dead-lettered | Retention expiry |

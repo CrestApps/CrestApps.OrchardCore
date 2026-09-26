@@ -1,6 +1,7 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Core.Services.Retention;
 using CrestApps.OrchardCore.ContactCenter.Deployments.Sources;
 using CrestApps.OrchardCore.ContactCenter.Deployments.Steps;
 using CrestApps.OrchardCore.ContactCenter.Drivers;
@@ -92,6 +93,19 @@ public sealed class InboundVoiceStartup : StartupBase
         services.AddDisplayDriver<ContactCenterEntryPoint, ContactCenterEntryPointDisplayDriver>();
         services.AddNavigationProvider<ContactCenterEntryPointsAdminMenu>();
         services.AddResourceConfiguration<ContactCenterIvrMenuEditorResourceConfiguration>();
+
+        // Queue shared voicemail boxes. They belong here because only an inbound queue line delivers to one: the entry
+        // point chooses the box, and the messages are the voicemails its callers leave.
+        services
+            .AddScoped<ISharedVoicemailStore, SharedVoicemailStore>()
+            .AddScoped<ISharedVoicemailManager, SharedVoicemailManager>()
+            .AddScoped<ISharedVoicemailAuthorizationService, SharedVoicemailAuthorizationService>()
+            .AddScoped<ISharedVoicemailService, SharedVoicemailService>()
+            .AddScoped<IContactCenterEventHandler, SharedVoicemailProjectionHandler>()
+            .AddScoped<IContactCenterRetentionPolicy, SharedVoicemailRetentionPolicy>()
+            .AddIndexProvider<SharedVoicemailIndexProvider>()
+            .AddDataMigration<SharedVoicemailIndexMigrations>();
+        services.AddNavigationProvider<ContactCenterSharedVoicemailAdminMenu>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
