@@ -80,6 +80,7 @@ public sealed class Startup : StartupBase
                     && options.ProviderCommandRetentionDays >= 0
                     && options.AgentSessionRetentionDays >= 0
                     && options.CallbackRequestRetentionDays >= 0
+                    && options.SharedVoicemailRetentionDays >= 0
                     && options.EventMetricRetentionDays >= 0
                     && options.CallQualityRecordRetentionDays >= 0
                     && options.SecureCaptureRetentionDays >= 0

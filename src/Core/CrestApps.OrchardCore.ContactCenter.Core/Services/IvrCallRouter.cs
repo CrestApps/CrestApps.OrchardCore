@@ -352,13 +352,10 @@ public sealed class IvrCallRouter : IIvrCallRouter
         }
 
         // A queue line has no agent of its own, so a message left on it went to nobody's inbox and was never heard.
-        // It goes to the entry point's voicemail inbox, when one is set. The call normally carries it from when it
-        // arrived; a call that does not is given it here.
-        if (entryPoint.TargetType != EntryPointTargetType.Agent &&
-            !string.IsNullOrEmpty(entryPoint.VoicemailRecipientAgentId) &&
-            !interaction.TechnicalMetadata.ContainsKey(ContactCenterConstants.Voicemail.MailboxAgentMetadataKey))
+        // It goes to the line's mailbox, when one is set: the entry point's voicemail inbox agent, or the shared box of
+        // the queue. The call normally carries it from when it arrived; a call that does not is given it here.
+        if (VoicemailDelivery.StampMailbox(interaction, entryPoint, interaction.QueueId))
         {
-            interaction.TechnicalMetadata[ContactCenterConstants.Voicemail.MailboxAgentMetadataKey] = entryPoint.VoicemailRecipientAgentId;
             await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
         }
 

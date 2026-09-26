@@ -66,4 +66,14 @@ public interface IContactCenterAuditRecorder
     /// <param name="actor">Who changed the activity: the user who purged or closed it, or the platform.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     Task RecordQueueItemWithdrawnAsync(QueueItemWithdrawnEventData data, ContactCenterActor actor, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Records something that happened to a message in a queue's shared voicemail box: it arriving, or a user claiming,
+    /// releasing, resolving, calling back or deleting it.
+    /// </summary>
+    /// <param name="eventType">One of the shared voicemail event types.</param>
+    /// <param name="data">The change. <see cref="SharedVoicemailEventData.OccurredUtc"/> dates it.</param>
+    /// <param name="actor">Who made the change.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task RecordSharedVoicemailAsync(string eventType, SharedVoicemailEventData data, ContactCenterActor actor, CancellationToken cancellationToken = default);
 }

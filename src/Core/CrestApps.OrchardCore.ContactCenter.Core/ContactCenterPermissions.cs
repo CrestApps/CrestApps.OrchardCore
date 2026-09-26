@@ -96,4 +96,18 @@ public static class ContactCenterPermissions
     /// coaching and joining a call, and messaging an agent, need only <see cref="MonitorContactCenter"/>.
     /// </summary>
     public static readonly Permission InterveneInCalls = new("ContactCenterInterveneInCalls", "Take over, end, transfer and record live Contact Center calls, and set agents' state", [ManageContactCenter]);
+
+    /// <summary>
+    /// Grants the management of queue shared voicemail boxes beyond one's own handling: deleting a message, and
+    /// returning or resolving a message somebody else has claimed. It is still limited to the queues the user is
+    /// entitled to, unless they also hold <see cref="ManageContactCenter"/>.
+    /// </summary>
+    public static readonly Permission ManageSharedVoicemail = new("ManageContactCenterSharedVoicemail", "Manage shared queue voicemail: delete messages and take over other users' claims", [ManageContactCenter]);
+
+    /// <summary>
+    /// Grants access to the shared voicemail boxes of the queues the user is entitled to: listening to the messages,
+    /// claiming them, marking them as dealt with, and calling the callers back. A user sees a queue's box only when
+    /// they also hold that queue in their agent entitlements, unless they hold <see cref="ManageContactCenter"/>.
+    /// </summary>
+    public static readonly Permission AccessSharedVoicemail = new("AccessContactCenterSharedVoicemail", "Access shared queue voicemail for entitled queues", [ManageSharedVoicemail, ManageContactCenter]);
 }

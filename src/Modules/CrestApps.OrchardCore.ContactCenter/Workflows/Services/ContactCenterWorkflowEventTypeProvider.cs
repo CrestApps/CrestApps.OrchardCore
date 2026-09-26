@@ -35,6 +35,7 @@ public sealed class ContactCenterWorkflowEventTypeProvider : IContactCenterWorkf
         var recording = new SelectListGroup { Name = S["Recording"].Value };
         var supervision = new SelectListGroup { Name = S["Supervision"].Value };
         var secureCapture = new SelectListGroup { Name = S["Secure capture"].Value };
+        var sharedVoicemail = new SelectListGroup { Name = S["Shared voicemail"].Value };
 
         return
         [
@@ -94,6 +95,13 @@ public sealed class ContactCenterWorkflowEventTypeProvider : IContactCenterWorkf
             new SelectListItem(S["Call ended"].Value, ContactCenterConstants.Events.CallEnded) { Group = calls },
             new SelectListItem(S["Call sent to voicemail"].Value, ContactCenterConstants.Events.CallSentToVoicemail) { Group = calls },
             new SelectListItem(S["Repeated poor call quality"].Value, ContactCenterConstants.Events.CallQualityAlertRaised) { Group = calls },
+
+            new SelectListItem(S["Shared voicemail received"].Value, ContactCenterConstants.Events.SharedVoicemailReceived) { Group = sharedVoicemail },
+            new SelectListItem(S["Shared voicemail claimed"].Value, ContactCenterConstants.Events.SharedVoicemailClaimed) { Group = sharedVoicemail },
+            new SelectListItem(S["Shared voicemail returned to the team"].Value, ContactCenterConstants.Events.SharedVoicemailReleased) { Group = sharedVoicemail },
+            new SelectListItem(S["Shared voicemail marked as done"].Value, ContactCenterConstants.Events.SharedVoicemailResolved) { Group = sharedVoicemail },
+            new SelectListItem(S["Shared voicemail callback requested"].Value, ContactCenterConstants.Events.SharedVoicemailCallbackRequested) { Group = sharedVoicemail },
+            new SelectListItem(S["Shared voicemail deleted"].Value, ContactCenterConstants.Events.SharedVoicemailDeleted) { Group = sharedVoicemail },
 
             new SelectListItem(S["Recording started"].Value, ContactCenterConstants.Events.RecordingStarted) { Group = recording },
             new SelectListItem(S["Recording paused"].Value, ContactCenterConstants.Events.RecordingPaused) { Group = recording },

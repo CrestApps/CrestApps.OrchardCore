@@ -103,6 +103,13 @@ public sealed class ContactCenterRetentionOptions
     public int CallbackRequestRetentionDays { get; set; }
 
     /// <summary>
+    /// Gets or sets the number of days to keep the messages in queue shared voicemail boxes once they were marked as
+    /// dealt with, measured from that moment. A message still waiting on the team is never purged. The recording is
+    /// not held by this record; it stays on its interaction and is governed with it.
+    /// </summary>
+    public int SharedVoicemailRetentionDays { get; set; }
+
+    /// <summary>
     /// Gets or sets the number of days to retain daily event metrics.
     /// </summary>
     public int EventMetricRetentionDays { get; set; }

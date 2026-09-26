@@ -63,6 +63,19 @@ public sealed class RecordingContactCenterAuditRecorder : IContactCenterAuditRec
     }
 
     /// <summary>
+    /// Gets the shared voicemail records, in the order they were made.
+    /// </summary>
+    public List<(string EventType, SharedVoicemailEventData Data, ContactCenterActor Actor)> SharedVoicemails { get; } = [];
+
+    /// <inheritdoc/>
+    public Task RecordSharedVoicemailAsync(string eventType, SharedVoicemailEventData data, ContactCenterActor actor, CancellationToken cancellationToken = default)
+    {
+        SharedVoicemails.Add((eventType, data, actor));
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
     /// Gets the call records of one event type.
     /// </summary>
     /// <param name="eventType">The event type.</param>

@@ -285,6 +285,22 @@ The provider accepting an external transfer only means it has started ringing th
 
 A personal line's messages go to its agent, and a message left after an agent let a queue offer ring out goes to that agent. A caller on a queue line who reaches voicemail with no agent of their own — they chose voicemail from the menu, the queue was full, or they waited past its limit before anybody was offered the call — used to leave a message that went into nobody's inbox. Set the entry point's **Voicemail inbox** to the agent (for example a supervisor) whose **Voicemail** tab should receive them. The inbox is stamped on the call when it arrives, the greeting is the entry point's **Default voicemail greeting**, and the message is played, marked read and deleted exactly like any other voicemail in that agent's inbox.
 
+#### The queue's shared voicemail box
+
+Set the entry point's **Deliver voicemail to** to **The queue's shared voicemail box** to give those messages to a team instead of one agent. The message is filed under the queue the caller was in when they reached voicemail — which a menu choice or an overflow can make a different queue from the line's own — and it is kept out of every agent's personal **Voicemail** tab, including the tab of an agent the caller was offered to earlier. A message left because an agent let an offered call ring out, and a personal line's messages, still go to that agent. Existing entry points keep delivering to their **Voicemail inbox** agent until this is changed.
+
+The team works the box from **Interaction Center > Shared voicemail**. The page lists the messages of the queues the viewer may see, newest first, with who called, the queue, when, how long, and who is handling it, and plays each recording through recording governance, so every playback is on the recording-access audit trail. It filters by queue and by status (open, new, claimed, done, all) and shows how many messages nobody has claimed yet. On each message a user can:
+
+- **I'll handle this** — claim it. Everyone else sees who claimed it and when. A user who holds **Manage shared queue voicemail** can take over someone else's claim.
+- **Call back** — queue a callback to the caller in the message's queue. The next available agent in the queue is offered it as a call to place, like a callback a caller asked for while waiting. It needs the **Contact Center Outbound Dialer** feature, which provides callbacks. An unclaimed message is claimed by whoever asks for the callback.
+- **Mark done** — resolve it, with an optional note. An unclaimed message is claimed by whoever resolves it.
+- **Return to team** / **Reopen** — put a claimed or resolved message back as new. Only whoever holds it, or a user who manages shared voicemail, can.
+- **Delete** — remove the message and erase its recording through recording governance. It needs **Manage shared queue voicemail**, and a recording under legal hold is never erased.
+
+Access takes two things. The user needs **Access shared queue voicemail for entitled queues**, which the Supervisor role has by default and the Agent role does not, so a tenant grants it to the roles that answer the box. And the user sees a queue's messages only when the queue is one of their entitled queues — the allowed queues on their agent profile, as the agent entitlement policy and the supervisor queue authorization read them. A user who holds **Manage the Contact Center** sees every queue. Both are enforced on the server for the list, the playback and every action; a message in a queue the user may not see is answered as not found.
+
+Every change is written to the event log as `SharedVoicemailReceived`, `SharedVoicemailClaimed`, `SharedVoicemailReleased`, `SharedVoicemailResolved`, `SharedVoicemailCallbackRequested` or `SharedVoicemailDeleted`, with who made it, and each can start a workflow.
+
 ### What is recorded
 
 The caller's route is kept with the call and written to the event log, so the call's history shows the path:

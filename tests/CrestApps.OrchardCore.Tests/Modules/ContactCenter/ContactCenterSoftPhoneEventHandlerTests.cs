@@ -298,6 +298,60 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
             Times.Once);
     }
 
+    [Theory]
+    [InlineData(ContactCenterConstants.Events.CallSentToVoicemail)]
+    [InlineData(ContactCenterConstants.Events.CallEnded)]
+    public async Task HandleAsync_AMessageInAQueuesSharedBox_IsKeptOutOfEveryAgentsVoicemailTab(string eventType)
+    {
+        // Arrange
+        // The caller was offered to an agent earlier, who let it ring out, and later reached voicemail from the queue.
+        // The message belongs to the queue's team: it must not also land in that agent's personal Voicemail tab, which
+        // is where the interaction's last agent would otherwise take it.
+        var interaction = new Interaction
+        {
+            ItemId = "interaction-1",
+            ActivityItemId = "activity-1",
+            ProviderName = "Telnyx",
+            ProviderInteractionId = "call-1",
+            CustomerAddress = "+15550001000",
+            QueueId = "queue-main",
+            AgentId = "agent-1",
+            Direction = InteractionDirection.Inbound,
+            CreatedUtc = new DateTime(2026, 7, 10, 13, 0, 0, DateTimeKind.Utc),
+            TechnicalMetadata = new Dictionary<string, object>
+            {
+                [ContactCenterConstants.Voicemail.ProjectionMetadataKey] = true,
+                [ContactCenterConstants.Voicemail.SharedQueueMetadataKey] = "queue-main",
+            },
+        }.RestorePersistedStatus(InteractionStatus.Ended);
+
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager.Setup(manager => manager.FindByIdAsync("interaction-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(manager => manager.FindByIdAsync("agent-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentProfile { ItemId = "agent-1", UserId = "user-1" });
+
+        var store = new Mock<ITelephonyInteractionStore>(MockBehavior.Strict);
+        var hubContext = new Mock<IHubContext<TelephonyHub, ITelephonyClient>>(MockBehavior.Strict);
+
+        var handler = new ContactCenterSoftPhoneEventHandler(
+            interactionManager.Object,
+            new Mock<ICallSessionManager>().Object,
+            agentManager.Object,
+            store.Object,
+            hubContext.Object,
+            _shellSettings);
+
+        // Act
+        await handler.HandleAsync(new InteractionEvent { EventType = eventType, InteractionId = "interaction-1" }, TestContext.Current.CancellationToken);
+
+        // Assert
+        store.VerifyNoOtherCalls();
+        hubContext.VerifyNoOtherCalls();
+    }
+
     [Fact]
     public async Task HandleAsync_CallSessionUpdated_PushesMutedHoldState()
     {

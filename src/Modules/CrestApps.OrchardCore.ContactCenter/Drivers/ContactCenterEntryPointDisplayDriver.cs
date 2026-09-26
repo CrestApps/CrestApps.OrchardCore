@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Deployments;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -71,6 +72,7 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
             ClosedMessage = entryPoint.ClosedMessage,
             VoicemailGreetingText = entryPoint.VoicemailGreetingText,
             VoicemailRecipientAgentId = entryPoint.VoicemailRecipientAgentId,
+            VoicemailDestination = entryPoint.VoicemailDestination,
             IvrFlowJson = entryPoint.IvrFlow is null
                 ? null
                 : JsonSerializer.Serialize(entryPoint.IvrFlow, _ivrDisplayOptions),
@@ -112,6 +114,7 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
             model.VoicemailGreetingText = viewModel.VoicemailGreetingText;
             model.VoicemailRecipientAgentId = viewModel.VoicemailRecipientAgentId;
             model.VoicemailRecipientAgentOptions = viewModel.VoicemailRecipientAgentOptions;
+            model.VoicemailDestination = viewModel.VoicemailDestination;
             model.IvrFlowJson = viewModel.IvrFlowJson;
             model.IvrQueueOptions = viewModel.IvrQueueOptions;
             model.IvrAgentOptions = viewModel.IvrAgentOptions;
@@ -174,8 +177,15 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
         entryPoint.ClosedMessage = model.ClosedMessage?.Trim();
         entryPoint.VoicemailGreetingText = string.IsNullOrWhiteSpace(model.VoicemailGreetingText) ? null : model.VoicemailGreetingText.Trim();
 
-        // Only a queue line needs an inbox of its own; a personal line's messages always go to its agent.
-        entryPoint.VoicemailRecipientAgentId = !isAgentTarget && !string.IsNullOrWhiteSpace(model.VoicemailRecipientAgentId)
+        // Only a queue line needs a mailbox of its own; a personal line's messages always go to its agent. A line that
+        // delivers to the queue's shared box has no agent inbox, so the agent selection is cleared rather than kept
+        // looking as if it still received the line's messages.
+        var deliversToSharedBox = !isAgentTarget && model.VoicemailDestination == EntryPointVoicemailDestination.QueueSharedBox;
+
+        entryPoint.VoicemailDestination = deliversToSharedBox
+            ? EntryPointVoicemailDestination.QueueSharedBox
+            : EntryPointVoicemailDestination.AgentInbox;
+        entryPoint.VoicemailRecipientAgentId = !isAgentTarget && !deliversToSharedBox && !string.IsNullOrWhiteSpace(model.VoicemailRecipientAgentId)
             ? model.VoicemailRecipientAgentId.Trim()
             : null;
         entryPoint.Enabled = model.Enabled;

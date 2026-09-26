@@ -53,6 +53,16 @@ public static class ContactCenterDataGovernanceCatalog
         },
         new ContactCenterDataCategory
         {
+            Key = "shared-voicemail",
+            DisplayName = "Shared voicemail",
+            Sensitivity = ContactCenterDataSensitivity.Personal,
+            ContainsRecordingReference = false,
+            RetentionBasis = "SharedVoicemailRetentionDays, floored by LegalHoldMinimumDays, once marked as dealt with; the recording stays on its interaction and is governed with it.",
+            ErasureStrategy = ContactCenterErasureStrategy.RetentionExpiry,
+            Description = "A message in a queue's shared voicemail box. It holds the caller's number and name, who handled it and an optional note, so it is personal data; the recording itself is referenced through the interaction, not held here.",
+        },
+        new ContactCenterDataCategory
+        {
             Key = "agent-session",
             DisplayName = "Agent session",
             Sensitivity = ContactCenterDataSensitivity.Personal,

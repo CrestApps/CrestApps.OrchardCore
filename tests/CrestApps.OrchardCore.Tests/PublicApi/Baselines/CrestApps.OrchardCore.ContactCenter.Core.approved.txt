@@ -9,6 +9,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core
     }
     public static class ContactCenterPermissions
     {
+        public static readonly OrchardCore.Security.Permissions.Permission AccessSharedVoicemail;
         public static readonly OrchardCore.Security.Permissions.Permission InitiateSecureCapture;
         public static readonly OrchardCore.Security.Permissions.Permission InterveneInCalls;
         public static readonly OrchardCore.Security.Permissions.Permission ManageAgents;
@@ -18,6 +19,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core
         public static readonly OrchardCore.Security.Permissions.Permission ManageInteractions;
         public static readonly OrchardCore.Security.Permissions.Permission ManageQueueGroups;
         public static readonly OrchardCore.Security.Permissions.Permission ManageQueues;
+        public static readonly OrchardCore.Security.Permissions.Permission ManageSharedVoicemail;
         public static readonly OrchardCore.Security.Permissions.Permission ManageSkills;
         public static readonly OrchardCore.Security.Permissions.Permission ManageVoiceMedia;
         public static readonly OrchardCore.Security.Permissions.Permission MonitorContactCenter;
@@ -404,6 +406,17 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Indexes
         public System.DateTime? ModifiedUtc { get; set; }
         public bool RecordingResumed { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Models.SecureCaptureState State { get; set; }
+    }
+    public sealed class SharedVoicemailIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public SharedVoicemailIndex() { }
+        public string ClaimedByUserId { get; set; }
+        public long DocumentId { get; set; }
+        public string InteractionId { get; set; }
+        public string QueueId { get; set; }
+        public System.DateTime ReceivedUtc { get; set; }
+        public System.DateTime? ResolvedUtc { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Models.SharedVoicemailStatus Status { get; set; }
     }
     public sealed class VoiceMediaItemIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
     {
@@ -1248,6 +1261,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string TargetAgentId { get; set; }
         public string TargetQueueId { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Models.EntryPointTargetType TargetType { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Models.EntryPointVoicemailDestination VoicemailDestination { get; set; }
         public bool VoicemailEnabled { get; set; }
         public string VoicemailGreetingText { get; set; }
         public string VoicemailRecipientAgentId { get; set; }
@@ -1396,6 +1410,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public int PurgeBatchSize { get; set; }
         public int QueueItemRetentionDays { get; set; }
         public int SecureCaptureRetentionDays { get; set; }
+        public int SharedVoicemailRetentionDays { get; set; }
         public int WebhookInboxMessageRetentionDays { get; set; }
         public int WorkStateRetentionDays { get; set; }
     }
@@ -2300,6 +2315,108 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public int LinkTimeToLiveSeconds { get; set; }
         public bool PauseRecordingDuringCapture { get; set; }
     }
+    public sealed class SharedVoicemail : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel
+    {
+        public SharedVoicemail() { }
+        public string CallbackRequestId { get; set; }
+        public string CallbackRequestedByUserName { get; set; }
+        public System.DateTime? CallbackRequestedUtc { get; set; }
+        public string CallerName { get; set; }
+        public string CallerNumber { get; set; }
+        public string ClaimedByUserId { get; set; }
+        public string ClaimedByUserName { get; set; }
+        public System.DateTime? ClaimedUtc { get; set; }
+        public string ContactContentItemId { get; set; }
+        public string ContactContentType { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string InteractionId { get; set; }
+        public System.DateTime? ModifiedUtc { get; set; }
+        public string QueueId { get; set; }
+        public System.DateTime ReceivedUtc { get; set; }
+        public string ResolutionNote { get; set; }
+        public string ResolvedByUserId { get; set; }
+        public string ResolvedByUserName { get; set; }
+        public System.DateTime? ResolvedUtc { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Models.SharedVoicemailStatus Status { get; set; }
+    }
+    public sealed class SharedVoicemailAccess
+    {
+        public SharedVoicemailAccess() { }
+        public bool AllQueues { get; init; }
+        public bool CanAccess { get; init; }
+        public bool CanManage { get; init; }
+        public System.Collections.Generic.IReadOnlyCollection<string> QueueIds { get; init; }
+        public string UserId { get; init; }
+        public string UserName { get; init; }
+        public static CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailAccess None { get; }
+        public bool CanClaim(CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemail voicemail) { }
+        public bool CanDelete(CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemail voicemail) { }
+        public bool CanRelease(CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemail voicemail) { }
+        public bool CanWork(CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemail voicemail) { }
+        public bool CoversQueue(string queueId) { }
+        public bool Holds(CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemail voicemail) { }
+    }
+    public sealed class SharedVoicemailActionResult
+    {
+        public SharedVoicemailActionResult() { }
+        public CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest Callback { get; }
+        public string ReasonCode { get; }
+        public System.IO.Stream Recording { get; }
+        public CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailActionStatus Status { get; }
+        public bool Succeeded { get; }
+        public CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemail Voicemail { get; }
+        public static CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailActionResult Failure(CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailActionStatus status, CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemail voicemail = null, string reasonCode = null) { }
+        public static CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailActionResult Success(CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemail voicemail, CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest callback = null, System.IO.Stream recording = null) { }
+    }
+    public enum SharedVoicemailActionStatus
+    {
+        Succeeded = 0,
+        NotFound = 1,
+        Forbidden = 2,
+        Conflict = 3,
+        Unavailable = 4,
+    }
+    public sealed class SharedVoicemailEventData
+    {
+        public SharedVoicemailEventData() { }
+        public string CallbackRequestId { get; set; }
+        public string InteractionId { get; set; }
+        public string Note { get; set; }
+        public System.DateTime OccurredUtc { get; set; }
+        public string PreviousClaimedByUserId { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Models.SharedVoicemailStatus PreviousStatus { get; set; }
+        public string QueueId { get; set; }
+        public string SharedVoicemailId { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Models.SharedVoicemailStatus Status { get; set; }
+        public string UserId { get; set; }
+        public string UserName { get; set; }
+    }
+    public sealed class SharedVoicemailPage
+    {
+        public SharedVoicemailPage() { }
+        public int Count { get; set; }
+        public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemail> Entries { get; set; }
+        public static CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailPage Empty { get; }
+    }
+    public sealed class SharedVoicemailQuery
+    {
+        public SharedVoicemailQuery() { }
+        public bool IncludeResolved { get; set; }
+        public int Page { get; set; }
+        public int PageSize { get; set; }
+        public System.Collections.Generic.IReadOnlyCollection<string> QueueIds { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Models.SharedVoicemailStatus? Status { get; set; }
+    }
+    public static class SharedVoicemailReasons
+    {
+        public const string AlreadyResolved = "alreadyResolved";
+        public const string CallbacksUnavailable = "callbacksUnavailable";
+        public const string ClaimedByAnotherUser = "claimedByAnotherUser";
+        public const string LegalHold = "legalHold";
+        public const string ManagePermissionRequired = "managePermissionRequired";
+        public const string NoCallerNumber = "noCallerNumber";
+        public const string NoRecording = "noRecording";
+    }
     public readonly struct SkillTag : System.IEquatable<CrestApps.OrchardCore.ContactCenter.Core.Models.SkillTag>
     {
         public bool HasValue { get; }
@@ -3018,6 +3135,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task RecordCallAsync(string eventType, CrestApps.OrchardCore.ContactCenter.Core.Models.CallLifecycleEventData data, System.DateTime occurredUtc, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterActor actor, string idempotencyKey = null, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task RecordOfferAsync(string eventType, CrestApps.OrchardCore.ContactCenter.Core.Models.OfferLifecycleEventData data, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterActor actor, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task RecordQueueItemWithdrawnAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItemWithdrawnEventData data, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterActor actor, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task RecordSharedVoicemailAsync(string eventType, CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailEventData data, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterActor actor, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ContactCenterCallCommandService : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterCallCommandService
     {
@@ -3833,6 +3951,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         System.Threading.Tasks.Task RecordCallAsync(string eventType, CrestApps.OrchardCore.ContactCenter.Core.Models.CallLifecycleEventData data, System.DateTime occurredUtc, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterActor actor, string idempotencyKey = null, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task RecordOfferAsync(string eventType, CrestApps.OrchardCore.ContactCenter.Core.Models.OfferLifecycleEventData data, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterActor actor, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task RecordQueueItemWithdrawnAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItemWithdrawnEventData data, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterActor actor, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task RecordSharedVoicemailAsync(string eventType, CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailEventData data, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterActor actor, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IContactCenterCallCommandService
     {
@@ -4382,6 +4501,31 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public interface ISecurePauseAutoResumeService
     {
         System.Threading.Tasks.Task<int> ResumeExpiredAsync(System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ISharedVoicemailAuthorizationService
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailAccess> GetAccessAsync(System.Security.Claims.ClaimsPrincipal principal, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ISharedVoicemailManager : CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemail>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemail>
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemail> FindByInteractionIdAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailPage> QueryAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailQuery query, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ISharedVoicemailService
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailActionResult> ClaimAsync(System.Security.Claims.ClaimsPrincipal principal, string voicemailId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailActionResult> DeleteAsync(System.Security.Claims.ClaimsPrincipal principal, string voicemailId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemail> DeliverAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemail voicemail, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailPage> ListAsync(System.Security.Claims.ClaimsPrincipal principal, CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailQuery query, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailActionResult> OpenRecordingAsync(System.Security.Claims.ClaimsPrincipal principal, string voicemailId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailActionResult> ReleaseAsync(System.Security.Claims.ClaimsPrincipal principal, string voicemailId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailActionResult> RequestCallbackAsync(System.Security.Claims.ClaimsPrincipal principal, string voicemailId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailActionResult> ResolveAsync(System.Security.Claims.ClaimsPrincipal principal, string voicemailId, string note, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ISharedVoicemailStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemail>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemail>
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemail> FindByInteractionIdAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailPage> QueryAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailQuery query, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface ISupervisorEngagementNotifier
     {
@@ -5088,6 +5232,37 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         protected override string ErrorCodePrefix { get; }
         protected override System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> ExecuteTelephonyAsync(CrestApps.OrchardCore.Telephony.ITelephonyService telephonyService, CrestApps.OrchardCore.Telephony.Models.CallReference call, System.Threading.CancellationToken cancellationToken) { }
     }
+    public sealed class SharedVoicemailAuthorizationService : CrestApps.OrchardCore.ContactCenter.Core.Services.ISharedVoicemailAuthorizationService
+    {
+        public SharedVoicemailAuthorizationService(Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentProfileManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentEntitlementPolicy entitlementPolicy, CrestApps.OrchardCore.ContactCenter.Core.Services.ISupervisorQueueAuthorizationService supervisorQueueAuthorizationService) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailAccess> GetAccessAsync(System.Security.Claims.ClaimsPrincipal principal, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class SharedVoicemailManager : CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemail>, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemail>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemail>, CrestApps.OrchardCore.ContactCenter.Core.Services.ISharedVoicemailManager
+    {
+        public SharedVoicemailManager(CrestApps.OrchardCore.ContactCenter.Core.Services.ISharedVoicemailStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemail>> handlers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemail>> logger) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemail> FindByInteractionIdAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailPage> QueryAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailQuery query, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class SharedVoicemailService : CrestApps.OrchardCore.ContactCenter.Core.Services.ISharedVoicemailService
+    {
+        public const int MaxNoteLength = 1000;
+        public SharedVoicemailService(CrestApps.OrchardCore.ContactCenter.Core.Services.ISharedVoicemailManager voicemailManager, CrestApps.OrchardCore.ContactCenter.Core.Services.ISharedVoicemailAuthorizationService authorizationService, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterAuditRecorder auditRecorder, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallbackService callbackService, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Services.IRecordingAccessGovernanceService> governanceServices, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Telephony.IRecordingMediaStore> mediaStores, OrchardCore.Modules.IClock clock) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailActionResult> ClaimAsync(System.Security.Claims.ClaimsPrincipal principal, string voicemailId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailActionResult> DeleteAsync(System.Security.Claims.ClaimsPrincipal principal, string voicemailId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemail> DeliverAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemail voicemail, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailPage> ListAsync(System.Security.Claims.ClaimsPrincipal principal, CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailQuery query, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailActionResult> OpenRecordingAsync(System.Security.Claims.ClaimsPrincipal principal, string voicemailId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailActionResult> ReleaseAsync(System.Security.Claims.ClaimsPrincipal principal, string voicemailId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailActionResult> RequestCallbackAsync(System.Security.Claims.ClaimsPrincipal principal, string voicemailId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailActionResult> ResolveAsync(System.Security.Claims.ClaimsPrincipal principal, string voicemailId, string note, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class SharedVoicemailStore : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemail, CrestApps.OrchardCore.ContactCenter.Core.Indexes.SharedVoicemailIndex>, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemail>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemail>, CrestApps.OrchardCore.ContactCenter.Core.Services.ISharedVoicemailStore
+    {
+        public SharedVoicemailStore(YesSql.ISession session) { }
+        protected override bool CheckConcurrency { get; }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemail> FindByInteractionIdAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailPage> QueryAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailQuery query, System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public static class SkillMatching
     {
         public static int GetProficiency(CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile agent, string skillId) { }
@@ -5149,6 +5324,21 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public VoiceMediaItemStore(YesSql.ISession session) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaItem> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaItem>> GetAllAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public static class VoicemailDelivery
+    {
+        public static string GetSharedQueueId(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
+        public static CrestApps.OrchardCore.ContactCenter.Core.Services.VoicemailRecipient Resolve(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, string offeredAgentId = null) { }
+        public static bool StampMailbox(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint entryPoint, string queueId = null) { }
+    }
+    public sealed class VoicemailRecipient : System.IEquatable<CrestApps.OrchardCore.ContactCenter.Core.Services.VoicemailRecipient>
+    {
+        public VoicemailRecipient(string AgentId, string SharedQueueId) { }
+        public string AgentId { get; init; }
+        public string SharedQueueId { get; init; }
+        public static CrestApps.OrchardCore.ContactCenter.Core.Services.VoicemailRecipient None { get; }
+        public static CrestApps.OrchardCore.ContactCenter.Core.Services.VoicemailRecipient ForAgent(string agentId) { }
+        public static CrestApps.OrchardCore.ContactCenter.Core.Services.VoicemailRecipient ForSharedQueue(string queueId) { }
     }
     public sealed class WarmTransferService : CrestApps.OrchardCore.ContactCenter.Core.Services.IWarmTransferService
     {
@@ -5329,6 +5519,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services.Retention
         public override string EntityName { get; }
         protected override bool IsSubjectToLegalHold { get; }
         protected override System.Linq.Expressions.Expression<System.Func<CrestApps.OrchardCore.ContactCenter.Core.Indexes.SecureCaptureSessionIndex, bool>> BuildExpiredPredicate(System.DateTime cutoffUtc) { }
+        protected override double GetRetentionDays(CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterRetentionOptions options) { }
+    }
+    public sealed class SharedVoicemailRetentionPolicy : CrestApps.OrchardCore.ContactCenter.Core.Services.Retention.ContactCenterRetentionPolicyBase<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemail, CrestApps.OrchardCore.ContactCenter.Core.Indexes.SharedVoicemailIndex>
+    {
+        public SharedVoicemailRetentionPolicy(YesSql.ISession session, CrestApps.OrchardCore.ContactCenter.Core.Services.ISharedVoicemailStore sharedVoicemailStore) { }
+        public override string EntityName { get; }
+        protected override bool IsSubjectToLegalHold { get; }
+        protected override System.Linq.Expressions.Expression<System.Func<CrestApps.OrchardCore.ContactCenter.Core.Indexes.SharedVoicemailIndex, bool>> BuildExpiredPredicate(System.DateTime cutoffUtc) { }
         protected override double GetRetentionDays(CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterRetentionOptions options) { }
     }
 }

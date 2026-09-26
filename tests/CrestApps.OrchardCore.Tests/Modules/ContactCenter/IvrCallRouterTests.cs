@@ -253,6 +253,23 @@ public sealed class IvrCallRouterTests
     }
 
     [Fact]
+    public async Task AVoicemailChoiceOnALineDeliveringToTheSharedBox_LeavesTheMessageForTheQueue()
+    {
+        // Arrange
+        var harness = new RouterHarness();
+        harness.EntryPoint.VoicemailDestination = EntryPointVoicemailDestination.QueueSharedBox;
+        harness.EntryPoint.VoicemailRecipientAgentId = "agent-supervisor";
+
+        // Act
+        await harness.RouteAsync(new IvrStep(IvrStepKind.Voicemail, "root", null, null, null));
+
+        // Assert
+        Assert.Equal("queue-main", harness.Interaction.TechnicalMetadata[ContactCenterConstants.Voicemail.SharedMailboxQueueMetadataKey]);
+        Assert.False(harness.Interaction.TechnicalMetadata.ContainsKey(ContactCenterConstants.Voicemail.MailboxAgentMetadataKey));
+        Assert.Single(harness.Voicemails);
+    }
+
+    [Fact]
     public async Task AFailedExternalTransfer_TakesTheMenusFallback()
     {
         // Arrange

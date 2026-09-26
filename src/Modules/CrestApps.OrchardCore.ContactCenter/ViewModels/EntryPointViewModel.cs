@@ -122,6 +122,11 @@ public class EntryPointViewModel
     public string VoicemailRecipientAgentId { get; set; }
 
     /// <summary>
+    /// Gets or sets where a queue line delivers a message the call has no agent for.
+    /// </summary>
+    public EntryPointVoicemailDestination VoicemailDestination { get; set; }
+
+    /// <summary>
     /// Gets or sets the agents who can hold the line's voicemail inbox.
     /// </summary>
     public IList<SelectListItem> VoicemailRecipientAgentOptions { get; set; } = [];
