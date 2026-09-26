@@ -1,3 +1,7 @@
+using CrestApps.OrchardCore.AI.Chat.Models;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Mvc.Rendering;
+
 namespace CrestApps.OrchardCore.AI.Chat.ViewModels;
 
 /// <summary>
@@ -19,6 +23,27 @@ public sealed class UsageAnalyticsIndexViewModel
     /// Gets or sets the end date in local time.
     /// </summary>
     public DateTime? EndDate { get; set; }
+
+    /// <summary>
+    /// Gets or sets the AI profile the report is limited to, or <see langword="null"/> for every profile.
+    /// </summary>
+    public string ProfileId { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the completion table is grouped by.
+    /// </summary>
+    public AICompletionUsageGroupBy GroupBy { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the voice table is grouped by.
+    /// </summary>
+    public AIVoiceUsageGroupBy VoiceGroupBy { get; set; }
+
+    /// <summary>
+    /// Gets or sets the profiles the report can be limited to.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> Profiles { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the show report.
@@ -49,4 +74,16 @@ public sealed class UsageAnalyticsIndexViewModel
     /// Gets or sets the rows.
     /// </summary>
     public IReadOnlyList<AICompletionUsageSummaryViewModel> Rows { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the voice usage of every automated call in the range.
+    /// </summary>
+    [BindNever]
+    public AIVoiceUsageSummaryViewModel VoiceTotals { get; set; }
+
+    /// <summary>
+    /// Gets or sets the voice usage grouped by <see cref="VoiceGroupBy"/>.
+    /// </summary>
+    [BindNever]
+    public IReadOnlyList<AIVoiceUsageSummaryViewModel> VoiceRows { get; set; } = [];
 }

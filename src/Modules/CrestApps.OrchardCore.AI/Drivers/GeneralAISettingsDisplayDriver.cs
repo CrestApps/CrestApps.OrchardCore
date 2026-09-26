@@ -8,7 +8,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Environment.Shell;
+using OrchardCore.Environment.Options;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
 
@@ -22,7 +22,7 @@ public sealed class GeneralAISettingsDisplayDriver : SiteDisplayDriver<GeneralAI
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly DefaultAIOptions _defaultAIOptions;
-    private readonly IShellReleaseManager _shellReleaseManager;
+    private readonly IOptionsUpdateNotifier _optionsUpdateNotifier;
 
     internal readonly IStringLocalizer S;
 
@@ -33,27 +33,25 @@ public sealed class GeneralAISettingsDisplayDriver : SiteDisplayDriver<GeneralAI
     /// </summary>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     /// <param name="authorizationService">The authorization service.</param>
-    /// <param name="shellReleaseManager">The shell release manager.</param>
+    /// <param name="optionsUpdateNotifier">The options update notifier.</param>
     /// <param name="defaultAIOptions">The default AI options.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public GeneralAISettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
-        IShellReleaseManager shellReleaseManager,
+        IOptionsUpdateNotifier optionsUpdateNotifier,
         IOptions<DefaultAIOptions> defaultAIOptions,
         IStringLocalizer<GeneralAISettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
-        _shellReleaseManager = shellReleaseManager;
+        _optionsUpdateNotifier = optionsUpdateNotifier;
         _defaultAIOptions = defaultAIOptions.Value;
         S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(ISite site, GeneralAISettings settings, BuildEditorContext context)
     {
-        context.AddTenantReloadWarningWrapper();
-
         return Initialize<GeneralAISettingsViewModel>("GeneralAISettings_Edit", model =>
         {
             model.EnableAIUsageTracking = settings.EnableAIUsageTracking;
@@ -107,7 +105,7 @@ public sealed class GeneralAISettingsDisplayDriver : SiteDisplayDriver<GeneralAI
 
         if (settingsChanged)
         {
-            _shellReleaseManager.RequestRelease();
+            _optionsUpdateNotifier.RequestUpdate<GeneralAIOptions>();
         }
 
         return Edit(site, settings, context);

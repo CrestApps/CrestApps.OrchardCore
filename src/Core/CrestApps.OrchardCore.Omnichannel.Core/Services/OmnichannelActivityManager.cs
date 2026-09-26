@@ -81,9 +81,9 @@ public sealed class OmnichannelActivityManager : CatalogManager<OmnichannelActiv
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<OmnichannelActivity>> ListByIdsAsync(IReadOnlyCollection<string> itemIds, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<OmnichannelActivity>> GetByIdsAsync(IReadOnlyCollection<string> itemIds, CancellationToken cancellationToken = default)
     {
-        var activities = await _store.ListByIdsAsync(itemIds, cancellationToken);
+        var activities = await _store.GetByIdsAsync(itemIds, cancellationToken);
 
         foreach (var activity in activities)
         {
@@ -94,9 +94,9 @@ public sealed class OmnichannelActivityManager : CatalogManager<OmnichannelActiv
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<OmnichannelActivity>> ListBulkManageableAsync(BulkManageActivityFilter filter, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<OmnichannelActivity>> GetBulkManageableAsync(BulkManageActivityFilter filter, CancellationToken cancellationToken = default)
     {
-        var activities = await _store.ListBulkManageableAsync(filter, cancellationToken);
+        var activities = await _store.GetBulkManageableAsync(filter, cancellationToken);
 
         foreach (var activity in activities)
         {

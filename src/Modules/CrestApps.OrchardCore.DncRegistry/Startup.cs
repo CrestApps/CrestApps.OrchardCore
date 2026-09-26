@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.DncRegistry.Migrations;
 using CrestApps.OrchardCore.DncRegistry.Models;
 using CrestApps.OrchardCore.DncRegistry.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
@@ -91,7 +92,7 @@ public sealed class LocalDncRegistryStartup : StartupBase
 
         services.AddScoped<INationalDoNotCallRegistry, LocalDncRegistry>();
         services.AddScoped<ILocalDncListManager, DefaultLocalDncListManager>();
-        services.AddSingleton<IBackgroundTask, LocalDncImportBackgroundTask>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, LocalDncImportBackgroundTask>());
         services.AddNavigationProvider<LocalDncRegistryAdminMenu>();
         services.AddDataMigration<LocalDncRegistryMigrations>();
         services.AddSingleton<IIndexProvider, LocalDncListIndexProvider>();

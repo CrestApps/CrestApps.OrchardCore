@@ -1,0 +1,204 @@
+@page
+@model CrestApps.OrchardCore.Asterisk.Web.Pages.SimulatorModel
+
+<div class="row justify-content-center">
+    <div class="col-xl-8">
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h1 class="h3 mb-3">Inbound call simulator</h1>
+                <p class="text-body-secondary">Sign in to Orchard Core, then originate one or more Stasis-managed Asterisk calls that the sample forwards into the Contact Center ingress endpoint after Asterisk confirms the channel entered the configured Stasis application.</p>
+
+                <div class="alert alert-info small">
+                    The Orchard user must have <strong>Manage interactions</strong>, and at least one agent must be signed in to the target queue if you want the call to route immediately.
+                </div>
+
+                <div class="alert alert-secondary small">
+                    Queue routing follows the simulated <strong>To address</strong>. Match that number to your Contact Center entry point or inbound channel endpoint. <strong>Caller number seed</strong> only generates unique caller identities and does not select the queue.
+                </div>
+
+                <form method="post" class="row g-3">
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                    <div class="col-12">
+                        <label asp-for="Input.OrchardBaseUrl" class="form-label"></label>
+                        <input asp-for="Input.OrchardBaseUrl" class="form-control" />
+                        <span asp-validation-for="Input.OrchardBaseUrl" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="Input.LoginPath" class="form-label"></label>
+                        <input asp-for="Input.LoginPath" class="form-control" />
+                        <span asp-validation-for="Input.LoginPath" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="Input.InboundPath" class="form-label"></label>
+                        <input asp-for="Input.InboundPath" class="form-control" />
+                        <span asp-validation-for="Input.InboundPath" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="Input.UserName" class="form-label"></label>
+                        <input asp-for="Input.UserName" class="form-control" autocomplete="username" />
+                        <span asp-validation-for="Input.UserName" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="Input.Password" class="form-label"></label>
+                        <input asp-for="Input.Password" class="form-control" autocomplete="current-password" />
+                        <span asp-validation-for="Input.Password" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="Input.ProviderName" class="form-label"></label>
+                        <input asp-for="Input.ProviderName" class="form-control" readonly />
+                        <div class="form-text">The simulator uses the configured Asterisk provider identity so ARI events and Contact Center interactions remain correlated.</div>
+                        <span asp-validation-for="Input.ProviderName" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="Input.AsteriskDestination" class="form-label"></label>
+                        <input asp-for="Input.AsteriskDestination" class="form-control" />
+                        <div class="form-text">The bundled sample originates this destination into the configured Stasis application. The default demo flow expects a numeric extension like <code>1000</code>.</div>
+                        <span asp-validation-for="Input.AsteriskDestination" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="Input.ToAddress" class="form-label"></label>
+                        <input asp-for="Input.ToAddress" class="form-control" />
+                        <div class="form-text">Use the service number, DID, or entry-point address that your Contact Center queue mapping listens on.</div>
+                        <span asp-validation-for="Input.ToAddress" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="Input.CallerNumberSeed" class="form-label"></label>
+                        <input asp-for="Input.CallerNumberSeed" class="form-control" />
+                        <div class="form-text">This only changes the generated caller numbers for the burst. It does not affect queue or entry-point routing.</div>
+                        <span asp-validation-for="Input.CallerNumberSeed" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="Input.CallerNamePrefix" class="form-label"></label>
+                        <input asp-for="Input.CallerNamePrefix" class="form-control" />
+                        <span asp-validation-for="Input.CallerNamePrefix" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="Input.Count" class="form-label"></label>
+                        <input asp-for="Input.Count" class="form-control" />
+                        <span asp-validation-for="Input.Count" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6 d-flex align-items-end">
+                        <div class="form-check mb-2">
+                            <input asp-for="Input.SendConcurrently" class="form-check-input" />
+                            <label asp-for="Input.SendConcurrently" class="form-check-label"></label>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">Start inbound burst</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h2 class="h5">How it works</h2>
+                <ol class="mb-0">
+                    <li>It signs in to Orchard using the login form at the configured login path.</li>
+                    <li>It originates one or more Asterisk channels directly into the configured Stasis application.</li>
+                    <li>The background ARI listener waits for each <code>StasisStart</code> event, then forwards the normalized inbound voice event to the Contact Center ingress endpoint using the Asterisk channel id as the provider call id.</li>
+                    <li>Contact Center creates activities and interactions, enqueues them, and offers the calls to available agents.</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="alert alert-warning small">
+            The bundled sample now expects the originated test channels to enter the configured Asterisk Stasis application. That keeps the dashboard, ARI event stream, and Contact Center ingress aligned on the same provider call id and produces a much closer simulation of real PBX-driven load.
+        </div>
+
+        @if (Model.Results.Count > 0)
+        {
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h2 class="h5 mb-1">Last burst</h2>
+                            <p class="text-body-secondary mb-0">@Model.SuccessfulCount succeeded, @Model.RoutedCount offered to an agent, @Model.QueuedCount waiting in a queue.</p>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Call</th>
+                                    <th>Status</th>
+                                    <th>Routing</th>
+                                    <th>Records</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var result in Model.Results)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div class="fw-semibold">@result.CallerName</div>
+                                            <div class="small text-body-secondary">@result.CallerNumber</div>
+                                            <div class="small text-body-secondary">@result.ProviderCallId</div>
+                                            @if (result.AsteriskOriginated)
+                                            {
+                                                <div class="small text-body-secondary">Asterisk channel: @result.AsteriskChannelId</div>
+                                            }
+                                        </td>
+                                        <td>
+                                            <span class="badge @(result.Succeeded ? "bg-success" : "bg-danger")">@result.StatusCode</span>
+                                            <div class="small text-body-secondary">@result.DurationMilliseconds ms</div>
+                                        </td>
+                                        <td>
+                                            <div class="fw-semibold">
+                                                @(result.Routed == true
+                                                    ? "Offered"
+                                                    : result.Queued == true
+                                                        ? "Waiting in queue"
+                                                        : "Not queued")
+                                            </div>
+                                            <div class="small text-body-secondary">@result.Reason</div>
+                                            @if (!string.IsNullOrEmpty(result.AgentUserId))
+                                            {
+                                                <div class="small text-body-secondary">Agent: @result.AgentUserId</div>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(result.InteractionId))
+                                            {
+                                                <div class="small">Interaction: <code>@result.InteractionId</code></div>
+                                            }
+                                            @if (!string.IsNullOrEmpty(result.ActivityItemId))
+                                            {
+                                                <div class="small">Activity: <code>@result.ActivityItemId</code></div>
+                                            }
+                                            @if (!string.IsNullOrEmpty(result.QueueId))
+                                            {
+                                                <div class="small">Queue: <code>@result.QueueId</code></div>
+                                            }
+                                            @if (!string.IsNullOrEmpty(result.RawResponse))
+                                            {
+                                                <details class="small mt-2">
+                                                    <summary>Raw response</summary>
+                                                    <pre class="mb-0 mt-2 p-2 bg-body-tertiary border rounded small">@result.RawResponse</pre>
+                                                </details>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>

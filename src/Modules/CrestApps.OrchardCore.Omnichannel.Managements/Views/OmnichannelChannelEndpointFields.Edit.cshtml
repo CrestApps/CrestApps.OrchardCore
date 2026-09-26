@@ -11,16 +11,6 @@
 </div>
 
 <div class="ocat-wrapper">
-    <label asp-for="Channel" class="ocat-label">@T["Channel"]</label>
-    <div class="ocat-end">
-        <select asp-for="Channel" class="form-select" asp-items="Model.Channels">
-            <option value="">@T["Select a channel"]</option>
-        </select>
-        <span asp-validation-for="Channel" class="text-danger"></span>
-    </div>
-</div>
-
-<div class="ocat-wrapper">
     <label asp-for="Value" class="ocat-label">@T["Endpoint value"]</label>
     <div class="ocat-end">
         <input asp-for="Value" class="form-control" />

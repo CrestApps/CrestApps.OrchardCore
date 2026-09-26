@@ -1,0 +1,187 @@
+@using System.Globalization
+@using Microsoft.AspNetCore.Mvc.Rendering
+@using CrestApps.OrchardCore.ContactCenter.Models
+
+@model SharedVoicemailListViewModel
+
+@{
+    var returnUrl = $"{Context.Request.PathBase}{Context.Request.Path}{Context.Request.QueryString}";
+    var statusOptions = new List<SelectListItem>
+    {
+        new(T["Open (new and claimed)"].Value, nameof(SharedVoicemailStatusFilter.Open), Model.Status == SharedVoicemailStatusFilter.Open),
+        new(T["New"].Value, nameof(SharedVoicemailStatusFilter.New), Model.Status == SharedVoicemailStatusFilter.New),
+        new(T["Claimed"].Value, nameof(SharedVoicemailStatusFilter.Claimed), Model.Status == SharedVoicemailStatusFilter.Claimed),
+        new(T["Done"].Value, nameof(SharedVoicemailStatusFilter.Resolved), Model.Status == SharedVoicemailStatusFilter.Resolved),
+        new(T["All"].Value, nameof(SharedVoicemailStatusFilter.All), Model.Status == SharedVoicemailStatusFilter.All),
+    };
+}
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["Shared voicemail"])</h1></zone>
+
+<form asp-action="Index" method="get" class="no-multisubmit">
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-3 gy-2 align-items-center">
+                <div class="col-sm-auto">
+                    <label for="queueId" class="visually-hidden">@T["Queue"]</label>
+                    <select id="queueId" name="queueId" class="form-select" asp-items="Model.QueueOptions">
+                        <option value="">@T["All my queues"]</option>
+                    </select>
+                </div>
+                <div class="col-sm-auto">
+                    <label for="status" class="visually-hidden">@T["Status"]</label>
+                    <select id="status" name="status" class="form-select" asp-items="statusOptions"></select>
+                </div>
+                <div class="col-sm-auto">
+                    <button type="submit" class="btn btn-secondary">@T["Filter"]</button>
+                </div>
+                <div class="col text-sm-end">
+                    @if (Model.NewCount > 0)
+                    {
+                        <span class="badge text-bg-danger">@(Model.NewCount == 1 ? T["1 new voicemail"] : T["{0} new voicemails", Model.NewCount])</span>
+                    }
+                    else
+                    {
+                        <span class="badge text-bg-secondary">@T["No new voicemail"]</span>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<ul class="list-group">
+    @if (Model.Items.Count > 0)
+    {
+        @foreach (var item in Model.Items)
+        {
+            var voicemail = item.Voicemail;
+            var receivedUtc = voicemail.ReceivedUtc;
+            var hasCaller = !string.IsNullOrWhiteSpace(voicemail.CallerName);
+
+            <li class="list-group-item">
+                <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+                    <div class="flex-grow-1">
+                        <strong>@(hasCaller ? voicemail.CallerName : (string.IsNullOrWhiteSpace(voicemail.CallerNumber) ? T["Unknown caller"].Value : voicemail.CallerNumber))</strong>
+                        @if (hasCaller && !string.IsNullOrWhiteSpace(voicemail.CallerNumber))
+                        {
+                            <span class="text-muted ms-1">@voicemail.CallerNumber</span>
+                        }
+
+                        <div class="mt-1">
+                            <span class="badge text-bg-secondary">@T["Queue: {0}", item.QueueName]</span>
+
+                            @if (receivedUtc != default)
+                            {
+                                <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@await DisplayAsync(await New.DateTime(Utc: receivedUtc, Format: "g"))">
+                                    <i class="fa-solid fa-calendar text-secondary" aria-hidden="true"></i>
+                                    <time datetime="@receivedUtc.ToString(DateTimeFormatConstants.HtmlDateTimeOffset, CultureInfo.InvariantCulture)">@await DisplayAsync(await New.Timespan(Utc: receivedUtc))</time>
+                                </span>
+                            }
+
+                            @if (item.DurationSeconds is { } seconds)
+                            {
+                                <span class="badge ta-badge font-weight-normal" title="@T["Length"]">
+                                    <i class="fa-solid fa-clock text-secondary" aria-hidden="true"></i>
+                                    @(TimeSpan.FromSeconds(seconds).ToString(seconds >= 3600 ? "h\\:mm\\:ss" : "m\\:ss", CultureInfo.InvariantCulture))
+                                </span>
+                            }
+
+                            @switch (voicemail.Status)
+                            {
+                                case SharedVoicemailStatus.New:
+                                    <span class="badge text-bg-danger">@T["New"]</span>
+                                    break;
+                                case SharedVoicemailStatus.Claimed:
+                                    <span class="badge text-bg-warning">@(item.IsMine ? T["Claimed by you"] : T["Claimed by {0}", voicemail.ClaimedByUserName ?? string.Empty])</span>
+                                    break;
+                                case SharedVoicemailStatus.Resolved:
+                                    <span class="badge text-bg-success">@T["Done by {0}", voicemail.ResolvedByUserName ?? string.Empty]</span>
+                                    break;
+                            }
+
+                            @if (voicemail.CallbackRequestedUtc is { } callbackUtc)
+                            {
+                                <span class="badge text-bg-info" title="@await DisplayAsync(await New.DateTime(Utc: callbackUtc, Format: "g"))">@T["Callback queued by {0}", voicemail.CallbackRequestedByUserName ?? string.Empty]</span>
+                            }
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(voicemail.ResolutionNote))
+                        {
+                            <div class="text-muted small mt-1">@voicemail.ResolutionNote</div>
+                        }
+
+                        <div class="mt-2">
+                            @if (item.HasRecording)
+                            {
+                                <audio controls preload="none" class="w-100" style="max-width: 28rem;" src="@Url.Action("Recording", "SharedVoicemail", new { area = "CrestApps.OrchardCore.ContactCenter", id = voicemail.ItemId })">
+                                    @T["Your browser cannot play this recording."]
+                                </audio>
+                            }
+                            else
+                            {
+                                <span class="text-muted small">@T["No recording is available yet. The caller may have hung up before leaving a message, or it is still being saved."]</span>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-1 align-items-start">
+                        @if (item.CanClaim)
+                        {
+                            <form asp-action="Claim" asp-route-id="@voicemail.ItemId" method="post" class="no-multisubmit">
+                                <input type="hidden" name="returnUrl" value="@returnUrl" />
+                                <button type="submit" class="btn btn-primary btn-sm">@(voicemail.Status == SharedVoicemailStatus.Claimed ? T["Take over"] : T["I'll handle this"])</button>
+                            </form>
+                        }
+
+                        @if (item.CanCallBack)
+                        {
+                            <form asp-action="CallBack" asp-route-id="@voicemail.ItemId" method="post" class="no-multisubmit">
+                                <input type="hidden" name="returnUrl" value="@returnUrl" />
+                                <button type="submit" class="btn btn-success btn-sm" title="@T["Queue a callback to the caller in this queue. The next available agent is offered it as a call to place."]">@T["Call back"]</button>
+                            </form>
+                        }
+
+                        @if (item.CanRelease)
+                        {
+                            <form asp-action="Release" asp-route-id="@voicemail.ItemId" method="post" class="no-multisubmit">
+                                <input type="hidden" name="returnUrl" value="@returnUrl" />
+                                <button type="submit" class="btn btn-secondary btn-sm">@(voicemail.Status == SharedVoicemailStatus.Resolved ? T["Reopen"] : T["Return to team"])</button>
+                            </form>
+                        }
+
+                        @if (item.CanDelete)
+                        {
+                            <a asp-action="Delete"
+                               asp-route-id="@voicemail.ItemId"
+                               asp-route-returnUrl="@returnUrl"
+                               class="btn btn-danger btn-sm"
+                               data-title="@T["Delete"]"
+                               data-message="@T["Are you sure you want to delete this voicemail? Its recording is erased too."]"
+                               data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>
+                        }
+                    </div>
+                </div>
+
+                @if (item.CanResolve)
+                {
+                    <form asp-action="Resolve" asp-route-id="@voicemail.ItemId" method="post" class="no-multisubmit mt-2">
+                        <input type="hidden" name="returnUrl" value="@returnUrl" />
+                        <div class="input-group input-group-sm" style="max-width: 36rem;">
+                            <input type="text" name="note" class="form-control" maxlength="1000" placeholder="@T["Note (optional)"]" aria-label="@T["Note (optional)"]" />
+                            <button type="submit" class="btn btn-outline-success">@T["Mark done"]</button>
+                        </div>
+                    </form>
+                }
+            </li>
+        }
+    }
+    else
+    {
+        <li class="list-group-item list-group-item-info text-center">
+            @T["There is no shared voicemail here."]
+        </li>
+    }
+</ul>
+
+@await DisplayAsync(Model.Pager)

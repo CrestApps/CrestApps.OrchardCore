@@ -1,0 +1,51 @@
+@model DialerProfileViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="EnforceAbandonmentCap" data-dialer-modes="Power Progressive Predictive">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="EnforceAbandonmentCap" class="form-check-input" />
+            <label asp-for="EnforceAbandonmentCap" class="form-check-label">@T["Enforce an abandonment-rate cap"]</label>
+            <span class="hint dashed">@T["When enabled, automated pacing modes are suppressed once the rolling abandonment rate reaches the cap or the compliance statistics cannot be proven. Manual and preview dialing are unaffected because an agent is bound to every call."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="MaxAbandonmentRatePercent" data-dialer-modes="Power Progressive Predictive">
+    <label asp-for="MaxAbandonmentRatePercent" class="ocat-label">@T["Maximum abandonment rate"]</label>
+    <div class="ocat-limited">
+        <div class="input-group">
+            <input asp-for="MaxAbandonmentRatePercent" type="number" min="0" max="100" step="0.1" class="form-control" />
+            <span class="input-group-text">@T["%"]</span>
+        </div>
+        <span asp-validation-for="MaxAbandonmentRatePercent" class="text-danger"></span>
+        <span class="hint">@T["The highest rolling share of live-answered calls that may be abandoned before automated pacing is throttled. The U.S. TCPA safe-harbor limit is 3%."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="AbandonmentSampleFloor" data-dialer-modes="Power Progressive Predictive">
+    <label asp-for="AbandonmentSampleFloor" class="ocat-label">@T["Abandonment sample floor"]</label>
+    <div class="ocat-limited">
+        <input asp-for="AbandonmentSampleFloor" type="number" min="0" class="form-control" />
+        <span asp-validation-for="AbandonmentSampleFloor" class="text-danger"></span>
+        <span class="hint">@T["The minimum number of live-answered calls in the rolling window before the abandonment rate is enforced, so the cap is not triggered by a small, noisy sample."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="SafeHarborEnabled" data-dialer-modes="Power Progressive Predictive">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="SafeHarborEnabled" class="form-check-input" />
+            <label asp-for="SafeHarborEnabled" class="form-check-label">@T["Play a safe-harbor announcement when abandoned"]</label>
+            <span class="hint dashed">@T["When enabled, an abandoned automated call plays a recorded announcement that identifies the caller instead of dropping the party silently."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="SafeHarborMessage" data-dialer-modes="Power Progressive Predictive">
+    <label asp-for="SafeHarborMessage" class="ocat-label">@T["Safe-harbor announcement"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="SafeHarborMessage" class="form-control"></textarea>
+        <span asp-validation-for="SafeHarborMessage" class="text-danger"></span>
+        <span class="hint">@T["The announcement read to a live person when no agent is available and the call would otherwise be abandoned. Required when safe-harbor messaging is enabled."]</span>
+    </div>
+</div>

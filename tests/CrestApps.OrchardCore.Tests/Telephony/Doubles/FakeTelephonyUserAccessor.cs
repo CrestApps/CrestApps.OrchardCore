@@ -15,13 +15,27 @@ internal sealed class FakeTelephonyUserAccessor : ITelephonyUserAccessor
         _user = user;
     }
 
-    public int UpdateCount { get; private set; }
+    public int PersistCount { get; private set; }
+
+    public int ReloadCount { get; private set; }
 
     public Task<IUser> GetCurrentUserAsync() => Task.FromResult(_user);
 
-    public Task UpdateUserAsync(IUser user)
+    public Task<IUser> ReloadCurrentUserAsync()
     {
-        UpdateCount++;
+        ReloadCount++;
+
+        return Task.FromResult(_user);
+    }
+
+    public Task PersistCurrentUserAsync(Func<IUser, bool> mutate)
+    {
+        ArgumentNullException.ThrowIfNull(mutate);
+
+        if (mutate(_user))
+        {
+            PersistCount++;
+        }
 
         return Task.CompletedTask;
     }

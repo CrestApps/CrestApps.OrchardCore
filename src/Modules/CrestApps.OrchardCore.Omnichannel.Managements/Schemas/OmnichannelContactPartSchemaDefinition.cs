@@ -38,6 +38,10 @@ public sealed class OmnichannelContactPartSchemaDefinition : PartSchemaDefinitio
                             .Type(SchemaValueType.Boolean)
                             .Default(true)
                             .Description("Require a time zone for the contact.")),
+                        ("AutoDetectTimeZone", new JsonSchemaBuilder()
+                            .Type(SchemaValueType.Boolean)
+                            .Default(true)
+                            .Description("Automatically detect the contact time zone from the contact's phone number when one was not selected.")),
                         ("UseDoNotCall", new JsonSchemaBuilder()
                             .Type(SchemaValueType.Boolean)
                             .Default(true)
@@ -45,9 +49,6 @@ public sealed class OmnichannelContactPartSchemaDefinition : PartSchemaDefinitio
                         ("UseDoNotSms", new JsonSchemaBuilder()
                             .Type(SchemaValueType.Boolean)
                             .Description("Show the Do not SMS preference.")),
-                        ("UseDoNotChat", new JsonSchemaBuilder()
-                            .Type(SchemaValueType.Boolean)
-                            .Description("Show the Do not chat preference.")),
                         ("UseDoNotEmail", new JsonSchemaBuilder()
                             .Type(SchemaValueType.Boolean)
                             .Description("Show the Do not email preference.")))
@@ -88,11 +89,7 @@ public sealed class OmnichannelContactPartSchemaDefinition : PartSchemaDefinitio
                 ("DoNotSms", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Boolean)
                     .Description("Whether SMS is blocked for the contact.")),
-                ("DoNotSmsUtc", CreateUtcDateTimeSchema("The UTC timestamp when SMS was blocked for the contact.")),
-                ("DoNotChat", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.Boolean)
-                    .Description("Whether chat is blocked for the contact.")),
-                ("DoNotChatUtc", CreateUtcDateTimeSchema("The UTC timestamp when chat was blocked for the contact.")))
+                ("DoNotSmsUtc", CreateUtcDateTimeSchema("The UTC timestamp when SMS was blocked for the contact.")))
             .AdditionalProperties(true);
     }
 

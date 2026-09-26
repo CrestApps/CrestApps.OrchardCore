@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.ContactCenter.Workflows.ViewModels
+
+@model RecordingInteractionTaskViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="InteractionId">
+    <label class="ocat-label" asp-for="InteractionId">@T["Interaction"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="InteractionId" />
+        <span asp-validation-for="InteractionId"></span>
+        <span class="hint">@T["A Liquid expression resolving the interaction identifier to record, for example <code>{{ Workflow.Input.InteractionId }}</code>."]</span>
+    </div>
+</div>

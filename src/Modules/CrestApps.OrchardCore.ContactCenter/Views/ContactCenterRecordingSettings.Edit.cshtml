@@ -1,0 +1,70 @@
+@using CrestApps.OrchardCore.ContactCenter.Core.Models
+@model ContactCenterRecordingSettingsViewModel
+
+<p class="alert alert-info">
+    @T["Recording governance is enforced server-side before any recording starts. When recording is disabled or required consent has not been captured, recording is denied and a governance event is recorded."]
+</p>
+
+<div class="mb-3">
+    <div class="form-check">
+        <input type="checkbox" asp-for="RecordingEnabled" class="form-check-input" />
+        <label asp-for="RecordingEnabled" class="form-check-label">@T["Recording enabled"]</label>
+        <span class="hint d-block">@T["When disabled, no interaction may start recording for this tenant regardless of provider capability."]</span>
+    </div>
+</div>
+
+<div class="mb-3">
+    <label asp-for="ConsentModel" class="form-label">@T["Consent model"]</label>
+    <select asp-for="ConsentModel" class="form-select">
+        <option value="@RecordingConsentModel.AllParties">@T["All parties must consent"]</option>
+        <option value="@RecordingConsentModel.SingleParty">@T["Single party consent is sufficient"]</option>
+    </select>
+    <span class="hint">@T["Choose the consent model required by the jurisdictions this tenant operates in."]</span>
+</div>
+
+<div class="mb-3">
+    <div class="form-check">
+        <input type="checkbox" asp-for="RequireExplicitConsent" class="form-check-input" />
+        <label asp-for="RequireExplicitConsent" class="form-check-label">@T["Require explicit consent capture"]</label>
+        <span class="hint d-block">@T["When enabled with the all-parties consent model, recording is denied until explicit consent has been captured on the interaction."]</span>
+    </div>
+</div>
+
+<div class="mb-3">
+    <label asp-for="RetentionDays" class="form-label">@T["Retention (days)"]</label>
+    <input type="number" min="0" asp-for="RetentionDays" class="form-control" />
+    <span class="hint">@T["The number of days a captured recording is retained before it becomes eligible for erasure. Zero retains recordings indefinitely."]</span>
+</div>
+
+<div class="mb-3">
+    <div class="form-check">
+        <input type="checkbox" asp-for="LegalHoldByDefault" class="form-check-input" />
+        <label asp-for="LegalHoldByDefault" class="form-check-label">@T["Apply legal hold by default"]</label>
+        <span class="hint d-block">@T["When enabled, captured recordings begin under legal hold and are exempt from retention-driven and subject-request erasure until the hold is released."]</span>
+    </div>
+</div>
+
+<h5 class="mt-4">@T["Agent secure pause"]</h5>
+<p class="hint">@T["Secure pause lets an agent suppress recording during a sensitive-data capture, such as a card or Social Security number, so the sensitive audio is never captured. Every pause and resume is authorized against the agent's own live interaction and recorded as an audit event."]</p>
+
+<div class="mb-3">
+    <div class="form-check">
+        <input type="checkbox" asp-for="AllowAgentSecurePause" class="form-check-input" />
+        <label asp-for="AllowAgentSecurePause" class="form-check-label">@T["Allow agents to pause recording"]</label>
+        <span class="hint d-block">@T["When disabled, only automation or the provider may suppress capture, and the agent-facing secure-pause control is never shown."]</span>
+    </div>
+</div>
+
+<div class="mb-3">
+    <label asp-for="MaxSecurePauseSeconds" class="form-label">@T["Maximum secure-pause window (seconds)"]</label>
+    <input type="number" min="0" asp-for="MaxSecurePauseSeconds" class="form-control" />
+    <span class="hint">@T["The number of seconds a recording may remain paused before the platform automatically resumes it, so a pause that is never resumed cannot suppress capture for the rest of the call. Zero keeps a pause active until it is explicitly resumed."]</span>
+</div>
+
+<div class="mb-3">
+    <div class="form-check">
+        <input type="checkbox" asp-for="RequirePauseReason" class="form-check-input" />
+        <label asp-for="RequirePauseReason" class="form-check-label">@T["Require a reason to pause"]</label>
+        <span class="hint d-block">@T["When enabled, an agent must supply a reason when pausing recording, so the suppression gap is always accompanied by an auditable justification."]</span>
+    </div>
+</div>

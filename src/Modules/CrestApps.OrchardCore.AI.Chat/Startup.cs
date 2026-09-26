@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Chat;
+﻿using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Chat.Security;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Security;
@@ -16,6 +16,7 @@ using CrestApps.OrchardCore.AI.Chat.Schemas;
 using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Services;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
@@ -84,6 +85,10 @@ public sealed class Startup : StartupBase
         // Lets a tenant mint its own short-lived TURN credentials from Cloudflare Realtime instead of
         // sharing the host's, falling back to the configured STUN and TURN servers while it has no token.
         services.AddTenantCloudflareRealtimeTurn();
+
+        // The usage report asks for voice session summaries whether or not the analytics feature that keeps them
+        // is on; until it is, there are none.
+        services.TryAddScoped<IAIVoiceSessionSummaryStore, NullAIVoiceSessionSummaryStore>();
 
         services.AddDataProtection();
         services.AddOptions<AIVisitorIdentityOptions>();

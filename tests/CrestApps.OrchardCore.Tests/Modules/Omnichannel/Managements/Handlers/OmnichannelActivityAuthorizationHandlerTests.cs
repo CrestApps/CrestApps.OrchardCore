@@ -100,11 +100,7 @@ public sealed class OmnichannelActivityAuthorizationHandlerTests
                 ? AuthorizationResult.Success()
                 : AuthorizationResult.Failed());
 
-        var services = new ServiceCollection()
-            .AddSingleton(authorizationService.Object)
-            .BuildServiceProvider();
-
-        return new OmnichannelActivityAuthorizationHandler(services);
+        return new OmnichannelActivityAuthorizationHandler(new Lazy<IAuthorizationService>(authorizationService.Object));
     }
 
     private static AuthorizationHandlerContext CreateContext(ClaimsPrincipal user, OmnichannelActivity activity)

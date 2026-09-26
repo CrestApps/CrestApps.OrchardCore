@@ -25,6 +25,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v7
+    - uses: actions/setup-node@v7
+      with:
+        # The Node major decides the npm major, and npm 10 and npm 11 disagree about which optional peers the
+        # lockfile must satisfy. Match the Node developers run, so a lockfile written locally installs here.
+        node-version: "24"
     - name: Rebuild packages
       run: |
         npm ci

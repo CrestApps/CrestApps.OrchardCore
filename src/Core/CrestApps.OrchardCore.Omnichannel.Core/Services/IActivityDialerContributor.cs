@@ -26,13 +26,17 @@ public interface IActivityDialerContributor
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Enqueues an activity using the contributed dialer profile.
+    /// Enqueues an activity for outbound dialing under the given campaign, tagging it with the profile that
+    /// dials it. The routing target is derived from the campaign, so activities loaded for the same campaign
+    /// share one queue regardless of which profile dials them.
     /// </summary>
     /// <param name="activityId">The activity identifier.</param>
-    /// <param name="profileId">The profile identifier.</param>
+    /// <param name="campaignId">The campaign the inventory was loaded for.</param>
+    /// <param name="profile">The resolved profile descriptor that dials the activity.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     Task EnqueueAsync(
         string activityId,
+        string campaignId,
         ActivityDialerProfileDescriptor profile,
         CancellationToken cancellationToken = default);
 }

@@ -1,4 +1,10 @@
 .telephony-soft-phone {
+  --bs-body-bg: #fff;
+  --bs-body-color: #212529;
+  --bs-secondary-color: #6c757d;
+  --bs-tertiary-bg: #f8f9fa;
+  --bs-secondary-bg: #e9ecef;
+  --bs-border-color: #dee2e6;
   --telephony-accent: #2f6fed;
   --telephony-view-height: 18rem;
   position: fixed;
@@ -52,6 +58,16 @@
   font-weight: 600;
   margin-right: auto;
 }
+.telephony-soft-phone__header-status {
+  margin-right: auto;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 10rem;
+}
 .telephony-soft-phone__header-actions {
   margin-left: auto;
   display: flex;
@@ -97,7 +113,7 @@
   min-height: var(--telephony-view-height);
   max-height: var(--telephony-view-height);
   overflow-y: auto;
-  padding: 0.35rem 0.5rem 0.65rem;
+  padding: 0 0.5rem 0.5rem;
 }
 .telephony-soft-phone__view[data-telephony-view=keypad] {
   max-height: min(32rem, 100vh - 8rem);
@@ -143,6 +159,192 @@
 .telephony-soft-phone__history-item--active .telephony-soft-phone__history-dir {
   color: #1f9d55;
 }
+.telephony-soft-phone__history-item--voicemail {
+  cursor: default;
+}
+.telephony-soft-phone__history-item--voicemail .telephony-soft-phone__history-body {
+  flex: 1 1 auto;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+}
+.telephony-soft-phone__history-item--unread .telephony-soft-phone__history-number {
+  font-weight: 700;
+}
+.telephony-soft-phone__history-item--unread .telephony-soft-phone__history-number::after {
+  content: "";
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-left: 0.35rem;
+  border-radius: 999px;
+  background-color: var(--telephony-accent, #2f6fed);
+  vertical-align: middle;
+}
+.telephony-soft-phone__voicemail-play {
+  flex: 0 0 1.9rem;
+  width: 1.9rem;
+  height: 1.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  line-height: 1;
+  color: #fff;
+  background-color: #d23f3f;
+}
+.telephony-soft-phone__voicemail-play:hover {
+  filter: brightness(0.95);
+}
+.telephony-soft-phone__voicemail-play.is-playing {
+  background-color: var(--bs-secondary-color, #6c757d);
+}
+.telephony-soft-phone__call-btn {
+  flex: 0 0 1.9rem;
+  width: 1.9rem;
+  height: 1.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  line-height: 1;
+  color: #fff;
+  background-color: #1f9d55;
+}
+.telephony-soft-phone__call-btn:hover {
+  filter: brightness(0.95);
+}
+.telephony-soft-phone__voicemail {
+  min-height: var(--telephony-view-height);
+  max-height: var(--telephony-view-height);
+}
+.telephony-soft-phone__voicemail:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+}
+.telephony-soft-phone__voicemail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 0.5rem 0.5rem;
+}
+.telephony-soft-phone__voicemail-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0.25rem 0.5rem 0.35rem 1rem;
+  border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+}
+.telephony-soft-phone__voicemail-delete {
+  border: none;
+  border-radius: 0.4rem;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.8rem;
+  line-height: 1.2;
+  cursor: pointer;
+  color: #fff;
+  background-color: #d23f3f;
+}
+.telephony-soft-phone__voicemail-delete:hover:not(:disabled) {
+  filter: brightness(0.95);
+}
+.telephony-soft-phone__voicemail-delete:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.telephony-soft-phone__voicemail-select {
+  flex: 0 0 auto;
+  width: 0.9rem;
+  height: 0.9rem;
+  margin: 0;
+  cursor: pointer;
+  accent-color: var(--telephony-accent, #2f6fed);
+}
+.telephony-soft-phone__voicemail-toolbar-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-right: auto;
+  font-size: 0.78rem;
+  color: var(--bs-secondary-color, #6c757d);
+  cursor: pointer;
+}
+.telephony-soft-phone__voicemail-toolbar-select input {
+  width: 0.9rem;
+  height: 0.9rem;
+  margin: 0;
+  cursor: pointer;
+  accent-color: var(--telephony-accent, #2f6fed);
+}
+.telephony-soft-phone__voicemail-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.45rem 0.5rem;
+  border-radius: 0.5rem;
+}
+.telephony-soft-phone__voicemail-item:hover {
+  background-color: var(--bs-tertiary-bg, #f8f9fa);
+}
+.telephony-soft-phone__voicemail-item--unread .telephony-soft-phone__history-number {
+  font-weight: 700;
+}
+.telephony-soft-phone__voicemail-item--unread .telephony-soft-phone__history-number::after {
+  content: "";
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-left: 0.35rem;
+  border-radius: 999px;
+  background-color: #d23f3f;
+  vertical-align: middle;
+}
+.telephony-soft-phone__voicemail-item--delete-failed {
+  background-color: var(--bs-danger-bg-subtle, #f8d7da);
+}
+.telephony-soft-phone__voicemail-error {
+  font-size: 0.72rem;
+  color: var(--bs-danger-text-emphasis, #842029);
+  white-space: normal;
+}
+.telephony-soft-phone__voicemail-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.telephony-soft-phone__voicemail-player {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.35rem 0.5rem 0.5rem;
+}
+.telephony-soft-phone__voicemail-player .telephony-soft-phone__voicemail-player-info {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.telephony-soft-phone__voicemail-player .telephony-soft-phone__voicemail-audio {
+  width: 100%;
+  max-width: 15rem;
+  height: 1.85rem;
+  align-self: center;
+}
 .telephony-soft-phone__history-dir {
   flex: 0 0 1.15rem;
   width: 1.15rem;
@@ -160,6 +362,7 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  flex: 1 1 auto;
 }
 .telephony-soft-phone__history-number {
   font-weight: 600;
@@ -178,6 +381,7 @@
   background-color: var(--bs-tertiary-bg, #f8f9fa);
 }
 .telephony-soft-phone__tab {
+  position: relative;
   flex: 1 1 0;
   border: none;
   background: transparent;
@@ -200,6 +404,22 @@
   color: var(--telephony-accent);
   box-shadow: inset 0 -2px 0 var(--telephony-accent);
   font-weight: 600;
+}
+.telephony-soft-phone__tab-badge {
+  position: absolute;
+  top: 0.2rem;
+  right: 50%;
+  transform: translateX(1.1rem);
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 0.25rem;
+  border-radius: 999px;
+  background-color: #d23f3f;
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1rem;
+  text-align: center;
 }
 .telephony-soft-phone--dragging {
   user-select: none;
@@ -231,6 +451,89 @@
   background-color: var(--bs-secondary-bg, #e9ecef);
   opacity: 1;
 }
+.telephony-soft-phone__number-iti {
+  display: block;
+  width: 100%;
+}
+.telephony-soft-phone__number-iti .telephony-soft-phone__number {
+  width: 100%;
+}
+.telephony-soft-phone__dial-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.4rem;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 0.35rem;
+  background-color: transparent;
+  color: var(--bs-secondary-color, #6c757d);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.telephony-soft-phone__dial-mode:hover {
+  color: var(--telephony-accent, #0d6efd);
+}
+.telephony-soft-phone__dial-mode[aria-pressed=true] {
+  border-color: var(--telephony-accent, #0d6efd);
+  color: var(--telephony-accent, #0d6efd);
+}
+.telephony-soft-phone__extension-hint {
+  padding: 0 0.85rem 0.35rem;
+  color: var(--bs-secondary-color, #6c757d);
+  font-size: 0.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.telephony-soft-phone__keypad-results {
+  padding: 0 0.85rem 0.35rem;
+}
+.telephony-soft-phone__keypad-results-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 9.5rem;
+  overflow-y: auto;
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  border-radius: 0.375rem;
+}
+.telephony-soft-phone__keypad-result {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0.35rem 0.6rem;
+  border: 0;
+  border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+  background: transparent;
+  color: var(--bs-body-color, #212529);
+  font-size: 0.85rem;
+  text-align: left;
+}
+.telephony-soft-phone__keypad-result:last-child {
+  border-bottom: 0;
+}
+.telephony-soft-phone__keypad-result:hover, .telephony-soft-phone__keypad-result:focus-visible {
+  background: var(--bs-tertiary-bg, #f8f9fa);
+}
+.telephony-soft-phone__keypad-result-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.telephony-soft-phone__keypad-result-extension {
+  flex-shrink: 0;
+  color: var(--bs-secondary-color, #6c757d);
+  font-size: 0.78rem;
+}
+.telephony-soft-phone--extension .iti__country-container {
+  display: none;
+}
+.telephony-soft-phone--extension .telephony-soft-phone__number {
+  padding-left: 0.65rem !important;
+}
 .telephony-soft-phone__connect {
   min-height: var(--telephony-view-height);
   max-height: var(--telephony-view-height);
@@ -243,10 +546,173 @@
   font-size: 0.85rem;
   color: var(--bs-secondary-color, #6c757d);
 }
+.telephony-soft-phone__connect-error {
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.78rem;
+  text-align: left;
+}
 .telephony-soft-phone__error {
   margin: 0 0.85rem 0.5rem;
   padding: 0.4rem 0.6rem;
   font-size: 0.78rem;
+}
+.telephony-soft-phone__settings {
+  min-height: var(--telephony-view-height);
+  max-height: calc(100vh - 9rem);
+  overflow-y: auto;
+  padding: 0.35rem 0.85rem 0.85rem;
+}
+.telephony-soft-phone__settings-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0 0.65rem;
+}
+.telephony-soft-phone__settings-back {
+  border: none;
+  background: transparent;
+  color: var(--bs-body-color, #212529);
+  cursor: pointer;
+  line-height: 1;
+  padding: 0.2rem 0.35rem;
+  border-radius: 0.4rem;
+}
+.telephony-soft-phone__settings-back:hover {
+  background-color: var(--bs-tertiary-bg, #f8f9fa);
+}
+.telephony-soft-phone__settings-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.telephony-soft-phone__settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.telephony-soft-phone__settings-section + .telephony-soft-phone__settings-section {
+  margin-top: 1rem;
+}
+.telephony-soft-phone__settings-group-title {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--bs-secondary-color, #6c757d);
+}
+.telephony-soft-phone__setting {
+  display: block;
+  margin: 0;
+}
+.telephony-soft-phone__setting--check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.telephony-soft-phone__setting--check .form-check-input {
+  margin: 0;
+  flex: 0 0 auto;
+}
+.telephony-soft-phone__setting--check .telephony-soft-phone__setting-label {
+  margin-bottom: 0;
+}
+.telephony-soft-phone__settings-hint {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--bs-secondary-color, #6c757d);
+  margin: 0 0 0.35rem;
+}
+.telephony-soft-phone__setting > .telephony-soft-phone__settings-hint {
+  margin: 0.25rem 0 0;
+}
+.telephony-soft-phone__setting-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--bs-secondary-color, #6c757d);
+  margin-bottom: 0.25rem;
+}
+.telephony-soft-phone__setting-label i {
+  width: 1rem;
+  text-align: center;
+}
+.telephony-soft-phone__diagnostics-view {
+  min-height: var(--telephony-view-height);
+  max-height: min(32rem, 100vh - 8rem);
+  overflow-y: auto;
+  padding: 0.6rem 0.85rem 0.85rem;
+}
+.telephony-soft-phone__diag-section {
+  margin-bottom: 0.85rem;
+}
+.telephony-soft-phone__diag-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--bs-secondary-color, #6c757d);
+  margin-bottom: 0.35rem;
+}
+.telephony-soft-phone__diag-hint {
+  font-size: 0.72rem;
+  color: var(--bs-secondary-color, #6c757d);
+  margin-top: 0.3rem;
+}
+.telephony-soft-phone__mic-meter {
+  height: 0.65rem;
+  border-radius: 0.4rem;
+  background-color: var(--bs-tertiary-bg, #e9ecef);
+  overflow: hidden;
+}
+.telephony-soft-phone__mic-meter-fill {
+  height: 100%;
+  width: 0;
+  border-radius: 0.4rem;
+  background-color: var(--bs-secondary-color, #adb5bd);
+  transition: width 0.06s linear;
+}
+.telephony-soft-phone__mic-meter-fill.is-active {
+  background-color: var(--bs-success, #28a745);
+}
+.telephony-soft-phone__diag-readout {
+  font-size: 0.74rem;
+  line-height: 1.5;
+  color: var(--bs-body-color, #212529);
+  word-break: break-word;
+}
+.telephony-soft-phone__diag-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+.telephony-soft-phone__diag-status {
+  font-size: 0.74rem;
+  margin-top: 0.4rem;
+  color: var(--bs-body-color, #212529);
+}
+.telephony-soft-phone__diag-warnings {
+  font-size: 0.72rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #a05a00;
+  background-color: rgba(255, 193, 7, 0.12);
+  border-radius: 0.4rem;
+  padding: 0.4rem 0.55rem;
+  max-height: 8rem;
+  overflow-y: auto;
+}
+.telephony-soft-phone__diag-output {
+  font-size: 0.68rem;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 12rem;
+  overflow: auto;
+  margin: 0.5rem 0 0;
+  padding: 0.5rem;
+  background-color: var(--bs-tertiary-bg, #f8f9fa);
+  border-radius: 0.4rem;
 }
 .telephony-soft-phone__active-calls {
   margin: 0 0.85rem 0.6rem;
@@ -297,11 +763,129 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.telephony-soft-phone__active-call-meta {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
 .telephony-soft-phone__active-call-state {
   flex: 0 0 auto;
   color: var(--bs-secondary-color, #6c757d);
   font-size: 0.68rem;
   white-space: nowrap;
+}
+.telephony-soft-phone__line-state {
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background-color: var(--bs-secondary-bg, #e9ecef);
+  font-weight: 600;
+}
+.telephony-soft-phone__line-state--active {
+  background-color: color-mix(in srgb, var(--telephony-accent) 14%, var(--bs-body-bg, #fff));
+  color: color-mix(in srgb, var(--telephony-accent) 80%, var(--bs-body-color, #212529));
+}
+.telephony-soft-phone__line-state--held {
+  background-color: #fff3cd;
+  color: #664d03;
+}
+.telephony-soft-phone__line-timer {
+  color: var(--bs-secondary-color, #6c757d);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+.telephony-soft-phone__conference {
+  border-top: 1px solid var(--bs-border-color, #dee2e6);
+  background-color: color-mix(in srgb, var(--telephony-accent) 6%, var(--bs-body-bg, #fff));
+}
+.telephony-soft-phone__conference-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.5rem 0.2rem;
+  color: var(--telephony-accent);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.telephony-soft-phone__participant-hangup {
+  flex: 0 0 auto;
+  width: 1.7rem;
+  height: 1.7rem;
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--bs-secondary-color, #6c757d);
+  background-color: var(--bs-body-bg, #fff);
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+.telephony-soft-phone__participant-hangup:hover:not(:disabled), .telephony-soft-phone__participant-hangup:focus-visible {
+  border-color: #d23f3f;
+  color: #d23f3f;
+}
+.telephony-soft-phone__participant-hangup:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.telephony-soft-phone__active-call-check:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+.telephony-soft-phone__merge-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  padding: 0.45rem 0.5rem;
+  border-top: 1px solid var(--bs-border-color, #dee2e6);
+  background-color: var(--bs-tertiary-bg, #f8f9fa);
+}
+.telephony-soft-phone__merge-select-all {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0;
+  color: var(--bs-secondary-color, #6c757d);
+  font-size: 0.72rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.telephony-soft-phone__merge-select-all input {
+  margin: 0;
+}
+.telephony-soft-phone__merge-summary {
+  flex: 1 1 8rem;
+  min-width: 0;
+  color: var(--bs-body-color, #212529);
+  font-size: 0.72rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.telephony-soft-phone__merge-calls {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: auto;
+  white-space: nowrap;
+}
+.telephony-soft-phone__merge-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  padding: 0.4rem 0.5rem;
+  border-top: 1px solid var(--bs-border-color, #dee2e6);
+  color: var(--bs-secondary-color, #6c757d);
+  font-size: 0.7rem;
+  line-height: 1.3;
+}
+.telephony-soft-phone__merge-note > i {
+  margin-top: 0.1rem;
 }
 .telephony-soft-phone__transfer-panel {
   margin: 0 0.85rem 0.6rem;
@@ -310,13 +894,77 @@
   border-radius: 0.5rem;
   background-color: var(--bs-tertiary-bg, #f8f9fa);
 }
-.telephony-soft-phone__transfer-title, .telephony-soft-phone__directory-heading {
-  margin-bottom: 0.35rem;
+.telephony-soft-phone__transfer-header {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: -0.15rem 0 0.45rem -0.2rem;
+}
+.telephony-soft-phone__transfer-title {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.telephony-soft-phone__transfer-modes {
+  display: flex;
+  padding: 0.15rem;
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  border-radius: 0.45rem;
+  background-color: var(--bs-body-bg, #fff);
+}
+.telephony-soft-phone__transfer-mode {
+  flex: 1 1 0;
+  padding: 0.25rem 0.4rem;
+  border: none;
+  border-radius: 0.35rem;
+  background: transparent;
+  color: var(--bs-secondary-color, #6c757d);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.telephony-soft-phone__transfer-mode.is-active {
+  background-color: var(--telephony-accent);
+  color: #fff;
+}
+.telephony-soft-phone__transfer-hint {
+  margin: 0.3rem 0 0.45rem;
   color: var(--bs-secondary-color, #6c757d);
   font-size: 0.7rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+}
+.telephony-soft-phone__transfer-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.telephony-soft-phone__transfer-entry .iti {
+  display: block;
+  width: 100%;
+}
+.telephony-soft-phone__transfer-entry .telephony-soft-phone__dial-mode {
+  margin-top: 0.3rem;
+}
+.telephony-soft-phone__transfer-panel--extension .iti__country-container {
+  display: none;
+}
+.telephony-soft-phone__transfer-panel--extension .telephony-soft-phone__transfer-input {
+  padding-left: 0.5rem !important;
+}
+.telephony-soft-phone__transfer-blocked {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  padding: 0.5rem 0.25rem;
+  color: var(--bs-body-color, #212529);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+.telephony-soft-phone__transfer-blocked > i {
+  margin-top: 0.15rem;
+  color: var(--telephony-accent);
 }
 .telephony-soft-phone__transfer-input {
   width: 100%;
@@ -325,6 +973,136 @@
   border-radius: 0.4rem;
   background-color: var(--bs-body-bg, #fff);
   color: var(--bs-body-color, #212529);
+}
+.telephony-soft-phone__transfer-input:focus {
+  outline: 2px solid color-mix(in srgb, var(--telephony-accent) 45%, transparent);
+  outline-offset: 0;
+  border-color: var(--telephony-accent);
+}
+.telephony-soft-phone__transfer-error {
+  margin-top: 0.35rem;
+  color: #b02a37;
+  font-size: 0.72rem;
+}
+.telephony-soft-phone__transfer-results {
+  max-height: 11rem;
+  margin-top: 0.45rem;
+  overflow-y: auto;
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  border-radius: 0.4rem;
+  background-color: var(--bs-body-bg, #fff);
+  scrollbar-width: thin;
+}
+.telephony-soft-phone__transfer-results:empty {
+  display: none;
+}
+.telephony-soft-phone__transfer-group {
+  padding: 0.4rem 0.5rem 0.15rem;
+  color: var(--bs-secondary-color, #6c757d);
+  font-size: 0.64rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  user-select: none;
+}
+.telephony-soft-phone__transfer-option {
+  cursor: pointer;
+}
+.telephony-soft-phone__transfer-option > i {
+  flex: 0 0 auto;
+  width: 1rem;
+  color: var(--bs-secondary-color, #6c757d);
+  text-align: center;
+}
+.telephony-soft-phone__transfer-option .telephony-soft-phone__directory-name {
+  flex: 1 1 auto;
+}
+.telephony-soft-phone__transfer-option.is-selected {
+  background-color: color-mix(in srgb, var(--telephony-accent) 12%, var(--bs-body-bg, #fff));
+  box-shadow: inset 0.2rem 0 0 var(--telephony-accent);
+}
+.telephony-soft-phone__transfer-option.is-unavailable .telephony-soft-phone__directory-name {
+  color: var(--bs-secondary-color, #6c757d);
+  font-weight: 500;
+}
+.telephony-soft-phone__directory-presence {
+  flex: 0 0 auto;
+  padding: 0.05rem 0.4rem;
+  border-radius: 1rem;
+  background-color: var(--bs-tertiary-bg, #f8f9fa);
+  color: var(--bs-secondary-color, #6c757d);
+  font-size: 0.62rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.telephony-soft-phone__directory-presence--available {
+  background-color: #d1e7dd;
+  color: #0a3622;
+}
+.telephony-soft-phone__consult {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 0.5rem;
+}
+.telephony-soft-phone__consult > i {
+  flex: 0 0 auto;
+  color: var(--telephony-accent);
+  font-size: 1.1rem;
+}
+.telephony-soft-phone__consult-status {
+  min-width: 0;
+  font-size: 0.8rem;
+  line-height: 1.3;
+}
+.telephony-soft-phone__transfer-option--number {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.45rem 0.5rem;
+  border: none;
+  background: transparent;
+  color: var(--telephony-accent);
+  text-align: left;
+}
+.telephony-soft-phone__transfer-option--number > i {
+  color: var(--telephony-accent);
+}
+.telephony-soft-phone__transfer-option--number:hover {
+  background-color: var(--bs-tertiary-bg, #f8f9fa);
+}
+.telephony-soft-phone__confirm {
+  margin: 0.6rem 0.85rem 0;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid #f1aeb5;
+  border-radius: 0.5rem;
+  background-color: #f8d7da;
+  color: #58151c;
+}
+.telephony-soft-phone__confirm-text {
+  margin: 0 0 0.45rem;
+  font-size: 0.8rem;
+}
+.telephony-soft-phone__confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+.telephony-soft-phone__menu-heading {
+  margin: 0.35rem 0 0.1rem;
+  padding: 0.45rem 0.75rem 0.15rem;
+  border-top: 1px solid var(--bs-border-color, #dee2e6);
+  color: var(--bs-secondary-color, #6c757d);
+  font-size: 0.66rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  white-space: nowrap;
+  cursor: default;
+  pointer-events: none;
+  user-select: none;
 }
 .telephony-soft-phone__directory {
   margin-top: 0.5rem;
@@ -341,6 +1119,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
+  min-height: 2.1rem;
   width: 100%;
   padding: 0.35rem 0.45rem;
   border: none;
@@ -400,10 +1179,129 @@
 }
 .telephony-soft-phone__actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  justify-content: center;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.6rem;
   padding: 0.5rem 0.85rem 0.95rem;
+}
+.telephony-soft-phone__call-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(3.5rem, 1fr));
+  gap: 0.4rem;
+  justify-items: center;
+}
+.telephony-soft-phone__call-controls[hidden] {
+  display: none;
+}
+.telephony-soft-phone__control {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 3.5rem;
+  border: none;
+  padding: 0;
+  background: transparent;
+  color: var(--bs-body-color, #212529);
+  font-size: 0.72rem;
+  line-height: 1.2;
+  cursor: pointer;
+}
+.telephony-soft-phone__control[hidden] {
+  display: none;
+}
+.telephony-soft-phone__control:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+.telephony-soft-phone__control:focus-visible {
+  outline: none;
+}
+.telephony-soft-phone__control:focus-visible .telephony-soft-phone__control-icon {
+  box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--telephony-accent) 45%, transparent);
+}
+.telephony-soft-phone__control-icon {
+  width: 2.9rem;
+  height: 2.9rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  background-color: var(--bs-tertiary-bg, #f8f9fa);
+  color: var(--bs-body-color, #212529);
+  font-size: 1rem;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+.telephony-soft-phone__control:hover:not(:disabled) .telephony-soft-phone__control-icon {
+  background-color: var(--bs-secondary-bg, #e9ecef);
+}
+.telephony-soft-phone__control.is-on .telephony-soft-phone__control-icon, .telephony-soft-phone__control[aria-pressed=true] .telephony-soft-phone__control-icon {
+  border-color: var(--telephony-accent);
+  background-color: var(--telephony-accent);
+  color: #fff;
+}
+.telephony-soft-phone__control-label {
+  white-space: nowrap;
+}
+.telephony-soft-phone__control--hangup .telephony-soft-phone__control-icon, .telephony-soft-phone__control--hangup:hover:not(:disabled) .telephony-soft-phone__control-icon {
+  border-color: #c82f2f;
+  background-color: #c82f2f;
+  color: #fff;
+}
+.telephony-soft-phone__call-options {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem;
+}
+.telephony-soft-phone__call-options[hidden] {
+  display: none;
+}
+.telephony-soft-phone__option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.2rem;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  border-radius: 999px;
+  background-color: var(--bs-body-bg, #fff);
+  color: var(--bs-body-color, #212529);
+  font-size: 0.78rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.telephony-soft-phone__option[hidden] {
+  display: none;
+}
+.telephony-soft-phone__option:hover:not(:disabled) {
+  background-color: var(--bs-tertiary-bg, #f8f9fa);
+}
+.telephony-soft-phone__option:focus-visible {
+  outline: 0.15rem solid color-mix(in srgb, var(--telephony-accent) 60%, transparent);
+  outline-offset: 0.1rem;
+}
+.telephony-soft-phone__option:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.telephony-soft-phone__option--danger {
+  border-color: #d23f3f;
+  color: #b02a37;
+}
+.telephony-soft-phone__option--danger:hover:not(:disabled) {
+  background-color: color-mix(in srgb, #d23f3f 10%, var(--bs-body-bg, #fff));
+}
+.telephony-soft-phone__dial-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+.telephony-soft-phone__dial-row[hidden] {
+  display: none;
 }
 .telephony-soft-phone__btn {
   width: 2.6rem;
@@ -426,7 +1324,7 @@
 .telephony-soft-phone__btn--hangup-all {
   background-color: #a52834;
 }
-.telephony-soft-phone__btn--hold, .telephony-soft-phone__btn--resume, .telephony-soft-phone__btn--mute, .telephony-soft-phone__btn--unmute, .telephony-soft-phone__btn--transfer, .telephony-soft-phone__btn--merge {
+.telephony-soft-phone__btn--hold, .telephony-soft-phone__btn--resume, .telephony-soft-phone__btn--mute, .telephony-soft-phone__btn--unmute, .telephony-soft-phone__btn--transfer {
   background-color: var(--telephony-accent);
 }
 .telephony-soft-phone__view[data-telephony-view=keypad], .telephony-soft-phone__history, .telephony-soft-phone__extension-view, .telephony-soft-phone__connect, .telephony-soft-phone__unavailable, .telephony-soft-phone__directory-list {
@@ -442,6 +1340,29 @@
 .telephony-soft-phone__view[data-telephony-view=keypad]::-webkit-scrollbar-thumb, .telephony-soft-phone__history::-webkit-scrollbar-thumb, .telephony-soft-phone__extension-view::-webkit-scrollbar-thumb, .telephony-soft-phone__connect::-webkit-scrollbar-thumb, .telephony-soft-phone__unavailable::-webkit-scrollbar-thumb, .telephony-soft-phone__directory-list::-webkit-scrollbar-thumb {
   background-color: var(--bs-secondary-color, #6c757d);
   border-radius: 999px;
+}
+
+[data-bs-theme=dark] .telephony-soft-phone {
+  --bs-body-bg: #1e2126;
+  --bs-body-color: #e9ecef;
+  --bs-secondary-color: #adb5bd;
+  --bs-tertiary-bg: #2b3035;
+  --bs-secondary-bg: #343a40;
+  --bs-border-color: #495057;
+}
+[data-bs-theme=dark] .telephony-soft-phone .telephony-soft-phone__option--danger {
+  border-color: #e35d6a;
+  color: #f1aeb5;
+}
+[data-bs-theme=dark] .telephony-soft-phone .telephony-soft-phone__line-state--held {
+  background-color: rgba(255, 193, 7, 0.18);
+  color: #ffda6a;
+}
+
+[data-softphone-embedded] .telephony-soft-phone__settings {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
 }
 
 .telephony-phone-dial-btn {
@@ -591,4 +1512,8 @@
 }
 .telephony-incoming__actions .telephony-incoming__btn {
   flex: 1 1 0;
+}
+
+.iti--detached-country-selector {
+  z-index: 1100;
 }

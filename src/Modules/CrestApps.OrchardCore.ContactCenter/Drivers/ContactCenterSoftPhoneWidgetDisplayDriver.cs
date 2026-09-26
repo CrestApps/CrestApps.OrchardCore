@@ -1,0 +1,126 @@
+using System.Security.Claims;
+using CrestApps.OrchardCore.ContactCenter.Core;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Hubs;
+using CrestApps.OrchardCore.ContactCenter.Services;
+using CrestApps.OrchardCore.ContactCenter.ViewModels;
+using CrestApps.OrchardCore.Telephony.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Views;
+using OrchardCore.ResourceManagement;
+
+namespace CrestApps.OrchardCore.ContactCenter.Drivers;
+
+internal sealed class ContactCenterSoftPhoneWidgetDisplayDriver : DisplayDriver<SoftPhoneWidget>
+{
+    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IAuthorizationService _authorizationService;
+    private readonly IAgentProfileManager _agentProfileManager;
+    private readonly IActivityQueueManager _queueManager;
+    private readonly ContactCenterAdminFormOptionsProvider _optionsProvider;
+    private readonly IAgentStateReasonCodeManager _reasonCodeManager;
+    private readonly IResourceManager _resourceManager;
+    private readonly IAgentEntitlementPolicy _entitlementPolicy;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ContactCenterSoftPhoneWidgetDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The HTTP context accessor.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="agentProfileManager">The agent profile manager.</param>
+    /// <param name="queueManager">The queue manager.</param>
+    /// <param name="optionsProvider">The admin form options provider.</param>
+    /// <param name="resourceManager">The Orchard resource manager.</param>
+    /// <param name="reasonCodeManagers">The optional agent state reason code managers, available when the Agents feature is enabled.</param>
+    /// <param name="entitlementPolicy">The policy that decides which queues and campaigns the sign-in picker offers.</param>
+    public ContactCenterSoftPhoneWidgetDisplayDriver(
+        IHttpContextAccessor httpContextAccessor,
+        IAuthorizationService authorizationService,
+        IAgentProfileManager agentProfileManager,
+        IActivityQueueManager queueManager,
+        ContactCenterAdminFormOptionsProvider optionsProvider,
+        IResourceManager resourceManager,
+        IEnumerable<IAgentStateReasonCodeManager> reasonCodeManagers,
+        IAgentEntitlementPolicy entitlementPolicy)
+    {
+        _httpContextAccessor = httpContextAccessor;
+        _authorizationService = authorizationService;
+        _agentProfileManager = agentProfileManager;
+        _queueManager = queueManager;
+        _optionsProvider = optionsProvider;
+        _resourceManager = resourceManager;
+        _reasonCodeManager = reasonCodeManagers.FirstOrDefault();
+        _entitlementPolicy = entitlementPolicy;
+    }
+
+    /// <inheritdoc/>
+    public override async Task<IDisplayResult> DisplayAsync(SoftPhoneWidget widget, BuildDisplayContext context)
+    {
+        var httpContext = _httpContextAccessor.HttpContext;
+
+        if (httpContext is null)
+        {
+            return null;
+        }
+
+        var user = httpContext.User;
+
+        if (user?.Identity?.IsAuthenticated != true ||
+            !await _authorizationService.AuthorizeAsync(user, ContactCenterPermissions.SignIntoQueues))
+        {
+            return null;
+        }
+
+        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            return null;
+        }
+
+        var profile = await _agentProfileManager.FindByUserIdAsync(userId);
+
+        // The entitlement policy decides what the picker offers: the permissive default offers every queue and
+        // campaign, while the enforcing policy (Agent Entitlements feature) limits it to the profile's grants.
+        var selectedCampaignIds = _entitlementPolicy.GetSignedInCampaignIds(profile);
+        var queues = await _queueManager.GetEnabledAsync();
+
+        // Only stored (inbound) queues are offered for sign-in. A campaign's virtual queue is never stored, so it
+        // is naturally absent here; agents join it implicitly by signing into the campaign.
+        var entitledQueues = queues.Where(queue => _entitlementPolicy.AllowsQueue(profile, queue.ItemId)).ToList();
+        var entitledQueueIds = new HashSet<string>(entitledQueues.Select(queue => queue.ItemId), StringComparer.OrdinalIgnoreCase);
+        var campaignOptions = await _optionsProvider.GetCampaignOptionsAsync(selectedCampaignIds);
+        var entitledCampaignOptions = campaignOptions.Where(option => _entitlementPolicy.AllowsCampaign(profile, option.Value)).ToList();
+        var reasonCodes = _reasonCodeManager is null
+            ? []
+            : await _reasonCodeManager.GetEnabledAsync();
+
+        _resourceManager.RegisterResource("stylesheet", "bootstrap-select").AtHead();
+        _resourceManager.RegisterResource("script", "contact-center-realtime").AtFoot();
+        _resourceManager.RegisterResource("script", "contact-center-soft-phone").AtFoot();
+
+        var viewModel = new AgentSoftPhoneViewModel
+        {
+            HubUrl = SignalRHubRoutes.GetTenantAwareHubUrl<ContactCenterHub>(httpContext),
+            Profile = profile,
+            AvailableQueues = entitledQueues,
+            SelectedQueueIds = _entitlementPolicy.GetSignedInQueueIds(profile)
+                .Where(entitledQueueIds.Contains)
+                .ToList(),
+            CampaignOptions = entitledCampaignOptions,
+            SelectedCampaignIds = selectedCampaignIds,
+            ReasonCodes = [.. reasonCodes],
+        };
+
+        return Combine(
+            View("ContactCenterSoftPhonePresence_Header", viewModel)
+                .Location("Detail", "HeaderActions:5"),
+            View("ContactCenterSoftPhoneWork_Tab", viewModel)
+                .Location("Detail", "Tabs:10"),
+            View("ContactCenterSoftPhoneWork_View", viewModel)
+                .Location("Detail", "Views:10")
+        );
+    }
+}

@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
@@ -62,7 +63,11 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
         services.AddScoped<IActivityBatchLoadCoordinator, DefaultActivityBatchLoadCoordinator>();
         services.AddScoped<DefaultContactActivityBatchLoader>();
 
-        services.AddSingleton<IBackgroundTask, AutomatedActivitiesProcessorBackgroundTask>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AutomatedActivitiesProcessorBackgroundTask>());
+
+        // Shared with the Contact Center's outbound screening, so the loader and the dialler answer "may we reach
+        // them?" the same way. Whichever feature registers it first provides it.
+        services.TryAddScoped<IContactOptOutResolver, ContactOptOutResolver>();
 
         services
             .AddYesSqlDocumentCatalog<OmnichannelActivityBatch, OmnichannelActivityBatchIndex>(collection: OmnichannelConstants.CollectionName)
@@ -73,6 +78,13 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
             .AddScoped<ICatalogEntryHandler<OmnichannelActivityBatch>, OmnichannelActivityBatchHandler>()
             .AddIndexProvider<OmnichannelActivityBatchIndexProvider>()
             .AddDataMigration<OmnichannelActivityBatchIndexMigrations>();
+
+        // Reusable re-engagement cadences selected on automated loading campaigns.
+        services
+            .AddYesSqlDocumentCatalog<Cadence, CadenceIndex>(collection: OmnichannelConstants.CollectionName)
+            .AddScoped<ICatalogEntryHandler<Cadence>, CadenceHandler>()
+            .AddIndexProvider<CadenceIndexProvider>()
+            .AddDataMigration<CadenceIndexMigrations>();
 
         services.AddContentPart<OmnichannelContactPart>();
         services.AddContentPart<OmnichannelSubjectPart>();
@@ -92,8 +104,8 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
             .AddScoped<IActivityDispositionService, DefaultActivityDispositionService>()
             .AddScoped<IAutomatedActivityCompletionService, AutomatedActivityCompletionService>();
 
-        services.AddScoped<OmnichannelContentTypeProvider>();
-        services.AddScoped<IContentDefinitionEventHandler, OmnichannelContentTypeCacheInvalidator>();
+        services.AddSingleton<OmnichannelContentTypeProvider>();
+        services.AddSingleton<IContentDefinitionEventHandler>(sp => sp.GetRequiredService<OmnichannelContentTypeProvider>());
 
         services.AddScoped<ISubjectFlowSettingsService, SubjectFlowSettingsService>();
 
@@ -139,6 +151,9 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
         // deployment still has to authorize the requests it serves, and a permission that only exists when the
         // administration feature is on would fail closed for every headless caller.
         services.AddPermissionProvider<PermissionProvider>();
+        // The handler declares its authorization-service dependency but resolves it lazily, because the service
+        // is what runs the handler.
+        services.AddScoped(sp => new Lazy<IAuthorizationService>(sp.GetRequiredService<IAuthorizationService>));
         services.AddScoped<IAuthorizationHandler, OmnichannelActivityAuthorizationHandler>();
 
         services

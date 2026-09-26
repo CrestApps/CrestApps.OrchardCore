@@ -4,7 +4,7 @@
 @using Microsoft.AspNetCore.Mvc.Localization
 @using OrchardCore.DisplayManagement
 
-@model ListCatalogEntryViewModel<CatalogEntryViewModel<OmnichannelChannelEndpoint>>
+@model ListSourceCatalogEntryViewModel<OmnichannelChannelEndpoint>
 
 <zone Name="Title"><h1>@RenderTitleSegments(T["Channel Endpoints"])</h1></zone>
 
@@ -24,7 +24,7 @@
                     </div>
                 </div>
                 <div class="col-auto">
-                    <a class="btn btn-secondary create" role="button" asp-action="Create">@T["Add Channel Endpoint"]</a>
+                    <button type="button" class="btn btn-secondary create" role="button" data-bs-toggle="modal" data-bs-target="#modalAddChannelEndpoint">@T["Add Channel Endpoint"]</button>
                 </div>
             </div>
         </div>
@@ -98,3 +98,36 @@
     </div>
 
 </form>
+
+<!-- Modal -->
+<div class="modal fade" id="modalAddChannelEndpoint" tabindex="-1" role="dialog" aria-labelledby="available-channel-endpoint-sources-title" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="available-channel-endpoint-sources-title">@T["Available Channels"]</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                @if (!Model.Sources.Any())
+                {
+                    <p class="p-3 mb-2 bg-warning text-white">@T["You need to enable a feature which provides a channel."]</p>
+                }
+                else
+                {
+                    <div class="row row-cols-1 row-cols-md-3 g-2">
+                        @foreach (var source in Model.Sources)
+                        {
+                            IShape shape = await New.OmnichannelChannelEndpoint_Link(Source: source);
+                            shape.Metadata.Alternates.Add("OmnichannelChannelEndpoint_Link__" + source);
+
+                            @await DisplayAsync(shape)
+                        }
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Cancel"]</button>
+            </div>
+        </div>
+    </div>
+</div>

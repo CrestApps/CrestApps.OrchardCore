@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using YesSql;
 using YesSql.Sql;
@@ -10,22 +9,18 @@ namespace CrestApps.OrchardCore.Omnichannel.Migrations;
 internal sealed class OmnichannelContactCommunicationPreferenceIndexMigrations : DataMigration
 {
     private readonly IStore _store;
-    private readonly IDbConnectionAccessor _dbConnectionAccessor;
     private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OmnichannelContactCommunicationPreferenceIndexMigrations"/> class.
     /// </summary>
     /// <param name="store">The YesSql store.</param>
-    /// <param name="dbConnectionAccessor">The database connection accessor.</param>
     /// <param name="logger">The logger.</param>
     public OmnichannelContactCommunicationPreferenceIndexMigrations(
         IStore store,
-        IDbConnectionAccessor dbConnectionAccessor,
         ILogger<OmnichannelContactCommunicationPreferenceIndexMigrations> logger)
     {
         _store = store;
-        _dbConnectionAccessor = dbConnectionAccessor;
         _logger = logger;
     }
 
@@ -36,7 +31,7 @@ internal sealed class OmnichannelContactCommunicationPreferenceIndexMigrations :
     {
         await EnsureDefaultContactCommunicationPreferenceIndexTableAsync();
 
-        return 2;
+        return 3;
     }
 
     /// <summary>
@@ -47,6 +42,61 @@ internal sealed class OmnichannelContactCommunicationPreferenceIndexMigrations :
         await EnsureDefaultContactCommunicationPreferenceIndexTableAsync();
 
         return 2;
+    }
+
+    /// <summary>
+    /// Removes the chat preference columns, which no channel could ever act on.
+    /// </summary>
+    public async Task<int> UpdateFrom2Async()
+    {
+        // The chat preference was writable but never readable: the platform has no chat channel, no processor for
+        // one, and no path that can create chat work, so a contact who asked not to be chatted with was told
+        // something the product could not honour. The promise is withdrawn, so the columns behind it go too.
+        //
+        // The columns are looked for rather than dropped blindly. The host runs this step on the transaction every
+        // sibling step in the feature shares, and a drop that failed there would take all of them down with it, so a
+        // table that never had these columns has to be recognised before anything is attempted. The check and the
+        // drops run on that same transaction: a second connection would wait on SQLite for the write lock this
+        // transaction already holds, stall every startup for the full busy timeout, and fail.
+        var columns = await GetColumnNamesAsync();
+
+        if (columns.Contains("DoNotChat"))
+        {
+            await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactCommunicationPreferenceIndex>(table =>
+                table.DropColumn("DoNotChat"));
+        }
+
+        if (columns.Contains("DoNotChatUtc"))
+        {
+            await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactCommunicationPreferenceIndex>(table =>
+                table.DropColumn("DoNotChatUtc"));
+        }
+
+        return 3;
+    }
+
+    // Columns are read through the data reader rather than an engine-specific catalog view, so the same probe works
+    // on every supported engine, and the query matches no rows because only the declared columns are wanted.
+    private async Task<HashSet<string>> GetColumnNamesAsync()
+    {
+        var tableName = SchemaBuilder.TablePrefix +
+            SchemaBuilder.TableNameConvention.GetIndexTable(typeof(OmnichannelContactCommunicationPreferenceIndex), null);
+        var quotedTableName = SchemaBuilder.Dialect.QuoteForTableName(tableName, _store.Configuration.Schema);
+
+        await using var command = SchemaBuilder.Connection.CreateCommand();
+        command.Transaction = SchemaBuilder.Transaction;
+        command.CommandText = $"SELECT * FROM {quotedTableName} WHERE 1 = 0";
+
+        await using var reader = await command.ExecuteReaderAsync();
+
+        var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        for (var ordinal = 0; ordinal < reader.FieldCount; ordinal++)
+        {
+            columns.Add(reader.GetName(ordinal));
+        }
+
+        return columns;
     }
 
     private async Task EnsureDefaultContactCommunicationPreferenceIndexTableAsync()
@@ -61,8 +111,6 @@ internal sealed class OmnichannelContactCommunicationPreferenceIndexMigrations :
                 .Column<DateTime>("DoNotSmsUtc")
                 .Column<bool>("DoNotEmail", column => column.NotNull().WithDefault(false))
                 .Column<DateTime>("DoNotEmailUtc")
-                .Column<bool>("DoNotChat", column => column.NotNull().WithDefault(false))
-                .Column<DateTime>("DoNotChatUtc")
             );
         }
         catch (Exception ex)

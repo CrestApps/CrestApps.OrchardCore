@@ -1,0 +1,313 @@
+﻿using System.Globalization;
+using CrestApps.Core.Support;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Services;
+using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
+using OrchardCore.Modules;
+
+namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
+
+/// <summary>
+/// Between the policy that decides what a waiting caller is due to hear and the provider that makes it audible:
+/// finds the caller's live leg, works out what there is to say, says it, and records that it was said.
+/// </summary>
+public sealed class QueueTreatmentService : IQueueTreatmentService
+{
+    private readonly IQueueItemManager _queueItemManager;
+    private readonly IInteractionManager _interactionManager;
+    private readonly IQueueTreatmentProvider _treatmentProvider;
+    private readonly IAgentAvailabilityService _availabilityService;
+    private readonly IClock _clock;
+    private readonly ILogger _logger;
+
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="QueueTreatmentService"/> class.
+    /// </summary>
+    /// <param name="queueItemManager">The queue item manager.</param>
+    /// <param name="interactionManager">The interaction manager, which knows the caller's provider leg.</param>
+    /// <param name="treatmentProvider">The provider that makes the caller hear it.</param>
+    /// <param name="availabilityService">The availability service, for the estimate's divisor.</param>
+    /// <param name="clock">The clock.</param>
+    /// <param name="stringLocalizer">The localizer the spoken sentences are worded with.</param>
+    /// <param name="logger">The logger.</param>
+    public QueueTreatmentService(
+        IQueueItemManager queueItemManager,
+        IInteractionManager interactionManager,
+        IQueueTreatmentProvider treatmentProvider,
+        IAgentAvailabilityService availabilityService,
+        IClock clock,
+        IStringLocalizer<QueueTreatmentService> stringLocalizer,
+        ILogger<QueueTreatmentService> logger)
+    {
+        S = stringLocalizer;
+        _queueItemManager = queueItemManager;
+        _interactionManager = interactionManager;
+        _treatmentProvider = treatmentProvider;
+        _availabilityService = availabilityService;
+        _clock = clock;
+        _logger = logger;
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> RunDueAsync(ActivityQueue queue, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(queue);
+
+        var settings = queue.Treatment;
+
+        // This runs every few seconds against every queue, so a queue that configures no treatment must not cost
+        // a read of everybody waiting in it.
+        if (settings is null || !HasAnything(settings))
+        {
+            return 0;
+        }
+
+        var waiting = await _queueItemManager.GetWaitingAsync(queue.ItemId, cancellationToken);
+
+        if (waiting.Count == 0)
+        {
+            return 0;
+        }
+
+        var now = _clock.UtcNow;
+        var availableAgents = settings.AnnounceEstimatedWait
+            ? (await _availabilityService.GetForQueueAsync(queue.ItemId, cancellationToken)).Count
+            : 0;
+
+        var treated = 0;
+        var position = 0;
+
+        foreach (var item in waiting)
+        {
+            position++;
+
+            var step = QueueTreatmentPolicy.GetNextStep(item, settings, now);
+
+            if (step.Kind == QueueTreatmentStepKind.None)
+            {
+                continue;
+            }
+
+            var interaction = await _interactionManager.FindByActivityIdAsync(item.ActivityItemId, cancellationToken);
+            var providerCallId = interaction?.ProviderInteractionId;
+
+            // A queued call that has not been answered yet, or has already gone, has nothing to speak on.
+            // Recording it as treated would silently consume the welcome this caller never heard.
+            if (string.IsNullOrEmpty(providerCallId))
+            {
+                continue;
+            }
+
+            try
+            {
+                if (!await PlayAsync(step, item, settings, providerCallId, position, availableAgents, now, cancellationToken))
+                {
+                    continue;
+                }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                // One caller who hung up between the read and the command must not end the pass and leave every
+                // other caller in this queue in silence.
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug(ex, "Queue treatment could not be played to waiting item '{ItemId}'.", item.ItemId.SanitizeLogValue());
+                }
+
+                continue;
+            }
+
+            item.TreatmentStepsPlayed++;
+            item.LastTreatmentUtc = now;
+            await _queueItemManager.UpdateAsync(item, cancellationToken: cancellationToken);
+
+            treated++;
+        }
+
+        return treated;
+    }
+
+    /// <inheritdoc/>
+    public Task StartHoldMusicAsync(ActivityQueue queue, string providerCallId, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(queue);
+
+        var mediaId = queue.Treatment?.HoldMusicMediaId;
+
+        // A queue with no hold music has asked for silence, and a caller with no live leg has nothing to hear it
+        // on. Neither is an error.
+        if (string.IsNullOrWhiteSpace(providerCallId) || string.IsNullOrWhiteSpace(mediaId))
+        {
+            return Task.CompletedTask;
+        }
+
+        return _treatmentProvider.StartHoldMusicAsync(providerCallId, mediaId, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Task StartWaitingAudioAsync(ActivityQueue queue, string providerCallId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(providerCallId))
+        {
+            return Task.CompletedTask;
+        }
+
+        var mediaId = queue?.Treatment?.HoldMusicMediaId;
+
+        // Silence is only what a queue asks for while the network is still ringing the caller. Once the platform has
+        // answered them there is no ringing tone unless something plays one, and a quiet line is a dropped call.
+        return string.IsNullOrWhiteSpace(mediaId)
+            ? _treatmentProvider.StartRingbackAsync(providerCallId, cancellationToken)
+            : _treatmentProvider.StartHoldMusicAsync(providerCallId, mediaId, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task StartForNewArrivalAsync(ActivityQueue queue, string providerCallId, bool offered, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(providerCallId))
+        {
+            return;
+        }
+
+        // An offered caller is no longer a waiting one, so a pass would find nobody and play nothing.
+        if (offered || queue is null)
+        {
+            await StartWaitingAudioAsync(queue, providerCallId, cancellationToken);
+
+            return;
+        }
+
+        await RunDueAsync(queue, cancellationToken);
+
+        if (queue.Treatment is null || !QueueTreatmentPolicy.PlaysAnything(queue.Treatment))
+        {
+            await StartWaitingAudioAsync(queue, providerCallId, cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// Plays one step, and says whether the caller actually heard anything.
+    /// </summary>
+    private async Task<bool> PlayAsync(
+        QueueTreatmentStep step,
+        QueueItem item,
+        QueueTreatmentSettings settings,
+        string providerCallId,
+        int position,
+        int availableAgents,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        switch (step.Kind)
+        {
+            case QueueTreatmentStepKind.Welcome:
+                await _treatmentProvider.SpeakAsync(providerCallId, step.Text, cancellationToken);
+
+                // Music starts behind the welcome, so the caller is not left in silence until the first update.
+                await _treatmentProvider.StartHoldMusicAsync(providerCallId, settings.HoldMusicMediaId, cancellationToken);
+
+                return true;
+
+            case QueueTreatmentStepKind.HoldMusic:
+                await _treatmentProvider.StartHoldMusicAsync(providerCallId, settings.HoldMusicMediaId, cancellationToken);
+
+                return true;
+
+            case QueueTreatmentStepKind.CallbackOffer:
+                // The music is stopped so the offer is heard over nothing, rather than queued behind a loop that never
+                // ends or mixed into it; the caller's answer starts it again when they keep waiting.
+                await _treatmentProvider.StopHoldMusicAsync(providerCallId, cancellationToken);
+                await _treatmentProvider.OfferChoiceAsync(
+                    providerCallId,
+                    BuildCallbackPrompt(step.DtmfKey),
+                    step.DtmfKey,
+                    cancellationToken);
+
+                // Recorded so the offer is made once. Re-prompting somebody who already declined, every few
+                // seconds for the rest of their wait, is worse than never offering.
+                item.CallbackOfferedUtc = now;
+
+                return true;
+
+            case QueueTreatmentStepKind.Announcement:
+                var announcement = BuildAnnouncement(settings, position, availableAgents);
+
+                // A queue that announces neither position nor wait has configured a cadence with no content.
+                // Speaking an empty sentence interrupts the hold music for nothing.
+                if (string.IsNullOrEmpty(announcement))
+                {
+                    return false;
+                }
+
+                await _treatmentProvider.SpeakAsync(providerCallId, announcement, cancellationToken);
+
+                return true;
+
+            default:
+                return false;
+        }
+    }
+
+    /// <summary>
+    /// Whether this queue has asked for its callers to hear anything at all. A queue that has not is skipped
+    /// before anybody waiting in it is read, because this runs constantly against every queue.
+    /// </summary>
+    /// <remarks>
+    /// Hold music counts. It was missing here, which meant a queue whose only treatment was music — the most
+    /// ordinary configuration there is — was classed as having nothing configured and skipped before its callers
+    /// were ever looked at. The music was set, the provider could play it, and the caller sat in silence.
+    /// </remarks>
+    private static bool HasAnything(QueueTreatmentSettings settings)
+        => !string.IsNullOrWhiteSpace(settings.WelcomeMessage)
+            || !string.IsNullOrWhiteSpace(settings.HoldMusicMediaId)
+            || !string.IsNullOrWhiteSpace(settings.CallbackDtmfKey)
+            || (settings.AnnouncementIntervalSeconds > 0 && (settings.AnnouncePosition || settings.AnnounceEstimatedWait));
+
+    // The sentences are worded in the language the provider reads them out in: this runs from a timer or a webhook,
+    // where the current culture is nobody's.
+    private string BuildCallbackPrompt(string acceptKey)
+        => SpokenPromptCulture.Localize(_treatmentProvider.SpeechLanguage, () =>
+            S["If you would rather not wait, press {0} and we will call you back without losing your place in line.", acceptKey].Value);
+
+    private string BuildAnnouncement(QueueTreatmentSettings settings, int position, int availableAgents)
+        => SpokenPromptCulture.Localize(_treatmentProvider.SpeechLanguage, () => BuildAnnouncementText(settings, position, availableAgents));
+
+    private string BuildAnnouncementText(QueueTreatmentSettings settings, int position, int availableAgents)
+    {
+        var parts = new List<string>(2);
+
+        if (settings.AnnouncePosition)
+        {
+            parts.Add(S["You are number {0} in line.", position.ToString(CultureInfo.CurrentCulture)].Value);
+        }
+
+        if (settings.AnnounceEstimatedWait)
+        {
+            var estimate = EstimatedWaitTimeCalculator.Estimate(
+                position,
+                availableAgents,
+                TimeSpan.FromSeconds(Math.Max(0, settings.AverageHandleTimeSeconds)),
+                settings);
+
+            // No estimate rather than a wrong one: a queue nobody is working is not moving, and a number
+            // invented to fill the sentence is worse than saying nothing about the wait.
+            if (estimate is not null)
+            {
+                var minutes = Math.Max(1, (int)Math.Round(estimate.Value.TotalMinutes, MidpointRounding.AwayFromZero));
+
+                parts.Add(minutes == 1
+                    ? S["Your estimated wait is about 1 minute."].Value
+                    : S["Your estimated wait is about {0} minutes.", minutes.ToString(CultureInfo.CurrentCulture)].Value);
+            }
+        }
+
+        return parts.Count == 0 ? null : string.Join(' ', parts);
+    }
+}

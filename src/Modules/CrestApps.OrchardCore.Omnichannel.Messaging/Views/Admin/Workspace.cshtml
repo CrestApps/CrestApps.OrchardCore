@@ -1,0 +1,229 @@
+@using CrestApps.OrchardCore.Omnichannel.Messaging.Hubs
+@using CrestApps.OrchardCore.Omnichannel.Messaging.Models
+@model WorkspaceViewModel
+
+@{
+    var inbox = Model.Inbox;
+    var thread = Model.Thread;
+    var show = inbox.Filter == MessagingInboxFilter.All ? null : inbox.Filter.ToString().ToLowerInvariant();
+
+    var filterLabel = inbox.Filter switch
+    {
+        MessagingInboxFilter.Mine => T["My conversations"],
+        MessagingInboxFilter.Unassigned => T["Unassigned"],
+        _ => T["All conversations"],
+    };
+}
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["Messaging"])</h1></zone>
+
+<div class="messaging-workspace d-flex gap-3"
+     data-messaging-workspace
+     data-hub-url="@(Html.SignalRHubUrl<MessagingHub>())"
+     data-inbox-url="@Url.Action("InboxList", new { show, channel = inbox.ChannelFilter, page = inbox.Page, selected = inbox.SelectedCustomerKey })"
+     data-conversation-url="@Url.Action("Conversation", new { id = "__ID__" })"
+     data-availability-url="@Url.Action("SetAvailability")"
+     data-conversation-id="@thread?.Conversation.ItemId"
+     data-customer-key="@thread?.CustomerKey"
+     data-messages-url="@(thread is null ? null : Url.Action("ThreadMessages", new { id = thread.Conversation.ItemId }))"
+     data-new-message-text="@T["New message"]"
+     data-view-text="@T["Open conversation"]"
+     data-agent-id="@inbox.CurrentAgentId"
+     data-someone-text="@T["Someone"]"
+     data-transferred-to-you-text="@T["{0} transferred a conversation to you"].Value"
+     data-transferred-to-team-text="@T["{0} sent a conversation to {1}"].Value"
+     data-transferred-away-text="@T["This conversation was transferred to {0}"].Value">
+
+    <aside class="messaging-inbox messaging-pane d-flex flex-column flex-shrink-0 @(thread is null && Model.Compose is null ? string.Empty : "d-none d-md-flex")">
+        <div class="p-2 border-bottom d-flex flex-column gap-2">
+            <div class="d-flex gap-1 align-items-center">
+                <div class="has-search flex-grow-1">
+                    <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                    <input class="form-control form-control-sm" data-inbox-search placeholder="@T["Search"]" type="search" autocomplete="off" />
+                </div>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="@filterLabel">
+                        <i class="fa-solid fa-filter" aria-hidden="true"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <a class="dropdown-item d-flex justify-content-between align-items-center gap-3 @(inbox.Filter == MessagingInboxFilter.All ? "active" : string.Empty)" asp-route-action="Index" asp-route-channel="@inbox.ChannelFilter">
+                                <span>@T["All conversations"]</span>
+                                <span class="badge rounded-pill text-bg-secondary">@inbox.AllCount</span>
+                            </a>
+                        </li>
+                        @if (inbox.HasAgentProfile)
+                        {
+                            <li>
+                                <a class="dropdown-item d-flex justify-content-between align-items-center gap-3 @(inbox.Filter == MessagingInboxFilter.Mine ? "active" : string.Empty)" asp-route-action="Index" asp-route-show="mine" asp-route-channel="@inbox.ChannelFilter">
+                                    <span>@T["My conversations"]</span>
+                                    <span class="badge rounded-pill text-bg-secondary">@inbox.MineCount</span>
+                                </a>
+                            </li>
+                        }
+                        <li>
+                            <a class="dropdown-item d-flex justify-content-between align-items-center gap-3 @(inbox.Filter == MessagingInboxFilter.Unassigned ? "active" : string.Empty)" asp-route-action="Index" asp-route-show="unassigned" asp-route-channel="@inbox.ChannelFilter">
+                                <span>@T["Unassigned"]</span>
+                                <span class="badge rounded-pill text-bg-secondary">@inbox.UnassignedCount</span>
+                            </a>
+                        </li>
+                        @if (inbox.Channels.Count > 1)
+                        {
+                            <li><hr class="dropdown-divider" /></li>
+                            <li><h6 class="dropdown-header">@T["Channel"]</h6></li>
+                            <li>
+                                <a class="dropdown-item @(inbox.ChannelFilter is null ? "active" : string.Empty)" asp-route-action="Index" asp-route-show="@show">@T["Every channel"]</a>
+                            </li>
+                            @foreach (var channel in inbox.Channels)
+                            {
+                                <li>
+                                    <a class="dropdown-item @(string.Equals(inbox.ChannelFilter, channel.Name, StringComparison.OrdinalIgnoreCase) ? "active" : string.Empty)" asp-route-action="Index" asp-route-show="@show" asp-route-channel="@channel.Name">
+                                        <i class="@channel.IconCssClass me-2" aria-hidden="true"></i>@channel.DisplayName
+                                    </a>
+                                </li>
+                            }
+                        }
+                    </ul>
+                </div>
+                <a class="btn btn-sm btn-primary" asp-route-action="New" title="@T["New conversation"]" aria-label="@T["New conversation"]">
+                    <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
+                </a>
+            </div>
+            <div class="d-flex justify-content-between align-items-center small">
+                <span class="text-muted">@filterLabel</span>
+                @if (inbox.HasAgentProfile)
+                {
+                    <div class="form-check form-switch mb-0" title="@T["Accept routed conversations to your inbox"]">
+                        <input class="form-check-input" type="checkbox" role="switch" id="messaging-available-toggle" data-availability-toggle @(inbox.Available ? "checked" : string.Empty) />
+                        <label class="form-check-label" for="messaging-available-toggle">@T["Available"]</label>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="flex-grow-1 overflow-y-auto" data-inbox-list>
+            @await Html.PartialAsync("_InboxList", inbox)
+        </div>
+    </aside>
+
+    <section class="messaging-thread messaging-pane d-flex flex-column flex-grow-1 overflow-hidden">
+        @if (Model.Compose is not null)
+        {
+            @await Html.PartialAsync("_Compose", Model.Compose)
+        }
+        else if (thread is null)
+        {
+            <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 text-muted p-4 text-center">
+                <i class="fa-regular fa-comments fa-3x mb-3" aria-hidden="true"></i>
+                <p class="mb-1">@T["Select a customer to see their conversation."]</p>
+                @if (inbox.Channels.Count == 0)
+                {
+                    <p class="small mb-0">@T["No messaging channel is enabled yet. Enable a channel feature, such as SMS Messaging Channel, to send and receive messages."]</p>
+                }
+            </div>
+        }
+        else
+        {
+            @await Html.PartialAsync("_Thread", thread)
+        }
+    </section>
+</div>
+
+<form class="d-none" data-antiforgery>@Html.AntiForgeryToken()</form>
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1090;" data-toast-container></div>
+
+<style at="Head">
+    .ta-content {
+        padding-bottom: 0 !important;
+    }
+
+    .messaging-workspace {
+        height: calc(100vh - var(--oc-top-nav-height, 0px) - 5.5rem);
+        min-height: 32rem;
+    }
+
+    /* The list and the conversation are two panes of their own, set apart by a gap, rather than one box split by a
+       rule: each carries its own frame and the page background shows between them. */
+    .messaging-pane {
+        background-color: var(--bs-body-bg);
+        border: 1px solid var(--bs-border-color-translucent);
+        border-radius: var(--bs-border-radius-lg);
+        box-shadow: var(--bs-box-shadow-sm);
+        overflow: hidden;
+    }
+
+    .messaging-inbox {
+        width: 21rem;
+    }
+
+    @@media (max-width: 767.98px) {
+        .messaging-inbox {
+            width: 100%;
+        }
+    }
+
+    /* A flush list inside a framed pane would draw its own rule against the pane's edge. */
+    .messaging-inbox .list-group-item {
+        border-inline: 0;
+    }
+
+    .messaging-inbox .list-group-item:first-child {
+        border-top: 0;
+    }
+
+    /* Bootstrap's active item is white text on the primary colour, which washed the customer's name out on a light
+       row. The selected customer keeps readable text on a subtle tint, marked by an accent bar. */
+    .messaging-inbox-row.active,
+    .messaging-inbox-row.active:hover,
+    .messaging-inbox-row.active:focus {
+        background-color: var(--bs-primary-bg-subtle);
+        color: var(--bs-body-color);
+        border-color: var(--bs-border-color-translucent);
+        box-shadow: inset 3px 0 0 var(--bs-primary);
+    }
+
+    .messaging-inbox-row.active .text-muted {
+        color: var(--bs-secondary-color) !important;
+    }
+
+    .messaging-inbox-row.messaging-unread .messaging-row-name,
+    .messaging-inbox-row.messaging-unread .messaging-row-preview {
+        font-weight: 600;
+        color: var(--bs-body-color);
+    }
+
+    .messaging-avatar {
+        width: 2.25rem;
+        height: 2.25rem;
+        font-size: .8rem;
+    }
+
+    .messaging-channel-tabs .nav-link {
+        position: relative;
+        font-size: 1.15rem;
+        padding: .5rem .8rem;
+        color: var(--bs-secondary-color);
+        border: 0;
+        border-bottom: 2px solid transparent;
+    }
+
+    .messaging-channel-tabs .nav-link.active {
+        color: var(--bs-success);
+        border-bottom-color: var(--bs-success);
+        background: transparent;
+    }
+
+    .messaging-channel-tabs .nav-link.disabled {
+        opacity: .35;
+    }
+
+    .messaging-channel-tabs .messaging-tab-badge {
+        position: absolute;
+        top: .1rem;
+        right: .05rem;
+        font-size: .6rem;
+    }
+</style>
+
+<script asp-name="signalr" at="Foot"></script>
+<script asp-src="~/CrestApps.OrchardCore.Omnichannel.Messaging/scripts/messaging-workspace.min.js" debug-src="~/CrestApps.OrchardCore.Omnichannel.Messaging/scripts/messaging-workspace.js" depends-on="signalr" at="Foot"></script>

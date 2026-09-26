@@ -98,9 +98,11 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
 
         var fields = Initialize<EditOmnichannelActivity>("OmnichannelActivityFields_Edit", async model =>
         {
+            // Shown in local time, because a save reads it back as local time. Shown as stored, every save moved the
+            // activity by the offset from UTC -- seven hours later on a Pacific site -- without anybody touching it.
             model.ScheduleAt = context.IsNew || activity.ScheduledUtc == DateTime.MinValue
                 ? (await _localClock.GetLocalNowAsync()).DateTime
-                : activity.ScheduledUtc;
+                : (await _localClock.ConvertToLocalAsync(activity.ScheduledUtc)).DateTime;
             model.SubjectContentType = activity.SubjectContentType;
             model.UserId = activity.AssignedToId ?? _httpContextAccessor.HttpContext.User?.FindFirstValue(ClaimTypes.NameIdentifier);
             model.Instructions = activity.Instructions;
@@ -124,11 +126,11 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
                 model.SubjectContentType = subjectContentTypes[0].Value;
             }
 
-            var contactContentTypeNames = await _contentTypeProvider.GetContactContentTypesAsync();
+            await _contentTypeProvider.EnsureInitializedAsync(_contentDefinitionManager);
 
             foreach (var contentType in await _contentDefinitionManager.ListTypeDefinitionsAsync())
             {
-                if (contactContentTypeNames.Contains(contentType.Name))
+                if (_contentTypeProvider.IsContactContentType(contentType.Name))
                 {
                     contactContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
                 }
@@ -372,6 +374,9 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
 
             SubjectFlowSettings flowSettings = null;
 
+            // Only a new activity, or one moved to another subject, takes its delivery from the subject's flow.
+            var appliesFlowDelivery = OmnichannelActivityEditRules.AppliesFlowDelivery(activity, model.SubjectContentType, context.IsNew);
+
             if (!string.IsNullOrEmpty(model.SubjectContentType))
             {
                 flowSettings = await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(model.SubjectContentType);
@@ -382,7 +387,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
                 }
             }
 
-            if (flowSettings is not null)
+            if (flowSettings is not null && appliesFlowDelivery)
             {
                 var contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
 
@@ -402,7 +407,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.ScheduleAt), S["Schedule at field is required."]);
             }
 
-            if (flowSettings is not null)
+            if (flowSettings is not null && appliesFlowDelivery)
             {
                 activity.ChannelEndpointId = flowSettings.ChannelEndpointId;
                 activity.InteractionType = flowSettings.InteractionType;

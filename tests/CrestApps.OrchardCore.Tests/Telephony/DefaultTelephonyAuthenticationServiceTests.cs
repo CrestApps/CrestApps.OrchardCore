@@ -2,6 +2,8 @@ using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -85,6 +87,46 @@ public sealed class DefaultTelephonyAuthenticationServiceTests
     }
 
     [Fact]
+    public async Task GetStatusAsync_WithOAuthProviderAndMissingConnectionMetadata_StoresEnrichedMetadata()
+    {
+        // Arrange
+        var tokenStore = new FakeTelephonyUserTokenStore();
+        await tokenStore.StoreAsync("Dialpad", new TelephonyUserTokens
+        {
+            AccessToken = "valid",
+            ExpiresUtc = DateTimeOffset.UtcNow.AddHours(1),
+        }, TestContext.Current.CancellationToken);
+
+        var provider = new FakeAuthTelephonyProvider
+        {
+            RequiresUserAuthentication = true,
+            EnrichedTokensResult = new TelephonyUserTokens
+            {
+                AccessToken = "valid",
+                ExpiresUtc = DateTimeOffset.UtcNow.AddHours(1),
+                RemoteUserId = "5171365938069504",
+                RemoteUserEmail = "agent@example.com",
+                RemotePhoneNumber = "+12088208280",
+            },
+        };
+        var service = CreateService(
+            provider,
+            new TelephonySettings { DefaultProviderName = "Dialpad" },
+            tokenStore);
+
+        // Act
+        var status = await service.GetStatusAsync(TestContext.Current.CancellationToken);
+        var stored = await tokenStore.GetAsync("Dialpad", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(status.IsConnected);
+        Assert.NotNull(stored);
+        Assert.Equal("5171365938069504", stored.RemoteUserId);
+        Assert.Equal("agent@example.com", stored.RemoteUserEmail);
+        Assert.Equal("+12088208280", stored.RemotePhoneNumber);
+    }
+
+    [Fact]
     public async Task CompleteAuthorizationAsync_StoresTokens()
     {
         // Arrange
@@ -156,23 +198,177 @@ public sealed class DefaultTelephonyAuthenticationServiceTests
             tokenStore);
 
         // Act
-        await service.DisconnectAsync(TestContext.Current.CancellationToken);
+        var result = await service.DisconnectAsync(TestContext.Current.CancellationToken);
         var stored = await tokenStore.GetAsync("Dialpad", TestContext.Current.CancellationToken);
 
         // Assert
+        Assert.True(result.Succeeded);
         Assert.NotNull(provider.RevokedTokens);
         Assert.Equal("valid", provider.RevokedTokens.AccessToken);
         Assert.Null(stored);
+    }
+
+    [Fact]
+    public async Task DisconnectAsync_WhenRemoteRevocationFails_ClearsLocalTokensAndReportsFailure()
+    {
+        // Arrange
+        var tokenStore = new FakeTelephonyUserTokenStore();
+        await tokenStore.StoreAsync("Dialpad", new TelephonyUserTokens
+        {
+            AccessToken = "valid",
+        }, TestContext.Current.CancellationToken);
+
+        var provider = new FakeAuthTelephonyProvider
+        {
+            RequiresUserAuthentication = true,
+            RevokeResult = TelephonyResult.Failed("The provider rejected the revocation."),
+        };
+        var service = CreateService(
+            provider,
+            new TelephonySettings { DefaultProviderName = "Dialpad" },
+            tokenStore);
+
+        // Act
+        var result = await service.DisconnectAsync(TestContext.Current.CancellationToken);
+        var stored = await tokenStore.GetAsync("Dialpad", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.NotNull(provider.RevokedTokens);
+        Assert.Null(stored);
+    }
+
+    [Fact]
+    public async Task DisconnectAsync_WhenProviderCannotRevoke_ClearsLocalTokensAndReportsUnknown()
+    {
+        // Arrange
+        var tokenStore = new FakeTelephonyUserTokenStore();
+        await tokenStore.StoreAsync("Dialpad", new TelephonyUserTokens
+        {
+            AccessToken = "valid",
+        }, TestContext.Current.CancellationToken);
+
+        var provider = new CallControlOnlyTelephonyProvider();
+        var service = CreateService(
+            provider,
+            new TelephonySettings { DefaultProviderName = "Dialpad" },
+            tokenStore);
+
+        // Act
+        var result = await service.DisconnectAsync(TestContext.Current.CancellationToken);
+        var stored = await tokenStore.GetAsync("Dialpad", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.True(result.OutcomeUnknown);
+        Assert.Null(stored);
+    }
+
+    [Fact]
+    public async Task DisconnectAsync_WhenRemoteRevocationThrows_StillRemovesLocalTokens()
+    {
+        // Arrange
+        var tokenStore = new FakeTelephonyUserTokenStore();
+        await tokenStore.StoreAsync("Dialpad", new TelephonyUserTokens
+        {
+            AccessToken = "valid",
+        }, TestContext.Current.CancellationToken);
+
+        var provider = new FakeAuthTelephonyProvider
+        {
+            RequiresUserAuthentication = true,
+            RevokeException = new OperationCanceledException(),
+        };
+        var service = CreateService(
+            provider,
+            new TelephonySettings { DefaultProviderName = "Dialpad" },
+            tokenStore);
+
+        // Act
+        await Assert.ThrowsAsync<OperationCanceledException>(
+            () => service.DisconnectAsync(TestContext.Current.CancellationToken));
+        var stored = await tokenStore.GetAsync("Dialpad", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(stored);
+    }
+
+    [Fact]
+    public async Task GetValidTokensAsync_WhenTokensExpireAndCallersRace_RefreshesOnlyOnce()
+    {
+        // Arrange
+        var tokenStore = new FakeTelephonyUserTokenStore();
+        await tokenStore.StoreAsync("Dialpad", new TelephonyUserTokens
+        {
+            AccessToken = "expired",
+            RefreshToken = "refresh",
+            ExpiresUtc = new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero),
+        }, TestContext.Current.CancellationToken);
+
+        var provider = new FakeAuthTelephonyProvider
+        {
+            RequiresUserAuthentication = true,
+            RefreshResult = new TelephonyUserTokens
+            {
+                AccessToken = "refreshed",
+                RefreshToken = "rotated",
+                ExpiresUtc = new DateTimeOffset(2026, 1, 1, 1, 0, 0, TimeSpan.Zero),
+            },
+        };
+
+        var distributedLock = new FakeDistributedLock();
+        var service = CreateService(
+            provider,
+            new TelephonySettings { DefaultProviderName = "Dialpad" },
+            tokenStore,
+            distributedLock);
+
+        // Act
+        // Park the first refresh inside the critical section, then wait until the second caller has provably
+        // reached the lock and is contending for it before letting the first finish. This exercises the
+        // serialization path rather than the two races coincidentally running in order.
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        provider.RefreshGate = gate.Task;
+
+        var first = Task.Run(() => service.GetValidTokensAsync("Dialpad", CancellationToken.None));
+        await provider.RefreshStarted;
+
+        var second = Task.Run(() => service.GetValidTokensAsync("Dialpad", CancellationToken.None));
+        await distributedLock.WaitForAttemptAsync(2);
+        gate.SetResult();
+
+        var results = await Task.WhenAll(first, second);
+
+        // Assert
+        Assert.Equal(1, provider.RefreshCount);
+        Assert.All(results, tokens => Assert.Equal("refreshed", tokens.AccessToken));
     }
 
     private static DefaultTelephonyAuthenticationService CreateService(
         ITelephonyProvider provider,
         TelephonySettings settings,
         ITelephonyUserTokenStore tokenStore)
+        => CreateService(provider, settings, tokenStore, new FakeDistributedLock());
+
+    private static DefaultTelephonyAuthenticationService CreateService(
+        ITelephonyProvider provider,
+        TelephonySettings settings,
+        ITelephonyUserTokenStore tokenStore,
+        FakeDistributedLock distributedLock)
     {
         var siteService = SiteServiceFactory.Create(settings);
         var resolver = new StubTelephonyProviderResolver(provider);
+        var userAccessor = new FakeTelephonyUserAccessor(new FakeUser { UserName = "tester" });
+        var options = Options.Create(new TelephonyCoordinationOptions());
 
-        return new DefaultTelephonyAuthenticationService(siteService, resolver, tokenStore, new StubClock());
+        return new DefaultTelephonyAuthenticationService(
+            siteService,
+            resolver,
+            tokenStore,
+            userAccessor,
+            distributedLock,
+            new StubClock(),
+            options,
+            NullLogger<DefaultTelephonyAuthenticationService>.Instance);
     }
 }

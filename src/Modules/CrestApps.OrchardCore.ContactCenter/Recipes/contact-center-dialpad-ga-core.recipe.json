@@ -1,0 +1,25 @@
+{
+  "name": "ContactCenterDialpadGaCore",
+  "displayName": "Contact Center — Dialpad (GA-Core)",
+  "description": "Enables the supported GA-Core Contact Center feature set for the Dialpad voice provider in one step: base orchestration and administration, the agents (profiles and availability), work distribution (queues and routing), the agent desktop with its soft-phone call control, real-time updates, preview/manual dialing, and the Dialpad Contact Center voice adapter. This is the coherent, certified feature combination for the 'ga-core-dialpad' tenant profile; configure a Dialpad provider and your queues, skills, and entry points afterward to route calls.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [ "contact-center" ],
+  "tags": [ "contact-center", "telephony", "dialpad", "voice" ],
+  "steps": [
+    {
+      "name": "feature",
+      "enable": [
+        "CrestApps.OrchardCore.ContactCenter",
+        "CrestApps.OrchardCore.ContactCenter.Agents",
+        "CrestApps.OrchardCore.ContactCenter.Queues",
+        "CrestApps.OrchardCore.ContactCenter.InboundVoice",
+        "CrestApps.OrchardCore.Telephony.SoftPhone",
+        "CrestApps.OrchardCore.ContactCenter.Dialer",
+        "CrestApps.OrchardCore.Dialpad"
+      ]
+    }
+  ]
+}

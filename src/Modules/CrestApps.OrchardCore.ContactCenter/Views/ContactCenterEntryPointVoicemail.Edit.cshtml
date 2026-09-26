@@ -1,0 +1,58 @@
+@model EntryPointViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<div class="ocat-wrapper" asp-validation-class-for="VoicemailGreetingText">
+    <label asp-for="VoicemailGreetingText" class="ocat-label">@T["Default voicemail greeting"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="VoicemailGreetingText" class="form-control" rows="2"></textarea>
+        <span asp-validation-for="VoicemailGreetingText" class="text-danger"></span>
+        <span class="hint">@T["Spoken to callers who reach voicemail on this line, unless the agent has recorded their own greeting. Leave blank to use the system default."]</span>
+    </div>
+</div>
+
+<div data-entry-point-queue-field>
+    <div class="ocat-limited-wrapper" asp-validation-class-for="VoicemailDestination">
+        <label asp-for="VoicemailDestination" class="ocat-label">@T["Deliver voicemail to"]</label>
+        <div class="ocat-limited">
+            <select asp-for="VoicemailDestination" class="form-select" data-entry-point-voicemail-destination>
+                <option value="@EntryPointVoicemailDestination.AgentInbox">@T["An agent's inbox"]</option>
+                <option value="@EntryPointVoicemailDestination.QueueSharedBox">@T["The queue's shared voicemail box"]</option>
+            </select>
+            <span asp-validation-for="VoicemailDestination" class="text-danger"></span>
+            <span class="hint">@T["Where a message goes when no agent was offered the call: a caller who chose voicemail from the menu, or was sent there because the queue was full, they waited too long, or the line was closed. The shared box is reviewed by everyone allowed to access shared voicemail for the queue the caller was in. A message for an agent who let the call ring out still goes to that agent."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="VoicemailRecipientAgentId" data-entry-point-voicemail-inbox-field>
+        <label asp-for="VoicemailRecipientAgentId" class="ocat-label">@T["Voicemail inbox"]</label>
+        <div class="ocat-end">
+            <select asp-for="VoicemailRecipientAgentId" asp-items="Model.VoicemailRecipientAgentOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select an agent"]" data-width="100%" title="@T["No inbox"]">
+                <option value="">@T["No inbox"]</option>
+            </select>
+            <span asp-validation-for="VoicemailRecipientAgentId" class="text-danger"></span>
+            <span class="hint">@T["The agent (for example a supervisor) whose Voicemail tab receives messages left on this queue line when no agent was offered the call."]</span>
+        </div>
+    </div>
+</div>
+
+<script at="Foot">
+    (function () {
+        var destination = document.querySelector('[data-entry-point-voicemail-destination]');
+        var inboxField = document.querySelector('[data-entry-point-voicemail-inbox-field]');
+
+        if (!destination || !inboxField) {
+            return;
+        }
+
+        // The agent inbox only applies when the line delivers to an agent. The routing card shows and hides this whole
+        // card's queue-line fields by the entry point's target; this only decides which of the two mailboxes is shown.
+        function apply() {
+            inboxField.style.display = destination.value === '@EntryPointVoicemailDestination.QueueSharedBox' ? 'none' : '';
+        }
+
+        destination.addEventListener('change', apply);
+        apply();
+    })();
+</script>

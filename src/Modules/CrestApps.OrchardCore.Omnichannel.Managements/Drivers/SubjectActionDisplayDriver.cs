@@ -39,20 +39,21 @@ internal sealed class SubjectActionDisplayDriver : DisplayDriver<SubjectAction>
 
 
         action.DispositionId = model.DispositionId;
+        action.DispositionGuidance = string.IsNullOrWhiteSpace(model.DispositionGuidance)
+            ? null
+            : model.DispositionGuidance.Trim();
 
         if (model.ShowCommunicationPreferences)
         {
             action.SetDoNotCall = model.SetDoNotCall;
             action.SetDoNotSms = model.SetDoNotSms;
             action.SetDoNotEmail = model.SetDoNotEmail;
-            action.SetDoNotChat = model.SetDoNotChat;
         }
         else
         {
             action.SetDoNotCall = null;
             action.SetDoNotSms = null;
             action.SetDoNotEmail = null;
-            action.SetDoNotChat = null;
         }
 
         return await EditAsync(action, context);
@@ -61,17 +62,20 @@ internal sealed class SubjectActionDisplayDriver : DisplayDriver<SubjectAction>
     private async Task PopulateAsync(SubjectActionViewModel model, SubjectAction action)
     {
         model.DispositionId = action.DispositionId;
+        model.DispositionGuidance = action.DispositionGuidance;
         model.ShowCommunicationPreferences =
             action.SetDoNotCall.HasValue ||
             action.SetDoNotSms.HasValue ||
-            action.SetDoNotEmail.HasValue ||
-            action.SetDoNotChat.HasValue;
+            action.SetDoNotEmail.HasValue;
         model.SetDoNotCall = action.SetDoNotCall;
         model.SetDoNotSms = action.SetDoNotSms;
         model.SetDoNotEmail = action.SetDoNotEmail;
-        model.SetDoNotChat = action.SetDoNotChat;
 
         var dispositions = await _dispositionsCatalog.GetAllAsync();
+
+        model.DispositionDescriptions = dispositions
+            .Where(d => !string.IsNullOrWhiteSpace(d.Description))
+            .ToDictionary(d => d.ItemId, d => d.Description, StringComparer.OrdinalIgnoreCase);
 
         model.Dispositions = dispositions
             .Select(d => new SelectListItem

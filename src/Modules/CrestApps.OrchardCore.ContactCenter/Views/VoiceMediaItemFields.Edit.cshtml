@@ -1,0 +1,58 @@
+@model VoiceMediaItemViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+        <span class="hint">@T["A unique, admin-facing name for the clip, such as Main Hold Music or After-Hours Greeting."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Description">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Description" class="form-control"></textarea>
+        <span asp-validation-for="Description" class="text-danger"></span>
+        <span class="hint">@T["Optional. Note the business or line the clip is for."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Audio">
+    <label asp-for="Audio" class="ocat-label">@T["Audio"]</label>
+    <div class="ocat-end">
+        @if (Model.HasMedia)
+        {
+            <div class="mb-2">
+                <span class="badge text-bg-success">@T["Audio uploaded"]</span>
+                @if (!string.IsNullOrWhiteSpace(Model.Format))
+                {
+                    <span class="badge text-bg-secondary text-uppercase">@Model.Format</span>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.ProviderName))
+                {
+                    <span class="text-muted ms-1">@T["Hosted by {0}", Model.ProviderName]</span>
+                }
+            </div>
+        }
+        <input asp-for="Audio" type="file" class="form-control" accept="audio/*" disabled="@(!Model.CanUpload)" />
+        <span asp-validation-for="Audio" class="text-danger"></span>
+        @if (Model.CanUpload)
+        {
+            <span class="hint dashed">
+                @if (Model.HasMedia)
+                {
+                    @T["Upload a new file to replace the current clip. MP3, WAV, OGG, or WebM up to 20 MB. Leave empty to keep the current audio."]
+                }
+                else
+                {
+                    @T["Upload the audio to store on the telephony provider. MP3, WAV, OGG, or WebM up to 20 MB."]
+                }
+            </span>
+        }
+        else
+        {
+            <span class="hint dashed">@T["Audio uploads are unavailable because no telephony provider capable of hosting media is configured."]</span>
+        }
+    </div>
+</div>

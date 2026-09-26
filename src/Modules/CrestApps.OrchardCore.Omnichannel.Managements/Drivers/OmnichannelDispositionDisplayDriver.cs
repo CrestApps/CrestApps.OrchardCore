@@ -40,7 +40,7 @@ internal sealed class OmnichannelDispositionDisplayDriver : DisplayDriver<Omnich
             model.IsNew = context.IsNew;
             model.Name = disposition.Name;
             model.Description = disposition.Description;
-        }).Location("Content:1");
+        }).Location("Content:1%General;1");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(OmnichannelDisposition disposition, UpdateEditorContext context)

@@ -4,7 +4,6 @@ using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 
@@ -38,7 +37,7 @@ internal sealed class OmnichannelCampaignGroupDisplayDriver : DisplayDriver<Omni
         {
             model.DisplayText = group.DisplayText;
             model.Description = group.Description;
-        }).Location("Content:1");
+        }).Location("Content:1%General;1");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(OmnichannelCampaignGroup group, UpdateEditorContext context)

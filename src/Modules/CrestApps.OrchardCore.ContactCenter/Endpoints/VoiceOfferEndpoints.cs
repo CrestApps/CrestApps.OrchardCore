@@ -1,0 +1,201 @@
+using System.Security.Claims;
+using CrestApps.OrchardCore.ContactCenter.Core;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
+
+namespace CrestApps.OrchardCore.ContactCenter.Endpoints;
+
+internal static class VoiceOfferEndpoints
+{
+    public const string AcceptOfferRouteName = "ContactCenterVoiceAcceptOffer";
+    public const string DeclineOfferRouteName = "ContactCenterVoiceDeclineOffer";
+    public const string SendOfferToVoicemailRouteName = "ContactCenterVoiceSendOfferToVoicemail";
+
+    public static IEndpointRouteBuilder AddVoiceOfferEndpoints(this IEndpointRouteBuilder builder)
+    {
+        builder.MapPost("Admin/contact-center/voice/offer/accept", HandleAcceptAsync)
+            .WithName(AcceptOfferRouteName);
+
+        builder.MapPost("Admin/contact-center/voice/offer/decline", HandleDeclineAsync)
+            .WithName(DeclineOfferRouteName);
+
+        builder.MapPost("Admin/contact-center/voice/offer/voicemail", HandleVoicemailAsync)
+            .WithName(SendOfferToVoicemailRouteName);
+
+        return builder;
+    }
+
+    private static async Task<IResult> HandleAcceptAsync(
+        IAuthorizationService authorizationService,
+        IAntiforgery antiforgery,
+        IContactCenterCallCommandService callCommandService,
+        IContactCenterFeatureWorkManager workManager,
+        HttpContext httpContext)
+    {
+        if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.SignIntoQueues))
+        {
+            return TypedResults.Forbid();
+        }
+
+        if (!await ContactCenterEndpointAntiforgery.ValidateRequestAsync(antiforgery, httpContext))
+        {
+            return TypedResults.BadRequest();
+        }
+
+        using var workLease = workManager.TryEnter(ContactCenterConstants.Feature.Voice);
+
+        if (workLease is null)
+        {
+            return TypedResults.StatusCode(StatusCodes.Status503ServiceUnavailable);
+        }
+
+        var reservationId = await ResolveReservationIdAsync(httpContext);
+
+        if (string.IsNullOrEmpty(reservationId))
+        {
+            return TypedResults.BadRequest();
+        }
+
+        var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            return TypedResults.Forbid();
+        }
+
+        var result = await callCommandService.AcceptInboundOfferAsync(reservationId, userId, httpContext.RequestAborted);
+
+        if (!result.Succeeded)
+        {
+            return TypedResults.NotFound();
+        }
+
+        return TypedResults.Ok(new
+        {
+            result.Succeeded,
+            result.RequiresDeviceAnswer,
+
+            // The soft phone is (or another of the agent's soft phones is) holding a leg rung for this offer, and
+            // answering it is what connects the agent.
+            PreDialed = result.AgentLegPreDialed,
+            result.InteractionId,
+            result.CallSessionId,
+        });
+    }
+
+    private static Task<IResult> HandleDeclineAsync(
+        IAuthorizationService authorizationService,
+        IAntiforgery antiforgery,
+        IContactCenterCallCommandService callCommandService,
+        IContactCenterFeatureWorkManager workManager,
+        HttpContext httpContext)
+        => SettleOfferAsync(
+            authorizationService,
+            antiforgery,
+            workManager,
+            httpContext,
+            (reservationId, userId) => callCommandService.DeclineInboundOfferAsync(reservationId, userId, httpContext.RequestAborted));
+
+    // The agent sends the ringing offer to voicemail. The Contact Center owns the whole of it -- the decline, the
+    // agent's release, and the one voicemail command -- so the soft phone does not also ask the telephony hub.
+    private static Task<IResult> HandleVoicemailAsync(
+        IAuthorizationService authorizationService,
+        IAntiforgery antiforgery,
+        IContactCenterCallCommandService callCommandService,
+        IContactCenterFeatureWorkManager workManager,
+        HttpContext httpContext)
+        => SettleOfferAsync(
+            authorizationService,
+            antiforgery,
+            workManager,
+            httpContext,
+            (reservationId, userId) => callCommandService.DeclineInboundOfferToVoicemailAsync(reservationId, userId, httpContext.RequestAborted));
+
+    private static async Task<IResult> SettleOfferAsync(
+        IAuthorizationService authorizationService,
+        IAntiforgery antiforgery,
+        IContactCenterFeatureWorkManager workManager,
+        HttpContext httpContext,
+        Func<string, string, Task<CallCommandResult>> settle)
+    {
+        if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.SignIntoQueues))
+        {
+            return TypedResults.Forbid();
+        }
+
+        if (!await ContactCenterEndpointAntiforgery.ValidateRequestAsync(antiforgery, httpContext))
+        {
+            return TypedResults.BadRequest();
+        }
+
+        using var workLease = workManager.TryEnter(ContactCenterConstants.Feature.Voice);
+
+        if (workLease is null)
+        {
+            return TypedResults.StatusCode(StatusCodes.Status503ServiceUnavailable);
+        }
+
+        var reservationId = await ResolveReservationIdAsync(httpContext);
+
+        if (string.IsNullOrEmpty(reservationId))
+        {
+            return TypedResults.BadRequest();
+        }
+
+        var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            return TypedResults.Forbid();
+        }
+
+        var result = await settle(reservationId, userId);
+
+        return result.Succeeded
+            ? TypedResults.Ok()
+            : TypedResults.NotFound();
+    }
+
+    private sealed class ReservationRequest
+    {
+        public string ReservationId { get; set; }
+    }
+
+    private static async Task<string> ResolveReservationIdAsync(HttpContext httpContext)
+    {
+        var reservationId = httpContext.Request.Query["reservationId"].ToString();
+
+        if (!string.IsNullOrWhiteSpace(reservationId))
+        {
+            return reservationId;
+        }
+
+        if (httpContext.Request.HasFormContentType)
+        {
+            var form = await httpContext.Request.ReadFormAsync(httpContext.RequestAborted);
+            reservationId = form["reservationId"].ToString();
+
+            if (!string.IsNullOrWhiteSpace(reservationId))
+            {
+                return reservationId;
+            }
+        }
+
+        if (httpContext.Request.ContentType?.StartsWith("application/json", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            var request = await httpContext.Request.ReadFromJsonAsync<ReservationRequest>(cancellationToken: httpContext.RequestAborted);
+
+            if (!string.IsNullOrWhiteSpace(request?.ReservationId))
+            {
+                return request.ReservationId;
+            }
+        }
+
+        return null;
+    }
+}

@@ -11,7 +11,7 @@ This section contains release notes and version highlights for **CrestApps.Orcha
 
 | Version | Status | Highlights |
 | --- | --- | --- |
-| [3.0.0](3.0.0) | In development | Deployment purposes replaced by model capabilities and slots, opt-in MCP Server tool exposure, A2A 1.0 agent cards, realtime voice, per-tenant realtime transport configuration, and file upload security scanning for AI Documents |
+| [3.0.0](3.0.0) | In development | Contact Center orchestration layer, expanded Telephony and voice stack, new Asterisk provider, new report providers, deployment purposes replaced by model capabilities and slots, opt-in MCP Server tool exposure, A2A 1.0 agent cards, realtime voice, per-tenant realtime transport configuration, production-readiness hardening, and file upload security scanning for AI Documents (ClamAV antivirus support) |
 | 2.1.0 – 2.1.5 | Latest stable | Service and patch releases on the .NET 10 / Orchard Core 3.0 line. Release notes are published under the [2.1 documentation version](/docs/2.1/changelog/) |
 | [2.0.0](2.0.0) | Superseded | Complete rewrite for .NET 10 and Orchard Core 3.0.x, official documentation launch, new AI platform, Omnichannel, phone verification, telephony, Content Transfer, reports, and recipes |
 

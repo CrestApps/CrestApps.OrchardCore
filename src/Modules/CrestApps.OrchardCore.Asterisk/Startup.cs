@@ -1,0 +1,219 @@
+using CrestApps.OrchardCore.Asterisk.BackgroundTasks;
+using CrestApps.OrchardCore.Asterisk.Drivers;
+using CrestApps.OrchardCore.Asterisk.Indexes;
+using CrestApps.OrchardCore.Asterisk.Migrations;
+using CrestApps.OrchardCore.Asterisk.Models;
+using CrestApps.OrchardCore.Asterisk.Services;
+using CrestApps.OrchardCore.Configuration;
+using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Telephony.Extensions;
+using Microsoft.Extensions.Compliance.Redaction;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Http.Resilience;
+using Microsoft.Extensions.Options;
+using OrchardCore.BackgroundTasks;
+using OrchardCore.Data;
+using OrchardCore.Data.Migration;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Environment.Shell.Configuration;
+using OrchardCore.Modules;
+using Polly;
+
+namespace CrestApps.OrchardCore.Asterisk;
+
+/// <summary>
+/// Registers the Asterisk telephony providers and their settings driver.
+/// </summary>
+public sealed class Startup : StartupBase
+{
+    private readonly IShellConfiguration _shellConfiguration;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Startup"/> class.
+    /// </summary>
+    /// <param name="shellConfiguration">The shell configuration used to bind the Asterisk options.</param>
+    public Startup(IShellConfiguration shellConfiguration)
+    {
+        _shellConfiguration = shellConfiguration;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        // The resilience pipeline is constructed before any tenant request, so its timings are read here rather
+        // than resolved per call. The same section backs AsteriskCoordinationOptions below, so the validated
+        // values and the values the pipeline uses cannot diverge.
+        var coordination = new AsteriskCoordinationOptions();
+        _shellConfiguration.GetSection(AsteriskConstants.CoordinationConfigurationSectionPath).Bind(coordination);
+
+        services.AddHttpClient(AsteriskConstants.HttpClientName)
+            .AddStandardResilienceHandler(options =>
+            {
+                options.TotalRequestTimeout.Timeout = coordination.HttpTotalRequestTimeout;
+                options.AttemptTimeout.Timeout = coordination.HttpAttemptTimeout;
+
+                options.Retry.MaxRetryAttempts = 3;
+                options.Retry.Delay = TimeSpan.FromSeconds(2);
+                options.Retry.BackoffType = DelayBackoffType.Exponential;
+                options.Retry.UseJitter = true;
+
+                // Never auto-replay non-idempotent requests. This client carries ARI call-origination POSTs and
+                // PJSIP credential mutations; a retried POST after a lost response could place a second outbound
+                // call. Safe methods (status GETs) still retry. The provider exposes no idempotency key, so
+                // retrying unsafe methods is unsound.
+                options.Retry.DisableForUnsafeHttpMethods();
+
+                options.CircuitBreaker.FailureRatio = 0.1;
+                options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(30);
+                options.CircuitBreaker.MinimumThroughput = 100;
+                options.CircuitBreaker.BreakDuration = TimeSpan.FromSeconds(5);
+            });
+
+        services.ValidateTenantOptionsOnActivation();
+        services.AddOptions<DefaultAsteriskOptions>().ValidateOnStart();
+
+        services
+            .AddOptions<AsteriskCoordinationOptions>()
+            .Bind(_shellConfiguration.GetSection(AsteriskConstants.CoordinationConfigurationSectionPath))
+            .Validate(
+                options => options.CredentialLockTimeout > TimeSpan.Zero,
+                "'CrestApps:Asterisk:Coordination:CredentialLockTimeout' must be greater than zero.")
+            .Validate(
+                options => options.CredentialLockExpiration > options.CredentialLockTimeout,
+                "'CrestApps:Asterisk:Coordination:CredentialLockExpiration' must exceed 'CredentialLockTimeout', otherwise the lease expires while a peer is still waiting for it and two nodes issue credentials for the same endpoint.")
+            .Validate(
+                options => options.ChannelBindingCreateLockTimeout > TimeSpan.Zero,
+                "'CrestApps:Asterisk:Coordination:ChannelBindingCreateLockTimeout' must be greater than zero, otherwise a create can never acquire the per-channel serialization lock.")
+            .Validate(
+                options => options.PendingReclamationThreshold > TimeSpan.Zero,
+                "'CrestApps:Asterisk:Coordination:PendingReclamationThreshold' must be greater than zero, otherwise reconciliation reclaims a call that is still being answered.")
+            .Validate(
+                options => options.HttpAttemptTimeout > TimeSpan.Zero,
+                "'CrestApps:Asterisk:Coordination:HttpAttemptTimeout' must be greater than zero.")
+            .Validate(
+                options => options.HttpTotalRequestTimeout > options.HttpAttemptTimeout,
+                "'CrestApps:Asterisk:Coordination:HttpTotalRequestTimeout' must exceed 'HttpAttemptTimeout', otherwise no attempt can complete within the total budget.")
+            .Validate(
+                options => options.RealtimeEventBufferCapacity > 0,
+                "'CrestApps:Asterisk:Coordination:RealtimeEventBufferCapacity' must be greater than zero, otherwise the real-time receive loop has nowhere to buffer provider events.")
+            .Validate(
+                options => options.RealtimeEventBufferCapacity <= AsteriskConstants.MaxRealtimeEventBufferCapacity,
+                $"'CrestApps:Asterisk:Coordination:RealtimeEventBufferCapacity' must not exceed {AsteriskConstants.MaxRealtimeEventBufferCapacity}, otherwise a saturated buffer can grow large enough to exhaust process memory before backpressure engages.")
+            .Validate(
+                options => options.RealtimeEventBackpressureTimeout > TimeSpan.Zero,
+                "'CrestApps:Asterisk:Coordination:RealtimeEventBackpressureTimeout' must be greater than zero, otherwise a saturated buffer reconnects immediately instead of applying backpressure.")
+            .Validate(
+                options => options.MaxRealtimeMessageBytes > 0,
+                "'CrestApps:Asterisk:Coordination:MaxRealtimeMessageBytes' must be greater than zero, otherwise no real-time message could ever be received.")
+            .Validate(
+                options => options.MaxRealtimeMessageBytes <= AsteriskConstants.MaxRealtimeMessageBytesCeiling,
+                $"'CrestApps:Asterisk:Coordination:MaxRealtimeMessageBytes' must not exceed {AsteriskConstants.MaxRealtimeMessageBytesCeiling}, otherwise a single oversized message could exhaust process memory before the size guard closes the socket.")
+            .ValidateOnStart();
+
+        services
+            .AddTelephonyProviderOptionsConfiguration<AsteriskProviderOptionsConfigurations>()
+            .AddSiteDisplayDriver<AsteriskSettingsDisplayDriver>()
+            .AddTransient<IConfigureOptions<DefaultAsteriskOptions>, DefaultAsteriskOptionsConfiguration>()
+            .AddTransient<IValidateOptions<DefaultAsteriskOptions>, DefaultAsteriskOptionsValidator>()
+            .AddScoped<IAsteriskPjsipCredentialIssuer, AsteriskPjsipCredentialIssuer>()
+            .AddScoped<IAsteriskPjsipRealtimeCredentialStore, AsteriskPjsipRealtimeCredentialStore>()
+            .AddScoped<IAsteriskPjsipCredentialLeaseStore, AsteriskPjsipCredentialLeaseStore>()
+            .AddScoped<IAsteriskPjsipDialogTerminator, AsteriskPjsipDialogTerminator>()
+            .AddScoped<ISoftPhoneRegistrationConfigContributor, AsteriskSoftPhoneRegistrationConfigContributor>()
+            .AddScoped<ISoftPhoneCredentialRevoker, AsteriskSoftPhoneCredentialRevoker>();
+
+        services.AddIndexProvider<AsteriskPjsipCredentialLeaseIndexProvider>();
+        services.AddDataMigration<AsteriskPjsipCredentialLeaseMigrations>();
+
+        services.AddRedaction(builder => builder.SetRedactor<ErasingRedactor>(LogDataClassifications.AddressSet));
+
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AsteriskPjsipCredentialCleanupBackgroundTask>());
+
+        services
+            .AddSingleton<IAsteriskAriApplicationOwnershipRegistry, AsteriskAriApplicationOwnershipRegistry>()
+            .AddSingleton<IAsteriskAriApplicationGate, AsteriskAriApplicationGate>()
+            .AddSingleton<IAsteriskRealtimeVoiceListener, AsteriskRealtimeVoiceListener>()
+            .AddScoped<AsteriskRealtimeVoiceEventDispatcher>()
+            .AddScoped<IAsteriskProviderStateReconciler, AsteriskTelephonyProviderStateReconciler>()
+            .AddScoped<IModularTenantEvents, AsteriskRealtimeVoiceTenantEvents>();
+    }
+}
+
+/// <summary>
+/// Registers the Asterisk Contact Center voice adapter. This is integration glue rather than a separately
+/// selectable feature: it activates automatically whenever the Asterisk provider and Contact Center Voice are
+/// both enabled, so an operator never has to enable a redundant per-provider toggle that must match the
+/// provider they already configured.
+/// </summary>
+[RequireFeatures(ContactCenterConstants.Feature.Voice)]
+public sealed class AsteriskContactCenterVoiceStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddScoped<IContactCenterVoiceProvider, AsteriskContactCenterVoiceProvider>()
+            .AddSingleton<IProviderIdentityProvider, AsteriskProviderIdentityProvider>()
+            .AddSingleton<IAsteriskAgentChannelReadySignal, AsteriskAgentChannelReadySignal>()
+            .AddScoped<IAsteriskRealtimeVoiceEventBridge, AsteriskAgentChannelReadyBridge>()
+            .AddScoped<IAsteriskCallTeardownService, AsteriskCallTeardownService>()
+            .AddScoped<IAsteriskRealtimeVoiceEventBridge, AsteriskInboundCallOfferBridge>()
+            .AddSingleton<IAsteriskPendingCallerTerminationRegistry, AsteriskPendingCallerTerminationRegistry>()
+            .AddScoped<IAsteriskProviderStateReconciler, AsteriskInboundReconciler>()
+            .AddScoped<IAsteriskProviderStateReconciler, AsteriskPendingCallerTerminationReconciler>()
+            .AddScoped<IAsteriskProviderStateReconciler, AsteriskContactCenterProviderStateReconciler>()
+            .AddScoped<IAsteriskAriClient, AsteriskAriClient>()
+            .AddScoped<IAsteriskChannelTenantBindingStore, AsteriskChannelTenantBindingStore>()
+            .AddScoped<IAsteriskChannelOwnershipGuard, AsteriskChannelOwnershipGuard>()
+            .AddScoped<IAsteriskRecordingIngestJobStore, AsteriskRecordingIngestJobStore>()
+            .AddScoped<IAsteriskRecordingIngestService, AsteriskRecordingIngestService>()
+            .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
+                new AsteriskContactCenterFeatureLifecycleParticipant(
+                    AsteriskConstants.Feature.Area,
+                    AsteriskConstants.ContactCenterVoiceWorkPartition,
+                    serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
+                    serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()))
+            .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
+                new AsteriskContactCenterFeatureLifecycleParticipant(
+                    ContactCenterConstants.Feature.Voice,
+                    AsteriskConstants.ContactCenterVoiceWorkPartition,
+                    serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
+                    serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
+
+        services.AddIndexProvider<AsteriskChannelTenantBindingIndexProvider>();
+        services.AddDataMigration<AsteriskChannelTenantBindingMigrations>();
+        services.AddIndexProvider<AsteriskRecordingIngestJobIndexProvider>();
+        services.AddDataMigration<AsteriskRecordingIngestJobMigrations>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AsteriskInboundReconciliationBackgroundTask>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AsteriskRecordingIngestBackgroundTask>());
+    }
+}
+
+/// <summary>
+/// Registers Asterisk bidirectional RTP media for Contact Center voice calls. This is integration glue rather
+/// than a separately selectable feature: it activates automatically whenever the Asterisk provider and Contact
+/// Center Voice Media are both enabled.
+/// </summary>
+[RequireFeatures(ContactCenterConstants.Feature.VoiceMedia)]
+public sealed class AsteriskContactCenterMediaStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddScoped<IContactCenterVoiceMediaProvider, AsteriskContactCenterVoiceMediaProvider>()
+            .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
+                new AsteriskContactCenterFeatureLifecycleParticipant(
+                    AsteriskConstants.Feature.Area,
+                    AsteriskConstants.ContactCenterMediaWorkPartition,
+                    serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
+                    serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()))
+            .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
+                new AsteriskContactCenterFeatureLifecycleParticipant(
+                    ContactCenterConstants.Feature.VoiceMedia,
+                    AsteriskConstants.ContactCenterMediaWorkPartition,
+                    serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
+                    serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
+    }
+}

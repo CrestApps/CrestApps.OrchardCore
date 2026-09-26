@@ -4,6 +4,6688 @@
 */
 
 /*
+ * Phone-number formatting for display. Deliberately independent of intl-tel-input, which only enhances the
+ * editable keypad input: the display formatter has to work on screens where the phone-field library is not
+ * loaded at all.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a
+ * shared namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+  function normalizeDialNumber(value) {
+    var input = String(value || '').trim();
+    var hasInternationalPrefix = input.charAt(0) === '+';
+    var digits = input.replace(/\D/g, '');
+    return (hasInternationalPrefix ? '+' : '') + digits;
+  }
+  function formatNanpNumber(digits, international) {
+    var national = international ? digits.substring(1) : digits;
+    var formatted = '';
+    if (international) {
+      formatted = '+1';
+    }
+    if (national.length > 0) {
+      formatted += (international ? ' ' : '') + '(' + national.substring(0, 3);
+    }
+    if (national.length >= 3) {
+      formatted += ')';
+    }
+    if (national.length > 3) {
+      formatted += ' ' + national.substring(3, 6);
+    }
+    if (national.length > 6) {
+      formatted += '-' + national.substring(6, 10);
+    }
+    return formatted;
+  }
+  function formatInternationalNumber(digits) {
+    if (!digits) {
+      return '+';
+    }
+    var countryCodeLength = digits.length > 10 ? Math.min(3, digits.length - 10) : Math.min(2, digits.length);
+    var countryCode = digits.substring(0, countryCodeLength);
+    var national = digits.substring(countryCodeLength);
+    var groups = [];
+    while (national.length > 4) {
+      groups.push(national.substring(0, 3));
+      national = national.substring(3);
+    }
+    if (national) {
+      groups.push(national);
+    }
+    return '+' + countryCode + (groups.length ? ' ' + groups.join(' ') : '');
+  }
+
+  // Formats a number for display only (call history and active-call rows).
+  function formatPhoneNumber(value) {
+    var normalized = normalizeDialNumber(value);
+    var international = normalized.charAt(0) === '+';
+    var digits = normalized.replace(/\D/g, '');
+    if (!international && digits.length < 7) {
+      return digits;
+    }
+    if (!international && digits.length <= 10 || international && digits.charAt(0) === '1' && digits.length <= 11) {
+      return formatNanpNumber(digits, international);
+    }
+    return international ? formatInternationalNumber(digits) : digits;
+  }
+  softPhone.normalizeDialNumber = normalizeDialNumber;
+  softPhone.formatNanpNumber = formatNanpNumber;
+  softPhone.formatInternationalNumber = formatInternationalNumber;
+  softPhone.formatPhoneNumber = formatPhoneNumber;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * Call-quality measurement: turning an RTCStatsReport into the handful of numbers the in-call indicator and the
+ * server-side telemetry both read.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a
+ * shared namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // Thresholds that classify a getStats sample as a poor connection. Kept in sync with the server-side
+  // TelephonyCallQualityEvaluator so the in-call UX and the server logs agree on what "poor" means.
+  var QUALITY_POOR_MOS = 3.5;
+  var QUALITY_POOR_LOSS_PERCENT = 5;
+
+  // The capture level (RTCAudioSourceStats.audioLevel, 0..1 where 1.0 is full scale) at or below which the
+  // microphone is delivering nothing the far end could hear. Room noise on a live microphone sits above this.
+  var QUALITY_SILENT_MIC_LEVEL = 0.005;
+
+  // Consecutive silent samples before a capture is called dead. One sample is just a pause in the
+  // conversation; several in a row while the call is up is a microphone that is not working.
+  var QUALITY_SILENT_MIC_SAMPLES = 3;
+
+  // Estimates a Mean Opinion Score (1.0-4.5) from round-trip time, jitter, and packet loss using the ITU-T
+  // G.107 E-model approximation widely used for WebRTC quality monitoring. Latency and jitter are in
+  // milliseconds, loss in percent. A higher score is better; ~4.0+ is good, below ~3.5 is poor.
+  function estimateMos(rttMs, jitterMs, lossPercent) {
+    var effectiveLatency = (rttMs || 0) + (jitterMs || 0) * 2 + 10;
+    var r = effectiveLatency < 160 ? 93.2 - effectiveLatency / 40 : 93.2 - (effectiveLatency - 120) / 10;
+    r = r - 2.5 * (lossPercent || 0);
+    if (r < 0) {
+      return 1;
+    }
+    if (r > 100) {
+      return 4.5;
+    }
+    return 1 + 0.035 * r + r * (r - 60) * (100 - r) * 0.000007;
+  }
+
+  // The average jitter-buffer delay above which a conversation starts to feel like a walkie-talkie: the two
+  // parties begin talking over each other because each hears the other late. Well under the point where any
+  // other metric reacts.
+  var QUALITY_HIGH_JITTER_BUFFER_MS = 200;
+
+  // Average time received audio waited in the jitter buffer before it was played out, over the window since
+  // the previous sample.
+  //
+  // This is the missing half of perceived delay. Round-trip time measures the network between the browser and
+  // the provider edge; the jitter buffer is what the browser itself adds on top, adapting to conditions and
+  // routinely holding hundreds of milliseconds. A call can therefore have a healthy round-trip time, no
+  // packet loss, low jitter and a good score while the people on it are audibly talking over each other --
+  // which is exactly what a clean-looking call that the agent described as delayed turned out to be. Nothing
+  // transmitted before this could see it.
+  //
+  // Measured over the window rather than the call, because these counters are cumulative and a call-lifetime
+  // average hides a buffer that grew late. Returns -1 when the browser does not report the counters.
+  function readJitterBufferMs(inbound, previous) {
+    if (!inbound || typeof inbound.jitterBufferDelay !== 'number' || typeof inbound.jitterBufferEmittedCount !== 'number') {
+      return -1;
+    }
+    var delayDelta = inbound.jitterBufferDelay - (previous && previous.jitterBufferDelay || 0);
+    var emittedDelta = inbound.jitterBufferEmittedCount - (previous && previous.jitterBufferEmittedCount || 0);
+    if (emittedDelta > 0) {
+      return delayDelta / emittedDelta * 1000;
+    }
+
+    // No audio was emitted in this window (the call just started, or playout stalled). The call-lifetime
+    // average is less sharp but still true; only when there is nothing at all is the answer unknown.
+    return inbound.jitterBufferEmittedCount > 0 ? inbound.jitterBufferDelay / inbound.jitterBufferEmittedCount * 1000 : -1;
+  }
+
+  // Distinguishes a microphone that is dead from one that is merely quiet. The capture level alone cannot:
+  // an agent who is listening rather than talking also reads near zero. totalAudioEnergy, by contrast, only
+  // accumulates while the track actually delivers samples, so a level at the floor AND no new energy since
+  // the previous sample means nothing is being captured at all. That is the case the far end experiences as
+  // "I cannot hear you" while every other measurement on the call looks healthy.
+  function isCaptureSilent(level, energyDelta) {
+    return (level || 0) <= QUALITY_SILENT_MIC_LEVEL && (energyDelta || 0) <= 0;
+  }
+
+  // The capture level over the window since the previous sample, on the same 0..1 scale as
+  // RTCAudioSourceStats.audioLevel. Returns -1 when the browser reports no capture statistics (Firefox has no
+  // media-source stats at all), so an unmeasured capture never reads as a silent one.
+  //
+  // audioLevel itself is a single instantaneous reading, and one reading every eight seconds says almost
+  // nothing: it lands in a pause between words as often as not and then reads 0, so an agent in the middle of
+  // a conversation the far end was hearing clearly could log Mic=0.000 beside it. totalAudioEnergy accumulates
+  // audioLevel squared times duration, and totalSamplesDuration accumulates the duration, so the two deltas
+  // give the RMS level across the whole window -- every word in it counts, not just whichever instant the
+  // timer happened to fall on.
+  //
+  // A window in which no samples were captured at all is a measured silence (0): the track delivered
+  // nothing. Counters that went backwards were reset -- a replaced track can surface as a fresh media-source
+  // stat -- so the current totals are the window. A browser that reports audioLevel without the cumulative
+  // counters falls back to the instantaneous reading, which is still better than nothing.
+  function windowedMicrophoneLevel(mediaSource, previous) {
+    if (!mediaSource) {
+      return -1;
+    }
+    var hasTotals = typeof mediaSource.totalAudioEnergy === 'number' && typeof mediaSource.totalSamplesDuration === 'number';
+    if (!hasTotals) {
+      return typeof mediaSource.audioLevel === 'number' ? mediaSource.audioLevel : -1;
+    }
+    var energy = mediaSource.totalAudioEnergy;
+    var duration = mediaSource.totalSamplesDuration;
+    var previousEnergy = previous && typeof previous.totalAudioEnergy === 'number' ? previous.totalAudioEnergy : 0;
+    var previousDuration = previous && typeof previous.totalSamplesDuration === 'number' ? previous.totalSamplesDuration : 0;
+    if (energy < previousEnergy || duration < previousDuration) {
+      previousEnergy = 0;
+      previousDuration = 0;
+    }
+    var durationDelta = duration - previousDuration;
+    if (durationDelta <= 0) {
+      return 0;
+    }
+    return Math.min(1, Math.sqrt(Math.max(0, energy - previousEnergy) / durationDelta));
+  }
+
+  // Extracts the audio inbound-rtp, the capture (media-source) and outbound-rtp, the selected candidate pair,
+  // negotiated codec, and candidate types from an RTCStatsReport. Written defensively because the exact shape
+  // and which candidate pair is flagged "selected" varies across browsers (Chrome nominates a succeeded pair;
+  // Firefox marks one `selected`; the transport may name the pair through selectedCandidatePairId).
+  function parseWebRtcStats(report) {
+    var inbound = null;
+    var remoteInbound = null;
+    var mediaSource = null;
+    var outbound = null;
+    var selectedPair = null;
+    var nominatedPair = null;
+    var transportPairId = null;
+    var codecs = {};
+    var localCandidates = {};
+    var remoteCandidates = {};
+    var pairs = {};
+    report.forEach(function (stat) {
+      switch (stat.type) {
+        case 'inbound-rtp':
+          if (stat.kind === 'audio' || stat.mediaType === 'audio') {
+            inbound = stat;
+          }
+          break;
+        case 'remote-inbound-rtp':
+          if (stat.kind === 'audio' || stat.mediaType === 'audio') {
+            remoteInbound = stat;
+          }
+          break;
+        case 'media-source':
+          // The capture itself: audioLevel and totalAudioEnergy describe what the microphone is
+          // feeding the encoder, which is the only measurement that says whether the agent can be
+          // heard. Everything else on this report describes the direction they are listening to.
+          if (stat.kind === 'audio' || stat.mediaType === 'audio') {
+            mediaSource = stat;
+          }
+          break;
+        case 'outbound-rtp':
+          if (stat.kind === 'audio' || stat.mediaType === 'audio') {
+            outbound = stat;
+          }
+          break;
+        case 'candidate-pair':
+          pairs[stat.id] = stat;
+          if (stat.selected) {
+            selectedPair = stat;
+          }
+          if (stat.nominated && stat.state === 'succeeded' && (!nominatedPair || (stat.bytesReceived || 0) > (nominatedPair.bytesReceived || 0))) {
+            nominatedPair = stat;
+          }
+          break;
+        case 'codec':
+          codecs[stat.id] = stat;
+          break;
+        case 'local-candidate':
+          localCandidates[stat.id] = stat;
+          break;
+        case 'remote-candidate':
+          remoteCandidates[stat.id] = stat;
+          break;
+        case 'transport':
+          if (stat.selectedCandidatePairId) {
+            transportPairId = stat.selectedCandidatePairId;
+          }
+          break;
+        default:
+          break;
+      }
+    });
+    var pair = selectedPair || transportPairId && pairs[transportPairId] || nominatedPair || null;
+    var codec = inbound && inbound.codecId && codecs[inbound.codecId] ? codecs[inbound.codecId] : null;
+    // The codec the browser SENDS. Only the receive codec was reported until now, so the direction the far
+    // end hears -- the one every complaint has been about -- had no codec on record at all.
+    var sendCodec = outbound && outbound.codecId && codecs[outbound.codecId] ? codecs[outbound.codecId] : null;
+    var localCandidate = pair && pair.localCandidateId ? localCandidates[pair.localCandidateId] : null;
+    var remoteCandidate = pair && pair.remoteCandidateId ? remoteCandidates[pair.remoteCandidateId] : null;
+    return {
+      inbound: inbound,
+      remoteInbound: remoteInbound,
+      mediaSource: mediaSource,
+      outbound: outbound,
+      pair: pair,
+      codec: codec ? codec.mimeType || '' : '',
+      sendCodec: sendCodec ? sendCodec.mimeType || '' : '',
+      localCandidateType: localCandidate ? localCandidate.candidateType || '' : '',
+      remoteCandidateType: remoteCandidate ? remoteCandidate.candidateType || '' : ''
+    };
+  }
+  softPhone.QUALITY_POOR_MOS = QUALITY_POOR_MOS;
+  softPhone.QUALITY_POOR_LOSS_PERCENT = QUALITY_POOR_LOSS_PERCENT;
+  softPhone.QUALITY_SILENT_MIC_LEVEL = QUALITY_SILENT_MIC_LEVEL;
+  softPhone.QUALITY_SILENT_MIC_SAMPLES = QUALITY_SILENT_MIC_SAMPLES;
+  softPhone.QUALITY_HIGH_JITTER_BUFFER_MS = QUALITY_HIGH_JITTER_BUFFER_MS;
+  softPhone.estimateMos = estimateMos;
+  softPhone.readJitterBufferMs = readJitterBufferMs;
+  softPhone.isCaptureSilent = isCaptureSilent;
+  softPhone.windowedMicrophoneLevel = windowedMicrophoneLevel;
+  softPhone.parseWebRtcStats = parseWebRtcStats;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * Audio level probe: how loud a stream actually is, measured identically in every browser.
+ *
+ * getStats already reports a capture level, but only where the browser implements RTCAudioSourceStats --
+ * Chrome does, Firefox does not -- and it reports nothing at all about how loud the audio arriving from the
+ * far end is. Both gaps showed up on the same call: an agent reported the caller sounding distant while every
+ * transmitted metric said the connection was healthy, and the capture measurement that was supposed to cover
+ * the other direction came back unavailable because the call was answered in Firefox.
+ *
+ * So loudness is measured here instead of asked for: an AnalyserNode over the stream, sampled continuously
+ * and reduced to a peak per reporting window. Peak rather than average, because the question is "was there
+ * ever speech in this window", and an average over eight seconds of a normal conversation is mostly silence.
+ *
+ * The value is an RMS amplitude in 0..1, which is NOT the same scale as RTCAudioSourceStats.audioLevel --
+ * conversational speech peaks around 0.1-0.3 here. The two are reported as separate fields for that reason,
+ * rather than merged into one number that would mean different things depending on the browser.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a
+ * shared namespace rather than exporting, so the same file runs in the browser bundle and under the unit
+ * tests. The WebAudio pieces are injectable so the accumulate/peak/reset logic can be tested without a
+ * browser.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // How often the waveform is read. Fast enough that a brief utterance inside a long reporting window is not
+  // missed, slow enough to cost nothing next to the call itself.
+  var LEVEL_PROBE_INTERVAL_MS = 100;
+
+  // Reported when no measurement could be taken, matching the rest of the quality contract: an absent
+  // measurement must stay distinguishable from a measured silence, because the two call for opposite
+  // responses.
+  var LEVEL_UNKNOWN = -1;
+
+  // The peak RMS below which a window contained nothing a person would call speech. Room tone on a live
+  // microphone, and comfort noise on a live call, both sit above it.
+  var LEVEL_SILENT = 0.005;
+
+  // Root-mean-square amplitude of one waveform frame.
+  function frameRms(samples, length) {
+    var total = 0;
+    for (var i = 0; i < length; i++) {
+      total += samples[i] * samples[i];
+    }
+    return Math.sqrt(total / length);
+  }
+
+  /*
+   * Watches one MediaStream and accumulates its level until read.
+   *
+   * options.audioContext  - AudioContext constructor (defaults to the browser's).
+   * options.timers        - object with setInterval/clearInterval (defaults to the global).
+   *
+   * Returns null when the stream carries no audio or the browser has no usable AudioContext -- a caller that
+   * gets null reports the level as unknown rather than as zero.
+   */
+  function createLevelProbe(stream, options) {
+    var settings = options || {};
+    var AudioCtx = settings.audioContext || root.AudioContext || root.webkitAudioContext;
+    var timers = settings.timers || root;
+    if (!AudioCtx || !stream || typeof stream.getAudioTracks !== 'function' || !stream.getAudioTracks().length) {
+      return null;
+    }
+    var context;
+    var analyser;
+    var source;
+    var sink;
+    var data;
+    try {
+      context = new AudioCtx();
+      source = context.createMediaStreamSource(stream);
+      analyser = context.createAnalyser();
+      analyser.fftSize = 512;
+      source.connect(analyser);
+
+      // Firefox only pulls an audio graph that reaches the context destination. Left unconnected, the
+      // analyser is never processed and every read comes back as digital silence -- which is far worse
+      // than no measurement, because it looks exactly like a dead microphone on a call that is working.
+      // Chrome pulls an analyser regardless, which is precisely why this hid until a call was answered
+      // in Firefox and both directions reported 0.000 while the two people could hear each other.
+      //
+      // The route to the destination is through a silent gain stage: the graph runs, and nothing is
+      // added to what the agent hears. That matters most for the far end's audio, which the remote
+      // element is already playing -- routing it here at any audible gain would play it twice.
+      sink = context.createGain();
+      sink.gain.value = 0;
+      analyser.connect(sink);
+      sink.connect(context.destination);
+      data = new Float32Array(analyser.fftSize);
+    } catch (error) {
+      // A stream with no usable audio, or a browser that refuses the graph. Unknown, not silent.
+      return null;
+    }
+
+    // An AudioContext created outside a user gesture starts suspended, and a suspended graph reads as pure
+    // silence -- which would be indistinguishable from a dead microphone. Ask for it to run; if the request
+    // is refused the reads stay at zero and the caller sees a silent window, so also re-check on read.
+    function resume() {
+      if (context.state === 'suspended' && typeof context.resume === 'function') {
+        try {
+          Promise.resolve(context.resume()).catch(function () {});
+        } catch (error) {/* best effort */}
+      }
+    }
+    resume();
+    var peak = 0;
+    var sum = 0;
+    var reads = 0;
+    var disposed = false;
+    var timer = timers.setInterval(function () {
+      if (disposed) {
+        return;
+      }
+      try {
+        analyser.getFloatTimeDomainData(data);
+      } catch (error) {
+        return;
+      }
+      var rms = frameRms(data, data.length);
+      peak = Math.max(peak, rms);
+      sum += rms;
+      reads++;
+    }, LEVEL_PROBE_INTERVAL_MS);
+    return {
+      /*
+       * Returns the window since the previous read and starts a new one:
+       *   peak    - loudest frame in the window (the one to judge "was anything heard" on)
+       *   average - mean across the window, dominated by the silence between words
+       *   reads   - how many frames went into it; zero means the window produced no measurement
+       */
+      read: function () {
+        resume();
+        if (!reads) {
+          return {
+            peak: 0,
+            average: 0,
+            reads: 0
+          };
+        }
+        var window = {
+          peak: peak,
+          average: sum / reads,
+          reads: reads
+        };
+        peak = 0;
+        sum = 0;
+        reads = 0;
+        return window;
+      },
+      // The audio engine's state: a probe whose context never left "suspended" reads silence however loud
+      // the track is, which is indistinguishable from a dead microphone without it.
+      state: function () {
+        return disposed ? 'disposed' : context.state;
+      },
+      dispose: function () {
+        if (disposed) {
+          return;
+        }
+        disposed = true;
+        timers.clearInterval(timer);
+        try {
+          source.disconnect();
+          analyser.disconnect();
+          sink.disconnect();
+        } catch (error) {/* best effort */}
+        try {
+          if (typeof context.close === 'function') {
+            context.close();
+          }
+        } catch (error) {/* best effort */}
+      }
+    };
+  }
+
+  // Whether a captured track can deliver audio at all. A track is 'live' until it is stopped, but a source
+  // that has stopped feeding it -- a device asleep, unplugged, or switched away by the OS -- leaves it live and
+  // MUTED, and a muted track produces no frames: the encoder sends nothing, and the far end hears nothing. A
+  // check on readyState alone waved exactly such a track through onto a call that then ran thirty seconds with
+  // zero bytes sent.
+  function isTrackDeliverable(track) {
+    return !!track && track.readyState === 'live' && !track.muted;
+  }
+
+  // Whether the capture probe has to be rebuilt to measure the track that is being sent now.
+  //
+  // A probe binds to the track it was built on and never follows a swap: createMediaStreamSource takes the
+  // stream's track once, and a track later removed from that stream, stopped, or replaced on the sender leaves
+  // the probe reading the old one. A stopped track feeds the graph zero-filled frames, so the probe does not
+  // go quiet -- it reports a confident 0.000 for the rest of the call. That is what every mid-call microphone
+  // change did (device picked, boost or processing changed, dead microphone recovered): OutLevel read 0.000
+  // while the far end measured the agent at around 0.3.
+  //
+  // Rebuild when there is a live track to measure and it is not the one the probe was built on. An ended
+  // current track is not worth rebuilding onto -- it would measure the same silence -- and no track at all
+  // leaves nothing to bind to.
+  function captureProbeNeedsRebuild(probeTrackId, currentTrackId, currentTrackState) {
+    if (!currentTrackId || currentTrackState === 'ended') {
+      return false;
+    }
+    return probeTrackId !== currentTrackId;
+  }
+
+  // The audio track the soft phone is receiving: whatever the live receiver carries, else the remote element's
+  // stream. Like the sender, the receiver is the authority: the provider SDK can replace the stream on the remote
+  // element during a call, and a probe left on the first one read 0.000 for the rest of the call while the agent
+  // could hear the caller.
+  function selectReceiveTrack(receivers, remoteStream) {
+    var receiver = (receivers || []).filter(function (candidate) {
+      return candidate && candidate.track && candidate.track.kind === 'audio';
+    })[0];
+    if (receiver) {
+      return receiver.track;
+    }
+    return remoteStream && typeof remoteStream.getAudioTracks === 'function' ? remoteStream.getAudioTracks()[0] || null : null;
+  }
+
+  // Whether the incoming level probe has to be rebuilt to measure the track being received now: the same rule as
+  // the capture probe, applied to the receiver's track.
+  function inboundProbeNeedsRebuild(probeTrackId, receiveTrack) {
+    return captureProbeNeedsRebuild(probeTrackId, receiveTrack ? receiveTrack.id : null, receiveTrack ? receiveTrack.readyState : null);
+  }
+
+  // The level to report for a probe window: the peak, or unknown when the window produced no frames at all.
+  // A window that was measured and found silent reports 0, which is a finding; a window that could not be
+  // measured reports -1, which is not.
+  function probeLevel(probe) {
+    if (!probe) {
+      return LEVEL_UNKNOWN;
+    }
+    var window = probe.read();
+    return window && window.reads ? window.peak : LEVEL_UNKNOWN;
+  }
+  softPhone.LEVEL_PROBE_INTERVAL_MS = LEVEL_PROBE_INTERVAL_MS;
+  softPhone.LEVEL_UNKNOWN = LEVEL_UNKNOWN;
+  softPhone.LEVEL_SILENT = LEVEL_SILENT;
+  softPhone.frameRms = frameRms;
+  softPhone.createLevelProbe = createLevelProbe;
+  softPhone.probeLevel = probeLevel;
+  softPhone.isTrackDeliverable = isTrackDeliverable;
+  softPhone.captureProbeNeedsRebuild = captureProbeNeedsRebuild;
+  softPhone.selectReceiveTrack = selectReceiveTrack;
+  softPhone.inboundProbeNeedsRebuild = inboundProbeNeedsRebuild;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * Call status text with elapsed time, and call duration for history rows.
+ *
+ * The soft phone said "In call" for as long as a call lasted and nothing more; an agent testing audio, or one
+ * being asked how long they were on with a customer, had no way to tell twenty seconds from twenty minutes
+ * without a clock of their own. The header now carries the elapsed time next to the state, ticking once a
+ * second while the call is connected, and each entry in Recent carries the call's total duration.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a
+ * shared namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ * Formatting delegates to the shared call timer when its bundle is present (so every surface agrees past the
+ * hour mark) and carries a matching fallback so the soft phone never shows a bare number if it is not.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // The separator between the state and the elapsed time: "In call · 1:23".
+  var STATUS_SEPARATOR = ' · ';
+  function pad(value) {
+    return value < 10 ? '0' + value : String(value);
+  }
+
+  // m:ss, or h:mm:ss past the hour. Same shape as the shared call timer, which is preferred when loaded.
+  function formatElapsed(totalSeconds) {
+    var shared = root.CrestAppsTelephonyShared;
+    if (shared && typeof shared.formatDuration === 'function') {
+      return shared.formatDuration(totalSeconds);
+    }
+    if (!isFinite(totalSeconds) || totalSeconds < 0) {
+      totalSeconds = 0;
+    }
+    var seconds = Math.floor(totalSeconds % 60);
+    var minutes = Math.floor(totalSeconds / 60 % 60);
+    var hours = Math.floor(totalSeconds / 3600);
+    return (hours > 0 ? hours + ':' + pad(minutes) : minutes) + ':' + pad(seconds);
+  }
+
+  // The header text for a call: the state, and the elapsed time when one is known. An elapsed time that is
+  // not a finite number (no connected moment recorded yet, or a call that is not connected) leaves the state
+  // alone rather than showing "In call · 0:00" for a call that is still ringing.
+  function formatCallStatus(statusText, elapsedSeconds) {
+    var text = statusText || '';
+    if (typeof elapsedSeconds !== 'number' || !isFinite(elapsedSeconds) || elapsedSeconds < 0) {
+      return text;
+    }
+    return text + STATUS_SEPARATOR + formatElapsed(elapsedSeconds);
+  }
+
+  // When a call became connected, as the soft phone should remember it. The first moment the call is seen
+  // connected is kept for as long as the call lasts; later state refreshes must not restart the clock, and a
+  // call that is not (yet) connected has no connected moment at all.
+  function connectedAtFor(isConnected, previousConnectedAt, nowMs) {
+    if (!isConnected) {
+      return null;
+    }
+    return typeof previousConnectedAt === 'number' && isFinite(previousConnectedAt) ? previousConnectedAt : nowMs;
+  }
+
+  // The duration to show on a history row: the recorded total, or nothing for a call that never connected or
+  // is still going (its length is not known yet, and "0:00" next to a live call would read as a bug).
+  function durationMeta(durationSeconds, inProgress) {
+    if (inProgress || typeof durationSeconds !== 'number' || !isFinite(durationSeconds) || durationSeconds <= 0) {
+      return '';
+    }
+    return formatElapsed(durationSeconds);
+  }
+  softPhone.STATUS_SEPARATOR = STATUS_SEPARATOR;
+  softPhone.formatElapsed = formatElapsed;
+  softPhone.formatCallStatus = formatCallStatus;
+  softPhone.connectedAtFor = connectedAtFor;
+  softPhone.durationMeta = durationMeta;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * Microphone boost: a gain stage with a limiter in front of the encoder.
+ *
+ * The far end of a call compared the agent's live voice with the platform's text-to-speech and found the voice
+ * low and dull -- the speech was leaving the browser at about -21 dBFS active level, against the -12 to -16 that
+ * a synthesized prompt carries, after Chrome's automatic gain control had already done what it could. Nothing
+ * downstream changes level, so the gap arrives at the caller intact. This closes it in the one place the soft
+ * phone controls: the capture is routed through a gain node and a hard limiter and the limiter's output is what
+ * the call sends. The limiter is what makes the boost safe to leave on: a loud word hits the ceiling and is held
+ * there for a few milliseconds instead of clipping.
+ *
+ * Off by default, and off means no graph at all -- the capture is sent as it is, exactly as before this existed.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a
+ * shared namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ * The AudioContext is injectable so the graph wiring can be tested without a browser.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // The boosts an agent can choose. Bounded above because the limiter can hold peaks but cannot make a
+  // twelve-decibel lift of a quiet room sound like anything but a quiet room amplified.
+  var MIC_BOOST_OPTIONS_DB = [0, 3, 6, 9, 12];
+
+  // Limiter settings: a hard knee just under full scale, fast attack, short release. Speech peaks that the gain
+  // pushes past the ceiling are caught within a few milliseconds and let go quickly enough not to pump.
+  var LIMITER_THRESHOLD_DB = -3;
+  var LIMITER_KNEE_DB = 0;
+  var LIMITER_RATIO = 20;
+  var LIMITER_ATTACK_S = 0.003;
+  var LIMITER_RELEASE_S = 0.05;
+
+  // Normalizes a stored or chosen value to one of the allowed boosts. Anything unrecognized is off, never a
+  // surprise lift.
+  function clampBoostDb(value) {
+    var db = typeof value === 'number' ? value : parseInt(value, 10);
+    return MIC_BOOST_OPTIONS_DB.indexOf(db) === -1 ? 0 : db;
+  }
+
+  // The linear gain for a boost in decibels.
+  function boostGainFor(db) {
+    return Math.pow(10, clampBoostDb(db) / 20);
+  }
+
+  // A short label for the capture-format readout: "boost+6".
+  function describeBoost(db) {
+    var clamped = clampBoostDb(db);
+    return clamped > 0 ? 'boost+' + clamped : '';
+  }
+
+  /*
+   * Builds the send stream for a captured microphone stream.
+   *
+   * With no boost, the source stream is returned as the send stream and there is nothing to dispose. With a
+   * boost, the source is routed through gain -> limiter -> a MediaStreamAudioDestinationNode, and that node's
+   * stream is returned; its track is what the call should send.
+   *
+   * options.audioContext - AudioContext constructor (defaults to the browser's).
+   *
+   * Returns { stream, boosted, dispose } -- dispose releases the graph (and is a no-op when nothing was built).
+   */
+  function createBoostPipeline(sourceStream, boostDb, options) {
+    var db = clampBoostDb(boostDb);
+    var settings = options || {};
+    var AudioCtx = settings.audioContext || root.AudioContext || root.webkitAudioContext;
+    if (!sourceStream || db === 0 || !AudioCtx) {
+      return {
+        stream: sourceStream,
+        boosted: false,
+        dispose: function () {}
+      };
+    }
+    var context;
+    var source;
+    var gain;
+    var limiter;
+    var destination;
+    try {
+      context = new AudioCtx();
+      source = context.createMediaStreamSource(sourceStream);
+      gain = context.createGain();
+      gain.gain.value = boostGainFor(db);
+      limiter = context.createDynamicsCompressor();
+      limiter.threshold.value = LIMITER_THRESHOLD_DB;
+      limiter.knee.value = LIMITER_KNEE_DB;
+      limiter.ratio.value = LIMITER_RATIO;
+      limiter.attack.value = LIMITER_ATTACK_S;
+      limiter.release.value = LIMITER_RELEASE_S;
+      destination = context.createMediaStreamDestination();
+      source.connect(gain);
+      gain.connect(limiter);
+      limiter.connect(destination);
+
+      // A context created outside a user gesture starts suspended and a suspended graph is silence; the
+      // switch that builds this runs from a settings change or a call, so the request is normally granted.
+      if (context.state === 'suspended' && typeof context.resume === 'function') {
+        try {
+          Promise.resolve(context.resume()).catch(function () {});
+        } catch (error) {/* best effort */}
+      }
+    } catch (error) {
+      // A browser that refuses any part of the graph: send the capture as it is rather than nothing.
+      try {
+        if (context && typeof context.close === 'function') {
+          context.close();
+        }
+      } catch (closeError) {/* best effort */}
+      return {
+        stream: sourceStream,
+        boosted: false,
+        dispose: function () {}
+      };
+    }
+    var disposed = false;
+    return {
+      stream: destination.stream,
+      boosted: true,
+      dispose: function () {
+        if (disposed) {
+          return;
+        }
+        disposed = true;
+        try {
+          source.disconnect();
+          gain.disconnect();
+          limiter.disconnect();
+        } catch (error) {/* best effort */}
+        try {
+          if (typeof context.close === 'function') {
+            context.close();
+          }
+        } catch (error) {/* best effort */}
+      }
+    };
+  }
+  softPhone.MIC_BOOST_OPTIONS_DB = MIC_BOOST_OPTIONS_DB;
+  softPhone.clampBoostDb = clampBoostDb;
+  softPhone.boostGainFor = boostGainFor;
+  softPhone.describeBoost = describeBoost;
+  softPhone.createBoostPipeline = createBoostPipeline;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * Playout delay: asking the browser to hold less incoming audio before playing it.
+ *
+ * Half of the pause an agent feels between finishing a sentence and hearing the reply is spent inside their own
+ * browser. Chrome buffers arriving audio before playing it, sized for the worst jitter it expects rather than the
+ * jitter it is seeing: on these calls the network jitter measured 3-13 ms while the buffer held 60-105 ms, and it
+ * opened at 310-628 ms for the first half-minute of a call -- which is why the beginning of a call feels worst.
+ * Every millisecond of that sits in the return leg of a conversation.
+ *
+ * RTCRtpReceiver.playoutDelayHint asks for a shorter hold. It is a hint: the browser still grows the buffer when
+ * packets actually arrive late, so this trades a smaller safety margin for less delay rather than forcing
+ * anything. The cost of asking for too little is concealment -- the browser inventing audio for packets that
+ * arrived after their moment -- which is why the concealment rate is reported alongside it. Judge a setting by
+ * both numbers, never by the delay alone.
+ *
+ * Automatic (no hint) is the default, so nothing changes until an agent or an operator chooses otherwise.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a
+ * shared namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // The choices offered, in seconds. -1 means "no hint": leave the browser to its own judgement, which is what
+  // every call did before this existed. The floor is deliberately not zero -- a request for no buffer at all
+  // conceals on the first packet that is a millisecond late, and sounds worse than the delay it removes.
+  var PLAYOUT_DELAY_OPTIONS = [-1, 0.12, 0.08, 0.04, 0.02];
+
+  // Concealment above this share of received audio means the buffer is too small for the network it is on:
+  // the browser is filling gaps often enough to be heard as roughness rather than as a shorter delay.
+  var CONCEALMENT_WARNING_PERCENT = 5;
+  function clampPlayoutDelay(value) {
+    var seconds = typeof value === 'number' ? value : parseFloat(value);
+    if (!isFinite(seconds)) {
+      return -1;
+    }
+
+    // Match to an offered value rather than trusting an arbitrary number from storage or configuration.
+    for (var i = 0; i < PLAYOUT_DELAY_OPTIONS.length; i++) {
+      if (Math.abs(PLAYOUT_DELAY_OPTIONS[i] - seconds) < 0.0005) {
+        return PLAYOUT_DELAY_OPTIONS[i];
+      }
+    }
+    return -1;
+  }
+
+  // A short label for the capture/quality readout: "playout 40ms", or empty when the browser is left to decide.
+  function describePlayoutDelay(seconds) {
+    var clamped = clampPlayoutDelay(seconds);
+    return clamped < 0 ? '' : 'playout ' + Math.round(clamped * 1000) + 'ms';
+  }
+
+  /*
+   * Applies the hint to every audio receiver on a peer connection.
+   *
+   * Returns the number of receivers the hint was set on; zero means the browser does not support the hint
+   * (Firefox does not) or there is no audio receiver yet, in which case the call simply keeps the browser's own
+   * buffering and nothing is lost.
+   */
+  function applyPlayoutDelay(peerConnection, seconds) {
+    if (!peerConnection || typeof peerConnection.getReceivers !== 'function') {
+      return 0;
+    }
+    var clamped = clampPlayoutDelay(seconds);
+    var applied = 0;
+    peerConnection.getReceivers().forEach(function (receiver) {
+      if (!receiver || !receiver.track || receiver.track.kind !== 'audio') {
+        return;
+      }
+
+      // Absent in browsers that do not implement it; assigning would silently do nothing, so the caller is
+      // told instead by way of the count.
+      if (!('playoutDelayHint' in receiver)) {
+        return;
+      }
+      try {
+        // Clearing the hint is undefined, not a number: a receiver told "0" would hold nothing at all.
+        receiver.playoutDelayHint = clamped < 0 ? undefined : clamped;
+        applied++;
+      } catch (error) {/* a browser that exposes the property but refuses the value */}
+    });
+    return applied;
+  }
+
+  // Concealment as a percentage of the audio received in a window: the share the browser had to invent.
+  // Returns -1 when the browser does not report the counters, so an absent measurement stays distinguishable
+  // from a measured zero.
+  function concealmentPercent(inbound, previous) {
+    if (!inbound || typeof inbound.concealedSamples !== 'number' || typeof inbound.totalSamplesReceived !== 'number') {
+      return -1;
+    }
+    var concealed = inbound.concealedSamples - (previous && previous.concealedSamples || 0);
+    var received = inbound.totalSamplesReceived - (previous && previous.totalSamplesReceived || 0);
+    if (received > 0) {
+      return Math.max(0, concealed / received * 100);
+    }
+    return inbound.totalSamplesReceived > 0 ? Math.max(0, inbound.concealedSamples / inbound.totalSamplesReceived * 100) : -1;
+  }
+  softPhone.PLAYOUT_DELAY_OPTIONS = PLAYOUT_DELAY_OPTIONS;
+  softPhone.CONCEALMENT_WARNING_PERCENT = CONCEALMENT_WARNING_PERCENT;
+  softPhone.clampPlayoutDelay = clampPlayoutDelay;
+  softPhone.describePlayoutDelay = describePlayoutDelay;
+  softPhone.applyPlayoutDelay = applyPlayoutDelay;
+  softPhone.concealmentPercent = concealmentPercent;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * Signaling region: which of the provider's points of presence this browser connects to.
+ *
+ * The provider resolves its signaling host by DNS geography, and warns in its own documentation that the answer
+ * can be wrong -- their example is a client in India being routed to Frankfurt instead of Chennai, "call latency
+ * increases". An agent working far from where the tenant was set up inherits whatever that lookup returns, and
+ * nothing in the soft phone ever said which region they landed on, let alone let them change it.
+ *
+ * The provider SDK accepts a region, which rewrites its signaling host. This turns that into something an
+ * operator can set for the tenant and an agent can override for themselves -- necessary because the choice is
+ * per-person, not per-tenant: a team with agents on two continents cannot have one right answer.
+ *
+ * Scope, stated plainly because it is easy to assume more: this selects the SIGNALING edge. The provider
+ * documents the signaling and media planes as separate systems and does not document how the media gateway for a
+ * browser leg is chosen, so whether media follows is a question for measurement, not for assumption. The round
+ * trip reported on a call is what settles it.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a
+ * shared namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // The regions the vendored SDK accepts, with labels for the picker. Kept in step with the SDK's own Region
+  // constant (lib/src/Region.d.ts); an unknown value is treated as automatic rather than passed through, so a
+  // stale stored choice cannot send a client to a host that no longer exists.
+  //
+  // There is no Middle East entry. An agent in that part of the world has no in-region edge: Europe is the
+  // nearest, and saying so here is more use than leaving them to discover it.
+  var SIGNALING_REGIONS = [{
+    value: '',
+    label: 'Automatic'
+  }, {
+    value: 'us-west',
+    label: 'US West'
+  }, {
+    value: 'us-central',
+    label: 'US Central'
+  }, {
+    value: 'us-east',
+    label: 'US East'
+  }, {
+    value: 'ca-central',
+    label: 'Canada Central'
+  }, {
+    value: 'eu',
+    label: 'Europe'
+  }, {
+    value: 'apac',
+    label: 'Asia Pacific'
+  }, {
+    value: 'south-asia',
+    label: 'South Asia'
+  }];
+
+  // Normalizes a stored, configured or chosen region. Empty means automatic: let the provider's geo-routing
+  // decide, which is what every client did before this existed.
+  function clampSignalingRegion(value) {
+    var region = typeof value === 'string' ? value.trim().toLowerCase() : '';
+    if (!region) {
+      return '';
+    }
+    for (var i = 0; i < SIGNALING_REGIONS.length; i++) {
+      if (SIGNALING_REGIONS[i].value && SIGNALING_REGIONS[i].value === region) {
+        return region;
+      }
+    }
+    return '';
+  }
+
+  // The label for a region value, for the readout.
+  function describeSignalingRegion(value) {
+    var region = clampSignalingRegion(value);
+    if (!region) {
+      return '';
+    }
+    for (var i = 0; i < SIGNALING_REGIONS.length; i++) {
+      if (SIGNALING_REGIONS[i].value === region) {
+        return SIGNALING_REGIONS[i].label;
+      }
+    }
+    return region;
+  }
+
+  // The region this browser should actually register on, given what the operator configured for the tenant and
+  // what this agent chose for themselves.
+  //
+  // The agent's choice wins when they made one, because the right edge is a property of where the person is
+  // sitting rather than of where the tenant was set up: a team on two continents has no single right answer,
+  // and the operator's value is a starting point for everyone rather than a rule over anyone. Automatic -- the
+  // choice an agent starts with -- falls through to the tenant setting, and when that is empty too, to the
+  // provider's own geo-routing, which is what every client did before any of this existed.
+  function resolveSignalingRegion(configuredRegion, agentChoice) {
+    return clampSignalingRegion(agentChoice) || clampSignalingRegion(configuredRegion);
+  }
+
+  // Adds the region to the provider client options when one is chosen. Automatic adds nothing at all, so the
+  // SDK's own default routing is left exactly as it was rather than being overridden with an empty string.
+  function withSignalingRegion(clientOptions, value) {
+    var region = clampSignalingRegion(value);
+    if (region) {
+      clientOptions.region = region;
+    }
+    return clientOptions;
+  }
+  softPhone.SIGNALING_REGIONS = SIGNALING_REGIONS;
+  softPhone.clampSignalingRegion = clampSignalingRegion;
+  softPhone.describeSignalingRegion = describeSignalingRegion;
+  softPhone.resolveSignalingRegion = resolveSignalingRegion;
+  softPhone.withSignalingRegion = withSignalingRegion;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * Audio devices that are not a microphone or a speaker at all.
+ *
+ * A virtual audio cable, a mixer such as VoiceMeeter, or a "Stereo Mix" loopback shows up in the device lists like
+ * any other microphone or speaker, and picking one breaks a call in a way that looks like the platform's fault.
+ * As the microphone it captures the computer's own playback -- the far end's voice -- so the caller hears
+ * themselves and nobody's voice is sent. As the speaker it plays the call into the cable, so the agent hears
+ * nothing. Observed live: an extension call where each side heard silence, or itself, because one computer had
+ * "CABLE Output (VB-Audio Virtual Cable)" selected as its microphone.
+ *
+ * Noise-cancelling microphones are virtual devices too (Krisp, NVIDIA Broadcast) and are what an agent wants, so
+ * only the loopback and routing devices are named here.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a
+ * shared namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // Matched against the device label, case-insensitively.
+  var VIRTUAL_DEVICE_PATTERNS = [/vb-audio/, /\bvb-cable\b/, /\bcable (input|output)\b/, /virtual (audio )?cable/, /voicemeeter/, /stereo mix/, /what u hear/, /wave out mix/, /\bblackhole\b/, /soundflower/, /loopback audio/];
+
+  // Whether a device label names a virtual cable, mixer or loopback rather than real hardware.
+  function isVirtualAudioDevice(label) {
+    if (typeof label !== 'string' || !label.trim()) {
+      return false;
+    }
+    var normalized = label.toLowerCase();
+    for (var i = 0; i < VIRTUAL_DEVICE_PATTERNS.length; i++) {
+      if (VIRTUAL_DEVICE_PATTERNS[i].test(normalized)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // The label of the device a selection resolves to. An empty selection is the system default, which the browser
+  // lists as the "default" pseudo-device with the real device's name in its label ("Default - CABLE Input ...").
+  function resolveDeviceLabel(devices, kind, deviceId) {
+    if (!Array.isArray(devices)) {
+      return '';
+    }
+    var wanted = deviceId || 'default';
+    for (var i = 0; i < devices.length; i++) {
+      var device = devices[i];
+      if (device && device.kind === kind && device.deviceId === wanted) {
+        return device.label || '';
+      }
+    }
+    return '';
+  }
+  softPhone.isVirtualAudioDevice = isVirtualAudioDevice;
+  softPhone.resolveDeviceLabel = resolveDeviceLabel;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * Diagnostic text: turning whatever a provider SDK hands us into something a person can read in a log.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a
+ * shared namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // How much of a serialized warning to keep. Long enough to carry a real payload, short enough that a
+  // pathological object cannot flood the telemetry channel.
+  var WARNING_TEXT_LIMIT = 400;
+
+  // Describes a provider SDK warning.
+  //
+  // Reading a few hand-picked property names off the object and falling back to the literal string
+  // "Provider warning" threw the payload away whenever the SDK used a different shape -- which Telnyx does.
+  // Four warnings were logged during a call the caller could barely hear, and every one of them reached the
+  // server with no code, no message, and no context: the one signal that would have named the problem
+  // ("Low local microphone audio detected") arrived empty. A warning whose content is dropped is worse than
+  // no warning at all, because it reads as one that was already looked at.
+  //
+  // So an unrecognized shape is serialized rather than discarded. It only has to be seen once to be handled
+  // properly, and until then it is still readable.
+  function describeProviderWarning(warning) {
+    if (!warning) {
+      return '';
+    }
+    if (typeof warning === 'string') {
+      return warning;
+    }
+    var code = warning.code || warning.name || warning.type || '';
+    var message = warning.message || warning.error || warning.detail || warning.reason || '';
+    if (!message) {
+      try {
+        var serialized = JSON.stringify(warning);
+
+        // "{}" means the properties are non-enumerable (an Error-like object), so name the keys the
+        // object does expose rather than reporting an empty payload.
+        message = serialized && serialized !== '{}' ? serialized.slice(0, WARNING_TEXT_LIMIT) : 'keys=[' + Object.keys(warning).join(',') + ']';
+      } catch (error) {
+        // Circular or host objects cannot be serialized; the type is still more than nothing.
+        message = 'unserializable ' + typeof warning;
+      }
+    }
+    if (typeof message !== 'string') {
+      message = String(message);
+    }
+    return (code ? '[' + code + '] ' : '') + (message || 'no payload');
+  }
+
+  // Provider warnings that describe an ordinary pause rather than a fault. The SDK raises LOW_INBOUND_AUDIO
+  // (31006) when the audio arriving AT this browser averages below 0.001 for three consecutive seconds,
+  // and re-raises it every fifteen seconds while that holds. In a two-party call that is the other person not
+  // talking for three seconds -- it fired steadily while an agent read a test passage aloud. It says nothing
+  // about what the far end hears, and the soft phone's own inbound probe measures the same direction more
+  // usefully. Surfacing it as a warning buried the signals that mattered under twenty identical lines a call.
+  //
+  // Kept visible as information, never dropped: the description is accurate, and on a call where the far end
+  // really has gone silent it is still the first hint. Judged by code, not by text, so a reworded message in a
+  // later SDK does not change the classification.
+  var PAUSE_DRIVEN_WARNING_CODES = {
+    31006: true
+  };
+
+  // The diagnostic level a provider warning should be reported at.
+  function classifyProviderWarning(warning) {
+    var code = warning && typeof warning === 'object' ? warning.code || warning.warning && warning.warning.code : null;
+    return code != null && PAUSE_DRIVEN_WARNING_CODES[code] ? 'info' : 'warning';
+  }
+  softPhone.PAUSE_DRIVEN_WARNING_CODES = PAUSE_DRIVEN_WARNING_CODES;
+  softPhone.classifyProviderWarning = classifyProviderWarning;
+  softPhone.describeProviderWarning = describeProviderWarning;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * Translating the Telnyx WebRTC SDK's view of a call into the soft phone's, and the ICE-server check that keeps
+ * a STUN-only configuration from taking the SDK's relay away.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a
+ * shared namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // Maps a Telnyx WebRTC SDK call state (call.state) to the soft-phone outbound state names the
+  // originate() callback expects: 'Ringing', 'Connected', or 'Disconnected'. Returns null for
+  // transient states that should not change the UI.
+  function mapTelnyxOutboundState(state) {
+    switch (state) {
+      case 'new':
+      case 'requesting':
+      case 'trying':
+      case 'recovering':
+      case 'ringing':
+      case 'answering':
+      case 'early':
+        return 'Ringing';
+      case 'active':
+        return 'Connected';
+      case 'held':
+        // A held call is still connected from the dialer's perspective; the hold indicator is driven
+        // separately, so don't report a state change here.
+        return null;
+      case 'hangup':
+      case 'destroy':
+      case 'purge':
+        return 'Disconnected';
+      default:
+        return null;
+    }
+  }
+  function isTelnyxTerminalState(state) {
+    return state === 'hangup' || state === 'destroy' || state === 'purge';
+  }
+
+  // Whether an ICE server list contains at least one TURN (relay) server. A STUN-only list does not, and must
+  // not replace the Telnyx SDK's default ICE servers (which include TURN) or clients behind a restrictive NAT
+  // lose the relay they need to receive inbound media.
+  function iceServersIncludeTurn(iceServers) {
+    if (!Array.isArray(iceServers)) {
+      return false;
+    }
+    return iceServers.some(function (server) {
+      var urls = server && server.urls;
+      var list = Array.isArray(urls) ? urls : urls ? [urls] : [];
+      return list.some(function (url) {
+        return /^turns?:/i.test(String(url || ''));
+      });
+    });
+  }
+  softPhone.mapTelnyxOutboundState = mapTelnyxOutboundState;
+  softPhone.isTelnyxTerminalState = isTelnyxTerminalState;
+  softPhone.iceServersIncludeTurn = iceServersIncludeTurn;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * The reconnect schedule. Shared by the SignalR automatic-reconnect policy and the manual restart loop so both
+ * back off identically and neither ever gives up: a soft phone that stops trying is a phone that stops ringing.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a
+ * shared namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // Reconnect backoff (ms) by attempt index: immediate, then 2s, 5s, 10s, 20s, capped at 30s.
+  var RECONNECT_DELAYS_MS = [0, 2000, 5000, 10000, 20000, 30000];
+  function reconnectDelayMs(attempt) {
+    var index = attempt > 0 ? attempt : 0;
+    return RECONNECT_DELAYS_MS[Math.min(index, RECONNECT_DELAYS_MS.length - 1)];
+  }
+  softPhone.RECONNECT_DELAYS_MS = RECONNECT_DELAYS_MS;
+  softPhone.reconnectDelayMs = reconnectDelayMs;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * Hold audio for an answered call the agent puts on hold.
+ *
+ * Telnyx delivers this call's audio to the browser, not to a server-side leg, so the browser is the media
+ * endpoint. The provider's own call.hold() renegotiates the media to inactive, which is why a held caller hears
+ * dead silence and starts wondering whether the line dropped. Instead of holding at the signalling layer, this
+ * keeps the media flowing and swaps the microphone track on the outbound sender for a hold-audio track: the
+ * caller keeps receiving RTP, now carrying music (or a gentle comfort tone), and unhold swaps the microphone
+ * back. No renegotiation, no dropped media, no silence.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a
+ * shared namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ * The pure decision logic (source selection, tone plan, sender selection) and the engage/release state machine
+ * are the unit-tested parts; the WebAudio/HTMLAudio engine is a thin, injectable adapter so a mistake in the
+ * orchestration cannot hide behind an un-testable browser API.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // The comfort tone played when no hold-music URL is configured. A quiet, intermittent dual tone reads as
+  // "you are still on hold" without the fatigue of a continuous beep. These numbers are pinned by tests: the
+  // gain is deliberately far below unity because this audio is echoed into the agent's own ear on some setups
+  // and sent down the line to the caller, and a wrong gain is a painful surprise in both places.
+  var TONE_PLAN = {
+    frequencies: [440, 480],
+    // The North American call-progress pair, gentle and familiar.
+    gain: 0.05,
+    // Quiet. Well under unity so it can never clip or startle.
+    onSeconds: 1,
+    // Tone on...
+    offSeconds: 3 // ...then a longer silence, the cadence people read as "still waiting".
+  };
+
+  // Decide where the hold audio comes from. A trimmed, non-empty URL wins; otherwise the synthesized tone.
+  function selectHoldSource(config) {
+    config = config || {};
+    var url = typeof config.mediaUrl === 'string' ? config.mediaUrl.trim() : '';
+    if (url) {
+      return {
+        kind: 'url',
+        url: url
+      };
+    }
+    return {
+      kind: 'tone'
+    };
+  }
+
+  // A defensive copy of the tone plan so a caller cannot mutate the shared constant.
+  function buildTonePlan() {
+    return {
+      frequencies: TONE_PLAN.frequencies.slice(),
+      gain: TONE_PLAN.gain,
+      onSeconds: TONE_PLAN.onSeconds,
+      offSeconds: TONE_PLAN.offSeconds
+    };
+  }
+
+  // Pick the RTCRtpSender carrying audio to the far end. A sender whose track is null still counts: the mic
+  // track may already have been replaced, and that sender is exactly the one we put a track back on. A video
+  // sender is never a candidate.
+  function findAudioSender(senders) {
+    if (!senders || !senders.length) {
+      return null;
+    }
+    var i;
+    for (i = 0; i < senders.length; i++) {
+      if (senders[i] && senders[i].track && senders[i].track.kind === 'audio') {
+        return senders[i];
+      }
+    }
+    for (i = 0; i < senders.length; i++) {
+      if (senders[i] && (!senders[i].track || senders[i].track.kind === 'audio')) {
+        return senders[i];
+      }
+    }
+    return null;
+  }
+
+  // Orchestrates the swap. Browser-facing but thin: everything hard is delegated to an engine so the state
+  // machine here — engage once, release once, always tear the engine down, never leak a half-applied swap — is
+  // exercised by tests with a fake engine and fake senders.
+  function createHoldAudioController(options) {
+    options = options || {};
+    var source = selectHoldSource(options);
+    var createEngine = typeof options.createEngine === 'function' ? options.createEngine : defaultHoldAudioEngine;
+    var engine = null;
+    var savedSender = null;
+    var savedTrack = null;
+    var engaged = false;
+    // The engage still in flight. The soft phone re-applies a held call's state on every server report, so a
+    // second engage can arrive before the first has swapped the track; it must join the first rather than start
+    // a second engine whose tone nobody would ever stop.
+    var engaging = null;
+    function engage(peerConnection, micTrack) {
+      if (engaged) {
+        return Promise.resolve(true);
+      }
+      if (engaging) {
+        return engaging;
+      }
+      engaging = startEngage(peerConnection, micTrack).then(function (result) {
+        engaging = null;
+        return result;
+      }, function (error) {
+        engaging = null;
+        throw error;
+      });
+      return engaging;
+    }
+    function startEngage(peerConnection, micTrack) {
+      var senders = peerConnection && typeof peerConnection.getSenders === 'function' ? peerConnection.getSenders() : [];
+      var sender = findAudioSender(senders);
+      if (!sender || typeof sender.replaceTrack !== 'function') {
+        return Promise.reject(new Error('hold-audio: no audio sender to replace'));
+      }
+      engine = createEngine(source, buildTonePlan());
+      return Promise.resolve(engine.start()).then(function (holdTrack) {
+        if (!holdTrack) {
+          throw new Error('hold-audio: engine produced no track');
+        }
+
+        // Remember what to put back. Prefer the caller-supplied mic track; fall back to whatever the
+        // sender currently carries so release is never a no-op that leaves music playing.
+        savedSender = sender;
+        savedTrack = micTrack || sender.track || null;
+        return sender.replaceTrack(holdTrack);
+      }).then(function () {
+        engaged = true;
+        return true;
+      }).catch(function (error) {
+        // A failure mid-swap must not leave the engine running or the flag half-set.
+        return teardownEngine().then(function () {
+          throw error;
+        });
+      });
+    }
+    function release(peerConnection) {
+      // A resume that lands while the hold is still being put in place releases it once it is in place, so the
+      // caller is never left on the tone after the agent took them off hold.
+      if (engaging) {
+        return engaging.then(function () {
+          return release(peerConnection);
+        }, function () {
+          return false;
+        });
+      }
+      if (!engaged) {
+        return Promise.resolve(false);
+      }
+      var sender = savedSender || findAudioSender(peerConnection && typeof peerConnection.getSenders === 'function' ? peerConnection.getSenders() : []);
+      var restoreTrack = savedTrack;
+      var restore = sender && typeof sender.replaceTrack === 'function' ? Promise.resolve(sender.replaceTrack(restoreTrack)).catch(function () {}) : Promise.resolve();
+      return restore.then(teardownEngine).then(function () {
+        engaged = false;
+        return true;
+      });
+    }
+    function teardownEngine() {
+      savedSender = null;
+      savedTrack = null;
+      var stopping = engine && typeof engine.stop === 'function' ? engine.stop() : null;
+      engine = null;
+      return Promise.resolve(stopping).catch(function () {});
+    }
+    return {
+      engage: engage,
+      release: release,
+      // True while a hold is being put in place too, so a call ending mid-engage still tears it down.
+      isEngaged: function () {
+        return engaged || !!engaging;
+      },
+      source: source
+    };
+  }
+
+  // The real engine: builds a MediaStreamTrack from either an <audio> element (a configured URL) or a
+  // WebAudio oscillator graph (the comfort tone). Kept out of the tested surface because it is nothing but
+  // browser-API plumbing; the logic that decides which one to build and when to tear it down is above.
+  function defaultHoldAudioEngine(source, tonePlan) {
+    var element = null;
+    var audioContext = null;
+    var nodes = [];
+    function startUrl() {
+      var audio = root.document ? root.document.createElement('audio') : null;
+      if (!audio || typeof audio.play !== 'function') {
+        return Promise.reject(new Error('hold-audio: cannot create audio element'));
+      }
+      element = audio;
+      audio.src = source.url;
+      audio.loop = true;
+      audio.crossOrigin = 'anonymous';
+      audio.preload = 'auto';
+      var capture = audio.captureStream || audio.mozCaptureStream;
+      if (typeof capture !== 'function') {
+        return Promise.reject(new Error('hold-audio: captureStream unavailable'));
+      }
+      return Promise.resolve(audio.play()).then(function () {
+        var stream = capture.call(audio);
+        var tracks = stream && stream.getAudioTracks ? stream.getAudioTracks() : [];
+        return tracks[0] || null;
+      });
+    }
+    function startTone() {
+      var Ctx = root.AudioContext || root.webkitAudioContext;
+      if (typeof Ctx !== 'function') {
+        return Promise.reject(new Error('hold-audio: WebAudio unavailable'));
+      }
+      audioContext = new Ctx();
+      var destination = audioContext.createMediaStreamDestination();
+      var gain = audioContext.createGain();
+      gain.gain.value = 0;
+      gain.connect(destination);
+      nodes.push(gain);
+      tonePlan.frequencies.forEach(function (frequency) {
+        var oscillator = audioContext.createOscillator();
+        oscillator.type = 'sine';
+        oscillator.frequency.value = frequency;
+        oscillator.connect(gain);
+        oscillator.start();
+        nodes.push(oscillator);
+      });
+
+      // Pulse the gain on and off so the tone is intermittent rather than a solid drone.
+      var cycle = tonePlan.onSeconds + tonePlan.offSeconds;
+      var now = audioContext.currentTime;
+      for (var i = 0; i < 600 / cycle; i++) {
+        var base = now + i * cycle;
+        gain.gain.setValueAtTime(tonePlan.gain, base);
+        gain.gain.setValueAtTime(0, base + tonePlan.onSeconds);
+      }
+      var track = destination.stream.getAudioTracks()[0];
+
+      // Hold is triggered by a click, so the context is usually allowed to start running; resume anyway in
+      // case an autoplay policy created it suspended, or the tone would be silent on the first hold.
+      if (typeof audioContext.resume === 'function') {
+        try {
+          audioContext.resume();
+        } catch (error) {/* best effort */}
+      }
+      return Promise.resolve(track || null);
+    }
+    return {
+      start: function () {
+        return source.kind === 'url' ? startUrl() : startTone();
+      },
+      stop: function () {
+        if (element) {
+          try {
+            element.pause();
+          } catch (error) {/* best effort */}
+          element.src = '';
+          element = null;
+        }
+        nodes.forEach(function (node) {
+          try {
+            if (typeof node.stop === 'function') {
+              node.stop();
+            }
+          } catch (error) {/* best effort */}
+          try {
+            node.disconnect();
+          } catch (error) {/* best effort */}
+        });
+        nodes = [];
+        if (audioContext && typeof audioContext.close === 'function') {
+          try {
+            audioContext.close();
+          } catch (error) {/* best effort */}
+        }
+        audioContext = null;
+        return Promise.resolve();
+      }
+    };
+  }
+  softPhone.HOLD_TONE_PLAN = TONE_PLAN;
+  softPhone.selectHoldSource = selectHoldSource;
+  softPhone.buildTonePlan = buildTonePlan;
+  softPhone.findAudioSender = findAudioSender;
+  softPhone.createHoldAudioController = createHoldAudioController;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * Keeping the agent audible: the microphone every call sends, and a watch for a call on which nothing is sent.
+ *
+ * The soft phone captures the microphone once per registration and hands that one stream to every call. The provider
+ * SDK treats the stream it is handed as its own: when a call ends it stops every live track of it. A stopped track
+ * raises no event, so nothing noticed, and every call after the first on a registration went out on a dead track --
+ * the agent heard the caller, the caller heard nothing, and the provider reported receiving no packets from the agent.
+ * The SDK tells its listeners a call is being torn down just before it does so, which is the moment to take the shared
+ * stream back.
+ *
+ * However the send track dies, a call must not carry on silently one-way. RTP carries silence as well as speech, so a
+ * healthy call never stops sending for more than a packet or two: a connected call that has sent nothing for a few
+ * seconds while the agent is neither muted nor holding is one the caller cannot hear. The watch says so, so the agent
+ * is told at once instead of by the caller, and the call's quality record says so instead of rating it good.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // How long a connected call may send nothing before the agent is warned: long enough to ride out the media settling
+  // as the call connects, short enough that the agent hears about it before the caller gives up on them.
+  var OUTBOUND_SILENCE_MS = 5000;
+
+  // How often the watch reads the sent-bytes counter. A stats read is cheap; the SDK itself reads them every second.
+  var OUTBOUND_CHECK_INTERVAL_MS = 1000;
+
+  // The call states in which the SDK tears a call down, stopping the tracks of options.localStream right after it
+  // has told its listeners.
+  var TEARDOWN_STATES = ['destroy', 'recovering'];
+
+  // Whether a stream holds an audio track that can still carry the agent's voice.
+  function hasLiveAudioTrack(stream) {
+    if (!stream || typeof stream.getAudioTracks !== 'function') {
+      return false;
+    }
+    return stream.getAudioTracks().some(function (track) {
+      return !!track && track.readyState === 'live';
+    });
+  }
+
+  // Takes the shared capture back from a call the SDK is about to tear down, so the SDK stops nothing of it. Returns
+  // whether it did. A call still in progress keeps it, and a stream the SDK captured for itself is left to the SDK.
+  function releaseSharedCapture(call, sharedStream) {
+    if (!call || !sharedStream || !call.options || call.options.localStream !== sharedStream) {
+      return false;
+    }
+    if (TEARDOWN_STATES.indexOf(call.state) === -1) {
+      return false;
+    }
+    call.options.localStream = null;
+    return true;
+  }
+
+  /*
+   * Decides, one reading at a time, whether audio is leaving the call.
+   *
+   * observe({ now, bytesSent, trackLive, suppressed }) returns 'stalled' the first time nothing has left for the
+   * threshold, 'resumed' when audio leaves again after that, and null otherwise. While suppressed (muted or on hold)
+   * nothing is concluded and the window starts again afterwards.
+   */
+  function createOutboundAudioWatch(options) {
+    var thresholdMs = options && options.thresholdMs > 0 ? options.thresholdMs : OUTBOUND_SILENCE_MS;
+    var windowStart = null;
+    var lastBytes = 0;
+    var stalled = false;
+    var everStalled = false;
+    function observe(sample) {
+      var now = sample && typeof sample.now === 'number' ? sample.now : 0;
+      var bytes = sample && typeof sample.bytesSent === 'number' ? sample.bytesSent : 0;
+      if (sample && sample.suppressed) {
+        windowStart = null;
+        return null;
+      }
+      if (windowStart === null) {
+        windowStart = now;
+        lastBytes = bytes;
+        return null;
+      }
+
+      // A counter that went backwards is a new sender, not lost audio: take it as the new baseline.
+      var progressed = sample.trackLive !== false && bytes > lastBytes;
+      lastBytes = bytes;
+      if (progressed) {
+        windowStart = now;
+        if (stalled) {
+          stalled = false;
+          return 'resumed';
+        }
+        return null;
+      }
+      if (!stalled && now - windowStart >= thresholdMs) {
+        stalled = true;
+        everStalled = true;
+        return 'stalled';
+      }
+      return null;
+    }
+    return {
+      observe: observe,
+      isStalled: function () {
+        return stalled;
+      },
+      hasStalled: function () {
+        return everStalled;
+      }
+    };
+  }
+
+  // The audio track the call is sending, or null when no sender carries one: a call that sends nothing at all.
+  function readSendTrack(peer) {
+    var senders = peer && typeof peer.getSenders === 'function' ? peer.getSenders() : [];
+    var i;
+    for (i = 0; i < senders.length; i++) {
+      if (senders[i] && senders[i].track && senders[i].track.kind === 'audio') {
+        return senders[i].track;
+      }
+    }
+    return null;
+  }
+  function readBytesSent(report) {
+    var total = 0;
+    if (report && typeof report.forEach === 'function') {
+      report.forEach(function (stat) {
+        if (stat && stat.type === 'outbound-rtp' && (stat.kind || stat.mediaType) === 'audio' && typeof stat.bytesSent === 'number') {
+          total += stat.bytesSent;
+        }
+      });
+    }
+    return total;
+  }
+
+  /*
+   * Runs the watch over a live call's peer connection.
+   *
+   * options.readPeer()        - the call's RTCPeerConnection, or null until it has one.
+   * options.isSuppressed()    - true while the agent is muted or holding.
+   * options.onStalled(info)   - nothing left the call for the threshold; info is { trackState, bytesSent }.
+   * options.onResumed()       - audio is leaving again.
+   * options.thresholdMs, options.intervalMs, options.now, options.setInterval, options.clearInterval - injectable.
+   *
+   * Returns { stop, hasStalled }.
+   */
+  function startOutboundAudioMonitor(options) {
+    options = options || {};
+    var watch = createOutboundAudioWatch(options);
+    var now = typeof options.now === 'function' ? options.now : function () {
+      return Date.now();
+    };
+    var schedule = typeof options.setInterval === 'function' ? options.setInterval : function (fn, ms) {
+      return root.setInterval(fn, ms);
+    };
+    var unschedule = typeof options.clearInterval === 'function' ? options.clearInterval : function (id) {
+      root.clearInterval(id);
+    };
+    var stopped = false;
+    var reading = false;
+    function tick() {
+      var peer = stopped || reading || typeof options.readPeer !== 'function' ? null : options.readPeer();
+      if (!peer || typeof peer.getStats !== 'function') {
+        return;
+      }
+      var suppressed = typeof options.isSuppressed === 'function' && !!options.isSuppressed();
+      var track = readSendTrack(peer);
+      reading = true;
+      Promise.resolve(peer.getStats()).then(function (report) {
+        reading = false;
+        if (stopped) {
+          return;
+        }
+        var bytesSent = readBytesSent(report);
+        var result = watch.observe({
+          now: now(),
+          bytesSent: bytesSent,
+          trackLive: !!track && track.readyState === 'live',
+          suppressed: suppressed
+        });
+        if (result === 'stalled' && typeof options.onStalled === 'function') {
+          options.onStalled({
+            trackState: track ? track.readyState : 'none',
+            bytesSent: bytesSent
+          });
+        } else if (result === 'resumed' && typeof options.onResumed === 'function') {
+          options.onResumed();
+        }
+      }, function () {
+        reading = false;
+      });
+    }
+    var timer = schedule(tick, options.intervalMs > 0 ? options.intervalMs : OUTBOUND_CHECK_INTERVAL_MS);
+    return {
+      stop: function () {
+        if (!stopped) {
+          stopped = true;
+          unschedule(timer);
+        }
+      },
+      isStalled: watch.isStalled,
+      hasStalled: watch.hasStalled
+    };
+  }
+  softPhone.OUTBOUND_SILENCE_MS = OUTBOUND_SILENCE_MS;
+  softPhone.hasLiveAudioTrack = hasLiveAudioTrack;
+  softPhone.releaseSharedCapture = releaseSharedCapture;
+  softPhone.createOutboundAudioWatch = createOutboundAudioWatch;
+  softPhone.startOutboundAudioMonitor = startOutboundAudioMonitor;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * Keeping a hold the agent placed until the agent resumes it.
+ *
+ * With a provider that delivers the call's audio to this browser, hold happens here: the phone swaps the microphone
+ * for hold audio and the provider is never told. So everything the server says about the call afterwards -- the
+ * provider's own view of it, the periodic active-call refresh, a state push when anything else about the call changes
+ * -- still describes it as connected. The phone used to take each of those reports at its word, set the call back to
+ * connected and hand that to the media adapter, which dutifully took the caller off hold a few seconds after the
+ * agent put them on it.
+ *
+ * The phone now remembers the holds the agent placed. A report that the call is connected does not end such a hold
+ * when the hold is performed in this browser; only the agent resuming the call, or the call ending, does. Where the
+ * provider performs the hold itself, the provider is the authority, and a report that the call is connected again
+ * means the hold is over.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+  function isUp(stateName) {
+    return stateName === 'Connected' || stateName === 'OnHold';
+  }
+
+  // States a call passes through before it is first answered.
+  function isPreConnect(stateName) {
+    return stateName === 'Ringing' || stateName === 'Connecting';
+  }
+
+  // The state to take from a report about a call the phone already knows.
+  //
+  // A call that has been up does not start ringing again. A report that says it has is describing something that
+  // has not caught up with the call: the Contact Center describes a call from its interaction, and an interaction
+  // the server never moved past ringing kept reporting "Ringing" for a call the agent had been talking on for a
+  // minute. Taken at its word, that reopened the ringing panel over a live call and made the phone forget the hold
+  // the agent had placed on it. Such a report leaves the call as it was; every other report is taken as it comes.
+  function resolveReportedState(previousStateName, reportedStateName) {
+    if (isUp(previousStateName) && isPreConnect(reportedStateName)) {
+      return previousStateName;
+    }
+    return reportedStateName;
+  }
+
+  // Remembers (onHold true) or forgets (false) the agent's hold on a call.
+  function rememberAgentHold(holds, callId, onHold) {
+    if (!holds || !callId) {
+      return;
+    }
+    if (onHold) {
+      holds[callId] = true;
+    } else {
+      delete holds[callId];
+    }
+  }
+  function isAgentHeld(holds, callId) {
+    return !!(holds && callId && holds[callId] === true);
+  }
+
+  // Forgets the holds on every call that is no longer live, so the memory cannot outlast the calls it is about.
+  function pruneAgentHolds(holds, liveCallIds) {
+    if (!holds) {
+      return;
+    }
+    var live = {};
+    (liveCallIds || []).forEach(function (callId) {
+      live[callId] = true;
+    });
+    Object.keys(holds).forEach(function (callId) {
+      if (!live[callId]) {
+        delete holds[callId];
+      }
+    });
+  }
+
+  // What the phone should show for a call a report describes.
+  //   stateName      - the state the report gives (already normalized: 'Connected', 'OnHold', ...).
+  //   reportedOnHold - the report's own hold flag.
+  //   agentHeld      - whether the agent placed a hold on this call that has not been resumed.
+  //   holdIsLocal    - whether this browser performs the hold (the provider cannot see it).
+  // Returns { stateName, isOnHold, agentHeld }: the state and hold flag to apply, and whether the agent's hold
+  // still stands afterwards.
+  function reconcileAgentHold(stateName, reportedOnHold, agentHeld, holdIsLocal) {
+    var reportedHeld = stateName === 'OnHold' || !!reportedOnHold && isUp(stateName);
+
+    // A call the agent held has been up, so a report that it is ringing or connecting is stale (see
+    // resolveReportedState), not the end of the hold. Forgetting the hold here is what took the caller off the
+    // first hold of a call a few seconds after the agent placed it: the next report said "Connected".
+    if (agentHeld && isPreConnect(stateName)) {
+      return {
+        stateName: 'OnHold',
+        isOnHold: true,
+        agentHeld: true
+      };
+    }
+
+    // A call that is not up has no hold to keep: it is still ringing, or it is over.
+    if (!isUp(stateName)) {
+      return {
+        stateName: stateName,
+        isOnHold: false,
+        agentHeld: false
+      };
+    }
+    if (!agentHeld) {
+      return {
+        stateName: stateName,
+        isOnHold: reportedHeld,
+        agentHeld: false
+      };
+    }
+
+    // The report agrees the call is held, or it cannot know: this browser is the one holding it.
+    if (reportedHeld || holdIsLocal) {
+      return {
+        stateName: 'OnHold',
+        isOnHold: true,
+        agentHeld: true
+      };
+    }
+
+    // The provider holds the call itself, and says it is connected again: the hold is over.
+    return {
+      stateName: stateName,
+      isOnHold: false,
+      agentHeld: false
+    };
+  }
+
+  // Where the agent's hold or resume of a call goes. Both commands use this one decision, so they can never take
+  // different paths for the same call.
+  //   'hub'   - a call the server tracks. The server records the hold time and hands the new state back to the
+  //             media adapter, which swaps the hold audio in or out on the leg carrying the call.
+  //   'local' - a call this browser placed itself: there is nothing on the server to tell, so its own session holds.
+  //   'none'  - nothing to act on.
+  function holdCommandRoute(call, hasBrowserController) {
+    if (!call || !call.callId) {
+      return 'none';
+    }
+    if (!call.browserOriginated) {
+      return 'hub';
+    }
+    return hasBrowserController ? 'local' : 'none';
+  }
+  softPhone.resolveReportedState = resolveReportedState;
+  softPhone.holdCommandRoute = holdCommandRoute;
+  softPhone.rememberAgentHold = rememberAgentHold;
+  softPhone.isAgentHeld = isAgentHeld;
+  softPhone.pruneAgentHolds = pruneAgentHolds;
+  softPhone.reconcileAgentHold = reconcileAgentHold;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * Keeping a mute the agent placed until the agent unmutes.
+ *
+ * With a provider that delivers the call's audio to this browser, muting happens here: the phone disables the
+ * microphone track it sends, and the provider never hears of it. The server answers the Mute command with a muted call,
+ * but it keeps nothing, so everything it says about the call afterwards -- the periodic active-call refresh, a state
+ * push when anything else about the call changes -- describes it as unmuted. The phone took each of those reports at its
+ * word and handed it to the media adapter, which turned the microphone back on about five seconds after the agent
+ * pressed Mute (the next refresh), with the button flipping back to Mute as if the agent had never pressed it.
+ *
+ * The phone now remembers the mutes the agent placed. Where the mute is performed in this browser, only the agent
+ * unmuting, or the call ending, ends it; where the provider mutes the call itself, the provider's report is the
+ * authority.
+ *
+ * The phone sends one microphone track on every call it holds, so a mute is about the conversation the agent is in, not
+ * one leg: calls merged into a conference share it, and a report about any of them must not unmute the others.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // Remembers (muted true) or forgets (false) the agent's mute on a call.
+  function rememberAgentMute(mutes, callId, muted) {
+    if (!mutes || !callId) {
+      return;
+    }
+    if (muted) {
+      mutes[callId] = true;
+    } else {
+      delete mutes[callId];
+    }
+  }
+  function isAgentMuted(mutes, callId) {
+    return !!(mutes && callId && mutes[callId] === true);
+  }
+
+  // Forgets the mutes on every call that is no longer live, so the memory cannot outlast the calls it is about.
+  function pruneAgentMutes(mutes, liveCallIds) {
+    if (!mutes) {
+      return;
+    }
+    var live = {};
+    (liveCallIds || []).forEach(function (callId) {
+      live[callId] = true;
+    });
+    Object.keys(mutes).forEach(function (callId) {
+      if (!live[callId]) {
+        delete mutes[callId];
+      }
+    });
+  }
+
+  // Whether the phone should show a call a report describes as muted.
+  //   reportedMuted - the report's own mute flag.
+  //   agentMuted    - whether the agent muted this call and has not unmuted it.
+  //   muteIsLocal   - whether this browser performs the mute (the provider cannot see it).
+  // Returns { isMuted, agentMuted }: the flag to apply, and whether the agent's mute still stands afterwards.
+  function reconcileAgentMute(reportedMuted, agentMuted, muteIsLocal) {
+    // This browser is the only one that knows: a report either way is an echo of a command, or knows nothing.
+    if (muteIsLocal) {
+      return {
+        isMuted: !!agentMuted,
+        agentMuted: !!agentMuted
+      };
+    }
+    return {
+      isMuted: !!reportedMuted,
+      agentMuted: !!reportedMuted
+    };
+  }
+  function metadataValue(call, key) {
+    var metadata = call && call.metadata;
+    return metadata && metadata[key] !== undefined && metadata[key] !== null ? metadata[key] : null;
+  }
+  function isConferenceCall(call) {
+    var value = metadataValue(call, 'isConference');
+    return value === true || value === 'true' || value === 'True';
+  }
+
+  // What names the conference a call is part of: its primary call, or else its conference's name.
+  function conferenceKey(call) {
+    var primary = metadataValue(call, 'conferencePrimaryCallId');
+    if (primary) {
+      return 'primary:' + String(primary);
+    }
+    var name = metadataValue(call, 'conferenceName');
+    return name ? 'name:' + String(name) : '';
+  }
+
+  // The calls a mute of `call` applies to: the call itself and, when it is part of a conference, every other call
+  // in that conference -- the agent speaks into all of them through the same microphone.
+  function muteGroupCallIds(calls, call) {
+    if (!call || !call.callId) {
+      return [];
+    }
+    var ids = [call.callId];
+    if (!isConferenceCall(call)) {
+      return ids;
+    }
+    var key = conferenceKey(call);
+    (calls || []).forEach(function (other) {
+      if (!other || !other.callId || other.callId === call.callId || !isConferenceCall(other)) {
+        return;
+      }
+
+      // Two conferences can never be up at once on one phone, so a conference call that names none is this one.
+      var otherKey = conferenceKey(other);
+      if (!key || !otherKey || otherKey === key) {
+        ids.push(other.callId);
+      }
+    });
+    return ids;
+  }
+
+  // Whether the calls just merged into a conference are muted: the agent was talking on one of them, and the
+  // conference carries on as that call was -- muted or not -- so the button shown and the microphone agree.
+  //   callIds       - the calls in the conference.
+  //   mutes         - the agent's remembered mutes.
+  //   talkingCallId - the call the agent was on when merging (the one the phone showed).
+  function conferenceMuted(callIds, mutes, talkingCallId) {
+    var ids = callIds || [];
+    if (talkingCallId && ids.indexOf(talkingCallId) >= 0) {
+      return isAgentMuted(mutes, talkingCallId);
+    }
+    return ids.some(function (callId) {
+      return isAgentMuted(mutes, callId);
+    });
+  }
+  softPhone.rememberAgentMute = rememberAgentMute;
+  softPhone.isAgentMuted = isAgentMuted;
+  softPhone.pruneAgentMutes = pruneAgentMutes;
+  softPhone.reconcileAgentMute = reconcileAgentMute;
+  softPhone.muteGroupCallIds = muteGroupCallIds;
+  softPhone.conferenceMuted = conferenceMuted;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * Recognizing the provider leg the platform rang for a Contact Center offer that is still ringing on screen.
+ *
+ * Accepting an offer used to make the platform ring this browser only after the click, so the agent waited the whole
+ * invite-and-answer round trip of their own phone before hearing the caller. The platform now rings the browser
+ * while the offer is still ringing. That leg must not ring as a second call on top of the offer, and must not be
+ * answered on arrival (the agent has not accepted anything yet): the phone holds it, answers it the moment the agent
+ * accepts -- here, in another page, or on another device -- and hangs it up if they decline.
+ *
+ * The leg names its offer in the provider's client state (intent "cc-predial", offer "r") and in a SIP header; the
+ * offer's context may also name the provider's own id for the leg. These are the pure decisions: what an incoming
+ * leg says about its offer, and what to do with it given the offer on screen and the offers known to be accepted.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+  var PRE_DIALED_LEG_INTENT = 'cc-predial';
+  var OFFER_ID_HEADER = 'x-offer-id';
+
+  // How long an accept is remembered for a leg that has not arrived yet. The platform rings the leg within a second
+  // or two of the offer; anything later is not the leg for that accept.
+  var ACCEPTED_OFFER_MEMORY_MS = 60000;
+  function decodeBase64(value) {
+    try {
+      if (typeof root.atob === 'function') {
+        return root.atob(value);
+      }
+    } catch (error) {
+      return null;
+    }
+    return null;
+  }
+  function parseObject(text) {
+    try {
+      var parsed = JSON.parse(text);
+      return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  // The provider hands client state over base64-encoded; tolerate it already decoded too.
+  function readClientState(value) {
+    if (!value || typeof value !== 'string') {
+      return null;
+    }
+    var decoded = decodeBase64(value);
+    return decoded && parseObject(decoded) || parseObject(value);
+  }
+
+  // Custom SIP headers arrive as a list of { name, value } pairs, or occasionally as a plain map.
+  function readHeader(headers, name) {
+    if (!headers) {
+      return '';
+    }
+    if (Array.isArray(headers)) {
+      for (var i = 0; i < headers.length; i++) {
+        var header = headers[i];
+        if (header && typeof header.name === 'string' && header.name.toLowerCase() === name) {
+          return header.value == null ? '' : String(header.value);
+        }
+      }
+      return '';
+    }
+    if (typeof headers === 'object') {
+      var keys = Object.keys(headers);
+      for (var j = 0; j < keys.length; j++) {
+        if (keys[j].toLowerCase() === name) {
+          return headers[keys[j]] == null ? '' : String(headers[keys[j]]);
+        }
+      }
+    }
+    return '';
+  }
+
+  // What an incoming provider leg says about the offer it was rung for: { reservationId, legId }. Either may be
+  // empty. A leg that names no offer is an ordinary incoming call as far as this is concerned.
+  function readOfferLegTag(options) {
+    options = options || {};
+    var reservationId = '';
+    var state = readClientState(options.clientState || options.client_state);
+    if (state && state.i === PRE_DIALED_LEG_INTENT && state.r) {
+      reservationId = String(state.r);
+    }
+    if (!reservationId) {
+      reservationId = readHeader(options.customHeaders || options.custom_headers, OFFER_ID_HEADER);
+    }
+    var legId = options.telnyxCallControlId || options.callControlId || '';
+    return {
+      reservationId: reservationId,
+      legId: legId ? String(legId) : ''
+    };
+  }
+  function rememberAcceptedOffer(accepted, reservationId, now) {
+    if (!accepted || !reservationId) {
+      return;
+    }
+    accepted[reservationId] = now;
+
+    // Forget the old ones so the memory cannot grow for as long as the page stays open.
+    Object.keys(accepted).forEach(function (id) {
+      if (now - accepted[id] > ACCEPTED_OFFER_MEMORY_MS) {
+        delete accepted[id];
+      }
+    });
+  }
+  function forgetAcceptedOffer(accepted, reservationId) {
+    if (accepted && reservationId) {
+      delete accepted[reservationId];
+    }
+  }
+  function isOfferAccepted(accepted, reservationId, now) {
+    if (!accepted || !reservationId || typeof accepted[reservationId] !== 'number') {
+      return false;
+    }
+    return now - accepted[reservationId] <= ACCEPTED_OFFER_MEMORY_MS;
+  }
+
+  // What to do with an incoming provider leg.
+  //   tag      - readOfferLegTag() of the leg.
+  //   offer    - the offer on screen, { reservationId, agentLegId, accepting }, or null. accepting is true while
+  //              this page's own accept is in flight or has completed.
+  //   accepted - the offers known to have been accepted (rememberAcceptedOffer), from anywhere.
+  // Returns null for a leg that is not an offer's (the phone's usual rules apply), otherwise
+  // { action: 'hold' | 'answer', reservationId }.
+  function classifyOfferLeg(tag, offer, accepted, now) {
+    if (!tag) {
+      return null;
+    }
+    var matchesOffer = !!(offer && offer.reservationId && (tag.reservationId && tag.reservationId === offer.reservationId || tag.legId && offer.agentLegId && tag.legId === offer.agentLegId));
+    var reservationId = tag.reservationId || (matchesOffer ? offer.reservationId : '');
+    if (!reservationId) {
+      return null;
+    }
+
+    // The agent already said yes -- here, in another page, or on another device -- before the leg arrived.
+    if (isOfferAccepted(accepted, reservationId, now) || matchesOffer && offer.accepting) {
+      return {
+        action: 'answer',
+        reservationId: reservationId
+      };
+    }
+
+    // An offer's leg, and nobody has accepted it: hold it, without ringing it and without answering it. That is
+    // also what happens to a leg whose offer this page has not shown yet; the offer usually follows it.
+    return {
+      action: 'hold',
+      reservationId: reservationId
+    };
+  }
+
+  // Shared with the other rules that read what an incoming leg says about itself (see soft-phone/bridged-transfer.js).
+  softPhone.readProviderClientState = readClientState;
+  softPhone.readProviderHeader = readHeader;
+  softPhone.readOfferLegTag = readOfferLegTag;
+  softPhone.classifyOfferLeg = classifyOfferLeg;
+  softPhone.rememberAcceptedOffer = rememberAcceptedOffer;
+  softPhone.forgetAcceptedOffer = forgetAcceptedOffer;
+  softPhone.isOfferAccepted = isOfferAccepted;
+  softPhone.OFFER_LEG_CAPABILITY = 'held-offer-leg';
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * What a server report about the call of a Contact Center offer may change on the phone.
+ *
+ * An offer's call is live before any agent takes it: the platform answers the caller's leg to play hold music, or an
+ * automated assistant talked to them first. Some providers can only say whether a call exists, and a server that
+ * read "exists" as "connected" told a phone still ringing for the offer that the call was in progress. The phone
+ * took that as the call connecting: the incoming-call prompt vanished and it showed a call in progress, with the
+ * customer's number and the in-call buttons, although nobody had accepted anything. When the offer then expired the
+ * server kept reporting the call as live, so the phone went on showing a call to nobody.
+ *
+ * So a report that an offer's call is live does not end the ringing while nobody has accepted the offer -- here, in
+ * another page, or on another device -- and once an offer was withdrawn without being accepted here, reports about
+ * its call are not this phone's until the call is offered to it again or ends.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // How long a call whose offer was withdrawn is kept off the phone. A caller can wait in a queue for a long time
+  // after one agent's offer expired; the call's end, or a new offer of it, forgets it sooner.
+  var UNACCEPTED_OFFER_CALL_TTL_MS = 60 * 60 * 1000;
+  function isLiveStateName(stateName) {
+    return stateName === 'Connecting' || stateName === 'Connected' || stateName === 'OnHold';
+  }
+  function isAccepted(accepted, reservationId, now) {
+    return typeof softPhone.isOfferAccepted === 'function' && softPhone.isOfferAccepted(accepted, reservationId, now);
+  }
+  function prune(unaccepted, now) {
+    Object.keys(unaccepted).forEach(function (callId) {
+      if (now - unaccepted[callId] > UNACCEPTED_OFFER_CALL_TTL_MS) {
+        delete unaccepted[callId];
+      }
+    });
+  }
+
+  // Remembers the call of an offer that was withdrawn (declined, expired, taken by someone else) without this phone
+  // accepting it.
+  function rememberUnacceptedOfferCall(unaccepted, callId, now) {
+    if (!unaccepted || !callId) {
+      return;
+    }
+    prune(unaccepted, now);
+    unaccepted[callId] = now;
+  }
+
+  // The call was offered to this phone again, or it ended: it is no longer kept off the phone.
+  function forgetUnacceptedOfferCall(unaccepted, callId) {
+    if (unaccepted && callId) {
+      delete unaccepted[callId];
+    }
+  }
+  function isUnacceptedOfferCall(unaccepted, callId, now) {
+    return !!unaccepted && !!callId && typeof unaccepted[callId] === 'number' && now - unaccepted[callId] <= UNACCEPTED_OFFER_CALL_TTL_MS;
+  }
+
+  // What to do with a server report of a call's state.
+  //   report     - { callId, stateName } (stateName normalized: 'Ringing', 'Connected', 'OnHold', ...).
+  //   offer      - the offer ringing on screen, { callId, reservationId, accepting }, or null. accepting is true
+  //                while this page's own accept is in flight or has completed.
+  //   accepted   - the offers known to have been accepted (rememberAcceptedOffer), from anywhere.
+  //   unaccepted - the calls of offers withdrawn without an accept here (rememberUnacceptedOfferCall).
+  // Returns 'apply' (the usual handling), 'keep-ringing' (the offer stays on screen as it is) or 'ignore' (the call
+  // is not on this phone).
+  function planOfferCallReport(report, offer, accepted, unaccepted, now) {
+    if (!report || !report.callId || !isLiveStateName(report.stateName)) {
+      return 'apply';
+    }
+    if (offer && offer.callId === report.callId) {
+      return offer.accepting || isAccepted(accepted, offer.reservationId, now) ? 'apply' : 'keep-ringing';
+    }
+    return isUnacceptedOfferCall(unaccepted, report.callId, now) ? 'ignore' : 'apply';
+  }
+  softPhone.UNACCEPTED_OFFER_CALL_TTL_MS = UNACCEPTED_OFFER_CALL_TTL_MS;
+  softPhone.rememberUnacceptedOfferCall = rememberUnacceptedOfferCall;
+  softPhone.forgetUnacceptedOfferCall = forgetUnacceptedOfferCall;
+  softPhone.isUnacceptedOfferCall = isUnacceptedOfferCall;
+  softPhone.planOfferCallReport = planOfferCallReport;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * The one-shot expectation that the next inbound provider leg is one this browser is waiting for, so the media
+ * adapter answers it instead of ringing it as an unsolicited call.
+ *
+ * Two legs are expected that way: the browser's own leg of an extension call it just placed, and the leg the platform
+ * rings at the accept of an offer taken somewhere else (the docked agent bar, another page) when this page held no leg
+ * for it. The expectation used to be a bare deadline shared by both, so one armed for an offer outlived it: declined,
+ * expired or taken by another agent, the offer was over, yet whatever leg reached the browser next within the window
+ * -- a colleague's call, the next caller's -- was answered without the agent touching anything.
+ *
+ * An arm now names what it is for (an offer's reservation, or the extension call), is consumed by the first leg that
+ * uses it, lapses after a short window, and is dropped the moment what it was armed for is over -- an offer withdrawn
+ * without an accept here, or a different offer ringing on screen.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // How long an arm waits for its leg. The platform rings within a second or two of the accept or the dial.
+  var AUTO_ANSWER_WINDOW_MS = 20000;
+
+  // What an arm is for.
+  var EXTENSION_CALL_KEY = 'extension';
+
+  // An offer whose reservation is not known still gets a key of its own: any other offer on screen drops it.
+  function offerKey(reservationId) {
+    return 'offer:' + (reservationId || '');
+  }
+  function createAutoAnswerArm() {
+    return {
+      key: '',
+      until: 0
+    };
+  }
+
+  // Arms for `key` (an offerKey() or EXTENSION_CALL_KEY), replacing any earlier arm. An arm with no key is refused.
+  function armAutoAnswer(arm, key, now, windowMs) {
+    if (!arm || !key) {
+      return false;
+    }
+    arm.key = key;
+    arm.until = now + (typeof windowMs === 'number' && windowMs > 0 ? windowMs : AUTO_ANSWER_WINDOW_MS);
+    return true;
+  }
+
+  // Whether the leg arriving now is expected. Consumes the arm: the next leg rings unless something arms again.
+  // Returns the key the leg was expected for, or '' when it was not.
+  function consumeAutoAnswer(arm, now) {
+    if (!arm || !arm.key) {
+      return '';
+    }
+    var key = arm.key;
+    var live = now < arm.until;
+    arm.key = '';
+    arm.until = 0;
+    return live ? key : '';
+  }
+
+  // Drops the arm if it is for `key`.
+  function disarmAutoAnswer(arm, key) {
+    if (arm && arm.key && arm.key === key) {
+      arm.key = '';
+      arm.until = 0;
+    }
+  }
+
+  // A different offer is now the one on screen: an arm left for any other offer is for one that is over.
+  function disarmOtherOffers(arm, key) {
+    if (arm && arm.key && arm.key !== key && arm.key !== EXTENSION_CALL_KEY) {
+      arm.key = '';
+      arm.until = 0;
+    }
+  }
+
+  // The intent the platform stamps on a leg it rings at a call's destination: this phone is the one being called.
+  var DESTINATION_LEG_INTENT = 'ob-dest';
+
+  // The SIP header the platform adds to that leg, for an SDK that hands over no client state (live, Telnyx's did not).
+  var DESTINATION_LEG_HEADER = 'x-destination-leg';
+
+  // Whether the leg is one the platform rang at this phone as somebody's destination -- a colleague calling this
+  // agent's extension -- rather than this phone's own leg of a call it placed. Read from the leg's client state, or
+  // from its SIP header.
+  function isDestinationLeg(options) {
+    if (!options) {
+      return false;
+    }
+    var read = softPhone.readProviderClientState;
+    var state = typeof read === 'function' ? read(options.clientState || options.client_state) : null;
+    if (state && state.i === DESTINATION_LEG_INTENT) {
+      return true;
+    }
+    var readHeader = softPhone.readProviderHeader;
+    return typeof readHeader === 'function' && !!readHeader(options.customHeaders || options.custom_headers, DESTINATION_LEG_HEADER);
+  }
+
+  // Whether an accept made elsewhere may arm this phone for its offer's leg: only for an offer this phone was offered
+  // ({ reservationId: callId }). An offer it never had is another agent's -- the server tells the offer's queue and
+  // every supervisor of each accept -- and arming for it answered the next leg to arrive, whoever's it was.
+  function canArmForOffer(reservationId, offeredReservations) {
+    return !!reservationId && !!offeredReservations && Object.prototype.hasOwnProperty.call(offeredReservations, reservationId);
+  }
+
+  // Whether an accept made elsewhere may arm this phone for the offer's leg. A callback or a preview dial is accepted
+  // from the agent bar and never rings here, so the phone learns of the offer only from the accept: an accept naming
+  // this phone's own user arms it. One naming nobody, or somebody else, arms only for an offer the phone was showing --
+  // the server also sends every offer's settlement to the queue and to supervisors.
+  function canArmForAcceptedOffer(reservationId, offeredReservations, acceptedUserId, ownUserId) {
+    if (canArmForOffer(reservationId, offeredReservations)) {
+      return true;
+    }
+    return !!reservationId && !!acceptedUserId && !!ownUserId && String(acceptedUserId) === String(ownUserId);
+  }
+
+  // Whether an inbound leg arriving now is answered without ringing. Only an arm decides, and only once: nothing the
+  // phone remembers about an earlier call does. A leg that is somebody's call to this phone -- a colleague's extension
+  // call, a call handed over -- always rings, and leaves the arm for the phone's own leg.
+  //   leg - { clientState | client_state, transferLeg }.
+  function shouldAutoAnswerInboundLeg(arm, now, leg) {
+    if (leg && (leg.transferLeg || isDestinationLeg(leg))) {
+      return false;
+    }
+    return consumeAutoAnswer(arm, now) !== '';
+  }
+  softPhone.AUTO_ANSWER_WINDOW_MS = AUTO_ANSWER_WINDOW_MS;
+  softPhone.isDestinationLeg = isDestinationLeg;
+  softPhone.canArmForOffer = canArmForOffer;
+  softPhone.canArmForAcceptedOffer = canArmForAcceptedOffer;
+  softPhone.shouldAutoAnswerInboundLeg = shouldAutoAnswerInboundLeg;
+  softPhone.EXTENSION_CALL_KEY = EXTENSION_CALL_KEY;
+  softPhone.autoAnswerOfferKey = offerKey;
+  softPhone.createAutoAnswerArm = createAutoAnswerArm;
+  softPhone.armAutoAnswer = armAutoAnswer;
+  softPhone.consumeAutoAnswer = consumeAutoAnswer;
+  softPhone.disarmAutoAnswer = disarmAutoAnswer;
+  softPhone.disarmOtherOffers = disarmOtherOffers;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * The leg a supervisor's own soft phone is rung on to listen to, coach or join a Contact Center call.
+ *
+ * The platform rings the supervisor's registered browser with a leg that carries a one-off token -- in its client state
+ * ({ i: 'cc-sv', l: token }) and in an X-Monitor-Leg SIP header, since the provider's SDK may not hand over client
+ * state -- and tells the supervisor's phone, over the real-time channel, to expect that token first. The phone answers
+ * that leg by itself and never rings it as a call: an arm names the one token it is for, is consumed by the leg that
+ * uses it, and lapses. A monitor leg nobody armed for is not a call anybody asked for, so it is hung up rather than
+ * rung; a leg without a monitor tag is never touched here, so every other call rings or auto-answers exactly as before.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // The intent the platform stamps on a supervisor's monitor leg.
+  var MONITOR_LEG_INTENT = 'cc-sv';
+
+  // The SIP header carrying the token, for an SDK that hands over no client state.
+  var MONITOR_LEG_HEADER = 'x-monitor-leg';
+
+  // How long an arm waits for its leg. The platform rings within a second or two of the supervisor's click.
+  var MONITOR_ARM_WINDOW_MS = 30000;
+
+  // How long a monitor leg that arrived before its arm (the real-time message racing the provider's invite) waits for
+  // it before it is hung up.
+  var MONITOR_ARM_WAIT_MS = 3000;
+  function createMonitorLegArms() {
+    return {};
+  }
+
+  // Arms for one token. `info` travels with the arm to whoever handles the answered leg (the agent, the mode).
+  function armMonitorLeg(arms, token, now, info, windowMs) {
+    if (!arms || !token) {
+      return false;
+    }
+    arms[token] = {
+      until: now + (typeof windowMs === 'number' && windowMs > 0 ? windowMs : MONITOR_ARM_WINDOW_MS),
+      info: info || null
+    };
+    return true;
+  }
+  function disarmMonitorLeg(arms, token) {
+    if (arms && token && Object.prototype.hasOwnProperty.call(arms, token)) {
+      delete arms[token];
+    }
+  }
+
+  // The monitor tag of an inbound leg: { token, legId }, or null for any other leg. A leg that says it is a monitor leg
+  // but carries no token is still a monitor leg -- and, with nothing it could match, is never answered.
+  function readMonitorLegTag(options) {
+    if (!options) {
+      return null;
+    }
+    var readState = softPhone.readProviderClientState;
+    var readHeader = softPhone.readProviderHeader;
+    var state = typeof readState === 'function' ? readState(options.clientState || options.client_state) : null;
+    var header = typeof readHeader === 'function' ? readHeader(options.customHeaders || options.custom_headers, MONITOR_LEG_HEADER) : '';
+    var isMonitor = !!(state && state.i === MONITOR_LEG_INTENT);
+    if (!isMonitor && !header) {
+      return null;
+    }
+    return {
+      token: String(isMonitor && state.l || header || ''),
+      legId: options.telnyxCallControlId || options.callControlId || ''
+    };
+  }
+
+  // Consumes the arm the leg was expected on, returning it; null when nothing armed for it or the arm lapsed.
+  function claimMonitorLegArm(arms, tag, now) {
+    if (!arms || !tag || !tag.token || !Object.prototype.hasOwnProperty.call(arms, tag.token)) {
+      return null;
+    }
+    var arm = arms[tag.token];
+    delete arms[tag.token];
+    return now < arm.until ? arm : null;
+  }
+
+  // What to do with a monitor leg now: 'answer' (its arm is here), 'wait' (not yet, but its arm may still be on its way)
+  // or 'hangup'. Does not consume the arm.
+  function monitorLegAction(arms, tag, now, arrivedAt) {
+    if (!tag) {
+      return 'none';
+    }
+    var arm = tag.token && arms && Object.prototype.hasOwnProperty.call(arms, tag.token) ? arms[tag.token] : null;
+    if (arm && now < arm.until) {
+      return 'answer';
+    }
+    return now - arrivedAt < MONITOR_ARM_WAIT_MS ? 'wait' : 'hangup';
+  }
+
+  // Whether a monitor leg takes the place of one this phone already holds for the same engagement. A supervisor who
+  // takes a call over is rung again with the engagement's token, on an ordinary leg the customer can be bridged to (the
+  // provider takes no command on the supervising leg itself); the phone answers it without an arm, since it is the
+  // engagement it is already on.
+  //   legs - the phone's monitor legs, by token: { legId }
+  //   tag  - the arriving leg's monitor tag: { token, legId }
+  function monitorLegReplaces(legs, tag) {
+    if (!legs || !tag || !tag.token || !Object.prototype.hasOwnProperty.call(legs, tag.token)) {
+      return false;
+    }
+    var held = legs[tag.token];
+    return !!(held && held.legId && tag.legId && held.legId !== tag.legId);
+  }
+
+  // Whether the supervisor is heard on a monitor leg in `mode` (the engagement's mode, as the platform names it).
+  // Listening is silent: the platform joins the supervisor muted, and the phone keeps its microphone off too. Coaching
+  // is heard by the agent, and joining by everyone -- as is a call the supervisor took over, which is on as joined.
+  function monitorLegTalks(mode) {
+    return mode === 'Whisper' || mode === 'Barge';
+  }
+
+  // Whether any monitor leg this phone holds has the supervisor talking. The shared microphone is live while one does:
+  // the phone turns it off whenever it holds no call of its own, and a monitor leg is never one, so live, a supervisor
+  // who joined a call or took it over was heard by nobody.
+  //   legs - the phone's monitor legs, by token: { info: { mode } }
+  function anyMonitorLegTalks(legs) {
+    return Object.keys(legs || {}).some(function (token) {
+      var leg = legs[token];
+      return !!(leg && leg.info && monitorLegTalks(leg.info.mode));
+    });
+  }
+  softPhone.MONITOR_LEG_INTENT = MONITOR_LEG_INTENT;
+  softPhone.MONITOR_LEG_HEADER = MONITOR_LEG_HEADER;
+  softPhone.MONITOR_ARM_WINDOW_MS = MONITOR_ARM_WINDOW_MS;
+  softPhone.MONITOR_ARM_WAIT_MS = MONITOR_ARM_WAIT_MS;
+  softPhone.createMonitorLegArms = createMonitorLegArms;
+  softPhone.armMonitorLeg = armMonitorLeg;
+  softPhone.disarmMonitorLeg = disarmMonitorLeg;
+  softPhone.readMonitorLegTag = readMonitorLegTag;
+  softPhone.claimMonitorLegArm = claimMonitorLegArm;
+  softPhone.monitorLegAction = monitorLegAction;
+  softPhone.monitorLegReplaces = monitorLegReplaces;
+  softPhone.monitorLegTalks = monitorLegTalks;
+  softPhone.anyMonitorLegTalks = anyMonitorLegTalks;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * When the soft phone rings for a Contact Center offer, and when another open page silences it.
+ *
+ * Answering an offer waits on the server to accept it before the call connects; the ringtone carried on through that
+ * round trip after the agent had clicked Answer, so a pending accept silences it.
+ *
+ * Every open agent page runs its own soft phone and rings for the same offer. The page the agent answers or declines
+ * in tells the others through the browser ('offer-handled' on the 'crestapps-soft-phone-offers' channel): each settles
+ * the offer's leg if it is the one holding it, and a page ringing for that same call marks it handled and falls silent
+ * -- only for that call, so an unrelated call ringing in another page keeps ringing.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+  var OFFER_CHANNEL_NAME = 'crestapps-soft-phone-offers';
+  var OFFER_HANDLED_MESSAGE = 'offer-handled';
+
+  // Whether to ring: an offer is on screen and nobody has started accepting it.
+  function shouldRingForOffer(offerVisible, acceptPending) {
+    return !!offerVisible && !acceptPending;
+  }
+
+  // What an 'offer-handled' message from another page means here. Returns null for anything else, otherwise
+  // { reservationId, answered, marksCurrentCallHandled }: the offer whose leg to settle (may be empty), whether it
+  // was answered, and whether the call this page is showing is the one that was handled.
+  function readOfferHandledMessage(message, currentCallId) {
+    if (!message || message.type !== OFFER_HANDLED_MESSAGE) {
+      return null;
+    }
+    return {
+      reservationId: message.reservationId || '',
+      answered: !!message.answered,
+      marksCurrentCallHandled: !!currentCallId && currentCallId === message.callId
+    };
+  }
+  softPhone.OFFER_CHANNEL_NAME = OFFER_CHANNEL_NAME;
+  softPhone.OFFER_HANDLED_MESSAGE = OFFER_HANDLED_MESSAGE;
+  softPhone.shouldRingForOffer = shouldRingForOffer;
+  softPhone.readOfferHandledMessage = readOfferHandledMessage;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * When the soft phone gives up ringing for a Contact Center offer on its own.
+ *
+ * The server owns an offer's deadline. When it passes, the server expires the offer, moves the caller on (voicemail,
+ * back into the queue, the next agent) and tells every agent screen the offer is gone -- that revocation is what
+ * stops the ringing. The phone keeps a fallback only for a revocation that never arrives, and that fallback must never
+ * fire before the server's deadline: a phone that stopped ringing on its own clock while the server still held the
+ * offer left the agent watching a silent phone while the caller rang on, and their status changed long after.
+ *
+ * So the fallback is measured on the server's clock, not the device's (the offer carries the server's time alongside
+ * its deadline), and it waits a grace period past the deadline for the revocation to land first.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // How long past the server's deadline the phone waits for the server's revocation before it stops ringing anyway.
+  var OFFER_RING_STOP_GRACE_MS = 2000;
+
+  // Where the offset measured for an offer is remembered, so re-rendering the same offer later does not mistake the
+  // time that has passed since it arrived for clock drift.
+  var OFFSET_KEY = '__crestAppsServerOffsetMs';
+  function parseUtcMs(value) {
+    if (!value) {
+      return null;
+    }
+    var parsed = Date.parse(value);
+    return isFinite(parsed) ? parsed : null;
+  }
+
+  // How far this device's clock runs ahead of the server's (negative when behind), from the server's time stamped on
+  // a message and when this device received it. Zero when the message carried no server time.
+  function computeServerOffsetMs(serverTimeUtc, receivedAtMs) {
+    var serverMs = parseUtcMs(serverTimeUtc);
+    return serverMs === null || !isFinite(receivedAtMs) ? 0 : receivedAtMs - serverMs;
+  }
+
+  // How long from now until the phone stops ringing on its own: the server's deadline, moved onto this device's clock
+  // by the offset, plus the grace period. Never negative; null when the offer carries no deadline, in which case only
+  // the server's revocation ends the ring.
+  function computeOfferRingStopDelayMs(expiresUtc, serverOffsetMs, nowMs, graceMs) {
+    var expiresMs = parseUtcMs(expiresUtc);
+    if (expiresMs === null) {
+      return null;
+    }
+    var grace = typeof graceMs === 'number' && graceMs >= 0 ? graceMs : OFFER_RING_STOP_GRACE_MS;
+    var offset = isFinite(serverOffsetMs) ? serverOffsetMs : 0;
+    return Math.max(0, expiresMs + offset + grace - nowMs);
+  }
+
+  // The same, read off an offer's properties ({ expiresUtc, serverTimeUtc }). The clock offset is measured the first
+  // time the offer is seen and remembered on it.
+  function offerRingStopDelayMs(properties, nowMs) {
+    if (!properties) {
+      return null;
+    }
+    if (typeof properties[OFFSET_KEY] !== 'number') {
+      try {
+        Object.defineProperty(properties, OFFSET_KEY, {
+          value: computeServerOffsetMs(properties.serverTimeUtc, nowMs),
+          enumerable: false,
+          configurable: true,
+          writable: true
+        });
+      } catch (e) {
+        return computeOfferRingStopDelayMs(properties.expiresUtc, computeServerOffsetMs(properties.serverTimeUtc, nowMs), nowMs);
+      }
+    }
+    return computeOfferRingStopDelayMs(properties.expiresUtc, properties[OFFSET_KEY], nowMs);
+  }
+  softPhone.OFFER_RING_STOP_GRACE_MS = OFFER_RING_STOP_GRACE_MS;
+  softPhone.computeServerOffsetMs = computeServerOffsetMs;
+  softPhone.computeOfferRingStopDelayMs = computeOfferRingStopDelayMs;
+  softPhone.offerRingStopDelayMs = offerRingStopDelayMs;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * Which provider call in this browser a report about a platform call applies to.
+ *
+ * The browser can hold two kinds of provider call at once. One carries the media of a call the server tracks: the leg
+ * the platform rang for a Contact Center offer (pre-dialed while the offer rang, or rung at the accept), or the agent's
+ * own leg of an extension call. The server is the authority on that call, and its reports -- held, connected, ended,
+ * or no longer there -- are instructions for that leg. The other kind is a call the agent placed from the keypad, which
+ * the server knows nothing about and whose own provider session is its only authority.
+ *
+ * The media adapter used to keep a single "current" call for both. Placing a keypad call while a platform call was on
+ * hold made the keypad call current, so from then on every report about the platform call went to the keypad call:
+ * resuming unheld the wrong call, and when the agent hung up the platform call its leg stayed up, because the adapter
+ * also still believed its current call was browser-placed and treated the server's "no call" as silence. These are the
+ * pure decisions that keep the two apart.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // { platform, platformLegs, browser, browserLegs }: the latest leg carrying a server-tracked call and every such leg
+  // still up, the latest call placed from this browser's keypad, and every keypad call still up. The agent can place a
+  // second call while the first is on hold, and the first is no less this browser's for it: with only the latest
+  // remembered, the held call was forgotten the moment the second one ended, and its own hang-up was never heard.
+  function createCallLegs() {
+    return {
+      platform: null,
+      platformLegs: [],
+      browser: null,
+      browserLegs: []
+    };
+  }
+  function notePlatformLeg(legs, leg) {
+    if (legs && leg) {
+      legs.platformLegs = legs.platformLegs || [];
+      if (legs.platformLegs.indexOf(leg) < 0) {
+        legs.platformLegs.push(leg);
+      }
+      legs.platform = leg;
+    }
+  }
+
+  // The provider's id for a leg, as the platform names the call it carries: the leg the platform rang for a number
+  // dialed here, or for an extension call, is the call the server tracks.
+  function legCallId(leg) {
+    var options = leg && leg.options || {};
+    return String(options.telnyxCallControlId || options.callControlId || '');
+  }
+  function noteBrowserLeg(legs, leg) {
+    if (legs && leg) {
+      legs.browserLegs = legs.browserLegs || [];
+      if (legs.browserLegs.indexOf(leg) < 0) {
+        legs.browserLegs.push(leg);
+      }
+      legs.browser = leg;
+    }
+  }
+  function forgetLeg(legs, leg) {
+    if (!legs || !leg) {
+      return;
+    }
+    var platformIndex = legs.platformLegs ? legs.platformLegs.indexOf(leg) : -1;
+    if (platformIndex >= 0) {
+      legs.platformLegs.splice(platformIndex, 1);
+    }
+    if (legs.platform === leg) {
+      legs.platform = legs.platformLegs && legs.platformLegs.length ? legs.platformLegs[legs.platformLegs.length - 1] : null;
+    }
+    var index = legs.browserLegs ? legs.browserLegs.indexOf(leg) : -1;
+    if (index >= 0) {
+      legs.browserLegs.splice(index, 1);
+    }
+    if (legs.browser === leg) {
+      legs.browser = legs.browserLegs && legs.browserLegs.length ? legs.browserLegs[legs.browserLegs.length - 1] : null;
+    }
+  }
+
+  // The leg a report about the platform call `callId` is about. Several calls the server tracks can be up at once --
+  // numbers dialed from the keypad and connected by the platform each ring a leg of their own -- and a report about
+  // one of them applied to whichever leg arrived last held, resumed or hung up the wrong call. A leg whose own id is
+  // the call's is that call's. A Contact Center call is reported by the caller's leg, which is not the agent's, so a
+  // report that names no leg here goes to the latest platform leg -- unless that leg is already known to carry a
+  // call of its own.
+  function platformLegFor(legs, callId) {
+    var candidates = legs && legs.platformLegs || [];
+    var id = callId ? String(callId) : '';
+    if (id) {
+      for (var i = 0; i < candidates.length; i++) {
+        if (legCallId(candidates[i]) === id) {
+          return candidates[i];
+        }
+      }
+    }
+    var latest = legs && legs.platform || null;
+    if (latest && id && legs.reportedCallIds && legs.reportedCallIds.indexOf(legCallId(latest)) >= 0) {
+      return null;
+    }
+    return latest;
+  }
+
+  // Remembers that the server reported a call by this id, so its leg is known to carry that call.
+  function noteReportedCall(legs, callId) {
+    if (legs && callId) {
+      legs.reportedCallIds = legs.reportedCallIds || [];
+      if (legs.reportedCallIds.indexOf(String(callId)) < 0) {
+        legs.reportedCallIds.push(String(callId));
+      }
+    }
+  }
+
+  // What a report about the platform call asks of the media.
+  //   stateName - the reported state ('Connected', 'OnHold', 'Disconnected', ...), or null when the server reports
+  //               no call at all.
+  //   callId    - the call the report is about, when it names one.
+  // Returns { action: 'none' | 'hold' | 'resume' | 'hangup', leg }. A keypad call is never the leg: the server
+  // cannot know when it ends and has no hold of it to report.
+  function planPlatformReport(legs, stateName, callId) {
+    noteReportedCall(legs, callId);
+    var leg = platformLegFor(legs, callId);
+    if (!leg) {
+      return {
+        action: 'none',
+        leg: null
+      };
+    }
+    if (!stateName || stateName === 'Disconnected' || stateName === 'Failed') {
+      return {
+        action: 'hangup',
+        leg: leg
+      };
+    }
+    if (stateName === 'OnHold') {
+      return {
+        action: 'hold',
+        leg: leg
+      };
+    }
+    if (stateName === 'Connected') {
+      return {
+        action: 'resume',
+        leg: leg
+      };
+    }
+    return {
+      action: 'none',
+      leg: leg
+    };
+  }
+
+  // Forgets a leg that ended and returns the one that should now be the adapter's current call: the platform leg,
+  // when a keypad call placed on top of it has ended, so the platform leg's own events and hang-up are heard again;
+  // else the latest keypad call still up, such as the one the agent held to place the call that just ended.
+  function legAfterEnd(legs, endedLeg) {
+    forgetLeg(legs, endedLeg);
+    return legs && (legs.platform || legs.browser) || null;
+  }
+
+  // Every call this browser holds: the platform leg and each keypad call, once each.
+  function allLegs(legs) {
+    var all = [];
+    if (!legs) {
+      return all;
+    }
+    [legs.platform].concat(legs.platformLegs || [], [legs.browser], legs.browserLegs || []).forEach(function (leg) {
+      if (leg && all.indexOf(leg) < 0) {
+        all.push(leg);
+      }
+    });
+    return all;
+  }
+
+  // Whether a call may be offered for a conference. Merging is a server command over calls the server tracks; a
+  // call this browser placed itself cannot be part of one, so it is never offered.
+  function canConferenceCall(call) {
+    return !!(call && call.callId && !call.browserOriginated);
+  }
+  softPhone.createCallLegs = createCallLegs;
+  softPhone.notePlatformLeg = notePlatformLeg;
+  softPhone.noteBrowserLeg = noteBrowserLeg;
+  softPhone.forgetLeg = forgetLeg;
+  softPhone.planPlatformReport = planPlatformReport;
+  softPhone.platformLegFor = platformLegFor;
+  softPhone.legAfterEnd = legAfterEnd;
+  softPhone.allLegs = allLegs;
+  softPhone.canConferenceCall = canConferenceCall;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * How a number typed on the keypad is placed, and how the phone's one microphone follows several calls at once.
+ *
+ * A call the browser dials itself through the provider's SDK is invisible to the platform on some providers (Telnyx: the
+ * credential connection reports nothing), so it can be neither transferred nor merged. A provider that can connect the
+ * dial on the server instead (TelephonyCapabilities.BridgedDial) is asked to: it rings this browser's own registered
+ * credential, which the phone answers without ringing, and dials the number from there. When the provider says it
+ * cannot -- and only then, because nothing was dialed -- the phone dials the number itself, as before.
+ *
+ * With calls placed that way the phone holds several calls the platform tracks, each on a leg of its own, all sending
+ * the same microphone track. The track used to follow whichever call was reported last, so holding one call muted the
+ * agent on the call they had just resumed.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // Must match CrestApps.OrchardCore.Telephony.TelephonyConstants.
+  var BRIDGED_DIAL_LEG_CAPABILITY = 'bridged-dial-leg';
+  var BRIDGE_UNAVAILABLE = 'bridge-unavailable';
+  var SOFT_PHONE_CREDENTIAL_ID = 'softPhoneCredentialId';
+  function canOriginate(session) {
+    return !!(session && session.canOriginate && typeof session.originate === 'function');
+  }
+
+  // How to place a keypad dial:
+  //   bridgedDial  - whether the provider connects keypad dials itself (the BridgedDial capability)
+  //   session      - the browser audio session, or null when the phone has none
+  //   credentialId - the credential this phone is registered on
+  // Returns 'bridge' (ask the provider, naming this phone), 'browser' (dial it here) or 'server' (a plain Dial).
+  function planKeypadDial(options) {
+    options = options || {};
+    if (options.bridgedDial && options.session && options.credentialId) {
+      return 'bridge';
+    }
+    return canOriginate(options.session) ? 'browser' : 'server';
+  }
+
+  // The Dial request that asks the provider to connect the number through this phone's own leg.
+  function bridgedDialRequest(number, credentialId) {
+    var metadata = {};
+    metadata[SOFT_PHONE_CREDENTIAL_ID] = credentialId;
+    return {
+      to: number,
+      isExtension: false,
+      metadata: metadata
+    };
+  }
+
+  // Whether the provider's answer to a bridged dial means the phone should dial the number itself: the provider said it
+  // could not connect it and created no leg. Any other failure -- a refused number, a call the provider may have placed
+  // -- is shown, never dialed a second time.
+  function shouldDialFromBrowser(result, session) {
+    return !!(result && result.succeeded === false && result.errorCode === BRIDGE_UNAVAILABLE && canOriginate(session));
+  }
+
+  // Whether the shared microphone track should be live after a report about one call.
+  //   reported - the call the report is about: { state, isMuted }
+  //   others   - every other call the phone shows: { state, isMuted, isOnHold, browserOriginated }
+  //   isHeld   - optional; whether the agent holds a call (a browser-audio hold happens here, not on the server)
+  // A connected call speaks for itself -- muting it mutes the agent. A call that is held, ringing or over leaves the
+  // microphone to the others: live while the agent is talking on any of them, or a call this browser placed is up.
+  function sharedMicrophoneEnabled(reported, others, isHeld) {
+    var held = typeof isHeld === 'function' ? isHeld : function () {
+      return false;
+    };
+    if (reported && reported.state === 'Connected' && !reported.isOnHold && !held(reported)) {
+      return !reported.isMuted;
+    }
+    return (others || []).some(function (call) {
+      if (!call) {
+        return false;
+      }
+
+      // A call placed here is muted through its own session, which mutes this same track.
+      if (call.browserOriginated) {
+        return !call.isMuted;
+      }
+      return call.state === 'Connected' && !call.isMuted && !call.isOnHold && !held(call);
+    });
+  }
+  softPhone.BRIDGED_DIAL_LEG_CAPABILITY = BRIDGED_DIAL_LEG_CAPABILITY;
+  softPhone.BRIDGE_UNAVAILABLE = BRIDGE_UNAVAILABLE;
+  softPhone.planKeypadDial = planKeypadDial;
+  softPhone.bridgedDialRequest = bridgedDialRequest;
+  softPhone.shouldDialFromBrowser = shouldDialFromBrowser;
+  softPhone.sharedMicrophoneEnabled = sharedMicrophoneEnabled;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * Merging calls into a conference, and showing the conference once it exists.
+ *
+ * With one call held and a second call up, the only way to join them was to tick a checkbox beside each call in the
+ * active-call list and then find an unlabelled icon among the call buttons, which only appeared once two boxes were
+ * ticked. Agents did not find it. The phone then offered a labelled Merge that joined every call it could, which with
+ * three or more calls up was not what the agent meant. Now every call line carries its own checkbox, in the keypad view
+ * where the lines are listed; Merge is offered as soon as two lines could be joined, names how many it joins, and does
+ * something only once two or more are ticked. A running conference counts as one line: ticking it and another call adds
+ * that call to the conference. A conference's participants are listed under their own heading, each with a hang-up.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+  function defaultStateOf(call) {
+    return call ? String(call.state || '') : '';
+  }
+  function defaultIsConference(call) {
+    var value = call && call.metadata ? call.metadata.isConference : false;
+    return value === true || value === 1 || value === 'true' || value === 'True';
+  }
+  function metadataText(call, key) {
+    var value = call && call.metadata ? call.metadata[key] : null;
+    return value == null ? '' : String(value);
+  }
+
+  // Merging is a server command over calls the server tracks (see soft-phone/call-legs.js); a call this browser
+  // placed itself is never part of one.
+  function canJoin(call) {
+    return typeof softPhone.canConferenceCall === 'function' ? softPhone.canConferenceCall(call) : !!(call && call.callId && !call.browserOriginated);
+  }
+
+  // What a Merge would do with the calls the agent ticked.
+  //   calls      - the active calls.
+  //   selections - { callId: true } for the calls the agent ticked.
+  //   options    - { stateOf(call) -> 'Connected' | 'OnHold' | ..., isConference(call) -> bool }.
+  // Returns:
+  //   offered          - two or more lines could be joined, so the Merge action is shown.
+  //   canMerge         - two or more of them are ticked, so the Merge action does something.
+  //   selectedCount    - how many lines are ticked; a running conference counts as one line.
+  //   callIds          - the calls the merge command names: the conference's own call first when adding to it.
+  //   calls            - the ticked calls.
+  //   addsToConference - one of the ticked lines is a running conference the others join.
+  //   conferenceName   - that conference's name, when the provider gave it one.
+  //   eligibleCallIds  - every call that can be ticked, for Select all.
+  //   allSelected      - every call that can be ticked is.
+  //   blocked          - 'browser-call' when a call on screen cannot be merged because this browser placed it.
+  function planMerge(calls, selections, options) {
+    options = options || {};
+    selections = selections || {};
+    var stateOf = options.stateOf || defaultStateOf;
+    var isConference = options.isConference || defaultIsConference;
+    var live = (calls || []).filter(function (call) {
+      var state = stateOf(call);
+      return call && (state === 'Connected' || state === 'OnHold');
+    });
+    var eligible = live.filter(canJoin);
+    var participants = eligible.filter(isConference);
+    var others = eligible.filter(function (call) {
+      return !isConference(call);
+    });
+    var ticked = function (call) {
+      return !!selections[call.callId];
+    };
+    var conferenceTicked = participants.some(ticked);
+    var tickedOthers = others.filter(ticked);
+    var units = (participants.length ? 1 : 0) + others.length;
+    var selectedCount = (conferenceTicked ? 1 : 0) + tickedOthers.length;
+    var canMerge = selectedCount >= 2;
+    var primary = null;
+    var conferenceName = '';
+    if (participants.length) {
+      // A provider's report of one participant replaces what the phone noted on it, so the conference's own call
+      // and name are read from whichever participant still carries them.
+      var primaryId = participants.map(function (call) {
+        return metadataText(call, 'conferencePrimaryCallId');
+      }).filter(Boolean)[0];
+      primary = participants.filter(function (call) {
+        return call.callId === primaryId;
+      })[0] || participants[0];
+      conferenceName = metadataText(primary, 'conferenceName') || participants.map(function (call) {
+        return metadataText(call, 'conferenceName');
+      }).filter(Boolean)[0] || '';
+    }
+    var chosen = conferenceTicked ? [primary].concat(tickedOthers) : tickedOthers;
+    return {
+      offered: units >= 2,
+      canMerge: canMerge,
+      selectedCount: selectedCount,
+      callIds: canMerge ? chosen.map(function (call) {
+        return call.callId;
+      }) : [],
+      calls: (conferenceTicked ? participants.filter(ticked) : []).concat(tickedOthers),
+      addsToConference: canMerge && conferenceTicked,
+      conferenceName: conferenceTicked ? conferenceName : '',
+      eligibleCallIds: eligible.map(function (call) {
+        return call.callId;
+      }),
+      allSelected: eligible.length > 0 && eligible.every(ticked),
+      blocked: live.length > eligible.length ? 'browser-call' : ''
+    };
+  }
+
+  // The conference a merge that succeeded made: every call now in it, the call it was made from and its name, which
+  // the next "add to conference" names so the provider joins that conference rather than making another.
+  //   calls   - the active calls.
+  //   plan    - the plan the merge was sent from (see planMerge).
+  //   result  - the provider's answer: its call is the call the conference was made from, and may carry the name.
+  //   options - { isConference(call) -> bool }.
+  // Returns { callIds, primaryCallId, conferenceName }.
+  function conferenceAfterMerge(calls, plan, result, options) {
+    options = options || {};
+    var isConference = options.isConference || defaultIsConference;
+    var callIds = plan.addsToConference ? (calls || []).filter(isConference).map(function (call) {
+      return call.callId;
+    }) : [];
+    (plan.callIds || []).forEach(function (callId) {
+      if (callIds.indexOf(callId) === -1) {
+        callIds.push(callId);
+      }
+    });
+    var resultCall = result && result.call ? result.call : null;
+    return {
+      callIds: callIds,
+      primaryCallId: plan.addsToConference || !resultCall || !resultCall.callId ? (plan.callIds || [])[0] || '' : String(resultCall.callId),
+      conferenceName: metadataText(resultCall, 'conferenceName') || plan.conferenceName || ''
+    };
+  }
+  function format(template, value) {
+    return String(template).replace('{0}', value);
+  }
+  function unselectableText(reason, strings) {
+    if (reason === 'browser-call') {
+      return strings.cannotMergeBrowserCall || 'A call dialed from this phone cannot be merged into a conference.';
+    }
+
+    // A line still connecting or ringing: the provider refuses to join a call nobody has answered.
+    return reason === 'not-answered' ? strings.cannotMergeUnanswered || 'Waiting for them to answer before this call can be merged.' : '';
+  }
+  function row(item, strings, escapeHtml, inConference, withCheck) {
+    var reason = item.selectable ? '' : unselectableText(item.unselectableReason, strings);
+    var check = withCheck ? '<input type="checkbox" class="telephony-soft-phone__active-call-check" data-telephony-conference-call="' + escapeHtml(item.callId) + '"' + (item.selected && item.selectable ? ' checked' : '') + (item.selectable ? '' : ' disabled') + (reason ? ' title="' + escapeHtml(reason) + '"' : '') + ' aria-label="' + escapeHtml(format(strings.selectCall || 'Select {0}', item.number)) + '" />' : '';
+    // Only the phone's own Hang up is red: dropping one participant is a quiet control beside their row.
+    var hangup = inConference && item.canHangup ? '<button type="button" class="telephony-soft-phone__participant-hangup" data-telephony-participant-hangup="' + escapeHtml(item.callId) + '" title="' + escapeHtml(format(strings.hangupParticipant || 'Hang up {0}', item.number)) + '" aria-label="' + escapeHtml(format(strings.hangupParticipant || 'Hang up {0}', item.number)) + '">' + '<i class="fa-solid fa-user-minus" aria-hidden="true"></i></button>' : '';
+    // The line's state as a chip -- Active, On hold, Ringing -- and how long it has been up.
+    var stateKind = item.stateKind ? ' telephony-soft-phone__line-state--' + escapeHtml(item.stateKind) : '';
+    var timer = item.elapsed ? '<span class="telephony-soft-phone__line-timer" data-telephony-line-timer="' + escapeHtml(item.callId) + '">' + escapeHtml(item.elapsed) + '</span>' : '';
+    return '<div class="telephony-soft-phone__active-call' + (item.current ? ' is-current' : '') + (inConference ? ' is-participant' : '') + '"' + (inConference ? ' data-telephony-conference-participant="' + escapeHtml(item.callId) + '"' : '') + '>' + check + '<button type="button" class="telephony-soft-phone__active-call-select" data-telephony-call-select="' + escapeHtml(item.callId) + '"' + (item.current ? ' aria-current="true"' : '') + '>' + '<span class="telephony-soft-phone__active-call-number">' + escapeHtml(item.number) + '</span>' + '<span class="telephony-soft-phone__active-call-meta">' + '<span class="telephony-soft-phone__active-call-state telephony-soft-phone__line-state' + stateKind + '">' + escapeHtml(item.state) + '</span>' + timer + '</span>' + '</button>' + hangup + '</div>';
+  }
+  function mergeBarHtml(merge, strings, escapeHtml) {
+    var names = (merge.numbers || []).join(' + ');
+    var summary;
+    var action;
+    if (!merge.canMerge) {
+      summary = strings.mergeSelectHint || 'Tick two or more calls to merge them.';
+      action = strings.mergeCalls || 'Merge calls';
+    } else if (merge.addsToConference) {
+      summary = format(strings.addToConferenceSummary || 'Add {0} to the conference.', names);
+      action = strings.addToConference || 'Add to conference';
+    } else {
+      summary = format(strings.mergeSummary || 'Join {0} in one conference.', names);
+      action = format(strings.mergeSelectedCalls || 'Merge {0} calls', merge.selectedCount);
+    }
+    return '<div class="telephony-soft-phone__merge-bar">' + '<label class="telephony-soft-phone__merge-select-all">' + '<input type="checkbox" data-telephony-merge-select-all' + (merge.allSelected ? ' checked' : '') + ' /> ' + '<span>' + escapeHtml(strings.selectAllCalls || 'Select all') + '</span></label>' + '<span class="telephony-soft-phone__merge-summary" data-telephony-merge-summary role="status">' + escapeHtml(summary) + '</span>' + '<button type="button" class="btn btn-sm btn-primary telephony-soft-phone__merge-calls" data-telephony-merge-calls' + (merge.canMerge ? '' : ' disabled') + '>' + '<i class="fa-solid fa-code-merge" aria-hidden="true"></i> ' + escapeHtml(action) + '</button></div>';
+  }
+
+  // The active-call list: a checkbox beside every line, the conference's participants under their own heading, the
+  // other calls, and -- when two or more lines could be joined -- the Merge action for the ticked ones.
+  //   model - { calls: [{ callId, number, state, current, selectable, unselectableReason, selected, inConference,
+  //                       canHangup }],
+  //             merge: { offered, canMerge, selectedCount, addsToConference, allSelected, numbers: [], blocked } }
+  function buildActiveCallsHtml(model, strings, escapeHtml) {
+    model = model || {};
+    strings = strings || {};
+    var calls = model.calls || [];
+    var participants = calls.filter(function (call) {
+      return call.inConference;
+    });
+    var others = calls.filter(function (call) {
+      return !call.inConference;
+    });
+    var html = '';
+    var merge = model.merge || {};
+    // A checkbox only means something while there is something to merge: once every call is in the conference,
+    // ticking them again would only ask the provider to join them a second time. A call that cannot be merged keeps
+    // its disabled checkbox, which says why.
+    var waiting = calls.length > 1 && calls.some(function (call) {
+      return call.unselectableReason === 'not-answered';
+    });
+    var withChecks = !!(merge.offered || merge.blocked || waiting);
+    if (participants.length) {
+      html += '<div class="telephony-soft-phone__conference" data-telephony-conference role="group" aria-label="' + escapeHtml(format(strings.conferenceParticipants || 'Conference · {0} participants', participants.length)) + '">' + '<div class="telephony-soft-phone__conference-heading">' + '<i class="fa-solid fa-users" aria-hidden="true"></i> ' + escapeHtml(format(strings.conferenceParticipants || 'Conference · {0} participants', participants.length)) + '</div>' + participants.map(function (call) {
+        return row(call, strings, escapeHtml, true, withChecks);
+      }).join('') + '</div>';
+    }
+    html += others.map(function (call) {
+      return row(call, strings, escapeHtml, false, withChecks);
+    }).join('');
+    if (merge.blocked) {
+      html += '<div class="telephony-soft-phone__merge-note" data-telephony-merge-blocked>' + '<i class="fa-solid fa-circle-info" aria-hidden="true"></i> ' + escapeHtml(unselectableText(merge.blocked, strings)) + '</div>';
+    }
+    if (waiting && !merge.blocked) {
+      html += '<div class="telephony-soft-phone__merge-note" data-telephony-merge-waiting>' + '<i class="fa-solid fa-hourglass-half" aria-hidden="true"></i> ' + escapeHtml(unselectableText('not-answered', strings)) + '</div>';
+    }
+    if (merge.offered) {
+      html += mergeBarHtml(merge, strings, escapeHtml);
+    }
+    return html;
+  }
+
+  // ---- What the phone remembers about the conferences it made ----
+  //
+  // A provider may keep no conference flag on a call (Telnyx keeps none), so each time the phone read its calls again
+  // the conference a merge made fell apart on screen into separate lines, each with a checkbox and Merge offered again
+  // -- and a second Merge asked the provider to join calls already in the conference. The phone now remembers which
+  // calls each merge joined and stamps that back onto every report of them. It also remembers a participant who left
+  // on their own while their leg stayed up as the agent's way into the conference (the colleague of the extension call
+  // the conference was made from): that leg is no longer listed.
+
+  function createConferenceMemory() {
+    return {
+      members: {}
+    };
+  }
+  function memberOf(memory, callId) {
+    return memory && memory.members && callId && Object.prototype.hasOwnProperty.call(memory.members, callId) ? memory.members[callId] : null;
+  }
+  function membersByKey(memory, key) {
+    return Object.keys(memory && memory.members || {}).filter(function (callId) {
+      return memory.members[callId].key === key;
+    });
+  }
+
+  // Records the conference a merge made or added to: { callIds, primaryCallId, conferenceName } (see
+  // conferenceAfterMerge). Calls added to a conference already remembered join it.
+  function rememberConference(memory, conference) {
+    if (!memory || !conference || !conference.callIds || !conference.callIds.length) {
+      return;
+    }
+    var existing = conference.callIds.map(function (callId) {
+      return memberOf(memory, callId);
+    }).filter(Boolean)[0];
+    var key = existing ? existing.key : String(conference.primaryCallId || conference.callIds[0]);
+    conference.callIds.forEach(function (callId) {
+      var member = memberOf(memory, callId);
+      memory.members[callId] = {
+        key: key,
+        left: !!(member && member.left)
+      };
+    });
+    membersByKey(memory, key).forEach(function (callId) {
+      memory.members[callId].primaryCallId = String(conference.primaryCallId || key);
+      memory.members[callId].conferenceName = String(conference.conferenceName || '');
+    });
+  }
+
+  // Stamps a remembered conference onto a report of one of its calls, counting only the participants still in it.
+  function applyConferenceMemory(memory, call) {
+    var member = call ? memberOf(memory, call.callId) : null;
+    if (!member) {
+      return call;
+    }
+    call.metadata = call.metadata || {};
+    call.metadata.isConference = true;
+    call.metadata.conferencePrimaryCallId = member.primaryCallId || member.key;
+    call.metadata.conferenceName = member.conferenceName || metadataText(call, 'conferenceName');
+    call.metadata.participantCount = membersByKey(memory, member.key).filter(function (callId) {
+      return !memory.members[callId].left;
+    }).length;
+    return call;
+  }
+
+  // The participant of this call hung up while the call's own leg carries on in the conference.
+  function markParticipantLeft(memory, callId) {
+    var member = memberOf(memory, callId);
+    if (member) {
+      member.left = true;
+    }
+  }
+  function forgetConferenceCall(memory, callId) {
+    if (memberOf(memory, callId)) {
+      delete memory.members[callId];
+    }
+  }
+
+  // Every call of the conference this call is in, itself included; [] for a call in none.
+  function conferenceMembers(memory, callId) {
+    var member = memberOf(memory, callId);
+    return member ? membersByKey(memory, member.key) : [];
+  }
+
+  // The calls to list: a conference call whose participant has left is not one.
+  function visibleConferenceCalls(memory, calls) {
+    return (calls || []).filter(function (call) {
+      var member = call ? memberOf(memory, call.callId) : null;
+      return !(member && member.left);
+    });
+  }
+
+  // Whether these calls are already all in one conference, so merging them again would change nothing.
+  function isOneConference(memory, callIds) {
+    if (!callIds || callIds.length < 2) {
+      return false;
+    }
+    var first = memberOf(memory, callIds[0]);
+    return !!first && callIds.every(function (callId) {
+      var member = memberOf(memory, callId);
+      return !!member && member.key === first.key;
+    });
+  }
+
+  // The legs still up in a conference nobody is left in: once its last participant is gone the agent is talking to
+  // nobody, and those legs are hung up so the conference ends.
+  //   liveCallIds - the calls still up.
+  function conferenceLegsWithoutParticipants(memory, liveCallIds) {
+    var live = (liveCallIds || []).filter(function (callId) {
+      return !!memberOf(memory, callId);
+    });
+    var keys = [];
+    live.forEach(function (callId) {
+      var key = memory.members[callId].key;
+      if (keys.indexOf(key) === -1) {
+        keys.push(key);
+      }
+    });
+    return keys.reduce(function (legs, key) {
+      var ofKey = live.filter(function (callId) {
+        return memory.members[callId].key === key;
+      });
+      var present = ofKey.some(function (callId) {
+        return !memory.members[callId].left;
+      });
+      return present ? legs : legs.concat(ofKey);
+    }, []);
+  }
+
+  // ---- Leaving a conference, and ending it for everyone ----
+  //
+  // Live, the agent merged a dialed number with an extension call and pressed Hang up, and everybody was cut off: the
+  // phone hung up every one of the agent's calls in the conference, and each took its party with it. A phone system's
+  // Hang up leaves a conference and the others stay connected; ending it for everyone is its own, confirmed action.
+
+  // The remembered calls of this call's conference that are still up.
+  function liveMembers(memory, calls, callId) {
+    var up = (calls || []).map(function (call) {
+      return call && call.callId;
+    }).filter(Boolean);
+    return conferenceMembers(memory, callId).filter(function (id) {
+      return up.indexOf(id) !== -1;
+    });
+  }
+
+  // What the agent's Hang up does to the conference `callId` is in.
+  //   calls   - the calls still up.
+  //   options - { isContactCenterCall(call) -> bool }.
+  // Returns { action, leaveCallIds, keepCallIds, endCallIds }:
+  //   'none'  - the call is in no conference; it is hung up as any other.
+  //   'leave' - two or more other parties are still in it: each of the agent's calls in it is taken out of it
+  //             (leaveCallIds), including the agent's own way in whose party already left, and the others carry on. A
+  //             Contact Center caller's call is never the agent's to hang up by leaving (keepCallIds).
+  //   'end'   - only one other party is left, who would be alone in it: every call is hung up (endCallIds).
+  function planConferenceHangup(memory, calls, callId, options) {
+    options = options || {};
+    var members = liveMembers(memory, calls, callId);
+    var plan = {
+      action: 'none',
+      leaveCallIds: [],
+      keepCallIds: [],
+      endCallIds: []
+    };
+    if (!members.length) {
+      return plan;
+    }
+    var parties = members.filter(function (id) {
+      return !memory.members[id].left;
+    });
+    if (parties.length <= 1) {
+      plan.action = 'end';
+      plan.endCallIds = members;
+      return plan;
+    }
+    var isContactCenterCall = options.isContactCenterCall || function () {
+      return false;
+    };
+    var byId = {};
+    (calls || []).forEach(function (call) {
+      if (call && call.callId) {
+        byId[call.callId] = call;
+      }
+    });
+    plan.action = 'leave';
+    members.forEach(function (id) {
+      (isContactCenterCall(byId[id]) ? plan.keepCallIds : plan.leaveCallIds).push(id);
+    });
+    return plan;
+  }
+
+  // Ending the conference `callId` is in for everyone: { primaryCallId, conferenceName, callIds, partyCount } -- the
+  // call it was made from, whose hang-up names the conference to end, every call of it still up, and how many parties
+  // are still in it (for the confirmation) -- or null for a call in no conference.
+  function planConferenceEnd(memory, calls, callId) {
+    var members = liveMembers(memory, calls, callId);
+    if (!members.length) {
+      return null;
+    }
+    var member = memory.members[members[0]];
+    var primaryCallId = members.indexOf(member.primaryCallId) !== -1 ? member.primaryCallId : members[0];
+    return {
+      primaryCallId: primaryCallId,
+      conferenceName: member.conferenceName || '',
+      callIds: [primaryCallId].concat(members.filter(function (id) {
+        return id !== primaryCallId;
+      })),
+      partyCount: members.filter(function (id) {
+        return !memory.members[id].left;
+      }).length
+    };
+  }
+  softPhone.planConferenceHangup = planConferenceHangup;
+  softPhone.planConferenceEnd = planConferenceEnd;
+  softPhone.createConferenceMemory = createConferenceMemory;
+  softPhone.rememberConference = rememberConference;
+  softPhone.applyConferenceMemory = applyConferenceMemory;
+  softPhone.markParticipantLeft = markParticipantLeft;
+  softPhone.forgetConferenceCall = forgetConferenceCall;
+  softPhone.conferenceMembers = conferenceMembers;
+  softPhone.visibleConferenceCalls = visibleConferenceCalls;
+  softPhone.isOneConference = isOneConference;
+  softPhone.conferenceLegsWithoutParticipants = conferenceLegsWithoutParticipants;
+  softPhone.planMerge = planMerge;
+  softPhone.conferenceAfterMerge = conferenceAfterMerge;
+  softPhone.buildActiveCallsHtml = buildActiveCallsHtml;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * What the phone calls each line: a name or a number, never an id.
+ *
+ * Live, a conference row read "v3:UyLVvJ3o7qQklQFQnZpvgJylmV..." -- the provider's id for the agent's own leg -- where
+ * the dialed number belonged, and the phone sometimes showed the conference's id for a moment. The phone reads its calls
+ * again every few seconds, and a provider's report of a call may say nothing of whom it is with; the row then fell back
+ * to the call's id. The numbers a call was first reported with are now remembered and stamped back onto a report that
+ * has none, and a label that is still only an id is replaced by a plain word ("Participant", "Caller").
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // A provider's call control id ("v3:..."), a conference name the platform makes ("conf-...", "ext-...",
+  // "consult-...", "cc-park-..."), a UUID, or a test harness's call id.
+  var ID_PATTERNS = [/^v\d+:/i, /^(conf|ext|consult|cc-[a-z]+)-/i, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, /^call-[0-9a-f-]{8,}$/i];
+  function looksLikeId(value) {
+    return ID_PATTERNS.some(function (pattern) {
+      return pattern.test(value);
+    });
+  }
+
+  // The label to show, or `fallback` when it is empty or only an id.
+  function friendlyCallLabel(label, fallback) {
+    var text = label == null ? '' : String(label).trim();
+    return text && !looksLikeId(text) ? text : fallback || '';
+  }
+  function createCallPartyMemory() {
+    return {};
+  }
+  var PARTY_KEYS = ['from', 'to', 'direction'];
+
+  // Remembers whom a call is with from a report that says, and stamps it onto one that does not.
+  function carryCallParty(memory, call) {
+    if (!call || !call.callId || !memory) {
+      return call;
+    }
+    var remembered = Object.prototype.hasOwnProperty.call(memory, call.callId) ? memory[call.callId] : {};
+    PARTY_KEYS.forEach(function (key) {
+      var value = call[key];
+      if (value != null && value !== '') {
+        remembered[key] = value;
+      } else if (remembered[key] != null) {
+        call[key] = remembered[key];
+      }
+    });
+    if (Object.keys(remembered).length) {
+      memory[call.callId] = remembered;
+    }
+    return call;
+  }
+  function forgetCallParty(memory, callId) {
+    if (memory && callId) {
+      delete memory[callId];
+    }
+  }
+  softPhone.friendlyCallLabel = friendlyCallLabel;
+  softPhone.createCallPartyMemory = createCallPartyMemory;
+  softPhone.carryCallParty = carryCallParty;
+  softPhone.forgetCallParty = forgetCallParty;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * Which in-call controls the phone shows, and how.
+ *
+ * The phone used to put every in-call action in one row of identical round icons -- hold, mute, transfer, a dark red
+ * "disconnect all" and a red hang-up -- over a keypad that stayed open for the whole call. Agents holding a caller to
+ * dial someone else could not tell which icon did what, and two red buttons side by side made "hang up" a guess. Phones
+ * people already know (the iOS and Android in-call screens, Zoom Phone, RingCentral, Teams, Webex, Dialpad) split them:
+ * the agent's own call controls -- Mute, Hold, Keypad and a single red Hang up -- in one labelled row, and the actions
+ * that bring someone else in or hand the call over -- Transfer, Add call, and ending every call -- in a second, quieter
+ * row. The keypad opens only when asked for (or while a held call is waiting for the number to add), and Add call holds
+ * the current call and opens an empty number field with a way back to the held call.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // What the phone shows for the current call.
+  //   options - {
+  //     active, stateName ('Idle' | 'Connecting' | 'Ringing' | 'Connected' | 'OnHold' | ...), muted,
+  //     ringingOffer     - an incoming offer rings, answered or declined on its own card,
+  //     lineCount        - how many calls are up,
+  //     isConference     - the current call is in a conference,
+  //     conferenceParties - how many other parties are still in it,
+  //     keypadOpen       - the agent opened the keypad for digits,
+  //     addingCall       - the agent pressed Add call and is entering the number to add,
+  //     transferOpen     - the transfer panel is open,
+  //     numberIsCallDisplay - the number field only shows the current call's number,
+  //     canHold, canResume, canMute, canHangup, canTransfer, canAddCall, canDial - what the provider can do
+  //   }
+  // Returns {
+  //   callControls, options - whether the primary and the secondary row are shown,
+  //   mute, hold, keypad    - { visible, pressed },
+  //   hangup                - { visible, kind: 'hangup' | 'leave' },
+  //   transfer              - whether Transfer is offered,
+  //   addCall               - { visible, disabledReason: '' | 'hold-unavailable' },
+  //   endAll                - { visible, kind: 'calls' | 'conference' },
+  //   dial, cancelAdd       - whether the dial button and Back to call are shown,
+  //   showKeypad            - whether the keypad is shown
+  // }
+  function planInCallControls(options) {
+    options = options || {};
+    var stateName = String(options.stateName || 'Idle');
+    var active = !!options.active;
+    var connected = active && stateName === 'Connected';
+    var held = active && stateName === 'OnHold';
+    var live = connected || held;
+    var inCall = active && !options.ringingOffer;
+    var adding = inCall && !!options.addingCall;
+    var parties = Number(options.conferenceParties) || 0;
+    var dialOffered = typeof softPhone.shouldOfferDial === 'function' ? softPhone.shouldOfferDial({
+      callActive: active,
+      stateName: stateName,
+      numberIsCallDisplay: !!options.numberIsCallDisplay
+    }) : !active || held && !options.numberIsCallDisplay;
+    var controls = inCall && !adding;
+    var addCallVisible = controls && live && !!options.canDial;
+    return {
+      callControls: controls,
+      options: controls && live,
+      mute: {
+        visible: controls && connected && !!options.canMute,
+        pressed: !!options.muted
+      },
+      hold: {
+        visible: controls && (connected && !!options.canHold || held && !!options.canResume),
+        pressed: held
+      },
+      // The transfer panel takes the keypad's place; its own button goes back to the call.
+      keypad: {
+        visible: controls && connected && !options.transferOpen,
+        pressed: !!options.keypadOpen
+      },
+      hangup: {
+        visible: controls && !!options.canHangup,
+        kind: options.isConference && parties >= 2 ? 'leave' : 'hangup'
+      },
+      transfer: controls && live && !!options.canTransfer,
+      addCall: {
+        visible: addCallVisible,
+        // A connected call is held before the number is entered; a provider that cannot hold cannot add one.
+        disabledReason: addCallVisible && connected && !options.canHold ? 'hold-unavailable' : ''
+      },
+      endAll: {
+        visible: controls && (Number(options.lineCount) || 0) > 1 && !!options.canHangup,
+        kind: options.isConference ? 'conference' : 'calls'
+      },
+      dial: !!options.canDial && (adding || dialOffered),
+      cancelAdd: adding,
+      showKeypad: !options.transferOpen && (!active || adding || held || connected && !!options.keypadOpen)
+    };
+  }
+  softPhone.planInCallControls = planInCallControls;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * Keeping track of the calls this browser placed itself.
+ *
+ * A call dialed from the keypad (or a colleague's direct call the agent answered) runs entirely in the provider SDK.
+ * The platform never sees it, so the phone's own reports are the only record it gets: the call was placed, it is
+ * still up, it ended. Every one of those calls has to report its end exactly once, whatever happened to it.
+ *
+ * The media adapter used to keep a single state callback for "the" outbound call. Dialing a second number while the
+ * first call was on hold handed that callback to the second call, so when the first call ended the phone was never
+ * told: its end never reached the server (the history stayed "in progress" for good) and the phone went on showing
+ * it in a call. The same happened to a call the SDK dropped across a socket reconnect without a word, and to a call
+ * that was live when the page went away. These are the pure decisions that keep every call accounted for:
+ *
+ *   - per-call state callbacks, keyed by the provider's call id, which deliver the end once and then forget the call;
+ *   - which tracked calls the SDK no longer has, so a reconnect can end them instead of leaving them on screen;
+ *   - which of the calls on screen still have a live session behind them;
+ *   - a small journal, kept in the tab's session storage, of calls whose end has not been confirmed to the server yet,
+ *     so a reload or a hub outage cannot lose one;
+ *   - when to tell the server which calls are still up, so it can settle one the phone stopped reporting.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // ---- Per-call state callbacks ----
+
+  function createCallNotifiers() {
+    return {
+      entries: {}
+    };
+  }
+
+  // Registers the callback that owns a call's state. A call is tracked until its end has been delivered.
+  function trackCall(notifiers, callId, notify) {
+    if (!notifiers || !callId || typeof notify !== 'function') {
+      return false;
+    }
+    notifiers.entries[callId] = notify;
+    return true;
+  }
+  function isCallTracked(notifiers, callId) {
+    return !!(notifiers && callId && Object.prototype.hasOwnProperty.call(notifiers.entries, callId));
+  }
+  function trackedCallIds(notifiers) {
+    return notifiers ? Object.keys(notifiers.entries) : [];
+  }
+
+  // Hands a soft-phone state ('Ringing', 'Connected', 'Disconnected') to the callback of the call it is about. The end
+  // is delivered once: the call is forgotten before its callback runs, so a second hang-up notification, or a sweep
+  // that finds the same call gone, finds nothing left to end. Returns whether a callback was told.
+  function deliverCallState(notifiers, callId, stateName) {
+    if (!stateName || !isCallTracked(notifiers, callId)) {
+      return false;
+    }
+    var notify = notifiers.entries[callId];
+    if (stateName === 'Disconnected') {
+      delete notifiers.entries[callId];
+    }
+    try {
+      notify(stateName);
+    } catch (error) {/* a failing callback must not stop the others */}
+    return true;
+  }
+
+  // The tracked calls the provider SDK no longer has live: gone from its call registry, or there in a terminal state.
+  //   sdkCalls   - the SDK's registry of calls by id (Telnyx: client.calls), or null when the client itself is gone.
+  //   isTerminal - tells a terminal SDK state from a live one.
+  function findVanishedCalls(notifiers, sdkCalls, isTerminal) {
+    var registry = sdkCalls || {};
+    return trackedCallIds(notifiers).filter(function (callId) {
+      var call = Object.prototype.hasOwnProperty.call(registry, callId) ? registry[callId] : null;
+      return !call || typeof isTerminal === 'function' && isTerminal(call.state);
+    });
+  }
+
+  // Ends every tracked call: the session they ran on is going away. Returns the ids it ended.
+  function endAllCalls(notifiers) {
+    var callIds = trackedCallIds(notifiers);
+    callIds.forEach(function (callId) {
+      deliverCallState(notifiers, callId, 'Disconnected');
+    });
+    return callIds;
+  }
+
+  // ---- The calls on screen ----
+
+  // Splits the browser-placed calls the phone shows into those that still have a live session behind them and those
+  // that do not. A call is kept only while its controller exists and, when the controller can say, reports it live;
+  // a controller that cannot say (a provider that has no such check) is believed. The rest are gone and must be
+  // ended, or the phone shows a call that no longer exists. A colleague's call still ringing has no controller until
+  // it is answered; its ring prompt owns it, so it is kept.
+  //   calls       - the calls shown, as the phone holds them ({ callId, browserOriginated, browserInbound, state }).
+  //   controllers - the session controllers by call id.
+  function planShownBrowserCalls(calls, controllers) {
+    var plan = {
+      keep: [],
+      ended: []
+    };
+    (calls || []).forEach(function (call) {
+      if (!call || !call.callId || !call.browserOriginated) {
+        return;
+      }
+      if (call.browserInbound && call.state === 'Ringing') {
+        plan.keep.push(call.callId);
+        return;
+      }
+      var controller = controllers ? controllers[call.callId] : null;
+      var live = !!controller && (typeof controller.isLive !== 'function' || controller.isLive() !== false);
+      (live ? plan.keep : plan.ended).push(call.callId);
+    });
+    return plan;
+  }
+
+  // ---- The end-report journal ----
+
+  var JOURNAL_KEY = 'crestapps-soft-phone:browser-calls';
+
+  // The journal: { [callId]: { connected, ended } }. Storage can be missing or throw (a private window, blocked site
+  // data); the phone then works without it and the server's own sweep settles what it cannot.
+  function readCallJournal(storage) {
+    try {
+      var text = storage ? storage.getItem(JOURNAL_KEY) : null;
+      var journal = text ? JSON.parse(text) : null;
+      return journal && typeof journal === 'object' && !Array.isArray(journal) ? journal : {};
+    } catch (error) {
+      return {};
+    }
+  }
+  function writeCallJournal(storage, journal) {
+    try {
+      if (!storage) {
+        return;
+      }
+      if (!journal || !Object.keys(journal).length) {
+        storage.removeItem(JOURNAL_KEY);
+      } else {
+        storage.setItem(JOURNAL_KEY, JSON.stringify(journal));
+      }
+    } catch (error) {/* best effort */}
+  }
+  function updateCallJournal(storage, callId, update) {
+    if (!callId) {
+      return;
+    }
+    var journal = readCallJournal(storage);
+    update(journal);
+    writeCallJournal(storage, journal);
+  }
+  function journalCallStarted(storage, callId) {
+    updateCallJournal(storage, callId, function (journal) {
+      journal[callId] = journal[callId] || {
+        connected: false,
+        ended: false
+      };
+    });
+  }
+  function journalCallConnected(storage, callId) {
+    updateCallJournal(storage, callId, function (journal) {
+      var entry = journal[callId] = journal[callId] || {
+        connected: false,
+        ended: false
+      };
+      entry.connected = true;
+    });
+  }
+  function journalCallEnded(storage, callId, connected) {
+    updateCallJournal(storage, callId, function (journal) {
+      var entry = journal[callId] = journal[callId] || {
+        connected: false,
+        ended: false
+      };
+      entry.connected = !!(entry.connected || connected);
+      entry.ended = true;
+    });
+  }
+
+  // The server confirmed the end: nothing is owed for the call any more.
+  function journalCallSettled(storage, callId) {
+    updateCallJournal(storage, callId, function (journal) {
+      delete journal[callId];
+    });
+  }
+
+  // The ends still owed to the server: every call whose end was not confirmed, and every call the journal holds that
+  // this page is not running -- a call from before a reload, whose session went with the old page.
+  //   liveCallIds - the calls this page still has a live session for.
+  // Returns [{ callId, connected }].
+  function planOwedCallEnds(journal, liveCallIds) {
+    var live = {};
+    (liveCallIds || []).forEach(function (callId) {
+      live[callId] = true;
+    });
+    return Object.keys(journal || {}).filter(function (callId) {
+      var entry = journal[callId];
+      return !!entry && (entry.ended || !live[callId]);
+    }).map(function (callId) {
+      return {
+        callId: callId,
+        connected: !!journal[callId].connected
+      };
+    });
+  }
+
+  // ---- Telling the server which calls are still up ----
+
+  var HEARTBEAT_INTERVAL_MS = 30 * 1000;
+
+  // Whether to tell the server now which calls are up, and what to tell it. The server settles a call the phone
+  // stopped reporting, so the report has to come well inside its timeout, but not with every refresh of the call
+  // list. Only calls the phone placed are reported: a colleague's call it answered is on the platform's own record.
+  // Returns null when there is nothing to send yet.
+  //   calls      - the calls shown ({ callId, browserOriginated, browserInbound, everConnected, state }).
+  //   lastSentMs - when the last report went, or 0.
+  function planCallHeartbeat(calls, lastSentMs, nowMs, intervalMs) {
+    var interval = typeof intervalMs === 'number' && intervalMs > 0 ? intervalMs : HEARTBEAT_INTERVAL_MS;
+    if (lastSentMs && nowMs - lastSentMs < interval) {
+      return null;
+    }
+    var browserCalls = (calls || []).filter(function (call) {
+      return call && call.callId && call.browserOriginated && !call.browserInbound;
+    });
+    if (!browserCalls.length) {
+      return null;
+    }
+    return {
+      callIds: browserCalls.map(function (call) {
+        return call.callId;
+      }),
+      connectedCallIds: browserCalls.filter(function (call) {
+        return !!call.everConnected || call.state === 'Connected' || call.state === 'OnHold';
+      }).map(function (call) {
+        return call.callId;
+      })
+    };
+  }
+  softPhone.createCallNotifiers = createCallNotifiers;
+  softPhone.trackCall = trackCall;
+  softPhone.isCallTracked = isCallTracked;
+  softPhone.trackedCallIds = trackedCallIds;
+  softPhone.deliverCallState = deliverCallState;
+  softPhone.findVanishedCalls = findVanishedCalls;
+  softPhone.endAllCalls = endAllCalls;
+  softPhone.planShownBrowserCalls = planShownBrowserCalls;
+  softPhone.readCallJournal = readCallJournal;
+  softPhone.journalCallStarted = journalCallStarted;
+  softPhone.journalCallConnected = journalCallConnected;
+  softPhone.journalCallEnded = journalCallEnded;
+  softPhone.journalCallSettled = journalCallSettled;
+  softPhone.planOwedCallEnds = planOwedCallEnds;
+  softPhone.planCallHeartbeat = planCallHeartbeat;
+  softPhone.BROWSER_CALL_HEARTBEAT_INTERVAL_MS = HEARTBEAT_INTERVAL_MS;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * One remote audio element per call.
+ *
+ * The provider SDK plays each call's far end through the media element it is handed. The soft phone used to hand
+ * every call the one <audio> element on the page, so a second call attached its stream over the first's (the Telnyx
+ * SDK's SHARED_REMOTE_ELEMENT_OVERWRITE warning, 33011): the held call lost its audio for good, muting one call for
+ * hold muted the other, and when the second call ended the first was left with an element pointing at a dead stream.
+ *
+ * The pool gives the first call the page's own element and every call beside it an element of its own, created on
+ * demand and removed when that call ends. It is pure bookkeeping: creating and disposing an element are the caller's.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  //   primary        - the page's own remote audio element; the first call to need one gets it.
+  //   createElement  - makes an element for a call beside another; returns null when it cannot.
+  //   disposeElement - removes an element the pool created, once its call no longer needs it.
+  function createRemoteElementPool(primary, createElement, disposeElement) {
+    return {
+      primary: primary || null,
+      create: typeof createElement === 'function' ? createElement : function () {
+        return null;
+      },
+      dispose: typeof disposeElement === 'function' ? disposeElement : function () {},
+      byKey: {}
+    };
+  }
+  function isElementInUse(pool, element) {
+    return Object.keys(pool.byKey).some(function (key) {
+      return pool.byKey[key] === element;
+    });
+  }
+
+  // The element a call plays through, claimed for it on first use. The page's own element goes to whichever call
+  // needs one while it is free; a call beside another gets a new element. When no element can be made the page's own
+  // is shared, which is no worse than before.
+  function acquireRemoteElement(pool, key) {
+    if (!pool || !key) {
+      return pool ? pool.primary : null;
+    }
+    if (pool.byKey[key]) {
+      return pool.byKey[key];
+    }
+    var element = pool.primary && !isElementInUse(pool, pool.primary) ? pool.primary : pool.create() || pool.primary;
+    if (element) {
+      pool.byKey[key] = element;
+    }
+    return element;
+  }
+
+  // The element a call already plays through, without claiming one.
+  function remoteElementFor(pool, key) {
+    return pool && key && pool.byKey[key] ? pool.byKey[key] : null;
+  }
+
+  // Moves a claim to another key: an element claimed before the provider gave the call its id.
+  function rekeyRemoteElement(pool, fromKey, toKey) {
+    if (!pool || !fromKey || !toKey || fromKey === toKey || !pool.byKey[fromKey]) {
+      return;
+    }
+    pool.byKey[toKey] = pool.byKey[fromKey];
+    delete pool.byKey[fromKey];
+  }
+
+  // Frees a call's element. One the pool created is disposed once no call uses it; the page's own is only freed.
+  function releaseRemoteElement(pool, key) {
+    if (!pool || !key || !pool.byKey[key]) {
+      return;
+    }
+    var element = pool.byKey[key];
+    delete pool.byKey[key];
+    if (element !== pool.primary && !isElementInUse(pool, element)) {
+      try {
+        pool.dispose(element);
+      } catch (error) {/* best effort */}
+    }
+  }
+
+  // Frees every call's element.
+  function releaseAllRemoteElements(pool) {
+    if (!pool) {
+      return;
+    }
+    Object.keys(pool.byKey).forEach(function (key) {
+      releaseRemoteElement(pool, key);
+    });
+  }
+  softPhone.createRemoteElementPool = createRemoteElementPool;
+  softPhone.acquireRemoteElement = acquireRemoteElement;
+  softPhone.remoteElementFor = remoteElementFor;
+  softPhone.rekeyRemoteElement = rekeyRemoteElement;
+  softPhone.releaseRemoteElement = releaseRemoteElement;
+  softPhone.releaseAllRemoteElements = releaseAllRemoteElements;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * What the dial button may call.
+ *
+ * While a call is held the keypad opens for adding a call, and the number field keeps showing the held call's number
+ * as a display. The dial button used to take whatever the field held. For a call the platform bridged to the agent
+ * that display was the tenant's own caller id, and the dial button appears first in the row -- exactly where the Hold
+ * button had been a moment earlier -- so an agent reaching to resume called the tenant from the tenant: a second call
+ * on top of the held one, which came straight back in as a new inbound call.
+ *
+ * The dial button now dials only a number the agent entered, and never adds a call to the tenant's own outbound caller
+ * id; and it is not offered at all while the field only shows the held call's number.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+  function digitsOf(value) {
+    return value == null ? '' : String(value).replace(/\D+/g, '');
+  }
+
+  // Whether two numbers are the same number, however each is written.
+  function isSameNumber(left, right) {
+    var a = digitsOf(left);
+    return !!a && a === digitsOf(right);
+  }
+
+  // The number to dial.
+  //   number        - what the number field holds.
+  //   isCallDisplay - whether the field is only showing the current call's number, not something the agent entered.
+  //   liveCall      - whether a call is already in progress (the dial adds a call to it).
+  //   ownNumbers    - the tenant's own outbound caller ids.
+  //   isExtension   - whether the keypad is dialing an extension.
+  //   ownExtensions - the agent's own extensions, which only ring the phone doing the dialing.
+  // Returns { number, refused }: the number to dial, or '' with why it was refused ('call-display' | 'own-number' |
+  // 'own-extension').
+  function resolveDialTarget(options) {
+    options = options || {};
+    var number = options.number ? String(options.number) : '';
+    if (!number) {
+      return {
+        number: '',
+        refused: ''
+      };
+    }
+    if (options.isCallDisplay) {
+      return {
+        number: '',
+        refused: 'call-display'
+      };
+    }
+    if (options.isExtension && (options.ownExtensions || []).some(function (own) {
+      return String(own).trim() === number.trim();
+    })) {
+      return {
+        number: '',
+        refused: 'own-extension'
+      };
+    }
+    if (options.liveCall && (options.ownNumbers || []).some(function (own) {
+      return isSameNumber(number, own);
+    })) {
+      return {
+        number: '',
+        refused: 'own-number'
+      };
+    }
+    return {
+      number: number,
+      refused: ''
+    };
+  }
+
+  // Whether to show the dial button: with no call, or on hold once the agent has entered a number to add.
+  function shouldOfferDial(options) {
+    options = options || {};
+    if (!options.callActive) {
+      return true;
+    }
+    return options.stateName === 'OnHold' && !options.numberIsCallDisplay;
+  }
+
+  // Whether the number field should show the current call's number. On a held call the field is where the agent enters
+  // the number to add, and the dial button only appears once they have; writing the held call's number back over that
+  // entry on the next render would hide the button again and throw away what they typed.
+  //   stateName    - the current call's state (normalized: 'Connected', 'OnHold', ...).
+  //   agentEntered - whether the field holds something the agent entered since it last showed a call.
+  function shouldShowCallNumber(options) {
+    options = options || {};
+    return !(options.stateName === 'OnHold' && options.agentEntered);
+  }
+
+  // The other party's number, for the number field and the active-call list. The agent's leg of a call the platform
+  // bridged here is placed from the tenant's own number, so its "from" is the tenant itself; the other side is tried
+  // next, and nothing is shown rather than the tenant's own number.
+  //   call       - the call ({ direction, from, to }).
+  //   ownNumbers - the tenant's own outbound caller ids.
+  function resolvePeerNumber(call, ownNumbers) {
+    if (!call) {
+      return '';
+    }
+    var inbound = call.direction === 1 || call.direction === 'Inbound';
+    var candidates = inbound ? [call.from, call.to] : [call.to, call.from];
+    var own = ownNumbers || [];
+    for (var i = 0; i < candidates.length; i++) {
+      var candidate = candidates[i] ? String(candidates[i]) : '';
+      if (candidate && !own.some(isOwn(candidate))) {
+        return candidate;
+      }
+    }
+    return '';
+  }
+  function isOwn(candidate) {
+    return function (number) {
+      return isSameNumber(candidate, number);
+    };
+  }
+
+  // The states in which a call is up on screen (the soft phone's isActive).
+  var LIVE_STATES = ['Connected', 'OnHold', 'Connecting', 'Ringing'];
+
+  // What the number field shows, decided on every render. A call's label or number is shown for that call only: when
+  // the call it named is over, the field no longer shows it, even while another call (a held one with no number of
+  // its own) is current.
+  //   callId, stateName        - the current call, if any.
+  //   peerNumber, extensionLabel - what that call would show ("Jane Doe · ext 2" for an extension call).
+  //   agentEntered             - the field holds something the agent entered since it last showed a call.
+  //   isCallDisplay            - the field is showing a call's label or number, not an entry.
+  //   displayCallId            - the call it shows it for.
+  //   pendingDial, pendingDialNumber - a dial in flight with no call yet.
+  // Returns { action: 'label' | 'number' | 'pending' | 'clear' | 'keep', value, callId }.
+  function planNumberField(options) {
+    options = options || {};
+    var keep = {
+      action: 'keep',
+      value: '',
+      callId: ''
+    };
+    var clear = {
+      action: 'clear',
+      value: '',
+      callId: ''
+    };
+    var callUp = !!options.callId && LIVE_STATES.indexOf(options.stateName) !== -1;
+    if (callUp) {
+      var label = options.extensionLabel ? String(options.extensionLabel) : '';
+      var number = options.peerNumber ? String(options.peerNumber) : '';
+      if ((label || number) && shouldShowCallNumber({
+        stateName: options.stateName,
+        agentEntered: options.agentEntered
+      })) {
+        return label ? {
+          action: 'label',
+          value: label,
+          callId: options.callId
+        } : {
+          action: 'number',
+          value: number,
+          callId: options.callId
+        };
+      }
+      return options.isCallDisplay && options.displayCallId && options.displayCallId !== options.callId ? clear : keep;
+    }
+    if (options.pendingDial && !options.callId) {
+      return options.pendingDialNumber ? {
+        action: 'pending',
+        value: String(options.pendingDialNumber),
+        callId: ''
+      } : keep;
+    }
+    return options.isCallDisplay ? clear : keep;
+  }
+
+  // What starting an entry does to the field -- focusing it, the first key, switching Number / Extension: 'clear' when
+  // the field only shows a call's label or number, which is never part of what is dialed; 'keep' for the agent's own.
+  function planEntryStart(options) {
+    return options && options.isCallDisplay ? 'clear' : 'keep';
+  }
+
+  // What leaving the field does: 'release' gives an entry the agent left empty back to the held call's display;
+  // 'keep' leaves anything else.
+  function planEntryEnd(options) {
+    options = options || {};
+    var value = options.value == null ? '' : String(options.value).trim();
+    return options.agentEntered && !value ? 'release' : 'keep';
+  }
+  softPhone.planEntryStart = planEntryStart;
+  softPhone.planEntryEnd = planEntryEnd;
+  softPhone.planNumberField = planNumberField;
+  softPhone.isSameNumber = isSameNumber;
+  softPhone.resolvePeerNumber = resolvePeerNumber;
+  softPhone.resolveDialTarget = resolveDialTarget;
+  softPhone.shouldOfferDial = shouldOfferDial;
+  softPhone.shouldShowCallNumber = shouldShowCallNumber;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * Reading a phone number from a field the country-flag input (intl-tel-input) enhances.
+ *
+ * The keypad and the transfer panel both take a phone number this way, and a transfer used to read it its own way: a
+ * plain text box that accepted anything of two digits or more as a number, so an extension typed into it was checked
+ * as a phone number it could never be, and a real number was sent without a country code. The two now share the
+ * keypad's field -- the same flag, the same country, the same completeness check -- and these are the decisions that
+ * field makes.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+  function normalize(value) {
+    return typeof softPhone.normalizeDialNumber === 'function' ? softPhone.normalizeDialNumber(value) : String(value || '').trim();
+  }
+
+  // Enhances a number field with intl-tel-input, the way the keypad's field is. A country is always selected,
+  // otherwise intl-tel-input cannot read a national number as an international one.
+  //   input   - the field.
+  //   options - { intlTelInput, initialCountry, containerClass, dropdownParent, strictMode }.
+  // intl-tel-input is strict by default: it drops every key that is not a digit. A field that also searches by name
+  // (the transfer panel's) passes strictMode: false, or no letter ever reaches it.
+  // Returns the intl-tel-input instance, or null when intl-tel-input is not loaded.
+  function enhancePhoneInput(input, options) {
+    options = options || {};
+    if (!input || typeof options.intlTelInput !== 'function') {
+      return null;
+    }
+    var settings = {
+      containerClass: options.containerClass,
+      dropdownParent: options.dropdownParent
+    };
+    if (options.initialCountry) {
+      settings.initialCountry = options.initialCountry;
+    }
+    if (typeof options.strictMode === 'boolean') {
+      settings.strictMode = options.strictMode;
+    }
+    return options.intlTelInput(input, settings);
+  }
+
+  // The number a field holds, as it would be dialed: in international form whenever it can be.
+  //   raw      - what the field shows.
+  //   telInput - its intl-tel-input instance, if any.
+  function readPhoneInput(raw, telInput) {
+    var value = normalize(raw);
+
+    // A number the user already entered in international form is dialed as-is.
+    if (value.charAt(0) === '+') {
+      return value;
+    }
+    var visibleDigits = value.replace(/\D/g, '');
+    if (telInput && typeof telInput.getNumber === 'function') {
+      // Only trust the intl-tel-input E.164 output for real, valid phone numbers. Short strings are not valid
+      // numbers, so they are not turned into a bogus "+1101" style destination here.
+      var isValid = typeof telInput.isValidNumber !== 'function' || telInput.isValidNumber();
+      if (isValid) {
+        var e164 = telInput.getNumber();
+
+        // Guard against intl-tel-input desyncing (e.g. a keypad edit that did not update its internal state):
+        // only accept its E.164 when its digits actually contain what the user sees, so the dialed number can
+        // never differ from the visible number.
+        if (e164 && e164.charAt(0) === '+' && (visibleDigits === '' || e164.replace(/\D/g, '').indexOf(visibleDigits) !== -1)) {
+          return e164;
+        }
+      }
+    }
+
+    // Fall back to the visible number, prefixed with the selected country's dial code so it stays routable. This
+    // path guarantees the dialed number matches what is on screen.
+    if (visibleDigits && telInput && typeof telInput.getSelectedCountryData === 'function') {
+      var dialCode = (telInput.getSelectedCountryData() || {}).dialCode;
+      if (dialCode) {
+        return visibleDigits.indexOf(dialCode) === 0 ? '+' + visibleDigits : '+' + dialCode + visibleDigits;
+      }
+    }
+    return value;
+  }
+
+  // The number a transfer would be sent to: { value, valid }. With intl-tel-input the keypad's own completeness
+  // check decides; without it the field is read as an international or ten-digit North American number.
+  function readTransferNumber(raw, telInput) {
+    if (telInput && typeof telInput.isValidNumber === 'function') {
+      var value = readPhoneInput(raw, telInput);
+      return {
+        value: value,
+        valid: !!telInput.isValidNumber() && value.charAt(0) === '+'
+      };
+    }
+    var number = typeof softPhone.toInternationalNumber === 'function' ? softPhone.toInternationalNumber(raw) : '';
+    return {
+      value: number,
+      valid: !!number
+    };
+  }
+  softPhone.enhancePhoneInput = enhancePhoneInput;
+  softPhone.readPhoneInput = readPhoneInput;
+  softPhone.readTransferNumber = readTransferNumber;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * Who an extension rings, by name.
+ *
+ * An extension on its own -- "2" -- tells the agent nothing about who they are about to call or transfer to. The server
+ * names the person behind each extension as the site names its users (their display name, else their username), and
+ * the phone reads that list once and keeps it, so a name can be shown beside an extension wherever one appears: the
+ * transfer panel's "Transfer to extension 2 · Jane Doe", the keypad while an extension is typed, the call on screen
+ * ("Jane Doe · ext 2") and the Recent list. Nothing is looked up per keystroke.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // How long the list is trusted before the phone reads it again, when something asks for a name.
+  var EXTENSION_DIRECTORY_MAX_AGE_MS = 5 * 60 * 1000;
+  function text(value) {
+    return value == null ? '' : String(value).trim();
+  }
+  function label(strings, key, fallback) {
+    return strings && typeof strings[key] === 'string' && strings[key] ? strings[key] : fallback;
+  }
+  function format(template, values) {
+    return String(template).replace(/\{(\d+)\}/g, function (match, index) {
+      var value = values[Number(index)];
+      return value === undefined ? match : String(value);
+    });
+  }
+
+  // The phone's copy of the server's extensions: { names: { number: name }, own: [number], loadedAt }. `own` are the
+  // agent's own extensions, which only ring the agent's own phone, so they are never offered or dialed.
+  function createExtensionDirectory() {
+    return {
+      names: {},
+      own: [],
+      loadedAt: 0
+    };
+  }
+
+  // Replaces the copy with the entries the server sent ({ extension, displayName }) and the agent's own extensions.
+  function storeExtensionEntries(directory, entries, now, ownExtensions) {
+    if (!directory) {
+      return;
+    }
+    var names = {};
+    var own = (ownExtensions || []).map(text).filter(Boolean);
+    (entries || []).forEach(function (entry) {
+      var number = text(entry && entry.extension);
+      var name = text(entry && entry.displayName);
+      if (number && name && name !== number) {
+        names[number] = name;
+      }
+    });
+    directory.names = names;
+    directory.own = own;
+    directory.loadedAt = now || Date.now();
+  }
+
+  // The agent's own extensions, as the server named them.
+  function ownExtensions(directory) {
+    return directory && Array.isArray(directory.own) ? directory.own.slice() : [];
+  }
+
+  // Whether the extension is one of the agent's own.
+  function isOwnExtension(directory, number) {
+    var key = text(number);
+    return !!key && ownExtensions(directory).indexOf(key) !== -1;
+  }
+
+  // Whether the copy should be read again: never read, or older than the maximum age.
+  function shouldReloadExtensions(directory, now) {
+    return !directory || !directory.loadedAt || now - directory.loadedAt >= EXTENSION_DIRECTORY_MAX_AGE_MS;
+  }
+
+  // The name of whoever the extension rings, or '' when the phone does not know it.
+  function extensionName(directory, number) {
+    var key = text(number);
+    return directory && directory.names && key && Object.prototype.hasOwnProperty.call(directory.names, key) ? directory.names[key] : '';
+  }
+
+  // Whether a value a call or history entry carries is a name worth showing: not empty, not the extension itself, not a
+  // SIP address and not a number.
+  function isPersonName(value, number) {
+    var candidate = text(value);
+    return !!candidate && candidate !== text(number) && !/^sips?:/i.test(candidate) && !/^[+\d\s().\-]+$/.test(candidate);
+  }
+
+  // "Jane Doe · ext 2", or the bare extension when nobody is known to be behind it.
+  //   name   - the name the directory gives, or '' (see extensionName).
+  //   number - the extension.
+  //   fallbackName - a name the call itself carries (the provider's display name for it), used when the directory
+  //                  has none.
+  function describeExtension(strings, name, number, fallbackName) {
+    var extension = text(number);
+    var person = text(name) || (isPersonName(fallbackName, extension) ? text(fallbackName) : '');
+    if (!extension) {
+      return person;
+    }
+    return person ? format(label(strings, 'extensionWithName', '{0} · ext {1}'), [person, extension]) : extension;
+  }
+
+  // The transfer panel's offer for a typed extension: "Transfer to extension 2 · Jane Doe", or without the name when
+  // the phone does not know who it rings.
+  function transferToExtensionLabel(strings, number, name) {
+    var person = text(name);
+    return person ? format(label(strings, 'transferToExtensionNamed', 'Transfer to extension {0} · {1}'), [number, person]) : format(label(strings, 'transferToExtensionNumber', 'Transfer to extension {0}'), [number]);
+  }
+
+  // The extension a call was placed to, as the server stamped it on the call.
+  function callExtensionNumber(call) {
+    var metadata = call && call.metadata;
+    return metadata ? text(metadata.extensionNumber) : '';
+  }
+
+  // The transfer panel's rows for the phone system's extensions, when the provider has no directory of its own: each
+  // is sent as an extension, never dialed as a phone number. The agent's own are left out.
+  function extensionDirectoryEntries(directory, strings) {
+    var names = directory && directory.names || {};
+    return Object.keys(names).filter(function (number) {
+      return !isOwnExtension(directory, number);
+    }).sort(function (left, right) {
+      return names[left].localeCompare(names[right]) || left.localeCompare(right);
+    }).map(function (number) {
+      return {
+        id: 'extension:' + number,
+        name: names[number],
+        destination: number,
+        detail: format(label(strings, 'transferExtension', 'Ext {0}'), [number]),
+        extension: number,
+        isExtension: true,
+        kind: 'agent',
+        group: label(strings, 'transferGroupExtensions', 'Extensions')
+      };
+    });
+  }
+  softPhone.EXTENSION_DIRECTORY_MAX_AGE_MS = EXTENSION_DIRECTORY_MAX_AGE_MS;
+  softPhone.createExtensionDirectory = createExtensionDirectory;
+  softPhone.storeExtensionEntries = storeExtensionEntries;
+  softPhone.ownExtensions = ownExtensions;
+  softPhone.isOwnExtension = isOwnExtension;
+  softPhone.shouldReloadExtensions = shouldReloadExtensions;
+  softPhone.extensionName = extensionName;
+  softPhone.describeExtension = describeExtension;
+  softPhone.transferToExtensionLabel = transferToExtensionLabel;
+  softPhone.callExtensionNumber = callExtensionNumber;
+  softPhone.extensionDirectoryEntries = extensionDirectoryEntries;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * Who a call may be transferred to, and how.
+ *
+ * The transfer button used to open the browser's own "Transfer to number" prompt. Inside the desktop app's narrow
+ * window that prompt was cut off, it named the site rather than the phone, and it took whatever was typed -- including
+ * the tenant's own number, which only rings the tenant back. The soft phone now picks the target in its own panel: a
+ * directory entry, or a number checked the way the keypad checks one. These are the decisions that panel makes.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // Must match the Transfer and AttendedTransfer flags of CrestApps.OrchardCore.Telephony.Models.TelephonyCapabilities.
+  var TRANSFER_CAPABILITY = 1 << 5;
+  var ATTENDED_TRANSFER_CAPABILITY = 1 << 11;
+
+  // Must match CrestApps.OrchardCore.Telephony.Models.TransferMode.
+  var TRANSFER_MODE_VALUES = {
+    blind: 0,
+    warm: 1
+  };
+  function digitsOf(value) {
+    return value == null ? '' : String(value).replace(/\D+/g, '');
+  }
+
+  // Whether two numbers are the same line. A number typed without its country code is the same North American line as
+  // the tenant's +1 number, so "7025550100" and "+17025550100" match.
+  function isSameLine(left, right) {
+    var a = digitsOf(left);
+    var b = digitsOf(right);
+    if (!a || !b) {
+      return false;
+    }
+    if (a === b) {
+      return true;
+    }
+    return a.length === 11 && a.charAt(0) === '1' && a.substring(1) === b || b.length === 11 && b.charAt(0) === '1' && b.substring(1) === a;
+  }
+
+  // The transfer modes the provider supports, blind first: ['blind'], ['warm'], ['blind', 'warm'] or [].
+  function transferModes(capabilities) {
+    var value = Number(capabilities) || 0;
+    var modes = [];
+    if ((value & TRANSFER_CAPABILITY) === TRANSFER_CAPABILITY) {
+      modes.push('blind');
+    }
+    if ((value & ATTENDED_TRANSFER_CAPABILITY) === ATTENDED_TRANSFER_CAPABILITY) {
+      modes.push('warm');
+    }
+    return modes;
+  }
+
+  // The TransferMode value the hub expects for a mode name; blind for anything it does not know.
+  function transferModeValue(mode) {
+    return Object.prototype.hasOwnProperty.call(TRANSFER_MODE_VALUES, mode) ? TRANSFER_MODE_VALUES[mode] : 0;
+  }
+
+  // Whether what was typed reads as a phone number or extension rather than a name or an address.
+  function isNumberLike(value) {
+    var text = value == null ? '' : String(value).trim();
+    return !!text && /^[+\d\s().\-]+$/.test(text) && /\d/.test(text);
+  }
+
+  // The fields a transfer service's entries carry beyond a provider entry's, kept as they are.
+  var SERVICE_ENTRY_FIELDS = ['kind', 'targetType', 'targetId', 'group', 'presence', 'status', 'disabled', 'isExtension'];
+
+  // A directory entry as the panel shows it: { id, name, destination, detail }, plus what a transfer service's entry
+  // says about what it is (see soft-phone/transfer-service.js).
+  function normalizeDirectoryEntry(entry) {
+    entry = entry || {};
+    var destination = String(entry.destination || entry.extension || entry.phoneNumber || '');
+
+    // A service entry has already said what to show under its name; a provider entry shows its number.
+    var detail = entry.kind ? String(entry.detail == null ? '' : entry.detail) : String(entry.extension || entry.phoneNumber || entry.detail || destination);
+    var normalized = {
+      id: String(entry.id || destination),
+      name: String(entry.displayName || entry.name || destination),
+      destination: destination,
+      detail: detail
+    };
+    SERVICE_ENTRY_FIELDS.forEach(function (field) {
+      if (entry[field] !== undefined) {
+        normalized[field] = entry[field];
+      }
+    });
+    return normalized;
+  }
+
+  // The directory entries matching what the agent typed, by name, extension or number. Entries with nowhere to send
+  // the call are dropped.
+  function filterTransferTargets(entries, query) {
+    var text = query == null ? '' : String(query).trim().toLowerCase();
+    var digits = digitsOf(text);
+    return (entries || []).map(normalizeDirectoryEntry).filter(function (entry) {
+      if (!entry.destination) {
+        return false;
+      }
+      if (!text) {
+        return true;
+      }
+      if (entry.name.toLowerCase().indexOf(text) !== -1 || entry.detail.toLowerCase().indexOf(text) !== -1) {
+        return true;
+      }
+      return !!digits && isNumberLike(text) && (digitsOf(entry.destination).indexOf(digits) !== -1 || digitsOf(entry.detail).indexOf(digits) !== -1);
+    });
+  }
+
+  // A typed number in international format, or '' when it cannot be read as one. A number without a country code
+  // is read as North American only when it has exactly the ten digits one has; anything else must start with +.
+  function toInternationalNumber(value) {
+    var text = value == null ? '' : String(value).trim();
+    var digits = digitsOf(text);
+    if (text.charAt(0) === '+') {
+      return digits.length >= 8 && digits.length <= 15 ? '+' + digits : '';
+    }
+    if (digits.length === 10) {
+      return '+1' + digits;
+    }
+    if (digits.length === 11 && digits.charAt(0) === '1') {
+      return '+' + digits;
+    }
+    return '';
+  }
+
+  // The digits of a typed extension, or '' when what was typed is not one. An extension is only digits, which may
+  // be spaced or dashed the way people write them; a leading + makes it a phone number, not an extension.
+  function readExtension(value) {
+    var text = value == null ? '' : String(value).trim();
+    var digits = digitsOf(text);
+    return /^[\d\s-]+$/.test(text) && digits.length >= 1 && digits.length <= 15 ? digits : '';
+  }
+
+  // What to transfer the call to.
+  //   query      - what the agent typed.
+  //   dialMode   - 'number' (the default) or 'extension', as the panel's Number / Extension toggle is set.
+  //   number     - in number mode, what the country-flag input read from the query: { value, valid }. Without one
+  //                the query is read as an international or ten-digit North American number.
+  //   selected   - the directory entry the agent picked, if any ({ destination, name }); it wins in either mode.
+  //   ownNumbers - the tenant's own outbound caller ids.
+  // Returns { destination, isExtension, label, refused }: where to send the call and whether it is an internal
+  // extension, or '' with why it was refused ('empty' | 'invalid-number' | 'invalid-extension' | 'own-number').
+  function resolveTransferTarget(options) {
+    options = options || {};
+    var selected = options.selected;
+    var refuse = function (reason) {
+      return {
+        destination: '',
+        isExtension: false,
+        label: '',
+        refused: reason
+      };
+    };
+    if (selected && selected.destination) {
+      // A picked extension is sent as one, so the provider rings the colleague rather than dialing the digits.
+      return {
+        destination: String(selected.destination),
+        isExtension: !!selected.isExtension,
+        label: String(selected.name || selected.destination),
+        refused: ''
+      };
+    }
+    var text = options.query == null ? '' : String(options.query).trim();
+    if (!text) {
+      return refuse('empty');
+    }
+    if (options.dialMode === 'extension') {
+      var extension = readExtension(text);
+      return extension ? {
+        destination: extension,
+        isExtension: true,
+        label: text,
+        refused: ''
+      } : refuse('invalid-extension');
+    }
+    if (!isNumberLike(text)) {
+      // A name nobody in the directory was picked for.
+      return refuse('empty');
+    }
+    var reading = options.number || {
+      value: toInternationalNumber(text),
+      valid: !!toInternationalNumber(text)
+    };
+    var number = reading.value ? String(reading.value) : '';
+    if ((options.ownNumbers || []).some(function (own) {
+      return isSameLine(text, own) || isSameLine(number, own);
+    })) {
+      return refuse('own-number');
+    }
+    if (!reading.valid || !number) {
+      return refuse('invalid-number');
+    }
+    return {
+      destination: number,
+      isExtension: false,
+      label: text,
+      refused: ''
+    };
+  }
+
+  // The directory entry a typed name picks, so Enter transfers to the one person the list narrowed to: { entry, refused }.
+  // A name matching several people is refused as 'several-match', one matching nobody as 'no-match'. Digits, and an
+  // empty field, pick nothing: they are an extension or a number, offered as one (see resolveTransferTarget).
+  function pickTypedMatch(entries, query) {
+    var text = query == null ? '' : String(query).trim();
+    if (!text || isNumberLike(text)) {
+      return {
+        entry: null,
+        refused: ''
+      };
+    }
+    var matches = filterTransferTargets(entries, text);
+    if (matches.length === 1) {
+      return {
+        entry: matches[0],
+        refused: ''
+      };
+    }
+    return {
+      entry: null,
+      refused: matches.length ? 'several-match' : 'no-match'
+    };
+  }
+
+  // 'own-extension' when the transfer would go to the agent's own extension, which only rings the phone they are
+  // transferring from; else ''.
+  //   dialMode, query - the panel's Number / Extension toggle and what was typed.
+  //   selected        - the entry the agent picked, if any: an extension, or an agent with an extension.
+  //   ownExtensions   - the agent's own extensions, as the server named them.
+  function ownExtensionRefusal(options) {
+    options = options || {};
+    var own = (options.ownExtensions || []).map(function (number) {
+      return String(number).trim();
+    }).filter(Boolean);
+    var selected = options.selected;
+    var candidate = selected ? String(selected.isExtension ? selected.destination : selected.extension || '') : options.dialMode === 'extension' ? readExtension(options.query) : '';
+    return candidate && own.indexOf(candidate.trim()) !== -1 ? 'own-extension' : '';
+  }
+
+  // What the transfer panel says for each refusal: [string key, fallback].
+  var REFUSAL_MESSAGES = {
+    'own-number': ['transferOwnNumber', 'That is this phone system\'s own number. Choose who to transfer the call to.'],
+    'invalid-number': ['transferInvalidNumber', 'Enter a complete phone number, or switch to an extension.'],
+    'invalid-extension': ['transferInvalidExtension', 'Enter the extension as digits only.'],
+    'own-extension': ['ownExtension', 'That\'s your own extension.'],
+    'several-match': ['transferSeveralMatch', 'More than one person matches. Choose one from the list.'],
+    'no-match': ['directoryNoMatch', 'Nobody in the directory matches.'],
+    'browser-call': ['transferBrowserCall', 'This call was dialed straight from this phone, so the phone system cannot transfer it. Ask the other person to call the destination, or hang up and dial it.'],
+    'unavailable': ['transferAgentUnavailable', 'That agent cannot take a call right now. Choose someone who is available.'],
+    'warm-queue': ['transferWarmQueue', 'A queue cannot be consulted. Choose an agent or a number, or send the call to the queue with a blind transfer.'],
+    'external-not-allowed': ['transferNumberNotAllowed', 'Transfers to numbers that are not on the approved list are turned off. Choose from the list.']
+  };
+
+  // The localized sentence for a refusal (see resolveTransferTarget, pickTypedMatch and ownExtensionRefusal).
+  function transferRefusalMessage(strings, refused) {
+    var message = Object.prototype.hasOwnProperty.call(REFUSAL_MESSAGES, refused) ? REFUSAL_MESSAGES[refused] : ['transferTargetRequired', 'Choose who to transfer the call to, or enter a number.'];
+    var localized = strings && strings[message[0]];
+    return typeof localized === 'string' && localized ? localized : message[1];
+  }
+
+  // Why the phone cannot transfer this call itself, or ''. A call dialed from this browser runs in the provider SDK
+  // alone: the server holds no handle on it, so a transfer command for it can only fail. A transfer service that
+  // carries the call's transfer (see soft-phone/transfer-service.js) is not bound by that.
+  //   call           - the call to transfer.
+  //   serviceApplies - whether a transfer service carries this call's transfer.
+  function transferBlockedReason(options) {
+    options = options || {};
+    return options.call && options.call.browserOriginated && !options.serviceApplies ? 'browser-call' : '';
+  }
+  softPhone.TRANSFER_MODE_VALUES = TRANSFER_MODE_VALUES;
+  softPhone.isSameLine = isSameLine;
+  softPhone.transferModes = transferModes;
+  softPhone.transferModeValue = transferModeValue;
+  softPhone.isNumberLike = isNumberLike;
+  softPhone.normalizeDirectoryEntry = normalizeDirectoryEntry;
+  softPhone.filterTransferTargets = filterTransferTargets;
+  softPhone.toInternationalNumber = toInternationalNumber;
+  softPhone.readExtension = readExtension;
+  softPhone.resolveTransferTarget = resolveTransferTarget;
+  softPhone.pickTypedMatch = pickTypedMatch;
+  softPhone.ownExtensionRefusal = ownExtensionRefusal;
+  softPhone.transferRefusalMessage = transferRefusalMessage;
+  softPhone.transferBlockedReason = transferBlockedReason;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * Finding a colleague's extension by name on the keypad.
+ *
+ * The keypad's extension field took digits only: it was enhanced with the country-flag input, which drops every key
+ * that is not a digit, so a colleague could only be called by knowing their extension. In extension mode the field is
+ * now a plain search box, as the transfer panel's is: a name lists the extensions of the people it matches, picking one
+ * dials it, Enter dials the one person a name narrows the list to, and digits still dial the extension they are. The
+ * agent's own extensions, which only ring the phone doing the dialing, are never listed and are refused when typed.
+ *
+ * The search is the transfer panel's own (soft-phone/transfer-target.js) over the phone system's extensions
+ * (soft-phone/extension-names.js).
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // How many matches the keypad lists; the rest are found by typing more of the name.
+  var MAX_KEYPAD_MATCHES = 6;
+  function text(value) {
+    return value == null ? '' : String(value).trim();
+  }
+
+  // The extensions matching what was typed, by name or digits, the agent's own left out: [{ extension, name, detail }].
+  function keypadExtensionMatches(directory, query, strings) {
+    var typed = text(query);
+    if (!typed) {
+      return [];
+    }
+    var entries = softPhone.extensionDirectoryEntries(directory, strings || {});
+    return softPhone.filterTransferTargets(entries, typed).map(function (entry) {
+      return {
+        extension: String(entry.destination),
+        name: entry.name,
+        detail: entry.detail
+      };
+    });
+  }
+
+  // What dialing from the extension field calls: { extension, refused }, refused being 'empty', 'own-extension',
+  // 'several-match' or 'no-match'.
+  function resolveKeypadExtension(directory, query, strings) {
+    var typed = text(query);
+    if (!typed) {
+      return {
+        extension: '',
+        refused: 'empty'
+      };
+    }
+    var digits = softPhone.readExtension(typed);
+    if (digits) {
+      return softPhone.isOwnExtension(directory, digits) ? {
+        extension: '',
+        refused: 'own-extension'
+      } : {
+        extension: digits,
+        refused: ''
+      };
+    }
+    var pick = softPhone.pickTypedMatch(softPhone.extensionDirectoryEntries(directory, strings || {}), typed);
+    return pick.entry ? {
+      extension: String(pick.entry.destination),
+      refused: ''
+    } : {
+      extension: '',
+      refused: pick.refused || 'no-match'
+    };
+  }
+
+  // The list under the field: one button per match, each dialing its extension.
+  function buildKeypadExtensionResultsHtml(matches, strings, escapeHtml) {
+    if (!matches || !matches.length) {
+      return '';
+    }
+    strings = strings || {};
+    return '<div class="telephony-soft-phone__keypad-results-list" role="list" aria-label="' + escapeHtml(strings.keypadExtensionResults || 'Matching extensions') + '">' + matches.slice(0, MAX_KEYPAD_MATCHES).map(function (match) {
+      return '<button type="button" role="listitem" class="telephony-soft-phone__keypad-result" data-telephony-keypad-extension="' + escapeHtml(match.extension) + '">' + '<span class="telephony-soft-phone__keypad-result-name">' + escapeHtml(match.name) + '</span>' + '<span class="telephony-soft-phone__keypad-result-extension">' + escapeHtml(match.detail) + '</span>' + '</button>';
+    }).join('') + '</div>';
+  }
+  softPhone.keypadExtensionMatches = keypadExtensionMatches;
+  softPhone.resolveKeypadExtension = resolveKeypadExtension;
+  softPhone.buildKeypadExtensionResultsHtml = buildKeypadExtensionResultsHtml;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * Transfers a server-side transfer service carries out, rather than the telephony provider.
+ *
+ * A Contact Center call cannot be transferred by handing the provider a number: an agent or a queue is not somewhere a
+ * provider can dial, and the Contact Center has to route the call, move it off the transferring agent and record the
+ * transfer. When the tenant publishes transfer endpoints (the Contact Center does, and the soft phone's configuration
+ * carries their addresses), a call that belongs to an interaction is transferred through them: the panel lists the
+ * agents with their presence, the queues with who is waiting, and the approved outside numbers, and a warm transfer
+ * becomes a consult the agent completes or cancels. Every other call keeps the provider's own transfer.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+  function label(strings, key, fallback) {
+    return strings && typeof strings[key] === 'string' && strings[key] ? strings[key] : fallback;
+  }
+  function format(template, value) {
+    return String(template).replace('{0}', value);
+  }
+  function presenceLabel(presence, strings) {
+    var key = 'presence' + String(presence || '');
+    return label(strings, key, String(presence || ''));
+  }
+
+  // The service's directory as the transfer panel lists it. Each entry's destination is unique across kinds, and
+  // targetType/targetId are what the transfer request names.
+  function serviceDirectoryEntries(directory, strings) {
+    if (!directory) {
+      return [];
+    }
+    var entries = [];
+    var agentsGroup = label(strings, 'transferGroupAgents', 'Agents');
+    var queuesGroup = label(strings, 'transferGroupQueues', 'Queues');
+    var externalGroup = label(strings, 'transferGroupExternal', 'Outside numbers');
+    (directory.agents || []).forEach(function (agent) {
+      if (!agent || !agent.id) {
+        return;
+      }
+      entries.push({
+        id: String(agent.id),
+        name: String(agent.name || agent.id),
+        destination: 'agent:' + agent.id,
+        detail: agent.extension ? format(label(strings, 'transferExtension', 'Ext {0}'), agent.extension) : '',
+        extension: agent.extension ? String(agent.extension) : '',
+        kind: 'agent',
+        targetType: 'agent',
+        targetId: String(agent.id),
+        group: agentsGroup,
+        presence: String(agent.presence || ''),
+        status: presenceLabel(agent.presence, strings),
+        disabled: agent.available !== true
+      });
+    });
+    (directory.queues || []).forEach(function (queue) {
+      if (!queue || !queue.id) {
+        return;
+      }
+      entries.push({
+        id: String(queue.id),
+        name: String(queue.name || queue.id),
+        destination: 'queue:' + queue.id,
+        detail: format(label(strings, 'transferWaiting', '{0} waiting'), Number(queue.waiting) || 0),
+        kind: 'queue',
+        targetType: 'queue',
+        targetId: String(queue.id),
+        group: queuesGroup,
+        status: '',
+        disabled: false
+      });
+    });
+    (directory.externalDestinations || []).forEach(function (destination) {
+      if (!destination || !destination.id) {
+        return;
+      }
+      entries.push({
+        id: String(destination.id),
+        name: String(destination.name || destination.number || destination.id),
+        destination: 'external:' + destination.id,
+        detail: String(destination.number || ''),
+        kind: 'external',
+        targetType: 'external',
+        targetId: String(destination.id),
+        group: externalGroup,
+        status: '',
+        disabled: false
+      });
+    });
+    return entries;
+  }
+
+  // Blind always; warm only when the call's provider can hold the caller while the agent consults.
+  function serviceModes(directory) {
+    return directory && directory.supportsConsult ? ['blind', 'warm'] : ['blind'];
+  }
+
+  // What the service should transfer the call to.
+  //   selected   - the entry the agent picked, if any; it wins in either dial mode.
+  //   query      - what the agent typed.
+  //   dialMode   - 'number' (the default) or 'extension', as the panel's Number / Extension toggle is set.
+  //   number     - in number mode, what the country-flag input read from the query: { value, valid }.
+  //   mode       - 'blind' or 'warm'.
+  //   directory  - the service's directory (for whether outside numbers may be typed).
+  //   ownNumbers - the tenant's own numbers, which are never a destination.
+  // Returns { targetType, targetId, label, refused }, refused being '' or one of
+  // 'empty' | 'unavailable' | 'warm-queue' | 'external-not-allowed' | 'invalid-number' | 'invalid-extension' |
+  // 'own-number'. An extension is sent as targetType 'extension': the server resolves it to the agent it rings.
+  function resolveServiceTarget(options) {
+    options = options || {};
+    var selected = options.selected;
+    var refuse = function (reason) {
+      return {
+        targetType: '',
+        targetId: '',
+        label: '',
+        refused: reason
+      };
+    };
+    if (selected && selected.targetType) {
+      if (selected.disabled) {
+        return refuse('unavailable');
+      }
+      if (options.mode === 'warm' && selected.targetType === 'queue') {
+        return refuse('warm-queue');
+      }
+      return {
+        targetType: selected.targetType,
+        targetId: selected.targetId,
+        label: selected.name,
+        refused: ''
+      };
+    }
+    var text = options.query == null ? '' : String(options.query).trim();
+    if (options.dialMode === 'extension') {
+      if (!text) {
+        return refuse('empty');
+      }
+      var extension = softPhone.readExtension(text);
+      return extension ? {
+        targetType: 'extension',
+        targetId: extension,
+        label: text,
+        refused: ''
+      } : refuse('invalid-extension');
+    }
+    if (!text || !softPhone.isNumberLike(text)) {
+      return refuse('empty');
+    }
+    var directory = options.directory || {};
+    if (!directory.canTransferExternally || !directory.allowExternalNumbers) {
+      return refuse('external-not-allowed');
+    }
+    var reading = options.number || null;
+    var number = reading ? reading.valid ? String(reading.value || '') : '' : softPhone.toInternationalNumber(text);
+    if ((options.ownNumbers || []).some(function (own) {
+      return softPhone.isSameLine(text, own) || softPhone.isSameLine(number, own);
+    })) {
+      return refuse('own-number');
+    }
+    if (!number) {
+      return refuse('invalid-number');
+    }
+    return {
+      targetType: 'external',
+      targetId: number,
+      label: text,
+      refused: ''
+    };
+  }
+
+  // The client for the transfer endpoints.
+  //   options.urls              - { targetsUrl, transferUrl, consultUrl, consultCompleteUrl, consultCancelUrl }.
+  //   options.antiForgeryToken  - sent on every command.
+  //   options.fetch             - the fetch implementation (the browser's by default).
+  function createTransferService(options) {
+    options = options || {};
+    var urls = options.urls || {};
+    var fetchImpl = options.fetch || (typeof root.fetch === 'function' ? root.fetch.bind(root) : null);
+    function interactionOf(call) {
+      return call && call.metadata && call.metadata.interactionId ? String(call.metadata.interactionId) : '';
+    }
+    function applies(call) {
+      return !!(fetchImpl && urls.targetsUrl && urls.transferUrl && interactionOf(call));
+    }
+    function read(response) {
+      return Promise.resolve(response.json ? response.json() : null).catch(function () {
+        return null;
+      }).then(function (body) {
+        if (!response.ok) {
+          // The endpoints answer a refusal with a problem body rather than a redirect, so its reason is
+          // what the agent is shown.
+          return {
+            succeeded: false,
+            error: body && (body.detail || body.error || body.title) || 'The request was refused.'
+          };
+        }
+        return body || {};
+      });
+    }
+    function send(method, url, body) {
+      var headers = {
+        'Accept': 'application/json'
+      };
+      var init = {
+        method: method,
+        credentials: 'same-origin',
+        headers: headers
+      };
+      if (body) {
+        headers['Content-Type'] = 'application/json';
+        init.body = JSON.stringify(body);
+      }
+      if (method !== 'GET' && options.antiForgeryToken) {
+        headers.RequestVerificationToken = options.antiForgeryToken;
+      }
+      return fetchImpl(url, init).then(read).catch(function (error) {
+        return {
+          succeeded: false,
+          error: error && error.message ? error.message : String(error)
+        };
+      });
+    }
+    function query(url, parameters) {
+      var pairs = Object.keys(parameters).filter(function (key) {
+        return parameters[key];
+      }).map(function (key) {
+        return encodeURIComponent(key) + '=' + encodeURIComponent(parameters[key]);
+      });
+      return url + (pairs.length ? (url.indexOf('?') === -1 ? '?' : '&') + pairs.join('&') : '');
+    }
+    function loadDirectory(call) {
+      return send('GET', query(urls.targetsUrl, {
+        interactionId: interactionOf(call)
+      })).then(function (body) {
+        if (body && body.succeeded === false) {
+          throw new Error(body.error);
+        }
+        return body;
+      });
+    }
+    function transfer(call, target) {
+      return send('POST', urls.transferUrl, {
+        interactionId: interactionOf(call),
+        targetType: target.targetType,
+        targetId: target.targetId
+      });
+    }
+    function startConsult(call, target) {
+      return send('POST', urls.consultUrl, {
+        interactionId: interactionOf(call),
+        targetType: target.targetType,
+        targetId: target.targetId
+      });
+    }
+    function getConsult(call, consultId) {
+      return send('GET', query(urls.consultUrl, {
+        interactionId: interactionOf(call),
+        consultId: consultId
+      }));
+    }
+    function completeConsult(call, consultId) {
+      return send('POST', urls.consultCompleteUrl, {
+        interactionId: interactionOf(call),
+        consultId: consultId
+      });
+    }
+    function cancelConsult(call, consultId) {
+      return send('POST', urls.consultCancelUrl, {
+        interactionId: interactionOf(call),
+        consultId: consultId
+      });
+    }
+    return {
+      applies: applies,
+      loadDirectory: loadDirectory,
+      transfer: transfer,
+      startConsult: startConsult,
+      getConsult: getConsult,
+      completeConsult: completeConsult,
+      cancelConsult: cancelConsult
+    };
+  }
+
+  // What a Contact Center report says about the call beyond its state, which the provider's own report of the same call
+  // does not: the phone reads its calls again every few seconds, and a provider's report used to replace the Contact
+  // Center's, so the call stopped naming its interaction and the transfer panel fell back to the provider's
+  // directory -- the phone system's extensions only. It is remembered per call and stamped back onto a report that
+  // names none.
+  var CALL_CONTEXT_KEYS = ['interactionId', 'activityItemId', 'queueId', 'callSessionId'];
+  function createCallContextMemory() {
+    return {};
+  }
+  function carryCallContext(memory, call) {
+    if (!call || !call.callId || !memory) {
+      return call;
+    }
+    var metadata = call.metadata || {};
+    var reported = {};
+    CALL_CONTEXT_KEYS.forEach(function (key) {
+      if (metadata[key] != null && metadata[key] !== '') {
+        reported[key] = metadata[key];
+      }
+    });
+    if (reported.interactionId) {
+      memory[call.callId] = reported;
+      return call;
+    }
+    var remembered = Object.prototype.hasOwnProperty.call(memory, call.callId) ? memory[call.callId] : null;
+    if (!remembered) {
+      return call;
+    }
+    call.metadata = call.metadata || {};
+    CALL_CONTEXT_KEYS.forEach(function (key) {
+      if (remembered[key] != null && (call.metadata[key] == null || call.metadata[key] === '')) {
+        call.metadata[key] = remembered[key];
+      }
+    });
+    return call;
+  }
+  function forgetCallContext(memory, callId) {
+    if (memory && callId) {
+      delete memory[callId];
+    }
+  }
+  softPhone.createCallContextMemory = createCallContextMemory;
+  softPhone.carryCallContext = carryCallContext;
+  softPhone.forgetCallContext = forgetCallContext;
+  softPhone.serviceDirectoryEntries = serviceDirectoryEntries;
+  softPhone.serviceModes = serviceModes;
+  softPhone.resolveServiceTarget = resolveServiceTarget;
+  softPhone.createTransferService = createTransferService;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * Where a warm transfer's consult stands, as the transfer panel shows it.
+ *
+ * A warm transfer used to be a single request with nothing after it: the agent could not see whether the destination
+ * had answered, and had no way to hand the call over or take it back. The consult is now a state the panel follows --
+ * ringing, then connected, then completed or cancelled -- and these decide what the agent is told and which of
+ * Complete and Cancel they may press at each point.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // How often the panel asks where a live consult stands. The destination answering is what the agent waits on.
+  var CONSULT_POLL_INTERVAL_MS = 1500;
+  function label(strings, key, fallback) {
+    return strings && typeof strings[key] === 'string' && strings[key] ? strings[key] : fallback;
+  }
+  function format(template, value) {
+    return String(template).replace('{0}', value);
+  }
+  function isLive(status) {
+    return status === 'ringing' || status === 'connected';
+  }
+
+  // { status, live, message, canComplete, canCancel } for a consult ({ id, status, live }) with `targetName`.
+  function consultView(consult, targetName, strings) {
+    var status = consult && consult.status ? String(consult.status) : 'cancelled';
+    var live = !!consult && consult.live !== false && isLive(status);
+    var name = targetName || '';
+    var message;
+    switch (status) {
+      case 'connected':
+        message = format(label(strings, 'consultConnected', 'Talking to {0}. The caller is on hold.'), name);
+        break;
+      case 'completed':
+        message = format(label(strings, 'consultCompleted', 'The call was handed to {0}.'), name);
+        break;
+      case 'ringing':
+        message = format(label(strings, 'consultRinging', 'Calling {0}...'), name);
+        break;
+      default:
+        message = label(strings, 'consultCancelled', 'The caller is back with you.');
+        break;
+    }
+    return {
+      status: status,
+      live: live,
+      message: message,
+      // Only a destination who answered can take the caller; completing a ringing consult would hand them to
+      // a phone nobody has picked up.
+      canComplete: live && status === 'connected',
+      canCancel: live
+    };
+  }
+
+  // What to tell the agent when a consult they did not end has ended, or '' while it is still going.
+  //   previousStatus - the status the panel last showed.
+  //   next           - the consult as the server now reports it.
+  //   context        - { callEnded } whether the customer's call is gone.
+  function consultEndedMessage(previousStatus, next, targetName, strings, context) {
+    var status = next && next.status ? String(next.status) : 'cancelled';
+    if (next && next.live !== false && isLive(status)) {
+      return '';
+    }
+    if (context && context.callEnded) {
+      return label(strings, 'consultCallerLeft', 'The caller hung up.');
+    }
+    if (status === 'completed') {
+      return format(label(strings, 'consultCompleted', 'The call was handed to {0}.'), targetName || '');
+    }
+    if (isLive(previousStatus)) {
+      return format(label(strings, 'consultTargetLeft', '{0} did not take the call. The caller is back with you.'), targetName || '');
+    }
+    return label(strings, 'consultCancelled', 'The caller is back with you.');
+  }
+  softPhone.CONSULT_POLL_INTERVAL_MS = CONSULT_POLL_INTERVAL_MS;
+  softPhone.consultView = consultView;
+  softPhone.consultEndedMessage = consultEndedMessage;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * Transferring a call the provider connected on the server (a number dialed from the keypad on Telnyx), and taking one
+ * over from a colleague.
+ *
+ * A blind transfer of such a call used to hand the other party straight to the colleague. Their phone got a leg nobody
+ * had recorded, so it treated the call as one it had dialed itself and could not transfer it again; a warm transfer was
+ * refused outright. Now the provider rings the destination on a leg of its own and the call stays here, held, until
+ * that leg answers -- the transfer panel follows it as a consult, blind or warm -- and a colleague's phone recognizes
+ * the leg it is rung on, rings it with Answer and Decline, and follows it as a call the platform tracks.
+ *
+ * These are the pure decisions; soft-phone.js wires them to the hub and the media adapter.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // Must match CrestApps.OrchardCore.Telnyx.Services.TelnyxOutboundBridgeState.TransferLegIntent and
+  // TelnyxTransferCommands.TransferLegSipHeader.
+  var TRANSFER_LEG_INTENT = 'ob-xfer';
+  var TRANSFER_LEG_HEADER = 'x-transfer-leg';
+
+  // Must match CrestApps.OrchardCore.Telephony.TelephonyConstants.CallMetadata and ConsultStatuses.
+  var LIVE_STATUSES = ['ringing', 'connected'];
+  function text(value) {
+    return value == null ? '' : String(value);
+  }
+  function isTrue(value) {
+    return value === true || value === 'true' || value === 'True';
+  }
+
+  // What an incoming provider leg says about a call a colleague is handing over: { legId, partyNumber, transferredBy },
+  // or null for any other leg. The leg names itself in its client state and in a SIP header, for an SDK that exposes
+  // only one of them.
+  function readTransferLegTag(options) {
+    options = options || {};
+    var legId = text(options.telnyxCallControlId || options.callControlId);
+    var readState = softPhone.readProviderClientState;
+    var readHeader = softPhone.readProviderHeader;
+    var state = typeof readState === 'function' ? readState(options.clientState || options.client_state) : null;
+    var header = typeof readHeader === 'function' ? readHeader(options.customHeaders || options.custom_headers, TRANSFER_LEG_HEADER) : '';
+    if (!legId) {
+      return null;
+    }
+    if (state && state.i === TRANSFER_LEG_INTENT) {
+      return {
+        legId: legId,
+        partyNumber: text(state.m),
+        transferredBy: text(state.n)
+      };
+    }
+    if (header) {
+      return {
+        legId: legId,
+        partyNumber: header === '1' ? '' : header,
+        transferredBy: ''
+      };
+    }
+    return null;
+  }
+
+  // The Transfer request for a call the provider carries out itself. The phone names the credential it is registered on,
+  // so a warm transfer's consult rings this phone -- the server checks that it is the caller's.
+  function providerTransferRequest(callId, target, mode, credentialId) {
+    var request = {
+      callId: callId,
+      to: target && target.destination,
+      mode: mode,
+      isExtension: !!(target && target.isExtension)
+    };
+    if (credentialId) {
+      request.metadata = {
+        softPhoneCredentialId: credentialId
+      };
+    }
+    return request;
+  }
+
+  // The transfer a command's call reports, as the transfer panel follows it: { id, callId, status, live, callEnded,
+  // blind }, or null when the call carries none (the provider handed the call over at once, the old way).
+  //   call - the call the command returned: the call being transferred, or (warm) the consult's own call.
+  function consultFromCall(call) {
+    var metadata = call && call.metadata;
+    if (!metadata || !metadata.consultId) {
+      return null;
+    }
+    var status = text(metadata.consultStatus) || 'cancelled';
+    var consultOf = text(metadata.consultOf);
+    return {
+      id: text(metadata.consultId),
+      callId: consultOf || text(call.callId),
+      status: status,
+      live: metadata.consultLive === undefined ? LIVE_STATUSES.indexOf(status) >= 0 : isTrue(metadata.consultLive),
+      callEnded: isTrue(metadata.consultCallEnded),
+      blind: !consultOf && text(metadata.consultId) !== text(call.callId)
+    };
+  }
+
+  // The follow-up request for a consult the panel is showing.
+  function consultRequest(consult) {
+    return {
+      callId: consult ? consult.callId : '',
+      consultCallId: consult ? consult.id : ''
+    };
+  }
+
+  // A GetConsult/CompleteConsult/CancelConsult result as the transfer panel reads one. A consult followed from a blind
+  // transfer stays blind.
+  function consultCommandResult(result, previous) {
+    if (!result || result.succeeded === false) {
+      return {
+        succeeded: false,
+        error: result && result.error ? result.error : ''
+      };
+    }
+    var consult = consultFromCall(result.call);
+    if (consult && previous) {
+      consult.blind = !!previous.blind;
+      consult.callId = previous.callId || consult.callId;
+    }
+    return {
+      succeeded: true,
+      consult: consult
+    };
+  }
+
+  // Whether the call is held before a provider transfer: the party waits on this call's own hold tone while the
+  // destination is rung (and, warm, while the agent talks to them on the consult). Only a provider that connects calls
+  // on the server does this, and only for a call it tracks.
+  function shouldHoldBeforeTransfer(options) {
+    options = options || {};
+    var call = options.call;
+    return !!(options.bridgedDial && call && call.callId && !call.browserOriginated && !call.isOnHold && !options.serviceCall);
+  }
+  softPhone.TRANSFER_LEG_INTENT = TRANSFER_LEG_INTENT;
+  softPhone.readTransferLegTag = readTransferLegTag;
+  softPhone.providerTransferRequest = providerTransferRequest;
+  softPhone.consultFromCall = consultFromCall;
+  softPhone.consultRequest = consultRequest;
+  softPhone.consultCommandResult = consultCommandResult;
+  softPhone.shouldHoldBeforeTransfer = shouldHoldBeforeTransfer;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * The soft phone's own transfer panel.
+ *
+ * Transferring a call used to open the browser's "Transfer to number" prompt whenever the provider had no directory.
+ * The prompt was headed with the site's address, blocked the page, and was cut off inside the desktop app's narrow
+ * window. The panel replaces it inside the phone: the agent searches the directory or types a number, picks blind or
+ * warm when the call offers both, and goes back to the keypad without leaving the phone. A warm transfer that the
+ * phone's transfer service carries out becomes a consult the panel follows until the agent completes or cancels it.
+ * Like the keypad, the panel has a Number / Extension toggle: a number goes into the keypad's own country-flag field
+ * and is checked as the keypad checks one, and an extension is sent as an extension rather than refused as a short
+ * phone number. Either way a colleague can be searched by name: the field used to refuse every letter, because the
+ * country-flag input drops any key that is not a digit. A call this browser placed itself cannot be transferred at
+ * all, and the panel says so; nor can a call go to the agent's own extension.
+ * The decisions it makes live in soft-phone/transfer-target.js, soft-phone/transfer-service.js and
+ * soft-phone/consult-state.js; this file only draws them and wires them to the call.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+  var KIND_ICONS = {
+    agent: 'fa-user',
+    queue: 'fa-users',
+    external: 'fa-phone'
+  };
+  function label(strings, key, fallback) {
+    return strings && typeof strings[key] === 'string' && strings[key] ? strings[key] : fallback;
+  }
+  function format(template, value) {
+    return String(template).replace('{0}', value);
+  }
+
+  // Creates the panel inside `container`.
+  //   options.strings        - the phone's localized labels.
+  //   options.escapeHtml     - escapes text for markup.
+  //   options.formatNumber   - formats a number for display.
+  //   options.modes()        - the supported modes (see transferModes).
+  //   options.ownNumbers()   - the tenant's own outbound caller ids.
+  //   options.ownExtensions() - the agent's own extensions: never listed, and refused when typed.
+  //   options.loadDirectory() - a promise of directory entries, or null when there is none.
+  //   options.allowNumbers() - whether a typed number is offered (defaults to true).
+  //   options.extensionName(number) - the name of whoever an extension rings, or '' (see soft-phone/extension-names.js).
+  //   options.blockedReason() - why this call cannot be transferred at all ('' when it can; see transferBlockedReason).
+  //   options.enhanceNumberInput(input) - attaches the keypad's country-flag input to the panel's field; returns the
+  //                            intl-tel-input instance, or null.
+  //   options.resolveTarget(state) - resolves the target itself ({ refused, ... }), or null to use the provider rules.
+  //                            state carries the query, the picked entry, the blind/warm mode, the Number / Extension
+  //                            dialMode and, in number mode, what the flag input read ({ value, valid }).
+  //   options.transfer(target, modeValue, modeName) - performs the transfer; resolves to the command result. A result
+  //                            with a live `consult` opens the consult view. Without resolveTarget, target is
+  //                            { destination, isExtension, label } (see resolveTransferTarget).
+  //   options.getConsult(consult), options.completeConsult(consult), options.cancelConsult(consult)
+  //                          - follow and finish a consult; each resolves to a result with the consult's state.
+  //   options.onChange()     - called when the panel opens or closes, so the phone re-renders around it.
+  function createTransferPanel(container, options) {
+    options = options || {};
+    var strings = options.strings || {};
+    var escapeHtml = options.escapeHtml || function (value) {
+      return String(value == null ? '' : value);
+    };
+    var formatNumber = options.formatNumber || function (value) {
+      return value;
+    };
+    var state = {
+      open: false,
+      query: '',
+      selected: null,
+      mode: 'blind',
+      dialMode: 'number',
+      entries: [],
+      loading: false,
+      error: '',
+      consult: null
+    };
+    var parts = {};
+    var pollTimer = null;
+    var telInput = null;
+    function modes() {
+      return typeof options.modes === 'function' ? options.modes() : ['blind'];
+    }
+    function extensionName(number) {
+      return number && typeof options.extensionName === 'function' ? options.extensionName(number) || '' : '';
+    }
+    function allowNumbers() {
+      return typeof options.allowNumbers === 'function' ? options.allowNumbers() !== false : true;
+    }
+    function changed() {
+      if (typeof options.onChange === 'function') {
+        options.onChange();
+      }
+    }
+    function isOpen() {
+      return state.open;
+    }
+    function open(context) {
+      if (!container) {
+        return;
+      }
+      var supported = modes();
+      stopPolling();
+      state = {
+        open: true,
+        query: '',
+        selected: null,
+        mode: supported.length ? supported[0] : 'blind',
+        dialMode: 'number',
+        entries: [],
+        loading: false,
+        error: '',
+        consult: null
+      };
+      var blocked = typeof options.blockedReason === 'function' ? options.blockedReason() : '';
+      if (blocked) {
+        renderBlocked(context || {}, blocked);
+        changed();
+        return;
+      }
+      renderShell(context || {});
+      loadDirectory();
+      changed();
+      if (parts.input) {
+        parts.input.focus();
+      }
+    }
+    function releaseNumberInput() {
+      if (telInput && typeof telInput.destroy === 'function') {
+        try {
+          telInput.destroy();
+        } catch (error) {/* already gone */}
+      }
+      telInput = null;
+    }
+    function close() {
+      if (!state.open) {
+        return;
+      }
+      stopPolling();
+      releaseNumberInput();
+      state.open = false;
+      state.entries = [];
+      state.consult = null;
+      if (container) {
+        container.innerHTML = '';
+        container.classList.remove('telephony-soft-phone__transfer-panel--extension');
+      }
+      parts = {};
+      changed();
+    }
+    function loadDirectory() {
+      var pending = typeof options.loadDirectory === 'function' ? options.loadDirectory() : null;
+      if (!pending || typeof pending.then !== 'function') {
+        renderResults();
+        return;
+      }
+      state.loading = true;
+      renderResults();
+      pending.then(function (entries) {
+        if (!state.open) {
+          return;
+        }
+        state.entries = Array.isArray(entries) ? entries : [];
+      }).catch(function () {
+        state.entries = [];
+      }).then(function () {
+        state.loading = false;
+        if (state.open && !state.consult) {
+          // What the call offers can depend on what the directory said (a warm transfer needs a provider
+          // that can hold the caller), so the choice is drawn again now it is known.
+          renderModes();
+          renderResults();
+        }
+      });
+    }
+    function headerHtml(context) {
+      var title = context.callLabel ? format(label(strings, 'transferCallOf', 'Transfer {0}'), context.callLabel) : label(strings, 'transferTitle', 'Transfer call');
+      return '<div class="telephony-soft-phone__transfer-header">' + '<button type="button" class="telephony-soft-phone__settings-back" data-telephony-transfer-back title="' + escapeHtml(label(strings, 'back', 'Back')) + '" aria-label="' + escapeHtml(label(strings, 'back', 'Back')) + '">' + '<i class="fa-solid fa-arrow-left" aria-hidden="true"></i></button>' + '<span class="telephony-soft-phone__transfer-title" data-telephony-transfer-title>' + escapeHtml(title) + '</span>' + '</div>';
+    }
+
+    // A call the phone cannot transfer says so in place of the form, rather than letting the agent pick a target
+    // for a command that can only fail.
+    function renderBlocked(context, reason) {
+      container.innerHTML = headerHtml(context) + '<div class="telephony-soft-phone__transfer-blocked" data-telephony-transfer-blocked="' + escapeHtml(reason) + '" role="status">' + '<i class="fa-solid fa-circle-info" aria-hidden="true"></i> ' + escapeHtml(refusalMessage(reason)) + '</div>' + '<div class="telephony-soft-phone__transfer-actions">' + '<button type="button" class="btn btn-sm btn-outline-secondary" data-telephony-transfer-cancel>' + escapeHtml(label(strings, 'back', 'Back')) + '</button></div>';
+      parts = {};
+      container.querySelector('[data-telephony-transfer-back]').addEventListener('click', close);
+      container.querySelector('[data-telephony-transfer-cancel]').addEventListener('click', close);
+    }
+    function renderShell(context) {
+      container.innerHTML = headerHtml(context) + '<div data-telephony-transfer-modes-slot></div>' + '<div class="telephony-soft-phone__transfer-entry">' + '<input type="tel" class="telephony-soft-phone__transfer-input" data-telephony-transfer-input autocomplete="off" />' + '<button type="button" class="telephony-soft-phone__dial-mode" data-telephony-transfer-dial-mode aria-pressed="false">' + '<i class="fa-solid fa-hashtag" aria-hidden="true"></i> <span data-telephony-transfer-dial-mode-label></span></button>' + '</div>' + '<div class="telephony-soft-phone__transfer-error" data-telephony-transfer-error role="alert" hidden></div>' + '<div class="telephony-soft-phone__transfer-results" data-telephony-transfer-results></div>' + '<div class="telephony-soft-phone__transfer-actions" data-telephony-transfer-actions>' + '<button type="button" class="btn btn-sm btn-outline-secondary" data-telephony-transfer-cancel>' + escapeHtml(label(strings, 'cancel', 'Cancel')) + '</button>' + '<button type="button" class="btn btn-sm btn-primary" data-telephony-transfer-confirm>' + escapeHtml(label(strings, 'transfer', 'Transfer')) + '</button>' + '</div>';
+      parts = {
+        back: container.querySelector('[data-telephony-transfer-back]'),
+        modesSlot: container.querySelector('[data-telephony-transfer-modes-slot]'),
+        entry: container.querySelector('.telephony-soft-phone__transfer-entry'),
+        input: container.querySelector('[data-telephony-transfer-input]'),
+        error: container.querySelector('[data-telephony-transfer-error]'),
+        results: container.querySelector('[data-telephony-transfer-results]'),
+        actions: container.querySelector('[data-telephony-transfer-actions]'),
+        confirm: container.querySelector('[data-telephony-transfer-confirm]'),
+        dialMode: container.querySelector('[data-telephony-transfer-dial-mode]'),
+        dialModeLabel: container.querySelector('[data-telephony-transfer-dial-mode-label]'),
+        hint: null,
+        modes: []
+      };
+      applyDialModeInput();
+      parts.dialMode.addEventListener('click', function () {
+        setDialMode(state.dialMode === 'extension' ? 'number' : 'extension');
+      });
+      renderDialMode();
+      parts.back.addEventListener('click', close);
+      container.querySelector('[data-telephony-transfer-cancel]').addEventListener('click', close);
+      parts.confirm.addEventListener('click', submit);
+      parts.input.addEventListener('input', function () {
+        state.query = parts.input.value;
+        state.selected = null;
+        setError('');
+        renderResults();
+      });
+      parts.input.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          submit();
+        } else if (event.key === 'Escape') {
+          event.preventDefault();
+          close();
+        }
+      });
+      parts.results.addEventListener('click', function (event) {
+        var target = event.target && event.target.closest ? event.target.closest('[data-telephony-transfer-option]') : null;
+        if (!target) {
+          return;
+        }
+        var destination = target.getAttribute('data-telephony-directory-destination');
+        if (destination !== null) {
+          var entry = visibleEntries('').filter(function (candidate) {
+            return candidate.destination === destination;
+          })[0];
+          state.selected = state.selected && entry && state.selected.destination === entry.destination ? null : entry || null;
+        } else {
+          state.selected = null;
+        }
+        setError('');
+        renderResults();
+        if (target.hasAttribute('data-telephony-transfer-number')) {
+          submit();
+        }
+      });
+      renderModes();
+    }
+    function renderModes() {
+      if (!parts.modesSlot) {
+        return;
+      }
+      var supported = modes();
+      if (supported.indexOf(state.mode) === -1) {
+        state.mode = supported.length ? supported[0] : 'blind';
+      }
+      parts.modesSlot.innerHTML = supported.length > 1 ? '<div class="telephony-soft-phone__transfer-modes" role="radiogroup" aria-label="' + escapeHtml(label(strings, 'transferType', 'Transfer type')) + '">' + supported.map(function (mode) {
+        var text = mode === 'warm' ? label(strings, 'transferWarm', 'Warm') : label(strings, 'transferBlind', 'Blind');
+        return '<button type="button" role="radio" class="telephony-soft-phone__transfer-mode" data-telephony-transfer-mode="' + mode + '" aria-checked="false">' + escapeHtml(text) + '</button>';
+      }).join('') + '</div>' + '<div class="telephony-soft-phone__transfer-hint" data-telephony-transfer-mode-hint></div>' : '';
+      parts.hint = parts.modesSlot.querySelector('[data-telephony-transfer-mode-hint]');
+      parts.modes = Array.prototype.slice.call(parts.modesSlot.querySelectorAll('[data-telephony-transfer-mode]'));
+      parts.modes.forEach(function (button) {
+        button.addEventListener('click', function () {
+          state.mode = button.getAttribute('data-telephony-transfer-mode');
+          setError('');
+          renderMode();
+        });
+      });
+      renderMode();
+    }
+    function renderMode() {
+      (parts.modes || []).forEach(function (button) {
+        var selected = button.getAttribute('data-telephony-transfer-mode') === state.mode;
+        button.classList.toggle('is-active', selected);
+        button.setAttribute('aria-checked', selected ? 'true' : 'false');
+      });
+      if (parts.hint) {
+        parts.hint.textContent = state.mode === 'warm' ? label(strings, 'transferWarmHint', 'You speak to them before the call is handed over.') : label(strings, 'transferBlindHint', 'The call is sent straight to them.');
+      }
+    }
+
+    // Number or extension, as the keypad's "Dial extension" toggle sets it: a number is read by the country-flag
+    // input and checked for completeness, an extension is sent as its digits and never read as a phone number.
+    function setDialMode(dialMode) {
+      state.dialMode = dialMode === 'extension' ? 'extension' : 'number';
+      state.query = '';
+      state.selected = null;
+      if (parts.input) {
+        parts.input.value = '';
+      }
+      setError('');
+      applyDialModeInput();
+      renderDialMode();
+      renderResults();
+      if (parts.input) {
+        parts.input.focus();
+      }
+    }
+
+    // A number goes into the keypad's own country-flag field, so it is read and checked the way the keypad reads and
+    // checks one -- with its strict keys off, since a name is searched from the same field. An extension has no
+    // country: the field is a plain search box, for a name or the extension's digits.
+    function applyDialModeInput() {
+      releaseNumberInput();
+      if (!parts.input) {
+        return;
+      }
+      parts.input.setAttribute('type', state.dialMode === 'extension' ? 'text' : 'tel');
+      telInput = state.dialMode !== 'extension' && typeof options.enhanceNumberInput === 'function' ? options.enhanceNumberInput(parts.input) || null : null;
+    }
+    function ownExtensions() {
+      return typeof options.ownExtensions === 'function' ? options.ownExtensions() || [] : [];
+    }
+    function renderDialMode() {
+      var extension = state.dialMode === 'extension';
+      container.classList.toggle('telephony-soft-phone__transfer-panel--extension', extension);
+      if (parts.input) {
+        parts.input.setAttribute('inputmode', extension ? 'text' : 'tel');
+        parts.input.setAttribute('data-telephony-transfer-dial-mode-value', state.dialMode);
+        parts.input.setAttribute('placeholder', extension ? label(strings, 'transferExtensionPlaceholder', 'Search a name, or enter an extension') : label(strings, 'transferSearchPlaceholder', 'Search a name, or enter a number'));
+        parts.input.setAttribute('aria-label', extension ? label(strings, 'transferExtensionDestination', 'Extension to transfer to') : label(strings, 'transferDestination', 'Transfer destination'));
+      }
+      if (parts.dialMode) {
+        parts.dialMode.setAttribute('aria-pressed', extension ? 'true' : 'false');
+      }
+      if (parts.dialModeLabel) {
+        parts.dialModeLabel.textContent = extension ? label(strings, 'transferToPhoneNumber', 'Transfer to a phone number') : label(strings, 'transferToExtension', 'Transfer to an extension');
+      }
+    }
+    function entryHtml(entry) {
+      var selected = !!(state.selected && state.selected.destination === entry.destination);
+      var icon = KIND_ICONS[entry.kind] || 'fa-user';
+      var presence = entry.presence ? ' data-telephony-presence="' + escapeHtml(entry.presence) + '"' : '';
+      var status = entry.status ? '<span class="telephony-soft-phone__directory-presence telephony-soft-phone__directory-presence--' + escapeHtml(String(entry.presence || '').toLowerCase()) + '">' + escapeHtml(entry.status) + '</span>' : '';
+      return '<button type="button" class="telephony-soft-phone__directory-entry telephony-soft-phone__transfer-option' + (selected ? ' is-selected' : '') + (entry.disabled ? ' is-unavailable' : '') + '" data-telephony-transfer-option data-telephony-directory-destination="' + escapeHtml(entry.destination) + '"' + presence + ' aria-pressed="' + (selected ? 'true' : 'false') + '"' + (entry.disabled ? ' aria-disabled="true"' : '') + '>' + '<i class="fa-solid ' + icon + '" aria-hidden="true"></i>' + '<span class="telephony-soft-phone__directory-name">' + escapeHtml(entry.name) + '</span>' + status + '<span class="telephony-soft-phone__directory-destination">' + escapeHtml(entry.detail) + '</span></button>';
+    }
+
+    // The directory entries matching what was typed, the agent's own extensions left out.
+    function visibleEntries(query) {
+      return softPhone.filterTransferTargets(state.entries, query).filter(function (entry) {
+        return !softPhone.ownExtensionRefusal({
+          selected: entry,
+          ownExtensions: ownExtensions()
+        });
+      });
+    }
+    function renderResults() {
+      if (!parts.results || state.consult) {
+        return;
+      }
+      var matches = visibleEntries(state.query);
+      var html = '';
+      var query = String(state.query || '').trim();
+      var extensionMode = state.dialMode === 'extension';
+      var ownTyped = softPhone.ownExtensionRefusal({
+        dialMode: state.dialMode,
+        query: query,
+        ownExtensions: ownExtensions()
+      });
+      if (ownTyped) {
+        // The agent's own extension would only ring the phone they are transferring from.
+        html += '<div class="telephony-soft-phone__directory-empty" data-telephony-transfer-own>' + escapeHtml(refusalMessage(ownTyped)) + '</div>';
+      } else if (query && softPhone.isNumberLike(query) && (extensionMode || allowNumbers())) {
+        // An extension is somewhere inside the phone system, so it is offered whether or not outside numbers are.
+        var typed = extensionMode ? softPhone.transferToExtensionLabel(strings, softPhone.readExtension(query) || query, extensionName(softPhone.readExtension(query))) : format(label(strings, 'transferToNumber', 'Transfer to {0}'), formatNumber(query) || query);
+        html += '<button type="button" class="telephony-soft-phone__transfer-option telephony-soft-phone__transfer-option--number" ' + 'data-telephony-transfer-option data-telephony-transfer-number>' + '<i class="fa-solid ' + (extensionMode ? 'fa-hashtag' : 'fa-phone') + '" aria-hidden="true"></i>' + '<span class="telephony-soft-phone__directory-name">' + escapeHtml(typed) + '</span></button>';
+      }
+      if (state.loading) {
+        html += '<div class="telephony-soft-phone__directory-empty">' + escapeHtml(label(strings, 'directoryLoading', 'Loading the directory...')) + '</div>';
+      } else if (matches.length) {
+        var group = null;
+        matches.forEach(function (entry) {
+          var entryGroup = entry.group || label(strings, 'directory', 'Directory');
+          if (entryGroup !== group) {
+            group = entryGroup;
+            html += '<div class="telephony-soft-phone__transfer-group" role="presentation">' + escapeHtml(group) + '</div>';
+          }
+          html += entryHtml(entry);
+        });
+      } else if (state.entries.length && query) {
+        html += '<div class="telephony-soft-phone__directory-empty">' + escapeHtml(label(strings, 'directoryNoMatch', 'Nobody in the directory matches.')) + '</div>';
+      } else if (!query) {
+        html += '<div class="telephony-soft-phone__directory-empty">' + escapeHtml(label(strings, state.entries.length ? 'directoryEmpty' : 'transferEnterNumber', state.entries.length ? 'No directory entries are available.' : 'Enter the number or extension to transfer to.')) + '</div>';
+      }
+      parts.results.innerHTML = html;
+      if (parts.confirm) {
+        var text = state.selected ? format(label(strings, 'transferToNumber', 'Transfer to {0}'), state.selected.name) : label(strings, 'transfer', 'Transfer');
+        parts.confirm.textContent = text;
+      }
+    }
+    function setError(message) {
+      state.error = message || '';
+      if (parts.error) {
+        parts.error.textContent = state.error;
+        parts.error.hidden = !state.error;
+      }
+    }
+    function refusalMessage(refused) {
+      return softPhone.transferRefusalMessage(strings, refused);
+    }
+    function resolveTarget() {
+      // A name the list narrowed to one person picks them, so Enter transfers without a click.
+      var typed = state.selected ? {
+        entry: null,
+        refused: ''
+      } : softPhone.pickTypedMatch(visibleEntries(state.query), state.query);
+      if (typed.entry) {
+        state.selected = typed.entry;
+        renderResults();
+      }
+      var own = typed.refused || softPhone.ownExtensionRefusal({
+        dialMode: state.dialMode,
+        query: state.query,
+        selected: state.selected,
+        ownExtensions: ownExtensions()
+      });
+      if (own) {
+        return {
+          target: null,
+          refused: own
+        };
+      }
+      state.number = state.dialMode === 'extension' || !parts.input ? null : softPhone.readTransferNumber(parts.input.value, telInput);
+      var resolved = typeof options.resolveTarget === 'function' ? options.resolveTarget(state) : null;
+      if (resolved) {
+        return {
+          target: resolved,
+          refused: resolved.refused
+        };
+      }
+      var target = softPhone.resolveTransferTarget({
+        query: state.query,
+        selected: state.selected,
+        dialMode: state.dialMode,
+        number: state.number,
+        ownNumbers: typeof options.ownNumbers === 'function' ? options.ownNumbers() : []
+      });
+      return {
+        target: target,
+        refused: target.refused
+      };
+    }
+    function submit() {
+      if (state.consult) {
+        return;
+      }
+      var resolved = resolveTarget();
+      if (resolved.refused) {
+        setError(refusalMessage(resolved.refused));
+        if (parts.input) {
+          parts.input.focus();
+        }
+        return;
+      }
+      setError('');
+      var targetName = state.selected ? state.selected.name : resolved.target && resolved.target.label || '';
+      var submitted = state;
+      var pending = typeof options.transfer === 'function' ? options.transfer(resolved.target, softPhone.transferModeValue(state.mode), state.mode) : null;
+
+      // While the transfer is being asked for, the call on screen may change under the panel -- a warm transfer's
+      // consult is a new call, still connecting -- and the panel stays open for its answer.
+      submitted.submitting = true;
+
+      // A refused hub transfer is reported by the phone's own error line, as every other command is; a refused
+      // service transfer carries its reason, which is shown here. Either way the panel stays open so the agent
+      // can pick someone else.
+      Promise.resolve(pending).then(function (result) {
+        submitted.submitting = false;
+        if (!state.open) {
+          return;
+        }
+        if (result && result.consult && result.consult.live) {
+          showConsult(result.consult, targetName);
+          return;
+        }
+        if (result && result.succeeded !== false) {
+          close();
+        } else if (result && result.error) {
+          setError(result.error);
+        }
+      }).catch(function () {
+        submitted.submitting = false;
+      });
+    }
+
+    // Whether the panel is waiting on a transfer it asked for, or following one that is still going on. The phone
+    // keeps it open then, whatever the call on screen is doing.
+    function isBusy() {
+      return !!(state.open && (state.submitting || state.consult && state.consult.view && state.consult.view.live));
+    }
+    function stopPolling() {
+      if (pollTimer) {
+        root.clearTimeout(pollTimer);
+        pollTimer = null;
+      }
+    }
+    function schedulePoll() {
+      stopPolling();
+      if (!state.consult || !state.consult.view.live || typeof options.getConsult !== 'function') {
+        return;
+      }
+      pollTimer = root.setTimeout(function () {
+        pollTimer = null;
+        if (!state.open || !state.consult) {
+          return;
+        }
+        Promise.resolve(options.getConsult(state.consult.consult)).then(function (result) {
+          if (state.open && state.consult && result && result.consult) {
+            updateConsult(result.consult, false);
+          }
+        }).catch(function () {}).then(schedulePoll);
+      }, softPhone.CONSULT_POLL_INTERVAL_MS || 1500);
+    }
+    function showConsult(consult, targetName) {
+      state.consult = {
+        consult: consult,
+        name: targetName,
+        view: null,
+        message: ''
+      };
+      if (parts.modesSlot) {
+        parts.modesSlot.innerHTML = '';
+      }
+      if (parts.entry) {
+        parts.entry.hidden = true;
+      }
+
+      // Leaving the panel mid-consult would leave the caller on hold with nobody deciding what happens to them,
+      // so while it runs the only ways out are the consult's own Complete and Cancel.
+      if (parts.back) {
+        parts.back.hidden = true;
+      }
+      parts.results.innerHTML = '<div class="telephony-soft-phone__consult" data-telephony-consult>' + '<i class="fa-solid fa-user-clock" aria-hidden="true"></i>' + '<span class="telephony-soft-phone__consult-status" data-telephony-consult-status role="status" aria-live="polite"></span>' + '</div>';
+      parts.actions.innerHTML = '<button type="button" class="btn btn-sm btn-outline-danger" data-telephony-consult-cancel>' + escapeHtml(label(strings, 'consultCancel', 'Cancel transfer')) + '</button>' + '<button type="button" class="btn btn-sm btn-primary" data-telephony-consult-complete>' + escapeHtml(label(strings, 'consultComplete', 'Complete transfer')) + '</button>' + '<button type="button" class="btn btn-sm btn-primary" data-telephony-consult-done hidden>' + escapeHtml(label(strings, 'consultDone', 'Back to the call')) + '</button>';
+      parts.consultStatus = parts.results.querySelector('[data-telephony-consult-status]');
+      parts.consultCancel = parts.actions.querySelector('[data-telephony-consult-cancel]');
+      parts.consultComplete = parts.actions.querySelector('[data-telephony-consult-complete]');
+      parts.consultDone = parts.actions.querySelector('[data-telephony-consult-done]');
+      parts.consultComplete.addEventListener('click', function () {
+        finishConsult(options.completeConsult);
+      });
+      parts.consultCancel.addEventListener('click', function () {
+        finishConsult(options.cancelConsult);
+      });
+      parts.consultDone.addEventListener('click', close);
+      updateConsult(consult, true);
+    }
+    function updateConsult(consult, byAgent) {
+      var previous = state.consult.view ? state.consult.view.status : '';
+      var view = softPhone.consultView(consult, state.consult.name, strings);
+      state.consult.consult = consult;
+      state.consult.view = view;
+      var message = view.message;
+      if (!view.live && !byAgent && previous) {
+        message = softPhone.consultEndedMessage(previous, consult, state.consult.name, strings, {
+          callEnded: !!(consult && consult.callEnded)
+        }) || message;
+      }
+      parts.consultStatus.textContent = message;
+      parts.consultComplete.disabled = !view.canComplete;
+      parts.consultCancel.disabled = !view.canCancel;
+      // A blind transfer completes itself when the destination answers; there is nothing for the agent to complete.
+      parts.consultComplete.hidden = !view.live || !!(consult && consult.blind);
+      parts.consultCancel.hidden = !view.live;
+      parts.consultDone.hidden = view.live;
+      if (view.live) {
+        schedulePoll();
+      } else {
+        stopPolling();
+      }
+    }
+    function finishConsult(command) {
+      if (!state.consult || typeof command !== 'function') {
+        return;
+      }
+      parts.consultComplete.disabled = true;
+      parts.consultCancel.disabled = true;
+      stopPolling();
+      Promise.resolve(command(state.consult.consult)).then(function (result) {
+        if (!state.open || !state.consult) {
+          return;
+        }
+        if (result && result.succeeded !== false) {
+          close();
+          return;
+        }
+
+        // Refused -- most often completing before the destination answered. The consult goes on as it was.
+        setError(result && result.error ? result.error : label(strings, 'failed', 'Call failed'));
+        updateConsult(state.consult.consult, true);
+      }).catch(function () {
+        if (state.open && state.consult) {
+          updateConsult(state.consult.consult, true);
+        }
+      });
+    }
+    return {
+      open: open,
+      close: close,
+      isOpen: isOpen,
+      isBusy: isBusy,
+      submit: submit
+    };
+  }
+  softPhone.createTransferPanel = createTransferPanel;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * A confirmation asked inside the soft phone instead of through the browser.
+ *
+ * The browser's own confirm dialog is headed with the site's address, blocks every call event while it is open, and
+ * inside the desktop app's narrow window it is cut off. The phone asks its questions in its own panel instead.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // Asks `options.message` in a bar inserted into `host` ahead of `options.before` (or at its end). Resolves true when
+  // the agent confirms and false when they cancel or press Escape. Asking again replaces a question still open.
+  //   options - { message, confirmLabel, cancelLabel, before, focusCancel }
+  function showInAppConfirm(host, options) {
+    options = options || {};
+    if (!host || !host.ownerDocument) {
+      return Promise.resolve(false);
+    }
+    var existing = host.querySelector('[data-telephony-confirm]');
+    if (existing && typeof existing.__telephonyCancel === 'function') {
+      existing.__telephonyCancel();
+    }
+    var doc = host.ownerDocument;
+    var bar = doc.createElement('div');
+    var message = doc.createElement('p');
+    var actions = doc.createElement('div');
+    var cancel = doc.createElement('button');
+    var confirm = doc.createElement('button');
+    var messageId = 'telephony-confirm-' + Date.now();
+    bar.className = 'telephony-soft-phone__confirm';
+    bar.setAttribute('data-telephony-confirm', '');
+    bar.setAttribute('role', 'alertdialog');
+    bar.setAttribute('aria-labelledby', messageId);
+    message.className = 'telephony-soft-phone__confirm-text';
+    message.id = messageId;
+    message.textContent = options.message || '';
+    actions.className = 'telephony-soft-phone__confirm-actions';
+    cancel.type = 'button';
+    cancel.className = 'btn btn-sm btn-outline-secondary';
+    cancel.setAttribute('data-telephony-confirm-cancel', '');
+    cancel.textContent = options.cancelLabel || 'Cancel';
+    confirm.type = 'button';
+    confirm.className = 'btn btn-sm btn-danger';
+    confirm.setAttribute('data-telephony-confirm-accept', '');
+    confirm.textContent = options.confirmLabel || 'OK';
+    actions.appendChild(cancel);
+    actions.appendChild(confirm);
+    bar.appendChild(message);
+    bar.appendChild(actions);
+    return new Promise(function (resolve) {
+      function finish(answer) {
+        if (bar.parentNode) {
+          bar.parentNode.removeChild(bar);
+        }
+        resolve(answer);
+      }
+      bar.__telephonyCancel = function () {
+        finish(false);
+      };
+      cancel.addEventListener('click', function () {
+        finish(false);
+      });
+      confirm.addEventListener('click', function () {
+        finish(true);
+      });
+      bar.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          finish(false);
+        }
+      });
+      if (options.before && options.before.parentNode === host) {
+        host.insertBefore(bar, options.before);
+      } else {
+        host.appendChild(bar);
+      }
+
+      // A question whose confirmation ends the call for other people starts on the answer that keeps them on.
+      (options.focusCancel ? cancel : confirm).focus();
+    });
+  }
+  softPhone.showInAppConfirm = showInAppConfirm;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * The labels of a matched-record card's actions in the incoming-call panel.
+ *
+ * A card's actions used to always read "Answer & open" and "Open", whatever the card opened. The Contact Center now
+ * points the card for the offered activity's customer at that activity -- the notes and disposition for the call --
+ * and a generic "open" no longer tells the agent where it goes, so a card may name its own actions.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+  function pick(value, fallback) {
+    return typeof value === 'string' && value.trim() ? value : fallback;
+  }
+
+  // { answerAndOpen, open }: the card's own labels, else the phone's generic ones.
+  function incomingCardActionLabels(card, strings) {
+    card = card || {};
+    strings = strings || {};
+    return {
+      answerAndOpen: pick(card.answerAndOpenText, pick(strings.answerAndOpen, 'Answer & open')),
+      open: pick(card.openText, pick(strings.open, 'Open'))
+    };
+  }
+  softPhone.incomingCardActionLabels = incomingCardActionLabels;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * When the soft phone registers with the provider, and what a click on Answer does while it is not registered yet.
+ *
+ * The platform rings the agent's leg for an offer the moment the offer is made, at the credential this browser last
+ * registered on. A phone that is not registered then has nothing to ring (the provider answers SIP 480), and a phone
+ * that only registers once the agent clicks Answer makes that click pay for the whole registration -- microphone,
+ * credential, provider login -- several seconds in which nothing on screen changed, so the agent clicked again and
+ * again. These are the pure decisions: when to start registering, and whether a click registers, accepts or is a
+ * repeat of one already under way.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // Whether to start registering now: browser audio is in use, nothing is registered or being registered, the hub
+  // that hands out the credentials is up, and the microphone is not known to be blocked -- a blocked microphone fails
+  // every attempt the same way, and the agent's Retry is the way back from it.
+  function shouldStartRegistration(state) {
+    state = state || {};
+    return !!state.browserAudioEnabled && !state.registered && !state.registering && !state.microphoneBlocked && state.hubConnected !== false;
+  }
+
+  // What a click on Answer does: 'ignore' while an earlier click is still being carried out (registering for it or
+  // accepting it), 'register' when the phone has to register before it can take the call, and 'accept' otherwise.
+  function answerClickAction(state) {
+    state = state || {};
+    if (state.acceptPending || state.registeringForAnswer) {
+      return 'ignore';
+    }
+    return state.browserAudioEnabled && !state.registered ? 'register' : 'accept';
+  }
+
+  // Whether the agent's answer is under way -- from the first click, including the registration it waits on -- so
+  // the phone shows it at once: the offer's buttons disabled, the ringtone silenced, the status "Connecting".
+  function isAnswerInProgress(state) {
+    state = state || {};
+    return !!state.acceptPending || !!state.registeringForAnswer;
+  }
+  softPhone.shouldStartRegistration = shouldStartRegistration;
+  softPhone.answerClickAction = answerClickAction;
+  softPhone.isAnswerInProgress = isAnswerInProgress;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * What the offer's buttons show while the agent's answer is under way, and which offers are already over.
+ *
+ * The first click on Answer used to change nothing the agent could see for several seconds, so they clicked again and
+ * again. From that click the button reads "Answering..." with a spinner and every offer button is disabled, until the
+ * call connects -- or, if the answer fails or the registration it waits on never completes, until the buttons come back
+ * with an error.
+ *
+ * An offer can reach the phone more than once -- pushed by the hub, and fetched by a request already in flight -- and
+ * a copy can land after the offer was revoked or its call ended, re-opening the incoming-call modal for a call that is
+ * over. Settled offers are remembered for a while so a late copy is dropped instead of flashing the modal up.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // How long an answer may wait on the registration before it is given up and the buttons come back.
+  var ANSWER_REGISTRATION_TIMEOUT_MS = 15000;
+
+  // How long a revoked offer, or an ended call, is remembered: far longer than any copy of it can be in flight, and
+  // short enough that a call id is never held against a later, genuine offer.
+  var SETTLED_OFFER_TTL_MS = 30 * 1000;
+
+  // The offer button's look: disabled with a spinner and "Answering..." while the answer is in progress, and as it
+  // was (its own label) otherwise.
+  function answerButtonView(inProgress, restingLabel, labels) {
+    if (!inProgress) {
+      return {
+        disabled: false,
+        spinner: false,
+        label: restingLabel
+      };
+    }
+    return {
+      disabled: true,
+      spinner: true,
+      label: labels && labels.answering || 'Answering…'
+    };
+  }
+
+  // Settles like `promise`, or rejects with an error flagged `timedOut` once `ms` have passed without it settling.
+  // A later settlement of `promise` is then ignored.
+  function withTimeout(promise, ms) {
+    return new Promise(function (resolve, reject) {
+      var timer = root.setTimeout(function () {
+        var error = new Error('Timed out.');
+        error.timedOut = true;
+        reject(error);
+      }, ms);
+      Promise.resolve(promise).then(function (value) {
+        root.clearTimeout(timer);
+        resolve(value);
+      }, function (error) {
+        root.clearTimeout(timer);
+        reject(error);
+      });
+    });
+  }
+  function settledKeys(offer) {
+    var keys = [];
+    if (offer && offer.reservationId) {
+      keys.push('r:' + offer.reservationId);
+    }
+    if (offer && offer.callId) {
+      keys.push('c:' + offer.callId);
+    }
+    return keys;
+  }
+
+  // Remembers an offer that is over -- revoked (by reservation) or whose call ended (by call id) -- and forgets the
+  // ones remembered long enough.
+  function rememberSettledOffer(settled, offer, now) {
+    Object.keys(settled).forEach(function (key) {
+      if (now - settled[key] > SETTLED_OFFER_TTL_MS) {
+        delete settled[key];
+      }
+    });
+    settledKeys(offer).forEach(function (key) {
+      settled[key] = now;
+    });
+  }
+  function isOfferSettled(settled, offer, now) {
+    return settledKeys(offer).some(function (key) {
+      return typeof settled[key] === 'number' && now - settled[key] <= SETTLED_OFFER_TTL_MS;
+    });
+  }
+
+  // Ignore and Voicemail post to the Contact Center and wait about a second for its answer. Live, the buttons stayed
+  // clickable meanwhile, and the second click of a double-click declined the next reservation, offered the moment the
+  // first was declined. A click on an offer's button is taken only once per offer, and a click within this long of the
+  // last one is a double-click, whichever offer it lands on.
+  var OFFER_CLICK_GUARD_MS = 800;
+
+  // Whether a click on an offer's Ignore, Voicemail or Answer is the agent acting on `offer`.
+  //   pending - the offer action under way, { reservationId, at }, or null.
+  //   offer   - the offer on screen, { reservationId }.
+  // Returns 'act', or 'ignore' for a repeat click on the same offer or one landing within the guard of the last.
+  function offerActionClick(pending, offer, now) {
+    if (!pending) {
+      return 'act';
+    }
+    if (isOfferActionPending(pending, offer)) {
+      return 'ignore';
+    }
+    return typeof pending.at === 'number' && now - pending.at < OFFER_CLICK_GUARD_MS ? 'ignore' : 'act';
+  }
+
+  // Whether the action under way is for this offer, so its buttons stay disabled until the request fails.
+  function isOfferActionPending(pending, offer) {
+    return !!(pending && offer && pending.reservationId && pending.reservationId === offer.reservationId);
+  }
+  softPhone.OFFER_CLICK_GUARD_MS = OFFER_CLICK_GUARD_MS;
+  softPhone.offerActionClick = offerActionClick;
+  softPhone.isOfferActionPending = isOfferActionPending;
+  softPhone.ANSWER_REGISTRATION_TIMEOUT_MS = ANSWER_REGISTRATION_TIMEOUT_MS;
+  softPhone.SETTLED_OFFER_TTL_MS = SETTLED_OFFER_TTL_MS;
+  softPhone.answerButtonView = answerButtonView;
+  softPhone.withTimeout = withTimeout;
+  softPhone.rememberSettledOffer = rememberSettledOffer;
+  softPhone.isOfferSettled = isOfferSettled;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * Hands the incoming-call prompt to a desktop host that notifies for it, and takes the prompt back when the host does
+ * not confirm it.
+ *
+ * A desktop app that hosts the standalone /softphone page in an embedded browser (WebView2) shows its own incoming-call
+ * notification. The page's full-screen incoming modal then showed at the same time, so the agent saw the same call
+ * twice. The page now tells the host about the ringing call and hides its modal only when the host confirms that its
+ * notification for that exact call is on screen. If the host does not confirm within HOST_ACK_TIMEOUT_MS, or it later
+ * reports that its notification was closed without an answer, the page shows its modal again. The page never hides
+ * the modal on a host's word alone: a host that is missing, old, or broken leaves the modal exactly as before.
+ *
+ * Messages travel over window.chrome.webview, which exists only inside WebView2. A normal browser tab or the browser
+ * extension never has it, so the modal there is unchanged and shows without delay.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+  var HOST_BRIDGE_PROTOCOL = 1;
+
+  // How long the page waits for the host to confirm its notification before showing the modal itself.
+  var HOST_ACK_TIMEOUT_MS = 2000;
+
+  // How long the page stays quiet after the agent acted in the host's notification. If the call is still ringing
+  // after this (for example, the answer could not start the audio), the page shows its modal so the call is not lost.
+  // An answer the page reports as still under way (registering, then accepting) extends the wait; that answer has
+  // its own time limit, after which the call rings again and the modal comes back.
+  var HOST_ACTION_GRACE_MS = 5000;
+  var PAGE_MESSAGES = {
+    ready: 'softphone-ready',
+    incomingCall: 'incoming-call',
+    incomingCallEnded: 'incoming-call-ended',
+    actionResult: 'incoming-call-action-result'
+  };
+  var HOST_MESSAGES = {
+    ready: 'host-ready',
+    shown: 'incoming-call-shown',
+    dismissed: 'incoming-call-dismissed',
+    action: 'incoming-call-action'
+  };
+  var HOST_ACTIONS = ['answer', 'decline', 'voicemail'];
+
+  // The WebView2 message channel, or null when the page does not run inside WebView2.
+  function findHostChannel(win) {
+    var channel = win && win.chrome ? win.chrome.webview : null;
+    if (!channel || typeof channel.postMessage !== 'function' || typeof channel.addEventListener !== 'function') {
+      return null;
+    }
+    return channel;
+  }
+  function text(value) {
+    return typeof value === 'string' ? value : '';
+  }
+
+  // An absolute http(s) URL, or '' for anything else. Card URLs are path-only on the server; the host opens them
+  // outside the page, so they must be absolute, and only web links are ever handed over.
+  function absoluteHttpUrl(url, baseUrl) {
+    if (typeof url !== 'string' || !url.trim()) {
+      return '';
+    }
+    try {
+      var resolved = new URL(url.trim(), baseUrl);
+      return resolved.protocol === 'https:' || resolved.protocol === 'http:' ? resolved.href : '';
+    } catch (e) {
+      return '';
+    }
+  }
+  function buildCard(card, baseUrl) {
+    card = card || {};
+    var links = Array.isArray(card.links) ? card.links : [];
+    return {
+      id: text(card.id),
+      title: text(card.title),
+      subtitle: text(card.subtitle),
+      description: text(card.description),
+      badges: (Array.isArray(card.badges) ? card.badges : []).filter(function (badge) {
+        return typeof badge === 'string' && badge;
+      }),
+      url: absoluteHttpUrl(card.url, baseUrl),
+      answerAndOpenText: text(card.answerAndOpenText),
+      openText: text(card.openText),
+      links: links.map(function (link) {
+        return link ? {
+          text: text(link.text),
+          url: absoluteHttpUrl(link.url, baseUrl)
+        } : null;
+      }).filter(function (link) {
+        return !!(link && link.url);
+      })
+    };
+  }
+
+  // The 'incoming-call' message for the offer on screen. offer is { callId, from, queue, heading, canVoicemail,
+  // cards }, where each card already carries its resolved action labels. baseUrl resolves the path-only card URLs.
+  function buildIncomingCallMessage(offer, baseUrl) {
+    offer = offer || {};
+    return {
+      type: PAGE_MESSAGES.incomingCall,
+      protocol: HOST_BRIDGE_PROTOCOL,
+      callId: text(offer.callId),
+      from: text(offer.from),
+      queue: text(offer.queue),
+      heading: text(offer.heading),
+      canVoicemail: !!offer.canVoicemail,
+      cards: (Array.isArray(offer.cards) ? offer.cards : []).map(function (card) {
+        return buildCard(card, baseUrl);
+      })
+    };
+  }
+
+  // A message from the host, normalized, or null when it is not one this page understands.
+  function readHostMessage(data) {
+    if (typeof data === 'string') {
+      try {
+        data = JSON.parse(data);
+      } catch (e) {
+        return null;
+      }
+    }
+    if (!data || typeof data !== 'object' || typeof data.type !== 'string') {
+      return null;
+    }
+    var protocol = typeof data.protocol === 'number' ? data.protocol : 0;
+    switch (data.type) {
+      case HOST_MESSAGES.ready:
+        return protocol >= HOST_BRIDGE_PROTOCOL ? {
+          type: HOST_MESSAGES.ready,
+          protocol: protocol
+        } : null;
+      case HOST_MESSAGES.shown:
+      case HOST_MESSAGES.dismissed:
+        if (!text(data.callId)) {
+          return null;
+        }
+        return {
+          type: data.type,
+          callId: data.callId,
+          ringing: !!data.ringing
+        };
+      case HOST_MESSAGES.action:
+        if (!text(data.callId) || HOST_ACTIONS.indexOf(data.action) === -1) {
+          return null;
+        }
+        return {
+          type: HOST_MESSAGES.action,
+          callId: data.callId,
+          action: data.action
+        };
+      default:
+        return null;
+    }
+  }
+
+  // What the page shows for a ringing offer while a host may be notifying for it.
+  //   status 'pending'  - the host was told and has not confirmed yet: keep whatever was on screen.
+  //   status 'shown'    - the host confirmed its notification: hide the modal, ring only if the host does not.
+  //   status 'acting'   - the agent acted in the host's notification: stay quiet while the action runs.
+  //   status 'fallback' - the host did not confirm, or its notification was closed: show the modal and ring.
+  function presentationFor(offerVisible, delegation) {
+    if (!offerVisible) {
+      return {
+        showModal: false,
+        ring: false
+      };
+    }
+    if (!delegation) {
+      return {
+        showModal: true,
+        ring: true
+      };
+    }
+    switch (delegation.status) {
+      case 'pending':
+        return {
+          showModal: delegation.modalOnScreen,
+          ring: delegation.modalOnScreen
+        };
+      case 'shown':
+        return {
+          showModal: false,
+          ring: !delegation.hostRinging
+        };
+      case 'acting':
+        return {
+          showModal: false,
+          ring: false
+        };
+      default:
+        return {
+          showModal: true,
+          ring: true
+        };
+    }
+  }
+
+  // The per-page handoff state. options:
+  //   post(message)        - sends a message to the host.
+  //   onChange()           - called when the presentation may have changed (re-render).
+  //   schedule(fn, ms)     - optional timer (defaults to setTimeout); returns a handle.
+  //   cancel(handle)       - optional timer cancel (defaults to clearTimeout).
+  //   ackTimeoutMs         - optional, defaults to HOST_ACK_TIMEOUT_MS.
+  //   actionGraceMs        - optional, defaults to HOST_ACTION_GRACE_MS.
+  //   isActionUnderWay()   - optional; true while the chosen action is still running (e.g. an answer registering).
+  function createHostDelegation(options) {
+    options = options || {};
+    var post = options.post || function () {};
+    var onChange = options.onChange || function () {};
+    var isActionUnderWay = options.isActionUnderWay || function () {
+      return false;
+    };
+    var schedule = options.schedule || function (fn, ms) {
+      return root.setTimeout(fn, ms);
+    };
+    var cancel = options.cancel || function (handle) {
+      root.clearTimeout(handle);
+    };
+    var ackTimeoutMs = typeof options.ackTimeoutMs === 'number' ? options.ackTimeoutMs : HOST_ACK_TIMEOUT_MS;
+    var actionGraceMs = typeof options.actionGraceMs === 'number' ? options.actionGraceMs : HOST_ACTION_GRACE_MS;
+    var hostReady = false;
+    var current = null;
+    function stopTimer() {
+      if (current && current.timer !== null) {
+        cancel(current.timer);
+        current.timer = null;
+      }
+    }
+    function fallBackAfter(ms) {
+      var delegation = current;
+      stopTimer();
+      delegation.timer = schedule(function () {
+        if (current !== delegation) {
+          return;
+        }
+        delegation.timer = null;
+        if (delegation.status === 'acting' && isActionUnderWay()) {
+          fallBackAfter(ms);
+          return;
+        }
+        if (delegation.status === 'pending' || delegation.status === 'acting') {
+          delegation.status = 'fallback';
+          onChange();
+        }
+      }, ms);
+    }
+    function end() {
+      if (!current) {
+        return;
+      }
+      stopTimer();
+      post({
+        type: PAGE_MESSAGES.incomingCallEnded,
+        callId: current.callId
+      });
+      current = null;
+    }
+    return {
+      // Whether a host answered the page's 'softphone-ready' and takes part in the handoff.
+      isHostReady: function () {
+        return hostReady;
+      },
+      // The handoff state for the offer on screen (null when none). Read by the presentation.
+      current: function () {
+        return current;
+      },
+      // Called on every render. message is the 'incoming-call' message for the ringing offer, or null when no
+      // offer is on screen. modalOnScreen says whether the page's modal is showing right now.
+      sync: function (message, modalOnScreen) {
+        if (!message || !message.callId) {
+          end();
+          return;
+        }
+        if (!hostReady) {
+          return;
+        }
+        if (!current || current.callId !== message.callId) {
+          end();
+          current = {
+            callId: message.callId,
+            status: 'pending',
+            hostRinging: false,
+            modalOnScreen: !!modalOnScreen,
+            signature: '',
+            timer: null
+          };
+          fallBackAfter(ackTimeoutMs);
+        }
+
+        // Re-send when the offer's details change (for example, matched records arrive after the ring).
+        var signature = JSON.stringify(message);
+        if (signature !== current.signature) {
+          current.signature = signature;
+          post(message);
+        }
+      },
+      // Applies a message from the host. Returns { action, callId, matchesOffer } when the agent chose an
+      // action in the host's notification, otherwise null.
+      receive: function (data) {
+        var message = readHostMessage(data);
+        if (!message) {
+          return null;
+        }
+        var matches = !!(current && current.callId === message.callId);
+        switch (message.type) {
+          case HOST_MESSAGES.ready:
+            if (!hostReady) {
+              hostReady = true;
+              onChange();
+            }
+            return null;
+          case HOST_MESSAGES.shown:
+            if (matches && current.status !== 'acting') {
+              stopTimer();
+              current.status = 'shown';
+              current.hostRinging = message.ringing;
+              onChange();
+            }
+            return null;
+          case HOST_MESSAGES.dismissed:
+            if (matches && current.status !== 'fallback') {
+              stopTimer();
+              current.status = 'fallback';
+              onChange();
+            }
+            return null;
+          case HOST_MESSAGES.action:
+            if (matches) {
+              current.status = 'acting';
+              fallBackAfter(actionGraceMs);
+              onChange();
+            }
+            return {
+              action: message.action,
+              callId: message.callId,
+              matchesOffer: matches
+            };
+          default:
+            return null;
+        }
+      },
+      // { showModal, ring } for the offer on screen.
+      presentation: function (offerVisible) {
+        return presentationFor(offerVisible, current);
+      },
+      // Forgets the offer without telling the host (the page is going away).
+      reset: function () {
+        stopTimer();
+        current = null;
+      }
+    };
+  }
+  softPhone.HOST_BRIDGE_PROTOCOL = HOST_BRIDGE_PROTOCOL;
+  softPhone.HOST_ACK_TIMEOUT_MS = HOST_ACK_TIMEOUT_MS;
+  softPhone.HOST_ACTION_GRACE_MS = HOST_ACTION_GRACE_MS;
+  softPhone.HOST_PAGE_MESSAGES = PAGE_MESSAGES;
+  softPhone.HOST_MESSAGES = HOST_MESSAGES;
+  softPhone.findHostChannel = findHostChannel;
+  softPhone.buildIncomingCallMessage = buildIncomingCallMessage;
+  softPhone.readHostMessage = readHostMessage;
+  softPhone.presentationFor = presentationFor;
+  softPhone.createHostDelegation = createHostDelegation;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * Which path sends a ringing call to voicemail when the agent clicks Voicemail.
+ *
+ * Exactly one path may do it. The soft phone used to decline a Contact Center offer (which the Contact Center turns
+ * into voicemail, recording the decline and releasing the agent) and also ask the telephony hub to send the same call
+ * to voicemail. Both answered the caller and both played the greeting, so the caller heard it twice before the beep.
+ *
+ * A call the Contact Center offered belongs to the Contact Center: it sends the caller to voicemail through the offer's
+ * own action. The telephony hub is only for a plain telephony call that no Contact Center offer owns. A direct
+ * extension call rung in the browser is declined locally; the server routes its caller to voicemail from that hangup.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+  var VOICEMAIL_ROUTES = Object.freeze({
+    browserLeg: 'browser-leg',
+    contactCenter: 'contact-center',
+    telephony: 'telephony',
+    none: 'none'
+  });
+
+  // state.browserInboundRinging: a direct extension call is ringing in the browser.
+  // state.offer: the ringing offer's properties (its lifecycle actions), or nothing for a plain telephony call.
+  // state.hasCall: the phone knows the ringing call, so the telephony hub can act on it.
+  //
+  // Returns the route, and for the Contact Center the offer property holding the action to post. An offer that
+  // carries its voicemail action uses it; one that only carries a decline is declined, which for a direct-to-agent
+  // line is itself what sends the caller to voicemail.
+  function voicemailRoute(state) {
+    var current = state || {};
+    if (current.browserInboundRinging) {
+      return {
+        route: VOICEMAIL_ROUTES.browserLeg
+      };
+    }
+    var offer = current.offer || {};
+    var lifecycleKey = offer.voicemailUrl ? 'voicemailUrl' : offer.declineUrl ? 'declineUrl' : null;
+    if (lifecycleKey) {
+      return {
+        route: VOICEMAIL_ROUTES.contactCenter,
+        lifecycleKey: lifecycleKey
+      };
+    }
+    return {
+      route: current.hasCall ? VOICEMAIL_ROUTES.telephony : VOICEMAIL_ROUTES.none
+    };
+  }
+  softPhone.VOICEMAIL_ROUTES = VOICEMAIL_ROUTES;
+  softPhone.voicemailRoute = voicemailRoute;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * Deleting the voicemails an agent selected, and saying which ones did not go and why.
+ *
+ * The phone used to fire every delete at once and reload the list whatever came back. A refusal answered with a
+ * redirect was followed by the browser to a page that said 200, so a voicemail the server would not delete simply
+ * stayed in the list with no word about it. Here each answer is read for what it is: only a 2xx that was not reached
+ * through a redirect counts as deleted, and every other answer carries a reason the agent can act on. The requests go
+ * one at a time, so a single inbox is never written by several deletes at once.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+  var DEFAULT_TEXT = {
+    refused: 'The server refused the request. Reload the page and try again.',
+    expired: 'The page is out of date. Reload it and try again.',
+    signedOut: 'You are signed out. Sign in again and retry.',
+    forbidden: 'You do not have access to this voicemail.',
+    notFound: 'This voicemail no longer exists.',
+    legalHold: 'This voicemail is under legal hold and must be kept.',
+    network: 'The server could not be reached.',
+    failed: 'The server could not delete it.'
+  };
+  var STRING_KEYS = {
+    refused: 'voicemailDeleteRefused',
+    expired: 'voicemailDeleteExpired',
+    signedOut: 'voicemailDeleteSignedOut',
+    forbidden: 'voicemailDeleteForbidden',
+    notFound: 'voicemailDeleteNotFound',
+    legalHold: 'voicemailDeleteLegalHold',
+    network: 'voicemailDeleteNetwork',
+    failed: 'voicemailDeleteServerFailed'
+  };
+
+  // Why a delete's answer is not a deletion, or null when it is one. The answer is a fetch Response (or anything
+  // shaped like one); the request is sent with redirect: 'manual', so a redirect arrives as an opaque redirect.
+  function voicemailDeleteFailureReason(response) {
+    if (!response) {
+      return 'network';
+    }
+    var status = response.status;
+    if (response.type === 'opaqueredirect' || response.redirected === true || status >= 300 && status < 400) {
+      return 'refused';
+    }
+    if (status >= 200 && status < 300) {
+      return null;
+    }
+    switch (status) {
+      case 400:
+        return 'expired';
+      case 401:
+        return 'signedOut';
+      case 403:
+        return 'forbidden';
+      case 404:
+        return 'notFound';
+      case 409:
+        return 'legalHold';
+      default:
+        return 'failed';
+    }
+  }
+
+  // Deletes the voicemails one after another through deleteOne(id), which returns a promise of the server's answer,
+  // and resolves to { deleted: [ids], failed: [{ id, reason }] } once every one has been tried.
+  function deleteVoicemailsInTurn(ids, deleteOne) {
+    var outcome = {
+      deleted: [],
+      failed: []
+    };
+    return (ids || []).reduce(function (previous, id) {
+      if (!id) {
+        return previous;
+      }
+      return previous.then(function () {
+        return Promise.resolve().then(function () {
+          return deleteOne(id);
+        }).then(voicemailDeleteFailureReason, function () {
+          return 'network';
+        }).then(function (reason) {
+          if (reason) {
+            outcome.failed.push({
+              id: id,
+              reason: reason
+            });
+          } else {
+            outcome.deleted.push(id);
+          }
+        });
+      });
+    }, Promise.resolve()).then(function () {
+      return outcome;
+    });
+  }
+
+  // The sentence shown beside a voicemail that was not deleted.
+  function voicemailDeleteFailureText(reason, strings) {
+    var key = Object.prototype.hasOwnProperty.call(DEFAULT_TEXT, reason) ? reason : 'failed';
+    var localized = strings ? strings[STRING_KEYS[key]] : null;
+    return localized || DEFAULT_TEXT[key];
+  }
+
+  // The message for the whole attempt: null when every voicemail was deleted; otherwise one voicemail's reason, or
+  // how many of the selected voicemails were left behind (each row then carries its own reason).
+  function describeVoicemailDeleteFailures(outcome, strings) {
+    var failed = outcome && outcome.failed ? outcome.failed : [];
+    if (!failed.length) {
+      return null;
+    }
+    var total = failed.length + (outcome.deleted ? outcome.deleted.length : 0);
+    if (total === 1) {
+      return (strings && strings.voicemailDeleteFailed || 'The voicemail could not be deleted.') + ' ' + voicemailDeleteFailureText(failed[0].reason, strings);
+    }
+    var template = strings && strings.voicemailDeletePartiallyFailed || '{0} of {1} voicemails could not be deleted. They are still selected.';
+    return template.replace('{0}', String(failed.length)).replace('{1}', String(total));
+  }
+  softPhone.voicemailDeleteFailureReason = voicemailDeleteFailureReason;
+  softPhone.deleteVoicemailsInTurn = deleteVoicemailsInTurn;
+  softPhone.voicemailDeleteFailureText = voicemailDeleteFailureText;
+  softPhone.describeVoicemailDeleteFailures = describeVoicemailDeleteFailures;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
  * Provider-agnostic soft phone client.
  *
  * Connects to the Telephony SignalR hub and drives the floating soft phone UI. The widget can be
@@ -13,6 +6695,212 @@
  */
 (function () {
   'use strict';
+
+  // The parts of the soft phone with no DOM and no provider in them live in Assets/js/soft-phone/*.js and are
+  // concatenated ahead of this file into the same bundle. They attach to a shared namespace rather than
+  // exporting, so one source file runs both in the browser and under the JavaScript unit tests (`npm test`) —
+  // which is the point of the split: this file is far too large to test, and those parts are the ones where a
+  // silent arithmetic or mapping mistake reaches an agent as a wrong number on screen or a call that looks
+  // connected when it is ringing.
+  var softPhoneModules = (typeof globalThis !== 'undefined' ? globalThis : window).CrestAppsSoftPhone || {};
+  var normalizeDialNumber = softPhoneModules.normalizeDialNumber;
+  var formatNanpNumber = softPhoneModules.formatNanpNumber;
+  var formatInternationalNumber = softPhoneModules.formatInternationalNumber;
+  var formatPhoneNumber = softPhoneModules.formatPhoneNumber;
+  var QUALITY_POOR_MOS = softPhoneModules.QUALITY_POOR_MOS;
+  var QUALITY_POOR_LOSS_PERCENT = softPhoneModules.QUALITY_POOR_LOSS_PERCENT;
+  var QUALITY_SILENT_MIC_SAMPLES = softPhoneModules.QUALITY_SILENT_MIC_SAMPLES;
+  var LEVEL_UNKNOWN = softPhoneModules.LEVEL_UNKNOWN;
+  var LEVEL_SILENT = softPhoneModules.LEVEL_SILENT;
+  var estimateMos = softPhoneModules.estimateMos;
+  var isCaptureSilent = softPhoneModules.isCaptureSilent;
+  var readJitterBufferMs = softPhoneModules.readJitterBufferMs;
+  var parseWebRtcStats = softPhoneModules.parseWebRtcStats;
+  var createLevelProbe = softPhoneModules.createLevelProbe;
+  var probeLevel = softPhoneModules.probeLevel;
+  var isTrackDeliverable = softPhoneModules.isTrackDeliverable;
+  var captureProbeNeedsRebuild = softPhoneModules.captureProbeNeedsRebuild;
+  var windowedMicrophoneLevel = softPhoneModules.windowedMicrophoneLevel;
+  var findAudioSender = softPhoneModules.findAudioSender;
+  var formatCallStatus = softPhoneModules.formatCallStatus;
+  var connectedAtFor = softPhoneModules.connectedAtFor;
+  var formatElapsed = softPhoneModules.formatElapsed;
+  var isVirtualAudioDevice = softPhoneModules.isVirtualAudioDevice;
+  var resolveDeviceLabel = softPhoneModules.resolveDeviceLabel;
+  var durationMeta = softPhoneModules.durationMeta;
+  var clampBoostDb = softPhoneModules.clampBoostDb;
+  var describeBoost = softPhoneModules.describeBoost;
+  var createBoostPipeline = softPhoneModules.createBoostPipeline;
+  var clampPlayoutDelay = softPhoneModules.clampPlayoutDelay;
+  var describePlayoutDelay = softPhoneModules.describePlayoutDelay;
+  var applyPlayoutDelay = softPhoneModules.applyPlayoutDelay;
+  var concealmentPercent = softPhoneModules.concealmentPercent;
+  var clampSignalingRegion = softPhoneModules.clampSignalingRegion;
+  var describeSignalingRegion = softPhoneModules.describeSignalingRegion;
+  var resolveSignalingRegion = softPhoneModules.resolveSignalingRegion;
+  var withSignalingRegion = softPhoneModules.withSignalingRegion;
+  var describeProviderWarning = softPhoneModules.describeProviderWarning;
+  var classifyProviderWarning = softPhoneModules.classifyProviderWarning;
+  var mapTelnyxOutboundState = softPhoneModules.mapTelnyxOutboundState;
+  var isTelnyxTerminalState = softPhoneModules.isTelnyxTerminalState;
+  var iceServersIncludeTurn = softPhoneModules.iceServersIncludeTurn;
+  var reconnectDelayMs = softPhoneModules.reconnectDelayMs;
+  var createHoldAudioController = softPhoneModules.createHoldAudioController;
+  var hasLiveAudioTrack = softPhoneModules.hasLiveAudioTrack;
+  var releaseSharedCapture = softPhoneModules.releaseSharedCapture;
+  var startOutboundAudioMonitor = softPhoneModules.startOutboundAudioMonitor;
+  var OUTBOUND_SILENCE_MS = softPhoneModules.OUTBOUND_SILENCE_MS;
+  var rememberAgentHold = softPhoneModules.rememberAgentHold;
+  var pruneAgentHolds = softPhoneModules.pruneAgentHolds;
+  var isAgentHeld = softPhoneModules.isAgentHeld;
+  var reconcileAgentHold = softPhoneModules.reconcileAgentHold;
+  var resolveReportedState = softPhoneModules.resolveReportedState;
+  var holdCommandRoute = softPhoneModules.holdCommandRoute;
+  var rememberAgentMute = softPhoneModules.rememberAgentMute;
+  var isAgentMuted = softPhoneModules.isAgentMuted;
+  var pruneAgentMutes = softPhoneModules.pruneAgentMutes;
+  var reconcileAgentMute = softPhoneModules.reconcileAgentMute;
+  var muteGroupCallIds = softPhoneModules.muteGroupCallIds;
+  var conferenceMuted = softPhoneModules.conferenceMuted;
+  var readOfferLegTag = softPhoneModules.readOfferLegTag;
+  var classifyOfferLeg = softPhoneModules.classifyOfferLeg;
+  var rememberAcceptedOffer = softPhoneModules.rememberAcceptedOffer;
+  var forgetAcceptedOffer = softPhoneModules.forgetAcceptedOffer;
+  var OFFER_LEG_CAPABILITY = softPhoneModules.OFFER_LEG_CAPABILITY;
+  var planOfferCallReport = softPhoneModules.planOfferCallReport;
+  var rememberUnacceptedOfferCall = softPhoneModules.rememberUnacceptedOfferCall;
+  var forgetUnacceptedOfferCall = softPhoneModules.forgetUnacceptedOfferCall;
+  var EXTENSION_CALL_KEY = softPhoneModules.EXTENSION_CALL_KEY;
+  var autoAnswerOfferKey = softPhoneModules.autoAnswerOfferKey;
+  var createAutoAnswerArm = softPhoneModules.createAutoAnswerArm;
+  var armAutoAnswer = softPhoneModules.armAutoAnswer;
+  var disarmAutoAnswer = softPhoneModules.disarmAutoAnswer;
+  var disarmOtherOffers = softPhoneModules.disarmOtherOffers;
+  var shouldAutoAnswerInboundLeg = softPhoneModules.shouldAutoAnswerInboundLeg;
+  var canArmForAcceptedOffer = softPhoneModules.canArmForAcceptedOffer;
+  var createMonitorLegArms = softPhoneModules.createMonitorLegArms;
+  var armMonitorLegFor = softPhoneModules.armMonitorLeg;
+  var disarmMonitorLegFor = softPhoneModules.disarmMonitorLeg;
+  var readMonitorLegTag = softPhoneModules.readMonitorLegTag;
+  var claimMonitorLegArm = softPhoneModules.claimMonitorLegArm;
+  var monitorLegAction = softPhoneModules.monitorLegAction;
+  var monitorLegReplaces = softPhoneModules.monitorLegReplaces;
+  var anyMonitorLegTalks = softPhoneModules.anyMonitorLegTalks;
+  var planEntryStart = softPhoneModules.planEntryStart;
+  var planEntryEnd = softPhoneModules.planEntryEnd;
+  var BRIDGED_DIAL_LEG_CAPABILITY = softPhoneModules.BRIDGED_DIAL_LEG_CAPABILITY;
+  var planKeypadDial = softPhoneModules.planKeypadDial;
+  var bridgedDialRequest = softPhoneModules.bridgedDialRequest;
+  var shouldDialFromBrowser = softPhoneModules.shouldDialFromBrowser;
+  var sharedMicrophoneEnabled = softPhoneModules.sharedMicrophoneEnabled;
+  var shouldRingForOffer = softPhoneModules.shouldRingForOffer;
+  var shouldStartRegistration = softPhoneModules.shouldStartRegistration;
+  var answerClickAction = softPhoneModules.answerClickAction;
+  var isAnswerInProgress = softPhoneModules.isAnswerInProgress;
+  var answerButtonView = softPhoneModules.answerButtonView;
+  var offerActionClick = softPhoneModules.offerActionClick;
+  var isOfferActionPending = softPhoneModules.isOfferActionPending;
+  var ANSWER_REGISTRATION_TIMEOUT_MS = softPhoneModules.ANSWER_REGISTRATION_TIMEOUT_MS;
+  var withTimeout = softPhoneModules.withTimeout;
+  var rememberSettledOffer = softPhoneModules.rememberSettledOffer;
+  var isOfferSettled = softPhoneModules.isOfferSettled;
+  var readOfferHandledMessage = softPhoneModules.readOfferHandledMessage;
+  var OFFER_CHANNEL_NAME = softPhoneModules.OFFER_CHANNEL_NAME;
+  var OFFER_HANDLED_MESSAGE = softPhoneModules.OFFER_HANDLED_MESSAGE;
+  var createCallLegs = softPhoneModules.createCallLegs;
+  var notePlatformLeg = softPhoneModules.notePlatformLeg;
+  var noteBrowserLeg = softPhoneModules.noteBrowserLeg;
+  var forgetLeg = softPhoneModules.forgetLeg;
+  var planPlatformReport = softPhoneModules.planPlatformReport;
+  var legAfterEnd = softPhoneModules.legAfterEnd;
+  var allLegs = softPhoneModules.allLegs;
+  var canConferenceCall = softPhoneModules.canConferenceCall;
+  var planMerge = softPhoneModules.planMerge;
+  var conferenceAfterMerge = softPhoneModules.conferenceAfterMerge;
+  var buildActiveCallsHtml = softPhoneModules.buildActiveCallsHtml;
+  var createConferenceMemory = softPhoneModules.createConferenceMemory;
+  var rememberConference = softPhoneModules.rememberConference;
+  var applyConferenceMemory = softPhoneModules.applyConferenceMemory;
+  var markParticipantLeft = softPhoneModules.markParticipantLeft;
+  var forgetConferenceCall = softPhoneModules.forgetConferenceCall;
+  var conferenceMembers = softPhoneModules.conferenceMembers;
+  var visibleConferenceCalls = softPhoneModules.visibleConferenceCalls;
+  var isOneConference = softPhoneModules.isOneConference;
+  var conferenceLegsWithoutParticipants = softPhoneModules.conferenceLegsWithoutParticipants;
+  var planConferenceHangup = softPhoneModules.planConferenceHangup;
+  var planConferenceEnd = softPhoneModules.planConferenceEnd;
+  var planInCallControls = softPhoneModules.planInCallControls;
+  var friendlyCallLabel = softPhoneModules.friendlyCallLabel;
+  var createCallPartyMemory = softPhoneModules.createCallPartyMemory;
+  var carryCallParty = softPhoneModules.carryCallParty;
+  var forgetCallParty = softPhoneModules.forgetCallParty;
+  var planNumberField = softPhoneModules.planNumberField;
+  var keypadExtensionMatches = softPhoneModules.keypadExtensionMatches;
+  var resolveKeypadExtension = softPhoneModules.resolveKeypadExtension;
+  var buildKeypadExtensionResultsHtml = softPhoneModules.buildKeypadExtensionResultsHtml;
+  var transferRefusalMessage = softPhoneModules.transferRefusalMessage;
+  var transferModes = softPhoneModules.transferModes;
+  var createTransferPanel = softPhoneModules.createTransferPanel;
+  var createExtensionDirectory = softPhoneModules.createExtensionDirectory;
+  var storeExtensionEntries = softPhoneModules.storeExtensionEntries;
+  var shouldReloadExtensions = softPhoneModules.shouldReloadExtensions;
+  var extensionName = softPhoneModules.extensionName;
+  var describeExtension = softPhoneModules.describeExtension;
+  var callExtensionNumber = softPhoneModules.callExtensionNumber;
+  var extensionDirectoryEntries = softPhoneModules.extensionDirectoryEntries;
+  var ownExtensionsOf = softPhoneModules.ownExtensions;
+  var readExtension = softPhoneModules.readExtension;
+  var createTransferService = softPhoneModules.createTransferService;
+  var createCallContextMemory = softPhoneModules.createCallContextMemory;
+  var carryCallContext = softPhoneModules.carryCallContext;
+  var forgetCallContext = softPhoneModules.forgetCallContext;
+  var serviceDirectoryEntries = softPhoneModules.serviceDirectoryEntries;
+  var serviceModes = softPhoneModules.serviceModes;
+  var resolveServiceTarget = softPhoneModules.resolveServiceTarget;
+  var transferBlockedReason = softPhoneModules.transferBlockedReason;
+  var readTransferLegTag = softPhoneModules.readTransferLegTag;
+  var providerTransferRequest = softPhoneModules.providerTransferRequest;
+  var consultFromCall = softPhoneModules.consultFromCall;
+  var consultRequest = softPhoneModules.consultRequest;
+  var consultCommandResult = softPhoneModules.consultCommandResult;
+  var shouldHoldBeforeTransfer = softPhoneModules.shouldHoldBeforeTransfer;
+  var enhancePhoneInput = softPhoneModules.enhancePhoneInput;
+  var readPhoneInput = softPhoneModules.readPhoneInput;
+  var showInAppConfirm = softPhoneModules.showInAppConfirm;
+  var createCallNotifiers = softPhoneModules.createCallNotifiers;
+  var trackCall = softPhoneModules.trackCall;
+  var isCallTracked = softPhoneModules.isCallTracked;
+  var deliverCallState = softPhoneModules.deliverCallState;
+  var findVanishedCalls = softPhoneModules.findVanishedCalls;
+  var endAllCalls = softPhoneModules.endAllCalls;
+  var planShownBrowserCalls = softPhoneModules.planShownBrowserCalls;
+  var readCallJournal = softPhoneModules.readCallJournal;
+  var journalCallStarted = softPhoneModules.journalCallStarted;
+  var journalCallConnected = softPhoneModules.journalCallConnected;
+  var journalCallEnded = softPhoneModules.journalCallEnded;
+  var journalCallSettled = softPhoneModules.journalCallSettled;
+  var planOwedCallEnds = softPhoneModules.planOwedCallEnds;
+  var planCallHeartbeat = softPhoneModules.planCallHeartbeat;
+  var createRemoteElementPool = softPhoneModules.createRemoteElementPool;
+  var acquireRemoteElement = softPhoneModules.acquireRemoteElement;
+  var remoteElementFor = softPhoneModules.remoteElementFor;
+  var rekeyRemoteElement = softPhoneModules.rekeyRemoteElement;
+  var releaseRemoteElement = softPhoneModules.releaseRemoteElement;
+  var releaseAllRemoteElements = softPhoneModules.releaseAllRemoteElements;
+  var resolveDialTarget = softPhoneModules.resolveDialTarget;
+  var shouldOfferDial = softPhoneModules.shouldOfferDial;
+  var shouldShowCallNumber = softPhoneModules.shouldShowCallNumber;
+  var resolvePeerNumber = softPhoneModules.resolvePeerNumber;
+  var incomingCardActionLabels = softPhoneModules.incomingCardActionLabels;
+  var HOST_BRIDGE_PROTOCOL = softPhoneModules.HOST_BRIDGE_PROTOCOL;
+  var HOST_PAGE_MESSAGES = softPhoneModules.HOST_PAGE_MESSAGES;
+  var findHostChannel = softPhoneModules.findHostChannel;
+  var buildIncomingCallMessage = softPhoneModules.buildIncomingCallMessage;
+  var createHostDelegation = softPhoneModules.createHostDelegation;
+  var selectReceiveTrack = softPhoneModules.selectReceiveTrack;
+  var inboundProbeNeedsRebuild = softPhoneModules.inboundProbeNeedsRebuild;
+  var voicemailRoute = softPhoneModules.voicemailRoute;
+  var VOICEMAIL_ROUTES = softPhoneModules.VOICEMAIL_ROUTES;
 
   // Must match the CrestApps.OrchardCore.Telephony.Models.TelephonyCapabilities flags enum.
   var CAPABILITIES = {
@@ -26,23 +6914,31 @@
     SendDigits: 1 << 7,
     ReceiveCalls: 1 << 8,
     Voicemail: 1 << 9,
-    Directory: 1 << 10
+    Directory: 1 << 10,
+    BridgedDial: 1 << 14
   };
   var AUDIO_MODES = {
     None: 0,
     Browser: 1,
     ExternalDevice: 2
   };
-  var STATE_NAMES = ['Idle', 'Connecting', 'Ringing', 'Connected', 'OnHold', 'Disconnected', 'Failed'];
-  function normalizeState(state) {
-    if (typeof state === 'number') {
-      return STATE_NAMES[state] || 'Idle';
+
+  // The widget config renders the audio mode as its numeric enum value, but the SignalR hub serializes the
+  // same enum by name (for example "Browser"). Normalize both forms to the numeric value before comparing.
+  function normalizeAudioMode(value) {
+    if (typeof value === 'number') {
+      return value;
     }
-    if (typeof state === 'string' && state.length) {
-      return state;
+    if (typeof value === 'string') {
+      if (Object.prototype.hasOwnProperty.call(AUDIO_MODES, value)) {
+        return AUDIO_MODES[value];
+      }
+      var parsed = parseInt(value, 10);
+      return isNaN(parsed) ? -1 : parsed;
     }
-    return 'Idle';
+    return -1;
   }
+  var normalizeState = window.telephonyClient.normalizeCallState;
   function isActive(stateName) {
     return stateName === 'Connecting' || stateName === 'Ringing' || stateName === 'Connected' || stateName === 'OnHold';
   }
@@ -65,11 +6961,7 @@
       };
     }
   }
-  function escapeHtml(value) {
-    var element = document.createElement('div');
-    element.textContent = value == null ? '' : String(value);
-    return element.innerHTML;
-  }
+  var escapeHtml = window.telephonyClient.escapeHtml;
   function buildRegistrationConfigUrl(config) {
     if (config.registrationConfigUrl) {
       return config.registrationConfigUrl;
@@ -127,6 +7019,7 @@
      * process-wide registry that any script could silently overwrite.
      */
     adapters.sipjs = createSipJsBrowserMediaAdapter(rootElement, config);
+    adapters['telnyx-webrtc'] = createTelnyxBrowserMediaAdapter(rootElement, config);
     return adapters;
   }
   function createSipJsBrowserMediaAdapter(rootElement, widgetConfig) {
@@ -262,6 +7155,89 @@
       return {
         providerConfig: registrationConfig,
         mediaCodecs: media.codecs || [],
+        // Whether the browser places its own outbound calls (Telnyx) instead of the server originating
+        // a leg to this registered client.
+        canOriginate: !!registrationConfig.clientOriginatesCalls,
+        outboundCallerId: registrationConfig.outboundCallerId || '',
+        // Places an outbound call from the registered browser client and returns a controller. The
+        // caller id, when supplied, is presented as the SIP P-Asserted-Identity (required by Telnyx).
+        // onState receives soft-phone state names: 'Ringing', 'Connected', 'Disconnected'.
+        originate: function (destination, callerId, onState) {
+          var notify = typeof onState === 'function' ? onState : function () {};
+          if (disposed) {
+            notify('Disconnected');
+            return null;
+          }
+          var atIndex = (signaling.sipUri || '').indexOf('@');
+          var domain = atIndex >= 0 ? signaling.sipUri.substring(atIndex + 1).replace(/[;>].*$/, '') : 'sip.telnyx.com';
+          var targetUri = sip.UserAgent.makeURI('sip:' + destination + '@' + domain);
+          if (!targetUri) {
+            notify('Disconnected');
+            return null;
+          }
+          var extraHeaders = [];
+          if (callerId) {
+            extraHeaders.push('P-Asserted-Identity: <sip:' + callerId + '@' + domain + '>');
+          }
+          var inviter = new sip.Inviter(userAgent, targetUri, {
+            // Early media is intentionally off: negotiating media on a provisional (183) response
+            // caused the session to terminate mid-ring. Media is set up from the 200 OK on answer.
+            earlyMedia: false,
+            sessionDescriptionHandlerOptions: {
+              constraints: {
+                audio: true,
+                video: false
+              }
+            },
+            extraHeaders: extraHeaders
+          });
+          wireSession(inviter);
+          inviter.stateChange.addListener(function (state) {
+            if (state === 'Established') {
+              setMicrophoneEnabled(true);
+              notify('Connected');
+            } else if (state === 'Terminating' || state === 'Terminated') {
+              notify('Disconnected');
+            }
+          });
+          Promise.resolve(inviter.invite({
+            requestDelegate: {
+              onProgress: function () {
+                notify('Ringing');
+              },
+              onReject: function () {
+                notify('Disconnected');
+              }
+            }
+          })).catch(function () {
+            notify('Disconnected');
+          });
+          return {
+            terminate: function () {
+              var currentState = inviter.state;
+
+              // An established call is ended with BYE; an INVITE that has not been answered yet
+              // must be cancelled (CANCEL), which BYE cannot do.
+              if (currentState === 'Established') {
+                return Promise.resolve(inviter.bye()).catch(function () {});
+              }
+              if (currentState === 'Initial' || currentState === 'Establishing') {
+                return Promise.resolve(inviter.cancel()).catch(function () {});
+              }
+              if (typeof inviter.dispose === 'function') {
+                return Promise.resolve(inviter.dispose()).catch(function () {});
+              }
+              return Promise.resolve();
+            },
+            setHold: function (hold) {
+              return requestHold(hold);
+            },
+            setMute: function (mute) {
+              setMicrophoneEnabled(!mute);
+              return Promise.resolve();
+            }
+          };
+        },
         handleCallState: function (call) {
           var stateName = normalizeState(call && call.state);
           if (stateName === 'Disconnected' || stateName === 'Failed' || !call) {
@@ -291,66 +7267,1704 @@
       };
     });
   }
+
+  // Determines whether a Telnyx WebRTC error is a benign hang-up failure. When the local side ends a call
+  // the SDK tries to send a SIP BYE; if the socket or the remote leg has already gone away that send fails
+  // with BYE_SEND_FAILED ("Failed to hang up cleanly"). The call is ending regardless, so this is noise
+  // rather than a fault the agent needs to see.
+  function isBenignHangupError(error) {
+    if (!error) {
+      return false;
+    }
+    var code = error.code || error.name || '';
+    var message = error.message || error.error || (typeof error === 'string' ? error : '');
+    var haystack = (String(code) + ' ' + String(message)).toUpperCase();
+    return haystack.indexOf('BYE_SEND_FAILED') !== -1 || haystack.indexOf('HANG UP CLEANLY') !== -1;
+  }
+
+  // Maps configured codec names (for example "opus", "G722", "PCMU") to the { mimeType } shape the Telnyx SDK's
+  // preferred_codecs call option expects, which it applies with RTCRtpTransceiver.setCodecPreferences. This
+  // only reorders the browser's SDP OFFER; the Telnyx gateway's answer still picks the final codec, so a codec
+  // Telnyx does not support on the media path is not negotiated regardless. In practice Telnyx transcodes the
+  // WebRTC<->SIP/PSTN/conference legs to G711/G722, so Opus is not negotiated even though the browser offers it;
+  // this hook is here so an admin can influence ordering (and so Opus is used automatically if Telnyx ever
+  // enables it on the path). Item 2's quality telemetry reports the codec actually negotiated.
+  function buildPreferredCodecs(codecs) {
+    if (!Array.isArray(codecs) || codecs.length === 0) {
+      return null;
+    }
+
+    // setCodecPreferences requires full RTCRtpCodec descriptors (mimeType AND clockRate, plus channels for
+    // stereo codecs); a bare { mimeType } throws "Required member is undefined" and aborts the call. So build
+    // the preference from the browser's real audio codec capabilities, which carry those members. If the
+    // browser cannot report capabilities, return null and let the SDK/browser default ordering stand.
+    if (typeof RTCRtpSender === 'undefined' || typeof RTCRtpSender.getCapabilities !== 'function') {
+      return null;
+    }
+    var capabilities = RTCRtpSender.getCapabilities('audio');
+    var available = capabilities && capabilities.codecs || [];
+    if (!available.length) {
+      return null;
+    }
+    var ordered = [];
+
+    // Add the configured codecs first, in preference order, matched case-insensitively against the real
+    // capabilities (each match is a valid RTCRtpCodec).
+    codecs.forEach(function (codec) {
+      var name = String(codec || '').trim();
+      if (!name) {
+        return;
+      }
+      var mimeType = (/^(audio|video)\//i.test(name) ? name : 'audio/' + name).toLowerCase();
+      available.forEach(function (capability) {
+        if (capability.mimeType && capability.mimeType.toLowerCase() === mimeType && ordered.indexOf(capability) === -1) {
+          ordered.push(capability);
+        }
+      });
+    });
+
+    // Append every remaining capability so this only REORDERS the offer and never removes a codec the peer
+    // needs (for example telephone-event for DTMF or comfort noise).
+    available.forEach(function (capability) {
+      if (ordered.indexOf(capability) === -1) {
+        ordered.push(capability);
+      }
+    });
+    return ordered.length ? ordered : null;
+  }
+  function createTelnyxBrowserMediaAdapter(rootElement, widgetConfig) {
+    return function (context) {
+      var telnyx = window.TelnyxWebRTC;
+      if (!telnyx || typeof telnyx.TelnyxRTC !== 'function') {
+        return Promise.reject(new Error('The Telnyx WebRTC SDK is required for the configured browser audio adapter.'));
+      }
+      return fetchRegistrationConfig(widgetConfig).then(function (registrationConfig) {
+        return createTelnyxSession(telnyx, context, registrationConfig);
+      });
+    };
+  }
+  function createTelnyxSession(telnyx, context, registrationConfig) {
+    var signaling = registrationConfig.signaling || {};
+    var credential = registrationConfig.credential || {};
+    var ice = registrationConfig.ice || {};
+    var media = registrationConfig.media || {};
+    // Codec preference applied to both outbound newCall and inbound answer (see buildPreferredCodecs).
+    var preferredCodecs = buildPreferredCodecs(media.codecs);
+    // The page's own remote audio element. Each call plays through an element of its own (see
+    // soft-phone/remote-elements.js): the first call gets this one and a call beside it a new one, so a second
+    // call never attaches its stream over a held call's.
+    var remoteElement = context.remoteAudioElement;
+    var remoteElements = createRemoteElementPool(remoteElement, createCallAudioElement, disposeCallAudioElement);
+    var pendingElementSequence = 0;
+    function createCallAudioElement() {
+      if (!remoteElement || !remoteElement.parentNode || typeof document === 'undefined') {
+        return null;
+      }
+      try {
+        var element = document.createElement('audio');
+        element.autoplay = true;
+        element.setAttribute('data-telephony-remote-audio-call', '');
+
+        // Play on the output the agent chose for the page's own element.
+        if (remoteElement.sinkId && typeof element.setSinkId === 'function') {
+          Promise.resolve(element.setSinkId(remoteElement.sinkId)).catch(function () {});
+        }
+        remoteElement.parentNode.insertBefore(element, remoteElement.nextSibling);
+        return element;
+      } catch (error) {
+        return null;
+      }
+    }
+    function disposeCallAudioElement(element) {
+      try {
+        element.srcObject = null;
+        if (element.parentNode) {
+          element.parentNode.removeChild(element);
+        }
+      } catch (error) {/* best effort */}
+    }
+
+    // The element a call plays through, else the page's own.
+    function remoteElementOf(call) {
+      return call && remoteElementFor(remoteElements, call.id) || remoteElement;
+    }
+
+    // Hold audio. Telnyx delivers the caller's audio to this browser, so call.hold() puts the media leg
+    // inactive and the caller hears silence. Instead, keep the call up and swap the microphone track on the
+    // outbound sender for a hold-audio track (a configured URL, else a quiet comfort tone) so the caller
+    // keeps hearing something. A controller is built lazily per call from the media config, so holding one call
+    // while another is up never touches the other's sender, and ending one never releases the other's hold; when
+    // it or the peer connection is unavailable, applyHold falls back to the provider's native hold.
+    var holdAudioByCall = {};
+    function holdAudioFor(call) {
+      if (typeof createHoldAudioController !== 'function' || !call) {
+        return null;
+      }
+      var key = call.id || '';
+      if (!holdAudioByCall[key]) {
+        holdAudioByCall[key] = createHoldAudioController({
+          mediaUrl: media.holdMusicUrl || registrationConfig.holdMusicUrl || ''
+        });
+      }
+      return holdAudioByCall[key];
+    }
+    function setRemoteAudioMuted(call, muted) {
+      var element = remoteElementOf(call);
+      if (element) {
+        try {
+          element.muted = !!muted;
+        } catch (error) {/* best effort */}
+      }
+    }
+
+    // Put a live call on or off hold with browser-side hold audio, falling back to native hold when there is
+    // no controller or no reachable peer connection. On hold the agent's remote audio is muted too, so the
+    // parked caller is fully isolated (agent hears the hold silence, caller hears the hold audio).
+    function applyHold(call, hold) {
+      var peerConnection = call && call.peer && call.peer.instance;
+      var holdAudio = holdAudioFor(call);
+      if (!holdAudio || !peerConnection) {
+        return Promise.resolve(hold ? call.hold() : call.unhold()).catch(function () {});
+      }
+      if (hold) {
+        var micTrack = context.localStream && typeof context.localStream.getAudioTracks === 'function' ? context.localStream.getAudioTracks()[0] : null;
+        setRemoteAudioMuted(call, true);
+        return holdAudio.engage(peerConnection, micTrack).catch(function () {
+          // Media swap failed; keep the caller from hearing the agent by falling back to native hold.
+          setRemoteAudioMuted(call, false);
+          return Promise.resolve(call.hold()).catch(function () {});
+        });
+      }
+      return holdAudio.release(peerConnection).then(function () {
+        setRemoteAudioMuted(call, false);
+      }).catch(function () {
+        setRemoteAudioMuted(call, false);
+        return Promise.resolve(call.unhold()).catch(function () {});
+      });
+    }
+
+    // Tear a call's hold audio down when it ends -- every call's, when no call is named. Without this, a call
+    // that ended while on hold leaves the comfort-tone AudioContext running and the agent's remote audio muted,
+    // which is one way a soft phone gets stuck looking held after the call is already gone. Safe to call
+    // unconditionally.
+    function endHoldAudio(call) {
+      var keys = call ? [call.id || ''] : Object.keys(holdAudioByCall);
+      keys.forEach(function (key) {
+        var holdAudio = holdAudioByCall[key];
+        delete holdAudioByCall[key];
+        if (holdAudio && holdAudio.isEngaged()) {
+          Promise.resolve(holdAudio.release()).catch(function () {});
+        }
+      });
+      if (call) {
+        setRemoteAudioMuted(call, false);
+        return;
+      }
+      setRemoteAudioMuted(null, false);
+      Object.keys(remoteElements.byKey).forEach(function (key) {
+        try {
+          remoteElements.byKey[key].muted = false;
+        } catch (error) {/* best effort */}
+      });
+    }
+
+    // Lets go of what an ended call held: its hold audio and its remote audio element.
+    function releaseCallMedia(call) {
+      if (!call) {
+        return;
+      }
+      if (holdAudioByCall[call.id || '']) {
+        endHoldAudio(call);
+      }
+      releaseRemoteElement(remoteElements, call.id);
+    }
+
+    // Telnyx logs in with the telephony-credential SIP username/password, delivered in the same
+    // registration config the SIP.js adapter consumes (authorizationUser + credential.value). The SDK
+    // speaks Verto to Telnyx's own WebRTC gateway, so it manages the peer connection, media, and the
+    // rtcp-mux/SDP details internally; no SDP workaround is needed on this path.
+    var login = signaling.authorizationUser;
+    var password = credential.value;
+    if (!login || !password) {
+      return Promise.reject(new Error('The browser media registration configuration is incomplete.'));
+    }
+    var currentCall = null;
+    // The provider calls this browser holds, kept apart by kind (see soft-phone/call-legs.js): the leg carrying a
+    // call the server tracks, which the server's reports drive, and a call placed from the keypad, which has no
+    // platform interaction behind it and which those reports must never touch. Which of them is currentCall only
+    // says whose events the adapter is listening to; it used to decide which call a server report acted on too,
+    // so a keypad call placed on top of a held platform call took every later hold, resume and hang-up meant for
+    // the caller's leg.
+    var legs = createCallLegs();
+    // The state callback of every call this browser placed, or answered for itself, keyed by the provider's call
+    // id (see soft-phone/browser-calls.js). It used to be a single callback for "the" outbound call, which the next
+    // call placed took over: a call held while the agent dialed another was never heard to end.
+    var callNotifiers = createCallNotifiers();
+    // An inbound leg that is ringing but has not been answered yet (a direct extension call). It is surfaced
+    // to the soft-phone core as an Answer/Decline prompt; until the agent chooses it is not the currentCall.
+    var inboundRingingCall = null;
+    // Legs the platform rang for a Contact Center offer that is still ringing on screen, handed to the core to
+    // hold (unanswered, and not rung as a call of their own) until the agent accepts or declines the offer.
+    var heldOfferCalls = [];
+    // Legs the platform rang a supervisor's phone on to listen to a call (see soft-phone/monitor-leg.js). The core
+    // answers the one it armed for; they are never the current call and never a row in the call list.
+    var monitorCalls = [];
+    var disposed = false;
+
+    // Media-quality sampler state for the active call. A getStats sample is taken every few seconds while a
+    // call is active; the samples feed a rolling summary, a poor-connection signal for the degraded-state
+    // UX, and periodic + end-of-call reports to the server. Cleared when the call ends or the session is
+    // disposed. This is the early-warning system that would have caught the recent TURN/one-way-audio bug.
+    var QUALITY_SAMPLE_INTERVAL_MS = 8000;
+    // Only transmit every Nth periodic sample to the server (plus every poor-state change and the final
+    // summary), so an 8s sampling cadence does not become 8s of hub traffic per call.
+    var QUALITY_TRANSMIT_EVERY = 3;
+    var qualityTimer = null;
+    var qualityState = null;
+    // Watches the live call for audio that stops leaving it (see soft-phone/send-audio.js).
+    var outboundMonitor = null;
+
+    // Loudness probes for the two directions, measured in the browser rather than read out of getStats.
+    // They cover what getStats cannot: how loud the far end actually is (no browser reports it), and the
+    // capture level in browsers that do not implement RTCAudioSourceStats.
+    var captureProbe = null;
+    // The id of the track the capture probe was built on, kept even when the build failed so a browser
+    // that refuses the graph is not asked again every sample -- only when the track changes.
+    var captureProbeTrackId = null;
+    var captureProbeTrack = null;
+    var inboundProbe = null;
+    var inboundProbeTrackId = null;
+
+    // The audio track the soft phone is receiving: whatever the live receiver carries, else the remote
+    // element's stream. Like the sender, the receiver is the authority: the provider SDK can replace the
+    // stream on the remote element during a call, and a probe left on the first one read 0.000 for the rest of
+    // the call while the agent could hear the caller.
+    function currentReceiveTrack(peer) {
+      var receivers = peer && typeof peer.getReceivers === 'function' ? peer.getReceivers() : null;
+      var element = remoteElementOf(currentCall);
+      return selectReceiveTrack(receivers, element && element.srcObject);
+    }
+    function startInboundProbe(track) {
+      if (inboundProbe) {
+        inboundProbe.dispose();
+        inboundProbe = null;
+      }
+      inboundProbeTrackId = track ? track.id : null;
+      if (!track) {
+        return;
+      }
+      var element = remoteElementOf(currentCall);
+      inboundProbe = createLevelProbe(typeof MediaStream === 'function' ? new MediaStream([track]) : element && element.srcObject);
+    }
+
+    // The audio track the far end is hearing: whatever the live sender carries, else the soft phone's own
+    // send stream. The sender is the authority because the provider SDK may be sending a track other than
+    // the one it was handed, and a probe on the wrong track measures a microphone nobody hears.
+    function currentSendTrack(peer) {
+      if (peer && typeof peer.getSenders === 'function') {
+        var sender = findAudioSender(peer.getSenders());
+        if (sender && sender.track) {
+          return sender.track;
+        }
+      }
+      return context.localStream && typeof context.localStream.getAudioTracks === 'function' ? context.localStream.getAudioTracks()[0] || null : null;
+    }
+
+    // (Re)builds the capture probe on one specific track. The probe is given a stream holding that track
+    // alone rather than the shared send stream, so what it binds to is exactly the track named here: a
+    // MediaStreamAudioSourceNode takes its stream's track once, at construction, and a stream that briefly
+    // holds both the old and the new track mid-swap would leave it to the browser which one it picked.
+    function startCaptureProbe(track) {
+      if (captureProbe) {
+        captureProbe.dispose();
+        captureProbe = null;
+      }
+      captureProbeTrackId = track ? track.id : null;
+      captureProbeTrack = track || null;
+      if (!track) {
+        return;
+      }
+      var stream = typeof MediaStream === 'function' ? new MediaStream([track]) : context.localStream;
+      captureProbe = createLevelProbe(stream);
+    }
+    function startLevelProbes() {
+      stopLevelProbes();
+      var call = qualityState && qualityState.call;
+      startCaptureProbe(currentSendTrack(call && call.peer && call.peer.instance));
+      startInboundProbe(currentReceiveTrack(call && call.peer && call.peer.instance));
+    }
+
+    // Points the capture probe at the track now being sent, after the soft phone swapped its microphone
+    // mid-call. Called once the swap is committed -- the new track on the sender AND the old one stopped --
+    // never from inside the sender swap itself: rebuilding there bound the probe to the send stream while it
+    // still held the old track, which the commit then stopped, and the probe read 0.000 for the rest of the
+    // call while the far end measured the agent at around 0.3. Leaves the inbound probe alone; the far end
+    // did not change.
+    function refreshCaptureProbe() {
+      if (!qualityState) {
+        return;
+      }
+      var call = qualityState.call;
+      startCaptureProbe(currentSendTrack(call && call.peer && call.peer.instance));
+    }
+    function stopLevelProbes() {
+      if (captureProbe) {
+        captureProbe.dispose();
+        captureProbe = null;
+      }
+      captureProbeTrackId = null;
+      captureProbeTrack = null;
+      if (inboundProbe) {
+        inboundProbe.dispose();
+        inboundProbe = null;
+      }
+      inboundProbeTrackId = null;
+    }
+
+    // Records what was negotiated the moment media is up: the audio m= line and codec maps of both the offer
+    // Telnyx sent and the answer the browser gave (or vice versa), the direction, and the provider's leg ids.
+    // Every call so far had its codec inferred after the fact from an RTP statistic; nothing ever recorded
+    // which codecs the far side OFFERED, so "why G722 and not Opus" could not be answered from any log.
+    function reportNegotiation(call) {
+      if (typeof context.onNegotiated !== 'function') {
+        return;
+      }
+      try {
+        var peer = call && call.peer && call.peer.instance;
+        if (!peer) {
+          return;
+        }
+        var audioLines = function (description) {
+          if (!description || !description.sdp) {
+            return '(none)';
+          }
+          var lines = description.sdp.split(/\r?\n/);
+          var kept = [];
+          for (var i = 0; i < lines.length; i++) {
+            if (lines[i].indexOf('m=audio') === 0 || /^a=(rtpmap|fmtp|ptime|maxptime):/.test(lines[i])) {
+              kept.push(lines[i]);
+            }
+          }
+          return kept.join(' ; ');
+        };
+        var options = call.options || {};
+        var text = 'direction=' + (call.direction || '') + ' callId=' + (call.id || '') + ' ccid=' + (options.telnyxCallControlId || '') + ' leg=' + (options.telnyxLegId || '') + ' | remote(' + (peer.remoteDescription && peer.remoteDescription.type || '?') + '): ' + audioLines(peer.remoteDescription) + ' | local(' + (peer.localDescription && peer.localDescription.type || '?') + '): ' + audioLines(peer.localDescription);
+        context.onNegotiated(text);
+      } catch (error) {/* diagnostics only */}
+    }
+
+    // Asks the browser to hold less incoming audio before playing it, when the agent (or the operator) has
+    // chosen a shorter hold. Applied when media goes live and again whenever the choice changes, since the
+    // receiver is only there once the call is up.
+    function applyPlayoutDelayToCall(call) {
+      if (typeof context.readPlayoutDelay !== 'function') {
+        return;
+      }
+      var seconds = context.readPlayoutDelay();
+      var peer = call && call.peer && call.peer.instance;
+      if (!peer) {
+        return;
+      }
+      var applied = applyPlayoutDelay(peer, seconds);
+      if (applied === 0 && seconds >= 0 && typeof context.onPlayoutDelayUnsupported === 'function') {
+        context.onPlayoutDelayUnsupported();
+      }
+    }
+    function startQualitySampler(call) {
+      // Already sampling this call, or nothing to sample.
+      if (!call || qualityState && qualityState.call === call) {
+        return;
+      }
+      stopQualitySampler(false);
+      qualityState = {
+        call: call,
+        callId: call && (call.id || call.callId) || '',
+        started: Date.now(),
+        samples: 0,
+        transmitCounter: 0,
+        mosSum: 0,
+        minMos: Infinity,
+        maxLoss: 0,
+        lastPacketsReceived: 0,
+        lastPacketsLost: 0,
+        lastPoor: false,
+        finalSent: false,
+        // Capture-side state. minMicLevel starts at Infinity so the first sample sets it, and is
+        // reported on the summary: it answers "was this agent audible for the whole call?" from the
+        // server log alone, which nothing could before.
+        lastAudioEnergy: 0,
+        // The previous media-source counters, so the reported microphone level covers the window
+        // since the last sample rather than one instant of it.
+        lastMediaSource: null,
+        silentSamples: 0,
+        minMicLevel: Infinity,
+        captureAlerted: false,
+        // The previous raw inbound stats, kept so the jitter-buffer delay can be read over the window
+        // since the last sample rather than averaged across the whole call, which would flatten a
+        // buffer that only grew late.
+        lastInbound: null,
+        maxJitterBufferMs: -1,
+        last: null
+      };
+      startLevelProbes();
+      qualityTimer = window.setInterval(sampleQuality, QUALITY_SAMPLE_INTERVAL_MS);
+      startOutboundWatch(call);
+    }
+
+    // Tells the phone when a connected call stops sending, and marks the call's summary. A stall is sampled at once
+    // so a call too short for the regular sample still sends a summary that says so.
+    function startOutboundWatch(call) {
+      outboundMonitor = typeof startOutboundAudioMonitor !== 'function' ? null : startOutboundAudioMonitor({
+        readPeer: function () {
+          return call.peer && call.peer.instance;
+        },
+        isSuppressed: function () {
+          // This call's own hold audio, looked up without creating one: holding sends a tone, not the mic.
+          var holdAudio = holdAudioByCall[call.id || ''];
+          return holdAudio && holdAudio.isEngaged() || typeof context.isOutboundSuppressed === 'function' && context.isOutboundSuppressed();
+        },
+        onStalled: function (info) {
+          if (qualityState && qualityState.call === call) {
+            qualityState.outboundStalled = true;
+            sampleQuality();
+          }
+          if (typeof context.onOutboundAudioStalled === 'function') {
+            context.onOutboundAudioStalled(info);
+          }
+        },
+        onResumed: function () {
+          if (typeof context.onOutboundAudioResumed === 'function') {
+            context.onOutboundAudioResumed();
+          }
+        }
+      });
+    }
+    function sampleQuality() {
+      if (!qualityState) {
+        return;
+      }
+      var call = qualityState.call;
+      var peer = call && call.peer && call.peer.instance;
+      if (!peer || typeof peer.getStats !== 'function') {
+        return;
+      }
+      Promise.resolve(peer.getStats()).then(function (report) {
+        if (!qualityState || qualityState.call !== call || !report || typeof report.forEach !== 'function') {
+          return;
+        }
+        var parsed = parseWebRtcStats(report);
+        var inbound = parsed.inbound;
+        if (!inbound) {
+          return;
+        }
+        var packetsReceived = inbound.packetsReceived || 0;
+        var packetsLost = inbound.packetsLost || 0;
+        var deltaReceived = Math.max(0, packetsReceived - qualityState.lastPacketsReceived);
+        var deltaLost = Math.max(0, packetsLost - qualityState.lastPacketsLost);
+        var lossPercent = deltaReceived + deltaLost > 0 ? deltaLost / (deltaReceived + deltaLost) * 100 : 0;
+        var jitterMs = (inbound.jitter || 0) * 1000;
+        var rttMs = parsed.pair && typeof parsed.pair.currentRoundTripTime === 'number' ? parsed.pair.currentRoundTripTime * 1000 : parsed.remoteInbound && typeof parsed.remoteInbound.roundTripTime === 'number' ? parsed.remoteInbound.roundTripTime * 1000 : 0;
+        // Which statistic the round trip came from. A candidate-pair value is a STUN round trip over the
+        // media path; the remote-inbound value is RTCP-derived. When one call reported a steady 2.8 s
+        // with healthy jitter and loss, nothing recorded which of the two had said so.
+        var rttSource = parsed.pair && typeof parsed.pair.currentRoundTripTime === 'number' ? 'candidate-pair' : parsed.remoteInbound && typeof parsed.remoteInbound.roundTripTime === 'number' ? 'remote-inbound-rtp' : 'none';
+
+        // What Telnyx reports RECEIVING from this browser: the only far-end-side view of the agent's own
+        // audio that the browser can see. Loss and jitter here describe the direction the caller hears.
+        var remoteInbound = parsed.remoteInbound;
+        var remoteFractionLostPercent = remoteInbound && typeof remoteInbound.fractionLost === 'number' ? remoteInbound.fractionLost * 100 : -1;
+        var remoteJitterMs = remoteInbound && typeof remoteInbound.jitter === 'number' ? remoteInbound.jitter * 1000 : -1;
+
+        // The echo canceller's own view of the capture. A wired headset has almost no acoustic echo to
+        // cancel, so a canceller that is nonetheless working hard on it is suppressing the agent's voice
+        // -- a classic source of a hollow, distant sound that no level measurement can show.
+        var echoStatsReported = !!parsed.mediaSource && typeof parsed.mediaSource.echoReturnLoss === 'number';
+        var echoReturnLossDb = echoStatsReported ? parsed.mediaSource.echoReturnLoss : 0;
+        var echoReturnLossEnhancementDb = echoStatsReported && typeof parsed.mediaSource.echoReturnLossEnhancement === 'number' ? parsed.mediaSource.echoReturnLossEnhancement : 0;
+
+        // Which track the peer connection is actually sending, and whether it is the stream the soft phone
+        // captured. The provider SDK is free to ignore the stream it is handed on the answer path and
+        // capture its own -- on the browser's default device, with default constraints -- in which case
+        // everything the soft phone measures and configures about "its" microphone describes a track
+        // the far end never hears. Comparing track identity here is the only direct test of that.
+        var sentTrack = null;
+        if (typeof peer.getSenders === 'function') {
+          var senders = peer.getSenders();
+          for (var s = 0; s < senders.length; s++) {
+            if (senders[s].track && senders[s].track.kind === 'audio') {
+              sentTrack = senders[s].track;
+              break;
+            }
+          }
+        }
+        var localTrack = context.localStream && typeof context.localStream.getAudioTracks === 'function' ? context.localStream.getAudioTracks()[0] : null;
+        var sentTrackReported = !!sentTrack;
+        var sentTrackLabel = sentTrack ? sentTrack.label || '' : '';
+        var sentTrackIsLocalStream = !!(sentTrack && localTrack && sentTrack.id === localTrack.id);
+
+        // Keep the capture probe on the track being sent. The swap paths rebuild it themselves once a
+        // new microphone is committed, but anything that changes the send track without passing through
+        // them -- the provider SDK swapping its own track, or a swap whose rebuild was lost -- would
+        // otherwise leave the probe reading a stopped track as 0.000 for the rest of the call. The
+        // window right after a rebuild has no frames yet and reports unknown (-1), not silence. While a
+        // call is on hold the sender carries the comfort tone, so the probe follows it there and back:
+        // the level reported is always that of what the far end is being sent.
+        var probeTarget = sentTrack || localTrack;
+        if (captureProbeNeedsRebuild(captureProbeTrackId, probeTarget ? probeTarget.id : null, probeTarget ? probeTarget.readyState : null)) {
+          startCaptureProbe(probeTarget);
+        }
+
+        // The provider's own identifiers for this leg, so a browser-side observation can be joined to the
+        // server's webhook and command log for the same leg instead of being lined up by timestamp.
+        var callOptions = call && call.options || {};
+        var providerCallControlId = callOptions.telnyxCallControlId || '';
+        var providerLegId = callOptions.telnyxLegId || '';
+        var providerSessionId = callOptions.telnyxSessionId || '';
+        var bytesReceived = inbound.bytesReceived || 0;
+        var mos = estimateMos(rttMs, jitterMs, lossPercent);
+        var poor = lossPercent > QUALITY_POOR_LOSS_PERCENT || mos < QUALITY_POOR_MOS || bytesReceived === 0 && packetsReceived > 0;
+
+        // The capture side. Everything above measures the direction the agent is listening to, so a call
+        // where the caller cannot hear the agent produced a clean bill of health: no loss, low jitter, a
+        // good MOS, and not one number describing the microphone.
+        var mediaSource = parsed.mediaSource;
+        // Whether the browser reported a capture at all. Reporting an absent measurement as 0 would
+        // make "this browser does not expose media-source stats" indistinguishable from "this
+        // microphone is delivering silence" -- the same conflation that made a dropped round-trip time
+        // read as a perfect connection. So an unmeasured capture is -1, and nothing is concluded from
+        // it.
+        //
+        // The level is the RMS across the window since the previous sample, from the cumulative energy
+        // counters, not the instantaneous audioLevel: a single reading every eight seconds landed in a
+        // pause between words often enough to log Mic=0.000 for an agent the far end could hear.
+        var micLevel = windowedMicrophoneLevel(mediaSource, qualityState.lastMediaSource);
+        var captureReported = micLevel >= 0;
+        var audioEnergy = mediaSource && typeof mediaSource.totalAudioEnergy === 'number' ? mediaSource.totalAudioEnergy : 0;
+        var energyDelta = audioEnergy - qualityState.lastAudioEnergy;
+        var bytesSent = parsed.outbound && parsed.outbound.bytesSent ? parsed.outbound.bytesSent : 0;
+        var packetsSent = parsed.outbound && parsed.outbound.packetsSent ? parsed.outbound.packetsSent : 0;
+
+        // How long the browser held this audio before playing it. Added to the round-trip time, this is
+        // the delay the two people on the call actually experience -- and it is the only one of the two
+        // that a healthy network does nothing to keep small.
+        var jitterBufferMs = readJitterBufferMs(inbound, qualityState.lastInbound);
+
+        // The share of received audio the browser had to invent because a packet arrived after its
+        // moment. It is the price of a shorter playout buffer, so it is reported beside the delay: a
+        // buffer setting is only worth keeping while this stays near zero.
+        var concealment = concealmentPercent(inbound, qualityState.lastInbound);
+
+        // The far end may not have been attached when the call started, and the provider SDK may replace
+        // it during the call; keep the inbound probe on the track actually being received.
+        var receiveTrack = currentReceiveTrack(call && call.peer && call.peer.instance);
+        if (inboundProbeNeedsRebuild(inboundProbeTrackId, receiveTrack)) {
+          startInboundProbe(receiveTrack);
+        }
+
+        // Measured loudness in both directions, on the same scale, whatever the browser reports.
+        // "The caller sounds far away" is a statement about this number and about nothing else on the
+        // report, which is why a call that sounded distant rated Good on every other measurement.
+        var inboundLevel = probeLevel(inboundProbe);
+        var captureProbeLevel = probeLevel(captureProbe);
+
+        // Why the outgoing level reads what it does: the probe's audio engine state, then the probed
+        // track's state and whether it is muted or disabled. An outgoing level of 0.000 on a call the far
+        // end could hear is otherwise impossible to explain from the log.
+        var captureProbeState = (captureProbe && typeof captureProbe.state === 'function' ? captureProbe.state() : 'none') + '/' + (captureProbeTrack ? captureProbeTrack.readyState : 'no-track') + (captureProbeTrack && captureProbeTrack.muted ? '/muted' : '') + (captureProbeTrack && captureProbeTrack.enabled === false ? '/disabled' : '');
+
+        // The format the microphone is delivering in. Read every sample rather than once, because a
+        // Bluetooth headset switches profile when a call claims its microphone -- the value at
+        // registration is not the value on the call.
+        var captureSettings = typeof context.readCaptureSettings === 'function' ? context.readCaptureSettings() : null;
+        qualityState.lastInbound = {
+          jitterBufferDelay: inbound.jitterBufferDelay,
+          jitterBufferEmittedCount: inbound.jitterBufferEmittedCount,
+          concealedSamples: inbound.concealedSamples,
+          totalSamplesReceived: inbound.totalSamplesReceived
+        };
+        if (jitterBufferMs >= 0) {
+          qualityState.maxJitterBufferMs = Math.max(qualityState.maxJitterBufferMs, jitterBufferMs);
+        }
+        qualityState.lastPacketsReceived = packetsReceived;
+        qualityState.lastPacketsLost = packetsLost;
+        qualityState.lastAudioEnergy = audioEnergy;
+        qualityState.lastMediaSource = mediaSource ? {
+          totalAudioEnergy: mediaSource.totalAudioEnergy,
+          totalSamplesDuration: mediaSource.totalSamplesDuration
+        } : null;
+        qualityState.samples++;
+        qualityState.mosSum += mos;
+        qualityState.minMos = Math.min(qualityState.minMos, mos);
+        qualityState.maxLoss = Math.max(qualityState.maxLoss, lossPercent);
+        if (captureReported) {
+          qualityState.minMicLevel = Math.min(qualityState.minMicLevel, micLevel);
+        }
+
+        // A capture that delivers nothing across several consecutive samples is a dead microphone, not a
+        // pause. Tell the agent once per call: they are on a call the caller cannot hear them on, and
+        // today the only way they find out is the caller saying so.
+        //
+        // Only when the browser actually reported a capture. Warning an agent that their microphone is
+        // dead because the measurement is missing would be worse than saying nothing: they would go
+        // hunting a device that is working.
+        //
+        // Where the browser reports no capture statistics at all -- Firefox, where this call was
+        // answered -- the probe stands in, so the agent is told about a dead microphone there too
+        // instead of the check quietly never firing.
+        var captureSilent = captureReported ? isCaptureSilent(micLevel, energyDelta) : captureProbeLevel >= 0 && captureProbeLevel <= LEVEL_SILENT;
+        if (captureSilent) {
+          qualityState.silentSamples++;
+        } else {
+          qualityState.silentSamples = 0;
+        }
+        if (qualityState.silentSamples >= QUALITY_SILENT_MIC_SAMPLES && !qualityState.captureAlerted && typeof context.onCaptureSilent === 'function') {
+          qualityState.captureAlerted = true;
+          context.onCaptureSilent();
+        }
+        var sample = {
+          callId: qualityState.callId,
+          direction: call && call.direction || '',
+          codec: parsed.codec,
+          localCandidateType: parsed.localCandidateType,
+          remoteCandidateType: parsed.remoteCandidateType,
+          packetsReceived: packetsReceived,
+          packetsLost: packetsLost,
+          lossPercent: lossPercent,
+          jitterMs: jitterMs,
+          rttMs: rttMs,
+          bytesReceived: bytesReceived,
+          micLevel: micLevel,
+          captureReported: captureReported,
+          bytesSent: bytesSent,
+          packetsSent: packetsSent,
+          jitterBufferMs: jitterBufferMs,
+          concealmentPercent: concealment,
+          inboundLevel: inboundLevel,
+          captureProbeLevel: captureProbeLevel,
+          captureProbeState: captureProbeState,
+          sendCodec: parsed.sendCodec,
+          rttSource: rttSource,
+          remoteFractionLostPercent: remoteFractionLostPercent,
+          remoteJitterMs: remoteJitterMs,
+          echoStatsReported: echoStatsReported,
+          echoReturnLossDb: echoReturnLossDb,
+          echoReturnLossEnhancementDb: echoReturnLossEnhancementDb,
+          sentTrackReported: sentTrackReported,
+          sentTrackLabel: sentTrackLabel,
+          sentTrackIsLocalStream: sentTrackIsLocalStream,
+          providerCallControlId: providerCallControlId,
+          providerLegId: providerLegId,
+          providerSessionId: providerSessionId,
+          captureSampleRate: captureSettings && captureSettings.sampleRate || 0,
+          captureDevice: typeof context.captureDeviceLabel === 'function' ? context.captureDeviceLabel() : '',
+          captureProcessing: [captureSettings && captureSettings.echoCancellation ? 'ec' : '', captureSettings && captureSettings.noiseSuppression ? 'ns' : '', captureSettings && captureSettings.autoGainControl ? 'agc' : '',
+          // The soft phone's own gain stage, when set: a caller's "louder now" or "distorted now"
+          // has to be readable against the boost that was active.
+          typeof context.captureBoostLabel === 'function' ? context.captureBoostLabel() : ''].filter(Boolean).join('+'),
+          mos: mos,
+          poor: poor
+        };
+        qualityState.last = sample;
+        var poorChanged = poor !== qualityState.lastPoor;
+        if (poorChanged) {
+          qualityState.lastPoor = poor;
+          if (typeof context.onConnectionQuality === 'function') {
+            context.onConnectionQuality(poor);
+          }
+        }
+        qualityState.transmitCounter++;
+        if ((poorChanged || qualityState.transmitCounter % QUALITY_TRANSMIT_EVERY === 0) && typeof context.reportCallQuality === 'function') {
+          context.reportCallQuality(buildQualityPayload(sample, false));
+        }
+      }).catch(function () {/* best effort: a failed sample must never disrupt the call */});
+    }
+    function buildQualityPayload(sample, isFinal) {
+      var payload = {
+        callId: sample.callId,
+        direction: sample.direction,
+        codec: sample.codec,
+        localCandidateType: sample.localCandidateType,
+        remoteCandidateType: sample.remoteCandidateType,
+        packetsReceived: sample.packetsReceived,
+        packetsLost: sample.packetsLost,
+        lossPercent: sample.lossPercent,
+        jitterMs: sample.jitterMs,
+        // The server's contract calls this RoundTripTimeMs. Sending it as "rttMs" bound to nothing, so
+        // every sample arrived with a round-trip time of zero while the MOS beside it had been computed
+        // from the real one -- a call logged as "Poor" with 0ms round trip and no packet loss, which
+        // reads as a scoring bug and hides the actual half-second latency behind it.
+        roundTripTimeMs: sample.rttMs,
+        bytesReceived: sample.bytesReceived,
+        // The capture side, so a call the caller could not hear is visible in the server log rather than
+        // only in what the caller says afterwards. A microphone level of -1 with captureReported false
+        // means the browser exposed no capture stats: unknown, not silent.
+        microphoneLevel: sample.micLevel,
+        captureReported: !!sample.captureReported,
+        bytesSent: sample.bytesSent,
+        packetsSent: sample.packetsSent,
+        // Whether audio stopped leaving this call for a stretch while it was connected, unmuted and not held.
+        outboundAudioStalled: !!(qualityState && qualityState.outboundStalled),
+        // The delay the browser itself adds on top of the network round trip, and the measured loudness
+        // of each direction. All three are -1 when they could not be measured. Together they are what
+        // separates "this call sounded bad" from "every number said the call was fine", which is the
+        // gap the reports had until now.
+        jitterBufferMs: sample.jitterBufferMs,
+        // What a shorter playout buffer costs, if anything: audio the browser invented for packets that
+        // arrived too late to play. -1 when the browser does not report it.
+        concealmentPercent: sample.concealmentPercent,
+        inboundLevel: sample.inboundLevel,
+        captureProbeLevel: sample.captureProbeLevel,
+        captureProbeState: sample.captureProbeState,
+        // The capture format, so a call that measured perfectly and sounded wrong can be explained
+        // from the server log instead of from a live diagnostics panel nobody had open at the time.
+        captureSampleRate: sample.captureSampleRate,
+        captureDevice: sample.captureDevice,
+        captureProcessing: sample.captureProcessing,
+        // The direction the far end hears: the codec the browser sends, what Telnyx reports receiving,
+        // the echo canceller's activity, and -- decisively -- whether the track being sent is the stream
+        // the soft phone captured at all. Plus the provider's leg ids as the join key to the server log.
+        sendCodec: sample.sendCodec,
+        rttSource: sample.rttSource,
+        remoteFractionLostPercent: sample.remoteFractionLostPercent,
+        remoteJitterMs: sample.remoteJitterMs,
+        echoStatsReported: !!sample.echoStatsReported,
+        echoReturnLossDb: sample.echoReturnLossDb,
+        echoReturnLossEnhancementDb: sample.echoReturnLossEnhancementDb,
+        sentTrackReported: !!sample.sentTrackReported,
+        sentTrackLabel: sample.sentTrackLabel,
+        sentTrackIsLocalStream: !!sample.sentTrackIsLocalStream,
+        providerCallControlId: sample.providerCallControlId,
+        providerLegId: sample.providerLegId,
+        providerSessionId: sample.providerSessionId,
+        mos: sample.mos,
+        poor: sample.poor,
+        final: !!isFinal,
+        sampleCount: qualityState ? qualityState.samples : 0,
+        minMos: qualityState && isFinite(qualityState.minMos) ? qualityState.minMos : sample.mos,
+        avgMos: qualityState && qualityState.samples ? qualityState.mosSum / qualityState.samples : sample.mos,
+        maxLossPercent: qualityState ? qualityState.maxLoss : sample.lossPercent,
+        minMicrophoneLevel: qualityState && isFinite(qualityState.minMicLevel) ? qualityState.minMicLevel : sample.micLevel,
+        // The worst the playout delay got at any point, so a call that drifted into walkie-talkie
+        // territory late is visible from the summary line alone rather than only from the samples.
+        maxJitterBufferMs: qualityState ? qualityState.maxJitterBufferMs : sample.jitterBufferMs,
+        durationMs: qualityState ? Date.now() - qualityState.started : 0
+      };
+      return payload;
+    }
+    function stopQualitySampler(sendFinal) {
+      if (qualityTimer) {
+        window.clearInterval(qualityTimer);
+        qualityTimer = null;
+      }
+      if (outboundMonitor) {
+        // The call is over, so a warning about it is too.
+        if (outboundMonitor.isStalled() && typeof context.onOutboundAudioResumed === 'function') {
+          context.onOutboundAudioResumed();
+        }
+        outboundMonitor.stop();
+        outboundMonitor = null;
+      }
+      if (!qualityState) {
+        return;
+      }
+
+      // Report the end-of-call summary once, only when at least one sample was taken (a sub-sample-interval
+      // call produced no measurements worth summarizing).
+      if (sendFinal && !qualityState.finalSent && qualityState.samples > 0 && qualityState.last && typeof context.reportCallQuality === 'function') {
+        qualityState.finalSent = true;
+        context.reportCallQuality(buildQualityPayload(qualityState.last, true));
+      }
+
+      // Clear any lingering poor-connection signal on the core when the call ends.
+      if (qualityState.lastPoor && typeof context.onConnectionQuality === 'function') {
+        context.onConnectionQuality(false);
+      }
+
+      // Release the audio graphs the probes hold. They outlive nothing: a probe left running would keep
+      // an AudioContext (and, for the capture probe, a reference to the microphone) alive after the call.
+      stopLevelProbes();
+      qualityState = null;
+    }
+    var clientOptions = {
+      login: login,
+      password: password
+    };
+
+    // Only override the Telnyx SDK's built-in ICE servers when the provided set includes a TURN relay.
+    // Passing a STUN-only list here REPLACES the SDK's defaults -- which include Telnyx's TURN servers -- and
+    // a client behind a restrictive/symmetric NAT then has no relay to receive inbound media: it can send
+    // audio but receives nothing (one-way audio), while a client on a permissive NAT still works via STUN.
+    // With a STUN-only config we leave the SDK defaults in place so TURN relaying stays available.
+    if (Array.isArray(ice.iceServers) && ice.iceServers.length > 0 && iceServersIncludeTurn(ice.iceServers)) {
+      clientOptions.iceServers = ice.iceServers;
+    }
+
+    // Which of the provider's signaling edges this browser registers on: the agent's own choice, else the
+    // tenant setting, else the provider's geo-routing. It can only be set as the client is built, which is
+    // why changing it re-registers rather than taking effect on the next call. See signaling-region.js.
+    var signalingRegion = resolveSignalingRegion(signaling.region, typeof context.readSignalingRegion === 'function' ? context.readSignalingRegion() : '');
+    withSignalingRegion(clientOptions, signalingRegion);
+    var client = new telnyx.TelnyxRTC(clientOptions);
+
+    // Say which edge this registration landed on. Until now nothing did, so an agent on a distant edge had
+    // no way to know that was what they were hearing -- and neither did anyone reading the call afterwards.
+    if (typeof context.onSignalingRegion === 'function') {
+      context.onSignalingRegion(signalingRegion, describeSignalingRegion(signalingRegion));
+    }
+
+    // Forgets a call that ended. When a keypad call ends while the platform leg it was placed over is still up,
+    // the platform leg becomes current again (else the keypad call held under it), so its own events -- and its
+    // hang-up -- are heard. Its audio never moved: each call plays through an element of its own.
+    function clearCall(call) {
+      var next = legAfterEnd(legs, call);
+      if (currentCall !== call) {
+        return;
+      }
+      currentCall = next && next !== call && !isTelnyxTerminalState(next.state) ? next : null;
+    }
+
+    // Whether the SDK still has a live call under this call's id. A call the SDK recovered across a reconnect is a
+    // new object under the same id, so the registry is asked rather than the object this browser was first handed.
+    function isSdkCallLive(callId, fallbackState) {
+      var registry = client.calls;
+      if (!registry) {
+        return !isTelnyxTerminalState(fallbackState);
+      }
+      var sdkCall = Object.prototype.hasOwnProperty.call(registry, callId) ? registry[callId] : null;
+      return !!sdkCall && !isTelnyxTerminalState(sdkCall.state);
+    }
+    function isBrowserCallLive(call) {
+      return !disposed && !!call && isCallTracked(callNotifiers, call.id) && isSdkCallLive(call.id, call.state);
+    }
+    function findHeldCall(callId) {
+      if (currentCall && currentCall.id === callId) {
+        return currentCall;
+      }
+      return allLegs(legs).filter(function (leg) {
+        return leg.id === callId;
+      })[0] || null;
+    }
+
+    // Ends every call this browser placed that the SDK no longer has. A socket that dropped and came back can come
+    // back without a call and without a word about it; the phone then went on showing the call, and the platform
+    // never heard it end. Returns the ids it ended.
+    function sweepVanishedCalls() {
+      if (disposed || !client.calls) {
+        return [];
+      }
+      var vanished = findVanishedCalls(callNotifiers, client.calls, isTelnyxTerminalState);
+      vanished.forEach(function (callId) {
+        var leg = findHeldCall(callId);
+        if (typeof context.onCallVanished === 'function') {
+          context.onCallVanished(callId);
+        }
+        deliverCallState(callNotifiers, callId, 'Disconnected');
+        if (!leg) {
+          releaseRemoteElement(remoteElements, callId);
+          return;
+        }
+        if (leg === currentCall) {
+          stopQualitySampler(true);
+          clearCall(leg);
+        } else {
+          forgetLeg(legs, leg);
+        }
+        releaseCallMedia(leg);
+      });
+      return vanished;
+    }
+
+    // How long after a (re)login the sweep waits, so a call the SDK is still reattaching is not taken for gone.
+    var CALL_SWEEP_DELAY_MS = 1500;
+
+    // A single notification handler drives both directions:
+    //  * inbound: the server only originates a leg to this registered credential after the agent has
+    //    accepted the offer over SignalR, so answering the incoming call here mirrors the SIP.js
+    //    passive-answer model;
+    //  * outbound: relay the SDK call state to the originate() callback that owns the active call.
+    // The Telnyx SDK attaches the remote media to the audio element, but the browser's autoplay policy can
+    // block playback -- most notably on an auto-answered inbound call, which happens with no user gesture --
+    // leaving the call connected (DTLS up) but silent. Force playback and make sure the element is audible
+    // once the call is active. Best-effort: a rejected play() only means this particular attempt was blocked.
+    function ensureRemotePlayback(call) {
+      var element = remoteElementOf(call);
+      if (!element) {
+        return;
+      }
+      try {
+        element.muted = false;
+        if (typeof element.volume === 'number') {
+          element.volume = 1;
+        }
+        Promise.resolve(element.play()).catch(function () {});
+      } catch (error) {/* best effort */}
+    }
+
+    // Answer an inbound call with the same media options the outbound newCall path uses. Passing the already
+    // acquired microphone stream (localStream) plus audio:true is what makes the SDK negotiate a two-way
+    // (sendrecv) audio answer and attach the remote audio to remoteElement; answering with only remoteElement
+    // left the leg connected (DTLS up) but silent -- no media flowed in either direction.
+    function answerInboundCall(call) {
+      // A send track that ended since it was captured would carry nothing: take a fresh one first.
+      if (!hasLiveAudioTrack(context.localStream) && typeof context.reviveCapture === 'function') {
+        Promise.resolve(context.reviveCapture()).catch(function () {}).then(function () {
+          if (!disposed && !isTelnyxTerminalState(call.state)) {
+            answerOnLocalStream(call);
+          }
+        });
+        return;
+      }
+      answerOnLocalStream(call);
+    }
+    function answerOnLocalStream(call) {
+      try {
+        var answerOptions = {
+          localStream: context.localStream,
+          remoteElement: acquireRemoteElement(remoteElements, call.id),
+          audio: true,
+          video: false
+        };
+        if (preferredCodecs) {
+          answerOptions.preferred_codecs = preferredCodecs;
+        }
+
+        // The SDK's answer() copies only customHeaders and the media elements out of these options; the
+        // localStream (and preferred_codecs) it is handed here are silently discarded, and its Peer then
+        // calls getUserMedia itself -- {audio:true}, on the browser's default input, with default
+        // constraints. So on every inbound call the track the far end heard was whatever Windows had as
+        // its default microphone at the moment of answer, while the soft phone's device picker, mono
+        // constraint, level meter and telemetry all described a different track. A quality line from a
+        // live call read "Capture=... Microphone Array (Intel Smart Sound)" against "Sent=OTHER/Headset
+        // Microphone (Realtek)": two devices, one of them a far-field room mic, with nothing on screen to
+        // say which the caller was hearing.
+        //
+        // The Peer reads the stream from call.options, which answer() preserves (it merges into a copy
+        // of the existing options). Setting it there, before answering, is the one place the SDK will
+        // honour it -- and makes inbound calls send the same stream outbound calls already do.
+        if (context.localStream && call.options && typeof call.options === 'object') {
+          call.options.localStream = context.localStream;
+        }
+        call.answer(answerOptions);
+      } catch (error) {
+        context.showError(error && error.message ? error.message : String(error));
+      }
+    }
+
+    // The core's handle on a held offer leg. Answering it makes it the current call, exactly as the auto-answered
+    // agent leg of an accepted offer always was; the platform joins it to the caller.
+    function createOfferLegController(call) {
+      return {
+        legId: call.options && call.options.telnyxCallControlId || '',
+        answer: function () {
+          var index = heldOfferCalls.indexOf(call);
+          if (index >= 0) {
+            heldOfferCalls.splice(index, 1);
+          }
+          if (disposed || isTelnyxTerminalState(call.state)) {
+            return;
+          }
+          currentCall = call;
+          // The caller's audio from here on: the server's reports about their call drive this leg.
+          notePlatformLeg(legs, call);
+          answerInboundCall(call);
+        },
+        hangup: function () {
+          var index = heldOfferCalls.indexOf(call);
+          if (index >= 0) {
+            heldOfferCalls.splice(index, 1);
+          }
+          try {
+            Promise.resolve(call.hangup()).catch(function () {});
+          } catch (error) {/* best effort: the platform also hangs it up */}
+        }
+      };
+    }
+
+    // What a supervisor's monitor leg negotiated and sends, reported a few times while it is up. Whether the
+    // supervisor could be heard turns on it: a leg negotiated to receive only never carries the microphone, however
+    // its role is switched later.
+    var monitorMediaProbes = [];
+    function reportMonitorLegMedia(call) {
+      if (monitorMediaProbes.indexOf(call) >= 0 || typeof context.reportDiagnostic !== 'function') {
+        return;
+      }
+      monitorMediaProbes.push(call);
+      var remaining = 18;
+      var probe = function () {
+        var peer = call && call.peer && call.peer.instance;
+        if (disposed || !peer || isTelnyxTerminalState(call.state) || remaining-- <= 0) {
+          monitorMediaProbes.splice(monitorMediaProbes.indexOf(call), 1);
+          return;
+        }
+        var directions = (typeof peer.getTransceivers === 'function' ? peer.getTransceivers() : []).map(function (transceiver) {
+          var track = transceiver.sender && transceiver.sender.track;
+          var shared = !!(track && context.localStream && typeof context.localStream.getAudioTracks === 'function' && context.localStream.getAudioTracks().indexOf(track) >= 0);
+          return (transceiver.currentDirection || transceiver.direction || '?') + (track ? '/' + (track.enabled ? 'on' : 'off') + '/' + track.readyState + (shared ? '/shared' : '/own') : '/no-track');
+        }).join(',');
+        Promise.resolve(typeof peer.getStats === 'function' ? peer.getStats() : null).then(function (stats) {
+          var sent = 0;
+          if (stats && typeof stats.forEach === 'function') {
+            stats.forEach(function (report) {
+              if (report.type === 'outbound-rtp' && (report.kind === 'audio' || report.mediaType === 'audio')) {
+                sent += report.bytesSent || 0;
+              }
+            });
+          }
+          context.reportDiagnostic('info', 'monitor-leg-media', 'Monitor leg media: transceivers ' + (directions || 'none') + ', bytes sent ' + sent + '.', call.options && call.options.telnyxCallControlId || '');
+        }).catch(function () {});
+        setTimeout(probe, 10000);
+      };
+      setTimeout(probe, 3000);
+    }
+
+    // The core's handle on a supervisor's monitor leg: answered on the same media path as any inbound leg, but left out
+    // of the current call, so the phone's own calls are untouched by it.
+    function createMonitorLegController(call) {
+      return {
+        legId: call.options && call.options.telnyxCallControlId || '',
+        isRinging: function () {
+          return !disposed && call.state === 'ringing';
+        },
+        answer: function () {
+          if (!disposed && !isTelnyxTerminalState(call.state)) {
+            answerInboundCall(call);
+          }
+        },
+        hangup: function () {
+          return terminateCall(call);
+        },
+        setMute: function (mute) {
+          try {
+            if (mute) {
+              call.muteAudio();
+            } else {
+              call.unmuteAudio();
+            }
+          } catch (error) {/* best effort */}
+        }
+      };
+    }
+
+    // Best-effort extraction of the calling party from an inbound Telnyx call, used to label the ring
+    // prompt. The SDK surfaces it under a few names depending on version; a display name is preferred over
+    // a raw number, and both fall back to empty so the core can show a generic "Incoming call".
+    function extractCaller(call) {
+      var options = call && call.options || {};
+      var name = call.remoteCallerName || options.remoteCallerName || options.callerName || '';
+      var number = call.remoteCallerNumber || options.remoteCallerNumber || options.callerNumber || call.callerNumber || '';
+      return {
+        name: name || '',
+        number: number || ''
+      };
+    }
+
+    // Hangs up a call this browser placed or answered for itself. When the SDK has let go of it by the time the
+    // hang-up settles -- a call already gone at the far end, or a socket that is down -- the end is delivered from
+    // here, since no notification may ever come for it.
+    function terminateCall(call) {
+      endHoldAudio(call);
+      var hangup;
+      try {
+        hangup = Promise.resolve(call.hangup()).catch(function () {});
+      } catch (error) {
+        hangup = Promise.resolve();
+      }
+      return hangup.then(function () {
+        sweepVanishedCalls();
+      });
+    }
+    client.on('telnyx.notification', function (notification) {
+      if (!notification || notification.type !== 'callUpdate' || !notification.call) {
+        return;
+      }
+      var call = notification.call;
+
+      // The SDK stops the stream a call holds right after telling us the call is being torn down; take the
+      // shared microphone back first, or every later call on this registration sends a dead track.
+      releaseSharedCapture(call, context.localStream);
+
+      // A held offer leg that ends (the platform hung it up because the offer was declined or expired, or it
+      // rang out) is reported so the core stops holding it.
+      var heldOfferIndex = heldOfferCalls.indexOf(call);
+      if (heldOfferIndex >= 0) {
+        if (isTelnyxTerminalState(call.state)) {
+          heldOfferCalls.splice(heldOfferIndex, 1);
+          if (typeof context.onOfferLegEnded === 'function') {
+            context.onOfferLegEnded(call.options && call.options.telnyxCallControlId || '');
+          }
+        }
+        return;
+      }
+
+      // A supervisor's monitor leg: its audio plays once media flows, and its state is the core's to report.
+      var monitorIndex = monitorCalls.indexOf(call);
+      if (monitorIndex >= 0) {
+        if (call.state === 'active') {
+          ensureRemotePlayback(call);
+          reportMonitorLegMedia(call);
+        }
+        if (isTelnyxTerminalState(call.state)) {
+          monitorCalls.splice(monitorIndex, 1);
+          releaseCallMedia(call);
+        }
+        if (typeof context.onMonitorLegState === 'function') {
+          context.onMonitorLegState(call.options && call.options.telnyxCallControlId || '', call.state);
+        }
+        return;
+      }
+      if (call.direction === 'inbound' && call.state === 'ringing' && call !== currentCall && call !== inboundRingingCall && !disposed) {
+        // The leg the platform rang for an offer that is still ringing on screen. It is the core's to hold
+        // or answer, depending on whether the offer has been accepted; it never rings as a call of its own.
+        var takeOfferLeg = typeof context.claimOfferLeg === 'function' ? context.claimOfferLeg(call.options || {}) : null;
+        if (typeof takeOfferLeg === 'function') {
+          heldOfferCalls.push(call);
+          takeOfferLeg(createOfferLegController(call));
+          return;
+        }
+
+        // The leg a supervisor's phone is rung on to listen to a call: answered by itself when it is the one
+        // this phone asked for, hung up otherwise, and never rung or taken by the ordinary auto-answer.
+        var takeMonitorLeg = typeof context.claimMonitorLeg === 'function' ? context.claimMonitorLeg(call.options || {}) : null;
+        if (typeof takeMonitorLeg === 'function') {
+          monitorCalls.push(call);
+          takeMonitorLeg(createMonitorLegController(call));
+          return;
+        }
+
+        // The caller's own bridged leg (an extension call this browser just placed) and a Contact Center
+        // leg it just accepted are inbound calls the agent is expecting, so they are answered
+        // automatically. An unsolicited inbound leg -- a colleague dialing this agent's extension -- must
+        // ring with an Answer/Decline prompt instead of connecting silently.
+        // A colleague handing this agent a call rings a leg the platform placed and tracks: it rings like any
+        // incoming call, and once answered it is a platform call -- held, transferred and merged through the
+        // server, whose reports drive its leg (see soft-phone/bridged-transfer.js).
+        var transferLeg = typeof readTransferLegTag === 'function' ? readTransferLegTag(call.options || {}) : null;
+        var autoAnswer = !transferLeg && (typeof context.shouldAutoAnswerInbound !== 'function' || context.shouldAutoAnswerInbound(call.options || {}));
+        if (autoAnswer) {
+          currentCall = call;
+          notePlatformLeg(legs, call);
+          answerInboundCall(call);
+          return;
+        }
+        inboundRingingCall = call;
+        var caller = extractCaller(call);
+        var controller = {
+          callerName: caller.name,
+          callerNumber: transferLeg && transferLeg.partyNumber || caller.number,
+          platformCallId: transferLeg ? transferLeg.legId : '',
+          transferredBy: transferLeg ? transferLeg.transferredBy : '',
+          // Answer the ringing leg and, from here on, drive its state through onState just like an
+          // originated call (so the core sees Connected/Disconnected and can clean up).
+          answer: function (onState) {
+            currentCall = call;
+
+            // A colleague's direct call: the soft phone drives it through its own session, not the
+            // server's reports. A call handed over is the platform's, and its reports drive the leg.
+            if (transferLeg) {
+              notePlatformLeg(legs, call);
+            } else {
+              noteBrowserLeg(legs, call);
+            }
+            inboundRingingCall = null;
+            trackCall(callNotifiers, call.id, onState);
+            answerInboundCall(call);
+          },
+          // Decline before answer: hang up the ringing leg. Telnyx reports the destination-leg hangup to
+          // the server, whose no-answer handling can still route the caller to voicemail.
+          decline: function () {
+            inboundRingingCall = null;
+            try {
+              call.hangup();
+            } catch (error) {/* best effort */}
+          },
+          terminate: function () {
+            return terminateCall(call);
+          },
+          setHold: function (hold) {
+            try {
+              return applyHold(call, hold);
+            } catch (error) {
+              return Promise.resolve();
+            }
+          },
+          setMute: function (mute) {
+            try {
+              if (mute) {
+                call.muteAudio();
+              } else {
+                call.unmuteAudio();
+              }
+            } catch (error) {/* best effort */}
+            return Promise.resolve();
+          },
+          isLive: function () {
+            return isBrowserCallLive(call);
+          }
+        };
+        if (typeof context.onInboundRing === 'function') {
+          context.onInboundRing(controller);
+        } else {
+          // No ring handler is wired: never leave a call silently unanswered -- answer it.
+          controller.answer();
+        }
+        return;
+      }
+
+      // The agent has not answered yet and the caller hung up (or the ring timed out): tell the core to
+      // dismiss the Answer/Decline prompt.
+      if (call === inboundRingingCall) {
+        if (isTelnyxTerminalState(call.state)) {
+          inboundRingingCall = null;
+          if (typeof context.onInboundRingCanceled === 'function') {
+            context.onInboundRingCanceled();
+          }
+        }
+        return;
+      }
+
+      // A call the SDK recovered across a reconnect arrives as a new object under the same id.
+      if (currentCall && call !== currentCall && call.id && call.id === currentCall.id) {
+        currentCall = call;
+      }
+
+      // Once media is flowing, make sure the remote audio is actually playing (see ensureRemotePlayback) and
+      // begin sampling media quality for this call.
+      if (call === currentCall && call.state === 'active') {
+        ensureRemotePlayback(call);
+        reportNegotiation(call);
+        applyPlayoutDelayToCall(call);
+        startQualitySampler(call);
+      }
+
+      // Every call this browser placed, or answered for itself, reports to its own callback -- a held call under
+      // the current one included -- and its end is delivered once.
+      var mapped = mapTelnyxOutboundState(call.state);
+      if (mapped) {
+        deliverCallState(callNotifiers, call.id, mapped);
+      }
+      if (!isTelnyxTerminalState(call.state)) {
+        return;
+      }
+      if (call === currentCall) {
+        // Send the end-of-call quality summary before clearing the call.
+        stopQualitySampler(true);
+        clearCall(call);
+      } else {
+        // A leg this browser holds that is not the current call -- the platform leg under a keypad call, or a
+        // keypad call held under another -- ended.
+        forgetLeg(legs, call);
+      }
+      releaseCallMedia(call);
+    });
+    client.on('telnyx.error', function (error) {
+      // A failed BYE while hanging up is expected when the call is already tearing down; surfacing it as
+      // an error is misleading, so swallow it and keep only a diagnostic trace.
+      if (isBenignHangupError(error)) {
+        if (window.console && console.debug) {
+          console.debug('[soft-phone] Ignored benign Telnyx hang-up error.', error);
+        }
+        return;
+      }
+      context.showError(error && (error.error || error.message) || 'Telnyx WebRTC error.');
+    });
+
+    // Signaling-health signals for the degraded-state UX (item 6). The SDK owns the socket reconnect
+    // (autoReconnect, which we leave enabled); we only observe it. A close/error while the session is live
+    // means the SDK is reconnecting, so surface "Reconnecting..."; a re-open clears it. Intentional
+    // teardown (dispose/renewal sets `disposed`) must not masquerade as a reconnect.
+    function reportSignalingDegraded(active) {
+      if (disposed || typeof context.onSignalingDegraded !== 'function') {
+        return;
+      }
+      context.onSignalingDegraded(active);
+    }
+    client.on('telnyx.socket.close', function () {
+      reportSignalingDegraded(true);
+    });
+    client.on('telnyx.socket.error', function () {
+      reportSignalingDegraded(true);
+    });
+    client.on('telnyx.socket.open', function () {
+      reportSignalingDegraded(false);
+    });
+
+    // Provider SDK warnings (media/quality advisories such as "Low local microphone audio detected"). Surface
+    // them to the core for the Diagnostics tab and server telemetry.
+    client.on('telnyx.warning', function (warning) {
+      if (!disposed && typeof context.onProviderWarning === 'function') {
+        context.onProviderWarning(warning);
+      }
+    });
+
+    // On every (re)connect, clear any stale transient error banner -- most importantly a LOGIN_FAILED that
+    // has since recovered (for example after a brief credential churn), which would otherwise linger on the
+    // widget even though the client is connected again.
+    client.on('telnyx.ready', function () {
+      if (!disposed) {
+        context.showError(null);
+        reportSignalingDegraded(false);
+        // A reconnect can come back without a call and without a word about it. Give a call the SDK is
+        // reattaching a moment to land, then end whatever is gone.
+        window.setTimeout(sweepVanishedCalls, CALL_SWEEP_DELAY_MS);
+      }
+    });
+
+    // Resolve the session only once the client has logged in (telnyx.ready); newCall/answer require a
+    // live session.
+    return new Promise(function (resolve, reject) {
+      var settled = false;
+      client.on('telnyx.ready', function () {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        resolve(buildSession());
+      });
+      client.on('telnyx.error', function (error) {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        reject(new Error(error && (error.error || error.message) || 'Telnyx WebRTC login failed.'));
+      });
+      try {
+        client.connect();
+      } catch (error) {
+        if (!settled) {
+          settled = true;
+          reject(error instanceof Error ? error : new Error(String(error)));
+        }
+      }
+    });
+
+    // Returns live diagnostics for the current call: the negotiated SDP and a getStats dump. Used by the
+    // gated diagnostics panel to pull ICE/SDP/RTP from a real session on demand (companion tooling), and by
+    // the echo/loopback audio test to assert inbound bytesReceived > 0. Best-effort and read-only.
+    function getCallDiagnostics() {
+      var call = currentCall;
+      var peer = call && call.peer && call.peer.instance;
+      if (!peer) {
+        return Promise.resolve({
+          available: false,
+          localSdp: '',
+          remoteSdp: '',
+          stats: []
+        });
+      }
+      var result = {
+        available: true,
+        localSdp: '',
+        remoteSdp: '',
+        stats: []
+      };
+      try {
+        result.localSdp = peer.localDescription && peer.localDescription.sdp || '';
+        result.remoteSdp = peer.remoteDescription && peer.remoteDescription.sdp || '';
+      } catch (error) {/* best effort */}
+      if (typeof peer.getStats !== 'function') {
+        return Promise.resolve(result);
+      }
+      return Promise.resolve(peer.getStats()).then(function (report) {
+        if (report && typeof report.forEach === 'function') {
+          report.forEach(function (stat) {
+            result.stats.push(stat);
+          });
+        }
+        return result;
+      }).catch(function () {
+        return result;
+      });
+    }
+    function buildSession() {
+      return {
+        providerConfig: registrationConfig,
+        mediaCodecs: media.codecs || [],
+        // The signaling edge this registration is on, for the diagnostics readout. Empty means the
+        // provider's own geo-routing chose it and cannot tell us which one it picked.
+        signalingRegion: signalingRegion,
+        // The browser places its own outbound calls through the Telnyx SDK.
+        canOriginate: true,
+        // Reported to the server once registered: this client recognizes and holds the leg the platform
+        // rings for an offer that is still ringing, so the platform may ring it early.
+        // And it answers, without ringing, the leg the platform rings back to it for a number it dialed.
+        clientCapabilities: [OFFER_LEG_CAPABILITY, BRIDGED_DIAL_LEG_CAPABILITY].filter(Boolean),
+        outboundCallerId: registrationConfig.outboundCallerId || '',
+        // Optional echo/loopback destination for the diagnostics audio test (companion tooling).
+        echoTestDestination: registrationConfig.echoTestDestination || '',
+        // On-demand live diagnostics (SDP + getStats) for the diagnostics panel and the echo test.
+        getDiagnostics: getCallDiagnostics,
+        // Ends every call this browser placed that the SDK no longer has; the core asks on every refresh of its
+        // call list and after its hub reconnects. Returns the ids it ended.
+        reconcileCalls: sweepVanishedCalls,
+        // Re-applies the playout hint to the live call after the agent changes it.
+        refreshPlayoutDelay: function () {
+          if (currentCall) {
+            applyPlayoutDelayToCall(currentCall);
+          }
+        },
+        // Swaps the outgoing audio track of the live call without renegotiating, for a capture that died
+        // mid-call. Resolves false when there is no live sender to swap.
+        replaceLocalAudioTrack: function (track) {
+          var peer = currentCall && currentCall.peer && currentCall.peer.instance;
+          if (!peer || typeof peer.getSenders !== 'function') {
+            return Promise.resolve(false);
+          }
+          var sender = findAudioSender(peer.getSenders());
+          if (!sender || typeof sender.replaceTrack !== 'function') {
+            return Promise.resolve(false);
+          }
+
+          // The capture probe is NOT rebuilt here. At this point the soft phone has not yet committed the
+          // swap: its send stream still holds the old track, which it stops only afterwards, so a probe
+          // built now bound to a track that was about to die and read 0.000 for the rest of the call
+          // (observed live: OutLevel=0.000 while the far end measured InLevel around 0.3). The caller
+          // rebuilds it through refreshCaptureProbe once the commit is done.
+          return Promise.resolve(sender.replaceTrack(track)).then(function () {
+            return true;
+          });
+        },
+        // Re-points the capture level probe at the track now being sent, once a mid-call microphone swap
+        // has been committed. A no-op when no call is being sampled.
+        refreshCaptureProbe: refreshCaptureProbe,
+        // Places an outbound call through the Telnyx SDK and returns a controller. onState receives
+        // soft-phone state names: 'Ringing', 'Connected', 'Disconnected'.
+        originate: function (destination, callerId, onState) {
+          var notify = typeof onState === 'function' ? onState : function () {};
+          if (disposed) {
+            notify('Disconnected');
+            return null;
+          }
+          var call;
+          // The call has no id until the SDK makes it, so its audio element is claimed under a stand-in.
+          var elementKey = 'pending-call-' + ++pendingElementSequence;
+          try {
+            var callOptions = {
+              destinationNumber: destination,
+              callerNumber: callerId || registrationConfig.outboundCallerId || '',
+              // Reuse the microphone stream the soft phone already acquired so the SDK does not
+              // open a second capture for outbound calls.
+              localStream: context.localStream,
+              remoteElement: acquireRemoteElement(remoteElements, elementKey),
+              audio: true,
+              video: false
+            };
+            if (preferredCodecs) {
+              callOptions.preferred_codecs = preferredCodecs;
+            }
+            call = client.newCall(callOptions);
+          } catch (error) {
+            releaseRemoteElement(remoteElements, elementKey);
+            context.showError(error && error.message ? error.message : String(error));
+            notify('Disconnected');
+            return null;
+          }
+          rekeyRemoteElement(remoteElements, elementKey, call.id);
+          currentCall = call;
+          noteBrowserLeg(legs, call);
+          trackCall(callNotifiers, call.id, notify);
+          return {
+            terminate: function () {
+              return terminateCall(call);
+            },
+            // Whether the SDK still has this call live. The core drops a call it shows once this says no.
+            isLive: function () {
+              return isBrowserCallLive(call);
+            },
+            setHold: function (hold) {
+              try {
+                return applyHold(call, hold);
+              } catch (error) {
+                return Promise.resolve();
+              }
+            },
+            setMute: function (mute) {
+              try {
+                if (mute) {
+                  call.muteAudio();
+                } else {
+                  call.unmuteAudio();
+                }
+              } catch (error) {/* best effort */}
+              return Promise.resolve();
+            }
+          };
+        },
+        // Applies the server's state for the call it tracks to the leg carrying that call's audio -- never to a
+        // call the browser placed itself. Such a call has no platform interaction behind it, so the platform
+        // reporting no active call is silence, not an instruction to hang up (manual dials were once dropped
+        // the moment the customer answered, when a refresh came back empty), and a terminal report about a
+        // platform call is not about it either.
+        handleCallState: function (serverCall) {
+          var plan = planPlatformReport(legs, serverCall ? normalizeState(serverCall.state) : null, serverCall ? serverCall.callId : null);
+          var leg = plan.leg;
+          if (plan.action === 'hangup') {
+            if (leg === currentCall) {
+              stopQualitySampler(true);
+            }
+            endHoldAudio(leg);
+            try {
+              leg.hangup();
+            } catch (error) {/* best effort */}
+            forgetLeg(legs, leg);
+            if (currentCall === leg) {
+              currentCall = null;
+            }
+            return Promise.resolve();
+          }
+          if (plan.action === 'hold') {
+            try {
+              return applyHold(leg, true);
+            } catch (error) {
+              return Promise.resolve();
+            }
+          }
+          if (plan.action === 'resume') {
+            try {
+              if (serverCall.isMuted) {
+                leg.muteAudio();
+              } else {
+                leg.unmuteAudio();
+              }
+              return applyHold(leg, false);
+            } catch (error) {
+              return Promise.resolve();
+            }
+          }
+          return Promise.resolve();
+        },
+        dispose: function () {
+          if (disposed) {
+            return Promise.resolve();
+          }
+          disposed = true;
+          // Flush the end-of-call quality summary if a call was still live at disposal.
+          stopQualitySampler(true);
+
+          // Every call this browser still holds goes with the registration, not only the current one.
+          var held = allLegs(legs);
+          if (currentCall && held.indexOf(currentCall) < 0) {
+            held.push(currentCall);
+          }
+          held.forEach(function (call) {
+            try {
+              call.hangup();
+            } catch (error) {/* best effort */}
+          });
+
+          // Every call the phone placed is over with the registration, whether or not the SDK gets to say so
+          // before it disconnects: its end is reported now, once.
+          endAllCalls(callNotifiers);
+          endHoldAudio();
+          releaseAllRemoteElements(remoteElements);
+          currentCall = null;
+          legs = createCallLegs();
+          try {
+            return Promise.resolve(client.disconnect()).catch(function () {});
+          } catch (error) {
+            return Promise.resolve();
+          }
+        }
+      };
+    }
+  }
   function clamp(value, min, max) {
     return Math.min(Math.max(value, min), max);
   }
   function isFiniteNumber(value) {
     return typeof value === 'number' && isFinite(value);
   }
-  function normalizeDialNumber(value) {
-    var input = String(value || '').trim();
-    var hasInternationalPrefix = input.charAt(0) === '+';
-    var digits = input.replace(/\D/g, '');
-    return (hasInternationalPrefix ? '+' : '') + digits;
-  }
-  function formatNanpNumber(digits, international) {
-    var national = international ? digits.substring(1) : digits;
-    var formatted = '';
-    if (international) {
-      formatted = '+1';
+
+  // A self-contained inbound-call ringtone synthesized with the Web Audio API, so no audio asset needs to be
+  // bundled or fetched (which would also run into the strict CSP). It plays a classic telephone double-ring
+  // cadence (two short 440/480 Hz bursts, then a pause) on a loop until stopped. start() is idempotent, so it
+  // can be called on every render while a call is ringing. Playback needs the page to have had a user gesture
+  // (browser autoplay policy); an agent using the admin has almost always interacted, and if not the ring is
+  // simply silent rather than erroring.
+  function createRingtonePlayer() {
+    var AudioCtx = window.AudioContext || window.webkitAudioContext;
+    var ctx = null;
+    var oscA = null;
+    var oscB = null;
+    var gain = null;
+    var timer = null;
+    var running = false;
+    function ringOnce() {
+      if (!ctx || !gain) {
+        return;
+      }
+      var now = ctx.currentTime;
+      var peak = 0.14;
+      var floor = 0.0001;
+      gain.gain.cancelScheduledValues(now);
+      gain.gain.setValueAtTime(floor, now);
+      // First burst.
+      gain.gain.exponentialRampToValueAtTime(peak, now + 0.04);
+      gain.gain.setValueAtTime(peak, now + 0.4);
+      gain.gain.exponentialRampToValueAtTime(floor, now + 0.45);
+      // Second burst (double-ring), then a ~2s silence handled by the interval.
+      gain.gain.exponentialRampToValueAtTime(peak, now + 0.65);
+      gain.gain.setValueAtTime(peak, now + 1.0);
+      gain.gain.exponentialRampToValueAtTime(floor, now + 1.05);
     }
-    if (national.length > 0) {
-      formatted += (international ? ' ' : '') + '(' + national.substring(0, 3);
-    }
-    if (national.length >= 3) {
-      formatted += ')';
-    }
-    if (national.length > 3) {
-      formatted += ' ' + national.substring(3, 6);
-    }
-    if (national.length > 6) {
-      formatted += '-' + national.substring(6, 10);
-    }
-    return formatted;
-  }
-  function formatInternationalNumber(digits) {
-    if (!digits) {
-      return '+';
-    }
-    var countryCodeLength = digits.length > 10 ? Math.min(3, digits.length - 10) : Math.min(2, digits.length);
-    var countryCode = digits.substring(0, countryCodeLength);
-    var national = digits.substring(countryCodeLength);
-    var groups = [];
-    while (national.length > 4) {
-      groups.push(national.substring(0, 3));
-      national = national.substring(3);
-    }
-    if (national) {
-      groups.push(national);
-    }
-    return '+' + countryCode + (groups.length ? ' ' + groups.join(' ') : '');
-  }
-  function formatPhoneNumber(value) {
-    var normalized = normalizeDialNumber(value);
-    var international = normalized.charAt(0) === '+';
-    var digits = normalized.replace(/\D/g, '');
-    if (!international && digits.length < 7) {
-      return digits;
-    }
-    if (!international && digits.length <= 10 || international && digits.charAt(0) === '1' && digits.length <= 11) {
-      return formatNanpNumber(digits, international);
-    }
-    return international ? formatInternationalNumber(digits) : digits;
+    return {
+      start: function () {
+        if (running || !AudioCtx) {
+          return;
+        }
+        running = true;
+        try {
+          ctx = new AudioCtx();
+          oscA = ctx.createOscillator();
+          oscB = ctx.createOscillator();
+          gain = ctx.createGain();
+          oscA.type = 'sine';
+          oscB.type = 'sine';
+          oscA.frequency.value = 440;
+          oscB.frequency.value = 480;
+          gain.gain.value = 0.0001;
+          oscA.connect(gain);
+          oscB.connect(gain);
+          gain.connect(ctx.destination);
+          oscA.start();
+          oscB.start();
+          if (ctx.state === 'suspended' && typeof ctx.resume === 'function') {
+            ctx.resume().catch(function () {});
+          }
+          ringOnce();
+          timer = window.setInterval(ringOnce, 3000);
+        } catch (error) {
+          running = false;
+        }
+      },
+      stop: function () {
+        if (!running) {
+          return;
+        }
+        running = false;
+        if (timer) {
+          window.clearInterval(timer);
+          timer = null;
+        }
+        try {
+          if (gain && ctx) {
+            gain.gain.cancelScheduledValues(ctx.currentTime);
+            gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+          }
+          if (oscA) {
+            oscA.stop();
+          }
+          if (oscB) {
+            oscB.stop();
+          }
+        } catch (error) {/* best effort */}
+        try {
+          if (ctx && typeof ctx.close === 'function') {
+            ctx.close();
+          }
+        } catch (error) {/* best effort */}
+        ctx = oscA = oscB = gain = null;
+      }
+    };
   }
   function createSoftPhone(rootElement, options) {
     options = options || {};
@@ -359,16 +8973,56 @@
     var capabilities = config.capabilities || 0;
     var storageKey = (config.storageKey || 'telephony-soft-phone') + '-layout';
     var mediaAdapters = createBrowserMediaAdapterRegistry(rootElement, config);
+
+    // The standalone /softphone page (hosted by the CrestApps Soft Phone browser extension) wraps the phone
+    // in an element flagged data-softphone-embedded, and -- when the agent answered an inbound call from an
+    // OS notification while the phone window was closed -- data-softphone-answer-call-id. Embedded mode
+    // renders the phone open and full-window (the page CSS pins it); an answer call id, when present, makes
+    // the phone auto-answer that one offer as it arrives (see the one-shot state below).
+    var embeddedHost = typeof rootElement.closest === 'function' ? rootElement.closest('[data-softphone-embedded]') : null;
+    var isEmbedded = !!(embeddedHost && embeddedHost.getAttribute('data-softphone-embedded') === 'true');
+    var requestedAnswerCallId = embeddedHost ? (embeddedHost.getAttribute('data-softphone-answer-call-id') || '').trim() : '';
     var signalRFactory = options.signalRFactory || (typeof signalR !== 'undefined' ? signalR : null);
     var dom = {
       toggle: rootElement.querySelector('[data-telephony-toggle]'),
       toggleIcon: rootElement.querySelector('[data-telephony-toggle-icon]'),
       panel: rootElement.querySelector('[data-telephony-panel]'),
       dragHandle: rootElement.querySelector('[data-telephony-drag-handle]'),
+      disconnect: rootElement.querySelector('[data-telephony-disconnect]'),
       close: rootElement.querySelector('[data-telephony-close]'),
       status: rootElement.querySelector('[data-telephony-status]'),
       number: rootElement.querySelector('[data-telephony-number]'),
+      dialModeToggle: rootElement.querySelector('[data-telephony-dial-mode-toggle]'),
+      dialModeLabel: rootElement.querySelector('[data-telephony-dial-mode-label]'),
+      extensionHint: rootElement.querySelector('[data-telephony-extension-hint]'),
+      keypadResults: rootElement.querySelector('[data-telephony-keypad-results]'),
       error: rootElement.querySelector('[data-telephony-error]'),
+      micRetry: rootElement.querySelector('[data-telephony-mic-retry]'),
+      settingsToggle: rootElement.querySelector('[data-telephony-settings-toggle]'),
+      settingsPanel: rootElement.querySelector('[data-telephony-settings-panel]'),
+      settingsBack: rootElement.querySelector('[data-telephony-settings-back]'),
+      inputDevice: rootElement.querySelector('[data-telephony-input-device]'),
+      outputDevice: rootElement.querySelector('[data-telephony-output-device]'),
+      processingEc: rootElement.querySelector('[data-telephony-processing-ec]'),
+      processingNs: rootElement.querySelector('[data-telephony-processing-ns]'),
+      processingAgc: rootElement.querySelector('[data-telephony-processing-agc]'),
+      micBoost: rootElement.querySelector('[data-telephony-mic-boost]'),
+      playoutDelay: rootElement.querySelector('[data-telephony-playout-delay]'),
+      signalingRegion: rootElement.querySelector('[data-telephony-signaling-region]'),
+      signalingRegionStatus: rootElement.querySelector('[data-telephony-signaling-region-status]'),
+      outputDeviceRow: rootElement.querySelector('[data-telephony-output-device-row]'),
+      diagnosticsTab: rootElement.querySelector('[data-telephony-diagnostics-tab]'),
+      diagStatus: rootElement.querySelector('[data-telephony-diag-status]'),
+      diagReadout: rootElement.querySelector('[data-telephony-diag-readout]'),
+      diagOutput: rootElement.querySelector('[data-telephony-diag-output]'),
+      diagEchoInput: rootElement.querySelector('[data-telephony-diag-echo-input]'),
+      diagRun: rootElement.querySelector('[data-telephony-diag-run]'),
+      diagDump: rootElement.querySelector('[data-telephony-diag-dump]'),
+      diagWarnings: rootElement.querySelector('[data-telephony-diag-warnings]'),
+      diagWarningsSection: rootElement.querySelector('[data-telephony-diag-warnings-section]'),
+      micMeter: rootElement.querySelector('[data-telephony-mic-meter]'),
+      micMeterFill: rootElement.querySelector('[data-telephony-mic-meter-fill]'),
+      micMeterHint: rootElement.querySelector('[data-telephony-mic-meter-hint]'),
       activeCalls: rootElement.querySelector('[data-telephony-active-calls]'),
       activeCallsList: rootElement.querySelector('[data-telephony-active-calls-list]'),
       keys: Array.prototype.slice.call(rootElement.querySelectorAll('[data-telephony-key]')),
@@ -382,16 +9036,20 @@
       transferLabel: rootElement.querySelector('[data-telephony-transfer-label]'),
       transferPanel: rootElement.querySelector('[data-telephony-transfer-panel]'),
       keypadPanel: rootElement.querySelector('[data-telephony-keypad-panel]'),
-      transferInput: rootElement.querySelector('[data-telephony-transfer-input]'),
-      transferCancel: rootElement.querySelector('[data-telephony-transfer-cancel]'),
-      transferConfirm: rootElement.querySelector('[data-telephony-transfer-confirm]'),
-      directory: rootElement.querySelector('[data-telephony-directory]'),
-      directoryList: rootElement.querySelector('[data-telephony-directory-list]'),
-      merge: rootElement.querySelector('[data-telephony-merge]'),
       hangup: rootElement.querySelector('[data-telephony-hangup]'),
+      hangupLabel: rootElement.querySelector('[data-telephony-hangup-label]'),
       hangupAll: rootElement.querySelector('[data-telephony-hangup-all]'),
+      hangupAllLabel: rootElement.querySelector('[data-telephony-hangup-all-label]'),
+      callControls: rootElement.querySelector('[data-telephony-call-controls]'),
+      callOptions: rootElement.querySelector('[data-telephony-call-options]'),
+      keypadToggle: rootElement.querySelector('[data-telephony-keypad-toggle]'),
+      addCall: rootElement.querySelector('[data-telephony-add-call]'),
+      addCallCancel: rootElement.querySelector('[data-telephony-add-call-cancel]'),
+      dialRow: rootElement.querySelector('.telephony-soft-phone__dial-row'),
+      body: rootElement.querySelector('[data-telephony-body]'),
       connectPanel: rootElement.querySelector('[data-telephony-connect-panel]'),
       connect: rootElement.querySelector('[data-telephony-connect]'),
+      connectError: rootElement.querySelector('[data-telephony-connect-error]'),
       unavailable: rootElement.querySelector('[data-telephony-unavailable]'),
       unavailableText: rootElement.querySelector('[data-telephony-unavailable-text]'),
       keypadView: rootElement.querySelector('[data-telephony-view="keypad"]'),
@@ -407,31 +9065,552 @@
       incomingAnswer: rootElement.querySelector('[data-telephony-incoming-answer]'),
       incomingVoicemail: rootElement.querySelector('[data-telephony-incoming-voicemail]'),
       incomingIgnore: rootElement.querySelector('[data-telephony-incoming-ignore]'),
-      remoteAudio: rootElement.querySelector('[data-telephony-remote-audio]')
+      remoteAudio: rootElement.querySelector('[data-telephony-remote-audio]'),
+      voicemailAudio: rootElement.querySelector('[data-telephony-voicemail-audio]'),
+      voicemailBadge: rootElement.querySelector('[data-telephony-voicemail-badge]'),
+      voicemailList: rootElement.querySelector('[data-telephony-voicemail-list]'),
+      voicemailPlayer: rootElement.querySelector('[data-telephony-voicemail-player]'),
+      voicemailPlayerInfo: rootElement.querySelector('[data-telephony-voicemail-player-info]'),
+      voicemailToolbar: rootElement.querySelector('[data-telephony-voicemail-toolbar]'),
+      voicemailError: rootElement.querySelector('[data-telephony-voicemail-error]'),
+      voicemailDelete: rootElement.querySelector('[data-telephony-voicemail-delete]'),
+      voicemailSelectAll: rootElement.querySelector('[data-telephony-voicemail-select-all]')
     };
     var connection = null;
     var currentCall = null;
     var activeCalls = {};
     var conferenceSelections = {};
-    var directoryEntries = [];
-    var transferOpen = false;
+    // The conferences this phone's merges made, stamped back onto every report of their calls (see
+    // soft-phone/conference.js).
+    var conferenceMemory = createConferenceMemory();
+    // Whom each call is with, from the first report that said, for the reports that do not (see
+    // soft-phone/call-labels.js).
+    var callParties = createCallPartyMemory();
+    // The interaction each Contact Center call names, kept across the provider's reports of it, which name none
+    // (see soft-phone/transfer-service.js).
+    var callContexts = createCallContextMemory();
+    // A Contact Center call is transferred through the Contact Center's own endpoints when the tenant publishes
+    // them; every other call through the provider (see soft-phone/transfer-service.js).
+    var transferService = createTransferService ? createTransferService({
+      urls: config.transferService || {},
+      antiForgeryToken: config.antiForgeryToken
+    }) : null;
+    var serviceDirectory = null;
+    function serviceTransferCall() {
+      return transferService && transferService.applies(currentCall) ? currentCall : null;
+    }
+
+    // The transfer panel draws itself into the keypad view (see soft-phone/transfer-panel.js).
+    var transferPanel = createTransferPanel(dom.transferPanel, {
+      strings: strings,
+      escapeHtml: escapeHtml,
+      formatNumber: formatPhoneNumber,
+      modes: function () {
+        return serviceTransferCall() && serviceDirectory ? serviceModes(serviceDirectory) : transferModes(capabilities);
+      },
+      ownNumbers: function () {
+        return ownOutboundNumbers();
+      },
+      // The agent's own extensions, as the server named them (see soft-phone/extension-names.js).
+      ownExtensions: function () {
+        return ownExtensionsOf(extensionDirectory);
+      },
+      blockedReason: function () {
+        return transferBlockedReason({
+          call: currentCall,
+          serviceApplies: !!serviceTransferCall()
+        });
+      },
+      // The keypad's own country-flag field, with the keypad's country (see soft-phone/phone-input.js) -- but not
+      // its strict keys, which drop every letter: the panel's field also searches the directory by name.
+      enhanceNumberInput: function (input) {
+        var settings = phoneInputOptions();
+        settings.strictMode = false;
+        return enhancePhoneInput(input, settings);
+      },
+      loadDirectory: function () {
+        var call = serviceTransferCall();
+        serviceDirectory = null;
+        if (!call) {
+          return loadTransferDirectory();
+        }
+        return transferService.loadDirectory(call).then(function (directory) {
+          serviceDirectory = directory || {};
+          return serviceDirectoryEntries(serviceDirectory, strings);
+        }).catch(function (error) {
+          showError(error && error.message ? error.message : String(error));
+          return [];
+        });
+      },
+      // Who a typed extension rings, for "Transfer to extension 2 · Jane Doe".
+      extensionName: function (number) {
+        return extensionNameFor(number);
+      },
+      allowNumbers: function () {
+        return !serviceTransferCall() || !!(serviceDirectory && serviceDirectory.canTransferExternally && serviceDirectory.allowExternalNumbers);
+      },
+      resolveTarget: function (panelState) {
+        return serviceTransferCall() ? resolveServiceTarget({
+          query: panelState.query,
+          selected: panelState.selected,
+          dialMode: panelState.dialMode,
+          number: panelState.number,
+          mode: panelState.mode,
+          directory: serviceDirectory,
+          ownNumbers: ownOutboundNumbers()
+        }) : null;
+      },
+      transfer: function (target, mode, modeName) {
+        var call = serviceTransferCall();
+
+        // The provider is told an extension is one, so it rings the colleague's phone rather than dialing
+        // the digits as a phone number.
+        if (!call) {
+          return transferThroughProvider(target, mode, modeName);
+        }
+        if (modeName !== 'warm') {
+          return transferService.transfer(call, target);
+        }
+
+        // The consult is heard on this call's own line: an agent who held the caller first would otherwise
+        // talk to the colleague through the hold tone. The server holds the caller for the consult.
+        return Promise.resolve(call.isOnHold ? resume() : null).then(function () {
+          return transferService.startConsult(call, target);
+        });
+      },
+      getConsult: function (consult) {
+        var call = serviceTransferCall();
+        return call ? transferService.getConsult(call, consult.id) : providerConsultCommand('GetConsult', consult);
+      },
+      completeConsult: function (consult) {
+        var call = serviceTransferCall();
+        return call ? transferService.completeConsult(call, consult.id) : providerConsultCommand('CompleteConsult', consult);
+      },
+      cancelConsult: function (consult) {
+        var call = serviceTransferCall();
+        if (call) {
+          return transferService.cancelConsult(call, consult.id);
+        }
+
+        // Called off, the call is the agent's again: it comes off the hold it waited on.
+        return providerConsultCommand('CancelConsult', consult).then(function (result) {
+          if (result && result.succeeded !== false) {
+            resumeCallAfterTransfer(consult.callId);
+          }
+          return result;
+        });
+      },
+      onChange: function () {
+        render();
+      }
+    });
     var numberIsCallDisplay = false;
+    // The call whose label or number the field is showing.
+    var numberDisplayCallId = '';
+    // What the keypad's extension search list last drew.
+    var keypadResultsHtml = '';
+    // Whether the number field holds something the agent entered since it last showed a call's number. On hold
+    // that entry is the number to add, and a render must not write the held call's number back over it.
+    var numberEnteredByAgent = false;
     var callStateRevision = 0;
     var incomingContext = null;
     var incomingHandled = false;
     var incomingAcceptPending = false;
+    // The offer an Ignore or Voicemail click is being posted for, and when: { reservationId, at } (see
+    // soft-phone/answer-state.js). Its buttons stay disabled until the post fails, and a click landing on the next
+    // offer within a double-click of it is not taken as the agent's.
+    var offerAction = null;
+    // The agent clicked Answer on a phone that had to register first; the accept follows once it has.
+    var answerRegistering = false;
+    // Offers already over -- revoked, or their call ended -- so a late copy of one never opens the modal.
+    var settledOffers = {};
+    // The leg the platform rang for the offer on screen, held unanswered until the agent accepts or declines:
+    // { reservationId, legId, controller }. And the one answered for an accept that is still being confirmed, so
+    // it can be hung up if the accept fails.
+    var heldOfferLeg = null;
+    var answeredOfferLeg = null;
+    // Offers this agent is known to have accepted -- here, in another page, or on another device -- remembered
+    // briefly so their leg is answered the moment it arrives rather than held.
+    var acceptedOfferIds = {};
+    // Each offer's call id, by reservation. The calls of offers withdrawn without an accept here, which the server
+    // may go on reporting live (the caller waits on), are kept off the phone (see soft-phone/offer-report.js). And
+    // a live report of a ringing offer's call that is held back until somebody accepts the offer, by call id.
+    var offerCallIds = {};
+    var unacceptedOfferCalls = {};
+    var heldBackOfferReports = {};
+    // Calls the agent put on hold and has not resumed, by call id. With browser audio the hold happens here and
+    // the server keeps reporting the call connected, so this, not the server, says whether the call is held.
+    var agentHolds = {};
+    // Calls the agent muted and has not unmuted, by call id. With browser audio the mute happens here and the
+    // server keeps reporting the call unmuted, so this, not the server, says whether the agent is muted.
+    var agentMutes = {};
+    // The phone system's extensions and who each rings, read from the server once and kept, and the extension each
+    // call on screen was placed to (see soft-phone/extension-names.js).
+    var extensionDirectory = createExtensionDirectory();
+    var extensionDirectoryLoading = null;
+    var extensionCallNumbers = {};
+    // The Recent list as last shown, so it can be named again once the extensions arrive.
+    var lastHistoryItems = null;
+    // The calls as they stood before an active-call lookup replaced them, while that lookup is being applied.
+    var callsBeforeLookup = null;
+    // Audible inbound-call alert, started/stopped from renderIncoming so an away agent hears a ringing call.
+    var ringtone = createRingtonePlayer();
+
+    // Every open agent page runs its own soft phone, and each rings for the same offer. Answering or declining
+    // in one page tells the others through the browser, so they fall silent at once: before this, the pages the
+    // agent did not click kept ringing in the headset until the server's own "offer taken" update reached them,
+    // a second or so after the call had been answered.
+    var offerChannel = typeof BroadcastChannel === 'function' ? new BroadcastChannel(OFFER_CHANNEL_NAME) : null;
+    function announceOfferHandled(answered, reservationId) {
+      var id = currentCallId();
+      if (!offerChannel || !id) {
+        return;
+      }
+      try {
+        offerChannel.postMessage({
+          type: OFFER_HANDLED_MESSAGE,
+          callId: id,
+          reservationId: reservationId || '',
+          answered: !!answered
+        });
+      } catch (error) {/* another page not hearing it only costs a second of ringing */}
+    }
+    if (offerChannel) {
+      offerChannel.onmessage = function (event) {
+        var handled = readOfferHandledMessage(event && event.data, currentCall ? currentCall.callId : null);
+        if (!handled) {
+          return;
+        }
+
+        // The page the agent clicked in may not be the one the platform rang: whichever page holds the
+        // offer's leg answers it (or hangs it up) the moment it hears.
+        if (handled.reservationId) {
+          settleOfferLeg(handled.reservationId, handled.answered);
+        }
+        if (!handled.marksCurrentCallHandled) {
+          return;
+        }
+        incomingHandled = true;
+        render();
+      };
+    }
+
+    // A desktop app that embeds the standalone page (WebView2) shows its own incoming-call notification. The page
+    // tells it about the ringing call and hides the incoming modal only while the app confirms that notification
+    // is on screen; with no confirmation the modal shows as usual (see soft-phone/host-bridge.js).
+    var hostChannel = isEmbedded ? findHostChannel(window) : null;
+    var hostDelegation = createHostDelegation({
+      post: postToHost,
+      onChange: function () {
+        render();
+      },
+      isActionUnderWay: function () {
+        return answerInProgress();
+      }
+    });
+    function postToHost(message) {
+      if (!hostChannel) {
+        return;
+      }
+      try {
+        hostChannel.postMessage(message);
+      } catch (error) {/* an unconfirmed notification falls back to the modal */}
+    }
     var incomingExpiryTimer = null;
     var requiresAuthentication = false;
     var isConnected = false;
     var isAvailable = false;
     var connectionStatusResolved = false;
     var authenticationScheme = null;
+    var authActionPending = false;
     var activeTab = 'keypad';
     var activeCommand = null;
+    // The keypad is closed on a connected call until the agent opens it for digits, and Add call holds the current
+    // call while the agent enters the number to add: { heldCallId } (see soft-phone/in-call-controls.js).
+    var keypadOpen = false;
+    var addingCall = null;
+    var activeCallsRefreshTimer = null;
     var suppressToggleClick = false;
+    // Indefinite SignalR reconnect state. SignalR's automatic reconnect gives up after its default
+    // schedule, after which an agent silently stops receiving inbound-call offers until a manual page
+    // reload. The custom policy and the manual restart loop below back off but never give up.
+    var manualReconnectTimer = null;
+    var manualReconnectAttempt = 0;
+    var pageUnloading = false;
     var browserAudioPromise = null;
     var browserAudioSession = null;
+    var browserAudioHeartbeatTimer = null;
     var localAudioStream = null;
+    // Selected audio input/output device ids (item 5 device picker). Null means the browser default. The
+    // input id is applied to getUserMedia; the output id is applied to the remote audio element via
+    // setSinkId. Both persist per soft-phone instance in localStorage.
+    var selectedInputDeviceId = null;
+    var selectedOutputDeviceId = null;
+    // Mic-permission recovery UX (item 9). 'denied' or 'notfound' when getUserMedia is rejected for a
+    // permission/device reason; drives an actionable message plus a Retry affordance (distinct from a generic
+    // transient error). Cleared on a successful capture or when the agent retries.
+    var micPermissionState = null;
+    // Whether the settings overlay (opened from the header gear) is showing. It holds the audio device
+    // pickers off the keypad; it is an overlay, not a footer tab.
+    var settingsOpen = false;
+    // Controllers for calls the browser originated itself (client-originated providers such as Telnyx),
+    // keyed by the synthetic call id. Server-tracked calls are not in this map.
+    var browserCallControllers = {};
+    // The tab's session storage, where the phone journals each call it placed until the server has confirmed its
+    // end (see soft-phone/browser-calls.js). It outlives a reload of the page; it can be missing, or throw.
+    var browserCallStorage = function () {
+      try {
+        return window.sessionStorage || null;
+      } catch (error) {
+        return null;
+      }
+    }();
+    // The calls whose end this page has reported, so each is reported once.
+    var reportedBrowserCallEnds = {};
+    var lastBrowserCallHeartbeatMs = 0;
+    // While the phone shows a call it placed itself, it checks that call every few seconds (see watchBrowserCalls).
+    var BROWSER_CALL_WATCH_MS = 10 * 1000;
+    var browserCallWatchTimer = null;
+
+    // Set by the media adapter's quality sampler (item 2) when the live call's measured quality breaches the
+    // poor-connection thresholds, and consumed by the degraded-state UX (item 6). Kept in the core so it
+    // survives across adapter calls and can be read by render().
+    var connectionQualityPoor = false;
+
+    // Degraded-state UX (item 6). Two independent "trying to recover" signals drive a "Reconnecting..."
+    // status: the SignalR hub connection (hubReconnecting) and the provider media socket (mediaReconnecting).
+    // Each is toggled only on an actual state change, which debounces the status line so it does not flap.
+    var hubReconnecting = false;
+    var mediaReconnecting = false;
+
+    // Gated diagnostics tab: a live getStats/SDP view with a microphone level meter, provider warnings, and
+    // the echo/loopback audio test. Enabled by the EnableDiagnostics site setting (admins can turn it on at
+    // runtime to troubleshoot production, then off) or ad hoc for one session with ?diag=1. lastQualitySample
+    // mirrors item 2's most recent measurement for the live readout.
+    var diagnosticsEnabled = !!config.enableDiagnostics || /(?:^|[?&])diag=1(?:&|$)/.test(window.location.search || '');
+    var lastQualitySample = null;
+    var echoTestActive = false;
+
+    // A direct browser-inbound (extension) call that is ringing and awaiting the agent's Answer/Decline
+    // choice: { callId, controller }. The controller is the media adapter's handle for answering, declining,
+    // and (once answered) controlling the SDK call.
+    var browserInboundRing = null;
+
+    // One-shot expectation that the next inbound provider leg belongs to a call this browser is waiting for (an
+    // extension call it just placed, or an offer accepted elsewhere), so the media adapter answers it instead of
+    // ringing. It names what it is for and is dropped when that is over (see soft-phone/auto-answer.js); a genuine
+    // incoming call arriving without it armed still rings.
+    var inboundAutoAnswer = createAutoAnswerArm();
+
+    // The monitor legs this supervisor's phone was told to expect, by token, and the ones it answered (see
+    // soft-phone/monitor-leg.js). Separate from the arm above: an engagement never answers anybody's call.
+    var monitorLegArms = createMonitorLegArms();
+    var monitorLegs = {};
+    var monitorLegListeners = [];
+
+    // One-shot auto-answer for the extension "answer from the OS notification" handoff. When the standalone
+    // page is opened as /softphone?answerCallId=ID, the phone answers exactly the offer whose call id matches
+    // ID, and only once, the moment it surfaces -- whether restored on (re)connect (Contact Center's
+    // GetCurrentIncomingOffer) or pushed live (the hub's IncomingCall). A non-matching call is never
+    // auto-answered, and if the requested offer never arrives (it expired before the window opened) the phone
+    // simply falls through to the normal idle/ringing UI. The exact call-id match is the real guard against
+    // answering a stale call; the deadline only disarms the one-shot so it cannot linger past its usefulness.
+    var ANSWER_ON_LOAD_WINDOW_MS = 30000;
+    var pendingAnswerCallId = requestedAnswerCallId || '';
+    var pendingAnswerDeadline = pendingAnswerCallId ? Date.now() + ANSWER_ON_LOAD_WINDOW_MS : 0;
+
+    // True from the moment a call is placed until the first real call state arrives (or the attempt
+    // fails). While it is set - and no call is active yet - the status line reads "Connecting" instead
+    // of sitting on "Ready" during the 1-2s the browser audio session and the server take to acknowledge
+    // the dial, so the user can see the call is already in progress. A safety timer clears it if no call
+    // ever materializes so the status can never get stranded on "Connecting".
+    var pendingDial = false;
+    var pendingDialNumber = null;
+    var pendingDialTimer = null;
+    function beginPendingDial(number) {
+      if (pendingDialTimer) {
+        window.clearTimeout(pendingDialTimer);
+      }
+      pendingDial = true;
+      pendingDialNumber = number || null;
+      pendingDialTimer = window.setTimeout(function () {
+        clearPendingDial();
+        render();
+      }, 30000);
+    }
+    function clearPendingDial() {
+      pendingDial = false;
+      pendingDialNumber = null;
+      if (pendingDialTimer) {
+        window.clearTimeout(pendingDialTimer);
+        pendingDialTimer = null;
+      }
+    }
+
+    // The phone number input is enhanced with intl-tel-input so a national number entered on the
+    // keypad is normalized to E.164 (with a country selector) before it is dialed or screened.
+    // A country must always be selected, otherwise intl-tel-input cannot resolve a national number
+    // to E.164 and getNumber() echoes the raw digits, which the server then rejects as not dialable.
+    var telInput = null;
+    var initialCountry = resolveInitialCountry();
+    var extensionMode = false;
+
+    // The keypad's field and the transfer panel's share these settings, so both read a number the same way.
+    function phoneInputOptions() {
+      return {
+        intlTelInput: window.intlTelInput,
+        initialCountry: initialCountry,
+        containerClass: 'telephony-soft-phone__number-iti',
+        dropdownParent: document.body
+      };
+    }
+    telInput = enhancePhoneInput(dom.number, phoneInputOptions());
+    if (telInput) {
+      preventCountryDropdownScroll();
+    }
+
+    // The country dropdown is detached to document.body so it can escape the panel's bounded,
+    // scrollable area. Because that detached list sits outside the normal flow, the browser scrolls
+    // the page to the search input the first time intl-tel-input focuses it. Capture the scroll
+    // position when the flag is clicked and restore it before the next paint so the page does not jump.
+    function preventCountryDropdownScroll() {
+      var flagButton = rootElement.querySelector('.iti__selected-country');
+      if (!flagButton) {
+        return;
+      }
+      flagButton.addEventListener('click', function () {
+        var scrollX = window.scrollX;
+        var scrollY = window.scrollY;
+        window.requestAnimationFrame(function () {
+          if (window.scrollX !== scrollX || window.scrollY !== scrollY) {
+            window.scrollTo(scrollX, scrollY);
+          }
+        });
+      });
+    }
+    function resolveInitialCountry() {
+      if (config.defaultCountryCode) {
+        return config.defaultCountryCode;
+      }
+      var candidates = navigator.languages && navigator.languages.length ? navigator.languages : navigator.language ? [navigator.language] : [];
+      for (var i = 0; i < candidates.length; i++) {
+        var match = /[-_]([A-Za-z]{2})(?:$|[-_])/.exec(candidates[i] || '');
+        if (match) {
+          return match[1].toLowerCase();
+        }
+      }
+      return 'us';
+    }
+    function getDialNumber() {
+      var raw = dom.number ? normalizeDialNumber(dom.number.value) : '';
+
+      // In extension mode the destination is an internal extension, not a dialable phone number,
+      // so it is sent verbatim and the country selector is ignored.
+      // A phone number is read the way the country-flag field reads one (see soft-phone/phone-input.js).
+      return extensionMode ? raw : readPhoneInput(raw, telInput);
+    }
+    function setNumberDisplay(value) {
+      if (!dom.number) {
+        return;
+      }
+      if (value && telInput && typeof telInput.setNumber === 'function') {
+        var normalized = normalizeDialNumber(value);
+        if (normalized.charAt(0) === '+') {
+          telInput.setNumber(normalized);
+          return;
+        }
+      }
+      dom.number.value = value ? formatPhoneNumber(value) : '';
+    }
+    function clearNumberInput() {
+      // Also drop any lingering dial/call-display state, otherwise the next render() re-fills the input
+      // with the previous number (pendingDialNumber / the last call's peer) and clobbers what the user
+      // is now typing -- e.g. entering "2" but dialing the previous "6183".
+      clearPendingDial();
+      numberIsCallDisplay = false;
+      numberDisplayCallId = '';
+      numberEnteredByAgent = false;
+      if (dom.number) {
+        dom.number.value = '';
+      }
+      if (telInput && initialCountry && typeof telInput.setSelectedCountry === 'function') {
+        telInput.setSelectedCountry(initialCountry);
+      }
+    }
+
+    // In extension mode the field is a plain search box, for a name or an extension's digits: the country-flag input
+    // drops every key that is not a digit. A phone number goes back into the country-flag field.
+    function applyKeypadInputMode() {
+      if (!dom.number) {
+        return;
+      }
+      if (extensionMode) {
+        if (telInput && typeof telInput.destroy === 'function') {
+          try {
+            telInput.destroy();
+          } catch (error) {/* already gone */}
+        }
+        telInput = null;
+        dom.number.setAttribute('type', 'text');
+        dom.number.setAttribute('inputmode', 'text');
+        dom.number.setAttribute('autocomplete', 'off');
+        return;
+      }
+      dom.number.setAttribute('type', 'tel');
+      dom.number.setAttribute('inputmode', 'tel');
+      if (!telInput) {
+        telInput = enhancePhoneInput(dom.number, phoneInputOptions());
+        if (telInput) {
+          preventCountryDropdownScroll();
+        }
+      }
+    }
+    function setDialMode(isExtension) {
+      extensionMode = !!isExtension;
+      applyKeypadInputMode();
+      rootElement.classList.toggle('telephony-soft-phone--extension', extensionMode);
+      if (dom.dialModeToggle) {
+        dom.dialModeToggle.setAttribute('aria-pressed', extensionMode ? 'true' : 'false');
+      }
+      if (dom.dialModeLabel) {
+        dom.dialModeLabel.textContent = extensionMode ? strings.dialPhoneNumber || 'Dial phone number' : strings.dialExtension || 'Dial extension';
+      }
+      if (dom.number) {
+        dom.number.setAttribute('placeholder', extensionMode ? strings.extensionSearchPlaceholder || 'Search a name, or enter an extension' : strings.numberPlaceholder || 'Enter a number');
+        dom.number.setAttribute('aria-label', extensionMode ? strings.extensionLabel || 'Extension' : strings.numberLabel || 'Phone number');
+      }
+      clearNumberInput();
+
+      // The names shown while an extension is typed.
+      if (extensionMode) {
+        loadExtensionDirectory(false);
+      }
+      if (dom.number) {
+        dom.number.focus();
+      }
+    }
+    function toggleDialMode() {
+      setDialMode(!extensionMode);
+
+      // Switching mode is starting an entry: a held call's number does not come back over the empty field.
+      if (currentCall && normalizeState(currentCall.state) === 'OnHold') {
+        numberEnteredByAgent = true;
+      }
+      render();
+    }
+
+    // The agent starts an entry over a call's label or number -- a display, never part of what is dialed -- so it
+    // is cleared, and the field stays theirs until they leave it empty (see soft-phone/dial-target.js).
+    function startNumberEntry() {
+      if (planEntryStart({
+        isCallDisplay: numberIsCallDisplay
+      }) !== 'clear') {
+        return;
+      }
+      clearNumberInput();
+      numberEnteredByAgent = true;
+      render();
+    }
     function has(capability) {
       return (capabilities & capability) === capability;
     }
@@ -452,6 +9631,9 @@
       if (message) {
         dom.error.textContent = message;
         dom.error.hidden = false;
+        // Surface client-side errors to server telemetry (item 7), throttled/deduped. Kept at warning
+        // level so routine input validations do not escalate to error alerts.
+        reportDiagnostic('warning', 'client-error', message, null);
       } else {
         dom.error.textContent = '';
         dom.error.hidden = true;
@@ -460,7 +9642,25 @@
     function isBrowserAudioEnabled() {
       return config.audioMode === AUDIO_MODES.Browser && !!config.browserMediaAdapterName;
     }
+    function isOAuth2Authentication() {
+      return (authenticationScheme || '').toLowerCase() === 'oauth2';
+    }
+    function hasLiveCall() {
+      return getActiveCalls().some(function (call) {
+        return isActive(normalizeState(call && call.state));
+      });
+    }
     function stopLocalAudioStream() {
+      if (micBoostPipeline) {
+        micBoostPipeline.dispose();
+        micBoostPipeline = null;
+      }
+      if (sourceAudioStream) {
+        sourceAudioStream.getTracks().forEach(function (track) {
+          track.stop();
+        });
+        sourceAudioStream = null;
+      }
       if (!localAudioStream) {
         return;
       }
@@ -468,6 +9668,698 @@
         track.stop();
       });
       localAudioStream = null;
+    }
+
+    // The captured microphone outlives any single call: it is acquired once when the phone registers and
+    // kept for the life of that registration, which can be an hour of idle time. Over that window the track
+    // can die underneath the phone -- the machine sleeps, a Bluetooth headset powers down, the device is
+    // unplugged -- and a dead track raises no error anywhere: getUserMedia already succeeded, the stream
+    // object is still there, and the provider encodes and sends its silence perfectly happily. The call
+    // connects, the agent hears the caller normally, and only the caller knows anything is wrong. These
+    // read the track's actual state so that case is caught rather than inferred from a complaint.
+    // The captured microphone track as a DEVICE: its label, whether it is still delivering, its settings.
+    // That is the raw capture when a boost graph sits between it and the send stream, and the send track
+    // itself otherwise -- the boosted output is always 'live' and carries no device label, so reading it
+    // here would hide a dead microphone behind a healthy-looking track.
+    function getLocalAudioTrack() {
+      var track = getSourceAudioTrack();
+      if (track) {
+        return track;
+      }
+      if (!localAudioStream || typeof localAudioStream.getAudioTracks !== 'function') {
+        return null;
+      }
+      return localAudioStream.getAudioTracks()[0] || null;
+    }
+    function localAudioTrackLabel() {
+      var track = getLocalAudioTrack();
+      return track && track.label || '';
+    }
+
+    // What the microphone is actually delivering, as opposed to what was asked for.
+    //
+    // The sample rate is the one to read first. A Bluetooth headset can only run its microphone in
+    // hands-free mode, and Windows then delivers capture at 8 kHz (narrowband) or 16 kHz (wideband) instead
+    // of 48 kHz -- while the same headset keeps playing back at full quality, so the agent hears a perfect
+    // call and the far end hears a thin, hollow, distant voice. Nothing else on the call reflects this: the
+    // codec is still negotiated at G722, the bitrate is unchanged, no packets are lost, and the score stays
+    // high. The constraints are reported next to it because they were requested, not guaranteed -- and
+    // echo cancellation and noise suppression layered on top of a headset's own processing add exactly the
+    // hollowness this is trying to explain.
+    function localCaptureSettings() {
+      var track = getLocalAudioTrack();
+      if (!track || typeof track.getSettings !== 'function') {
+        return null;
+      }
+      try {
+        return track.getSettings() || null;
+      } catch (error) {
+        return null;
+      }
+    }
+
+    // A compact, readable rendering of the capture format for the diagnostics line.
+    function describeCaptureSettings() {
+      var settings = localCaptureSettings();
+      if (!settings) {
+        return '';
+      }
+      var parts = [];
+      if (settings.sampleRate) {
+        parts.push(Math.round(settings.sampleRate / 1000) + 'kHz');
+      }
+      if (settings.channelCount) {
+        parts.push(settings.channelCount === 1 ? 'mono' : settings.channelCount + 'ch');
+      }
+      var processing = [];
+      if (settings.echoCancellation) {
+        processing.push('ec');
+      }
+      if (settings.noiseSuppression) {
+        processing.push('ns');
+      }
+      if (settings.autoGainControl) {
+        processing.push('agc');
+      }
+      if (processing.length) {
+        parts.push(processing.join('+'));
+      }
+      var boost = describeBoost(micBoostDb);
+      if (boost) {
+        parts.push(boost);
+      }
+      return parts.join(' ');
+    }
+    function isLocalAudioTrackDead() {
+      // Nothing captured yet is not a dead capture: the phone simply has not registered.
+      if (!localAudioStream) {
+        return false;
+      }
+      return !isTrackDeliverable(getLocalAudioTrack());
+    }
+
+    // Watches the captured track for the two ways it stops delivering audio. 'ended' is terminal -- the
+    // device is gone and only a fresh getUserMedia can recover. 'mute' means the source stopped feeding the
+    // track (a headset switching profile, a device going to sleep) and can recover on its own, so it is
+    // reported and surfaced but not acted on destructively.
+    function watchLocalAudioTrack() {
+      var track = getLocalAudioTrack();
+      if (!track) {
+        return;
+      }
+      track.onended = function () {
+        handleLocalAudioTrackLost('ended');
+      };
+      track.onmute = function () {
+        handleLocalAudioTrackLost('muted');
+      };
+      track.onunmute = function () {
+        reportDiagnostic('info', 'microphone-restored', 'The captured microphone is delivering audio again.', localAudioTrackLabel());
+        if (micPermissionState === null) {
+          showError(null);
+        }
+        startMicMeter();
+      };
+    }
+
+    // The capture is live but delivering nothing measurable, sustained long enough not to be a pause in the
+    // conversation. This is the muted-headset and wrong-device case, which the track state cannot see: the
+    // track is 'live' and unmuted, it is simply carrying silence. Worth interrupting the agent for -- the
+    // alternative is finding out from the caller, which is how tonight went.
+    function handleSilentCapture() {
+      var label = localAudioTrackLabel();
+      reportDiagnostic('warning', 'microphone-silent', 'The microphone is live but has delivered no audio for several samples.', label);
+      showError(strings.microphoneSilent || 'Your microphone is not picking up any sound, so the caller cannot hear you. Check that it is not muted and that the right device is selected.');
+    }
+
+    // A fresh capture in place of a send track that has ended, taken without re-registering: re-registering would
+    // hang up the offer leg about to be answered on it.
+    function reviveSendCapture() {
+      if (hasLiveAudioTrack(localAudioStream) || !navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+        return Promise.resolve(false);
+      }
+      return navigator.mediaDevices.getUserMedia(buildAudioConstraints()).then(function (stream) {
+        commitCapture(stream, createBoostPipeline(stream, micBoostDb));
+        watchLocalAudioTrack();
+        reportDiagnostic('warning', 'microphone-revived', 'The outgoing microphone track had ended; a fresh capture was taken for the call.', localAudioTrackLabel());
+        return true;
+      }, function (error) {
+        reportDiagnostic('error', 'mic-error', error && (error.name || error.message) || 'getUserMedia failed', null);
+        return false;
+      });
+    }
+
+    // Muted, held or not yet connected, the agent's voice is not meant to be on the wire.
+    function isOutboundAudioSuppressed() {
+      return !currentCall || !!currentCall.isMuted || !!currentCall.isOnHold || normalizeState(currentCall.state) !== 'Connected';
+    }
+    function outboundAudioWarning() {
+      return strings.outboundAudioStalled || 'The caller may not hear you. Check your microphone.';
+    }
+
+    // Nothing has left a connected call for several seconds: tell the agent now rather than leave the caller to.
+    // A send track that ended is replaced under the call, which is usually the whole fix.
+    function handleOutboundAudioStalled(info) {
+      var trackState = info && info.trackState || 'unknown';
+      reportDiagnostic('warning', 'no-outbound-audio', 'No audio has left this browser for ' + Math.round((OUTBOUND_SILENCE_MS || 5000) / 1000) + ' seconds on a connected call (send track ' + trackState + ').', localAudioTrackLabel());
+      showError(outboundAudioWarning());
+      if (trackState !== 'live' && hasLiveCall()) {
+        switchLocalAudioTrack('ended').catch(function () {});
+      }
+    }
+    function handleOutboundAudioResumed() {
+      if (dom.error && dom.error.textContent === outboundAudioWarning()) {
+        showError(null);
+      }
+    }
+    function handleLocalAudioTrackLost(reason) {
+      reportDiagnostic('warning', 'microphone-lost', 'The captured microphone stopped delivering audio (' + reason + ').', localAudioTrackLabel());
+
+      // During a call, re-registering would tear down the media session, but the capture itself can be
+      // replaced under the live call: acquire a fresh track from the same device selection and swap it onto
+      // the sender with replaceTrack, which needs no renegotiation. Only if that fails is the agent left to
+      // be told -- and they are, at that moment, on a call the caller cannot hear them on.
+      if (hasLiveCall()) {
+        switchLocalAudioTrack(reason).catch(function () {
+          showError(strings.microphoneLostOnCall || 'Your microphone stopped working, so the caller cannot hear you. Check the device and call back.');
+        });
+        return;
+      }
+
+      // Idle: drop the dead capture and register again, so the next call starts from a live microphone
+      // instead of inheriting this one.
+      showError(strings.microphoneLostIdle || 'Your microphone stopped working and is being reconnected.');
+      releaseBrowserAudio();
+      registerBrowserAudioForInbound();
+    }
+
+    // Switches the captured microphone to the current device selection -- because the agent picked another
+    // device, or because the source died -- without disturbing a call in progress.
+    //
+    // The registration-time stream is kept for the life of the registration, so both cases used to mean the
+    // same thing: either tear the whole session down and register again (dropping any live call, and
+    // re-issuing the provider credential every time), or do nothing and promise "the next call". Nothing ever
+    // honoured that promise -- the old track lived on until the registration was renewed -- so an agent who
+    // switched headsets mid-call watched the picker move while the far end kept hearing the old microphone,
+    // and still heard it on the next call.
+    //
+    // A fresh getUserMedia on the selection, swapped onto the live sender with replaceTrack, changes what the
+    // far end hears within a packet or two and needs no renegotiation. The new track goes into the SAME
+    // MediaStream object, so the adapter (which reads that stream when the next call starts) follows without
+    // being told. The call-quality level probe does NOT: a MediaStreamAudioSourceNode binds to the track it
+    // was built on, so after a swap it went on reading the stopped old track as 0.000 for the rest of the call
+    // while the far end heard the agent fine. It is rebuilt explicitly once the swap is committed, and the
+    // meter is restarted below for the same reason. Known edge: a switch made while a call is on hold replaces
+    // the hold audio too; unhold then restores the original, now stopped, track. Rare enough to note rather
+    // than guard.
+    function switchLocalAudioTrack(reason) {
+      if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+        return Promise.reject(new Error('Media capture is not available.'));
+      }
+      return navigator.mediaDevices.getUserMedia(buildAudioConstraints()).then(function (stream) {
+        // The new send track: the capture itself, or the boost graph's output when a boost is set.
+        var pipeline = createBoostPipeline(stream, micBoostDb);
+        var fresh = pipeline.stream.getAudioTracks()[0];
+        var abandon = function (error) {
+          pipeline.dispose();
+          stream.getTracks().forEach(function (track) {
+            track.stop();
+          });
+          throw error;
+        };
+        if (!fresh) {
+          return abandon(new Error('No audio track was captured.'));
+        }
+
+        // Muted before it reaches the sender, when the agent is muted.
+        matchMicrophoneToCalls(fresh);
+
+        // Under a live call the sender must take the new track, and a failure there is a failure of the
+        // whole switch: leaving the far end on the old track while the meter shows the new one would be
+        // exactly the lie this replaces. Idle, the swap into the stream below is enough on its own.
+        var replace;
+        if (!hasLiveCall()) {
+          replace = Promise.resolve();
+        } else if (browserAudioSession && typeof browserAudioSession.replaceLocalAudioTrack === 'function') {
+          replace = Promise.resolve(browserAudioSession.replaceLocalAudioTrack(fresh)).then(function (replaced) {
+            if (!replaced) {
+              throw new Error('The live call has no outgoing audio track to replace.');
+            }
+          });
+        } else {
+          replace = Promise.reject(new Error('The media session cannot replace its outgoing track.'));
+        }
+        return replace.then(function () {
+          commitCapture(stream, pipeline);
+
+          // Only now -- the new track on the sender and in the send stream, the old one stopped -- can
+          // the capture probe be rebuilt onto what the far end hears. A probe does not follow a track
+          // swap on its own; see refreshCaptureProbe.
+          if (browserAudioSession && typeof browserAudioSession.refreshCaptureProbe === 'function') {
+            browserAudioSession.refreshCaptureProbe();
+          }
+          watchLocalAudioTrack();
+          reportDiagnostic('info', 'microphone-switched', 'The captured microphone was switched (' + reason + ').', localAudioTrackLabel() + (describeBoost(micBoostDb) ? ' ' + describeBoost(micBoostDb) : ''));
+          if (micPermissionState === null) {
+            showError(null);
+          }
+          stopMicMeter();
+          startMicMeter();
+          populateDevicePickers();
+          checkForVirtualAudioDevices();
+        }, abandon);
+      });
+    }
+
+    // Builds the microphone capture constraints. The three processing flags (echo cancellation, noise
+    // suppression, automatic gain control) are on by default so captured audio is clean without extra
+    // configuration. When the agent has picked a specific input device (item 5) it is requested exactly;
+    // otherwise the browser's default input is used.
+    function buildAudioConstraints() {
+      var audio = {
+        // On by default; each can be switched off in the settings overlay, live, when a caller reports
+        // the agent sounding hollow or processed -- these three are the usual suspects.
+        echoCancellation: processingSettings.echoCancellation,
+        noiseSuppression: processingSettings.noiseSuppression,
+        autoGainControl: processingSettings.autoGainControl,
+        // Ask for a single channel. A call is mono end to end, so stereo capture buys nothing and can
+        // cost a great deal: headset microphones routed through a shared audio codec are often
+        // presented as a stereo pair carrying the microphone on one side and silence on the other, and
+        // WebRTC then downmixes (L+R)/2 -- roughly 6 dB of the agent's voice thrown away before it ever
+        // reaches the encoder, with automatic gain control pumping to compensate. The far end hears
+        // someone thin and distant while every transmitted measurement stays perfect. Asking for mono
+        // lets the browser take the channel that carries signal instead of averaging it with one that
+        // does not. It is a request, not a requirement, so a device that only offers stereo still works.
+        channelCount: 1
+      };
+      if (selectedInputDeviceId) {
+        audio.deviceId = {
+          exact: selectedInputDeviceId
+        };
+      }
+      return {
+        audio: audio,
+        video: false
+      };
+    }
+
+    // Maps a getUserMedia rejection to an actionable error and records the recovery state (item 9). A denied
+    // permission and a missing device are distinguished from a generic failure so the agent gets a specific,
+    // localized message plus a Retry affordance instead of an opaque error. Never retries on its own.
+    function categorizeMicError(error) {
+      var name = error && error.name || '';
+      if (name === 'NotAllowedError' || name === 'PermissionDeniedError' || name === 'SecurityError') {
+        reportDiagnostic('error', 'mic-permission-denied', name, null);
+        setMicPermissionIssue('denied');
+        return new Error(strings.micPermissionDenied || 'Microphone access is blocked. Allow microphone access in your browser, then retry.');
+      }
+      if (name === 'NotFoundError' || name === 'DevicesNotFoundError' || name === 'OverconstrainedError') {
+        // A selected input device that has gone away throws OverconstrainedError; drop the stale selection
+        // so a retry falls back to the browser default input.
+        if (name === 'OverconstrainedError') {
+          selectedInputDeviceId = null;
+          persistDeviceSelection();
+        }
+        reportDiagnostic('error', 'mic-not-found', name, null);
+        setMicPermissionIssue('notfound');
+        return new Error(strings.micNotFound || 'No microphone was found. Connect a microphone, then retry.');
+      }
+      reportDiagnostic('error', 'mic-error', name || error && error.message || 'getUserMedia failed', null);
+      return error instanceof Error ? error : new Error(String(error));
+    }
+    function setMicPermissionIssue(kind) {
+      micPermissionState = kind;
+      var message = kind === 'denied' ? strings.micPermissionDenied || 'Microphone access is blocked. Allow microphone access in your browser, then retry.' : strings.micNotFound || 'No microphone was found. Connect a microphone, then retry.';
+
+      // Show the guidance directly (not through showError, which would double-report the diagnostic) so it
+      // appears regardless of which path hit the error: a dial surfaces it through the promise chain, but
+      // the idle background registration swallows failures to a debug log.
+      if (dom.error) {
+        dom.error.textContent = message;
+        dom.error.hidden = false;
+      }
+      render();
+    }
+    function clearMicPermissionIssue() {
+      if (!micPermissionState) {
+        return;
+      }
+      micPermissionState = null;
+      if (dom.error && !dom.error.hidden) {
+        dom.error.textContent = '';
+        dom.error.hidden = true;
+      }
+      render();
+    }
+
+    // Retries microphone capture once after a permission/device failure (item 9). Not a loop: a repeated
+    // failure simply re-shows the guidance.
+    function retryMicrophone() {
+      clearMicPermissionIssue();
+      registerBrowserAudioForInbound();
+    }
+
+    // ---- Audio device selection (item 5) ----
+
+    // The browser's capture processing (echo cancellation, noise suppression, automatic gain control). All on
+    // by default; persisted with the device selection so an agent who found that one of them made them sound
+    // hollow to callers does not have to rediscover it every day. Stored as explicit booleans -- a missing
+    // value means "on", never "off".
+    var processingSettings = {
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true
+    };
+
+    // Microphone boost in decibels (0 = off). When set, the raw capture is routed through a gain stage and a
+    // limiter, and the limiter's output is what the call sends. See mic-boost.js for why.
+    var micBoostDb = 0;
+
+    // How long the browser should hold arriving audio before playing it, in seconds (-1 = the browser's own
+    // judgement, which is the default). Half of the pause between an agent finishing a sentence and hearing
+    // the reply is spent here; see playout-delay.js.
+    var playoutDelaySeconds = -1;
+
+    // Which of the provider's signaling edges this agent registers on (empty = follow the tenant setting,
+    // and failing that the provider's geo-routing). Unlike every other setting here this one is fixed when
+    // the provider client is built, so changing it re-registers. See signaling-region.js.
+    var signalingRegion = '';
+
+    // Set when the agent changes the region above: the next time the registration is ensured it is rebuilt
+    // rather than reused, through the same path that revokes the credential it replaces.
+    var reregisterOnNextEnsure = false;
+
+    // The raw capture from the device -- what the device label, mute/ended state and capture settings are
+    // read from -- as distinct from localAudioStream, which is the stream the call SENDS. Without a boost the
+    // two carry the same track; with one, localAudioStream carries the boosted output.
+    var sourceAudioStream = null;
+    var micBoostPipeline = null;
+    function getSourceAudioTrack() {
+      if (!sourceAudioStream || typeof sourceAudioStream.getAudioTracks !== 'function') {
+        return null;
+      }
+      return sourceAudioStream.getAudioTracks()[0] || null;
+    }
+
+    // Makes a fresh capture (already routed through its pipeline) the stream the call sends. localAudioStream
+    // is a long-lived container that the provider adapter holds a reference to and reads when a call starts,
+    // so its identity never changes: tracks are swapped inside it. The previous capture and graph are retired
+    // once the new track is in place.
+    function commitCapture(stream, pipeline) {
+      var previousSource = sourceAudioStream;
+      var previousPipeline = micBoostPipeline;
+      var fresh = pipeline.stream.getAudioTracks()[0] || null;
+      sourceAudioStream = stream;
+      micBoostPipeline = pipeline;
+      if (!localAudioStream) {
+        localAudioStream = new MediaStream();
+      }
+      localAudioStream.getAudioTracks().forEach(function (old) {
+        if (old !== fresh) {
+          localAudioStream.removeTrack(old);
+          old.stop();
+        }
+      });
+      if (fresh && localAudioStream.getAudioTracks().indexOf(fresh) === -1) {
+        localAudioStream.addTrack(fresh);
+      }
+      matchMicrophoneToCalls(fresh);
+      if (previousPipeline && previousPipeline !== pipeline) {
+        previousPipeline.dispose();
+      }
+      if (previousSource && previousSource !== stream) {
+        previousSource.getTracks().forEach(function (track) {
+          track.stop();
+        });
+      }
+      return fresh;
+    }
+    function readProcessingFlag(value, fallback) {
+      return typeof value === 'boolean' ? value : fallback;
+    }
+    function loadDeviceSelection() {
+      var layout = loadLayout();
+      selectedInputDeviceId = layout.inputDeviceId || null;
+      selectedOutputDeviceId = layout.outputDeviceId || null;
+      processingSettings = {
+        echoCancellation: readProcessingFlag(layout.echoCancellation, true),
+        noiseSuppression: readProcessingFlag(layout.noiseSuppression, true),
+        autoGainControl: readProcessingFlag(layout.autoGainControl, true)
+      };
+      micBoostDb = clampBoostDb(layout.micBoostDb);
+      playoutDelaySeconds = clampPlayoutDelay(Object.prototype.hasOwnProperty.call(layout, 'playoutDelaySeconds') ? layout.playoutDelaySeconds : config.playoutDelaySeconds);
+      signalingRegion = clampSignalingRegion(layout.signalingRegion);
+    }
+    function persistDeviceSelection() {
+      saveLayout({
+        inputDeviceId: selectedInputDeviceId || '',
+        outputDeviceId: selectedOutputDeviceId || '',
+        echoCancellation: processingSettings.echoCancellation,
+        noiseSuppression: processingSettings.noiseSuppression,
+        autoGainControl: processingSettings.autoGainControl,
+        micBoostDb: micBoostDb,
+        playoutDelaySeconds: playoutDelaySeconds,
+        signalingRegion: signalingRegion
+      });
+    }
+
+    // The signaling-region choice changed. The provider fixes the edge when its client is constructed, so
+    // unlike the other audio settings this cannot be applied to what is already running: the registration has
+    // to be rebuilt. Doing that under a live call would drop the call, so a call in progress keeps the edge it
+    // started on and the agent is told the change waits for it to end -- the same rule the credential renewal
+    // already follows. Idle, it re-registers immediately, because an agent who just moved themselves to a
+    // nearer edge is trying to fix the call they are about to take.
+    function onSignalingRegionChange() {
+      signalingRegion = clampSignalingRegion(dom.signalingRegion ? dom.signalingRegion.value : '');
+      persistDeviceSelection();
+      if (!browserAudioSession) {
+        // Nothing registered yet; whatever is stored is read when registration happens.
+        return;
+      }
+
+      // Hand the rebuild to ensureBrowserAudio rather than tearing down here: it is the path that remembers
+      // the credential being replaced and revokes it once the fresh one is registered. Releasing directly
+      // would leave the old provider credential live until its own expiry, and there is a cap on how many
+      // an agent may hold -- reached, it refuses the login outright.
+      reregisterOnNextEnsure = true;
+      if (hasLiveCall()) {
+        // The flag stays set, so the rebuild happens the next time the registration is ensured, which is
+        // the next call or the next time this agent goes available -- both after this call has ended.
+        showError(strings.signalingRegionOnNextCall || 'The connection region will be used the next time you register, once this call ends.');
+        return;
+      }
+      ensureBrowserAudio().catch(function (error) {
+        reportDiagnostic('warning', 'signaling-region-register-failed', String(error && error.message || error), '');
+        showError(strings.signalingRegionRegisterFailed || 'The phone could not re-register on the selected connection region.');
+      });
+    }
+
+    // The playout-delay choice changed. It is applied to the live call at once -- this is the one audio
+    // setting whose effect the agent can hear on the call they are already on.
+    function onPlayoutDelayChange() {
+      playoutDelaySeconds = clampPlayoutDelay(dom.playoutDelay ? dom.playoutDelay.value : -1);
+      persistDeviceSelection();
+      if (browserAudioSession && typeof browserAudioSession.refreshPlayoutDelay === 'function') {
+        browserAudioSession.refreshPlayoutDelay();
+      }
+    }
+
+    // The boost selector changed: persist and rebuild the capture through the new gain, live if need be.
+    function onBoostChange() {
+      micBoostDb = clampBoostDb(dom.micBoost ? dom.micBoost.value : 0);
+      persistDeviceSelection();
+      if (!localAudioStream) {
+        return;
+      }
+      switchLocalAudioTrack('boost changed').catch(function (error) {
+        reportDiagnostic('warning', 'processing-switch-failed', String(error && error.message || error), localAudioTrackLabel());
+        showError(strings.processingSwitchFailed || 'The microphone processing change could not be applied on this call.');
+      });
+    }
+
+    // Reflects the stored processing flags into the settings checkboxes.
+    function syncProcessingControls() {
+      if (dom.processingEc) {
+        dom.processingEc.checked = processingSettings.echoCancellation;
+      }
+      if (dom.processingNs) {
+        dom.processingNs.checked = processingSettings.noiseSuppression;
+      }
+      if (dom.processingAgc) {
+        dom.processingAgc.checked = processingSettings.autoGainControl;
+      }
+      if (dom.micBoost) {
+        dom.micBoost.value = String(micBoostDb);
+      }
+      if (dom.playoutDelay) {
+        dom.playoutDelay.value = String(playoutDelaySeconds);
+      }
+      if (dom.signalingRegion) {
+        dom.signalingRegion.value = signalingRegion;
+      }
+    }
+
+    // Shows the edge the live registration is actually on. Automatic is the common case and the one worth
+    // reporting: it is where the tenant setting, or the provider's own geo-routing, put this agent -- the
+    // thing nobody could see before, and the reason a picker exists at all.
+    function showSignalingRegion(region, label) {
+      if (!dom.signalingRegionStatus) {
+        return;
+      }
+      dom.signalingRegionStatus.textContent = region ? (strings.signalingRegionConnected || 'Connected via {0}.').replace('{0}', label) : strings.signalingRegionAutomatic || 'Connected via the region your provider selected.';
+    }
+
+    // A processing checkbox changed. Re-capture with the new constraints and swap the track under any live
+    // call -- applyConstraints cannot change these on an open capture in Chrome (it is refused or silently
+    // ignored), so a fresh capture is the only way, and replaceTrack makes it seamless. This is the A/B an
+    // agent needs when a caller says they sound hollow: flip one switch, ask "better?", flip it back.
+    function onProcessingChange() {
+      processingSettings = {
+        echoCancellation: !dom.processingEc || dom.processingEc.checked,
+        noiseSuppression: !dom.processingNs || dom.processingNs.checked,
+        autoGainControl: !dom.processingAgc || dom.processingAgc.checked
+      };
+      persistDeviceSelection();
+      if (!localAudioStream) {
+        return;
+      }
+      switchLocalAudioTrack('processing changed').catch(function (error) {
+        reportDiagnostic('warning', 'processing-switch-failed', String(error && error.message || error), localAudioTrackLabel());
+        showError(strings.processingSwitchFailed || 'The microphone processing change could not be applied on this call.');
+      });
+    }
+    function fillDeviceSelect(select, devices, selectedId, defaultLabel) {
+      if (!select) {
+        return;
+      }
+      var html = '<option value="">' + escapeHtml(defaultLabel) + '</option>';
+      devices.forEach(function (device, index) {
+        var label = device.label || defaultLabel + ' ' + (index + 1);
+        html += '<option value="' + escapeHtml(device.deviceId) + '"' + (device.deviceId === selectedId ? ' selected' : '') + '>' + escapeHtml(label) + '</option>';
+      });
+      select.innerHTML = html;
+      select.value = selectedId || '';
+    }
+    function outputDeviceSelectionSupported() {
+      return !!(dom.remoteAudio && typeof dom.remoteAudio.setSinkId === 'function');
+    }
+
+    // Applies the selected output device to the shared remote audio element via setSinkId (feature-detected).
+    // An empty id routes back to the system default. The sink sticks on the element across calls, so applying
+    // it on selection and after (re)registration is enough.
+    function applyOutputDevice() {
+      if (!outputDeviceSelectionSupported()) {
+        return;
+      }
+
+      // A failure here used to vanish: the picker moved, the audio stayed where it was, and nothing said
+      // so. Now it is reported, and the agent is told the call keeps its current output.
+      Promise.resolve(dom.remoteAudio.setSinkId(selectedOutputDeviceId || '')).then(function () {
+        reportDiagnostic('info', 'output-device-applied', 'Remote audio routed to the selected output device.', selectedOutputDeviceId || 'default');
+        checkForVirtualAudioDevices();
+      }, function (error) {
+        reportDiagnostic('warning', 'output-device-failed', 'The selected output device could not be applied: ' + String(error && error.message || error), selectedOutputDeviceId || 'default');
+        showError(strings.outputDeviceFailed || 'The selected speaker could not be applied. The call keeps its current output.');
+      });
+    }
+
+    // Warns when the microphone or the speaker is a virtual cable, mixer or loopback rather than real hardware.
+    // Such a device looks like any other in the lists and breaks a call in a way that looks like the platform's
+    // fault: as the microphone it captures the computer's own playback, so the far end hears itself and nobody's
+    // voice is sent; as the speaker it plays the call into the cable, so the agent hears nothing. Observed live
+    // on an extension call that was silent both ways. The system default is checked too, because that is how a
+    // cable is usually reached: set as the Windows default, never picked in the phone.
+    function checkForVirtualAudioDevices() {
+      if (typeof isVirtualAudioDevice !== 'function' || !navigator.mediaDevices || typeof navigator.mediaDevices.enumerateDevices !== 'function') {
+        return;
+      }
+      var microphone = localAudioTrackLabel();
+      navigator.mediaDevices.enumerateDevices().then(function (devices) {
+        var speaker = outputDeviceSelectionSupported() ? resolveDeviceLabel(devices, 'audiooutput', selectedOutputDeviceId) : '';
+        if (isVirtualAudioDevice(microphone)) {
+          reportDiagnostic('warning', 'virtual-microphone', 'The captured microphone is a virtual audio device, not a microphone.', microphone);
+          showError(strings.virtualMicrophone || 'Your microphone is set to a virtual audio device, not a real microphone, so the caller will not hear you and may hear themselves. Choose your headset or microphone in the phone settings.');
+          return;
+        }
+        if (isVirtualAudioDevice(speaker)) {
+          reportDiagnostic('warning', 'virtual-speaker', 'The selected speaker is a virtual audio device, not a speaker.', speaker);
+          showError(strings.virtualSpeaker || 'Your speaker is set to a virtual audio device, so you will not hear the caller. Choose your headset or speakers in the phone settings.');
+        }
+      }).catch(function () {/* best effort */});
+    }
+
+    // Enumerates audio devices and fills the pickers. Device labels are only exposed once microphone
+    // permission has been granted, so the picker is shown only when labels are known and there is a real
+    // choice to make.
+    function populateDevicePickers() {
+      if (!isBrowserAudioEnabled() || !navigator.mediaDevices || typeof navigator.mediaDevices.enumerateDevices !== 'function') {
+        return Promise.resolve();
+      }
+      return navigator.mediaDevices.enumerateDevices().then(function (devices) {
+        // Exclude the "default" and "communications" pseudo-devices: they just alias whatever the system
+        // default is (which can be a silent virtual cable), so listing them alongside the real devices
+        // only adds confusing duplicates. The "Default microphone" option already covers the system
+        // default, and the real, unambiguous devices are what an agent needs to pick to fix a bad default.
+        function isRealDevice(device) {
+          return device.deviceId !== 'default' && device.deviceId !== 'communications';
+        }
+        var inputs = devices.filter(function (device) {
+          return device.kind === 'audioinput' && isRealDevice(device);
+        });
+        var outputs = devices.filter(function (device) {
+          return device.kind === 'audiooutput' && isRealDevice(device);
+        });
+        var sinkSupported = outputDeviceSelectionSupported();
+        fillDeviceSelect(dom.inputDevice, inputs, selectedInputDeviceId, strings.defaultMicrophone || 'Default microphone');
+        if (sinkSupported) {
+          fillDeviceSelect(dom.outputDevice, outputs, selectedOutputDeviceId, strings.defaultSpeaker || 'Default speaker');
+        }
+        if (dom.outputDeviceRow) {
+          dom.outputDeviceRow.hidden = !sinkSupported;
+        }
+      }).catch(function () {/* best effort */});
+    }
+
+    // Settings overlay (opened from the header gear). It hosts the audio device pickers off the keypad. It is
+    // an overlay over the widget body, not a footer tab, so it never adds a tab to the strip.
+    function openSettings() {
+      settingsOpen = true;
+      // Refresh the device lists on open so newly attached devices appear.
+      populateDevicePickers();
+      render();
+    }
+    function closeSettings() {
+      settingsOpen = false;
+      render();
+    }
+    function toggleSettings() {
+      if (settingsOpen) {
+        closeSettings();
+      } else {
+        openSettings();
+      }
+    }
+    function onInputDeviceChange() {
+      selectedInputDeviceId = dom.inputDevice && dom.inputDevice.value || null;
+      persistDeviceSelection();
+
+      // Nothing captured yet: the registration that follows reads the selection when it captures.
+      if (!localAudioStream) {
+        return;
+      }
+
+      // Switch the capture in place, live call or not. Tearing the registration down re-issued the
+      // provider credential on every change, and deferring to "the next call" was never actually carried
+      // out. Only if the switch fails is the agent told -- with the truth: this call keeps the old device.
+      switchLocalAudioTrack('device selected').catch(function (error) {
+        reportDiagnostic('warning', 'microphone-switch-failed', String(error && error.message || error), localAudioTrackLabel());
+        showError(strings.microphoneChangeOnNextCall || 'The microphone could not be switched on this call. It will be used on your next call.');
+      });
+    }
+    function onOutputDeviceChange() {
+      selectedOutputDeviceId = dom.outputDevice && dom.outputDevice.value || null;
+      persistDeviceSelection();
+      applyOutputDevice();
     }
     function releaseBrowserAudio() {
       browserAudioPromise = null;
@@ -489,12 +10381,103 @@
         Promise.resolve(dom.remoteAudio.play()).catch(function () {});
       }
     }
+
+    // The registration config advertises when the provider's browser credential expires. This is a
+    // generic part of the SoftPhoneRegistrationConfig contract that each provider fills with its own
+    // lifetime, so the renewal below is provider-agnostic: it honors whatever expiry the active provider
+    // advertises and does nothing for a provider that advertises no real expiry.
+    var BROWSER_AUDIO_HEARTBEAT_MS = 60 * 1000;
+    var BROWSER_AUDIO_RENEW_THRESHOLD_MS = 10 * 60 * 1000;
+    // A credential whose advertised expiry predates this is treated as carrying no real expiry (an unset
+    // or default timestamp) rather than being renewed on every heartbeat.
+    var BROWSER_AUDIO_MIN_PLAUSIBLE_EXPIRY_MS = Date.UTC(2000, 0, 1);
+    // How close to expiry an ongoing call must be before the agent is warned it may not survive (item 8).
+    // The renewal is deferred during a live call because re-registering would drop media, so a call longer
+    // than the credential lifetime can lose its registration at expiry; the warning lets the agent redial
+    // proactively. It is well inside the renewal threshold so it only fires when renewal has actually been
+    // deferred by an in-progress call.
+    var BROWSER_AUDIO_EXPIRY_WARNING_MS = 3 * 60 * 1000;
+    var credentialExpiryWarned = false;
+    function browserAudioExpiryMs(session) {
+      var providerConfig = session && session.providerConfig;
+      var credential = providerConfig && providerConfig.credential;
+      var parsed = credential && credential.expiresAtUtc ? Date.parse(credential.expiresAtUtc) : NaN;
+      return isFinite(parsed) ? parsed : null;
+    }
+    function isBrowserAudioExpiring(session) {
+      var expiry = browserAudioExpiryMs(session);
+
+      // No expiry, or an implausible/unset one: the provider does not expire this credential, so it is
+      // never renewed.
+      if (expiry === null || expiry < BROWSER_AUDIO_MIN_PLAUSIBLE_EXPIRY_MS) {
+        return false;
+      }
+      return expiry - Date.now() <= BROWSER_AUDIO_RENEW_THRESHOLD_MS;
+    }
+
+    // The provider credential id the session registered with, carried on the registration config so a
+    // renewal can revoke the exact credential it supersedes.
+    function browserAudioCredentialId(session) {
+      var providerConfig = session && session.providerConfig;
+      var sessionConfig = providerConfig && providerConfig.session;
+      return sessionConfig && sessionConfig.interactionId ? sessionConfig.interactionId : null;
+    }
+
+    // Ask the server to tear down a credential this soft phone just superseded during a renewal, so renewed
+    // sessions do not leave their predecessor credentials live until natural expiry. Best-effort: a failure
+    // only means the old credential lingers until it expires or the per-user cap trims it.
+    function revokeSupersededCredential(credentialId) {
+      if (!connection || !credentialId) {
+        return;
+      }
+      connection.invoke('RevokeSupersededCredential', credentialId).catch(function () {});
+    }
+
+    // Tell the server which credential this client is registered on. Several credentials can be live for
+    // one user at once -- a renewal mints a fresh one before its predecessor expires, and a registration
+    // that never completes leaves its credential live but unusable -- and only the registered one can
+    // receive a call. Without this the server delivers to the newest-issued credential, which Telnyx
+    // refuses with SIP 486 when no client is registered on it, so the agent's leg never rings.
+    function reportCredentialRegistered(credentialId) {
+      if (!connection || !credentialId) {
+        return;
+      }
+      connection.invoke('ReportCredentialRegistered', credentialId).catch(function () {});
+    }
+
+    // Tell the server what this client can do on the credential it registered on, so it only rings this browser
+    // in ways it understands. A client that reports nothing is rung the way it always was.
+    function reportClientCapabilities(credentialId, capabilities) {
+      if (!connection || !credentialId || !Array.isArray(capabilities) || !capabilities.length) {
+        return;
+      }
+      connection.invoke('ReportCredentialCapabilities', credentialId, capabilities).catch(function () {});
+    }
     function ensureBrowserAudio() {
       if (!isBrowserAudioEnabled()) {
         return Promise.resolve(null);
       }
+      var supersededCredentialId = null;
       if (browserAudioSession) {
-        return Promise.resolve(browserAudioSession);
+        // Self-heal on every entry point (placing or answering a call, or becoming available): when
+        // the credential is at or near expiry, or the captured microphone has died since it was
+        // acquired, re-establish first. Only do so while idle -- re-establishing tears down the
+        // provider media client and would drop a live call, so during an active call the current
+        // session is kept and the heartbeat renews once it ends.
+        //
+        // The microphone half matters as much as the credential: a session whose capture has ended is
+        // still a perfectly valid session, and reusing it puts the agent on a call nobody can hear
+        // them on.
+        // The third reason is the agent choosing a different signaling region: the provider fixes the edge
+        // when its client is constructed, so a live session cannot be moved -- it has to be rebuilt.
+        if ((isBrowserAudioExpiring(browserAudioSession) || isLocalAudioTrackDead() || reregisterOnNextEnsure) && !hasLiveCall()) {
+          // Remember the credential being replaced so it can be revoked once the fresh one is live.
+          supersededCredentialId = browserAudioCredentialId(browserAudioSession);
+          reregisterOnNextEnsure = false;
+          releaseBrowserAudio();
+        } else {
+          return Promise.resolve(browserAudioSession);
+        }
       }
       if (browserAudioPromise) {
         return browserAudioPromise;
@@ -507,23 +10490,117 @@
         return Promise.reject(new Error(strings.microphoneUnavailable || 'The microphone is unavailable.'));
       }
       browserAudioPromise = connection.invoke('GetCredentials').then(function (credentials) {
-        if (!credentials || credentials.audioMode !== AUDIO_MODES.Browser || credentials.browserMediaAdapterName !== config.browserMediaAdapterName) {
+        if (!credentials || normalizeAudioMode(credentials.audioMode) !== AUDIO_MODES.Browser || credentials.browserMediaAdapterName !== config.browserMediaAdapterName) {
           throw new Error(strings.browserAudioUnavailable || 'The configured browser audio adapter is unavailable.');
         }
-        return navigator.mediaDevices.getUserMedia({
-          audio: true
+        return navigator.mediaDevices.getUserMedia(buildAudioConstraints()).catch(function (mediaError) {
+          // Turn a permission/device rejection into an actionable, categorized error (item 9).
+          throw categorizeMicError(mediaError);
         }).then(function (stream) {
-          localAudioStream = stream;
+          // The capture becomes the send stream through the boost pipeline (a no-op when boost is off).
+          commitCapture(stream, createBoostPipeline(stream, micBoostDb));
+          // This capture has to survive until the registration is replaced, so watch it for the
+          // device dying underneath it rather than discovering it on the next call.
+          watchLocalAudioTrack();
+          // Capture succeeded: clear any prior mic-permission guidance and refresh the device pickers
+          // (labels are only available now that permission has been granted).
+          clearMicPermissionIssue();
+          populateDevicePickers();
+          applyOutputDevice();
+          checkForVirtualAudioDevices();
           return Promise.resolve(adapter({
             credentials: credentials,
-            localStream: stream,
+            // The send stream, not the raw capture: through the boost when one is set, and a stable
+            // container whose track is swapped on device or processing changes.
+            localStream: localAudioStream,
             remoteAudioElement: dom.remoteAudio,
             setRemoteStream: setRemoteAudioStream,
-            showError: showError
+            showError: showError,
+            // Lets a client-originated provider (Telnyx) decide, per inbound leg, whether to answer
+            // automatically (the agent's own bridged leg) or ring an Answer/Decline prompt (a direct
+            // extension call from a colleague).
+            shouldAutoAnswerInbound: consumeInboundAutoAnswer,
+            // The leg rung for an offer still ringing on screen: held until the agent accepts or
+            // declines, never rung as a call of its own.
+            claimOfferLeg: claimOfferLeg,
+            onOfferLegEnded: handleOfferLegEnded,
+            // A supervisor's monitor leg: answered by itself only when this phone asked for it.
+            claimMonitorLeg: claimMonitorLeg,
+            onMonitorLegState: handleMonitorLegState,
+            reportDiagnostic: reportDiagnostic,
+            onInboundRing: handleBrowserInboundRing,
+            onInboundRingCanceled: clearBrowserInboundRing,
+            // Media-quality telemetry (item 2): the adapter samples the live peer connection and
+            // reports periodic/final summaries and a poor-connection signal back through these.
+            reportCallQuality: reportCallQuality,
+            onConnectionQuality: setConnectionQualityPoor,
+            // Degraded-state UX (item 6): the adapter reports when its signaling socket drops and is
+            // reconnecting so the status line can show "Reconnecting..." for a media outage too.
+            onSignalingDegraded: setMediaReconnecting,
+            // Diagnostics: provider SDK warnings (e.g. "Low local microphone audio detected") are
+            // collected for the Diagnostics tab and forwarded to server telemetry.
+            onProviderWarning: addProviderWarning,
+            // The SDK no longer had a call the phone placed, and never said it ended; the adapter ended it.
+            onCallVanished: function (callId) {
+              reportDiagnostic('info', 'browser-call-vanished', 'The provider SDK no longer had a call the phone placed; the phone ended it.', callId);
+            },
+            // The capture went silent mid-call: the microphone is live as far as the browser is
+            // concerned but is delivering nothing, so the caller cannot hear the agent.
+            onCaptureSilent: handleSilentCapture,
+            // Nothing is leaving a connected call: the caller cannot hear the agent. See send-audio.js.
+            reviveCapture: reviveSendCapture,
+            isOutboundSuppressed: isOutboundAudioSuppressed,
+            onOutboundAudioStalled: handleOutboundAudioStalled,
+            onOutboundAudioResumed: handleOutboundAudioResumed,
+            // The capture format, read at sample time rather than at registration: a Bluetooth
+            // headset changes it when the call takes its microphone, so reading it once up front
+            // would record the format the call is not using.
+            readCaptureSettings: localCaptureSettings,
+            captureDeviceLabel: localAudioTrackLabel,
+            captureBoostLabel: function () {
+              return describeBoost(micBoostDb);
+            },
+            readPlayoutDelay: function () {
+              return playoutDelaySeconds;
+            },
+            // This agent's signaling-edge choice. The adapter resolves it against the tenant setting
+            // it receives in the registration config.
+            readSignalingRegion: function () {
+              return signalingRegion;
+            },
+            // Which edge the registration actually landed on, once resolved.
+            onSignalingRegion: function (region, label) {
+              showSignalingRegion(region, label);
+              reportDiagnostic('info', 'signaling-region', region ? 'Registered on the ' + label + ' signaling edge.' : 'Registered on the signaling edge chosen by the provider.', '');
+            },
+            onPlayoutDelayUnsupported: function () {
+              reportDiagnostic('info', 'playout-delay-unsupported', 'This browser does not support a playout delay hint; the call keeps its own buffering.', '');
+            },
+            // The negotiated SDP at connect, forwarded as a diagnostic so the codecs each side offered
+            // are on the server for the call, next to the webhook and command log for its legs.
+            onNegotiated: function (text) {
+              if (window.console && typeof window.console.info === 'function') {
+                window.console.info('[soft-phone] negotiated ' + text);
+              }
+              reportDiagnostic('info', 'sdp-negotiated', text, localAudioTrackLabel());
+            }
           }));
         });
       }).then(function (session) {
         browserAudioSession = session || {};
+        // A fresh credential is live: reset the one-time expiry warning so a subsequent long call warns
+        // again against the new expiry (item 8).
+        credentialExpiryWarned = false;
+
+        // Registration completed on this credential, so it is the one the platform must deliver to.
+        reportCredentialRegistered(browserAudioCredentialId(browserAudioSession));
+        reportClientCapabilities(browserAudioCredentialId(browserAudioSession), browserAudioSession.clientCapabilities);
+
+        // A renewal replaced a still-live credential; revoke that predecessor now that the fresh
+        // session is registered (unless, defensively, the server handed back the same credential id).
+        if (supersededCredentialId && supersededCredentialId !== browserAudioCredentialId(browserAudioSession)) {
+          revokeSupersededCredential(supersededCredentialId);
+        }
         return browserAudioSession;
       }).catch(function (error) {
         releaseBrowserAudio();
@@ -533,12 +10610,111 @@
       });
       return browserAudioPromise;
     }
+    function renewBrowserAudioIfNeeded() {
+      if (!isBrowserAudioEnabled()) {
+        return;
+      }
+
+      // Nothing registered at all is the worst case of an expiring credential: register again.
+      if (!browserAudioSession) {
+        registerIfUnregistered();
+        return;
+      }
+
+      // Nothing to do until the credential is near expiry.
+      if (!isBrowserAudioExpiring(browserAudioSession)) {
+        credentialExpiryWarned = false;
+        return;
+      }
+
+      // Never renew mid-call (re-establishing would drop the active media session); the renewal is retried
+      // on the next heartbeat once the line clears. If the credential is very close to expiring, warn the
+      // agent once that a very long call may drop so they can redial proactively (item 8).
+      if (hasLiveCall()) {
+        maybeWarnCredentialExpiry();
+        return;
+      }
+
+      // ensureBrowserAudio re-establishes with a freshly issued credential (its self-heal releases the
+      // expiring session first). Failures are kept quiet here because this runs in the background; a
+      // genuine problem surfaces the next time the agent places or answers a call.
+      ensureBrowserAudio().catch(function (error) {
+        if (window.console && console.debug) {
+          console.debug('[soft-phone] Browser audio credential renewal failed.', error);
+        }
+      });
+    }
+
+    // Warns the agent, once per credential, when an in-progress call is within the warning window of the
+    // credential expiry. The soft phone cannot renew mid-call without dropping media, so the honest
+    // mitigation is to tell the agent a very long call may drop and let them redial. The flag resets when a
+    // fresh credential is established (ensureBrowserAudio) or the credential is no longer expiring.
+    function maybeWarnCredentialExpiry() {
+      if (credentialExpiryWarned) {
+        return;
+      }
+      var expiry = browserAudioExpiryMs(browserAudioSession);
+      if (expiry === null || expiry - Date.now() > BROWSER_AUDIO_EXPIRY_WARNING_MS) {
+        return;
+      }
+      credentialExpiryWarned = true;
+      reportDiagnostic('warning', 'credential-expiry-approaching', 'Active call approaching browser credential expiry', null);
+      showError(strings.callCredentialExpiring || 'This call is nearing its session limit. If it drops, redial to reconnect.');
+    }
+    function startBrowserAudioHeartbeat() {
+      if (browserAudioHeartbeatTimer || !isBrowserAudioEnabled()) {
+        return;
+      }
+      browserAudioHeartbeatTimer = window.setInterval(renewBrowserAudioIfNeeded, BROWSER_AUDIO_HEARTBEAT_MS);
+    }
+    function stopBrowserAudioHeartbeat() {
+      if (browserAudioHeartbeatTimer) {
+        window.clearInterval(browserAudioHeartbeatTimer);
+        browserAudioHeartbeatTimer = null;
+      }
+    }
+
+    // Register the browser with the provider as soon as the soft phone connects -- not lazily on the first
+    // dial -- and keep it registered, so an idle agent can still RECEIVE inbound extension/queue calls.
+    // Without this the browser only registers for the duration of a call it places (and disconnects right
+    // after), so a colleague dialing an idle agent's extension reaches an unregistered endpoint and the
+    // call is cleared before it can ring.
+    function registerBrowserAudioForInbound() {
+      if (!isBrowserAudioEnabled()) {
+        return;
+      }
+      ensureBrowserAudio().catch(function (error) {
+        if (window.console && console.debug) {
+          console.debug('[soft-phone] Could not pre-register browser audio for inbound calls.', error);
+        }
+      });
+    }
+
+    // Registers a phone that holds no registration -- an offer is ringing, or the heartbeat found it lapsed (a
+    // failed registration, a torn-down provider client) -- so the platform has a live endpoint to ring before
+    // the agent clicks anything. See soft-phone/registration.js.
+    function registerIfUnregistered() {
+      if (typeof shouldStartRegistration !== 'function' || !shouldStartRegistration({
+        browserAudioEnabled: isBrowserAudioEnabled(),
+        registered: !!browserAudioSession,
+        registering: !!browserAudioPromise,
+        microphoneBlocked: !!micPermissionState,
+        hubConnected: !!connection && connection.state === 'Connected'
+      })) {
+        return;
+      }
+      registerBrowserAudioForInbound();
+    }
     function notifyBrowserAudio(call) {
+      // Browser-originated calls drive their own SIP session directly; the passive-answer bridging here
+      // must not touch them (it would toggle the mic or terminate the live session).
+      if (call && call.browserOriginated) {
+        return;
+      }
       if (!browserAudioSession || !localAudioStream) {
         return;
       }
-      var stateName = normalizeState(call && call.state);
-      var microphoneEnabled = stateName === 'Connected' && !call.isMuted;
+      var microphoneEnabled = microphoneEnabledAfter(call);
       localAudioStream.getAudioTracks().forEach(function (track) {
         track.enabled = microphoneEnabled;
       });
@@ -546,6 +10722,45 @@
         Promise.resolve(browserAudioSession.handleCallState(call || null)).catch(function (error) {
           showError(error && error.message ? error.message : String(error));
         });
+      }
+    }
+
+    // Whether the shared microphone should be live after a report about `call`. The microphone is shared by every
+    // call the phone holds -- a call placed from the keypad, and each of the platform's calls on a leg of its own --
+    // so a report about one call decides it only while that call is the one the agent is talking on (see
+    // soft-phone/keypad-dial.js).
+    function microphoneEnabledAfter(call) {
+      // A supervisor talking on a monitor leg (coaching, joining, or on a call they took over) is heard on the same
+      // microphone; a monitor leg is no call of the phone's own, so the calls alone would keep it off.
+      if (anyMonitorLegTalks(monitorLegs)) {
+        return true;
+      }
+      var others = getActiveCalls().filter(function (active) {
+        return active && (!call || active.callId !== call.callId);
+      }).map(function (active) {
+        return {
+          callId: active.callId,
+          state: normalizeState(active.state),
+          isMuted: !!active.isMuted,
+          isOnHold: !!active.isOnHold,
+          browserOriginated: !!active.browserOriginated
+        };
+      });
+      return sharedMicrophoneEnabled(call ? {
+        callId: call.callId,
+        state: normalizeState(call.state),
+        isMuted: !!call.isMuted,
+        isOnHold: !!call.isOnHold
+      } : null, others, function (entry) {
+        return isAgentHeld(agentHolds, entry.callId);
+      });
+    }
+
+    // A capture that replaces the send track mid-call starts enabled; left so, a new or revived microphone turned
+    // the agent's voice back on under a mute. It takes the state the calls give it instead.
+    function matchMicrophoneToCalls(track) {
+      if (track && hasLiveCall()) {
+        track.enabled = microphoneEnabledAfter(currentCall);
       }
     }
     function invokeWithBrowserAudio(method, payload) {
@@ -556,10 +10771,1177 @@
         return null;
       });
     }
+
+    // Places an outbound call. When the active provider delivers audio to this browser and expects the
+    // browser to originate its own calls (Telnyx), the call is dialed directly from the registered SIP
+    // client; otherwise the server places it over the hub as before.
+    function placeCall(number, isExtension) {
+      // Show "Connecting" immediately so the placed call is visible during the round trip, rather than
+      // leaving the status on "Ready" until the browser audio session and the server catch up. The real
+      // call state (browser-originated below, or the server's first CallStateChanged) takes over as soon
+      // as it arrives, and a failure clears it right away.
+      beginPendingDial(number);
+      // The number to add has been dialed: the phone is back to its calls.
+      addingCall = null;
+      keypadOpen = false;
+      render();
+
+      // A hub command that fails resolves with { succeeded: false } rather than rejecting, so the
+      // optimistic "Connecting" state must be cleared here too -- otherwise the status line stays
+      // stranded on "Connecting" after an error (for example an unavailable extension) until the safety
+      // timer eventually fires.
+      function settleDial(result) {
+        if (!result || result.succeeded === false) {
+          clearPendingDial();
+          render();
+        }
+        return result;
+      }
+      function failDial(error) {
+        clearPendingDial();
+        render();
+        showError(error && error.message ? error.message : String(error));
+        return null;
+      }
+
+      // Internal extension calls are resolved and bridged server-side, but the caller's own browser must
+      // be registered first: the provider rings this browser and then bridges it to the target. Ensure
+      // (and renew, if the credential has lapsed) the browser audio session before asking the hub to place
+      // the call, so a stale caller credential self-heals instead of failing with "you must be signed in".
+      // In a non-browser audio mode ensureBrowserAudio resolves to null and the hub places the call as
+      // before.
+      if (isExtension) {
+        // The provider rings this browser's own leg first and then bridges it to the target; that inbound
+        // leg is expected, so arm the media adapter to answer it automatically rather than ring for it.
+        armAutoAnswer(inboundAutoAnswer, EXTENSION_CALL_KEY, Date.now());
+
+        // A refused extension call rings nothing back: the arm goes, or it answers the next caller instead.
+        return ensureBrowserAudio().then(function () {
+          return invoke('DialExtension', {
+            extension: number
+          });
+        }).then(function (result) {
+          if (!result || result.succeeded === false) {
+            disarmAutoAnswer(inboundAutoAnswer, EXTENSION_CALL_KEY);
+          }
+          return settleDial(result);
+        }).catch(function (error) {
+          disarmAutoAnswer(inboundAutoAnswer, EXTENSION_CALL_KEY);
+          return failDial(error);
+        });
+      }
+
+      // A provider that connects keypad dials itself rings this browser's own leg for the number, exactly as an
+      // extension call does, so the call is one the platform can transfer and merge; the phone answers that leg
+      // without ringing. When the provider says it cannot -- and only then, because nothing was dialed -- the
+      // phone dials the number itself (see soft-phone/keypad-dial.js).
+      function placeBridgedCall(session) {
+        armAutoAnswer(inboundAutoAnswer, EXTENSION_CALL_KEY, Date.now());
+        return invoke('Dial', bridgedDialRequest(number, browserAudioCredentialId(session))).then(function (result) {
+          if (shouldDialFromBrowser(result, session)) {
+            disarmAutoAnswer(inboundAutoAnswer, EXTENSION_CALL_KEY);
+            showError(null);
+            reportDiagnostic('warning', 'bridged-dial-unavailable', 'The provider could not connect a keypad dial through this phone; it was dialed from the browser.', '');
+            originateBrowserCall(session, number);
+            return null;
+          }
+          if (!result || result.succeeded === false) {
+            disarmAutoAnswer(inboundAutoAnswer, EXTENSION_CALL_KEY);
+          }
+          return settleDial(result);
+        });
+      }
+      return ensureBrowserAudio().then(function (session) {
+        var route = planKeypadDial({
+          bridgedDial: has(CAPABILITIES.BridgedDial),
+          session: session,
+          credentialId: browserAudioCredentialId(session)
+        });
+        if (route === 'bridge') {
+          return placeBridgedCall(session);
+        }
+        if (route === 'browser') {
+          originateBrowserCall(session, number);
+          return null;
+        }
+        return invoke('Dial', {
+          to: number,
+          isExtension: isExtension
+        }).then(settleDial);
+      }).catch(failDial);
+    }
+    function originateBrowserCall(session, number) {
+      var callId = 'browser-' + Date.now();
+      var call = {
+        callId: callId,
+        state: 'Connecting',
+        direction: 'Outbound',
+        to: number,
+        from: session.outboundCallerId || '',
+        startedUtc: new Date().toISOString(),
+        isMuted: false,
+        isOnHold: false,
+        browserOriginated: true,
+        metadata: {}
+      };
+      upsertActiveCall(call, true);
+      render();
+      var controller = session.originate(number, session.outboundCallerId, function (stateName) {
+        var existing = activeCalls[callId];
+        if (!existing) {
+          return;
+        }
+        if (stateName === 'Connected') {
+          existing.everConnected = true;
+          journalCallConnected(browserCallStorage, callId);
+        }
+
+        // Preserve a local hold state (the SIP session has no distinct hold signal to the UI).
+        if (!(stateName === 'Connected' && existing.isOnHold)) {
+          existing.state = stateName;
+        }
+        if (stateName === 'Disconnected') {
+          reportBrowserCallEnded(callId, existing.everConnected);
+          removeActiveCall(callId);
+          delete browserCallControllers[callId];
+          // The call ended; if the credential is at/near expiry (a call longer than its lifetime
+          // deferred renewal), renew now rather than waiting for the next heartbeat tick (item 8).
+          renewBrowserAudioIfNeeded();
+        } else {
+          upsertActiveCall(existing, false);
+        }
+        render();
+      });
+      if (controller) {
+        browserCallControllers[callId] = controller;
+
+        // A browser-originated call is placed directly through the provider SDK and never passes through
+        // a server "Dial" action, so report it to the hub to record call history -- otherwise it would be
+        // missing from the Recent tab. Best-effort: history is not essential to the call itself. The call is
+        // journaled until the server has its end, so neither a reload nor a hub outage can lose that end.
+        journalCallStarted(browserCallStorage, callId);
+        if (connection) {
+          connection.invoke('RecordBrowserCall', callId, call.to, call.from).catch(function () {});
+        }
+
+        // Checked from here on, and reported still up, until it ends.
+        watchBrowserCalls();
+      } else {
+        clearPendingDial();
+        removeActiveCall(callId);
+        render();
+      }
+    }
+    function currentBrowserController() {
+      return currentCall && currentCall.browserOriginated ? browserCallControllers[currentCall.callId] || null : null;
+    }
+
+    // Tell the server a browser-originated call ended, so its history interaction is settled to a final
+    // outcome instead of lingering "in progress" (which would keep it out of completed history and let the
+    // reconciler delete it as an orphan). Each call's end is reported once; it stays in the journal until the
+    // server confirms it, so an end the hub could not take is sent again on the next connect.
+    function reportBrowserCallEnded(callId, connected) {
+      if (!callId || reportedBrowserCallEnds[callId]) {
+        return;
+      }
+      reportedBrowserCallEnds[callId] = true;
+      journalCallEnded(browserCallStorage, callId, connected);
+      sendBrowserCallEnded(callId, connected);
+    }
+    function sendBrowserCallEnded(callId, connected) {
+      if (!connection || !callId) {
+        return;
+      }
+      connection.invoke('RecordBrowserCallEnded', callId, !!connected).then(function () {
+        journalCallSettled(browserCallStorage, callId);
+      }).catch(function () {});
+    }
+
+    // Sends every end still owed: those a hub outage kept from landing, and the calls of a page that went away
+    // mid-call, whose sessions went with it.
+    function flushOwedBrowserCallEnds() {
+      var live = planShownBrowserCalls(getActiveCalls(), browserCallControllers).keep;
+      planOwedCallEnds(readCallJournal(browserCallStorage), live).forEach(function (owed) {
+        reportedBrowserCallEnds[owed.callId] = true;
+        sendBrowserCallEnded(owed.callId, owed.connected);
+      });
+    }
+
+    // Drops every browser-placed call the phone shows that has no live session behind it any more, and reports its
+    // end: the phone must never show a call that no longer exists. The media adapter first ends the calls its SDK
+    // has lost, through each call's own callback. Returns whether any call was dropped.
+    function reconcileShownBrowserCalls() {
+      if (browserAudioSession && typeof browserAudioSession.reconcileCalls === 'function') {
+        try {
+          browserAudioSession.reconcileCalls();
+        } catch (error) {/* best effort */}
+      }
+      var plan = planShownBrowserCalls(getActiveCalls(), browserCallControllers);
+      plan.ended.forEach(function (callId) {
+        var call = activeCalls[callId];
+        reportDiagnostic('info', 'browser-call-reconciled', 'A call the phone showed had no live session behind it; it was ended.', callId);
+
+        // A colleague's call the agent answered is on the platform's own record; only a placed call is reported.
+        if (call && !call.browserInbound) {
+          reportBrowserCallEnded(callId, !!call.everConnected);
+        }
+        removeActiveCall(callId);
+        delete browserCallControllers[callId];
+      });
+      return plan.ended.length > 0;
+    }
+
+    // While the phone shows a call it placed itself, checks it every few seconds: a call whose session is gone is
+    // dropped (and its end reported), and the server is told which calls are still up. The hub's own call-list
+    // refresh runs only for calls the server tracks, and a call the SDK lost without a word would otherwise stay on
+    // screen for good. Stops by itself once no such call is shown.
+    function watchBrowserCalls() {
+      if (browserCallWatchTimer) {
+        return;
+      }
+      reportBrowserCallsAlive();
+      browserCallWatchTimer = window.setInterval(function () {
+        var shown = getActiveCalls().some(function (call) {
+          return call && call.browserOriginated;
+        });
+        if (!shown) {
+          window.clearInterval(browserCallWatchTimer);
+          browserCallWatchTimer = null;
+          return;
+        }
+        if (reconcileShownBrowserCalls()) {
+          render();
+        }
+        reportBrowserCallsAlive();
+      }, BROWSER_CALL_WATCH_MS);
+    }
+
+    // Tells the server which of the calls this browser placed are still up, so it can settle one the phone stopped
+    // reporting (a page that crashed, an app that was closed mid-call). Throttled; see planCallHeartbeat.
+    function reportBrowserCallsAlive() {
+      var plan = planCallHeartbeat(getActiveCalls(), lastBrowserCallHeartbeatMs, Date.now());
+      if (!plan || !connection) {
+        return;
+      }
+      lastBrowserCallHeartbeatMs = Date.now();
+      connection.invoke('ReportBrowserCallsAlive', plan.callIds, plan.connectedCallIds).catch(function () {});
+    }
+
+    // Forwards a browser-measured media-quality report (item 2) to the server for observability and
+    // alerting. Best-effort: telemetry must never disrupt the call.
+    function reportCallQuality(payload) {
+      if (payload) {
+        lastQualitySample = payload;
+        if (diagnosticsEnabled) {
+          updateDiagnosticsReadout();
+        }
+      }
+      if (connection && payload) {
+        connection.invoke('ReportCallQuality', payload).catch(function () {});
+      }
+    }
+
+    // Records the media adapter's poor-connection signal for the degraded-state UX (item 6). A change
+    // re-renders so the status line updates promptly, and it debounces internally by ignoring no-op updates.
+    function setConnectionQualityPoor(poor) {
+      var next = !!poor;
+      if (next === connectionQualityPoor) {
+        return;
+      }
+      connectionQualityPoor = next;
+      render();
+    }
+
+    // Throttled/deduped client diagnostics (item 7). Client-side failures are reported to the server so they
+    // become alertable rather than only visible in the agent's console. A given level+code+message is sent at
+    // most once per dedupe window, and total volume is capped per minute, so a flapping error cannot flood
+    // the hub.
+    var DIAGNOSTIC_DEDUPE_MS = 60 * 1000;
+    var DIAGNOSTIC_MAX_PER_MINUTE = 20;
+    var diagnosticRecent = {};
+    var diagnosticWindowStart = 0;
+    var diagnosticWindowCount = 0;
+    function reportDiagnostic(level, code, message, context) {
+      if (!connection) {
+        return;
+      }
+      var now = Date.now();
+      var key = (level || '') + '|' + (code || '') + '|' + (message || '');
+      if (diagnosticRecent[key] && now - diagnosticRecent[key] < DIAGNOSTIC_DEDUPE_MS) {
+        return;
+      }
+
+      // Rolling per-minute cap across all diagnostics.
+      if (now - diagnosticWindowStart >= 60000) {
+        diagnosticWindowStart = now;
+        diagnosticWindowCount = 0;
+      }
+      if (diagnosticWindowCount >= DIAGNOSTIC_MAX_PER_MINUTE) {
+        return;
+      }
+      diagnosticWindowCount++;
+      diagnosticRecent[key] = now;
+
+      // Bound the dedupe map over a long session by dropping entries older than the dedupe window.
+      if (Object.keys(diagnosticRecent).length > 200) {
+        Object.keys(diagnosticRecent).forEach(function (existing) {
+          if (now - diagnosticRecent[existing] >= DIAGNOSTIC_DEDUPE_MS) {
+            delete diagnosticRecent[existing];
+          }
+        });
+      }
+      connection.invoke('ReportClientDiagnostic', level || 'warning', code || 'client-error', message || '', context || '').catch(function () {});
+    }
+
+    // ---- Gated diagnostics + echo/loopback audio test (companion tooling) ----
+
+    function setDiagStatus(text) {
+      if (dom.diagStatus) {
+        dom.diagStatus.textContent = text || '';
+      }
+    }
+
+    // ---- Microphone level meter (Diagnostics tab) ----
+    // A live meter of the microphone the soft phone is (or would be) capturing. It reads the actual input
+    // level, so a flat bar while speaking immediately reveals a silent/wrong input device -- the exact class
+    // of problem that is otherwise painful to diagnose (a virtual-cable default, a muted device, etc.).
+    var micMeterCtx = null;
+    var micMeterAnalyser = null;
+    var micMeterSink = null;
+    var micMeterRaf = null;
+    var micMeterOwnStream = null;
+    var micMeterData = null;
+    function startMicMeter() {
+      if (!dom.micMeter || !dom.micMeterFill || micMeterCtx) {
+        return;
+      }
+      var AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx || !navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+        if (dom.micMeterHint) {
+          dom.micMeterHint.textContent = strings.micMeterUnavailable || 'Microphone metering is not available in this browser.';
+        }
+        return;
+      }
+      function attach(stream) {
+        try {
+          micMeterCtx = new AudioCtx();
+          var source = micMeterCtx.createMediaStreamSource(stream);
+          micMeterAnalyser = micMeterCtx.createAnalyser();
+          micMeterAnalyser.fftSize = 512;
+          source.connect(micMeterAnalyser);
+
+          // Firefox only processes a graph that reaches the destination, so an analyser left hanging
+          // reads silence forever -- a meter that stays flat no matter how loudly the agent talks,
+          // which is the one reading it exists to rule out. Route it there through a silent gain so
+          // the graph runs without the agent hearing their own microphone.
+          micMeterSink = micMeterCtx.createGain();
+          micMeterSink.gain.value = 0;
+          micMeterAnalyser.connect(micMeterSink);
+          micMeterSink.connect(micMeterCtx.destination);
+          micMeterData = new Float32Array(micMeterAnalyser.fftSize);
+
+          // Show which device is actually being captured. A wrong/virtual default (for example
+          // "CABLE Output (VB-Audio Virtual Cable)") shows up here immediately, next to a flat meter.
+          // The raw capture carries the device label; the boosted send track does not.
+          var track = getSourceAudioTrack() || stream.getAudioTracks()[0];
+          if (dom.micMeterHint && track) {
+            // A track that has ended or been muted produces exactly the same flat bar as a
+            // microphone nobody is speaking into, so name the difference instead of leaving the
+            // agent to conclude the meter is broken.
+            if (track.readyState !== 'live') {
+              dom.micMeterHint.textContent = strings.micMeterEnded || 'This microphone has stopped and needs to be reconnected.';
+            } else if (track.muted) {
+              dom.micMeterHint.textContent = strings.micMeterMuted || 'This microphone is delivering no audio right now.';
+            } else {
+              dom.micMeterHint.textContent = (strings.micMeterUsing || 'Using:') + ' ' + (track.label || strings.defaultMicrophone || 'Default microphone');
+            }
+          }
+          micMeterTick();
+        } catch (error) {/* best effort */}
+      }
+
+      // Prefer the soft phone's own captured mic so the meter reflects exactly what a call uses; when idle
+      // and not yet registered, open a dedicated capture with the same constraints (selected device).
+      if (localAudioStream) {
+        attach(localAudioStream);
+      } else {
+        navigator.mediaDevices.getUserMedia(buildAudioConstraints()).then(function (stream) {
+          if (activeTab === 'diagnostics' && !micMeterCtx) {
+            micMeterOwnStream = stream;
+            attach(stream);
+          } else {
+            stream.getTracks().forEach(function (track) {
+              track.stop();
+            });
+          }
+        }).catch(function () {
+          if (dom.micMeterHint) {
+            dom.micMeterHint.textContent = strings.micMeterDenied || 'Allow microphone access to see the input level.';
+          }
+        });
+      }
+    }
+    function micMeterTick() {
+      if (!micMeterAnalyser || !dom.micMeterFill) {
+        return;
+      }
+      micMeterAnalyser.getFloatTimeDomainData(micMeterData);
+      var sum = 0;
+      for (var i = 0; i < micMeterData.length; i++) {
+        sum += micMeterData[i] * micMeterData[i];
+      }
+      var rms = Math.sqrt(sum / micMeterData.length);
+      // Speech RMS is roughly 0..0.3; scale to a 0..100% bar with headroom.
+      var pct = Math.min(100, Math.round(rms * 400));
+      dom.micMeterFill.style.width = pct + '%';
+      dom.micMeterFill.classList.toggle('is-active', pct > 3);
+      micMeterRaf = window.requestAnimationFrame(micMeterTick);
+    }
+    function stopMicMeter() {
+      if (micMeterRaf) {
+        window.cancelAnimationFrame(micMeterRaf);
+        micMeterRaf = null;
+      }
+      if (micMeterCtx) {
+        try {
+          micMeterCtx.close();
+        } catch (error) {/* best effort */}
+        micMeterCtx = null;
+      }
+      micMeterAnalyser = null;
+      micMeterSink = null;
+      micMeterData = null;
+      if (micMeterOwnStream) {
+        micMeterOwnStream.getTracks().forEach(function (track) {
+          track.stop();
+        });
+        micMeterOwnStream = null;
+      }
+      if (dom.micMeterFill) {
+        dom.micMeterFill.style.width = '0%';
+        dom.micMeterFill.classList.remove('is-active');
+      }
+    }
+
+    // ---- Provider warnings (Diagnostics tab) ----
+    // Warnings the provider SDK raises (for example Telnyx "Low local microphone audio detected") are
+    // collected here so they can be seen in the Diagnostics tab and are also forwarded (deduped) to server
+    // telemetry, turning a console-only signal into an alertable one.
+    var providerWarnings = [];
+    function addProviderWarning(warning) {
+      if (!warning) {
+        return;
+      }
+      var text = describeProviderWarning(warning);
+      // A pause-driven warning (the far end quiet for three seconds) is information, not a fault; it is
+      // shown and logged as such so the warnings that do matter are not buried under it.
+      var level = classifyProviderWarning(warning);
+      providerWarnings.unshift(new Date().toLocaleTimeString() + '  ' + (level === 'info' ? '(info) ' : '') + text);
+      if (providerWarnings.length > 20) {
+        providerWarnings.length = 20;
+      }
+
+      // The captured device goes with it: "Low local microphone audio detected" is only actionable next to
+      // the name of the microphone it was detected on.
+      reportDiagnostic(level, 'provider-warning', text, localAudioTrackLabel());
+      renderProviderWarnings();
+    }
+    function renderProviderWarnings() {
+      if (!dom.diagWarnings || !dom.diagWarningsSection) {
+        return;
+      }
+      dom.diagWarningsSection.hidden = providerWarnings.length === 0;
+      dom.diagWarnings.textContent = providerWarnings.join('\n');
+    }
+
+    // Renders the most recent media-quality sample (item 2) into the diagnostics panel so live ICE/codec/RTP
+    // can be watched from any real session.
+    function updateDiagnosticsReadout() {
+      if (!dom.diagReadout) {
+        return;
+      }
+      var sample = lastQualitySample;
+      if (!sample) {
+        dom.diagReadout.textContent = strings.diagNoData || 'No active call to measure.';
+        return;
+      }
+
+      // Read the payload's own key names: this is the sample as sent, so renaming rttMs to
+      // roundTripTimeMs for the server quietly turned the panel's round trip into a dash.
+      dom.diagReadout.textContent = ['MOS ' + (sample.mos ? sample.mos.toFixed(2) : '-'), 'loss ' + (sample.lossPercent != null ? sample.lossPercent.toFixed(1) : '-') + '%', 'jitter ' + (sample.jitterMs != null ? Math.round(sample.jitterMs) : '-') + 'ms', 'rtt ' + (sample.roundTripTimeMs != null ? Math.round(sample.roundTripTimeMs) : '-') + 'ms',
+      // The browser's own playout delay, alongside the network round trip. On a call that feels
+      // delayed these two are the whole story, and only one of them was ever shown.
+      'buffer ' + (sample.jitterBufferMs >= 0 ? Math.round(sample.jitterBufferMs) + 'ms' : 'n/a'),
+      // Read these two together: a shorter buffer is only an improvement while concealment stays low.
+      'conceal ' + (sample.concealmentPercent >= 0 ? sample.concealmentPercent.toFixed(1) + '%' : 'n/a'),
+      // Measured loudness of each direction. "They sound far away" is this number, in
+      // ('in' being what the agent hears) and nothing else.
+      'in ' + (sample.inboundLevel >= 0 ? sample.inboundLevel.toFixed(3) : 'n/a'), 'out ' + (sample.captureProbeLevel >= 0 ? sample.captureProbeLevel.toFixed(3) : 'n/a'),
+      // The capture side, next to everything else: a healthy call the far end cannot hear looks
+      // perfect on every number except this one. Unmeasured reads as "n/a" rather than as zero.
+      'mic ' + (sample.captureReported && sample.microphoneLevel != null ? sample.microphoneLevel.toFixed(3) : 'n/a'), 'bytesSent ' + (sample.bytesSent != null ? sample.bytesSent : '-'), 'bytesRecv ' + (sample.bytesReceived != null ? sample.bytesReceived : '-'), 'codec ' + (sample.codec || '-'), 'send ' + (sample.sendCodec || '-'),
+      // Whether the far end is hearing the soft phone's own capture or a track the provider SDK
+      // acquired on its own. "OTHER" here means every microphone setting on this page is describing
+      // a track nobody is listening to.
+      'sent ' + (sample.sentTrackReported ? sample.sentTrackIsLocalStream ? 'soft-phone stream' : 'OTHER: ' + (sample.sentTrackLabel || '?') : 'n/a'), 'echo ' + (sample.echoStatsReported ? 'erl ' + sample.echoReturnLossDb.toFixed(1) + 'dB erle ' + sample.echoReturnLossEnhancementDb.toFixed(1) + 'dB' : 'n/a'), 'remote loss ' + (sample.remoteFractionLostPercent >= 0 ? sample.remoteFractionLostPercent.toFixed(1) + '%' : 'n/a'), 'ice ' + (sample.localCandidateType || '-') + '/' + (sample.remoteCandidateType || '-'),
+      // The microphone the call is actually on. An agent wearing a headset whose soft phone is
+      // capturing a webcam's far-field array sounds distant and hollow to the far end while
+      // everything they hear is perfect -- and nothing else on this line would show it.
+      'mic device ' + (localAudioTrackLabel() || '-'),
+      // The format that microphone is actually capturing in. A headset that drops to 8 or 16 kHz to
+      // free its microphone sounds thin and far away to the far end while every other number here
+      // stays perfect, so this is the line to read when a call measures well and sounds wrong.
+      'capture ' + (describeCaptureSettings() || '-')].join('  •  ');
+    }
+
+    // Dumps the live SDP + getStats for the current call into the diagnostics output on demand.
+    function dumpDiagnostics() {
+      if (!dom.diagOutput) {
+        return;
+      }
+      if (!browserAudioSession || typeof browserAudioSession.getDiagnostics !== 'function') {
+        dom.diagOutput.textContent = strings.diagUnavailable || 'Diagnostics are not available for this provider.';
+        return;
+      }
+      dom.diagOutput.textContent = strings.diagCollecting || 'Collecting...';
+      browserAudioSession.getDiagnostics().then(function (diag) {
+        if (!diag || !diag.available) {
+          dom.diagOutput.textContent = strings.diagNoData || 'No active call to measure.';
+          return;
+        }
+        var lines = ['=== getStats ==='];
+        (diag.stats || []).forEach(function (stat) {
+          try {
+            lines.push(JSON.stringify(stat));
+          } catch (error) {/* skip unserializable entries */}
+        });
+        lines.push('', '=== local SDP ===', diag.localSdp || '(none)', '', '=== remote SDP ===', diag.remoteSdp || '(none)');
+        dom.diagOutput.textContent = lines.join('\n');
+      }).catch(function () {
+        dom.diagOutput.textContent = strings.diagUnavailable || 'Diagnostics are not available.';
+      });
+    }
+
+    // Runs the echo/loopback audio test: places a call to the configured echo destination and asserts that
+    // inbound audio flows back (bytesReceived > 0), so an agent can verify audio without a second person.
+    function runEchoTest() {
+      if (echoTestActive) {
+        return;
+      }
+      var dest = browserAudioSession && browserAudioSession.echoTestDestination || '';
+      if (dom.diagEchoInput && dom.diagEchoInput.value && dom.diagEchoInput.value.trim()) {
+        dest = dom.diagEchoInput.value.trim();
+      }
+      if (!dest) {
+        setDiagStatus(strings.echoTestNoDestination || 'Configure an audio test destination in the provider settings first.');
+        return;
+      }
+      if (hasBlockingActiveCall()) {
+        setDiagStatus(strings.echoTestBusy || 'End the current call before running the audio test.');
+        return;
+      }
+      echoTestActive = true;
+      setDiagStatus(strings.echoTestRunning || 'Running audio test...');
+      ensureBrowserAudio().then(function (session) {
+        if (!session || !session.canOriginate || typeof session.originate !== 'function') {
+          echoTestActive = false;
+          setDiagStatus(strings.echoTestUnavailable || 'The audio test is not available for this provider.');
+          return;
+        }
+        startEchoTestCall(session, dest);
+      }).catch(function (error) {
+        echoTestActive = false;
+        setDiagStatus((strings.echoTestFailed || 'Audio test failed.') + ' ' + (error && error.message ? error.message : String(error)));
+      });
+    }
+    function startEchoTestCall(session, dest) {
+      var settled = false;
+      var checkTimer = null;
+      function finish(pass, detail) {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        if (checkTimer) {
+          window.clearTimeout(checkTimer);
+        }
+        echoTestActive = false;
+        try {
+          if (controller) {
+            controller.terminate();
+          }
+        } catch (error) {/* best effort */}
+        var label = pass ? strings.echoTestPass || 'Audio test passed' : strings.echoTestFail || 'Audio test failed';
+        setDiagStatus(label + (detail ? ' — ' + detail : ''));
+      }
+      var controller = session.originate(dest, session.outboundCallerId, function (stateName) {
+        if (stateName === 'Connected' && !checkTimer) {
+          setDiagStatus(strings.echoTestMeasuring || 'Connected. Measuring round-trip audio...');
+          // Give media a few seconds to flow, then assert inbound audio is arriving.
+          checkTimer = window.setTimeout(function () {
+            checkEchoResult(session, finish);
+          }, 6000);
+        } else if (stateName === 'Disconnected') {
+          finish(false, strings.echoTestEndedEarly || 'the call ended before audio was confirmed');
+        }
+      });
+      if (!controller) {
+        finish(false, strings.echoTestNoPlace || 'could not place the test call');
+      }
+    }
+    function checkEchoResult(session, finish) {
+      if (typeof session.getDiagnostics !== 'function') {
+        // Connected but we cannot read stats: treat as an inconclusive pass (the call did connect).
+        finish(true, strings.echoTestConnectedNoStats || 'connected (stats unavailable)');
+        return;
+      }
+      session.getDiagnostics().then(function (diag) {
+        var bytes = 0;
+        (diag.stats || []).forEach(function (stat) {
+          if (stat.type === 'inbound-rtp' && (stat.kind === 'audio' || stat.mediaType === 'audio')) {
+            bytes = stat.bytesReceived || 0;
+          }
+        });
+        finish(bytes > 0, 'bytesReceived=' + bytes);
+      }).catch(function () {
+        finish(false, strings.echoTestNoStats || 'could not read audio stats');
+      });
+    }
+
+    // Arm the one-shot expectation that the next inbound provider leg is the Contact Center leg for the offer
+    // (`reservationId`) the agent just accepted elsewhere, so the media adapter answers it automatically rather
+    // than ringing it as an unsolicited incoming call and tearing it down. The arm is for that offer alone.
+    //   acceptedUserId, ownUserId - who the accept names, and this phone's user: a callback or a preview dial never
+    //   rings here, so its accept is how the phone learns of it (see soft-phone/auto-answer.js).
+    function armInboundAutoAnswer(reservationId, acceptedUserId, ownUserId) {
+      // Only for this phone's own offer: the Contact Center layer hears of other agents' accepts too.
+      if (!canArmForAcceptedOffer(reservationId, offerCallIds, acceptedUserId, ownUserId)) {
+        reportDiagnostic('info', 'auto-answer-arm-refused', 'An accept of an offer this phone was never offered did not arm it to answer the next leg.', reservationId || '');
+        return;
+      }
+      armAutoAnswer(inboundAutoAnswer, autoAnswerOfferKey(reservationId), Date.now());
+    }
+
+    // Called by the media adapter for each inbound provider leg to decide whether to auto-answer. Only an arm
+    // decides, once: the offer the agent just accepted, an offer accepted from the docked agent bar, or a call this
+    // phone just placed. "The agent answered" is not one -- it outlived the call it was about and had every later
+    // colleague's call answered on arrival (see soft-phone/auto-answer.js).
+    function consumeInboundAutoAnswer(options) {
+      return shouldAutoAnswerInboundLeg(inboundAutoAnswer, Date.now(), options || {});
+    }
+
+    // A supervisor's engagement: the platform is about to ring this phone with a leg carrying `token`. `info` is
+    // handed back with the leg's events ({ interactionId, agentName, mode }).
+    function armMonitorLeg(token, info) {
+      return armMonitorLegFor(monitorLegArms, token, Date.now(), info);
+    }
+
+    // The engagement is over before its leg arrived, or its leg is to be let go.
+    function disarmMonitorLeg(token) {
+      disarmMonitorLegFor(monitorLegArms, token);
+    }
+
+    // The engagement's mode changed (or it was taken over): the microphone follows whether the supervisor is heard.
+    function setMonitorLegMode(token, mode) {
+      var leg = token ? monitorLegs[token] : null;
+      var arm = token && Object.prototype.hasOwnProperty.call(monitorLegArms, token) ? monitorLegArms[token] : null;
+      var holder = leg || arm;
+      if (!holder) {
+        return false;
+      }
+      holder.info = Object.assign({}, holder.info || {}, {
+        mode: mode
+      });
+      matchMicrophoneToMonitorLegs();
+      return true;
+    }
+    function matchMicrophoneToMonitorLegs() {
+      if (!localAudioStream) {
+        return;
+      }
+      var enabled = microphoneEnabledAfter(null);
+      var tracks = localAudioStream.getAudioTracks();
+      tracks.forEach(function (track) {
+        track.enabled = enabled;
+      });
+
+      // Whether a supervisor was heard is what a live report of "nobody heard me" turns on: said once per change.
+      var modes = Object.keys(monitorLegs).map(function (token) {
+        return monitorLegs[token].info && monitorLegs[token].info.mode || '?';
+      }).join(',');
+      var live = tracks.filter(function (track) {
+        return track.readyState === 'live';
+      }).length;
+      var reported = (enabled ? 'on' : 'off') + '|' + modes + '|' + live;
+      if (modes && reported !== lastReportedMonitorMicrophone) {
+        lastReportedMonitorMicrophone = reported;
+        reportDiagnostic('info', 'monitor-leg-microphone', 'The supervisor\'s microphone is ' + (enabled ? 'on' : 'off') + ' (' + live + ' live track(s)) for mode ' + modes + '.', modes);
+      }
+    }
+    var lastReportedMonitorMicrophone = null;
+    function hangupMonitorLeg(token) {
+      var leg = token ? monitorLegs[token] : null;
+      if (leg && leg.controller) {
+        Promise.resolve(leg.controller.hangup()).catch(function () {});
+      }
+    }
+    function onMonitorLeg(listener) {
+      if (typeof listener === 'function') {
+        monitorLegListeners.push(listener);
+      }
+    }
+    function emitMonitorLeg(event) {
+      monitorLegListeners.forEach(function (listener) {
+        try {
+          listener(event);
+        } catch (error) {/* a listener's failure is its own */}
+      });
+    }
+
+    // Called by the media adapter for an inbound leg: a handler for a monitor leg, or null for any other leg.
+    function claimMonitorLeg(options) {
+      var tag = readMonitorLegTag(options || {});
+      if (!tag) {
+        return null;
+      }
+      return function (controller) {
+        settleMonitorLeg(tag, controller, Date.now());
+      };
+    }
+
+    // The real-time message and the provider's invite race; a leg that arrives first waits a moment for its arm.
+    function settleMonitorLeg(tag, controller, arrivedAt) {
+      // The leg a takeover moves the engagement to: answered in place of the one held, which the platform lets go.
+      if (monitorLegReplaces(monitorLegs, tag)) {
+        if (!controller.isRinging()) {
+          return;
+        }
+        monitorLegs[tag.token] = {
+          controller: controller,
+          legId: tag.legId,
+          info: monitorLegs[tag.token].info
+        };
+        reportDiagnostic('info', 'monitor-leg-replaced', 'The phone answered the leg its engagement moved to.', tag.legId || '');
+        matchMicrophoneToMonitorLegs();
+        controller.answer();
+        return;
+      }
+      var action = monitorLegAction(monitorLegArms, tag, Date.now(), arrivedAt);
+      if (action === 'wait' && controller.isRinging()) {
+        window.setTimeout(function () {
+          settleMonitorLeg(tag, controller, arrivedAt);
+        }, 150);
+        return;
+      }
+      var arm = action === 'answer' ? claimMonitorLegArm(monitorLegArms, tag, Date.now()) : null;
+      if (!arm || !controller.isRinging()) {
+        reportDiagnostic('info', 'monitor-leg-refused', 'A monitor leg this phone did not ask for was hung up.', tag.legId || '');
+        Promise.resolve(controller.hangup()).catch(function () {});
+        return;
+      }
+      monitorLegs[tag.token] = {
+        controller: controller,
+        legId: tag.legId,
+        info: arm.info
+      };
+      reportDiagnostic('info', 'monitor-leg-answered', 'The phone answered the monitor leg it asked for.', tag.legId || '');
+      matchMicrophoneToMonitorLegs();
+      controller.answer();
+      emitMonitorLeg({
+        type: 'answering',
+        token: tag.token,
+        legId: tag.legId,
+        info: arm.info
+      });
+    }
+    function handleMonitorLegState(legId, state) {
+      var token = Object.keys(monitorLegs).find(function (candidate) {
+        return monitorLegs[candidate].legId === legId;
+      });
+      if (!token) {
+        return;
+      }
+      var leg = monitorLegs[token];
+      if (isTelnyxTerminalState(state)) {
+        delete monitorLegs[token];
+        matchMicrophoneToMonitorLegs();
+        emitMonitorLeg({
+          type: 'ended',
+          token: token,
+          legId: legId,
+          info: leg.info
+        });
+      } else if (state === 'active') {
+        matchMicrophoneToMonitorLegs();
+        emitMonitorLeg({
+          type: 'connected',
+          token: token,
+          legId: legId,
+          info: leg.info
+        });
+      }
+    }
+
+    // The offer on screen, as the offer-leg rules need it.
+    function currentOfferDescriptor() {
+      var properties = incomingContext && incomingContext.properties;
+      if (!properties || !properties.reservationId) {
+        return null;
+      }
+      return {
+        reservationId: properties.reservationId,
+        agentLegId: properties.agentLegId || '',
+        accepting: incomingAcceptPending || incomingHandled
+      };
+    }
+
+    // Called by the media adapter for each inbound provider leg. Returns null for a leg that is not an offer's
+    // (the usual auto-answer/ring rules apply), otherwise a function the adapter hands the leg's controller to.
+    function claimOfferLeg(options) {
+      if (typeof readOfferLegTag !== 'function' || typeof classifyOfferLeg !== 'function') {
+        return null;
+      }
+      var decision = classifyOfferLeg(readOfferLegTag(options), currentOfferDescriptor(), acceptedOfferIds, Date.now());
+      if (!decision) {
+        return null;
+      }
+      return function (controller) {
+        if (decision.action === 'answer') {
+          answerOfferLeg(decision.reservationId, controller);
+          return;
+        }
+
+        // One offer rings at a time. A leg still held for an earlier one belongs to an offer that is over.
+        if (heldOfferLeg && heldOfferLeg.reservationId !== decision.reservationId) {
+          hangupHeldOfferLeg(heldOfferLeg.reservationId);
+        }
+        heldOfferLeg = {
+          reservationId: decision.reservationId,
+          legId: controller.legId || '',
+          controller: controller
+        };
+        reportDiagnostic('info', 'offer-leg-held', 'Holding the leg rung for the ringing offer until it is accepted or declined.', decision.reservationId);
+      };
+    }
+    function answerOfferLeg(reservationId, controller) {
+      answeredOfferLeg = {
+        reservationId: reservationId,
+        legId: controller.legId || '',
+        controller: controller
+      };
+      // The leg an accept is waiting for has arrived; nothing else should be auto-answered on its behalf.
+      disarmAutoAnswer(inboundAutoAnswer, autoAnswerOfferKey(reservationId));
+      try {
+        controller.answer();
+      } catch (error) {
+        showError(error && error.message ? error.message : String(error));
+      }
+    }
+
+    // Answers the held leg of an offer the agent accepted. Returns whether this page was holding it.
+    function answerHeldOfferLeg(reservationId) {
+      if (!heldOfferLeg || reservationId && heldOfferLeg.reservationId !== reservationId) {
+        return false;
+      }
+      var held = heldOfferLeg;
+      heldOfferLeg = null;
+      answerOfferLeg(held.reservationId, held.controller);
+      return true;
+    }
+    function hangupHeldOfferLeg(reservationId) {
+      if (!heldOfferLeg || reservationId && heldOfferLeg.reservationId !== reservationId) {
+        return;
+      }
+      var held = heldOfferLeg;
+      heldOfferLeg = null;
+      try {
+        held.controller.hangup();
+      } catch (error) {/* best effort: the platform also hangs it up */}
+    }
+
+    // An accept that failed: the leg answered for it is on a call nobody will join.
+    function hangupAnsweredOfferLeg(reservationId) {
+      hangupHeldOfferLeg(reservationId);
+      if (!answeredOfferLeg || reservationId && answeredOfferLeg.reservationId !== reservationId) {
+        return;
+      }
+      var answered = answeredOfferLeg;
+      answeredOfferLeg = null;
+      try {
+        answered.controller.hangup();
+      } catch (error) {/* best effort */}
+    }
+    function handleOfferLegEnded(legId) {
+      if (heldOfferLeg && (!legId || heldOfferLeg.legId === legId)) {
+        heldOfferLeg = null;
+      }
+      if (answeredOfferLeg && (!legId || answeredOfferLeg.legId === legId)) {
+        answeredOfferLeg = null;
+      }
+    }
+
+    // Something outside this page settled an offer: another page, another device, or the server. Accepted, its
+    // leg is answered here if this page holds it; otherwise it is hung up. Returns whether a held leg was
+    // answered.
+    function settleOfferLeg(reservationId, accepted) {
+      if (!reservationId) {
+        return false;
+      }
+      if (accepted) {
+        if (typeof rememberAcceptedOffer === 'function') {
+          rememberAcceptedOffer(acceptedOfferIds, reservationId, Date.now());
+        }
+        var answered = answerHeldOfferLeg(reservationId);
+        applyHeldBackOfferReport(offerCallIds[reservationId]);
+        return answered;
+      }
+      if (typeof forgetAcceptedOffer === 'function') {
+        forgetAcceptedOffer(acceptedOfferIds, reservationId);
+      }
+
+      // Nobody here took the offer: the leg held for it, or answered for an accept that did not stand, is on a
+      // call this agent is not joining, and an expectation armed for its leg is for an offer that is over.
+      hangupAnsweredOfferLeg(reservationId);
+      disarmAutoAnswer(inboundAutoAnswer, autoAnswerOfferKey(reservationId));
+      releaseUnacceptedOfferCall(reservationId);
+      return false;
+    }
+
+    // The offer's call is not this phone's any more. The server may go on reporting it live -- the caller is still
+    // on the line, waiting for another agent or leaving a voicemail -- and none of that is shown here. A ringing
+    // copy is left to clearIncomingOffer, so the prompt and the call leave together.
+    function releaseUnacceptedOfferCall(reservationId) {
+      var callId = offerCallIds[reservationId];
+      delete offerCallIds[reservationId];
+      if (!callId) {
+        return;
+      }
+      delete heldBackOfferReports[callId];
+      rememberUnacceptedOfferCall(unacceptedOfferCalls, callId, Date.now());
+      releaseShownCall(callId);
+    }
+
+    // Takes a server-tracked call off the phone if it is showing as live.
+    function releaseShownCall(callId) {
+      var shown = callId ? activeCalls[callId] : null;
+      if (shown && !shown.browserOriginated && normalizeState(shown.state) !== 'Ringing') {
+        removeActiveCall(callId);
+        render();
+      }
+    }
+
+    // The offer on screen, as a server report about its call is read against (see soft-phone/offer-report.js).
+    function ringingOfferForReports() {
+      var properties = incomingContext && incomingContext.properties;
+      var reservationId = properties && properties.reservationId;
+      if (!reservationId || !offerCallIds[reservationId]) {
+        return null;
+      }
+      return {
+        callId: offerCallIds[reservationId],
+        reservationId: reservationId,
+        accepting: incomingAcceptPending || incomingHandled
+      };
+    }
+
+    // 'apply', 'keep-ringing' or 'ignore' for a server report of a call's state.
+    function planServerCallReport(call) {
+      if (!call || !call.callId || typeof planOfferCallReport !== 'function') {
+        return 'apply';
+      }
+      var plan = planOfferCallReport({
+        callId: call.callId,
+        stateName: normalizeState(call.state)
+      }, ringingOfferForReports(), acceptedOfferIds, unacceptedOfferCalls, Date.now());
+      if (plan === 'keep-ringing') {
+        if (!heldBackOfferReports[call.callId]) {
+          reportDiagnostic('warning', 'offer-call-live-before-accept', 'The server reported the call of a ringing offer as ' + normalizeState(call.state) + ' before anyone accepted it; the offer keeps ringing.', call.callId);
+        }
+        heldBackOfferReports[call.callId] = call;
+      }
+      return plan;
+    }
+
+    // A report held back while the offer rang, shown once the offer is accepted -- after the Contact Center layer
+    // has cleared the ringing prompt, which it does right after settling the offer.
+    function applyHeldBackOfferReport(callId) {
+      var report = callId ? heldBackOfferReports[callId] : null;
+      if (!report) {
+        return;
+      }
+      delete heldBackOfferReports[callId];
+      Promise.resolve().then(function () {
+        if (planServerCallReport(report) !== 'apply') {
+          return;
+        }
+        upsertActiveCall(report, true);
+        render();
+        notifyBrowserAudio(report);
+        scheduleActiveCallsRefresh();
+      });
+    }
+
+    // The server says an offer this agent was ringing for was answered -- by this page or any other. The pages
+    // that did not answer stop ringing now, rather than when the durable offer update reaches them.
+    function handleOfferAnswered(callId, reservationId) {
+      var answeredHeldLeg = settleOfferLeg(reservationId, true);
+      var ringing = !!(currentCall && isRingingInbound() && (!callId || currentCall.callId === callId));
+
+      // The page that made the accept finishes it itself, and a page another page already told has stopped.
+      if (!ringing || incomingAcceptPending || incomingHandled) {
+        return;
+      }
+
+      // The accept was made elsewhere. When this page is holding no leg for it, the platform may still ring this
+      // browser at accept time, and that leg is expected.
+      if (!answeredHeldLeg) {
+        armInboundAutoAnswer(reservationId);
+      }
+      clearIncomingOffer();
+    }
+
+    // Surface a ringing direct extension call as an Answer/Decline prompt, reusing the incoming-call modal
+    // that Contact Center offers use. There is no server-side offer here (no reservation/accept URL); the
+    // agent's choice acts directly on the provider SDK through the adapter controller.
+    function handleBrowserInboundRing(controller) {
+      if (!controller) {
+        return;
+      }
+
+      // The agent is already on a (non-ringing) call: decline the new leg rather than interrupting, matching
+      // how a server offer is suppressed while a blocking call is active.
+      if (hasBlockingActiveCall()) {
+        try {
+          controller.decline();
+        } catch (e) {/* best effort */}
+        return;
+      }
+
+      // Replace any earlier unanswered ring with this one.
+      if (browserInboundRing && browserInboundRing.callId !== null) {
+        removeActiveCall(browserInboundRing.callId);
+      }
+
+      // A call a colleague is handing over is the platform's own call, under the id of the leg it rings: the
+      // server tracks it and this user's history already has it, so from here on it is a call like a keypad dial.
+      var platform = !!controller.platformCallId;
+      var callId = platform ? controller.platformCallId : 'browser-in-' + Date.now();
+      browserInboundRing = {
+        callId: callId,
+        controller: controller,
+        platform: platform
+      };
+      var call = {
+        callId: callId,
+        state: 'Ringing',
+        direction: 'Inbound',
+        from: platform ? controller.callerNumber || controller.callerName || '' : controller.callerName || controller.callerNumber || '',
+        to: '',
+        startedUtc: new Date().toISOString(),
+        isMuted: false,
+        isOnHold: false,
+        browserOriginated: !platform,
+        browserInbound: !platform,
+        metadata: {}
+      };
+      upsertActiveCall(call, true);
+
+      // A direct extension call carries no Contact Center offer context. A call handed over says who by.
+      incomingContext = platform && controller.transferredBy ? {
+        properties: {
+          queue: (strings.transferredBy || 'Transferred by {0}').replace('{0}', controller.transferredBy)
+        }
+      } : null;
+      incomingHandled = false;
+      incomingAcceptPending = false;
+      setActiveTab('keypad');
+      render();
+    }
+
+    // Answer the ringing browser-inbound call: hand control to the adapter and wire the SDK call's state back
+    // into the active-call UI (Connected/Disconnected), then keep the controller for the in-call buttons.
+    function answerBrowserInboundRing() {
+      if (!browserInboundRing) {
+        return;
+      }
+      var ring = browserInboundRing;
+      browserInboundRing = null;
+      incomingHandled = true;
+      var existing = activeCalls[ring.callId];
+      if (existing) {
+        existing.state = 'Connecting';
+        upsertActiveCall(existing, true);
+      }
+
+      // A call handed over by a colleague is held, muted and transferred through the server, like a keypad dial;
+      // only a colleague's direct call is driven through the SDK here.
+      if (!ring.platform) {
+        browserCallControllers[ring.callId] = ring.controller;
+        watchBrowserCalls();
+      }
+      togglePanel(true);
+      try {
+        ring.controller.answer(function (stateName) {
+          var live = activeCalls[ring.callId];
+          if (!live) {
+            return;
+          }
+          if (!(stateName === 'Connected' && live.isOnHold)) {
+            live.state = stateName;
+          }
+          if (stateName === 'Disconnected') {
+            removeActiveCall(ring.callId);
+            delete browserCallControllers[ring.callId];
+
+            // The answer was for this call; with it over, nothing is being answered.
+            if (!currentCall) {
+              incomingHandled = false;
+            }
+            // Renew the credential now if this (possibly very long) answered call outlasted it (item 8).
+            renewBrowserAudioIfNeeded();
+          } else {
+            upsertActiveCall(live, false);
+          }
+          render();
+        });
+      } catch (error) {
+        showError(error && error.message ? error.message : String(error));
+        removeActiveCall(ring.callId);
+        delete browserCallControllers[ring.callId];
+      }
+      render();
+    }
+
+    // Dismiss the ringing browser-inbound call, optionally declining it on the SDK. Used both when the agent
+    // ignores/sends it to voicemail and when the caller cancels before it is answered.
+    function clearBrowserInboundRing(options) {
+      if (!browserInboundRing) {
+        return;
+      }
+      options = options || {};
+      var ring = browserInboundRing;
+      browserInboundRing = null;
+      if (options.decline) {
+        try {
+          ring.controller.decline();
+        } catch (e) {/* best effort */}
+      }
+      removeActiveCall(ring.callId);
+      incomingHandled = false;
+      render();
+    }
+    function isBrowserInboundRinging() {
+      return !!(browserInboundRing && currentCall && currentCall.callId === browserInboundRing.callId);
+    }
     function showView(name) {
       dom.views.forEach(function (view) {
         show(view, view.getAttribute('data-telephony-view') === name);
       });
+    }
+    function setBodyVisible(visible) {
+      if (dom.body) {
+        dom.body.hidden = !visible;
+      }
     }
     function syncViewHeight() {
       if (!dom.panel || dom.panel.hidden || !dom.keypadView) {
@@ -601,12 +11983,49 @@
       activeTab = dom.tabs.length ? dom.tabs[0].getAttribute('data-telephony-tab') : 'keypad';
     }
     function isTelephonyTab(tab) {
-      return tab === 'keypad' || tab === 'history';
+      return tab === 'keypad' || tab === 'history' || tab === 'voicemail' || tab === 'diagnostics';
     }
     function hasExtensionTabs() {
       return dom.tabs.some(function (tab) {
         return !isTelephonyTab(tab.getAttribute('data-telephony-tab'));
       });
+    }
+
+    // ---- Call timer ----
+    // When each active call was first seen connected (ms since epoch), by call id. Kept outside the call
+    // objects because the server replaces those on every state refresh.
+    var callConnectedAt = {};
+    var callTimerInterval = null;
+    function currentCallElapsedSeconds() {
+      var connectedAt = currentCall && currentCall.callId ? callConnectedAt[currentCall.callId] : null;
+      return typeof connectedAt === 'number' ? (Date.now() - connectedAt) / 1000 : null;
+    }
+
+    // Ticks the header once a second while a call has a running clock; stops the moment none does. Only the
+    // status text is refreshed on each tick -- a full render every second would re-lay out the whole widget.
+    function scheduleCallTimer() {
+      var running = currentCallElapsedSeconds() !== null;
+      if (running && !callTimerInterval) {
+        callTimerInterval = window.setInterval(function () {
+          var elapsed = currentCallElapsedSeconds();
+          if (elapsed === null) {
+            scheduleCallTimer();
+            return;
+          }
+
+          // Reconnect and poor-connection overlays own the header while they last; the clock resumes
+          // with the next render once they clear.
+          var tickState = normalizeState(currentCall && currentCall.state);
+          var tickLive = tickState === 'Connected' || tickState === 'OnHold';
+          if (!hubReconnecting && !mediaReconnecting && !(connectionQualityPoor && tickLive)) {
+            setStatus(formatCallStatus(statusTextForCall(currentCall), elapsed));
+          }
+          tickLineTimers();
+        }, 1000);
+      } else if (!running && callTimerInterval) {
+        window.clearInterval(callTimerInterval);
+        callTimerInterval = null;
+      }
     }
     function statusTextForState(stateName) {
       var key = stateName.charAt(0).toLowerCase() + stateName.slice(1);
@@ -616,17 +12035,145 @@
       if (metadataBoolean(call, 'isConference')) {
         return strings.inConference || 'In conference';
       }
+      if (normalizeState(call && call.state) === 'Connecting' && metadataBoolean(call, 'requiresActiveDialpadDevice')) {
+        return strings.answerOnDialpadDevice || 'Answer on your Dialpad device...';
+      }
       return statusTextForState(normalizeState(call && call.state));
     }
+
+    // A line's label: whom it is with -- the person an extension rings, the number, the caller -- never an id.
+    function lineLabel(call) {
+      return friendlyCallLabel(callDisplayLabel(call), isContactCenterCall(call) ? strings.caller || 'Caller' : strings.participant || 'Participant');
+    }
+
+    // A line's state in the active-call list: Active, On hold, or what the header would say.
+    function lineStateText(call) {
+      if (!metadataBoolean(call, 'isConference') && normalizeState(call && call.state) === 'Connected') {
+        return strings.lineActive || 'Active';
+      }
+      return statusTextForCall(call);
+    }
+    function lineStateKind(call) {
+      var stateName = normalizeState(call && call.state);
+      return stateName === 'OnHold' ? 'held' : stateName === 'Connected' ? 'active' : 'pending';
+    }
+    function lineElapsedText(callId) {
+      var connectedAt = callConnectedAt[callId];
+      return typeof connectedAt === 'number' ? formatElapsed((Date.now() - connectedAt) / 1000) : '';
+    }
+
+    // Ticks each line's clock in place; the list itself is only redrawn when something about it changes.
+    function tickLineTimers() {
+      if (!dom.activeCallsList) {
+        return;
+      }
+      Array.prototype.forEach.call(dom.activeCallsList.querySelectorAll('[data-telephony-line-timer]'), function (timer) {
+        var text = lineElapsedText(timer.getAttribute('data-telephony-line-timer'));
+        if (text) {
+          timer.textContent = text;
+        }
+      });
+    }
+
+    // Never the tenant's own number: the agent's leg of a bridged call is placed from it (see soft-phone/dial-target.js).
     function getPeerNumber(call) {
-      if (!call) {
-        return '';
+      return resolvePeerNumber(call, ownOutboundNumbers());
+    }
+
+    // Reads the phone system's extensions and who each rings, once, and again only when the copy has aged (see
+    // soft-phone/extension-names.js); `force` reads it now. Resolves to the copy, as it stands if the read fails.
+    function loadExtensionDirectory(force) {
+      if (!connection || connection.state !== 'Connected') {
+        return Promise.resolve(extensionDirectory);
       }
-      var inbound = call.direction === 1 || call.direction === 'Inbound';
-      if (inbound) {
-        return call.from || call.to || '';
+      if (extensionDirectoryLoading) {
+        return extensionDirectoryLoading;
       }
-      return call.to || call.from || '';
+      if (!force && !shouldReloadExtensions(extensionDirectory, Date.now())) {
+        return Promise.resolve(extensionDirectory);
+      }
+      extensionDirectoryLoading = connection.invoke('GetExtensionDirectory').then(function (result) {
+        if (result && result.succeeded !== false) {
+          storeExtensionEntries(extensionDirectory, result.entries || [], Date.now(), result.ownExtensions || []);
+          render();
+          if (activeTab === 'history' && lastHistoryItems) {
+            renderHistory(lastHistoryItems);
+          }
+        }
+        return extensionDirectory;
+      }).catch(function () {
+        return extensionDirectory;
+      }).finally(function () {
+        extensionDirectoryLoading = null;
+      });
+      return extensionDirectoryLoading;
+    }
+    function extensionNameFor(number) {
+      return extensionName(extensionDirectory, number);
+    }
+
+    // How a call is named on screen: "Jane Doe · ext 2" for a call to an extension, else the other party's number.
+    function callDisplayLabel(call) {
+      var extension = callExtensionNumber(call);
+      if (extension) {
+        return describeExtension(strings, extensionNameFor(extension), extension, getPeerNumber(call));
+      }
+      return formatPhoneNumber(getPeerNumber(call));
+    }
+
+    // A later report of a call may not carry the extension it was placed to; the first one that did is remembered.
+    function rememberExtensionCall(call) {
+      var extension = callExtensionNumber(call);
+      if (extension) {
+        extensionCallNumbers[call.callId] = extension;
+      } else if (extensionCallNumbers[call.callId]) {
+        call.metadata = call.metadata || {};
+        call.metadata.extensionNumber = extensionCallNumbers[call.callId];
+      }
+    }
+
+    // While an extension is typed on the keypad, the name of whoever it rings, under the field.
+    function renderExtensionHint() {
+      if (!dom.extensionHint) {
+        return;
+      }
+
+      // Only while the agent is entering an extension: not over a call on screen (a held one excepted, since the
+      // agent may be entering an extension to add).
+      var callState = currentCall ? normalizeState(currentCall.state) : 'Idle';
+      var entering = !numberIsCallDisplay && (!isActive(callState) || callState === 'OnHold');
+      var name = extensionMode && entering && dom.number ? extensionNameFor(readExtension(dom.number.value)) : '';
+      dom.extensionHint.textContent = name;
+      dom.extensionHint.hidden = !name;
+      renderKeypadResults(extensionMode && entering && dom.number ? dom.number.value : '', name);
+    }
+
+    // The extensions matching a name typed in extension mode, each dialing its extension when picked (see
+    // soft-phone/keypad-search.js). An extension typed in full whose person the hint already names needs no list.
+    function renderKeypadResults(query, hintedName) {
+      if (!dom.keypadResults) {
+        return;
+      }
+      var matches = keypadExtensionMatches(extensionDirectory, query, strings);
+      if (hintedName && matches.length === 1) {
+        matches = [];
+      }
+      var html = buildKeypadExtensionResultsHtml(matches, strings, escapeHtml);
+
+      // Redrawn only when the list changes, so a render between press and release never swallows a pick.
+      if (keypadResultsHtml !== html) {
+        dom.keypadResults.innerHTML = html;
+        keypadResultsHtml = html;
+      }
+      dom.keypadResults.hidden = !html;
+    }
+    function dialPickedExtension(extension) {
+      if (!extension || activeCommand || currentCall && normalizeState(currentCall.state) !== 'OnHold') {
+        return;
+      }
+      clearNumberInput();
+      showError(null);
+      placeCall(extension, true);
     }
     function metadataBoolean(call, key) {
       if (!call || !call.metadata || !Object.prototype.hasOwnProperty.call(call.metadata, key)) {
@@ -658,14 +12205,134 @@
       }
       delete activeCalls[callId];
       delete conferenceSelections[callId];
+      delete callConnectedAt[callId];
+      rememberAgentHold(agentHolds, callId, false);
+      rememberAgentMute(agentMutes, callId, false);
+      delete extensionCallNumbers[callId];
+      forgetConferenceCall(conferenceMemory, callId);
+      forgetCallParty(callParties, callId);
+      forgetCallContext(callContexts, callId);
       if (currentCall && currentCall.callId === callId) {
-        currentCall = getActiveCalls()[0] || null;
+        currentCall = visibleConferenceCalls(conferenceMemory, getActiveCalls())[0] || getActiveCalls()[0] || null;
       }
+    }
+
+    // The conference this call is in, as calls; [] when it is in none.
+    function conferenceCallsOf(callId) {
+      return conferenceMembers(conferenceMemory, callId).map(function (id) {
+        return activeCalls[id];
+      }).filter(Boolean);
+    }
+
+    // Hangs up one participant of a conference. When the call is also the agent's own way into the conference (the
+    // extension call the conference was made from), the provider hangs up the participant's leg alone and says so:
+    // the call stays up, no longer listed. Once nobody is left, the agent's remaining legs are hung up.
+    function hangupParticipant(callId) {
+      var call = callId ? activeCalls[callId] : null;
+      if (!call || !connection || activeCommand) {
+        return;
+      }
+      var metadata = Object.assign({}, call.metadata || {});
+      metadata.conferenceParticipant = true;
+      activeCommand = 'Hangup';
+      render();
+      connection.invoke('Hangup', {
+        callId: callId,
+        metadata: metadata
+      }).then(function (result) {
+        if (result && result.succeeded !== false && result.call && metadataBoolean(result.call, 'participantLeft')) {
+          showError(null);
+          markParticipantLeft(conferenceMemory, callId);
+          if (currentCall && currentCall.callId === callId) {
+            currentCall = visibleConferenceCalls(conferenceMemory, getActiveCalls())[0] || currentCall;
+          }
+          return;
+        }
+
+        // A provider that cannot end the call no longer knows it: it is cleared here rather than left stuck.
+        if (!applyCommandResult(result)) {
+          removeActiveCall(callId);
+        }
+      }).catch(function (error) {
+        showError(error && error.message ? error.message : String(error));
+        removeActiveCall(callId);
+      }).finally(function () {
+        activeCommand = null;
+        endConferenceWithNobodyLeft();
+        render();
+      });
+    }
+
+    // A conference whose last participant is gone leaves the agent talking to nobody: its legs are hung up.
+    function endConferenceWithNobodyLeft() {
+      var legs = conferenceLegsWithoutParticipants(conferenceMemory, Object.keys(activeCalls)).map(function (id) {
+        return activeCalls[id];
+      }).filter(Boolean);
+      if (legs.length) {
+        hangupAll(legs);
+      }
+    }
+
+    // Whether a hold on a platform call is performed by this browser, which the provider then cannot see.
+    function holdIsPerformedHere() {
+      return isBrowserAudioEnabled() && !!browserAudioSession;
+    }
+
+    // Applies the agent's own hold to a report of a platform call, so a report that the call is connected does
+    // not take the caller off a hold this browser is performing (see soft-phone/agent-hold.js). Browser-placed
+    // calls keep their hold on the call object itself and never pass through the server's reports.
+    function applyAgentHold(call) {
+      if (call.browserOriginated) {
+        return;
+      }
+
+      // A call already up cannot be ringing again: a report that says so is stale (see
+      // resolveReportedState), and is read as the call staying as it was.
+      var reportedStateName = normalizeState(call.state);
+      var previous = activeCalls[call.callId] || callsBeforeLookup && callsBeforeLookup[call.callId];
+      var stateName = previous ? resolveReportedState(normalizeState(previous.state), reportedStateName) : reportedStateName;
+      if (stateName !== reportedStateName) {
+        reportDiagnostic('info', 'stale-call-state-ignored', 'A report that the call is ' + reportedStateName + ' was ignored; the call is already ' + stateName + '.', call.callId);
+        call.state = stateName;
+      }
+      var outcome = reconcileAgentHold(stateName, call.isOnHold, isAgentHeld(agentHolds, call.callId), holdIsPerformedHere());
+      rememberAgentHold(agentHolds, call.callId, outcome.agentHeld);
+      if (outcome.stateName !== stateName) {
+        reportDiagnostic('info', 'agent-hold-kept', 'A report that the call is ' + stateName + ' did not end the hold the agent placed.', call.callId);
+        call.state = outcome.stateName;
+      }
+      call.isOnHold = outcome.isOnHold;
+    }
+
+    // Whether muting a call is done by this browser -- it disables the microphone it sends -- so the provider cannot
+    // see it: a call placed here, or any call whose audio is in the browser.
+    function muteIsPerformedHere(call) {
+      return !!(call && call.browserOriginated) || holdIsPerformedHere();
+    }
+
+    // Applies the agent's own mute to a report of a call, so a report that the call is unmuted -- which is every
+    // report once the provider never saw the mute -- does not turn the agent's microphone back on (see
+    // soft-phone/agent-mute.js).
+    function applyAgentMute(call) {
+      var agentMuted = isAgentMuted(agentMutes, call.callId);
+      var outcome = reconcileAgentMute(call.isMuted, agentMuted, muteIsPerformedHere(call));
+      if (outcome.isMuted !== !!call.isMuted && agentMuted) {
+        reportDiagnostic('info', 'agent-mute-kept', 'A report that the call is unmuted did not end the mute the agent placed.', call.callId);
+      }
+      rememberAgentMute(agentMutes, call.callId, outcome.agentMuted);
+      call.isMuted = outcome.isMuted;
     }
     function upsertActiveCall(call, select) {
       if (!call || !call.callId) {
         return;
       }
+      carryCallParty(callParties, call);
+      applyAgentHold(call);
+      applyAgentMute(call);
+      rememberExtensionCall(call);
+      carryCallContext(callContexts, call);
+      // A provider that keeps no conference on its calls reports a merged call as a call of its own.
+      applyConferenceMemory(conferenceMemory, call);
       var stateName = normalizeState(call.state);
       if (!isActive(stateName)) {
         removeActiveCall(call.callId);
@@ -800,6 +12467,16 @@
       if (typeof layout.activeTab === 'string' && layout.activeTab.length) {
         activeTab = layout.activeTab;
       }
+
+      // Embedded in the standalone /softphone page: the phone always renders open and full-window (the page
+      // CSS pins it), so ignore the saved floating open/position state -- the phone is not a draggable
+      // bubble here, and applying a stored corner position would fight the page layout.
+      if (isEmbedded) {
+        if (dom.panel) {
+          dom.panel.hidden = false;
+        }
+        return;
+      }
       if (layout.open && dom.panel) {
         dom.panel.hidden = false;
       }
@@ -909,22 +12586,71 @@
       render();
       if (tab === 'history') {
         loadHistory();
+      } else if (tab === 'voicemail') {
+        // Voicemails stay unread until the caller opens one (clicks its body); opening the list no longer
+        // marks them all read.
+        loadVoicemails();
+      } else if (tab === 'diagnostics') {
+        // Start the live microphone level meter and refresh the readout while the tab is open.
+        startMicMeter();
+        updateDiagnosticsReadout();
+      }
+
+      // The mic meter only needs to run while the Diagnostics tab is visible.
+      if (tab !== 'diagnostics') {
+        stopMicMeter();
       }
     }
     function renderActiveCalls() {
       if (!dom.activeCalls || !dom.activeCallsList) {
         return;
       }
-      var calls = getActiveCalls();
-      show(dom.activeCalls, calls.length > 1);
-      dom.activeCallsList.innerHTML = calls.map(function (call) {
-        var callId = call.callId || '';
-        var selected = !!conferenceSelections[callId];
-        var current = currentCall && currentCall.callId === callId;
-        var number = formatPhoneNumber(getPeerNumber(call)) || callId;
-        var state = statusTextForCall(call);
-        return '<div class="telephony-soft-phone__active-call' + (current ? ' is-current' : '') + '">' + '<input type="checkbox" class="telephony-soft-phone__active-call-check" data-telephony-conference-call="' + escapeHtml(callId) + '"' + (selected ? ' checked' : '') + ' aria-label="' + escapeHtml(strings.conference || 'Conference selected calls') + '" />' + '<button type="button" class="telephony-soft-phone__active-call-select" data-telephony-call-select="' + escapeHtml(callId) + '">' + '<span class="telephony-soft-phone__active-call-number">' + escapeHtml(number) + '</span>' + '<span class="telephony-soft-phone__active-call-state">' + escapeHtml(state) + '</span>' + '</button></div>';
-      }).join('');
+
+      // A participant who left while their leg carries the agent in the conference is not listed.
+      var calls = visibleConferenceCalls(conferenceMemory, getActiveCalls());
+      // While a call is being added the held call stays in sight, so the agent knows who is waiting.
+      show(dom.activeCalls, calls.length > 1 || !!addingCall || calls.some(function (call) {
+        return metadataBoolean(call, 'isConference');
+      }));
+      var plan = currentMergePlan();
+      var canMergeCalls = has(CAPABILITIES.Merge);
+
+      // A checkbox beside every line, the conference's participants, the other calls, and the Merge action for
+      // the ticked ones (see soft-phone/conference.js).
+      dom.activeCallsList.innerHTML = buildActiveCallsHtml({
+        calls: calls.map(function (call) {
+          var callId = call.callId || '';
+          var lineState = normalizeState(call.state);
+
+          // Each line keeps its own clock from the first moment it was seen connected, current or not.
+          callConnectedAt[callId] = connectedAtFor(lineState === 'Connected' || lineState === 'OnHold', callConnectedAt[callId], Date.now());
+          return {
+            callId: callId,
+            number: lineLabel(call),
+            state: lineStateText(call),
+            stateKind: lineStateKind(call),
+            elapsed: lineElapsedText(callId),
+            current: !!(currentCall && currentCall.callId === callId),
+            // A line still connecting or ringing cannot be merged: nobody has answered it yet.
+            selectable: canMergeCalls && canConferenceCall(call) && (lineState === 'Connected' || lineState === 'OnHold'),
+            unselectableReason: !canConferenceCall(call) ? 'browser-call' : lineState === 'Connected' || lineState === 'OnHold' ? '' : 'not-answered',
+            selected: !!conferenceSelections[callId],
+            inConference: metadataBoolean(call, 'isConference'),
+            canHangup: has(CAPABILITIES.Hangup)
+          };
+        }),
+        merge: {
+          offered: plan.offered && canMergeCalls,
+          canMerge: plan.canMerge,
+          selectedCount: plan.selectedCount,
+          addsToConference: plan.addsToConference,
+          allSelected: plan.allSelected,
+          blocked: canMergeCalls ? plan.blocked : '',
+          numbers: plan.calls.map(function (call) {
+            return lineLabel(call);
+          })
+        }
+      }, strings, escapeHtml);
       Array.prototype.forEach.call(dom.activeCallsList.querySelectorAll('[data-telephony-call-select]'), function (button) {
         button.addEventListener('click', function () {
           var callId = button.getAttribute('data-telephony-call-select');
@@ -946,33 +12672,192 @@
           render();
         });
       });
-    }
-    function renderDirectory() {
-      if (!dom.directory || !dom.directoryList) {
-        return;
-      }
-      show(dom.directory, transferOpen && has(CAPABILITIES.Directory));
-      if (!directoryEntries.length) {
-        dom.directoryList.innerHTML = '<div class="telephony-soft-phone__directory-empty">' + escapeHtml(strings.directoryEmpty || 'No directory entries are available.') + '</div>';
-        return;
-      }
-      dom.directoryList.innerHTML = directoryEntries.map(function (entry) {
-        var destination = entry.destination || entry.extension || entry.phoneNumber || '';
-        var detail = entry.extension || entry.phoneNumber || entry.detail || destination;
-        return '<button type="button" class="telephony-soft-phone__directory-entry" data-telephony-directory-destination="' + escapeHtml(destination) + '">' + '<span class="telephony-soft-phone__directory-name">' + escapeHtml(entry.displayName || destination) + '</span>' + '<span class="telephony-soft-phone__directory-destination">' + escapeHtml(detail) + '</span></button>';
-      }).join('');
-      Array.prototype.forEach.call(dom.directoryList.querySelectorAll('[data-telephony-directory-destination]'), function (button) {
-        button.addEventListener('click', function () {
-          if (dom.transferInput) {
-            dom.transferInput.value = button.getAttribute('data-telephony-directory-destination') || '';
-            dom.transferInput.focus();
+      Array.prototype.forEach.call(dom.activeCallsList.querySelectorAll('[data-telephony-merge-select-all]'), function (checkbox) {
+        checkbox.addEventListener('change', function () {
+          conferenceSelections = {};
+          if (checkbox.checked) {
+            plan.eligibleCallIds.forEach(function (callId) {
+              conferenceSelections[callId] = true;
+            });
           }
+          render();
         });
+      });
+      Array.prototype.forEach.call(dom.activeCallsList.querySelectorAll('[data-telephony-participant-hangup]'), function (button) {
+        button.disabled = !!activeCommand;
+        button.addEventListener('click', function () {
+          hangupParticipant(button.getAttribute('data-telephony-participant-hangup'));
+        });
+      });
+      Array.prototype.forEach.call(dom.activeCallsList.querySelectorAll('[data-telephony-merge-calls]'), function (button) {
+        button.disabled = !!activeCommand || !plan.canMerge;
+        button.addEventListener('click', merge);
+      });
+    }
+
+    // The number field: the current call's label or number, the number being dialed, or the agent's own entry. A
+    // call's label is shown for that call only, so it goes when the call does, even while a held call with nothing
+    // of its own to show is current again (see soft-phone/dial-target.js).
+    function renderNumberField(stateName, active) {
+      if (currentCall && active) {
+        // The dial has materialized into a real call, so the pending-dial state is done. Clear it now rather than
+        // letting its 30s timer keep it alive, or the old number would come back over a fresh entry.
+        clearPendingDial();
+      }
+
+      // Add call gave the agent an empty field for the number to add: the held call's label never comes back over it.
+      if (addingCall) {
+        return;
+      }
+      var field = planNumberField({
+        callId: currentCall ? currentCall.callId : '',
+        stateName: stateName,
+        peerNumber: currentCall ? getPeerNumber(currentCall) : '',
+        // A call to an extension is shown as the person it rings, never run through the number formatter.
+        extensionLabel: currentCall && callExtensionNumber(currentCall) ? callDisplayLabel(currentCall) : '',
+        agentEntered: numberEnteredByAgent,
+        isCallDisplay: numberIsCallDisplay,
+        displayCallId: numberDisplayCallId,
+        pendingDial: pendingDial,
+        pendingDialNumber: pendingDialNumber
+      });
+      if (field.action === 'clear') {
+        clearNumberInput();
+        return;
+      }
+      if (field.action === 'keep') {
+        return;
+      }
+
+      // Never an id in the field: a call whose report names nobody shows nothing rather than its own id.
+      if (!friendlyCallLabel(field.value, '')) {
+        return;
+      }
+      if (field.action === 'label') {
+        dom.number.value = field.value;
+      } else {
+        setNumberDisplay(field.value);
+      }
+      numberIsCallDisplay = true;
+      numberDisplayCallId = field.callId;
+      if (field.action !== 'pending') {
+        numberEnteredByAgent = false;
+      }
+    }
+
+    // Which in-call controls to show for the current call (see soft-phone/in-call-controls.js).
+    function inCallControlsFor(stateName, active, transferOpen, selectedConferenceCallIds) {
+      var visibleCalls = visibleConferenceCalls(conferenceMemory, getActiveCalls());
+      var isConference = metadataBoolean(currentCall, 'isConference');
+      return planInCallControls({
+        active: active,
+        stateName: stateName,
+        muted: !!(currentCall && currentCall.isMuted),
+        // A ringing inbound offer is answered or declined through the incoming panel, so the call controls wait
+        // until that call actually connects rather than sitting beside the answer and decline actions.
+        ringingOffer: isRingingInbound() && !incomingHandled,
+        lineCount: getActiveCalls().length,
+        isConference: isConference,
+        conferenceParties: isConference && currentCall ? conferenceCallsOf(currentCall.callId).filter(function (call) {
+          return visibleCalls.indexOf(call) !== -1;
+        }).length : 0,
+        keypadOpen: keypadOpen,
+        addingCall: !!addingCall,
+        transferOpen: transferOpen,
+        numberIsCallDisplay: numberIsCallDisplay,
+        canHold: has(CAPABILITIES.Hold),
+        canResume: has(CAPABILITIES.Resume),
+        canMute: has(CAPABILITIES.Mute),
+        canHangup: has(CAPABILITIES.Hangup),
+        canDial: has(CAPABILITIES.Dial),
+        canTransfer: transferModes(capabilities).length > 0 && (!isConference || (selectedConferenceCallIds || []).length === 1)
+      });
+    }
+    function applyInCallControls(controls) {
+      var inConference = controls.endAll.kind === 'conference';
+      show(dom.callControls, controls.callControls);
+      show(dom.callOptions, controls.options);
+      show(dom.dialRow, controls.dial || controls.cancelAdd);
+      show(dom.dial, controls.dial);
+      show(dom.addCallCancel, controls.cancelAdd);
+      show(dom.mute, controls.mute.visible && !controls.mute.pressed);
+      show(dom.unmute, controls.mute.visible && controls.mute.pressed);
+      show(dom.hold, controls.hold.visible && !controls.hold.pressed);
+      show(dom.resume, controls.hold.visible && controls.hold.pressed);
+      show(dom.keypadToggle, controls.keypad.visible);
+      show(dom.hangup, controls.hangup.visible);
+      show(dom.transfer, controls.transfer);
+      show(dom.addCall, controls.addCall.visible);
+      show(dom.hangupAll, controls.endAll.visible);
+      if (dom.keypadToggle) {
+        dom.keypadToggle.setAttribute('aria-pressed', controls.keypad.pressed ? 'true' : 'false');
+        dom.keypadToggle.title = controls.keypad.pressed ? strings.hideKeypad || 'Hide the keypad' : strings.showKeypad || 'Show the keypad to send digits';
+      }
+
+      // In a conference the others stay in, Hang up is the agent leaving it.
+      var leave = controls.hangup.kind === 'leave';
+      var hangupText = leave ? strings.leaveConference || 'Leave' : strings.hangup || 'Hang up';
+      if (dom.hangup) {
+        dom.hangup.setAttribute('aria-label', hangupText);
+        dom.hangup.title = leave ? strings.leaveConferenceTitle || 'Leave the conference. The others stay connected.' : hangupText;
+      }
+      if (dom.hangupLabel) {
+        dom.hangupLabel.textContent = hangupText;
+      }
+      var endAllText = inConference ? strings.endForAll || 'End for all' : strings.endAllCalls || 'End all';
+      if (dom.hangupAll) {
+        dom.hangupAll.setAttribute('aria-label', endAllText);
+        dom.hangupAll.title = inConference ? strings.endForAllTitle || 'End the conference for everyone in it' : strings.endAllCallsTitle || 'Hang up every call';
+      }
+      if (dom.hangupAllLabel) {
+        dom.hangupAllLabel.textContent = endAllText;
+      }
+    }
+    function currentMergePlan() {
+      return planMerge(visibleConferenceCalls(conferenceMemory, getActiveCalls()), conferenceSelections, {
+        stateOf: function (call) {
+          return normalizeState(call && call.state);
+        },
+        isConference: function (call) {
+          return metadataBoolean(call, 'isConference');
+        }
       });
     }
     function render() {
       renderIncoming();
       ensureActiveTab();
+      renderExtensionHint();
+
+      // The mic-permission Retry affordance (item 9) is shown whenever a permission/device issue is
+      // outstanding, independent of the connection state below.
+      if (dom.micRetry) {
+        show(dom.micRetry, !!micPermissionState);
+      }
+
+      // The gated Diagnostics tab is shown only when diagnostics are enabled (site setting or ?diag=1).
+      if (dom.diagnosticsTab) {
+        show(dom.diagnosticsTab, diagnosticsEnabled);
+      }
+
+      // The header gear opens the settings overlay, offered only when the soft phone uses browser audio
+      // (the only setting today is audio device selection).
+      if (dom.settingsToggle) {
+        show(dom.settingsToggle, isBrowserAudioEnabled());
+      }
+
+      // The settings overlay replaces the body/footer while open (like the connect panel). The header
+      // stays visible so the gear, back, and close controls remain reachable.
+      if (settingsOpen && isBrowserAudioEnabled()) {
+        show(dom.settingsPanel, true);
+        show(dom.connectPanel, false);
+        show(dom.unavailable, false);
+        setBodyVisible(false);
+        show(dom.footer, false);
+        return;
+      }
+      if (dom.settingsPanel) {
+        show(dom.settingsPanel, false);
+      }
       var stateName = currentCall ? normalizeState(currentCall.state) : 'Idle';
       var active = isActive(stateName);
       var connected = stateName === 'Connected';
@@ -983,14 +12868,25 @@
         return !!activeCalls[callId];
       });
       var currentIsConference = metadataBoolean(currentCall, 'isConference');
-      if (transferOpen && !liveMedia) {
-        transferOpen = false;
-        directoryEntries = [];
+
+      // A transfer being asked for, or a consult under way, keeps the panel up while its consult call connects.
+      var transferBusy = transferPanel.isBusy();
+      if (transferPanel.isOpen() && !liveMedia && !transferBusy) {
+        transferPanel.close();
       }
+      var transferOpen = transferPanel.isOpen();
+
+      // A call being added is over once the held call it was added to is gone, and the keypad closes with the call.
+      if (addingCall && !activeCalls[addingCall.heldCallId]) {
+        addingCall = null;
+      }
+      if (!active) {
+        keypadOpen = false;
+      }
+      var controls = inCallControlsFor(stateName, active, transferOpen, selectedConferenceCallIds);
       renderActiveCalls();
-      renderDirectory();
-      show(dom.transferPanel, transferOpen && liveMedia);
-      show(dom.keypadPanel, !transferOpen);
+      show(dom.transferPanel, transferOpen && (liveMedia || transferBusy));
+      show(dom.keypadPanel, controls.showKeypad);
       if (dom.transfer) {
         var transferButtonText = transferOpen ? strings.keypad || 'Keypad' : strings.transfer || 'Transfer';
         dom.transfer.title = transferButtonText;
@@ -1005,8 +12901,29 @@
       if (dom.toggleIcon) {
         dom.toggleIcon.className = 'fa-solid fa-phone';
       }
+      var canDisconnectProvider = connectionStatusResolved && requiresAuthentication && isConnected && isOAuth2Authentication();
+      show(dom.disconnect, canDisconnectProvider);
+      if (dom.disconnect) {
+        dom.disconnect.disabled = !!authActionPending;
+      }
+      if (dom.connect) {
+        dom.connect.disabled = !!authActionPending;
+      }
       var notAvailable = connectionStatusResolved && !isAvailable;
       var needsConnect = connectionStatusResolved && isAvailable && requiresAuthentication && !isConnected;
+
+      // Pending: the provider and connection status have not resolved yet. Keep the keypad and the
+      // status messages hidden so the widget never briefly flashes the keypad before the real state
+      // (unavailable, connect, or operating) is known.
+      if (!connectionStatusResolved && !active) {
+        show(dom.unavailable, false);
+        show(dom.connectPanel, false);
+        showView(null);
+        setBodyVisible(false);
+        show(dom.footer, hasExtensionTabs());
+        updateTabs();
+        return;
+      }
 
       // Unavailable: no provider configured. Keep contributed tabs reachable.
       if (notAvailable && !active) {
@@ -1014,6 +12931,7 @@
         if (dom.unavailableText) {
           dom.unavailableText.textContent = strings.notConfigured || 'No telephony provider is configured.';
         }
+        setBodyVisible(true);
         show(dom.unavailable, showUnavailable);
         show(dom.connectPanel, false);
         showView(showUnavailable ? null : activeTab);
@@ -1025,58 +12943,96 @@
       }
       show(dom.unavailable, false);
 
-      // Needs a per-user connection (for example OAuth). Keep contributed tabs reachable.
+      // Needs a per-user connection (for example OAuth). Keep contributed tabs reachable. The body is
+      // collapsed while the connect panel is shown so the widget keeps its normal height instead of
+      // stacking the connect panel above an empty, height-reserving body.
       if (needsConnect && !active) {
         var showConnect = isTelephonyTab(activeTab);
         show(dom.connectPanel, showConnect);
+        setBodyVisible(!showConnect);
         showView(showConnect ? null : activeTab);
         show(dom.footer, hasExtensionTabs());
         updateTabs();
         setStatus(strings.notConnected || 'Not connected');
-        syncViewHeight();
+        if (!showConnect) {
+          syncViewHeight();
+        }
         return;
       }
       show(dom.connectPanel, false);
+      setBodyVisible(true);
 
       // Operating state: show the footer tabs and the selected view (keypad or recent calls).
       show(dom.footer, true);
       updateTabs();
       showView(activeTab);
-      setStatus(currentCall ? statusTextForCall(currentCall) : strings.idle || 'Ready');
-      if (dom.number && currentCall && (active || stateName === 'OnHold')) {
-        var peerNumber = getPeerNumber(currentCall);
-        if (peerNumber) {
-          dom.number.value = formatPhoneNumber(peerNumber);
-          numberIsCallDisplay = true;
-        }
-      } else if (dom.number && canDial && numberIsCallDisplay) {
-        dom.number.value = '';
-        numberIsCallDisplay = false;
+      if (currentCall) {
+        clearPendingDial();
       }
-      show(dom.dial, canDial && has(CAPABILITIES.Dial));
-      show(dom.hangup, liveMedia && has(CAPABILITIES.Hangup));
-      show(dom.hangupAll, calls.length > 1 && has(CAPABILITIES.Hangup));
-      show(dom.hold, active && stateName === 'Connected' && has(CAPABILITIES.Hold));
-      show(dom.resume, active && stateName === 'OnHold' && has(CAPABILITIES.Resume));
-      var muted = currentCall && currentCall.isMuted;
-      show(dom.mute, connected && !muted && has(CAPABILITIES.Mute));
-      show(dom.unmute, connected && muted && has(CAPABILITIES.Mute));
-      show(dom.transfer, liveMedia && has(CAPABILITIES.Transfer) && (!currentIsConference || selectedConferenceCallIds.length === 1));
-      show(dom.merge, selectedConferenceCallIds.length >= 2 && has(CAPABILITIES.Merge));
+      var baseStatus = currentCall ? statusTextForCall(currentCall) : pendingDial ? strings.connecting || 'Connecting' : strings.idle || 'Ready';
+
+      // The agent answered -- the phone is registering, accepting, or waiting for the call to connect: say so,
+      // rather than "Ringing" on.
+      if (currentCall && isRingingInbound() && (answerInProgress() || incomingHandled)) {
+        baseStatus = strings.connecting || 'Connecting';
+      }
+
+      // Degraded-state overlays (item 6). A hub or media reconnect takes precedence so the agent sees the
+      // soft phone is trying to recover; a measured poor connection is surfaced while media is live. Both
+      // signals are toggled only on a real state change, so the status does not flap.
+      if (hubReconnecting || mediaReconnecting) {
+        baseStatus = strings.reconnecting || 'Reconnecting...';
+      } else if (connectionQualityPoor && liveMedia) {
+        baseStatus = strings.poorConnection || 'Poor connection';
+      }
+
+      // The elapsed time of the current call, from the first moment it was seen connected. Recorded here,
+      // in the one place every call state passes through -- server-tracked and browser-originated alike --
+      // so the clock is the same however the call was placed.
+      if (currentCall && currentCall.callId) {
+        callConnectedAt[currentCall.callId] = connectedAtFor(stateName === 'Connected' || stateName === 'OnHold', callConnectedAt[currentCall.callId], Date.now());
+      }
+      setStatus(formatCallStatus(baseStatus, currentCallElapsedSeconds()));
+      scheduleCallTimer();
       if (dom.number) {
-        dom.number.disabled = !canDial || !!activeCommand;
+        renderNumberField(stateName, active);
       }
-      [dom.dial, dom.hangup, dom.hold, dom.resume, dom.mute, dom.unmute, dom.transfer, dom.merge, dom.hangupAll].forEach(function (button) {
+
+      // The number field may have just stopped showing the call, which is what offers the dial button on hold.
+      controls = inCallControlsFor(stateName, active, transferOpen, selectedConferenceCallIds);
+      applyInCallControls(controls);
+      if (dom.number) {
+        // While a call is being added the field is the agent's from the start, even before the hold lands.
+        var numberDisabled = !canDial && !addingCall || !!activeCommand || pendingDial && !currentCall;
+        if (telInput && typeof telInput.setDisabled === 'function') {
+          telInput.setDisabled(numberDisabled);
+        } else {
+          dom.number.disabled = numberDisabled;
+        }
+        if (dom.dialModeToggle) {
+          dom.dialModeToggle.disabled = numberDisabled;
+        }
+      }
+      [dom.dial, dom.hangup, dom.hold, dom.resume, dom.mute, dom.unmute, dom.transfer, dom.hangupAll, dom.keypadToggle, dom.addCallCancel].forEach(function (button) {
         if (button) {
           button.disabled = !!activeCommand;
         }
       });
-      if (dom.merge) {
-        dom.merge.disabled = !!activeCommand || selectedConferenceCallIds.length < 2;
+      if (dom.addCall) {
+        // Left focusable while it cannot be used, so its title says why; a press says so too.
+        dom.addCall.disabled = !!activeCommand;
+        dom.addCall.setAttribute('aria-disabled', controls.addCall.disabledReason ? 'true' : 'false');
+        dom.addCall.title = controls.addCall.disabledReason ? strings.addCallNeedsHold || 'This phone cannot hold the call, so another call cannot be added.' : strings.addCallTitle || 'Put this call on hold and dial another number';
       }
       dom.keys.forEach(function (button) {
         button.disabled = active && stateName !== 'Connected' && stateName !== 'OnHold' || !!activeCommand;
       });
+
+      // Add call puts the cursor in the empty field as soon as it takes input (the hold's round trip disables it).
+      if (addingCall && addingCall.focus && dom.number && !dom.number.disabled && !dom.number.hidden) {
+        addingCall.focus = false;
+        dom.number.focus();
+      }
       syncViewHeight();
     }
 
@@ -1091,6 +13047,16 @@
         return false;
       }
       showError(null);
+      if (result.call) {
+        var resultState = normalizeState(result.call.state);
+        var ended = resultState === 'Disconnected' || resultState === 'Failed';
+        upsertActiveCall(result.call, true);
+        render();
+        // A call the command ended is handed to the media as ended, so the leg carrying it is hung up even when
+        // the call now current is another one -- a call placed from the keypad, which the media must not touch.
+        notifyBrowserAudio(ended ? result.call : currentCall);
+        scheduleActiveCallsRefresh();
+      }
       return true;
     }
     function applyActiveCallsLookup(result, expectedRevision) {
@@ -1100,11 +13066,59 @@
       if (expectedRevision !== callStateRevision) {
         return currentCall;
       }
+
+      // Before the browser-placed calls are carried over, drop any the SDK no longer has, and tell the server
+      // which are still up.
+      reconcileShownBrowserCalls();
+      reportBrowserCallsAlive();
       var calls = result.calls || [];
       var previousCallId = currentCall ? currentCall.callId : null;
+
+      // The server does not track browser-originated calls, so a server active-calls lookup must not
+      // erase them; carry them over so a poll during a live browser call cannot blank the UI.
+      var preservedBrowserCalls = Object.keys(activeCalls).map(function (id) {
+        return activeCalls[id];
+      }).filter(function (call) {
+        return call && call.browserOriginated;
+      });
+
+      // The list replaces the calls wholesale, but what the phone already knew about each call still decides how
+      // a stale report about it is read.
+      callsBeforeLookup = activeCalls;
       activeCalls = {};
-      calls.forEach(function (call) {
-        upsertActiveCall(call, false);
+      try {
+        calls.forEach(function (call) {
+          var plan = planServerCallReport(call);
+          if (plan === 'keep-ringing') {
+            // The offer's ringing copy stays as it was; the live report waits for an accept.
+            if (callsBeforeLookup && callsBeforeLookup[call.callId]) {
+              upsertActiveCall(callsBeforeLookup[call.callId], false);
+            }
+            return;
+          }
+          if (plan === 'apply') {
+            upsertActiveCall(call, false);
+          }
+        });
+        preservedBrowserCalls.forEach(function (call) {
+          upsertActiveCall(call, false);
+        });
+      } finally {
+        callsBeforeLookup = null;
+      }
+
+      // A held call the server no longer reports is over; its hold goes with it, and its place in a conference.
+      pruneAgentHolds(agentHolds, Object.keys(activeCalls));
+      pruneAgentMutes(agentMutes, Object.keys(activeCalls));
+      Object.keys(conferenceMemory.members).forEach(function (callId) {
+        if (!activeCalls[callId]) {
+          forgetConferenceCall(conferenceMemory, callId);
+        }
+      });
+      Object.keys(callContexts).forEach(function (callId) {
+        if (!activeCalls[callId]) {
+          forgetCallContext(callContexts, callId);
+        }
       });
       currentCall = previousCallId && activeCalls[previousCallId] ? activeCalls[previousCallId] : getActiveCalls()[0] || null;
       if (!currentCall) {
@@ -1112,9 +13126,12 @@
       }
       render();
       notifyBrowserAudio(currentCall);
-      if (!currentCall) {
-        releaseBrowserAudio();
-      }
+
+      // Do NOT tear down the browser registration when the last call ends: the soft phone stays registered
+      // with the provider so it can receive the next inbound extension/queue call while idle. The
+      // registration is released only on an explicit disconnect/sign-out or when the hub connection closes.
+
+      scheduleActiveCallsRefresh();
       return currentCall;
     }
     function refreshActiveCalls() {
@@ -1125,6 +13142,26 @@
       return connection.invoke('GetActiveCalls').then(function (result) {
         return applyActiveCallsLookup(result, expectedRevision);
       });
+    }
+    function clearActiveCallsRefresh() {
+      if (!activeCallsRefreshTimer) {
+        return;
+      }
+      window.clearTimeout(activeCallsRefreshTimer);
+      activeCallsRefreshTimer = null;
+    }
+    function scheduleActiveCallsRefresh() {
+      clearActiveCallsRefresh();
+      if (!connection || !getActiveCalls().length) {
+        return;
+      }
+      activeCallsRefreshTimer = window.setTimeout(function () {
+        activeCallsRefreshTimer = null;
+        refreshActiveCalls().catch(function (error) {
+          showError(error && error.message ? error.message : String(error));
+          scheduleActiveCallsRefresh();
+        });
+      }, config.activeCallRefreshInterval || 5000);
     }
     function invoke(method, payload) {
       if (!connection) {
@@ -1159,51 +13196,247 @@
         metadata: currentCall && currentCall.metadata ? currentCall.metadata : null
       };
     }
+
+    // The tenant's own outbound caller ids: a call added from the keypad to one of them only rings the tenant back.
+    function ownOutboundNumbers() {
+      return [browserAudioSession && browserAudioSession.outboundCallerId].filter(Boolean);
+    }
     function dial() {
-      var number = dom.number ? normalizeDialNumber(dom.number.value) : '';
-      if (!number) {
-        showError(strings.invalidNumber || 'Enter a phone number to call.');
+      // An extension is read from what was typed -- its digits, or the one person a name narrows the directory to
+      // (see soft-phone/keypad-search.js) -- never from the digits scattered through a name or a call's label.
+      if (extensionMode && !numberIsCallDisplay) {
+        var picked = resolveKeypadExtension(extensionDirectory, dom.number ? dom.number.value : '', strings);
+        if (picked.refused) {
+          reportDiagnostic('info', 'dial-refused', 'A dial was refused: ' + picked.refused + '.', '');
+          showError(picked.refused === 'empty' ? strings.extensionRequired || 'Enter an extension to call.' : transferRefusalMessage(strings, picked.refused));
+          return;
+        }
+        dialPickedExtension(picked.extension);
         return;
       }
-      if (dom.number) {
-        dom.number.value = '';
-        numberIsCallDisplay = false;
-      }
-      invokeWithBrowserAudio('Dial', {
-        to: number
+
+      // Only a number the agent entered. While a call is held the field keeps showing that call's number, and
+      // for a call the platform bridged here that is the tenant's own caller id (see soft-phone/dial-target.js).
+      var target = resolveDialTarget({
+        number: getDialNumber(),
+        isCallDisplay: numberIsCallDisplay,
+        liveCall: hasLiveCall(),
+        ownNumbers: extensionMode ? [] : ownOutboundNumbers(),
+        isExtension: extensionMode,
+        ownExtensions: ownExtensionsOf(extensionDirectory)
       });
+      if (target.refused) {
+        reportDiagnostic('info', 'dial-refused', 'A dial was refused: ' + target.refused + '.', '');
+        showError(target.refused === 'own-extension' ? strings.ownExtension || 'That\'s your own extension.' : target.refused === 'own-number' ? strings.dialOwnNumber || 'That is this phone system\'s own number. Enter the number you want to add to the call.' : strings.dialNumberRequired || 'Enter the number you want to add to the call.');
+        return;
+      }
+      var number = target.number;
+      if (extensionMode) {
+        // An internal extension call requires an extension to be entered.
+        if (!number) {
+          showError(strings.extensionRequired || 'Enter an extension to call.');
+          return;
+        }
+      } else {
+        // A phone call requires a complete, valid number. intl-tel-input validates completeness, so an
+        // incomplete entry (for example "702499") is rejected here instead of being dialed as raw digits.
+        var canValidate = telInput && typeof telInput.isValidNumber === 'function';
+        if (canValidate && !telInput.isValidNumber() || !number) {
+          showError(strings.invalidNumber || 'Enter a valid phone number to call.');
+          return;
+        }
+      }
+      clearNumberInput();
+      numberIsCallDisplay = false;
+      placeCall(number, extensionMode);
     }
-    function dialNumber(number) {
+    function dialNumber(number, isExtension) {
       if (!number) {
         return;
       }
       setActiveTab('keypad');
       togglePanel(true);
-      if (dom.number) {
-        dom.number.value = '';
-        numberIsCallDisplay = false;
+
+      // Align the dial mode with the entry being called back (setDialMode also clears the input), so an
+      // extension entry redials in extension mode and a phone entry in phone mode.
+      setDialMode(!!isExtension);
+      numberIsCallDisplay = false;
+      placeCall(isExtension ? number : normalizeDialNumber(number), !!isExtension);
+    }
+
+    // Add call: the current call goes on hold and the agent gets an empty field for the number to add, with Back to
+    // call to return to it (see soft-phone/in-call-controls.js).
+    function startAddCall() {
+      var call = currentCall;
+      var stateName = call ? normalizeState(call.state) : 'Idle';
+      if (!call || activeCommand || stateName !== 'Connected' && stateName !== 'OnHold') {
+        return;
       }
-      invokeWithBrowserAudio('Dial', {
-        to: normalizeDialNumber(number)
-      });
+      if (stateName === 'Connected' && !has(CAPABILITIES.Hold)) {
+        showError(strings.addCallNeedsHold || 'This phone cannot hold the call, so another call cannot be added.');
+        return;
+      }
+      if (transferPanel.isOpen()) {
+        transferPanel.close();
+      }
+      keypadOpen = false;
+      addingCall = {
+        heldCallId: call.callId,
+        focus: true
+      };
+      clearNumberInput();
+      numberEnteredByAgent = true;
+      showError(null);
+      if (stateName === 'Connected') {
+        setCurrentCallHold(true);
+      }
+      render();
+    }
+
+    // Back to call: the entry goes and the held call is taken off hold.
+    function cancelAddCall() {
+      var held = addingCall ? activeCalls[addingCall.heldCallId] : null;
+      addingCall = null;
+      clearNumberInput();
+      showError(null);
+      if (held) {
+        selectCurrentCall(held);
+        if (normalizeState(held.state) === 'OnHold') {
+          setCurrentCallHold(false);
+        }
+      }
+      render();
     }
     function hangup() {
-      var call = currentCallReference();
-      if (call) {
-        invoke('Hangup', call);
+      var controller = currentBrowserController();
+      if (controller) {
+        Promise.resolve(controller.terminate()).catch(function () {});
+        return;
       }
+      var call = currentCallReference();
+      if (!call) {
+        return;
+      }
+
+      // The agent hanging up a conference leaves it, and the others stay connected; with only one other party left,
+      // it ends (see soft-phone/conference.js).
+      if (conferenceCallsOf(call.callId).length > 1) {
+        leaveConference(call.callId);
+        return;
+      }
+      var callId = call.callId;
+
+      // If the provider cannot end the call -- for example a stale call restored from the server that the
+      // provider no longer knows about -- clear it locally so the soft phone recovers instead of staying
+      // stuck "in a call", which blocks the keypad (it sends DTMF) and the dialer.
+      invoke('Hangup', call).then(function (result) {
+        if (result && result.succeeded === false) {
+          removeActiveCall(callId);
+          render();
+        }
+      }).catch(function () {
+        removeActiveCall(callId);
+        render();
+      });
     }
-    function hangupAll() {
+
+    // A Contact Center call names its interaction; its caller is never hung up by the agent leaving a conference.
+    function isContactCenterCall(call) {
+      var interactionId = call && call.metadata ? call.metadata.interactionId : null;
+      return interactionId != null && String(interactionId) !== '';
+    }
+
+    // Takes the agent out of the conference `callId` is in: each of the agent's calls in it is hung up flagged as
+    // leaving, so the provider hangs up the agent's own leg alone and the others stay connected. A Contact Center
+    // caller's call stays on the phone as a line of its own.
+    function leaveConference(callId) {
+      var plan = planConferenceHangup(conferenceMemory, getActiveCalls(), callId, {
+        isContactCenterCall: isContactCenterCall
+      });
+      var callsOf = function (ids) {
+        return ids.map(function (id) {
+          return activeCalls[id];
+        }).filter(Boolean);
+      };
+      if (plan.action === 'end') {
+        return hangupAll(callsOf(plan.endCallIds));
+      }
+      if (plan.action !== 'leave') {
+        return Promise.resolve(null);
+      }
+      plan.keepCallIds.forEach(function (id) {
+        forgetConferenceCall(conferenceMemory, id);
+      });
+      return hangupAll(callsOf(plan.leaveCallIds), {
+        leave: true
+      });
+    }
+
+    // Disconnect all: ends every call, and a conference for everyone in it, once the agent confirms -- the others lose
+    // the call too, so it is asked inside the phone first, starting on the answer that keeps them talking.
+    function endAllCalls() {
       var calls = getActiveCalls();
-      if (!connection || !calls.length || activeCommand) {
+      if (!calls.length || activeCommand) {
+        return Promise.resolve(false);
+      }
+      var conference = currentCall ? planConferenceEnd(conferenceMemory, calls, currentCall.callId) : null;
+      var message = conference ? String(strings.endForAllConfirm || 'End the call for everyone? All {0} participants will be disconnected.').replace('{0}', conference.partyCount) : String(strings.endAllCallsConfirm || 'Hang up all {0} calls?').replace('{0}', calls.length);
+      return showInAppConfirm(dom.panel, {
+        message: message,
+        confirmLabel: conference ? strings.endForAll || 'End for all' : strings.endAllCalls || 'End all',
+        cancelLabel: strings.keepTalking || 'Keep talking',
+        before: dom.body,
+        focusCancel: true
+      }).then(function (confirmed) {
+        if (!confirmed) {
+          return false;
+        }
+        return hangupAll(getActiveCalls(), conference ? {
+          endConference: conference
+        } : null).then(function () {
+          return true;
+        });
+      });
+    }
+
+    // Hangs up every call, or only the calls given (a conference's).
+    //   flags - { leave } to take the agent out of a conference, leaving its parties connected; { endConference } to
+    //           end that conference for everyone first (see planConferenceEnd).
+    function hangupAll(only, flags) {
+      flags = flags || {};
+      var calls = Array.isArray(only) ? only : getActiveCalls();
+
+      // End browser-originated calls directly on their SIP sessions; they have no server-side call.
+      calls.filter(function (call) {
+        return call.browserOriginated;
+      }).forEach(function (call) {
+        var controller = browserCallControllers[call.callId];
+        if (controller) {
+          Promise.resolve(controller.terminate()).catch(function () {});
+        }
+      });
+      var serverCalls = calls.filter(function (call) {
+        return !call.browserOriginated;
+      });
+      if (!connection || !serverCalls.length || activeCommand) {
         return Promise.resolve(null);
       }
       activeCommand = 'HangupAll';
       render();
-      return Promise.all(calls.map(function (call) {
+      return Promise.all(serverCalls.map(function (call) {
+        var metadata = call.metadata || null;
+        if (flags.leave || flags.endConference && flags.endConference.primaryCallId === call.callId) {
+          metadata = Object.assign({}, call.metadata || {});
+          if (flags.leave) {
+            metadata.conferenceLeave = true;
+          } else {
+            metadata.conferenceEnd = true;
+            metadata.conferenceName = flags.endConference.conferenceName || metadata.conferenceName || '';
+          }
+        }
         return connection.invoke('Hangup', {
           callId: call.callId,
-          metadata: call.metadata || null
+          metadata: metadata
         });
       })).then(function (results) {
         results.forEach(applyCommandResult);
@@ -1216,126 +13449,311 @@
         render();
       });
     }
-    function hold() {
-      var call = currentCallReference();
-      if (call) {
-        invoke('Hold', call);
+
+    // Holds or resumes the current call. A call the server tracks always goes through the hub -- the server
+    // records the hold time, and its answer drives the hold audio on the leg carrying the call -- and a call this
+    // browser placed itself is held on its own session. Hold and resume share this path, so the two can never
+    // take different routes for the same call (see holdCommandRoute in soft-phone/agent-hold.js).
+    function setCurrentCallHold(onHold) {
+      var controller = currentBrowserController();
+      var route = holdCommandRoute(currentCall, !!controller);
+      if (route === 'local') {
+        Promise.resolve(controller.setHold(onHold)).catch(function () {});
+        currentCall.isOnHold = onHold;
+        currentCall.state = onHold ? 'OnHold' : 'Connected';
+        upsertActiveCall(currentCall, true);
+        render();
+        return;
       }
+      var call = route === 'hub' ? currentCallReference() : null;
+      if (!call) {
+        return;
+      }
+      if (onHold) {
+        // Remembered before the round trip, so a report that crosses it cannot take the caller off hold; a
+        // hold the server refused is forgotten again.
+        rememberAgentHold(agentHolds, call.callId, true);
+        settleHoldCommand(invoke('Hold', call), call.callId, false);
+        return;
+      }
+
+      // Only the agent ends their own hold. A resume the server refused leaves the call held.
+      var wasHeld = isAgentHeld(agentHolds, call.callId);
+      rememberAgentHold(agentHolds, call.callId, false);
+      settleHoldCommand(invoke('Resume', call), call.callId, wasHeld);
+    }
+    function hold() {
+      setCurrentCallHold(true);
+    }
+
+    // Undoes the remembered hold change when the command did not go through.
+    function settleHoldCommand(pending, callId, heldIfRefused) {
+      Promise.resolve(pending).then(function (result) {
+        if (!result || result.succeeded === false) {
+          rememberAgentHold(agentHolds, callId, heldIfRefused);
+        }
+      }, function () {
+        rememberAgentHold(agentHolds, callId, heldIfRefused);
+      });
     }
     function resume() {
+      setCurrentCallHold(false);
+    }
+
+    // Mutes or unmutes the agent on the call shown -- and, in a conference, on every call of it, since the agent speaks
+    // into all of them through one microphone. Where the mute happens in this browser it is remembered and applied
+    // before the server is told, so no report that crosses the command, or follows it, can undo it
+    // (see soft-phone/agent-mute.js).
+    function setCurrentCallMute(muted) {
+      if (!currentCall) {
+        return;
+      }
+      var controller = currentBrowserController();
+      var local = !!controller || muteIsPerformedHere(currentCall);
+      if (local) {
+        muteGroupCallIds(getActiveCalls(), currentCall).forEach(function (callId) {
+          rememberAgentMute(agentMutes, callId, muted);
+          if (activeCalls[callId]) {
+            activeCalls[callId].isMuted = muted;
+          }
+        });
+        currentCall.isMuted = muted;
+      }
+      if (controller) {
+        controller.setMute(muted);
+        render();
+        return;
+      }
+      if (local) {
+        render();
+        notifyBrowserAudio(currentCall);
+      }
       var call = currentCallReference();
       if (call) {
-        invoke('Resume', call);
+        invoke(muted ? 'Mute' : 'Unmute', call).catch(function () {});
       }
     }
     function mute() {
-      var call = currentCallReference();
-      if (call) {
-        invoke('Mute', call);
-      }
+      setCurrentCallMute(true);
     }
     function unmute() {
-      var call = currentCallReference();
-      if (call) {
-        invoke('Unmute', call);
-      }
+      setCurrentCallMute(false);
     }
     function transfer() {
       var id = currentCallId();
       if (!id) {
         return;
       }
-      if (transferOpen) {
-        cancelTransfer();
+      if (transferPanel.isOpen()) {
+        transferPanel.close();
         return;
       }
-      if (!has(CAPABILITIES.Directory) || !dom.transferPanel) {
-        var destination = window.prompt(strings.transferPrompt || 'Transfer to number');
-        if (destination) {
-          invoke('Transfer', {
-            callId: id,
-            to: destination,
-            mode: 0
-          });
-        }
-        return;
-      }
-      transferOpen = true;
-      directoryEntries = [];
-      if (dom.transferInput) {
-        dom.transferInput.value = '';
-      }
-      render();
-      connection.invoke('GetDirectory').then(function (result) {
-        if (!result || result.succeeded === false) {
-          showError(result && result.error ? result.error : 'Unable to load the provider directory.');
-          return;
-        }
-        directoryEntries = result.entries || [];
-        render();
-      }).catch(function (error) {
-        showError(error && error.message ? error.message : String(error));
+
+      // The soft phone picks the target in its own panel, never the browser's prompt (see soft-phone/transfer-panel.js).
+      transferPanel.open({
+        callLabel: callDisplayLabel(currentCall)
       });
     }
-    function cancelTransfer() {
-      transferOpen = false;
-      directoryEntries = [];
-      render();
+
+    // A transfer the provider carries out itself. On a provider that connects calls on the server, the destination is
+    // rung while the caller waits on this call's hold tone, and the panel follows that as a consult -- warm, on a
+    // consult call the provider rings back to this phone; blind, until the destination answers or does not (see
+    // soft-phone/bridged-transfer.js). Any other provider hands the call over at once, as before.
+    function transferThroughProvider(target, mode, modeName) {
+      var callId = currentCallId();
+      var warm = modeName === 'warm';
+      var hold = shouldHoldBeforeTransfer({
+        bridgedDial: has(CAPABILITIES.BridgedDial),
+        call: currentCall,
+        serviceCall: false
+      }) ? holdCallForTransfer() : Promise.resolve(null);
+      return hold.then(function () {
+        // A consult rings this phone back, on a leg it answers without ringing, like a keypad dial.
+        if (warm) {
+          armAutoAnswer(inboundAutoAnswer, EXTENSION_CALL_KEY, Date.now());
+        }
+        return invoke('Transfer', providerTransferRequest(callId, target, mode, browserAudioCredentialId(browserAudioSession)));
+      }).then(function (result) {
+        var consult = result && result.succeeded !== false ? consultFromCall(result.call) : null;
+        if (warm && !consult) {
+          disarmAutoAnswer(inboundAutoAnswer, EXTENSION_CALL_KEY);
+        }
+        return consult ? {
+          succeeded: true,
+          consult: consult
+        } : result;
+      });
     }
-    function confirmTransfer() {
-      var id = currentCallId();
-      var destination = dom.transferInput ? String(dom.transferInput.value || '').trim() : '';
-      if (!id || !destination) {
-        showError(strings.invalidNumber || 'Enter a phone number to call.');
+    function holdCallForTransfer() {
+      var call = currentCallReference();
+      if (!call) {
+        return Promise.resolve(null);
+      }
+      rememberAgentHold(agentHolds, call.callId, true);
+      var pending = invoke('Hold', call);
+      settleHoldCommand(pending, call.callId, false);
+      return pending;
+    }
+
+    // Follows or finishes a transfer the provider is carrying out. Sent straight to the hub: the panel polls while
+    // the destination rings, and a poll must neither wait on nor block the agent's own commands.
+    function providerConsultCommand(method, consult) {
+      if (!connection || !consult || !consult.callId) {
+        return Promise.resolve(null);
+      }
+      return connection.invoke(method, consultRequest(consult)).then(function (result) {
+        return consultCommandResult(result, consult);
+      }).catch(function (error) {
+        return {
+          succeeded: false,
+          error: error && error.message ? error.message : String(error)
+        };
+      });
+    }
+
+    // The transfer was called off: the call held for it comes off hold, on the leg that carries it.
+    function resumeCallAfterTransfer(callId) {
+      var call = callId ? activeCalls[callId] : null;
+      if (!call || !call.isOnHold && !isAgentHeld(agentHolds, callId)) {
         return;
       }
-      invoke('Transfer', {
-        callId: id,
-        to: destination,
-        mode: 0
+      rememberAgentHold(agentHolds, callId, false);
+      invoke('Resume', {
+        callId: callId,
+        metadata: call.metadata || null
       }).then(function (result) {
-        if (result && result.succeeded !== false) {
-          cancelTransfer();
+        if (result && result.succeeded !== false && activeCalls[callId]) {
+          notifyBrowserAudio(activeCalls[callId]);
         }
+      }).catch(function () {});
+    }
+
+    // The provider's directory entries for the transfer panel, or null when the provider has no directory.
+    // A provider without a directory of its own is offered the phone system's extensions, each by the name of the
+    // person it rings; with none of those either, there is no directory.
+    function loadTransferDirectory() {
+      if (!connection) {
+        return null;
+      }
+      if (!has(CAPABILITIES.Directory)) {
+        return loadExtensionDirectory(false).then(function (directory) {
+          return extensionDirectoryEntries(directory, strings);
+        });
+      }
+      return connection.invoke('GetDirectory').then(function (result) {
+        if (!result || result.succeeded === false) {
+          showError(result && result.error ? result.error : 'Unable to load the provider directory.');
+          return [];
+        }
+        return result.entries || [];
+      }).catch(function (error) {
+        showError(error && error.message ? error.message : String(error));
+        return [];
       });
     }
     function merge() {
-      var callIds = Object.keys(conferenceSelections).filter(function (callId) {
-        return !!activeCalls[callId];
-      });
-      if (callIds.length < 2) {
+      var plan = currentMergePlan();
+      var callIds = plan.callIds;
+
+      // Calls already in one conference: merging them again changes nothing, and the provider would refuse it.
+      if (isOneConference(conferenceMemory, callIds)) {
+        showError(null);
+        return;
+      }
+      if (!plan.canMerge || callIds.length < 2) {
         showError(strings.selectCallsToMerge || 'Select at least two calls to conference.');
         return;
       }
-      invoke('Merge', {
+
+      // Adding to a running conference names it, so the provider joins the new calls to it rather than making a
+      // second one from its first participant.
+      var request = {
         callIds: callIds
-      }).then(function (result) {
-        if (result && result.succeeded !== false) {
-          callIds.forEach(function (callId) {
-            var call = activeCalls[callId];
-            if (!call) {
-              return;
-            }
-            call.state = 'Connected';
-            call.isOnHold = false;
-            call.metadata = call.metadata || {};
-            call.metadata.isConference = true;
-            call.metadata.participantCount = callIds.length;
-          });
-          conferenceSelections = {};
-          render();
+      };
+      // The call the agent is talking on as they merge: the conference carries on muted or not as it was.
+      var talkingCallId = currentCallId();
+      if (plan.addsToConference && plan.conferenceName) {
+        request.conferenceName = plan.conferenceName;
+      }
+      invoke('Merge', request).then(function (result) {
+        if (!result || result.succeeded === false) {
+          // The provider may have joined some of the calls before it refused the rest; the calls' own state is
+          // read again rather than guessed. The refusal itself is on the error line.
+          scheduleActiveCallsRefresh();
+          return;
         }
+        var conference = conferenceAfterMerge(getActiveCalls(), plan, result, {
+          isConference: function (call) {
+            return metadataBoolean(call, 'isConference');
+          }
+        });
+
+        // Remembered, so the next report of these calls -- which may say nothing of a conference -- keeps them one.
+        rememberConference(conferenceMemory, conference);
+        conference.callIds.forEach(function (callId) {
+          var call = activeCalls[callId];
+          if (!call) {
+            return;
+          }
+          call.state = 'Connected';
+          call.isOnHold = false;
+          // Joining the conference is the agent taking these calls off hold.
+          rememberAgentHold(agentHolds, callId, false);
+          call.metadata = call.metadata || {};
+          call.metadata.isConference = true;
+          call.metadata.participantCount = conference.callIds.length;
+          call.metadata.conferencePrimaryCallId = conference.primaryCallId;
+          call.metadata.conferenceName = conference.conferenceName;
+        });
+
+        // One microphone speaks into every call of the conference, so they are all muted or none is; a mute
+        // performed here is remembered for each, so a report about any one of them cannot undo it.
+        if (holdIsPerformedHere()) {
+          var muted = conferenceMuted(conference.callIds, agentMutes, talkingCallId);
+          conference.callIds.forEach(function (callId) {
+            rememberAgentMute(agentMutes, callId, muted);
+            if (activeCalls[callId]) {
+              activeCalls[callId].isMuted = muted;
+            }
+          });
+        }
+
+        // The agent hears the conference on these calls' legs: whichever was held here is taken off hold -- its
+        // comfort tone stopped and the far end's audio unmuted -- on the leg that carries it.
+        conference.callIds.forEach(function (callId) {
+          if (activeCalls[callId]) {
+            notifyBrowserAudio(activeCalls[callId]);
+          }
+        });
+        conferenceSelections = {};
+        render();
       });
     }
     function pressKey(value) {
       var stateName = currentCall ? normalizeState(currentCall.state) : 'Idle';
-      if (stateName === 'Connected' && has(CAPABILITIES.SendDigits)) {
+
+      // While a call is being added the keypad enters the number to add, never digits for the call being held.
+      if (stateName === 'Connected' && !addingCall && has(CAPABILITIES.SendDigits)) {
         invoke('SendDigits', {
           callId: currentCallId(),
           digits: value
         });
-      } else if ((!isActive(stateName) || stateName === 'OnHold') && dom.number) {
-        dom.number.value = formatPhoneNumber(dom.number.value + value);
+      } else if ((!isActive(stateName) || stateName === 'OnHold' || addingCall) && dom.number) {
+        // If the field is currently showing a call/pending number (not something the user typed),
+        // start a fresh entry so the keypad digit is not appended to -- or immediately overwritten by
+        // a background render with -- the previous number. clearNumberInput also drops that state.
+        if (numberIsCallDisplay) {
+          clearNumberInput();
+        }
+        dom.number.value = dom.number.value + value;
+
+        // The number field is enhanced by intl-tel-input, which tracks the number/country from 'input'
+        // events. Setting .value directly (a keypad press) bypasses that, leaving its internal state
+        // stale so getNumber() returns a wrong E.164 -- the dialed number then differs from what is
+        // visible. Fire an input event so intl-tel-input re-reads the current value.
+        dom.number.dispatchEvent(new Event('input', {
+          bubbles: true
+        }));
       }
     }
     function togglePanel(open) {
@@ -1380,8 +13798,26 @@
     }
     function renderIncoming() {
       var visible = isRingingInbound() && !incomingHandled;
-      show(dom.incoming, visible);
+
+      // A desktop host that confirmed its own notification for this call takes over the prompt (and, if it
+      // rings, the ringtone). Only what is shown changes: the offer state and its expiry timer below still
+      // follow the ringing call, so the modal can come back at any moment.
+      hostDelegation.sync(visible && hostDelegation.isHostReady() ? buildHostIncomingMessage() : null, !!(dom.incoming && !dom.incoming.hidden));
+      var presentation = hostDelegation.presentation(visible);
+      show(dom.incoming, presentation.showModal);
       rootElement.classList.toggle('telephony-soft-phone--incoming', visible);
+
+      // Ring while an inbound offer is pending answer (covers both Contact Center offers and direct
+      // extension rings, since both surface as a ringing inbound call). start()/stop() are idempotent, so
+      // calling them on every render is safe; the ring stops the moment the call is answered, declined,
+      // ignored, times out, or the caller hangs up. Answering a Contact Center offer waits on the server
+      // to accept it before the call connects, and the agent heard the ringtone carry on through that
+      // round trip after clicking Answer, so a pending accept silences it too.
+      if (shouldRingForOffer(visible, answerInProgress()) && presentation.ring) {
+        ringtone.start();
+      } else {
+        ringtone.stop();
+      }
       if (!visible) {
         clearIncomingExpiryTimer();
         if (!isRingingInbound()) {
@@ -1397,9 +13833,155 @@
         dom.incomingQueue.textContent = queueText || '';
         dom.incomingQueue.hidden = !queueText;
       }
-      show(dom.incomingVoicemail, has(CAPABILITIES.Voicemail));
+
+      // A call a colleague is handing over goes back to them when it is declined; it has no voicemail of its own.
+      show(dom.incomingVoicemail, has(CAPABILITIES.Voicemail) && !(browserInboundRing && browserInboundRing.platform));
+
+      // While a Contact Center offer is being accepted the accept is a server round-trip; disable the
+      // offer controls so the agent gets instant feedback and cannot act on the offer again mid-flight.
+      setIncomingControlsBusy(answerInProgress() || isOfferActionPending(offerAction, currentOfferKey()));
       renderIncomingCards();
       scheduleIncomingExpiry();
+    }
+
+    // The offer on screen, as the offer-action rules name it.
+    function currentOfferKey() {
+      var properties = incomingContext && incomingContext.properties;
+      return {
+        reservationId: properties && properties.reservationId ? String(properties.reservationId) : ''
+      };
+    }
+
+    // Takes a click on an offer's button as the agent's, once: false for a repeat, or a click that landed on the next
+    // offer a moment after acting on the last. Taken, the offer's buttons disable until the request fails.
+    function beginOfferAction() {
+      var offer = currentOfferKey();
+      var now = Date.now();
+      if (offerActionClick(offerAction, offer, now) === 'ignore') {
+        return false;
+      }
+      offerAction = {
+        reservationId: offer.reservationId,
+        at: now
+      };
+      render();
+      return true;
+    }
+
+    // The Contact Center answered a decline or a send-to-voicemail for `reservationId`. It closes that offer only:
+    // the next offer may already be on screen, and must not be cleared -- or told it failed -- by the last one's
+    // answer. A failure gives the buttons back so the agent can try again.
+    function finishOfferAction(reservationId, callId, result) {
+      var stillShown = currentOfferKey().reservationId === String(reservationId || '');
+      if (!result || result.succeeded === false) {
+        if (stillShown) {
+          showError(strings.offerUnavailable || 'This call is no longer available.');
+          offerAction = null;
+          render();
+        }
+        return;
+      }
+      if (stillShown) {
+        clearIncomingOffer();
+        return;
+      }
+
+      // Replaced meanwhile: only the declined offer's own ringing call goes.
+      var declined = callId ? activeCalls[callId] : null;
+      if (declined && normalizeState(declined.state) === 'Ringing' && (!currentCall || currentCall.callId !== callId)) {
+        removeActiveCall(callId);
+        render();
+      }
+    }
+
+    // From the agent's first click on Answer, including the registration that click may be waiting on.
+    function answerInProgress() {
+      return isAnswerInProgress({
+        acceptPending: incomingAcceptPending,
+        registeringForAnswer: answerRegistering
+      });
+    }
+
+    // The ringing offer as the desktop host shows it: the same caller, queue, and matched records as the modal.
+    function buildHostIncomingMessage() {
+      var context = incomingContext || {};
+      var cards = Array.isArray(context.cards) ? context.cards : [];
+      return buildIncomingCallMessage({
+        callId: currentCallId(),
+        from: getPeerNumber(currentCall) || '',
+        queue: context.properties ? context.properties.queue || '' : '',
+        heading: cards.length ? context.heading || strings.matchedRecords || '' : '',
+        canVoicemail: has(CAPABILITIES.Voicemail),
+        cards: cards.map(function (card) {
+          var labels = incomingCardActionLabels(card, strings);
+          return {
+            id: card.id,
+            title: card.title,
+            subtitle: card.subtitle,
+            description: card.description,
+            badges: card.badges,
+            url: card.url,
+            links: card.links,
+            answerAndOpenText: labels.answerAndOpen,
+            openText: labels.open
+          };
+        })
+      }, window.location.href);
+    }
+
+    // The agent chose Answer, Decline, or Voicemail in the desktop host's notification. The action runs here,
+    // through the same paths as the modal's buttons, because the page holds the call's audio and the offer.
+    function onHostMessage(event) {
+      var choice = hostDelegation.receive(event ? event.data : null);
+      if (!choice) {
+        return;
+      }
+      var handled = false;
+      if (choice.matchesOffer && currentCallId() === choice.callId && isRingingInbound() && !incomingHandled) {
+        if (choice.action === 'answer') {
+          handled = true;
+          answerIncoming(null);
+        } else if (choice.action === 'decline') {
+          handled = true;
+          ignoreIncoming();
+        } else if (has(CAPABILITIES.Voicemail)) {
+          handled = true;
+          voicemailIncoming();
+        }
+      } else if (choice.action === 'answer') {
+        // The host rang for a call this page has not surfaced yet (the host's own connection saw it first).
+        // Answer it the moment it arrives, exactly like /softphone?answerCallId=, without reloading the page.
+        pendingAnswerCallId = choice.callId;
+        pendingAnswerDeadline = Date.now() + ANSWER_ON_LOAD_WINDOW_MS;
+      }
+      postToHost({
+        type: HOST_PAGE_MESSAGES.actionResult,
+        callId: choice.callId,
+        action: choice.action,
+        handled: handled
+      });
+    }
+    function setIncomingControlsBusy(busy) {
+      [dom.incomingAnswer, dom.incomingVoicemail, dom.incomingIgnore].forEach(function (button) {
+        if (button) {
+          button.disabled = busy;
+          button.classList.toggle('is-busy', busy);
+        }
+      });
+
+      // The Answer button itself says the answer is under way: "Answering..." with a spinner. Its content is only
+      // replaced when that changes, so a render never swaps the button's insides out from under a click.
+      var answer = dom.incomingAnswer;
+      if (answer && !!answer.__answeringShown !== busy) {
+        if (busy) {
+          answer.__restingHtml = answer.innerHTML;
+        }
+        answer.innerHTML = busy ? answerButtonHtml(answerButtonView(true, '', strings)) : answer.__restingHtml;
+        answer.__answeringShown = busy;
+      }
+    }
+    function answerButtonHtml(view) {
+      return '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>' + escapeHtml(view.label);
     }
     function clearIncomingExpiryTimer() {
       if (incomingExpiryTimer) {
@@ -1409,21 +13991,29 @@
     }
     function scheduleIncomingExpiry() {
       clearIncomingExpiryTimer();
-      if (!incomingContext || !incomingContext.properties || !incomingContext.properties.expiresUtc) {
+
+      // The server's revocation is what stops the ring; this is only the fallback for one that never arrives,
+      // measured on the server's clock and never before its deadline (see soft-phone/offer-deadline.js).
+      var remainingMs = softPhoneModules.offerRingStopDelayMs(incomingContext && incomingContext.properties, Date.now());
+      if (remainingMs === null) {
         return;
       }
-      var expiresAt = Date.parse(incomingContext.properties.expiresUtc);
-      if (!isFinite(expiresAt)) {
-        return;
-      }
-      var remainingMs = expiresAt - Date.now();
       if (remainingMs <= 0) {
-        clearIncomingOffer();
+        expireIncomingOffer();
         return;
       }
-      incomingExpiryTimer = window.setTimeout(function () {
-        clearIncomingOffer();
-      }, remainingMs + 250);
+      incomingExpiryTimer = window.setTimeout(expireIncomingOffer, remainingMs);
+    }
+
+    // The server's deadline has passed without its revocation reaching this phone. Unless the agent's answer is
+    // under way, the offer is over for this phone just as a revocation would have said: its leg is let go and its
+    // call is not shown again.
+    function expireIncomingOffer() {
+      var reservationId = getIncomingReservationId(incomingContext);
+      if (reservationId && !incomingAcceptPending && !incomingHandled) {
+        settleOfferLeg(reservationId, false);
+      }
+      clearIncomingOffer();
     }
     function renderIncomingCards() {
       if (!dom.incomingCards) {
@@ -1432,6 +14022,7 @@
       var cards = incomingContext && incomingContext.cards ? incomingContext.cards : [];
       if (!cards.length) {
         dom.incomingCards.innerHTML = '';
+        dom.incomingCards.__renderedHtml = '';
         dom.incomingCards.hidden = true;
         return;
       }
@@ -1443,8 +14034,15 @@
       cards.forEach(function (card) {
         html += buildIncomingCard(card);
       });
-      dom.incomingCards.innerHTML = html;
       dom.incomingCards.hidden = false;
+
+      // Rebuilt only when it changed: replacing the buttons on every render could swallow a click whose press
+      // and release landed on two different copies of the same button.
+      if (dom.incomingCards.__renderedHtml === html) {
+        return;
+      }
+      dom.incomingCards.innerHTML = html;
+      dom.incomingCards.__renderedHtml = html;
       Array.prototype.forEach.call(dom.incomingCards.querySelectorAll('[data-telephony-card-answer]'), function (button) {
         button.addEventListener('click', function () {
           answerIncoming(button.getAttribute('data-url'));
@@ -1481,8 +14079,12 @@
       var actions = '';
       if (card.url) {
         var openTarget = card.openInNewTab ? ' target="_blank" rel="noopener"' : '';
-        actions += '<button type="button" class="btn btn-sm btn-success" data-telephony-card-answer data-url="' + escapeHtml(card.url) + '"><i class="fa-solid fa-phone"></i> ' + escapeHtml(strings.answerAndOpen || 'Answer & open') + '</button>';
-        actions += '<a class="btn btn-sm btn-outline-secondary" href="' + escapeHtml(card.url) + '"' + openTarget + '><i class="fa-solid fa-up-right-from-square"></i> ' + escapeHtml(strings.open || 'Open') + '</a>';
+        var answering = answerInProgress();
+        var answerBusy = answering ? ' disabled' : '';
+        var actionLabels = incomingCardActionLabels(card, strings);
+        var answerContent = answering ? answerButtonHtml(answerButtonView(true, '', strings)) : '<i class="fa-solid fa-phone"></i> ' + escapeHtml(actionLabels.answerAndOpen);
+        actions += '<button type="button" class="btn btn-sm btn-success" data-telephony-card-answer data-url="' + escapeHtml(card.url) + '"' + answerBusy + '>' + answerContent + '</button>';
+        actions += '<a class="btn btn-sm btn-outline-secondary" href="' + escapeHtml(card.url) + '"' + openTarget + '><i class="fa-solid fa-up-right-from-square"></i> ' + escapeHtml(actionLabels.open) + '</a>';
       }
       return '<div class="telephony-incoming__card">' + icon + '<div class="telephony-incoming__card-body">' + body + '</div>' + (actions ? '<div class="telephony-incoming__card-actions">' + actions + '</div>' : '') + '</div>';
     }
@@ -1532,12 +14134,28 @@
     }
     function answerIncoming(openUrl) {
       var id = currentCallId();
-      if (isBrowserAudioEnabled() && !browserAudioSession) {
-        ensureBrowserAudio().then(function () {
-          answerIncoming(openUrl);
-        }).catch(function (error) {
-          showError(error && error.message ? error.message : String(error));
-        });
+      var action = answerClickAction({
+        browserAudioEnabled: isBrowserAudioEnabled(),
+        registered: !!browserAudioSession,
+        acceptPending: incomingAcceptPending,
+        registeringForAnswer: answerRegistering
+      });
+
+      // Accepting a Contact Center offer is a server round-trip, and it may first wait on a registration;
+      // ignore repeat clicks while either is in flight so the reservation is never accepted twice. An offer being
+      // declined or sent to voicemail is not answered either, nor is the next offer a moment after either.
+      if (action === 'ignore' || incomingContext && incomingContext.properties && offerActionClick(offerAction, currentOfferKey(), Date.now()) === 'ignore') {
+        return;
+      }
+
+      // A direct browser-inbound (extension) call has no server-side offer; it is answered on the provider
+      // SDK through the adapter controller, not via a server "Answer" command.
+      if (isBrowserInboundRinging()) {
+        answerBrowserInboundRing();
+        return;
+      }
+      if (action === 'register') {
+        answerAfterRegistering(openUrl);
         return;
       }
       if (openUrl) {
@@ -1559,9 +14177,32 @@
       // A Contact Center offer: the server-side accept must succeed (accept the reservation and
       // connect the media) before the device answers, so the same live call is never answered here
       // while it is being re-offered to another agent.
+      //
+      // The one exception is the leg the platform already rang for this offer, held since the offer appeared.
+      // It is answered now, alongside the accept rather than after it: answering it proves only that this
+      // browser picked up, and the platform joins it to the caller only once the accept has succeeded.
+      var offerReservationId = incomingContext.properties.reservationId || '';
+      if (offerReservationId && typeof rememberAcceptedOffer === 'function') {
+        rememberAcceptedOffer(acceptedOfferIds, offerReservationId, Date.now());
+      }
+
+      // With no leg held for it, the platform rings this browser's leg for the offer now: that one leg is expected.
+      if (!answerHeldOfferLeg(offerReservationId)) {
+        armAutoAnswer(inboundAutoAnswer, autoAnswerOfferKey(offerReservationId), Date.now());
+      }
       incomingAcceptPending = true;
+      announceOfferHandled(true, offerReservationId);
+
+      // Reflect the pending accept immediately so the offer controls disable while the accept round-trips,
+      // instead of appearing clickable until the next server status update arrives.
+      render();
       postLifecycle('acceptUrl').then(function (result) {
         if (!result || result.succeeded === false) {
+          if (typeof forgetAcceptedOffer === 'function') {
+            forgetAcceptedOffer(acceptedOfferIds, offerReservationId);
+          }
+          hangupAnsweredOfferLeg(offerReservationId);
+          disarmAutoAnswer(inboundAutoAnswer, autoAnswerOfferKey(offerReservationId));
           showError(strings.offerUnavailable || 'This call is no longer available.');
           incomingContext = null;
           removeActiveCall(id);
@@ -1585,23 +14226,94 @@
         incomingAcceptPending = false;
       });
     }
+
+    // The agent answered before the phone was registered. The click shows at once -- buttons disabled, ringtone
+    // silenced, "Connecting" -- and "Answer & open" opens the record now, inside the click, where the browser
+    // still allows a new window. The accept follows the moment the registration completes, for the offer the
+    // agent clicked only: one that was taken elsewhere or replaced meanwhile is left alone.
+    function answerAfterRegistering(openUrl) {
+      var clickedCallId = currentCallId();
+      answerRegistering = true;
+      if (openUrl) {
+        window.open(openUrl, '_blank', 'noopener');
+      }
+      render();
+
+      // A registration the provider never confirms must not leave the buttons disabled for good: past the limit
+      // the answer is given up on (the registration itself carries on) and the agent answers again.
+      withTimeout(ensureBrowserAudio(), ANSWER_REGISTRATION_TIMEOUT_MS).then(function () {
+        answerRegistering = false;
+        if (clickedCallId && currentCallId() === clickedCallId && isRingingInbound() && !incomingHandled) {
+          answerIncoming(null);
+        } else {
+          render();
+        }
+      }).catch(function (error) {
+        answerRegistering = false;
+        showError(error && error.timedOut ? strings.answerTimedOut || 'Your phone could not connect in time. Try answering again.' : error && error.message ? error.message : String(error));
+        render();
+      });
+    }
     function voicemailIncoming() {
       var call = currentCallReference();
-      postLifecycle('declineUrl');
-      if (call) {
+      var offer = incomingContext && incomingContext.properties ? incomingContext.properties : null;
+      var decision = voicemailRoute({
+        browserInboundRinging: isBrowserInboundRinging(),
+        offer: offer,
+        hasCall: !!call
+      });
+
+      // A direct extension call: decline the local leg. The server's no-answer handling routes the caller to
+      // the extension owner's voicemail from the destination-leg hangup, so there is nothing more to do here.
+      if (decision.route === VOICEMAIL_ROUTES.browserLeg) {
+        clearBrowserInboundRing({
+          decline: true
+        });
+        return;
+      }
+
+      // Sent once: a second click -- or one landing on the next offer -- never posts again.
+      if (decision.route === VOICEMAIL_ROUTES.contactCenter && !beginOfferAction()) {
+        return;
+      }
+      var declinedReservationId = offer ? offer.reservationId || '' : '';
+      var declinedCallId = currentCallId();
+      settleOfferLeg(declinedReservationId, false);
+      announceOfferHandled(false, declinedReservationId);
+
+      // A Contact Center offer is sent to voicemail by the Contact Center alone; asking the telephony hub as
+      // well answered the caller twice and played the greeting twice.
+      if (decision.route === VOICEMAIL_ROUTES.contactCenter) {
+        postLifecycle(decision.lifecycleKey).then(function (result) {
+          finishOfferAction(declinedReservationId, declinedCallId, result);
+        });
+        return;
+      }
+      if (decision.route === VOICEMAIL_ROUTES.telephony) {
         invoke('Voicemail', call);
       }
     }
     function ignoreIncoming() {
+      // A direct extension call has no server offer to decline; hang up the ringing leg on the SDK.
+      if (isBrowserInboundRinging()) {
+        clearBrowserInboundRing({
+          decline: true
+        });
+        return;
+      }
       var call = currentCallReference();
       var hasOffer = incomingContext && incomingContext.properties && incomingContext.properties.declineUrl;
       if (hasOffer) {
+        // Declined once: a second click -- or one landing on the next offer -- never posts another decline.
+        if (!beginOfferAction()) {
+          return;
+        }
+        var ignoredReservationId = incomingContext.properties.reservationId || '';
+        var ignoredCallId = currentCallId();
+        settleOfferLeg(ignoredReservationId, false);
+        announceOfferHandled(false, ignoredReservationId);
         postLifecycle('declineUrl').then(function (result) {
-          if (!result || result.succeeded === false) {
-            showError(strings.offerUnavailable || 'This call is no longer available.');
-            return;
-          }
-          clearIncomingOffer();
+          finishOfferAction(ignoredReservationId, ignoredCallId, result);
         });
         return;
       }
@@ -1621,12 +14333,59 @@
       if (incomingHandled && isSameIncomingOffer(call, context)) {
         return;
       }
+
+      // A copy of an offer that is already over (revoked, expired, or its call ended) arrived late: never open it.
+      var expiresUtc = context && context.properties ? Date.parse(context.properties.expiresUtc || '') : NaN;
+      if (typeof isOfferSettled === 'function' && isOfferSettled(settledOffers, {
+        callId: call.callId,
+        reservationId: getIncomingReservationId(context)
+      }, Date.now()) || isFinite(expiresUtc) && expiresUtc <= Date.now()) {
+        return;
+      }
+
+      // The same offer delivered again (pushed, then restored) while the agent's answer is under way keeps that
+      // answer going; only a different offer starts over.
+      var sameOffer = isSameIncomingOffer(call, context);
       upsertActiveCall(call, true);
       incomingContext = context || null;
       incomingHandled = false;
-      incomingAcceptPending = false;
+      var offeredReservationId = getIncomingReservationId(context);
+      if (offeredReservationId) {
+        // Offered (again): reports about this call are this phone's once more, and an expectation left armed
+        // for any other offer is for one that is over.
+        offerCallIds[offeredReservationId] = call.callId;
+        forgetUnacceptedOfferCall(unacceptedOfferCalls, call.callId);
+        disarmOtherOffers(inboundAutoAnswer, autoAnswerOfferKey(offeredReservationId));
+      }
+      if (!sameOffer) {
+        incomingAcceptPending = false;
+        answerRegistering = false;
+      }
       setActiveTab('keypad');
       render();
+      // An offer is ringing: be registered by the time the agent answers, not from the moment they click.
+      registerIfUnregistered();
+      maybeAutoAnswerRequestedOffer(call);
+    }
+
+    // Fires the extension's one-shot "answer from the OS notification" handoff: when the just-surfaced offer
+    // is the exact call the agent already chose to answer (its call id matches the ?answerCallId the page was
+    // opened with), answer it automatically through the same path the incoming modal's Answer button uses.
+    // Consumed once regardless of outcome so a later, unrelated call is never auto-answered.
+    function maybeAutoAnswerRequestedOffer(call) {
+      if (!pendingAnswerCallId || !call || call.callId !== pendingAnswerCallId) {
+        return;
+      }
+
+      // Match found: burn the one-shot now so nothing else can retrigger it.
+      pendingAnswerCallId = '';
+
+      // Too long has passed since the page was opened to still trust this as the same ring the agent
+      // accepted; leave it ringing for the agent to answer manually instead of connecting on its own.
+      if (pendingAnswerDeadline && Date.now() > pendingAnswerDeadline) {
+        return;
+      }
+      answerIncoming(null);
     }
     function clearIncomingOffer(options) {
       options = options || {};
@@ -1674,15 +14433,72 @@
         // Keep the capabilities provided in the configuration when the hub call fails.
       });
     }
-    function startOAuth() {
-      if (!config.connectUrl) {
+    function showConnectError(message) {
+      if (!dom.connectError) {
         return;
       }
+      if (message) {
+        dom.connectError.textContent = message;
+        dom.connectError.hidden = false;
+      } else {
+        dom.connectError.textContent = '';
+        dom.connectError.hidden = true;
+      }
+    }
+    function startOAuth() {
+      if (!config.connectUrl) {
+        showConnectError(strings.connectUnavailable || 'The connection could not be started.');
+        return;
+      }
+      showConnectError(null);
       var separator = config.connectUrl.indexOf('?') >= 0 ? '&' : '?';
-      var url = config.connectUrl + separator + 'returnUrl=' + encodeURIComponent(window.location.pathname);
-      var popup = window.open(url, 'telephony-oauth', 'width=520,height=640');
-      if (!popup) {
-        window.location.href = url;
+      var url = config.connectUrl + separator + 'returnUrl=' + encodeURIComponent(window.location.pathname + window.location.search);
+      var popup = window.open(url, 'telephony-oauth');
+      if (popup) {
+        popup.focus();
+        return;
+      }
+
+      // The pop-up was blocked. Rather than silently failing, navigate the current window so the
+      // user can still complete the authorization, and surface guidance to allow pop-ups.
+      showConnectError(strings.connectPopupBlocked || 'Your browser blocked the connection window.');
+      window.location.href = url;
+    }
+    function postToProviderUrl(url) {
+      if (!url) {
+        return Promise.resolve({
+          succeeded: false
+        });
+      }
+      var headers = {};
+      if (config.antiForgeryToken) {
+        headers.RequestVerificationToken = config.antiForgeryToken;
+      }
+      try {
+        return fetch(url, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: headers
+        }).then(function (response) {
+          if (!response.ok) {
+            return {
+              succeeded: false
+            };
+          }
+          return response.json().catch(function () {
+            return {
+              succeeded: true
+            };
+          });
+        }).catch(function () {
+          return {
+            succeeded: false
+          };
+        });
+      } catch (e) {
+        return Promise.resolve({
+          succeeded: false
+        });
       }
     }
     function handleConnect() {
@@ -1700,17 +14516,71 @@
         startOAuth();
       }
     }
+    function handleDisconnect() {
+      if (authActionPending) {
+        return;
+      }
+      if (hasLiveCall()) {
+        showError(strings.disconnectActiveCalls || 'End active calls before disconnecting from the provider.');
+        return;
+      }
+
+      // Asked inside the phone, never through the browser's confirm (see soft-phone/in-app-confirm.js).
+      showInAppConfirm(dom.panel, {
+        message: strings.disconnectConfirm || 'Disconnect your provider account from the soft phone?',
+        confirmLabel: strings.disconnectProvider || 'Disconnect provider',
+        cancelLabel: strings.cancel || 'Cancel',
+        before: dom.body
+      }).then(function (confirmed) {
+        if (confirmed) {
+          disconnectProvider();
+        }
+      });
+    }
+    function disconnectProvider() {
+      authActionPending = true;
+      showError(null);
+      showConnectError(null);
+      render();
+      postToProviderUrl(config.disconnectUrl).then(function (result) {
+        if (!result || result.succeeded === false) {
+          showError(strings.disconnectFailed || 'The provider could not be disconnected. Please try again.');
+          return null;
+        }
+        releaseBrowserAudio();
+        return refreshConnectionStatus().then(function () {
+          showConnectError(result.message || null);
+        });
+      }).catch(function () {
+        showError(strings.disconnectFailed || 'The provider could not be disconnected. Please try again.');
+      }).finally(function () {
+        authActionPending = false;
+        render();
+      });
+    }
     function onOAuthMessage(event) {
       if (event.origin !== window.location.origin || !event.data || event.data.type !== 'telephony-oauth') {
         return;
       }
       if (event.data.success) {
+        showConnectError(null);
         refreshConnectionStatus();
+      } else {
+        showConnectError(event.data.error || strings.connectFailed || 'The connection could not be completed. Please try again.');
       }
     }
 
     // ---- History ----
 
+    // Reloads whichever list tab is currently open so a just-ended call (a new recent call, or a new voicemail)
+    // appears without a manual refresh.
+    function reloadActiveListTab() {
+      if (activeTab === 'history') {
+        loadHistory();
+      } else if (activeTab === 'voicemail') {
+        loadVoicemails();
+      }
+    }
     function loadHistory() {
       if (!connection) {
         renderHistory([]);
@@ -1721,12 +14591,306 @@
       }).catch(function () {
         renderHistory([]);
       });
+      refreshVoicemailBadge();
     }
     function isInbound(interaction) {
       return interaction.direction === 1 || interaction.direction === 'Inbound';
     }
     function isMissed(interaction) {
       return interaction.outcome === 2 || interaction.outcome === 'Missed' || interaction.outcome === 3 || interaction.outcome === 'Rejected';
+    }
+    function isVoicemail(interaction) {
+      return interaction.isVoicemail === true;
+    }
+    function voicemailPlaybackEnabled() {
+      return config.voicemailPlaybackEnabled === true && !!config.voicemailMediaUrlTemplate && !!dom.voicemailAudio;
+    }
+    function buildVoicemailUrl(interactionId) {
+      if (!interactionId || !config.voicemailMediaUrlTemplate) {
+        return null;
+      }
+      return config.voicemailMediaUrlTemplate.replace('__INTERACTION_ID__', encodeURIComponent(interactionId));
+    }
+    var playingVoicemailButton = null;
+    var playingVoicemailId = null;
+    function stopVoicemailPlayback() {
+      if (dom.voicemailAudio) {
+        try {
+          dom.voicemailAudio.pause();
+        } catch (e) {/* ignore */}
+
+        // Detach the clip so a deleted or gone voicemail cannot stay loaded in the player.
+        dom.voicemailAudio.removeAttribute('src');
+        try {
+          dom.voicemailAudio.load();
+        } catch (e) {/* ignore */}
+      }
+      if (playingVoicemailButton) {
+        playingVoicemailButton.classList.remove('is-playing');
+        playingVoicemailButton = null;
+      }
+      playingVoicemailId = null;
+
+      // The player bar only makes sense while a voicemail is loaded; remove it once playback is torn down.
+      if (dom.voicemailPlayer) {
+        dom.voicemailPlayer.hidden = true;
+      }
+    }
+    function playVoicemail(interactionId, callId, button) {
+      if (!voicemailPlaybackEnabled()) {
+        return;
+      }
+      var url = buildVoicemailUrl(interactionId);
+      if (!url) {
+        return;
+      }
+
+      // Clicking the currently-playing voicemail toggles it off.
+      if (playingVoicemailButton === button && dom.voicemailAudio && !dom.voicemailAudio.paused) {
+        dom.voicemailAudio.pause();
+        return;
+      }
+      stopVoicemailPlayback();
+      showError(null);
+      if (dom.voicemailPlayer) {
+        dom.voicemailPlayer.hidden = false;
+      }
+
+      // Surface which voicemail is playing in the player bar, so the caller's number and time stay visible
+      // while the native audio controls drive playback (the audio element itself shows neither).
+      if (dom.voicemailPlayerInfo) {
+        var row = button ? button.closest('.telephony-soft-phone__voicemail-item') : null;
+        var numberText = row ? row.querySelector('.telephony-soft-phone__history-number') : null;
+        var metaText = row ? row.querySelector('.telephony-soft-phone__history-meta') : null;
+        dom.voicemailPlayerInfo.innerHTML = '<span class="telephony-soft-phone__history-number">' + escapeHtml(numberText ? numberText.textContent : strings.voicemailLabel || 'Voicemail') + '</span>' + '<span class="telephony-soft-phone__history-meta">' + escapeHtml(metaText ? metaText.textContent : '') + '</span>';
+      }
+      dom.voicemailAudio.src = url;
+      playingVoicemailButton = button;
+      playingVoicemailId = interactionId;
+      if (button) {
+        button.classList.add('is-playing');
+      }
+
+      // The native <audio controls> element drives playback (scrub/rewind). A load failure surfaces through
+      // its 'error' event; play() may still reject on some browsers, which is handled the same way.
+      Promise.resolve(dom.voicemailAudio.play()).catch(function () {});
+    }
+    function handleVoicemailAudioError() {
+      var processing = dom.voicemailAudio && dom.voicemailAudio.error && dom.voicemailAudio.error.code === 4;
+      stopVoicemailPlayback();
+      showError(processing ? strings.voicemailUnavailable || 'This voicemail is still processing. Try again in a moment.' : strings.voicemailPlaybackFailed || 'The voicemail could not be played.');
+    }
+    function loadVoicemails() {
+      if (!connection || !dom.voicemailList) {
+        renderVoicemails([]);
+        return;
+      }
+      connection.invoke('GetInteractions', config.recentCallsCount || 30).then(function (items) {
+        renderVoicemails((items || []).filter(isVoicemail));
+      }).catch(function () {
+        renderVoicemails([]);
+      });
+    }
+
+    // Why each voicemail the last delete left behind was not deleted, by id; the list renders them selected.
+    var voicemailDeleteFailures = {};
+
+    // The phone's own error line sits in the keypad view, out of sight while the Voicemail tab is open, so the
+    // tab reports its outcome in its own line when the page has one.
+    function showVoicemailError(message) {
+      if (!dom.voicemailError) {
+        showError(message);
+        return;
+      }
+      dom.voicemailError.textContent = message || '';
+      dom.voicemailError.hidden = !message;
+    }
+    function voicemailDeleteEnabled() {
+      return config.voicemailDeleteEnabled === true && !!config.voicemailDeleteUrlTemplate && !!dom.voicemailDelete;
+    }
+    function buildVoicemailDeleteUrl(interactionId) {
+      if (!interactionId || !config.voicemailDeleteUrlTemplate) {
+        return null;
+      }
+      return config.voicemailDeleteUrlTemplate.replace('__INTERACTION_ID__', encodeURIComponent(interactionId));
+    }
+    function selectedVoicemailIds() {
+      if (!dom.voicemailList) {
+        return [];
+      }
+      return Array.prototype.slice.call(dom.voicemailList.querySelectorAll('[data-telephony-voicemail-select]:checked')).map(function (checkbox) {
+        return checkbox.getAttribute('data-telephony-voicemail-id');
+      }).filter(function (id) {
+        return !!id;
+      });
+    }
+    function updateVoicemailDeleteButton() {
+      var checkboxes = dom.voicemailList ? dom.voicemailList.querySelectorAll('[data-telephony-voicemail-select]') : [];
+      var selectedCount = selectedVoicemailIds().length;
+      if (dom.voicemailDelete) {
+        dom.voicemailDelete.disabled = selectedCount === 0;
+      }
+
+      // Keep the header "select all" box in sync: checked when every row is selected, a dash (indeterminate)
+      // when only some are.
+      if (dom.voicemailSelectAll) {
+        dom.voicemailSelectAll.checked = checkboxes.length > 0 && selectedCount === checkboxes.length;
+        dom.voicemailSelectAll.indeterminate = selectedCount > 0 && selectedCount < checkboxes.length;
+      }
+    }
+    function toggleSelectAllVoicemails() {
+      if (!dom.voicemailList || !dom.voicemailSelectAll) {
+        return;
+      }
+      var checked = dom.voicemailSelectAll.checked;
+      Array.prototype.forEach.call(dom.voicemailList.querySelectorAll('[data-telephony-voicemail-select]'), function (checkbox) {
+        checkbox.checked = checked;
+      });
+      updateVoicemailDeleteButton();
+    }
+    function renderVoicemails(items) {
+      if (!dom.voicemailList) {
+        return;
+      }
+
+      // If the voicemail currently loaded in the player is no longer in the list (deleted or otherwise
+      // gone), tear the player down so it cannot strand an orphaned clip over an empty or changed list.
+      if (playingVoicemailId && !items.some(function (interaction) {
+        return interaction.interactionId === playingVoicemailId;
+      })) {
+        stopVoicemailPlayback();
+      }
+      var canDelete = voicemailDeleteEnabled();
+      if (dom.voicemailToolbar) {
+        dom.voicemailToolbar.hidden = !(canDelete && items.length);
+      }
+      updateVoicemailDeleteButton();
+      if (!items.length) {
+        dom.voicemailList.innerHTML = '<div class="telephony-soft-phone__history-empty">' + escapeHtml(strings.noVoicemails || 'No voicemails.') + '</div>';
+        return;
+      }
+      dom.voicemailList.innerHTML = items.map(function (interaction) {
+        var number = interaction.from || '';
+        var formattedNumber = formatPhoneNumber(number);
+        var time = formatTime(interaction.startedUtc);
+        var unread = !interaction.voicemailReadUtc;
+        // A voicemail the last delete could not remove stays selected and says why.
+        var deleteFailure = voicemailDeleteFailures[interaction.interactionId];
+        var cls = 'telephony-soft-phone__voicemail-item' + (unread ? ' telephony-soft-phone__voicemail-item--unread' : '') + (deleteFailure ? ' telephony-soft-phone__voicemail-item--delete-failed' : '');
+        var selectMarkup = canDelete ? '<input type="checkbox" class="telephony-soft-phone__voicemail-select" data-telephony-voicemail-select ' + (deleteFailure ? 'checked ' : '') + 'data-telephony-voicemail-id="' + escapeHtml(interaction.interactionId || '') + '" ' + 'aria-label="' + escapeHtml(strings.selectVoicemail || 'Select voicemail') + '">' : '';
+        return '<div class="' + cls + '">' + selectMarkup + '<button type="button" class="telephony-soft-phone__voicemail-play" data-telephony-voicemail-play ' + 'data-telephony-voicemail-id="' + escapeHtml(interaction.interactionId || '') + '" ' + 'data-telephony-voicemail-call="' + escapeHtml(interaction.callId || '') + '" ' + 'title="' + escapeHtml(strings.playVoicemail || 'Play voicemail') + '" ' + 'aria-label="' + escapeHtml(strings.playVoicemail || 'Play voicemail') + '"><i class="fa-solid fa-play"></i></button>' + '<div class="telephony-soft-phone__voicemail-body" data-telephony-voicemail-body ' + 'data-telephony-voicemail-call="' + escapeHtml(interaction.callId || '') + '" ' + 'role="button" tabindex="0">' + '<span class="telephony-soft-phone__history-number">' + escapeHtml(formattedNumber || number || strings.voicemailLabel || 'Voicemail') + '</span>' + '<span class="telephony-soft-phone__history-meta">' + escapeHtml(time) + '</span>' + (deleteFailure ? '<span class="telephony-soft-phone__voicemail-error" role="alert">' + escapeHtml(softPhoneModules.voicemailDeleteFailureText(deleteFailure, strings)) + '</span>' : '') + '</div>' + '<button type="button" class="telephony-soft-phone__call-btn" data-telephony-history-number="' + escapeHtml(number) + '" ' + 'title="' + escapeHtml(strings.callBack || 'Call back') + '" aria-label="' + escapeHtml(strings.callBack || 'Call back') + '"><i class="fa-solid fa-phone"></i></button>' + '</div>';
+      }).join('');
+      Array.prototype.forEach.call(dom.voicemailList.querySelectorAll('[data-telephony-voicemail-play]'), function (item) {
+        item.addEventListener('click', function () {
+          playVoicemail(item.getAttribute('data-telephony-voicemail-id'), item.getAttribute('data-telephony-voicemail-call'), item);
+        });
+      });
+      Array.prototype.forEach.call(dom.voicemailList.querySelectorAll('[data-telephony-voicemail-select]'), function (checkbox) {
+        checkbox.addEventListener('change', updateVoicemailDeleteButton);
+      });
+      updateVoicemailDeleteButton();
+
+      // Clicking (or keyboard-activating) the voicemail body -- the caller/time area, distinct from the
+      // play and call-back icons -- marks that voicemail as read.
+      Array.prototype.forEach.call(dom.voicemailList.querySelectorAll('[data-telephony-voicemail-body]'), function (body) {
+        function activate() {
+          markVoicemailRead(body.getAttribute('data-telephony-voicemail-call'), body.closest('.telephony-soft-phone__voicemail-item'));
+        }
+        body.addEventListener('click', activate);
+        body.addEventListener('keydown', function (event) {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            activate();
+          }
+        });
+      });
+      Array.prototype.forEach.call(dom.voicemailList.querySelectorAll('[data-telephony-history-number]'), function (item) {
+        item.addEventListener('click', function () {
+          var number = item.getAttribute('data-telephony-history-number');
+          if (number) {
+            dialNumber(number);
+          }
+        });
+      });
+    }
+    function deleteSelectedVoicemails() {
+      if (!voicemailDeleteEnabled()) {
+        return;
+      }
+      var ids = selectedVoicemailIds();
+      if (!ids.length) {
+        return;
+      }
+      if (dom.voicemailDelete) {
+        dom.voicemailDelete.disabled = true;
+      }
+
+      // Stop any playback of a voicemail that is about to be deleted.
+      stopVoicemailPlayback();
+      var headers = {};
+      if (config.antiForgeryToken) {
+        headers['RequestVerificationToken'] = config.antiForgeryToken;
+      }
+
+      // One at a time, each answer read for what it is (a redirect is never a deletion), so a voicemail the
+      // server would not delete is reported and left selected rather than silently left behind.
+      headers['X-Requested-With'] = 'XMLHttpRequest';
+      voicemailDeleteFailures = {};
+      softPhoneModules.deleteVoicemailsInTurn(ids, function (id) {
+        return fetch(buildVoicemailDeleteUrl(id), {
+          method: 'POST',
+          headers: headers,
+          redirect: 'manual'
+        });
+      }).then(function (outcome) {
+        outcome.failed.forEach(function (failure) {
+          voicemailDeleteFailures[failure.id] = failure.reason;
+        });
+        showVoicemailError(softPhoneModules.describeVoicemailDeleteFailures(outcome, strings));
+        loadVoicemails();
+        refreshVoicemailBadge();
+      });
+    }
+    function markAllVoicemailsRead() {
+      if (!connection) {
+        return;
+      }
+      connection.invoke('MarkAllVoicemailsRead').then(function (remaining) {
+        updateVoicemailBadge(remaining);
+      }).catch(function () {});
+    }
+    function markVoicemailRead(callId, itemElement) {
+      // Reflect the read state immediately so the row stops showing as unread even before the round trip.
+      if (itemElement) {
+        itemElement.classList.remove('telephony-soft-phone__voicemail-item--unread');
+      }
+      if (!connection || !callId) {
+        return;
+      }
+      connection.invoke('MarkVoicemailRead', callId).then(function (remaining) {
+        updateVoicemailBadge(remaining);
+      }).catch(function () {});
+    }
+    function updateVoicemailBadge(count) {
+      if (!dom.voicemailBadge) {
+        return;
+      }
+      var value = typeof count === 'number' && count > 0 ? count : 0;
+      if (value > 0) {
+        dom.voicemailBadge.textContent = value > 99 ? '99+' : String(value);
+        dom.voicemailBadge.hidden = false;
+      } else {
+        dom.voicemailBadge.textContent = '';
+        dom.voicemailBadge.hidden = true;
+      }
+    }
+    function refreshVoicemailBadge() {
+      if (!connection || !dom.voicemailBadge) {
+        return;
+      }
+      connection.invoke('GetUnreadVoicemailCount').then(function (count) {
+        updateVoicemailBadge(count);
+      }).catch(function () {});
     }
     function isInProgress(interaction) {
       return interaction.outcome === 0 || interaction.outcome === 'InProgress';
@@ -1749,28 +14913,51 @@
       if (!dom.historyList) {
         return;
       }
+      lastHistoryItems = items;
       if (!items.length) {
         dom.historyList.innerHTML = '<div class="telephony-soft-phone__history-empty">' + escapeHtml(strings.noInteractions || 'No recent calls.') + '</div>';
         return;
       }
-      dom.historyList.innerHTML = items.map(function (interaction) {
+
+      // Voicemails live in their own tab; the Recent list is calls only.
+      dom.historyList.innerHTML = items.filter(function (interaction) {
+        return !isVoicemail(interaction);
+      }).map(function (interaction) {
         var inbound = isInbound(interaction);
         var missed = isMissed(interaction);
         var inProgress = isInProgress(interaction);
+        var isExtension = !!interaction.isExtension;
         var directionGlyph = inbound ? '\u2199' : '\u2197';
         var number = inbound ? interaction.from || '' : interaction.to || '';
-        var formattedNumber = formatPhoneNumber(number);
+        // An extension entry stores the target's display name in `to`; the dialable value is the stored
+        // extension number, so the call-back button redials that (in extension mode) rather than the name.
+        var dialTarget = isExtension ? interaction.extensionNumber || '' : number;
         var label = missed ? strings.missed || 'Missed' : inbound ? strings.incoming || 'Incoming' : strings.outgoing || 'Outgoing';
         var time = formatTime(interaction.startedUtc);
+        var extensionTag = isExtension ? escapeHtml(strings.extensionLabel || 'Extension') + ' \u2022 ' : '';
+        var meta = extensionTag + escapeHtml(label) + (time ? ' \u2022 ' + escapeHtml(time) : '');
+        // The call's total length, once it has one. A call that never connected or is still going
+        // shows none rather than a misleading zero.
+        var duration = durationMeta(interaction.durationSeconds, inProgress);
+        if (duration) {
+          meta += ' \u2022 ' + escapeHtml(duration);
+        }
+        // Extension targets are display names, not numbers, so they are shown verbatim; phone numbers are
+        // run through the display formatter.
+        // An extension call is named after the person the extension rings now ("Jane Doe · ext 2"), else the
+        // name the entry was stored with.
+        var displayNumber = escapeHtml(isExtension ? describeExtension(strings, extensionNameFor(dialTarget), dialTarget, number) || number || label : formatPhoneNumber(number) || number || label);
         var cls = 'telephony-soft-phone__history-item' + (missed ? ' telephony-soft-phone__history-item--missed' : '') + (inProgress ? ' telephony-soft-phone__history-item--active' : '');
-        var meta = escapeHtml(label) + (time ? ' \u2022 ' + escapeHtml(time) : '');
-        return '<button type="button" class="' + cls + '" data-telephony-history-number="' + escapeHtml(number) + '">' + '<span class="telephony-soft-phone__history-dir" aria-hidden="true">' + directionGlyph + '</span>' + '<span class="telephony-soft-phone__history-body">' + '<span class="telephony-soft-phone__history-number">' + escapeHtml(formattedNumber || number || label) + '</span>' + '<span class="telephony-soft-phone__history-meta">' + meta + '</span>' + '</span></button>';
+
+        // The row itself no longer dials; a dedicated Call button on the right places the call.
+        return '<div class="' + cls + '">' + '<span class="telephony-soft-phone__history-dir" aria-hidden="true">' + directionGlyph + '</span>' + '<div class="telephony-soft-phone__history-body">' + '<span class="telephony-soft-phone__history-number">' + displayNumber + '</span>' + '<span class="telephony-soft-phone__history-meta">' + meta + '</span>' + '</div>' + (dialTarget ? '<button type="button" class="telephony-soft-phone__call-btn" data-telephony-history-number="' + escapeHtml(dialTarget) + '"' + (isExtension ? ' data-telephony-history-extension="true"' : '') + ' ' + 'title="' + escapeHtml(strings.call || 'Call') + '" aria-label="' + escapeHtml(strings.call || 'Call') + '"><i class="fa-solid fa-phone"></i></button>' : '') + '</div>';
       }).join('');
       Array.prototype.forEach.call(dom.historyList.querySelectorAll('[data-telephony-history-number]'), function (item) {
         item.addEventListener('click', function () {
           var number = item.getAttribute('data-telephony-history-number');
+          var isExtension = item.getAttribute('data-telephony-history-extension') === 'true';
           if (number) {
-            dialNumber(number);
+            dialNumber(number, isExtension);
           }
         });
       });
@@ -1786,16 +14973,58 @@
         callStateRevision++;
         var isTerminal = !call || normalizeState(call.state) === 'Disconnected' || normalizeState(call.state) === 'Failed';
         if (isTerminal) {
+          // An offer for this call that is still on its way here must not open the modal once it lands.
+          if (call && call.callId && typeof rememberSettledOffer === 'function') {
+            rememberSettledOffer(settledOffers, {
+              callId: call.callId
+            }, Date.now());
+          }
+          if (call && call.callId) {
+            forgetUnacceptedOfferCall(unacceptedOfferCalls, call.callId);
+            delete heldBackOfferReports[call.callId];
+          }
+
+          // A terminal state from the server for a call THIS browser placed is bookkeeping, not the call
+          // ending: the platform never saw the call and cannot know when it ends -- the provider SDK
+          // reports that through the media adapter, which is the only authority for these calls. The
+          // one thing the server can say about a browser-originated call is that it stopped tracking
+          // its history entry, and acting on that as a hang-up is how a reconciliation sweep dropped
+          // every keypad call that outlived the next minute: the entry was removed, this ran, the call
+          // was taken out of the active list, and with nothing left in it the session was torn down
+          // under a live conversation.
+          var terminatedBrowserCall = call && call.callId ? activeCalls[call.callId] : null;
+          if (terminatedBrowserCall && terminatedBrowserCall.browserOriginated) {
+            reportDiagnostic('info', 'browser-call-server-terminal-ignored', 'The server reported a terminal state for a browser-originated call that is still live; ignored.', call.callId);
+            return;
+          }
           if (!call || !call.callId) {
+            // Keep browser-originated calls; this server signal is about server-tracked calls only.
+            var keptBrowserCalls = Object.keys(activeCalls).map(function (id) {
+              return activeCalls[id];
+            }).filter(function (existing) {
+              return existing && existing.browserOriginated;
+            });
             activeCalls = {};
             conferenceSelections = {};
-            currentCall = null;
+            conferenceMemory = createConferenceMemory();
+            callContexts = createCallContextMemory();
+            keptBrowserCalls.forEach(function (existing) {
+              activeCalls[existing.callId] = existing;
+            });
+            pruneAgentHolds(agentHolds, Object.keys(activeCalls));
+            pruneAgentMutes(agentMutes, Object.keys(activeCalls));
+            currentCall = getActiveCalls()[0] || null;
             incomingHandled = false;
           } else {
             var tracked = !!activeCalls[call.callId];
             removeActiveCall(call.callId);
             if (!currentCall) {
               incomingHandled = false;
+            }
+
+            // The conference's last participant hung up: the agent's legs into it go too.
+            if (!activeCommand) {
+              endConferenceWithNobodyLeft();
             }
             if (!tracked) {
               refreshActiveCalls().catch(function (error) {
@@ -1805,64 +15034,199 @@
           }
           render();
           notifyBrowserAudio(call);
+
+          // A call that just ended updates the recent calls and may have been sent to voicemail, so refresh
+          // the unread badge and reload whichever list tab is open (Recent or Voicemail) so the new entry
+          // appears without a manual refresh. The projection that creates the entry can land a moment after
+          // this terminal signal, so reload once now and once shortly after to catch that case.
+          refreshVoicemailBadge();
+          reloadActiveListTab();
+          setTimeout(function () {
+            reloadActiveListTab();
+            refreshVoicemailBadge();
+          }, 2000);
+
+          // The provider registration outlives the call: releasing it here left an Available agent with
+          // nothing registered, so the next offer's leg was refused (SIP 480) and the agent's Answer had to
+          // register from scratch first.
           if (!getActiveCalls().length) {
-            releaseBrowserAudio();
+            clearActiveCallsRefresh();
+          } else {
+            scheduleActiveCallsRefresh();
           }
+          return;
+        }
+
+        // A live report of a ringing offer's call waits for somebody to accept the offer; one of a call whose
+        // offer was withdrawn without an accept here is not this phone's (see soft-phone/offer-report.js).
+        var plan = planServerCallReport(call);
+        if (plan === 'keep-ringing') {
+          return;
+        }
+        if (plan === 'ignore') {
+          releaseShownCall(call.callId);
           return;
         }
         upsertActiveCall(call, true);
         render();
         notifyBrowserAudio(call);
+        scheduleActiveCallsRefresh();
       });
       connection.on('IncomingCall', function (call, context) {
         setIncomingOffer(call, context || null);
       });
+      connection.on('IncomingCallAnswered', function (notification) {
+        if (notification) {
+          handleOfferAnswered(notification.callId || '', notification.offerId || '');
+        }
+      });
       connection.on('ReceiveError', function (message) {
         showError(message);
       });
+      connection.on('DialRequested', function (request) {
+        // A call was started from outside the phone (for example, the "call" button next to a phone-number
+        // field). Place it on this soft phone. dialNumber registers first when needed and holds an active
+        // call, so presence is left untouched here.
+        var number = request && request.number ? String(request.number).trim() : '';
+        if (number) {
+          dialNumber(number);
+        }
+      });
       connection.on('CredentialsIssued', function () {});
+      if (typeof connection.onreconnecting === 'function') {
+        connection.onreconnecting(function () {
+          // SignalR is transparently retrying a dropped connection. Surface the degraded state (item 6
+          // layers a debounced degraded-state manager over this same status line) instead of leaving a
+          // stale "Ready" while calls cannot be placed or received.
+          setHubReconnecting(true);
+        });
+      }
       connection.onclose(function () {
-        setStatus(strings.disconnectedHub || 'Disconnected');
-        releaseBrowserAudio();
+        clearActiveCallsRefresh();
+        stopBrowserAudioHeartbeat();
+        // Do NOT release browser audio here: the provider media session (and any live call) is a
+        // separate connection to the provider and must survive a transient hub outage -- tearing it down
+        // would drop an in-progress call and de-register the agent for inbound. The manual restart loop
+        // below brings the hub back and re-runs setup; browser audio is only released on sign-out/unload.
+        setHubReconnecting(true);
+        scheduleManualReconnect();
       });
       if (typeof connection.onreconnected === 'function') {
         connection.onreconnected(function () {
-          showError(null);
-          return Promise.all([refreshCapabilities(), refreshConnectionStatus()]).then(function () {
-            return restoreActiveCall();
-          }).then(function () {
-            if (activeTab === 'history') {
-              loadHistory();
-            }
-            render();
-          }).catch(function (error) {
-            showError(error && error.message ? error.message : String(error));
-          });
+          manualReconnectAttempt = 0;
+          return afterConnected();
         });
       }
+    }
+
+    // Degraded-state setters (item 6). render() derives the "Reconnecting..." status from these; toggling
+    // only on a real change keeps the status line from flapping.
+    function setHubReconnecting(active) {
+      if (hubReconnecting === !!active) {
+        return;
+      }
+      hubReconnecting = !!active;
+      render();
+    }
+    function setMediaReconnecting(active) {
+      if (mediaReconnecting === !!active) {
+        return;
+      }
+      mediaReconnecting = !!active;
+      render();
+    }
+
+    // Re-runs the full post-connect setup after the hub connection is (re-)established, whether by the
+    // initial connect, SignalR's automatic reconnect, or the manual restart loop. Each step is idempotent:
+    // startBrowserAudioHeartbeat no-ops if already running, and registerBrowserAudioForInbound dedupes
+    // through ensureBrowserAudio, so running it more than once cannot double-register or double-start.
+    function afterConnected() {
+      showError(null);
+      // The hub is back: clear the reconnecting overlay (render() below restores the real status).
+      setHubReconnecting(false);
+      startBrowserAudioHeartbeat();
+      // Register with the provider now that the soft phone is connected, so the agent is reachable for
+      // inbound calls while idle -- not only while placing a call.
+      registerBrowserAudioForInbound();
+      return Promise.all([refreshCapabilities(), refreshConnectionStatus()]).then(function () {
+        // Who each extension rings, for the names shown beside extensions; never holds the call list up.
+        loadExtensionDirectory(true);
+        return restoreActiveCall();
+      }).then(function () {
+        // Whatever happened while the hub was away -- a call the SDK lost, a call that ended with no hub
+        // to tell, a page reloaded mid-call -- is settled now.
+        if (reconcileShownBrowserCalls()) {
+          render();
+        }
+        flushOwedBrowserCallEnds();
+      }).then(function () {
+        if (activeTab === 'history') {
+          loadHistory();
+        } else if (activeTab === 'voicemail') {
+          loadVoicemails();
+        }
+        refreshVoicemailBadge();
+        render();
+      }).catch(function (error) {
+        showError(error && error.message ? error.message : String(error));
+      });
+    }
+
+    // Manual restart loop for when the hub connection closes for good. SignalR's automatic reconnect only
+    // covers a connection that started successfully and then dropped, and it does not retry an initial start
+    // that never succeeded. This loop guarantees the soft phone keeps trying to reconnect indefinitely (same
+    // backoff as the automatic policy) so an agent is never stranded unable to receive calls until a reload.
+    function scheduleManualReconnect() {
+      if (manualReconnectTimer || pageUnloading || !connection) {
+        return;
+      }
+      var delay = reconnectDelayMs(manualReconnectAttempt);
+      manualReconnectAttempt++;
+      setHubReconnecting(true);
+      manualReconnectTimer = window.setTimeout(function () {
+        manualReconnectTimer = null;
+        connection.start().then(function () {
+          manualReconnectAttempt = 0;
+          return afterConnected();
+        }).catch(function () {
+          // Still down: keep trying. The status stays on "Reconnecting...".
+          scheduleManualReconnect();
+        });
+      }, delay);
     }
     function connect() {
       if (!signalRFactory || !config.hubUrl) {
         render();
         return Promise.resolve();
       }
-      connection = new signalRFactory.HubConnectionBuilder().withUrl(config.hubUrl).withAutomaticReconnect().build();
+      connection = new signalRFactory.HubConnectionBuilder().withUrl(config.hubUrl).withAutomaticReconnect({
+        // Never return null: retry with a backoff that caps at ~30s but never gives up, so a hub
+        // connection lost for longer than SignalR's default schedule still recovers on its own
+        // without a page reload. previousRetryCount is 0 on the first retry.
+        nextRetryDelayInMilliseconds: function (retryContext) {
+          return reconnectDelayMs(retryContext.previousRetryCount);
+        }
+      }).build();
       registerClientCallbacks();
       return connection.start().then(function () {
-        showError(null);
-        return Promise.all([refreshCapabilities(), refreshConnectionStatus()]);
-      }).then(function () {
-        return restoreActiveCall();
-      }).then(function () {
-        if (activeTab === 'history') {
-          loadHistory();
-        }
-        render();
+        manualReconnectAttempt = 0;
+        return afterConnected();
       }).catch(function (error) {
         showError(error && error.message ? error.message : String(error));
+        // The initial start failed (for example the server was briefly unreachable at page load).
+        // SignalR's automatic reconnect does not cover a start that never succeeded, so kick off the
+        // manual restart loop to keep trying instead of leaving the soft phone permanently offline.
+        scheduleManualReconnect();
       });
     }
     function bindEvents() {
+      document.addEventListener('visibilitychange', function () {
+        // Background tabs throttle timers, so the heartbeat can be delayed while hidden. Re-check the
+        // credential the moment the agent brings the soft phone back to the foreground.
+        if (!document.hidden) {
+          renewBrowserAudioIfNeeded();
+        }
+      });
       if (dom.toggle) {
         dom.toggle.addEventListener('click', function () {
           if (suppressToggleClick) {
@@ -1882,20 +15246,107 @@
           setActiveTab(tab.getAttribute('data-telephony-tab'));
         });
       });
+      if (dom.voicemailDelete) {
+        dom.voicemailDelete.addEventListener('click', deleteSelectedVoicemails);
+      }
+      if (dom.voicemailSelectAll) {
+        dom.voicemailSelectAll.addEventListener('change', toggleSelectAllVoicemails);
+      }
       if (dom.dial) {
         dom.dial.addEventListener('click', dial);
       }
-      if (dom.number) {
-        dom.number.addEventListener('input', function () {
-          numberIsCallDisplay = false;
-          dom.number.value = formatPhoneNumber(dom.number.value);
+      if (dom.micRetry) {
+        dom.micRetry.addEventListener('click', retryMicrophone);
+      }
+      if (dom.settingsToggle) {
+        dom.settingsToggle.addEventListener('click', toggleSettings);
+      }
+      if (dom.settingsBack) {
+        dom.settingsBack.addEventListener('click', closeSettings);
+      }
+      if (dom.inputDevice) {
+        dom.inputDevice.addEventListener('change', onInputDeviceChange);
+      }
+      if (dom.outputDevice) {
+        dom.outputDevice.addEventListener('change', onOutputDeviceChange);
+      }
+      [dom.processingEc, dom.processingNs, dom.processingAgc].forEach(function (control) {
+        if (control) {
+          control.addEventListener('change', onProcessingChange);
+        }
+      });
+      if (dom.micBoost) {
+        dom.micBoost.addEventListener('change', onBoostChange);
+      }
+      if (dom.playoutDelay) {
+        dom.playoutDelay.addEventListener('change', onPlayoutDelayChange);
+      }
+      if (dom.signalingRegion) {
+        dom.signalingRegion.addEventListener('change', onSignalingRegionChange);
+      }
+      if (dom.processingEc || dom.processingNs || dom.processingAgc || dom.micBoost || dom.playoutDelay || dom.signalingRegion) {
+        syncProcessingControls();
+      }
+      if (navigator.mediaDevices && typeof navigator.mediaDevices.addEventListener === 'function') {
+        // Re-enumerate when devices are plugged in or removed so the picker stays current (item 5).
+        navigator.mediaDevices.addEventListener('devicechange', function () {
+          populateDevicePickers();
         });
-        dom.number.addEventListener('focus', function () {
-          if (currentCall && normalizeState(currentCall.state) === 'OnHold') {
-            dom.number.select();
+      }
+      if (dom.diagRun) {
+        dom.diagRun.addEventListener('click', runEchoTest);
+      }
+      if (dom.diagDump) {
+        dom.diagDump.addEventListener('click', dumpDiagnostics);
+      }
+      if (dom.dialModeToggle) {
+        dom.dialModeToggle.addEventListener('click', toggleDialMode);
+      }
+      if (dom.number) {
+        dom.number.addEventListener('input', function (event) {
+          numberIsCallDisplay = false;
+          // Clear a transient error (for example "Enter a phone number to call.") as soon as the
+          // user starts entering a number.
+          showError(null);
+
+          // intl-tel-input reports its own setNumber -- the phone showing a call's number -- as an input
+          // too; only what the agent enters is theirs.
+          if (event && event.detail && event.detail.isSetNumber) {
+            return;
+          }
+
+          // Render now, so the dial button appears on hold as soon as there is a number to add rather than
+          // whenever something else happens to render.
+          numberEnteredByAgent = true;
+          render();
+        });
+        // Reaching for the field over a held call's number is starting an entry: the number goes, and the field
+        // is the agent's until they leave it empty (see soft-phone/dial-target.js).
+        dom.number.addEventListener('focus', startNumberEntry);
+        dom.number.addEventListener('blur', function () {
+          // A field Add call emptied stays empty: reaching for a keypad key must not bring the held call back.
+          if (!addingCall && planEntryEnd({
+            value: dom.number.value,
+            agentEntered: numberEnteredByAgent
+          }) === 'release') {
+            numberEnteredByAgent = false;
+            render();
+          }
+        });
+        // Typing over a call's label or number starts a fresh entry, as a keypad press does: the label is never
+        // part of what is dialed.
+        dom.number.addEventListener('beforeinput', function () {
+          if (numberIsCallDisplay) {
+            clearNumberInput();
           }
         });
         dom.number.addEventListener('keydown', function (event) {
+          // Escape backs out of Add call to the held call.
+          if (event.key === 'Escape' && addingCall && !event.isComposing) {
+            event.preventDefault();
+            cancelAddCall();
+            return;
+          }
           if (event.key !== 'Enter' || event.isComposing) {
             return;
           }
@@ -1905,11 +15356,41 @@
           }
         });
       }
+      if (dom.keypadResults) {
+        dom.keypadResults.addEventListener('click', function (event) {
+          var button = event.target && event.target.closest ? event.target.closest('[data-telephony-keypad-extension]') : null;
+          if (button) {
+            dialPickedExtension(button.getAttribute('data-telephony-keypad-extension'));
+          }
+        });
+      }
       if (dom.hangup) {
         dom.hangup.addEventListener('click', hangup);
       }
       if (dom.hangupAll) {
-        dom.hangupAll.addEventListener('click', hangupAll);
+        dom.hangupAll.addEventListener('click', endAllCalls);
+      }
+      if (dom.keypadToggle) {
+        dom.keypadToggle.addEventListener('click', function () {
+          keypadOpen = !keypadOpen;
+          render();
+        });
+      }
+      if (dom.addCall) {
+        dom.addCall.addEventListener('click', startAddCall);
+      }
+      if (dom.addCallCancel) {
+        dom.addCallCancel.addEventListener('click', cancelAddCall);
+      }
+
+      // Escape anywhere in the keypad view backs out of Add call, as it does in the number field.
+      if (dom.keypadView) {
+        dom.keypadView.addEventListener('keydown', function (event) {
+          if (event.key === 'Escape' && addingCall && !event.defaultPrevented) {
+            event.preventDefault();
+            cancelAddCall();
+          }
+        });
       }
       if (dom.hold) {
         dom.hold.addEventListener('click', hold);
@@ -1926,15 +15407,6 @@
       if (dom.transfer) {
         dom.transfer.addEventListener('click', transfer);
       }
-      if (dom.transferCancel) {
-        dom.transferCancel.addEventListener('click', cancelTransfer);
-      }
-      if (dom.transferConfirm) {
-        dom.transferConfirm.addEventListener('click', confirmTransfer);
-      }
-      if (dom.merge) {
-        dom.merge.addEventListener('click', merge);
-      }
       if (dom.incomingAnswer) {
         dom.incomingAnswer.addEventListener('click', function () {
           answerIncoming(null);
@@ -1943,11 +15415,18 @@
       if (dom.incomingVoicemail) {
         dom.incomingVoicemail.addEventListener('click', voicemailIncoming);
       }
+      if (dom.voicemailAudio) {
+        dom.voicemailAudio.addEventListener('ended', stopVoicemailPlayback);
+        dom.voicemailAudio.addEventListener('error', handleVoicemailAudioError);
+      }
       if (dom.incomingIgnore) {
         dom.incomingIgnore.addEventListener('click', ignoreIncoming);
       }
       if (dom.connect) {
         dom.connect.addEventListener('click', handleConnect);
+      }
+      if (dom.disconnect) {
+        dom.disconnect.addEventListener('click', handleDisconnect);
       }
       dom.keys.forEach(function (key) {
         key.addEventListener('click', function () {
@@ -1963,7 +15442,36 @@
         suppressClick: true
       });
       window.addEventListener('message', onOAuthMessage);
-      window.addEventListener('beforeunload', releaseBrowserAudio);
+
+      // Announce the page to a desktop host. Only a host that answers with 'host-ready' takes part in the
+      // incoming-call handoff; any other page keeps its modal.
+      if (hostChannel) {
+        hostChannel.addEventListener('message', onHostMessage);
+        postToHost({
+          type: HOST_PAGE_MESSAGES.ready,
+          protocol: HOST_BRIDGE_PROTOCOL
+        });
+      }
+      window.addEventListener('beforeunload', function (event) {
+        // Seatbelt for navigating away mid-call: a full page load tears down the WebRTC media, so the
+        // call cannot survive a reload. Warn the agent before they leave while a call is live (the
+        // browser shows its own generic confirmation). This does NOT release audio -- if the agent
+        // cancels the navigation the call keeps running; cleanup happens in pagehide only when the page
+        // actually goes away. This is a safety net, not a fix for navigating while on a call.
+        if (hasLiveCall()) {
+          event.preventDefault();
+          event.returnValue = '';
+        }
+      });
+      window.addEventListener('pagehide', function () {
+        // The page is actually being unloaded (navigation confirmed or tab closing): stop the manual
+        // reconnect loop from scheduling a doomed restart during teardown, silence the ringtone, and
+        // release the provider media session.
+        pageUnloading = true;
+        ringtone.stop();
+        hostDelegation.reset();
+        releaseBrowserAudio();
+      });
       window.addEventListener('resize', function () {
         restorePosition();
         syncViewHeight();
@@ -1971,7 +15479,20 @@
     }
     bindEvents();
     restoreLayout();
+    // Load the persisted device selection before the first registration so getUserMedia uses the saved
+    // input device (item 5).
+    loadDeviceSelection();
+    // The stored processing flags are known only now; the checkboxes were wired (and defaulted) earlier.
+    syncProcessingControls();
     render();
+
+    // A restored Diagnostics tab is active without setActiveTab having run, so the meter that tab owns was
+    // never started: the panel opens showing a bar that cannot move, which reads as a microphone that is not
+    // being read at all.
+    if (activeTab === 'diagnostics' && diagnosticsEnabled) {
+      startMicMeter();
+      updateDiagnosticsReadout();
+    }
     rootElement.style.visibility = '';
     var startPromise = connect();
     return {
@@ -1981,6 +15502,10 @@
       dialNumber: dialNumber,
       hangup: hangup,
       hangupAll: hangupAll,
+      endAllCalls: endAllCalls,
+      leaveConference: leaveConference,
+      addCall: startAddCall,
+      cancelAddCall: cancelAddCall,
       hold: hold,
       resume: resume,
       mute: mute,
@@ -1999,8 +15524,24 @@
       isIncomingAcceptPending: function () {
         return incomingAcceptPending;
       },
+      // Lets the Contact Center layer declare that a routed leg is on its way to this browser, so the
+      // media adapter answers it instead of ringing it as an unsolicited incoming call.
+      armInboundAutoAnswer: armInboundAutoAnswer,
+      // A supervisor's engagement (the Contact Center supervision layer): expect the monitor leg carrying a token,
+      // hear about it as it is answered, connects and ends, and let it go.
+      armMonitorLeg: armMonitorLeg,
+      disarmMonitorLeg: disarmMonitorLeg,
+      hangupMonitorLeg: hangupMonitorLeg,
+      setMonitorLegMode: setMonitorLegMode,
+      onMonitorLeg: onMonitorLeg,
+      // Answers (accepted) or hangs up (not) the leg held for an offer; returns whether a held leg was answered.
+      settleOfferLeg: settleOfferLeg,
       setIncomingOffer: setIncomingOffer,
       clearIncomingOffer: clearIncomingOffer,
+      // Records that an offer ({ reservationId, callId }) is over, so a copy of it still in flight never opens.
+      markOfferSettled: function (offer) {
+        rememberSettledOffer(settledOffers, offer, Date.now());
+      },
       showError: showError,
       getConnection: function () {
         return connection;

@@ -1,0 +1,48 @@
+@model EntryPointViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<div class="ocat-wrapper" asp-validation-class-for="BusinessHoursCalendarId">
+    <label asp-for="BusinessHoursCalendarId" class="ocat-label">@T["Business hours calendar"]</label>
+    <div class="ocat-end">
+        <select asp-for="BusinessHoursCalendarId" asp-items="Model.BusinessHoursCalendarOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a calendar"]" data-width="100%" title="@T["Always open"]">
+            <option value="">@T["Always open"]</option>
+        </select>
+        <span asp-validation-for="BusinessHoursCalendarId" class="text-danger"></span>
+        <span class="hint">@T["Gates when the entry point is open. Leave empty to accept calls around the clock."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="ClosedAction">
+    <label asp-for="ClosedAction" class="ocat-label">@T["Closed action"]</label>
+    <div class="ocat-limited">
+        <select asp-for="ClosedAction" class="form-select">
+            <option value="@EntryPointClosedAction.HoldInQueue">@T["Hold in queue"]</option>
+            <option value="@EntryPointClosedAction.Voicemail">@T["Voicemail"]</option>
+            <option value="@EntryPointClosedAction.Overflow">@T["Overflow"]</option>
+            <option value="@EntryPointClosedAction.Reject">@T["Reject"]</option>
+        </select>
+        <span asp-validation-for="ClosedAction" class="text-danger"></span>
+        <span class="hint">@T["What happens to a call that arrives while the entry point is closed."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="OverflowQueueId">
+    <label asp-for="OverflowQueueId" class="ocat-label">@T["Overflow queue"]</label>
+    <div class="ocat-end">
+        <select asp-for="OverflowQueueId" asp-items="Model.OverflowQueueOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a queue"]" data-width="100%" title="@T["No overflow"]">
+            <option value="">@T["No overflow"]</option>
+        </select>
+        <span asp-validation-for="OverflowQueueId" class="text-danger"></span>
+        <span class="hint">@T["Used when the closed action is Overflow."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="ClosedMessage">
+    <label asp-for="ClosedMessage" class="ocat-label">@T["Closed message"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="ClosedMessage" class="form-control" rows="2"></textarea>
+        <span asp-validation-for="ClosedMessage" class="text-danger"></span>
+    </div>
+</div>

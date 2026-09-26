@@ -88,6 +88,8 @@ turns them on, and they disappear again when nothing needs them.
 
 ## Contact Center
 
+The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, recording, campaign, and subject) and the Orchard Core Workflows bridge are **not** separate features. Reports activate automatically when `CrestApps.OrchardCore.ContactCenter.Queues` and `CrestApps.OrchardCore.Reports` are both enabled; the workflow activities activate automatically when `OrchardCore.Workflows` is enabled alongside Contact Center. See [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) and [Workflows automation](./contact-center/workflows).
+
 | Feature ID | Name | Docs |
 | --- | --- | --- |
 | `CrestApps.OrchardCore.Omnichannel` | Omnichannel | [Omnichannel Communications](./omnichannel/) |
@@ -96,15 +98,42 @@ turns them on, and they disappear again when nothing needs them.
 | `CrestApps.OrchardCore.Omnichannel.Activities` | Omnichannel Activities | [Management (CRM)](./omnichannel/management) |
 | `CrestApps.OrchardCore.Omnichannel.Managements` | Omnichannel Management | [Management (CRM)](./omnichannel/management) |
 | `CrestApps.OrchardCore.Omnichannel.Sms` | SMS Omnichannel Automation | [SMS Automation](./omnichannel/sms) |
+| `CrestApps.OrchardCore.Omnichannel.ChannelEndpoints` | Omnichannel Channel Endpoints (dependency only) | [Management (CRM)](./omnichannel/management#channel-endpoint) |
+| `CrestApps.OrchardCore.Omnichannel.Messaging` | Omnichannel Messaging Workspace | [Messaging Workspace](./omnichannel/messaging-workspace) |
+| `CrestApps.OrchardCore.Omnichannel.Messaging.Sms` | SMS Messaging Channel | [Messaging Workspace](./omnichannel/messaging-workspace#setting-up-sms) |
+| `CrestApps.OrchardCore.ContactCenter` | Contact Center | [Contact Center](./contact-center/) |
+| `CrestApps.OrchardCore.ContactCenter.AgentServices` | Contact Center Agent Services (dependency only) | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
+| `CrestApps.OrchardCore.ContactCenter.Agents` | Contact Center Agents | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
+| `CrestApps.OrchardCore.ContactCenter.AgentEntitlements` | Contact Center Agent Entitlements | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
+| `CrestApps.OrchardCore.ContactCenter.Queues` | Contact Center Work Distribution | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
+| `CrestApps.OrchardCore.ContactCenter.Dialer` | Contact Center Outbound Dialer | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
+| `CrestApps.OrchardCore.ContactCenter.Dialer.Paced` | Contact Center Paced Dialing | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
+| `CrestApps.OrchardCore.ContactCenter.Voice` | Contact Center Voice (dependency only) | [Voice routing](./contact-center/voice-routing) |
+| `CrestApps.OrchardCore.ContactCenter.Voice.Media` | Contact Center Voice Media | [Voice routing](./contact-center/voice-routing) |
+| `CrestApps.OrchardCore.ContactCenter.InboundVoice` | Contact Center Inbound Voice | [Voice routing](./contact-center/voice-routing) |
+| `CrestApps.OrchardCore.ContactCenter.Recording` | Contact Center Call Recording | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
+| `CrestApps.OrchardCore.ContactCenter.SecureCapture` | Contact Center Secure Data Capture | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
+| `CrestApps.OrchardCore.ContactCenter.Supervision` | Contact Center Supervision & Live Dashboard | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
+| `CrestApps.OrchardCore.ContactCenter.RealTime` | Contact Center Real-Time (dependency only) | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
+| `CrestApps.OrchardCore.Telnyx.AiVoice` | Telnyx AI Voice Agent | [Telnyx AI Voice Agent](./telephony/telnyx#telnyx-ai-voice-agent) |
+| `CrestApps.OrchardCore.ContactCenter.BusinessHours` | Contact Center Business Hours | [Business hours and overflow](./contact-center/agents-queues-dialer#business-hours-and-overflow) |
+| `CrestApps.OrchardCore.ContactCenter.ProviderInbox` | Contact Center Provider Webhook Inbox (dependency only) | [Voice routing](./contact-center/voice-routing) |
+| `CrestApps.OrchardCore.ContactCenter.Recording.Core` | Contact Center Recording Governance (dependency only) | [Recording governance](./contact-center/#recording-governance) |
+| `CrestApps.OrchardCore.Omnichannel.Messaging.RoutedDistribution` | Omnichannel Messaging Routed Distribution | [Messaging Workspace](./omnichannel/messaging-workspace) |
+| `CrestApps.OrchardCore.Omnichannel.Voice` | Automated Voice | [Telnyx AI Voice Agent](./telephony/telnyx#telnyx-ai-voice-agent) |
 
 ## Telephony
 
 | Feature ID | Name | Docs |
 | --- | --- | --- |
 | `CrestApps.OrchardCore.Telephony` | Telephony | [Telephony](./telephony/) |
-| `CrestApps.OrchardCore.Telephony.Admin` | Telephony Administration | [Telephony](./telephony/#site-settings) |
 | `CrestApps.OrchardCore.Telephony.SoftPhone` | Telephony Soft Phone | [Telephony](./telephony/#soft-phone-widget) |
 | `CrestApps.OrchardCore.Dialpad` | Dialpad | [Dialpad](./telephony/dialpad) |
+| `CrestApps.OrchardCore.Telephony.SoftPhone.Core` | Telephony Soft Phone Core (dependency only) | [Telephony](./telephony/) |
+| `CrestApps.OrchardCore.Telephony.SoftPhone.Extension` | Telephony Soft Phone Extension | [Telephony](./telephony/) |
+| `CrestApps.OrchardCore.Telephony.Azure` | Telephony - Azure Blob Storage | [Recording — Azure Blob Storage](./telephony/recording-azure-blob-storage) |
+| `CrestApps.OrchardCore.Telnyx` | Telnyx | [Telnyx](./telephony/telnyx) |
+| `CrestApps.OrchardCore.Asterisk` | Asterisk | [Asterisk](./telephony/asterisk) |
 
 ## Compliance
 
@@ -149,6 +178,7 @@ turns them on, and they disappear again when nothing needs them.
 | `CrestApps.OrchardCore.SignalR` | SignalR (Deprecated) | [SignalR](./modules/signalr) |
 | `CrestApps.OrchardCore.SignalR.Redis` | SignalR Redis Backplane (Deprecated) | [SignalR](./modules/signalr) |
 | `CrestApps.OrchardCore.SignalR.Azure` | SignalR Azure Backplane (Deprecated) | [SignalR](./modules/signalr) |
+| `CrestApps.OrchardCore.Telnyx.Sms` | Telnyx SMS | [Telnyx SMS](./telephony/telnyx#telnyx-sms) |
 
 ## Users
 
@@ -166,3 +196,4 @@ turns them on, and they disappear again when nothing needs them.
 | `CrestApps.OrchardCore.TimeZones` | Time Zones | [Time Zones](./modules/time-zones) |
 | `CrestApps.OrchardCore.Resources` | CrestApps Resources | [Resources](./modules/resources) |
 | `CrestApps.OrchardCore.Roles` | Enhanced Roles | [Roles](./modules/roles) |
+| `CrestApps.OrchardCore.WebSockets` | WebSockets (dependency only) | [WebSockets](./modules/websockets) |

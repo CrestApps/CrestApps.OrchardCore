@@ -1,0 +1,16 @@
+{
+  "description": "When the provider voice event sink already owns the call, the webhook updates it instead of routing a duplicate.",
+  "payload": {
+    "call_id": "3456789012345678",
+    "state": "ringing",
+    "direction": "inbound",
+    "external_number": "+15125550188",
+    "internal_number": "+15125550100",
+    "event_timestamp": 1699887601456
+  },
+  "expected": {
+    "result": "Updated",
+    "state": "Ringing",
+    "providerHandled": true
+  }
+}

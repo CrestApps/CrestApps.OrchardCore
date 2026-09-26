@@ -1,0 +1,267 @@
+using System.Net;
+using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Telnyx.Models;
+using CrestApps.OrchardCore.Telnyx.Services;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using Moq;
+
+namespace CrestApps.OrchardCore.Tests.Telephony;
+
+/// <summary>
+/// Reconciliation repairs calls the platform has a record of. This covers the ones it does not: a call placed
+/// just before the process died, so no interaction was ever written. The person is connected to a platform that
+/// has no idea they exist, no webhook will ever produce a record for them, and nothing else in the system will
+/// ever notice.
+/// </summary>
+public sealed class TelnyxOrphanedCallReconcilerTests
+{
+    [Fact]
+    public async Task ACallThePlatformKnowsAbout_IsLeftAlone()
+    {
+        // Arrange
+        var handler = ListingOneCall("call-1", durationSeconds: 600);
+        var interactions = KnownCalls("call-1");
+        var reconciler = CreateReconciler(handler, interactions, TelnyxOrphanedCallHandling.EndCall);
+
+        // Act
+        var result = await reconciler.ReconcileAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(0, result.OrphansFound);
+        Assert.Single(handler.Requests);
+    }
+
+    // The number an agent dialed from the soft phone is a leg the platform dialed only to reach them; it has no
+    // interaction of its own, and ending it as an orphan would cut the agent's call off after two minutes.
+    [Fact]
+    public async Task TheDialedLegOfACallThePlatformKnows_IsNotAnOrphan()
+    {
+        // Arrange
+        var state = new TelnyxOutboundBridgeState
+        {
+            Intent = TelnyxOutboundBridgeState.DestinationLegIntent,
+            PeerCallControlId = "agent-leg-1",
+        }.ToClientState();
+        var handler = new RecordingHttpMessageHandler().AlwaysRespondWith(HttpStatusCode.OK, $$"""
+            { "data": [ { "call_control_id": "remote-leg-1", "call_duration": 600, "client_state": "{{state}}" } ] }
+            """);
+        var reconciler = CreateReconciler(handler, KnownCalls("agent-leg-1"), TelnyxOrphanedCallHandling.EndCall);
+
+        // Act
+        var result = await reconciler.ReconcileAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(0, result.OrphansFound);
+        Assert.Single(handler.Requests);
+    }
+
+    [Fact]
+    public async Task ACallNothingHasARecordOf_IsFound()
+    {
+        // Arrange
+        var handler = ListingOneCall("call-1", durationSeconds: 600);
+        var reconciler = CreateReconciler(handler, KnownCalls(), TelnyxOrphanedCallHandling.Report);
+
+        // Act
+        var result = await reconciler.ReconcileAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(1, result.OrphansFound);
+    }
+
+    [Fact]
+    public async Task ByDefault_AnOrphanIsReportedAndLeftConnected()
+    {
+        // Arrange
+        // Hanging up on a live person is the more destructive of the two options, so it is never what happens
+        // unless a deployment asks for it: a call the platform lost may still be a conversation between two
+        // people who can hear each other perfectly well.
+        var handler = ListingOneCall("call-1", durationSeconds: 600);
+        var reconciler = CreateReconciler(handler, KnownCalls(), TelnyxOrphanedCallHandling.Report);
+
+        // Act
+        var result = await reconciler.ReconcileAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(1, result.OrphansFound);
+        Assert.Equal(0, result.OrphansEnded);
+        Assert.Single(handler.Requests);
+    }
+
+    [Fact]
+    public async Task WhenTheDeploymentAsksForIt_AnOrphanIsToldWhatHappenedAndReleased()
+    {
+        // Arrange
+        // Silence is the worst outcome for the person on the call. If a deployment would rather end an orphan
+        // than leave it hanging, it is ended with an explanation first.
+        var handler = ListingOneCall("call-1", durationSeconds: 600);
+        var reconciler = CreateReconciler(handler, KnownCalls(), TelnyxOrphanedCallHandling.EndCall);
+
+        // Act
+        var result = await reconciler.ReconcileAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(1, result.OrphansEnded);
+        Assert.Equal("/v2/calls/call-1/actions/speak", handler.Requests[1].Path);
+        Assert.Equal("/v2/calls/call-1/actions/hangup", handler.Requests[2].Path);
+    }
+
+    [Fact]
+    public async Task TheApologyToAnOrphan_IsSpokenInTheTenantsVoice_AndWordedInItsLanguage()
+    {
+        // Arrange
+        // The apology named no voice, which Telnyx refuses, and was fixed English whatever language the tenant spoke.
+        var handler = ListingOneCall("call-1", durationSeconds: 600);
+        var localizer = new TranslatingStringLocalizer<TelnyxOrphanedCallReconciler>().Add(
+            "es-US",
+            "We're sorry. This call can no longer be completed because of a system interruption. Please call us back. Goodbye.",
+            "Lo sentimos. Esta llamada no puede completarse por una interrupción del sistema. Por favor llámenos de nuevo. Adiós.");
+        var reconciler = CreateReconciler(
+            handler,
+            KnownCalls(),
+            TelnyxOrphanedCallHandling.EndCall,
+            voice: "AWS.Polly.Lupe-Neural",
+            language: "es-US",
+            localizer: localizer);
+
+        // Act
+        await reconciler.ReconcileAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        using var body = System.Text.Json.JsonDocument.Parse(handler.Requests[1].Body);
+        Assert.Equal("AWS.Polly.Lupe-Neural", body.RootElement.GetProperty("voice").GetString());
+        Assert.Equal("es-US", body.RootElement.GetProperty("language").GetString());
+        Assert.StartsWith("Lo sentimos.", body.RootElement.GetProperty("payload").GetString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task AVeryNewCall_IsLeftAlone()
+    {
+        // Arrange
+        // A call that has been up for seconds is far more likely to be one whose interaction is still being
+        // written than one that was lost. Treating it as an orphan would hang up on calls that are working.
+        var handler = ListingOneCall("call-1", durationSeconds: 3);
+        var reconciler = CreateReconciler(handler, KnownCalls(), TelnyxOrphanedCallHandling.EndCall);
+
+        // Act
+        var result = await reconciler.ReconcileAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(0, result.OrphansFound);
+    }
+
+    [Fact]
+    public async Task EveryPage_IsWalked()
+    {
+        // Arrange
+        // The orphan is as likely to be on the last page as the first, and a busy connection has several.
+        var handler = new RecordingHttpMessageHandler()
+            .RespondWith(HttpStatusCode.OK, """
+                {
+                  "data": [ { "call_control_id": "call-1", "call_duration": 600 } ],
+                  "meta": { "next_page_token": "page-2" }
+                }
+                """)
+            .RespondWith(HttpStatusCode.OK, """
+                { "data": [ { "call_control_id": "call-2", "call_duration": 600 } ] }
+                """);
+        var reconciler = CreateReconciler(handler, KnownCalls(), TelnyxOrphanedCallHandling.Report);
+
+        // Act
+        var result = await reconciler.ReconcileAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(2, result.OrphansFound);
+    }
+
+    [Fact]
+    public async Task WhenTheProviderRefusesTheListing_NothingIsAssumedToBeAnOrphan()
+    {
+        // Arrange
+        // An expired API key must not be read as "every call on this connection is lost" and act on it.
+        var handler = new RecordingHttpMessageHandler().AlwaysRespondWith(HttpStatusCode.Unauthorized);
+        var reconciler = CreateReconciler(handler, KnownCalls(), TelnyxOrphanedCallHandling.EndCall);
+
+        // Act
+        var result = await reconciler.ReconcileAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Equal(0, result.OrphansFound);
+        Assert.Equal(0, result.OrphansEnded);
+    }
+
+    [Fact]
+    public async Task WithNoConnectionConfigured_NothingIsAsked()
+    {
+        // Arrange
+        // A tenant that has not finished configuring Telnyx has no connection to list, and asking anyway just
+        // logs a provider error every time the task runs.
+        var handler = new RecordingHttpMessageHandler();
+        var reconciler = CreateReconciler(handler, KnownCalls(), TelnyxOrphanedCallHandling.Report, connectionId: null);
+
+        // Act
+        var result = await reconciler.ReconcileAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Empty(handler.Requests);
+    }
+
+    private static RecordingHttpMessageHandler ListingOneCall(string callControlId, int durationSeconds)
+        => new RecordingHttpMessageHandler().AlwaysRespondWith(HttpStatusCode.OK, $$"""
+            { "data": [ { "call_control_id": "{{callControlId}}", "call_duration": {{durationSeconds}} } ] }
+            """);
+
+    private static ITelephonyInteractionStore KnownCalls(params string[] callIds)
+    {
+        var store = new Mock<ITelephonyInteractionStore>();
+
+        store.Setup(x => x.FindByProviderCallIdAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string _, string callId, CancellationToken _) =>
+                callIds.Contains(callId) ? new TelephonyInteraction { CallId = callId } : null);
+
+        return store.Object;
+    }
+
+    private static TelnyxOrphanedCallReconciler CreateReconciler(
+        HttpMessageHandler handler,
+        ITelephonyInteractionStore interactions,
+        TelnyxOrphanedCallHandling handling,
+        string connectionId = "connection-1",
+        string voice = null,
+        string language = null,
+        Microsoft.Extensions.Localization.IStringLocalizer<TelnyxOrphanedCallReconciler> localizer = null)
+    {
+        var httpClient = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("https://api.telnyx.com/v2/"),
+        };
+
+        var options = new TelnyxOptions
+        {
+            ApiBaseUrl = "https://api.telnyx.com/v2/",
+            ApiKey = "test-api-key",
+            ConnectionId = connectionId,
+            OrphanedCallHandling = handling,
+            TtsVoice = voice,
+            TtsLanguage = language,
+        };
+
+        var apiClient = new TelnyxApiClient(
+            httpClient,
+            new OptionsWrapper<TelnyxOptions>(options),
+            new TelnyxApiRetryPolicy(TimeSpan.Zero),
+            NullLogger<TelnyxApiClient>.Instance);
+
+        return new TelnyxOrphanedCallReconciler(
+            apiClient,
+            interactions,
+            new TestOptionsMonitor<TelnyxOptions>(options),
+            localizer ?? new PassThroughStringLocalizer<TelnyxOrphanedCallReconciler>(),
+            NullLogger<TelnyxOrphanedCallReconciler>.Instance);
+    }
+}

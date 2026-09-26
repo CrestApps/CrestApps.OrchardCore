@@ -1,0 +1,1205 @@
+#nullable enable annotations
+
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Telephony.Models;
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
+using OrchardCore.Modules;
+
+namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
+
+public sealed class ContactCenterCallCommandServiceTests
+{
+    private static readonly DateTime _now = new(2026, 6, 30, 12, 0, 0, DateTimeKind.Utc);
+
+    [Fact]
+    public async Task AcceptInboundOfferAsync_WhenInteractionIsMissing_AcceptsReservationWithoutMedia()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.SetupPendingReservation();
+        harness.InteractionManager
+            .Setup(manager => manager.FindByActivityIdAsync("act1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Interaction)null!);
+        harness.ReservationService
+            .Setup(service => service.AcceptAsync("r1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateReservation());
+
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.AcceptInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.False(result.RequiresDeviceAnswer);
+        Assert.Null(result.InteractionId);
+        Assert.Equal("The work was accepted.", result.Reason);
+        harness.ReservationService.Verify(
+            service => service.AcceptAsync("r1", It.IsAny<CancellationToken>()),
+            Times.Once);
+        harness.InteractionManager.Verify(
+            manager => manager.UpdateAsync(It.IsAny<Interaction>(), It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        harness.CallSessionManager.Verify(
+            manager => manager.CreateAsync(It.IsAny<CallSession>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        harness.VoiceProviderResolver.Verify(
+            resolver => resolver.Get(It.IsAny<string>()),
+            Times.Never);
+        harness.ProviderCommandStateService.Verify(
+            service => service.RegisterAsync(It.IsAny<ProviderCommandRegistration>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        harness.ScopeExecutor.Verify(
+            executor => executor.ScheduleAfterCommit<IProviderCommandProcessor>(It.IsAny<Func<IProviderCommandProcessor, Task>>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task AcceptInboundOfferAsync_WhenActivityIsPreviewDial_StartsDialerAttemptWithoutAcceptingReservation()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.SetupPendingReservation();
+        harness.SetupPreviewDialAttempt();
+
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.AcceptInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.False(result.RequiresDeviceAnswer);
+        harness.DialerAttemptService.Verify(
+            attemptService => attemptService.TryDialAsync(
+                It.Is<DialerProfile>(profile => profile.ItemId == "profile-1"),
+                It.Is<ActivityReservation>(reservation => reservation.ItemId == "r1"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        harness.ReservationService.Verify(
+            service => service.AcceptAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        harness.InteractionManager.Verify(
+            manager => manager.UpdateAsync(It.IsAny<Interaction>(), It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        harness.CallSessionManager.Verify(
+            manager => manager.CreateAsync(It.IsAny<CallSession>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        harness.VoiceProviderResolver.Verify(
+            resolver => resolver.Get(It.IsAny<string>()),
+            Times.Never);
+        harness.ProviderCommandStateService.Verify(
+            service => service.RegisterAsync(It.IsAny<ProviderCommandRegistration>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    // A queued callback has no dialer profile of its own: it is dialed with the platform's built-in callback profile,
+    // from the default caller id, and the caller who asked for it is never refused as do-not-call.
+    [Fact]
+    public async Task AcceptInboundOfferAsync_WhenActivityIsAQueuedCallback_DialsTheCallerWithTheCallbackProfile()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.SetupPendingReservation();
+        harness.ActivityManager
+            .Setup(manager => manager.FindByIdAsync("act1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OmnichannelActivity { ItemId = "act1", Source = ActivitySources.Callback, PreferredDestination = "+17025550100" });
+        harness.DialerAttemptService
+            .Setup(service => service.TryDialAsync(It.IsAny<DialerProfile>(), It.IsAny<ActivityReservation>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.AcceptInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        harness.DialerAttemptService.Verify(
+            attemptService => attemptService.TryDialAsync(
+                It.Is<DialerProfile>(profile =>
+                    profile.ItemId == QueueCallbackDialerProfile.Id &&
+                    profile.CallerId == null &&
+                    !profile.RespectDoNotCall &&
+                    !profile.EnforceCallingWindow),
+                It.Is<ActivityReservation>(reservation => reservation.ItemId == "r1"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        harness.ReservationService.Verify(
+            service => service.AcceptAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Theory]
+    [InlineData(InteractionStatus.Ended)]
+    [InlineData(InteractionStatus.Failed)]
+    public async Task AcceptInboundOfferAsync_WhenDurableInteractionIsTerminal_ReturnsFailureWithoutAcceptingReservation(
+        InteractionStatus terminalStatus)
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.SetupPendingReservation();
+        harness.SetupInteraction();
+        harness.Interaction.RestorePersistedStatus(terminalStatus);
+
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.AcceptInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Equal("The offer is no longer available.", result.Reason);
+        harness.ReservationService.Verify(
+            service => service.AcceptAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        harness.InteractionManager.Verify(
+            manager => manager.UpdateAsync(It.IsAny<Interaction>(), It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        harness.CallSessionManager.Verify(
+            manager => manager.CreateAsync(It.IsAny<CallSession>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        harness.VoiceProviderResolver.Verify(
+            resolver => resolver.Get(It.IsAny<string>()),
+            Times.Never);
+        harness.ProviderCommandStateService.Verify(
+            service => service.RegisterAsync(It.IsAny<ProviderCommandRegistration>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        harness.ScopeExecutor.Verify(
+            executor => executor.ScheduleAfterCommit<IProviderCommandProcessor>(It.IsAny<Func<IProviderCommandProcessor, Task>>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task AcceptInboundOfferAsync_WhenAgentDeviceNativeProvider_StagesRingingWithoutProviderCommand()
+    {
+        // Arrange
+        var order = new List<string>();
+        var harness = new Harness();
+        ConfigureAcceptedInboundOffer(harness, order);
+        harness.SetupProvider(VoiceProviderDeliveryModel.AgentDeviceNative);
+
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.AcceptInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.True(result.RequiresDeviceAnswer);
+        Assert.Equal("int1", result.InteractionId);
+        Assert.Equal("session-1", result.CallSessionId);
+        Assert.Equal(InteractionStatus.Ringing, harness.Interaction.Status);
+        Assert.Equal("a1", harness.Interaction.AgentId);
+        Assert.Equal("q1", harness.Interaction.QueueId);
+        Assert.Equal(_now, harness.Interaction.StartedUtc);
+        var createdCallSession = harness.CreatedCallSession!;
+
+        Assert.Equal(VoiceCallState.Ringing, createdCallSession.State);
+        Assert.Equal(VoiceProviderDeliveryModel.AgentDeviceNative, createdCallSession.DeliveryModel);
+        Assert.Equal(_now, createdCallSession.CreatedUtc);
+        Assert.Equal(_now, createdCallSession.StartedUtc);
+        Assert.Null(createdCallSession.AnsweredUtc);
+        Assert.Equal(
+            [
+                "accept",
+                "interaction",
+                "session",
+                ContactCenterConstants.Events.CallSessionCreated,
+                ContactCenterConstants.Events.OfferAccepted,
+            ],
+            order);
+        harness.ReservationService.Verify(
+            service => service.AcceptAsync("r1", It.IsAny<CancellationToken>()),
+            Times.Once);
+        harness.VoiceProviderResolver.Verify(
+            resolver => resolver.Get("dp"),
+            Times.Once);
+        harness.CallControlProvider.Verify(
+            provider => provider.ConnectToAgentAsync(It.IsAny<ContactCenterConnectRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        harness.ProviderCommandStateService.Verify(
+            service => service.RegisterAsync(It.IsAny<ProviderCommandRegistration>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        harness.ScopeExecutor.Verify(
+            executor => executor.ScheduleAfterCommit<IProviderCommandProcessor>(It.IsAny<Func<IProviderCommandProcessor, Task>>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task AcceptInboundOfferAsync_WhenServerSideAcdProvider_RegistersAnswerCommandAndSchedulesProcessor()
+    {
+        // Arrange
+        var order = new List<string>();
+        var harness = new Harness();
+        ConfigureAcceptedInboundOffer(harness, order);
+        harness.SetupProvider(VoiceProviderDeliveryModel.ServerSideAcd);
+        ProviderCommandRegistration? capturedRegistration = null;
+        string? observedCommandIdDuringRegistration = null;
+        Func<IProviderCommandProcessor, Task>? scheduledDispatch = null;
+        harness.ProviderCommandStateService
+            .Setup(service => service.RegisterAsync(It.IsAny<ProviderCommandRegistration>(), It.IsAny<CancellationToken>()))
+            .Callback<ProviderCommandRegistration, CancellationToken>((registration, _) =>
+            {
+                capturedRegistration = registration;
+                observedCommandIdDuringRegistration = Assert.IsType<string>(harness.Interaction.TechnicalMetadata[ContactCenterConstants.CommandMetadata.CommandId]);
+                order.Add("register");
+            })
+            .ReturnsAsync(new ProviderCommand());
+        harness.ScopeExecutor
+            .Setup(executor => executor.ScheduleAfterCommit<IProviderCommandProcessor>(It.IsAny<Func<IProviderCommandProcessor, Task>>()))
+            .Callback<Func<IProviderCommandProcessor, Task>>(operation =>
+            {
+                scheduledDispatch = operation;
+                order.Add("schedule");
+            })
+            .Returns(true);
+
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.AcceptInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.False(result.RequiresDeviceAnswer);
+        Assert.Equal("int1", result.InteractionId);
+        Assert.Equal("session-1", result.CallSessionId);
+        Assert.Equal(InteractionStatus.Ringing, harness.Interaction.Status);
+        Assert.Equal(VoiceCallState.Ringing, harness.CreatedCallSession!.State);
+        Assert.Equal(
+            [
+                "accept",
+                "interaction",
+                "session",
+                ContactCenterConstants.Events.CallSessionCreated,
+                ContactCenterConstants.Events.OfferAccepted,
+                "register",
+                "schedule",
+            ],
+            order);
+        Assert.NotNull(capturedRegistration);
+        Assert.Equal(capturedRegistration!.CommandId, observedCommandIdDuringRegistration);
+
+        // The session names the answer command, so the connected event the bridge produces on an answered outbound
+        // call finds the agent already being joined instead of registering a second command to ring them again.
+        Assert.Equal(capturedRegistration!.CommandId, harness.CreatedCallSession!.Metadata[ContactCenterConstants.CommandMetadata.CommandId]);
+        AssertAnswerRegistration(harness, capturedRegistration!);
+        harness.ReservationService.Verify(
+            service => service.AcceptAsync("r1", It.IsAny<CancellationToken>()),
+            Times.Once);
+        harness.VoiceProviderResolver.Verify(
+            resolver => resolver.Get("dp"),
+            Times.Once);
+        harness.CallControlProvider.Verify(
+            provider => provider.ConnectToAgentAsync(It.IsAny<ContactCenterConnectRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        harness.ProviderCommandStateService.Verify(
+            service => service.RegisterAsync(It.IsAny<ProviderCommandRegistration>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        harness.ScopeExecutor.Verify(
+            executor => executor.ScheduleAfterCommit<IProviderCommandProcessor>(It.IsAny<Func<IProviderCommandProcessor, Task>>()),
+            Times.Once);
+        Assert.NotNull(scheduledDispatch);
+        var processor = new Mock<IProviderCommandProcessor>();
+        processor
+            .Setup(value => value.DispatchAsync(capturedRegistration!.CommandId, CancellationToken.None))
+            .ReturnsAsync(new ProviderCommand { CommandId = capturedRegistration!.CommandId });
+
+        await scheduledDispatch!(processor.Object);
+
+        processor.Verify(
+            value => value.DispatchAsync(capturedRegistration!.CommandId, CancellationToken.None),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task AcceptInboundOfferAsync_WhenNoVoiceProviderIsResolved_RegistersAnswerCommandAndSchedulesProcessor()
+    {
+        // Arrange
+        var order = new List<string>();
+        var harness = new Harness();
+        ConfigureAcceptedInboundOffer(harness, order);
+        harness.SetupNoProvider();
+        ProviderCommandRegistration? capturedRegistration = null;
+        string? observedCommandIdDuringRegistration = null;
+        Func<IProviderCommandProcessor, Task>? scheduledDispatch = null;
+        harness.ProviderCommandStateService
+            .Setup(service => service.RegisterAsync(It.IsAny<ProviderCommandRegistration>(), It.IsAny<CancellationToken>()))
+            .Callback<ProviderCommandRegistration, CancellationToken>((registration, _) =>
+            {
+                capturedRegistration = registration;
+                observedCommandIdDuringRegistration = Assert.IsType<string>(harness.Interaction.TechnicalMetadata[ContactCenterConstants.CommandMetadata.CommandId]);
+                order.Add("register");
+            })
+            .ReturnsAsync(new ProviderCommand());
+        harness.ScopeExecutor
+            .Setup(executor => executor.ScheduleAfterCommit<IProviderCommandProcessor>(It.IsAny<Func<IProviderCommandProcessor, Task>>()))
+            .Callback<Func<IProviderCommandProcessor, Task>>(operation =>
+            {
+                scheduledDispatch = operation;
+                order.Add("schedule");
+            })
+            .Returns(true);
+
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.AcceptInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.False(result.RequiresDeviceAnswer);
+        Assert.Equal("int1", result.InteractionId);
+        Assert.Equal("session-1", result.CallSessionId);
+        Assert.Equal(InteractionStatus.Ringing, harness.Interaction.Status);
+        Assert.Equal(VoiceCallState.Ringing, harness.CreatedCallSession!.State);
+        Assert.Equal(
+            [
+                "accept",
+                "interaction",
+                "session",
+                ContactCenterConstants.Events.CallSessionCreated,
+                ContactCenterConstants.Events.OfferAccepted,
+                "register",
+                "schedule",
+            ],
+            order);
+        Assert.NotNull(capturedRegistration);
+        Assert.Equal(capturedRegistration!.CommandId, observedCommandIdDuringRegistration);
+
+        // The session names the answer command, so the connected event the bridge produces on an answered outbound
+        // call finds the agent already being joined instead of registering a second command to ring them again.
+        Assert.Equal(capturedRegistration!.CommandId, harness.CreatedCallSession!.Metadata[ContactCenterConstants.CommandMetadata.CommandId]);
+        AssertAnswerRegistration(harness, capturedRegistration!);
+        harness.ReservationService.Verify(
+            service => service.AcceptAsync("r1", It.IsAny<CancellationToken>()),
+            Times.Once);
+        harness.VoiceProviderResolver.Verify(
+            resolver => resolver.Get("dp"),
+            Times.Once);
+        harness.ProviderCommandStateService.Verify(
+            service => service.RegisterAsync(It.IsAny<ProviderCommandRegistration>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        harness.ScopeExecutor.Verify(
+            executor => executor.ScheduleAfterCommit<IProviderCommandProcessor>(It.IsAny<Func<IProviderCommandProcessor, Task>>()),
+            Times.Once);
+        Assert.NotNull(scheduledDispatch);
+        var processor = new Mock<IProviderCommandProcessor>();
+        processor
+            .Setup(value => value.DispatchAsync(capturedRegistration!.CommandId, CancellationToken.None))
+            .ReturnsAsync(new ProviderCommand { CommandId = capturedRegistration!.CommandId });
+
+        await scheduledDispatch!(processor.Object);
+
+        processor.Verify(
+            value => value.DispatchAsync(capturedRegistration!.CommandId, CancellationToken.None),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task AcceptInboundOfferAsync_WhenProviderCommandRegistrationFails_CompensatesReservationInFreshScope()
+    {
+        // Arrange
+        var order = new List<string>();
+        var harness = new Harness();
+        ConfigureAcceptedInboundOffer(harness, order);
+        harness.SetupProvider(VoiceProviderDeliveryModel.ServerSideAcd);
+        ProviderCommandRegistration? capturedRegistration = null;
+        string? observedCommandIdDuringRegistration = null;
+        var compensationService = new Mock<IActivityReservationService>();
+        compensationService
+            .Setup(service => service.CompensateAsync("r1", false, CancellationToken.None))
+            .Callback(() => order.Add("compensate"))
+            .ReturnsAsync(CreateReservation());
+        harness.ProviderCommandStateService
+            .Setup(service => service.RegisterAsync(It.IsAny<ProviderCommandRegistration>(), It.IsAny<CancellationToken>()))
+            .Callback<ProviderCommandRegistration, CancellationToken>((registration, _) =>
+            {
+                capturedRegistration = registration;
+                observedCommandIdDuringRegistration = Assert.IsType<string>(harness.Interaction.TechnicalMetadata[ContactCenterConstants.CommandMetadata.CommandId]);
+                order.Add("register");
+            })
+            .ThrowsAsync(new InvalidOperationException("The command intent could not be committed."));
+        harness.ScopeExecutor
+            .Setup(executor => executor.ExecuteAsync<IActivityReservationService>(It.IsAny<Func<IActivityReservationService, Task>>()))
+            .Returns<Func<IActivityReservationService, Task>>(operation => operation(compensationService.Object));
+
+        var service = harness.CreateService();
+
+        // Act
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.AcceptInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.Equal("The command intent could not be committed.", exception.Message);
+        Assert.NotNull(capturedRegistration);
+        Assert.Equal(capturedRegistration!.CommandId, observedCommandIdDuringRegistration);
+
+        // The session names the answer command, so the connected event the bridge produces on an answered outbound
+        // call finds the agent already being joined instead of registering a second command to ring them again.
+        Assert.Equal(capturedRegistration!.CommandId, harness.CreatedCallSession!.Metadata[ContactCenterConstants.CommandMetadata.CommandId]);
+        AssertAnswerRegistration(harness, capturedRegistration!);
+        Assert.Equal(
+            [
+                "accept",
+                "interaction",
+                "session",
+                ContactCenterConstants.Events.CallSessionCreated,
+                ContactCenterConstants.Events.OfferAccepted,
+                "register",
+                "compensate",
+            ],
+            order);
+        harness.ReservationService.Verify(
+            service => service.AcceptAsync("r1", It.IsAny<CancellationToken>()),
+            Times.Once);
+        harness.CallControlProvider.Verify(
+            provider => provider.ConnectToAgentAsync(It.IsAny<ContactCenterConnectRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        harness.ScopeExecutor.Verify(
+            executor => executor.ExecuteAsync<IActivityReservationService>(It.IsAny<Func<IActivityReservationService, Task>>()),
+            Times.Once);
+        harness.ScopeExecutor.Verify(
+            executor => executor.ScheduleAfterCommit<IProviderCommandProcessor>(It.IsAny<Func<IProviderCommandProcessor, Task>>()),
+            Times.Never);
+        harness.ProviderCommandStateService.Verify(
+            service => service.RegisterAsync(It.IsAny<ProviderCommandRegistration>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        compensationService.Verify(
+            service => service.CompensateAsync("r1", false, CancellationToken.None),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task DeclineInboundOfferAsync_PublishesDurableOfferDeclinedEvent()
+    {
+        // Arrange
+        var order = new List<string>();
+        var harness = new Harness();
+        harness.SetupPendingReservation();
+        InteractionEvent? publishedEvent = null;
+        harness.ReservationService
+            .Setup(service => service.RejectAsync("r1", It.IsAny<CancellationToken>()))
+            .Callback(() => order.Add("reject"))
+            .ReturnsAsync(new ActivityReservation { ItemId = "r1", AgentId = "a1", QueueId = "q1" });
+        harness.Publisher
+            .Setup(publisher => publisher.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<InteractionEvent, CancellationToken>((interactionEvent, _) =>
+            {
+                publishedEvent = interactionEvent;
+                order.Add("publish");
+            })
+            .Returns(Task.CompletedTask);
+
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.DeclineInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.False(result.RequiresDeviceAnswer);
+        Assert.Equal("The offer was declined.", result.Reason);
+        Assert.Equal(["reject", "publish"], order);
+        Assert.NotNull(publishedEvent);
+        var declinedEvent = publishedEvent!;
+
+        Assert.Equal(ContactCenterConstants.Events.OfferDeclined, declinedEvent.EventType);
+        Assert.Equal(nameof(ActivityReservation), declinedEvent.AggregateType);
+        Assert.Equal("r1", declinedEvent.AggregateId);
+        // The agent who declined, by user id, as every agent-made record names them; the profile is in the payload.
+        Assert.Equal("u1", declinedEvent.ActorId);
+        Assert.Equal(ContactCenterConstants.Components.Voice, declinedEvent.SourceComponent);
+        Assert.Equal("q1", declinedEvent.GetData<OfferDeclinedEventData>().QueueId);
+        harness.ReservationService.Verify(
+            service => service.RejectAsync("r1", It.IsAny<CancellationToken>()),
+            Times.Once);
+        harness.Publisher.Verify(
+            publisher => publisher.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        harness.VoiceProviderResolver.Verify(
+            resolver => resolver.Get(It.IsAny<string>()),
+            Times.Never);
+        harness.CallSessionManager.Verify(
+            manager => manager.CreateAsync(It.IsAny<CallSession>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        harness.ProviderCommandStateService.Verify(
+            service => service.RegisterAsync(It.IsAny<ProviderCommandRegistration>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        harness.ScopeExecutor.Verify(
+            executor => executor.ExecuteAsync<IActivityReservationService>(It.IsAny<Func<IActivityReservationService, Task>>()),
+            Times.Never);
+        harness.ScopeExecutor.Verify(
+            executor => executor.ScheduleAfterCommit<IProviderCommandProcessor>(It.IsAny<Func<IProviderCommandProcessor, Task>>()),
+            Times.Never);
+    }
+
+    // Bug: an agent sending an offered call to voicemail had the Contact Center decline it and the telephony hub send it
+    // to voicemail as well, so the caller was greeted twice. The Contact Center now sends an offered caller to voicemail
+    // itself: the offer is rejected to voicemail (never re-offered) and the decline is recorded against the agent.
+    [Fact]
+    public async Task DeclineInboundOfferToVoicemailAsync_RejectsTheOfferToVoicemail_AndRecordsTheDecline()
+    {
+        // Arrange
+        var order = new List<string>();
+        var harness = new Harness();
+        harness.SetupPendingReservation();
+        InteractionEvent? publishedEvent = null;
+        harness.ReservationService
+            .Setup(service => service.RejectToVoicemailAsync("r1", It.IsAny<CancellationToken>()))
+            .Callback(() => order.Add("reject-to-voicemail"))
+            .ReturnsAsync(new ActivityReservation { ItemId = "r1", AgentId = "a1", QueueId = "q1" });
+        harness.Publisher
+            .Setup(publisher => publisher.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<InteractionEvent, CancellationToken>((interactionEvent, _) =>
+            {
+                publishedEvent = interactionEvent;
+                order.Add("publish");
+            })
+            .Returns(Task.CompletedTask);
+
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.DeclineInboundOfferToVoicemailAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.False(result.RequiresDeviceAnswer);
+        Assert.Equal(["reject-to-voicemail", "publish"], order);
+        Assert.Equal(ContactCenterConstants.Events.OfferDeclined, publishedEvent!.EventType);
+        Assert.Equal("u1", publishedEvent.ActorId);
+        Assert.Equal(ContactCenterActorType.Agent, publishedEvent.ActorType);
+        harness.ReservationService.Verify(
+            service => service.RejectAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task DeclineInboundOfferToVoicemailAsync_WhenTheOfferIsNoLongerTheAgents_DoesNothing()
+    {
+        // Arrange
+        // A second click, or one that lands after the offer moved on, must not send the caller anywhere a second time.
+        var harness = new Harness();
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.DeclineInboundOfferToVoicemailAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        harness.ReservationService.Verify(
+            service => service.RejectToVoicemailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        harness.Publisher.Verify(
+            publisher => publisher.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task AcceptInboundOfferAsync_WhenTheAgentWasPreDialed_JoinsThatLegInsteadOfRingingTheAgentAgain()
+    {
+        // Arrange
+        var order = new List<string>();
+        var harness = new Harness();
+        ConfigureAcceptedInboundOffer(harness, order);
+        harness.SetupProvider(VoiceProviderDeliveryModel.ServerSideAcd);
+        harness.PreDialCoordinator
+            .Setup(coordinator => coordinator.GetForAcceptAsync("r1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentPreDialLeg { ReservationId = "r1", AgentLegId = "leg-1", ProviderCallId = "call-1" });
+        ProviderCommandRegistration? capturedRegistration = null;
+        harness.ProviderCommandStateService
+            .Setup(service => service.RegisterAsync(It.IsAny<ProviderCommandRegistration>(), It.IsAny<CancellationToken>()))
+            .Callback<ProviderCommandRegistration, CancellationToken>((registration, _) => capturedRegistration = registration)
+            .ReturnsAsync(new ProviderCommand());
+
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.AcceptInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.True(result.AgentLegPreDialed);
+        Assert.NotNull(capturedRegistration);
+
+        var request = JsonSerializer.Deserialize<ProviderAnswerCommandRequest>(capturedRegistration!.RequestPayload);
+        Assert.Equal("leg-1", request!.PreDialedAgentLegId);
+    }
+
+    [Fact]
+    public async Task AcceptInboundOfferAsync_WhenTheAgentWasNotPreDialed_ConnectsTheAgentAsBefore()
+    {
+        // Arrange
+        var order = new List<string>();
+        var harness = new Harness();
+        ConfigureAcceptedInboundOffer(harness, order);
+        harness.SetupProvider(VoiceProviderDeliveryModel.ServerSideAcd);
+        ProviderCommandRegistration? capturedRegistration = null;
+        harness.ProviderCommandStateService
+            .Setup(service => service.RegisterAsync(It.IsAny<ProviderCommandRegistration>(), It.IsAny<CancellationToken>()))
+            .Callback<ProviderCommandRegistration, CancellationToken>((registration, _) => capturedRegistration = registration)
+            .ReturnsAsync(new ProviderCommand());
+
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.AcceptInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.False(result.AgentLegPreDialed);
+
+        var request = JsonSerializer.Deserialize<ProviderAnswerCommandRequest>(capturedRegistration!.RequestPayload);
+        Assert.Null(request!.PreDialedAgentLegId);
+    }
+
+    [Fact]
+    public async Task AcceptInboundOfferAsync_TellsTheAgentsOtherClientsTheOfferWasAnswered_BeforeConnectingTheCall()
+    {
+        // Arrange
+        var order = new List<string>();
+        var harness = new Harness();
+        ConfigureAcceptedInboundOffer(harness, order);
+        harness.SetupProvider(VoiceProviderDeliveryModel.ServerSideAcd);
+        harness.OfferAnsweredNotifier
+            .Setup(notifier => notifier.NotifyAnsweredAsync(It.IsAny<ActivityReservation>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback(() => order.Add("answered"))
+            .Returns(Task.CompletedTask);
+        harness.ProviderCommandStateService
+            .Setup(service => service.RegisterAsync(It.IsAny<ProviderCommandRegistration>(), It.IsAny<CancellationToken>()))
+            .Callback(() => order.Add("register"))
+            .ReturnsAsync(new ProviderCommand());
+
+        var service = harness.CreateService();
+
+        // Act
+        await service.AcceptInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        harness.OfferAnsweredNotifier.Verify(
+            notifier => notifier.NotifyAnsweredAsync(
+                It.Is<ActivityReservation>(reservation => reservation.ItemId == "r1"),
+                "u1",
+                "call-1",
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        Assert.True(order.IndexOf("answered") > order.IndexOf("accept"));
+        Assert.True(order.IndexOf("answered") < order.IndexOf("register"));
+    }
+
+    [Fact]
+    public async Task AcceptInboundOfferAsync_WhenTheNotifierFails_StillAcceptsTheOffer()
+    {
+        // Arrange
+        var harness = new Harness();
+        ConfigureAcceptedInboundOffer(harness, []);
+        harness.SetupProvider(VoiceProviderDeliveryModel.ServerSideAcd);
+        harness.OfferAnsweredNotifier
+            .Setup(notifier => notifier.NotifyAnsweredAsync(It.IsAny<ActivityReservation>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("The hub is down."));
+        harness.ProviderCommandStateService
+            .Setup(service => service.RegisterAsync(It.IsAny<ProviderCommandRegistration>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProviderCommand());
+
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.AcceptInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+    }
+
+    [Fact]
+    public async Task AcceptInboundOfferAsync_WhenTheProviderStopsTheMusicOnBridge_LeavesTheCallerListeningUntilTheAgentIsJoined()
+    {
+        // Arrange
+        var harness = new Harness();
+        ConfigureAcceptedInboundOffer(harness, []);
+        harness.SetupProvider(VoiceProviderDeliveryModel.ServerSideAcd);
+        harness.Provider
+            .SetupGet(provider => provider.Capabilities)
+            .Returns(ContactCenterVoiceProviderCapabilities.AgentConnect | ContactCenterVoiceProviderCapabilities.HoldMusicStopsOnAgentBridge);
+        harness.SetupQueueItemOnAccept();
+        harness.ProviderCommandStateService
+            .Setup(service => service.RegisterAsync(It.IsAny<ProviderCommandRegistration>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProviderCommand());
+
+        var service = harness.CreateService();
+
+        // Act
+        await service.AcceptInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        harness.QueueService.Verify(
+            queue => queue.StopHoldMusicAsync(It.IsAny<QueueItem>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task AcceptInboundOfferAsync_WhenTheProviderCannotStopTheMusicOnBridge_StopsItAtAccept()
+    {
+        // Arrange
+        var harness = new Harness();
+        ConfigureAcceptedInboundOffer(harness, []);
+        harness.SetupProvider(VoiceProviderDeliveryModel.AgentDeviceNative);
+        var queueItem = harness.SetupQueueItemOnAccept();
+
+        var service = harness.CreateService();
+
+        // Act
+        await service.AcceptInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        harness.QueueService.Verify(queue => queue.StopHoldMusicAsync(queueItem, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task DeclineInboundOfferAsync_HangsUpTheLegRungForTheOffer()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.SetupPendingReservation();
+        harness.ReservationService
+            .Setup(service => service.RejectAsync("r1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ActivityReservation { ItemId = "r1", AgentId = "a1", QueueId = "q1" });
+
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.DeclineInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        harness.PreDialCoordinator.Verify(coordinator => coordinator.ReleaseAsync("r1", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+        public async Task AcceptInboundOfferAsync_OfferAcceptedCarriesTheOffer_AndHowLongItRang()
+    {
+        // Arrange
+        var harness = new Harness();
+        ConfigureAcceptedInboundOffer(harness, []);
+        harness.SetupProvider(VoiceProviderDeliveryModel.AgentDeviceNative);
+        var published = new List<InteractionEvent>();
+        harness.Publisher
+            .Setup(publisher => publisher.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<InteractionEvent, CancellationToken>((interactionEvent, _) => published.Add(interactionEvent))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await harness.CreateService().AcceptInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        var accepted = Assert.Single(published, e => e.EventType == ContactCenterConstants.Events.OfferAccepted);
+        Assert.Equal("int1", accepted.InteractionId);
+        Assert.Equal(ContactCenterActorType.Agent, accepted.ActorType);
+        Assert.Equal(_now, accepted.OccurredUtc);
+
+        var offer = accepted.GetData<OfferLifecycleEventData>();
+        Assert.Equal("r1", offer.ReservationId);
+        Assert.Equal("int1", offer.InteractionId);
+        Assert.Equal(_now, offer.SettledUtc);
+        Assert.Equal(7, offer.RingSeconds);
+    }
+
+    [Fact]
+    public async Task DeclineInboundOfferAsync_NamesTheInteraction_AndStillRoutesTheNextOffer()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.SetupPendingReservation();
+        harness.SetupInteraction();
+        harness.ReservationService
+            .Setup(service => service.RejectAsync("r1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateReservation());
+        InteractionEvent? declined = null;
+        harness.Publisher
+            .Setup(publisher => publisher.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<InteractionEvent, CancellationToken>((interactionEvent, _) => declined = interactionEvent)
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await harness.CreateService().DeclineInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(declined);
+        Assert.Equal("int1", declined!.InteractionId);
+        Assert.Equal(ContactCenterActorType.Agent, declined.ActorType);
+
+        var offer = declined.GetData<OfferLifecycleEventData>();
+        Assert.Equal("int1", offer.InteractionId);
+        Assert.Equal("u1", offer.UserId);
+        Assert.Equal(7, offer.RingSeconds);
+
+        // The re-offer handler reads the queue from the same payload under its own contract.
+        Assert.Equal("q1", declined.GetData<OfferDeclinedEventData>().QueueId);
+    }
+
+    [Fact]
+    public async Task AcceptInboundOfferAsync_NamesTheAcceptingAgentByUserId_OnEveryEventItRecords()
+    {
+        // Arrange
+        // The accept is the agent's own act. The agent's profile id is what the call is about; the actor is the
+        // person, by the user id every other agent-made record names them by.
+        var harness = new Harness();
+        ConfigureAcceptedInboundOffer(harness, []);
+        harness.SetupProvider(VoiceProviderDeliveryModel.AgentDeviceNative);
+        var clock = new Mock<IClock>();
+        clock.SetupGet(value => value.UtcNow).Returns(_now);
+        var log = new AuditedEventLog(clock.Object);
+        ForwardTo(harness, log);
+
+        // Act
+        await harness.CreateService().AcceptInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        var accepted = log.Single(ContactCenterConstants.Events.OfferAccepted);
+        Assert.Equal(ContactCenterActorType.Agent, accepted.ActorType);
+        Assert.Equal("u1", accepted.ActorId);
+
+        // Recorded like every other offer event, so the reports that read offers by reservation find it.
+        Assert.Equal(nameof(ActivityReservation), accepted.AggregateType);
+        Assert.Equal("r1", accepted.AggregateId);
+        Assert.Equal("int1", accepted.InteractionId);
+
+        var created = log.Single(ContactCenterConstants.Events.CallSessionCreated);
+        Assert.Equal(ContactCenterActorType.Agent, created.ActorType);
+        Assert.Equal("u1", created.ActorId);
+        Assert.Equal("a1", created.GetData<CallLifecycleEventData>()?.AgentId);
+
+        log.AssertEveryEventNamesItsActor();
+    }
+
+    [Fact]
+    public async Task DeclineInboundOfferAsync_NamesTheDecliningAgentByUserId()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.SetupPendingReservation();
+        harness.SetupInteraction();
+        harness.ReservationService
+            .Setup(service => service.RejectAsync("r1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateReservation());
+        var clock = new Mock<IClock>();
+        clock.SetupGet(value => value.UtcNow).Returns(_now);
+        var log = new AuditedEventLog(clock.Object);
+        ForwardTo(harness, log);
+
+        // Act
+        await harness.CreateService().DeclineInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        var declined = log.Single(ContactCenterConstants.Events.OfferDeclined);
+        Assert.Equal(ContactCenterActorType.Agent, declined.ActorType);
+        Assert.Equal("u1", declined.ActorId);
+        Assert.Equal("a1", declined.GetData<OfferLifecycleEventData>()?.AgentId);
+        log.AssertEveryEventNamesItsActor();
+    }
+
+    private static void ForwardTo(Harness harness, AuditedEventLog log)
+        => harness.Publisher
+            .Setup(publisher => publisher.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .Returns((InteractionEvent interactionEvent, CancellationToken cancellationToken) => log.Publisher.PublishAsync(interactionEvent, cancellationToken));
+
+    private static void ConfigureAcceptedInboundOffer(Harness harness, List<string> order)
+    {
+        harness.SetupAcceptedReservation(order);
+        harness.SetupInteraction(order);
+        harness.SetupNewCallSession(order);
+        harness.SetupPublisher(order);
+    }
+
+    private static ActivityReservation CreateReservation()
+    {
+        return new ActivityReservation
+        {
+            ItemId = "r1",
+            AgentId = "a1",
+            ActivityItemId = "act1",
+            QueueId = "q1",
+            DialerProfileId = "profile-1",
+            CreatedUtc = _now.AddSeconds(-7),
+        }.RestorePersistedStatus(ReservationStatus.Pending);
+    }
+
+    private static AgentProfile CreateAgentProfile()
+    {
+        return new AgentProfile
+        {
+            ItemId = "a1",
+            UserId = "u1",
+            UserName = "agent",
+        };
+    }
+
+    private static CallSession CreateCallSession()
+    {
+        return new CallSession
+        {
+            ItemId = "session-1",
+        };
+    }
+
+    private static OmnichannelActivity CreatePreviewDialActivity()
+    {
+        return new OmnichannelActivity
+        {
+            ItemId = "act1",
+            Source = ActivitySources.PreviewDial,
+            CampaignId = "campaign-1",
+        };
+    }
+
+    private static DialerProfile CreatePreviewDialProfile()
+    {
+        return new DialerProfile
+        {
+            ItemId = "profile-1",
+            Mode = DialerMode.Preview,
+        };
+    }
+
+    private static void AssertAnswerRegistration(Harness harness, ProviderCommandRegistration registration)
+    {
+        Assert.NotNull(registration);
+        Assert.Equal(harness.Interaction.TechnicalMetadata[ContactCenterConstants.CommandMetadata.CommandId], registration.CommandId);
+        Assert.Equal("dp", registration.ProviderName);
+        Assert.Equal(ProviderCommandType.Answer, registration.CommandType);
+        Assert.Equal("act1", registration.ActivityItemId);
+        Assert.Equal("int1", registration.InteractionId);
+        Assert.Equal("r1", registration.ReservationId);
+        Assert.False(string.IsNullOrWhiteSpace(registration.RequestPayload));
+
+        var request = JsonSerializer.Deserialize<ProviderAnswerCommandRequest>(registration.RequestPayload);
+
+        Assert.NotNull(request);
+        Assert.Equal("act1", request.ActivityId);
+        Assert.Equal("int1", request.InteractionId);
+        Assert.Equal("call-1", request.ProviderCallId);
+        Assert.Equal("a1", request.AgentId);
+        Assert.Equal("u1", request.AgentUserId);
+        Assert.Equal("q1", request.QueueId);
+
+        var removeReservationProperty = registration.GetType().GetProperty("RemoveReservationFromQueueOnFailure");
+
+        Assert.NotNull(removeReservationProperty);
+        Assert.False((bool)removeReservationProperty.GetValue(registration));
+    }
+
+    private sealed class Harness
+    {
+        public Harness()
+        {
+            CallControlProvider = Provider.As<IContactCenterVoiceCallControlProvider>();
+        }
+
+        public Mock<IActivityReservationService> ReservationService { get; } = new();
+
+        public Mock<IActivityReservationManager> ReservationManager { get; } = new();
+
+        public Mock<IInteractionManager> InteractionManager { get; } = new();
+
+        public Mock<IOmnichannelActivityManager> ActivityManager { get; } = new();
+
+        public Mock<IDialerProfileReader> DialerProfileReader { get; } = new();
+
+        public Mock<IDialerAttemptService> DialerAttemptService { get; } = new();
+
+        public Mock<IAgentProfileManager> AgentManager { get; } = new();
+
+        public Mock<IContactCenterVoiceProviderResolver> VoiceProviderResolver { get; } = new();
+
+        public Mock<ICallSessionManager> CallSessionManager { get; } = new();
+
+        public Mock<IProviderCommandStateService> ProviderCommandStateService { get; } = new();
+
+        public Mock<IContactCenterScopeExecutor> ScopeExecutor { get; } = new();
+
+        public Mock<IContactCenterEventPublisher> Publisher { get; } = new();
+
+        public Mock<IQueueItemManager> QueueItemManager { get; } = new();
+
+        public Mock<IActivityQueueService> QueueService { get; } = new();
+
+        public Mock<IContactCenterOfferAnsweredNotifier> OfferAnsweredNotifier { get; } = new();
+
+        public Mock<IAgentPreDialCoordinator> PreDialCoordinator { get; } = new();
+
+        public Mock<IContactCenterVoiceProvider> Provider { get; } = new();
+
+        public Mock<IContactCenterVoiceCallControlProvider> CallControlProvider { get; }
+
+        public Interaction Interaction { get; } = CreateInteraction();
+
+        public CallSession? CreatedCallSession { get; private set; }
+
+        public QueueItem SetupQueueItemOnAccept()
+        {
+            var reservation = CreateReservation();
+            reservation.QueueItemId = "qi-1";
+            var queueItem = new QueueItem { ItemId = "qi-1", QueueId = "q1", ActivityItemId = "act1" };
+
+            ReservationService
+                .Setup(service => service.AcceptAsync("r1", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(reservation);
+            QueueItemManager
+                .Setup(manager => manager.FindByIdAsync("qi-1", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(queueItem);
+
+            return queueItem;
+        }
+
+        public void SetupPendingReservation()
+        {
+            ReservationManager
+                .Setup(manager => manager.FindByIdAsync("r1", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(CreateReservation());
+
+            AgentManager
+                .Setup(manager => manager.FindByUserIdAsync("u1", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(CreateAgentProfile());
+        }
+
+        public void SetupAcceptedReservation(List<string>? order = null)
+        {
+            SetupPendingReservation();
+
+            ReservationService
+                .Setup(service => service.AcceptAsync("r1", It.IsAny<CancellationToken>()))
+                .Callback(() => order?.Add("accept"))
+                .ReturnsAsync(CreateReservation());
+        }
+
+        public void SetupInteraction(List<string>? order = null)
+        {
+            InteractionManager
+                .Setup(manager => manager.FindByActivityIdAsync("act1", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Interaction);
+
+            InteractionManager
+                .Setup(manager => manager.UpdateAsync(
+                    It.IsAny<Interaction>(),
+                    It.IsAny<JsonNode>(),
+                    It.IsAny<CancellationToken>()))
+                .Callback<Interaction, JsonNode, CancellationToken>((_, _, _) => order?.Add("interaction"))
+                .Returns(ValueTask.CompletedTask);
+
+            AgentManager
+                .Setup(manager => manager.FindByIdAsync("a1", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(CreateAgentProfile());
+
+        }
+
+        public void SetupProvider(VoiceProviderDeliveryModel deliveryModel)
+        {
+            Provider.SetupGet(provider => provider.TechnicalName).Returns("dp");
+            Provider.SetupGet(provider => provider.DeliveryModel).Returns(deliveryModel);
+
+            VoiceProviderResolver
+                .Setup(resolver => resolver.Get("dp"))
+                .Returns(Provider.Object);
+        }
+
+        public void SetupNoProvider()
+        {
+            VoiceProviderResolver
+                .Setup(resolver => resolver.Get("dp"))
+                .Returns((IContactCenterVoiceProvider)null!);
+        }
+
+        public void SetupPublisher(List<string>? order = null)
+        {
+            Publisher
+                .Setup(publisher => publisher.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+                .Callback<InteractionEvent, CancellationToken>((interactionEvent, _) => order?.Add(interactionEvent.EventType))
+                .Returns(Task.CompletedTask);
+        }
+
+        public void SetupNewCallSession(List<string>? order = null)
+        {
+            CallSessionManager
+                .Setup(manager => manager.FindByInteractionIdAsync("int1", It.IsAny<CancellationToken>()))
+                .ReturnsAsync((CallSession)null!);
+
+            CallSessionManager
+                .Setup(manager => manager.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(CreateCallSession());
+
+            CallSessionManager
+                .Setup(manager => manager.CreateAsync(It.IsAny<CallSession>(), It.IsAny<CancellationToken>()))
+                .Callback<CallSession, CancellationToken>((session, _) =>
+                {
+                    CreatedCallSession = session;
+                    order?.Add("session");
+                })
+                .Returns(ValueTask.CompletedTask);
+        }
+
+        public void SetupPreviewDialAttempt()
+        {
+            ActivityManager
+                .Setup(manager => manager.FindByIdAsync("act1", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(CreatePreviewDialActivity());
+
+            DialerProfileReader
+                .Setup(manager => manager.FindByIdAsync("profile-1", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(CreatePreviewDialProfile());
+
+            DialerAttemptService
+                .Setup(service => service.TryDialAsync(
+                    It.Is<DialerProfile>(profile => profile.ItemId == "profile-1"),
+                    It.Is<ActivityReservation>(reservation => reservation.ItemId == "r1"),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
+        }
+
+        public ContactCenterCallCommandService CreateService()
+        {
+            var clock = new Mock<IClock>();
+            clock.SetupGet(value => value.UtcNow).Returns(_now);
+
+            return new ContactCenterCallCommandService(
+                ReservationService.Object,
+                ReservationManager.Object,
+                InteractionManager.Object,
+                ActivityManager.Object,
+                DialerProfileReader.Object,
+                new[] { DialerAttemptService.Object },
+                AgentManager.Object,
+                VoiceProviderResolver.Object,
+                CallSessionManager.Object,
+                ProviderCommandStateService.Object,
+                ScopeExecutor.Object,
+                Publisher.Object,
+                QueueItemManager.Object,
+                QueueService.Object,
+                [OfferAnsweredNotifier.Object],
+                PreDialCoordinator.Object,
+                clock.Object,
+                NullLogger<ContactCenterCallCommandService>.Instance);
+        }
+    }
+
+    private static Interaction CreateInteraction()
+    {
+        return new Interaction
+        {
+            ItemId = "int1",
+            ProviderName = "dp",
+            ProviderInteractionId = "call-1",
+            Direction = InteractionDirection.Inbound,
+        };
+    }
+
+}

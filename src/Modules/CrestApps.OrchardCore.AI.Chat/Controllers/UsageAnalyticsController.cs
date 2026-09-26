@@ -1,9 +1,13 @@
 using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
+using CrestApps.OrchardCore.AI.Core.Indexes;
+using CrestApps.OrchardCore.AI.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.Modules;
@@ -17,27 +21,39 @@ namespace CrestApps.OrchardCore.AI.Chat.Controllers;
 public sealed class UsageAnalyticsController : Controller
 {
     private readonly IAICompletionUsageService _usageService;
+    private readonly IAIVoiceSessionSummaryStore _voiceSessionStore;
+    private readonly IAIProfileStore _profileStore;
     private readonly IAuthorizationService _authorizationService;
     private readonly ILocalClock _localClock;
-    private readonly GeneralAIOptions _generalAIOptions;
+    private readonly IClock _clock;
+    private readonly IOptionsMonitor<GeneralAIOptions> _generalAIOptions;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="UsageAnalyticsController"/> class.
     /// </summary>
     /// <param name="usageService">The usage service.</param>
+    /// <param name="voiceSessionStore">The per-call AI voice session summaries.</param>
+    /// <param name="profileStore">The AI profile store, for the profile filter and profile names.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="localClock">The local clock for timezone conversions.</param>
+    /// <param name="clock">The clock, for converting call times to the site's time zone.</param>
     /// <param name="generalAIOptions">The general AI options.</param>
     public UsageAnalyticsController(
         IAICompletionUsageService usageService,
+        IAIVoiceSessionSummaryStore voiceSessionStore,
+        IAIProfileStore profileStore,
         IAuthorizationService authorizationService,
         ILocalClock localClock,
-        IOptions<GeneralAIOptions> generalAIOptions)
+        IClock clock,
+        IOptionsMonitor<GeneralAIOptions> generalAIOptions)
     {
         _usageService = usageService;
+        _voiceSessionStore = voiceSessionStore;
+        _profileStore = profileStore;
         _authorizationService = authorizationService;
         _localClock = localClock;
-        _generalAIOptions = generalAIOptions.Value;
+        _clock = clock;
+        _generalAIOptions = generalAIOptions;
     }
 
     /// <summary>
@@ -51,10 +67,14 @@ public sealed class UsageAnalyticsController : Controller
             return Forbid();
         }
 
-        return View(new UsageAnalyticsIndexViewModel
+        var model = new UsageAnalyticsIndexViewModel
         {
-            IsAIUsageTrackingEnabled = _generalAIOptions.EnableAIUsageTracking,
-        });
+            IsAIUsageTrackingEnabled = _generalAIOptions.CurrentValue.EnableAIUsageTracking,
+        };
+
+        model.Profiles = ToSelectList(await GetProfileNamesAsync());
+
+        return View(model);
     }
 
     /// <summary>
@@ -70,7 +90,10 @@ public sealed class UsageAnalyticsController : Controller
             return Forbid();
         }
 
-        model.IsAIUsageTrackingEnabled = _generalAIOptions.EnableAIUsageTracking;
+        model.IsAIUsageTrackingEnabled = _generalAIOptions.CurrentValue.EnableAIUsageTracking;
+
+        var profileNames = await GetProfileNamesAsync();
+        model.Profiles = ToSelectList(profileNames);
 
         // Convert local dates to UTC before querying.
         DateTime? startDateUtc = model.StartDate.HasValue
@@ -81,18 +104,29 @@ public sealed class UsageAnalyticsController : Controller
             : null;
 
         var records = await _usageService.GetAsync(startDateUtc, endDateUtc);
-        ApplyReport(model, records);
+        var voiceSessions = await _voiceSessionStore.GetAsync(startDateUtc, endDateUtc);
+        var timeZone = await _localClock.GetLocalTimeZoneAsync();
+
+        ApplyReport(
+            model,
+            records,
+            voiceSessions,
+            profileNames,
+            utc => _clock.ConvertToTimeZone(new DateTimeOffset(DateTime.SpecifyKind(utc, DateTimeKind.Utc)), timeZone).DateTime);
 
         return View("Index", model);
     }
 
-    private static void ApplyReport(UsageAnalyticsIndexViewModel model, IReadOnlyList<AICompletionUsageRecord> records)
+    private static void ApplyReport(
+        UsageAnalyticsIndexViewModel model,
+        IReadOnlyList<AICompletionUsageRecord> records,
+        IReadOnlyList<AIVoiceSessionSummaryIndex> voiceSessions,
+        IReadOnlyDictionary<string, string> profileNames,
+        Func<DateTime, DateTime> toLocal)
     {
         model.ShowReport = true;
 
-        var relevantRecords = records
-            .Where(record => !string.IsNullOrEmpty(record.SessionId) || !string.IsNullOrEmpty(record.InteractionId))
-            .ToList();
+        var relevantRecords = AICompletionUsageReport.Relevant(records, model.ProfileId);
 
         model.TotalCalls = relevantRecords.Count;
         model.TotalSessions = relevantRecords
@@ -106,54 +140,29 @@ public sealed class UsageAnalyticsController : Controller
             .Distinct(StringComparer.Ordinal)
             .Count();
         model.TotalTokens = relevantRecords.Sum(record => (long)record.TotalTokenCount);
+        model.Rows = AICompletionUsageReport.BuildRows(relevantRecords, model.GroupBy, profileNames);
 
-        model.Rows = relevantRecords
-            .GroupBy(record => new
-            {
-                UserLabel = GetUserLabel(record),
-                record.IsAuthenticated,
-                ClientName = record.ClientName ?? "Unknown",
-                ModelName = record.ModelName ?? record.DeploymentName ?? "Unknown",
-            })
-            .Select(group =>
-            {
-                var latencySamples = group.Where(record => record.ResponseLatencyMs > 0).ToList();
+        // A call's text tokens are the completions recorded against its chat session: the turn-based replies and
+        // the review that concludes every call.
+        var textTokensBySession = AICompletionUsageReport.TokensBySession(relevantRecords);
+        var calls = AIVoiceUsageReport.Calls(voiceSessions, model.ProfileId);
 
-                return new AICompletionUsageSummaryViewModel
-                {
-                    UserLabel = group.Key.UserLabel,
-                    IsAuthenticated = group.Key.IsAuthenticated,
-                    ClientName = group.Key.ClientName,
-                    ModelName = group.Key.ModelName,
-                    TotalCalls = group.Count(),
-                    TotalSessions = group.Select(record => record.SessionId).Where(sessionId => !string.IsNullOrEmpty(sessionId)).Distinct(StringComparer.Ordinal).Count(),
-                    TotalChatInteractions = group.Select(record => record.InteractionId).Where(interactionId => !string.IsNullOrEmpty(interactionId)).Distinct(StringComparer.Ordinal).Count(),
-                    TotalInputTokens = group.Sum(record => (long)record.InputTokenCount),
-                    TotalOutputTokens = group.Sum(record => (long)record.OutputTokenCount),
-                    TotalTokens = group.Sum(record => (long)record.TotalTokenCount),
-                    AverageResponseLatencyMs = latencySamples.Count > 0
-                        ? Math.Round(latencySamples.Average(record => record.ResponseLatencyMs), 0)
-                        : 0,
-                };
-            })
-            .OrderByDescending(row => row.TotalTokens)
-            .ThenByDescending(row => row.TotalCalls)
-            .ThenBy(row => row.UserLabel, StringComparer.OrdinalIgnoreCase)
+        model.VoiceTotals = AIVoiceUsageReport.Summarize(label: null, calls, textTokensBySession);
+        model.VoiceRows = AIVoiceUsageReport.BuildRows(calls, model.VoiceGroupBy, profileNames, toLocal, textTokensBySession);
+    }
+
+    private async Task<IReadOnlyDictionary<string, string>> GetProfileNamesAsync()
+        => (await _profileStore.GetByTypeAsync(AIProfileType.Chat))
+            .Where(profile => !string.IsNullOrEmpty(profile.ItemId))
+            .GroupBy(profile => profile.ItemId, StringComparer.Ordinal)
+            .ToDictionary(
+                group => group.Key,
+                group => string.IsNullOrWhiteSpace(group.First().DisplayText) ? group.First().Name : group.First().DisplayText,
+                StringComparer.Ordinal);
+
+    private static List<SelectListItem> ToSelectList(IReadOnlyDictionary<string, string> profileNames)
+        => profileNames
+            .OrderBy(profile => profile.Value, StringComparer.OrdinalIgnoreCase)
+            .Select(profile => new SelectListItem(profile.Value, profile.Key))
             .ToList();
-    }
-
-    private static string GetUserLabel(AICompletionUsageRecord record)
-    {
-        if (!string.IsNullOrEmpty(record.UserName))
-        {
-            return record.UserName;
-        }
-
-        if (record.IsAuthenticated && !string.IsNullOrEmpty(record.UserId))
-        {
-            return record.UserId;
-        }
-
-        return "Anonymous";
-    }
 }

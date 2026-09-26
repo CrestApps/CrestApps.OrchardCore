@@ -1,4 +1,15 @@
 .telephony-soft-phone {
+    // Pin the Bootstrap surface variables the widget paints with, scoped to the widget itself, so it
+    // renders identically under any host theme. The front-end (TheTheme) and admin (TheAdmin) define these
+    // to slightly different values, which made the keypad, footer, borders and inputs look inconsistent
+    // between the two. Everything inside the widget reads these, so pinning them here keeps one look
+    // everywhere; the dark override below keeps dark mode working with the widget's own consistent palette.
+    --bs-body-bg: #fff;
+    --bs-body-color: #212529;
+    --bs-secondary-color: #6c757d;
+    --bs-tertiary-bg: #f8f9fa;
+    --bs-secondary-bg: #e9ecef;
+    --bs-border-color: #dee2e6;
     --telephony-accent: #2f6fed;
     --telephony-view-height: 18rem;
     position: fixed;
@@ -57,6 +68,19 @@
         margin-right: auto;
     }
 
+    // The live call status sits on the left of the header (replacing the redundant "Phone" title) so it is
+    // visible on every tab, including the degraded-state messages ("Reconnecting...", "Poor connection").
+    &__header-status {
+        margin-right: auto;
+        font-size: 0.78rem;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.9);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 10rem;
+    }
+
     &__header-actions {
         margin-left: auto;
         display: flex;
@@ -109,7 +133,8 @@
         min-height: var(--telephony-view-height);
         max-height: var(--telephony-view-height);
         overflow-y: auto;
-        padding: 0.35rem 0.5rem 0.65rem;
+        // Match the voicemail list's padding so the Recent and Voicemail tabs line up identically.
+        padding: 0 0.5rem 0.5rem;
     }
 
     &__view {
@@ -166,6 +191,231 @@
         &--active .telephony-soft-phone__history-dir {
             color: #1f9d55;
         }
+
+        &--voicemail {
+            cursor: default;
+
+            .telephony-soft-phone__history-body {
+                flex: 1 1 auto;
+                border: none;
+                background: transparent;
+                text-align: left;
+                padding: 0;
+                cursor: pointer;
+                color: inherit;
+            }
+        }
+
+        &--unread {
+            .telephony-soft-phone__history-number {
+                font-weight: 700;
+            }
+
+            .telephony-soft-phone__history-number::after {
+                content: "";
+                display: inline-block;
+                width: 0.5rem;
+                height: 0.5rem;
+                margin-left: 0.35rem;
+                border-radius: 999px;
+                background-color: var(--telephony-accent, #2f6fed);
+                vertical-align: middle;
+            }
+        }
+    }
+
+    &__voicemail-play {
+        flex: 0 0 1.9rem;
+        width: 1.9rem;
+        height: 1.9rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 0.75rem;
+        line-height: 1;
+        color: #fff;
+        // Deliberately a distinct colour from the accent so the play glyph is not the same colour as its circle.
+        background-color: #d23f3f;
+
+        &:hover {
+            filter: brightness(0.95);
+        }
+
+        &.is-playing {
+            background-color: var(--bs-secondary-color, #6c757d);
+        }
+    }
+
+    &__call-btn {
+        flex: 0 0 1.9rem;
+        width: 1.9rem;
+        height: 1.9rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 0.75rem;
+        line-height: 1;
+        color: #fff;
+        background-color: #1f9d55;
+
+        &:hover {
+            filter: brightness(0.95);
+        }
+    }
+
+    // The voicemail view element is itself the tab panel (it carries the `hidden` attribute), so bound its height
+    // and let only the list scroll -- the player bar stays pinned above it -- matching the Recent tab's behavior.
+    // `display` is guarded with :not([hidden]) so it never overrides the `hidden` attribute that hides the panel.
+    &__voicemail {
+        min-height: var(--telephony-view-height);
+        max-height: var(--telephony-view-height);
+
+        &:not([hidden]) {
+            display: flex;
+            flex-direction: column;
+        }
+    }
+
+    &__voicemail-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+        // Fill the remaining height under the player and scroll when the voicemails overflow, like the Recent tab.
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        padding: 0 0.5rem 0.5rem;
+    }
+
+    &__voicemail-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        // Left padding lines the "select all" checkbox up with the per-row checkboxes below it, which sit at the
+        // list's 0.5rem padding plus each row's 0.5rem padding.
+        padding: 0.25rem 0.5rem 0.35rem 1rem;
+        border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+    }
+
+    &__voicemail-delete {
+        border: none;
+        border-radius: 0.4rem;
+        padding: 0.25rem 0.75rem;
+        font-size: 0.8rem;
+        line-height: 1.2;
+        cursor: pointer;
+        color: #fff;
+        background-color: #d23f3f;
+
+        &:hover:not(:disabled) {
+            filter: brightness(0.95);
+        }
+
+        &:disabled {
+            opacity: 0.5;
+            cursor: default;
+        }
+    }
+
+    &__voicemail-select {
+        flex: 0 0 auto;
+        width: 0.9rem;
+        height: 0.9rem;
+        margin: 0;
+        cursor: pointer;
+        accent-color: var(--telephony-accent, #2f6fed);
+    }
+
+    &__voicemail-toolbar-select {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin-right: auto;
+        font-size: 0.78rem;
+        color: var(--bs-secondary-color, #6c757d);
+        cursor: pointer;
+
+        input {
+            width: 0.9rem;
+            height: 0.9rem;
+            margin: 0;
+            cursor: pointer;
+            accent-color: var(--telephony-accent, #2f6fed);
+        }
+    }
+
+    &__voicemail-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        width: 100%;
+        padding: 0.45rem 0.5rem;
+        border-radius: 0.5rem;
+
+        &:hover {
+            background-color: var(--bs-tertiary-bg, #f8f9fa);
+        }
+
+        &--unread .telephony-soft-phone__history-number {
+            font-weight: 700;
+
+            &::after {
+                content: "";
+                display: inline-block;
+                width: 0.5rem;
+                height: 0.5rem;
+                margin-left: 0.35rem;
+                border-radius: 999px;
+                background-color: #d23f3f;
+                vertical-align: middle;
+            }
+        }
+
+        &--delete-failed {
+            background-color: var(--bs-danger-bg-subtle, #f8d7da);
+        }
+    }
+
+    &__voicemail-error {
+        font-size: 0.72rem;
+        color: var(--bs-danger-text-emphasis, #842029);
+        white-space: normal;
+    }
+
+    &__voicemail-body {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        flex: 1 1 auto;
+    }
+
+    &__voicemail-player {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        padding: 0.35rem 0.5rem 0.5rem;
+
+        .telephony-soft-phone__voicemail-player-info {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 0.5rem;
+            min-width: 0;
+        }
+
+        .telephony-soft-phone__voicemail-audio {
+            width: 100%;
+            max-width: 15rem;
+            height: 1.85rem;
+            // Center the compact player under the full-width caller info line above it.
+            align-self: center;
+        }
     }
 
     &__history-dir {
@@ -186,6 +436,8 @@
         display: flex;
         flex-direction: column;
         min-width: 0;
+        // Grow to fill the row so the trailing Call button is pushed hard-right, matching the voicemail rows.
+        flex: 1 1 auto;
     }
 
     &__history-number {
@@ -208,6 +460,7 @@
     }
 
     &__tab {
+        position: relative;
         flex: 1 1 0;
         border: none;
         background: transparent;
@@ -233,6 +486,23 @@
             box-shadow: inset 0 -2px 0 var(--telephony-accent);
             font-weight: 600;
         }
+    }
+
+    &__tab-badge {
+        position: absolute;
+        top: 0.2rem;
+        right: 50%;
+        transform: translateX(1.1rem);
+        min-width: 1rem;
+        height: 1rem;
+        padding: 0 0.25rem;
+        border-radius: 999px;
+        background-color: #d23f3f;
+        color: #fff;
+        font-size: 0.62rem;
+        font-weight: 700;
+        line-height: 1rem;
+        text-align: center;
     }
 
     &--dragging {
@@ -271,6 +541,109 @@
         }
     }
 
+    &__number-iti {
+        display: block;
+        width: 100%;
+
+        .telephony-soft-phone__number {
+            width: 100%;
+        }
+    }
+
+    &__dial-mode {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin-top: 0.4rem;
+        padding: 0.15rem 0.5rem;
+        border: 1px solid transparent;
+        border-radius: 0.35rem;
+        background-color: transparent;
+        color: var(--bs-secondary-color, #6c757d);
+        font-size: 0.75rem;
+        cursor: pointer;
+
+        &:hover {
+            color: var(--telephony-accent, #0d6efd);
+        }
+
+        &[aria-pressed="true"] {
+            border-color: var(--telephony-accent, #0d6efd);
+            color: var(--telephony-accent, #0d6efd);
+        }
+    }
+
+    // Who the extension being typed rings, under the keypad's field.
+    &__extension-hint {
+        padding: 0 0.85rem 0.35rem;
+        color: var(--bs-secondary-color, #6c757d);
+        font-size: 0.8rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    // The extensions matching a name typed in extension mode, under the field; each dials its extension.
+    &__keypad-results {
+        padding: 0 0.85rem 0.35rem;
+    }
+
+    &__keypad-results-list {
+        display: flex;
+        flex-direction: column;
+        max-height: 9.5rem;
+        overflow-y: auto;
+        border: 1px solid var(--bs-border-color, #dee2e6);
+        border-radius: 0.375rem;
+    }
+
+    &__keypad-result {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 0.5rem;
+        width: 100%;
+        min-width: 0;
+        padding: 0.35rem 0.6rem;
+        border: 0;
+        border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+        background: transparent;
+        color: var(--bs-body-color, #212529);
+        font-size: 0.85rem;
+        text-align: left;
+
+        &:last-child {
+            border-bottom: 0;
+        }
+
+        &:hover,
+        &:focus-visible {
+            background: var(--bs-tertiary-bg, #f8f9fa);
+        }
+    }
+
+    &__keypad-result-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    &__keypad-result-extension {
+        flex-shrink: 0;
+        color: var(--bs-secondary-color, #6c757d);
+        font-size: 0.78rem;
+    }
+
+    &--extension {
+        .iti__country-container {
+            display: none;
+        }
+
+        .telephony-soft-phone__number {
+            padding-left: 0.65rem !important;
+        }
+    }
+
     &__connect {
         min-height: var(--telephony-view-height);
         max-height: var(--telephony-view-height);
@@ -285,10 +658,208 @@
         color: var(--bs-secondary-color, #6c757d);
     }
 
+    &__connect-error {
+        margin-bottom: 0.75rem;
+        padding: 0.5rem 0.65rem;
+        font-size: 0.78rem;
+        text-align: left;
+    }
+
     &__error {
         margin: 0 0.85rem 0.5rem;
         padding: 0.4rem 0.6rem;
         font-size: 0.78rem;
+    }
+
+    // As tall as the window leaves room for above the floating toggle, rather than a fixed box: the settings scroll
+    // only when they do not fit. The standalone page lets them fill the window (below).
+    &__settings {
+        min-height: var(--telephony-view-height);
+        max-height: calc(100vh - 9rem);
+        overflow-y: auto;
+        padding: 0.35rem 0.85rem 0.85rem;
+    }
+
+    &__settings-header {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.25rem 0 0.65rem;
+    }
+
+    &__settings-back {
+        border: none;
+        background: transparent;
+        color: var(--bs-body-color, #212529);
+        cursor: pointer;
+        line-height: 1;
+        padding: 0.2rem 0.35rem;
+        border-radius: 0.4rem;
+
+        &:hover {
+            background-color: var(--bs-tertiary-bg, #f8f9fa);
+        }
+    }
+
+    &__settings-title {
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    &__settings-section {
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+
+        & + & {
+            margin-top: 1rem;
+        }
+    }
+
+    &__settings-group-title {
+        font-size: 0.68rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: var(--bs-secondary-color, #6c757d);
+    }
+
+    &__setting {
+        display: block;
+        margin: 0;
+    }
+
+    // A checkbox setting: the control sits inline before its label rather than under it.
+    &__setting--check {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        .form-check-input {
+            margin: 0;
+            flex: 0 0 auto;
+        }
+
+        .telephony-soft-phone__setting-label {
+            margin-bottom: 0;
+        }
+    }
+
+    &__settings-hint {
+        // Used both as a paragraph above a group and as a note under a control, so it is a block either way.
+        display: block;
+        font-size: 0.72rem;
+        color: var(--bs-secondary-color, #6c757d);
+        margin: 0 0 0.35rem;
+
+        // Under a control the note belongs to what precedes it, not to what follows.
+        .telephony-soft-phone__setting > & {
+            margin: 0.25rem 0 0;
+        }
+    }
+
+    &__setting-label {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.78rem;
+        color: var(--bs-secondary-color, #6c757d);
+        margin-bottom: 0.25rem;
+
+        i {
+            width: 1rem;
+            text-align: center;
+        }
+    }
+
+    // ---- Diagnostics tab ----
+    &__diagnostics-view {
+        min-height: var(--telephony-view-height);
+        max-height: min(32rem, calc(100vh - 8rem));
+        overflow-y: auto;
+        padding: 0.6rem 0.85rem 0.85rem;
+    }
+
+    &__diag-section {
+        margin-bottom: 0.85rem;
+    }
+
+    &__diag-label {
+        font-size: 0.68rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: var(--bs-secondary-color, #6c757d);
+        margin-bottom: 0.35rem;
+    }
+
+    &__diag-hint {
+        font-size: 0.72rem;
+        color: var(--bs-secondary-color, #6c757d);
+        margin-top: 0.3rem;
+    }
+
+    &__mic-meter {
+        height: 0.65rem;
+        border-radius: 0.4rem;
+        background-color: var(--bs-tertiary-bg, #e9ecef);
+        overflow: hidden;
+    }
+
+    &__mic-meter-fill {
+        height: 100%;
+        width: 0;
+        border-radius: 0.4rem;
+        background-color: var(--bs-secondary-color, #adb5bd);
+        transition: width 0.06s linear;
+
+        &.is-active {
+            background-color: var(--bs-success, #28a745);
+        }
+    }
+
+    &__diag-readout {
+        font-size: 0.74rem;
+        line-height: 1.5;
+        color: var(--bs-body-color, #212529);
+        word-break: break-word;
+    }
+
+    &__diag-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        margin-top: 0.4rem;
+    }
+
+    &__diag-status {
+        font-size: 0.74rem;
+        margin-top: 0.4rem;
+        color: var(--bs-body-color, #212529);
+    }
+
+    &__diag-warnings {
+        font-size: 0.72rem;
+        white-space: pre-wrap;
+        word-break: break-word;
+        color: #a05a00;
+        background-color: rgba(255, 193, 7, 0.12);
+        border-radius: 0.4rem;
+        padding: 0.4rem 0.55rem;
+        max-height: 8rem;
+        overflow-y: auto;
+    }
+
+    &__diag-output {
+        font-size: 0.68rem;
+        white-space: pre-wrap;
+        word-break: break-all;
+        max-height: 12rem;
+        overflow: auto;
+        margin: 0.5rem 0 0;
+        padding: 0.5rem;
+        background-color: var(--bs-tertiary-bg, #f8f9fa);
+        border-radius: 0.4rem;
     }
 
     &__active-calls {
@@ -347,11 +918,153 @@
         white-space: nowrap;
     }
 
+    &__active-call-meta {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
     &__active-call-state {
         flex: 0 0 auto;
         color: var(--bs-secondary-color, #6c757d);
         font-size: 0.68rem;
         white-space: nowrap;
+    }
+
+    // A line's state as a chip: Active in the accent, On hold in amber, anything else neutral.
+    &__line-state {
+        padding: 0.1rem 0.45rem;
+        border-radius: 999px;
+        background-color: var(--bs-secondary-bg, #e9ecef);
+        font-weight: 600;
+
+        &--active {
+            background-color: color-mix(in srgb, var(--telephony-accent) 14%, var(--bs-body-bg, #fff));
+            color: color-mix(in srgb, var(--telephony-accent) 80%, var(--bs-body-color, #212529));
+        }
+
+        &--held {
+            background-color: #fff3cd;
+            color: #664d03;
+        }
+    }
+
+    &__line-timer {
+        color: var(--bs-secondary-color, #6c757d);
+        font-size: 0.7rem;
+        font-variant-numeric: tabular-nums;
+    }
+
+    // A conference's participants sit under their own heading, each with its own hang-up.
+    &__conference {
+        border-top: 1px solid var(--bs-border-color, #dee2e6);
+        background-color: color-mix(in srgb, var(--telephony-accent) 6%, var(--bs-body-bg, #fff));
+    }
+
+    &__conference-heading {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.35rem 0.5rem 0.2rem;
+        color: var(--telephony-accent);
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    &__participant-hangup {
+        flex: 0 0 auto;
+        width: 1.7rem;
+        height: 1.7rem;
+        border: 1px solid var(--bs-border-color, #dee2e6);
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--bs-secondary-color, #6c757d);
+        background-color: var(--bs-body-bg, #fff);
+        font-size: 0.72rem;
+        cursor: pointer;
+
+        &:hover:not(:disabled),
+        &:focus-visible {
+            border-color: #d23f3f;
+            color: #d23f3f;
+        }
+
+        &:disabled {
+            opacity: 0.55;
+            cursor: default;
+        }
+    }
+
+    &__active-call-check:disabled {
+        cursor: not-allowed;
+        opacity: 0.45;
+    }
+
+    // The Merge action names the calls it will join, so the agent can see what a click does before making it. Select
+    // all, the summary and the button wrap onto two rows in the desktop app's narrow window rather than squeezing.
+    &__merge-bar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.35rem 0.5rem;
+        padding: 0.45rem 0.5rem;
+        border-top: 1px solid var(--bs-border-color, #dee2e6);
+        background-color: var(--bs-tertiary-bg, #f8f9fa);
+    }
+
+    &__merge-select-all {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        margin: 0;
+        color: var(--bs-secondary-color, #6c757d);
+        font-size: 0.72rem;
+        white-space: nowrap;
+        cursor: pointer;
+
+        input {
+            margin: 0;
+        }
+    }
+
+    &__merge-summary {
+        flex: 1 1 8rem;
+        min-width: 0;
+        color: var(--bs-body-color, #212529);
+        font-size: 0.72rem;
+        line-height: 1.3;
+        overflow-wrap: anywhere;
+    }
+
+    &__merge-calls {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin-left: auto;
+        white-space: nowrap;
+    }
+
+    // Why the calls on screen cannot be joined: a call dialed from this phone has no server-side handle to merge.
+    &__merge-note {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.35rem;
+        padding: 0.4rem 0.5rem;
+        border-top: 1px solid var(--bs-border-color, #dee2e6);
+        color: var(--bs-secondary-color, #6c757d);
+        font-size: 0.7rem;
+        line-height: 1.3;
+
+        > i {
+            margin-top: 0.1rem;
+        }
     }
 
     &__transfer-panel {
@@ -362,14 +1075,95 @@
         background-color: var(--bs-tertiary-bg, #f8f9fa);
     }
 
-    &__transfer-title,
-    &__directory-heading {
-        margin-bottom: 0.35rem;
+    // The panel's own header mirrors the settings panel: a back button and the title.
+    &__transfer-header {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin: -0.15rem 0 0.45rem -0.2rem;
+    }
+
+    &__transfer-title {
+        min-width: 0;
+        overflow: hidden;
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    // Blind or warm, as a segmented control; only drawn when the provider offers both.
+    &__transfer-modes {
+        display: flex;
+        padding: 0.15rem;
+        border: 1px solid var(--bs-border-color, #dee2e6);
+        border-radius: 0.45rem;
+        background-color: var(--bs-body-bg, #fff);
+    }
+
+    &__transfer-mode {
+        flex: 1 1 0;
+        padding: 0.25rem 0.4rem;
+        border: none;
+        border-radius: 0.35rem;
+        background: transparent;
+        color: var(--bs-secondary-color, #6c757d);
+        font-size: 0.78rem;
+        font-weight: 600;
+        cursor: pointer;
+
+        &.is-active {
+            background-color: var(--telephony-accent);
+            color: #fff;
+        }
+    }
+
+    &__transfer-hint {
+        margin: 0.3rem 0 0.45rem;
         color: var(--bs-secondary-color, #6c757d);
         font-size: 0.7rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
+    }
+
+    // The destination field and, under it, the Number / Extension toggle the keypad has.
+    &__transfer-entry {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+
+        .iti {
+            display: block;
+            width: 100%;
+        }
+
+        .telephony-soft-phone__dial-mode {
+            margin-top: 0.3rem;
+        }
+    }
+
+    // An extension has no country, so the flag is put away the way the keypad puts it away.
+    &__transfer-panel--extension {
+        .iti__country-container {
+            display: none;
+        }
+
+        .telephony-soft-phone__transfer-input {
+            padding-left: 0.5rem !important;
+        }
+    }
+
+    &__transfer-blocked {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.45rem;
+        padding: 0.5rem 0.25rem;
+        color: var(--bs-body-color, #212529);
+        font-size: 0.78rem;
+        line-height: 1.35;
+
+        > i {
+            margin-top: 0.15rem;
+            color: var(--telephony-accent);
+        }
     }
 
     &__transfer-input {
@@ -379,6 +1173,167 @@
         border-radius: 0.4rem;
         background-color: var(--bs-body-bg, #fff);
         color: var(--bs-body-color, #212529);
+
+        &:focus {
+            outline: 2px solid color-mix(in srgb, var(--telephony-accent) 45%, transparent);
+            outline-offset: 0;
+            border-color: var(--telephony-accent);
+        }
+    }
+
+    &__transfer-error {
+        margin-top: 0.35rem;
+        color: #b02a37;
+        font-size: 0.72rem;
+    }
+
+    &__transfer-results {
+        max-height: 11rem;
+        margin-top: 0.45rem;
+        overflow-y: auto;
+        border: 1px solid var(--bs-border-color, #dee2e6);
+        border-radius: 0.4rem;
+        background-color: var(--bs-body-bg, #fff);
+        scrollbar-width: thin;
+
+        &:empty {
+            display: none;
+        }
+    }
+
+    // A section label inside the results, not an option: small caps, muted, and never looking clickable.
+    &__transfer-group {
+        padding: 0.4rem 0.5rem 0.15rem;
+        color: var(--bs-secondary-color, #6c757d);
+        font-size: 0.64rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        user-select: none;
+    }
+
+    &__transfer-option {
+        cursor: pointer;
+
+        > i {
+            flex: 0 0 auto;
+            width: 1rem;
+            color: var(--bs-secondary-color, #6c757d);
+            text-align: center;
+        }
+
+        .telephony-soft-phone__directory-name {
+            flex: 1 1 auto;
+        }
+
+        &.is-selected {
+            background-color: color-mix(in srgb, var(--telephony-accent) 12%, var(--bs-body-bg, #fff));
+            box-shadow: inset 0.2rem 0 0 var(--telephony-accent);
+        }
+
+        // A colleague who cannot take a call is listed so the agent sees why, but reads as not an option.
+        &.is-unavailable {
+            .telephony-soft-phone__directory-name {
+                color: var(--bs-secondary-color, #6c757d);
+                font-weight: 500;
+            }
+        }
+    }
+
+    // A colleague's presence beside their name: green when they can take the call, muted otherwise.
+    &__directory-presence {
+        flex: 0 0 auto;
+        padding: 0.05rem 0.4rem;
+        border-radius: 1rem;
+        background-color: var(--bs-tertiary-bg, #f8f9fa);
+        color: var(--bs-secondary-color, #6c757d);
+        font-size: 0.62rem;
+        font-weight: 600;
+        white-space: nowrap;
+
+        &--available {
+            background-color: #d1e7dd;
+            color: #0a3622;
+        }
+    }
+
+    // The consult a warm transfer runs: what is happening, and the two ways out of it.
+    &__consult {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.75rem 0.5rem;
+
+        > i {
+            flex: 0 0 auto;
+            color: var(--telephony-accent);
+            font-size: 1.1rem;
+        }
+    }
+
+    &__consult-status {
+        min-width: 0;
+        font-size: 0.8rem;
+        line-height: 1.3;
+    }
+
+    &__transfer-option--number {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        width: 100%;
+        padding: 0.45rem 0.5rem;
+        border: none;
+        background: transparent;
+        color: var(--telephony-accent);
+        text-align: left;
+
+        > i {
+            color: var(--telephony-accent);
+        }
+
+        &:hover {
+            background-color: var(--bs-tertiary-bg, #f8f9fa);
+        }
+    }
+
+    // A question the phone asks itself rather than through the browser (see soft-phone/in-app-confirm.js).
+    &__confirm {
+        margin: 0.6rem 0.85rem 0;
+        padding: 0.55rem 0.65rem;
+        border: 1px solid #f1aeb5;
+        border-radius: 0.5rem;
+        background-color: #f8d7da;
+        color: #58151c;
+    }
+
+    &__confirm-text {
+        margin: 0 0 0.45rem;
+        font-size: 0.8rem;
+    }
+
+    &__confirm-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.4rem;
+    }
+
+    // A section label inside a header menu (for example the presence menu's break reasons). It names the items below it
+    // and must never read as one of them: no item padding, no item colour, and nothing that looks clickable.
+    &__menu-heading {
+        margin: 0.35rem 0 0.1rem;
+        padding: 0.45rem 0.75rem 0.15rem;
+        border-top: 1px solid var(--bs-border-color, #dee2e6);
+        color: var(--bs-secondary-color, #6c757d);
+        font-size: 0.66rem;
+        font-weight: 700;
+        line-height: 1.2;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        white-space: nowrap;
+        cursor: default;
+        pointer-events: none;
+        user-select: none;
     }
 
     &__directory {
@@ -398,6 +1353,7 @@
         align-items: center;
         justify-content: space-between;
         gap: 0.5rem;
+        min-height: 2.1rem;
         width: 100%;
         padding: 0.35rem 0.45rem;
         border: none;
@@ -467,10 +1423,158 @@
 
     &__actions {
         display: flex;
-        flex-wrap: wrap;
-        gap: 0.4rem;
-        justify-content: center;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.6rem;
         padding: 0.5rem 0.85rem 0.95rem;
+    }
+
+    // The agent's own call controls: Mute, Hold, Keypad and the one red Hang up, each an icon over its label.
+    &__call-controls {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(3.5rem, 1fr));
+        gap: 0.4rem;
+        justify-items: center;
+
+        &[hidden] {
+            display: none;
+        }
+    }
+
+    &__control {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.3rem;
+        min-width: 3.5rem;
+        border: none;
+        padding: 0;
+        background: transparent;
+        color: var(--bs-body-color, #212529);
+        font-size: 0.72rem;
+        line-height: 1.2;
+        cursor: pointer;
+
+        &[hidden] {
+            display: none;
+        }
+
+        &:disabled {
+            cursor: default;
+            opacity: 0.55;
+        }
+
+        &:focus-visible {
+            outline: none;
+
+            .telephony-soft-phone__control-icon {
+                box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--telephony-accent) 45%, transparent);
+            }
+        }
+    }
+
+    &__control-icon {
+        width: 2.9rem;
+        height: 2.9rem;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--bs-border-color, #dee2e6);
+        background-color: var(--bs-tertiary-bg, #f8f9fa);
+        color: var(--bs-body-color, #212529);
+        font-size: 1rem;
+        transition: background-color 0.12s ease, color 0.12s ease;
+
+        .telephony-soft-phone__control:hover:not(:disabled) & {
+            background-color: var(--bs-secondary-bg, #e9ecef);
+        }
+    }
+
+    // A control that is on -- muted, held, the keypad open -- is filled with the accent, so its state reads at a glance.
+    &__control.is-on &__control-icon,
+    &__control[aria-pressed="true"] &__control-icon {
+        border-color: var(--telephony-accent);
+        background-color: var(--telephony-accent);
+        color: #fff;
+    }
+
+    &__control-label {
+        white-space: nowrap;
+    }
+
+    &__control--hangup &__control-icon,
+    &__control--hangup:hover:not(:disabled) &__control-icon {
+        border-color: #c82f2f;
+        background-color: #c82f2f;
+        color: #fff;
+    }
+
+    // Transfer, Add call and ending every call: labelled, neutral, and a row below the agent's own controls.
+    &__call-options {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.4rem;
+
+        &[hidden] {
+            display: none;
+        }
+    }
+
+    &__option {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        min-height: 2.2rem;
+        padding: 0.35rem 0.8rem;
+        border: 1px solid var(--bs-border-color, #dee2e6);
+        border-radius: 999px;
+        background-color: var(--bs-body-bg, #fff);
+        color: var(--bs-body-color, #212529);
+        font-size: 0.78rem;
+        font-weight: 500;
+        white-space: nowrap;
+        cursor: pointer;
+
+        &[hidden] {
+            display: none;
+        }
+
+        &:hover:not(:disabled) {
+            background-color: var(--bs-tertiary-bg, #f8f9fa);
+        }
+
+        &:focus-visible {
+            outline: 0.15rem solid color-mix(in srgb, var(--telephony-accent) 60%, transparent);
+            outline-offset: 0.1rem;
+        }
+
+        &:disabled {
+            cursor: not-allowed;
+            opacity: 0.55;
+        }
+
+        // Ending every call is destructive for the others too: outlined in red, never filled like Hang up.
+        &--danger {
+            border-color: #d23f3f;
+            color: #b02a37;
+
+            &:hover:not(:disabled) {
+                background-color: color-mix(in srgb, #d23f3f 10%, var(--bs-body-bg, #fff));
+            }
+        }
+    }
+
+    &__dial-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+
+        &[hidden] {
+            display: none;
+        }
     }
 
     &__btn {
@@ -501,8 +1605,7 @@
         &--resume,
         &--mute,
         &--unmute,
-        &--transfer,
-        &--merge {
+        &--transfer {
             background-color: var(--telephony-accent);
         }
     }
@@ -529,6 +1632,36 @@
             border-radius: 999px;
         }
     }
+}
+
+// Keep dark mode consistent across host themes: the widget uses its own dark palette rather than each
+// theme's, so it looks the same in the admin and on the front end when a dark theme is active.
+[data-bs-theme="dark"] .telephony-soft-phone {
+    --bs-body-bg: #1e2126;
+    --bs-body-color: #e9ecef;
+    --bs-secondary-color: #adb5bd;
+    --bs-tertiary-bg: #2b3035;
+    --bs-secondary-bg: #343a40;
+    --bs-border-color: #495057;
+
+    // The red that reads on the light surface is too dark on this one.
+    .telephony-soft-phone__option--danger {
+        border-color: #e35d6a;
+        color: #f1aeb5;
+    }
+
+    .telephony-soft-phone__line-state--held {
+        background-color: rgba(255, 193, 7, 0.18);
+        color: #ffda6a;
+    }
+}
+
+// The standalone page (the desktop app and the browser extension) fills the window with the phone: the settings take
+// the whole height under the header, down to the bottom, and scroll only past it.
+[data-softphone-embedded] .telephony-soft-phone__settings {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
 }
 
 .telephony-phone-dial-btn {
@@ -702,4 +1835,12 @@
             flex: 1 1 0;
         }
     }
+}
+
+// intl-tel-input detaches the country dropdown to <body> (class .iti--detached-country-selector,
+// z-index 1060 by default), but the floating soft phone panel sits at z-index 1080. Without this
+// override the country list opens behind the panel and appears to be missing. Lift it above the
+// panel and the incoming-call overlay so the country selector is always visible.
+.iti--detached-country-selector {
+    z-index: 1100;
 }

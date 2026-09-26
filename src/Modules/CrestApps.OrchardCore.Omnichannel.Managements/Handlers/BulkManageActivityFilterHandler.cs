@@ -227,40 +227,50 @@ public sealed class BulkManageActivityFilterHandler : IBulkManageActivityFilterH
             builder.WhereAnd($"{tzCol} IN ({string.Join(", ", placeholders)})");
         }
 
-        // JOIN the DNC preference index for do-not-call date range filtering.
+        // Do-not-call filtering asks whether a matching preference row EXISTS rather than joining to it.
+        //
+        // The preference index is mapped from the contact content item with no published-or-latest gate, unlike
+        // the contact index the two joins above use -- which is why those pin Latest and this one has nothing to
+        // pin. A contact with a draft alongside its published version therefore has a row per version, and an
+        // inner join multiplies every one of their activities by however many rows there are. The count this
+        // builds is what the confirmation prompt shows before a bulk complete or purge runs, so it has to be the
+        // number of activities, not the number of index rows behind them.
         if (hasDncFilter)
         {
             var actContactCol = nameof(OmnichannelActivityIndex.ContactContentItemId);
             var dncTable = context.TableNameConvention.GetIndexTable(typeof(OmnichannelContactCommunicationPreferenceIndex));
             var dncItemIdCol = nameof(OmnichannelContactCommunicationPreferenceIndex.ContentItemId);
 
-            builder.Join(
-                JoinType.Inner,
-                dncTable,
-                DncAlias,
-                dncItemIdCol,
-                actAlias,
-                actContactCol,
-                context.Schema,
-                DncAlias,
-                actAlias);
+            var quotedDncTable = dialect.QuoteForTableName(context.TablePrefix + dncTable, context.Schema);
+            var quotedDncAlias = dialect.QuoteForAliasName(DncAlias);
+            var activityContactCol = $"{dialect.QuoteForAliasName(actAlias)}.{dialect.QuoteForColumnName(actContactCol)}";
 
-            var doNotCallCol = $"{dialect.QuoteForAliasName(DncAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelContactCommunicationPreferenceIndex.DoNotCall))}";
-            builder.WhereAnd($"{doNotCallCol} = 1");
+            var conditions = new List<string>
+            {
+                $"{quotedDncAlias}.{dialect.QuoteForColumnName(dncItemIdCol)} = {activityContactCol}",
+            };
+
+            // Bound rather than written as the literal 1. YesSql creates this column as boolean on PostgreSQL and
+            // as a numeric-affinity BOOL on SQLite, so "= 1" is accepted in development and rejected outright in
+            // production with "operator does not exist: boolean = integer" -- the whole bulk manage screen would
+            // throw the moment anybody picked a do-not-call range. Binding it lets each provider write its own
+            // boolean literal.
+            builder.Parameters["@DncTrue"] = true;
+            conditions.Add($"{quotedDncAlias}.{dialect.QuoteForColumnName(nameof(OmnichannelContactCommunicationPreferenceIndex.DoNotCall))} = @DncTrue");
 
             if (filter.DoNotCallFrom.HasValue)
             {
-                var dncUtcCol = $"{dialect.QuoteForAliasName(DncAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelContactCommunicationPreferenceIndex.DoNotCallUtc))}";
                 builder.Parameters["@DncFrom"] = filter.DoNotCallFrom.Value;
-                builder.WhereAnd($"{dncUtcCol} >= @DncFrom");
+                conditions.Add($"{quotedDncAlias}.{dialect.QuoteForColumnName(nameof(OmnichannelContactCommunicationPreferenceIndex.DoNotCallUtc))} >= @DncFrom");
             }
 
             if (filter.DoNotCallTo.HasValue)
             {
-                var dncUtcCol = $"{dialect.QuoteForAliasName(DncAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelContactCommunicationPreferenceIndex.DoNotCallUtc))}";
                 builder.Parameters["@DncTo"] = filter.DoNotCallTo.Value;
-                builder.WhereAnd($"{dncUtcCol} <= @DncTo");
+                conditions.Add($"{quotedDncAlias}.{dialect.QuoteForColumnName(nameof(OmnichannelContactCommunicationPreferenceIndex.DoNotCallUtc))} <= @DncTo");
             }
+
+            builder.WhereAnd($"EXISTS (SELECT 1 FROM {quotedDncTable} AS {quotedDncAlias} WHERE {string.Join(" AND ", conditions)})");
         }
     }
 

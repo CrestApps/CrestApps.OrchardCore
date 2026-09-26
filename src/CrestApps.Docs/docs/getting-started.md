@@ -49,9 +49,11 @@ git clone https://github.com/CrestApps/CrestApps.OrchardCore.git
 cd CrestApps.OrchardCore
 npm install
 npm run rebuild
-dotnet build .\CrestApps.OrchardCore.slnx -c Release /p:NuGetAudit=false
-dotnet test .\tests\CrestApps.OrchardCore.Tests\CrestApps.OrchardCore.Tests.csproj -c Release /p:NuGetAudit=false
+dotnet build .\CrestApps.OrchardCore.slnx -c Release
+dotnet test .\tests\CrestApps.OrchardCore.Tests\CrestApps.OrchardCore.Tests.csproj -c Release
 ```
+
+> Dependency vulnerability auditing is enabled for every build and a published advisory fails it. If the build stops on an `NU1901`-`NU1904` error, pin the patched version in `Directory.Packages.props`; see [Supply chain security](supply-chain). Do not disable the audit.
 
 > The .NET build depends on Orchard Core preview packages. If Cloudsmith is unreachable, asset builds still work but the .NET restore/build will not.
 >

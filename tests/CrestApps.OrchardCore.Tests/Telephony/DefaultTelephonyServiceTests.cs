@@ -1,3 +1,6 @@
+using CrestApps.OrchardCore.Tests.Doubles;
+using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
@@ -14,6 +17,9 @@ public sealed class DefaultTelephonyServiceTests
         var provider = new RecordingTelephonyProvider { ResultToReturn = TelephonyResult.Success(call) };
         var service = new DefaultTelephonyService(
             new StubTelephonyProviderResolver(provider),
+            new DefaultOutboundCallScreeningService([]),
+            new StubTelephonyExtensionResolver(),
+            DialDestinationPolicyFactory.Create(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
         // Act
@@ -32,6 +38,9 @@ public sealed class DefaultTelephonyServiceTests
         var provider = new RecordingTelephonyProvider();
         var service = new DefaultTelephonyService(
             new StubTelephonyProviderResolver(provider),
+            new DefaultOutboundCallScreeningService([]),
+            new StubTelephonyExtensionResolver(),
+            DialDestinationPolicyFactory.Create(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
         // Act
@@ -47,6 +56,9 @@ public sealed class DefaultTelephonyServiceTests
         // Arrange
         var service = new DefaultTelephonyService(
             new StubTelephonyProviderResolver(null),
+            new DefaultOutboundCallScreeningService([]),
+            new StubTelephonyExtensionResolver(),
+            DialDestinationPolicyFactory.Create(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
         // Act
@@ -78,6 +90,9 @@ public sealed class DefaultTelephonyServiceTests
         var provider = new RecordingTelephonyProvider { Capabilities = capability };
         var service = new DefaultTelephonyService(
             new StubTelephonyProviderResolver(provider),
+            new DefaultOutboundCallScreeningService([]),
+            new StubTelephonyExtensionResolver(),
+            DialDestinationPolicyFactory.Create(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
         // Act
@@ -107,6 +122,9 @@ public sealed class DefaultTelephonyServiceTests
         var provider = new RecordingTelephonyProvider { Capabilities = TelephonyCapabilities.None };
         var service = new DefaultTelephonyService(
             new StubTelephonyProviderResolver(provider),
+            new DefaultOutboundCallScreeningService([]),
+            new StubTelephonyExtensionResolver(),
+            DialDestinationPolicyFactory.Create(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
         // Act
@@ -124,6 +142,9 @@ public sealed class DefaultTelephonyServiceTests
         var provider = new RecordingTelephonyProvider { Capabilities = TelephonyCapabilities.Dial | TelephonyCapabilities.Transfer };
         var service = new DefaultTelephonyService(
             new StubTelephonyProviderResolver(provider),
+            new DefaultOutboundCallScreeningService([]),
+            new StubTelephonyExtensionResolver(),
+            DialDestinationPolicyFactory.Create(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
         // Act
@@ -139,6 +160,9 @@ public sealed class DefaultTelephonyServiceTests
         // Arrange
         var service = new DefaultTelephonyService(
             new StubTelephonyProviderResolver(null),
+            new DefaultOutboundCallScreeningService([]),
+            new StubTelephonyExtensionResolver(),
+            DialDestinationPolicyFactory.Create(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
         // Act
@@ -164,6 +188,9 @@ public sealed class DefaultTelephonyServiceTests
         };
         var service = new DefaultTelephonyService(
             new StubTelephonyProviderResolver(provider),
+            new DefaultOutboundCallScreeningService([]),
+            new StubTelephonyExtensionResolver(),
+            DialDestinationPolicyFactory.Create(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
         // Act
@@ -184,6 +211,9 @@ public sealed class DefaultTelephonyServiceTests
         };
         var service = new DefaultTelephonyService(
             new StubTelephonyProviderResolver(provider),
+            new DefaultOutboundCallScreeningService([]),
+            new StubTelephonyExtensionResolver(),
+            DialDestinationPolicyFactory.Create(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
         // Act
@@ -205,6 +235,9 @@ public sealed class DefaultTelephonyServiceTests
         };
         var service = new DefaultTelephonyService(
             new StubTelephonyProviderResolver(provider),
+            new DefaultOutboundCallScreeningService([]),
+            new StubTelephonyExtensionResolver(),
+            DialDestinationPolicyFactory.Create(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
         // Act
@@ -213,6 +246,132 @@ public sealed class DefaultTelephonyServiceTests
         // Assert
         Assert.False(result.Succeeded);
         Assert.NotEmpty(result.Error);
+    }
+
+    [Theory]
+    [InlineData(TransferMode.Blind, "Transfer")]
+    [InlineData(TransferMode.Warm, "AttendedTransfer")]
+    public async Task TransferAsync_ToAnExtension_ResolvesTheUserItRings_AndHandsTheProviderTheExtension(TransferMode mode, string expectedOperation)
+    {
+        // Arrange - the soft phone's transfer panel sent extension "2" as an extension, not as a phone number.
+        var provider = new RecordingTelephonyProvider
+        {
+            Capabilities = TelephonyCapabilities.Transfer | TelephonyCapabilities.AttendedTransfer,
+        };
+        var service = new DefaultTelephonyService(
+            new StubTelephonyProviderResolver(provider),
+            new DefaultOutboundCallScreeningService([]),
+            new StubTelephonyExtensionResolver(new Dictionary<string, ExtensionResolution>
+            {
+                ["2"] = new() { Found = true, Number = "2", UserId = "user-2", DisplayName = "Test 2" },
+            }),
+            DialDestinationPolicyFactory.Create(),
+            new PassThroughStringLocalizer<DefaultTelephonyService>());
+
+        // Act
+        var result = await service.TransferAsync(new TransferRequest
+        {
+            CallId = "call-1",
+            To = "2",
+            IsExtension = true,
+            Mode = mode,
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Equal(expectedOperation, provider.LastOperation);
+        var request = Assert.IsType<TransferRequest>(provider.LastPayload);
+        Assert.True(request.IsExtension);
+        Assert.Equal("2", request.To);
+        Assert.Equal("user-2", request.TargetUserId);
+    }
+
+    // A transfer to one's own extension would ring the phone that is already on the call.
+    [Theory]
+    [InlineData(TransferMode.Blind)]
+    [InlineData(TransferMode.Warm)]
+    public async Task TransferAsync_ToTheTransferringUsersOwnExtension_IsRefusedWithoutReachingTheProvider(TransferMode mode)
+    {
+        // Arrange
+        var provider = new RecordingTelephonyProvider
+        {
+            Capabilities = TelephonyCapabilities.Transfer | TelephonyCapabilities.AttendedTransfer,
+        };
+        var service = new DefaultTelephonyService(
+            new StubTelephonyProviderResolver(provider),
+            new DefaultOutboundCallScreeningService([]),
+            new StubTelephonyExtensionResolver(new Dictionary<string, ExtensionResolution>
+            {
+                ["1"] = new() { Found = true, Number = "1", UserId = "user-1", DisplayName = "Mike Alhayek" },
+            }),
+            DialDestinationPolicyFactory.Create(),
+            new PassThroughStringLocalizer<DefaultTelephonyService>());
+
+        // Act
+        var result = await service.TransferAsync(new TransferRequest
+        {
+            CallId = "call-1",
+            To = "1",
+            IsExtension = true,
+            Mode = mode,
+            Metadata = new Dictionary<string, string> { [TelephonyConstants.RequestMetadata.SoftPhoneUserId] = "user-1" },
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Equal("That's your own extension.", result.Error);
+        Assert.Null(provider.LastOperation);
+    }
+
+    [Fact]
+    public async Task TransferAsync_ToAnExtensionNobodyOwns_FailsWithoutReachingTheProvider()
+    {
+        // Arrange
+        var provider = new RecordingTelephonyProvider { Capabilities = TelephonyCapabilities.Transfer };
+        var service = new DefaultTelephonyService(
+            new StubTelephonyProviderResolver(provider),
+            new DefaultOutboundCallScreeningService([]),
+            new StubTelephonyExtensionResolver(),
+            DialDestinationPolicyFactory.Create(),
+            new PassThroughStringLocalizer<DefaultTelephonyService>());
+
+        // Act
+        var result = await service.TransferAsync(new TransferRequest
+        {
+            CallId = "call-1",
+            To = "7",
+            IsExtension = true,
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Contains("7", result.Error);
+        Assert.Null(provider.LastOperation);
+    }
+
+    [Fact]
+    public async Task TransferAsync_ToANumber_NeverLooksTheNumberUpAsAnExtension()
+    {
+        // Arrange - "2" resolves as an extension, but a transfer the panel sent as a number is left alone.
+        var provider = new RecordingTelephonyProvider { Capabilities = TelephonyCapabilities.Transfer };
+        var service = new DefaultTelephonyService(
+            new StubTelephonyProviderResolver(provider),
+            new DefaultOutboundCallScreeningService([]),
+            new StubTelephonyExtensionResolver(new Dictionary<string, ExtensionResolution>
+            {
+                ["+15557654321"] = new() { Found = true, Number = "+15557654321", UserId = "user-2" },
+            }),
+            DialDestinationPolicyFactory.Create(),
+            new PassThroughStringLocalizer<DefaultTelephonyService>());
+
+        // Act
+        var result = await service.TransferAsync(new TransferRequest { CallId = "call-1", To = "+15557654321" }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        var request = Assert.IsType<TransferRequest>(provider.LastPayload);
+        Assert.False(request.IsExtension);
+        Assert.Null(request.TargetUserId);
     }
 
     private static Task<TelephonyResult> InvokeAsync(DefaultTelephonyService service, string operation)

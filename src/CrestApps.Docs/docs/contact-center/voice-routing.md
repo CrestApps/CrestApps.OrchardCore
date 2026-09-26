@@ -1,0 +1,655 @@
+---
+sidebar_label: Voice Routing Architecture
+sidebar_position: 3
+title: Inbound and Outbound Voice Routing Architecture
+description: Technical deep dive into Contact Center inbound and outbound voice routing, provider-truth synchronization, and restart reconciliation.
+---
+
+# Voice Routing Architecture
+
+This guide explains how the Contact Center routes **inbound** and **outbound** voice work, how it stays synchronized with the telephony server, and how it recovers when the Orchard Core application or tenant restarts.
+
+The key rule is constant across every flow:
+
+- the **provider/server is the source of truth for live call state**
+- Contact Center owns **routing, reservation, assignment, and call-session orchestration**
+- the soft phone mirrors the **server-projected state** instead of inventing its own truth
+
+## Network and protocol requirements for real-time voice
+
+Real-time voice depends on both **provider-to-Orchard** and **browser-to-Orchard** connectivity. In production, prefer encrypted transports everywhere, and do not assume the hosting platform allows outbound sockets by default.
+
+| Path | Typical protocol(s) | Direction | Why it is needed |
+| --- | --- | --- | --- |
+| Browser soft phone ↔ Orchard app | `https` + `wss` | Bidirectional | The soft phone loads over HTTPS and receives live SignalR call-state updates over secure WebSockets. |
+| Browser soft phone ↔ Orchard app fallback | `https` | Bidirectional | SignalR may fall back to SSE or long polling when WebSockets are unavailable, so normal HTTPS traffic must also remain allowed. |
+| Dialpad → Orchard webhook | `https` | Inbound to Orchard | Dialpad posts signed call events to Orchard webhook endpoints. |
+| Orchard → Dialpad REST API | `https` | Outbound from Orchard | Orchard may query Dialpad for current call truth or execute provider API operations. |
+| Orchard → Asterisk ARI REST API | `http` / `https` | Outbound from Orchard | Orchard uses ARI HTTP(S) for dial, hangup, hold, mute, and per-call state lookup. |
+| Orchard → Asterisk ARI event stream | `ws` / `wss` | Outbound from Orchard | Orchard keeps a live ARI socket open so server-side call changes reach the app immediately. |
+
+### Production guidance
+
+1. Use **`https`** for every public webhook or browser endpoint.
+2. Use **`wss`** for every production WebSocket connection.
+3. Allow plain **`http`** or **`ws`** only for trusted local development or lab environments where TLS termination is handled elsewhere.
+4. If a reverse proxy or firewall sits in front of Orchard, it must allow **WebSocket upgrade** requests for SignalR and provider stream listeners.
+5. If a reverse proxy or firewall sits between Orchard and Asterisk, it must allow Orchard's long-lived outbound `ws`/`wss` ARI event-stream connection in addition to normal ARI HTTP(S) requests.
+6. If the app runs on a host that restricts outbound traffic by default, such as some Azure topologies or locked-down App Service / container-network deployments, explicitly allow Orchard's outbound `https`, `ws`, or `wss` connections to provider APIs and live event streams or the app will not receive real-time provider state.
+
+## The moving parts
+
+| Layer | Owns |
+| --- | --- |
+| Omnichannel CRM | Contacts, activities, campaigns, subject flows, dispositions |
+| Contact Center | Queues, routing, reservations, assignment, interactions, call sessions, supervisor/agent events |
+| Telephony | Provider resolution, soft-phone hub, call-control execution, provider call-state lookup |
+| Provider | Live call media, native device state, provider webhooks, provider APIs |
+
+## PBX mutation execution boundary
+
+Read-only Telephony operations remain cancellable when the SignalR connection closes. Once a PBX mutation is admitted, however, the server executes it with its own deadline rather than `Context.ConnectionAborted` or an HTTP request token. The same boundary covers durable provider commands and Contact Center recording, monitoring, and transfer.
+
+Configure the deadline in tenant shell configuration:
+
+```json
+{
+  "CrestApps_Telephony": {
+    "Commands": {
+      "Timeout": "00:00:10"
+    }
+  }
+}
+```
+
+The default is 10 seconds; valid values range from one second through two minutes. The boundary returns on time even if a provider implementation fails to observe cancellation, and host shutdown also cancels the owned token. A timeout after provider contact is ambiguous: durable commands persist `OutcomeUnknown` with reconciliation required, while synchronous Telephony commands return an unknown result. The application must never interpret the timeout as proof that the PBX did not execute the command.
+
+Only provider execution consumes this deadline. After provider-confirmed success, Orchard persists interaction history, recording state, monitoring events, and transfer state with a non-request, non-expiring token. A browser disconnect or deadline expiration therefore cannot create a confirmed PBX mutation followed by canceled local persistence.
+
+## Inbound routing flow
+
+### 1. A provider event reaches Orchard
+
+Inbound voice can enter the Contact Center through one of two server-side paths:
+
+1. A provider or simulator posts a normalized `InboundVoiceEvent` to `POST /api/contact-center/voice/inbound`.
+2. A provider-owned webhook endpoint receives the provider's native payload, validates it, and normalizes it into Contact Center events first.
+
+Examples:
+
+- Provider-owned webhook path (each provider maps its own route): `POST /api/dialpad/webhook/call`
+- Generic normalized inbound path: `POST /api/contact-center/voice/inbound`
+- Dialpad built-in path: `POST /api/dialpad/webhook/call`
+
+The provider never pushes state directly to the browser. It always comes into Orchard first.
+
+The generic provider and built-in Dialpad webhook endpoints reject request bodies larger than 1 MiB with HTTP 413. The ceiling is measured against the bytes that arrive rather than the length the caller declares, so a chunked delivery that declares no length is refused at the same point, and it is refused as it arrives rather than after the whole body has been held in memory. The ingress permit is taken before the body is buffered, so the number of bodies a tenant holds at once is bounded by the concurrency limit; a caller that sends slowly is stopped by the server's minimum request body data rate rather than by the endpoint. Each tenant also enforces a shared concurrency limit and a separate authenticated token-bucket rate per canonical provider; rejected deliveries return HTTP 429 and include `Retry-After` when the rate limiter can calculate one. Unauthenticated deliveries do not consume the authenticated provider budget. Authenticated deliveries must contain a provider-signed UTC event timestamp within the configured maximum age and future clock-skew window. Generic normalized events use `OccurredUtc`; Dialpad JWT payloads use `event_timestamp` in epoch milliseconds. Missing, malformed, non-UTC, stale, or excessively future timestamps are rejected with HTTP 400 before state-changing processing.
+
+After authentication and validation, Orchard normalizes the payload and commits it to a tenant-local YesSql provider webhook inbox before returning HTTP 2xx. The canonical provider name plus provider delivery id forms the replay boundary under a distributed acceptance lock, so a retry resolves to the existing durable message instead of creating a second one. Provider delivery ids longer than 256 characters are rejected before persistence. Processing starts only after that commit and never uses the caller's disconnect token. Successful processing removes the inbox record; transient failures retain it for exponential-backoff retry, one poison message does not block later due messages, and the message is dead-lettered after ten failed attempts. If an optional provider feature is temporarily disabled, its persisted messages remain pending without consuming the retry budget and resume when the handler is available again. The immediate persisted dispatch preserves normal call-state latency, while the tenant background task recovers deliveries interrupted by process failure or deployment restart.
+
+Single-node development can use Orchard's local lock implementation. Every supported multi-node production deployment must enable and configure `OrchardCore.Redis.Lock`; a Redis SignalR backplane alone does not make `IDistributedLock` cross-node.
+
+Configure tenant-local limits in shell configuration:
+
+```json
+{
+  "CrestApps": {
+    "ContactCenter": {
+      "WebhookIngress": {
+        "ConcurrencyPermitLimit": 8,
+        "RatePermitLimit": 120,
+        "RatePeriodSeconds": 60,
+        "MaximumDeliveryAgeSeconds": 900,
+        "MaximumFutureSkewSeconds": 120
+      }
+    }
+  }
+}
+```
+
+`ConcurrencyPermitLimit` bounds all provider webhook requests buffering or processing on one tenant and application node. `RatePermitLimit` is applied independently to each authenticated canonical provider during `RatePeriodSeconds`. `MaximumDeliveryAgeSeconds` rejects authenticated deliveries older than the accepted replay window, and `MaximumFutureSkewSeconds` permits only bounded provider clock skew. Concurrency, rate, period, and delivery age must be greater than zero; future skew may be zero. In a multi-node deployment, each node enforces its own limits, so the external gateway should also enforce the deployment-wide provider contract.
+
+### 2. Contact Center creates the CRM work item and interaction
+
+`VoiceContactCenterCallRouter` takes the inbound event and:
+
+1. acquires a distributed lock scoped to provider name + provider call id
+2. checks for an existing interaction using the same provider-scoped identity
+3. resolves the dialed number (`ToAddress`) to the configured phone channel endpoint
+4. resolves the matching subject flow and optional CRM contact
+5. resolves the entry-point plan and validates its effective target queue
+6. creates the `OmnichannelActivity`
+7. creates the linked `Interaction`
+
+At this stage:
+
+- the **Activity** is the CRM work item
+- the **Interaction** is the communication attempt record
+- the provider call id is stored on the interaction so later provider truth can find it again
+
+Contact attribution is explicit and auditable. No contact match persists `Unresolved`; one loadable match persists `Resolved`; multiple matches persist `Ambiguous` with a deduplicated, deterministic candidate list and no assigned contact. Ambiguity does not block queueing or an agent offer because those operations are contact-independent. The source-neutral disposition service rejects an ambiguous activity, so alternate completion callers cannot bypass resolution. Before completing it, an agent with resource-scoped completion permission must select one of the persisted candidates on the completion form. The activity records the selected contact, resolving user, and UTC resolution time before disposition processing. Unresolved, ambiguous, and legacy inbound activities without explicit resolution cannot run contact-bound Subject Actions.
+
+Closed or unroutable entry points retain one provider-correlated activity and interaction for idempotency and audit, but never leave routable CRM work. A closed voicemail decision completes the activity; a closed rejection cancels it; and a missing or disabled effective queue fails it. The activity assignment is released and its terminal timestamp is recorded immediately. In the same tenant transaction, Contact Center registers exactly one durable voicemail or rejection command and schedules dispatch only after commit. The interaction remains `Ringing` with no end timestamp while provider truth is pending, then the fenced provider-command state machine ends it after confirmation or records a definitive failure or unknown outcome without returning the activity to routing.
+
+The stable reason code is returned in `ReasonCode`, stored as `TerminalReasonCode` on the activity, included in the provider-command request metadata, and copied to the interaction's `routing_terminal_reason` metadata. These paths create no queue item, reservation, or agent offer, and an entry-point decision never silently falls back to a generic queue.
+
+The activity status records the Contact Center routing decision, while the interaction and durable command metadata record whether the provider mechanically completed, failed, or could not prove the voicemail or rejection action.
+
+### 3. The activity is queued
+
+If the entry point is open and queueing is allowed, Contact Center enqueues the activity into the resolved `ActivityQueue`.
+
+The queue still owns routing. The provider does not decide which Orchard agent gets the work.
+
+### 4. Assignment selects the next agent
+
+`ActivityAssignmentService` serializes assignment with a **per-queue distributed lock** so multiple nodes or concurrent background tasks cannot assign the same queue item twice.
+
+Inside that lock, it:
+
+1. confirms the queue is enabled and open
+2. selects the highest-priority waiting queue item
+3. evaluates currently available agents through the routing pipeline
+4. creates a pending reservation for the winning agent
+
+This is the single-writer boundary for queue assignment.
+
+### 5. The ringing offer is projected to the agent
+
+`VoiceContactCenterCallRouter.OfferNextAsync()` turns the pending reservation into a ringing offer:
+
+1. loads the reserved agent and linked interaction
+2. refreshes the interaction from **provider truth** before offering it
+3. if the provider confirms the call no longer exists, removes it from the queue and releases the reservation and agent (via `ProviderVoiceOfferSynchronizationService.ReconcileEndedOfferAsync`), then moves on to the next queued call instead of offering a dead call
+4. moves a still-live interaction to `Ringing`
+5. builds a telephony `TelephonyCall`
+6. dispatches it through `IIncomingCallDispatcher`
+
+Because a queued call is validated against provider truth at offer time, a "zombie" interaction whose provider channel has already disappeared can never be offered to an agent. This prevents the agent from being reserved for a call they can neither answer nor hang up, which would otherwise leave them stuck and unable to receive new inbound calls.
+
+The Telephony module then:
+
+- sends the incoming call to the agent's soft-phone SignalR connections
+- persists the telephony interaction history used by the **Recent** tab and reconnect restore
+
+### 6. The agent accepts through one authoritative server command
+
+The workspace and the soft-phone incoming modal both call the same authoritative accept endpoint:
+
+- `POST /Admin/contact-center/voice/offer/accept`
+
+`ContactCenterCallCommandService.AcceptInboundOfferAsync()` then:
+
+1. validates that the reservation is still pending and still belongs to the current agent
+2. refreshes the interaction from **provider truth** before accepting
+3. rejects the accept immediately if the provider already ended the call
+4. accepts the reservation
+5. connects media if the provider uses a server-side ACD model
+6. if the media connect or answer fails, re-checks provider truth: when the provider confirms the call is gone, the offer is reconciled (removed from the queue and the agent released via `ReconcileEndedOfferAsync`) instead of leaving the accepted reservation stuck; only a still-live call is re-offered
+7. leaves device-native providers in `Ringing` until the provider later reports `Connected`
+8. creates or updates the `CallSession`
+9. publishes Contact Center events such as `OfferAccepted`
+
+This is why the UI does not get to decide that the call is connected just because the user clicked **Accept**.
+
+### 7. Provider truth finishes the state transition
+
+After the provider actually changes call state, the provider webhook or provider call-state lookup drives the next authoritative transition:
+
+- `Ringing` → `Connected`
+- `Connected` → `OnHold`
+- `OnHold` → `Connected`
+- `Connected` → `Ended`
+- and so on
+
+`ProviderVoiceEventService` projects those transitions into:
+
+- the durable `Interaction`
+- the durable `CallSession`
+- Contact Center domain events
+- the soft phone through server-side projections
+
+If a persisted interaction references a provider name that is no longer registered, restart and healing reconciliation retry the provider call id through the tenant's current default provider. A confirmed missing call is terminalized and its queue/agent state is released; a call the provider still reports as active remains assigned and is never requeued merely because the agent resets queue membership.
+
+When the browser receives a terminal event for a different call id than the call currently displayed, it immediately asks the server for the provider-authoritative active call. This preserves a genuinely newer call while clearing a stale browser call that no longer exists.
+
+## Voicemail
+
+A call is sent to voicemail when an entry point is closed and configured for voicemail, when a direct-to-agent line's ring window elapses without an answer, when a queued offer times out, or when an agent sends a ringing call to voicemail from the soft phone. In every case the interaction is flagged and projected to the recipient agent as a **missed** call before the recording leg is answered, so the agent never sees a live "in call" state for a call they did not take.
+
+### Greeting, then beep, then record
+
+The provider answers the caller's leg, plays the greeting, and only **after the greeting finishes** starts recording with a leading **beep**.
+
+The answer is only needed for a leg that is still ringing. A caller who reaches voicemail from a queue — because they waited past the queue's maximum wait — is already connected, and a provider will refuse the attempt outright (Telnyx returns `90102`, "Can not issue an answer command on an outbound call"). That refusal is the expected outcome on this path rather than a failure, so voicemail continues to the greeting; the platform asks the provider whether the leg is alive rather than interpreting the error text, because the reasons an answer is refused are not distinguishable from the message and greeting a leg that has actually hung up would be talking to nobody. A leg that answers normally pays no extra lookup.
+
+The caller hears the hold music stop and the greeting begin as one moment. Both halves are on the same queue-treatment sweep, and each sweep runs in its own unit of work: stopping the music is immediate, while the greeting is a provider command whose dispatch waits for that unit of work to commit, so anything that widens the sweep widens the silence between them. This keeps the spoken greeting out of the caller's recorded message and gives the caller the "after the tone" cue. With Telnyx this is sequenced through the provider webhook: the greeting is played with a correlation `client_state`, and its `call.speak.ended` / `call.playback.ended` event triggers `record_start` with `play_beep`. That greeting-ended signal is handled as a fast path in the webhook endpoint, ahead of the durable inbox write, so the beep-and-record starts within about a second of the greeting ending rather than queuing behind other event processing.
+
+The greeting played is resolved in this order:
+
+1. The recipient agent's **recorded/uploaded greeting** (hosted in the provider's media storage; see [Agent Workspace → Record your voicemail greeting](agent-desktop.md#7-record-your-voicemail-greeting)).
+2. The recipient agent's **spoken (text-to-speech) greeting**, if set through deployment.
+3. The **inbound entry point's Default voicemail greeting** (text), configured per dialed number so a line can define its callers' greeting without each agent setting one.
+4. The built-in **system greeting**.
+
+The finished recording is ingested into the encrypted media store and surfaced in the recipient agent's **Voicemail** tab in real time. See [Agent Workspace](agent-desktop.md#5-review-recent-activity) for playback and deletion.
+
+## Entry-point phone menus (IVR)
+
+An inbound entry point can carry a phone menu, built with the visual menu editor on the entry point's edit screen. An entry point with no menu (or one whose first menu is missing) routes exactly as it always did.
+
+### When the menu plays
+
+Business hours and the closed action are decided first. A closed entry point applies its closed action (voicemail, reject, hold in queue or overflow) and never plays the menu. An open one answers the caller and plays the first menu instead of queueing them. The menu is started only after inbound routing has committed the call's activity and interaction, so the provider's `call.answered` event always finds the call it belongs to.
+
+### What each key can do
+
+| Action | What happens to the caller |
+| --- | --- |
+| **Route to queue** | Admitted to the queue like any inbound caller, so a full queue still overflows or goes to voicemail. They are offered to the next agent at once; because they were answered to hear the menu, they hear the queue's hold music while the offer rings (a ringing tone when the queue has no music), or the queue's treatment (welcome, music, announcements, callback offer) while they wait. A queue with no treatment at all gives them a ringing tone rather than silence. |
+| **Route to agent** | Rings that one agent the way a personal line does: held and re-offered to the agent when they become available, and sent to voicemail when the entry point's ring window runs out (or held indefinitely when the entry point's voicemail is off). While the agent rings, or the caller is held for them, they hear the hold music of the entry point's queue on a queue line, and a ringing tone on a personal line or a queue with no music. It stops when the agent is joined or the caller is sent to voicemail. |
+| **Sub-menu** | Plays the sub-menu and collects the next key. Tries are counted per menu and start again on each new menu. |
+| **Voicemail** | Sends the caller to voicemail with the entry point's greeting. On a personal-line entry point the message is left for that agent; on a queue line it goes to the entry point's **Voicemail inbox** (see [Voicemail on a queue line](#voicemail-on-a-queue-line)). |
+| **External transfer** | Transfers the caller to an approved destination from **Settings → External transfer destinations**. Only an enabled destination that the dial policy allows, and that is not one of the contact center's own numbers, is reachable. The destination is shown the number the caller dialled. The call is settled as transferred only once the destination answers; one that is busy, does not answer or rejects the call puts the caller where the menu's fallback sends callers, or through to the entry point's target (see [A transfer the destination does not answer](#a-transfer-the-destination-does-not-answer)). |
+| **Repeat** | Plays the menu again. It counts as a try, so a caller who keeps asking to hear the menu still reaches the fallback. |
+
+A key the menu does not offer, or no key before the menu times out (8 seconds after the prompt ends), plays the menu again. When the caller has used up the menu's **Tries**, the **When the tries run out** action is taken; with no fallback, the caller is routed to the entry point's own target (its queue or agent). A choice that cannot be reached — a deleted or disabled queue, a missing agent, a disabled or refused external destination, a failed transfer — sends the caller to the entry point's target, and when that cannot be reached either, to voicemail. A caller is never left on the line.
+
+### Prompts
+
+A menu's **prompt text** is spoken with text-to-speech, in the voice and language set on the Telnyx settings page (**Text-to-speech voice** and **Text-to-speech language**, `female` and `en-US` when blank). The same voice and language are used for the voicemail greeting, the queue's announcements, and its callback offer and confirmation. The sentences the platform writes itself — the position and estimated-wait announcements, the callback offer and its confirmation, the default voicemail greeting and the apology read to an orphaned call — are localized like the rest of the UI, and are looked up in the **Text-to-speech language** rather than in the culture of whoever's request triggered them, so a tenant that speaks `es-MX` hears them from its `es-MX` translations. With no translation for that language they are spoken in English. A menu with **recorded audio** from the voice media library plays that instead; if the clip can no longer be found, the text is spoken and a warning is logged. With neither, or when the provider refuses the prompt, the caller is routed to the entry point's target.
+
+With Telnyx, a spoken menu is `gather_using_speak` and a recorded one is `gather_using_audio` (by the clip's `media_name`, or `audio_url` for an externally hosted file). Both follow an `answer`. Each collects one key (`minimum_digits` and `maximum_digits` 1), accepts only the keys the menu offers (`valid_digits`), and collects once (`maximum_tries` 1): the menu's own tries decide what a missed key means, rather than Telnyx replaying the prompt on its own. The key arrives on the `call.gather.ended` webhook, whose `status` says how the collection ended: `valid`, `invalid` and `timeout` move the caller through the menu; `call_hangup` records the caller as having abandoned in the menu; `cancelled` is ignored.
+
+### Waiting after the menu
+
+The network plays ringback to a caller only until they are answered, and the menu answered them. From then on whatever they hear is played by the platform: the queue's hold music when there is some, and otherwise a ringing tone (the North American 440 + 480 Hz cadence, two seconds on and four off, sent to Telnyx as `playback_content` and looped). It is stopped the way hold music is — Telnyx stops the caller's playback when it bridges the agent in, and a caller leaving the queue for voicemail, overflow or anywhere else has it stopped as they leave.
+
+The same applies to every caller who reaches a queue already answered. A caller an agent **blind-transfers** to a queue or to another agent, and a caller the **AI voice agent hands off** to a queue, hear the queue's hold music while the next agent rings, or its treatment while nobody is free; a queue with no music, one whose treatment plays nothing, or a transfer from a direct call with no queue plays the ringing tone instead of leaving them in silence. On Telnyx a transferred caller is parked on their own leg first (in and straight out of a `cc-park-…` conference), and the audio is played on that leg.
+
+### The queue's callback offer
+
+A queue with a **callback key** offers a waiting caller a callback once they have waited its **callback offer delay**: the hold music is stopped, the offer ("press 1 and we will call you back without losing your place in line") is spoken with `gather_using_speak` in the tenant's voice, and one key is collected, once, with the same 8-second timeout as a menu. The caller's answer comes back on the same `call.gather.ended` path as a menu choice, and is acted on only when the caller has no menu in progress and has been played the offer:
+
+- **The callback key** schedules a callback to the number they are calling from, carrying the time they entered the queue so they keep their place in line; takes them out of the queue so no agent is offered a caller who has gone; completes the inbound activity with the reason `queued_callback`; tells them it is arranged; and hangs up once that has been said (the confirmation is spoken with a `cc-bye` client state, and its `call.speak.ended` is what hangs up). The callback is promoted into an outbound callback activity by the callback dispatcher like any other. `CallbackRequested` is recorded with the queue and the caller's wait, and the reports count the call under its own **Callback requested** outcome — neither answered nor abandoned, and outside the service level (see [Interaction outcomes](report-catalog.md#interaction-outcomes)).
+- **Any other key, no key, or a key Telnyx could not read** is "no": the offer is not repeated, their hold music starts again and they keep waiting with the queue's treatment.
+- **A callback that cannot be arranged** — callbacks are not enabled on the tenant (the Contact Center Outbound Dialer feature), or there is no number to call — is not promised: the caller keeps waiting and a warning is logged.
+
+A redelivered key press never schedules a second callback, and a caller who is offered to an agent while the offer is playing is not taken out of the queue by pressing the key.
+
+### A transfer the destination does not answer
+
+The provider accepting an external transfer only means it has started ringing the destination. On Telnyx the leg it rings is marked, and the call stays the contact center's until that leg answers, when it settles as *Transferred* and `IvrActionTaken` is recorded with the reason `ExternalTransferCompleted`. When the leg hangs up first — busy, no answer, rejected — `IvrFallbackTaken` is recorded with the reason `ExternalTransferFailed`, the number and the provider's hangup cause, and the caller is put where the menu's **When the tries run out** action sends callers: a queue, an agent, voicemail, or another outside number. A fallback that is a menu, or is the same number that just failed, sends them to the entry point's own target instead. A caller who hangs up while the destination rings is recorded with `ExternalTransferAbandoned` and routed nowhere.
+
+### Voicemail on a queue line
+
+A personal line's messages go to its agent, and a message left after an agent let a queue offer ring out goes to that agent. A caller on a queue line who reaches voicemail with no agent of their own — they chose voicemail from the menu, the queue was full, or they waited past its limit before anybody was offered the call — used to leave a message that went into nobody's inbox. Set the entry point's **Voicemail inbox** to the agent (for example a supervisor) whose **Voicemail** tab should receive them. The inbox is stamped on the call when it arrives, the greeting is the entry point's **Default voicemail greeting**, and the message is played, marked read and deleted exactly like any other voicemail in that agent's inbox.
+
+#### The queue's shared voicemail box
+
+Set the entry point's **Deliver voicemail to** to **The queue's shared voicemail box** to give those messages to a team instead of one agent. The message is filed under the queue the caller was in when they reached voicemail — which a menu choice or an overflow can make a different queue from the line's own — and it is kept out of every agent's personal **Voicemail** tab, including the tab of an agent the caller was offered to earlier. A message left because an agent let an offered call ring out, and a personal line's messages, still go to that agent. Existing entry points keep delivering to their **Voicemail inbox** agent until this is changed.
+
+The team works the box from **Interaction Center > Shared voicemail**. The page lists the messages of the queues the viewer may see, newest first, with who called, the queue, when, how long, and who is handling it, and plays each recording through recording governance, so every playback is on the recording-access audit trail. It filters by queue and by status (open, new, claimed, done, all) and shows how many messages nobody has claimed yet. On each message a user can:
+
+- **I'll handle this** — claim it. Everyone else sees who claimed it and when. A user who holds **Manage shared queue voicemail** can take over someone else's claim.
+- **Call back** — queue a callback to the caller in the message's queue. The next available agent in the queue is offered it as a call to place, like a callback a caller asked for while waiting. It needs the **Contact Center Outbound Dialer** feature, which provides callbacks. An unclaimed message is claimed by whoever asks for the callback.
+- **Mark done** — resolve it, with an optional note. An unclaimed message is claimed by whoever resolves it.
+- **Return to team** / **Reopen** — put a claimed or resolved message back as new. Only whoever holds it, or a user who manages shared voicemail, can.
+- **Delete** — remove the message and erase its recording through recording governance. It needs **Manage shared queue voicemail**, and a recording under legal hold is never erased.
+
+Access takes two things. The user needs **Access shared queue voicemail for entitled queues**, which the Supervisor role has by default and the Agent role does not, so a tenant grants it to the roles that answer the box. And the user sees a queue's messages only when the queue is one of their entitled queues — the allowed queues on their agent profile, as the agent entitlement policy and the supervisor queue authorization read them. A user who holds **Manage the Contact Center** sees every queue. Both are enforced on the server for the list, the playback and every action; a message in a queue the user may not see is answered as not found.
+
+Every change is written to the event log as `SharedVoicemailReceived`, `SharedVoicemailClaimed`, `SharedVoicemailReleased`, `SharedVoicemailResolved`, `SharedVoicemailCallbackRequested` or `SharedVoicemailDeleted`, with who made it, and each can start a workflow.
+
+### What is recorded
+
+The caller's route is kept with the call and written to the event log, so the call's history shows the path:
+
+- `IvrMenuEntered` each time a menu is played, with the try number.
+- `IvrDigitsReceived` for each key press or timeout.
+- `IvrActionTaken` when a choice sends the caller somewhere (with the queue, agent or external number). An external transfer records it twice: `ExternalTransferRinging` when the destination starts ringing and `ExternalTransferCompleted` when it answers.
+- `IvrFallbackTaken` when the tries ran out, a choice could not be reached and the caller was rerouted, or an external transfer failed (`ExternalTransferFailed`, with the provider's hangup cause).
+- `CallAbandoned` when the caller hangs up in the menu. The platform answered the caller to play the menu, so without it the reports would count a caller who gave up in the menu as answered.
+
+The interaction also carries the whole route (each menu heard, each key pressed, and where it led) in its menu state. Key presses are applied once: a redelivered `call.gather.ended` never moves a caller twice, and once the caller has left the menu, later digit collections on the same call are not read as menu choices: a queue's callback offer is answered by the callback offer instead.
+
+## Outbound routing flow
+
+### 1. A dialer profile starts a cycle
+
+`DialerService` runs automated outbound work only for automated modes such as **Power** or **Progressive**. It first confirms that a Contact Center voice provider can route outbound calls for the dialer profile.
+
+### 2. The dialer strategy reserves work
+
+The selected `IDialerStrategy` picks how many attempts to launch for the cycle. Each attempt reserves:
+
+1. the next eligible queue item/activity
+2. an available agent
+
+The reserved activity is still the CRM work item; the reservation only gives the dialer a temporary right to place the attempt.
+
+### 3. Compliance is checked before every attempt
+
+`DialerAttemptService` runs `IDialerEligibilityService` before dialing.
+
+That check enforces rules such as:
+
+- destination exists
+- maximum attempts has not been reached
+- retry cool-down has elapsed
+- do-not-call and national registry suppression
+- configured calling window
+
+If the attempt is suppressed:
+
+- the reservation is canceled
+- the activity status is updated when appropriate
+- a `DialSuppressed` event is published for auditability
+
+### 4. Contact Center creates the outbound interaction
+
+If the attempt is eligible, Contact Center creates a new outbound `Interaction` before the provider dial occurs.
+
+This means the routing/orchestration record exists before live provider events begin to arrive.
+
+### 5. The provider dials
+
+`VoiceContactCenterCallRouter.RouteOutboundAsync()` resolves the configured `IContactCenterVoiceProvider`, verifies that it advertises dialer dialing and implements `IContactCenterVoiceCallControlProvider`, and then calls the executable dial contract.
+
+For the current built-in Dialpad provider:
+
+- Contact Center owns the outbound attempt
+- Dialpad executes the actual dial through the Telephony provider
+- the provider returns a provider call id
+
+If the provider does not return a call id, the attempt is treated as a failure because Contact Center cannot reconcile a call it cannot identify later.
+
+### 6. Reservation acceptance and ringing state are persisted
+
+If the provider dial succeeds:
+
+1. the reservation is accepted
+2. the interaction moves to `Ringing`
+3. the provider call id is saved on the interaction
+4. the activity moves into `Dialing`
+
+If the reservation can no longer be accepted by the time the provider succeeds, Contact Center fails the attempt and tears down the temporary state rather than letting the call continue without valid routing ownership.
+
+### 7. Provider truth drives answer, bridge, and completion
+
+The next transitions come from provider truth:
+
+- provider reports answer/connected
+- Contact Center updates the interaction and `CallSession`
+- for server-side ACD providers, Contact Center can bridge the live call to the agent
+- provider reports terminal state
+- Contact Center ends the interaction/session and moves the agent into the normal completion path
+
+## How Contact Center stays synchronized with the server
+
+Synchronization is built around **normalized provider truth** plus **reconciliation**.
+
+### Normalized provider events
+
+Providers translate their native events into `ProviderVoiceEvent`.
+
+That contract carries the authoritative server-side facts Contact Center cares about, including:
+
+- provider name and provider call id
+- normalized call state
+- addresses
+- mute state
+- recording state
+- conference state
+- idempotency key
+
+`ProviderVoiceEventService` ingests those events idempotently and updates the durable interaction/session projection. Provider name and call id are queried together first so identical call ids from two providers cannot collide. If an interaction was stamped with a provider identity that is no longer registered, the service can fall back to the provider call id, canonicalize the stored provider identity to the live event source, and continue terminal projection instead of silently losing the event. The fallback is rejected when the stored provider is still active, preserving provider-scoped ownership when two backends can produce the same call id. The service rejects stale events, never permits a nonterminal event to reopen a terminal call id, and gives every semantic event derived from one provider delivery its own idempotency key while keeping the base key on `CallSessionUpdated` for replay detection.
+
+When an answered inbound call reaches a terminal provider state, Contact Center moves the agent into `WrapUp` and marks the assigned queue item `Completed`. The accepted reservation and CRM activity remain as audit and after-call-work records until the normal disposition/completion flow releases the agent to the requested ready state. Pre-answer terminal calls still follow the abandon path, which removes the queue item, cancels the reservation, releases the CRM assignment, and restores the agent immediately.
+
+### Durable event delivery
+
+Every Contact Center domain event is persisted together with a pending outbox message before handler fan-out begins. Successful handlers are checkpointed individually, so a retry after a partial failure runs only the handlers that did not complete. Pending messages survive tenant/application restarts, retry with exponential backoff, and dead-letter after the configured attempt limit instead of silently disappearing between event persistence and real-time/workflow projection.
+
+### Provider call-state lookup
+
+When a provider implements `ITelephonyCallStateProvider`, Contact Center can actively ask:
+
+> "What is the current truth for provider call `<id>` right now?"
+
+That lookup is used for:
+
+1. **pre-accept validation** so an ended call cannot still be accepted
+2. **scheduled fresh-scope reconciliation** after a restart
+3. **periodic safety reconciliation** in case a live event was missed or delayed
+
+### Ended-offer reconciliation
+
+If provider truth says a ringing call ended before it was actually answered, `ProviderVoiceOfferSynchronizationService` clears the stale routing state:
+
+- queue item
+- **every** non-terminal (pending or accepted) reservation bound to the activity, not only the one referenced by the queue item
+- agent active reservation/presence
+- activity assignment metadata
+
+That prevents abandoned or already-ended calls from being re-offered as ghost work. Reject/re-offer cycles can accumulate more than one accepted reservation for the same activity, so the reconciler cancels **all** of them and clears the agent's active-reservation pointer whenever it referenced one of the cancelled reservations. This also runs for calls that were already answered: the wrap-up cascade still owns the agent's presence transition, but any lingering reservation pointer is cleared so the agent is never blocked from receiving the next offer.
+
+Ended-offer reconciliation only runs when a real non-terminal → terminal transition is observed. When a reconciliation sweep discovers a call that already disappeared on the provider **before any call session was ever recorded**, `ProviderVoiceEventService` seeds the newly created session with the interaction's pre-event (non-terminal) state rather than the incoming terminal state. This preserves the non-terminal → terminal transition so the `CallEnded` event is still published and the ended-offer cleanup runs; without the seed the session would be created already-terminal and the cleanup would silently never fire, leaving the interaction stuck in the queue.
+
+### Soft-phone projection stays server-driven
+
+The soft phone sends intents such as:
+
+- accept
+- decline
+- hold
+- resume
+- mute
+- hang up
+
+But it does not become the system of record for live call state.
+
+The durable truth is:
+
+1. provider event or provider lookup
+2. Contact Center interaction and call-session update
+3. Telephony/Contact Center server projection
+4. UI refresh from the resulting server state
+
+## What happens during an application or tenant restart
+
+The current design assumes that a short restart can happen during active traffic and must not permanently desynchronize routing.
+
+### Fresh-scope restart reconciliation
+
+Tenant activation performs no provider or database reconciliation inline with Orchard's shell construction. The feature registers `ProviderCallStateReconciliationBackgroundTask`, which runs the reconciliation contract in a normal fresh tenant scope within the next minute; provider listeners such as Asterisk also trigger an immediate provider-scoped pass after they reconnect.
+
+For each active interaction, Contact Center:
+
+1. resolves the telephony provider
+2. asks for the current provider call state
+3. rebuilds a normalized provider event from that lookup
+4. re-ingests it through the same `ProviderVoiceEventService` pipeline
+
+If the provider says the call no longer exists, Contact Center treats it as terminal and clears stale local state.
+
+### Periodic reconciliation
+
+`ProviderCallStateReconciliationBackgroundTask` runs every minute as the restart and missed-event safety net.
+
+This catches cases where:
+
+- an app restart happened between two provider events
+- a provider event was delayed
+- a live stream or webhook delivery was missed
+
+Bulk reconciliation is serialized by a distributed lock. A provider live-stream reconnect requests a provider-scoped pass, so reconnecting one Asterisk endpoint does not repeatedly query unrelated providers or overlap another full reconciliation sweep.
+
+The Asterisk live event listener is hardened so a single bad event can never silence the stream. Each received event is dispatched in isolation: a malformed payload, an unroutable event, or a transient tenant-scope failure while the shell is reloading is logged and skipped instead of tearing down the WebSocket and forcing a reconnect storm. The listener also subscribes to **all** application events (`subscribeAll`), so every channel state change reaches provider-truth ingest rather than only the events for channels the app happens to own. In a supported Redis-locked multi-node deployment, more than one node may hold an Asterisk socket during startup or rolling deployment; ingestion serializes the canonical provider-call stream, commits before releasing the lock, and suppresses the duplicate against the committed provider event. Any event genuinely missed during a reconnect is still repaired by the periodic sweep above.
+
+### Re-offer and reconnect recovery
+
+When an agent becomes available again or reconnects, Contact Center can re-check waiting voice work and offer it again. Before it does, the healer/reconciliation path clears impossible leftovers so stale reservations do not block future offers.
+
+The healer never requeues a **provider-backed ringing** interaction on its own. Requeuing one would either yank a genuinely live ringing call away from the agent or resurrect a dead call in an endless offer loop, so a provider-backed ringing interaction is always left under provider control and released only when provider truth confirms it ended. Only non-provider-backed ringing work (which has no authoritative source to consult) is requeued locally.
+
+Manual presence changes are also self-healing. If an agent is parked in an on-call presence state (Reserved/Busy/WrapUp or still holding a reservation) and asks to return to a ready state, `AgentPresenceManagerService` first reconciles the agent against provider truth. A call that no longer exists on the provider is released so the requested change applies immediately; a genuinely live provider-backed call is preserved and the change is deferred as before. This stops an agent from being stuck as **Busy** and unable to go **Available** after a call that already disappeared on the provider.
+
+## Why the current implementation is resilient
+
+The current voice flow stays consistent because it combines these protections:
+
+1. **Per-queue, per-agent, and per-reservation distributed locks** prevent double assignment and accept/expiry races.
+2. **Provider-scoped inbound locks and lookups** prevent duplicate work and cross-provider call-id collisions.
+3. **Reservations** make offers explicit and auditable.
+4. **Provider call ids** let Contact Center correlate server truth back to local interactions.
+5. **Tenant-scoped provider-call locking plus monotonic lifecycle and sequence guards** prevents concurrent, stale, timestampless, mixed-order, or duplicate deliveries from corrupting state.
+6. **Durable per-handler outbox delivery** prevents events from disappearing across handler failures or restarts.
+7. **Pre-accept provider refresh** stops agents from accepting already-ended calls.
+8. **Ended-offer reconciliation** clears stale queue and agent state immediately.
+9. **Tenant-startup, reconnect, and periodic reconciliation** repair drift after restarts or missed events.
+10. **Server-driven soft-phone projection** keeps the browser as a mirror instead of a source of truth.
+
+## Current limitations and important notes
+
+:::danger Not an emergency-calling service
+Contact Center is **not** an emergency (E911/112/999) calling service and must never be relied on for life-safety communication. It performs no location determination, no routing to a Public Safety Answering Point, and no registered-address provisioning; no emergency-service origination code path exists anywhere in the platform.
+
+The emergency-number denial is enforced by `IDialDestinationPolicy`, which every dial and transfer path consults: the Contact Center server-side paths (outbound first-dial through `DialProviderCommandTypeExecutor`, external-transfer resolution through `TransferDestinationResolver`, and the approved-destination settings screen) **and** the Telephony soft-phone keypad, transfer field and extension field, which all reach `DefaultTelephonyService` and are refused there before any provider is called. The policy refuses a broad set of emergency short codes (`911`, `112`, `999`, `000`, `110`, `119`, `100`, `102`, `108`, `113`, `117`, `118`, `122`, `133`, `190`, `191`, `192`, `193`, `194`, `997`, `998`) matched as the whole dialed string after an optional trunk prefix is stripped, and the tenant allow-list of ordinary short codes can never open an emergency code.
+
+That is a refusal to originate, not an emergency-calling capability. Operators **must** still provide emergency-calling access to agents and end users by other, independent means, and must communicate this limitation to their users. Blocking emergency and any other disallowed codes in the Asterisk dialplan and/or the SIP trunk configuration remains sound defence in depth.
+:::
+
+- `InboundVoiceEvent.ToAddress` must be present for generic inbound routing because the router needs the dialed service address to resolve the entry point or queue.
+- If multiple enabled queues have no explicit inbound mapping, the generic fallback queue resolution intentionally does not guess between them.
+- Dialpad currently uses the **agent-device-native** delivery model. Contact Center does not bridge media for it; the provider rings the agent's registered device and later tells Contact Center what really happened.
+- Voice capabilities are metadata only. Dialing and agent connection require `IContactCenterVoiceCallControlProvider`; provider-owned queue placement, transfer, conference, recording, and monitoring each have a separate executable contract. A capability flag without its matching contract is rejected.
+- Contact Center–orchestrated external transfers resolve only from a tenant-scoped approved-destination catalog. Callers pass an opaque catalog entry identifier (never a raw phone number); the resolver requires the external-transfer permission, denies missing or disabled entries, and re-validates the stored E.164 address with emergency and premium ranges always rejected. Operators curate the catalog in the **External transfer destinations** section of the **Settings → Contact Center** screen, and because it is stored as Orchard Core site settings it is isolated per tenant. The catalog is enforced on every transfer the platform executes: `ITransferTargetPolicy` decides what a transfer target may be, and with Contact Center Voice enabled that policy resolves through the catalog, so a raw number typed into the soft-phone transfer field is refused server-side whatever the client sends. `IDialDestinationPolicy` applies underneath it, so emergency and premium destinations are refused on every path regardless of the catalog. The soft-phone transfer **panel** does not yet list agents, queues and catalog entries for the agent to pick from — that is presentation work, and the restriction is already enforced without it.
+- Bidirectional media is exposed only by a separately registered `IContactCenterVoiceMediaProvider` whose technical name matches a registered base voice provider. Asterisk registers that contract with its ARI External Media feature, and Telnyx registers it with Telnyx Media Streaming (`streaming_start` in bidirectional RTP/PCMU mode); Dialpad does not register one because its public integration does not expose equivalent raw live-media injection. Each is gated behind the Contact Center **Voice Media** feature and activates automatically when its provider and Voice Media are both enabled — there is no separate per-provider toggle.
+- The two media providers invert control differently. Asterisk streams RTP to a socket Orchard opens, so it is self-contained. Telnyx instead dials back to a WebSocket **Orchard hosts** at `api/telnyx/media/stream` after the `streaming_start` command, so the Telnyx module depends on the **WebSockets** feature (`CrestApps.OrchardCore.WebSockets`, enabled by dependency only) that adds the ASP.NET Core WebSocket middleware to the tenant pipeline, then the media feature maps that endpoint. The public address Telnyx dials is resolved most-trusted-source-first: an explicit `mediaStreamPublicUrl` session-metadata override, then the tenant **site base URL**, then the current request's host — the last only reflects the external host behind a proxy when OrchardCore's **Reverse Proxy** feature is enabled to validate the forwarded headers (the raw `X-Forwarded-Host` is never trusted directly, since it would let a caller choose where call audio is streamed). Because a media session is usually opened outside an HTTP request (an AI/bot orchestrator or a background webhook processor), the site base URL is the reliable source and should be set to a publicly reachable `https` address. The correlation token that pairs a pending session with the returning socket is held in the WebSockets feature's `IWebSocketConnectionRegistry`, whose default implementation is a **per-node in-memory registry**. So live Telnyx media requires either a single-node deployment or **host-level affinity** that routes each callback back to the node that started the stream (each node advertising its own public base URL): a callback routed by Telnyx's load balancer to a node that did not start the stream cannot be served there, because a live socket cannot be handed between processes. When the **Redis** feature is enabled the WebSockets feature swaps in a distributed registry that records the owning node in Redis with a short expiry. That does not remove the affinity requirement — nothing can move a live socket — but it changes a silent failure into a diagnosable one: the misrouted callback is refused, the log names the node that holds the rendezvous, and the rendezvous is left intact so the provider's retry can still reach the right node. If Redis is unreachable the registry degrades to the per-node behaviour rather than failing the call.
+- Dialpad webhook subscriptions are currently created and monitored in the Dialpad administration portal; Orchard validates deliveries but does not automatically register or health-check the provider subscription.
+- Attended (warm) transfer runs as three recorded phases — consult, then complete or cancel — through `IConsultTransferService`. Only a **connected** consult may be completed, so a customer is never handed to a phone that never answered, and a repeated command completes once. A provider that cannot hold a customer and ring a third party privately reports that rather than silently doing nothing.
+- Inbound entry-point resolution is a chain: every registered `IEntryPointResolver` is asked in order and the first plan wins, so a feature that adds its own entry-point source is actually consulted.
+- Automated outbound calls run as a live speech-to-speech session when the AI profile's chat mode is **Realtime**, so the assistant answers while the caller is still finishing and hears them if they interrupt. It needs the **Voice Media** feature, which is what carries audio both ways on the caller's leg; without it — or if the session cannot start — the call falls back to the transcribe-complete-synthesize loop rather than to silence. The transcript is written to the same chat session either way, so the summary, the disposition and the subject write-back are identical.
+- **A call handed to a live agent is that agent's to conclude.** The model's own leg ends the instant the caller is passed on, which reaches the conversation loop as a hangup; concluding there would close and disposition the activity while the agent is still talking, and the outcome on record would be the model's guess rather than what the agent did — and the agent's own wrap-up would then be refused, because the work was already finished. An escalated activity is therefore left open for the agent. If nobody ever takes it, the recovery sweeps close it on their usual schedule.
+- Asterisk and other server-side ACD providers can use server-driven answer/bridge flows instead.
+- Reconciliation works from both directions. The interaction pass repairs **known local provider-backed interactions**; a second pass asks the Telnyx connection which calls it actually has up and reports any that this platform has no interaction for — a call placed immediately before a restart, for which no local record was ever written and which no local sweep could therefore reach. Those are reported by default; a deployment that would rather release the caller than leave them on a call nothing can act on can switch **Calls with no local record** to **End call** on the Telnyx settings screen, which speaks an apology before hanging up. The equivalent pass for other providers is not implemented: it depends on the provider offering a way to list the calls currently up on a connection.
+
+## How the call state machine tolerates the way providers really deliver events
+
+Every provider event that carries a call state reaches Contact Center through `ProviderVoiceEventService`. That service is the single place where a provider report becomes a change to the call session and the interaction, and where the resulting domain events are published, so it is the component that has to absorb the difference between the lifecycle a provider *had* and the way that provider *delivered* it.
+
+Those two things do not match in production. Provider nodes do not share a clock, so a hangup can be stamped fractionally behind the state change that preceded it. Providers do not sequence every event type, so the same stream can mix sequenced and unsequenced deliveries. Retries and at-least-once webhook semantics mean any delivery can arrive twice, or the whole stream can be replayed. Network paths reorder. A provider can also report a call terminated more than once and disagree with itself about how it ended.
+
+The state machine handles this with four rules:
+
+- **Lifecycle rank, not raw ordering.** States are ranked (planned; dialing and ringing; connected and on hold; ending; terminal). A delivery that would move the session backwards down that ranking is ignored, so a late `ringing` cannot undo a `connected`.
+- **Terminal absorption.** Once a session is terminal it stops accepting further state reports, so a second, competing terminal report cannot rewrite how the call ended.
+- **Terminal deliveries bypass the staleness guards.** Sequence-number and timestamp staleness checks are deliberately *not* applied to a terminal state. Discarding a hangup because it looked stale is far worse than accepting one late: the session would stay live forever, `CallEnded` would never publish, wrap-up would never start, and the agent and their reservation would never be released.
+- **Terminated calls carry no live-only state.** Flags that only make sense while a call is up, such as mute, are cleared on termination and cannot be re-applied by a later delivery.
+
+`CallStateMachinePropertyTests` enforces all of this as properties rather than examples. It generates a real call lifecycle, then deliberately corrupts its delivery with duplicates, whole-stream replays, arbitrary reordering, clock skew wider than the spacing between events, mostly-unsequenced streams, late backward regressions stamped with the freshest timestamp and highest sequence, and competing terminal reports; it then drives the production service and the production event publisher over 400 seeded sequences per property and requires convergence to a single terminal outcome with no rank regression, no resurrection, no stranded call, no duplicated lifecycle event, and no live-only flag left set. A companion property asserts that the generator is still producing each hard case, so the suite cannot quietly become vacuous.
+
+## One call-state vocabulary and provider-neutral hangup causes
+
+Contact Center reasons about a call with a twelve-state vocabulary; the soft phone renders it with a seven-state one. Translating between them is lossy in one direction and ambiguous in the other, so it is written in exactly one place, `ContactCenterCallStateProjection`, and a build gate fails if a second translation appears anywhere in the product.
+
+The narrowing direction is a declared, lossy projection: four distinct terminal outcomes collapse onto the soft phone's `Disconnected`, and two more onto `Failed`. The widening direction cannot be recovered from the soft-phone state alone, which is why every provider event carries a **hangup cause**.
+
+`HangupCause` is provider-neutral and has eight meanings plus an explicit `Unknown`:
+
+| Cause | Meaning |
+| --- | --- |
+| `NormalClearing` | The call was answered and then released normally. |
+| `Busy` | The remote party was busy. |
+| `NoAnswer` | The call alerted but was never answered. |
+| `Rejected` | The remote party or network explicitly rejected the call. |
+| `Congestion` | No circuit was available, or the network was congested. Normally retryable. |
+| `Failed` | A permanent failure such as an unallocated number or invalid format. Not retryable. |
+| `Canceled` | The originating side abandoned the call before it was answered. |
+| `AnsweringMachine` | A machine, voicemail greeting, or fax tone answered instead of a person. |
+| `Unknown` | The provider ended the call without reporting any cause. Recorded rather than presented as a normal clearing. |
+
+Asterisk reports the release reason as a Q.850 cause code on its hangup events, which is normalized into that vocabulary; when only the standard cause text is present it is used instead. Answer detection takes precedence over the release cause, because a call released normally after a machine picked up is still a machine answer. Dialpad publishes no release cause of its own, so its cause is derived from the call-state token it already reports, plus its answer classification.
+
+Q.850 has no distinct cause for an abandoned call — a caller who hangs up while the far end is still alerting releases the channel with the same normal cause as a completed conversation. That distinction therefore belongs to the state machine, which is the only component that knows whether the call was ever answered: a normal release with no answer is recorded as `Canceled`, and a cause that reached it as `Canceled` on an answered call is corrected back to `NormalClearing`.
+
+**No call may end without a cause.** A provider that reports a terminal state without one has the cause derived from the state itself, and the property suite asserts over every generated adversarial delivery sequence that a terminated session always carries both a cause and an end time. A cause that is never written at the source cannot be reconstructed later, which is what previously made outbound compliance reporting and abandon analytics impossible to compute.
+
+## Three writers, one telephony interaction
+
+The soft phone's interaction record is written from three independent directions, and none of them coordinates with the others:
+
+- **Real-time provider events** arrive as the call progresses and move the interaction through ringing, answered, and hangup.
+- **The reconciliation pass** periodically asks the provider for authoritative call state and repairs anything a dropped event left behind.
+- **Inbound dispatch** refreshes the record when a call is offered to an agent.
+
+Each of these used to read the interaction, mutate the copy it was holding, and save it. Whichever one committed last won, and everything the others had written in the meantime was discarded. The damaging case is not a lost cosmetic field: the reconciliation pass carries a provider snapshot that was already seconds old by the time it was applied, so it could reinstate a live call over a hangup that a real-time event had committed while the pass was running. The call then looked active to the agent until the next pass happened to catch it.
+
+Every write to a telephony interaction is now guarded by an optimistic-concurrency check, so a writer holding a version that has already been replaced fails instead of overwriting the winner. Read-modify-write callers do not perform their own read anymore; they hand the store a mutation, and the store opens a dedicated session, reads the current version, applies the mutation, and commits. If another writer commits first, the store re-reads and reapplies the mutation against the version that actually won, up to a bounded number of attempts.
+
+The mutation is also allowed to decline after seeing the fresh version. That is what makes the guards correct rather than merely retried: the real-time dispatcher re-evaluates "is this interaction already terminal?" against the version that won the race, so an event that arrives just behind a hangup declines instead of resurrecting the call.
+
+## Automated calls held as a live speech-to-speech session
+
+When the AI profile driving an automated call names a realtime deployment, and the **Contact Center Voice Media** feature is enabled, the call is held as a live speech-to-speech session instead of the turn-based transcribe-complete-synthesize loop. The caller's audio reaches the model as it arrives and the model's voice goes back as it is produced, so it can answer while they are still finishing and hear them if they interrupt. Everything downstream is unchanged, because both paths write the same transcript.
+
+Six things about that session are decided here rather than by the provider's defaults.
+
+### The line is band-limited in both directions
+
+A call carries roughly 300 Hz to 3.4 kHz at 8 kHz; the model speaks 24 kHz. Converting between them without first removing what the destination cannot represent does not discard that content — it **folds it back** into the voice band as inharmonic tones that track the speech but belong to no human voice. It is loudest on sibilants and hard consonants, and it is heard as a metallic, buzzy edge.
+
+Both directions are therefore filtered to the telephone passband before the rate changes: on the way out so nothing aliases into what the caller hears, and on the way in so the images that straight-line interpolation leaves above the caller's own band are not fed to the model's transcription and turn detection.
+
+An earlier revision skipped this on the reasoning that the aliasing "sits above what the line carries anyway". That is backwards, and it is why a natural-sounding model arrived sounding synthetic.
+
+### Turn detection is tuned for a telephone, not a headset
+
+The provider's defaults assume clean, close-mic audio. On a companded 8 kHz line carrying noise and whatever leaks back from the far end's earpiece, they decide the caller has started and stopped talking when they have done neither — which shows up as the assistant answering phantom turns, transcribing one utterance twice, and restarting its own sentences. Interruption stays enabled: being talked over is the other half of sounding like a machine.
+
+The session is also asked to wait longer for a pause (900 ms) at the default speech threshold, but those two values only take effect when the tenant's realtime transport runs `server_vad` (see [Realtime voice](../ai/realtime-voice.md)). Under the default `semantic_vad` detector the model decides when a turn is over and the silence and threshold are ignored. The threshold is deliberately *not* raised to fight phantom turns: a harder-to-trigger detector clips the soft onset of a short "yeah", which is the most common thing a caller says.
+
+The detector *type* is deliberately left as the session already has it. Valid values belong to the provider, and naming one here would be a guess that fails closed on a live call.
+
+### The assistant's own echo is held back
+
+A phone line returns some of what is played down it — the earpiece couples into the handset microphone, and the network reflects it — and the provider hears that faint, garbled return as the caller starting to talk. Its recognizer then hallucinates a stock phrase out of it. On a live call this came out as the caller apparently saying "Bye-bye." while the greeting was still playing and "you" during the next line; the model answered both, and sounded like it was talking to itself.
+
+Echo is always quieter than a person talking into the phone, so while the assistant's audio is playing, and for 600 ms after its projected end while the last of it comes back, caller audio quieter than -38 dBFS is sent to the model as silence. Audio louder than that for at least 40 ms is the caller talking over the assistant: it goes straight through, together with the 240 ms before it so the soft start of what they said is not lost, and it keeps going through pauses between words. Outside that window nothing is altered at all, however quiet, so a short answer after the assistant's question reaches the model exactly as it was said.
+
+Held audio is replaced with silence rather than dropped, so the model's view of the line stays in step with the clock. Each call logs how much caller audio was held back and how loud the loudest of it was, and — at debug — the level of every caller who talked over the assistant, so the -38 dBFS line can be checked against real calls rather than guessed at.
+
+### A caller who talks over the assistant stops hearing it
+
+Letting the caller's voice through is only half of barge-in. The provider then stops the model, but the model produces speech faster than it plays — a seven-second line can arrive in under three — so when a caller talks over a sentence, most of it is already queued at the carrier. On a live call the caller talked over the assistant three times, the guard let every one through, and each time they heard it finish its sentence anyway.
+
+So when the provider reports that the caller has started speaking while the assistant's audio is still playing, the session:
+
+1. Tells the carrier to discard the audio it has queued. On Telnyx this is the media stream's `clear` event, sent under the same lock as the audio frames. Asterisk external media plays RTP as it arrives and has no equivalent, so there it does nothing.
+2. Cuts the model's spoken item back to what was actually played (`conversation.item.truncate`), measured along that item's own audio, so the model's context matches what the caller heard rather than the whole line it generated.
+3. Drops any later audio that belongs to the interrupted response, so a piece of it arriving after the clear does not restart the assistant mid-sentence. Audio from the model's next response plays as usual.
+
+It only does this for a real interruption: the provider's report *and* the echo guard having let a voice through over the assistant within the last 1.5 seconds. The provider's detector can also fire on the assistant's own echo, and stopping on that would be the assistant interrupting itself, so a speech start the guard heard no voice behind leaves the assistant talking. A cough loud enough to open the guard is not enough on its own either, because the provider never reports it and so never stops the model; clearing the line on it would leave the assistant silent mid-sentence.
+
+The closing line is deliberately left to finish — the goodbye, or the line announcing a transfer. Goodbyes overlap on a phone, and clipping the closing line is exactly what the closing watchdog exists to prevent. The caller still takes the call back: speaking abandons the hangup, and the model answers once the line has played.
+
+Each interruption is logged at information level with how much of the assistant's audio was still to play and how much of the line the caller had heard; a speech start treated as echo, or one over the closing line, is logged at debug.
+
+### A transfer ends the session
+
+The model escalates by invoking a transfer tool, which only *records* the request. The session is closed as soon as that happens, so the caller is released to the queue rather than staying with an assistant that has already promised them a person. Before this, the session ran until somebody hung up and the enqueue happened whenever the call would have ended anyway — measured at 19 and 40 seconds on live calls.
+
+It is a short grace rather than an instant cut, because the model announces the transfer in the same breath as invoking the tool; cutting the audio immediately would clip that line mid-word and drop the caller into silence. The profile prompt should keep that announcement to one short sentence, or the grace will truncate it.
+
+### Optional room ambience
+
+A call can carry a quiet background bed — faint room tone and the sound of an agent typing — chosen per campaign on the activity batch and snapshotted onto each activity. Perfect silence between sentences is a strong tell that nobody is there. The bed is synthesized rather than looped, because a loop has its own tell: on a long call the caller starts to hear the seam. It is off by default, since it is audible on the call and an operator should opt into it rather than discover it.
+
+## Related guides
+
+- [Contact Center overview](index.md)
+- [Agents, queues, and dialer](agents-queues-dialer.md)
+- [Agent desktop and supervisor dashboard](agent-desktop.md)
+- [Telephony soft phone](../telephony/index.md)
+- [Custom telephony and Contact Center providers](../telephony/custom-providers.md)

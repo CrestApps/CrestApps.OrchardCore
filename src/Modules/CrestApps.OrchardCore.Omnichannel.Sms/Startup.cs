@@ -1,5 +1,7 @@
 ﻿using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Sms.BackgroundTasks;
 using CrestApps.OrchardCore.Omnichannel.Sms.Endpoints;
 using CrestApps.OrchardCore.Omnichannel.Sms.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Sms.Indexes;
@@ -10,9 +12,11 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Modules;
+using OrchardCore.Sms.Services;
 
 namespace CrestApps.OrchardCore.Omnichannel.Sms;
 
@@ -27,7 +31,24 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<IOmnichannelEventHandler, SmsOmnichannelEventHandler>();
 
+        // Asked before any text goes out, so a stop said on any record that holds the number is honoured here too.
+        services.TryAddScoped<IContactOptOutResolver, ContactOptOutResolver>();
+
+        // Re-drives automated SMS conversations whose in-memory reply generation was lost (for example on a restart),
+        // so an owed reply is not left stranded and the no-response timeout does not wrongly fail the conversation.
+        services.AddSingleton<IBackgroundTask, SmsOwedReplyRecoveryBackgroundTask>();
+
+        // Proactively re-engages automated SMS contacts who have gone quiet (when the campaign enabled it), gated by
+        // the campaign's business-hours calendar so nudges are never sent after hours.
+        services.AddSingleton<IBackgroundTask, SmsReEngagementBackgroundTask>();
+
         services.AddRedaction(builder => builder.SetRedactor<ErasingRedactor>(LogDataClassifications.AddressSet));
+
+        // Twilio says why it refused a message, and its provider throws that away. Recorded, so a text that fails
+        // for credentials, region or a trial restriction says which in the log.
+        services.AddTransient<TwilioErrorLoggingHandler>();
+        services.AddHttpClient(TwilioSmsProvider.TechnicalName)
+            .AddHttpMessageHandler<TwilioErrorLoggingHandler>();
 
         services
             .AddDataMigration<OminchannelActivityAIChatSessionIndexMigrations>()
@@ -37,7 +58,6 @@ public sealed class Startup : StartupBase
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes
-            .AddTwilioWebhookEndpoint()
-            .AddTwilioEventGridEndpoint();
+            .AddTwilioWebhookEndpoint();
     }
 }
