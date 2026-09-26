@@ -3263,7 +3263,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public sealed class ContactCenterTransferService : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterTransferService
     {
-        public ContactCenterTransferService(CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.IContactCenterVoiceProviderResolver voiceProviderResolver, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallControlAuthorizationService callControlAuthorizationService, CrestApps.OrchardCore.ContactCenter.Core.Services.ITransferDestinationResolver transferDestinationResolver, CrestApps.OrchardCore.ContactCenter.Core.Services.ITransferredCallRouter router, CrestApps.OrchardCore.ContactCenter.Core.Services.ITransferAgentReleaseService agentRelease, CrestApps.OrchardCore.ContactCenter.Core.Services.IProviderVoiceEventService providerVoiceEventService, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventPublisher publisher, CrestApps.OrchardCore.Telephony.ITelephonyCommandExecutor commandExecutor, YesSql.ISession session, OrchardCore.Modules.IClock clock) { }
+        public ContactCenterTransferService(CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.IContactCenterVoiceProviderResolver voiceProviderResolver, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallControlAuthorizationService callControlAuthorizationService, CrestApps.OrchardCore.ContactCenter.Core.Services.ITransferDestinationResolver transferDestinationResolver, CrestApps.OrchardCore.ContactCenter.Core.Services.ITransferredCallRouter router, CrestApps.OrchardCore.ContactCenter.Core.Services.ITransferAgentReleaseService agentRelease, CrestApps.OrchardCore.ContactCenter.Core.Services.IProviderVoiceEventService providerVoiceEventService, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventPublisher publisher, CrestApps.OrchardCore.Telephony.ITelephonyCommandExecutor commandExecutor, YesSql.ISession session, OrchardCore.Modules.IClock clock, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterMonitoringService monitoringService) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.TransferResult> TransferAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.TransferRequest request, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ContactCenterVoiceMediaProviderResolver : CrestApps.OrchardCore.ContactCenter.IContactCenterVoiceMediaProviderResolver
@@ -5009,7 +5009,23 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public sealed class WarmTransferService : CrestApps.OrchardCore.ContactCenter.Core.Services.IWarmTransferService
     {
-        public WarmTransferService(CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallSessionManager callSessionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallControlAuthorizationService authorizationService, CrestApps.OrchardCore.ContactCenter.Core.Services.ITransferDestinationResolver destinationResolver, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentAvailabilityService availabilityService, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueManager queueManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IVoiceMediaItemManager mediaItemManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IConsultTransferService consults, CrestApps.OrchardCore.ContactCenter.Core.Services.ITransferAgentReleaseService agentRelease, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentPresenceManager presenceManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IProviderVoiceEventService providerVoiceEventService, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventPublisher publisher, YesSql.ISession session, OrchardCore.Modules.IClock clock) { }
+        public WarmTransferService(
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager,
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.ICallSessionManager callSessionManager,
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.ICallControlAuthorizationService authorizationService,
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.ITransferDestinationResolver destinationResolver,
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentManager,
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentAvailabilityService availabilityService,
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueManager queueManager,
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.IVoiceMediaItemManager mediaItemManager,
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.IConsultTransferService consults,
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.ITransferAgentReleaseService agentRelease,
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentPresenceManager presenceManager,
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.IProviderVoiceEventService providerVoiceEventService,
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventPublisher publisher,
+                    YesSql.ISession session,
+                    OrchardCore.Modules.IClock clock,
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterMonitoringService monitoringService) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.WarmTransferResult> CancelAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.WarmTransferCommand command, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.WarmTransferResult> CompleteAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.WarmTransferCommand command, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.WarmTransferResult> GetAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.WarmTransferCommand command, System.Threading.CancellationToken cancellationToken = default) { }
