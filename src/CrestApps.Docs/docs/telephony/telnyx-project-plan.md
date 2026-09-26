@@ -83,8 +83,10 @@ implements `IContactCenterVoiceRecordingProvider` and advertises
 `DialerDial | AgentConnect | CallTransfer | Recording`, with `record_start` / `record_pause` /
 `record_resume` / `record_stop` driven by Contact Center recording governance and `call.recording.saved`
 ingestion into the encrypted media store (see [Call recording](./telnyx.md#call-recording)). **Monitor /
-whisper / barge and multi-party conference remain unimplemented**; the provider advertises only the
-capabilities it implements, so nothing fails closed.
+whisper / barge are done too**, with mode switching and takeover: the call is moved into a conference when the
+supervisor's own soft phone answers, and the supervisor joins with a Telnyx `supervisor_role` (see
+[Supervisor monitoring](./telnyx.md#supervisor-monitoring)). **Multi-party Contact Center conference remains
+unimplemented**; the provider advertises only the capabilities it implements, so nothing fails closed.
 
 Separately, **bidirectional media streaming** (the Telnyx equivalent of Asterisk ARI External Media) is now
 implemented as `TelnyxContactCenterVoiceMediaProvider` / `TelnyxContactCenterVoiceMediaSession` over the
@@ -92,9 +94,8 @@ implemented as `TelnyxContactCenterVoiceMediaProvider` / `TelnyxContactCenterVoi
 
 **Needed to complete the supervisor scope:**
 
-- Implement `IContactCenterVoiceMonitoringProvider` (monitor/whisper/barge) on the Telnyx CC provider using the Telnyx **Conference API**: move the live call into a conference, then join the supervisor leg muted (monitor), with `whisper_call_control_ids` (whisper), or unmuted (barge).
-- Implement `IContactCenterVoiceConferenceProvider` (add participants).
-- Add the matching flags to `TelnyxContactCenterVoiceProvider.Capabilities` (`Monitor | Whisper | Barge | Conference`).
+- ✅ `IContactCenterVoiceMonitoringProvider` and `IContactCenterVoiceSupervisorInterventionProvider` on the Telnyx CC provider, over the **Conference API** (`supervisor_role` on join, `actions/update` to switch), advertising `Monitor | Whisper | Barge`.
+- Implement `IContactCenterVoiceConferenceProvider` (add participants) and advertise `Conference`.
 - Extend `TelnyxWebhookService` to normalize conference events (`conference.*`) into `ProviderVoiceEvent` conference fields.
 
 ### 2. Per‑agent outbound caller id — editor UI + dial‑path wiring

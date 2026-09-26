@@ -206,6 +206,62 @@ contact center voice adapter activates automatically whenever both are enabled. 
 - **Inbound** — Telnyx posts signed call events to `/api/telnyx/webhook/call`; new inbound calls create a
   CRM activity and voice interaction and route through the matching entry point.
 
+## Supervisor monitoring
+
+A supervisor can **listen** to, **whisper** to (coach — only the agent hears them) or **barge** into (everyone hears
+them) any Contact Center call on Telnyx from the **Live dashboard**, switch between the three without being rung again,
+stop, and **take the call over**. The supervisor hears the call on their **own soft phone**, so it must be open and
+registered (the same Telnyx browser credential an agent uses).
+
+How a call is supervised, command by command:
+
+1. **The supervisor's phone is rung.** The platform first tells the supervisor's phone, over the Contact Center hub, the
+   one-off token of the leg it is about to ring, then originates a leg to the supervisor's registered credential
+   (`POST /v2/calls` to `sip:{credential}@sip.telnyx.com`, chosen registered-first like any agent leg). The leg carries
+   the token in its `client_state` (intent `cc-sv`) and in an `X-Monitor-Leg` SIP header. The phone answers that leg by
+   itself and shows it as a **Monitoring** banner, never as a call; a monitor leg the phone did not ask for is hung up,
+   and every other call rings as before.
+2. **The call moves into a conference when the supervisor answers** — not before, so a supervisor who never picks up
+   never disturbs the call. A Contact Center call runs as the agent's leg bridged to the caller's with
+   `park_after_unbridge=self`. The platform creates a conference named `cc-sv-{caller leg}` from the caller's leg
+   ([Create conference](https://developers.telnyx.com/api-reference/conference-commands/create-conference),
+   `beep_enabled: never`, no hold audio), which takes the caller out of the bridge and parks the agent's leg; the agent's
+   leg then [joins](https://developers.telnyx.com/api-reference/conference-commands/join-a-conference) it (`beep_enabled:
+   never`, not `end_conference_on_exit`). Nobody is hung up and nobody hears a tone; the caller hears a moment of
+   silence.
+3. **The supervisor joins with a supervisor role**
+   ([Join a conference](https://developers.telnyx.com/api-reference/conference-commands/join-a-conference)):
+   `supervisor_role: monitor` (heard by nobody), `whisper` with `whisper_call_control_ids: [agent leg]` (heard by the
+   agent only), or `barge` (heard by both).
+4. **Switching mode** changes the participant in place
+   ([Update conference participant](https://developers.telnyx.com/api-reference/conference-commands/update-conference-participant),
+   `POST /v2/conferences/{id}/actions/update` with the new `supervisor_role`). A switch made while the phone is still
+   answering updates the role the leg will join with.
+5. **Stop** hangs up only the supervisor's leg (marked detached in its client state), then — once no supervisor is left —
+   takes the caller and the agent out of the conference and bridges them again exactly as before (`bridge` on the agent's
+   leg with `park_after_unbridge=self`), so hold, transfer, consult and park keep working on the topology they expect.
+   A supervisor hanging up their own phone does the same.
+6. **Take over** switches the supervisor to `barge` first, so the customer is never alone, then hangs up the agent's leg
+   with its client state marked detached, so its hang-up does not end the call. The interaction, the call's agent leg, its
+   talk time and its after-call work move to the supervisor; the released agent goes to wrap-up (queue calls) or back to
+   ready (direct calls). The supervisor's leg is then the call's agent leg: hanging it up ends the call.
+
+When the call ends, every supervisor leg still on it is hung up. A transfer or a consult releases the supervisors first,
+since none of them can follow the call where it goes. While a sensitive-data capture has recording paused, no supervisor
+can start, change or take over an engagement, and supervisors already listening are released.
+
+The live dashboard lists the other interventions too — **End call**, **Transfer** (to a queue, an agent or a number),
+**Record** on or off, the agent's state, and a **Message** to the agent's phone; see the
+[Agent & Supervisor User Manual](../contact-center/user-manual.md).
+
+:::note What can be monitored
+Only calls the Contact Center routed are monitorable — the calls that are Contact Center interactions. A number an agent
+dialed from the keypad and an internal extension call are phone calls of the agent's own, not interactions; the dashboard
+shows **Cannot be monitored** on an agent who is on one. With a supervisor barging, the barge audio is part of what the
+caller's leg hears, so a call recording running on that leg includes it; a monitoring or whispering supervisor is not
+heard by the caller and is not in the caller's recording.
+:::
+
 ## Transfers
 
 A Contact Center call on Telnyx is transferred by the Contact Center, not by Telnyx's own `transfer` action,
@@ -446,8 +502,9 @@ browser media adapter because Telnyx delivers this call's audio to the browser. 
 reports a call muted, so the soft phone keeps the agent's mute itself: it lasts through state reports, refreshes,
 hold and resume, a merge (a conference is muted or unmuted as a whole) and a replaced microphone, until the agent
 unmutes or the call ends. The Contact Center voice
-provider advertises dialer dialing, agent connect (bridge), call transfer, attended (consult) transfer, and —
-with the Call Recording feature — recording.
+provider advertises dialer dialing, agent connect (bridge), call transfer, attended (consult) transfer, supervisor
+monitor, whisper and barge (with mode switching and takeover, see [Supervisor monitoring](#supervisor-monitoring)),
+and — with the Call Recording feature — recording.
 
 ## Telnyx AI Voice Agent
 

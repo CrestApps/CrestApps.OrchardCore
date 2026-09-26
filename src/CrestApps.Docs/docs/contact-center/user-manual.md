@@ -27,7 +27,7 @@ The exact click path, the audit checklist, and the target file name for each rec
 | You are a… | Grant the role/permission | It lets you… |
 | --- | --- | --- |
 | Agent | `ContactCenterSignIntoQueues` | Sign in to queues/campaigns, change your own presence, accept/decline offers, and complete work in **My workspace**. |
-| Supervisor | **Supervisor** role (includes `MonitorContactCenter`) | Open the **Live dashboard** and monitor, whisper to, or barge into live calls. |
+| Supervisor | **Supervisor** role (includes `MonitorContactCenter` and `ContactCenterInterveneInCalls`) | Open the **Live dashboard**, listen to, whisper to, or barge into live calls, and message agents. `ContactCenterInterveneInCalls` adds taking a call over, ending, transferring and recording it, and setting an agent's state. |
 | Administrator | `ManageContactCenterQueues`, `ManageContactCenterAgents`, `ManageContactCenterSkills`, `ManageContactCenterDialer` | Create queues, agents, skills, reason codes, business hours, entry points, and dialer profiles. |
 
 Confirm your role with your administrator before starting. Agents only see the queues and campaigns they are **entitled** to; supervisors only see monitoring actions the active voice provider actually supports.
@@ -408,12 +408,17 @@ Supervisors prepare the environment and monitor operations. The configuration sc
 
 ## How to monitor a live call
 
-**Prerequisites:** an agent is on a live call, and the active voice provider advertises **Monitor** and implements the executable monitoring contract (the bundled Asterisk Contact Center Voice provider does).
+**Prerequisites:** an agent is on a live call, and the active voice provider advertises **Monitor** and implements the executable monitoring contract (the bundled Asterisk Contact Center Voice provider and the [Telnyx](../telephony/telnyx.md#supervisor-monitoring) provider do). You hear the call through **your own soft phone**, so keep it open: the platform rings it for you and it answers by itself.
 
 1. On the **Live dashboard** agent board, find the agent who is on a call.
-2. Click **Monitor** on that agent's card. You listen to the live call silently; neither party hears you.
+2. Click **Listen** on that agent's card. You listen to the live call silently; neither party hears you.
+3. The card shows **You: Listen** (or **Connecting your phone…** until your phone answers), and your soft phone shows a **Monitoring** banner with the agent's name. The banner, not a call row, is how your phone shows it.
 
-The action invokes the provider first and only records the audited monitoring event after the provider confirms success. If the provider does not support the action, the button is not shown.
+The action invokes the provider first and only records the audited monitoring event after the provider confirms success. If the provider does not support the action, the button is not shown; an agent on a call that cannot be monitored — one that is not a Contact Center interaction, such as a number they dialed from the keypad or an extension call, or one whose provider does not support monitoring — shows **Cannot be monitored**, with the reason in its tooltip.
+
+### Switch mode, or stop
+
+While you are on the call, the card's **Listen**, **Whisper** and **Barge** buttons (and the same switcher on your phone's banner) change how you are heard without ringing you again; the active one is shown pressed. **Stop** — on the card or the banner — hangs up only your leg: the call goes on for the agent and the customer exactly as before.
 
 :::note Screencast
 `contact-center-manager-monitor.mp4`
@@ -440,6 +445,34 @@ The action invokes the provider first and only records the audited monitoring ev
 :::note Screencast
 `contact-center-manager-barge.mp4`
 :::
+
+## How to take over a call
+
+**Prerequisites:** `ContactCenterInterveneInCalls`, an agent profile of your own, your soft phone open, and a provider that can hand a call to a supervisor (Telnyx can).
+
+1. Click **Take over** on the agent's card. If you are not on the call yet, you barge in first, and the call is taken over as soon as your phone is on it.
+2. The customer hears you before the agent is released. Your phone's banner changes to **You took over … 's call**, with **Hang up**.
+
+From then on the call is yours: the interaction, its talk time and its after-call work are recorded against you, and the released agent goes to wrap-up (a queue call) or back to ready (a direct call). The takeover is audited as `SupervisorTookOver`, naming you and the agent.
+
+## How to end, transfer or record a call
+
+**Prerequisites:** `ContactCenterInterveneInCalls`.
+
+Open **More ▾** on the agent's card:
+
+- **End call…** asks you to confirm, then ends the call for everyone on it.
+- **Transfer…** sends the call to a queue, an available agent or a phone number, as a blind transfer. Anyone listening is released first.
+- **Start recording** / **Stop recording** turns the call's recording on or off, under the tenant's recording governance. Neither is possible while the agent has recording paused for a sensitive-data capture.
+
+## How to set an agent's state or message them
+
+From **More ▾** on any agent's card:
+
+- **Set Available**, **Set Not ready** or **Set Break** changes the agent's state under the same rules as their own change: an agent on a call gets it when their work ends. **Sign out of queues** (after a confirm) signs them out. These need `ContactCenterInterveneInCalls`.
+- **Message…** sends a short note (up to 500 characters) that appears on the agent's soft phone until they dismiss it. Messaging needs only `MonitorContactCenter`.
+
+Every intervention is audited under your name (`SupervisorEndedCall`, `SupervisorTransferredCall`, `SupervisorChangedRecording`, `SupervisorSetAgentState`, `SupervisorMessagedAgent`, `SupervisorMonitorModeChanged`) and limited to agents and calls in the queues you supervise.
 
 ## How to review productivity with reports
 

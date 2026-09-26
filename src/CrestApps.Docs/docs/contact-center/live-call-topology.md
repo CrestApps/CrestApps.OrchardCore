@@ -63,6 +63,8 @@ A second engagement by the same supervisor on the same call is refused. Two enga
 
 When the provider does not report a leg identifier for the engagement, the monitor session is still recorded with a null provider leg. The engagement is on the record, but a barge cannot place the supervisor on the bridge without a leg to place.
 
+A provider that rings the supervisor's own phone (Telnyx) reports the leg answering, which stamps `ConnectedUtc`: until then the supervisor is being connected, and a takeover is refused. Changing mode updates `Mode` on the same engagement — joining the bridge on a switch to barge, leaving it on a switch away. Taking the call over ends the engagement and the agent's leg, and records the supervisor's leg as the call's agent leg under the supervisor's agent profile, which becomes `CallSession.AgentId`; the "cannot monitor their own agent leg" rule applies to live engagements only, so the engagement a takeover came from stays on the record.
+
 ## Consultative transfers
 
 A consultative (warm) transfer records a `ConsultCall` on the source session and a typed relationship to the destination. This is what lets a supervisor see that a customer is on hold while their agent talks to someone else, and lets reporting tell a completed warm transfer apart from a consult the agent abandoned.

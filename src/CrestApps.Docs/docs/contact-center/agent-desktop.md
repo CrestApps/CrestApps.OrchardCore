@@ -75,6 +75,8 @@ Use it to spot a backing-up queue, an SLA breach, or too few available agents, a
 
 When an agent has a live interaction, the agent card shows only the **Monitor**, **Whisper**, or **Barge** actions for which the active provider both advertises the matching capability and implements the executable monitoring contract. Each action invokes the provider first; the audited Contact Center event is published only after the provider confirms success. Missing contracts, provider failures, and unknown outcomes stay hidden or return failure without recording a successful engagement. While an agent has paused recording for a sensitive-data capture, all three actions fail closed on the server, so a supervisor can never listen in on the secured segment.
 
+While engaged, the card shows the active mode pressed and a **Stop**; the other modes switch on the same leg (a provider that cannot, like Asterisk, stops and engages again). **Take over** hands the call to the supervisor, and **More ▾** holds **End call**, **Transfer**, **Record** on or off, the agent's state and **Message**, each shown only when the provider and the supervisor's permissions allow it. The supervisor hears the call on their own soft phone, which shows a **Monitoring** banner with the same switcher and Stop instead of a call row. See the [user manual](user-manual.md#how-to-take-over-a-call) and, for how Telnyx does it, [Telnyx supervisor monitoring](../telephony/telnyx.md#supervisor-monitoring).
+
 ## For contact center managers: inbound routing runbook
 
 Use this checklist before publishing a new inbound line:
