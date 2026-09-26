@@ -28,7 +28,7 @@ public sealed class AgentAvailabilityRecoveryService : IAgentAvailabilityRecover
     /// <param name="agentManager">The agent profile manager.</param>
     /// <param name="interactionManager">The interaction manager.</param>
     /// <param name="presenceManager">The agent presence manager.</param>
-    /// <param name="reservationManager">The reservation manager.</param>
+    /// <param name="reservationManagers">The reservation manager, registered only with queues and campaigns.</param>
     /// <param name="eventStore">The event log the agents' state changes are read from.</param>
     /// <param name="options">The availability policy.</param>
     /// <param name="clock">The clock.</param>
@@ -37,7 +37,7 @@ public sealed class AgentAvailabilityRecoveryService : IAgentAvailabilityRecover
         IAgentProfileManager agentManager,
         IInteractionManager interactionManager,
         IAgentPresenceManager presenceManager,
-        IActivityReservationManager reservationManager,
+        IEnumerable<IActivityReservationManager> reservationManagers,
         IInteractionEventStore eventStore,
         IOptions<AgentAvailabilityOptions> options,
         IClock clock,
@@ -46,7 +46,7 @@ public sealed class AgentAvailabilityRecoveryService : IAgentAvailabilityRecover
         _agentManager = agentManager;
         _interactionManager = interactionManager;
         _presenceManager = presenceManager;
-        _reservationManager = reservationManager;
+        _reservationManager = reservationManagers?.FirstOrDefault();
         _eventStore = eventStore;
         _options = options.Value;
         _clock = clock;
@@ -153,7 +153,7 @@ public sealed class AgentAvailabilityRecoveryService : IAgentAvailabilityRecover
             return await _interactionManager.FindByIdAsync(change.InteractionId, cancellationToken);
         }
 
-        if (string.IsNullOrEmpty(change.ReservationId))
+        if (string.IsNullOrEmpty(change.ReservationId) || _reservationManager is null)
         {
             return null;
         }
