@@ -557,3 +557,68 @@ describe('the menus as a caller walks them', () => {
         expect(model.nodes).toHaveLength(1);
     });
 });
+
+// Pasted or typed JSON reaches the visual editor only when it is a menu the entry point could save: it must parse, and
+// pass every check. Warnings (a menu no key opens) do not stop it.
+describe('JSON pasted into the editor', () => {
+    const catalog = { queue: [{ value: 'q' }], agent: [], external: [] };
+    const valid = JSON.stringify({
+        RootNodeId: 'main',
+        MaxRetries: 3,
+        Nodes: [
+            { NodeId: 'main', Prompt: 'Press 1.', Options: [{ Digit: '1', Action: { Kind: 'RouteToQueue', TargetId: 'q' } }] },
+            { NodeId: 'spare', Prompt: 'Unused.', Options: [{ Digit: '1', Action: { Kind: 'Voicemail' } }] },
+        ],
+    });
+
+    it('is applied when it parses and passes every check, warnings aside', () => {
+        const result = ivr.checkJsonForEditor(valid, catalog);
+
+        expect(result.ok).toBe(true);
+        expect(result.model.nodes).toHaveLength(2);
+        expect(result.errors).toEqual([]);
+        expect(result.warnings.map(entry => entry.code)).toContain('unreachable');
+    });
+
+    it('is refused when it does not parse, with the reason', () => {
+        const result = ivr.checkJsonForEditor('{ "RootNodeId": ', catalog);
+
+        expect(result.ok).toBe(false);
+        expect(result.parseError).toBeTruthy();
+        expect(result.model).toBeNull();
+    });
+
+    it('is refused when it is not a menu', () => {
+        const result = ivr.checkJsonForEditor('[1, 2]', catalog);
+
+        expect(result.ok).toBe(false);
+        expect(result.parseError).toBe('notAnObject');
+    });
+
+    it('is refused when it parses but fails a check, listing every error', () => {
+        const broken = JSON.stringify({
+            RootNodeId: 'main',
+            MaxRetries: 0,
+            Nodes: [{ NodeId: 'main', Prompt: '', Options: [{ Digit: '1', Action: { Kind: 'SubMenu', TargetId: 'nowhere' } }] }],
+        });
+
+        const result = ivr.checkJsonForEditor(broken, catalog);
+
+        expect(result.ok).toBe(false);
+        expect(result.parseError).toBeNull();
+        expect(result.errors.map(entry => entry.code)).toEqual(expect.arrayContaining(['maxRetriesInvalid', 'promptMissing', 'subMenuNotFound']));
+    });
+
+    // Clearing the JSON is how a menu is removed, so an empty field is a valid, empty menu.
+    it('accepts an empty field as no menu at all', () => {
+        const result = ivr.checkJsonForEditor('   ', catalog);
+
+        expect(result.ok).toBe(true);
+        expect(result.model.nodes).toEqual([]);
+    });
+
+    it('formats JSON it can read, and leaves anything else as it was', () => {
+        expect(ivr.formatJson('{"a":1}')).toBe('{\n  "a": 1\n}');
+        expect(ivr.formatJson('{ nope')).toBe('{ nope');
+    });
+});

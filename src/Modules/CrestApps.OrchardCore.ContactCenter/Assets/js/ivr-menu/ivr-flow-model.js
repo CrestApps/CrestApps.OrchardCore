@@ -758,6 +758,36 @@
         }
     }
 
+    // Whether JSON pasted or typed into the editor may replace the menu: it has to parse, and pass every check the
+    // entry point would refuse to save without. Warnings do not stop it; they are shown once it is applied.
+    function checkJsonForEditor(value, catalog) {
+        var parsed = parseJson(value);
+
+        if (!parsed.ok) {
+            return { ok: false, parseError: parsed.error, model: null, errors: [], warnings: [] };
+        }
+
+        var issues = validate(parsed.model, catalog || {});
+        var errors = issues.filter(function (entry) { return entry.severity === 'error'; });
+
+        return {
+            ok: errors.length === 0,
+            parseError: null,
+            model: parsed.model,
+            errors: errors,
+            warnings: issues.filter(function (entry) { return entry.severity !== 'error'; })
+        };
+    }
+
+    // Pretty-prints JSON that reads, and leaves anything else exactly as typed.
+    function formatJson(value) {
+        try {
+            return JSON.stringify(JSON.parse(text(value)), null, 2);
+        } catch (error) {
+            return value;
+        }
+    }
+
     ivr.ACTION_KINDS = ACTION_KINDS;
     ivr.ENUM_ORDER = ENUM_ORDER;
     ivr.TELEPHONE_KEYS = TELEPHONE_KEYS;
@@ -789,4 +819,6 @@
     ivr.buildMenuTree = buildMenuTree;
     ivr.addSubMenu = addSubMenu;
     ivr.removeSubMenu = removeSubMenu;
+    ivr.checkJsonForEditor = checkJsonForEditor;
+    ivr.formatJson = formatJson;
 }(typeof globalThis !== 'undefined' ? globalThis : window));

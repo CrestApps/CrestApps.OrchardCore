@@ -703,6 +703,43 @@
       model.fallback = null;
     }
   }
+
+  // Whether JSON pasted or typed into the editor may replace the menu: it has to parse, and pass every check the
+  // entry point would refuse to save without. Warnings do not stop it; they are shown once it is applied.
+  function checkJsonForEditor(value, catalog) {
+    var parsed = parseJson(value);
+    if (!parsed.ok) {
+      return {
+        ok: false,
+        parseError: parsed.error,
+        model: null,
+        errors: [],
+        warnings: []
+      };
+    }
+    var issues = validate(parsed.model, catalog || {});
+    var errors = issues.filter(function (entry) {
+      return entry.severity === 'error';
+    });
+    return {
+      ok: errors.length === 0,
+      parseError: null,
+      model: parsed.model,
+      errors: errors,
+      warnings: issues.filter(function (entry) {
+        return entry.severity !== 'error';
+      })
+    };
+  }
+
+  // Pretty-prints JSON that reads, and leaves anything else exactly as typed.
+  function formatJson(value) {
+    try {
+      return JSON.stringify(JSON.parse(text(value)), null, 2);
+    } catch (error) {
+      return value;
+    }
+  }
   ivr.ACTION_KINDS = ACTION_KINDS;
   ivr.ENUM_ORDER = ENUM_ORDER;
   ivr.TELEPHONE_KEYS = TELEPHONE_KEYS;
@@ -734,6 +771,8 @@
   ivr.buildMenuTree = buildMenuTree;
   ivr.addSubMenu = addSubMenu;
   ivr.removeSubMenu = removeSubMenu;
+  ivr.checkJsonForEditor = checkJsonForEditor;
+  ivr.formatJson = formatJson;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*
  * The entry point's visual IVR menu editor.
@@ -741,8 +780,9 @@
  * The menu used to be typed as raw JSON. This builds it with forms instead: menus with a prompt and a row per key,
  * each key choosing what it does and where it goes from lists of the tenant's queues, agents, approved external
  * destinations and the menus defined here. The JSON textarea is still the field the form posts, kept in step with
- * every edit, and stays one switch away for anyone who prefers to type it; JSON that cannot be read keeps the
- * editor in that mode, with the reason, rather than throwing an edit away.
+ * every edit. "Edit as JSON" opens it for anyone who prefers to type or paste a menu, with Copy and Format; Apply
+ * replaces the menu only when the JSON parses and passes every check (the problems are listed otherwise), and Cancel
+ * throws the typed edits away. JSON that cannot be read on load keeps the editor in that mode, with the reason.
  *
  * The menus are drawn the way a caller walks them: the first menu at the top, and each submenu nested under the key
  * that opens it, so nobody names menus or picks them by name. A key that goes back to a menu already drawn is a jump,
@@ -811,6 +851,9 @@
     var jsonPanel = root.querySelector('[data-ivr-json-panel]');
     var toggle = root.querySelector('[data-ivr-advanced-toggle]');
     var message = root.querySelector('[data-ivr-message]');
+    var jsonTools = root.querySelector('[data-ivr-json-tools]');
+    var jsonActions = root.querySelector('[data-ivr-json-actions]');
+    var jsonStatus = root.querySelector('[data-ivr-json-status]');
     var model = ivr.createModel();
     var tree = ivr.buildMenuTree(model);
     var transientIssues = {};
@@ -998,14 +1041,15 @@
     }
 
     // A menu as the caller reaches it: "Main menu", "Main menu > 2 > 1", or, for one no key opens, its stored name.
-    function menuLabel(index) {
-      var path = tree.paths[index];
+    function menuLabel(index, ofTree, ofModel) {
+      var path = (ofTree || tree).paths[index];
+      var nodes = (ofModel || model).nodes;
       var main = t('mainMenu', 'Main menu');
       if (path) {
         return path.length ? [main].concat(path).join(' > ') : main;
       }
       return t('unusedMenu', 'Unused menu ({id})', {
-        id: String(model.nodes[index] && model.nodes[index].nodeId || '').trim()
+        id: String(nodes[index] && nodes[index].nodeId || '').trim()
       });
     }
 
@@ -1569,44 +1613,131 @@
           break;
       }
     }
-
-    // The switch between the forms and the JSON. Leaving the JSON needs JSON the forms can show.
-    function setAdvanced(advanced) {
-      if (!advanced) {
-        var result = ivr.parseJson(textarea.value);
-        if (!result.ok) {
-          toggle.checked = true;
-          showMessage(t('jsonInvalid', 'The JSON cannot be shown in the visual editor until it is fixed or cleared: {error}', {
-            error: result.error === 'notAnObject' ? t('jsonNotAnObject', 'the menu must be a JSON object.') : result.error
-          }));
-          textarea.focus();
-          return;
-        }
-        model = result.model;
-        transientIssues = {};
-        showMessage('');
-        jsonPanel.hidden = true;
-        visual.hidden = false;
-        render();
+    function showJsonStatus(nodes, className) {
+      if (!jsonStatus) {
         return;
       }
-      sync();
+      jsonStatus.replaceChildren.apply(jsonStatus, nodes || []);
+      jsonStatus.className = 'small mt-2 ' + (className || '');
+      jsonStatus.hidden = !nodes || nodes.length === 0;
+    }
+
+    // Opens the JSON for typing or pasting, or goes back to the forms. The forms show only what the JSON says, so
+    // they are drawn from the model; leaving without Apply keeps the model the forms already had.
+    function showJson(open) {
       showMessage('');
-      visual.hidden = true;
-      jsonPanel.hidden = false;
+      showJsonStatus(null);
+      visual.hidden = open;
+      jsonPanel.hidden = !open;
+      if (toggle) {
+        toggle.hidden = open;
+      }
+      if (jsonTools) {
+        jsonTools.hidden = !open;
+      }
+      if (jsonActions) {
+        jsonActions.hidden = !open;
+      }
+      if (open) {
+        textarea.focus();
+      } else {
+        render();
+      }
+    }
+
+    // Replaces the menu with the JSON, but only JSON the entry point could save: it has to parse and pass every
+    // check. Otherwise nothing changes, and each problem is listed with the menu it is on.
+    function applyJson() {
+      var result = ivr.checkJsonForEditor(textarea.value, catalog);
+      if (result.parseError) {
+        showJsonStatus([h('div', {
+          className: 'text-danger'
+        }, [icon('fa-solid fa-circle-exclamation me-1'), t('jsonInvalid', 'The JSON cannot be shown in the visual editor until it is fixed or cleared: {error}', {
+          error: result.parseError === 'notAnObject' ? t('jsonNotAnObject', 'the menu must be a JSON object.') : result.parseError
+        })])]);
+        textarea.focus();
+        return;
+      }
+      if (!result.ok) {
+        var checkedTree = ivr.buildMenuTree(result.model);
+        showJsonStatus([h('div', {
+          className: 'text-danger fw-semibold',
+          text: t('jsonHasErrors', 'The JSON is valid, but the menu has problems to fix before it can be applied:')
+        }), h('ul', {
+          className: 'text-danger mb-0 ps-3'
+        }, result.errors.map(function (entry) {
+          var problem = describe(entry);
+          var node = entry.path && entry.path.node;
+          return h('li', {
+            text: node === undefined ? problem : t('jsonInMenu', '{menu}: {problem}', {
+              menu: menuLabel(node, checkedTree, result.model),
+              problem: problem
+            })
+          });
+        }))]);
+        textarea.focus();
+        return;
+      }
+      model = result.model;
+      transientIssues = {};
+      showJson(false);
+    }
+    function cancelJson() {
+      sync();
+      showJson(false);
+    }
+    function copyJson() {
+      var done = function () {
+        showJsonStatus([h('div', {
+          className: 'text-success',
+          text: t('copied', 'Copied to the clipboard.')
+        })]);
+      };
+      var failed = function () {
+        textarea.select();
+        showJsonStatus([h('div', {
+          className: 'text-warning-emphasis',
+          text: t('copyFailed', 'The browser did not allow copying. Select the text and copy it instead.')
+        })]);
+      };
+      if (window.navigator && window.navigator.clipboard && typeof window.navigator.clipboard.writeText === 'function') {
+        window.navigator.clipboard.writeText(textarea.value).then(done, failed);
+      } else {
+        failed();
+      }
+    }
+    function formatJsonField() {
+      textarea.value = ivr.formatJson(textarea.value);
+      showJsonStatus(null);
     }
     visual.addEventListener('input', onInput);
     visual.addEventListener('change', onChange);
     visual.addEventListener('click', onClick);
-    toggle.addEventListener('change', function () {
-      setAdvanced(toggle.checked);
+    toggle.addEventListener('click', function () {
+      sync();
+      showJson(true);
+    });
+    root.addEventListener('click', function (event) {
+      var button = event.target.closest('[data-ivr-json-apply], [data-ivr-json-cancel], [data-ivr-json-copy], [data-ivr-json-format]');
+      if (!button || !root.contains(button)) {
+        return;
+      }
+      if (button.hasAttribute('data-ivr-json-apply')) {
+        applyJson();
+      } else if (button.hasAttribute('data-ivr-json-cancel')) {
+        cancelJson();
+      } else if (button.hasAttribute('data-ivr-json-copy')) {
+        copyJson();
+      } else {
+        formatJsonField();
+      }
     });
 
     // Start in the forms, unless the field holds JSON they cannot show (a rejected edit shown back as typed).
     var initial = ivr.parseJson(textarea.value);
     if (initial.ok) {
       model = initial.model;
-      toggle.checked = false;
+      toggle.hidden = false;
       jsonPanel.hidden = true;
       visual.hidden = false;
 
@@ -1615,9 +1746,16 @@
       render();
       textarea.value = original;
     } else {
-      toggle.checked = true;
+      // A rejected edit shown back as typed: it stays in the JSON until it is fixed, applied or cancelled.
       visual.hidden = true;
       jsonPanel.hidden = false;
+      toggle.hidden = true;
+      if (jsonTools) {
+        jsonTools.hidden = false;
+      }
+      if (jsonActions) {
+        jsonActions.hidden = false;
+      }
       showMessage(t('jsonInvalid', 'The JSON cannot be shown in the visual editor until it is fixed or cleared: {error}', {
         error: initial.error
       }));
