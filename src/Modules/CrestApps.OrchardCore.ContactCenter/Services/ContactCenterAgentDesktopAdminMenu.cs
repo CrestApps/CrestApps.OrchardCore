@@ -27,14 +27,14 @@ public sealed class ContactCenterAgentDesktopAdminMenu : AdminNavigationProvider
             .Add(S["Interaction Center"], "80", interactionCenter => interactionCenter
                 .AddClass("interaction-center")
                 .Id("interactionCenter")
-                .Add(S["My workspace"], "-2", workspace => workspace
+                .Add(S["My workspace"], "before.5", workspace => workspace
                     .AddClass("contact-center-workspace")
                     .Id("contactCenterWorkspace")
                     .Action("Index", "AgentWorkspace", "CrestApps.OrchardCore.ContactCenter")
                     .Permission(ContactCenterPermissions.SignIntoQueues)
                     .LocalNav()
                 )
-                .Add(S["My voicemail greeting"], "-1", greeting => greeting
+                .Add(S["My voicemail greeting"], S["My voicemail greeting"].PrefixPosition(), greeting => greeting
                     .AddClass("contact-center-my-voicemail-greeting")
                     .Id("contactCenterMyVoicemailGreeting")
                     .Action("Index", "MyVoicemailGreeting", "CrestApps.OrchardCore.ContactCenter")
