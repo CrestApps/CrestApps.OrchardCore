@@ -591,6 +591,11 @@
     display: inline-block;
 }
 
+// An open menu hangs below its card, so the panel around the board must not clip it.
+.cc-panel:has(.cc-agent__menu.show) {
+    overflow: visible;
+}
+
 .cc-agent__menu {
     position: absolute;
     top: 100%;
