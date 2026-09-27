@@ -1,9 +1,12 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.SignalR.Core;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Hubs;
@@ -13,7 +16,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Hubs;
 /// group for every queue (department) they belong to, so inbound-message and delivery notifications reach the
 /// right inboxes. Supervisors who can view all conversations also join the unassigned/triage group. The
 /// connection is also the agent's presence: the workspace checks in over it, and routed assignment only pushes
-/// conversations at agents whose workspace has checked in recently.
+/// conversations at agents whose workspace has checked in recently. The notifications every other admin page carries
+/// connect passively: they join the same groups but never count as the workspace being open.
 /// </summary>
 [Authorize]
 public sealed class MessagingHub : Hub<IMessagingHubClient>
@@ -23,9 +27,20 @@ public sealed class MessagingHub : Hub<IMessagingHubClient>
     /// </summary>
     public const string UnassignedGroup = "messaging:unassigned";
 
+    /// <summary>
+    /// The query string parameter a listening-only connection sets to <c>1</c>. Such a connection joins the same
+    /// groups as the workspace but is never recorded as the agent being present.
+    /// </summary>
+    public const string PassiveQueryParameter = "passive";
+
+    // Marks a passive connection in its items, so a later call over it can tell without re-reading the request it
+    // was opened with.
+    private static readonly object _passiveConnectionKey = new();
+
     private readonly IAgentProfileManager _agentProfileManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IMessagingPresenceTracker _presenceTracker;
+    private readonly ILogger _logger;
     private readonly string _tenantName;
 
     /// <summary>
@@ -35,16 +50,19 @@ public sealed class MessagingHub : Hub<IMessagingHubClient>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="presenceTracker">The tracker that records the connected agent's workspace as open.</param>
     /// <param name="shellSettings">The current Orchard shell settings.</param>
+    /// <param name="logger">The logger.</param>
     public MessagingHub(
         IAgentProfileManager agentProfileManager,
         IAuthorizationService authorizationService,
         IMessagingPresenceTracker presenceTracker,
-        ShellSettings shellSettings)
+        ShellSettings shellSettings,
+        ILogger<MessagingHub> logger)
     {
         _agentProfileManager = agentProfileManager;
         _authorizationService = authorizationService;
         _presenceTracker = presenceTracker;
         _tenantName = shellSettings.Name;
+        _logger = logger;
     }
 
     /// <summary>
@@ -72,7 +90,16 @@ public sealed class MessagingHub : Hub<IMessagingHubClient>
             return;
         }
 
+        var passive = IsPassive(httpContext.Request);
+
+        if (passive)
+        {
+            Context.Items[_passiveConnectionKey] = true;
+        }
+
         var userId = Context.UserIdentifier;
+        string agentId = null;
+        var groupCount = 0;
 
         if (!string.IsNullOrEmpty(userId))
         {
@@ -80,20 +107,50 @@ public sealed class MessagingHub : Hub<IMessagingHubClient>
 
             if (profile is not null)
             {
-                await _presenceTracker.TouchAsync(profile.ItemId, Context.ConnectionAborted);
+                agentId = profile.ItemId;
+
+                // Only the workspace is presence. A passive connection stays open for the toasts while the agent
+                // browses other admin pages, and counting it would have routed distribution push conversations at
+                // an agent who has no inbox on screen.
+                if (!passive)
+                {
+                    await _presenceTracker.TouchAsync(profile.ItemId, Context.ConnectionAborted);
+                }
 
                 await Groups.AddToGroupAsync(Context.ConnectionId, ForGroup(MessagingHub.AgentGroup(profile.ItemId)));
+                groupCount++;
 
                 foreach (var queueId in profile.QueueIds.Concat(profile.AllowedQueueIds).Distinct())
                 {
                     await Groups.AddToGroupAsync(Context.ConnectionId, ForGroup(QueueGroup(queueId)));
+                    groupCount++;
                 }
             }
 
             if (await _authorizationService.AuthorizeAsync(httpContext.User, MessagingPermissions.ViewAllConversations))
             {
                 await Groups.AddToGroupAsync(Context.ConnectionId, ForGroup(UnassignedGroup));
+                groupCount++;
             }
+        }
+
+        if (groupCount == 0)
+        {
+            // Allowed to use the workspace, yet tied to no agent, no queue and no triage inbox: nothing this hub sends
+            // can reach the connection, which is why such a user sees no toast however many messages arrive.
+            _logger.LogWarning(
+                "Messaging hub connection {ConnectionId} (passive: {Passive}) has no agent profile and cannot view all conversations, so it joined no group and receives no messaging notifications.",
+                Context.ConnectionId.SanitizeLogValue(),
+                passive);
+        }
+        else if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug(
+                "Messaging hub connection {ConnectionId} for agent {AgentId} joined {GroupCount} notification groups (passive: {Passive}).",
+                Context.ConnectionId.SanitizeLogValue(),
+                agentId.SanitizeLogValue(),
+                groupCount,
+                passive);
         }
 
         await base.OnConnectedAsync();
@@ -106,6 +163,12 @@ public sealed class MessagingHub : Hub<IMessagingHubClient>
     /// </summary>
     public async Task Heartbeat()
     {
+        // A passive connection is not the workspace, so it never checks in, even when something calls this over it.
+        if (Context.Items.ContainsKey(_passiveConnectionKey))
+        {
+            return;
+        }
+
         var userId = Context.UserIdentifier;
 
         if (string.IsNullOrEmpty(userId))
@@ -119,6 +182,14 @@ public sealed class MessagingHub : Hub<IMessagingHubClient>
         {
             await _presenceTracker.TouchAsync(profile.ItemId, Context.ConnectionAborted);
         }
+    }
+
+    private static bool IsPassive(HttpRequest request)
+    {
+        var value = request.Query[PassiveQueryParameter].ToString();
+
+        return string.Equals(value, "1", StringComparison.Ordinal) ||
+            string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
     }
 
     private string ForGroup(string groupName) => TenantSignalRGroupName.ForGroup(_tenantName, groupName);

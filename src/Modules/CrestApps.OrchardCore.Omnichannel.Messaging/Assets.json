@@ -2,9 +2,18 @@
   {
     "inputs": [
       "Assets/js/shared/messaging-state.js",
+      "Assets/js/shared/messaging-attention-badge.js",
       "Assets/js/messaging-workspace.js"
     ],
     "output": "wwwroot/scripts/messaging-workspace.js"
+  },
+  {
+    "inputs": [
+      "Assets/js/shared/messaging-state.js",
+      "Assets/js/shared/messaging-attention-badge.js",
+      "Assets/js/messaging-notifications.js"
+    ],
+    "output": "wwwroot/scripts/messaging-notifications.js"
   },
   {
     "inputs": [

@@ -6,7 +6,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 public enum MessagingConversationEventKind
 {
     /// <summary>
-    /// The conversation was handed to another person, or sent back to a team's shared pool.
+    /// The conversation was handed to another person, or sent back to a queue's shared pool.
     /// </summary>
     Transferred,
 }
@@ -45,7 +45,7 @@ public sealed class MessagingConversationEvent
     public string FromAgentId { get; set; }
 
     /// <summary>
-    /// Gets or sets the display name of whoever held the conversation before: the agent, or the team whose shared
+    /// Gets or sets the display name of whoever held the conversation before: the agent, or the queue whose shared
     /// pool it sat in.
     /// </summary>
     public string FromName { get; set; }
@@ -56,12 +56,12 @@ public sealed class MessagingConversationEvent
     public string ToAgentId { get; set; }
 
     /// <summary>
-    /// Gets or sets the queue (team) the conversation went to, when it was sent back to a shared pool.
+    /// Gets or sets the queue the conversation went to, when it was sent back to a shared pool.
     /// </summary>
     public string ToQueueId { get; set; }
 
     /// <summary>
-    /// Gets or sets the display name of the person or team the conversation went to.
+    /// Gets or sets the display name of the person or queue the conversation went to.
     /// </summary>
     public string ToName { get; set; }
 

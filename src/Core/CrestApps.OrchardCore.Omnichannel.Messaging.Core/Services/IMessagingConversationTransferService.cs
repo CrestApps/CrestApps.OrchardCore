@@ -5,7 +5,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 
 /// <summary>
-/// Hands a conversation to another person, or sends it back to a team's shared pool. It is the same conversation,
+/// Hands a conversation to another person, or sends it back to a queue's shared pool. It is the same conversation,
 /// reassigned, so the whole history stays with it; the transfer itself is recorded in the conversation's history and
 /// announced to the workspaces it affects.
 /// </summary>
@@ -31,7 +31,7 @@ public sealed class MessagingTransferRequest
     public string ConversationId { get; set; }
 
     /// <summary>
-    /// Gets or sets whether the conversation goes to a person or back to a team.
+    /// Gets or sets whether the conversation goes to a person or back to a queue.
     /// </summary>
     public ConversationRouteTargetType TargetType { get; set; }
 

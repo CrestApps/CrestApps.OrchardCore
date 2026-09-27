@@ -104,6 +104,19 @@ public sealed class AdminController : Controller
         return PartialView("_InboxList", await _workspaceBuilder.BuildInboxAsync(User, agent, show, channel, page, selected, HttpContext.RequestAborted));
     }
 
+    // The count on the Messaging admin menu item. The menu is on every admin page, so the pages ask for the number
+    // after they load rather than holding up every page render to count conversations.
+    [Admin("messaging/attention", "MessagingAttention")]
+    public async Task<IActionResult> Attention()
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, MessagingPermissions.UseMessagingWorkspace))
+        {
+            return Forbid();
+        }
+
+        return Json(new { count = await _workspaceBuilder.CountNeedingAttentionAsync(User, HttpContext.RequestAborted) });
+    }
+
     [Admin("messaging/conversation/{id}", "MessagingConversation")]
     public async Task<IActionResult> Conversation(string id, string show, string channel, int page = 1, long beforeTicks = 0)
     {
@@ -500,7 +513,7 @@ public sealed class AdminController : Controller
         return Json(await _transferTargets.SearchAgentsAsync(conversation, query, HttpContext.RequestAborted));
     }
 
-    // The teams whose shared pool the open conversation can be sent back to, for the same picker.
+    // The queues whose shared pool the open conversation can be sent back to, for the same picker.
     [Admin("messaging/conversation/{id}/transfer/queues", "MessagingTransferQueues")]
     public async Task<IActionResult> TransferQueues(string id, string query)
     {
@@ -514,7 +527,7 @@ public sealed class AdminController : Controller
         return Json(await _transferTargets.SearchQueuesAsync(conversation, query, HttpContext.RequestAborted));
     }
 
-    // Hands the conversation to another person, or back to a team's shared pool. Whoever holds the conversation may
+    // Hands the conversation to another person, or back to a queue's shared pool. Whoever holds the conversation may
     // do it, and so may a supervisor; an unclaimed conversation is claimed first. It stays the same conversation, so
     // its whole history goes with it.
     [HttpPost]

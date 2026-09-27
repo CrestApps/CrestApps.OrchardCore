@@ -179,12 +179,7 @@ public sealed class MessagingWorkspaceBuilder
             _ => MessagingInboxFilter.All,
         };
 
-        var visibleQueueIds = currentAgent is null
-            ? []
-            : currentAgent.QueueIds.Concat(currentAgent.AllowedQueueIds)
-                .Where(queueId => !string.IsNullOrEmpty(queueId))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToArray();
+        var visibleQueueIds = GetVisibleQueueIds(currentAgent);
 
         MessagingInboxQuery BuildQuery(MessagingInboxFilter tab, int skip, int take) => new()
         {
@@ -238,6 +233,53 @@ public sealed class MessagingWorkspaceBuilder
         }
 
         return viewModel;
+    }
+
+    /// <summary>
+    /// Counts the conversations waiting on the user, for the badge on the Messaging admin menu item: the unread open
+    /// conversations assigned to them, and the unread open conversations nobody has taken yet among those the inbox
+    /// shows them (the queues they serve, or every queue for a supervisor). It applies the inbox's own visibility
+    /// rules, so the badge never counts a conversation the user could not open.
+    /// </summary>
+    /// <param name="user">The current user.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The number of conversations waiting on the user.</returns>
+    public async Task<int> CountNeedingAttentionAsync(ClaimsPrincipal user, CancellationToken cancellationToken)
+    {
+        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        // Every admin page asks for this number, so the profile is only looked up here. It is provisioned when the
+        // user first opens the workspace, not as a side effect of browsing some other page.
+        var agent = string.IsNullOrEmpty(userId)
+            ? null
+            : await _agentProfileManager.FindByUserIdAsync(userId, cancellationToken);
+
+        var canViewAll = await _authorizationService.AuthorizeAsync(user, MessagingPermissions.ViewAllConversations);
+
+        if (agent is null && !canViewAll)
+        {
+            return 0;
+        }
+
+        var visibleQueueIds = GetVisibleQueueIds(agent);
+
+        MessagingInboxQuery BuildQuery(MessagingInboxFilter tab) => new()
+        {
+            AgentId = agent?.ItemId,
+            QueueIds = visibleQueueIds,
+            IncludeAll = canViewAll,
+            Filter = tab,
+            OpenOnly = true,
+            UnreadOnly = true,
+        };
+
+        // The two tabs never overlap (one is assigned, the other is not), so their counts add up without counting a
+        // conversation twice. A supervisor without a profile has nothing assigned to them.
+        var mine = agent is null
+            ? 0
+            : await _conversationStore.CountAsync(BuildQuery(MessagingInboxFilter.Mine), cancellationToken);
+
+        return mine + await _conversationStore.CountAsync(BuildQuery(MessagingInboxFilter.Unassigned), cancellationToken);
     }
 
     /// <summary>
@@ -407,6 +449,15 @@ public sealed class MessagingWorkspaceBuilder
 
         return (items, endpointChannels);
     }
+
+    // The queues whose shared conversations the agent sees: the ones they belong to and the ones they may serve.
+    private static string[] GetVisibleQueueIds(AgentProfile agent)
+        => agent is null
+            ? []
+            : agent.QueueIds.Concat(agent.AllowedQueueIds)
+                .Where(queueId => !string.IsNullOrEmpty(queueId))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
 
     private static ChannelViewModel ToViewModel(IMessagingChannel channel)
         => new()

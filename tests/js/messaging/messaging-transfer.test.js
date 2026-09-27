@@ -4,7 +4,7 @@ import '../../../src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/
 
 const { classifyAssignment, formatText, transferTargetInputName } = globalThis.CrestAppsMessaging;
 
-// A transfer reaches the recipient, the team whose pool it went to, and whoever held it before. Each of them is told
+// A transfer reaches the recipient, the queue whose pool it went to, and whoever held it before. Each of them is told
 // something different, and the person who made the transfer is told nothing: they already know.
 describe('classifyAssignment', () => {
     const view = { agentId: 'agent-b', conversationId: 'c-open' };
@@ -17,15 +17,15 @@ describe('classifyAssignment', () => {
         expect(classifyAssignment({ isTransfer: true, assignedAgentId: 'agent-c', transferredByAgentId: 'agent-b', conversationId: 'c-open' }, view)).toBe('refresh');
     });
 
-    it('tells the team a conversation was sent back to its shared pool', () => {
-        expect(classifyAssignment({ isTransfer: true, assignedAgentId: null, ownerQueueId: 'q-1', transferredByAgentId: 'agent-a', conversationId: 'c-9' }, view)).toBe('to-team');
+    it('tells the queue a conversation was sent back to its shared pool', () => {
+        expect(classifyAssignment({ isTransfer: true, assignedAgentId: null, ownerQueueId: 'q-1', transferredByAgentId: 'agent-a', conversationId: 'c-9' }, view)).toBe('to-queue');
     });
 
     it('tells someone looking at the conversation that it moved on without them', () => {
         expect(classifyAssignment({ isTransfer: true, assignedAgentId: 'agent-c', previousAgentId: 'agent-b', transferredByAgentId: 'agent-s', conversationId: 'c-open' }, view)).toBe('away');
     });
 
-    it('prefers saying the open conversation moved over announcing it to the team', () => {
+    it('prefers saying the open conversation moved over announcing it to the queue', () => {
         expect(classifyAssignment({ isTransfer: true, ownerQueueId: 'q-1', transferredByAgentId: 'agent-s', conversationId: 'c-open' }, view)).toBe('away');
     });
 

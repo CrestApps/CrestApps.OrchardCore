@@ -140,11 +140,11 @@
     }
 
     // Classifies a notification that a conversation changed hands against who is looking. A transfer reaches the
-    // recipient, the team whose pool it went to and whoever held it before, and each is told something different.
-    //   'to-me'   - it was transferred to the viewing agent: say who sent it.
-    //   'away'    - the conversation on screen was moved on by somebody else: say where it went.
-    //   'to-team' - it was sent back to a team's shared pool the viewer serves: say so.
-    //   'refresh' - a claim, a routed assignment, or the viewer's own transfer: only the list needs to catch up.
+    // recipient, the queue whose pool it went to and whoever held it before, and each is told something different.
+    //   'to-me'    - it was transferred to the viewing agent: say who sent it.
+    //   'away'     - the conversation on screen was moved on by somebody else: say where it went.
+    //   'to-queue' - it was sent back to a queue's shared pool the viewer serves: say so.
+    //   'refresh'  - a claim, a routed assignment, or the viewer's own transfer: only the list needs to catch up.
     function classifyAssignment(notification, view) {
         if (!notification || !notification.isTransfer) {
             return 'refresh';
@@ -166,7 +166,7 @@
         }
 
         if (!notification.assignedAgentId && notification.ownerQueueId) {
-            return 'to-team';
+            return 'to-queue';
         }
 
         return 'refresh';
@@ -183,12 +183,48 @@
         });
     }
 
-    // The transfer form carries a picker for a person and one for a team; only the chosen one must hold a selection.
+    // The transfer form carries a picker for a person and one for a queue; only the chosen one must hold a selection.
     function transferTargetInputName(targetType) {
         return targetType === 'Queue' ? 'targetQueueId' : 'targetAgentId';
     }
 
+    // Remembers, for a short window, which notifications were already announced. A transfer is sent to the
+    // recipient's own group and to the group of the queue the conversation belongs to, and a recipient who serves
+    // that queue is in both, so the same event arrives twice on one connection and was announced twice.
+    //   isNew(key) - true the first time a key is offered within the window, false for a repeat of it.
+    function createRecentNotifications(windowMs, now) {
+        var seen = {};
+        var clock = now || function () { return Date.now(); };
+
+        return {
+            isNew: function (key) {
+                var at = clock();
+
+                Object.keys(seen).forEach(function (existing) {
+                    if (at - seen[existing] >= windowMs) {
+                        delete seen[existing];
+                    }
+                });
+
+                if (Object.prototype.hasOwnProperty.call(seen, key)) {
+                    return false;
+                }
+
+                seen[key] = at;
+
+                return true;
+            },
+        };
+    }
+
+    // What a notification is recognised by when repeats are folded: what happened, and to which conversation.
+    function notificationKey(kind, notification) {
+        return String(kind) + ':' + ((notification && notification.conversationId) || '');
+    }
+
     messaging.classifyAssignment = classifyAssignment;
+    messaging.createRecentNotifications = createRecentNotifications;
+    messaging.notificationKey = notificationKey;
     messaging.formatText = formatText;
     messaging.transferTargetInputName = transferTargetInputName;
     messaging.unseenInboundCount = unseenInboundCount;

@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Notifications;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Environment.Shell;
 
@@ -31,7 +32,7 @@ public sealed class SmsRealTimeNotifierTests
         var hubContext = new Mock<IHubContext<MessagingHub, IMessagingHubClient>>();
         hubContext.SetupGet(context => context.Clients).Returns(clients.Object);
 
-        var notifier = new MessagingRealTimeNotifier(hubContext.Object, new ShellSettings { Name = "TenantA" });
+        var notifier = new MessagingRealTimeNotifier(hubContext.Object, new ShellSettings { Name = "TenantA" }, NullLogger<MessagingRealTimeNotifier>.Instance);
 
         var notification = new MessagingDeliveryNotification
         {
@@ -66,7 +67,7 @@ public sealed class SmsRealTimeNotifierTests
         var hubContext = new Mock<IHubContext<MessagingHub, IMessagingHubClient>>();
         hubContext.SetupGet(context => context.Clients).Returns(clients.Object);
 
-        var notifier = new MessagingRealTimeNotifier(hubContext.Object, new ShellSettings { Name = "TenantA" });
+        var notifier = new MessagingRealTimeNotifier(hubContext.Object, new ShellSettings { Name = "TenantA" }, NullLogger<MessagingRealTimeNotifier>.Instance);
 
         var notification = new MessagingDeliveryNotification
         {
@@ -100,7 +101,7 @@ public sealed class SmsRealTimeNotifierTests
         var hubContext = new Mock<IHubContext<MessagingHub, IMessagingHubClient>>();
         hubContext.SetupGet(context => context.Clients).Returns(clients.Object);
 
-        var notifier = new MessagingRealTimeNotifier(hubContext.Object, new ShellSettings { Name = "TenantA" });
+        var notifier = new MessagingRealTimeNotifier(hubContext.Object, new ShellSettings { Name = "TenantA" }, NullLogger<MessagingRealTimeNotifier>.Instance);
 
         var notification = new MessagingDeliveryNotification
         {
@@ -135,7 +136,7 @@ public sealed class SmsRealTimeNotifierTests
         var hubContext = new Mock<IHubContext<MessagingHub, IMessagingHubClient>>();
         hubContext.SetupGet(context => context.Clients).Returns(clients.Object);
 
-        var notifier = new MessagingRealTimeNotifier(hubContext.Object, new ShellSettings { Name = "TenantA" });
+        var notifier = new MessagingRealTimeNotifier(hubContext.Object, new ShellSettings { Name = "TenantA" }, NullLogger<MessagingRealTimeNotifier>.Instance);
 
         var notification = new MessagingAssignmentNotification
         {
@@ -167,7 +168,7 @@ public sealed class SmsRealTimeNotifierTests
         var hubContext = new Mock<IHubContext<MessagingHub, IMessagingHubClient>>();
         hubContext.SetupGet(context => context.Clients).Returns(clients.Object);
 
-        var notifier = new MessagingRealTimeNotifier(hubContext.Object, new ShellSettings { Name = "TenantA" });
+        var notifier = new MessagingRealTimeNotifier(hubContext.Object, new ShellSettings { Name = "TenantA" }, NullLogger<MessagingRealTimeNotifier>.Instance);
 
         var notification = new MessagingAssignmentNotification
         {

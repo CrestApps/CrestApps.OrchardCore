@@ -30,8 +30,16 @@
     var viewText = workspace.getAttribute('data-view-text');
     var someoneText = workspace.getAttribute('data-someone-text');
     var transferredToYouText = workspace.getAttribute('data-transferred-to-you-text');
-    var transferredToTeamText = workspace.getAttribute('data-transferred-to-team-text');
+    var transferredToQueueText = workspace.getAttribute('data-transferred-to-queue-text');
+    var transferredToYourQueueText = workspace.getAttribute('data-transferred-to-your-queue-text');
     var transferredAwayText = workspace.getAttribute('data-transferred-away-text');
+
+    // The same event can reach the page through two of the agent's groups (a transfer goes to the recipient and to the
+    // queue they serve); it is announced once. The list and the thread still catch up on every copy.
+    var recent = messaging.createRecentNotifications(5000);
+
+    // The count on the Messaging menu item, which this page carries like every admin page.
+    var attentionBadge = messaging.createAttentionBadge(workspace.getAttribute('data-attention-url'));
 
     var list = workspace.querySelector('[data-inbox-list]');
     var search = workspace.querySelector('[data-inbox-search]');
@@ -216,8 +224,10 @@
                     setActiveTabBadge(unseen + added);
                 }
 
-                // The poll found messages the push did not announce, so the list is stale too.
+                // The poll found messages the push did not announce, so the list is stale too, and reading them here
+                // marked the conversation read, which the menu count reflects.
                 refreshInbox();
+                attentionBadge.schedule();
             })
             .catch(function () { /* transient network error; the next poll retries */ })
             .finally(function () { pulling = false; });
@@ -403,16 +413,19 @@
                 break;
 
             default:
-                showToast(
-                    notification && notification.contactAddress ? newMessageText + ' — ' + notification.contactAddress : newMessageText,
-                    notification ? notification.preview : '',
-                    notification && notification.conversationId
-                        ? conversationUrlTemplate.replace('__ID__', encodeURIComponent(notification.conversationId))
-                        : null);
+                if (recent.isNew(messaging.notificationKey('inbound', notification))) {
+                    showToast(
+                        notification && notification.contactAddress ? newMessageText + ' — ' + notification.contactAddress : newMessageText,
+                        notification ? notification.preview : '',
+                        notification && notification.conversationId
+                            ? conversationUrlTemplate.replace('__ID__', encodeURIComponent(notification.conversationId))
+                            : null);
+                }
                 break;
         }
 
         refreshInbox();
+        attentionBadge.schedule();
     }
 
     function conversationHref(conversationId) {
@@ -425,14 +438,21 @@
     function onAssigned(notification) {
         var by = (notification && notification.transferredByName) || someoneText;
         var to = (notification && notification.transferredToName) || someoneText;
+        var kind = messaging.classifyAssignment(notification, view);
+        var announce = kind !== 'refresh' && recent.isNew(messaging.notificationKey(kind, notification));
 
-        switch (messaging.classifyAssignment(notification, view)) {
+        switch (announce ? kind : 'refresh') {
             case 'to-me':
                 showToast(messaging.formatText(transferredToYouText, [by]), '', conversationHref(notification.conversationId));
                 break;
 
-            case 'to-team':
-                showToast(messaging.formatText(transferredToTeamText, [by, to]), '', conversationHref(notification.conversationId));
+            case 'to-queue':
+                showToast(
+                    notification.transferredToName
+                        ? messaging.formatText(transferredToQueueText, [by, notification.transferredToName])
+                        : messaging.formatText(transferredToYourQueueText, [by]),
+                    '',
+                    conversationHref(notification.conversationId));
                 break;
 
             case 'away':
@@ -441,7 +461,10 @@
         }
 
         refreshInbox();
+        attentionBadge.schedule();
     }
+
+    attentionBadge.start();
 
     if (root.signalR && hubUrl) {
         try {
@@ -479,6 +502,7 @@
                 startHeartbeat();
                 pullThread();
                 refreshInbox();
+                attentionBadge.refresh();
             });
 
             connection.onclose(function () {

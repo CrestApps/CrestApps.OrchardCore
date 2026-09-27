@@ -12,7 +12,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 
 /// <summary>
 /// The default <see cref="IMessagingConversationTransferService"/>. Whoever holds a conversation, or a supervisor, can
-/// hand it to another person or send it back to a team's shared pool; the conversation keeps its identity and so
+/// hand it to another person or send it back to a queue's shared pool; the conversation keeps its identity and so
 /// every message it carries.
 /// </summary>
 public sealed class MessagingConversationTransferService : IMessagingConversationTransferService
@@ -55,7 +55,7 @@ public sealed class MessagingConversationTransferService : IMessagingConversatio
         _conversationAuthorizationService = conversationAuthorizationService;
         _agentProfileManager = agentProfileManager;
         // Queues belong to a feature the workspace does not require. Without it a conversation can still go to a
-        // person, just not back to a team.
+        // person, just not back to a queue.
         _queueManager = queueManagers.FirstOrDefault();
         _entitlementPolicy = entitlementPolicy;
         _agentNames = agentNames;
@@ -72,7 +72,7 @@ public sealed class MessagingConversationTransferService : IMessagingConversatio
         if (string.IsNullOrWhiteSpace(request.TargetId))
         {
             return MessagingTransferResult.Failed(request.TargetType == ConversationRouteTargetType.Queue
-                ? "Choose the team to send the conversation to."
+                ? "Choose the queue to send the conversation to."
                 : "Choose the person to transfer the conversation to.");
         }
 
@@ -101,15 +101,15 @@ public sealed class MessagingConversationTransferService : IMessagingConversatio
 
             if (queue is null || !queue.Enabled || ContactCenterConstants.IsDirectRoutingQueue(queue.ItemId))
             {
-                return MessagingTransferResult.Failed("The team was not found.");
+                return MessagingTransferResult.Failed("The queue was not found.");
             }
 
             if (previousAgentId is null && string.Equals(previousQueueId, queue.ItemId, StringComparison.Ordinal))
             {
-                return MessagingTransferResult.Failed("The conversation is already waiting in that team's shared inbox.");
+                return MessagingTransferResult.Failed("The conversation is already waiting in that queue's shared inbox.");
             }
 
-            // Back in the team's pool: nobody holds it, and every member may claim it.
+            // Back in the queue's pool: nobody holds it, and every member may claim it.
             conversation.OwnerType = ConversationOwnerType.Queue;
             conversation.OwnerId = queue.ItemId;
             conversation.AssignedAgentId = null;
@@ -130,8 +130,8 @@ public sealed class MessagingConversationTransferService : IMessagingConversatio
                 return MessagingTransferResult.Failed("The conversation is already with that person.");
             }
 
-            // A queue conversation stays with its team when the recipient serves that team, so it still counts for the
-            // team. Assigned to someone who does not, they could never open it, so it becomes their own instead.
+            // A queue conversation stays with its queue when the recipient serves that queue, so it still counts for the
+            // queue. Assigned to someone who does not, they could never open it, so it becomes their own instead.
             if (conversation.OwnerType != ConversationOwnerType.Queue || !ServesQueue(target, conversation.OwnerId))
             {
                 conversation.OwnerType = ConversationOwnerType.Personal;
@@ -207,7 +207,7 @@ public sealed class MessagingConversationTransferService : IMessagingConversatio
         };
     }
 
-    // The same membership rule the conversation authorization applies, so a recipient kept on the team can open it.
+    // The same membership rule the conversation authorization applies, so a recipient kept on the queue can open it.
     private bool ServesQueue(AgentProfile agent, string queueId)
     {
         if (string.IsNullOrEmpty(queueId))

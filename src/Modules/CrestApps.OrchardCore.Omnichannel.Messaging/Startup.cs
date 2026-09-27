@@ -11,6 +11,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.Routing;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.Routers;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Drivers;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Filters;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Hubs;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Indexes;
@@ -19,6 +20,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Notifications;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.Configuration;
@@ -80,7 +82,7 @@ public sealed class Startup : StartupBase
         // Two-way send, through whichever channel the conversation runs on.
         services.AddScoped<IMessagingConversationService, MessagingConversationService>();
 
-        // Handing a conversation to another person or back to a team, and the names the workspace shows for agents.
+        // Handing a conversation to another person or back to a queue, and the names the workspace shows for agents.
         services
             .AddScoped<IMessagingConversationTransferService, MessagingConversationTransferService>()
             .AddScoped<IMessagingAgentNameProvider, MessagingAgentNameProvider>();
@@ -145,6 +147,14 @@ public sealed class Startup : StartupBase
 
         // Real-time messaging notifications over the workspace SignalR hub.
         services.AddScoped<IMessagingRealTimeNotifier, MessagingRealTimeNotifier>();
+
+        // The same notifications on every other admin page, so an agent reading something else still hears about a
+        // new message or a conversation handed to them, and the Messaging menu item counts what is waiting.
+        services.AddResourceConfiguration<MessagingResourceConfiguration>();
+        services.Configure<MvcOptions>(options =>
+        {
+            options.Filters.Add<MessagingNotificationsFilter>();
+        });
 
         // Receives AI-to-agent handoffs for every enabled messaging channel: moves an escalated automated
         // conversation into a queue-owned human thread in the inbox.

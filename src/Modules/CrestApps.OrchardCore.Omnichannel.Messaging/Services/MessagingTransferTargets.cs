@@ -13,7 +13,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Services;
 
 /// <summary>
 /// Lists where a conversation can be transferred: the other people who can work messaging conversations, and the
-/// teams (queues) whose shared pool it can be sent back to. The same rule decides what the picker offers and what the
+/// queues whose shared pool it can be sent back to. The same rule decides what the picker offers and what the
 /// transfer accepts, so the picker never offers somebody the transfer then refuses.
 /// </summary>
 public sealed class MessagingTransferTargets
@@ -39,7 +39,7 @@ public sealed class MessagingTransferTargets
         IDisplayNameProvider displayNameProvider)
     {
         _agentProfileManager = agentProfileManager;
-        // Queues are a feature of their own that the workspace does not require: without it there is no team to send
+        // Queues are a feature of their own that the workspace does not require: without it there is no queue to send
         // a conversation back to, only people.
         _queueManager = queueManagers.FirstOrDefault();
         _userManager = userManager;
@@ -49,7 +49,7 @@ public sealed class MessagingTransferTargets
     }
 
     /// <summary>
-    /// Gets a value indicating whether a conversation can be sent back to a team.
+    /// Gets a value indicating whether a conversation can be sent back to a queue.
     /// </summary>
     public bool SupportsQueues => _queueManager is not null;
 
@@ -98,11 +98,11 @@ public sealed class MessagingTransferTargets
     }
 
     /// <summary>
-    /// Lists the teams the conversation can be sent back to, by name, leaving out the team whose shared pool it
+    /// Lists the queues the conversation can be sent back to, by name, leaving out the queue whose shared pool it
     /// already waits in.
     /// </summary>
     /// <param name="conversation">The conversation being transferred.</param>
-    /// <param name="query">Text the name must contain, or empty for every team.</param>
+    /// <param name="query">Text the name must contain, or empty for every queue.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The options, ordered by name; empty when queues are not available.</returns>
     public async Task<IReadOnlyList<MessagingTransferTarget>> SearchQueuesAsync(MessagingConversation conversation, string query, CancellationToken cancellationToken)
