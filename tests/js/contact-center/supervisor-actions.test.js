@@ -9,6 +9,7 @@ const {
     supervisorAgentMenuHtml,
     nextMonitorEngagement,
     monitorBannerHtml,
+    monitorEndedMessage,
 } = globalThis.CrestAppsContactCenter;
 
 const onCall = overrides => ({
@@ -186,6 +187,25 @@ describe('the supervisor phone engagement', () => {
     it('shows nothing once the engagement ended', () => {
         expect(monitorBannerHtml({ ...requested, phase: 'ended' }, {})).toBe('');
         expect(monitorBannerHtml(null, {})).toBe('');
+    });
+});
+
+// Live, every mode the supervisor chose "reverted as if the connection failed": their phone was not registered, the
+// provider refused the leg at once, and nothing said why. An engagement their phone never answered says so.
+describe('why a supervisor engagement ended', () => {
+    const ended = reason => ({ interactionId: 'int-1', phase: 'ended', reason });
+
+    it('tells the supervisor their phone did not answer', () => {
+        expect(monitorEndedMessage(ended('supervisor-unreachable'), {}))
+            .toBe('Your soft phone did not answer. Close and reopen it, wait until it says it is ready, then try again.');
+        expect(monitorEndedMessage(ended('supervisor-unreachable'), { phoneUnreachable: 'Localized.' })).toBe('Localized.');
+    });
+
+    it('says nothing for an engagement that ended normally, or has not ended', () => {
+        expect(monitorEndedMessage(ended('supervisor-left'), {})).toBe('');
+        expect(monitorEndedMessage(ended('call-ended'), {})).toBe('');
+        expect(monitorEndedMessage({ phase: 'connected' }, {})).toBe('');
+        expect(monitorEndedMessage(null, {})).toBe('');
     });
 });
 

@@ -13,7 +13,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Environment.Shell;
@@ -208,6 +208,25 @@ public sealed class PhoneCallSupervisionServiceTests
         // The replaced leg's end is not the engagement's; the new leg's is.
         Assert.False(await fixture.Service.OnEndedAsync("Telnyx", "number-leg", "supervisor-leg", null, null, cancellationToken));
         Assert.True(await fixture.Service.OnEndedAsync("Telnyx", "number-leg", "supervisor-leg-2", null, null, cancellationToken));
+    }
+
+    // Live, a supervisor whose phone was not registered saw every engagement silently revert; the server logged nothing
+    // about it. An engagement that ends before the supervisor's phone ever answered is a warning naming the leg.
+    [Fact]
+    public async Task AnEngagementThePhoneNeverAnswered_EndsAsUnreachable_AndIsLoggedAsAWarning()
+    {
+        // Arrange
+        var fixture = await new Fixture().WithKeypadCall().EngagedAsync(MonitorMode.Whisper, connected: false);
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        // Act
+        Assert.True(await fixture.Service.OnEndedAsync("Telnyx", "number-leg", "supervisor-leg", null, null, cancellationToken));
+
+        // Assert
+        Assert.Equal(("Ended", "supervisor-unreachable"), (fixture.Notifier.Engagements.Last().State, fixture.Notifier.Engagements.Last().Reason));
+        var warning = Assert.Single(fixture.Logger.At(LogLevel.Warning));
+        Assert.Contains("never connected", warning, StringComparison.Ordinal);
+        Assert.Contains("supervisor-leg", warning, StringComparison.Ordinal);
     }
 
     // The mode is changed on the leg the supervisor is on; until their phone has answered one, there is none to change.
@@ -529,7 +548,9 @@ public sealed class PhoneCallSupervisionServiceTests
                 Telephony.Object,
                 [Notifier],
                 new StubClock(),
-                NullLogger<ContactCenterPhoneCallSupervisionService>.Instance);
+                Logger);
+
+        public RecordingLogger<ContactCenterPhoneCallSupervisionService> Logger { get; } = new();
 
         public Fixture WithKeypadCall()
         {

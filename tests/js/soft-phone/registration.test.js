@@ -1,8 +1,17 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/registration.js';
 
-const { shouldStartRegistration, answerClickAction, isAnswerInProgress, planRegistrationSelfHeal, planMicrophoneLossRecovery } = globalThis.CrestAppsSoftPhone;
+const {
+    shouldStartRegistration,
+    answerClickAction,
+    isAnswerInProgress,
+    planRegistrationSelfHeal,
+    planMicrophoneLossRecovery,
+    guardRegistration,
+    REGISTRATION_TIMEOUT_MS,
+    REGISTRATION_RETRY_MS,
+} = globalThis.CrestAppsSoftPhone;
 
 const idle = {
     browserAudioEnabled: true,
@@ -123,5 +132,66 @@ describe('recovering a microphone that stopped', () => {
     it('registers again only when an idle phone could not replace it', () => {
         expect(planMicrophoneLossRecovery({ liveMedia: false }).onFailure).toBe('reregister');
         expect(planMicrophoneLossRecovery({ liveMedia: true }).onFailure).toBe('warn');
+    });
+});
+
+// Live (2026-09-26), a supervisor's phone asked for its registration config at the moment the tunnel in front of the
+// server was replaced. The reply never arrived, nothing timed out, and the phone stayed "registering" for good: every
+// later attempt joined the stalled one, so it never registered again and every supervisor leg rang the credential it had
+// registered before the restart (refused, SIP 480). A registration is given up on, said, and tried again.
+describe('guarding a registration attempt', () => {
+    beforeEach(() => {
+        vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    it('settles with the session a registration produces in time', async () => {
+        await expect(guardRegistration(Promise.resolve('session'), 1000, () => 'provider login')).resolves.toBe('session');
+    });
+
+    it('fails with the error the registration itself failed with', async () => {
+        await expect(guardRegistration(Promise.reject(new Error('No microphone was found.')), 1000, () => 'microphone'))
+            .rejects.toThrow('No microphone was found.');
+    });
+
+    it('gives up on one that has not finished, saying what it was waiting for', async () => {
+        let stage = 'credential';
+        const stalled = new Promise(() => { });
+        const outcome = guardRegistration(stalled, 1000, () => stage).catch(error => error);
+
+        stage = 'registration config';
+        vi.advanceTimersByTime(999);
+        vi.advanceTimersByTime(1);
+        const error = await outcome;
+
+        expect(error.registrationTimedOut).toBe(true);
+        expect(error.stage).toBe('registration config');
+        expect(error.message).toContain('waiting for the registration config');
+    });
+
+    it('lets go of a session that arrives after it was given up on', async () => {
+        let finish;
+        const late = vi.fn();
+        const guarded = guardRegistration(new Promise(resolve => { finish = resolve; }), 1000, () => 'provider login', late);
+        const outcome = guarded.catch(error => error);
+
+        vi.advanceTimersByTime(1000);
+        await outcome;
+        finish('late-session');
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(late).toHaveBeenCalledWith('late-session');
+        await expect(guarded).rejects.toMatchObject({ registrationTimedOut: true });
+    });
+
+    it('waits long enough for a slow login and retries soon, not only at the minute heartbeat', () => {
+        expect(REGISTRATION_TIMEOUT_MS).toBeGreaterThanOrEqual(15000);
+        expect(REGISTRATION_TIMEOUT_MS).toBeLessThanOrEqual(60000);
+        expect(REGISTRATION_RETRY_MS).toBeGreaterThan(0);
+        expect(REGISTRATION_RETRY_MS).toBeLessThan(60000);
     });
 });

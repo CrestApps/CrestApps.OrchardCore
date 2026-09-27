@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Telnyx.Models;
 using CrestApps.OrchardCore.Telnyx.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -32,6 +33,49 @@ public sealed class TelnyxAgentEndpointResolverTests
 
         // Assert
         Assert.Equal("sip:older-registered@sip.example.com", endpoint);
+    }
+
+    // Live (2026-09-26), a supervisor's phone reopened after a restart asked for a fresh credential and stalled before
+    // registering it. Every supervisor leg then rang the credential the closed phone had registered and was refused
+    // (SIP 480), and the log only said which credential was chosen, at debug. The choice stands -- nothing better is
+    // registered -- but the log warns that the address is probably stale.
+    [Fact]
+    public async Task Warns_WhenTheRegisteredCredentialIsOlderThanOneIssuedSinceThatNeverRegistered()
+    {
+        // Arrange
+        var logger = new RecordingLogger<TelnyxAgentEndpointResolver>();
+        var resolver = Resolver(
+            logger,
+            Credential("newer-unregistered", issuedUtc: _now, registeredUtc: null),
+            Credential("older-registered", issuedUtc: _now.AddMinutes(-30), registeredUtc: _now.AddMinutes(-29)));
+
+        // Act
+        var endpoint = await resolver.ResolveAsync("u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("sip:older-registered@sip.example.com", endpoint);
+        var warning = Assert.Single(logger.At(LogLevel.Warning));
+        Assert.Contains("newer-unregistered", warning, StringComparison.Ordinal);
+        Assert.Contains("older-registered", warning, StringComparison.Ordinal);
+        Assert.Contains("SIP 480", warning, StringComparison.Ordinal);
+    }
+
+    // A credential issued before the chosen one registered is an old attempt, not a phone registering now.
+    [Fact]
+    public async Task DoesNotWarn_WhenNoCredentialWasIssuedSinceTheChosenOneRegistered()
+    {
+        // Arrange
+        var logger = new RecordingLogger<TelnyxAgentEndpointResolver>();
+        var resolver = Resolver(
+            logger,
+            Credential("abandoned-before", issuedUtc: _now.AddMinutes(-40), registeredUtc: null),
+            Credential("registered", issuedUtc: _now.AddMinutes(-30), registeredUtc: _now.AddMinutes(-29)));
+
+        // Act
+        await resolver.ResolveAsync("u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(logger.At(LogLevel.Warning));
     }
 
     [Fact]
@@ -199,6 +243,9 @@ public sealed class TelnyxAgentEndpointResolverTests
         };
 
     private static TelnyxAgentEndpointResolver Resolver(params TelnyxAgentCredential[] credentials)
+        => Resolver(NullLogger<TelnyxAgentEndpointResolver>.Instance, credentials);
+
+    private static TelnyxAgentEndpointResolver Resolver(ILogger<TelnyxAgentEndpointResolver> logger, params TelnyxAgentCredential[] credentials)
     {
         var store = new Mock<ITelnyxAgentCredentialStore>();
         store
@@ -209,6 +256,6 @@ public sealed class TelnyxAgentEndpointResolverTests
             store.Object,
             new OptionsWrapper<TelnyxOptions>(new TelnyxOptions { SipDomain = "sip.example.com" }),
             new StubClock(_now),
-            NullLogger<TelnyxAgentEndpointResolver>.Instance);
+            logger);
     }
 }

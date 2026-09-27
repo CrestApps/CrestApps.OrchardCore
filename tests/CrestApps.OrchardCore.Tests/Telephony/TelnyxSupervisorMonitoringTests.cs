@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telnyx;
 using CrestApps.OrchardCore.Telnyx.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -504,6 +505,53 @@ public sealed class TelnyxSupervisorMonitoringTests
         Assert.Empty(api.Requests);
     }
 
+    // Live (2026-09-26), every mode a supervisor picked failed the same way: their phone was not registered on the
+    // credential the leg was rung at, Telnyx refused it at once (SIP 480), and the log held only the raw webhook. A
+    // refusal is logged as a warning that says what it most likely means.
+    [Fact]
+    public async Task ASupervisorLegRefusedByThePhone_IsLoggedAsAWarningThatSaysThePhoneIsNotRegistered()
+    {
+        // Arrange
+        var api = BridgedCall();
+        var logger = new RecordingLogger<TelnyxOutboundBridgeOrchestrator>();
+        var orchestrator = CreateOrchestrator(api, Mock.Of<ISupervisorLegEventSink>(), logger: logger);
+        var refused = Hangup(Supervisor, SupervisorState("whisper"));
+        refused.SipHangupCause = "480";
+
+        // Act
+        await orchestrator.AdvanceAsync(refused, TestContext.Current.CancellationToken);
+
+        // Assert
+        var warning = Assert.Single(logger.At(LogLevel.Warning));
+        Assert.Contains("refused supervisor leg", warning, StringComparison.Ordinal);
+        Assert.Contains("SIP 480", warning, StringComparison.Ordinal);
+        Assert.Contains("supervisor-user", warning, StringComparison.Ordinal);
+        Assert.Contains("whisper", warning, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ASupervisorLegThatEndsNormally_OrWasReleasedByThePlatform_IsNotAWarning()
+    {
+        // Arrange
+        var api = BridgedCall();
+        var logger = new RecordingLogger<TelnyxOutboundBridgeOrchestrator>();
+        var orchestrator = CreateOrchestrator(api, Mock.Of<ISupervisorLegEventSink>(), logger: logger);
+        var ended = Hangup(Supervisor, SupervisorState("monitor"));
+        ended.SipHangupCause = "200";
+        var detached = SupervisorState("monitor");
+        detached.Detached = true;
+        var released = Hangup(Supervisor, detached);
+        released.SipHangupCause = "487";
+
+        // Act
+        await orchestrator.AdvanceAsync(ended, TestContext.Current.CancellationToken);
+        await orchestrator.AdvanceAsync(released, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(logger.At(LogLevel.Warning));
+        Assert.Contains(logger.At(LogLevel.Information), message => message.Contains("ended (normal_clearing, SIP 200)", StringComparison.Ordinal));
+    }
+
     [Fact]
     public async Task ReleaseSupervisorLeg_HangsUpTheLegMarkedDetached()
     {
@@ -609,7 +657,8 @@ public sealed class TelnyxSupervisorMonitoringTests
         HttpMessageHandler handler,
         ISupervisorLegEventSink sink,
         IContactCenterAgentLegFailureService failureService = null,
-        ISupervisorLegEventSink nextSink = null)
+        ISupervisorLegEventSink nextSink = null,
+        ILogger<TelnyxOutboundBridgeOrchestrator> logger = null)
     {
         var options = new TelnyxOptions
         {
@@ -631,7 +680,7 @@ public sealed class TelnyxSupervisorMonitoringTests
 
         return new TelnyxOutboundBridgeOrchestrator(
             apiClient,
-            NullLogger<TelnyxOutboundBridgeOrchestrator>.Instance,
+            logger ?? NullLogger<TelnyxOutboundBridgeOrchestrator>.Instance,
             monitor.Object,
             failureService ?? new Mock<IContactCenterAgentLegFailureService>().Object,
             [],
