@@ -1,0 +1,53 @@
+<span class="title">@Model.Text</span>
+@* The shared voicemails nobody has picked up yet, in the queues the user may see. The menu is on every admin page, so a
+   message waiting for the team is noticed from anywhere. The count is read once the page has loaded -- the menu never
+   waits on it -- and again every minute and whenever the tab comes back into view. *@
+<span class="badge rounded-pill text-bg-danger ms-1 d-none" title="@T["Voicemails nobody has picked up yet"]" data-shared-voicemail-badge></span>
+<script at="Foot">
+    (function () {
+        'use strict';
+
+        // The item can be drawn more than once on a page (the menu and the page's own navigation); one reader serves all.
+        if (window.crestAppsSharedVoicemailBadge) {
+            return;
+        }
+
+        window.crestAppsSharedVoicemailBadge = true;
+
+        var url = '@Url.RouteUrl("ContactCenterSharedVoicemailCount")';
+
+        function show(count) {
+            var value = Math.floor(Number(count) || 0);
+
+            document.querySelectorAll('[data-shared-voicemail-badge]').forEach(function (badge) {
+                badge.textContent = value > 99 ? '99+' : (value > 0 ? String(value) : '');
+                badge.classList.toggle('d-none', value <= 0);
+            });
+        }
+
+        function refresh() {
+            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin', cache: 'no-store' })
+                .then(function (response) { return response.ok ? response.json() : null; })
+                .then(function (data) {
+                    if (data && typeof data.count === 'number') {
+                        show(data.count);
+                    }
+                })
+                .catch(function () { /* the next read tries again */ });
+        }
+
+        refresh();
+
+        window.setInterval(function () {
+            if (!document.hidden) {
+                refresh();
+            }
+        }, 60000);
+
+        document.addEventListener('visibilitychange', function () {
+            if (!document.hidden) {
+                refresh();
+            }
+        });
+    })();
+</script>

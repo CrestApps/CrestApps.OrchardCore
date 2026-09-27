@@ -146,7 +146,7 @@
                         {
                             <form asp-action="Release" asp-route-id="@voicemail.ItemId" method="post" class="no-multisubmit">
                                 <input type="hidden" name="returnUrl" value="@returnUrl" />
-                                <button type="submit" class="btn btn-secondary btn-sm">@(voicemail.Status == SharedVoicemailStatus.Resolved ? T["Reopen"] : T["Return to team"])</button>
+                                <button type="submit" class="btn btn-secondary btn-sm">@(voicemail.Status == SharedVoicemailStatus.Resolved ? T["Reopen"] : T["Return to queue"])</button>
                             </form>
                         }
 

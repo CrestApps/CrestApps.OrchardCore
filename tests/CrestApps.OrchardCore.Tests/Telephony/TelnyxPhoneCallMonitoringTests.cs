@@ -370,6 +370,90 @@ public sealed class TelnyxPhoneCallMonitoringTests
     public void WhatTheDashboardOffers_IsExtensionCallsAndNumbersTheAgentDialed(bool isExtension, bool isOutbound, bool expected)
         => Assert.Equal(expected, TelnyxContactCenterProviderFactory.Create(new FakeTelnyxCallControl()).CanMonitorPhoneCall(isExtension, isOutbound));
 
+    // Live (2026-09-26), a supervisor who took a keypad call over had it only as a monitor leg: nothing on their soft phone
+    // to mute, hold, dial digits on or hang up. The leg the call is taken over on becomes the agent's keypad leg, bridged
+    // to the number (so its events are the call's, hanging it up releases the number and digits reach the number), and
+    // the platform is told it is an ordinary call of the supervisor's own.
+    [Fact]
+    public async Task TakeOver_OfAKeypadCall_MakesTheTakeOverLegTheSupervisorsOwnKeypadCall()
+    {
+        // Arrange
+        var api = KeypadCall();
+        api.WithLeg(Supervisor, KeypadSupervisorState("whisper"));
+        api.NextLegId = "takeover-leg";
+        var provider = TelnyxContactCenterProviderFactory.Create(api, Resolver());
+        var request = KeypadRequest(MonitorMode.Barge);
+        request.SupervisorLegId = Supervisor;
+
+        // Act
+        var result = await provider.TakeOverPhoneCallAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Equal("true", result.Metadata[ContactCenterPhoneCallMonitoringTarget.TakeOverLegIsOwnCallMetadataKey]);
+
+        Assert.True(TelnyxOutboundBridgeState.TryParse(api.LegStates["takeover-leg"], out var own));
+        Assert.Equal(TelnyxOutboundBridgeState.AgentLegIntent, own.Intent);
+        Assert.Equal(NumberLeg, own.PeerCallControlId);
+        Assert.Equal(AgentLeg, own.TransferOfCallControlId);
+        Assert.True(own.PeerAnswered);
+        Assert.Null(own.Detached);
+
+        // What made the agent's leg a keypad call -- the number dialed -- carries over.
+        Assert.Equal("+17025550100", own.Destination);
+        Assert.Null(own.MonitorToken);
+    }
+
+    // A leg Telnyx will not update stays the monitor leg it was: the takeover still succeeds, but the platform is not told
+    // to record it as the supervisor's own call, which their phone could not act on.
+    [Fact]
+    public async Task TakeOver_OfAKeypadCall_WhenTheLegCannotBeMadeAnOrdinaryCall_DoesNotClaimItIs()
+    {
+        // Arrange
+        var api = new RefusingStateUpdate("takeover-leg", KeypadCall());
+        api.Inner.WithLeg(Supervisor, KeypadSupervisorState("whisper"));
+        api.Inner.NextLegId = "takeover-leg";
+        var provider = TelnyxContactCenterProviderFactory.Create(api, Resolver());
+        var request = KeypadRequest(MonitorMode.Barge);
+        request.SupervisorLegId = Supervisor;
+
+        // Act
+        var result = await provider.TakeOverPhoneCallAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.False(result.Metadata?.ContainsKey(ContactCenterPhoneCallMonitoringTarget.TakeOverLegIsOwnCallMetadataKey) ?? false);
+    }
+
+    // Refuses a client-state update on one leg, as Telnyx refuses one on a leg that ended; everything else is the fake's.
+    private sealed class RefusingStateUpdate : DelegatingHandler
+    {
+        private readonly string _legId;
+
+        public RefusingStateUpdate(string legId, FakeTelnyxCallControl inner)
+            : base(inner)
+        {
+            _legId = legId;
+            Inner = inner;
+        }
+
+        public FakeTelnyxCallControl Inner { get; }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            if (request.Method == HttpMethod.Put &&
+                request.RequestUri.AbsolutePath.EndsWith($"calls/{_legId}/actions/client_state_update", StringComparison.Ordinal))
+            {
+                return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.UnprocessableEntity)
+                {
+                    Content = new StringContent("{\"errors\":[{\"code\":\"90018\"}]}", System.Text.Encoding.UTF8, "application/json"),
+                });
+            }
+
+            return base.SendAsync(request, cancellationToken);
+        }
+    }
+
     private static FakeTelnyxCallControl KeypadCall()
         => new FakeTelnyxCallControl()
             .WithLeg(AgentLeg, KeypadAgentState())

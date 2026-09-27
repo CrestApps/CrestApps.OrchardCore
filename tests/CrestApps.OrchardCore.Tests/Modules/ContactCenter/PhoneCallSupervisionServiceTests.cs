@@ -288,6 +288,77 @@ public sealed class PhoneCallSupervisionServiceTests
         }
     }
 
+    // Live (2026-09-26), a supervisor who took a call over had it only as a banner: their soft phone listed nothing to mute,
+    // hold or hang up. When the provider made the leg an ordinary call of theirs, it is recorded as their call -- the same
+    // party and direction as the agent's, answered, on the leg they took it on -- which is what their phone lists and acts
+    // on; the engagement is over, since the leg's own events keep that call current.
+    [Fact]
+    public async Task TakeOver_OntoAnOrdinaryLeg_RecordsTheCallAsTheSupervisors_AndEndsTheEngagement()
+    {
+        // Arrange
+        var fixture = await new Fixture().WithKeypadCall().EngagedAsync(MonitorMode.Whisper);
+        var cancellationToken = TestContext.Current.CancellationToken;
+        TelephonyInteraction recorded = null;
+        fixture.Interactions
+            .Setup(value => value.FindByCallIdAsync("agent-user", CallId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => fixture.ActiveCalls.FirstOrDefault());
+        fixture.Interactions
+            .Setup(value => value.CreateAsync(It.IsAny<TelephonyInteraction>(), It.IsAny<CancellationToken>()))
+            .Callback<TelephonyInteraction, CancellationToken>((interaction, _) => recorded = interaction)
+            .Returns(Task.CompletedTask);
+        fixture.PhoneCalls
+            .Setup(value => value.TakeOverPhoneCallAsync(It.IsAny<ContactCenterVoiceMonitoringRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ContactCenterVoiceProviderResult
+            {
+                Succeeded = true,
+                ProviderLegId = "takeover-leg",
+                Metadata = new Dictionary<string, string>
+                {
+                    [ContactCenterPhoneCallMonitoringTarget.TakeOverLegIsOwnCallMetadataKey] = "true",
+                },
+            });
+
+        // Act
+        var result = await fixture.Service.TakeOverAsync(Key, "sup-user", Fixture.Principal, cancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded, result.Reason);
+        Assert.NotNull(recorded);
+        Assert.Equal("takeover-leg", recorded.CallId);
+        Assert.Equal("sup-user", recorded.UserId);
+        Assert.Equal(CallDirection.Outbound, recorded.Direction);
+        Assert.Equal("+17025550100", recorded.To);
+        Assert.Equal(CallOutcome.InProgress, recorded.Outcome);
+        Assert.False(recorded.AwaitingAnswer);
+        Assert.Null(recorded.EndedUtc);
+
+        Assert.Null(await fixture.Service.FindEngagementAsync(Key, "sup-user", cancellationToken));
+        Assert.Equal("TookOver", fixture.Notifier.Engagements.Last().State);
+    }
+
+    // A provider that leaves the call on the supervisor's monitor leg is not claimed to have made it an ordinary call: the
+    // engagement carries on, and its leg's end ends the call as before.
+    [Fact]
+    public async Task TakeOver_WithoutAnOrdinaryLeg_RecordsNothing_AndKeepsTheEngagement()
+    {
+        // Arrange
+        var fixture = await new Fixture().WithKeypadCall().EngagedAsync(MonitorMode.Whisper);
+        var cancellationToken = TestContext.Current.CancellationToken;
+        fixture.PhoneCalls
+            .Setup(value => value.TakeOverPhoneCallAsync(It.IsAny<ContactCenterVoiceMonitoringRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ContactCenterVoiceProviderResult { Succeeded = true, ProviderLegId = "takeover-leg" });
+
+        // Act
+        var result = await fixture.Service.TakeOverAsync(Key, "sup-user", Fixture.Principal, cancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded, result.Reason);
+        fixture.Interactions.Verify(value => value.CreateAsync(It.IsAny<TelephonyInteraction>(), It.IsAny<CancellationToken>()), Times.Never);
+        var engagement = await fixture.Service.FindEngagementAsync(Key, "sup-user", cancellationToken);
+        Assert.True(engagement.TookOver);
+        Assert.Equal("takeover-leg", engagement.SupervisorLegId);
+    }
+
     [Fact]
     public async Task TakeOver_MakesTheCallTheSupervisors_SoTheirHangingUpEndsItForTheOtherParty()
     {

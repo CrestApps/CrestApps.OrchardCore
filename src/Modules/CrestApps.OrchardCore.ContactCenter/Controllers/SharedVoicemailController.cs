@@ -206,7 +206,7 @@ public sealed class SharedVoicemailController : Controller
     }
 
     /// <summary>
-    /// Returns a shared voicemail to the team, unclaimed.
+    /// Returns a shared voicemail to its queue, unclaimed.
     /// </summary>
     /// <param name="id">The shared voicemail identifier.</param>
     /// <param name="returnUrl">The list page to return to.</param>
@@ -219,7 +219,7 @@ public sealed class SharedVoicemailController : Controller
 
         if (result.Succeeded)
         {
-            await _notifier.SuccessAsync(H["The voicemail was returned to the team."]);
+            await _notifier.SuccessAsync(H["The voicemail was returned to the queue."]);
         }
         else
         {
@@ -252,6 +252,25 @@ public sealed class SharedVoicemailController : Controller
         }
 
         return Return(returnUrl);
+    }
+
+    /// <summary>
+    /// The number of shared voicemails nobody has picked up yet, in the queues the user may see: the count on the Shared
+    /// voicemail admin menu item, so a message waiting for the team is noticed from any admin page.
+    /// </summary>
+    /// <returns>The count, as <c>{ count }</c>.</returns>
+    [HttpGet]
+    [Admin("contact-center/shared-voicemail/count", "ContactCenterSharedVoicemailCount")]
+    public async Task<IActionResult> Count()
+    {
+        var page = await _sharedVoicemailService.ListAsync(User, new SharedVoicemailQuery
+        {
+            Status = SharedVoicemailStatus.New,
+            Page = 1,
+            PageSize = 1,
+        }, HttpContext.RequestAborted);
+
+        return Json(new { count = page.Count });
     }
 
     /// <summary>
@@ -395,7 +414,7 @@ public sealed class SharedVoicemailController : Controller
         var message = result.ReasonCode switch
         {
             SharedVoicemailReasons.ClaimedByAnotherUser => H["{0} is already handling this voicemail.", result.Voicemail?.ClaimedByUserName ?? string.Empty],
-            SharedVoicemailReasons.AlreadyResolved => H["This voicemail was already marked as done. Return it to the team to work it again."],
+            SharedVoicemailReasons.AlreadyResolved => H["This voicemail was already marked as done. Return it to the queue to work it again."],
             SharedVoicemailReasons.ManagePermissionRequired => H["You are not allowed to delete shared voicemail."],
             SharedVoicemailReasons.NoCallerNumber => H["The caller left no number to call back."],
             SharedVoicemailReasons.CallbacksUnavailable => H["Callbacks are not available. Enable the Contact Center Outbound Dialer feature to queue callbacks."],

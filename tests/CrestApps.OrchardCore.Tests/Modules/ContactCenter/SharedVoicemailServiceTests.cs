@@ -385,6 +385,51 @@ public sealed class SharedVoicemailServiceTests
         Assert.Equal(ContactCenterConstants.Events.SharedVoicemailCallbackRequested, audit.EventType);
     }
 
+    // Live, a second click on Call back became a second call to the caller. The same user asking again within 30 seconds
+    // is the call already under way; after that, or once the message was worked, they may call back again.
+    [Fact]
+    public async Task RequestCallbackAsync_ASecondRequestBySameUserMomentsLater_IsTheCallAlreadyUnderWay()
+    {
+        // Arrange
+        var harness = new Harness();
+        var voicemail = NewVoicemail();
+        voicemail.Status = SharedVoicemailStatus.Claimed;
+        voicemail.ClaimedByUserId = "user-1";
+        voicemail.CallbackRequestedByUserName = "agent.one";
+        voicemail.CallbackRequestedUtc = _now.AddSeconds(-10);
+        harness.Add(voicemail);
+
+        // Act
+        var result = await harness.Service.RequestCallbackAsync(Harness.Principal, "vm-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Equal(SharedVoicemailActionStatus.Conflict, result.Status);
+        Assert.Equal(SharedVoicemailReasons.CallbackAlreadyStarted, result.ReasonCode);
+        Assert.Empty(harness.Updates);
+        Assert.Empty(harness.Audit.SharedVoicemails);
+    }
+
+    [Fact]
+    public async Task RequestCallbackAsync_AfterTheRepeatWindow_CallsBackAgain()
+    {
+        // Arrange
+        var harness = new Harness();
+        var voicemail = NewVoicemail();
+        voicemail.Status = SharedVoicemailStatus.Claimed;
+        voicemail.ClaimedByUserId = "user-1";
+        voicemail.CallbackRequestedByUserName = "agent.one";
+        voicemail.CallbackRequestedUtc = _now.AddMinutes(-5);
+        harness.Add(voicemail);
+
+        // Act
+        var result = await harness.Service.RequestCallbackAsync(Harness.Principal, "vm-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Equal(_now, result.Voicemail.CallbackRequestedUtc);
+    }
+
     [Fact]
     public async Task RequestCallbackAsync_ForACallerWhoLeftNoNumber_IsRefused()
     {

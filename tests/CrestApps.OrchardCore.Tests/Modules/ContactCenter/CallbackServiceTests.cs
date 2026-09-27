@@ -67,6 +67,61 @@ public sealed class CallbackServiceTests
         queueService.Verify(s => s.EnqueueAsync("act-1", "q1", null, It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    // Live (2026-09-27), one callback became two preview calls a minute apart. The pass read every due callback at once,
+    // promoting the first committed the session (enqueuing saves it), and saving the second -- read before that commit, so
+    // no longer tracked -- inserted it as a second, still-pending row the next pass promoted again. Each callback is read
+    // again on its own before it is claimed, and the fresh copy is the one saved.
+    [Fact]
+    public async Task PromoteDueAsync_ReadsEachCallbackAgain_AndSavesTheFreshCopy_NotTheOneFromTheBatch()
+    {
+        // Arrange
+        var batchCopy = new CallbackRequest { ItemId = "cb1", Destination = "+15551234567", QueueId = "q1", Status = CallbackRequestStatus.Pending };
+        var freshCopy = new CallbackRequest { ItemId = "cb1", Destination = "+15551234567", QueueId = "q1", Status = CallbackRequestStatus.Pending };
+
+        var callbackManager = new Mock<ICallbackRequestManager>();
+        callbackManager.Setup(m => m.GetDueAsync(_now, It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync([batchCopy]);
+        callbackManager.Setup(m => m.FindByIdAsync("cb1", It.IsAny<CancellationToken>())).ReturnsAsync(freshCopy);
+
+        var activityManager = new Mock<IOmnichannelActivityManager>();
+        activityManager.Setup(m => m.NewAsync(It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OmnichannelActivity { ItemId = "act-1" });
+
+        var service = CreateService(callbackManager, activityManager, new Mock<IActivityQueueService>(), new Mock<IContactCenterEventPublisher>());
+
+        // Act
+        var count = await service.PromoteDueAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(1, count);
+        Assert.Equal(CallbackRequestStatus.Scheduled, freshCopy.Status);
+        Assert.Equal(CallbackRequestStatus.Pending, batchCopy.Status);
+        callbackManager.Verify(m => m.UpdateAsync(batchCopy, It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()), Times.Never);
+        callbackManager.Verify(m => m.UpdateAsync(freshCopy, It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+    }
+
+    // A callback promoted since the batch was read (by the pass before, or another node) is left alone.
+    [Fact]
+    public async Task PromoteDueAsync_SkipsACallbackThatIsNoLongerPendingWhenReadAgain()
+    {
+        // Arrange
+        var batchCopy = new CallbackRequest { ItemId = "cb1", QueueId = "q1", Status = CallbackRequestStatus.Pending };
+        var alreadyPromoted = new CallbackRequest { ItemId = "cb1", QueueId = "q1", Status = CallbackRequestStatus.Scheduled };
+
+        var callbackManager = new Mock<ICallbackRequestManager>();
+        callbackManager.Setup(m => m.GetDueAsync(_now, It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync([batchCopy]);
+        callbackManager.Setup(m => m.FindByIdAsync("cb1", It.IsAny<CancellationToken>())).ReturnsAsync(alreadyPromoted);
+
+        var activityManager = new Mock<IOmnichannelActivityManager>();
+        var service = CreateService(callbackManager, activityManager, new Mock<IActivityQueueService>(), new Mock<IContactCenterEventPublisher>());
+
+        // Act
+        var count = await service.PromoteDueAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(0, count);
+        activityManager.Verify(m => m.NewAsync(It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     [Fact]
     public async Task PromoteDueAsync_WithoutQueue_DoesNotEnqueue()
     {

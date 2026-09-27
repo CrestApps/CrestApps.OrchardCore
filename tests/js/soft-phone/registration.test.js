@@ -11,6 +11,8 @@ const {
     guardRegistration,
     REGISTRATION_TIMEOUT_MS,
     REGISTRATION_RETRY_MS,
+    registrationRetryDelay,
+    shouldReportRegistrationFailure,
 } = globalThis.CrestAppsSoftPhone;
 
 const idle = {
@@ -193,5 +195,31 @@ describe('guarding a registration attempt', () => {
         expect(REGISTRATION_TIMEOUT_MS).toBeLessThanOrEqual(60000);
         expect(REGISTRATION_RETRY_MS).toBeGreaterThan(0);
         expect(REGISTRATION_RETRY_MS).toBeLessThan(60000);
+    });
+});
+
+// Live (overnight 2026-09-26), an agent's browser never answered the microphone request a registration made. The
+// registration guard gave up and started another every 35 seconds all night: 682 attempts, each opening another
+// microphone request behind the first, and about 1,400 warnings in the server log. The next morning, once the phone waited
+// for the open request, it registered the moment the microphone answered.
+describe('a registration waiting on the microphone', () => {
+    it('does not start another while the microphone request it made is still open', () => {
+        expect(shouldStartRegistration({ ...idle, captureInFlight: true })).toBe(false);
+        expect(shouldStartRegistration({ ...idle, captureInFlight: false })).toBe(true);
+    });
+});
+
+describe('retrying a registration that failed', () => {
+    it('tries again soon, then backs off to a couple of minutes', () => {
+        expect([1, 2, 3, 4, 5, 6, 50].map(registrationRetryDelay)).toEqual([5000, 15000, 30000, 60000, 120000, 120000, 120000]);
+        expect(registrationRetryDelay(0)).toBe(5000);
+    });
+
+    it('logs the first failure of a run, one that fails differently, and every tenth -- not every one', () => {
+        expect(shouldReportRegistrationFailure(1, 'stalled', '')).toBe(true);
+        expect(shouldReportRegistrationFailure(2, 'stalled', 'stalled')).toBe(false);
+        expect(shouldReportRegistrationFailure(3, 'refused', 'stalled')).toBe(true);
+        expect(shouldReportRegistrationFailure(10, 'stalled', 'stalled')).toBe(true);
+        expect(shouldReportRegistrationFailure(11, 'stalled', 'stalled')).toBe(false);
     });
 });
