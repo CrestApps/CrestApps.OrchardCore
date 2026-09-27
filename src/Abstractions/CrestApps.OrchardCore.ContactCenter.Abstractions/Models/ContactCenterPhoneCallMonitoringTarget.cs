@@ -12,6 +12,13 @@ public sealed class ContactCenterPhoneCallMonitoringTarget
     public const string ConferenceMetadataKey = "conferenceName";
 
     /// <summary>
+    /// The key, in a takeover's <see cref="ContactCenterVoiceProviderResult.Metadata"/>, that says the leg the call was
+    /// taken over on is an ordinary call of the supervisor's own (value <c>true</c>): the platform records it as theirs,
+    /// so their soft phone lists it and mutes, holds and hangs it up like any other call.
+    /// </summary>
+    public const string TakeOverLegIsOwnCallMetadataKey = "takeOverLegIsOwnCall";
+
+    /// <summary>
     /// Gets or sets the call as the provider's monitoring requests name it (<see cref="ContactCenterVoiceMonitoringRequest.ProviderCallId"/>).
     /// </summary>
     public string ProviderCallId { get; set; }

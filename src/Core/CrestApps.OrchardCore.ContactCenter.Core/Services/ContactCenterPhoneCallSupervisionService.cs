@@ -506,6 +506,17 @@ public sealed partial class ContactCenterPhoneCallSupervisionService : IContactC
             await _engagements.SaveAsync(engagement, CancellationToken.None);
         }
 
+        // Live, the supervisor who took a call over had it only as a banner: their phone listed nothing to mute, hold or
+        // hang up. A provider that made the leg an ordinary call of theirs has it recorded as their call, which is what
+        // their phone lists and acts on; the engagement is over, since the leg's events are the call's from now on.
+        if (result.Metadata is not null &&
+            result.Metadata.TryGetValue(ContactCenterPhoneCallMonitoringTarget.TakeOverLegIsOwnCallMetadataKey, out var ownCall) &&
+            string.Equals(ownCall, "true", StringComparison.OrdinalIgnoreCase) &&
+            await RecordSupervisorsCallAsync(engagement, result.ProviderLegId))
+        {
+            await _engagements.RemoveAsync(engagement, CancellationToken.None);
+        }
+
         await NotifyAsync(SupervisorEngagementNotification.TookOver, engagement, agent: null, reason: null);
 
         if (_logger.IsEnabled(LogLevel.Information))

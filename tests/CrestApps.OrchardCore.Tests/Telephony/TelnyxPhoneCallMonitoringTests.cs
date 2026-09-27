@@ -311,6 +311,7 @@ public sealed class TelnyxPhoneCallMonitoringTests
         Assert.Equal("takeover-leg", result.ProviderLegId);
         Assert.Equal(
             [
+                $"GET calls/{AgentLeg}",
                 "POST calls",
                 "POST calls/takeover-leg/actions/bridge",
                 $"POST calls/{Supervisor}/actions/hangup",
@@ -318,6 +319,7 @@ public sealed class TelnyxPhoneCallMonitoringTests
                 $"PUT calls/{NumberLeg}/actions/client_state_update",
                 $"GET calls/{AgentLeg}",
                 $"POST calls/{AgentLeg}/actions/hangup",
+                "PUT calls/takeover-leg/actions/client_state_update",
             ],
             api.Commands);
         Assert.Contains(AgentLeg, api.HungUp);

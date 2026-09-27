@@ -108,10 +108,67 @@ public sealed partial class TelnyxContactCenterVoiceProvider : IContactCenterVoi
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        // The agent's leg carries what makes the call a keypad call -- the number, the caller id, the leg it is bridged
+        // to -- and is gone once the takeover releases it, so it is read first.
+        var agentLegId = request.AgentLegId?.Trim();
+        var agentStatus = string.IsNullOrEmpty(agentLegId) ? null : await _apiClient.GetCallStatusAsync(agentLegId, cancellationToken);
+        TelnyxOutboundBridgeState agentState = null;
+        var hasAgentState = agentStatus?.Succeeded == true &&
+            TelnyxOutboundBridgeState.TryParseEncoded(agentStatus.ClientState, out agentState);
+
         // A number dialed from the keypad runs like a Contact Center call, and is taken over the same way: the number's leg
         // is handed to the leg the supervisor takes it on, so the number hanging up ends the supervisor's call rather than
         // leaving them alone.
-        return await TakeOverAsync(request, cancellationToken);
+        var result = await TakeOverAsync(request, cancellationToken);
+
+        if (result?.Succeeded != true || string.IsNullOrWhiteSpace(result.ProviderLegId))
+        {
+            return result;
+        }
+
+        // Live, the supervisor who took a keypad call over had it only as a monitor leg: nothing on their phone to mute,
+        // hold, dial digits on or hang up. The leg becomes the agent's keypad leg, bridged to the number, so it is the
+        // supervisor's own call from here: its events are the call's, hanging it up releases the number, and digits
+        // reach the number.
+        var takeOverLegId = result.ProviderLegId.Trim();
+        var keypadState = hasAgentState && agentState.Intent == TelnyxOutboundBridgeState.AgentLegIntent
+            ? agentState
+            : new TelnyxOutboundBridgeState { Intent = TelnyxOutboundBridgeState.AgentLegIntent };
+
+        keypadState.PeerCallControlId = request.ProviderCallId?.Trim();
+        keypadState.PeerAnswered = true;
+        keypadState.TransferOfCallControlId = agentLegId;
+        keypadState.Detached = null;
+
+        var updated = await _apiClient.UpdateClientStateAsync(takeOverLegId, keypadState.ToClientStateJson(), cancellationToken);
+
+        if (!updated.Succeeded)
+        {
+            _logger.LogWarning(
+                "Telnyx returned {StatusCode} making takeover leg '{TakeOverLegId}' the supervisor's own call on number leg '{NumberLegId}'; it stays a monitor leg. Response: {Response}",
+                updated.StatusCode,
+                takeOverLegId.SanitizeLogValue(),
+                request.ProviderCallId.SanitizeLogValue(),
+                updated.ErrorBody.SanitizeLogValue());
+
+            return result;
+        }
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Takeover leg '{TakeOverLegId}' is now supervisor '{SupervisorUserId}''s own call on number leg '{NumberLegId}' (was agent leg '{AgentLegId}').",
+                takeOverLegId.SanitizeLogValue(),
+                request.SupervisorId.SanitizeLogValue(),
+                request.ProviderCallId.SanitizeLogValue(),
+                agentLegId.SanitizeLogValue());
+        }
+
+        // Tells the platform the leg is an ordinary call now, so it is recorded as the supervisor's.
+        result.Metadata ??= new Dictionary<string, string>(StringComparer.Ordinal);
+        result.Metadata[ContactCenterPhoneCallMonitoringTarget.TakeOverLegIsOwnCallMetadataKey] = "true";
+
+        return result;
     }
 
     /// <inheritdoc/>

@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
+using OrchardCore;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -109,6 +110,62 @@ public sealed partial class ContactCenterPhoneCallSupervisionService : ISupervis
                     callId.SanitizeLogValue(),
                     engagement.SupervisorUserId.SanitizeLogValue());
             }
+        }
+    }
+
+    // Records the call a supervisor took over, on the leg they took it on, as a call of their own: the same party, the same
+    // direction, answered. Their soft phone lists it, and the leg's events keep it current. Returns whether it was recorded.
+    private async Task<bool> RecordSupervisorsCallAsync(PhoneCallEngagement engagement, string takeOverLegId)
+    {
+        if (_telephonyInteractions is null || string.IsNullOrWhiteSpace(takeOverLegId))
+        {
+            return false;
+        }
+
+        try
+        {
+            var agentsCall = await _telephonyInteractions.FindByCallIdAsync(engagement.MonitoredUserId, engagement.CallId, CancellationToken.None);
+            var supervisor = await _agentProfileManager.FindByUserIdAsync(engagement.SupervisorUserId, CancellationToken.None);
+
+            await _telephonyInteractions.CreateAsync(new TelephonyInteraction
+            {
+                InteractionId = IdGenerator.GenerateId(),
+                CallId = takeOverLegId,
+                ProviderName = engagement.ProviderName ?? agentsCall?.ProviderName,
+                UserId = engagement.SupervisorUserId,
+                UserName = supervisor?.UserName ?? supervisor?.DisplayName,
+                From = agentsCall?.From,
+                To = agentsCall?.To,
+                Direction = agentsCall?.Direction ?? CallDirection.Outbound,
+                IsExtension = agentsCall?.IsExtension ?? false,
+                ExtensionNumber = agentsCall?.ExtensionNumber,
+                Outcome = CallOutcome.InProgress,
+                StartedUtc = _clock.UtcNow,
+                AwaitingAnswer = false,
+            }, CancellationToken.None);
+
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Recorded the phone call '{CallId}' supervisor '{SupervisorUserId}' took over from user '{MonitoredUserId}' as their own call on leg '{TakeOverLegId}'.",
+                    engagement.CallId.SanitizeLogValue(),
+                    engagement.SupervisorUserId.SanitizeLogValue(),
+                    engagement.MonitoredUserId.SanitizeLogValue(),
+                    takeOverLegId.SanitizeLogValue());
+            }
+
+            return true;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // The call is the supervisor's on the provider either way; without the record their phone only shows the banner.
+            _logger.LogError(
+                ex,
+                "The phone call '{CallId}' supervisor '{SupervisorUserId}' took over could not be recorded as theirs; their soft phone will not list it.",
+                engagement.CallId.SanitizeLogValue(),
+                engagement.SupervisorUserId.SanitizeLogValue());
+
+            return false;
         }
     }
 

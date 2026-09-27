@@ -1030,6 +1030,16 @@
     }
     return '';
   }
+
+  // Whether a capture that failed on the agent's chosen microphone is taken again on the default one: the chosen device
+  // is simply not there (a Bluetooth headset switched off or out of range). Live (2026-09-26), a supervisor's headset
+  // dropped, the phone could not capture it, gave up registering and waited for a Retry click while the computer's own
+  // microphone sat unused. A permission refusal is not a missing device and is never worked around.
+  function shouldFallBackToDefaultMicrophone(error, selectedDeviceId) {
+    var name = error && error.name || '';
+    return !!selectedDeviceId && (name === 'OverconstrainedError' || name === 'NotFoundError' || name === 'DevicesNotFoundError');
+  }
+  softPhone.shouldFallBackToDefaultMicrophone = shouldFallBackToDefaultMicrophone;
   softPhone.isVirtualAudioDevice = isVirtualAudioDevice;
   softPhone.resolveDeviceLabel = resolveDeviceLabel;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
@@ -6875,6 +6885,7 @@
   var connectedAtFor = softPhoneModules.connectedAtFor;
   var formatElapsed = softPhoneModules.formatElapsed;
   var isVirtualAudioDevice = softPhoneModules.isVirtualAudioDevice;
+  var shouldFallBackToDefaultMicrophone = softPhoneModules.shouldFallBackToDefaultMicrophone;
   var resolveDeviceLabel = softPhoneModules.resolveDeviceLabel;
   var durationMeta = softPhoneModules.durationMeta;
   var clampBoostDb = softPhoneModules.clampBoostDb;
@@ -8494,6 +8505,30 @@
               call.unmuteAudio();
             }
           } catch (error) {/* best effort */}
+        },
+        // The supervisor took the call over on this leg, and it is theirs now: it leaves the monitor legs and is
+        // noted as the leg of a call the platform tracks, so the server's reports about it drive it -- mute,
+        // hold, digits, hang-up -- like any other call. Returns whether the leg was still up to take.
+        promote: function () {
+          var index = monitorCalls.indexOf(call);
+          if (index >= 0) {
+            monitorCalls.splice(index, 1);
+          }
+          if (disposed || isTelnyxTerminalState(call.state)) {
+            return false;
+          }
+          if (!currentCall) {
+            currentCall = call;
+          }
+          notePlatformLeg(legs, call);
+
+          // It is already connected, so none of what a call's connecting starts has run for it.
+          if (call === currentCall && call.state === 'active') {
+            ensureRemotePlayback(call);
+            applyPlayoutDelayToCall(call);
+            startQualitySampler(call);
+          }
+          return true;
         }
       };
     }
@@ -9956,7 +9991,7 @@
       if (hasLiveAudioTrack(localAudioStream) || !navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
         return Promise.resolve(false);
       }
-      return navigator.mediaDevices.getUserMedia(buildAudioConstraints()).then(function (stream) {
+      return captureMicrophone().then(function (stream) {
         commitCapture(stream, createBoostPipeline(stream, micBoostDb));
         watchLocalAudioTrack();
         reportDiagnostic('warning', 'microphone-revived', 'The outgoing microphone track had ended; a fresh capture was taken for the call.', localAudioTrackLabel());
@@ -10036,7 +10071,7 @@
       if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
         return Promise.reject(new Error('Media capture is not available.'));
       }
-      return navigator.mediaDevices.getUserMedia(buildAudioConstraints()).then(function (stream) {
+      return captureMicrophone().then(function (stream) {
         // The new send track: the capture itself, or the boost graph's output when a boost is set.
         var pipeline = createBoostPipeline(stream, micBoostDb);
         var fresh = pipeline.stream.getAudioTracks()[0];
@@ -10088,6 +10123,27 @@
           populateDevicePickers();
           checkForVirtualAudioDevices();
         }, abandon);
+      });
+    }
+
+    // A capture on the agent's microphone selection. A chosen device that is not there any more -- a Bluetooth headset
+    // switched off or out of range -- falls back to the default microphone instead of failing (see
+    // soft-phone/audio-devices.js): a call keeps going on the computer's own microphone, and an idle phone stays
+    // registered rather than waiting for a Retry click.
+    function captureMicrophone() {
+      return navigator.mediaDevices.getUserMedia(buildAudioConstraints()).catch(function (error) {
+        if (!shouldFallBackToDefaultMicrophone(error, selectedInputDeviceId)) {
+          throw error;
+        }
+        var missingDeviceId = selectedInputDeviceId;
+        selectedInputDeviceId = null;
+        persistDeviceSelection();
+        return navigator.mediaDevices.getUserMedia(buildAudioConstraints()).then(function (stream) {
+          var track = stream.getAudioTracks()[0];
+          reportDiagnostic('warning', 'microphone-fallback', 'The selected microphone is not connected (' + (error && error.name || 'error') + '); the default microphone is used instead.', (track && track.label || 'default') + ' in place of ' + missingDeviceId);
+          populateDevicePickers();
+          return stream;
+        });
       });
     }
 
@@ -10680,7 +10736,7 @@
           throw new Error('The registration was given up on.');
         }
         stage = 'microphone';
-        return navigator.mediaDevices.getUserMedia(buildAudioConstraints()).catch(function (mediaError) {
+        return captureMicrophone().catch(function (mediaError) {
           // Turn a permission/device rejection into an actionable, categorized error (item 9).
           throw categorizeMicError(mediaError);
         }).then(function (stream) {
@@ -10817,8 +10873,12 @@
         // Until now a failed or stalled registration left no trace but the browser console: the server only saw
         // a phone that asked for a credential and went quiet, and the platform went on ringing the one it had
         // registered before. Said, and tried again shortly rather than at the next heartbeat.
-        reportDiagnostic('warning', error && error.registrationTimedOut ? 'registration-timeout' : 'registration-failed', (error && error.message || String(error)) + ' It is tried again shortly.', stage);
-        scheduleRegistrationRetry();
+        // A blocked or missing microphone fails every attempt the same way: the agent's Retry is the way back.
+        var retrying = !micPermissionState;
+        reportDiagnostic('warning', error && error.registrationTimedOut ? 'registration-timeout' : 'registration-failed', (error && error.message || String(error)) + (retrying ? ' It is tried again shortly.' : ' It is tried again once the agent clicks Retry.'), stage);
+        if (retrying) {
+          scheduleRegistrationRetry();
+        }
         throw error;
       }).finally(function () {
         browserAudioPromise = null;
@@ -11712,6 +11772,25 @@
       if (leg && leg.controller) {
         Promise.resolve(leg.controller.hangup()).catch(function () {});
       }
+    }
+
+    // The supervisor took the call over on the leg held for `token`: it becomes a call of this phone's own, listed and
+    // muted, held and hung up like any other. Live, a supervisor who took a call over had only a banner for it.
+    // Returns whether the leg was taken.
+    function promoteMonitorLeg(token) {
+      var leg = token ? monitorLegs[token] : null;
+      if (!leg || !leg.controller || typeof leg.controller.promote !== 'function') {
+        reportDiagnostic('warning', 'monitor-leg-promote-missed', 'The call the supervisor took over is not held by this phone, so it could not be listed.', token || '');
+        return false;
+      }
+      delete monitorLegs[token];
+
+      // No monitor leg talks any more: the microphone follows the phone's calls, this one included.
+      matchMicrophoneToMonitorLegs();
+      var promoted = !!leg.controller.promote();
+      reportDiagnostic(promoted ? 'info' : 'warning', promoted ? 'monitor-leg-promoted' : 'monitor-leg-promote-failed', promoted ? 'The call the supervisor took over is a call of this phone now.' : 'The leg the supervisor took the call over on had already ended.', leg.legId || '');
+      refreshActiveCalls().catch(function () {});
+      return promoted;
     }
     function onMonitorLeg(listener) {
       if (typeof listener === 'function') {
@@ -15760,6 +15839,7 @@
       armMonitorLeg: armMonitorLeg,
       disarmMonitorLeg: disarmMonitorLeg,
       hangupMonitorLeg: hangupMonitorLeg,
+      promoteMonitorLeg: promoteMonitorLeg,
       setMonitorLegMode: setMonitorLegMode,
       onMonitorLeg: onMonitorLeg,
       // Answers (accepted) or hangs up (not) the leg held for an offer; returns whether a held leg was answered.

@@ -164,7 +164,11 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
             eventType == ContactCenterConstants.Events.RecordingResumed ||
             eventType == ContactCenterConstants.Events.RecordingStopped ||
             eventType == ContactCenterConstants.Events.CallEnded ||
-            eventType == ContactCenterConstants.Events.CallSentToVoicemail;
+            eventType == ContactCenterConstants.Events.CallSentToVoicemail ||
+
+            // The call is the supervisor's once they take it over (the session names them as its agent): live, nothing
+            // put it on their soft phone, which showed only a banner with nothing to mute, hold or hang up.
+            eventType == ContactCenterConstants.Events.SupervisorTookOver;
     }
 
     private static string ResolveInteractionId(InteractionEvent interactionEvent)

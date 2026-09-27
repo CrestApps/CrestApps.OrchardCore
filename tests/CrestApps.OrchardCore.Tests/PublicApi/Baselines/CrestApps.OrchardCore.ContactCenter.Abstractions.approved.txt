@@ -658,6 +658,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
     public sealed class ContactCenterPhoneCallMonitoringTarget
     {
         public const string ConferenceMetadataKey = "conferenceName";
+        public const string TakeOverLegIsOwnCallMetadataKey = "takeOverLegIsOwnCall";
         public ContactCenterPhoneCallMonitoringTarget() { }
         public string AgentLegId { get; set; }
         public bool CanTakeOver { get; set; }

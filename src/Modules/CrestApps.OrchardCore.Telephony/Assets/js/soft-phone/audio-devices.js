@@ -71,6 +71,18 @@
         return '';
     }
 
+    // Whether a capture that failed on the agent's chosen microphone is taken again on the default one: the chosen device
+    // is simply not there (a Bluetooth headset switched off or out of range). Live (2026-09-26), a supervisor's headset
+    // dropped, the phone could not capture it, gave up registering and waited for a Retry click while the computer's own
+    // microphone sat unused. A permission refusal is not a missing device and is never worked around.
+    function shouldFallBackToDefaultMicrophone(error, selectedDeviceId) {
+        var name = (error && error.name) || '';
+
+        return !!selectedDeviceId &&
+            (name === 'OverconstrainedError' || name === 'NotFoundError' || name === 'DevicesNotFoundError');
+    }
+
+    softPhone.shouldFallBackToDefaultMicrophone = shouldFallBackToDefaultMicrophone;
     softPhone.isVirtualAudioDevice = isVirtualAudioDevice;
     softPhone.resolveDeviceLabel = resolveDeviceLabel;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
