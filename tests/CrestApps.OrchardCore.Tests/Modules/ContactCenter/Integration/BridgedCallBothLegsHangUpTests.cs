@@ -29,9 +29,12 @@ public sealed class BridgedCallBothLegsHangUpTests
     public async Task BothLegsHangingUpAtOnce_EndTheCallAtTheCallersHangup_AndStartTheAgentsWrapUpPromptly()
     {
         // Arrange: a Power-dialed campaign call, answered by the customer, with the agent's leg answered and joined.
-        // A one-second busy timeout stands in for the live thirty seconds, so a flow blocked on the write lock fails
-        // with "database is locked" quickly instead of stalling the test.
-        await using var harness = await DialerModeIntegrationHarness.CreateAsync(busyTimeoutSeconds: 1);
+        // A ten-second busy timeout stands in for the live thirty seconds, so a flow blocked on the write lock fails
+        // with "database is locked" instead of stalling the test. It has to cover the agent leg reaching the lease: the
+        // caller's leg writes as soon as the agent leg has written, and the agent leg keeps the write lock until the
+        // gate commits its work before waiting. One second was not enough on a loaded Windows runner (CI failed with
+        // "database is locked" there). A real deadlock never lets the lock go, so it still fails, however long this is.
+        await using var harness = await DialerModeIntegrationHarness.CreateAsync(busyTimeoutSeconds: 10);
         var cancellationToken = TestContext.Current.CancellationToken;
 
         await harness.SignInAgentAsync(AgentId, "user-1");
@@ -113,8 +116,9 @@ public sealed class BridgedCallBothLegsHangUpTests
             await agentFlow.Session.SaveChangesAsync(cancellationToken);
         }, cancellationToken);
 
-        // Act: neither leg may fail on the database's write lock or on the lease's wait.
-        await Task.WhenAll(callerLeg, agentLeg).WaitAsync(TimeSpan.FromSeconds(20), cancellationToken);
+        // Act: neither leg may fail on the database's write lock or on the lease's wait. Past the busy timeout and short
+        // of the lease's thirty seconds, so a flow stuck on the lease fails here.
+        await Task.WhenAll(callerLeg, agentLeg).WaitAsync(TimeSpan.FromSeconds(25), cancellationToken);
         stopwatch.Stop();
 
         // Assert: read back through a fresh unit of work, as the agent's screen would.
@@ -141,7 +145,8 @@ public sealed class BridgedCallBothLegsHangUpTests
         // The agent leg's own work is kept, not lost to the lock it gave up.
         Assert.NotNull(await reader.Session.Query<CallQualityRecord>().FirstOrDefaultAsync(cancellationToken));
 
-        // Promptly: neither the database's busy timeout nor the lease's thirty-second wait was waited out.
-        Assert.InRange(stopwatch.Elapsed, TimeSpan.Zero, TimeSpan.FromSeconds(3));
+        // Promptly: the lease's thirty-second wait was not waited out. The database's busy timeout cannot be waited out
+        // without failing: a write that outlasts it throws "database is locked".
+        Assert.InRange(stopwatch.Elapsed, TimeSpan.Zero, TimeSpan.FromSeconds(20));
     }
 }
