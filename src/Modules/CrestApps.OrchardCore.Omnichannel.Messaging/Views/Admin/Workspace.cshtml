@@ -27,6 +27,7 @@
      data-conversation-id="@thread?.Conversation.ItemId"
      data-customer-key="@thread?.CustomerKey"
      data-messages-url="@(thread is null ? null : Url.Action("ThreadMessages", new { id = thread.Conversation.ItemId }))"
+     data-read-url="@(thread is null ? null : Url.Action("MarkRead", new { id = thread.Conversation.ItemId }))"
      data-new-message-text="@T["New message"]"
      data-view-text="@T["Open conversation"]"
      data-agent-id="@inbox.CurrentAgentId"

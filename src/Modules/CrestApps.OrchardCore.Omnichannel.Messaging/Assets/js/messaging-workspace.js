@@ -24,6 +24,7 @@
     var hubUrl = workspace.getAttribute('data-hub-url');
     var inboxUrl = workspace.getAttribute('data-inbox-url');
     var messagesUrl = workspace.getAttribute('data-messages-url');
+    var readUrl = workspace.getAttribute('data-read-url');
     var conversationUrlTemplate = workspace.getAttribute('data-conversation-url');
     var availabilityUrl = workspace.getAttribute('data-availability-url');
     var newMessageText = workspace.getAttribute('data-new-message-text');
@@ -157,7 +158,25 @@
     function clearUnseenWhenVisible() {
         if (unseen > 0 && !document.hidden && isPinnedToBottom()) {
             setActiveTabBadge(0);
+            markRead();
         }
+    }
+
+    // The messages that arrived while the agent was away were put on screen but left unread, so the menu could count
+    // them; now they are in front of the agent, the conversation is read.
+    function markRead() {
+        if (!readUrl) { return; }
+
+        fetch(readUrl, {
+            method: 'POST',
+            headers: { 'RequestVerificationToken': antiforgeryToken(), 'X-Requested-With': 'XMLHttpRequest' },
+            credentials: 'same-origin',
+        })
+            .then(function () {
+                refreshInbox();
+                attentionBadge.schedule();
+            })
+            .catch(function () { /* opening the conversation again reads it */ });
     }
 
     // ---- The open conversation ---------------------------------------------------------------------------------
@@ -186,7 +205,11 @@
         pulling = true;
 
         var after = messaging.maxTicks(bubblesOnScreen().map(function (bubble) { return bubble.ticks; }));
-        var url = messagesUrl + (messagesUrl.indexOf('?') >= 0 ? '&' : '?') + 'afterTicks=' + after;
+
+        // Only a thread in front of the agent is read by the poll. One in a background tab, or scrolled up, keeps its
+        // new messages unread until the agent is back at the bottom of it.
+        var seen = messaging.isThreadInView(document.hidden, isPinnedToBottom());
+        var url = messagesUrl + (messagesUrl.indexOf('?') >= 0 ? '&' : '?') + 'afterTicks=' + after + '&seen=' + seen;
 
         fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
             .then(function (response) { return response.ok ? response.text() : ''; })
@@ -218,14 +241,14 @@
 
                 if (pinned) { scrollToBottom(); }
 
-                var added = messaging.unseenInboundCount(fresh, pinned && !document.hidden);
+                var added = messaging.unseenInboundCount(fresh, seen);
 
                 if (added > 0) {
                     setActiveTabBadge(unseen + added);
                 }
 
                 // The poll found messages the push did not announce, so the list is stale too, and reading them here
-                // marked the conversation read, which the menu count reflects.
+                // may have marked the conversation read, which the menu count reflects.
                 refreshInbox();
                 attentionBadge.schedule();
             })

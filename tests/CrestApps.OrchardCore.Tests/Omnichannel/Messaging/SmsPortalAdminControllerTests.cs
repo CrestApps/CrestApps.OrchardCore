@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.ContentManagement;
@@ -351,6 +352,7 @@ public sealed class SmsPortalAdminControllerTests
             new MessagingContactSearch(channels, Mock.Of<IOmnichannelContactTypeProvider>(), Mock.Of<IContentManager>(), Mock.Of<YesSqlSession>()),
             authorizationService,
             Mock.Of<INotifier>(),
+            NullLogger<AdminController>.Instance,
             new NullHtmlLocalizer(),
             new NullStringLocalizer<AdminController>());
 

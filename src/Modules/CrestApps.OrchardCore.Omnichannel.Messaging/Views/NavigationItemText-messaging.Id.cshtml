@@ -2,7 +2,3 @@
     <i class="fa-solid fa-comments"></i>
 </span>
 <span class="title">@Model.Text</span>
-@* The number of conversations waiting on the user. It is filled in by the page's messaging script once the page has
-   loaded, and kept current as messages arrive, so the menu itself never waits on a count and stays the same for
-   everyone who sees it. It stays hidden for anyone without the workspace, whose pages carry no such script. *@
-<span class="badge rounded-pill text-bg-danger ms-1 d-none" title="@T["Conversations waiting for you"]" data-messaging-attention-badge></span>

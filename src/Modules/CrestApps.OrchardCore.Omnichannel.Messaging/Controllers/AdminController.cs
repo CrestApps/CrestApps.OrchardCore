@@ -1,4 +1,6 @@
+using System.Security.Claims;
 using CrestApps.Core;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
@@ -12,6 +14,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement.Notify;
 
@@ -37,6 +40,7 @@ public sealed class AdminController : Controller
     private readonly MessagingContactSearch _contactSearch;
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
+    private readonly ILogger _logger;
 
     private readonly IHtmlLocalizer H;
     private readonly IStringLocalizer S;
@@ -54,6 +58,7 @@ public sealed class AdminController : Controller
         MessagingContactSearch contactSearch,
         IAuthorizationService authorizationService,
         INotifier notifier,
+        ILogger<AdminController> logger,
         IHtmlLocalizer<AdminController> htmlLocalizer,
         IStringLocalizer<AdminController> stringLocalizer)
     {
@@ -69,6 +74,7 @@ public sealed class AdminController : Controller
         _contactSearch = contactSearch;
         _authorizationService = authorizationService;
         _notifier = notifier;
+        _logger = logger;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -321,9 +327,11 @@ public sealed class AdminController : Controller
 
     // Returns the message bubbles added since a client-supplied high-water mark (UTC ticks), rendered with the same
     // partial the full thread uses, so the open conversation can append new messages live over SignalR (and a light
-    // fallback poll) without a page refresh.
+    // fallback poll) without a page refresh. The page says whether the agent can see the thread: a workspace left open in
+    // a background tab keeps polling, and reading for it would clear every new message before anyone saw it, leaving
+    // nothing for the menu count to show.
     [Admin("messaging/conversation/{id}/messages", "MessagingConversationMessages")]
-    public async Task<IActionResult> ThreadMessages(string id, long afterTicks)
+    public async Task<IActionResult> ThreadMessages(string id, long afterTicks, bool seen = false)
     {
         if (!await _authorizationService.AuthorizeAsync(User, MessagingPermissions.UseMessagingWorkspace))
         {
@@ -348,8 +356,8 @@ public sealed class AdminController : Controller
 
         var bubbles = await _workspaceBuilder.BuildBubblesAfterAsync(conversation, after, HttpContext.RequestAborted);
 
-        // A message arriving in the open thread should not leave it flagged unread for the viewing agent.
-        if (bubbles.Count > 0 && (conversation.UnreadCount != 0 || !conversation.IsRead))
+        // A message arriving in the open thread, in front of the agent, should not leave it flagged unread.
+        if (seen && bubbles.Count > 0 && (conversation.UnreadCount != 0 || !conversation.IsRead))
         {
             conversation.IsRead = true;
             conversation.UnreadCount = 0;
@@ -357,6 +365,44 @@ public sealed class AdminController : Controller
         }
 
         return PartialView("_MessageBubbles", bubbles);
+    }
+
+    // Marks the open conversation read once the agent comes back to it: the messages that arrived while the page was in
+    // the background were shown then, but only read now.
+    [HttpPost]
+    [Admin("messaging/conversation/{id}/read", "MessagingConversationRead")]
+    public async Task<IActionResult> MarkRead(string id)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, MessagingPermissions.UseMessagingWorkspace))
+        {
+            return Forbid();
+        }
+
+        var conversation = await _conversationStore.FindByIdAsync(id);
+
+        if (conversation is null)
+        {
+            return NotFound();
+        }
+
+        if (!await _workspaceBuilder.AuthorizeAsync(User, conversation, ConversationOperation.View))
+        {
+            return Forbid();
+        }
+
+        if (conversation.UnreadCount != 0 || !conversation.IsRead)
+        {
+            conversation.IsRead = true;
+            conversation.UnreadCount = 0;
+            await _conversationStore.UpdateAsync(conversation);
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("Messaging conversation {ConversationId} was read when the agent came back to it.", conversation.ItemId.SanitizeLogValue());
+            }
+        }
+
+        return NoContent();
     }
 
     [HttpPost]
@@ -510,7 +556,7 @@ public sealed class AdminController : Controller
             return refusal;
         }
 
-        return Json(await _transferTargets.SearchAgentsAsync(conversation, query, HttpContext.RequestAborted));
+        return Json(await _transferTargets.SearchAgentsAsync(conversation, query, User.FindFirstValue(ClaimTypes.NameIdentifier), HttpContext.RequestAborted));
     }
 
     // The queues whose shared pool the open conversation can be sent back to, for the same picker.

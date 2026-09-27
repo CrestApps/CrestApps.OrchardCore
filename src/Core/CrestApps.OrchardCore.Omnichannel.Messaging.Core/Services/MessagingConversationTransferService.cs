@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
@@ -125,6 +126,16 @@ public sealed class MessagingConversationTransferService : IMessagingConversatio
                 return MessagingTransferResult.Failed("The person was not found.");
             }
 
+            if (IsActingAgent(request, target))
+            {
+                _logger.LogWarning(
+                    "Refused to transfer messaging conversation {ConversationId} to agent {AgentId}: that is the person transferring it.",
+                    conversation.ItemId.SanitizeLogValue(),
+                    target.ItemId.SanitizeLogValue());
+
+                return MessagingTransferResult.Failed("You cannot transfer a conversation to yourself.");
+            }
+
             if (string.Equals(previousAgentId, target.ItemId, StringComparison.OrdinalIgnoreCase))
             {
                 return MessagingTransferResult.Failed("The conversation is already with that person.");
@@ -205,6 +216,21 @@ public sealed class MessagingConversationTransferService : IMessagingConversatio
             Conversation = conversation,
             Event = entry,
         };
+    }
+
+    // The person transferring, by their agent profile or, when the caller passed none, by the signed-in user behind it.
+    private static bool IsActingAgent(MessagingTransferRequest request, AgentProfile target)
+    {
+        if (!string.IsNullOrEmpty(request.ActingAgentId) &&
+            string.Equals(request.ActingAgentId, target.ItemId, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var userId = request.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        return !string.IsNullOrEmpty(userId) &&
+            string.Equals(userId, target.UserId, StringComparison.OrdinalIgnoreCase);
     }
 
     // The same membership rule the conversation authorization applies, so a recipient kept on the queue can open it.

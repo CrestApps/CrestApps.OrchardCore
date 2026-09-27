@@ -54,13 +54,15 @@ public sealed class MessagingTransferTargets
     public bool SupportsQueues => _queueManager is not null;
 
     /// <summary>
-    /// Lists the people the conversation can go to, by name, leaving out whoever holds it now.
+    /// Lists the people the conversation can go to, by name, leaving out whoever holds it now and the person asking,
+    /// who cannot transfer a conversation to themselves.
     /// </summary>
     /// <param name="conversation">The conversation being transferred.</param>
     /// <param name="query">Text the name must contain, or empty for everybody.</param>
+    /// <param name="actingUserId">The signed-in user choosing where to send it, or empty when unknown.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The options, ordered by name.</returns>
-    public async Task<IReadOnlyList<MessagingTransferTarget>> SearchAgentsAsync(MessagingConversation conversation, string query, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<MessagingTransferTarget>> SearchAgentsAsync(MessagingConversation conversation, string query, string actingUserId, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(conversation);
 
@@ -72,7 +74,8 @@ public sealed class MessagingTransferTargets
         {
             if (agent is null ||
                 string.IsNullOrEmpty(agent.ItemId) ||
-                string.Equals(agent.ItemId, holderId, StringComparison.OrdinalIgnoreCase))
+                string.Equals(agent.ItemId, holderId, StringComparison.OrdinalIgnoreCase) ||
+                (!string.IsNullOrEmpty(actingUserId) && string.Equals(agent.UserId, actingUserId, StringComparison.OrdinalIgnoreCase)))
             {
                 continue;
             }

@@ -622,3 +622,63 @@ describe('JSON pasted into the editor', () => {
         expect(ivr.formatJson('{ nope')).toBe('{ nope');
     });
 });
+
+// "Go to another menu" is how the editor shows a key that jumps to a menu drawn somewhere else, such as back to the
+// main menu. It is not a kind of its own: it is stored as a SubMenu, so the server reads it like any other.
+describe('going to another menu', () => {
+    const node = (id, options) => ({ NodeId: id, Prompt: 'Hi', Options: options });
+    const key = (digit, kind, target) => ({ Digit: digit, Action: { Kind: kind, TargetId: target ?? null } });
+
+    it('shows a key that opens its own submenu as a submenu', () => {
+        expect(ivr.editorKindOf({ kind: 'SubMenu', targetId: 'billing' }, true)).toBe('SubMenu');
+    });
+
+    it('shows a key that jumps to a menu drawn elsewhere as going to another menu', () => {
+        expect(ivr.editorKindOf({ kind: 'SubMenu', targetId: 'main' }, false)).toBe(ivr.GO_TO_MENU);
+    });
+
+    it('shows every other kind as itself, and no action as none', () => {
+        expect(ivr.editorKindOf({ kind: 'Voicemail', targetId: '' }, false)).toBe('Voicemail');
+        expect(ivr.editorKindOf(null, false)).toBe('');
+    });
+
+    it('starts a key sent to another menu as a submenu waiting for the menu to be chosen', () => {
+        expect(ivr.actionForEditorKind(ivr.GO_TO_MENU)).toEqual({ kind: 'SubMenu', targetId: '' });
+        expect(ivr.actionForEditorKind('Voicemail')).toEqual({ kind: 'Voicemail', targetId: '' });
+    });
+
+    it('is never stored as a kind of its own', () => {
+        expect(ivr.isKnownKind(ivr.GO_TO_MENU)).toBe(false);
+
+        const model = ivr.fromFlow({
+            RootNodeId: 'main',
+            MaxRetries: 3,
+            Nodes: [node('main', [key('2', 'SubMenu', 'billing')]), node('billing', [])],
+        });
+
+        const jump = ivr.actionForEditorKind(ivr.GO_TO_MENU);
+        jump.targetId = 'main';
+        model.nodes[1].options.push({ digit: '9', action: jump });
+
+        const stored = ivr.toFlow(model).Nodes[1].Options[0];
+
+        expect(stored.Digit).toBe('9');
+        expect(stored.Action).toEqual({ Kind: 'SubMenu', TargetId: 'main' });
+    });
+
+    it('is what a key back to the main menu reads as in the menu tree', () => {
+        const model = ivr.fromFlow({
+            RootNodeId: 'main',
+            MaxRetries: 3,
+            Nodes: [
+                node('main', [key('2', 'SubMenu', 'billing')]),
+                node('billing', [key('9', 'SubMenu', 'main')]),
+            ],
+        });
+        const tree = ivr.buildMenuTree(model);
+        const kindOf = (menu, option) => ivr.editorKindOf(model.nodes[menu].options[option].action, tree.childOf(menu, option) !== undefined);
+
+        expect(kindOf(0, 0)).toBe('SubMenu');
+        expect(kindOf(1, 0)).toBe(ivr.GO_TO_MENU);
+    });
+});

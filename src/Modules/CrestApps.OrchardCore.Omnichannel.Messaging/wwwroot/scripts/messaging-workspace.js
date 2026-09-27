@@ -120,6 +120,13 @@
     }).length;
   }
 
+  // Whether the open thread is in front of the agent: the page is showing and they are at the bottom of the thread,
+  // where a new message lands. Only then does reading the thread mark it read; otherwise the new messages wait,
+  // counted on the menu, until the agent comes back to them.
+  function isThreadInView(pageHidden, pinnedToBottom) {
+    return !pageHidden && !!pinnedToBottom;
+  }
+
   // A link built from page data only ever leads back into this site over http(s), returned as a path, so a crafted
   // value such as a javascript: URL or another site's address can never become a clickable link.
   function sameOriginUrl(value, baseUrl) {
@@ -216,6 +223,7 @@
   messaging.formatText = formatText;
   messaging.transferTargetInputName = transferTargetInputName;
   messaging.unseenInboundCount = unseenInboundCount;
+  messaging.isThreadInView = isThreadInView;
   messaging.sameOriginUrl = sameOriginUrl;
   messaging.maxTicks = maxTicks;
   messaging.classifyInbound = classifyInbound;
@@ -224,7 +232,7 @@
   messaging.selectNewBubbles = selectNewBubbles;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*
- * The count on the Messaging admin menu item: the conversations waiting on the user. The admin menu is on every page,
+ * The count on the Messaging > Inbox admin menu item: the unread conversations waiting on the user. The admin menu is on every page,
  * the workspace included, so the workspace and the notifications every other admin page carries both keep it current
  * through this one helper. The number comes from the server, which applies the inbox's own visibility rules, so the
  * page never has to work out what the user may see.
@@ -243,12 +251,35 @@
   // A safety net for a notification that never arrived (a dropped connection, a conversation read on another
   // device), kept slow because every admin page runs it.
   var periodicRefreshMs = 60000;
+
+  // Turns a menu group's icon red while any item under it shows a count, and back once none does, so a collapsed
+  // menu (icons only) still shows there is something waiting. Every count on the admin menu marks itself with
+  // data-admin-menu-attention, whichever module draws it, so this can run after any of them changes.
+  function flagMenuGroups(root) {
+    var scope = root || document;
+    scope.querySelectorAll('[data-admin-menu-attention]').forEach(function (badge) {
+      var item = badge.closest('li');
+      var group = item && item.parentElement ? item.parentElement.closest('li') : null;
+      while (group) {
+        // The group's own label (a figure > figcaption in the admin theme), not one of its items' labels.
+        var header = Array.prototype.find.call(group.querySelectorAll('.item-label'), function (label) {
+          return label.closest('li') === group;
+        });
+        var icon = header ? header.querySelector(':scope > .icon') : null;
+        if (icon) {
+          icon.classList.toggle('text-danger', !!group.querySelector('[data-admin-menu-attention]:not(.d-none)'));
+        }
+        group = group.parentElement ? group.parentElement.closest('li') : null;
+      }
+    });
+  }
   function show(count) {
     var value = Math.floor(Number(count) || 0);
     document.querySelectorAll('[data-messaging-attention-badge]').forEach(function (badge) {
       badge.textContent = value > 99 ? '99+' : value > 0 ? String(value) : '';
       badge.classList.toggle('d-none', value <= 0);
     });
+    flagMenuGroups(document);
   }
 
   // Creates the badge updater for a page.
@@ -317,6 +348,7 @@
     };
   }
   messaging.createAttentionBadge = createAttentionBadge;
+  messaging.flagMenuGroups = flagMenuGroups;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*
  * The messaging workspace page: the customer list, the open customer's conversation and its channel tabs.
@@ -341,6 +373,7 @@
   var hubUrl = workspace.getAttribute('data-hub-url');
   var inboxUrl = workspace.getAttribute('data-inbox-url');
   var messagesUrl = workspace.getAttribute('data-messages-url');
+  var readUrl = workspace.getAttribute('data-read-url');
   var conversationUrlTemplate = workspace.getAttribute('data-conversation-url');
   var availabilityUrl = workspace.getAttribute('data-availability-url');
   var newMessageText = workspace.getAttribute('data-new-message-text');
@@ -466,7 +499,27 @@
   function clearUnseenWhenVisible() {
     if (unseen > 0 && !document.hidden && isPinnedToBottom()) {
       setActiveTabBadge(0);
+      markRead();
     }
+  }
+
+  // The messages that arrived while the agent was away were put on screen but left unread, so the menu could count
+  // them; now they are in front of the agent, the conversation is read.
+  function markRead() {
+    if (!readUrl) {
+      return;
+    }
+    fetch(readUrl, {
+      method: 'POST',
+      headers: {
+        'RequestVerificationToken': antiforgeryToken(),
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      credentials: 'same-origin'
+    }).then(function () {
+      refreshInbox();
+      attentionBadge.schedule();
+    }).catch(function () {/* opening the conversation again reads it */});
   }
 
   // ---- The open conversation ---------------------------------------------------------------------------------
@@ -499,7 +552,11 @@
     var after = messaging.maxTicks(bubblesOnScreen().map(function (bubble) {
       return bubble.ticks;
     }));
-    var url = messagesUrl + (messagesUrl.indexOf('?') >= 0 ? '&' : '?') + 'afterTicks=' + after;
+
+    // Only a thread in front of the agent is read by the poll. One in a background tab, or scrolled up, keeps its
+    // new messages unread until the agent is back at the bottom of it.
+    var seen = messaging.isThreadInView(document.hidden, isPinnedToBottom());
+    var url = messagesUrl + (messagesUrl.indexOf('?') >= 0 ? '&' : '?') + 'afterTicks=' + after + '&seen=' + seen;
     fetch(url, {
       headers: {
         'X-Requested-With': 'XMLHttpRequest'
@@ -538,13 +595,13 @@
       if (pinned) {
         scrollToBottom();
       }
-      var added = messaging.unseenInboundCount(fresh, pinned && !document.hidden);
+      var added = messaging.unseenInboundCount(fresh, seen);
       if (added > 0) {
         setActiveTabBadge(unseen + added);
       }
 
       // The poll found messages the push did not announce, so the list is stale too, and reading them here
-      // marked the conversation read, which the menu count reflects.
+      // may have marked the conversation read, which the menu count reflects.
       refreshInbox();
       attentionBadge.schedule();
     }).catch(function () {/* transient network error; the next poll retries */}).finally(function () {

@@ -118,6 +118,13 @@
         return (bubbles || []).filter(function (bubble) { return bubble && bubble.inbound; }).length;
     }
 
+    // Whether the open thread is in front of the agent: the page is showing and they are at the bottom of the thread,
+    // where a new message lands. Only then does reading the thread mark it read; otherwise the new messages wait,
+    // counted on the menu, until the agent comes back to them.
+    function isThreadInView(pageHidden, pinnedToBottom) {
+        return !pageHidden && !!pinnedToBottom;
+    }
+
     // A link built from page data only ever leads back into this site over http(s), returned as a path, so a crafted
     // value such as a javascript: URL or another site's address can never become a clickable link.
     function sameOriginUrl(value, baseUrl) {
@@ -228,6 +235,7 @@
     messaging.formatText = formatText;
     messaging.transferTargetInputName = transferTargetInputName;
     messaging.unseenInboundCount = unseenInboundCount;
+    messaging.isThreadInView = isThreadInView;
     messaging.sameOriginUrl = sameOriginUrl;
     messaging.maxTicks = maxTicks;
     messaging.classifyInbound = classifyInbound;

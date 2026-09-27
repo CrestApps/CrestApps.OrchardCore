@@ -25,6 +25,7 @@ public sealed class MessagingAdminMenu : AdminNavigationProvider
                 .AddClass("messaging")
                 .Id("messaging")
                 .Add(S["Inbox"], "1", inbox => inbox
+                    .Id("messagingInbox")
                     .Action("Index", "Admin", MessagingConstants.Feature.Workspace)
                     .Permission(MessagingPermissions.UseMessagingWorkspace)
                     .LocalNav())

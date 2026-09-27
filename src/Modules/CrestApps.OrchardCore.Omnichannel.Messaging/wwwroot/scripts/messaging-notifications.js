@@ -120,6 +120,13 @@
     }).length;
   }
 
+  // Whether the open thread is in front of the agent: the page is showing and they are at the bottom of the thread,
+  // where a new message lands. Only then does reading the thread mark it read; otherwise the new messages wait,
+  // counted on the menu, until the agent comes back to them.
+  function isThreadInView(pageHidden, pinnedToBottom) {
+    return !pageHidden && !!pinnedToBottom;
+  }
+
   // A link built from page data only ever leads back into this site over http(s), returned as a path, so a crafted
   // value such as a javascript: URL or another site's address can never become a clickable link.
   function sameOriginUrl(value, baseUrl) {
@@ -216,6 +223,7 @@
   messaging.formatText = formatText;
   messaging.transferTargetInputName = transferTargetInputName;
   messaging.unseenInboundCount = unseenInboundCount;
+  messaging.isThreadInView = isThreadInView;
   messaging.sameOriginUrl = sameOriginUrl;
   messaging.maxTicks = maxTicks;
   messaging.classifyInbound = classifyInbound;
@@ -224,7 +232,7 @@
   messaging.selectNewBubbles = selectNewBubbles;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*
- * The count on the Messaging admin menu item: the conversations waiting on the user. The admin menu is on every page,
+ * The count on the Messaging > Inbox admin menu item: the unread conversations waiting on the user. The admin menu is on every page,
  * the workspace included, so the workspace and the notifications every other admin page carries both keep it current
  * through this one helper. The number comes from the server, which applies the inbox's own visibility rules, so the
  * page never has to work out what the user may see.
@@ -243,12 +251,35 @@
   // A safety net for a notification that never arrived (a dropped connection, a conversation read on another
   // device), kept slow because every admin page runs it.
   var periodicRefreshMs = 60000;
+
+  // Turns a menu group's icon red while any item under it shows a count, and back once none does, so a collapsed
+  // menu (icons only) still shows there is something waiting. Every count on the admin menu marks itself with
+  // data-admin-menu-attention, whichever module draws it, so this can run after any of them changes.
+  function flagMenuGroups(root) {
+    var scope = root || document;
+    scope.querySelectorAll('[data-admin-menu-attention]').forEach(function (badge) {
+      var item = badge.closest('li');
+      var group = item && item.parentElement ? item.parentElement.closest('li') : null;
+      while (group) {
+        // The group's own label (a figure > figcaption in the admin theme), not one of its items' labels.
+        var header = Array.prototype.find.call(group.querySelectorAll('.item-label'), function (label) {
+          return label.closest('li') === group;
+        });
+        var icon = header ? header.querySelector(':scope > .icon') : null;
+        if (icon) {
+          icon.classList.toggle('text-danger', !!group.querySelector('[data-admin-menu-attention]:not(.d-none)'));
+        }
+        group = group.parentElement ? group.parentElement.closest('li') : null;
+      }
+    });
+  }
   function show(count) {
     var value = Math.floor(Number(count) || 0);
     document.querySelectorAll('[data-messaging-attention-badge]').forEach(function (badge) {
       badge.textContent = value > 99 ? '99+' : value > 0 ? String(value) : '';
       badge.classList.toggle('d-none', value <= 0);
     });
+    flagMenuGroups(document);
   }
 
   // Creates the badge updater for a page.
@@ -317,6 +348,7 @@
     };
   }
   messaging.createAttentionBadge = createAttentionBadge;
+  messaging.flagMenuGroups = flagMenuGroups;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*
  * Messaging notifications on every admin page but the workspace: a toast when a customer writes or a conversation is
