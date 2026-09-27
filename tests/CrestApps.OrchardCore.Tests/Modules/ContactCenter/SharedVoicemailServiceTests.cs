@@ -355,59 +355,34 @@ public sealed class SharedVoicemailServiceTests
         Assert.Equal(SharedVoicemailReasons.AlreadyResolved, result.ReasonCode);
     }
 
+    // Live, a call-back was queued as a preview call for the next available member of the queue, so the user who clicked
+    // Call back had to wait for an offer and dial again, and every click became another preview call. Now the user calls
+    // the caller themselves: the message becomes theirs and records who is calling back, and nothing is queued.
     [Fact]
-    public async Task RequestCallbackAsync_QueuesACallbackToTheCallerBackIntoTheMessagesQueue()
+    public async Task RequestCallbackAsync_RecordsWhoIsCallingBack_AndQueuesNothing()
     {
         // Arrange
         var harness = new Harness();
-        var voicemail = NewVoicemail();
-        voicemail.ContactContentItemId = "contact-1";
-        voicemail.ContactContentType = "Contact";
-        harness.Add(voicemail);
-
-        // Act
-        var result = await harness.Service.RequestCallbackAsync(Harness.Principal, "vm-1", TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.True(result.Succeeded);
-        var callback = Assert.Single(harness.Callbacks);
-        Assert.Equal("+15550001000", callback.Destination);
-        Assert.Equal("queue-main", callback.QueueId);
-        Assert.Equal("contact-1", callback.ContactContentItemId);
-        Assert.Equal("Contact", callback.ContactContentType);
-        Assert.Equal(_now, callback.ScheduledUtc);
-        Assert.False(string.IsNullOrEmpty(callback.ItemId));
-        Assert.Same(callback, result.Callback);
-
-        // Asking for the callback is handling the message, so an unclaimed one becomes the user's.
-        Assert.Equal(SharedVoicemailStatus.Claimed, result.Voicemail.Status);
-        Assert.Equal("user-1", result.Voicemail.ClaimedByUserId);
-        Assert.Equal(callback.ItemId, result.Voicemail.CallbackRequestId);
-        Assert.Equal("agent.one", result.Voicemail.CallbackRequestedByUserName);
-        Assert.Equal(_now, result.Voicemail.CallbackRequestedUtc);
-
-        var audit = Assert.Single(harness.Audit.SharedVoicemails);
-        Assert.Equal(ContactCenterConstants.Events.SharedVoicemailCallbackRequested, audit.EventType);
-        Assert.Equal(callback.ItemId, audit.Data.CallbackRequestId);
-    }
-
-    [Fact]
-    public async Task RequestCallbackAsync_WhenCallbacksAreNotEnabled_ChangesNothing()
-    {
-        // Arrange
-        // Without the Outbound Dialer feature the tenant has no callbacks, and scheduling one does nothing.
-        var harness = new Harness(callbacksEnabled: false);
         harness.Add(NewVoicemail());
 
         // Act
         var result = await harness.Service.RequestCallbackAsync(Harness.Principal, "vm-1", TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(SharedVoicemailActionStatus.Unavailable, result.Status);
-        Assert.Equal(SharedVoicemailReasons.CallbacksUnavailable, result.ReasonCode);
-        Assert.Equal(SharedVoicemailStatus.New, harness.Voicemails["vm-1"].Status);
-        Assert.Empty(harness.Updates);
-        Assert.Empty(harness.Audit.SharedVoicemails);
+        Assert.True(result.Succeeded);
+        Assert.Empty(harness.Callbacks);
+        Assert.Null(result.Callback);
+        Assert.Equal("+15550001000", result.Voicemail.CallerNumber);
+
+        // Calling back is handling the message, so an unclaimed one becomes the user's.
+        Assert.Equal(SharedVoicemailStatus.Claimed, result.Voicemail.Status);
+        Assert.Equal("user-1", result.Voicemail.ClaimedByUserId);
+        Assert.Null(result.Voicemail.CallbackRequestId);
+        Assert.Equal("agent.one", result.Voicemail.CallbackRequestedByUserName);
+        Assert.Equal(_now, result.Voicemail.CallbackRequestedUtc);
+
+        var audit = Assert.Single(harness.Audit.SharedVoicemails);
+        Assert.Equal(ContactCenterConstants.Events.SharedVoicemailCallbackRequested, audit.EventType);
     }
 
     [Fact]
@@ -678,7 +653,6 @@ public sealed class SharedVoicemailServiceTests
                 manager.Object,
                 authorization.Object,
                 Audit,
-                callbacks.Object,
                 interactions.Object,
                 [Governance.Object],
                 [MediaStore.Object],

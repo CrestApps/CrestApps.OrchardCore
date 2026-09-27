@@ -3,9 +3,9 @@
 <style asp-name="bootstrap-select"></style>
 <script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
 
-<div class="ocat-limited-wrapper" asp-validation-class-for="TargetType">
+<div class="ocat-wrapper" asp-validation-class-for="TargetType">
     <label asp-for="TargetType" class="ocat-label">@T["Route to"]</label>
-    <div class="ocat-limited">
+    <div class="ocat-end">
         <select asp-for="TargetType" class="form-select" data-entry-point-target-type>
             <option value="@EntryPointTargetType.Queue">@T["Queue"]</option>
             <option value="@EntryPointTargetType.Agent">@T["Specific agent"]</option>
@@ -56,9 +56,9 @@
     </div>
 </div>
 
-<div class="ocat-limited-wrapper" asp-validation-class-for="Priority">
+<div class="ocat-wrapper" asp-validation-class-for="Priority">
     <label asp-for="Priority" class="ocat-label">@T["Priority"]</label>
-    <div class="ocat-limited">
+    <div class="ocat-end">
         <select asp-for="Priority" class="form-select">
             <option value="@InteractionPriority.Lowest">@T["Lowest"]</option>
             <option value="@InteractionPriority.Low">@T["Low"]</option>

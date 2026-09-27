@@ -13,9 +13,9 @@
 </div>
 
 <div data-entry-point-queue-field>
-    <div class="ocat-limited-wrapper" asp-validation-class-for="VoicemailDestination">
+    <div class="ocat-wrapper" asp-validation-class-for="VoicemailDestination">
         <label asp-for="VoicemailDestination" class="ocat-label">@T["Deliver voicemail to"]</label>
-        <div class="ocat-limited">
+        <div class="ocat-end">
             <select asp-for="VoicemailDestination" class="form-select" data-entry-point-voicemail-destination>
                 <option value="@EntryPointVoicemailDestination.AgentInbox">@T["An agent's inbox"]</option>
                 <option value="@EntryPointVoicemailDestination.QueueSharedBox">@T["The queue's shared voicemail box"]</option>

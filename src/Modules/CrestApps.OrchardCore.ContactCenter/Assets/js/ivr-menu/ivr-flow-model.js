@@ -32,6 +32,12 @@
     // The server's default when a flow does not say.
     var DEFAULT_MAX_RETRIES = 3;
 
+    // The editor's name for a key that jumps to a menu drawn somewhere else -- back to the main menu, or across to another
+    // submenu. It is stored as a SubMenu like any key that opens a menu; only where the menu is drawn tells them apart.
+    // Live, the jump was only reachable by choosing "Open a menu", which made a new submenu first, and then picking a
+    // menu from its list, so nobody found it.
+    var GO_TO_MENU = 'GoToMenu';
+
     function isObject(value) {
         return value !== null && typeof value === 'object' && !Array.isArray(value);
     }
@@ -602,6 +608,23 @@
         }
     }
 
+    // What a key's action shows as in the editor: GoToMenu for a key that opens a menu it does not own (one drawn under
+    // another key, a menu not chosen yet, or one that no longer exists), and the stored kind otherwise.
+    //   ownsMenu - whether the menu the key opens is drawn under that very key
+    function editorKindOf(action, ownsMenu) {
+        if (!action || !action.kind) {
+            return '';
+        }
+
+        return action.kind === 'SubMenu' && !ownsMenu ? GO_TO_MENU : action.kind;
+    }
+
+    // The action a key gets when the editor's kind is chosen for it: a jump is a SubMenu waiting for its menu, and every
+    // other kind is itself.
+    function actionForEditorKind(kind) {
+        return kind === GO_TO_MENU ? { kind: 'SubMenu', targetId: '' } : createAction(kind);
+    }
+
     // Changes what an action does. A new kind starts with no target, since a queue id is not a menu name.
     function setActionKind(action, kind) {
         if (action.kind !== kind) {
@@ -789,6 +812,9 @@
     }
 
     ivr.ACTION_KINDS = ACTION_KINDS;
+    ivr.GO_TO_MENU = GO_TO_MENU;
+    ivr.editorKindOf = editorKindOf;
+    ivr.actionForEditorKind = actionForEditorKind;
     ivr.ENUM_ORDER = ENUM_ORDER;
     ivr.TELEPHONE_KEYS = TELEPHONE_KEYS;
     ivr.DEFAULT_MAX_RETRIES = DEFAULT_MAX_RETRIES;

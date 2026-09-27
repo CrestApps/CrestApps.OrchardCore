@@ -320,12 +320,17 @@
             }
 
             if (type === 'menu') {
-                // A key can always be given a new submenu of its own; the fallback only jumps to a menu that exists.
+                // A key that owns its submenu keeps it, or starts a new one; a key going to another menu, and the
+                // fallback, choose among the menus that are there.
                 var isOption = String(field).indexOf('option:') === 0;
 
+                if (isOption && ownChild !== undefined) {
+                    return select(field, withUnknown(menuOptions(ownChild).slice(0, 1), value, 'unknownMenu')
+                        .concat([{ value: NEW_MENU, text: t('newSubmenu', '+ New submenu') }]), value, { id: id, 'aria-label': t('targetMenu', 'Menu to open') });
+                }
+
                 return select(field, [{ value: '', text: t('chooseMenu', 'Choose a menu') }]
-                    .concat(withUnknown(menuOptions(ownChild), value, 'unknownMenu'))
-                    .concat(isOption ? [{ value: NEW_MENU, text: t('newSubmenu', '+ New submenu') }] : []), value, { id: id, 'aria-label': t('targetMenu', 'Menu to open') });
+                    .concat(withUnknown(menuOptions(undefined), value, 'unknownMenu')), value, { id: id, 'aria-label': t('goToMenu', 'Menu to go to') });
             }
 
             var list = catalog[type];
@@ -351,12 +356,27 @@
             return select(field, [{ value: '', text: chooseLabels[type] }].concat(withUnknown(list, value, 'unknownTarget')), value, { id: id, 'aria-label': chooseLabels[type] });
         }
 
-        function kindOptions(current, emptyLabel) {
-            var options = [{ value: '', text: emptyLabel }].concat(ivr.ACTION_KINDS.map(function (kind) {
-                return { value: kind, text: kindLabel(kind) };
-            }));
+        // The actions a key can take. A key can open a submenu of its own or go to a menu that is already there; the
+        // fallback only ever goes to one that is there, so its menu kind reads that way.
+        //   forKey - whether the list is for a key rather than the fallback
+        function kindOptions(current, emptyLabel, forKey) {
+            var options = [{ value: '', text: emptyLabel }];
 
-            if (current && !ivr.isKnownKind(current)) {
+            ivr.ACTION_KINDS.forEach(function (kind) {
+                if (kind === 'SubMenu' && !forKey) {
+                    options.push({ value: kind, text: kindLabel(ivr.GO_TO_MENU) });
+
+                    return;
+                }
+
+                options.push({ value: kind, text: kindLabel(kind) });
+
+                if (kind === 'SubMenu') {
+                    options.push({ value: ivr.GO_TO_MENU, text: kindLabel(ivr.GO_TO_MENU) });
+                }
+            });
+
+            if (current && current !== ivr.GO_TO_MENU && !ivr.isKnownKind(current)) {
                 options.push({ value: current, text: t('unknownKind', 'Unknown: {id}', { id: current }) });
             }
 
@@ -411,6 +431,7 @@
             var targetId = idPrefix + '-t-' + nodeIndex + '-' + optionIndex;
             var digit = String(option.digit || '').trim();
             var ownChild = tree.childOf(nodeIndex, optionIndex);
+            var editorKind = ivr.editorKindOf(option.action, ownChild !== undefined);
             var digits = ivr.availableDigits(node, optionIndex).map(function (key) {
                 return { value: key, text: key };
             });
@@ -433,7 +454,7 @@
                 ]),
                 h('div', { className: 'col-8 col-md-4' }, [
                     h('label', { className: 'visually-hidden', for: kindId, text: t('action', 'Action') }),
-                    select(prefix + ':kind', kindOptions(option.action && option.action.kind, t('chooseAction', 'Choose an action')), option.action ? option.action.kind : '', { id: kindId })
+                    select(prefix + ':kind', kindOptions(editorKind, t('chooseAction', 'Choose an action'), true), editorKind, { id: kindId })
                 ]),
                 h('div', { className: 'col-10 col-md-5' }, [
                     h('label', { className: 'visually-hidden', for: targetId, text: t('target', 'Target') }),
@@ -670,6 +691,13 @@
                 }
 
                 render(field);
+
+                return;
+            }
+
+            if (location.scope === 'option' && location.name === 'kind' && control.value === ivr.GO_TO_MENU) {
+                setActionAt(location, ivr.actionForEditorKind(ivr.GO_TO_MENU));
+                render('option:' + location.node + ':' + location.option + ':target');
 
                 return;
             }

@@ -17,10 +17,12 @@ public sealed class SharedVoicemailService : ISharedVoicemailService
     /// </summary>
     public const int MaxNoteLength = 1000;
 
+    // How long a second call-back request by the same user counts as the one already being placed.
+    private static readonly TimeSpan _repeatedCallbackWindow = TimeSpan.FromSeconds(30);
+
     private readonly ISharedVoicemailManager _voicemailManager;
     private readonly ISharedVoicemailAuthorizationService _authorizationService;
     private readonly IContactCenterAuditRecorder _auditRecorder;
-    private readonly ICallbackService _callbackService;
     private readonly IInteractionManager _interactionManager;
     private readonly IRecordingAccessGovernanceService _governance;
     private readonly IRecordingMediaStore _mediaStore;
@@ -36,7 +38,6 @@ public sealed class SharedVoicemailService : ISharedVoicemailService
     /// <param name="voicemailManager">The shared voicemail manager.</param>
     /// <param name="authorizationService">The authorization that decides which boxes a user may see.</param>
     /// <param name="auditRecorder">The recorder every change is written to.</param>
-    /// <param name="callbackService">The callback service a call back is scheduled through.</param>
     /// <param name="interactionManager">The interaction manager used to find a message's recording.</param>
     /// <param name="governanceServices">The optional recording governance that audits playback and decides erasure.</param>
     /// <param name="mediaStores">The optional media store the recordings are kept in.</param>
@@ -45,7 +46,6 @@ public sealed class SharedVoicemailService : ISharedVoicemailService
         ISharedVoicemailManager voicemailManager,
         ISharedVoicemailAuthorizationService authorizationService,
         IContactCenterAuditRecorder auditRecorder,
-        ICallbackService callbackService,
         IInteractionManager interactionManager,
         IEnumerable<IRecordingAccessGovernanceService> governanceServices,
         IEnumerable<IRecordingMediaStore> mediaStores,
@@ -54,7 +54,6 @@ public sealed class SharedVoicemailService : ISharedVoicemailService
         _voicemailManager = voicemailManager;
         _authorizationService = authorizationService;
         _auditRecorder = auditRecorder;
-        _callbackService = callbackService;
         _interactionManager = interactionManager;
         _governance = governanceServices.FirstOrDefault();
         _mediaStore = mediaStores.FirstOrDefault();
@@ -315,26 +314,18 @@ public sealed class SharedVoicemailService : ISharedVoicemailService
 
         var now = _clock.UtcNow;
 
-        // The callback is queued back into the message's own queue, so it is offered to the next available member of the
-        // team that owns the message, as a call to place, like any callback a caller asked for while waiting.
-        var callback = await _callbackService.ScheduleAsync(new CallbackRequest
+        // The same person asking again moments later is the same call-back, not a second one: live, a second click
+        // started a second call to the caller.
+        if (voicemail.CallbackRequestedUtc.HasValue &&
+            now - voicemail.CallbackRequestedUtc.Value < _repeatedCallbackWindow &&
+            string.Equals(voicemail.CallbackRequestedByUserName, access.UserName, StringComparison.Ordinal))
         {
-            ItemId = IdGenerator.GenerateId(),
-            Destination = voicemail.CallerNumber,
-            QueueId = voicemail.QueueId,
-            ContactContentItemId = voicemail.ContactContentItemId,
-            ContactContentType = voicemail.ContactContentType,
-            RequestedUtc = now,
-            ScheduledUtc = now,
-            Notes = $"Callback for the voicemail the caller left at {voicemail.ReceivedUtc:u}.",
-        }, cancellationToken);
-
-        // Without the Outbound Dialer feature the tenant has no callbacks: nothing was scheduled, so nothing changes.
-        if (callback is null)
-        {
-            return SharedVoicemailActionResult.Failure(SharedVoicemailActionStatus.Unavailable, voicemail, SharedVoicemailReasons.CallbacksUnavailable);
+            return SharedVoicemailActionResult.Failure(SharedVoicemailActionStatus.Conflict, voicemail, SharedVoicemailReasons.CallbackAlreadyStarted);
         }
 
+        // The person who asked calls the caller back themselves, from their own soft phone, now. Live, the call-back was
+        // queued as a preview call for the next available member of the queue: the one who clicked Call back had to wait
+        // for an offer and dial again, and every click became another preview call.
         var previousStatus = voicemail.Status;
         var previousClaimedByUserId = voicemail.ClaimedByUserId;
 
@@ -344,7 +335,7 @@ public sealed class SharedVoicemailService : ISharedVoicemailService
             Claim(voicemail, access, now);
         }
 
-        voicemail.CallbackRequestId = callback.ItemId;
+        voicemail.CallbackRequestId = null;
         voicemail.CallbackRequestedByUserName = access.UserName;
         voicemail.CallbackRequestedUtc = now;
         voicemail.ModifiedUtc = now;
@@ -357,10 +348,9 @@ public sealed class SharedVoicemailService : ISharedVoicemailService
             previousClaimedByUserId,
             access,
             now,
-            cancellationToken,
-            callbackRequestId: callback.ItemId);
+            cancellationToken);
 
-        return SharedVoicemailActionResult.Success(voicemail, callback);
+        return SharedVoicemailActionResult.Success(voicemail);
     }
 
     /// <inheritdoc/>

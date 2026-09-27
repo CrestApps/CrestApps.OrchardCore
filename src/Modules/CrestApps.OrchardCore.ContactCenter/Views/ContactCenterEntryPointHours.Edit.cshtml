@@ -14,9 +14,9 @@
     </div>
 </div>
 
-<div class="ocat-limited-wrapper" asp-validation-class-for="ClosedAction">
+<div class="ocat-wrapper" asp-validation-class-for="ClosedAction">
     <label asp-for="ClosedAction" class="ocat-label">@T["Closed action"]</label>
-    <div class="ocat-limited">
+    <div class="ocat-end">
         <select asp-for="ClosedAction" class="form-select">
             <option value="@EntryPointClosedAction.HoldInQueue">@T["Hold in queue"]</option>
             <option value="@EntryPointClosedAction.Voicemail">@T["Voicemail"]</option>

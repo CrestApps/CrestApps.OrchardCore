@@ -76,13 +76,13 @@ public interface ISharedVoicemailService
     Task<SharedVoicemailActionResult> ResolveAsync(ClaimsPrincipal principal, string voicemailId, string note, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Schedules a callback to the caller, queued back into the message's queue so the next available member of the
-    /// team places it. An unclaimed message is claimed by the user as the callback is requested.
+    /// Records that the user is calling the caller back, from their own soft phone, now. An unclaimed message is claimed
+    /// by the user. The same user asking again moments later is refused as the call-back already under way.
     /// </summary>
     /// <param name="principal">The signed-in user.</param>
     /// <param name="voicemailId">The shared voicemail identifier.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    /// <returns>The result, carrying the scheduled callback when it succeeded.</returns>
+    /// <returns>The result, carrying the message and the number to dial when it succeeded.</returns>
     Task<SharedVoicemailActionResult> RequestCallbackAsync(ClaimsPrincipal principal, string voicemailId, CancellationToken cancellationToken = default);
 
     /// <summary>

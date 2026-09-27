@@ -48,6 +48,7 @@ public sealed class CallbackServiceTests
 
         var callbackManager = new Mock<ICallbackRequestManager>();
         callbackManager.Setup(m => m.GetDueAsync(_now, It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync([callback]);
+        callbackManager.Setup(m => m.FindByIdAsync(callback.ItemId, It.IsAny<CancellationToken>())).ReturnsAsync(callback);
 
         var activityManager = new Mock<IOmnichannelActivityManager>();
         activityManager.Setup(m => m.NewAsync(It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()))
@@ -74,6 +75,7 @@ public sealed class CallbackServiceTests
 
         var callbackManager = new Mock<ICallbackRequestManager>();
         callbackManager.Setup(m => m.GetDueAsync(_now, It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync([callback]);
+        callbackManager.Setup(m => m.FindByIdAsync(callback.ItemId, It.IsAny<CancellationToken>())).ReturnsAsync(callback);
 
         var activityManager = new Mock<IOmnichannelActivityManager>();
         activityManager.Setup(m => m.NewAsync(It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()))
@@ -104,6 +106,7 @@ public sealed class CallbackServiceTests
 
         var callbackManager = new Mock<ICallbackRequestManager>();
         callbackManager.Setup(m => m.GetDueAsync(_now, It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync([callback]);
+        callbackManager.Setup(m => m.FindByIdAsync(callback.ItemId, It.IsAny<CancellationToken>())).ReturnsAsync(callback);
 
         var activityManager = new Mock<IOmnichannelActivityManager>();
         activityManager.Setup(m => m.NewAsync(It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()))
@@ -138,6 +141,7 @@ public sealed class CallbackServiceTests
 
         var callbackManager = new Mock<ICallbackRequestManager>();
         callbackManager.Setup(m => m.GetDueAsync(_now, It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync([callback]);
+        callbackManager.Setup(m => m.FindByIdAsync(callback.ItemId, It.IsAny<CancellationToken>())).ReturnsAsync(callback);
 
         var activityManager = new Mock<IOmnichannelActivityManager>();
         var service = CreateService(callbackManager, activityManager, new Mock<IActivityQueueService>(), new Mock<IContactCenterEventPublisher>());

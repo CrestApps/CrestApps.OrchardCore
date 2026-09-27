@@ -84,11 +84,17 @@ public sealed class CallbackService : ICallbackService
         var due = await _callbackManager.GetDueAsync(now, MaxBatchSize, cancellationToken);
         var count = 0;
 
-        foreach (var callback in due)
+        foreach (var dueCallback in due)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (!await TryClaimAsync(callback, cancellationToken))
+            // Read again, on its own. Promoting the callback before this one committed the session (enqueuing saves it),
+            // and a commit detaches everything the session read before it: saving a callback from the batch read then
+            // inserted it as a second row, still pending, which the next pass promoted again. Live, one callback a user
+            // asked for became two preview calls a minute apart.
+            var callback = await _callbackManager.FindByIdAsync(dueCallback.ItemId, cancellationToken);
+
+            if (callback is null || !await TryClaimAsync(callback, cancellationToken))
             {
                 continue;
             }

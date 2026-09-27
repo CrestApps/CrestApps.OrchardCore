@@ -134,6 +134,11 @@ public static class SharedVoicemailReasons
     public const string CallbacksUnavailable = "callbacksUnavailable";
 
     /// <summary>
+    /// The same user asked to call the caller back moments ago: that call is already being placed.
+    /// </summary>
+    public const string CallbackAlreadyStarted = "callbackAlreadyStarted";
+
+    /// <summary>
     /// The recording is under legal hold and cannot be erased.
     /// </summary>
     public const string LegalHold = "legalHold";

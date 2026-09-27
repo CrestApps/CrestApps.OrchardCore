@@ -1,4 +1,6 @@
 using System.Globalization;
+using System.Security.Claims;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -7,10 +9,17 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
+using CrestApps.OrchardCore.SignalR.Core;
+using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Telephony.Hubs;
+using CrestApps.OrchardCore.Telephony.Models;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 
@@ -36,6 +45,9 @@ public sealed class SharedVoicemailController : Controller
     private readonly IActivityQueueManager _queueManager;
     private readonly IInteractionManager _interactionManager;
     private readonly INotifier _notifier;
+    private readonly IHubContext<TelephonyHub, ITelephonyClient> _telephonyHub;
+    private readonly ShellSettings _shellSettings;
+    private readonly ILogger _logger;
 
     internal readonly IHtmlLocalizer H;
 
@@ -47,6 +59,9 @@ public sealed class SharedVoicemailController : Controller
     /// <param name="queueManager">The queue manager used to name the queues.</param>
     /// <param name="interactionManager">The interaction manager used to read each message's recording and length.</param>
     /// <param name="notifier">The admin notifier.</param>
+    /// <param name="telephonyHub">The soft phone hub a call-back is dialed through.</param>
+    /// <param name="shellSettings">The tenant, whose soft phone groups the hub addresses.</param>
+    /// <param name="logger">The logger.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     public SharedVoicemailController(
         ISharedVoicemailService sharedVoicemailService,
@@ -54,8 +69,14 @@ public sealed class SharedVoicemailController : Controller
         IActivityQueueManager queueManager,
         IInteractionManager interactionManager,
         INotifier notifier,
+        IHubContext<TelephonyHub, ITelephonyClient> telephonyHub,
+        ShellSettings shellSettings,
+        ILogger<SharedVoicemailController> logger,
         IHtmlLocalizer<SharedVoicemailController> htmlLocalizer)
     {
+        _telephonyHub = telephonyHub;
+        _shellSettings = shellSettings;
+        _logger = logger;
         _sharedVoicemailService = sharedVoicemailService;
         _authorizationService = authorizationService;
         _queueManager = queueManager;
@@ -234,7 +255,7 @@ public sealed class SharedVoicemailController : Controller
     }
 
     /// <summary>
-    /// Schedules a callback to the caller who left a shared voicemail.
+    /// Calls back the caller who left a shared voicemail, from the user's own soft phone, now.
     /// </summary>
     /// <param name="id">The shared voicemail identifier.</param>
     /// <param name="returnUrl">The list page to return to.</param>
@@ -245,14 +266,32 @@ public sealed class SharedVoicemailController : Controller
     {
         var result = await _sharedVoicemailService.RequestCallbackAsync(User, id, HttpContext.RequestAborted);
 
-        if (result.Succeeded)
-        {
-            await _notifier.SuccessAsync(H["A callback to the caller was queued. The next available agent in the queue will be offered it."]);
-        }
-        else
+        if (!result.Succeeded)
         {
             await NotifyFailureAsync(result);
+
+            return Return(returnUrl);
         }
+
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var number = result.Voicemail.CallerNumber;
+
+        // The same push the call button beside a phone number sends: the user's soft phone dials it. Live, a call-back
+        // was queued as a preview call instead, which the user then had to wait for and dial again.
+        await _telephonyHub.Clients
+            .Group(TenantSignalRGroupName.ForUser(_shellSettings.Name, userId))
+            .DialRequested(new TelephonyDialRequest { Number = number });
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "User '{UserId}' is calling back the caller who left shared voicemail '{VoicemailId}' on queue '{QueueId}'; their soft phone was asked to dial.",
+                userId.SanitizeLogValue(),
+                result.Voicemail.ItemId.SanitizeLogValue(),
+                result.Voicemail.QueueId.SanitizeLogValue());
+        }
+
+        await _notifier.SuccessAsync(H["Calling {0} from your soft phone. Mark the voicemail as done once you have spoken to the caller. If your soft phone does not start the call, open it and try again.", number]);
 
         return Return(returnUrl);
     }
@@ -360,6 +399,7 @@ public sealed class SharedVoicemailController : Controller
             SharedVoicemailReasons.ManagePermissionRequired => H["You are not allowed to delete shared voicemail."],
             SharedVoicemailReasons.NoCallerNumber => H["The caller left no number to call back."],
             SharedVoicemailReasons.CallbacksUnavailable => H["Callbacks are not available. Enable the Contact Center Outbound Dialer feature to queue callbacks."],
+            SharedVoicemailReasons.CallbackAlreadyStarted => H["You are already calling this caller back. If your soft phone did not start the call, wait a moment and try again."],
             SharedVoicemailReasons.LegalHold => H["The voicemail's recording is under legal hold and cannot be deleted."],
             _ when result.Status == SharedVoicemailActionStatus.NotFound => H["The voicemail could not be found."],
             _ => H["You are not allowed to do that with this voicemail."],

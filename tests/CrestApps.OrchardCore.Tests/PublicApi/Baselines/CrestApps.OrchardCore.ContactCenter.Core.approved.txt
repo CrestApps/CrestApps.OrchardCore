@@ -2410,6 +2410,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
     public static class SharedVoicemailReasons
     {
         public const string AlreadyResolved = "alreadyResolved";
+        public const string CallbackAlreadyStarted = "callbackAlreadyStarted";
         public const string CallbacksUnavailable = "callbacksUnavailable";
         public const string ClaimedByAnotherUser = "claimedByAnotherUser";
         public const string LegalHold = "legalHold";
@@ -5246,7 +5247,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public sealed class SharedVoicemailService : CrestApps.OrchardCore.ContactCenter.Core.Services.ISharedVoicemailService
     {
         public const int MaxNoteLength = 1000;
-        public SharedVoicemailService(CrestApps.OrchardCore.ContactCenter.Core.Services.ISharedVoicemailManager voicemailManager, CrestApps.OrchardCore.ContactCenter.Core.Services.ISharedVoicemailAuthorizationService authorizationService, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterAuditRecorder auditRecorder, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallbackService callbackService, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Services.IRecordingAccessGovernanceService> governanceServices, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Telephony.IRecordingMediaStore> mediaStores, OrchardCore.Modules.IClock clock) { }
+        public SharedVoicemailService(CrestApps.OrchardCore.ContactCenter.Core.Services.ISharedVoicemailManager voicemailManager, CrestApps.OrchardCore.ContactCenter.Core.Services.ISharedVoicemailAuthorizationService authorizationService, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterAuditRecorder auditRecorder, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Services.IRecordingAccessGovernanceService> governanceServices, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Telephony.IRecordingMediaStore> mediaStores, OrchardCore.Modules.IClock clock) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailActionResult> ClaimAsync(System.Security.Claims.ClaimsPrincipal principal, string voicemailId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailActionResult> DeleteAsync(System.Security.Claims.ClaimsPrincipal principal, string voicemailId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemail> DeliverAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemail voicemail, System.Threading.CancellationToken cancellationToken = default) { }

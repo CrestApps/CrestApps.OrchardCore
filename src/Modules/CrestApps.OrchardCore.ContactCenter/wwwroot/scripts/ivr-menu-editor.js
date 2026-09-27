@@ -36,6 +36,12 @@
 
   // The server's default when a flow does not say.
   var DEFAULT_MAX_RETRIES = 3;
+
+  // The editor's name for a key that jumps to a menu drawn somewhere else -- back to the main menu, or across to another
+  // submenu. It is stored as a SubMenu like any key that opens a menu; only where the menu is drawn tells them apart.
+  // Live, the jump was only reachable by choosing "Open a menu", which made a new submenu first, and then picking a
+  // menu from its list, so nobody found it.
+  var GO_TO_MENU = 'GoToMenu';
   function isObject(value) {
     return value !== null && typeof value === 'object' && !Array.isArray(value);
   }
@@ -576,6 +582,25 @@
     }
   }
 
+  // What a key's action shows as in the editor: GoToMenu for a key that opens a menu it does not own (one drawn under
+  // another key, a menu not chosen yet, or one that no longer exists), and the stored kind otherwise.
+  //   ownsMenu - whether the menu the key opens is drawn under that very key
+  function editorKindOf(action, ownsMenu) {
+    if (!action || !action.kind) {
+      return '';
+    }
+    return action.kind === 'SubMenu' && !ownsMenu ? GO_TO_MENU : action.kind;
+  }
+
+  // The action a key gets when the editor's kind is chosen for it: a jump is a SubMenu waiting for its menu, and every
+  // other kind is itself.
+  function actionForEditorKind(kind) {
+    return kind === GO_TO_MENU ? {
+      kind: 'SubMenu',
+      targetId: ''
+    } : createAction(kind);
+  }
+
   // Changes what an action does. A new kind starts with no target, since a queue id is not a menu name.
   function setActionKind(action, kind) {
     if (action.kind !== kind) {
@@ -741,6 +766,9 @@
     }
   }
   ivr.ACTION_KINDS = ACTION_KINDS;
+  ivr.GO_TO_MENU = GO_TO_MENU;
+  ivr.editorKindOf = editorKindOf;
+  ivr.actionForEditorKind = actionForEditorKind;
   ivr.ENUM_ORDER = ENUM_ORDER;
   ivr.TELEPHONE_KEYS = TELEPHONE_KEYS;
   ivr.DEFAULT_MAX_RETRIES = DEFAULT_MAX_RETRIES;
@@ -1104,17 +1132,24 @@
         });
       }
       if (type === 'menu') {
-        // A key can always be given a new submenu of its own; the fallback only jumps to a menu that exists.
+        // A key that owns its submenu keeps it, or starts a new one; a key going to another menu, and the
+        // fallback, choose among the menus that are there.
         var isOption = String(field).indexOf('option:') === 0;
+        if (isOption && ownChild !== undefined) {
+          return select(field, withUnknown(menuOptions(ownChild).slice(0, 1), value, 'unknownMenu').concat([{
+            value: NEW_MENU,
+            text: t('newSubmenu', '+ New submenu')
+          }]), value, {
+            id: id,
+            'aria-label': t('targetMenu', 'Menu to open')
+          });
+        }
         return select(field, [{
           value: '',
           text: t('chooseMenu', 'Choose a menu')
-        }].concat(withUnknown(menuOptions(ownChild), value, 'unknownMenu')).concat(isOption ? [{
-          value: NEW_MENU,
-          text: t('newSubmenu', '+ New submenu')
-        }] : []), value, {
+        }].concat(withUnknown(menuOptions(undefined), value, 'unknownMenu')), value, {
           id: id,
-          'aria-label': t('targetMenu', 'Menu to open')
+          'aria-label': t('goToMenu', 'Menu to go to')
         });
       }
       var list = catalog[type];
@@ -1144,17 +1179,35 @@
         'aria-label': chooseLabels[type]
       });
     }
-    function kindOptions(current, emptyLabel) {
+
+    // The actions a key can take. A key can open a submenu of its own or go to a menu that is already there; the
+    // fallback only ever goes to one that is there, so its menu kind reads that way.
+    //   forKey - whether the list is for a key rather than the fallback
+    function kindOptions(current, emptyLabel, forKey) {
       var options = [{
         value: '',
         text: emptyLabel
-      }].concat(ivr.ACTION_KINDS.map(function (kind) {
-        return {
+      }];
+      ivr.ACTION_KINDS.forEach(function (kind) {
+        if (kind === 'SubMenu' && !forKey) {
+          options.push({
+            value: kind,
+            text: kindLabel(ivr.GO_TO_MENU)
+          });
+          return;
+        }
+        options.push({
           value: kind,
           text: kindLabel(kind)
-        };
-      }));
-      if (current && !ivr.isKnownKind(current)) {
+        });
+        if (kind === 'SubMenu') {
+          options.push({
+            value: ivr.GO_TO_MENU,
+            text: kindLabel(ivr.GO_TO_MENU)
+          });
+        }
+      });
+      if (current && current !== ivr.GO_TO_MENU && !ivr.isKnownKind(current)) {
         options.push({
           value: current,
           text: t('unknownKind', 'Unknown: {id}', {
@@ -1228,6 +1281,7 @@
       var targetId = idPrefix + '-t-' + nodeIndex + '-' + optionIndex;
       var digit = String(option.digit || '').trim();
       var ownChild = tree.childOf(nodeIndex, optionIndex);
+      var editorKind = ivr.editorKindOf(option.action, ownChild !== undefined);
       var digits = ivr.availableDigits(node, optionIndex).map(function (key) {
         return {
           value: key,
@@ -1275,7 +1329,7 @@
         className: 'visually-hidden',
         for: kindId,
         text: t('action', 'Action')
-      }), select(prefix + ':kind', kindOptions(option.action && option.action.kind, t('chooseAction', 'Choose an action')), option.action ? option.action.kind : '', {
+      }), select(prefix + ':kind', kindOptions(editorKind, t('chooseAction', 'Choose an action'), true), editorKind, {
         id: kindId
       })]), h('div', {
         className: 'col-10 col-md-5'
@@ -1547,6 +1601,11 @@
           };
         }
         render(field);
+        return;
+      }
+      if (location.scope === 'option' && location.name === 'kind' && control.value === ivr.GO_TO_MENU) {
+        setActionAt(location, ivr.actionForEditorKind(ivr.GO_TO_MENU));
+        render('option:' + location.node + ':' + location.option + ':target');
         return;
       }
       if (location.scope === 'option' && (location.name === 'kind' && control.value === 'SubMenu' || location.name === 'target' && control.value === NEW_MENU)) {
