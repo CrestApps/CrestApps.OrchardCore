@@ -339,7 +339,7 @@ public sealed class SharedVoicemailController : Controller
         return Return(returnUrl);
     }
 
-    private static void ApplyStatus(SharedVoicemailQuery query, SharedVoicemailStatusFilter status)
+    internal static void ApplyStatus(SharedVoicemailQuery query, SharedVoicemailStatusFilter status)
     {
         switch (status)
         {

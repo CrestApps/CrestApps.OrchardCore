@@ -80,6 +80,28 @@ public sealed class SharedVoicemailServiceTests
         Assert.Equal(["queue-main", "queue-support"], harness.LastQuery.QueueIds);
     }
 
+    // A user who sees every queue reads the boxes without a queue filter, so a queue created after they signed in is
+    // in their list too.
+    [Fact]
+    public async Task ListAsync_ForAUserWhoSeesEveryQueue_ReadsWithoutAQueueFilter()
+    {
+        // Arrange
+        var harness = new Harness(new SharedVoicemailAccess
+        {
+            UserId = "user-1",
+            UserName = "agent.one",
+            CanAccess = true,
+            AllQueues = true,
+        });
+
+        // Act
+        await harness.Service.ListAsync(Harness.Principal, new SharedVoicemailQuery(), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(harness.LastQuery);
+        Assert.Null(harness.LastQuery.QueueIds);
+    }
+
     [Fact]
     public async Task ListAsync_ForAUserWhoMayNotUseTheBoxes_ReadsNothing()
     {
@@ -322,6 +344,27 @@ public sealed class SharedVoicemailServiceTests
         Assert.Null(result.Voicemail.ResolutionNote);
     }
 
+    [Fact]
+    public async Task ResolveAsync_WithANoteLongerThanTheLimit_KeepsItCutToTheLimit()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.Add(ClaimedVoicemail("user-1", "agent.one"));
+        var note = new string('a', 900) + new string('b', 600);
+
+        // Act
+        var result = await harness.Service.ResolveAsync(Harness.Principal, "vm-1", note, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Equal(SharedVoicemailService.MaxNoteLength, result.Voicemail.ResolutionNote.Length);
+        Assert.Equal(note[..SharedVoicemailService.MaxNoteLength], result.Voicemail.ResolutionNote);
+
+        // The audit keeps the note as it was stored, not the longer one that was typed.
+        var audit = Assert.Single(harness.Audit.SharedVoicemails);
+        Assert.Equal(result.Voicemail.ResolutionNote, audit.Data.Note);
+    }
+
     [Theory]
     [InlineData(false, SharedVoicemailActionStatus.Forbidden)]
     [InlineData(true, SharedVoicemailActionStatus.Succeeded)]
@@ -501,6 +544,27 @@ public sealed class SharedVoicemailServiceTests
         Assert.True(result.Succeeded);
         Assert.DoesNotContain("vm-1", harness.Voicemails.Keys);
         harness.MediaStore.Verify(value => value.DeleteAsync("storage/recording-1", It.IsAny<CancellationToken>()), Times.Once);
+        var audit = Assert.Single(harness.Audit.SharedVoicemails);
+        Assert.Equal(ContactCenterConstants.Events.SharedVoicemailDeleted, audit.EventType);
+    }
+
+    // A caller who hung up before the greeting ended left a message with nothing recorded: there is nothing to erase, so
+    // deleting it must not wait on, or fail for want of, the recording features.
+    [Fact]
+    public async Task DeleteAsync_AMessageThatRecordedNothing_IsRemovedWithoutTouchingRecordings()
+    {
+        // Arrange
+        var harness = new Harness(Access(queueIds: ["queue-main"], canManage: true));
+        harness.Add(NewVoicemail());
+
+        // Act
+        var result = await harness.Service.DeleteAsync(Harness.Principal, "vm-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.DoesNotContain("vm-1", harness.Voicemails.Keys);
+        harness.Governance.VerifyNoOtherCalls();
+        harness.MediaStore.VerifyNoOtherCalls();
         var audit = Assert.Single(harness.Audit.SharedVoicemails);
         Assert.Equal(ContactCenterConstants.Events.SharedVoicemailDeleted, audit.EventType);
     }

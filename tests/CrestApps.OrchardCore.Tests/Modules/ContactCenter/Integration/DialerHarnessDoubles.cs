@@ -382,17 +382,27 @@ internal sealed class InMemoryOmnichannelActivities
 }
 
 /// <summary>
-/// Captures published domain events for optional assertion.
+/// Captures published domain events for optional assertion, and hands each one on to the host's publisher when the
+/// harness keeps a durable event history.
 /// </summary>
 internal sealed class RecordingContactCenterEventPublisher : IContactCenterEventPublisher
 {
+    private readonly IContactCenterEventPublisher _inner;
+
+    public RecordingContactCenterEventPublisher(IContactCenterEventPublisher inner = null)
+    {
+        _inner = inner;
+    }
+
     public List<InteractionEvent> Events { get; } = [];
 
     public Task PublishAsync(InteractionEvent interactionEvent, CancellationToken cancellationToken = default)
     {
         Events.Add(interactionEvent);
 
-        return Task.CompletedTask;
+        return _inner is null
+            ? Task.CompletedTask
+            : _inner.PublishAsync(interactionEvent, cancellationToken);
     }
 }
 

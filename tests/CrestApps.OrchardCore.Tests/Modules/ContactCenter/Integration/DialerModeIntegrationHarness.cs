@@ -51,6 +51,7 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
     private readonly string _databasePath;
     private readonly ServiceProvider _provider;
     private readonly TestClock _clock;
+    private readonly bool _durableEventHistory;
     private readonly List<string> _agentIds = [];
 
     private DialerModeIntegrationHarness(
@@ -58,13 +59,15 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
         ISession session,
         string databasePath,
         ServiceProvider provider,
-        TestClock clock)
+        TestClock clock,
+        bool durableEventHistory)
     {
         _store = store;
         _session = session;
         _databasePath = databasePath;
         _provider = provider;
         _clock = clock;
+        _durableEventHistory = durableEventHistory;
     }
 
     public FakeVoiceContactCenterCallRouter Router => (FakeVoiceContactCenterCallRouter)_provider.GetRequiredService<IVoiceContactCenterCallRouter>();
@@ -105,7 +108,13 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
     /// <see langword="null"/> for the provider default. A short timeout makes a flow that cannot get the lock fail
     /// fast instead of stalling the test.
     /// </param>
-    public static async Task<DialerModeIntegrationHarness> CreateAsync(int? busyTimeoutSeconds = null)
+    /// <param name="durableEventHistory">
+    /// Whether every published event is also written to the durable event history, through the real
+    /// <see cref="DefaultContactCenterEventPublisher"/> and <see cref="InteractionEventStore"/>, as the host does. A service
+    /// that reads the history back (the stuck-Busy recovery reads each agent's latest state change) then sees exactly
+    /// what the pipeline recorded. Off by default, so the history every other flow reads stays empty as it always was.
+    /// </param>
+    public static async Task<DialerModeIntegrationHarness> CreateAsync(int? busyTimeoutSeconds = null, bool durableEventHistory = false)
     {
         var databasePath = Path.Combine(Path.GetTempPath(), $"cc-dialer-integration-{Guid.NewGuid():N}.db");
         var connectionString = busyTimeoutSeconds.HasValue
@@ -126,6 +135,7 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
             new ContactCenterWorkStateIndexProvider(),
             new InteractionIndexProvider(),
             new CallSessionIndexProvider(new ProviderIdentityResolver([])),
+            new InteractionEventIndexProvider(),
         ]);
         await store.InitializeAsync(TestContext.Current.CancellationToken);
         await store.InitializeCollectionAsync(ContactCenterStorage.CollectionName, TestContext.Current.CancellationToken);
@@ -133,13 +143,13 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
 
         var session = store.CreateSession();
         var clock = new TestClock();
-        var provider = BuildServiceProvider(session, clock, CreateAlwaysGrantingLock());
+        var provider = BuildServiceProvider(session, clock, CreateAlwaysGrantingLock(), durableEventHistory);
 
         // Late-bind the harness scope executor and command processor to the built container so their deferred
         // work can resolve the real services.
         ((HarnessScopeExecutor)provider.GetRequiredService<IContactCenterScopeExecutor>()).Bind(provider);
 
-        return new DialerModeIntegrationHarness(store, session, databasePath, provider, clock);
+        return new DialerModeIntegrationHarness(store, session, databasePath, provider, clock, durableEventHistory);
     }
 
     /// <summary>
@@ -327,7 +337,7 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
     public HarnessFlow OpenFlow(IDistributedLock distributedLock)
     {
         var session = _store.CreateSession();
-        var provider = BuildServiceProvider(session, _clock, distributedLock);
+        var provider = BuildServiceProvider(session, _clock, distributedLock, _durableEventHistory);
         ((HarnessScopeExecutor)provider.GetRequiredService<IContactCenterScopeExecutor>()).Bind(provider);
 
         return new HarnessFlow(session, provider);
@@ -357,7 +367,7 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
         TemporarySqliteDatabase.DisposeAndDelete(_store, _databasePath);
     }
 
-    private static ServiceProvider BuildServiceProvider(ISession session, TestClock clock, IDistributedLock distributedLock)
+    private static ServiceProvider BuildServiceProvider(ISession session, TestClock clock, IDistributedLock distributedLock, bool durableEventHistory)
     {
         var services = new ServiceCollection();
         services.AddLogging();
@@ -406,7 +416,24 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
         services.AddSingleton<IProviderCommandStateService>(sp => sp.GetRequiredService<InMemoryProviderCommandStateService>());
         services.AddSingleton<HarnessScopeExecutor>();
         services.AddSingleton<IContactCenterScopeExecutor>(sp => sp.GetRequiredService<HarnessScopeExecutor>());
-        services.AddSingleton<IContactCenterEventPublisher>(new RecordingContactCenterEventPublisher());
+
+        if (durableEventHistory)
+        {
+            // The host's publisher over the real event store: each event is written to the history, then handed to the
+            // outbox, whose handler dispatch has its own tests and is not what a flow here asserts.
+            services.AddSingleton<IInteractionEventUpcastService>(new DefaultInteractionEventUpcastService([]));
+            services.AddSingleton<IInteractionEventStore>(sp => new InteractionEventStore(session, sp.GetRequiredService<IInteractionEventUpcastService>()));
+            services.AddSingleton(Mock.Of<IContactCenterOutbox>());
+            services.AddSingleton<ContactCenterEventDispatchContext>();
+            services.AddSingleton<DefaultContactCenterEventPublisher>();
+            services.AddSingleton<IContactCenterEventPublisher>(sp => new RecordingContactCenterEventPublisher(sp.GetRequiredService<DefaultContactCenterEventPublisher>()));
+        }
+        else
+        {
+            services.AddSingleton<IContactCenterEventPublisher>(new RecordingContactCenterEventPublisher());
+            services.AddSingleton(CreateEmptyInteractionEventStore());
+        }
+
         services.AddSingleton<IContactCenterAuditRecorder, ContactCenterAuditRecorder>();
         services.AddSingleton<IAgentAvailabilityService, HarnessAvailabilityService>();
         services.AddSingleton(CreateEligibilityService());
@@ -415,7 +442,6 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
         services.AddSingleton(Mock.Of<IActivityQueueService>());
         services.AddSingleton(Mock.Of<IContactCenterVoiceProviderResolver>());
         services.AddSingleton(Mock.Of<ITelephonyProviderResolver>());
-        services.AddSingleton(CreateEmptyInteractionEventStore());
         services.AddSingleton<IProviderIdentityResolver>(new ProviderIdentityResolver([]));
         // As registered in the host, the gate releases the scope's own open work before it waits on a held call.
         services.AddSingleton<IVoiceIngressGate>(sp => new VoiceIngressGate(sp.GetRequiredService<IDistributedLock>(), session));
@@ -575,6 +601,18 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
             .Column<string>("DurableCommandId", column => column.WithLength(26))
             .Column<DateTime>("CreatedUtc", column => column.NotNull())
             .Column<DateTime>("EndedUtc"),
+            collection: ContactCenterStorage.CollectionName);
+
+        await builder.CreateMapIndexTableAsync<InteractionEventIndex>(table => table
+            .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<string>("InteractionId", column => column.WithLength(26))
+            .Column<string>("EventType", column => column.WithLength(128))
+            .Column<string>("AggregateType", column => column.WithLength(128))
+            .Column<string>("AggregateId", column => column.WithLength(26))
+            .Column<string>("CorrelationId", column => column.WithLength(26))
+            .Column<string>("IdempotencyKey", column => column.WithLength(128))
+            .Column<string>("IdempotencyClaimKey", column => column.NotNull().WithDefault(string.Empty).WithLength(128))
+            .Column<DateTime>("OccurredUtc", column => column.NotNull()),
             collection: ContactCenterStorage.CollectionName);
 
         await transaction.CommitAsync(TestContext.Current.CancellationToken);

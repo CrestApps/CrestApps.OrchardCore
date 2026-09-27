@@ -45,7 +45,7 @@ internal static class SupervisorDashboardEndpoints
         return builder;
     }
 
-    private static async Task<IResult> HandleStateAsync(
+    internal static async Task<IResult> HandleStateAsync(
         IAuthorizationService authorizationService,
         IActivityQueueManager queueManager,
         IQueueItemManager queueItemManager,

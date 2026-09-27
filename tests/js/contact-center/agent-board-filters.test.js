@@ -90,6 +90,18 @@ describe('filtering the agent board', () => {
         expect(filterSupervisorAgents(board, { queueId: 'sales', campaignId: 'winback' })).toEqual([]);
     });
 
+    // Confirmed live: an agent signed in only to a campaign is on the board with no queue at all. The campaign filter finds
+    // them, and any queue filter leaves them out, since they take none of that queue's calls.
+    it('finds an agent signed in only to a campaign by that campaign, and never by a queue', () => {
+        const campaignOnly = agent({ agentId: 'gus', displayName: 'Gus Outbound', queueIds: [], campaignIds: ['renewals'] });
+        const withCampaignOnly = [...board, campaignOnly];
+
+        expect(ids(filterSupervisorAgents(withCampaignOnly, { campaignId: 'renewals' }))).toEqual(['ann', 'dan', 'gus']);
+        expect(ids(filterSupervisorAgents(withCampaignOnly, { queueId: 'support' }))).not.toContain('gus');
+        expect(ids(filterSupervisorAgents(withCampaignOnly, { queueId: 'sales' }))).not.toContain('gus');
+        expect(filterSupervisorAgents([campaignOnly], { queueId: 'support', campaignId: 'renewals' })).toEqual([]);
+    });
+
     it('tolerates agents the server sent without their queues or campaigns', () => {
         const bare = [{ agentId: 'x', displayName: 'X', presenceStatus: 'Available' }];
 
