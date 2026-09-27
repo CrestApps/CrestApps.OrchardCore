@@ -26,7 +26,28 @@
             !state.registered &&
             !state.registering &&
             !state.microphoneBlocked &&
+            // A microphone request an earlier attempt made is still open (a permission prompt nobody has answered, a
+            // device that does not respond): another would only stack up behind it. Live, a phone asked again every
+            // 35 seconds all night. The phone registers the moment that request is answered.
+            !state.captureInFlight &&
             state.hubConnected !== false;
+    }
+
+    // How long to wait before registering again after `failures` failed or stalled attempts in a row: soon at first, then
+    // backing off to a couple of minutes, so a phone that cannot register neither gives up nor floods the server.
+    var REGISTRATION_RETRY_DELAYS_MS = [5000, 15000, 30000, 60000, 120000];
+
+    function registrationRetryDelay(failures) {
+        var index = Math.max(0, Math.min(REGISTRATION_RETRY_DELAYS_MS.length - 1, (failures || 1) - 1));
+
+        return REGISTRATION_RETRY_DELAYS_MS[index];
+    }
+
+    // Whether the `failures`-th failure in a row is worth a line in the server log: the first, one that fails
+    // differently from the one before, and every tenth of a run, so a phone failing all night leaves a trail rather
+    // than a flood.
+    function shouldReportRegistrationFailure(failures, message, previousMessage) {
+        return failures <= 1 || message !== previousMessage || failures % 10 === 0;
     }
 
     // What a click on Answer does: 'ignore' while an earlier click is still being carried out (registering for it or
@@ -131,6 +152,8 @@
     softPhone.REGISTRATION_TIMEOUT_MS = REGISTRATION_TIMEOUT_MS;
     softPhone.REGISTRATION_RETRY_MS = REGISTRATION_RETRY_MS;
     softPhone.guardRegistration = guardRegistration;
+    softPhone.registrationRetryDelay = registrationRetryDelay;
+    softPhone.shouldReportRegistrationFailure = shouldReportRegistrationFailure;
     softPhone.shouldStartRegistration = shouldStartRegistration;
     softPhone.planRegistrationSelfHeal = planRegistrationSelfHeal;
     softPhone.planMicrophoneLossRecovery = planMicrophoneLossRecovery;

@@ -131,6 +131,8 @@
     var guardRegistration = softPhoneModules.guardRegistration;
     var REGISTRATION_TIMEOUT_MS = softPhoneModules.REGISTRATION_TIMEOUT_MS;
     var REGISTRATION_RETRY_MS = softPhoneModules.REGISTRATION_RETRY_MS;
+    var registrationRetryDelay = softPhoneModules.registrationRetryDelay;
+    var shouldReportRegistrationFailure = softPhoneModules.shouldReportRegistrationFailure;
     var answerClickAction = softPhoneModules.answerClickAction;
     var isAnswerInProgress = softPhoneModules.isAnswerInProgress;
     var answerButtonView = softPhoneModules.answerButtonView;
@@ -4525,8 +4527,15 @@
                 }
 
                 stage = 'microphone';
+                captureInFlight = true;
 
-                return captureMicrophone().catch(function (mediaError) {
+                return captureMicrophone().then(function (stream) {
+                    captureInFlight = false;
+
+                    return stream;
+                }, function (mediaError) {
+                    captureInFlight = false;
+
                     // Turn a permission/device rejection into an actionable, categorized error (item 9).
                     throw categorizeMicError(mediaError);
                 }).then(function (stream) {
@@ -4534,6 +4543,12 @@
                         stream.getTracks().forEach(function (track) {
                             track.stop();
                         });
+
+                        // The microphone answered after the attempt was given up on (a permission prompt answered, a
+                        // device that woke up): register now rather than at the next retry.
+                        reportDiagnostic('info', 'microphone-answered-late',
+                            'The microphone answered after the registration waiting for it was given up on; the phone registers again now.', '');
+                        window.setTimeout(registerIfUnregistered, 0);
 
                         throw new Error('The registration was given up on.');
                     }
@@ -4654,8 +4669,11 @@
                 reportCredentialRegistered(browserAudioCredentialId(browserAudioSession));
                 reportClientCapabilities(browserAudioCredentialId(browserAudioSession), browserAudioSession.clientCapabilities);
                 reportDiagnostic('info', 'registration-completed',
-                    'The phone registered with the provider in ' + (Date.now() - startedAt) + ' ms.',
+                    'The phone registered with the provider in ' + (Date.now() - startedAt) + ' ms' +
+                    (registrationFailures ? ', after ' + registrationFailures + ' failed attempt(s)' : '') + '.',
                     browserAudioCredentialId(browserAudioSession) || '');
+                registrationFailures = 0;
+                lastRegistrationFailure = '';
 
                 // A renewal replaced a still-live credential; revoke that predecessor now that the fresh
                 // session is registered (unless, defensively, the server handed back the same credential id).
@@ -4672,15 +4690,36 @@
                 // Until now a failed or stalled registration left no trace but the browser console: the server only saw
                 // a phone that asked for a credential and went quiet, and the platform went on ringing the one it had
                 // registered before. Said, and tried again shortly rather than at the next heartbeat.
-                // A blocked or missing microphone fails every attempt the same way: the agent's Retry is the way back.
-                var retrying = !micPermissionState;
+                // A blocked or missing microphone fails every attempt the same way: the agent's Retry is the way back. A
+                // microphone request still open is waited on (see soft-phone/registration.js); anything else is tried
+                // again, backing off.
+                registrationFailures += 1;
 
-                reportDiagnostic('warning', error && error.registrationTimedOut ? 'registration-timeout' : 'registration-failed',
-                    ((error && error.message) || String(error)) +
-                    (retrying ? ' It is tried again shortly.' : ' It is tried again once the agent clicks Retry.'), stage);
+                var retrying = !micPermissionState;
+                var failure = (error && error.message) || String(error);
+                var retryDelay = registrationRetryDelay(registrationFailures);
+
+                if (shouldReportRegistrationFailure(registrationFailures, failure, lastRegistrationFailure)) {
+                    reportDiagnostic('warning', error && error.registrationTimedOut ? 'registration-timeout' : 'registration-failed',
+                        failure + ' Attempt ' + registrationFailures + ' in a row; ' +
+                        (!retrying
+                            ? 'it is tried again once the agent clicks Retry.'
+                            : captureInFlight
+                                ? 'it registers once the microphone answers.'
+                                : 'it is tried again in ' + Math.round(retryDelay / 1000) + ' seconds.'), stage);
+                }
+
+                lastRegistrationFailure = failure;
+
+                // Nothing else tells the agent their phone cannot take calls: a microphone that does not answer is
+                // usually a permission prompt waiting for them, or another app holding the device.
+                if (error && error.registrationTimedOut && error.stage === 'microphone') {
+                    showError(strings.microphoneNotResponding ||
+                        'Your microphone is not responding, so this phone cannot take calls. Allow microphone access if the browser asks, or close other apps using the microphone.');
+                }
 
                 if (retrying) {
-                    scheduleRegistrationRetry();
+                    scheduleRegistrationRetry(retryDelay);
                 }
 
                 throw error;
@@ -4695,7 +4734,15 @@
         // still needed (a blocked microphone, a hub that is down or a registration that has since succeeded skip it).
         var registrationRetryTimer = null;
 
-        function scheduleRegistrationRetry() {
+        // Consecutive failed or stalled registrations, and the last failure said, for backing off and for keeping a phone
+        // that cannot register from writing the same warning every half minute.
+        var registrationFailures = 0;
+        var lastRegistrationFailure = '';
+
+        // Whether a microphone request a registration made is still open.
+        var captureInFlight = false;
+
+        function scheduleRegistrationRetry(delayMs) {
             if (registrationRetryTimer || pageUnloading) {
                 return;
             }
@@ -4703,7 +4750,7 @@
             registrationRetryTimer = window.setTimeout(function () {
                 registrationRetryTimer = null;
                 registerIfUnregistered();
-            }, REGISTRATION_RETRY_MS);
+            }, typeof delayMs === 'number' && delayMs > 0 ? delayMs : REGISTRATION_RETRY_MS);
         }
 
         function renewBrowserAudioIfNeeded() {
@@ -4807,6 +4854,7 @@
                 registered: !!browserAudioSession,
                 registering: !!browserAudioPromise,
                 microphoneBlocked: !!micPermissionState,
+                captureInFlight: captureInFlight,
                 hubConnected: !!connection && connection.state === 'Connected'
             })) {
                 return;
