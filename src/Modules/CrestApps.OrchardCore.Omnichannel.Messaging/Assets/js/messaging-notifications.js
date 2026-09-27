@@ -29,10 +29,12 @@
     var newMessageFromText = host.getAttribute('data-new-message-from-text');
     var openText = host.getAttribute('data-open-text');
     var closeText = host.getAttribute('data-close-text');
-    var someoneText = host.getAttribute('data-someone-text');
-    var transferredToYouText = host.getAttribute('data-transferred-to-you-text');
-    var transferredToQueueText = host.getAttribute('data-transferred-to-queue-text');
-    var transferredToYourQueueText = host.getAttribute('data-transferred-to-your-queue-text');
+    var transferTexts = {
+        someone: host.getAttribute('data-someone-text'),
+        toYou: host.getAttribute('data-transferred-to-you-text'),
+        toQueue: host.getAttribute('data-transferred-to-queue-text'),
+        toYourQueue: host.getAttribute('data-transferred-to-your-queue-text'),
+    };
 
     // Long enough to read a line of preview. What a toast announced stays counted on the menu after it goes.
     var toastDelayMs = 8000;
@@ -155,15 +157,7 @@
             return;
         }
 
-        var by = notification.transferredByName || someoneText;
-
-        var title = kind === 'to-me'
-            ? messaging.formatText(transferredToYouText, [by])
-            : notification.transferredToName
-                ? messaging.formatText(transferredToQueueText, [by, notification.transferredToName])
-                : messaging.formatText(transferredToYourQueueText, [by]);
-
-        showToast(title, '', conversationHref(notification.conversationId));
+        showToast(messaging.assignmentToastTitle(kind, notification, transferTexts), '', conversationHref(notification.conversationId));
     }
 
     badge.start();

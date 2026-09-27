@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
+using Microsoft.AspNetCore.Mvc.Localization;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Services;
 
@@ -69,6 +70,39 @@ public static class ThreadTimeline
         }
 
         return items;
+    }
+
+    /// <summary>
+    /// Words a transfer as the thread shows it, from the names captured when it happened. A queue is named as one, so
+    /// "to Billing" is not read as a person called Billing, and whoever made the transfer is only named apart from the
+    /// sender when it was somebody else, such as a supervisor.
+    /// </summary>
+    /// <param name="entry">The transfer.</param>
+    /// <param name="T">The localizer of the view that shows it.</param>
+    /// <returns>The sentence. The names are its arguments, so they are encoded once, when it is written.</returns>
+    public static LocalizedHtmlString DescribeTransfer(MessagingConversationEvent entry, IHtmlLocalizer T)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        ArgumentNullException.ThrowIfNull(T);
+
+        // GetString formats the destination as plain text; it is encoded as an argument of the sentence.
+        var to = !string.IsNullOrEmpty(entry.ToQueueId)
+            ? T.GetString("the {0} queue", string.IsNullOrWhiteSpace(entry.ToName) ? T.GetString("unknown").Value : entry.ToName).Value
+            : string.IsNullOrWhiteSpace(entry.ToName) ? T.GetString("another agent").Value : entry.ToName;
+        var from = entry.FromName;
+        var actor = entry.ActorName;
+        var actorIsSender = !string.IsNullOrEmpty(entry.ActorAgentId) && string.Equals(entry.ActorAgentId, entry.FromAgentId, StringComparison.OrdinalIgnoreCase);
+
+        if (string.IsNullOrWhiteSpace(from))
+        {
+            return string.IsNullOrWhiteSpace(actor)
+                ? T["Transferred to {0}", to]
+                : T["{0} transferred this conversation to {1}", actor, to];
+        }
+
+        return string.IsNullOrWhiteSpace(actor) || actorIsSender
+            ? T["Transferred from {0} to {1}", from, to]
+            : T["{0} transferred this conversation from {1} to {2}", actor, from, to];
     }
 }
 

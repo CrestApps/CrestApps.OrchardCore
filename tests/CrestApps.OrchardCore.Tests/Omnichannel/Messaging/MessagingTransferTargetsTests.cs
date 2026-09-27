@@ -139,6 +139,55 @@ public sealed class MessagingTransferTargetsTests
         Assert.Empty(await targets.SearchQueuesAsync(HeldBy("agent-a"), query: null, TestContext.Current.CancellationToken));
     }
 
+    [Fact]
+    public async Task SearchQueuesAsync_MatchesAnyPartOfTheNameIgnoringCase()
+    {
+        var targets = new Builder()
+            .Queue("queue-1", "Billing")
+            .Queue("queue-2", "Accounts")
+            .Build();
+
+        var options = await targets.SearchQueuesAsync(HeldBy("agent-a"), query: " bill ", TestContext.Current.CancellationToken);
+
+        Assert.Equal(["Billing"], options.Select(option => option.Text));
+    }
+
+    // One search never returns more than the picker can list, and the ones it returns are the first by name, not the
+    // first the directory happened to hold.
+    [Fact]
+    public async Task SearchAgentsAsync_ReturnsAtMostMaxResults_InNameOrder()
+    {
+        var builder = new Builder();
+
+        foreach (var index in Enumerable.Range(0, 60).Reverse())
+        {
+            builder.Agent($"agent-{index:D2}", $"Agent {index:D2}");
+        }
+
+        var options = await builder.Build().SearchAgentsAsync(HeldBy("agent-holder"), query: null, actingUserId: null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            Enumerable.Range(0, MessagingTransferTargets.MaxResults).Select(index => $"Agent {index:D2}"),
+            options.Select(option => option.Text));
+    }
+
+    [Fact]
+    public async Task SearchQueuesAsync_ReturnsAtMostMaxResults_InNameOrder()
+    {
+        var builder = new Builder();
+
+        foreach (var index in Enumerable.Range(0, 60).Reverse())
+        {
+            builder.Queue($"queue-{index:D2}", $"Queue {index:D2}");
+        }
+
+        var options = await builder.Build().SearchQueuesAsync(HeldBy("agent-a"), query: null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            Enumerable.Range(0, MessagingTransferTargets.MaxResults).Select(index => $"Queue {index:D2}"),
+            options.Select(option => option.Text));
+    }
+
     private static MessagingConversation HeldBy(string agentId)
         => new()
         {

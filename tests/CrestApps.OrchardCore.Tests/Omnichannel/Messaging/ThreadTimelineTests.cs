@@ -1,6 +1,9 @@
+using System.Text.Encodings.Web;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
+using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.Tests.Omnichannel.Messaging;
 
@@ -67,6 +70,90 @@ public sealed class ThreadTimelineTests
         Assert.Empty(ThreadTimeline.ForPage(null, [Message("m1", 1)], beforeUtc: null, hasEarlierMessages: false));
     }
 
+    [Fact]
+    public void DescribeTransfer_WithNoSenderOrActor_SaysOnlyWhereItWent()
+    {
+        var sentence = Describe(new MessagingConversationEvent { ToAgentId = "agent-b", ToName = "Bea" });
+
+        Assert.Equal("Transferred to Bea", sentence);
+    }
+
+    // An agent who hands on their own conversation is named once, not as "Ann transferred this conversation from Ann".
+    [Fact]
+    public void DescribeTransfer_MadeByTheSender_NamesThemOnceAsTheSender()
+    {
+        var sentence = Describe(new MessagingConversationEvent
+        {
+            FromAgentId = "agent-a",
+            FromName = "Ann",
+            ActorAgentId = "agent-a",
+            ActorName = "Ann",
+            ToAgentId = "agent-b",
+            ToName = "Bea",
+        });
+
+        Assert.Equal("Transferred from Ann to Bea", sentence);
+    }
+
+    [Fact]
+    public void DescribeTransfer_MadeByASupervisor_NamesThemAsWellAsTheSender()
+    {
+        var sentence = Describe(new MessagingConversationEvent
+        {
+            FromAgentId = "agent-a",
+            FromName = "Ann",
+            ActorAgentId = "agent-s",
+            ActorName = "Sam",
+            ToAgentId = "agent-b",
+            ToName = "Bea",
+        });
+
+        Assert.Equal("Sam transferred this conversation from Ann to Bea", sentence);
+    }
+
+    [Fact]
+    public void DescribeTransfer_OfAnUnclaimedConversationBySomebody_NamesWhoMovedIt()
+    {
+        var sentence = Describe(new MessagingConversationEvent { ActorAgentId = "agent-s", ActorName = "Sam", ToAgentId = "agent-b", ToName = "Bea" });
+
+        Assert.Equal("Sam transferred this conversation to Bea", sentence);
+    }
+
+    // A queue is named as one, so "to Billing" is not read as a person called Billing (it once read "the Billing team").
+    [Fact]
+    public void DescribeTransfer_ToAQueue_NamesItAsAQueue()
+    {
+        var sentence = Describe(new MessagingConversationEvent { FromName = "Ann", ToQueueId = "queue-1", ToName = "Billing" });
+
+        Assert.Equal("Transferred from Ann to the Billing queue", sentence);
+    }
+
+    [Fact]
+    public void DescribeTransfer_WithoutTheDestinationsName_FallsBackToGenericWording()
+    {
+        Assert.Equal("Transferred to another agent", Describe(new MessagingConversationEvent { ToAgentId = "agent-b" }));
+        Assert.Equal("Transferred to the unknown queue", Describe(new MessagingConversationEvent { ToQueueId = "queue-1", ToName = " " }));
+    }
+
+    // The queue's wording is formatted as plain text and then encoded as an argument of the sentence, never twice.
+    [Fact]
+    public void DescribeTransfer_EncodesTheNamesOnce()
+    {
+        var sentence = Describe(new MessagingConversationEvent { FromName = "Ann <Lead>", ToQueueId = "queue-1", ToName = "R&D" });
+
+        Assert.Equal("Transferred from Ann &lt;Lead&gt; to the R&amp;D queue", sentence);
+    }
+
+    // Renders the sentence the way the view writes it.
+    private static string Describe(MessagingConversationEvent entry)
+    {
+        using var writer = new StringWriter();
+
+        ThreadTimeline.DescribeTransfer(entry, new PassThroughHtmlLocalizer()).WriteTo(writer, HtmlEncoder.Default);
+
+        return writer.ToString();
+    }
+
     private static OmnichannelMessage Message(string id, int minutes)
         => new() { Id = id, CreatedUtc = _start.AddMinutes(minutes) };
 
@@ -75,4 +162,18 @@ public sealed class ThreadTimelineTests
 
     private static string Label(ThreadTimelineItem item)
         => item.Message?.Id ?? item.Event.Note;
+
+    // Keeps the arguments of a sentence apart from it, as the view localizer does, so they are encoded when written.
+    private sealed class PassThroughHtmlLocalizer : IHtmlLocalizer
+    {
+        public LocalizedHtmlString this[string name] => new(name, name);
+
+        public LocalizedHtmlString this[string name, params object[] arguments] => new(name, name, false, arguments);
+
+        public LocalizedString GetString(string name) => new(name, name);
+
+        public LocalizedString GetString(string name, params object[] arguments) => new(name, string.Format(name, arguments));
+
+        public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
+    }
 }

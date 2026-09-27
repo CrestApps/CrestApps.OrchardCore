@@ -1,8 +1,9 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import '../../../src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/shared/messaging-state.js';
 
-const { classifyAssignment, formatText, transferTargetInputName } = globalThis.CrestAppsMessaging;
+const { assignmentToastTitle, classifyAssignment, formatText, transferTargetInputName } = globalThis.CrestAppsMessaging;
 
 // A transfer reaches the recipient, the queue whose pool it went to, and whoever held it before. Each of them is told
 // something different, and the person who made the transfer is told nothing: they already know.
@@ -62,5 +63,79 @@ describe('transferTargetInputName', () => {
     it('reads the person picker otherwise', () => {
         expect(transferTargetInputName('Agent')).toBe('targetAgentId');
         expect(transferTargetInputName(undefined)).toBe('targetAgentId');
+    });
+});
+
+// The sentences the pages carry for script to complete, as MessagingNotifications.cshtml and Workspace.cshtml word them.
+const texts = {
+    someone: 'Someone',
+    toYou: '{0} transferred a conversation to you',
+    toQueue: '{0} sent a conversation to the {1} queue',
+    toYourQueue: '{0} sent a conversation to one of your queues',
+    away: 'This conversation was transferred to {0}',
+};
+
+describe('assignmentToastTitle', () => {
+    it('tells the recipient who transferred the conversation to them', () => {
+        expect(assignmentToastTitle('to-me', { transferredByName: 'Ann' }, texts)).toBe('Ann transferred a conversation to you');
+    });
+
+    it('says someone when the sender has no name', () => {
+        expect(assignmentToastTitle('to-me', { transferredByName: '' }, texts)).toBe('Someone transferred a conversation to you');
+    });
+
+    it('names the queue a conversation was sent back to', () => {
+        expect(assignmentToastTitle('to-queue', { transferredByName: 'Ann', transferredToName: 'Billing' }, texts))
+            .toBe('Ann sent a conversation to the Billing queue');
+    });
+
+    it('says one of your queues when the queue has no name', () => {
+        expect(assignmentToastTitle('to-queue', { transferredByName: 'Ann' }, texts)).toBe('Ann sent a conversation to one of your queues');
+    });
+
+    it('tells someone looking at the conversation where it went', () => {
+        expect(assignmentToastTitle('away', { transferredToName: 'Bea' }, texts)).toBe('This conversation was transferred to Bea');
+        expect(assignmentToastTitle('away', {}, texts)).toBe('This conversation was transferred to Someone');
+    });
+
+    it('raises no toast for a claim or a routed assignment', () => {
+        expect(assignmentToastTitle('refresh', { transferredByName: 'Ann' }, texts)).toBeNull();
+    });
+
+    // Both pages raise these toasts, so both must take their titles from the one tested choice.
+    it.each([
+        'src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/messaging-notifications.js',
+        'src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/messaging-workspace.js',
+    ])('is what %s titles its transfer toasts with', path => {
+        expect(readFileSync(path, 'utf8')).toContain('messaging.assignmentToastTitle(kind, notification, transferTexts)');
+    });
+});
+
+// The thread shows each transfer with the note the sender left for the next agent.
+describe('the transfer row in the thread', () => {
+    const view = readFileSync('src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Views/Admin/_ThreadEvent.cshtml', 'utf8');
+
+    it('is worded by the tested ThreadTimeline.DescribeTransfer', () => {
+        expect(view).toContain('ThreadTimeline.DescribeTransfer(Model, T)');
+    });
+
+    it('still shows the note', () => {
+        expect(view).toContain('@Model.Note');
+    });
+});
+
+// The transfer picker searches as the agent types. The shared selector sends the text as "query", and the actions it
+// calls must bind a parameter of that name, or every search quietly returns the unfiltered list.
+describe('the transfer picker search', () => {
+    it('sends the typed text as a query parameter', () => {
+        const selector = readFileSync('src/Modules/CrestApps.OrchardCore.Resources/Assets/js/item-selector.js', 'utf8');
+
+        expect(selector).toContain("url.searchParams.set('query', query)");
+    });
+
+    it.each(['TransferAgents', 'TransferQueues'])('reaches %s as its query parameter', action => {
+        const controller = readFileSync('src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Controllers/AdminController.cs', 'utf8');
+
+        expect(controller).toContain(`public async Task<IActionResult> ${action}(string id, string query)`);
     });
 });

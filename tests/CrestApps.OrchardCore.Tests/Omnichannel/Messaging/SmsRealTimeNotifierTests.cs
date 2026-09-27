@@ -183,4 +183,100 @@ public sealed class SmsRealTimeNotifierTests
         // Assert
         agentClient.Verify(client => client.ConversationAssigned(notification), Times.Once);
     }
+
+    // A conversation sent back to a queue has no assignee, so only the queue's pool hears it arrived, and the agent who
+    // held it hears it left their inbox.
+    [Fact]
+    public async Task ConversationAssignedAsync_WhenSentBackToAQueue_ReachesTheQueueAndThePreviousHolderOnce()
+    {
+        // Arrange
+        var queueClient = new Mock<IMessagingHubClient>();
+        var previousClient = new Mock<IMessagingHubClient>();
+        var clients = new Mock<IHubClients<IMessagingHubClient>>();
+
+        clients
+            .Setup(hubClients => hubClients.Group(TenantSignalRGroupName.ForGroup("TenantA", MessagingHub.QueueGroup("q-1"))))
+            .Returns(queueClient.Object);
+        clients
+            .Setup(hubClients => hubClients.Group(TenantSignalRGroupName.ForGroup("TenantA", MessagingHub.AgentGroup("agent-a"))))
+            .Returns(previousClient.Object);
+
+        var hubContext = new Mock<IHubContext<MessagingHub, IMessagingHubClient>>();
+        hubContext.SetupGet(context => context.Clients).Returns(clients.Object);
+
+        var notifier = new MessagingRealTimeNotifier(hubContext.Object, new ShellSettings { Name = "TenantA" }, NullLogger<MessagingRealTimeNotifier>.Instance);
+
+        var notification = new MessagingAssignmentNotification
+        {
+            ConversationId = "conv-1",
+            OwnerQueueId = "q-1",
+            PreviousAgentId = "agent-a",
+            IsTransfer = true,
+        };
+
+        // Act
+        await notifier.ConversationAssignedAsync(notification, TestContext.Current.CancellationToken);
+
+        // Assert
+        queueClient.Verify(client => client.ConversationAssigned(notification), Times.Once);
+        previousClient.Verify(client => client.ConversationAssigned(notification), Times.Once);
+        clients.Verify(hubClients => hubClients.Group(It.IsAny<string>()), Times.Exactly(2));
+    }
+
+    // The other members of the queue drop a conversation from their pool once one of them holds it.
+    [Fact]
+    public async Task ConversationAssignedAsync_WhenAssignedWithinAQueue_ReachesTheAssigneeAndTheQueue()
+    {
+        // Arrange
+        var agentClient = new Mock<IMessagingHubClient>();
+        var queueClient = new Mock<IMessagingHubClient>();
+        var clients = new Mock<IHubClients<IMessagingHubClient>>();
+
+        clients
+            .Setup(hubClients => hubClients.Group(TenantSignalRGroupName.ForGroup("TenantA", MessagingHub.AgentGroup("agent-b"))))
+            .Returns(agentClient.Object);
+        clients
+            .Setup(hubClients => hubClients.Group(TenantSignalRGroupName.ForGroup("TenantA", MessagingHub.QueueGroup("q-1"))))
+            .Returns(queueClient.Object);
+
+        var hubContext = new Mock<IHubContext<MessagingHub, IMessagingHubClient>>();
+        hubContext.SetupGet(context => context.Clients).Returns(clients.Object);
+
+        var notifier = new MessagingRealTimeNotifier(hubContext.Object, new ShellSettings { Name = "TenantA" }, NullLogger<MessagingRealTimeNotifier>.Instance);
+
+        var notification = new MessagingAssignmentNotification
+        {
+            ConversationId = "conv-1",
+            AssignedAgentId = "agent-b",
+            OwnerQueueId = "q-1",
+        };
+
+        // Act
+        await notifier.ConversationAssignedAsync(notification, TestContext.Current.CancellationToken);
+
+        // Assert
+        agentClient.Verify(client => client.ConversationAssigned(notification), Times.Once);
+        queueClient.Verify(client => client.ConversationAssigned(notification), Times.Once);
+    }
+
+    [Fact]
+    public async Task ConversationAssignedAsync_WhenItNamesNobody_SendsNothing()
+    {
+        // Arrange
+        var allClient = new Mock<IMessagingHubClient>();
+        var clients = new Mock<IHubClients<IMessagingHubClient>>();
+        clients.SetupGet(hubClients => hubClients.All).Returns(allClient.Object);
+
+        var hubContext = new Mock<IHubContext<MessagingHub, IMessagingHubClient>>();
+        hubContext.SetupGet(context => context.Clients).Returns(clients.Object);
+
+        var notifier = new MessagingRealTimeNotifier(hubContext.Object, new ShellSettings { Name = "TenantA" }, NullLogger<MessagingRealTimeNotifier>.Instance);
+
+        // Act
+        await notifier.ConversationAssignedAsync(new MessagingAssignmentNotification { ConversationId = "conv-1" }, TestContext.Current.CancellationToken);
+
+        // Assert
+        clients.Verify(hubClients => hubClients.Group(It.IsAny<string>()), Times.Never);
+        allClient.Verify(client => client.ConversationAssigned(It.IsAny<MessagingAssignmentNotification>()), Times.Never);
+    }
 }

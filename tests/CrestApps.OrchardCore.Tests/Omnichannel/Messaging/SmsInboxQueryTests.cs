@@ -1,11 +1,27 @@
+using System.Security.Claims;
+using System.Text.Json.Nodes;
 using CrestApps.Core;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
 using CrestApps.OrchardCore.Tests.Utilities;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
+using Moq;
+using OrchardCore.ContentManagement;
+using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
+using OrchardCore.Modules;
+using OrchardCore.Security;
+using OrchardCore.Security.Permissions;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
@@ -258,6 +274,195 @@ public sealed class SmsInboxQueryTests
         Assert.Equal(_now.AddSeconds(20), next);
     }
 
+    // A conversation sent back to a queue waits in the queue's pool: its members find it on the Unassigned tab, while a
+    // colleague's conversation in the same queue stays theirs.
+    [Fact]
+    public async Task QueryAsync_UnassignedTab_ForAMemberOfTheQueue_ShowsOnlyTheConversationSentBackToIt()
+    {
+        await using var harness = await Harness.CreateAsync();
+        await harness.SeedAsync(SentBackToQueue("sent-back", "q-1"), Queue("colleagues", "q-1", assignedAgentId: "agent-2"));
+
+        var results = await harness.Store.QueryAsync(
+            new MessagingInboxQuery { AgentId = "agent-1", QueueIds = ["q-1"], Filter = MessagingInboxFilter.Unassigned, Take = 50 },
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(["sent-back"], results.Select(conversation => conversation.ItemId));
+    }
+
+    [Fact]
+    public async Task QueryAsync_UnassignedTab_ForAnAgentOfAnotherQueue_ShowsNothing()
+    {
+        await using var harness = await Harness.CreateAsync();
+        await harness.SeedAsync(SentBackToQueue("sent-back", "q-1"), Queue("colleagues", "q-1", assignedAgentId: "agent-2"));
+
+        var results = await harness.Store.QueryAsync(
+            new MessagingInboxQuery { AgentId = "agent-1", QueueIds = ["q-2"], Filter = MessagingInboxFilter.Unassigned, Take = 50 },
+            TestContext.Current.CancellationToken);
+
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    public async Task QueryAsync_UnassignedTab_ForASupervisor_ShowsTheConversationSentBackToAQueue()
+    {
+        await using var harness = await Harness.CreateAsync();
+        await harness.SeedAsync(SentBackToQueue("sent-back", "q-1"), Queue("colleagues", "q-1", assignedAgentId: "agent-2"));
+
+        var results = await harness.Store.QueryAsync(
+            new MessagingInboxQuery { IncludeAll = true, Filter = MessagingInboxFilter.Unassigned, Take = 50 },
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(["sent-back"], results.Select(conversation => conversation.ItemId));
+    }
+
+    // The count on Messaging > Inbox. It counts what is waiting on the user and nothing they could not open: their own
+    // unread open conversations, including one just handed to them, and the unread pool of the queues they serve.
+    [Fact]
+    public async Task CountNeedingAttentionAsync_ForAnAgent_CountsTheirUnreadOpenConversationsAndTheirQueuesUnreadPool()
+    {
+        await using var harness = await Harness.CreateAsync();
+        await harness.SeedAsync(AttentionSeed());
+
+        var (builder, _) = CreateBuilder(harness.Store, new AgentProfile { ItemId = "agent-1", UserId = "user-1", QueueIds = ["q-1"] });
+
+        var count = await builder.CountNeedingAttentionAsync(User(), TestContext.Current.CancellationToken);
+
+        // Mine and unread, the transfer to me, and the unread one in my queue's pool.
+        Assert.Equal(3, count);
+    }
+
+    [Fact]
+    public async Task CountNeedingAttentionAsync_ForASupervisorWithoutAProfile_CountsTheUnreadPoolOfEveryQueue()
+    {
+        await using var harness = await Harness.CreateAsync();
+        await harness.SeedAsync(AttentionSeed());
+
+        var (builder, _) = CreateBuilder(harness.Store, agent: null, MessagingPermissions.ViewAllConversations);
+
+        var count = await builder.CountNeedingAttentionAsync(User(), TestContext.Current.CancellationToken);
+
+        // The unread ones nobody holds, in my queue and in the other; nothing is assigned to somebody without a profile.
+        Assert.Equal(2, count);
+    }
+
+    [Fact]
+    public async Task CountNeedingAttentionAsync_ForASupervisorWithAProfile_AddsTheirOwnToEveryQueuesUnreadPool()
+    {
+        await using var harness = await Harness.CreateAsync();
+        await harness.SeedAsync(AttentionSeed());
+
+        var (builder, _) = CreateBuilder(
+            harness.Store,
+            new AgentProfile { ItemId = "agent-1", UserId = "user-1", QueueIds = ["q-1"] },
+            MessagingPermissions.ViewAllConversations);
+
+        var count = await builder.CountNeedingAttentionAsync(User(), TestContext.Current.CancellationToken);
+
+        Assert.Equal(4, count);
+    }
+
+    // Every admin page asks for this number, so a user who has never opened the workspace costs no query, and browsing
+    // does not provision them an agent profile.
+    [Fact]
+    public async Task CountNeedingAttentionAsync_WithoutAProfileOrViewAll_IsZero_AndNeitherQueriesNorCreatesAProfile()
+    {
+        var store = new Mock<IMessagingConversationStore>();
+        var (builder, agentProfiles) = CreateBuilder(store.Object, agent: null);
+
+        var count = await builder.CountNeedingAttentionAsync(User(), TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, count);
+        store.VerifyNoOtherCalls();
+        agentProfiles.Verify(manager => manager.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()), Times.Never);
+        agentProfiles.Verify(manager => manager.CreateAsync(It.IsAny<AgentProfile>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    // What agent-1, serving q-1, has around them.
+    private static MessagingConversation[] AttentionSeed()
+    {
+        var mineUnread = Assigned("mine-unread", "agent-1");
+        mineUnread.UnreadCount = 1;
+
+        var mineRead = Assigned("mine-read", "agent-1");
+        mineRead.IsRead = true;
+
+        var mineClosed = Assigned("mine-closed", "agent-1");
+        mineClosed.UnreadCount = 1;
+        mineClosed.Status = ConversationStatus.Closed;
+
+        // A transfer leaves the conversation unread for its recipient without adding a message.
+        var transferredToMe = Queue("transferred-to-me", "q-1", assignedAgentId: "agent-1");
+
+        var pooledRead = SentBackToQueue("pooled-read", "q-1");
+        pooledRead.IsRead = true;
+        pooledRead.UnreadCount = 0;
+
+        var colleagues = Queue("colleagues", "q-1", assignedAgentId: "agent-2");
+        colleagues.UnreadCount = 1;
+
+        return
+        [
+            mineUnread,
+            mineRead,
+            mineClosed,
+            transferredToMe,
+            SentBackToQueue("pooled-unread", "q-1"),
+            pooledRead,
+            SentBackToQueue("other-queue", "q-2"),
+            colleagues,
+        ];
+    }
+
+    private static MessagingConversation SentBackToQueue(string itemId, string queueId)
+    {
+        var conversation = Queue(itemId, queueId, assignedAgentId: null);
+        conversation.UnreadCount = 1;
+
+        return conversation;
+    }
+
+    private static ClaimsPrincipal User()
+        => new(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "user-1")], "Test"));
+
+    private static (MessagingWorkspaceBuilder Builder, Mock<IAgentProfileManager> AgentProfiles) CreateBuilder(
+        IMessagingConversationStore store,
+        AgentProfile agent,
+        params Permission[] granted)
+    {
+        var agentProfiles = new Mock<IAgentProfileManager>();
+        agentProfiles
+            .Setup(manager => manager.FindByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(agent);
+
+        var clock = new Mock<IClock>();
+        clock.SetupGet(instance => instance.UtcNow).Returns(_now);
+
+        var builder = new MessagingWorkspaceBuilder(
+            store,
+            MessagingTestChannels.Resolver(MessagingTestChannels.AcceptingDispatcher().Object),
+            Mock.Of<IOmnichannelChannelEndpointManager>(),
+            Mock.Of<IMessageTemplateManager>(),
+            agentProfiles.Object,
+            Mock.Of<IMessagingAvailabilityService>(),
+            Mock.Of<IMessagingAgentNameProvider>(),
+            [],
+            Mock.Of<IContentManager>(),
+            new PermissionGrants(granted.Select(permission => permission.Name).ToHashSet()),
+            new MessagingQuietHoursGuard(
+                Mock.Of<IBusinessHoursGate>(),
+                Mock.Of<IMessagingQueuePolicyReader>(),
+                Mock.Of<IMessagingContactTimeZoneResolver>(),
+                clock.Object),
+            Mock.Of<IDisplayManager<MessagingConversation>>(),
+            Mock.Of<IUpdateModelAccessor>(),
+            Mock.Of<ISession>(),
+            clock.Object,
+            new OptionsWrapper<MessagingWorkspaceOptions>(new MessagingWorkspaceOptions()),
+            Mock.Of<IStringLocalizer<MessagingWorkspaceBuilder>>());
+
+        return (builder, agentProfiles);
+    }
+
     private static MessagingConversation Personal(string itemId, string ownerId)
         => new()
         {
@@ -370,5 +575,19 @@ public sealed class SmsInboxQueryTests
             await _session.DisposeAsync();
             TemporarySqliteDatabase.DisposeAndDelete(_store, _databasePath);
         }
+    }
+
+    // Grants the named permissions and nothing else.
+    private sealed class PermissionGrants(ISet<string> granted) : IAuthorizationService
+    {
+        public Task<AuthorizationResult> AuthorizeAsync(ClaimsPrincipal user, object resource, IEnumerable<IAuthorizationRequirement> requirements)
+        {
+            var allowed = requirements.OfType<PermissionRequirement>().All(requirement => granted.Contains(requirement.Permission.Name));
+
+            return Task.FromResult(allowed ? AuthorizationResult.Success() : AuthorizationResult.Failed());
+        }
+
+        public Task<AuthorizationResult> AuthorizeAsync(ClaimsPrincipal user, object resource, string policyName)
+            => Task.FromResult(AuthorizationResult.Failed());
     }
 }

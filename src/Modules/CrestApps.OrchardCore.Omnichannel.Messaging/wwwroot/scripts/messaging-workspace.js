@@ -182,6 +182,25 @@
     });
   }
 
+  // The title of the toast a transfer raises, by what classifyAssignment made of it. The names were captured when the
+  // transfer happened, and one that is missing reads as "Someone" rather than leaving a gap in the sentence.
+  //   texts - the page's localized sentences: someone, toYou, toQueue, toYourQueue and away.
+  // Returns null for a kind that raises no toast.
+  function assignmentToastTitle(kind, notification, texts) {
+    var text = texts || {};
+    var by = notification && notification.transferredByName || text.someone;
+    switch (kind) {
+      case 'to-me':
+        return formatText(text.toYou, [by]);
+      case 'to-queue':
+        return notification && notification.transferredToName ? formatText(text.toQueue, [by, notification.transferredToName]) : formatText(text.toYourQueue, [by]);
+      case 'away':
+        return formatText(text.away, [notification && notification.transferredToName || text.someone]);
+      default:
+        return null;
+    }
+  }
+
   // The transfer form carries a picker for a person and one for a queue; only the chosen one must hold a selection.
   function transferTargetInputName(targetType) {
     return targetType === 'Queue' ? 'targetQueueId' : 'targetAgentId';
@@ -218,6 +237,7 @@
     return String(kind) + ':' + (notification && notification.conversationId || '');
   }
   messaging.classifyAssignment = classifyAssignment;
+  messaging.assignmentToastTitle = assignmentToastTitle;
   messaging.createRecentNotifications = createRecentNotifications;
   messaging.notificationKey = notificationKey;
   messaging.formatText = formatText;
@@ -378,11 +398,13 @@
   var availabilityUrl = workspace.getAttribute('data-availability-url');
   var newMessageText = workspace.getAttribute('data-new-message-text');
   var viewText = workspace.getAttribute('data-view-text');
-  var someoneText = workspace.getAttribute('data-someone-text');
-  var transferredToYouText = workspace.getAttribute('data-transferred-to-you-text');
-  var transferredToQueueText = workspace.getAttribute('data-transferred-to-queue-text');
-  var transferredToYourQueueText = workspace.getAttribute('data-transferred-to-your-queue-text');
-  var transferredAwayText = workspace.getAttribute('data-transferred-away-text');
+  var transferTexts = {
+    someone: workspace.getAttribute('data-someone-text'),
+    toYou: workspace.getAttribute('data-transferred-to-you-text'),
+    toQueue: workspace.getAttribute('data-transferred-to-queue-text'),
+    toYourQueue: workspace.getAttribute('data-transferred-to-your-queue-text'),
+    away: workspace.getAttribute('data-transferred-away-text')
+  };
 
   // The same event can reach the page through two of the agent's groups (a transfer goes to the recipient and to the
   // queue they serve); it is announced once. The list and the thread still catch up on every copy.
@@ -793,19 +815,15 @@
 
   // A conversation changed hands: the list always catches up, and a transfer also says who moved it where.
   function onAssigned(notification) {
-    var by = notification && notification.transferredByName || someoneText;
-    var to = notification && notification.transferredToName || someoneText;
     var kind = messaging.classifyAssignment(notification, view);
     var announce = kind !== 'refresh' && recent.isNew(messaging.notificationKey(kind, notification));
     switch (announce ? kind : 'refresh') {
       case 'to-me':
-        showToast(messaging.formatText(transferredToYouText, [by]), '', conversationHref(notification.conversationId));
-        break;
       case 'to-queue':
-        showToast(notification.transferredToName ? messaging.formatText(transferredToQueueText, [by, notification.transferredToName]) : messaging.formatText(transferredToYourQueueText, [by]), '', conversationHref(notification.conversationId));
+        showToast(messaging.assignmentToastTitle(kind, notification, transferTexts), '', conversationHref(notification.conversationId));
         break;
       case 'away':
-        showToast(messaging.formatText(transferredAwayText, [to]), '', null);
+        showToast(messaging.assignmentToastTitle(kind, notification, transferTexts), '', null);
         break;
     }
     refreshInbox();

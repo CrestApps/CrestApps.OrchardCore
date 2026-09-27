@@ -302,6 +302,175 @@ public sealed class SmsPortalAdminControllerTests
         Assert.IsType<NotFoundResult>(result);
     }
 
+    // Where the sender lands is decided by the conversation as the transfer left it, not as it was: once it waits in a
+    // queue they do not serve they can no longer open it, while in a queue they serve they still can.
+    [Fact]
+    public async Task Transfer_ToAQueueTheSenderDoesNotServe_ReturnsThemToTheirList()
+    {
+        var result = await TransferToQueueNineAsync(senderQueueIds: ["q-1"]);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(AdminController.Index), redirect.ActionName);
+    }
+
+    [Fact]
+    public async Task Transfer_ToAQueueTheSenderServes_KeepsThemOnTheConversation()
+    {
+        var result = await TransferToQueueNineAsync(senderQueueIds: ["q-9"]);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(AdminController.Conversation), redirect.ActionName);
+    }
+
+    // Live, a supervisor saw their own name in the transfer picker. The picker is told who the signed-in user is, so it
+    // leaves them out.
+    [Fact]
+    public async Task TransferAgents_ReturnsThePeopleItCanGoTo_LeavingOutTheSignedInUser()
+    {
+        var conversation = CreateForeignConversation();
+        var controller = CreateController(
+            conversation,
+            allowConversation: true,
+            targetUser: Mock.Of<IUser>(),
+            agents:
+            [
+                new AgentProfile { ItemId = "agent-1", UserId = "user-1", DisplayName = "Sam Supervisor" },
+                new AgentProfile { ItemId = "agent-2", UserId = "user-2", DisplayName = "Bea Recipient" },
+            ]);
+
+        var result = await controller.TransferAgents(ConversationId, query: null);
+
+        var json = Assert.IsType<JsonResult>(result);
+        var targets = Assert.IsAssignableFrom<IEnumerable<MessagingTransferTarget>>(json.Value);
+        Assert.Equal(["agent-2"], targets.Select(target => target.Value));
+    }
+
+    [Fact]
+    public async Task TransferQueues_ReturnsTheQueuesItCanBeSentBackTo()
+    {
+        var queues = new Mock<IActivityQueueManager>();
+        queues
+            .Setup(manager => manager.GetEnabledAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(
+            [
+                new ActivityQueue { ItemId = "q-1", Name = "Billing", Enabled = true },
+                new ActivityQueue { ItemId = "q-2", Name = "Accounts", Enabled = true },
+            ]);
+
+        var controller = CreateController(CreateForeignConversation(), allowConversation: true, queueManager: queues.Object);
+
+        var result = await controller.TransferQueues(ConversationId, query: null);
+
+        var json = Assert.IsType<JsonResult>(result);
+        var targets = Assert.IsAssignableFrom<IEnumerable<MessagingTransferTarget>>(json.Value);
+        Assert.Equal(["Accounts", "Billing"], targets.Select(target => target.Text));
+    }
+
+    // Opening a conversation reads it for the menu count, and picks up a routed one so it is not reassigned away from
+    // the agent reading it.
+    [Fact]
+    public async Task Conversation_WhenOpened_MarksItReadAndPicksItUp_SavingOnce()
+    {
+        var conversation = CreateForeignConversation();
+        conversation.IsRead = false;
+        conversation.UnreadCount = 3;
+        conversation.AssignedUtc = DateTime.UtcNow;
+        conversation.ReassignmentAttempts = 2;
+        var store = new Mock<IMessagingConversationStore>();
+        var controller = CreateController(conversation, allowConversation: true, store: store);
+
+        var result = await controller.Conversation(ConversationId, show: null, channel: null);
+
+        Assert.IsType<ViewResult>(result);
+        Assert.True(conversation.IsRead);
+        Assert.Equal(0, conversation.UnreadCount);
+        Assert.Null(conversation.AssignedUtc);
+        Assert.Equal(0, conversation.ReassignmentAttempts);
+        store.Verify(value => value.UpdateAsync(conversation, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Conversation_WhenAlreadyReadAndPickedUp_SavesNothing()
+    {
+        var conversation = CreateForeignConversation();
+        conversation.IsRead = true;
+        conversation.UnreadCount = 0;
+        conversation.AssignedUtc = null;
+        var store = new Mock<IMessagingConversationStore>();
+        var controller = CreateController(conversation, allowConversation: true, store: store);
+
+        var result = await controller.Conversation(ConversationId, show: null, channel: null);
+
+        Assert.IsType<ViewResult>(result);
+        store.Verify(value => value.UpdateAsync(It.IsAny<MessagingConversation>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Attention_WithoutTheWorkspacePermission_ReturnsForbid()
+    {
+        var controller = CreateController(CreateForeignConversation(), allowConversation: true, grantWorkspace: false);
+
+        var result = await controller.Attention();
+
+        Assert.IsType<ForbidResult>(result);
+    }
+
+    // The badge on Messaging > Inbox reads this on every admin page.
+    [Fact]
+    public async Task Attention_ReturnsTheNumberOfConversationsWaitingOnTheUser()
+    {
+        var store = new Mock<IMessagingConversationStore>();
+        store
+            .Setup(value => value.CountAsync(It.Is<MessagingInboxQuery>(query => query.Filter == MessagingInboxFilter.Mine), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(2);
+        store
+            .Setup(value => value.CountAsync(It.Is<MessagingInboxQuery>(query => query.Filter == MessagingInboxFilter.Unassigned), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(3);
+
+        var controller = CreateController(CreateForeignConversation(), allowConversation: true, store: store);
+
+        var result = Assert.IsType<JsonResult>(await controller.Attention());
+
+        Assert.Equal(5, (int)result.Value.GetType().GetProperty("count").GetValue(result.Value));
+    }
+
+    // The sender, agent-1, holds the conversation and sends it to q-9; they may open it while they hold it, or while it
+    // waits in a queue they serve.
+    private static Task<IActionResult> TransferToQueueNineAsync(string[] senderQueueIds)
+    {
+        var conversation = CreateForeignConversation();
+        conversation.OwnerId = "agent-1";
+        conversation.AssignedAgentId = "agent-1";
+
+        var transferService = new Mock<IMessagingConversationTransferService>();
+        transferService
+            .Setup(service => service.TransferAsync(It.IsAny<MessagingTransferRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MessagingTransferResult
+            {
+                Succeeded = true,
+                Conversation = new MessagingConversation
+                {
+                    Channel = "SMS",
+                    ItemId = ConversationId,
+                    OwnerType = ConversationOwnerType.Queue,
+                    OwnerId = "q-9",
+                    AssignmentStatus = ConversationAssignmentStatus.Pooled,
+                },
+                Event = new MessagingConversationEvent { ToQueueId = "q-9", ToName = "Escalations" },
+            });
+
+        var controller = CreateController(
+            conversation,
+            allowConversation: true,
+            transferService: transferService,
+            conversationRule: (candidate, operation) =>
+                operation != ConversationOperation.View ||
+                candidate.AssignedAgentId == "agent-1" ||
+                senderQueueIds.Contains(candidate.OwnerId));
+
+        return controller.Transfer(ConversationId, ConversationRouteTargetType.Queue, targetAgentId: null, targetQueueId: "q-9", note: null);
+    }
+
     private static MessagingConversation CreateForeignConversation()
         => new()
         {
@@ -322,13 +491,29 @@ public sealed class SmsPortalAdminControllerTests
         Mock<IMessagingConversationTransferService> transferService = null,
         ISet<ConversationOperation> deniedOperations = null,
         IUser targetUser = null,
-        Mock<IMessagingConversationStore> store = null)
+        Mock<IMessagingConversationStore> store = null,
+        Func<MessagingConversation, ConversationOperation, bool> conversationRule = null,
+        IEnumerable<AgentProfile> agents = null,
+        IActivityQueueManager queueManager = null,
+        bool grantWorkspace = true)
     {
         var conversationStore = store ?? new Mock<IMessagingConversationStore>();
 
         conversationStore
             .Setup(store => store.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(conversation);
+
+        // Opening a conversation renders the inbox beside it and reads its thread; both come back empty here.
+        conversationStore
+            .Setup(store => store.QueryAsync(It.IsAny<MessagingInboxQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var session = new Mock<YesSqlSession> { DefaultValue = DefaultValue.Mock };
+
+        var availabilityService = new Mock<IMessagingAvailabilityService>();
+        availabilityService
+            .Setup(service => service.Get(It.IsAny<AgentProfile>()))
+            .Returns(new MessagingAgentAvailability());
 
         var agentProfileManager = new Mock<IAgentProfileManager>();
 
@@ -339,8 +524,13 @@ public sealed class SmsPortalAdminControllerTests
         var clock = new Mock<IClock>();
         clock.SetupGet(instance => instance.UtcNow).Returns(DateTime.UtcNow);
 
-        var channels = MessagingTestChannels.Resolver(MessagingTestChannels.AcceptingDispatcher().Object);
-        var authorizationService = new ConversationAuthorizationService(allowConversation, deniedOperations);
+        var channels = MessagingTestChannels.Resolver(MessagingTestChannels.AcceptingDispatcher().Object, session.Object);
+        var authorizationService = new ConversationAuthorizationService(allowConversation, deniedOperations, conversationRule, grantWorkspace);
+        IActivityQueueManager[] queueManagers = queueManager is null ? [] : [queueManager];
+
+        agentProfileManager
+            .Setup(manager => manager.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync((agents ?? []).ToArray());
 
         agentProfileManager
             .Setup(manager => manager.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -358,7 +548,7 @@ public sealed class SmsPortalAdminControllerTests
 
         var transferTargets = new MessagingTransferTargets(
             agentProfileManager.Object,
-            [],
+            queueManagers,
             userManager.Object,
             principalFactory.Object,
             authorizationService,
@@ -370,9 +560,9 @@ public sealed class SmsPortalAdminControllerTests
             Mock.Of<IOmnichannelChannelEndpointManager>(),
             Mock.Of<IMessageTemplateManager>(),
             agentProfileManager.Object,
-            Mock.Of<IMessagingAvailabilityService>(),
+            availabilityService.Object,
             Mock.Of<IMessagingAgentNameProvider>(),
-            [],
+            queueManagers,
             Mock.Of<IContentManager>(),
             authorizationService,
             new MessagingQuietHoursGuard(
@@ -382,7 +572,7 @@ public sealed class SmsPortalAdminControllerTests
                 clock.Object),
             Mock.Of<IDisplayManager<MessagingConversation>>(),
             Mock.Of<IUpdateModelAccessor>(),
-            Mock.Of<YesSqlSession>(),
+            session.Object,
             clock.Object,
             new OptionsWrapper<MessagingWorkspaceOptions>(new MessagingWorkspaceOptions()),
             new NullStringLocalizer<MessagingWorkspaceBuilder>());
@@ -412,6 +602,9 @@ public sealed class SmsPortalAdminControllerTests
             },
         };
 
+        // Opening a conversation builds the links of its channel tabs.
+        controller.Url = Mock.Of<IUrlHelper>();
+
         return controller;
     }
 
@@ -432,16 +625,25 @@ public sealed class SmsPortalAdminControllerTests
     }
 
     // Grants the portal permission, and grants (or denies) the per-conversation rule the way the
-    // MessagingConversationAuthorizationHandler does at runtime.
+    // MessagingConversationAuthorizationHandler does at runtime. A rule, when given, reads the conversation it is asked
+    // about, so a test can grant what depends on the state a transfer left the conversation in.
     private sealed class ConversationAuthorizationService : IAuthorizationService
     {
         private readonly bool _allowConversation;
         private readonly ISet<ConversationOperation> _deniedOperations;
+        private readonly Func<MessagingConversation, ConversationOperation, bool> _rule;
+        private readonly bool _grantWorkspace;
 
-        public ConversationAuthorizationService(bool allowConversation, ISet<ConversationOperation> deniedOperations = null)
+        public ConversationAuthorizationService(
+            bool allowConversation,
+            ISet<ConversationOperation> deniedOperations = null,
+            Func<MessagingConversation, ConversationOperation, bool> rule = null,
+            bool grantWorkspace = true)
         {
             _allowConversation = allowConversation;
             _deniedOperations = deniedOperations ?? new HashSet<ConversationOperation>();
+            _rule = rule;
+            _grantWorkspace = grantWorkspace;
         }
 
         public Task<AuthorizationResult> AuthorizeAsync(
@@ -450,16 +652,22 @@ public sealed class SmsPortalAdminControllerTests
             IEnumerable<IAuthorizationRequirement> requirements)
         {
             if (resource is ConversationAuthorizationResource conversationResource &&
-                (!_allowConversation || _deniedOperations.Contains(conversationResource.Operation)))
+                (!_allowConversation ||
+                    _deniedOperations.Contains(conversationResource.Operation) ||
+                    (_rule is not null && !_rule(conversationResource.Conversation, conversationResource.Operation))))
             {
                 return Task.FromResult(AuthorizationResult.Failed());
             }
 
-            var isSupervisorCheck = requirements
+            var permissions = requirements
                 .OfType<PermissionRequirement>()
-                .Any(requirement => requirement.Permission.Name == MessagingPermissions.ViewAllConversations.Name);
+                .Select(requirement => requirement.Permission.Name)
+                .ToArray();
 
-            return Task.FromResult(isSupervisorCheck
+            var denied = permissions.Contains(MessagingPermissions.ViewAllConversations.Name) ||
+                (!_grantWorkspace && permissions.Contains(MessagingPermissions.UseMessagingWorkspace.Name));
+
+            return Task.FromResult(denied
                 ? AuthorizationResult.Failed()
                 : AuthorizationResult.Success());
         }

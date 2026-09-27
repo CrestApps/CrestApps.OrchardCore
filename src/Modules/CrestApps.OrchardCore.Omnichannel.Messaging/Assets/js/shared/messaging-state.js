@@ -190,6 +190,31 @@
         });
     }
 
+    // The title of the toast a transfer raises, by what classifyAssignment made of it. The names were captured when the
+    // transfer happened, and one that is missing reads as "Someone" rather than leaving a gap in the sentence.
+    //   texts - the page's localized sentences: someone, toYou, toQueue, toYourQueue and away.
+    // Returns null for a kind that raises no toast.
+    function assignmentToastTitle(kind, notification, texts) {
+        var text = texts || {};
+        var by = (notification && notification.transferredByName) || text.someone;
+
+        switch (kind) {
+            case 'to-me':
+                return formatText(text.toYou, [by]);
+
+            case 'to-queue':
+                return notification && notification.transferredToName
+                    ? formatText(text.toQueue, [by, notification.transferredToName])
+                    : formatText(text.toYourQueue, [by]);
+
+            case 'away':
+                return formatText(text.away, [(notification && notification.transferredToName) || text.someone]);
+
+            default:
+                return null;
+        }
+    }
+
     // The transfer form carries a picker for a person and one for a queue; only the chosen one must hold a selection.
     function transferTargetInputName(targetType) {
         return targetType === 'Queue' ? 'targetQueueId' : 'targetAgentId';
@@ -230,6 +255,7 @@
     }
 
     messaging.classifyAssignment = classifyAssignment;
+    messaging.assignmentToastTitle = assignmentToastTitle;
     messaging.createRecentNotifications = createRecentNotifications;
     messaging.notificationKey = notificationKey;
     messaging.formatText = formatText;
