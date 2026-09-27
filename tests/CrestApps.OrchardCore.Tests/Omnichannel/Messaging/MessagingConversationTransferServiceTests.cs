@@ -5,6 +5,8 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Notifications;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Modules;
@@ -142,6 +144,50 @@ public sealed class MessagingConversationTransferServiceTests
         Assert.False(result.Succeeded);
         Assert.Empty(conversation.History);
         context.Notifier.Verify(notifier => notifier.ConversationAssignedAsync(It.IsAny<MessagingAssignmentNotification>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    // Live, the transfer picker listed the person transferring, and choosing themselves "transferred" the conversation
+    // back to its sender.
+    [Fact]
+    public async Task TransferAsync_ToTheActingAgent_IsRefusedAndNothingChanges()
+    {
+        var conversation = CreateQueueConversation(assignedAgentId: RecipientId);
+        var context = new TestContextBuilder(conversation);
+
+        var result = await context.Service.TransferAsync(ToAgent(SenderId), TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal("You cannot transfer a conversation to yourself.", result.Error);
+        Assert.Equal(RecipientId, conversation.AssignedAgentId);
+        Assert.Empty(conversation.History);
+        context.Store.Verify(store => store.UpdateAsync(It.IsAny<MessagingConversation>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task TransferAsync_ToTheSignedInUsersOwnProfile_IsRefusedEvenWithoutAnActingAgent()
+    {
+        var conversation = CreateQueueConversation(assignedAgentId: RecipientId);
+        var context = new TestContextBuilder(conversation);
+
+        var request = ToAgent(SenderId);
+        request.ActingAgentId = null;
+        request.Principal = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "user-" + SenderId)], "Test"));
+
+        var result = await context.Service.TransferAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(RecipientId, conversation.AssignedAgentId);
+    }
+
+    [Fact]
+    public async Task TransferAsync_ToTheActingAgent_LogsWhyItWasRefused()
+    {
+        var logger = new RecordingLogger<MessagingConversationTransferService>();
+        var context = new TestContextBuilder(CreateQueueConversation(assignedAgentId: RecipientId), logger: logger);
+
+        await context.Service.TransferAsync(ToAgent(SenderId), TestContext.Current.CancellationToken);
+
+        Assert.Contains(logger.Entries, entry => entry.Level == LogLevel.Warning && entry.Message.Contains("that is the person transferring it", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -370,7 +416,7 @@ public sealed class MessagingConversationTransferServiceTests
         private readonly Dictionary<string, string> _names = new(StringComparer.Ordinal);
         private readonly Dictionary<string, ActivityQueue> _queues = new(StringComparer.Ordinal);
 
-        public TestContextBuilder(MessagingConversation conversation, bool allowTransfer = true, bool withQueues = true)
+        public TestContextBuilder(MessagingConversation conversation, bool allowTransfer = true, bool withQueues = true, ILogger<MessagingConversationTransferService> logger = null)
         {
             Store.Setup(store => store.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(conversation);
             Store.Setup(store => store.UpdateAsync(It.IsAny<MessagingConversation>(), It.IsAny<CancellationToken>())).Returns(ValueTask.CompletedTask);
@@ -415,7 +461,7 @@ public sealed class MessagingConversationTransferServiceTests
                 names.Object,
                 Notifier.Object,
                 clock.Object,
-                NullLogger<MessagingConversationTransferService>.Instance);
+                logger ?? NullLogger<MessagingConversationTransferService>.Instance);
         }
 
         public Mock<IMessagingConversationStore> Store { get; } = new();

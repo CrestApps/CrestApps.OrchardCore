@@ -357,10 +357,8 @@ public sealed class AdminController : Controller
         var bubbles = await _workspaceBuilder.BuildBubblesAfterAsync(conversation, after, HttpContext.RequestAborted);
 
         // A message arriving in the open thread, in front of the agent, should not leave it flagged unread.
-        if (seen && bubbles.Count > 0 && (conversation.UnreadCount != 0 || !conversation.IsRead))
+        if (MessagingConversationReadState.PollReads(seen, bubbles.Count) && MessagingConversationReadState.MarkRead(conversation))
         {
-            conversation.IsRead = true;
-            conversation.UnreadCount = 0;
             await _conversationStore.UpdateAsync(conversation);
         }
 
@@ -390,10 +388,8 @@ public sealed class AdminController : Controller
             return Forbid();
         }
 
-        if (conversation.UnreadCount != 0 || !conversation.IsRead)
+        if (MessagingConversationReadState.MarkRead(conversation))
         {
-            conversation.IsRead = true;
-            conversation.UnreadCount = 0;
             await _conversationStore.UpdateAsync(conversation);
 
             if (_logger.IsEnabled(LogLevel.Debug))

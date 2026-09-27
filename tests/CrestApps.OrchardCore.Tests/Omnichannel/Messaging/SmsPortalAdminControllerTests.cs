@@ -56,6 +56,53 @@ public sealed class SmsPortalAdminControllerTests
         Assert.IsType<ForbidResult>(result);
     }
 
+    // The workspace calls this when the agent comes back to a thread whose new messages arrived while the page was in
+    // the background: they were put on screen then, but left unread so the menu could count them.
+    [Fact]
+    public async Task MarkRead_ReadsAnUnreadConversation()
+    {
+        var conversation = CreateForeignConversation();
+        conversation.IsRead = false;
+        conversation.UnreadCount = 2;
+        var store = new Mock<IMessagingConversationStore>();
+        var controller = CreateController(conversation, allowConversation: true, store: store);
+
+        var result = await controller.MarkRead(ConversationId);
+
+        Assert.IsType<NoContentResult>(result);
+        Assert.True(conversation.IsRead);
+        Assert.Equal(0, conversation.UnreadCount);
+        store.Verify(value => value.UpdateAsync(conversation, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task MarkRead_OfAReadConversation_SavesNothing()
+    {
+        var conversation = CreateForeignConversation();
+        conversation.IsRead = true;
+        var store = new Mock<IMessagingConversationStore>();
+        var controller = CreateController(conversation, allowConversation: true, store: store);
+
+        await controller.MarkRead(ConversationId);
+
+        store.Verify(value => value.UpdateAsync(It.IsAny<MessagingConversation>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task MarkRead_WhenTheThreadIsNotTheCallers_ReturnsForbid_AndLeavesItUnread()
+    {
+        var conversation = CreateForeignConversation();
+        conversation.IsRead = false;
+        var store = new Mock<IMessagingConversationStore>();
+        var controller = CreateController(conversation, allowConversation: false, store: store);
+
+        var result = await controller.MarkRead(ConversationId);
+
+        Assert.IsType<ForbidResult>(result);
+        Assert.False(conversation.IsRead);
+        store.Verify(value => value.UpdateAsync(It.IsAny<MessagingConversation>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     [Fact]
     public async Task Claim_WhenTheThreadIsNotTheCallers_ReturnsForbid_AndNeverClaims()
     {
@@ -274,9 +321,10 @@ public sealed class SmsPortalAdminControllerTests
         Mock<IMessagingConversationService> conversationService = null,
         Mock<IMessagingConversationTransferService> transferService = null,
         ISet<ConversationOperation> deniedOperations = null,
-        IUser targetUser = null)
+        IUser targetUser = null,
+        Mock<IMessagingConversationStore> store = null)
     {
-        var conversationStore = new Mock<IMessagingConversationStore>();
+        var conversationStore = store ?? new Mock<IMessagingConversationStore>();
 
         conversationStore
             .Setup(store => store.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))

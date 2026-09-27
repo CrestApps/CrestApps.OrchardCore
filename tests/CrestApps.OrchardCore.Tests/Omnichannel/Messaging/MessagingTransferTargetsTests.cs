@@ -32,6 +32,21 @@ public sealed class MessagingTransferTargetsTests
         Assert.Equal(["agent-b", "agent-c"], options.Select(option => option.Value));
     }
 
+    // Live, a supervisor transferring a conversation someone else held saw their own name in the list.
+    [Fact]
+    public async Task SearchAgentsAsync_LeavesOutThePersonTransferring()
+    {
+        var targets = new Builder()
+            .Agent("agent-a", "Ann Holder")
+            .Agent("agent-s", "Sam Supervisor")
+            .Agent("agent-b", "Bea Recipient")
+            .Build();
+
+        var options = await targets.SearchAgentsAsync(HeldBy("agent-a"), query: null, actingUserId: "user-agent-s", TestContext.Current.CancellationToken);
+
+        Assert.Equal(["agent-b"], options.Select(option => option.Value));
+    }
+
     [Fact]
     public async Task SearchAgentsAsync_LeavesOutPeopleWhoCannotUseTheMessagingWorkspace()
     {
