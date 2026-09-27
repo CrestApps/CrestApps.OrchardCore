@@ -225,7 +225,41 @@
         };
     }
 
+    // Puts a new send track under every leg the phone holds -- its own call and each monitor leg -- without renegotiating,
+    // and resolves how many took it. Live, a supervisor switched headsets while listening and the new microphone went onto
+    // the phone's own call only: it had none, so the monitor leg kept sending the old, stopped track.
+    //   peers      - the legs' peer connections (entries without senders are skipped)
+    //   findSender - picks the audio sender out of a peer's senders
+    function replaceSendTrackOnPeers(peers, track, findSender) {
+        var replacing = (peers || []).map(function (peer) {
+            var sender = peer && typeof peer.getSenders === 'function' && typeof findSender === 'function'
+                ? findSender(peer.getSenders())
+                : null;
+
+            if (!sender || typeof sender.replaceTrack !== 'function') {
+                return Promise.resolve(0);
+            }
+
+            return Promise.resolve()
+                .then(function () {
+                    return sender.replaceTrack(track);
+                })
+                .then(function () {
+                    return 1;
+                }, function () {
+                    return 0;
+                });
+        });
+
+        return Promise.all(replacing).then(function (counts) {
+            return counts.reduce(function (sum, count) {
+                return sum + count;
+            }, 0);
+        });
+    }
+
     softPhone.OUTBOUND_SILENCE_MS = OUTBOUND_SILENCE_MS;
+    softPhone.replaceSendTrackOnPeers = replaceSendTrackOnPeers;
     softPhone.hasLiveAudioTrack = hasLiveAudioTrack;
     softPhone.releaseSharedCapture = releaseSharedCapture;
     softPhone.createOutboundAudioWatch = createOutboundAudioWatch;

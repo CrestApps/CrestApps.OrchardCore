@@ -8,6 +8,7 @@ const {
     releaseSharedCapture,
     createOutboundAudioWatch,
     startOutboundAudioMonitor,
+    replaceSendTrackOnPeers,
 } = globalThis.CrestAppsSoftPhone;
 
 function track(readyState = 'live', kind = 'audio') {
@@ -349,5 +350,52 @@ describe('startOutboundAudioMonitor', () => {
         }
 
         expect(onStalled).not.toHaveBeenCalled();
+    });
+});
+
+// Live (2026-09-26), a supervisor switched to a headset while listening. The new microphone went onto the phone's own
+// call only -- it had none -- so the monitor leg kept sending the old, stopped track ("sendrecv/off/ended/own") and the
+// switch reported failure. Every leg the phone holds takes the new track.
+describe('replacing the send track under every leg', () => {
+    function peer(kind = 'audio') {
+        const sender = {
+            track: { kind },
+            replaced: null,
+            replaceTrack(next) {
+                this.replaced = next;
+
+                return Promise.resolve();
+            },
+        };
+
+        return { sender, getSenders: () => [sender] };
+    }
+
+    const findAudio = senders => senders.find(sender => sender.track && sender.track.kind === 'audio') || null;
+
+    it('replaces the audio sender of each leg and counts them', async () => {
+        const call = peer();
+        const monitor = peer();
+        const fresh = { kind: 'audio' };
+
+        await expect(replaceSendTrackOnPeers([call, monitor], fresh, findAudio)).resolves.toBe(2);
+        expect(call.sender.replaced).toBe(fresh);
+        expect(monitor.sender.replaced).toBe(fresh);
+    });
+
+    it('skips what has no audio sender, and counts none when nothing is up', async () => {
+        const video = peer('video');
+
+        await expect(replaceSendTrackOnPeers([null, {}, video], { kind: 'audio' }, findAudio)).resolves.toBe(0);
+        await expect(replaceSendTrackOnPeers([], { kind: 'audio' }, findAudio)).resolves.toBe(0);
+        expect(video.sender.replaced).toBeNull();
+    });
+
+    it('counts only the legs that took it when one refuses', async () => {
+        const refusing = peer();
+        refusing.sender.replaceTrack = () => Promise.reject(new Error('closed'));
+        const taking = peer();
+
+        await expect(replaceSendTrackOnPeers([refusing, taking], { kind: 'audio' }, findAudio)).resolves.toBe(1);
     });
 });

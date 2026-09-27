@@ -102,6 +102,14 @@ public sealed class TelnyxOutboundBridgeState
     public bool? TakesOver { get; set; }
 
     /// <summary>
+    /// Gets or sets, on a supervisor leg rung for a change of mode, the supervising leg it replaces. Live, Telnyx's role
+    /// switch left the supervisor unheard or hearing silence, so each mode is a leg dialed in its own role: the replaced
+    /// leg is let go once this one answers, and goes with it if this one ends first.
+    /// </summary>
+    [JsonPropertyName("rp")]
+    public string ReplacesCallControlId { get; set; }
+
+    /// <summary>
     /// Gets or sets, on a supervisor leg, the one-off token the supervisor's phone was told to expect, so it answers this
     /// leg by itself and no other.
     /// </summary>

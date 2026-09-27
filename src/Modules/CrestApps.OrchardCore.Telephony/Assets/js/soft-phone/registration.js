@@ -49,7 +49,39 @@
         return !!state.acceptPending || !!state.registeringForAnswer;
     }
 
+    // What to do with the registration before it is used: 'keep' it, 'replace-capture' (a fresh microphone under the same
+    // registration) or 'reregister'. Live, a Bluetooth microphone that kept dropping registered the phone again each time:
+    // a new SIP credential every few minutes, one of them while a supervisor was listening, which hung their monitor leg
+    // up and left the next engagement ringing the address being replaced (refused, 480). Nothing is rebuilt while a call
+    // or a monitor leg is up, and a dead capture alone never needs a new credential.
+    //   state - { expiring, captureDead, reregisterRequested, liveMedia }
+    function planRegistrationSelfHeal(state) {
+        state = state || {};
+
+        if (state.liveMedia) {
+            return 'keep';
+        }
+
+        if (state.expiring || state.reregisterRequested) {
+            return 'reregister';
+        }
+
+        return state.captureDead ? 'replace-capture' : 'keep';
+    }
+
+    // How a microphone that stopped delivering is recovered: a fresh capture swapped in where it is, first, whether or
+    // not anything is up; if that fails, an idle phone registers again and a phone with media up tells its user.
+    //   state - { liveMedia }
+    function planMicrophoneLossRecovery(state) {
+        return {
+            first: 'replace-capture',
+            onFailure: state && state.liveMedia ? 'warn' : 'reregister'
+        };
+    }
+
     softPhone.shouldStartRegistration = shouldStartRegistration;
+    softPhone.planRegistrationSelfHeal = planRegistrationSelfHeal;
+    softPhone.planMicrophoneLossRecovery = planMicrophoneLossRecovery;
     softPhone.answerClickAction = answerClickAction;
     softPhone.isAnswerInProgress = isAnswerInProgress;
 }(typeof globalThis !== 'undefined' ? globalThis : window));

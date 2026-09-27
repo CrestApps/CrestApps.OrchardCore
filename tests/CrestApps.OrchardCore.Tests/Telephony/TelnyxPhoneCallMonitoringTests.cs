@@ -204,8 +204,8 @@ public sealed class TelnyxPhoneCallMonitoringTests
         // Act
         await orchestrator.AdvanceAsync(TelnyxSupervisorMonitoringTests.Answered(Supervisor, state), TestContext.Current.CancellationToken);
 
-        // Assert
-        Assert.Equal([$"POST calls/{Supervisor}/actions/switch_supervisor_role"], api.Commands);
+        // Assert - the leg keeps the role it was dialed with: live, a role switch left the supervisor hearing silence.
+        Assert.Empty(api.Commands);
         Assert.Empty(api.Conferences);
         Assert.Empty(api.Bridges);
         Assert.Empty(api.HungUp);
@@ -304,13 +304,13 @@ public sealed class TelnyxPhoneCallMonitoringTests
         // Act
         var result = await provider.TakeOverPhoneCallAsync(request, TestContext.Current.CancellationToken);
 
-        // Assert - heard by the number first, rung on a leg the number is bridged to (Telnyx takes no command on the
-        // supervising leg), then the supervising leg and the agent are let go, marked so their ends do not end the call.
+        // Assert - rung on a leg the number is bridged to (Telnyx takes no command on the supervising leg, and switching it
+        // to barge first left the supervisor hearing silence), then the supervising leg and the agent are let go, marked
+        // so their ends do not end the call.
         Assert.True(result.Succeeded);
         Assert.Equal("takeover-leg", result.ProviderLegId);
         Assert.Equal(
             [
-                $"POST calls/{Supervisor}/actions/switch_supervisor_role",
                 "POST calls",
                 "POST calls/takeover-leg/actions/bridge",
                 $"POST calls/{Supervisor}/actions/hangup",

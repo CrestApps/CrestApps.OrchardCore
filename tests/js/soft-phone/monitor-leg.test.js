@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/offer-leg.js';
 import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/auto-answer.js';
+import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/quality.js';
 import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/monitor-leg.js';
 
 const {
@@ -17,6 +18,9 @@ const {
     monitorLegReplaces,
     monitorLegTalks,
     anyMonitorLegTalks,
+    holdsMonitorLeg,
+    readMonitorLegMedia,
+    describeMonitorLegMedia,
 } = globalThis.CrestAppsSoftPhone;
 
 const now = 9_000_000;
@@ -152,5 +156,64 @@ describe('the leg a takeover moves the engagement to', () => {
         expect(monitorLegReplaces({}, { token: 'tok-1', legId: 'take-1' })).toBe(false);
         expect(monitorLegReplaces(null, { token: 'tok-1', legId: 'take-1' })).toBe(false);
         expect(monitorLegReplaces({ 'tok-1': { legId: 'sv-1' } }, { token: '', legId: 'take-1' })).toBe(false);
+    });
+});
+
+// Live (2026-09-26), the supervisor's Bluetooth microphone dropped while they listened. The phone held no call of its own,
+// so it took itself for idle and registered again: that hung the monitor leg up, and the next engagement rang the SIP
+// address being replaced and was refused (480, "failed to connect"). A monitor leg is live media like any call.
+describe('whether the phone holds a monitor leg', () => {
+    it('does while any leg is held', () => {
+        expect(holdsMonitorLeg({ 'tok-1': { legId: 'sv-1', info: { mode: 'Monitor' } } })).toBe(true);
+    });
+
+    it('does not with none', () => {
+        expect(holdsMonitorLeg({})).toBe(false);
+        expect(holdsMonitorLeg(null)).toBe(false);
+        expect(holdsMonitorLeg({ 'tok-1': null })).toBe(false);
+    });
+});
+
+const statsReport = stats => new Map(stats.map((stat, index) => [stat.id || `s${index}`, stat]));
+
+// Live, the supervisor heard nothing while listening, and the only report was what the phone SENT. Whether the provider
+// delivered silence or nothing at all could not be told apart. The report says what arrives and how loud it is, per window.
+describe('reading what a monitor leg carries', () => {
+    it('reads the bytes each way, the level heard over the window, and the codec', () => {
+        const previous = readMonitorLegMedia(statsReport([
+            { type: 'inbound-rtp', kind: 'audio', bytesReceived: 1000, totalAudioEnergy: 0.1, totalSamplesDuration: 10, codecId: 'c1' },
+            { type: 'outbound-rtp', kind: 'audio', bytesSent: 500 },
+            { id: 'c1', type: 'codec', mimeType: 'audio/opus', clockRate: 48000 },
+        ]), null);
+
+        const media = readMonitorLegMedia(statsReport([
+            { type: 'inbound-rtp', kind: 'audio', bytesReceived: 17000, totalAudioEnergy: 0.1 + (0.2 * 0.2 * 10), totalSamplesDuration: 20, codecId: 'c1' },
+            { type: 'outbound-rtp', kind: 'audio', bytesSent: 16500 },
+            { type: 'media-source', kind: 'audio', totalAudioEnergy: 0, totalSamplesDuration: 20 },
+            { id: 'c1', type: 'codec', mimeType: 'audio/opus', clockRate: 48000 },
+        ]), previous);
+
+        expect(media.bytesSent).toBe(16500);
+        expect(media.bytesReceived).toBe(17000);
+        expect(media.heardLevel).toBeCloseTo(0.2, 5);
+        expect(media.microphoneLevel).toBe(0);
+        expect(media.codec).toBe('audio/opus');
+    });
+
+    it('says silence arrives when packets flow but carry nothing', () => {
+        const media = readMonitorLegMedia(statsReport([
+            { type: 'inbound-rtp', kind: 'audio', bytesReceived: 9000, totalAudioEnergy: 0, totalSamplesDuration: 10 },
+        ]), null);
+
+        expect(describeMonitorLegMedia('sendrecv/off/live/shared', media))
+            .toBe('Monitor leg media: transceivers sendrecv/off/live/shared, sent 0 bytes (mic -), received 9000 bytes (heard 0.000), codec -.');
+    });
+
+    it('reports unknown levels as a dash rather than as silence', () => {
+        const media = readMonitorLegMedia(statsReport([]), null);
+
+        expect(media.heardLevel).toBe(-1);
+        expect(describeMonitorLegMedia('', media))
+            .toBe('Monitor leg media: transceivers none, sent 0 bytes (mic -), received 0 bytes (heard -), codec -.');
     });
 });

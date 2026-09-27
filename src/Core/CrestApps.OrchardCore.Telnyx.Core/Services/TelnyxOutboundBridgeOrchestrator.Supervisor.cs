@@ -29,6 +29,14 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator
         }
         else if (IsHangup(callEvent))
         {
+            // A leg rung for a change of mode that ends -- answered or not -- takes the leg it was to replace with it, in
+            // that leg's own state: whichever of the two the engagement names, its end is reported, so the engagement never
+            // outlives both. Once the new leg has answered, the replaced one is already gone and this changes nothing.
+            if (!string.IsNullOrWhiteSpace(state.ReplacesCallControlId) && _options.IsConfigured)
+            {
+                await HangupLegAsync(state.ReplacesCallControlId, cancellationToken);
+            }
+
             // A leg the platform released itself (a stop, a transfer, the call ending) was recorded by whatever released
             // it. Reporting it again wrote the call's record a second time while the stop was still writing it, and the
             // stop failed on the conflict (live: POST dashboard/stop answered 500 with a ConcurrencyException).
@@ -103,22 +111,46 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator
         await ReportSupervisorAnsweredAsync(supervisorLegId, state, cancellationToken);
     }
 
-    // Telnyx attached the answered leg to the agent's itself. The mode may have changed while it rang, which changed only
-    // the role it carries: it is given that role now.
+    // Telnyx attached the answered leg to the agent's itself, in the role it was dialed with. It is never switched: live,
+    // a leg dialed as barge and switched to listen the moment it answered carried nothing but silence to the supervisor. A
+    // leg rung for a change of mode takes over from the one it replaces, which goes quietly now: its hang-up is not the
+    // supervisor walking away.
     private async Task AttachedSupervisorAnsweredAsync(string supervisorLegId, TelnyxOutboundBridgeState state, CancellationToken cancellationToken)
     {
-        var role = string.IsNullOrWhiteSpace(state.SupervisorRole) ? "monitor" : state.SupervisorRole;
-        var switched = await _apiClient.SwitchSupervisorRoleAsync(supervisorLegId, role, cancellationToken);
-
         if (_logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation(
-                "Supervisor leg '{SupervisorLegId}' answered on agent leg '{AgentLegId}' as {Role}; Telnyx returned {StatusCode} setting its role. Response: {Response}",
+                "Supervisor leg '{SupervisorLegId}' answered on agent leg '{AgentLegId}' as {Role}{Replacing}.",
                 supervisorLegId.SanitizeLogValue(),
                 state.PartyCallControlId.SanitizeLogValue(),
-                role.SanitizeLogValue(),
-                switched.StatusCode,
-                switched.ErrorBody.SanitizeLogValue());
+                (string.IsNullOrWhiteSpace(state.SupervisorRole) ? "monitor" : state.SupervisorRole).SanitizeLogValue(),
+                string.IsNullOrWhiteSpace(state.ReplacesCallControlId) ? string.Empty : $", replacing '{state.ReplacesCallControlId.SanitizeLogValue()}'");
+        }
+
+        if (!string.IsNullOrWhiteSpace(state.ReplacesCallControlId))
+        {
+            var released = await _apiClient.HangupWithStateAsync(
+                state.ReplacesCallControlId,
+                new TelnyxOutboundBridgeState
+                {
+                    Intent = TelnyxOutboundBridgeState.ContactCenterSupervisorLegIntent,
+                    PeerCallControlId = state.PeerCallControlId,
+                    PartyCallControlId = state.PartyCallControlId,
+                    SupervisesInPlace = true,
+                    RingUserId = state.RingUserId,
+                    Detached = true,
+                }.ToClientStateJson(),
+                cancellationToken);
+
+            if (!released.Succeeded && !TelnyxApiErrors.IsCallAlreadyEnded(released))
+            {
+                _logger.LogWarning(
+                    "Telnyx returned {StatusCode} releasing supervisor leg '{ReplacedLegId}' after '{SupervisorLegId}' took over from it. Response: {Response}",
+                    released.StatusCode,
+                    state.ReplacesCallControlId.SanitizeLogValue(),
+                    supervisorLegId.SanitizeLogValue(),
+                    released.ErrorBody.SanitizeLogValue());
+            }
         }
 
         await ReportSupervisorAnsweredAsync(supervisorLegId, state, cancellationToken);

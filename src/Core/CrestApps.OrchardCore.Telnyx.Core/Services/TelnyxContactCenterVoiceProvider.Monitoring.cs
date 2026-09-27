@@ -21,10 +21,17 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 /// A call on a two-leg bridge -- a Contact Center call, a number dialed from the keypad -- is supervised where it is: the
 /// leg is dialed with <c>supervise_call_control_id</c> naming the agent's leg and a <c>supervisor_role</c>, and Telnyx
 /// attaches it to the call when it answers (<c>monitor</c> heard by nobody, <c>whisper</c> by the agent alone,
-/// <c>barge</c> by both). A mode is changed on the supervisor's own leg (<c>switch_supervisor_role</c>), stopping only hangs
-/// that leg up, and a takeover bridges the customer to it before the agent's leg is released. Nobody is moved. Live,
-/// moving the call into a conference for the supervisor left the customer and the agent unable to hear each other, or the
-/// supervisor, in every mode.
+/// <c>barge</c> by both). Stopping only hangs that leg up, and a takeover bridges the customer to a fresh ordinary leg
+/// before the agent's leg is released. Nobody is moved. Live, moving the call into a conference for the supervisor left
+/// the customer and the agent unable to hear each other, or the supervisor, in every mode.
+/// </para>
+/// <para>
+/// A leg keeps the role it is dialed with. Live (2026-09-26), a leg dialed to listen and left alone was heard, but every
+/// <c>switch_supervisor_role</c> Telnyx accepted went wrong: a leg switched from listening to whisper was heard by nobody,
+/// one switched to barge left the supervisor hearing silence, and one dialed as barge and switched to listen when it
+/// answered carried only silence. So a change of mode rings the supervisor's phone with a fresh leg dialed in the new role,
+/// carrying the engagement's token (the phone answers it in place of the one it holds) and naming the leg it replaces,
+/// which is let go once the new one answers (see TelnyxOutboundBridgeOrchestrator).
 /// </para>
 /// <para>
 /// An extension call already runs in a conference of its own, and the supervisor joins it there (see
@@ -37,9 +44,6 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
 {
     // How long the supervisor's phone is given to answer its own monitor leg; it answers without ringing.
     private const int SupervisorLegTimeoutSeconds = 30;
-
-    // The role every supervising leg is dialed with: one the supervisor can be heard in.
-    private const string SupervisorDialRole = "barge";
 
     // How long a takeover waits for the supervisor's phone to answer the leg it takes the call on, within the server's
     // command timeout, and how often it tries the bridge meanwhile.
@@ -114,25 +118,13 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
 
         if (inPlace)
         {
-            // Telnyx attaches the leg to the agent's when it answers: a whisper is heard by the agent alone. The leg is
-            // always dialed as barge and given its mode when it answers (see TelnyxOutboundBridgeOrchestrator): live, a
-            // leg dialed to listen was never heard after it was switched to whisper or barge, although every switch was
-            // accepted and the phone's microphone was on. The phone keeps its microphone off while listening, so the
-            // moment before the switch carries silence.
-            originate.AdditionalFields["supervise_call_control_id"] = agentLegId;
-            originate.AdditionalFields["supervisor_role"] = SupervisorDialRole;
+            // Telnyx attaches the leg to the agent's when it answers, in the role it is dialed with; it is never switched.
+            AttachToAgentLeg(originate, agentLegId, role);
         }
 
         // A browser credential is reached as an internal SIP address, never through the outbound voice profile. The
         // header is what the phone matches the leg to the engagement it asked for.
-        originate.AdditionalFields["custom_headers"] = new[]
-        {
-            new Dictionary<string, string>(StringComparer.Ordinal)
-            {
-                ["name"] = TelnyxConstants.MonitorLegSipHeader,
-                ["value"] = token,
-            },
-        };
+        AddMonitorToken(originate, token);
         originate.AdditionalFields["command_id"] = $"cc-sv-leg-{token}";
 
         var leg = await _apiClient.OriginateAsync(originate, cancellationToken);
@@ -226,32 +218,149 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
         var supervisorLegId = request.SupervisorLegId.Trim();
         var role = TelnyxSupervisedConference.RoleFor(request.Mode.ToString());
 
-        if (SupervisesInPlace(request)
-            ? (await _apiClient.SwitchSupervisorRoleAsync(supervisorLegId, role, cancellationToken)).Succeeded
-            : await SupervisedConference.SwitchRoleAsync(SupervisedConferenceName(request), supervisorLegId, role, request.AgentLegId?.Trim(), cancellationToken))
+        if (!SupervisesInPlace(request))
         {
-            return MonitoringSuccess(request);
+            return await SupervisedConference.SwitchRoleAsync(SupervisedConferenceName(request), supervisorLegId, role, request.AgentLegId?.Trim(), cancellationToken)
+                ? MonitoringSuccess(request)
+                : Failure("monitor_switch_failed", "The supervisor's mode could not be changed.");
         }
 
-        // The phone has not answered yet, so the leg is not in the conference: the role it joins with is changed instead.
-        var status = await _apiClient.GetCallStatusAsync(supervisorLegId, cancellationToken);
-
-        if (status.Succeeded &&
-            status.IsAlive &&
-            TelnyxOutboundBridgeState.TryParseEncoded(status.ClientState, out var state) &&
-            state.Intent == TelnyxOutboundBridgeState.ContactCenterSupervisorLegIntent)
+        if (string.IsNullOrWhiteSpace(request.AgentLegId))
         {
-            state.SupervisorRole = role;
+            return Failure("monitor_agent_leg_missing", "The agent's leg of this call is not known, so the mode cannot be changed.");
+        }
 
-            var updated = await _apiClient.UpdateClientStateAsync(supervisorLegId, state.ToClientStateJson(), cancellationToken);
+        var replacementLegId = await RingReplacementLegAsync(request, supervisorLegId, role, cancellationToken);
 
-            if (updated.Succeeded)
+        if (string.IsNullOrEmpty(replacementLegId))
+        {
+            return Failure("monitor_switch_failed", "Your soft phone could not be rung in the new mode.");
+        }
+
+        return new ContactCenterVoiceProviderResult
+        {
+            Succeeded = true,
+            ProviderName = TechnicalName,
+            ProviderCallId = request.ProviderCallId.Trim(),
+
+            // The engagement is on the new leg from now on; the one it replaces goes once the phone has answered it.
+            ProviderLegId = replacementLegId,
+        };
+    }
+
+    // Rings the supervisor's phone with a supervising leg dialed in the new role. It carries the engagement's token, so
+    // the phone answers it in place of the leg it holds, and names that leg, which is hung up once this one answers.
+    private async Task<string> RingReplacementLegAsync(
+        ContactCenterVoiceMonitoringRequest request,
+        string supervisorLegId,
+        string role,
+        CancellationToken cancellationToken)
+    {
+        var customerLegId = request.ProviderCallId.Trim();
+        var agentLegId = request.AgentLegId.Trim();
+        var token = await ResolveMonitorTokenAsync(request, supervisorLegId, cancellationToken);
+        var endpoint = string.IsNullOrWhiteSpace(request.SupervisorId)
+            ? null
+            : await _agentEndpointResolver.ResolveAsync(request.SupervisorId.Trim(), cancellationToken);
+
+        if (string.IsNullOrEmpty(token) || string.IsNullOrWhiteSpace(endpoint))
+        {
+            _logger.LogWarning(
+                "The supervisor's mode on call '{CustomerLegId}' could not be changed: the engagement's token or the phone's address is unknown.",
+                customerLegId.SanitizeLogValue());
+
+            return null;
+        }
+
+        var originate = new TelnyxOriginateRequest
+        {
+            ConnectionId = _options.ConnectionId,
+            To = endpoint,
+            From = _options.DefaultOutboundCallerId,
+            TimeoutSeconds = SupervisorLegTimeoutSeconds,
+            ClientState = new TelnyxOutboundBridgeState
             {
-                return MonitoringSuccess(request);
-            }
+                Intent = TelnyxOutboundBridgeState.ContactCenterSupervisorLegIntent,
+                PeerCallControlId = customerLegId,
+                PartyCallControlId = agentLegId,
+                SupervisesInPlace = true,
+                SupervisorRole = role,
+                RingUserId = request.SupervisorId.Trim(),
+                MonitorToken = token,
+                ReplacesCallControlId = supervisorLegId,
+            }.ToClientStateJson(),
+        };
+
+        AttachToAgentLeg(originate, agentLegId, role);
+        AddMonitorToken(originate, token);
+        originate.AdditionalFields["command_id"] = $"cc-sv-mode-{token}-{Guid.NewGuid():N}";
+
+        var leg = await _apiClient.OriginateAsync(originate, cancellationToken);
+
+        if (!leg.Succeeded || string.IsNullOrWhiteSpace(leg.CallControlId))
+        {
+            _logger.LogError(
+                "Telnyx rejected the {Role} supervisor leg replacing '{SupervisorLegId}' on call '{CustomerLegId}' with status code {StatusCode}; the supervisor stays in their mode. Response: {Response}",
+                role.SanitizeLogValue(),
+                supervisorLegId.SanitizeLogValue(),
+                customerLegId.SanitizeLogValue(),
+                leg.StatusCode,
+                leg.ErrorBody.SanitizeLogValue());
+
+            return null;
         }
 
-        return Failure("monitor_switch_failed", "The supervisor's mode could not be changed.");
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Rang supervisor leg '{ReplacementLegId}' as {Role} on agent leg '{AgentLegId}' to replace '{SupervisorLegId}'.",
+                leg.CallControlId.SanitizeLogValue(),
+                role.SanitizeLogValue(),
+                agentLegId.SanitizeLogValue(),
+                supervisorLegId.SanitizeLogValue());
+        }
+
+        return leg.CallControlId;
+    }
+
+    // Telnyx attaches the leg to the agent's when it answers, in the role it is dialed with: a whisper is heard by the
+    // agent alone.
+    private static void AttachToAgentLeg(TelnyxOriginateRequest originate, string agentLegId, string role)
+    {
+        originate.AdditionalFields["supervise_call_control_id"] = agentLegId;
+        originate.AdditionalFields["supervisor_role"] = role;
+    }
+
+    // The header the phone matches a leg to its engagement by, for an SDK that hands over no client state.
+    private static void AddMonitorToken(TelnyxOriginateRequest originate, string token)
+        => originate.AdditionalFields["custom_headers"] = new[]
+        {
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["name"] = TelnyxConstants.MonitorLegSipHeader,
+                ["value"] = token,
+            },
+        };
+
+    // The engagement's token, read from the request or else from the supervising leg the phone answered it on (a
+    // Contact Center call's request carries none).
+    private async Task<string> ResolveMonitorTokenAsync(
+        ContactCenterVoiceMonitoringRequest request,
+        string supervisorLegId,
+        CancellationToken cancellationToken)
+    {
+        var token = request.MonitorToken?.Trim();
+
+        if (!string.IsNullOrEmpty(token))
+        {
+            return token;
+        }
+
+        var supervising = await _apiClient.GetCallStatusAsync(supervisorLegId, cancellationToken);
+
+        return supervising.Succeeded && TelnyxOutboundBridgeState.TryParseEncoded(supervising.ClientState, out var supervisingState)
+            ? supervisingState.MonitorToken
+            : null;
     }
 
     /// <inheritdoc/>
@@ -272,16 +381,11 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
         var agentLegId = request.AgentLegId.Trim();
         var supervisorLegId = request.SupervisorLegId.Trim();
 
-        // The supervisor is heard by the customer before the agent goes, so the customer is never alone on the line.
         if (SupervisesInPlace(request))
         {
-            var heard = await _apiClient.SwitchSupervisorRoleAsync(supervisorLegId, "barge", cancellationToken);
-
-            if (!heard.Succeeded)
-            {
-                return Failure("takeover_failed", "You are not connected to the call yet, so it cannot be taken over.");
-            }
-
+            // The customer is bridged to the supervisor before the agent goes, so they are never alone on the line. The
+            // supervising leg is not switched to barge first: live, that left the supervisor hearing silence.
+            //
             // Telnyx takes no command on a supervising leg ("Supervisor calls do not support commands"), so the customer
             // cannot be bridged to it. The supervisor's phone is rung with an ordinary leg that carries the engagement's
             // token, which the phone answers by itself in place of the one it holds, and the customer is bridged to that.
@@ -379,18 +483,7 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
         string supervisorLegId,
         CancellationToken cancellationToken)
     {
-        var token = request.MonitorToken?.Trim();
-
-        if (string.IsNullOrEmpty(token))
-        {
-            var supervising = await _apiClient.GetCallStatusAsync(supervisorLegId, cancellationToken);
-
-            if (supervising.Succeeded && TelnyxOutboundBridgeState.TryParseEncoded(supervising.ClientState, out var supervisingState))
-            {
-                token = supervisingState.MonitorToken;
-            }
-        }
-
+        var token = await ResolveMonitorTokenAsync(request, supervisorLegId, cancellationToken);
         var endpoint = string.IsNullOrWhiteSpace(request.SupervisorId)
             ? null
             : await _agentEndpointResolver.ResolveAsync(request.SupervisorId.Trim(), cancellationToken);
@@ -423,14 +516,7 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
             }.ToClientStateJson(),
         };
 
-        originate.AdditionalFields["custom_headers"] = new[]
-        {
-            new Dictionary<string, string>(StringComparer.Ordinal)
-            {
-                ["name"] = TelnyxConstants.MonitorLegSipHeader,
-                ["value"] = token,
-            },
-        };
+        AddMonitorToken(originate, token);
         originate.AdditionalFields["command_id"] = $"cc-sv-take-{token}";
 
         var leg = await _apiClient.OriginateAsync(originate, cancellationToken);

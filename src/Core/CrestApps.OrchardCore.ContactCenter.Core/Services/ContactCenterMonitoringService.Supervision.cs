@@ -73,6 +73,12 @@ public sealed partial class ContactCenterMonitoringService
             return SupervisorEngagementResult.Success();
         }
 
+        // The mode is changed on the leg the supervisor is on: until their phone has answered one, there is none.
+        if (!live.ConnectedUtc.HasValue)
+        {
+            return SupervisorEngagementResult.Failure("You are still being connected to the call. Change the mode once you hear it.");
+        }
+
         if (provider is not IContactCenterVoiceSupervisorInterventionProvider interventionProvider)
         {
             // Without a way to change the role on the supervisor's leg, the engagement is started again in the new mode.
@@ -84,6 +90,7 @@ public sealed partial class ContactCenterMonitoringService
         }
 
         var previousMode = live.Mode;
+        string movedToLegId = null;
 
         try
         {
@@ -103,6 +110,9 @@ public sealed partial class ContactCenterMonitoringService
                 return SupervisorEngagementResult.Failure(
                     providerResult?.ErrorMessage ?? $"The voice provider did not confirm the change to '{mode}'.");
             }
+
+            // A provider whose role switch cannot be trusted rings the supervisor with a fresh leg in the new mode.
+            movedToLegId = providerResult.ProviderLegId;
         }
         catch (TimeoutException)
         {
@@ -127,6 +137,17 @@ public sealed partial class ContactCenterMonitoringService
             }
 
             engaged.Mode = mode;
+
+            // The engagement is on the new leg from now on: the replaced leg leaves the conversation if it was on it.
+            if (!string.IsNullOrEmpty(movedToLegId) && !string.Equals(movedToLegId, engaged.ProviderLegId, StringComparison.Ordinal))
+            {
+                if (!string.IsNullOrEmpty(engaged.ProviderLegId))
+                {
+                    CallTopologyProjector.Leave(current, engaged.ProviderLegId, now);
+                }
+
+                engaged.ProviderLegId = movedToLegId;
+            }
 
             // A barging supervisor is a party of the conversation; listening and whispering are not.
             if (!string.IsNullOrEmpty(engaged.ProviderLegId))

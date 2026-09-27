@@ -142,6 +142,56 @@
         });
     }
 
+    // Whether the phone holds a monitor leg. A monitor leg is live media like any call of the phone's own: live, a
+    // microphone that dropped while the supervisor listened found no call up, registered the phone again, and that hung
+    // the leg up and changed the address the next engagement was rung at (refused, 480).
+    //   legs - the phone's monitor legs, by token
+    function holdsMonitorLeg(legs) {
+        return Object.keys(legs || {}).some(function (token) {
+            return !!legs[token];
+        });
+    }
+
+    // What a monitor leg carries each way, from one reading of its stats (parseWebRtcStats) and the one before it. The
+    // levels are over the window between the two readings (-1 when the browser reports none): live, a supervisor heard
+    // nothing and only what the phone SENT was on record, so silence arriving could not be told from nothing arriving.
+    function readMonitorLegMedia(report, previous) {
+        var parse = softPhone.parseWebRtcStats;
+        var windowed = softPhone.windowedMicrophoneLevel;
+        var parsed = typeof parse === 'function' && report && typeof report.forEach === 'function' ? parse(report) : {};
+        var inbound = parsed.inbound || null;
+        var outbound = parsed.outbound || null;
+        var mediaSource = parsed.mediaSource || null;
+        var level = function (stat, before) {
+            return typeof windowed === 'function' ? windowed(stat, before) : -1;
+        };
+
+        return {
+            bytesSent: (outbound && outbound.bytesSent) || 0,
+            bytesReceived: (inbound && inbound.bytesReceived) || 0,
+            heardLevel: level(inbound, previous && previous.inbound),
+            microphoneLevel: level(mediaSource, previous && previous.mediaSource),
+            codec: parsed.codec || '',
+            inbound: inbound,
+            mediaSource: mediaSource
+        };
+    }
+
+    // The line the server log gets for a monitor leg's media.
+    //   directions - each transceiver's direction and send track, as the phone reads them
+    function describeMonitorLegMedia(directions, media) {
+        var format = function (value) {
+            return typeof value === 'number' && value >= 0 ? value.toFixed(3) : '-';
+        };
+
+        media = media || {};
+
+        return 'Monitor leg media: transceivers ' + (directions || 'none') +
+            ', sent ' + (media.bytesSent || 0) + ' bytes (mic ' + format(media.microphoneLevel) + ')' +
+            ', received ' + (media.bytesReceived || 0) + ' bytes (heard ' + format(media.heardLevel) + ')' +
+            ', codec ' + (media.codec || '-') + '.';
+    }
+
     softPhone.MONITOR_LEG_INTENT = MONITOR_LEG_INTENT;
     softPhone.MONITOR_LEG_HEADER = MONITOR_LEG_HEADER;
     softPhone.MONITOR_ARM_WINDOW_MS = MONITOR_ARM_WINDOW_MS;
@@ -155,4 +205,7 @@
     softPhone.monitorLegReplaces = monitorLegReplaces;
     softPhone.monitorLegTalks = monitorLegTalks;
     softPhone.anyMonitorLegTalks = anyMonitorLegTalks;
+    softPhone.holdsMonitorLeg = holdsMonitorLeg;
+    softPhone.readMonitorLegMedia = readMonitorLegMedia;
+    softPhone.describeMonitorLegMedia = describeMonitorLegMedia;
 }(typeof globalThis !== 'undefined' ? globalThis : window));

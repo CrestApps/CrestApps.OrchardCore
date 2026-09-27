@@ -150,7 +150,7 @@ public sealed class SupervisorEngagementTests
             .Setup(value => value.SwitchModeAsync(It.IsAny<ContactCenterVoiceMonitoringRequest>(), It.IsAny<CancellationToken>()))
             .Callback<ContactCenterVoiceMonitoringRequest, CancellationToken>((request, _) => switched = request)
             .ReturnsAsync(new ContactCenterVoiceProviderResult { Succeeded = true });
-        var session = Session(engagedMode: from);
+        var session = Session(engagedMode: from, connected: true);
         var service = CreateService(provider, session, notifier, publisher);
 
         // Act
@@ -180,6 +180,50 @@ public sealed class SupervisorEngagementTests
                 It.IsAny<CancellationToken>()),
             Times.Once);
         Assert.Equal(SupervisorEngagementNotification.ModeChanged, Assert.Single(notifier.Engagements).State);
+    }
+
+    // Live, a role switch on the supervising leg left the supervisor unheard or hearing silence, so the provider may change
+    // the mode by ringing a fresh leg. The engagement is on that leg from then on, and a barging supervisor's place on the
+    // call moves to it.
+    [Fact]
+    public async Task SwitchMode_RecordsTheLegTheProviderMovedTheSupervisorTo()
+    {
+        // Arrange
+        var provider = MonitoringProvider(out _, out var intervention);
+        intervention
+            .Setup(value => value.SwitchModeAsync(It.IsAny<ContactCenterVoiceMonitoringRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ContactCenterVoiceProviderResult { Succeeded = true, ProviderLegId = "sup-leg-2" });
+        var session = Session(engagedMode: MonitorMode.Monitor, connected: true);
+        var service = CreateService(provider, session, new RecordingNotifier());
+
+        // Act
+        var result = await service.SwitchModeAsync("int1", "sup1", null, MonitorMode.Barge, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        var live = Assert.Single(session.ActiveMonitorSessions);
+        Assert.Equal("sup-leg-2", live.ProviderLegId);
+        Assert.Equal(MonitorMode.Barge, live.Mode);
+        Assert.Contains(session.Bridge.Participants, participant => participant.ProviderLegId == "sup-leg-2" && participant.LeftUtc is null);
+        Assert.DoesNotContain(session.Bridge.Participants, participant => participant.ProviderLegId == "sup-leg" && participant.LeftUtc is null);
+    }
+
+    // The mode is changed on the leg the supervisor is on; until their phone has answered one, there is none to change.
+    [Fact]
+    public async Task SwitchMode_BeforeTheSupervisorsPhoneAnswered_IsRefused()
+    {
+        // Arrange
+        var provider = MonitoringProvider(out _, out var intervention);
+        var session = Session(engagedMode: MonitorMode.Monitor);
+        var service = CreateService(provider, session, new RecordingNotifier());
+
+        // Act
+        var result = await service.SwitchModeAsync("int1", "sup1", null, MonitorMode.Whisper, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        intervention.Verify(value => value.SwitchModeAsync(It.IsAny<ContactCenterVoiceMonitoringRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+        Assert.Equal(MonitorMode.Monitor, Assert.Single(session.ActiveMonitorSessions).Mode);
     }
 
     [Fact]
@@ -225,7 +269,7 @@ public sealed class SupervisorEngagementTests
         monitoring
             .Setup(value => value.EngageAsync(It.Is<ContactCenterVoiceMonitoringRequest>(request => request.Mode == MonitorMode.Barge), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ContactCenterVoiceProviderResult { Succeeded = true, ProviderLegId = "new-leg" });
-        var session = Session(engagedMode: MonitorMode.Monitor);
+        var session = Session(engagedMode: MonitorMode.Monitor, connected: true);
         var service = CreateService(provider, session, new RecordingNotifier());
 
         // Act
@@ -265,7 +309,7 @@ public sealed class SupervisorEngagementTests
             Times.Once);
     }
 
-    internal static CallSession Session(MonitorMode? engagedMode = null)
+    internal static CallSession Session(MonitorMode? engagedMode = null, bool connected = false)
     {
         var session = new CallSession
         {
@@ -297,7 +341,7 @@ public sealed class SupervisorEngagementTests
 
         if (engagedMode.HasValue)
         {
-            CallTopologyProjector.StartMonitorSession(
+            var monitorSession = CallTopologyProjector.StartMonitorSession(
                 session,
                 "monitor-1",
                 "sup1",
@@ -305,6 +349,12 @@ public sealed class SupervisorEngagementTests
                 engagedMode.Value,
                 new DateTime(2026, 9, 25, 10, 1, 0, DateTimeKind.Utc),
                 "sup-leg");
+
+            // The supervisor's phone answered their leg.
+            if (connected)
+            {
+                monitorSession.ConnectedUtc = new DateTime(2026, 9, 25, 10, 1, 1, DateTimeKind.Utc);
+            }
         }
 
         return session;

@@ -66,6 +66,23 @@ describe('the dashboard actions for an agent', () => {
         expect(actions.engagedLabel).toBe('Connecting your phone…');
     });
 
+    // Live, a supervisor clicked Barge and then Whisper while their phone was still being rung: the switch reached a leg
+    // that had not answered, was refused, and the engagement never connected. A mode is changed once the phone is on
+    // the call, and the server refuses it before then.
+    it('holds the mode buttons while the supervisor\'s phone is still connecting', () => {
+        const connecting = supervisorAgentActions(onCall({ monitorMode: 'Barge', monitorConnected: false }), supervisor, {});
+
+        expect(connecting.modes.map(mode => mode.disabled)).toEqual([true, true, true]);
+        expect(supervisorAgentActionsHtml(onCall({ monitorMode: 'Barge', monitorConnected: false }), supervisor, {}))
+            .toMatch(/data-cc-switch="int-1" data-cc-mode="Whisper"[^>]* disabled aria-disabled="true"/);
+
+        const connected = supervisorAgentActions(onCall({ monitorMode: 'Barge', monitorConnected: true }), supervisor, {});
+        expect(connected.modes.map(mode => mode.disabled)).toEqual([false, false, false]);
+
+        const notEngaged = supervisorAgentActions(onCall(), supervisor, {});
+        expect(notEngaged.modes.map(mode => mode.disabled)).toEqual([false, false, false]);
+    });
+
     it('lists the call and agent interventions in the More menu', () => {
         const actions = supervisorAgentActions(onCall(), supervisor, {});
 

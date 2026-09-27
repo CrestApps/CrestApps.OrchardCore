@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/registration.js';
 
-const { shouldStartRegistration, answerClickAction, isAnswerInProgress } = globalThis.CrestAppsSoftPhone;
+const { shouldStartRegistration, answerClickAction, isAnswerInProgress, planRegistrationSelfHeal, planMicrophoneLossRecovery } = globalThis.CrestAppsSoftPhone;
 
 const idle = {
     browserAudioEnabled: true,
@@ -83,5 +83,45 @@ describe('isAnswerInProgress', () => {
 
     it('is not in progress before the agent clicks', () => {
         expect(isAnswerInProgress({ acceptPending: false, registeringForAnswer: false })).toBe(false);
+    });
+});
+
+// Live (2026-09-26), a supervisor's Bluetooth microphone kept dropping. Each drop, and each call that found the capture
+// dead, registered the phone again: a new SIP credential every few minutes. One of them landed while the supervisor was
+// listening -- a monitor leg is no call of the phone's own, so the phone took itself for idle -- and hung the leg up; the
+// next engagement rang the address being replaced and was refused (480). A registration is only rebuilt for what needs a
+// new one, never while media is up, and a dead capture is replaced where it is.
+describe('healing the registration before it is used', () => {
+    const healthy = { expiring: false, captureDead: false, reregisterRequested: false, liveMedia: false };
+
+    it('keeps a healthy registration', () => {
+        expect(planRegistrationSelfHeal(healthy)).toBe('keep');
+    });
+
+    it('never rebuilds it while a call or a monitor leg is up', () => {
+        expect(planRegistrationSelfHeal({ ...healthy, liveMedia: true, captureDead: true })).toBe('keep');
+        expect(planRegistrationSelfHeal({ ...healthy, liveMedia: true, expiring: true })).toBe('keep');
+        expect(planRegistrationSelfHeal({ ...healthy, liveMedia: true, reregisterRequested: true })).toBe('keep');
+    });
+
+    it('registers again for a credential near expiry, or a change that needs a new provider client', () => {
+        expect(planRegistrationSelfHeal({ ...healthy, expiring: true })).toBe('reregister');
+        expect(planRegistrationSelfHeal({ ...healthy, reregisterRequested: true, captureDead: true })).toBe('reregister');
+    });
+
+    it('replaces a dead capture without registering again', () => {
+        expect(planRegistrationSelfHeal({ ...healthy, captureDead: true })).toBe('replace-capture');
+    });
+});
+
+describe('recovering a microphone that stopped', () => {
+    it('replaces the capture in place, under whatever is up', () => {
+        expect(planMicrophoneLossRecovery({ liveMedia: true }).first).toBe('replace-capture');
+        expect(planMicrophoneLossRecovery({ liveMedia: false }).first).toBe('replace-capture');
+    });
+
+    it('registers again only when an idle phone could not replace it', () => {
+        expect(planMicrophoneLossRecovery({ liveMedia: false }).onFailure).toBe('reregister');
+        expect(planMicrophoneLossRecovery({ liveMedia: true }).onFailure).toBe('warn');
     });
 });

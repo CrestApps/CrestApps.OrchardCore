@@ -326,6 +326,12 @@ public sealed partial class ContactCenterPhoneCallSupervisionService : IContactC
             return SupervisorEngagementResult.Success();
         }
 
+        // The mode is changed on the leg the supervisor is on: until their phone has answered one, there is none.
+        if (!engagement.ConnectedUtc.HasValue)
+        {
+            return SupervisorEngagementResult.Failure("You are still being connected to the call. Change the mode once you hear it.");
+        }
+
         var provider = _voiceProviderResolver.Get(engagement.ProviderName);
 
         if (provider is not IContactCenterVoiceSupervisorInterventionProvider interventions ||
@@ -356,6 +362,14 @@ public sealed partial class ContactCenterPhoneCallSupervisionService : IContactC
         }
 
         engagement.Mode = mode;
+
+        // A provider whose role switch cannot be trusted rings the supervisor with a fresh leg in the new mode, and that
+        // leg is the engagement's from now on.
+        if (!string.IsNullOrEmpty(result.ProviderLegId))
+        {
+            engagement.SupervisorLegId = result.ProviderLegId;
+        }
+
         await _engagements.SaveAsync(engagement, cancellationToken);
         await NotifyAsync(SupervisorEngagementNotification.ModeChanged, engagement, agent: null, reason: null);
 

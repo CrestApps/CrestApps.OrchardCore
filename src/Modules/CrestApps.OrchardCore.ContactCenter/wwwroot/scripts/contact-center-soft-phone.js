@@ -206,7 +206,7 @@
 
   // The dashboard's actions for one agent row.
   //   agent: a row of the dashboard state; state: { canIntervene, canMessage }; labels: localized strings.
-  // Returns { modes: [{ mode, label, pressed, action }], stop, takeOver: { disabled, title } | null,
+  // Returns { modes: [{ mode, label, pressed, action, disabled }], stop, takeOver: { disabled, title } | null,
   //           menu: [{ action, label, danger }], engagedLabel, unavailable }.
   function agentActions(agent, state, labels) {
     var actions = {
@@ -233,7 +233,10 @@
           label: modeLabel(mode, labels),
           pressed: engaged && agent.monitorMode === mode,
           // Engaged, a mode button changes the mode on the same leg; otherwise it rings the supervisor.
-          action: engaged ? 'switch' : 'engage'
+          action: engaged ? 'switch' : 'engage',
+          // Not until the supervisor's phone is on the call: live, a switch sent while it still rang was
+          // refused, and the server refuses one before then.
+          disabled: engaged && !agent.monitorConnected
         });
       });
       if (engaged) {
@@ -309,7 +312,7 @@
     }
     if (actions.modes.length) {
       html += '<span class="btn-group btn-group-sm" role="group" aria-label="' + escapeHtml(text(labels, 'modes', 'Monitoring mode')) + '">' + actions.modes.map(function (mode) {
-        return '<button type="button" class="btn btn-sm ' + (mode.pressed ? 'btn-primary' : 'btn-outline-secondary') + '"' + ' data-cc-' + mode.action + '="' + interactionId + '" data-cc-mode="' + escapeHtml(mode.mode) + '"' + ' aria-pressed="' + (mode.pressed ? 'true' : 'false') + '"' + ' title="' + escapeHtml(modeHint(mode.mode, labels)) + '">' + escapeHtml(mode.label) + '</button>';
+        return '<button type="button" class="btn btn-sm ' + (mode.pressed ? 'btn-primary' : 'btn-outline-secondary') + '"' + ' data-cc-' + mode.action + '="' + interactionId + '" data-cc-mode="' + escapeHtml(mode.mode) + '"' + ' aria-pressed="' + (mode.pressed ? 'true' : 'false') + '"' + (mode.disabled ? ' disabled aria-disabled="true"' : '') + ' title="' + escapeHtml(modeHint(mode.mode, labels)) + '">' + escapeHtml(mode.label) + '</button>';
       }).join('') + '</span>';
     }
     if (actions.stop) {

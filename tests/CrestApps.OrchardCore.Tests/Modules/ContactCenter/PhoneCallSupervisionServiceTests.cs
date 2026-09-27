@@ -183,6 +183,49 @@ public sealed class PhoneCallSupervisionServiceTests
         Assert.Equal("ModeChanged", fixture.Notifier.Engagements.Last().State);
     }
 
+    // Live, a role switch on the supervising leg left the supervisor unheard or hearing silence, so a provider may change the
+    // mode by ringing a fresh leg. That leg is the engagement's from then on: stopping, switching again or taking over act
+    // on it, and its answer and hang-up are the engagement's.
+    [Fact]
+    public async Task SwitchMode_RecordsTheLegTheProviderMovedTheSupervisorTo()
+    {
+        // Arrange
+        var fixture = await new Fixture().WithKeypadCall().EngagedAsync(MonitorMode.Monitor);
+        var cancellationToken = TestContext.Current.CancellationToken;
+        fixture.Interventions
+            .Setup(value => value.SwitchModeAsync(It.IsAny<ContactCenterVoiceMonitoringRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ContactCenterVoiceProviderResult { Succeeded = true, ProviderLegId = "supervisor-leg-2" });
+
+        // Act
+        var result = await fixture.Service.SwitchModeAsync(Key, "sup-user", Fixture.Principal, MonitorMode.Whisper, cancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded, result.Reason);
+        var engagement = await fixture.Service.FindEngagementAsync(Key, "sup-user", cancellationToken);
+        Assert.Equal("supervisor-leg-2", engagement.SupervisorLegId);
+        Assert.Equal(MonitorMode.Whisper, engagement.Mode);
+
+        // The replaced leg's end is not the engagement's; the new leg's is.
+        Assert.False(await fixture.Service.OnEndedAsync("Telnyx", "number-leg", "supervisor-leg", null, null, cancellationToken));
+        Assert.True(await fixture.Service.OnEndedAsync("Telnyx", "number-leg", "supervisor-leg-2", null, null, cancellationToken));
+    }
+
+    // The mode is changed on the leg the supervisor is on; until their phone has answered one, there is none to change.
+    [Fact]
+    public async Task SwitchMode_BeforeTheSupervisorsPhoneAnswered_IsRefused()
+    {
+        // Arrange
+        var fixture = await new Fixture().WithKeypadCall().EngagedAsync(MonitorMode.Monitor, connected: false);
+
+        // Act
+        var result = await fixture.Service.SwitchModeAsync(Key, "sup-user", Fixture.Principal, MonitorMode.Whisper, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        fixture.Interventions.Verify(value => value.SwitchModeAsync(It.IsAny<ContactCenterVoiceMonitoringRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+        Assert.Equal(MonitorMode.Monitor, (await fixture.Service.FindEngagementAsync(Key, "sup-user", TestContext.Current.CancellationToken)).Mode);
+    }
+
     [Fact]
     public async Task Stop_HangsUpTheSupervisorsLeg_ForgetsTheEngagement_AndTellsThePhone()
     {

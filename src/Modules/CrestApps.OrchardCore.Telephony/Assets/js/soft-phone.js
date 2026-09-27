@@ -110,6 +110,10 @@
     var monitorLegAction = softPhoneModules.monitorLegAction;
     var monitorLegReplaces = softPhoneModules.monitorLegReplaces;
     var anyMonitorLegTalks = softPhoneModules.anyMonitorLegTalks;
+    var holdsMonitorLeg = softPhoneModules.holdsMonitorLeg;
+    var readMonitorLegMedia = softPhoneModules.readMonitorLegMedia;
+    var describeMonitorLegMedia = softPhoneModules.describeMonitorLegMedia;
+    var replaceSendTrackOnPeers = softPhoneModules.replaceSendTrackOnPeers;
     var planEntryStart = softPhoneModules.planEntryStart;
     var planEntryEnd = softPhoneModules.planEntryEnd;
 
@@ -121,6 +125,8 @@
 
     var shouldRingForOffer = softPhoneModules.shouldRingForOffer;
     var shouldStartRegistration = softPhoneModules.shouldStartRegistration;
+    var planRegistrationSelfHeal = softPhoneModules.planRegistrationSelfHeal;
+    var planMicrophoneLossRecovery = softPhoneModules.planMicrophoneLossRecovery;
     var answerClickAction = softPhoneModules.answerClickAction;
     var isAnswerInProgress = softPhoneModules.isAnswerInProgress;
     var answerButtonView = softPhoneModules.answerButtonView;
@@ -1855,9 +1861,9 @@
             };
         }
 
-        // What a supervisor's monitor leg negotiated and sends, reported a few times while it is up. Whether the
-        // supervisor could be heard turns on it: a leg negotiated to receive only never carries the microphone, however
-        // its role is switched later.
+        // What a supervisor's monitor leg negotiated, sends and receives, reported a few times while it is up. Whether the
+        // supervisor could be heard turns on what it sends; whether they hear the call, on what arrives and how loud it
+        // is -- live, a supervisor heard nothing, and silence arriving could not be told from nothing arriving.
         var monitorMediaProbes = [];
 
         function reportMonitorLegMedia(call) {
@@ -1868,6 +1874,7 @@
             monitorMediaProbes.push(call);
 
             var remaining = 18;
+            var previous = null;
             var probe = function () {
                 var peer = call && call.peer && call.peer.instance;
 
@@ -1888,20 +1895,13 @@
                 }).join(',');
 
                 Promise.resolve(typeof peer.getStats === 'function' ? peer.getStats() : null).then(function (stats) {
-                    var sent = 0;
+                    var media = readMonitorLegMedia(stats, previous);
 
-                    if (stats && typeof stats.forEach === 'function') {
-                        stats.forEach(function (report) {
-                            if (report.type === 'outbound-rtp' && (report.kind === 'audio' || report.mediaType === 'audio')) {
-                                sent += report.bytesSent || 0;
-                            }
-                        });
-                    }
-
+                    previous = media;
                     context.reportDiagnostic(
                         'info',
                         'monitor-leg-media',
-                        'Monitor leg media: transceivers ' + (directions || 'none') + ', bytes sent ' + sent + '.',
+                        describeMonitorLegMedia(directions, media),
                         (call.options && call.options.telnyxCallControlId) || '');
                 }).catch(function () { });
 
@@ -2341,28 +2341,23 @@
                         applyPlayoutDelayToCall(currentCall);
                     }
                 },
-                // Swaps the outgoing audio track of the live call without renegotiating, for a capture that died
-                // mid-call. Resolves false when there is no live sender to swap.
+                // Swaps the outgoing audio track of every leg this phone holds -- the live call and any supervisor's
+                // monitor leg -- without renegotiating, for a capture that died or a device the agent picked mid-call.
+                // Resolves false when there is no live sender to swap.
                 replaceLocalAudioTrack: function (track) {
-                    var peer = currentCall && currentCall.peer && currentCall.peer.instance;
-
-                    if (!peer || typeof peer.getSenders !== 'function') {
-                        return Promise.resolve(false);
-                    }
-
-                    var sender = findAudioSender(peer.getSenders());
-
-                    if (!sender || typeof sender.replaceTrack !== 'function') {
-                        return Promise.resolve(false);
-                    }
+                    var peers = [currentCall].concat(monitorCalls).filter(function (call, index, calls) {
+                        return !!call && calls.indexOf(call) === index && !isTelnyxTerminalState(call.state);
+                    }).map(function (call) {
+                        return call.peer && call.peer.instance;
+                    });
 
                     // The capture probe is NOT rebuilt here. At this point the soft phone has not yet committed the
                     // swap: its send stream still holds the old track, which it stops only afterwards, so a probe
                     // built now bound to a track that was about to die and read 0.000 for the rest of the call
                     // (observed live: OutLevel=0.000 while the far end measured InLevel around 0.3). The caller
                     // rebuilds it through refreshCaptureProbe once the commit is done.
-                    return Promise.resolve(sender.replaceTrack(track)).then(function () {
-                        return true;
+                    return replaceSendTrackOnPeers(peers, track, findAudioSender).then(function (replaced) {
+                        return replaced > 0;
                     });
                 },
                 // Re-points the capture level probe at the track now being sent, once a mid-call microphone swap
@@ -3418,6 +3413,13 @@
             });
         }
 
+        // A call of the phone's own, or a supervisor's monitor leg: media that tearing the registration down would drop.
+        // Live, a microphone that failed while the supervisor listened found no call up, registered the phone again, and
+        // that hung the monitor leg up.
+        function hasLiveMedia() {
+            return hasLiveCall() || holdsMonitorLeg(monitorLegs);
+        }
+
         function stopLocalAudioStream() {
             if (micBoostPipeline) {
                 micBoostPipeline.dispose();
@@ -3637,7 +3639,7 @@
                 ' seconds on a connected call (send track ' + trackState + ').', localAudioTrackLabel());
             showError(outboundAudioWarning());
 
-            if (trackState !== 'live' && hasLiveCall()) {
+            if (trackState !== 'live' && hasLiveMedia()) {
                 switchLocalAudioTrack('ended').catch(function () { });
             }
         }
@@ -3652,25 +3654,27 @@
             reportDiagnostic('warning', 'microphone-lost',
                 'The captured microphone stopped delivering audio (' + reason + ').', localAudioTrackLabel());
 
-            // During a call, re-registering would tear down the media session, but the capture itself can be
-            // replaced under the live call: acquire a fresh track from the same device selection and swap it onto
-            // the sender with replaceTrack, which needs no renegotiation. Only if that fails is the agent left to
-            // be told -- and they are, at that moment, on a call the caller cannot hear them on.
-            if (hasLiveCall()) {
-                switchLocalAudioTrack(reason).catch(function () {
+            // The capture is replaced where it is: a fresh track from the same device selection, swapped onto every
+            // sender with replaceTrack (no renegotiation), or into the send stream the next call reads when nothing is
+            // up. Re-registering would tear down any call or monitor leg, and live, doing it on every drop of a
+            // Bluetooth headset issued a new SIP credential every few minutes, which a leg rung meanwhile was refused
+            // on. Only if the swap fails does an idle phone register again; with media up, the agent is told -- they
+            // are, at that moment, on a call nobody can hear them on.
+            var recovery = planMicrophoneLossRecovery({ liveMedia: hasLiveMedia() });
+
+            switchLocalAudioTrack(reason).catch(function () {
+                if (recovery.onFailure === 'warn') {
                     showError(strings.microphoneLostOnCall ||
                         'Your microphone stopped working, so the caller cannot hear you. Check the device and call back.');
-                });
 
-                return;
-            }
+                    return;
+                }
 
-            // Idle: drop the dead capture and register again, so the next call starts from a live microphone
-            // instead of inheriting this one.
-            showError(strings.microphoneLostIdle ||
-                'Your microphone stopped working and is being reconnected.');
-            releaseBrowserAudio();
-            registerBrowserAudioForInbound();
+                showError(strings.microphoneLostIdle ||
+                    'Your microphone stopped working and is being reconnected.');
+                releaseBrowserAudio();
+                registerBrowserAudioForInbound();
+            });
         }
 
         // Switches the captured microphone to the current device selection -- because the agent picked another
@@ -3720,7 +3724,7 @@
                 // exactly the lie this replaces. Idle, the swap into the stream below is enough on its own.
                 var replace;
 
-                if (!hasLiveCall()) {
+                if (!hasLiveMedia()) {
                     replace = Promise.resolve();
                 } else if (browserAudioSession && typeof browserAudioSession.replaceLocalAudioTrack === 'function') {
                     replace = Promise.resolve(browserAudioSession.replaceLocalAudioTrack(fresh)).then(function (replaced) {
@@ -3997,7 +4001,7 @@
             // an agent may hold -- reached, it refuses the login outright.
             reregisterOnNextEnsure = true;
 
-            if (hasLiveCall()) {
+            if (hasLiveMedia()) {
                 // The flag stays set, so the rebuild happens the next time the registration is ensured, which is
                 // the next call or the next time this agent goes available -- both after this call has ended.
                 showError(strings.signalingRegionOnNextCall ||
@@ -4396,8 +4400,26 @@
                 // them on.
                 // The third reason is the agent choosing a different signaling region: the provider fixes the edge
                 // when its client is constructed, so a live session cannot be moved -- it has to be rebuilt.
-                if ((isBrowserAudioExpiring(browserAudioSession) || isLocalAudioTrackDead() || reregisterOnNextEnsure) &&
-                    !hasLiveCall()) {
+                //
+                // A dead capture alone is replaced under the same registration (see soft-phone/registration.js): live,
+                // re-registering for it issued a new credential on every drop of a Bluetooth headset, and a supervisor's
+                // monitor leg -- no call of the phone's own -- was hung up by one.
+                var heal = planRegistrationSelfHeal({
+                    expiring: isBrowserAudioExpiring(browserAudioSession),
+                    captureDead: isLocalAudioTrackDead(),
+                    reregisterRequested: reregisterOnNextEnsure,
+                    liveMedia: hasLiveMedia()
+                });
+
+                if (heal === 'replace-capture') {
+                    var healing = browserAudioSession;
+
+                    return switchLocalAudioTrack('ended').catch(function () { }).then(function () {
+                        return healing;
+                    });
+                }
+
+                if (heal === 'reregister') {
                     // Remember the credential being replaced so it can be revoked once the fresh one is live.
                     supersededCredentialId = browserAudioCredentialId(browserAudioSession);
                     reregisterOnNextEnsure = false;
@@ -4569,10 +4591,10 @@
                 return;
             }
 
-            // Never renew mid-call (re-establishing would drop the active media session); the renewal is retried
-            // on the next heartbeat once the line clears. If the credential is very close to expiring, warn the
-            // agent once that a very long call may drop so they can redial proactively (item 8).
-            if (hasLiveCall()) {
+            // Never renew mid-call or mid-monitoring (re-establishing would drop the active media session); the renewal
+            // is retried on the next heartbeat once the line clears. If the credential is very close to expiring, warn
+            // the agent once that a very long call may drop so they can redial proactively (item 8).
+            if (hasLiveMedia()) {
                 maybeWarnCredentialExpiry();
 
                 return;
@@ -4714,7 +4736,7 @@
         // A capture that replaces the send track mid-call starts enabled; left so, a new or revived microphone turned
         // the agent's voice back on under a mute. It takes the state the calls give it instead.
         function matchMicrophoneToCalls(track) {
-            if (track && hasLiveCall()) {
+            if (track && hasLiveMedia()) {
                 track.enabled = microphoneEnabledAfter(currentCall);
             }
         }
@@ -9143,7 +9165,7 @@
                 return;
             }
 
-            if (hasLiveCall()) {
+            if (hasLiveMedia()) {
                 showError(strings.disconnectActiveCalls || 'End active calls before disconnecting from the provider.');
 
                 return;
@@ -10317,7 +10339,7 @@
                 // browser shows its own generic confirmation). This does NOT release audio -- if the agent
                 // cancels the navigation the call keeps running; cleanup happens in pagehide only when the page
                 // actually goes away. This is a safety net, not a fix for navigating while on a call.
-                if (hasLiveCall()) {
+                if (hasLiveMedia()) {
                     event.preventDefault();
                     event.returnValue = '';
                 }
