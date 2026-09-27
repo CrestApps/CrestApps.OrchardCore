@@ -82,6 +82,26 @@
             (name === 'OverconstrainedError' || name === 'NotFoundError' || name === 'DevicesNotFoundError');
     }
 
+    // A microphone capture that falls back to the default microphone when the chosen one is not there
+    // (shouldFallBackToDefaultMicrophone). `onFallback(missingDeviceId, error)` runs before the second capture: that is
+    // where the caller forgets the chosen device, so the next `buildConstraints()` asks for the default one.
+    //   getUserMedia     - captures with the constraints it is given, as navigator.mediaDevices.getUserMedia does
+    //   buildConstraints - builds the constraints from the current selection
+    //   readSelectedId   - reads the chosen device id when the capture fails
+    function captureWithFallback(getUserMedia, buildConstraints, readSelectedId, onFallback) {
+        return getUserMedia(buildConstraints()).catch(function (error) {
+            var selectedDeviceId = readSelectedId();
+
+            if (!shouldFallBackToDefaultMicrophone(error, selectedDeviceId)) {
+                throw error;
+            }
+
+            onFallback(selectedDeviceId, error);
+
+            return getUserMedia(buildConstraints());
+        });
+    }
+
     // Whether the speaker the agent chose has gone, so the call is played on the default speaker instead. Live
     // (2026-09-27), a Bluetooth headset switched off mid-call: the microphone fell back to the computer's own, but the
     // speaker stayed on the missing headset, so the agent heard nothing and the picker showed a blank choice. Only a
@@ -102,6 +122,7 @@
     }
 
     softPhone.shouldFallBackToDefaultMicrophone = shouldFallBackToDefaultMicrophone;
+    softPhone.captureWithFallback = captureWithFallback;
     softPhone.shouldFallBackToDefaultSpeaker = shouldFallBackToDefaultSpeaker;
     softPhone.isVirtualAudioDevice = isVirtualAudioDevice;
     softPhone.resolveDeviceLabel = resolveDeviceLabel;

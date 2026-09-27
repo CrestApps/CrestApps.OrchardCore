@@ -261,6 +261,82 @@ public sealed class TelnyxAgentPreDialTests
         Assert.EndsWith("calls/caller-1/actions/playback_stop", handler.Requests[1].RequestUri.AbsolutePath, StringComparison.Ordinal);
     }
 
+    // A caller the AI assistant hands to the Contact Center keeps the AI's client state on their leg for the rest of the
+    // call, and the agent who accepts is rung on a leg that names that call as its peer. When the agent answers, the
+    // accept-time bridge joins the two, the queue music stops, the answer is recorded against the AI's call, and the
+    // caller leg's bridged event reaches the Contact Center as well as the conversation. Confirmed live on a phone
+    // handoff from the AI assistant to an agent.
+    [Fact]
+    public async Task AdvanceAsync_WhenTheAcceptedAgentLegsPeerIsAHandedOffAiCall_BridgesTheAgentToTheCaller()
+    {
+        // Arrange
+        var handler = new StubHttpMessageHandler(HttpStatusCode.OK, "{\"data\":{}}");
+        var failureService = new Mock<IContactCenterAgentLegFailureService>();
+        var conversation = new Mock<ITelnyxAiVoiceEventHandler>();
+        var probe = new Mock<IInboundVoiceInteractionProbe>();
+        probe
+            .Setup(value => value.HasActiveInteractionAsync("Telnyx", "ai-call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        var orchestrator = new TelnyxOutboundBridgeOrchestrator(
+            CreateApiClient(handler),
+            NullLogger<TelnyxOutboundBridgeOrchestrator>.Instance,
+            CreateMonitor(),
+            failureService.Object,
+            [conversation.Object],
+            [],
+            [probe.Object]);
+
+        // Act
+        var agentLeg = await orchestrator.AdvanceAsync(new TelnyxCallEvent
+        {
+            EventType = "call.answered",
+            CallControlId = "agent-leg-1",
+            ClientState = ClientState(new TelnyxOutboundBridgeState
+            {
+                Intent = TelnyxOutboundBridgeState.ContactCenterAgentLegIntent,
+                PeerCallControlId = "ai-call-1",
+            }),
+        }, TestContext.Current.CancellationToken);
+
+        var callerLeg = await orchestrator.AdvanceAsync(new TelnyxCallEvent
+        {
+            EventType = "call.bridged",
+            CallControlId = "ai-call-1",
+            ClientState = ClientState(new TelnyxOutboundBridgeState
+            {
+                Intent = TelnyxOutboundBridgeState.AiVoiceLegIntent,
+                ActivityId = "activity-1",
+            }),
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.EndsWith("calls/agent-leg-1/actions/bridge", handler.Requests[0].RequestUri.AbsolutePath, StringComparison.Ordinal);
+
+        using (var bridge = JsonDocument.Parse(handler.RequestBodies[0]))
+        {
+            Assert.Equal("ai-call-1", bridge.RootElement.GetProperty("call_control_id").GetString());
+        }
+
+        Assert.EndsWith("calls/ai-call-1/actions/playback_stop", handler.Requests[1].RequestUri.AbsolutePath, StringComparison.Ordinal);
+        failureService.Verify(
+            value => value.RecordAnsweredAsync("Telnyx", "ai-call-1", "agent-leg-1", It.IsAny<CancellationToken>()),
+            Times.Once);
+        Assert.Equal(TelnyxOutboundBridgeLeg.None, agentLeg);
+
+        // The caller's leg is the Contact Center's now, so its bridge is not hidden, and the conversation still hears it.
+        Assert.Equal(TelnyxOutboundBridgeLeg.None, callerLeg);
+        conversation.Verify(
+            value => value.HandleAsync(
+                It.Is<TelnyxCallEvent>(callEvent => callEvent.EventType == "call.bridged"),
+                It.Is<TelnyxOutboundBridgeState>(state => state.ActivityId == "activity-1"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    private static string ClientState(TelnyxOutboundBridgeState state)
+        => Encoding.UTF8.GetString(Convert.FromBase64String(state.ToClientState()));
+
     private static TelnyxCallEvent PreDialedLegEvent(string eventType, string hangupCause = null)
         => new()
         {

@@ -81,6 +81,49 @@ public sealed class SupervisorInterventionServiceTests
         Assert.Contains(context.Notifier.Engagements, notification => notification.State == SupervisorEngagementNotification.TookOver);
     }
 
+    // Telnyx takes no command on a supervising leg, so it cannot bridge the customer to it: it rings the supervisor
+    // afresh on an ordinary leg and names that leg in its result (see TelnyxSupervisorMonitoringTests). That leg is the
+    // call's agent leg from then on, and the supervisor's talk time is recorded on it. Confirmed live on a queue call.
+    [Fact]
+    public async Task TakeOver_OnALegTheProviderRangAfresh_MakesThatLegTheAgentLeg()
+    {
+        // Arrange
+        var context = new Context(engagedMode: MonitorMode.Barge, connected: true);
+        context.Intervention
+            .Setup(value => value.TakeOverAsync(It.IsAny<ContactCenterVoiceMonitoringRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ContactCenterVoiceProviderResult { Succeeded = true, ProviderLegId = "take-leg" });
+
+        // Act
+        var result = await context.Service.TakeOverAsync("int1", "sup1", _supervisor, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded, result.Reason);
+
+        var session = context.Session;
+        var takeLeg = session.Legs.Single(leg => leg.ProviderLegId == "take-leg");
+        Assert.Equal(CallPartyRole.Agent, takeLeg.Role);
+        Assert.Equal("sup-agent", takeLeg.AgentId);
+        Assert.NotNull(takeLeg.AnsweredUtc);
+        Assert.DoesNotContain(session.Legs, leg => leg.ProviderLegId == "sup-leg" && leg.Role == CallPartyRole.Agent);
+        Assert.NotNull(session.Legs.Single(leg => leg.ProviderLegId == "agent-leg").EndedUtc);
+        Assert.Equal("sup-agent", session.AgentId);
+
+        context.Audit.Verify(value => value.RecordCallAsync(
+            ContactCenterConstants.Events.AgentLegAnswered,
+            It.Is<CallLifecycleEventData>(data => data.AgentId == "sup-agent" && data.ProviderLegId == "take-leg"),
+            It.IsAny<DateTime>(),
+            ContactCenterActor.Supervisor("sup1"),
+            It.IsAny<string>(),
+            It.IsAny<CancellationToken>()), Times.Once);
+        context.Audit.Verify(value => value.RecordCallAsync(
+            ContactCenterConstants.Events.AgentLegAnswered,
+            It.Is<CallLifecycleEventData>(data => data.ProviderLegId == "sup-leg"),
+            It.IsAny<DateTime>(),
+            It.IsAny<ContactCenterActor>(),
+            It.IsAny<string>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     [Fact]
     public async Task TakeOver_OfADirectCall_ReturnsTheAgentToReady()
     {

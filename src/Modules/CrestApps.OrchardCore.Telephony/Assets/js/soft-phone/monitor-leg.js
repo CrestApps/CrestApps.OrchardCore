@@ -123,6 +123,42 @@
         return !!(held && held.legId && tag.legId && held.legId !== tag.legId);
     }
 
+    // The leg a supervisor took the call over on, taken out of the phone's monitor legs so it can become a call of the
+    // phone's own. Null when the phone holds no leg for `token` that can be promoted -- the take-over is missed, and the
+    // legs are left as they are.
+    //   legs - the phone's monitor legs, by token: { legId, controller: { promote } }
+    function planMonitorLegPromotion(legs, token) {
+        var leg = token && legs ? legs[token] : null;
+
+        if (!leg || !leg.controller || typeof leg.controller.promote !== 'function') {
+            return null;
+        }
+
+        delete legs[token];
+
+        return leg;
+    }
+
+    // What promoting a monitor call does to the phone's calls: the call leaves the monitor calls whatever happens, and
+    // becomes the current call only when the phone has no other. A call that has ended, or a phone that is gone, has
+    // nothing left to promote. Returns { promoted, current }: the call the phone's current call is after it.
+    //   calls   - the phone's monitor calls
+    //   current - the phone's current call, or null
+    //   ended   - whether the call has ended or the phone is disposed
+    function planMonitorCallPromotion(calls, call, current, ended) {
+        var index = calls ? calls.indexOf(call) : -1;
+
+        if (index >= 0) {
+            calls.splice(index, 1);
+        }
+
+        if (ended) {
+            return { promoted: false, current: current };
+        }
+
+        return { promoted: true, current: current || call };
+    }
+
     // Whether the supervisor is heard on a monitor leg in `mode` (the engagement's mode, as the platform names it).
     // Listening is silent: the platform joins the supervisor muted, and the phone keeps its microphone off too. Coaching
     // is heard by the agent, and joining by everyone -- as is a call the supervisor took over, which is on as joined.
@@ -203,6 +239,8 @@
     softPhone.claimMonitorLegArm = claimMonitorLegArm;
     softPhone.monitorLegAction = monitorLegAction;
     softPhone.monitorLegReplaces = monitorLegReplaces;
+    softPhone.planMonitorLegPromotion = planMonitorLegPromotion;
+    softPhone.planMonitorCallPromotion = planMonitorCallPromotion;
     softPhone.monitorLegTalks = monitorLegTalks;
     softPhone.anyMonitorLegTalks = anyMonitorLegTalks;
     softPhone.holdsMonitorLeg = holdsMonitorLeg;

@@ -522,6 +522,104 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
             Times.Once);
     }
 
+    // Live, a supervisor who took a queue call over had only a banner on their soft phone: nothing projected the call
+    // onto it, so there was nothing to mute, hold or hang up. The take-over names the supervisor as the session's agent,
+    // and the call is pushed to their phone as a live call they have joined. Confirmed live on a queue call.
+    [Fact]
+    public async Task HandleAsync_SupervisorTookOver_PutsTheLiveCallOnTheSupervisorsPhone()
+    {
+        // Arrange
+        var interaction = new Interaction
+        {
+            ItemId = "interaction-1",
+            ActivityItemId = "activity-1",
+            ProviderName = "Telnyx",
+            ProviderInteractionId = "call-1",
+            CustomerAddress = "+15550001000",
+            QueueId = "queue-1",
+            AgentId = "sup-agent",
+            Direction = InteractionDirection.Inbound,
+            CreatedUtc = new DateTime(2026, 9, 26, 15, 0, 0, DateTimeKind.Utc),
+            StartedUtc = new DateTime(2026, 9, 26, 15, 0, 5, DateTimeKind.Utc),
+        }.RestorePersistedStatus(InteractionStatus.Connected);
+        var session = new CallSession
+        {
+            ItemId = "session-1",
+            InteractionId = "interaction-1",
+            ProviderName = "Telnyx",
+            ProviderCallId = "call-1",
+            AgentId = "sup-agent",
+            Direction = InteractionDirection.Inbound,
+            FromAddress = "+15550001000",
+            ToAddress = "+15550002000",
+            StartedUtc = new DateTime(2026, 9, 26, 15, 0, 5, DateTimeKind.Utc),
+            AnsweredUtc = new DateTime(2026, 9, 26, 15, 0, 9, DateTimeKind.Utc),
+        }.RestorePersistedState(VoiceCallState.Connected);
+
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager.Setup(manager => manager.FindByIdAsync("interaction-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+
+        var callSessionManager = new Mock<ICallSessionManager>();
+        callSessionManager.Setup(manager => manager.FindByInteractionIdAsync("interaction-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(manager => manager.FindByIdAsync("sup-agent", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentProfile
+            {
+                ItemId = "sup-agent",
+                UserId = "sup-user",
+                UserName = "sam.supervisor",
+            });
+
+        var store = new Mock<ITelephonyInteractionStore>();
+        store.Setup(value => value.FindByCallIdAsync("sup-user", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((TelephonyInteraction)null);
+
+        TelephonyInteraction createdInteraction = null;
+        store.Setup(value => value.CreateAsync(It.IsAny<TelephonyInteraction>(), It.IsAny<CancellationToken>()))
+            .Callback<TelephonyInteraction, CancellationToken>((telephonyInteraction, _) => createdInteraction = telephonyInteraction)
+            .Returns(Task.CompletedTask);
+
+        var client = new Mock<ITelephonyClient>();
+        var clients = new Mock<IHubClients<ITelephonyClient>>();
+        var hubContext = new Mock<IHubContext<TelephonyHub, ITelephonyClient>>();
+        clients.Setup(value => value.Group(TenantSignalRGroupName.ForUser(_shellSettings.Name, "sup-user"))).Returns(client.Object);
+        hubContext.SetupGet(value => value.Clients).Returns(clients.Object);
+
+        var handler = new ContactCenterSoftPhoneEventHandler(
+            interactionManager.Object,
+            callSessionManager.Object,
+            agentManager.Object,
+            store.Object,
+            hubContext.Object,
+            _shellSettings);
+
+        var interactionEvent = new InteractionEvent
+        {
+            EventType = ContactCenterConstants.Events.SupervisorTookOver,
+            InteractionId = "interaction-1",
+        };
+
+        // Act
+        await handler.HandleAsync(interactionEvent, TestContext.Current.CancellationToken);
+
+        // Assert
+        client.Verify(
+            value => value.CallStateChanged(It.Is<TelephonyCall>(call =>
+                call.CallId == session.ProviderCallId &&
+                call.State == CallState.Connected)),
+            Times.Once);
+        clients.Verify(value => value.Group(TenantSignalRGroupName.ForUser(_shellSettings.Name, "sup-user")), Times.Once);
+
+        Assert.NotNull(createdInteraction);
+        Assert.Equal("sup-user", createdInteraction.UserId);
+        Assert.Equal("call-1", createdInteraction.CallId);
+        Assert.Equal(CallOutcome.InProgress, createdInteraction.Outcome);
+        Assert.False(createdInteraction.AwaitingAnswer);
+    }
+
     // Bug: on a call handed off from the AI assistant, the soft phone's number field showed the platform's own number.
     // The call session's addresses follow whichever provider leg reported last -- here the leg the platform dialed
     // from its own number -- so the projection took the tenant's caller id for the customer. The customer is the

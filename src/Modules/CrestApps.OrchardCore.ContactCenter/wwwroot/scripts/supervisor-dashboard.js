@@ -271,6 +271,13 @@
     }
   }
 
+  // Whether the supervisor's phone takes the call they are on as a call of its own: once, as the engagement becomes
+  // taken over. A repeat of the take-over, or any other change, leaves the phone's calls as they are.
+  //   previous, next: the engagement before and after an event (nextEngagement).
+  function shouldPromoteMonitorLeg(previous, next) {
+    return !!(next && next.phase === PHASES.tookOver && previous && previous.phase !== PHASES.tookOver);
+  }
+
   // The HTML of the supervisor's engagement banner in their soft phone, or '' when there is none to show.
   function monitorBannerHtml(engagement, labels) {
     if (!engagement || engagement.phase === PHASES.ended) {
@@ -376,6 +383,7 @@
   contactCenter.supervisorAgentActionsHtml = agentActionsHtml;
   contactCenter.supervisorAgentMenuHtml = agentMenuHtml;
   contactCenter.nextMonitorEngagement = nextEngagement;
+  contactCenter.shouldPromoteMonitorLeg = shouldPromoteMonitorLeg;
   contactCenter.monitorBannerHtml = monitorBannerHtml;
   contactCenter.monitorModeLabel = modeLabel;
   contactCenter.escapeSupervisorHtml = escapeHtml;

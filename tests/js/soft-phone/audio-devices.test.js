@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/audio-devices.js';
 
@@ -85,5 +85,76 @@ describe('shouldFallBackToDefaultMicrophone', () => {
     it('does not fall back on a failure it cannot name', () => {
         expect(fallsBack(null, 'headset-1')).toBe(false);
         expect(fallsBack(new Error('boom'), 'headset-1')).toBe(false);
+    });
+});
+
+// Live (2026-09-26), a supervisor's Bluetooth headset dropped and the phone gave up capturing instead of using the
+// computer's own microphone. Confirmed fixed live on 2026-09-27: the capture is taken again on the default microphone,
+// once, and only for a device that is missing.
+describe('captureWithFallback', () => {
+    const capture = softPhone.captureWithFallback;
+    const failure = name => Object.assign(new Error(name), { name });
+
+    // The soft phone builds its constraints from the current selection, and forgets the missing device in onFallback.
+    const phone = selected => {
+        const state = { selected, missing: [] };
+
+        state.buildConstraints = () => ({ audio: state.selected ? { deviceId: { exact: state.selected } } : {} });
+        state.readSelectedId = () => state.selected;
+        state.onFallback = missingDeviceId => {
+            state.missing.push(missingDeviceId);
+            state.selected = null;
+        };
+
+        return state;
+    };
+
+    it('captures on the default microphone when the chosen one is not there, asking for no device the second time', async () => {
+        const state = phone('headset-1');
+        const stream = { id: 'default-stream' };
+        const getUserMedia = vi.fn()
+            .mockRejectedValueOnce(failure('NotFoundError'))
+            .mockResolvedValueOnce(stream);
+
+        await expect(capture(getUserMedia, state.buildConstraints, state.readSelectedId, state.onFallback)).resolves.toBe(stream);
+
+        expect(getUserMedia).toHaveBeenCalledTimes(2);
+        expect(getUserMedia.mock.calls[0][0].audio.deviceId).toEqual({ exact: 'headset-1' });
+        expect(getUserMedia.mock.calls[1][0].audio).not.toHaveProperty('deviceId');
+        expect(state.missing).toEqual(['headset-1']);
+    });
+
+    it('never works around a permission refusal', async () => {
+        const state = phone('headset-1');
+        const refused = failure('NotAllowedError');
+        const getUserMedia = vi.fn().mockRejectedValue(refused);
+
+        await expect(capture(getUserMedia, state.buildConstraints, state.readSelectedId, state.onFallback)).rejects.toBe(refused);
+
+        expect(getUserMedia).toHaveBeenCalledTimes(1);
+        expect(state.missing).toEqual([]);
+        expect(state.selected).toBe('headset-1');
+    });
+
+    it('captures once when the chosen microphone is there', async () => {
+        const state = phone('headset-1');
+        const stream = { id: 'headset-stream' };
+        const getUserMedia = vi.fn().mockResolvedValue(stream);
+
+        await expect(capture(getUserMedia, state.buildConstraints, state.readSelectedId, state.onFallback)).resolves.toBe(stream);
+
+        expect(getUserMedia).toHaveBeenCalledTimes(1);
+        expect(state.missing).toEqual([]);
+    });
+
+    it('gives up when the default microphone cannot be captured either', async () => {
+        const state = phone('headset-1');
+        const none = failure('NotFoundError');
+        const getUserMedia = vi.fn().mockRejectedValue(none);
+
+        await expect(capture(getUserMedia, state.buildConstraints, state.readSelectedId, state.onFallback)).rejects.toBe(none);
+
+        expect(getUserMedia).toHaveBeenCalledTimes(2);
+        expect(state.missing).toEqual(['headset-1']);
     });
 });

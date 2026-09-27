@@ -91,7 +91,7 @@
 
             // Taken over, the call is the supervisor's own: it moves to their phone's call list, where it is muted, held
             // and hung up like any other, and the banner goes. Live, a supervisor who took a call over had only the banner.
-            if (engagement.phase === 'tookOver' && previous && previous.phase !== 'tookOver' &&
+            if (contactCenter.shouldPromoteMonitorLeg(previous, engagement) &&
                 typeof api.promoteMonitorLeg === 'function' && api.promoteMonitorLeg(engagement.token)) {
                 engagement = null;
                 render();

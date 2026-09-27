@@ -263,6 +263,104 @@ public sealed class IvrFlowStateMachineTests
         Assert.Equal("support", subMenu.NodeId);
     }
 
+    // Confirmed live: a caller in the support menu pressed the key set to "Go to another menu" and heard the main menu
+    // again. Their tries belong to the menu they are on, so they start afresh there.
+    [Fact]
+    public void GoingToAnotherMenu_TakesTheCallerToThatMenu_WithItsTriesStartingAfresh()
+    {
+        // Arrange
+        var flow = Flow();
+        var state = new IvrFlowState { CurrentNodeId = "root" };
+
+        IvrFlowStateMachine.Advance(flow, state, "2", deliveryId: "g1");
+        IvrFlowStateMachine.Advance(flow, state, "7", deliveryId: "g2");
+
+        // Act
+        var step = IvrFlowStateMachine.Advance(flow, state, "9", deliveryId: "g3");
+
+        // Assert
+        Assert.Equal(IvrStepKind.Prompt, step.Kind);
+        Assert.Equal("root", step.NodeId);
+        Assert.Equal("Press 1 for sales, 2 for support.", step.Prompt);
+        Assert.False(step.IsRetry);
+        Assert.Equal("root", state.CurrentNodeId);
+        Assert.Equal(0, state.Attempts);
+    }
+
+    [Fact]
+    public void AKeyForAMenuThatNoLongerExists_RetriesTheMenuTheCallerIsOn()
+    {
+        // Arrange
+        // A menu deleted after a key was pointed at it must not strand the caller on nothing: the key counts as a miss.
+        var flow = Flow();
+        flow.Nodes[0].Options.Add(new IvrOption { Digit = "3", Action = new IvrAction { Kind = IvrActionKind.SubMenu, TargetId = "gone" } });
+        var state = new IvrFlowState { CurrentNodeId = "root" };
+
+        // Act
+        var step = IvrFlowStateMachine.Advance(flow, state, "3", deliveryId: "g1");
+
+        // Assert
+        Assert.Equal(IvrStepKind.Prompt, step.Kind);
+        Assert.Equal("root", step.NodeId);
+        Assert.True(step.IsRetry);
+        Assert.Equal("root", state.CurrentNodeId);
+        Assert.Equal(1, state.Attempts);
+    }
+
+    [Fact]
+    public void AFallbackToAMenuThatNoLongerExists_EndsTheMenu_AsTheFallback()
+    {
+        // Arrange
+        // Retrying from the fallback would loop the caller forever, so it ends the menu the way no fallback at all would.
+        var flow = Flow(maxRetries: 1);
+        flow.FallbackAction = new IvrAction { Kind = IvrActionKind.SubMenu, TargetId = "gone" };
+        var state = new IvrFlowState { CurrentNodeId = "root" };
+
+        // Act
+        var step = IvrFlowStateMachine.Advance(flow, state, digits: null, deliveryId: "g1");
+
+        // Assert
+        Assert.Equal(IvrStepKind.Done, step.Kind);
+        Assert.True(step.IsFallback);
+    }
+
+    [Fact]
+    public void AFallbackThatIsAMenu_PromptsThatMenu_AsTheFallback_WithItsTriesStartingAfresh()
+    {
+        // Arrange
+        var flow = Flow(maxRetries: 1);
+        flow.FallbackAction = new IvrAction { Kind = IvrActionKind.SubMenu, TargetId = "support" };
+        var state = new IvrFlowState { CurrentNodeId = "root" };
+
+        // Act
+        var step = IvrFlowStateMachine.Advance(flow, state, digits: null, deliveryId: "g1");
+
+        // Assert
+        Assert.Equal(IvrStepKind.Prompt, step.Kind);
+        Assert.Equal("support", step.NodeId);
+        Assert.True(step.IsFallback);
+        Assert.False(step.IsRetry);
+        Assert.Equal("support", state.CurrentNodeId);
+        Assert.Equal(0, state.Attempts);
+    }
+
+    [Fact]
+    public void AFallbackOfRepeat_EndsTheMenu_AsTheFallback()
+    {
+        // Arrange
+        // Repeating the menu once the tries are used up is the loop the fallback exists to break.
+        var flow = Flow(maxRetries: 1);
+        flow.FallbackAction = new IvrAction { Kind = IvrActionKind.Repeat };
+        var state = new IvrFlowState { CurrentNodeId = "root" };
+
+        // Act
+        var step = IvrFlowStateMachine.Advance(flow, state, digits: null, deliveryId: "g1");
+
+        // Assert
+        Assert.Equal(IvrStepKind.Done, step.Kind);
+        Assert.True(step.IsFallback);
+    }
+
     [Theory]
     [InlineData("1", "2", "1")]
     [InlineData("2", "2", "2")]
@@ -316,10 +414,13 @@ public sealed class IvrFlowStateMachineTests
         flow.Nodes.Add(new IvrNode
         {
             NodeId = "support",
-            Prompt = "Press 1 for billing.",
+            Prompt = "Press 1 for billing, 9 for the main menu.",
             Options =
             [
                 new IvrOption { Digit = "1", Action = new IvrAction { Kind = IvrActionKind.RouteToQueue, TargetId = "billing" } },
+
+                // "Go to another menu" in the editor is stored as a sub-menu action naming the menu it goes to.
+                new IvrOption { Digit = "9", Action = new IvrAction { Kind = IvrActionKind.SubMenu, TargetId = "root" } },
             ],
         });
 

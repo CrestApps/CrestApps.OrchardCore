@@ -1040,6 +1040,23 @@
     return !!selectedDeviceId && (name === 'OverconstrainedError' || name === 'NotFoundError' || name === 'DevicesNotFoundError');
   }
 
+  // A microphone capture that falls back to the default microphone when the chosen one is not there
+  // (shouldFallBackToDefaultMicrophone). `onFallback(missingDeviceId, error)` runs before the second capture: that is
+  // where the caller forgets the chosen device, so the next `buildConstraints()` asks for the default one.
+  //   getUserMedia     - captures with the constraints it is given, as navigator.mediaDevices.getUserMedia does
+  //   buildConstraints - builds the constraints from the current selection
+  //   readSelectedId   - reads the chosen device id when the capture fails
+  function captureWithFallback(getUserMedia, buildConstraints, readSelectedId, onFallback) {
+    return getUserMedia(buildConstraints()).catch(function (error) {
+      var selectedDeviceId = readSelectedId();
+      if (!shouldFallBackToDefaultMicrophone(error, selectedDeviceId)) {
+        throw error;
+      }
+      onFallback(selectedDeviceId, error);
+      return getUserMedia(buildConstraints());
+    });
+  }
+
   // Whether the speaker the agent chose has gone, so the call is played on the default speaker instead. Live
   // (2026-09-27), a Bluetooth headset switched off mid-call: the microphone fell back to the computer's own, but the
   // speaker stayed on the missing headset, so the agent heard nothing and the picker showed a blank choice. Only a
@@ -1060,6 +1077,7 @@
     });
   }
   softPhone.shouldFallBackToDefaultMicrophone = shouldFallBackToDefaultMicrophone;
+  softPhone.captureWithFallback = captureWithFallback;
   softPhone.shouldFallBackToDefaultSpeaker = shouldFallBackToDefaultSpeaker;
   softPhone.isVirtualAudioDevice = isVirtualAudioDevice;
   softPhone.resolveDeviceLabel = resolveDeviceLabel;
@@ -2530,6 +2548,42 @@
     return !!(held && held.legId && tag.legId && held.legId !== tag.legId);
   }
 
+  // The leg a supervisor took the call over on, taken out of the phone's monitor legs so it can become a call of the
+  // phone's own. Null when the phone holds no leg for `token` that can be promoted -- the take-over is missed, and the
+  // legs are left as they are.
+  //   legs - the phone's monitor legs, by token: { legId, controller: { promote } }
+  function planMonitorLegPromotion(legs, token) {
+    var leg = token && legs ? legs[token] : null;
+    if (!leg || !leg.controller || typeof leg.controller.promote !== 'function') {
+      return null;
+    }
+    delete legs[token];
+    return leg;
+  }
+
+  // What promoting a monitor call does to the phone's calls: the call leaves the monitor calls whatever happens, and
+  // becomes the current call only when the phone has no other. A call that has ended, or a phone that is gone, has
+  // nothing left to promote. Returns { promoted, current }: the call the phone's current call is after it.
+  //   calls   - the phone's monitor calls
+  //   current - the phone's current call, or null
+  //   ended   - whether the call has ended or the phone is disposed
+  function planMonitorCallPromotion(calls, call, current, ended) {
+    var index = calls ? calls.indexOf(call) : -1;
+    if (index >= 0) {
+      calls.splice(index, 1);
+    }
+    if (ended) {
+      return {
+        promoted: false,
+        current: current
+      };
+    }
+    return {
+      promoted: true,
+      current: current || call
+    };
+  }
+
   // Whether the supervisor is heard on a monitor leg in `mode` (the engagement's mode, as the platform names it).
   // Listening is silent: the platform joins the supervisor muted, and the phone keeps its microphone off too. Coaching
   // is heard by the agent, and joining by everyone -- as is a call the supervisor took over, which is on as joined.
@@ -2602,6 +2656,8 @@
   softPhone.claimMonitorLegArm = claimMonitorLegArm;
   softPhone.monitorLegAction = monitorLegAction;
   softPhone.monitorLegReplaces = monitorLegReplaces;
+  softPhone.planMonitorLegPromotion = planMonitorLegPromotion;
+  softPhone.planMonitorCallPromotion = planMonitorCallPromotion;
   softPhone.monitorLegTalks = monitorLegTalks;
   softPhone.anyMonitorLegTalks = anyMonitorLegTalks;
   softPhone.holdsMonitorLeg = holdsMonitorLeg;
@@ -6927,7 +6983,7 @@
   var connectedAtFor = softPhoneModules.connectedAtFor;
   var formatElapsed = softPhoneModules.formatElapsed;
   var isVirtualAudioDevice = softPhoneModules.isVirtualAudioDevice;
-  var shouldFallBackToDefaultMicrophone = softPhoneModules.shouldFallBackToDefaultMicrophone;
+  var captureWithFallback = softPhoneModules.captureWithFallback;
   var shouldFallBackToDefaultSpeaker = softPhoneModules.shouldFallBackToDefaultSpeaker;
   var resolveDeviceLabel = softPhoneModules.resolveDeviceLabel;
   var durationMeta = softPhoneModules.durationMeta;
@@ -6988,6 +7044,8 @@
   var claimMonitorLegArm = softPhoneModules.claimMonitorLegArm;
   var monitorLegAction = softPhoneModules.monitorLegAction;
   var monitorLegReplaces = softPhoneModules.monitorLegReplaces;
+  var planMonitorLegPromotion = softPhoneModules.planMonitorLegPromotion;
+  var planMonitorCallPromotion = softPhoneModules.planMonitorCallPromotion;
   var anyMonitorLegTalks = softPhoneModules.anyMonitorLegTalks;
   var holdsMonitorLeg = softPhoneModules.holdsMonitorLeg;
   var readMonitorLegMedia = softPhoneModules.readMonitorLegMedia;
@@ -8555,16 +8613,12 @@
         // noted as the leg of a call the platform tracks, so the server's reports about it drive it -- mute,
         // hold, digits, hang-up -- like any other call. Returns whether the leg was still up to take.
         promote: function () {
-          var index = monitorCalls.indexOf(call);
-          if (index >= 0) {
-            monitorCalls.splice(index, 1);
-          }
-          if (disposed || isTelnyxTerminalState(call.state)) {
+          // See soft-phone/monitor-leg.js.
+          var promotion = planMonitorCallPromotion(monitorCalls, call, currentCall, disposed || isTelnyxTerminalState(call.state));
+          if (!promotion.promoted) {
             return false;
           }
-          if (!currentCall) {
-            currentCall = call;
-          }
+          currentCall = promotion.current;
           notePlatformLeg(legs, call);
 
           // It is already connected, so none of what a call's connecting starts has run for it.
@@ -10176,19 +10230,26 @@
     // soft-phone/audio-devices.js): a call keeps going on the computer's own microphone, and an idle phone stays
     // registered rather than waiting for a Retry click.
     function captureMicrophone() {
-      return navigator.mediaDevices.getUserMedia(buildAudioConstraints()).catch(function (error) {
-        if (!shouldFallBackToDefaultMicrophone(error, selectedInputDeviceId)) {
-          throw error;
-        }
-        var missingDeviceId = selectedInputDeviceId;
+      var fallback = null;
+      return captureWithFallback(function (constraints) {
+        return navigator.mediaDevices.getUserMedia(constraints);
+      }, buildAudioConstraints, function () {
+        return selectedInputDeviceId;
+      }, function (missingDeviceId, error) {
+        fallback = {
+          missingDeviceId: missingDeviceId,
+          error: error
+        };
         selectedInputDeviceId = null;
         persistDeviceSelection();
-        return navigator.mediaDevices.getUserMedia(buildAudioConstraints()).then(function (stream) {
+      }).then(function (stream) {
+        if (fallback) {
           var track = stream.getAudioTracks()[0];
-          reportDiagnostic('warning', 'microphone-fallback', 'The selected microphone is not connected (' + (error && error.name || 'error') + '); the default microphone is used instead.', (track && track.label || 'default') + ' in place of ' + missingDeviceId);
+          var error = fallback.error;
+          reportDiagnostic('warning', 'microphone-fallback', 'The selected microphone is not connected (' + (error && error.name || 'error') + '); the default microphone is used instead.', (track && track.label || 'default') + ' in place of ' + fallback.missingDeviceId);
           populateDevicePickers();
-          return stream;
-        });
+        }
+        return stream;
       });
     }
 
@@ -11882,12 +11943,12 @@
     // muted, held and hung up like any other. Live, a supervisor who took a call over had only a banner for it.
     // Returns whether the leg was taken.
     function promoteMonitorLeg(token) {
-      var leg = token ? monitorLegs[token] : null;
-      if (!leg || !leg.controller || typeof leg.controller.promote !== 'function') {
+      // Taken out of the monitor legs here (see soft-phone/monitor-leg.js).
+      var leg = planMonitorLegPromotion(monitorLegs, token);
+      if (!leg) {
         reportDiagnostic('warning', 'monitor-leg-promote-missed', 'The call the supervisor took over is not held by this phone, so it could not be listed.', token || '');
         return false;
       }
-      delete monitorLegs[token];
 
       // No monitor leg talks any more: the microphone follows the phone's calls, this one included.
       matchMicrophoneToMonitorLegs();

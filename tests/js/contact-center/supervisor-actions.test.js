@@ -10,6 +10,7 @@ const {
     nextMonitorEngagement,
     monitorBannerHtml,
     monitorEndedMessage,
+    shouldPromoteMonitorLeg,
 } = globalThis.CrestAppsContactCenter;
 
 const onCall = overrides => ({
@@ -187,6 +188,43 @@ describe('the supervisor phone engagement', () => {
     it('shows nothing once the engagement ended', () => {
         expect(monitorBannerHtml({ ...requested, phase: 'ended' }, {})).toBe('');
         expect(monitorBannerHtml(null, {})).toBe('');
+    });
+});
+
+// Live, a supervisor who took a call over had only the banner. Their phone takes the call as its own the moment the
+// engagement becomes taken over -- once: confirmed live, the supervisor's phone then had full control of the call.
+describe('taking the call over onto the supervisor\'s phone', () => {
+    const requested = nextMonitorEngagement(null, {
+        source: 'hub',
+        notification: { state: 'Requested', interactionId: 'int-1', monitorToken: 'tok', agentName: 'Ann', mode: 'Monitor' },
+    });
+    const tookOver = notification => ({ source: 'hub', notification: { state: 'TookOver', interactionId: 'int-1', ...notification } });
+
+    it('happens as the engagement becomes taken over', () => {
+        const connected = { ...requested, phase: 'connected' };
+
+        expect(shouldPromoteMonitorLeg(requested, nextMonitorEngagement(requested, tookOver()))).toBe(true);
+        expect(shouldPromoteMonitorLeg(connected, nextMonitorEngagement(connected, tookOver()))).toBe(true);
+    });
+
+    it('happens once, not again when the take-over is reported again', () => {
+        const taken = nextMonitorEngagement(requested, tookOver());
+
+        expect(shouldPromoteMonitorLeg(taken, nextMonitorEngagement(taken, tookOver()))).toBe(false);
+    });
+
+    it('does not happen for any other change, or for another call\'s take-over', () => {
+        const connected = nextMonitorEngagement(requested, { source: 'hub', notification: { state: 'Connected', interactionId: 'int-1' } });
+        const ended = nextMonitorEngagement(requested, { source: 'phone', type: 'ended', token: 'tok' });
+
+        expect(shouldPromoteMonitorLeg(requested, connected)).toBe(false);
+        expect(shouldPromoteMonitorLeg(requested, ended)).toBe(false);
+        expect(shouldPromoteMonitorLeg(requested, nextMonitorEngagement(requested, tookOver({ interactionId: 'int-2' })))).toBe(false);
+    });
+
+    it('does not happen without an engagement to have come from', () => {
+        expect(shouldPromoteMonitorLeg(null, { ...requested, phase: 'tookOver' })).toBe(false);
+        expect(shouldPromoteMonitorLeg(requested, null)).toBe(false);
     });
 });
 

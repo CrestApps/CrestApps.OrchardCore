@@ -1,11 +1,17 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
+using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Modules;
 using YesSql;
+using YesSql.Provider.Sqlite;
+using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -167,6 +173,94 @@ public sealed class OrphanedActivityRecoveryServiceTests
         Assert.Equal(ActivityStatus.Failed, healthy.Status);
     }
 
+    // The automated AI voice dialer's calls stay InProgress for the whole conversation with no Contact Center reservation
+    // or interaction, so to this sweep they look like the oldest orphans there are (confirmed live end to end with the
+    // exclusion in place). The query never takes them: were they candidates, a batch would fill with calls the
+    // per-record guard then skips, and an agent's stranded activity behind them would wait for a pass that never
+    // reaches it.
+    [Fact]
+    public async Task RecoverAsync_OnTheStore_NeverTakesAnAiAutomaticActivity_SoTheAgentsOrphanBehindItIsRecovered()
+    {
+        // Arrange
+        var databasePath = Path.Combine(Path.GetTempPath(), $"cc-orphan-recovery-{Guid.NewGuid():N}.db");
+        var store = await CreateActivityStoreAsync(databasePath);
+
+        try
+        {
+            await using var querySession = store.CreateSession();
+            var harness = new Harness(querySession);
+            var automated = harness.NewActivity(ActivityStatus.InProgress, itemId: "ai-call", campaignId: "campaign-1", interactionType: ActivityInteractionType.Automated);
+            var manual = harness.NewActivity(ActivityStatus.InProgress, itemId: "agent-call", campaignId: "campaign-1");
+
+            await using (var seedSession = store.CreateSession())
+            {
+                // The AI call is stored first, so it is first in the scan's order.
+                await seedSession.SaveAsync(automated, collection: OmnichannelConstants.CollectionName, cancellationToken: TestContext.Current.CancellationToken);
+                await seedSession.SaveAsync(manual, collection: OmnichannelConstants.CollectionName, cancellationToken: TestContext.Current.CancellationToken);
+                await seedSession.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            // Act
+            var recovered = await harness.Service.RecoverAsync(TimeSpan.FromMinutes(5), maxToRecover: 1, TestContext.Current.CancellationToken);
+
+            // Assert
+            Assert.Equal(1, recovered);
+            Assert.Equal(ActivityStatus.Failed, manual.Status);
+            Assert.Equal(ActivityStatus.InProgress, automated.Status);
+            harness.Writer.Verify(
+                w => w.UpdateAsync("ai-call", It.IsAny<Action<OmnichannelActivity>>(), It.IsAny<CancellationToken>()),
+                Times.Never);
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
+    private static async Task<IStore> CreateActivityStoreAsync(string databasePath)
+    {
+        var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={databasePath};Pooling=False"));
+        store.RegisterIndexes([new OmnichannelActivityIndexProvider()]);
+        await store.InitializeAsync(TestContext.Current.CancellationToken);
+        await store.InitializeCollectionAsync(OmnichannelConstants.CollectionName, TestContext.Current.CancellationToken);
+
+        await using var session = store.CreateSession();
+        var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
+        var schemaBuilder = new SchemaBuilder(store.Configuration, transaction);
+        await schemaBuilder.CreateMapIndexTableAsync<OmnichannelActivityIndex>(table => table
+            .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<ActivityKind>("Kind")
+            .Column<string>("Source", column => column.WithLength(50))
+            .Column<string>("Channel", column => column.WithLength(50))
+            .Column<string>("ChannelEndpointId", column => column.WithLength(26))
+            .Column<string>("PreferredDestination", column => column.WithLength(255))
+            .Column<string>("ContactContentItemId", column => column.WithLength(26))
+            .Column<string>("ContactContentType", column => column.WithLength(255))
+            .Column<string>("CampaignId", column => column.WithLength(26))
+            .Column<string>("SubjectContentType", column => column.WithLength(26))
+            .Column<DateTime>("ScheduledUtc", column => column.NotNull())
+            .Column<DateTime>("CompletedUtc")
+            .Column<int>("Attempts", column => column.NotNull())
+            .Column<string>("AssignedToId", column => column.WithLength(26))
+            .Column<DateTime>("AssignedToUtc")
+            .Column<ActivityAssignmentStatus>("AssignmentStatus")
+            .Column<string>("ReservationId", column => column.WithLength(26))
+            .Column<string>("ReservedById", column => column.WithLength(26))
+            .Column<DateTime>("ReservedUtc")
+            .Column<DateTime>("ReservationExpiresUtc")
+            .Column<string>("CreatedById", column => column.WithLength(26))
+            .Column<string>("DispositionId", column => column.WithLength(26))
+            .Column<DateTime>("CreatedUtc", column => column.NotNull())
+            .Column<ActivityUrgencyLevel>("UrgencyLevel")
+            .Column<ActivityStatus>("Status")
+            .Column<ActivityInteractionType>("InteractionType")
+            .Column<bool>("AiEscalated"),
+            collection: OmnichannelConstants.CollectionName);
+        await transaction.CommitAsync(TestContext.Current.CancellationToken);
+
+        return store;
+    }
+
     private sealed class Harness
     {
         private readonly Dictionary<string, OmnichannelActivity> _activities = new(StringComparer.Ordinal);
@@ -185,7 +279,7 @@ public sealed class OrphanedActivityRecoveryServiceTests
 
         public OrphanedActivityRecoveryService Service { get; }
 
-        public Harness()
+        public Harness(ISession session = null)
         {
             // The writer loads the activity by id and applies the mutation; here it looks the activity up in the
             // registry and applies the mutation to that same instance so the test can assert the outcome.
@@ -219,7 +313,7 @@ public sealed class OrphanedActivityRecoveryServiceTests
             clock.SetupGet(c => c.UtcNow).Returns(_now);
 
             Service = new OrphanedActivityRecoveryService(
-                Mock.Of<ISession>(),
+                session ?? Mock.Of<ISession>(),
                 Interactions.Object,
                 Reservations.Object,
                 Writer.Object,

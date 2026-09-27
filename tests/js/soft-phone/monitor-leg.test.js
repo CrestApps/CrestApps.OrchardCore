@@ -16,6 +16,8 @@ const {
     claimMonitorLegArm,
     monitorLegAction,
     monitorLegReplaces,
+    planMonitorLegPromotion,
+    planMonitorCallPromotion,
     monitorLegTalks,
     anyMonitorLegTalks,
     holdsMonitorLeg,
@@ -156,6 +158,74 @@ describe('the leg a takeover moves the engagement to', () => {
         expect(monitorLegReplaces({}, { token: 'tok-1', legId: 'take-1' })).toBe(false);
         expect(monitorLegReplaces(null, { token: 'tok-1', legId: 'take-1' })).toBe(false);
         expect(monitorLegReplaces({ 'tok-1': { legId: 'sv-1' } }, { token: '', legId: 'take-1' })).toBe(false);
+    });
+});
+
+// Live, a supervisor who took a call over had only a banner for it: nothing to mute, hold or hang up. The leg they were
+// on leaves the monitor legs and becomes a call of their phone's own. Confirmed live: the supervisor's phone got full
+// control of the call.
+describe('the leg a supervisor took the call over on', () => {
+    const promotable = { legId: 'take-1', controller: { promote: () => true } };
+
+    it('is taken out of the monitor legs', () => {
+        const legs = { 'tok-1': promotable, 'tok-2': { legId: 'sv-2', controller: { promote: () => true } } };
+
+        expect(planMonitorLegPromotion(legs, 'tok-1')).toBe(promotable);
+        expect(Object.keys(legs)).toEqual(['tok-2']);
+    });
+
+    it('is missed when the phone holds no leg for the engagement, and nothing is taken out', () => {
+        const legs = { 'tok-1': promotable };
+
+        expect(planMonitorLegPromotion(legs, 'tok-other')).toBeNull();
+        expect(planMonitorLegPromotion(legs, '')).toBeNull();
+        expect(planMonitorLegPromotion(legs, undefined)).toBeNull();
+        expect(planMonitorLegPromotion(null, 'tok-1')).toBeNull();
+        expect(legs).toEqual({ 'tok-1': promotable });
+    });
+
+    it('is missed when the leg it holds cannot be promoted, and is kept', () => {
+        const withoutController = { legId: 'sv-1' };
+        const withoutPromote = { legId: 'sv-2', controller: { hangup: () => { } } };
+        const legs = { 'tok-1': withoutController, 'tok-2': withoutPromote };
+
+        expect(planMonitorLegPromotion(legs, 'tok-1')).toBeNull();
+        expect(planMonitorLegPromotion(legs, 'tok-2')).toBeNull();
+        expect(legs).toEqual({ 'tok-1': withoutController, 'tok-2': withoutPromote });
+    });
+});
+
+describe('promoting the monitor call a supervisor took over', () => {
+    const call = { id: 'take-1' };
+    const other = { id: 'sv-2' };
+
+    it('becomes the phone\'s current call when it holds no other', () => {
+        const calls = [other, call];
+
+        expect(planMonitorCallPromotion(calls, call, null, false)).toEqual({ promoted: true, current: call });
+        expect(calls).toEqual([other]);
+    });
+
+    it('leaves the phone\'s current call as it is when it holds one', () => {
+        const current = { id: 'own-call' };
+        const calls = [call];
+
+        expect(planMonitorCallPromotion(calls, call, current, false)).toEqual({ promoted: true, current });
+        expect(calls).toEqual([]);
+    });
+
+    it('is not promoted once the call has ended or the phone is gone, but still leaves the monitor calls', () => {
+        const calls = [call, other];
+
+        expect(planMonitorCallPromotion(calls, call, null, true)).toEqual({ promoted: false, current: null });
+        expect(calls).toEqual([other]);
+    });
+
+    it('is promoted even when the phone no longer lists it as a monitor call', () => {
+        const calls = [other];
+
+        expect(planMonitorCallPromotion(calls, call, null, false)).toEqual({ promoted: true, current: call });
+        expect(calls).toEqual([other]);
     });
 });
 

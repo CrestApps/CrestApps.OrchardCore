@@ -41,7 +41,7 @@
     var connectedAtFor = softPhoneModules.connectedAtFor;
     var formatElapsed = softPhoneModules.formatElapsed;
     var isVirtualAudioDevice = softPhoneModules.isVirtualAudioDevice;
-    var shouldFallBackToDefaultMicrophone = softPhoneModules.shouldFallBackToDefaultMicrophone;
+    var captureWithFallback = softPhoneModules.captureWithFallback;
     var shouldFallBackToDefaultSpeaker = softPhoneModules.shouldFallBackToDefaultSpeaker;
     var resolveDeviceLabel = softPhoneModules.resolveDeviceLabel;
     var durationMeta = softPhoneModules.durationMeta;
@@ -111,6 +111,8 @@
     var claimMonitorLegArm = softPhoneModules.claimMonitorLegArm;
     var monitorLegAction = softPhoneModules.monitorLegAction;
     var monitorLegReplaces = softPhoneModules.monitorLegReplaces;
+    var planMonitorLegPromotion = softPhoneModules.planMonitorLegPromotion;
+    var planMonitorCallPromotion = softPhoneModules.planMonitorCallPromotion;
     var anyMonitorLegTalks = softPhoneModules.anyMonitorLegTalks;
     var holdsMonitorLeg = softPhoneModules.holdsMonitorLeg;
     var readMonitorLegMedia = softPhoneModules.readMonitorLegMedia;
@@ -1947,19 +1949,14 @@
                 // noted as the leg of a call the platform tracks, so the server's reports about it drive it -- mute,
                 // hold, digits, hang-up -- like any other call. Returns whether the leg was still up to take.
                 promote: function () {
-                    var index = monitorCalls.indexOf(call);
+                    // See soft-phone/monitor-leg.js.
+                    var promotion = planMonitorCallPromotion(monitorCalls, call, currentCall, disposed || isTelnyxTerminalState(call.state));
 
-                    if (index >= 0) {
-                        monitorCalls.splice(index, 1);
-                    }
-
-                    if (disposed || isTelnyxTerminalState(call.state)) {
+                    if (!promotion.promoted) {
                         return false;
                     }
 
-                    if (!currentCall) {
-                        currentCall = call;
-                    }
+                    currentCall = promotion.current;
 
                     notePlatformLeg(legs, call);
 
@@ -3804,27 +3801,33 @@
         // soft-phone/audio-devices.js): a call keeps going on the computer's own microphone, and an idle phone stays
         // registered rather than waiting for a Retry click.
         function captureMicrophone() {
-            return navigator.mediaDevices.getUserMedia(buildAudioConstraints()).catch(function (error) {
-                if (!shouldFallBackToDefaultMicrophone(error, selectedInputDeviceId)) {
-                    throw error;
-                }
+            var fallback = null;
 
-                var missingDeviceId = selectedInputDeviceId;
-
-                selectedInputDeviceId = null;
-                persistDeviceSelection();
-
-                return navigator.mediaDevices.getUserMedia(buildAudioConstraints()).then(function (stream) {
+            return captureWithFallback(
+                function (constraints) {
+                    return navigator.mediaDevices.getUserMedia(constraints);
+                },
+                buildAudioConstraints,
+                function () {
+                    return selectedInputDeviceId;
+                },
+                function (missingDeviceId, error) {
+                    fallback = { missingDeviceId: missingDeviceId, error: error };
+                    selectedInputDeviceId = null;
+                    persistDeviceSelection();
+                }).then(function (stream) {
+                if (fallback) {
                     var track = stream.getAudioTracks()[0];
+                    var error = fallback.error;
 
                     reportDiagnostic('warning', 'microphone-fallback',
                         'The selected microphone is not connected (' + ((error && error.name) || 'error') +
                         '); the default microphone is used instead.',
-                        ((track && track.label) || 'default') + ' in place of ' + missingDeviceId);
+                        ((track && track.label) || 'default') + ' in place of ' + fallback.missingDeviceId);
                     populateDevicePickers();
+                }
 
-                    return stream;
-                });
+                return stream;
             });
         }
 
@@ -5828,16 +5831,15 @@
         // muted, held and hung up like any other. Live, a supervisor who took a call over had only a banner for it.
         // Returns whether the leg was taken.
         function promoteMonitorLeg(token) {
-            var leg = token ? monitorLegs[token] : null;
+            // Taken out of the monitor legs here (see soft-phone/monitor-leg.js).
+            var leg = planMonitorLegPromotion(monitorLegs, token);
 
-            if (!leg || !leg.controller || typeof leg.controller.promote !== 'function') {
+            if (!leg) {
                 reportDiagnostic('warning', 'monitor-leg-promote-missed',
                     'The call the supervisor took over is not held by this phone, so it could not be listed.', token || '');
 
                 return false;
             }
-
-            delete monitorLegs[token];
 
             // No monitor leg talks any more: the microphone follows the phone's calls, this one included.
             matchMicrophoneToMonitorLegs();

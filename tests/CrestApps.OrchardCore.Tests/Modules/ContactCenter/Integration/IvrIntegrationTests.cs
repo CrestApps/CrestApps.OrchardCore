@@ -72,6 +72,34 @@ public sealed class IvrIntegrationTests
             IvrExecutionService.ReadState(interaction).Path.Select(entry => entry.Result));
     }
 
+    // Confirmed live: a caller who went into the support menu pressed the key set to "Go to another menu", heard the
+    // main menu again, and chose sales from it.
+    [Fact]
+    public async Task GoingBackToTheMainMenu_ThenChoosingSales_PutsTheCallerInTheSalesQueue()
+    {
+        // Arrange
+        await using var fixture = await IvrIntegrationFixture.CreateAsync();
+        fixture.EntryPoint.IvrFlow.Nodes.Single(node => node.NodeId == "support").Options.Add(
+            new IvrOption { Digit = "9", Action = new IvrAction { Kind = IvrActionKind.SubMenu, TargetId = "main" } });
+        await fixture.StartAsync();
+
+        // Act
+        await fixture.PressAsync("2", "gather-1");
+        await fixture.PressAsync("9", "gather-2");
+        await fixture.PressAsync("1", "gather-3");
+
+        // Assert
+        var queueItem = await fixture.FindQueueItemAsync();
+        Assert.Equal(IvrIntegrationFixture.SalesQueueId, queueItem.QueueId);
+        Assert.Equal(IvrIntegrationFixture.AgentId, (await fixture.FindReservationsAsync()).Single().AgentId);
+
+        var interaction = await fixture.FindInteractionAsync();
+        Assert.Equal(IvrIntegrationFixture.SalesQueueId, interaction.QueueId);
+        Assert.Equal(
+            ["Menu", "Menu:support", "Menu:main", $"RouteToQueue:{IvrIntegrationFixture.SalesQueueId}"],
+            IvrExecutionService.ReadState(interaction).Path.Select(entry => entry.Result));
+    }
+
     [Fact]
     public async Task AQueueWithNobodyFree_KeepsTheCallerWaiting_WithTheQueuesTreatment()
     {

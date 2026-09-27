@@ -378,6 +378,78 @@ public sealed class ReservationExpiryBackgroundTaskTests
             Times.Never);
     }
 
+    // An automated AI voice call is the omnichannel AI processor's from dialing to conclusion, whatever source it came
+    // from: offered to an agent it could only be refused and swept again, and it is not agent work at all. Confirmed live
+    // end to end with the AI voice dialer. Both sweeps are covered: the enabled queues and the virtual campaign queues.
+    [Theory]
+    [InlineData(false, ActivitySources.PreviewDial)]
+    [InlineData(false, ActivitySources.Dialer)]
+    [InlineData(true, ActivitySources.PreviewDial)]
+    [InlineData(true, ActivitySources.Dialer)]
+    public async Task DoWorkAsync_WhenTheHeadItemIsAiAutomatic_NeverOffersItToAnAgent(bool campaignQueue, string activitySource)
+    {
+        // Arrange
+        // The source is one this task would otherwise assign, so only the interaction type keeps it from an agent.
+        var campaignQueueId = ContactCenterConstants.CampaignQueue.CreateId("campaign-1");
+        var queue = new ActivityQueue { ItemId = "queue-1" };
+        var reservationService = new Mock<IActivityReservationService>();
+        var assignmentService = new Mock<IActivityAssignmentService>();
+        var queueService = new Mock<IActivityQueueService>();
+        var queueManager = new Mock<IActivityQueueManager>();
+        queueManager
+            .Setup(manager => manager.GetEnabledAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(campaignQueue ? [] : [queue]);
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager
+            .Setup(manager => manager.FindNextWaitingAsync(It.IsAny<ActivityQueue>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QueueItem { ActivityItemId = "activity-1" });
+        var queueItemStore = new Mock<IQueueItemStore>();
+        queueItemStore
+            .Setup(store => store.GetWaitingQueueIdsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(campaignQueue ? [campaignQueueId] : []);
+        queueItemStore
+            .Setup(store => store.FindNextWaitingAsync(campaignQueueId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QueueItem { ActivityItemId = "activity-1" });
+        var interactionManager = new Mock<IInteractionManager>();
+        var activityManager = new Mock<IOmnichannelActivityManager>();
+        activityManager
+            .Setup(manager => manager.FindByIdAsync("activity-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OmnichannelActivity
+            {
+                ItemId = "activity-1",
+                Source = activitySource,
+                InteractionType = ActivityInteractionType.Automated,
+            });
+        var inboundVoiceService = new Mock<IInboundVoiceService>();
+        var clock = new Mock<IClock>();
+        clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 9, 27, 0, 0, 0, DateTimeKind.Utc));
+        var session = new Mock<ISession>();
+
+        await using var serviceProvider = CreateServiceProvider(
+            reservationService,
+            assignmentService,
+            queueService,
+            queueManager,
+            queueItemManager,
+            interactionManager,
+            activityManager,
+            inboundVoiceService,
+            clock,
+            session,
+            queueItemStore: queueItemStore);
+
+        // Act
+        await new ReservationExpiryBackgroundTask().DoWorkAsync(serviceProvider, TestContext.Current.CancellationToken);
+
+        // Assert
+        assignmentService.Verify(
+            service => service.AssignQueueAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        activityManager.Verify(
+            manager => manager.FindByIdAsync("activity-1", It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
     [Fact]
     public async Task DoWorkAsync_WhenRoutingFeatureIsQuiescing_DoesNoWork()
     {
