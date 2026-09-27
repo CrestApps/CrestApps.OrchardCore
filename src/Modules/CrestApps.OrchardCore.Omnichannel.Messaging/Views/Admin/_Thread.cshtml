@@ -279,7 +279,7 @@
 
 @if (Model.CanTransfer)
 {
-    @* Handing the conversation on: to a person who works messaging, or back to a team's shared pool. The page moves
+    @* Handing the conversation on: to a person who works messaging, or back to a queue's shared pool. The page moves
        the dialog to the end of the document so it stacks above the workspace panes. *@
     <div class="modal fade" id="messaging-transfer-modal" tabindex="-1" aria-labelledby="messaging-transfer-title" aria-hidden="true" data-transfer-modal>
         <div class="modal-dialog">
@@ -297,7 +297,7 @@
                             <input type="radio" class="btn-check" name="targetType" id="messaging-transfer-to-agent" value="@nameof(ConversationRouteTargetType.Agent)" autocomplete="off" checked data-transfer-type />
                             <label class="btn btn-outline-primary" for="messaging-transfer-to-agent"><i class="fa-solid fa-user me-1" aria-hidden="true"></i>@T["A person"]</label>
                             <input type="radio" class="btn-check" name="targetType" id="messaging-transfer-to-queue" value="@nameof(ConversationRouteTargetType.Queue)" autocomplete="off" data-transfer-type />
-                            <label class="btn btn-outline-primary" for="messaging-transfer-to-queue"><i class="fa-solid fa-users me-1" aria-hidden="true"></i>@T["Back to a team"]</label>
+                            <label class="btn btn-outline-primary" for="messaging-transfer-to-queue"><i class="fa-solid fa-users me-1" aria-hidden="true"></i>@T["Back to a queue"]</label>
                         </div>
                     }
                     else
@@ -326,7 +326,7 @@
                     @if (Model.CanTransferToQueue)
                     {
                         <div class="mb-3 d-none" data-transfer-target="@nameof(ConversationRouteTargetType.Queue)">
-                            <label class="form-label d-block">@T["Team"]</label>
+                            <label class="form-label d-block">@T["Queue"]</label>
                             @await Component.InvokeAsync("ItemSelector", new
                             {
                                 id = "messaging-transfer-queue-selector",
@@ -334,14 +334,14 @@
                                 endpoint = Url.Action("TransferQueues", new { id = conversation.ItemId }),
                                 multiple = false,
                                 enableSearch = true,
-                                buttonText = T["Select a team"].Value,
-                                searchPlaceholder = T["Search teams"].Value,
-                                emptyResultsText = T["No team matches."].Value,
-                                noSelectionText = T["No team selected."].Value,
-                                selectedItemsLabel = T["Selected team"].Value,
-                                availableItemsLabel = T["Teams"].Value,
+                                buttonText = T["Select a queue"].Value,
+                                searchPlaceholder = T["Search queues"].Value,
+                                emptyResultsText = T["No queue matches."].Value,
+                                noSelectionText = T["No queue selected."].Value,
+                                selectedItemsLabel = T["Selected queue"].Value,
+                                availableItemsLabel = T["Queues"].Value,
                             })
-                            <span class="hint">@T["The conversation goes back to the team's shared inbox for any member to claim."]</span>
+                            <span class="hint">@T["The conversation goes back to the queue's shared inbox for any member to claim."]</span>
                         </div>
                     }
 
@@ -350,7 +350,7 @@
                     <div>
                         <label for="messaging-transfer-note" class="form-label">@T["Note for the recipient"] <span class="text-muted small">@T["(optional)"]</span></label>
                         <textarea id="messaging-transfer-note" name="note" class="form-control" rows="2" maxlength="500"></textarea>
-                        <span class="hint">@T["Kept in the conversation's history for your team. It is never sent to the customer."]</span>
+                        <span class="hint">@T["Kept in the conversation's history for other agents. It is never sent to the customer."]</span>
                     </div>
                 </div>
                 <div class="modal-footer">

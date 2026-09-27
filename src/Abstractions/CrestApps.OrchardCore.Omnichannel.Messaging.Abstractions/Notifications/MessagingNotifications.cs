@@ -104,7 +104,7 @@ public sealed class MessagingAssignmentNotification
     public string TransferredByName { get; set; }
 
     /// <summary>
-    /// Gets or sets the display name of the person or team a transfer went to.
+    /// Gets or sets the display name of the person or queue a transfer went to.
     /// </summary>
     public string TransferredToName { get; set; }
 }

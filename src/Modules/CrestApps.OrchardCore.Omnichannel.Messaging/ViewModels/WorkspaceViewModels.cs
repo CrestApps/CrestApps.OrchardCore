@@ -254,7 +254,7 @@ public class ThreadViewModel
     public bool CanTransfer { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether the conversation can also be sent back to a team's shared pool.
+    /// Gets or sets a value indicating whether the conversation can also be sent back to a queue's shared pool.
     /// </summary>
     public bool CanTransferToQueue { get; set; }
 

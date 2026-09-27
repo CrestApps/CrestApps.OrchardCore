@@ -2,10 +2,10 @@
 @model MessagingConversationEvent
 
 @{
-    // The names were captured when the transfer happened. A team is named as one, so "to Billing" is not read as a
+    // The names were captured when the transfer happened. A queue is named as one, so "to Billing" is not read as a
     // person called Billing. GetString formats the text here; it is encoded once, as an argument of the sentence.
     var to = !string.IsNullOrEmpty(Model.ToQueueId)
-        ? T.GetString("the {0} team", string.IsNullOrWhiteSpace(Model.ToName) ? T.GetString("unknown").Value : Model.ToName).Value
+        ? T.GetString("the {0} queue", string.IsNullOrWhiteSpace(Model.ToName) ? T.GetString("unknown").Value : Model.ToName).Value
         : string.IsNullOrWhiteSpace(Model.ToName) ? T.GetString("another agent").Value : Model.ToName;
     var from = Model.FromName;
     var actor = Model.ActorName;
@@ -38,7 +38,7 @@
     </span>
     @if (!string.IsNullOrWhiteSpace(Model.Note))
     {
-        <span class="mt-1 fst-italic" style="max-width: 80%; white-space: pre-wrap; word-break: break-word;" title="@T["An internal note for the team; the customer never sees it."]">
+        <span class="mt-1 fst-italic" style="max-width: 80%; white-space: pre-wrap; word-break: break-word;" title="@T["An internal note for other agents; the customer never sees it."]">
             <i class="fa-regular fa-note-sticky me-1" aria-hidden="true"></i>@Model.Note
         </span>
     }
