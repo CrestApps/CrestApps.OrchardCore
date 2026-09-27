@@ -59,3 +59,31 @@ describe('resolveDeviceLabel', () => {
         expect(softPhone.resolveDeviceLabel(undefined, 'audiooutput', 'speakers')).toBe('');
     });
 });
+
+// Live (2026-09-26), a supervisor's Bluetooth headset dropped: the phone could not capture it, gave up registering and
+// waited for a Retry click while the computer's own microphone sat unused. Confirmed fixed live on 2026-09-27.
+describe('shouldFallBackToDefaultMicrophone', () => {
+    const fallsBack = softPhone.shouldFallBackToDefaultMicrophone;
+    const failure = name => ({ name });
+
+    it('falls back when the chosen microphone is not there any more', () => {
+        expect(fallsBack(failure('NotFoundError'), 'headset-1')).toBe(true);
+        expect(fallsBack(failure('OverconstrainedError'), 'headset-1')).toBe(true);
+        expect(fallsBack(failure('DevicesNotFoundError'), 'headset-1')).toBe(true);
+    });
+
+    it('never works around a permission refusal', () => {
+        expect(fallsBack(failure('NotAllowedError'), 'headset-1')).toBe(false);
+        expect(fallsBack(failure('SecurityError'), 'headset-1')).toBe(false);
+    });
+
+    it('does nothing when the default microphone was already in use', () => {
+        expect(fallsBack(failure('NotFoundError'), null)).toBe(false);
+        expect(fallsBack(failure('NotFoundError'), '')).toBe(false);
+    });
+
+    it('does not fall back on a failure it cannot name', () => {
+        expect(fallsBack(null, 'headset-1')).toBe(false);
+        expect(fallsBack(new Error('boom'), 'headset-1')).toBe(false);
+    });
+});

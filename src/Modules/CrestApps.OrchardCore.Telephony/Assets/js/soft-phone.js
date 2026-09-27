@@ -42,6 +42,7 @@
     var formatElapsed = softPhoneModules.formatElapsed;
     var isVirtualAudioDevice = softPhoneModules.isVirtualAudioDevice;
     var shouldFallBackToDefaultMicrophone = softPhoneModules.shouldFallBackToDefaultMicrophone;
+    var shouldFallBackToDefaultSpeaker = softPhoneModules.shouldFallBackToDefaultSpeaker;
     var resolveDeviceLabel = softPhoneModules.resolveDeviceLabel;
     var durationMeta = softPhoneModules.durationMeta;
     var clampBoostDb = softPhoneModules.clampBoostDb;
@@ -4204,9 +4205,25 @@
                 return;
             }
 
+            var sinkId = selectedOutputDeviceId || '';
+
+            // Each call beside the first plays through an element of its own, which only copied the page element's
+            // output when it was made; a change, or a fall back to the default, moves those too.
+            if (typeof document !== 'undefined') {
+                Array.prototype.forEach.call(document.querySelectorAll('audio[data-telephony-remote-audio-call]'), function (element) {
+                    if (typeof element.setSinkId === 'function') {
+                        Promise.resolve(element.setSinkId(sinkId)).catch(function (error) {
+                            reportDiagnostic('warning', 'output-device-failed',
+                                'The output device of a call could not be changed: ' + String((error && error.message) || error),
+                                sinkId || 'default');
+                        });
+                    }
+                });
+            }
+
             // A failure here used to vanish: the picker moved, the audio stayed where it was, and nothing said
             // so. Now it is reported, and the agent is told the call keeps its current output.
-            Promise.resolve(dom.remoteAudio.setSinkId(selectedOutputDeviceId || '')).then(function () {
+            Promise.resolve(dom.remoteAudio.setSinkId(sinkId)).then(function () {
                 reportDiagnostic('info', 'output-device-applied',
                     'Remote audio routed to the selected output device.', selectedOutputDeviceId || 'default');
                 checkForVirtualAudioDevices();
@@ -4277,6 +4294,19 @@
                 var inputs = devices.filter(function (device) { return device.kind === 'audioinput' && isRealDevice(device); });
                 var outputs = devices.filter(function (device) { return device.kind === 'audiooutput' && isRealDevice(device); });
                 var sinkSupported = outputDeviceSelectionSupported();
+
+                // The chosen speaker is gone (a headset switched off): the call moves to the default speaker, as the
+                // microphone does, rather than playing into a device that is not there.
+                if (sinkSupported && shouldFallBackToDefaultSpeaker(outputs, selectedOutputDeviceId)) {
+                    var missingDeviceId = selectedOutputDeviceId;
+
+                    selectedOutputDeviceId = null;
+                    persistDeviceSelection();
+                    applyOutputDevice();
+                    reportDiagnostic('warning', 'speaker-fallback',
+                        'The selected speaker is not connected; the default speaker is used instead.',
+                        'default in place of ' + missingDeviceId);
+                }
 
                 fillDeviceSelect(dom.inputDevice, inputs, selectedInputDeviceId, strings.defaultMicrophone || 'Default microphone');
 

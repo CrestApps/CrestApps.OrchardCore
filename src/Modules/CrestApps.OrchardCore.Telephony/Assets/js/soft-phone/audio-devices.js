@@ -82,7 +82,27 @@
             (name === 'OverconstrainedError' || name === 'NotFoundError' || name === 'DevicesNotFoundError');
     }
 
+    // Whether the speaker the agent chose has gone, so the call is played on the default speaker instead. Live
+    // (2026-09-27), a Bluetooth headset switched off mid-call: the microphone fell back to the computer's own, but the
+    // speaker stayed on the missing headset, so the agent heard nothing and the picker showed a blank choice. Only a
+    // list that names real devices proves anything: before microphone permission the browser lists devices without
+    // ids, and every chosen speaker would look missing.
+    function shouldFallBackToDefaultSpeaker(outputs, selectedDeviceId) {
+        if (!selectedDeviceId) {
+            return false;
+        }
+
+        var known = (outputs || []).filter(function (device) { return device && device.deviceId; });
+
+        if (known.length === 0) {
+            return false;
+        }
+
+        return !known.some(function (device) { return device.deviceId === selectedDeviceId; });
+    }
+
     softPhone.shouldFallBackToDefaultMicrophone = shouldFallBackToDefaultMicrophone;
+    softPhone.shouldFallBackToDefaultSpeaker = shouldFallBackToDefaultSpeaker;
     softPhone.isVirtualAudioDevice = isVirtualAudioDevice;
     softPhone.resolveDeviceLabel = resolveDeviceLabel;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
