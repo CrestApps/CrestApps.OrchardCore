@@ -23,6 +23,7 @@
      data-inbox-url="@Url.Action("InboxList", new { show, channel = inbox.ChannelFilter, page = inbox.Page, selected = inbox.SelectedCustomerKey })"
      data-conversation-url="@Url.Action("Conversation", new { id = "__ID__" })"
      data-availability-url="@Url.Action("SetAvailability")"
+     data-attention-url="@Url.Action("Attention")"
      data-conversation-id="@thread?.Conversation.ItemId"
      data-customer-key="@thread?.CustomerKey"
      data-messages-url="@(thread is null ? null : Url.Action("ThreadMessages", new { id = thread.Conversation.ItemId }))"
@@ -31,7 +32,8 @@
      data-agent-id="@inbox.CurrentAgentId"
      data-someone-text="@T["Someone"]"
      data-transferred-to-you-text="@T["{0} transferred a conversation to you"].Value"
-     data-transferred-to-team-text="@T["{0} sent a conversation to {1}"].Value"
+     data-transferred-to-queue-text="@T["{0} sent a conversation to the {1} queue"].Value"
+     data-transferred-to-your-queue-text="@T["{0} sent a conversation to one of your queues"].Value"
      data-transferred-away-text="@T["This conversation was transferred to {0}"].Value">
 
     <aside class="messaging-inbox messaging-pane d-flex flex-column flex-shrink-0 @(thread is null && Model.Compose is null ? string.Empty : "d-none d-md-flex")">

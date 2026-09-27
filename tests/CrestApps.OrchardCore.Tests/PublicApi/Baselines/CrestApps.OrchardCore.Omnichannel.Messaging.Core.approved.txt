@@ -229,9 +229,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models
         public string Channel { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Messaging.Models.MessagingInboxFilter Filter { get; set; }
         public bool IncludeAll { get; set; }
+        public bool OpenOnly { get; set; }
         public System.Collections.Generic.IReadOnlyCollection<string> QueueIds { get; set; }
         public int Skip { get; set; }
         public int Take { get; set; }
+        public bool UnreadOnly { get; set; }
     }
     public readonly struct MessagingQueuePolicy : System.IEquatable<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingQueuePolicy>
     {

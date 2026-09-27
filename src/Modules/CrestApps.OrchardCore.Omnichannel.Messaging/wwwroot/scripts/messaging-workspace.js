@@ -139,11 +139,11 @@
   }
 
   // Classifies a notification that a conversation changed hands against who is looking. A transfer reaches the
-  // recipient, the team whose pool it went to and whoever held it before, and each is told something different.
-  //   'to-me'   - it was transferred to the viewing agent: say who sent it.
-  //   'away'    - the conversation on screen was moved on by somebody else: say where it went.
-  //   'to-team' - it was sent back to a team's shared pool the viewer serves: say so.
-  //   'refresh' - a claim, a routed assignment, or the viewer's own transfer: only the list needs to catch up.
+  // recipient, the queue whose pool it went to and whoever held it before, and each is told something different.
+  //   'to-me'    - it was transferred to the viewing agent: say who sent it.
+  //   'away'     - the conversation on screen was moved on by somebody else: say where it went.
+  //   'to-queue' - it was sent back to a queue's shared pool the viewer serves: say so.
+  //   'refresh'  - a claim, a routed assignment, or the viewer's own transfer: only the list needs to catch up.
   function classifyAssignment(notification, view) {
     if (!notification || !notification.isTransfer) {
       return 'refresh';
@@ -161,7 +161,7 @@
       return 'away';
     }
     if (!notification.assignedAgentId && notification.ownerQueueId) {
-      return 'to-team';
+      return 'to-queue';
     }
     return 'refresh';
   }
@@ -175,11 +175,44 @@
     });
   }
 
-  // The transfer form carries a picker for a person and one for a team; only the chosen one must hold a selection.
+  // The transfer form carries a picker for a person and one for a queue; only the chosen one must hold a selection.
   function transferTargetInputName(targetType) {
     return targetType === 'Queue' ? 'targetQueueId' : 'targetAgentId';
   }
+
+  // Remembers, for a short window, which notifications were already announced. A transfer is sent to the
+  // recipient's own group and to the group of the queue the conversation belongs to, and a recipient who serves
+  // that queue is in both, so the same event arrives twice on one connection and was announced twice.
+  //   isNew(key) - true the first time a key is offered within the window, false for a repeat of it.
+  function createRecentNotifications(windowMs, now) {
+    var seen = {};
+    var clock = now || function () {
+      return Date.now();
+    };
+    return {
+      isNew: function (key) {
+        var at = clock();
+        Object.keys(seen).forEach(function (existing) {
+          if (at - seen[existing] >= windowMs) {
+            delete seen[existing];
+          }
+        });
+        if (Object.prototype.hasOwnProperty.call(seen, key)) {
+          return false;
+        }
+        seen[key] = at;
+        return true;
+      }
+    };
+  }
+
+  // What a notification is recognised by when repeats are folded: what happened, and to which conversation.
+  function notificationKey(kind, notification) {
+    return String(kind) + ':' + (notification && notification.conversationId || '');
+  }
   messaging.classifyAssignment = classifyAssignment;
+  messaging.createRecentNotifications = createRecentNotifications;
+  messaging.notificationKey = notificationKey;
   messaging.formatText = formatText;
   messaging.transferTargetInputName = transferTargetInputName;
   messaging.unseenInboundCount = unseenInboundCount;
@@ -189,6 +222,101 @@
   messaging.tabBadgeCount = tabBadgeCount;
   messaging.rowMatchesFilter = rowMatchesFilter;
   messaging.selectNewBubbles = selectNewBubbles;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * The count on the Messaging admin menu item: the conversations waiting on the user. The admin menu is on every page,
+ * the workspace included, so the workspace and the notifications every other admin page carries both keep it current
+ * through this one helper. The number comes from the server, which applies the inbox's own visibility rules, so the
+ * page never has to work out what the user may see.
+ *
+ * Concatenated ahead of the scripts that use it by the module asset pipeline, like messaging-state.js.
+ */
+(function (root) {
+  'use strict';
+
+  var messaging = root.CrestAppsMessaging = root.CrestAppsMessaging || {};
+
+  // The pause before the count is read after a notification. The hub sends the event before the change behind it
+  // has committed, so reading at once could still see the old number; a burst of events also folds into one read.
+  var settleDelayMs = 1500;
+
+  // A safety net for a notification that never arrived (a dropped connection, a conversation read on another
+  // device), kept slow because every admin page runs it.
+  var periodicRefreshMs = 60000;
+  function show(count) {
+    var value = Math.floor(Number(count) || 0);
+    document.querySelectorAll('[data-messaging-attention-badge]').forEach(function (badge) {
+      badge.textContent = value > 99 ? '99+' : value > 0 ? String(value) : '';
+      badge.classList.toggle('d-none', value <= 0);
+    });
+  }
+
+  // Creates the badge updater for a page.
+  //   start()    - reads the count now, then again on a slow timer and whenever the page comes back into view.
+  //   refresh()  - reads the count now.
+  //   schedule() - reads the count a moment from now; what a notification asks for.
+  function createAttentionBadge(url) {
+    var timer = null;
+    var inFlight = false;
+    var queued = false;
+    function refresh() {
+      if (!url || !document.querySelector('[data-messaging-attention-badge]')) {
+        return;
+      }
+      if (inFlight) {
+        queued = true;
+        return;
+      }
+      inFlight = true;
+      fetch(url, {
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'same-origin',
+        cache: 'no-store'
+      }).then(function (response) {
+        return response.ok ? response.json() : null;
+      }).then(function (data) {
+        if (data && typeof data.count === 'number') {
+          show(data.count);
+        }
+      }).catch(function () {/* the next notification or the periodic read tries again */}).finally(function () {
+        inFlight = false;
+        if (queued) {
+          queued = false;
+          refresh();
+        }
+      });
+    }
+    function schedule() {
+      if (timer !== null) {
+        clearTimeout(timer);
+      }
+      timer = setTimeout(function () {
+        timer = null;
+        refresh();
+      }, settleDelayMs);
+    }
+    function start() {
+      refresh();
+      setInterval(function () {
+        if (!document.hidden) {
+          refresh();
+        }
+      }, periodicRefreshMs);
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) {
+          refresh();
+        }
+      });
+    }
+    return {
+      start: start,
+      refresh: refresh,
+      schedule: schedule
+    };
+  }
+  messaging.createAttentionBadge = createAttentionBadge;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*
  * The messaging workspace page: the customer list, the open customer's conversation and its channel tabs.
@@ -219,8 +347,16 @@
   var viewText = workspace.getAttribute('data-view-text');
   var someoneText = workspace.getAttribute('data-someone-text');
   var transferredToYouText = workspace.getAttribute('data-transferred-to-you-text');
-  var transferredToTeamText = workspace.getAttribute('data-transferred-to-team-text');
+  var transferredToQueueText = workspace.getAttribute('data-transferred-to-queue-text');
+  var transferredToYourQueueText = workspace.getAttribute('data-transferred-to-your-queue-text');
   var transferredAwayText = workspace.getAttribute('data-transferred-away-text');
+
+  // The same event can reach the page through two of the agent's groups (a transfer goes to the recipient and to the
+  // queue they serve); it is announced once. The list and the thread still catch up on every copy.
+  var recent = messaging.createRecentNotifications(5000);
+
+  // The count on the Messaging menu item, which this page carries like every admin page.
+  var attentionBadge = messaging.createAttentionBadge(workspace.getAttribute('data-attention-url'));
   var list = workspace.querySelector('[data-inbox-list]');
   var search = workspace.querySelector('[data-inbox-search]');
   var thread = workspace.querySelector('[data-thread]');
@@ -407,8 +543,10 @@
         setActiveTabBadge(unseen + added);
       }
 
-      // The poll found messages the push did not announce, so the list is stale too.
+      // The poll found messages the push did not announce, so the list is stale too, and reading them here
+      // marked the conversation read, which the menu count reflects.
       refreshInbox();
+      attentionBadge.schedule();
     }).catch(function () {/* transient network error; the next poll retries */}).finally(function () {
       pulling = false;
     });
@@ -584,10 +722,13 @@
         badgeTab(notification.channel, messaging.tabBadgeCount(notification));
         break;
       default:
-        showToast(notification && notification.contactAddress ? newMessageText + ' — ' + notification.contactAddress : newMessageText, notification ? notification.preview : '', notification && notification.conversationId ? conversationUrlTemplate.replace('__ID__', encodeURIComponent(notification.conversationId)) : null);
+        if (recent.isNew(messaging.notificationKey('inbound', notification))) {
+          showToast(notification && notification.contactAddress ? newMessageText + ' — ' + notification.contactAddress : newMessageText, notification ? notification.preview : '', notification && notification.conversationId ? conversationUrlTemplate.replace('__ID__', encodeURIComponent(notification.conversationId)) : null);
+        }
         break;
     }
     refreshInbox();
+    attentionBadge.schedule();
   }
   function conversationHref(conversationId) {
     return conversationId ? conversationUrlTemplate.replace('__ID__', encodeURIComponent(conversationId)) : null;
@@ -597,19 +738,23 @@
   function onAssigned(notification) {
     var by = notification && notification.transferredByName || someoneText;
     var to = notification && notification.transferredToName || someoneText;
-    switch (messaging.classifyAssignment(notification, view)) {
+    var kind = messaging.classifyAssignment(notification, view);
+    var announce = kind !== 'refresh' && recent.isNew(messaging.notificationKey(kind, notification));
+    switch (announce ? kind : 'refresh') {
       case 'to-me':
         showToast(messaging.formatText(transferredToYouText, [by]), '', conversationHref(notification.conversationId));
         break;
-      case 'to-team':
-        showToast(messaging.formatText(transferredToTeamText, [by, to]), '', conversationHref(notification.conversationId));
+      case 'to-queue':
+        showToast(notification.transferredToName ? messaging.formatText(transferredToQueueText, [by, notification.transferredToName]) : messaging.formatText(transferredToYourQueueText, [by]), '', conversationHref(notification.conversationId));
         break;
       case 'away':
         showToast(messaging.formatText(transferredAwayText, [to]), '', null);
         break;
     }
     refreshInbox();
+    attentionBadge.schedule();
   }
+  attentionBadge.start();
   if (root.signalR && hubUrl) {
     try {
       var connection = new root.signalR.HubConnectionBuilder().withUrl(hubUrl).withAutomaticReconnect().build();
@@ -639,6 +784,7 @@
         startHeartbeat();
         pullThread();
         refreshInbox();
+        attentionBadge.refresh();
       });
       connection.onclose(function () {
         if (heartbeatTimer !== null) {

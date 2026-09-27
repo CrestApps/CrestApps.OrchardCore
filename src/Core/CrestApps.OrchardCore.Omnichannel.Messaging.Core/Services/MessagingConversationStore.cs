@@ -295,6 +295,20 @@ public sealed class MessagingConversationStore : DocumentCatalog<MessagingConver
             results = results.Where(index => index.Channel == channel);
         }
 
+        if (query.OpenOnly)
+        {
+            var open = ConversationStatus.Open.ToString();
+
+            results = results.Where(index => index.Status == open);
+        }
+
+        if (query.UnreadOnly)
+        {
+            // IsRead rather than UnreadCount: a transfer marks the thread unread for its recipient without adding a
+            // message, and that hand-over is exactly what the recipient must not miss.
+            results = results.Where(index => !index.IsRead);
+        }
+
         return query.Filter switch
         {
             MessagingInboxFilter.Mine => results.Where(index => index.AssignmentStatus == assigned && index.AssignedAgentId == agentId),
