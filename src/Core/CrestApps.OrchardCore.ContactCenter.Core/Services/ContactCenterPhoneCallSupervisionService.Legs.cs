@@ -61,6 +61,17 @@ public sealed partial class ContactCenterPhoneCallSupervisionService : ISupervis
             ? "call-ended"
             : engagement.ConnectedUtc.HasValue ? "supervisor-left" : "supervisor-unreachable";
 
+        if (reason == "supervisor-unreachable")
+        {
+            _logger.LogWarning(
+                "Supervisor '{SupervisorUserId}' never connected to the phone call '{CallId}': their phone did not answer leg '{SupervisorLegId}' (hangup cause {HangupCause}). The {Mode} engagement ended.",
+                engagement.SupervisorUserId.SanitizeLogValue(),
+                engagement.CallId.SanitizeLogValue(),
+                supervisorLegId.SanitizeLogValue(),
+                hangupCause,
+                engagement.Mode);
+        }
+
         await NotifyAsync(SupervisorEngagementNotification.Ended, engagement, agent: null, reason);
 
         return true;

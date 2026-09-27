@@ -6115,6 +6115,52 @@
       onFailure: state && state.liveMedia ? 'warn' : 'reregister'
     };
   }
+
+  // How long a registration may take end to end -- the credential, the microphone, the registration config and the
+  // provider's login -- before it is given up on and tried again. Live (2026-09-26), a supervisor's phone asked for a
+  // credential at the moment the tunnel in front of the server was replaced; the reply never arrived, nothing timed
+  // out, and the phone stayed "registering" for good: every later attempt joined the stalled one, so it was never
+  // registered again, and every supervisor leg rang the credential it had registered before (refused, SIP 480).
+  var REGISTRATION_TIMEOUT_MS = 30000;
+
+  // How soon a registration that failed or stalled is tried again, besides the minute-long heartbeat.
+  var REGISTRATION_RETRY_MS = 5000;
+
+  // Gives a registration attempt `timeoutMs` to settle. It settles like `attempt`, or rejects with an error flagged
+  // `registrationTimedOut` whose `stage` is what `stageOf()` said the attempt was doing. A session the attempt produces
+  // after that is handed to `onLate`, so a stalled attempt that wakes up never leaves a registration nobody holds.
+  function guardRegistration(attempt, timeoutMs, stageOf, onLate) {
+    return new Promise(function (resolve, reject) {
+      var timedOut = false;
+      var timer = root.setTimeout(function () {
+        var stage = typeof stageOf === 'function' ? stageOf() || '' : '';
+        var error = new Error('The phone did not finish registering within ' + Math.round(timeoutMs / 1000) + ' seconds' + (stage ? ' (it was waiting for the ' + stage + ')' : '') + '.');
+        timedOut = true;
+        error.registrationTimedOut = true;
+        error.stage = stage;
+        reject(error);
+      }, timeoutMs);
+      Promise.resolve(attempt).then(function (session) {
+        if (timedOut) {
+          if (typeof onLate === 'function') {
+            onLate(session);
+          }
+          return;
+        }
+        root.clearTimeout(timer);
+        resolve(session);
+      }, function (error) {
+        if (timedOut) {
+          return;
+        }
+        root.clearTimeout(timer);
+        reject(error);
+      });
+    });
+  }
+  softPhone.REGISTRATION_TIMEOUT_MS = REGISTRATION_TIMEOUT_MS;
+  softPhone.REGISTRATION_RETRY_MS = REGISTRATION_RETRY_MS;
+  softPhone.guardRegistration = guardRegistration;
   softPhone.shouldStartRegistration = shouldStartRegistration;
   softPhone.planRegistrationSelfHeal = planRegistrationSelfHeal;
   softPhone.planMicrophoneLossRecovery = planMicrophoneLossRecovery;
@@ -6904,6 +6950,9 @@
   var shouldStartRegistration = softPhoneModules.shouldStartRegistration;
   var planRegistrationSelfHeal = softPhoneModules.planRegistrationSelfHeal;
   var planMicrophoneLossRecovery = softPhoneModules.planMicrophoneLossRecovery;
+  var guardRegistration = softPhoneModules.guardRegistration;
+  var REGISTRATION_TIMEOUT_MS = softPhoneModules.REGISTRATION_TIMEOUT_MS;
+  var REGISTRATION_RETRY_MS = softPhoneModules.REGISTRATION_RETRY_MS;
   var answerClickAction = softPhoneModules.answerClickAction;
   var isAnswerInProgress = softPhoneModules.isAnswerInProgress;
   var answerButtonView = softPhoneModules.answerButtonView;
@@ -10616,14 +10665,33 @@
       if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
         return Promise.reject(new Error(strings.microphoneUnavailable || 'The microphone is unavailable.'));
       }
-      browserAudioPromise = connection.invoke('GetCredentials').then(function (credentials) {
+
+      // What the attempt is waiting for, for the log when it stalls; and whether it was given up on, so a stalled
+      // step that wakes up does not reach into the next attempt's microphone or registration.
+      var stage = 'credential';
+      var abandoned = false;
+      var startedAt = Date.now();
+      reportDiagnostic('info', 'registration-started', 'The phone started registering with the provider.', '');
+      var attempt = connection.invoke('GetCredentials').then(function (credentials) {
         if (!credentials || normalizeAudioMode(credentials.audioMode) !== AUDIO_MODES.Browser || credentials.browserMediaAdapterName !== config.browserMediaAdapterName) {
           throw new Error(strings.browserAudioUnavailable || 'The configured browser audio adapter is unavailable.');
         }
+        if (abandoned) {
+          throw new Error('The registration was given up on.');
+        }
+        stage = 'microphone';
         return navigator.mediaDevices.getUserMedia(buildAudioConstraints()).catch(function (mediaError) {
           // Turn a permission/device rejection into an actionable, categorized error (item 9).
           throw categorizeMicError(mediaError);
         }).then(function (stream) {
+          if (abandoned) {
+            stream.getTracks().forEach(function (track) {
+              track.stop();
+            });
+            throw new Error('The registration was given up on.');
+          }
+          stage = 'provider login';
+
           // The capture becomes the send stream through the boost pipeline (a no-op when boost is off).
           commitCapture(stream, createBoostPipeline(stream, micBoostDb));
           // This capture has to survive until the registration is replaced, so watch it for the
@@ -10698,7 +10766,9 @@
             // Which edge the registration actually landed on, once resolved.
             onSignalingRegion: function (region, label) {
               showSignalingRegion(region, label);
-              reportDiagnostic('info', 'signaling-region', region ? 'Registered on the ' + label + ' signaling edge.' : 'Registered on the signaling edge chosen by the provider.', '');
+              // Sent as the provider client is built, before it has logged in: registration-completed
+              // is what says the phone is reachable.
+              reportDiagnostic('info', 'signaling-region', region ? 'Registering on the ' + label + ' signaling edge.' : 'Registering on the signaling edge chosen by the provider.', '');
             },
             onPlayoutDelayUnsupported: function () {
               reportDiagnostic('info', 'playout-delay-unsupported', 'This browser does not support a playout delay hint; the call keeps its own buffering.', '');
@@ -10713,6 +10783,16 @@
             }
           }));
         });
+      });
+      browserAudioPromise = guardRegistration(attempt, REGISTRATION_TIMEOUT_MS, function () {
+        return stage;
+      }, function (late) {
+        // A stalled attempt that finished after it was given up on holds a provider client nobody else knows
+        // of; left up, it would compete with the registration that replaced it.
+        if (late && typeof late.dispose === 'function') {
+          Promise.resolve(late.dispose()).catch(function () {});
+        }
+        reportDiagnostic('warning', 'registration-late', 'A registration that had been given up on finished late; it was let go.', stage);
       }).then(function (session) {
         browserAudioSession = session || {};
         // A fresh credential is live: reset the one-time expiry warning so a subsequent long call warns
@@ -10722,6 +10802,7 @@
         // Registration completed on this credential, so it is the one the platform must deliver to.
         reportCredentialRegistered(browserAudioCredentialId(browserAudioSession));
         reportClientCapabilities(browserAudioCredentialId(browserAudioSession), browserAudioSession.clientCapabilities);
+        reportDiagnostic('info', 'registration-completed', 'The phone registered with the provider in ' + (Date.now() - startedAt) + ' ms.', browserAudioCredentialId(browserAudioSession) || '');
 
         // A renewal replaced a still-live credential; revoke that predecessor now that the fresh
         // session is registered (unless, defensively, the server handed back the same credential id).
@@ -10730,12 +10811,32 @@
         }
         return browserAudioSession;
       }).catch(function (error) {
+        abandoned = true;
         releaseBrowserAudio();
+
+        // Until now a failed or stalled registration left no trace but the browser console: the server only saw
+        // a phone that asked for a credential and went quiet, and the platform went on ringing the one it had
+        // registered before. Said, and tried again shortly rather than at the next heartbeat.
+        reportDiagnostic('warning', error && error.registrationTimedOut ? 'registration-timeout' : 'registration-failed', (error && error.message || String(error)) + ' It is tried again shortly.', stage);
+        scheduleRegistrationRetry();
         throw error;
       }).finally(function () {
         browserAudioPromise = null;
       });
       return browserAudioPromise;
+    }
+
+    // One retry at a time, soon after a registration failed or stalled. registerIfUnregistered decides whether it is
+    // still needed (a blocked microphone, a hub that is down or a registration that has since succeeded skip it).
+    var registrationRetryTimer = null;
+    function scheduleRegistrationRetry() {
+      if (registrationRetryTimer || pageUnloading) {
+        return;
+      }
+      registrationRetryTimer = window.setTimeout(function () {
+        registrationRetryTimer = null;
+        registerIfUnregistered();
+      }, REGISTRATION_RETRY_MS);
     }
     function renewBrowserAudioIfNeeded() {
       if (!isBrowserAudioEnabled()) {

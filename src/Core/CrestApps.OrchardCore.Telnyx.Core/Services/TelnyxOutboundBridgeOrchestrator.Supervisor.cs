@@ -29,6 +29,8 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator
         }
         else if (IsHangup(callEvent))
         {
+            LogSupervisorLegEnded(callEvent, state);
+
             // A leg rung for a change of mode that ends -- answered or not -- takes the leg it was to replace with it, in
             // that leg's own state: whichever of the two the engagement names, its end is reported, so the engagement never
             // outlives both. Once the new leg has answered, the replaced one is already gone and this changes nothing.
@@ -154,6 +156,45 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator
         }
 
         await ReportSupervisorAnsweredAsync(supervisorLegId, state, cancellationToken);
+    }
+
+    // Live, every mode a supervisor picked failed the same way -- the leg was refused at once (SIP 480) because their phone
+    // was not registered on the credential it was rung at -- and nothing in the log said so beyond the raw webhook. A
+    // refusal is named as what it most likely means.
+    private void LogSupervisorLegEnded(TelnyxCallEvent callEvent, TelnyxOutboundBridgeState state)
+    {
+        if (state.Detached == true)
+        {
+            return;
+        }
+
+        var sipCause = callEvent.SipHangupCause?.Trim();
+
+        if (int.TryParse(sipCause, out var sipCode) && sipCode >= 400)
+        {
+            _logger.LogWarning(
+                "The phone of supervisor '{SupervisorUserId}' refused supervisor leg '{SupervisorLegId}' ({Role}) on call '{CustomerLegId}' with SIP {SipCode} ({HangupCause}). A 480 or 404 means the phone is not registered on the credential it was rung at: it should be closed and reopened.",
+                state.RingUserId.SanitizeLogValue(),
+                callEvent.CallControlId.SanitizeLogValue(),
+                (state.SupervisorRole ?? "monitor").SanitizeLogValue(),
+                state.PeerCallControlId.SanitizeLogValue(),
+                sipCode,
+                callEvent.HangupCause.SanitizeLogValue());
+
+            return;
+        }
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Supervisor leg '{SupervisorLegId}' ({Role}) of supervisor '{SupervisorUserId}' on call '{CustomerLegId}' ended ({HangupCause}, SIP {SipCause}).",
+                callEvent.CallControlId.SanitizeLogValue(),
+                (state.SupervisorRole ?? "monitor").SanitizeLogValue(),
+                state.RingUserId.SanitizeLogValue(),
+                state.PeerCallControlId.SanitizeLogValue(),
+                callEvent.HangupCause.SanitizeLogValue(),
+                sipCause.SanitizeLogValue());
+        }
     }
 
     private async Task ReportSupervisorAnsweredAsync(string supervisorLegId, TelnyxOutboundBridgeState state, CancellationToken cancellationToken)

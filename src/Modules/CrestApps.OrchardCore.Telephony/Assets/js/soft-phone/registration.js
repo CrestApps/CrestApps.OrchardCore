@@ -79,6 +79,58 @@
         };
     }
 
+    // How long a registration may take end to end -- the credential, the microphone, the registration config and the
+    // provider's login -- before it is given up on and tried again. Live (2026-09-26), a supervisor's phone asked for a
+    // credential at the moment the tunnel in front of the server was replaced; the reply never arrived, nothing timed
+    // out, and the phone stayed "registering" for good: every later attempt joined the stalled one, so it was never
+    // registered again, and every supervisor leg rang the credential it had registered before (refused, SIP 480).
+    var REGISTRATION_TIMEOUT_MS = 30000;
+
+    // How soon a registration that failed or stalled is tried again, besides the minute-long heartbeat.
+    var REGISTRATION_RETRY_MS = 5000;
+
+    // Gives a registration attempt `timeoutMs` to settle. It settles like `attempt`, or rejects with an error flagged
+    // `registrationTimedOut` whose `stage` is what `stageOf()` said the attempt was doing. A session the attempt produces
+    // after that is handed to `onLate`, so a stalled attempt that wakes up never leaves a registration nobody holds.
+    function guardRegistration(attempt, timeoutMs, stageOf, onLate) {
+        return new Promise(function (resolve, reject) {
+            var timedOut = false;
+            var timer = root.setTimeout(function () {
+                var stage = typeof stageOf === 'function' ? (stageOf() || '') : '';
+                var error = new Error('The phone did not finish registering within ' + Math.round(timeoutMs / 1000) + ' seconds' +
+                    (stage ? ' (it was waiting for the ' + stage + ')' : '') + '.');
+
+                timedOut = true;
+                error.registrationTimedOut = true;
+                error.stage = stage;
+                reject(error);
+            }, timeoutMs);
+
+            Promise.resolve(attempt).then(function (session) {
+                if (timedOut) {
+                    if (typeof onLate === 'function') {
+                        onLate(session);
+                    }
+
+                    return;
+                }
+
+                root.clearTimeout(timer);
+                resolve(session);
+            }, function (error) {
+                if (timedOut) {
+                    return;
+                }
+
+                root.clearTimeout(timer);
+                reject(error);
+            });
+        });
+    }
+
+    softPhone.REGISTRATION_TIMEOUT_MS = REGISTRATION_TIMEOUT_MS;
+    softPhone.REGISTRATION_RETRY_MS = REGISTRATION_RETRY_MS;
+    softPhone.guardRegistration = guardRegistration;
     softPhone.shouldStartRegistration = shouldStartRegistration;
     softPhone.planRegistrationSelfHeal = planRegistrationSelfHeal;
     softPhone.planMicrophoneLossRecovery = planMicrophoneLossRecovery;

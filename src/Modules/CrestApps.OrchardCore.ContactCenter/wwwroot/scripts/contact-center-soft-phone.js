@@ -492,7 +492,18 @@
     }
     return parts.join(' · ');
   }
+
+  // What the supervisor is told when their engagement ended without their phone ever answering its leg. Live, every
+  // mode "reverted as if the connection failed": the phone was not registered, the provider refused the leg at once,
+  // and nothing said why. '' for an engagement that ended any other way, or has not ended.
+  function monitorEndedMessage(engagement, labels) {
+    if (!engagement || engagement.phase !== PHASES.ended || engagement.reason !== 'supervisor-unreachable') {
+      return '';
+    }
+    return text(labels, 'phoneUnreachable', 'Your soft phone did not answer. Close and reopen it, wait until it says it is ready, then try again.');
+  }
   contactCenter.supervisorMenuPlacement = menuPlacement;
+  contactCenter.monitorEndedMessage = monitorEndedMessage;
   contactCenter.supervisorPhoneCallSummary = phoneCallSummary;
   contactCenter.MONITOR_PHASES = PHASES;
   contactCenter.supervisorAgentActions = agentActions;

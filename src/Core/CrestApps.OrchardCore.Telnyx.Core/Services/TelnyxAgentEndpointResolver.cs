@@ -69,7 +69,30 @@ public sealed class TelnyxAgentEndpointResolver : ITelnyxAgentEndpointResolver
             return null;
         }
 
-        if (_logger.IsEnabled(LogLevel.Debug))
+        // Live, a phone reopened after a restart asked for a fresh credential and stalled before registering it; every call
+        // for that user then went to the credential registered by the phone that had closed, and was refused (SIP 480).
+        // The choice stays the same (nothing better is registered), but the log says the address is probably stale.
+        var newerUnregistered = credential.RegisteredUtc.HasValue
+            ? live
+                .Where(candidate =>
+                    !ReferenceEquals(candidate, credential) &&
+                    !candidate.RegisteredUtc.HasValue &&
+                    candidate.IssuedUtc > credential.RegisteredUtc.Value)
+                .OrderByDescending(candidate => candidate.IssuedUtc)
+                .FirstOrDefault()
+            : null;
+
+        if (newerUnregistered is not null)
+        {
+            _logger.LogWarning(
+                "User '{UserId}' was issued credential '{NewerCredentialId}' at {NewerIssuedUtc:o} and has not registered it; ringing credential '{CredentialId}' registered at {RegisteredUtc:o}, which may belong to a phone that has since closed. A refusal (SIP 480) means the phone did not finish registering.",
+                userId.SanitizeLogValue(),
+                newerUnregistered.CredentialId.SanitizeLogValue(),
+                newerUnregistered.IssuedUtc,
+                credential.CredentialId.SanitizeLogValue(),
+                credential.RegisteredUtc);
+        }
+        else if (_logger.IsEnabled(LogLevel.Debug))
         {
             _logger.LogDebug(
                 "Resolved Telnyx agent endpoint for user '{UserId}' to credential '{CredentialId}' (registered {RegisteredUtc:o}, issued {IssuedUtc:o}).",

@@ -93,6 +93,15 @@
                 // Nothing is expected any more, and a leg still up is let go.
                 api.disarmMonitorLeg(engagement.token);
                 api.hangupMonitorLeg(engagement.token);
+
+                // A phone that never answered is the supervisor's to fix: say so, rather than just reverting.
+                var endedMessage = typeof contactCenter.monitorEndedMessage === 'function'
+                    ? contactCenter.monitorEndedMessage(engagement, strings)
+                    : '';
+
+                if (endedMessage && typeof api.showError === 'function') {
+                    api.showError(endedMessage);
+                }
             }
 
             render();
