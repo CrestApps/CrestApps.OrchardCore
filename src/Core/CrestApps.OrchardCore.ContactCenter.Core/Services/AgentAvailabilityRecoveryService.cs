@@ -106,9 +106,11 @@ public sealed class AgentAvailabilityRecoveryService : IAgentAvailabilityRecover
                 continue;
             }
 
+            AgentProfile updated;
+
             try
             {
-                await _presenceManager.CompleteWorkAsync(agent.ItemId, new AgentStateChangeContext
+                updated = await _presenceManager.CompleteWorkAsync(agent.ItemId, new AgentStateChangeContext
                 {
                     Source = AgentStateChangeSources.Reconciled,
                     InteractionId = interaction.ItemId,
@@ -120,6 +122,19 @@ public sealed class AgentAvailabilityRecoveryService : IAgentAvailabilityRecover
                     ex,
                     "Skipped busy-state recovery for contended Contact Center agent '{AgentId}'.",
                     agent.ItemId.SanitizeLogValue());
+
+                continue;
+            }
+
+            // The presence manager leaves an agent who still holds a reservation, or who is no longer Busy by the time
+            // it looks, as they are. That used to be logged as a recovery all the same, so an agent still stuck Busy
+            // behind a reservation read as put right in the log.
+            if (updated is null)
+            {
+                _logger.LogWarning(
+                    "Could not return Contact Center agent '{AgentId}' to work after the call '{InteractionId}' that made them Busy ended: they still hold a reservation, or are no longer Busy.",
+                    agent.ItemId.SanitizeLogValue(),
+                    interaction.ItemId.SanitizeLogValue());
 
                 continue;
             }

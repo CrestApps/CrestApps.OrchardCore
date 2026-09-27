@@ -102,7 +102,7 @@
 
                             @if (voicemail.CallbackRequestedUtc is { } callbackUtc)
                             {
-                                <span class="badge text-bg-info" title="@await DisplayAsync(await New.DateTime(Utc: callbackUtc, Format: "g"))">@T["Callback queued by {0}", voicemail.CallbackRequestedByUserName ?? string.Empty]</span>
+                                <span class="badge text-bg-info" title="@await DisplayAsync(await New.DateTime(Utc: callbackUtc, Format: "g"))">@T["Called back by {0}", voicemail.CallbackRequestedByUserName ?? string.Empty]</span>
                             }
                         </div>
 
@@ -138,7 +138,7 @@
                         {
                             <form asp-action="CallBack" asp-route-id="@voicemail.ItemId" method="post" class="no-multisubmit">
                                 <input type="hidden" name="returnUrl" value="@returnUrl" />
-                                <button type="submit" class="btn btn-success btn-sm" title="@T["Queue a callback to the caller in this queue. The next available agent is offered it as a call to place."]">@T["Call back"]</button>
+                                <button type="submit" class="btn btn-success btn-sm" title="@T["Call the caller back now from your soft phone."]">@T["Call back"]</button>
                             </form>
                         }
 

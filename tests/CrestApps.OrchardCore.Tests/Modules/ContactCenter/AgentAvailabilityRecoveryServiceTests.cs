@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -407,6 +408,41 @@ public sealed class AgentAvailabilityRecoveryServiceTests
         fixture.AssertNotReleased();
     }
 
+    [Fact]
+    public async Task RecoverAsync_ABusyAgentReturnedToWork_IsLoggedAsRecovered()
+    {
+        // Arrange
+        var fixture = new BusyFixture();
+        fixture.BusyFromAcceptedCall(InteractionStatus.Ended, endedUtc: _now.AddMinutes(-2));
+
+        // Act
+        await fixture.Service.RecoverAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Contains(fixture.Logger.At(LogLevel.Information), message => message.StartsWith("Returned Contact Center agent 'busy-agent' to work", StringComparison.Ordinal));
+    }
+
+    // The presence manager leaves an agent who still holds a reservation, or who stopped being Busy in the meantime, as
+    // they are. That used to be logged and counted as a recovery anyway, so an agent still stuck read as put right.
+    [Fact]
+    public async Task RecoverAsync_WhenThePresenceManagerLeavesTheAgentAsTheyAre_IsNotCountedAndSaysWhy()
+    {
+        // Arrange
+        var fixture = new BusyFixture();
+        fixture.BusyFromAcceptedCall(InteractionStatus.Ended, endedUtc: _now.AddMinutes(-2));
+        fixture.Presence
+            .Setup(manager => manager.CompleteWorkAsync("busy-agent", It.IsAny<AgentStateChangeContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AgentProfile)null);
+
+        // Act
+        var recovered = await fixture.Service.RecoverAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(0, recovered);
+        Assert.DoesNotContain(fixture.Logger.At(LogLevel.Information), message => message.StartsWith("Returned Contact Center agent", StringComparison.Ordinal));
+        Assert.Contains(fixture.Logger.At(LogLevel.Warning), message => message.Contains("Could not return Contact Center agent 'busy-agent' to work", StringComparison.Ordinal));
+    }
+
     private sealed class BusyFixture
     {
         private readonly List<InteractionEvent> _changes = [];
@@ -428,6 +464,11 @@ public sealed class AgentAvailabilityRecoveryServiceTests
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(() => _changes);
 
+            // The presence manager moves the agent unless a test says otherwise.
+            Presence
+                .Setup(manager => manager.CompleteWorkAsync(It.IsAny<string>(), It.IsAny<AgentStateChangeContext>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((string agentId, AgentStateChangeContext _, CancellationToken _) => new AgentProfile { ItemId = agentId, PresenceStatus = AgentPresenceStatus.Available });
+
             var clock = new Mock<IClock>();
             clock.SetupGet(value => value.UtcNow).Returns(_now);
 
@@ -439,8 +480,10 @@ public sealed class AgentAvailabilityRecoveryServiceTests
                 Events.Object,
                 Options.Create(new AgentAvailabilityOptions()),
                 clock.Object,
-                new Mock<ILogger<AgentAvailabilityRecoveryService>>().Object);
+                Logger);
         }
+
+        public RecordingLogger<AgentAvailabilityRecoveryService> Logger { get; } = new();
 
         public Mock<IAgentProfileManager> Agents { get; } = new();
 
