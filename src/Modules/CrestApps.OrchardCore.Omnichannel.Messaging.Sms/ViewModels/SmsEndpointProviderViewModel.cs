@@ -6,7 +6,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Sms.ViewModels;
 /// <summary>
 /// View model for selecting the SMS provider that owns a channel endpoint's number.
 /// </summary>
-public sealed class SmsEndpointProviderViewModel
+public class SmsEndpointProviderViewModel
 {
     /// <summary>
     /// Gets or sets the selected provider's technical name. Empty means the tenant-default provider.
