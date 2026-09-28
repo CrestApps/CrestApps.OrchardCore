@@ -217,6 +217,54 @@ public sealed class InboundVoiceDigitsSinkTests
         Assert.Equal("delivery-7", harness.Flow.Deliveries.Single().DeliveryId);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task TheEndOfAnEntryPointMessage_IsTheRoutersToDecide(bool routerMovesCallerOn)
+    {
+        // Arrange
+        // Only the router knows whether this caller is still hearing the message; a repeated or unrelated end of
+        // speech must come back unclaimed so the webhook does not report it as routed.
+        var harness = new DigitsHarness { RouterMovesCallerOn = routerMovesCallerOn };
+
+        // Act
+        var handled = await harness.EndAnnouncementAsync();
+
+        // Assert
+        Assert.Equal(routerMovesCallerOn, handled);
+        Assert.Equal(["interaction-1"], harness.AnnouncementsCompleted);
+        Assert.Empty(harness.Routed);
+        Assert.Empty(harness.Flow.Deliveries);
+    }
+
+    [Fact]
+    public async Task TheEndOfSpeechOnACallNobodyKnows_IsNotOurs()
+    {
+        // Arrange
+        var harness = new DigitsHarness(interactionExists: false) { RouterMovesCallerOn = true };
+
+        // Act
+        var handled = await harness.EndAnnouncementAsync();
+
+        // Assert
+        Assert.False(handled);
+        Assert.Empty(harness.AnnouncementsCompleted);
+    }
+
+    [Fact]
+    public async Task TheEndOfSpeechWithNoCall_IsNotOurs()
+    {
+        // Arrange
+        var harness = new DigitsHarness { RouterMovesCallerOn = true };
+
+        // Act
+        var handled = await harness.EndAnnouncementAsync(providerCallId: null);
+
+        // Assert
+        Assert.False(handled);
+        Assert.Empty(harness.AnnouncementsCompleted);
+    }
+
     private sealed class DigitsHarness
     {
         private readonly Interaction _interaction;
@@ -243,6 +291,10 @@ public sealed class InboundVoiceDigitsSinkTests
             router.Setup(x => x.RouteAsync(It.IsAny<string>(), It.IsAny<ContactCenterEntryPoint>(), It.IsAny<IvrStep>(), It.IsAny<CancellationToken>()))
                 .Callback<string, ContactCenterEntryPoint, IvrStep, CancellationToken>((id, entryPoint, step, _) => Routed.Add((id, entryPoint.ItemId, step)))
                 .Returns(Task.CompletedTask);
+
+            router.Setup(x => x.CompleteAnnouncementAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Callback<string, CancellationToken>((id, _) => AnnouncementsCompleted.Add(id))
+                .ReturnsAsync(() => RouterMovesCallerOn);
 
             var audit = new Mock<IContactCenterAuditRecorder>();
             audit.Setup(x => x.RecordCallAsync(
@@ -284,6 +336,18 @@ public sealed class InboundVoiceDigitsSinkTests
         public List<(string InteractionId, string EntryPointId, IvrStep Step)> Routed { get; } = [];
 
         public List<(string EventType, string Key)> Audit { get; } = [];
+
+        public List<string> AnnouncementsCompleted { get; } = [];
+
+        public bool RouterMovesCallerOn { get; set; }
+
+        public Task<bool> EndAnnouncementAsync(string providerCallId = "call-1")
+            => Sink.HandleAnnouncementEndedAsync(new InboundVoiceAnnouncementEndedEvent
+            {
+                ProviderName = "Telnyx",
+                ProviderCallId = providerCallId,
+                DeliveryId = "speak-ended-1",
+            }, TestContext.Current.CancellationToken);
 
         public void WithMenuChoice(IvrStep step)
             => Flow.NextStep = step;

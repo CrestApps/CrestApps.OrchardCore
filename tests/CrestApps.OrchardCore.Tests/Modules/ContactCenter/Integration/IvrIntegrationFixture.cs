@@ -42,6 +42,16 @@ internal sealed class IvrIntegrationFixture : IAsyncDisposable
 
     public List<(string ActivityId, string Reason)> Voicemails { get; } = [];
 
+    /// <summary>
+    /// Gets every call inbound routing was asked to end, and whether the provider was already ending it itself.
+    /// </summary>
+    public List<(string ActivityId, string Reason, bool ProviderEndsCall)> EndedCalls { get; } = [];
+
+    /// <summary>
+    /// Gets what the IVR router logged, for the warnings a caller moved on without their message depends on.
+    /// </summary>
+    public RecordingLogger<IvrCallRouter> RouterLog { get; } = new();
+
     public List<string> ExternalTransfers { get; } = [];
 
     public List<CallbackRequest> Callbacks { get; } = [];
@@ -134,6 +144,62 @@ internal sealed class IvrIntegrationFixture : IAsyncDisposable
         await Harness.CommitAsync();
 
         return handled;
+    }
+
+    /// <summary>
+    /// Leaves the call as inbound routing does for a caller owed the entry point's welcome or closed message: the
+    /// message scheduled, and, for a caller who is not going on to the menu, no menu left to press keys in.
+    /// </summary>
+    public async Task ScheduleAnnouncementAsync(string kind, string next, string queueId = null)
+    {
+        var interaction = await FindInteractionAsync();
+
+        if (next != EntryPointAnnouncement.NextMenu)
+        {
+            interaction.TechnicalMetadata[IvrExecutionService.StateMetadataKey] = new IvrFlowState { Completed = true };
+        }
+
+        EntryPointAnnouncement.Schedule(interaction, kind, next, queueId);
+        await Harness.InteractionManager.UpdateAsync(interaction, cancellationToken: TestContext.Current.CancellationToken);
+        await Harness.CommitAsync();
+    }
+
+    /// <summary>
+    /// Runs what inbound routing schedules after its commit for a caller owed a message: answering them and saying it.
+    /// </summary>
+    public async Task AnnounceAsync()
+    {
+        await Router.AnnounceAsync(InteractionId, TestContext.Current.CancellationToken);
+        await Harness.CommitAsync();
+    }
+
+    /// <summary>
+    /// Delivers the end of a message's speech the way the Telnyx webhook hands a <c>cc-ann</c> <c>call.speak.ended</c>
+    /// to the Contact Center.
+    /// </summary>
+    public async Task<bool> EndSpeechAsync(string deliveryId)
+    {
+        var handled = await Sink.HandleAnnouncementEndedAsync(new InboundVoiceAnnouncementEndedEvent
+        {
+            ProviderName = DialerModeIntegrationHarness.ProviderName,
+            ProviderCallId = CallId,
+            DeliveryId = deliveryId,
+        }, TestContext.Current.CancellationToken);
+
+        await Harness.CommitAsync();
+
+        return handled;
+    }
+
+    /// <summary>
+    /// Ends the caller's interaction, as their hang-up does.
+    /// </summary>
+    public async Task HangUpAsync()
+    {
+        var interaction = await FindInteractionAsync();
+        interaction.TransitionTo(InteractionStatus.Ended);
+        await Harness.InteractionManager.UpdateAsync(interaction, cancellationToken: TestContext.Current.CancellationToken);
+        await Harness.CommitAsync();
     }
 
     public async Task TakeAgentOfflineAsync()
@@ -313,6 +379,10 @@ internal sealed class IvrIntegrationFixture : IAsyncDisposable
             .Setup(value => value.SendToVoicemailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Callback<string, string, CancellationToken>((activityId, reason, _) => Voicemails.Add((activityId, reason)))
             .ReturnsAsync(true);
+        processor
+            .Setup(value => value.EndInboundAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, bool, CancellationToken>((activityId, reason, providerEndsCall, _) => EndedCalls.Add((activityId, reason, providerEndsCall)))
+            .ReturnsAsync(true);
 
         var external = new Mock<IIvrExternalTransferService>();
         external
@@ -338,7 +408,7 @@ internal sealed class IvrIntegrationFixture : IAsyncDisposable
             services.GetRequiredService<IContactCenterAuditRecorder>(),
             Harness.Session,
             clock,
-            NullLogger<IvrCallRouter>.Instance);
+            RouterLog);
 
         TransferOutcomes = new IvrExternalTransferOutcomeSink(
             services.GetRequiredService<IInteractionManager>(),
@@ -436,13 +506,33 @@ internal sealed class IvrIntegrationFixture : IAsyncDisposable
 }
 
 /// <summary>
-/// The menu provider seam: records every answer and every menu played, in order.
+/// The menu provider seam: records every answer, every entry point message said and every menu played, in order.
 /// </summary>
 internal sealed class RecordingIvrProvider : IIvrProvider
 {
     public List<string> Commands { get; } = [];
 
     public List<(string CallId, string Text, string ValidDigits)> Prompts { get; } = [];
+
+    public List<(string CallId, string Text, bool EndCallAfter)> Announcements { get; } = [];
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the provider accepts an entry point message; one that cannot speak refuses it.
+    /// </summary>
+    public bool CanAnnounce { get; set; } = true;
+
+    public Task<bool> AnnounceAsync(string providerCallId, string text, bool endCallAfter, CancellationToken cancellationToken = default)
+    {
+        if (!CanAnnounce)
+        {
+            return Task.FromResult(false);
+        }
+
+        Commands.Add(endCallAfter ? "speak-then-hangup" : "speak");
+        Announcements.Add((providerCallId, text, endCallAfter));
+
+        return Task.FromResult(true);
+    }
 
     public Task<bool> AnswerAsync(string providerCallId, CancellationToken cancellationToken = default)
     {

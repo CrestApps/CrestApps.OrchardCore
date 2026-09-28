@@ -2,6 +2,7 @@ using System.Net;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Telnyx;
 using CrestApps.OrchardCore.Telnyx.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -119,6 +120,81 @@ public sealed class TelnyxCallFlowWebhookTests
         Assert.Equal(VoiceCallState.Ended, harness.Ingested.Single().State);
     }
 
+    [Fact]
+    public async Task TheEndOfAnEntryPointMessage_IsHandedToTheDigitsSinksAnnouncementHandler()
+    {
+        // Arrange
+        // Without this the caller who heard the welcome or closed message was never moved on to the menu, the queue or
+        // voicemail: the speak.ended was dropped as an unmappable call event.
+        var harness = new WebhookHarness { AnnouncementClaims = true };
+
+        // Act
+        var result = await harness.DeliverAsync(Event("call.speak.ended", "v3:caller-1", AnnouncementState()));
+
+        // Assert
+        Assert.Equal(TelnyxWebhookResult.Routed, result);
+        var ended = harness.AnnouncementsEnded.Single();
+        Assert.Equal(TelnyxConstants.ProviderTechnicalName, ended.ProviderName);
+        Assert.Equal("v3:caller-1", ended.ProviderCallId);
+        Assert.Equal("evt-call.speak.ended", ended.DeliveryId);
+
+        // It is not the hang-up state: the call carries on.
+        Assert.Empty(harness.Http.Requests);
+        Assert.Empty(harness.Ingested);
+    }
+
+    [Fact]
+    public async Task TheEndOfSpeechTheSinkDoesNotClaim_IsNotHungUp()
+    {
+        // Arrange
+        // The announcement state stays on the leg, so a queue announcement's speak.ended carries it too. The sink says
+        // the caller is not waiting on a message, and the call must not be touched.
+        var harness = new WebhookHarness { AnnouncementClaims = false };
+
+        // Act
+        var result = await harness.DeliverAsync(Event("call.speak.ended", "v3:caller-1", AnnouncementState()));
+
+        // Assert
+        Assert.Equal(TelnyxWebhookResult.Ignored, result);
+        Assert.Single(harness.AnnouncementsEnded);
+        Assert.Empty(harness.Http.Requests);
+    }
+
+    [Theory]
+    [InlineData("call.hangup", VoiceCallState.Ended)]
+    [InlineData("call.answered", VoiceCallState.Connected)]
+    public async Task TheCallersOtherEvents_CarryingTheAnnouncementState_GoOnToTheOrdinaryPipeline(string eventType, VoiceCallState state)
+    {
+        // Arrange
+        // A hang-up taken for the end of the message would move a caller who has gone, and lose the end of the call.
+        var harness = new WebhookHarness { AnnouncementClaims = true };
+
+        // Act
+        await harness.DeliverAsync(Event(eventType, "v3:caller-1", AnnouncementState(), eventType == "call.hangup" ? "normal_clearing" : null));
+
+        // Assert
+        Assert.Empty(harness.AnnouncementsEnded);
+        Assert.Empty(harness.Http.Requests);
+        Assert.Equal(state, harness.Ingested.Single().State);
+    }
+
+    [Fact]
+    public async Task TheEndOfAClosedMessageBeforeReject_HangsUpRatherThanMovingTheCaller()
+    {
+        // Arrange
+        var harness = new WebhookHarness { AnnouncementClaims = true };
+
+        // Act
+        await harness.DeliverAsync(Event("call.speak.ended", "v3:caller-1", HangUpState()));
+
+        // Assert
+        Assert.Empty(harness.AnnouncementsEnded);
+        Assert.Equal("/v2/calls/v3:caller-1/actions/hangup", Uri.UnescapeDataString(harness.Http.Requests.Single().Path));
+    }
+
+    private static string AnnouncementState()
+        => TelnyxCallFlowClientState.ForAnnouncement().ToClientState();
+
     private static string TransferLegState()
         => TelnyxCallFlowClientState.ForTransferLeg("interaction-1").ToClientState();
 
@@ -168,10 +244,16 @@ public sealed class TelnyxCallFlowWebhookTests
                 new TelnyxApiRetryPolicy(TimeSpan.Zero),
                 NullLogger<TelnyxApiClient>.Instance);
 
+            // Strict, so a key press or anything other than the end of an entry point message fails the test.
+            var digitsSink = new Mock<IInboundVoiceDigitsSink>(MockBehavior.Strict);
+            digitsSink.Setup(x => x.HandleAnnouncementEndedAsync(It.IsAny<InboundVoiceAnnouncementEndedEvent>(), It.IsAny<CancellationToken>()))
+                .Callback<InboundVoiceAnnouncementEndedEvent, CancellationToken>((announcementEvent, _) => AnnouncementsEnded.Add(announcementEvent))
+                .ReturnsAsync(() => AnnouncementClaims);
+
             Service = new TelnyxWebhookService(
                 ingestor.Object,
                 new Mock<ITelnyxInboundCallRouter>(MockBehavior.Strict).Object,
-                new Mock<IInboundVoiceDigitsSink>(MockBehavior.Strict).Object,
+                digitsSink.Object,
                 orchestrator.Object,
                 [],
                 [],
@@ -188,6 +270,10 @@ public sealed class TelnyxCallFlowWebhookTests
         public List<ExternalTransferOutcome> Outcomes { get; } = [];
 
         public List<ProviderVoiceEvent> Ingested { get; } = [];
+
+        public List<InboundVoiceAnnouncementEndedEvent> AnnouncementsEnded { get; } = [];
+
+        public bool AnnouncementClaims { get; set; }
 
         public Task<TelnyxWebhookResult> DeliverAsync(string payload)
         {
