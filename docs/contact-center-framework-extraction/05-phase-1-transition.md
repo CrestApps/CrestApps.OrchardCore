@@ -21,7 +21,7 @@ Work in the order below. Each workstream is one pull request (or one reviewable 
 7. **Stored data:** any moved class that is persisted as a YesSql document (anything saved through `ISession.SaveAsync` or a `DocumentCatalog`) is added to the type-name rewrite table in appendix B in the same pull request. Any moved class that is embedded inside a stored document keeps its property names and JSON attributes.
 8. **Tests move with code.** A test moves when its subject moved; it stays when it tests Orchard glue.
 9. **No competitor names** in new identifiers, comments, or docs.
-10. Update `src/CrestApps.Docs/docs/contact-center/production-readiness-changelog.md` at the end of each workstream with a one-paragraph entry.
+10. Update `docs/engineering/contact-center/production-readiness-changelog.md` at the end of each workstream with a one-paragraph entry.
 
 ## 1. Workstreams
 

@@ -20,7 +20,7 @@ The screencast below enables the **Local Do Not Call Registry** feature, opens i
 
 ## Built-in registry integrations
 
-The module currently ships with these provider features:
+The module ships with these provider features:
 
 | Registry | Feature ID | Admin location |
 | --- | --- | --- |
@@ -42,9 +42,11 @@ The module splits settings by responsibility:
 | **Settings** -> **DNC Registries** -> **Canada LNNTE-DNCL Registry** | Configure Canada DNCL API access |
 | **Interaction Center** -> **Local DNC Registry** | Manage locally uploaded DNC lists |
 
+The settings pages and the Local DNC Registry screen require the **Manage DNC registry settings** (`ManageDncRegistrySettings`) permission.
+
 When global enforcement is enabled, Omnichannel imports always perform DNC checks even if the importer does not opt in on the import form.
 
-The same settings can now be provisioned through the Recipes module's generic `Settings` step by using the `DncRegistrySettings`, `UsaFtcDncRegistrySettings`, and `CanadaDnclRegistrySettings` objects when the matching features are enabled.
+The same settings can be provisioned through the Recipes module's generic `Settings` step by using the `DncRegistrySettings`, `UsaFtcDncRegistrySettings`, and `CanadaDnclRegistrySettings` objects when the matching features are enabled. `EnforcedRegistryKeys` takes the registry keys: `usa-ftc-dnc` (USA FTC), `canada-lnnte-dncl` (Canada LNNTE-DNCL), and `local-dnc` (Local Do Not Call Registry).
 
 ```json
 {
@@ -53,7 +55,7 @@ The same settings can now be provisioned through the Recipes module's generic `S
       "name": "settings",
       "DncRegistrySettings": {
         "EnforceGlobally": true,
-        "EnforcedRegistryKeys": ["usa-ftc", "canada-dncl"]
+        "EnforcedRegistryKeys": ["usa-ftc-dnc", "canada-lnnte-dncl"]
       },
       "UsaFtcDncRegistrySettings": {
         "OrganizationId": "example-org",
@@ -102,13 +104,19 @@ The **Local DNC Registry** feature (`CrestApps.OrchardCore.DncRegistry.Local`) a
 
 ### Managing local lists
 
-Navigate to **Interaction Center** -> **Local DNC Registry** to:
+Navigate to **Interaction Center** -> **Local DNC Registry** (requires the **Manage DNC registry settings** permission) to:
 
-1. **View uploaded lists** — see all lists with their country, phone number count, and upload date
-2. **Upload a new list** — use either the page action or **Interaction Center** -> **Upload DNC List**, then select a country (the picker shows the dialing prefix), provide a name, and upload a CSV file
-3. **Delete a list** — remove a list and all its phone numbers from the list grid when it is no longer needed
+1. **View uploaded lists** — each list shows its uploaded file name, country, upload time, status, the number of records imported successfully and with errors, when it was last processed, and a progress bar (*N of M records processed*)
+2. **Upload a new list** — click **Upload new list** on the page, then select a **Country** (the picker shows the dialing prefix), enter a **List name**, and choose the **CSV file**
+3. **Act on a list** from its row:
+   - **Download errors** — download the rejected rows, with the reason for each, as a CSV file
+   - **Process now** — resume and run an import that is not yet completed (pending, stalled, paused, or failed) immediately instead of waiting for the background task
+   - **Pause import** — stop an import while it is processing; it resumes with **Process now**
+   - **Delete** — remove the list and all its phone numbers in the background when it is no longer needed
 
-After upload, the request returns immediately and the import continues in the background. The list grid shows whether a list is **Pending**, **Processing**, **Completed**, or **Failed**, together with row progress, success counts, and error counts.
+After upload, the request returns immediately and the import continues in the background. A background task (**Local DNC Import Processor**) picks up pending and in-progress imports every 10 minutes. A list's status is **Pending**, **Processing**, **Completed**, **Completed with errors**, **Failed**, **Paused**, or **Deleting**.
+
+Only **Completed** lists are used for screening; a list that is still importing, paused, or failed is not consulted. Uploaded files are stored under `App_Data/Sites/{tenant}/DncRegistry` unless [Azure Blob Storage](#store-local-registry-files-in-azure-blob-storage) is enabled.
 
 The screencast below uploads a suppression list to the Local DNC Registry and then turns on global enforcement. It opens **Local DNC Registry**, uploads a named CSV list for the United States, then visits **Settings** -> **Content Import** to enable **Enforce do-not-call registry checks globally** and select the **Local Do Not Call Registry** so every contact import automatically scrubs numbers that appear on the list.
 

@@ -20,19 +20,23 @@ The management experience layers a lightweight Customer Relationship Management 
 
 | Module | Docs |
 | --- | --- |
-| Base orchestration module | This page |
-| Azure Communication Services integration | [Azure Communication Services](azure-communication-services) |
+| Base orchestration module (includes the **Omnichannel - Azure Communication Services** feature) | This page, [Azure Communication Services](azure-communication-services) |
 | Event Grid integration | [Event Grid](event-grid) |
-| Management UI | [Management](management) |
+| Management UI (CRM), including re-engagement cadences | [Management](management), [Cadences](cadences) |
 | SMS automation (AI) | [SMS](sms) |
-| Messaging workspace (human two-way, every non-voice channel; SMS today) | [Messaging Workspace](messaging-workspace) |
+| Automated Voice (AI voice conversations over any telephony provider) | [Telnyx AI Voice Agent](../telephony/telnyx.md#telnyx-ai-voice-agent) |
+| Messaging workspace (human two-way, every non-voice channel) and its **SMS Messaging Channel** | [Messaging Workspace](messaging-workspace) |
+| DNC Registry (national and local do-not-call screening) | [DNC Registry](../modules/dnc-registry) |
+| Contact Center Business Hours (calendars that gate automated sends) | [Business hours](../user-manual/business-hours.md) |
 
 ## What the base module does
 
 - provides the shared Orchard communication layer
 - supplies the shared message, endpoint, preference, and processing contracts used by the management
   and channel modules
-- acts as the dependency root for optional channel integrations such as Azure Communication Services
+- ships the **Omnichannel - Azure Communication Services** feature
+  (`CrestApps.OrchardCore.Omnichannel.AzureCommunicationServices`), which only enables Orchard Core's
+  `OrchardCore.Email.Azure` and `OrchardCore.Sms.Azure` providers alongside Omnichannel
 
 ## Enable the feature
 
@@ -47,7 +51,9 @@ feature that owns the provider:
 
 | Feature | Endpoint |
 | --- | --- |
-| [Omnichannel - Azure Event Grid](event-grid) | `~/Omnichannel/webhook/AzureEventGrid` |
+| [Omnichannel - Azure Event Grid](event-grid) | `POST ~/api/azure/webhook/eventgrid` |
+| [SMS Omnichannel Automation](sms) (Twilio inbound SMS) | `POST ~/api/twilio/webhook/sms` |
+| [Telnyx SMS](../telephony/telnyx.md#telnyx-sms) (Telnyx inbound SMS) | `POST ~/api/telnyx/webhook/sms` |
 
 Enable the channel feature that matches how your provider delivers events, and configure its
 authentication before pointing a subscription at it.
@@ -56,14 +62,24 @@ authentication before pointing a subscription at it.
 
 When **Omnichannel Management** and the shared **Reports** feature (`CrestApps.OrchardCore.Reports`) are enabled, CRM
 reports are contributed to the reusable [Reports](../modules/reports.md) framework and appear under the
-top-level admin **Reports** menu (grouped under **CRM**). Each report shares the standard from/to
-date-range filter and a CSV export.
+top-level admin **Reports** menu. Omnichannel Management contributes 25 reports, grouped across the
+**Operations**, **Queue & Routing**, **Agent Performance**, **CRM & Campaigns**, **Compliance & Audit**, and
+**Technical & IT** categories. Each report shares the standard from/to date-range filter and adds
+**Campaign group**, **Campaign**, **Channel**, **Source**, and **Status** filters. Reports export to CSV, and
+to Excel (`.xlsx`) when the **Reports (OpenXml)** feature is enabled.
+
+Examples include:
 
 - **Activity summary** - activity volume and completion, broken down by source, channel, and status,
   with a daily created-activity trend.
 - **Campaign performance** - per-campaign *completed vs pending* progress across the CRM activity
   inventory.
 - **Disposition breakdown** - how completed activities were dispositioned in the period.
+- **Activity backlog** and **Activity aging** - open workload, assignment, reservation, and overdue work.
+- **Campaign source, channel, disposition, and attempt mixes**, **Channel endpoint usage**, and per-user
+  productivity and completion-time reports.
+
+See [Management: Reports](management#reports) and [Reports](../user-manual/reports.md) in the user manual.
 
 Access is gated by the **View Omnichannel reports** (`ViewOmnichannelReports`) permission, which is
 implied by **Manage activities** and granted to administrators by default.

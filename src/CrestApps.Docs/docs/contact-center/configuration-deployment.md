@@ -11,16 +11,15 @@ A contact centre that can only be configured by hand cannot be promoted. Contact
 
 ## One-step feature enablement recipes
 
-A supported Contact Center tenant enables roughly a dozen features across the base module, the voice stack, and a provider adapter, and getting that set — and its order — right by hand is the bulk of first-run toil. The base module ships two harvestable recipes, one per certified provider profile, that enable exactly the feature set of the matching certified tenant profile in a single step:
+A supported Contact Center tenant enables roughly a dozen features across the base module, the voice stack, and a provider adapter, and getting that set — and its order — right by hand is the bulk of first-run toil. The base module ships a harvestable recipe for each certified provider profile that enables exactly the feature set of the matching certified tenant profile in a single step:
 
 | Recipe | Display name | Enables the feature set of tenant profile |
 | --- | --- | --- |
 | `contact-center-asterisk-ga-core` | **Contact Center — Asterisk (GA-Core)** | `ga-core-asterisk` |
-| `contact-center-dialpad-ga-core` | **Contact Center — Dialpad (GA-Core)** | `ga-core-dialpad` |
 
 Enable **Recipes** (`OrchardCore.Recipes`), then run the recipe for your provider from **Configuration → Recipes**. Orchard Core resolves feature dependencies, so the listed features and anything they depend on are enabled together. Each recipe enables the base orchestration and administration menu, availability, queues, routing, voice with the browser soft phone, the agent desktop, real-time updates, preview/manual dialing, and the provider's Contact Center voice adapter. Each capability includes the screens needed to configure its queues, agents, entry points, or dialer profiles after the recipe runs.
 
-The feature list in each recipe is the coherent, certified combination for its tenant profile — a build test asserts each recipe enables exactly its profile's certified feature set, so a recipe cannot drift from the supported combination and cannot ship an unlisted (unsupported) combination. There is deliberately no "inbound-only" or "outbound-only" recipe: the certified profiles bundle inbound voice with preview and manual dialing, and a partial split would be an unlisted feature combination. The recipes enable features only; they carry no queues, skills, entry points, or dialer profiles, because that configuration references environment-specific resources (a configured provider, its channel endpoints, and campaigns). Configure your provider and then define or import that configuration with the steps below.
+The feature list in each recipe is the coherent, certified combination for its tenant profile: each recipe enables exactly its profile's certified feature set, and never an unlisted (unsupported) combination. There is deliberately no "inbound-only" or "outbound-only" recipe: the certified profiles bundle inbound voice with preview and manual dialing, and a partial split would be an unlisted feature combination. The recipes enable features only; they carry no queues, skills, entry points, or dialer profiles, because that configuration references environment-specific resources (a configured provider, its channel endpoints, and campaigns). Configure your provider and then define or import that configuration with the steps below.
 
 ## What travels between environments
 
@@ -32,7 +31,7 @@ Each configurable entity has its own deployment step and a matching recipe step,
 | Queue group | Contact Center Queue Groups | `ContactCenterQueueGroup` | `QueueGroups` |
 | Business hours calendar | Contact Center Business Hours Calendars | `ContactCenterBusinessHoursCalendar` | `Calendars` |
 | Queue | Contact Center Queues | `ContactCenterQueue` | `Queues` |
-| Entry point | Contact Center Inbound Voice | `ContactCenterEntryPoint` | `EntryPoints` |
+| Entry point | Contact Center Entry Points | `ContactCenterEntryPoint` | `EntryPoints` |
 | Dialer profile | Contact Center Dialer Profiles | `ContactCenterDialerProfile` | `DialerProfiles` |
 | Agent state reason code | Contact Center Agent State Reason Codes | `AgentStateReasonCode` | `ReasonCodes` |
 | Agent entitlements | Contact Center Agent Entitlements | `ContactCenterAgentEntitlement` | `Agents` |
@@ -40,6 +39,8 @@ Each configurable entity has its own deployment step and a matching recipe step,
 The CRM configuration a contact centre routes and reports on travels the same way. Those steps are described in [Omnichannel management](../omnichannel/management.md#exporting-and-importing-configuration).
 
 A step only appears when the feature that owns its entity is enabled, so a tenant that does not run the dialer is not offered a dialer profile step.
+
+Some configuration has no Contact Center deployment step and must be set up again in the destination: the **Voice Media** library, shared voicemail messages, and the Contact Center site settings (such as recording governance and external transfer destinations). Because voice media does not travel, an imported IVR menu keeps a recorded prompt's `PromptMediaId` that the destination does not have; upload the recording there and pick it again on the entry point's menu; until then the menu falls back to its prompt text, as described in [Voice Routing](voice-routing.md#prompts).
 
 Full agent profiles do not travel. A profile names the person who holds it, carries their contact details, and records the state they are in right now; it is a record of who works in an environment rather than of how that environment is configured, so it is treated as runtime state and stays where it is produced. The manager-owned entitlement configuration an operator does grant — display name, maximum concurrent interactions, allowed queues, allowed campaigns and skills — travels through the **Contact Center Agent Entitlements** step. That step is a deliberate projection: it is keyed by the Orchard user name (the internal user identifier differs between environments) and it never carries live presence, the internal user identifier, or the profile item identifier. The user name is resolved from the live user record at export time, so a plan stays valid even after an administrator renames the user. On import each entry is matched to a user by name — an entry whose user is absent from the destination is reported and skipped — dangling queue and campaign references are dropped, and an existing profile has only its configuration promoted, so a signed-in agent's presence and active reservation are left untouched.
 
@@ -65,7 +66,7 @@ Import is idempotent, which is what makes a plan safe to replay:
 - An entry whose identifier is unknown is created, preserving the identifier from the plan so that later replays match it.
 - An entry the destination's own rules reject is reported and skipped without being stored, and without stopping the entries around it. A plan with one bad entry lands the rest and tells you what it could not land.
 
-Because identifiers are preserved, cross-references keep working after the import: a queue that points at a queue group, an entry point that points at a queue, and a dialer profile that points at a campaign all still resolve.
+Because identifiers are preserved, cross-references keep working after the import: a queue that points at a queue group, an entry point that points at a queue, and a dialer profile that points at a calling calendar all still resolve.
 
 ### Order the steps so that referenced entities import first
 
@@ -77,7 +78,7 @@ A recipe runs its steps in file order, and a reference is checked when the entry
 4. Dialer profiles.
 5. Agent entitlements.
 
-Agent state reason codes reference nothing and can be placed anywhere. Agent entitlements reference queues and campaigns, so place the **Contact Center Agent Entitlements** step after the queue step and after the Omnichannel campaign step. Where Contact Center configuration references CRM configuration - a dialer profile that names a campaign, or a queue that overflows to a channel endpoint - place the Omnichannel steps before the Contact Center steps that need them.
+Agent state reason codes reference nothing and can be placed anywhere. Agent entitlements reference queues and campaigns, so place the **Contact Center Agent Entitlements** step after the queue step and after the Omnichannel campaign step. Where Contact Center configuration references CRM configuration - a queue mapped to an inbound channel endpoint - place the Omnichannel steps before the Contact Center steps that need them.
 
 The standard agent state reason codes seeded by the Contact Center migrations use fixed identifiers, so every tenant agrees on them and a plan that references a standard reason code still resolves after it is replayed.
 
@@ -154,7 +155,5 @@ services
     .AddDeployment<ContactCenterSkillDeploymentSource, ContactCenterSkillDeploymentStep>()
     .AddRecipeExecutionStep<ContactCenterSkillStep>();
 ```
-
-The build fails until the new entity is also declared as configuration or as runtime state, so the decision cannot be skipped.
 
 Registering the recipe step also brings the entity under the rule-ownership checks: it must have a handler registered by the same feature that registers the step, its editor screens must not carry rules of their own, and every admin action that saves it must run the handlers first. Registering the handler in a different feature is checked because a tenant can enable the feature that carries the recipe step without enabling the one that carries the admin screens, and a handler that is not registered does not run. Runtime state - activities, activity batches, interactions, call sessions, queue items and agent sessions - is outside this, because no plan authors it.

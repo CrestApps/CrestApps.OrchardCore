@@ -41,7 +41,7 @@ Fabricating participant entries to make the observed list match a reported count
 
 `CallTopologyProjector` is the only place in the product that mutates legs, bridges, bridge membership, consults, monitor sessions, or relationships. Every service that observes a change to the call — the provider event stream, the transfer service, the monitoring service, the agent-connect command executor — calls into it.
 
-Keeping the rules in one place is what makes them enforceable: that a leg cannot end before it started, that a participant cannot leave before it joined, that a destroyed bridge has no live members, that a supervisor cannot monitor themselves, and that the same supervisor cannot hold two live engagements on one call. A build gate scans every Contact Center, Telephony, and provider source file and fails the build if any of them mutates the topology directly.
+Keeping the rules in one place is what makes them enforceable: that a leg cannot end before it started, that a participant cannot leave before it joined, that a destroyed bridge has no live members, that a supervisor cannot monitor themselves, and that the same supervisor cannot hold two live engagements on one call. No Contact Center, Telephony, or provider code mutates the topology directly.
 
 ## Ending a leg says why it ended
 

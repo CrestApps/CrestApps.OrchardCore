@@ -27,9 +27,11 @@ Use this when your SMS (or other channel) provider can publish events to Event G
 
 This module exposes an endpoint for Azure Event Grid notifications:
 
-- `~/api/azure/webhook/eventgrid`
+- `POST ~/api/azure/webhook/eventgrid`
 
-You can configure your Event Grid subscription to deliver events to this endpoint.
+You can configure your Event Grid subscription to deliver events to this endpoint. The endpoint accepts the
+**Event Grid event schema** only; a subscription that delivers the CloudEvents schema is answered with
+`400 Bad Request`, so choose **Event Grid Schema** when you create the subscription.
 
 ## Authentication options
 
@@ -77,7 +79,9 @@ the tenant.
 | `AADAudience` | Only for bearer token auth | Expected audience for Microsoft Entra ID tokens. |
 | `AADMetadataAddress` | Only for bearer token auth | OpenID Connect metadata address used to load signing keys for token validation. |
 
-If you want bearer token authentication, configure **all three** AAD values. Partial AAD configuration is rejected.
+If you want bearer token authentication, configure **all three** AAD values. With only some of them set, the
+endpoint logs a warning and skips the bearer-token check, so a request carrying only a bearer token is rejected
+with `401 Unauthorized`; SAS-key authentication keeps working.
 
 ## Azure Event Grid subscription setup
 
@@ -88,7 +92,7 @@ If you want bearer token authentication, configure **all three** AAD values. Par
 
    `https://your-host.example.com/api/azure/webhook/eventgrid`
 
-5. If you use SAS-key authentication, add the matching `aeg-sas-key` value to the subscription delivery settings.
+5. If you use SAS-key authentication, add a **custom delivery property** (a delivery header) named `aeg-sas-key` whose value matches `EventGridSasKey`. Event Grid does not send this header on its own for webhook subscriptions.
 6. If you use Microsoft Entra ID delivery, configure the subscription to send bearer tokens for the same issuer, audience, and metadata endpoint values you configured in Orchard Core.
 
 ## Subscription validation
@@ -105,5 +109,17 @@ A typical flow is:
 
 1. Provider emits inbound/outbound event.
 2. Event is delivered to Azure Event Grid.
-3. Event Grid posts to `~/Omnichannel/EventGrid`.
-4. Omnichannel processes the communication event and routes it to the appropriate channel/service.
+3. Event Grid posts to `~/api/azure/webhook/eventgrid`.
+4. Every event (other than the subscription-validation handshake) is saved as an **inbound** Omnichannel message.
+   The endpoint reads the sender, recipient, content, channel, and timestamp from common property names in the
+   event data (`from`, `to`, `content`/`message`/`body`/`text`, `channel`, `timestamp`); the channel is
+   `Unknown` unless the data carries one, and the raw event data is stored as the content when no content field
+   is found.
+5. Each registered `IOmnichannelEventHandler` is then called with the raw Event Grid event type, subject, and
+   data, and decides whether the event is one it handles.
+
+:::caution
+The built-in SMS handlers do not consume Azure Communication Services `Microsoft.Communication.SMSReceived`
+events delivered this way, so an ACS inbound text is stored as a message but does not start or continue an
+SMS conversation. Handling it requires a custom `IOmnichannelEventHandler`.
+:::

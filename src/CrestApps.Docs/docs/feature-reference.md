@@ -128,9 +128,8 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | --- | --- | --- |
 | `CrestApps.OrchardCore.Telephony` | Telephony | [Telephony](./telephony/) |
 | `CrestApps.OrchardCore.Telephony.SoftPhone` | Telephony Soft Phone | [Telephony](./telephony/#soft-phone-widget) |
-| `CrestApps.OrchardCore.Dialpad` | Dialpad | [Dialpad](./telephony/dialpad) |
 | `CrestApps.OrchardCore.Telephony.SoftPhone.Core` | Telephony Soft Phone Core (dependency only) | [Telephony](./telephony/) |
-| `CrestApps.OrchardCore.Telephony.SoftPhone.Extension` | Telephony Soft Phone Extension | [Telephony](./telephony/) |
+| `CrestApps.OrchardCore.Telephony.SoftPhone.Extension` | Telephony Soft Phone Extension | [Telephony](./telephony/#standalone-soft-phone-page-and-browser-extension) |
 | `CrestApps.OrchardCore.Telephony.Azure` | Telephony - Azure Blob Storage | [Recording — Azure Blob Storage](./telephony/recording-azure-blob-storage) |
 | `CrestApps.OrchardCore.Telnyx` | Telnyx | [Telnyx](./telephony/telnyx) |
 | `CrestApps.OrchardCore.Asterisk` | Asterisk | [Asterisk](./telephony/asterisk) |

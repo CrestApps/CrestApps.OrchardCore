@@ -36,6 +36,20 @@ Each task exposes its identifier fields as Liquid expressions so they can bind t
 | **Place Call or Send Message** | `CrestApps.OrchardCore.ContactCenter` | Starts an automated omnichannel activity immediately, instead of waiting for the periodic automated-activities pass to pick it up. The activity's own channel selects the processor, so the same task places the outbound call for a Phone activity and sends the opening message for an SMS activity. |
 | **Hand Off to Live Agent** | `CrestApps.OrchardCore.ContactCenter.Queues` | Moves an **automated** conversation out of the AI lane and into the human lane: a live call is seated in a queue and offered to an agent, and a text conversation becomes a queue-owned thread in the SMS workspace. Optionally names the queue, a reason, and a summary; when no queue is named, the subject flow's configured handoff queue is used. |
 
+### Inputs and outcomes
+
+Text inputs accept Liquid that resolves the identifier or value, so they can bind to the triggering event (for example `{{ Workflow.Input.InteractionId }}`). Pickers and numbers are set in the editor.
+
+| Activity | Inputs | Outcomes |
+| --- | --- | --- |
+| **Contact Center Event** | **Event type** (picker, or **Any event type**) | Matched, Ignored |
+| **Set Agent Presence** | **User**, **Status** (picker), **Reason** (optional) | Done, Failed |
+| **Enqueue Activity** | **Activity**, **Queue**, **Priority** (optional picker) | Done, Failed |
+| **Schedule Callback** | **Destination**, **Delay (minutes)** (number), **Campaign**, **Queue**, **Contact** (the last three optional) | Done, Failed |
+| **Start Call Recording** / **Stop Call Recording** | **Interaction** | Done, Indeterminate, Failed |
+| **Place Call or Send Message** | **Activity** | Done, Already Started, Failed |
+| **Hand Off to Live Agent** | **Activity**, **Queue**, **Reason**, **Summary** (the last three optional) | Connected, Waiting In Queue, Callback Scheduled, Failed |
+
 ### Outcomes beyond Done and Failed
 
 Two of the tasks above report more than a binary result, because the workflow that follows usually needs to say something different in each case:

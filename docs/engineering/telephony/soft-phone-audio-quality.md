@@ -68,7 +68,7 @@ And **read paired fields together**: `buffer` against `conceal`, `mic` against `
 
 ## Settings an agent can change, and when
 
-All live, on a call in progress, under the gear icon.
+All live, on a call in progress, under the headset (**Settings**) icon in the soft phone header.
 
 - **Microphone / Speaker** — change either mid-call.
 - **Echo cancellation, noise suppression, automatic gain control** — on by default. Turn one off and ask the
