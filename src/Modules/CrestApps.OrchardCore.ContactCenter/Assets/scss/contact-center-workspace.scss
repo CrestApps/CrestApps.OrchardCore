@@ -24,7 +24,7 @@
     box-sizing: border-box;
 }
 
-/* Top bar: identity, presence, live queue chips. */
+/* Top bar: identity, presence and connection, with the Live dashboard link at the far end. */
 .cc-topbar {
     display: flex;
     flex-wrap: wrap;
@@ -58,23 +58,57 @@
     text-transform: uppercase;
 }
 
-.cc-topbar__queues {
+/* The far end of the top bar (the Live dashboard link). */
+.cc-topbar__end {
+    margin-left: auto;
+}
+
+/* The "Signed in to" card: a labelled group of chips for the queues, and one for the campaigns. */
+.cc-sign-ins {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.cc-sign-ins__label {
+    margin-bottom: 0.35rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--bs-secondary-color, #6c757d);
+}
+
+.cc-sign-ins__chips {
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
-    margin-left: auto;
+}
+
+.cc-sign-ins__none {
+    color: var(--bs-secondary-color, #6c757d);
+    font-size: 0.9rem;
 }
 
 .cc-queue-chip {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
+    max-width: 100%;
     padding: 0.3rem 0.7rem;
     border-radius: 2rem;
     background: var(--cc-surface-muted);
     border: 1px solid var(--cc-border);
     font-size: 0.85rem;
     white-space: nowrap;
+}
+
+/* A long name is cut short; the chip's title keeps the whole of it. */
+.cc-queue-chip__name {
+    min-width: 0;
+    max-width: 16rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .cc-queue-chip__count {

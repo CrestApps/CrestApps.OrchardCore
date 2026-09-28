@@ -63,7 +63,59 @@
             '</' + tag + '>';
     }
 
+    function format(template, value) {
+        return String(template || '').replace('{0}', value);
+    }
+
+    // What the "Signed in to" card shows: a group of chips for the queues (with how many are waiting) and one for the
+    // campaigns, leaving out a group the agent has nothing in. A long name is cut short on screen, so each chip keeps
+    // the whole name in its title. It used to be a row of chips in the top bar, which an agent signed in to many queues
+    // and campaigns, or to long-named ones, crowded.
+    //   queues    - [{ name, waitingCount }]
+    //   campaigns - [{ name }]
+    //   labels    - { queues, campaigns, noSignIns, waiting ('{0} waiting') }
+    function signInsHtml(queues, campaigns, labels) {
+        var text = labels || {};
+        var queueList = queues || [];
+        var campaignList = campaigns || [];
+
+        if (!queueList.length && !campaignList.length) {
+            return '<div class="cc-sign-ins__none">' + escape(text.noSignIns || 'You are not signed in to any queue or campaign.') + '</div>';
+        }
+
+        function group(title, chips) {
+            return '<div class="cc-sign-ins__group">' +
+                '<div class="cc-sign-ins__label">' + escape(title) + '</div>' +
+                '<div class="cc-sign-ins__chips">' + chips.join('') + '</div>' +
+                '</div>';
+        }
+
+        var html = '';
+
+        if (queueList.length) {
+            html += group(text.queues || 'Queues', queueList.map(function (queue) {
+                var count = Number(queue && queue.waitingCount) || 0;
+
+                return '<span class="cc-queue-chip" title="' + escape(queue && queue.name) + '">' +
+                    '<span class="cc-queue-chip__name">' + escape(queue && queue.name) + '</span>' +
+                    '<span class="cc-queue-chip__count' + (count > 0 ? '' : ' is-empty') + '" title="' +
+                    escape(format(text.waiting || '{0} waiting', count)) + '">' + count + '</span></span>';
+            }));
+        }
+
+        if (campaignList.length) {
+            html += group(text.campaigns || 'Campaigns', campaignList.map(function (campaign) {
+                return '<span class="cc-queue-chip cc-queue-chip--campaign" title="' + escape(campaign && campaign.name) + '">' +
+                    '<i class="fa-solid fa-bullhorn" aria-hidden="true"></i>' +
+                    '<span class="cc-queue-chip__name">' + escape(campaign && campaign.name) + '</span></span>';
+            }));
+        }
+
+        return html;
+    }
+
     contactCenter.NO_ACTIVE_INTERACTION = NO_ACTIVE_INTERACTION;
+    contactCenter.signInsHtml = signInsHtml;
     contactCenter.activeInteractionSignature = activeInteractionSignature;
     contactCenter.createChangeGate = createChangeGate;
     contactCenter.emptyStateHtml = emptyStateHtml;

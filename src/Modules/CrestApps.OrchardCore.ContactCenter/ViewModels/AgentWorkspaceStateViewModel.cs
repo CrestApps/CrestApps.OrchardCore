@@ -43,6 +43,11 @@ public sealed class AgentWorkspaceStateViewModel
     public IList<WorkspaceQueueStatViewModel> Queues { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the campaigns the agent is signed in to.
+    /// </summary>
+    public IList<WorkspaceCampaignViewModel> Campaigns { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the work item currently offered to the agent, or <see langword="null"/> when none is pending.
     /// </summary>
     public WorkspaceOfferViewModel Offer { get; set; }

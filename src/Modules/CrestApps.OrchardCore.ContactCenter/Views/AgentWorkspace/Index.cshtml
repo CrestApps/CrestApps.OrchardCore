@@ -40,6 +40,10 @@
         ["strings"] = new Dictionary<string, string>
         {
             ["noQueues"] = T["Not signed in to any queue"].Value,
+            ["signInQueues"] = T["Queues"].Value,
+            ["signInCampaigns"] = T["Campaigns"].Value,
+            ["noSignIns"] = T["You are not signed in to any queue or campaign."].Value,
+            ["queueWaiting"] = T["{0} waiting"].Value,
             ["incomingOffer"] = T["Incoming"].Value,
             ["unknownCaller"] = T["Unknown caller"].Value,
             ["accept"] = T["Accept"].Value,
@@ -138,14 +142,16 @@
 
         <span class="cc-connection" data-cc-connection role="status" aria-live="polite"></span>
 
+        @* The queues and campaigns the agent is signed in to have their own card below: listed here, many of them, or
+           long-named ones, crowded the bar. *@
         @if (Model.CanMonitor && !string.IsNullOrEmpty(Model.SupervisorDashboardUrl))
         {
-            <a class="btn btn-sm btn-outline-secondary" href="@Model.SupervisorDashboardUrl">
-                <i class="fa-solid fa-gauge-high" aria-hidden="true"></i> @T["Live dashboard"]
-            </a>
+            <div class="cc-topbar__end">
+                <a class="btn btn-sm btn-outline-secondary" href="@Model.SupervisorDashboardUrl">
+                    <i class="fa-solid fa-gauge-high" aria-hidden="true"></i> @T["Live dashboard"]
+                </a>
+            </div>
         }
-
-        <div class="cc-topbar__queues" data-cc-queues role="status" aria-live="polite" aria-label="@T["Signed-in queues"]"></div>
     </div>
 
     <div class="cc-error" data-cc-error role="alert" aria-live="assertive" hidden></div>
@@ -164,6 +170,13 @@
                         <div class="cc-empty__title">@T["No active interactions right now"]</div>
                         <div class="cc-empty__hint">@T["Incoming calls and messages you accept will appear here."]</div>
                     </div>
+                </div>
+            </div>
+
+            <div class="cc-panel">
+                <div class="cc-panel__header" id="ccSignInsHeader">@T["Signed in to"]</div>
+                <div class="cc-panel__body cc-sign-ins" data-cc-sign-ins role="status" aria-live="polite" aria-labelledby="ccSignInsHeader">
+                    <div class="cc-sign-ins__none">@T["Loading..."]</div>
                 </div>
             </div>
         </div>
