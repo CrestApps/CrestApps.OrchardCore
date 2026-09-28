@@ -169,11 +169,6 @@ public static class OmnichannelConstants
         public readonly static Permission CompleteOwnActivity = new("CompleteOwnActivity", "Complete own activity");
 
         /// <summary>
-        /// Gets the permission to edit an activity.
-        /// </summary>
-        public readonly static Permission EditActivity = new("EditActivity", "Edit activity");
-
-        /// <summary>
         /// Gets the permission to manage dispositions.
         /// </summary>
         public readonly static Permission ManageDispositions = new("ManageDispositions", "Manage dispositions");
@@ -197,6 +192,12 @@ public static class OmnichannelConstants
         /// Gets the permission to manage activities in bulk.
         /// </summary>
         public readonly static Permission ManageActivities = new("ManageActivities", "Manage activities");
+
+        /// <summary>
+        /// Gets the permission to create and edit activities. Anyone who can manage activities can also edit them.
+        /// Declared after <see cref="ManageActivities"/> because static fields initialize in declaration order.
+        /// </summary>
+        public readonly static Permission EditActivity = new("EditActivity", "Create and edit activities", [ManageActivities]);
 
         /// <summary>
         /// Gets the permission to purge an activity.

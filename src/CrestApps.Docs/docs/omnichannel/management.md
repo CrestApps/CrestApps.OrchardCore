@@ -568,7 +568,7 @@ Every Omnichannel report can be narrowed by **Campaign group**, **Campaign**, **
 
 ## Permissions
 
-The **Edit activity** permission gates the contact's **Add Activity** screens (outbound and inbound) and editing an activity. It is not registered with the role editor, so it cannot be granted to a role there.
+The **Create and edit activities** permission (`EditActivity`) gates the contact's **Add Activity** screens (outbound and inbound) and editing an activity. It is granted to the *Agent* and *Administrator* roles by default, can be granted to any other role from the role editor, and is implied by **Manage activities**.
 
 ## Exporting and importing configuration
 

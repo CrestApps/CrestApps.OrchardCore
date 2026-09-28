@@ -40,7 +40,7 @@ Once a load has started it can no longer be edited or deleted.
 </video>
 
 1. Click **Add Inventory Load** and choose **Dialer**.
-2. Pick the **Dialer profile** (it decides preview, power or progressive) and the **Campaign**. Agents sign in to this campaign to get the calls, so always pick one (or give the subject a default campaign).
+2. Pick the **Dialer profile** (it decides preview, power or progressive) and the **Campaign**. Agents sign in to this campaign to get the calls, so a dialer load will not save without one unless the subject has a default campaign.
 3. Fill in the contact filters, save, and choose **Actions > Load batch**.
 
 Dialer loads always use the phone channel and create manual (agent-handled) activities. Each activity is queued for the campaign as it is created.

@@ -10,7 +10,7 @@ An **activity** is one piece of work for one contact: a call to make, a text to 
 | | |
 | --- | --- |
 | **Menu** | Interaction Center > Activities |
-| **Permissions** | List activities, List contact activities and Complete own activity (the *Agent* role has them) |
+| **Permissions** | List activities, List contact activities, Complete own activity, and Create and edit activities for **Add Activity** and **Edit** (the *Agent* role has them; *Manage activities* also allows creating and editing) |
 | **Feature** | Omnichannel Management |
 
 ## Your activity list
@@ -69,7 +69,3 @@ If the caller is not in the system yet, create the contact first, then log the c
 ## Other actions on a contact's activities
 
 On a contact's **Activities** page, scheduled activities have **Complete**, **Edit** and **Purge**; completed ones have **Edit** and, for AI conversations, **Review AI conversation**. Editing a completed activity changes only its disposition and notes; it does not re-run the flow. **Purge** (with the *Purge activity* permission) permanently marks a manual, not-started activity as purged.
-
-:::caution Creating activities needs a super user today
-Scheduling, logging and editing activities are checked against the *Edit activity* permission, which cannot currently be granted to a role. Until that is fixed, only users with full administrative rights can use **Add Activity** and **Edit**.
-:::
