@@ -328,7 +328,7 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
     /// <c>IncomingCall</c>. The reservation broadcast above only reaches Contact Center clients over the
     /// Contact Center hub, so without this the soft phone (the browser extension and the Windows app, which
     /// listen only for <c>IncomingCall</c> on the Telephony hub) never rings for queue calls -- only for
-    /// direct-to-agent DID calls, which the Dialpad inbound router dispatches. The dispatcher runs the same
+    /// direct-to-agent DID calls, which the provider inbound router dispatches. The dispatcher runs the same
     /// incoming-call context providers used by the current-offer recovery poll, so the matched-customer
     /// cards and the accept/decline offer actions are attached here too, and both paths surface the same
     /// call id (the modal dedupes on it).

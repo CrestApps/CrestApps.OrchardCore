@@ -34,7 +34,7 @@ The module ships as feature-gated capabilities so a tenant enables only what it 
 
 > The server-side voice orchestration (`CrestApps.OrchardCore.ContactCenter.Voice`) is enabled automatically as a dependency of Inbound Voice, Outbound Dialer, Call Recording, and Supervision, so it is not listed as a separately selectable feature. It in turn pulls in Contact Center Real-Time.
 
-> The CRM-integrated **Agent Workspace** and each **provider contact center voice adapter** (Telnyx, Dialpad, Asterisk) are integration glue rather than selectable features. The Agent Workspace activates whenever Contact Center Agents, Contact Center Voice, Contact Center Real-Time, and the Telephony soft phone are all enabled; a provider's voice adapter activates whenever that provider module and Contact Center Voice are both enabled.
+> The CRM-integrated **Agent Workspace** and each **provider contact center voice adapter** (Telnyx, Asterisk) are integration glue rather than selectable features. The Agent Workspace activates whenever Contact Center Agents, Contact Center Voice, Contact Center Real-Time, and the Telephony soft phone are all enabled; a provider's voice adapter activates whenever that provider module and Contact Center Voice are both enabled.
 
 ### Real-time experiences and reporting
 
@@ -67,7 +67,7 @@ Install the package into the web/startup project and enable the capabilities you
 }
 ```
 
-A Telephony provider (for example Asterisk or Dialpad) and its Contact Center Voice feature must also be enabled for voice execution.
+A Telephony provider (for example Telnyx or Asterisk) and its Contact Center Voice feature must also be enabled for voice execution.
 
 ## Configuration
 

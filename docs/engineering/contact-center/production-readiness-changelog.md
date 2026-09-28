@@ -712,7 +712,7 @@ The rules that matter: a second consult is refused while one is live, because an
 
 ### E10. The log-privacy guard now covers the trees that carry message bodies
 
-**Why.** `ContactCenterOperationalLogPrivacyTests` scanned Contact Center, Telephony, Asterisk, Dialpad and the SMS **automation** module — but not the SMS **Portal**, which is where message bodies and contact numbers actually flow, nor Telnyx, which handles addresses on every call. The guard was watching the quieter half of the problem.
+**Why.** `ContactCenterOperationalLogPrivacyTests` scanned Contact Center, Telephony, Asterisk and the SMS **automation** module — but not the SMS **Portal**, which is where message bodies and contact numbers actually flow, nor Telnyx, which handles addresses on every call. The guard was watching the quieter half of the problem.
 
 **What changed.** Four folders added to the scan: `Omnichannel.Sms.Portal.Core`, `Omnichannel.Sms.Portal`, `Telnyx.Core` and `Telnyx`. It immediately found three unsanitised identifiers in code written earlier in this plan — two in `SmsAgentHandoffService` and one in `SmsConversationRouter` — which are now wrapped in `SanitizeLogValue()`. That is the guard doing its job on the first run, which is the argument for widening it.
 
@@ -732,7 +732,7 @@ Rules 1–4 already had guards. Two more now do.
 
 **Rule 6 — every provider-originated write survives a duplicate delivery.** `ProviderWriteIdempotencyArchitectureTests` requires each `IProviderWebhookInboxHandler` to declare a replay contract other than `Unspecified`, **and** to have a test that names it and exercises a duplicate. A declaration nobody tested is a claim, and claims about idempotency are the ones that turn out to be wrong under load.
 
-It found two handlers — `SmsInboundInboxHandler` and `DialpadWebhookInboxHandler` — claiming `GuardedByDurableStore` with nothing proving it, so `WebhookInboxHandlerReplayTests` was written: the same payload delivered twice saves under the same identity and raises the same provider event id, the forwarding handlers reach the guarded service both times, and an unreadable payload throws rather than being swallowed (the durable inbox retries in a fresh scope; returning quietly is how an inbound text disappears).
+It found two handlers — `SmsInboundInboxHandler` and a provider webhook inbox handler — claiming `GuardedByDurableStore` with nothing proving it, so `WebhookInboxHandlerReplayTests` was written: the same payload delivered twice saves under the same identity and raises the same provider event id, the forwarding handlers reach the guarded service both times, and an unreadable payload throws rather than being swallowed (the durable inbox retries in a fresh scope; returning quietly is how an inbound text disappears).
 
 **A flaw in my own guard, worth recording.** The first version reflected over `AppDomain.CurrentDomain.GetAssemblies()`, which only sees assemblies the runtime has already loaded. It found four handlers in a full run and two under a filter — passing while `TelnyxWebhookInboxHandler` went unchecked. It now anchors on a named type per assembly to force the load, and the Telnyx handler, which every call in a Telnyx tenant flows through, got the replay tests it was missing.
 
@@ -877,7 +877,7 @@ Four of the seven rows in this item were closed by earlier work (the SMS roll-up
 
 `VoiceQueueOfferServiceTests` (13 cases) was written **first**, characterizing both paths — including the preview-dial reservation that must survive having no interaction yet, because releasing it takes the call away from the agent who was about to place it — so the consolidation is provably behaviour-preserving rather than argued to be.
 
-**The failure result, written four times.** Every voice provider and the router in front of them had a private `Failure(errorCode, errorMessage)`. They now delegate to one factory on the result type. Two of the four copies **left the provider name unset**, so a Dialpad failure and a router failure reached the operator attributed to nobody — precisely when attribution is what they need. Dialpad now carries its name; the router deliberately passes none, because it fails before a provider has been chosen and that is itself the information.
+**The failure result, written four times.** Every voice provider and the router in front of them had a private `Failure(errorCode, errorMessage)`. They now delegate to one factory on the result type. Two of the four copies **left the provider name unset**, so a provider failure and a router failure reached the operator attributed to nobody — precisely when attribution is what they need. The provider now carries its name; the router deliberately passes none, because it fails before a provider has been chosen and that is itself the information.
 
 ### E6. The largest file in the Contact Center module, split
 

@@ -1503,11 +1503,11 @@ public sealed class ProviderVoiceEventServiceTests
             ProviderInteractionId = "call-asterisk",
             AnsweredUtc = connectedUtc,
         }.RestorePersistedStatus(InteractionStatus.Connected);
-        var dialPadInteraction = new Interaction
+        var contosoInteraction = new Interaction
         {
-            ItemId = "interaction-dialpad",
-            ProviderName = "Dialpad",
-            ProviderInteractionId = "call-dialpad",
+            ItemId = "interaction-contoso",
+            ProviderName = "Contoso",
+            ProviderInteractionId = "call-contoso",
             AnsweredUtc = connectedUtc,
         }.RestorePersistedStatus(InteractionStatus.Connected);
         var asteriskSession = new CallSession
@@ -1518,12 +1518,12 @@ public sealed class ProviderVoiceEventServiceTests
             ProviderCallId = "call-asterisk",
             AnsweredUtc = connectedUtc,
         }.RestorePersistedState(VoiceCallState.Connected);
-        var dialPadSession = new CallSession
+        var contosoSession = new CallSession
         {
-            ItemId = "session-dialpad",
-            InteractionId = "interaction-dialpad",
-            ProviderName = "Dialpad",
-            ProviderCallId = "call-dialpad",
+            ItemId = "session-contoso",
+            InteractionId = "interaction-contoso",
+            ProviderName = "Contoso",
+            ProviderCallId = "call-contoso",
             AnsweredUtc = connectedUtc,
         }.RestorePersistedState(VoiceCallState.Connected);
 
@@ -1532,15 +1532,15 @@ public sealed class ProviderVoiceEventServiceTests
             .Setup(manager => manager.FindByProviderInteractionIdAsync("Asterisk", "call-asterisk", It.IsAny<CancellationToken>()))
             .ReturnsAsync(asteriskInteraction);
         interactionManager
-            .Setup(manager => manager.FindByProviderInteractionIdAsync("Dialpad", "call-dialpad", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(dialPadInteraction);
+            .Setup(manager => manager.FindByProviderInteractionIdAsync("Contoso", "call-contoso", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(contosoInteraction);
         var callSessionManager = new Mock<ICallSessionManager>();
         callSessionManager
             .Setup(manager => manager.FindByProviderCallIdAsync("Asterisk", "call-asterisk", It.IsAny<CancellationToken>()))
             .ReturnsAsync(asteriskSession);
         callSessionManager
-            .Setup(manager => manager.FindByProviderCallIdAsync("Dialpad", "call-dialpad", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(dialPadSession);
+            .Setup(manager => manager.FindByProviderCallIdAsync("Contoso", "call-contoso", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(contosoSession);
 
         // The event store simulates real database-backed idempotency: a key that was already published is
         // reported as existing on the next lookup.
@@ -1590,8 +1590,8 @@ public sealed class ProviderVoiceEventServiceTests
         }, TestContext.Current.CancellationToken);
         await service.IngestAsync(new ProviderVoiceEvent
         {
-            ProviderName = "Dialpad",
-            ProviderCallId = "call-dialpad",
+            ProviderName = "Contoso",
+            ProviderCallId = "call-contoso",
             State = VoiceCallState.Ended,
             IdempotencyKey = "delivery-42",
             OccurredUtc = connectedUtc.AddSeconds(1),
@@ -1603,9 +1603,9 @@ public sealed class ProviderVoiceEventServiceTests
             value => value.IdempotencyKey == ContactCenterClaimKeys.BuildProviderEventIdempotencyKey("Asterisk", "delivery-42"));
         Assert.Contains(
             publishedEvents,
-            value => value.IdempotencyKey == ContactCenterClaimKeys.BuildProviderEventIdempotencyKey("Dialpad", "delivery-42"));
+            value => value.IdempotencyKey == ContactCenterClaimKeys.BuildProviderEventIdempotencyKey("Contoso", "delivery-42"));
         Assert.Equal(VoiceCallState.Ended, asteriskSession.State);
-        Assert.Equal(VoiceCallState.Ended, dialPadSession.State);
+        Assert.Equal(VoiceCallState.Ended, contosoSession.State);
     }
 
     [Fact]

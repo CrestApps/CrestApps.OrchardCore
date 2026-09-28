@@ -14,8 +14,6 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
     private const string ContactCenterModulePath = "src/Modules/CrestApps.OrchardCore.ContactCenter";
     private const string AsteriskManifestPath = "src/Modules/CrestApps.OrchardCore.Asterisk/Manifest.cs";
     private const string AsteriskModulePath = "src/Modules/CrestApps.OrchardCore.Asterisk";
-    private const string DialpadManifestPath = "src/Modules/CrestApps.OrchardCore.Dialpad/Manifest.cs";
-    private const string DialpadModulePath = "src/Modules/CrestApps.OrchardCore.Dialpad";
     private const string SignalRManifestPath = "src/Modules/CrestApps.OrchardCore.SignalR/Manifest.cs";
     private const string SignalRStartupPath = "src/Modules/CrestApps.OrchardCore.SignalR/Startup.cs";
     private const string TelephonyManifestPath = "src/Modules/CrestApps.OrchardCore.Telephony/Manifest.cs";
@@ -534,12 +532,6 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
             repositoryRoot,
             AsteriskModulePath,
             "CrestApps.OrchardCore.Asterisk");
-        var dialPadFeatures = ParseManifestFeatures(repositoryRoot, DialpadManifestPath)
-            .ToDictionary(feature => feature.Id, StringComparer.Ordinal);
-        var dialPadStartups = ParseStartupClassesInDirectory(
-            repositoryRoot,
-            DialpadModulePath,
-            "CrestApps.OrchardCore.Dialpad");
 
         // Act
         var mediaDependencies = contactCenterFeatures["CrestApps.OrchardCore.ContactCenter.Voice.Media"].Dependencies;
@@ -563,11 +555,6 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         var asteriskMediaOwner = asteriskStartups.Single(startup =>
             startup.Body.Contains(
                 "AddScoped<IContactCenterVoiceMediaProvider, AsteriskContactCenterVoiceMediaProvider>()",
-                StringComparison.Ordinal));
-        var dialPadBaseDependencies = dialPadFeatures["CrestApps.OrchardCore.Dialpad"].Dependencies;
-        var dialPadVoiceOwner = dialPadStartups.Single(startup =>
-            startup.Body.Contains(
-                "AddScoped<IContactCenterVoiceProvider>(sp => sp.GetRequiredService<DialpadContactCenterVoiceProvider>())",
                 StringComparison.Ordinal));
         var asteriskBaseStartup = asteriskStartups.Single(startup =>
             startup.FeatureId == "CrestApps.OrchardCore.Asterisk"
@@ -595,9 +582,6 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         Assert.False(
             asteriskFeatures.ContainsKey("CrestApps.OrchardCore.Asterisk.ContactCenterMedia"),
             "The Asterisk Contact Center media adapter is integration glue and must not be a selectable feature.");
-        Assert.False(
-            dialPadFeatures.ContainsKey("CrestApps.OrchardCore.Dialpad.ContactCenterVoice"),
-            "The Dialpad Contact Center voice adapter is integration glue and must not be a selectable feature.");
         Assert.Equal(["CrestApps.OrchardCore.Telephony"], asteriskBaseDependencies);
         Assert.Equal("CrestApps.OrchardCore.Asterisk", asteriskVoiceOwner.FeatureId);
         // The adapter is owned by the Asterisk module's default feature, so it only requires the Contact Center
@@ -625,14 +609,6 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
             asteriskContactCenterReconcilerOwner.RequiredFeatureIds.Order(StringComparer.Ordinal));
         Assert.DoesNotContain("IProviderVoiceEventService", asteriskBaseStartup.Body, StringComparison.Ordinal);
         Assert.DoesNotContain("IProviderCallStateSynchronizationService", asteriskBaseStartup.Body, StringComparison.Ordinal);
-        Assert.Equal(["CrestApps.OrchardCore.Telephony"], dialPadBaseDependencies);
-        Assert.Equal("CrestApps.OrchardCore.Dialpad", dialPadVoiceOwner.FeatureId);
-        Assert.Equal(
-            [
-                "CrestApps.OrchardCore.ContactCenter.Voice",
-                "CrestApps.OrchardCore.Dialpad",
-            ],
-            dialPadVoiceOwner.RequiredFeatureIds.Order(StringComparer.Ordinal));
     }
 
     [Fact]
@@ -643,15 +619,11 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         var asteriskProject = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "src/Modules/CrestApps.OrchardCore.Asterisk/CrestApps.OrchardCore.Asterisk.csproj"));
-        var dialPadProject = File.ReadAllText(Path.Combine(
-            repositoryRoot,
-            "src/Modules/CrestApps.OrchardCore.Dialpad/CrestApps.OrchardCore.Dialpad.csproj"));
 
         // Act
         var providerProjects = new[]
         {
             asteriskProject,
-            dialPadProject,
         };
 
         // Assert

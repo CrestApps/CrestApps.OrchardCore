@@ -4,7 +4,7 @@
  * The phone used to put every in-call action in one row of identical round icons -- hold, mute, transfer, a dark red
  * "disconnect all" and a red hang-up -- over a keypad that stayed open for the whole call. Agents holding a caller to
  * dial someone else could not tell which icon did what, and two red buttons side by side made "hang up" a guess. Phones
- * people already know (the iOS and Android in-call screens, Zoom Phone, RingCentral, Teams, Webex, Dialpad) split them:
+ * people already know (the iOS and Android in-call screens, Zoom Phone, RingCentral, Teams, Webex) split them:
  * the agent's own call controls -- Mute, Hold, Keypad and a single red Hang up -- in one labelled row, and the actions
  * that bring someone else in or hand the call over -- Transfer, Add call, and ending every call -- in a second, quieter
  * row. The keypad opens only when asked for (or while a held call is waiting for the number to add), and Add call holds

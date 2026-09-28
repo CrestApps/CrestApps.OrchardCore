@@ -13,7 +13,7 @@ Phase 1 location: `src/Abstractions/Transitions/<pillar>.Abstractions/Builders/`
 | `CrestAppsTelephonyBuilder` | `suite.AddTelephony(...)` | `CrestApps.Core.Telephony.Abstractions` |
 | `CrestAppsContactCenterBuilder` | `suite.AddContactCenter(...)` | `CrestApps.Core.ContactCenter.Abstractions` |
 | `CrestAppsSmsPortalBuilder` | `suite.AddSmsPortal(...)` | `CrestApps.Core.Omnichannel.Sms.Portal.Abstractions` |
-| `CrestAppsTelnyxBuilder`, `CrestAppsAsteriskBuilder`, `CrestAppsDialpadBuilder` | `telephony.AddTelnyx(...)`, `.AddAsterisk(...)`, `.AddDialpad(...)` | the provider package (like `CrestApps.Core.AI.OpenAI` owns `AddOpenAI`) |
+| `CrestAppsTelnyxBuilder`, `CrestAppsAsteriskBuilder` | `telephony.AddTelnyx(...)`, `.AddAsterisk(...)` | the provider package (like `CrestApps.Core.AI.OpenAI` owns `AddOpenAI`) |
 
 Every builder:
 
@@ -65,8 +65,6 @@ builder.Services.AddCrestAppsCore(crestApps => crestApps
                 .AddYesSqlStores()
                 .AddContactCenterVoice()
                 .AddContactCenterMedia())
-            .AddDialpad(builder.Configuration.GetSection("CrestApps:Telephony:Dialpad"), dialpad => dialpad
-                .AddContactCenterVoice())
             .AddBackgroundWorkers())
         .AddContactCenter(contactCenter => contactCenter
             .AddYesSqlStores()
@@ -127,7 +125,6 @@ app.MapSoftPhoneDialerEndpoints()
    .MapTelnyxWebhookEndpoints()
    .MapTelnyxMediaStreamEndpoint()
    .MapTelnyxSmsWebhookEndpoint()
-   .MapDialpadWebhookEndpoint()
    .MapTwilioSmsWebhookEndpoint()
    .MapOmnichannelSubjectActionEndpoints();
 ```
@@ -184,7 +181,6 @@ Each row names the builder method, the `AddCore*` method behind it, the Orchard 
 | `telnyx.AddAiVoice()` | `AddCoreTelnyxAiVoice()` | `Telnyx.AiVoice` (`AiVoiceStartup`) | `ITelnyxVoiceAgentClient`, `TelnyxVoiceAgentMediaProvider`, `TelnyxAiVoiceConversationHandler`, `IOmnichannelProcessor` `VoiceOmnichannelProcessor` |
 | `telnyx.AddYesSqlStores()` | `AddCoreTelnyxStoresYesSql()` | migrations in the Telnyx module | `ITelnyxAgentCredentialStore`, `ITelnyxRecordingIngestJobStore` YesSql stores + index providers |
 | `AddAsterisk(IConfiguration, Action<CrestAppsAsteriskBuilder>)`, `asterisk.AddContactCenterVoice()`, `asterisk.AddContactCenterMedia()`, `asterisk.AddYesSqlStores()` | `AddCoreAsterisk*` | `Asterisk/Startup.cs`, `AsteriskContactCenterVoiceStartup`, `AsteriskContactCenterMediaStartup` | named `HttpClient` (`AsteriskConstants.HttpClientName`), `DefaultAsteriskOptions` (+ validator, `ValidateOnStart`), ARI client, PJSIP credential issuer/lease store/realtime store, realtime listener + ingestion + dispatcher, providers, reconcilers, teardown, registries, cycles, stores |
-| `AddDialpad(IConfiguration, Action<CrestAppsDialpadBuilder>)`, `dialpad.AddContactCenterVoice()` | `AddCoreDialpad*` | `DialPad/Startup.cs`, `DialerStartup.cs` | named `HttpClient`, `DialpadOptions`, `IDialpadWebhookService`, `IDialpadWebhookApiService`, `IDialpadInboundCallRouter` (direct default; Contact Center replaces), JWT validator, provider, contact center voice provider, lifecycle participant, inbox handler |
 | `AddYesSqlStores()` | `AddCoreTelephonyStoresYesSql()` | Telephony migrations/index providers | extension, interaction, user-connection index providers and stores |
 | `AddBackgroundWorkers()` | `AddCoreTelephonyBackgroundWorkers()` | n/a | runners for Telephony + provider cycles registered so far |
 

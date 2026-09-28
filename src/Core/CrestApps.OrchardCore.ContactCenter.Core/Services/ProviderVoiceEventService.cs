@@ -121,7 +121,7 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
 
         // Scope the provider-supplied idempotency key by the canonical provider so identical raw delivery
         // identifiers emitted by different providers (for example the same numeric id from Asterisk and
-        // Dialpad) cannot collide in the shared interaction-event idempotency space. Non-provider domain
+        // Telnyx) cannot collide in the shared interaction-event idempotency space. Non-provider domain
         // events are unaffected because this path only runs for normalized provider voice events.
         var legacyIdempotencyKey = providerEvent.IdempotencyKey;
 

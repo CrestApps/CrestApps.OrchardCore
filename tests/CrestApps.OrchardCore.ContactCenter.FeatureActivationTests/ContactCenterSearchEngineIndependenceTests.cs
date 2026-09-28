@@ -71,7 +71,6 @@ public sealed class ContactCenterSearchEngineIndependenceTests
     private static readonly string[] _supportedProfileIds =
     [
         "ga-core-asterisk",
-        "ga-core-dialpad",
     ];
 
     /// <summary>
@@ -82,7 +81,6 @@ public sealed class ContactCenterSearchEngineIndependenceTests
         "CrestApps.OrchardCore.ContactCenter",
         "CrestApps.OrchardCore.Telephony",
         "CrestApps.OrchardCore.Asterisk",
-        "CrestApps.OrchardCore.Dialpad",
     ];
 
     /// <summary>
@@ -94,7 +92,6 @@ public sealed class ContactCenterSearchEngineIndependenceTests
         "CrestApps.OrchardCore.ContactCenter",
         "CrestApps.OrchardCore.ContactCenter.Abstractions",
         "CrestApps.OrchardCore.ContactCenter.Core",
-        "CrestApps.OrchardCore.Dialpad",
         "CrestApps.OrchardCore.Telephony",
         "CrestApps.OrchardCore.Telephony.Abstractions",
         "CrestApps.OrchardCore.Telephony.Azure",
@@ -298,7 +295,6 @@ public sealed class ContactCenterSearchEngineIndependenceTests
 
     [Theory]
     [InlineData("ga-core-asterisk")]
-    [InlineData("ga-core-dialpad")]
     public async Task SupportedProfile_EnablesNoSearchBackedFeature(string profileId)
     {
         Assert.Contains(profileId, _supportedProfileIds);
@@ -360,7 +356,6 @@ public sealed class ContactCenterSearchEngineIndependenceTests
 
     [Theory]
     [InlineData("ga-core-asterisk")]
-    [InlineData("ga-core-dialpad")]
     public async Task SupportedProfile_RunsItsCorrectnessPathsWithoutCallingOutOfProcess(string profileId)
     {
         Assert.Contains(profileId, _supportedProfileIds);

@@ -102,7 +102,6 @@
   <Folder Name="/src/Modules/ContactCenter/">
     <Project Path="src/Modules/CrestApps.OrchardCore.Asterisk/CrestApps.OrchardCore.Asterisk.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.ContactCenter/CrestApps.OrchardCore.ContactCenter.csproj" />
-    <Project Path="src/Modules/CrestApps.OrchardCore.Dialpad/CrestApps.OrchardCore.Dialpad.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.DncRegistry.Azure/CrestApps.OrchardCore.DncRegistry.Azure.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.DncRegistry/CrestApps.OrchardCore.DncRegistry.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Omnichannel.EventGrid/CrestApps.OrchardCore.Omnichannel.EventGrid.csproj" />

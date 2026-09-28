@@ -13,8 +13,7 @@ description: Provider-agnostic soft phone, SignalR hub, and telephony provider m
 The **Telephony** module adds a provider-agnostic soft phone to Orchard Core. It exposes a SignalR
 hub that receives call-control requests from the browser and routes them to whichever telephony
 provider is configured for the tenant. The UI never talks to a provider directly, so the same soft
-phone works with any provider that implements the telephony abstractions (for example
-[Dialpad](dialpad)).
+phone works with any provider that implements the telephony abstractions.
 
 ## Architecture
 
@@ -25,7 +24,7 @@ Browser soft phone (soft-phone.js)
         │  SignalR (invoke Dial/Hangup/Hold/...)
         ▼
 TelephonyHub  ──►  ITelephonyService  ──►  ITelephonyProviderResolver  ──►  ITelephonyProvider
-                                                                              (Dialpad, ...)
+                                                                              (any provider)
 ```
 
 - **`CrestApps.OrchardCore.Telephony.Abstractions`** contains the provider-agnostic contracts:
@@ -36,7 +35,7 @@ TelephonyHub  ──►  ITelephonyService  ──►  ITelephonyProviderResolve
   A provider module depends only on this package.
 - **`CrestApps.OrchardCore.Telephony`** contains the `TelephonyHub`, the default service and resolver
   implementations, the site settings, and the soft phone widget.
-- A **provider module** (such as Dialpad) implements `ITelephonyProvider` and registers itself as a
+- A **provider module** implements `ITelephonyProvider` and registers itself as a
   selectable provider.
 
 ## The provider contract
@@ -168,8 +167,8 @@ Providers use one of two authentication scenarios, and the soft phone adapts aut
 - **Account-level credentials** – the provider authenticates with a shared key configured by an
   administrator (for example an API token). No per-user step is needed and the dialer is shown
   immediately. This is the right model for providers such as Twilio.
-- **Per-user OAuth 2.0** – the provider requires each user to connect their own account (for example
-  Dialpad). When the user is not yet connected, the widget shows a **Connect to provider** button
+- **Per-user OAuth 2.0** – the provider requires each user to connect their own account.
+  When the user is not yet connected, the widget shows a **Connect to provider** button
   that starts the OAuth 2.0 authorization code flow in a popup. After the user grants access, the
   tokens are stored **encrypted on the user's account** and the dialer is shown. Expired tokens are
   refreshed automatically when a refresh token is available.
@@ -232,5 +231,3 @@ To add a new provider:
    stores the tokens securely on the user's account and supplies them back to your provider through
    `ITelephonyAuthenticationService`. Providers that only use a shared account key do not implement
    this interface.
-
-See the [Dialpad](dialpad) provider for a complete example.

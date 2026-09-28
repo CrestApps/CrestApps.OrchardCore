@@ -45,7 +45,6 @@ public sealed class CallTopologyAuthorityTests
         Path.Combine("Modules", "CrestApps.OrchardCore.ContactCenter"),
         Path.Combine("Modules", "CrestApps.OrchardCore.Telephony"),
         Path.Combine("Modules", "CrestApps.OrchardCore.Asterisk"),
-        Path.Combine("Modules", "CrestApps.OrchardCore.Dialpad"),
         Path.Combine("Core", "CrestApps.OrchardCore.Telnyx.Core"),
         Path.Combine("Modules", "CrestApps.OrchardCore.Telnyx"),
         // The SMS Portal reaches Contact Center Core for agent-profile identity, so it can see CallSession and

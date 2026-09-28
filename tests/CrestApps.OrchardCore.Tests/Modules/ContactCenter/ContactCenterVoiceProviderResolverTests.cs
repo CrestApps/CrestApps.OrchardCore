@@ -13,14 +13,14 @@ public sealed class ContactCenterVoiceProviderResolverTests
     {
         // Arrange
         var telnyx = CreateProvider("Telnyx");
-        var dialpad = CreateProvider("Dialpad");
-        var resolver = CreateResolver([telnyx, dialpad], defaultProviderName: "Telnyx");
+        var contoso = CreateProvider("Contoso");
+        var resolver = CreateResolver([telnyx, contoso], defaultProviderName: "Telnyx");
 
         // Act
-        var result = resolver.Get("Dialpad");
+        var result = resolver.Get("Contoso");
 
         // Assert: an explicitly named provider is resolved by technical name regardless of the default.
-        Assert.Same(dialpad, result);
+        Assert.Same(contoso, result);
     }
 
     [Fact]
@@ -30,15 +30,15 @@ public sealed class ContactCenterVoiceProviderResolverTests
         // Voice). The configured default is the second-registered one, so a naive first-registered fallback
         // would return the wrong provider.
         var telnyx = CreateProvider("Telnyx");
-        var dialpad = CreateProvider("Dialpad");
+        var contoso = CreateProvider("Contoso");
         var asterisk = CreateProvider("Asterisk");
-        var resolver = CreateResolver([telnyx, dialpad, asterisk], defaultProviderName: "Dialpad");
+        var resolver = CreateResolver([telnyx, contoso, asterisk], defaultProviderName: "Contoso");
 
         // Act
         var result = resolver.Get();
 
         // Assert
-        Assert.Same(dialpad, result);
+        Assert.Same(contoso, result);
     }
 
     [Fact]
@@ -46,30 +46,30 @@ public sealed class ContactCenterVoiceProviderResolverTests
     {
         // Arrange: the default names a provider whose voice adapter is not registered (its module is not enabled
         // for Contact Center voice), so the resolver falls back to the first registered provider.
-        var dialpad = CreateProvider("Dialpad");
+        var contoso = CreateProvider("Contoso");
         var asterisk = CreateProvider("Asterisk");
-        var resolver = CreateResolver([dialpad, asterisk], defaultProviderName: "Telnyx");
+        var resolver = CreateResolver([contoso, asterisk], defaultProviderName: "Telnyx");
 
         // Act
         var result = resolver.Get();
 
         // Assert
-        Assert.Same(dialpad, result);
+        Assert.Same(contoso, result);
     }
 
     [Fact]
     public void Get_WithoutName_WhenNoDefaultConfigured_FallsBackToFirst()
     {
         // Arrange
-        var dialpad = CreateProvider("Dialpad");
+        var contoso = CreateProvider("Contoso");
         var asterisk = CreateProvider("Asterisk");
-        var resolver = CreateResolver([dialpad, asterisk], defaultProviderName: null);
+        var resolver = CreateResolver([contoso, asterisk], defaultProviderName: null);
 
         // Act
         var result = resolver.Get();
 
         // Assert
-        Assert.Same(dialpad, result);
+        Assert.Same(contoso, result);
     }
 
     private static ContactCenterVoiceProviderResolver CreateResolver(

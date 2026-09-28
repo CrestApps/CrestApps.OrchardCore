@@ -55,7 +55,7 @@ TelephonyAudioMode ConfiguredAudioMode { get; }         // None / Browser / Exte
 string BrowserMediaAdapterName { get; }                 // e.g. "telnyx-webrtc", "sipjs", or null
 ```
 
-Return `null` for `BrowserMediaAdapterName` when the provider has no in-browser media (e.g. DialPad).
+Return `null` for `BrowserMediaAdapterName` when the provider has no in-browser media.
 
 ### Soft-phone credentials
 

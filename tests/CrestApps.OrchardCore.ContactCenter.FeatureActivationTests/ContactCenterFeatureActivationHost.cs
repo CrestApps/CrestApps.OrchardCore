@@ -232,11 +232,6 @@ public sealed class ContactCenterFeatureActivationHost : IAsyncDisposable
                 webhookHandlers,
                 handler => Assert.NotEqual(ContactCenterHandlerReplaySafety.Unspecified, handler.ReplaySafety));
 
-            if (expectedProviderName == "Dialpad")
-            {
-                Assert.Single(webhookHandlers, handler => handler.TechnicalName == "dialpad-call-event");
-            }
-
             Assert.Single(services.GetServices<IBackgroundTask>().OfType<ProviderWebhookInboxBackgroundTask>());
         });
     }
@@ -492,16 +487,18 @@ public sealed class ContactCenterFeatureActivationHost : IAsyncDisposable
         // gated on the provider module and Contact Center Voice. Toggling the provider module feature therefore
         // activates and deactivates the voice-provider registration, so that is the feature the disable/re-enable
         // round trip exercises.
-        return GetExpectedProviderName(profile) == "Asterisk"
-            ? "CrestApps.OrchardCore.Asterisk"
-            : "CrestApps.OrchardCore.Dialpad";
+        return GetExpectedProviderName(profile) switch
+        {
+            "Asterisk" => "CrestApps.OrchardCore.Asterisk",
+            var providerName => throw new InvalidOperationException($"No provider feature is known for '{providerName}'."),
+        };
     }
 
     private static string GetExpectedProviderName(ContactCenterTenantProfile profile)
     {
         return profile.ProviderProfile.StartsWith("asterisk-", StringComparison.Ordinal)
             ? "Asterisk"
-            : "Dialpad";
+            : throw new InvalidOperationException($"Tenant profile '{profile.Id}' uses an unknown provider profile '{profile.ProviderProfile}'.");
     }
 
     private static bool IsCrestAppsFeature(string featureId)

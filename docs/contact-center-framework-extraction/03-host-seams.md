@@ -25,7 +25,7 @@ Rule of thumb: **the framework declares the contract and a safe default; Orchard
 | S15 | `OrchardCore.Data.IDbConnectionAccessor`, `StoreCollectionOptions`, `OrchardCore.Data.Migration.DataMigration` | `OmnichannelActivityStore` (Dapper), migrations, legacy type-name rewrites | `IStore.Configuration.ConnectionFactory.CreateConnection()`; `ContactCenterStoreOptions`/`SmsPortalStoreOptions` collection names; schema-builder extensions | `DataMigration` classes stay Orchard |
 | S16 | `OrchardCore.Redis` (`IRedisService`) | `RedisRendezvousOwnerStore`, `ContactCenterRedisConnectivityHealthCheck`, backplane health | none in Phase 1 (D-10) | stays Orchard |
 | S17 | `CrestApps.OrchardCore.Abstractions` helpers (`LogDataClassifications`, `DictionaryDocument<T>`, `ValidateTenantOptionsOnActivation`) | 2 + 1 usages in cores; startups | framework copies in `CrestApps.Core.Hosting.Abstractions` (Phase 2: `CrestApps.Core.Infrastructure.Abstractions`) | Orchard keeps its own; values identical |
-| S18 | Feature ids inside services (`ContactCenterConstants.Feature.*` passed to `IContactCenterFeatureWorkManager.TryEnter`, lifecycle participants, hub work leases) | `ContactCenterHub`, `ContactCenterFeatureWorkManager`, lifecycle participants (Contact Center, Telnyx, Asterisk, Dialpad) | `ContactCenterCapabilities` constants | Orchard maps feature id to capability in its lifecycle handler |
+| S18 | Feature ids inside services (`ContactCenterConstants.Feature.*` passed to `IContactCenterFeatureWorkManager.TryEnter`, lifecycle participants, hub work leases) | `ContactCenterHub`, `ContactCenterFeatureWorkManager`, lifecycle participants (Contact Center, Telnyx, Asterisk) | `ContactCenterCapabilities` constants | Orchard maps feature id to capability in its lifecycle handler |
 | S19 | `OrchardCore.Sms` provider settings screens, `OrchardCore_Sms_Telnyx` configuration section | Telnyx SMS | framework `TelnyxSmsOptions` bound from any section | Orchard binds the legacy section name |
 | S20 | `CrestApps.OrchardCore.DncRegistry.Abstractions` (`INationalDoNotCallRegistry`, `NumberSearchContext`, `DoNotCallScreeningException`) | dialer compliance screening in `ContactCenter.Core`/module | move these 3 Orchard-free files to `CrestApps.Core.Omnichannel.Abstractions/Compliance`; framework default `ContactPreferenceDoNotCallRegistry` (screens against `OmnichannelContact.DoNotCall`) with `ComplianceOptions.FailClosedWithoutNationalRegistry` (D-13) | DNC module implements the framework contract and replaces the default |
 | S21 | `ContactCenterAgentSignOutCookieConfiguration` (cookie sign-out event signs the agent out of queues) | Contact Center module | `IAgentSignOutHandler.HandleAsync(ClaimsPrincipal)` in `CrestApps.Core.ContactCenter` (calls presence/session sign-out) | Orchard cookie configuration calls the handler; MVC host calls it from `CookieAuthenticationEvents.OnSigningOut` |
@@ -102,7 +102,7 @@ For each settings class read through `ISiteService`:
 | `TelephonySettings` | already an options POCO with `TelephonySettingsConfiguration : IPostConfigureOptions` | keep |
 | `TelnyxSettings`, `TelnyxSmsSettings` | `TelnyxOptions`, `TelnyxSmsOptions` already exist; the settings classes become Orchard-only site documents that feed the options | `TelnyxOptionsConfigurations`, `TelnyxSmsOptionsConfiguration` stay Orchard |
 | `SmsPortalOptions`, `SmsKeywordReplySettings`, `SmsRoutedDistributionOptions` | already options | Orchard binds from `IShellConfiguration` sections; framework binds from `IConfiguration` |
-| `AsteriskSettings`, `DialpadSettings`, `EventGridSettings` | `DefaultAsteriskOptions`, `DialpadOptions`, `EventGridOptions` already exist | settings display drivers stay Orchard |
+| `AsteriskSettings`, `EventGridSettings` | `DefaultAsteriskOptions`, `EventGridOptions` already exist | settings display drivers stay Orchard |
 
 Rule: framework services take `IOptionsMonitor<T>` (or `IOptions<T>` when refresh is irrelevant). No framework type may reference `ISiteService`, `ISite`, or `OrchardCore.Entities`.
 
@@ -361,7 +361,7 @@ public static class ContactCenterCapabilities
 }
 ```
 
-- `IContactCenterFeatureWorkManager`, `IContactCenterFeatureLifecycleParticipant`, `ContactCenterFeatureLifecycleOptions`, and the provider lifecycle participants (Telnyx, Asterisk, Dialpad) key on capability names.
+- `IContactCenterFeatureWorkManager`, `IContactCenterFeatureLifecycleParticipant`, `ContactCenterFeatureLifecycleOptions`, and the provider lifecycle participants (Telnyx, Asterisk) key on capability names.
 - Orchard `ContactCenterFeatureLifecycleHandler` maps `ContactCenterConstants.Feature.X` to `ContactCenterCapabilities.X` in one dictionary; the feature ids themselves stay in `CrestApps.OrchardCore.ContactCenter.Abstractions`.
 - Verify nothing persists the feature id string (`grep -rn "Feature\." src/Core/CrestApps.OrchardCore.ContactCenter.Core/Models`) before renaming values; if a stored document carries a feature id, keep the legacy value as the capability value.
 

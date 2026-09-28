@@ -36,7 +36,6 @@ This review walks every Orchard feature in scope, states what it does today, wha
 | `CrestApps.OrchardCore.Telnyx.AiVoice` | Telnyx, Automated Voice, AI, ChatCore, Managements | `telnyx.AddAiVoice()` | TTS/transcription media provider, phone processor | `VoiceAgentMediaProviderTests`, `TelnyxContactCenterVoiceMediaProviderTests` |
 | Telnyx with Contact Center Voice / Voice Media (`[RequireFeatures]` startups) | ContactCenter.Voice / Voice.Media | `telnyx.AddContactCenterVoice()` / `.AddContactCenterMedia()` | recording ingest, IVR, queue treatment, media sessions, lifecycle participant | `TelnyxRecordingIngestEnqueuerTests`, `TelnyxIvrProviderTests`, `TelnyxQueueTreatmentProviderTests`, `TelnyxContactCenterVoiceMediaSessionTests` |
 | `CrestApps.OrchardCore.Asterisk` (+ CC voice/media startups) | Telephony (+ CC Voice / Voice.Media) | `AddCoreAsterisk(section)` + `.AddContactCenterVoice()` / `.AddContactCenterMedia()`; settings driver/bridge, migrations, wrappers, tenant events wrapper stay | ARI client contracts (cassette tests), PJSIP credential leases, realtime listener reconnect, RTP media, reconcilers, tenant isolation | the 53 `Asterisk*Tests` + cassettes, `AsteriskChannelTenantBindingIsolationTests`, `AsteriskWebSecurityTests` (Orchard host) |
-| `CrestApps.OrchardCore.Dialpad` (+ `DialerStartup`) | Telephony (+ CC Voice) | `AddCoreDialpad(section)` + `.AddContactCenterVoice()`; settings driver, webhook registration controller stay | JWT validation, webhook contract, direct vs CC inbound routing | `Dialpad*Tests`, cassettes |
 | `CrestApps.OrchardCore.WebSockets` | - | `AddCoreWebSockets()` + `UseWebSockets`; Redis owner store stays | rendezvous across nodes | `WebSocketConnectionRegistryTests`, `TwoNodeWebSocketRendezvousTests` |
 | `CrestApps.OrchardCore.PhoneNumbers` | - | `AddCorePhoneNumbers()` | parsing/E.164 | `PhoneNumberTests`, `PhoneNumberComparisonKeyTests`, `PhoneNumberCanonicalizationArchitectureTests` |
 
@@ -90,7 +89,7 @@ This review walks every Orchard feature in scope, states what it does today, wha
 ## 3. Things easy to miss (checked explicitly)
 
 - `EnabledByDependencyOnly` features (`AgentServices`, `ChannelEndpoints`, `ProviderInbox`, `Voice`, `Voice.Media`, `Recording.Core`, `RealTime`, `SoftPhone.Core`, `WebSockets`, `PhoneNumbers`) keep their flag; the framework has no equivalent, so their registrations must be reachable from the dependent features' `AddCore*` methods too.
-- `[RequireFeatures]` startups (deployment, recipes, workflows, health checks, Redis, Reports, AI subject flow, Content Transfer, DNC + Content Transfer, Contents, Telnyx/Asterisk/Dialpad with CC Voice/Media, Telnyx AiVoice) keep their conditions; only their framework-eligible lines move.
+- `[RequireFeatures]` startups (deployment, recipes, workflows, health checks, Redis, Reports, AI subject flow, Content Transfer, DNC + Content Transfer, Contents, Telnyx/Asterisk with CC Voice/Media, Telnyx AiVoice) keep their conditions; only their framework-eligible lines move.
 - Startup ordering rules that today rely on `TryAdd` (Telnyx inbound router) become explicit `Replace` inside the framework method.
 - `services.Configure<MvcOptions>` filters (soft phone widget/extension dialer filters, agent bar filter) stay Orchard.
 - `IContentDefinitionEventHandler` / `OmnichannelContentTypeProvider` singletons stay Orchard.

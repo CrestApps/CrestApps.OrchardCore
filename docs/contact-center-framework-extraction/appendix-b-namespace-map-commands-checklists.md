@@ -31,7 +31,6 @@ Apply with a scripted find/replace over `using` directives, `namespace` declarat
 | `CrestApps.OrchardCore.Telnyx.Core.Services` / `.Models` / `.Indexes` | `CrestApps.Core.Telephony.Telnyx.Services` / `.Models` / `.Data.YesSql` | `CrestApps.Core.Telephony.Telnyx` |
 | `CrestApps.OrchardCore.Telnyx.*` (module) | `CrestApps.Core.Telephony.Telnyx.*` | `CrestApps.Core.Telephony.Telnyx` |
 | `CrestApps.OrchardCore.Asterisk.*` | `CrestApps.Core.Telephony.Asterisk.*` | `CrestApps.Core.Telephony.Asterisk` |
-| `CrestApps.OrchardCore.Dialpad.*` | `CrestApps.Core.Telephony.Dialpad.*` | `CrestApps.Core.Telephony.Dialpad` |
 | `CrestApps.OrchardCore.Omnichannel.Core.Models` | `CrestApps.Core.Omnichannel.Models` | `CrestApps.Core.Omnichannel.Abstractions` |
 | `CrestApps.OrchardCore.Omnichannel.Core.Services` | `CrestApps.Core.Omnichannel.Services` | abstractions (interfaces) / `CrestApps.Core.Omnichannel` (implementations) |
 | `CrestApps.OrchardCore.Omnichannel.Core.Indexes` | `CrestApps.Core.Data.YesSql.Indexes.Omnichannel` | store |

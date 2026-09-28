@@ -13,7 +13,7 @@ documentation.
 
 ## Why Telnyx
 
-Dialpad's public API only offers an "initiate‑via‑ring" model (it rings the agent's own Dialpad app,
+A click‑to‑call provider API that only offers an "initiate‑via‑ring" model (it rings the agent's own desk or mobile app,
 carries no audio in the browser, and exposes no server‑side bridging), which makes a browser‑only soft
 phone impossible and breaks true power dialing. Telnyx exposes a SIP‑over‑WebSocket registrar
 (`wss://sip.telnyx.com:7443`) with per‑user telephony credentials **and** a REST Call Control API, so the soft
@@ -114,7 +114,7 @@ implemented as `TelnyxContactCenterVoiceMediaProvider` / `TelnyxContactCenterVoi
 **Needed to complete:**
 
 - Ed25519 signature acceptance/rejection tests for `TelnyxWebhookSignatureValidator` (valid signature, wrong key, tampered body, bad timestamp).
-- `TelnyxCallEventParser` + `TelnyxWebhookService` normalization/state‑mapping tests (recorded Telnyx deliveries under `tests/CrestApps.OrchardCore.Tests/Telephony/`, mirroring the Dialpad cassette approach).
+- `TelnyxCallEventParser` + `TelnyxWebhookService` normalization/state‑mapping tests (recorded Telnyx deliveries under `tests/CrestApps.OrchardCore.Tests/Telephony/`, using recorded cassettes).
 - DID → agent routing tests: `EntryPointRoutingPlanner` agent target, and `InboundVoiceCallProcessor` offering the named agent then falling back to the queue when unavailable.
 
 ### 4. WebRTC end‑to‑end verification & TURN
@@ -132,7 +132,7 @@ implemented as `TelnyxContactCenterVoiceMediaProvider` / `TelnyxContactCenterVoi
 
 **Needed to complete:**
 
-- A `contact-center-telnyx-ga-core` recipe mirroring the Dialpad/Asterisk GA recipes to enable and pre‑configure the features for a new tenant.
+- A `contact-center-telnyx-ga-core` recipe mirroring the Asterisk GA recipe to enable and pre‑configure the features for a new tenant.
 
 ### 6. "Connect Telnyx" guided auto‑provisioning (API‑key based)
 
@@ -148,15 +148,15 @@ implemented as `TelnyxContactCenterVoiceMediaProvider` / `TelnyxContactCenterVoi
 
 **Original design (for reference):**
 
-**Design (reuses the Dialpad register‑webhook pattern):**
+**Design (register‑webhook pattern):**
 
-- `ITelnyxProvisioningApiService` (mirrors `IDialpadWebhookApiService`) uses the API key to **find‑or‑create** (idempotently, by a stable name such as `CrestApps <tenant>`):
+- `ITelnyxProvisioningApiService` uses the API key to **find‑or‑create** (idempotently, by a stable name such as `CrestApps <tenant>`):
   - a **Call Control application** (`POST /v2/call_control_applications`) with `webhook_event_url` set to `https://<tenant-host>/api/telnyx/webhook/call` → resolves `ConnectionId`;
   - a **Credential SIP connection** (`POST /v2/credential_connections`) → resolves `SipConnectionId`;
   - an **outbound voice profile** (`POST /v2/outbound_voice_profiles`) bound to both connections → resolves `OutboundVoiceProfileId`.
 - It **lists existing numbers** (`GET /v2/phone_numbers`) and sets `DefaultOutboundCallerId` when one is unambiguous, or surfaces a picker (never auto‑buys).
 - It attempts to **fetch the account webhook public key**; if Telnyx exposes no such endpoint, the admin pastes it once (the one remaining manual field) — everything else is filled in automatically.
-- A controller/endpoint (mirrors `DialpadWebhookRegistrationController`) runs the provisioning, writes the resolved ids into `TelnyxSettings`, and the settings page polls a **status** action and refreshes — exactly like Dialpad's **Register webhook** UX. A **Disconnect** action can delete the created resources.
+- A controller/endpoint runs the provisioning, writes the resolved ids into `TelnyxSettings`, and the settings page polls a **status** action and refreshes, like a **Register webhook** UX. A **Disconnect** action can delete the created resources.
 
 **Why this over OAuth:** no CrestApps‑registered OAuth application, no token storage/refresh, no OAuth scopes to reconcile. The runtime provider keeps using the static API key it already uses.
 
