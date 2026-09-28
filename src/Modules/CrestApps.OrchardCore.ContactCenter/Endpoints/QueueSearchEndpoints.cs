@@ -1,4 +1,7 @@
+using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Core;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -23,11 +26,21 @@ internal static class QueueSearchEndpoints
         return builder;
     }
 
-    private static async Task<IResult> HandleAsync(
+    internal static async Task<IResult> HandleAsync(
         string query,
+        HttpContext httpContext,
+        IAuthorizationService authorizationService,
         IActivityQueueManager queueManager,
         CancellationToken cancellationToken)
     {
+        // Signing in used to be enough, so any registered user could list every queue by name. Only the people who
+        // pick a queue -- those who manage queues, or the channel endpoints whose routing names one -- see the list.
+        if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.ManageQueues) &&
+            !await authorizationService.AuthorizeAsync(httpContext.User, OmnichannelConstants.Permissions.ManageChannelEndpoints))
+        {
+            return Results.Forbid();
+        }
+
         var queues = await queueManager.GetEnabledAsync(cancellationToken);
 
         IEnumerable<Core.Models.ActivityQueue> matches = queues;

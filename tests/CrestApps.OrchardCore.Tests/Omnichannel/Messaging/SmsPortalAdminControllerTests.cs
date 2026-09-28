@@ -560,6 +560,7 @@ public sealed class SmsPortalAdminControllerTests
             Mock.Of<IOmnichannelChannelEndpointManager>(),
             Mock.Of<IMessageTemplateManager>(),
             agentProfileManager.Object,
+            new PermissiveAgentEntitlementPolicy(),
             availabilityService.Object,
             Mock.Of<IMessagingAgentNameProvider>(),
             queueManagers,

@@ -351,6 +351,7 @@ namespace CrestApps.OrchardCore.Telephony.Services
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction>> GetActiveByUserAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction>> GetRecentAsync(string userId, int count, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<int> GetUnreadVoicemailCountAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> IsHeldByAnotherUserAsync(string userId, string callId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<int> MarkAllVoicemailsReadAsync(string userId, System.DateTime readUtc, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction> MarkVoicemailReadAsync(string userId, string callId, System.DateTime readUtc, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task UpdateAsync(CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction interaction, System.Threading.CancellationToken cancellationToken = default) { }

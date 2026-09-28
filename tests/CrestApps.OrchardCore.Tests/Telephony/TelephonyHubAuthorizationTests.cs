@@ -687,6 +687,14 @@ public sealed class TelephonyHubAuthorizationTests
             return Task.CompletedTask;
         }
 
+        public Task<bool> IsHeldByAnotherUserAsync(
+            string userId,
+            string callId,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(_interactions.Any(value =>
+                string.Equals(value.CallId, callId, StringComparison.Ordinal) &&
+                !string.Equals(value.UserId, userId, StringComparison.Ordinal)));
+
         public Task<TelephonyInteraction> FindByCallIdAsync(
             string userId,
             string callId,

@@ -24,11 +24,6 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
 {
     private const string WorkLeaseKey = "ContactCenterFeatureWorkLease";
 
-    /// <summary>
-    /// The name of the SignalR group that receives supervisor-wide updates.
-    /// </summary>
-    public const string SupervisorsGroup = "cc:supervisors";
-
     private readonly ILogger _logger;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IContactCenterFeatureWorkManager _workManager;
@@ -65,6 +60,38 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
     public static string QueueGroup(string queueId)
     {
         return $"cc:queue:{queueId}";
+    }
+
+    /// <summary>
+    /// Builds the SignalR group name that receives the supervisor updates for a single queue. A supervisor joins it
+    /// only for the queues they may oversee, so the live events about a queue's agents, offers, recordings and call
+    /// quality reach nobody else.
+    /// </summary>
+    /// <param name="queueId">The queue identifier, which for a campaign is its campaign queue.</param>
+    /// <returns>The supervisor queue group name.</returns>
+    public static string SupervisorQueueGroup(string queueId)
+    {
+        return $"cc:supervisors:queue:{queueId}";
+    }
+
+    /// <summary>
+    /// Lists the queues a supervisor oversees: the queues they are allowed, and the campaign queue of each campaign
+    /// they are allowed. It is the same scope the live dashboard's own state is limited to.
+    /// </summary>
+    /// <param name="supervisor">The supervisor's agent profile.</param>
+    /// <returns>The queue identifiers.</returns>
+    public static IReadOnlyList<string> GetSupervisedQueueIds(AgentProfile supervisor)
+    {
+        if (supervisor is null)
+        {
+            return [];
+        }
+
+        return (supervisor.AllowedQueueIds ?? [])
+            .Concat((supervisor.AllowedCampaignIds ?? []).Where(campaignId => !string.IsNullOrWhiteSpace(campaignId)).Select(ContactCenterConstants.CampaignQueue.CreateId))
+            .Where(queueId => !string.IsNullOrWhiteSpace(queueId))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     /// <inheritdoc/>
@@ -145,7 +172,18 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
             {
                 authorized = true;
 
-                await Groups.AddToGroupAsync(Context.ConnectionId, GetSupervisorsGroup(), HubConnectionWork.MustComplete);
+                // One group for every supervisor used to carry every queue's events -- agents' names and states,
+                // offers, recordings, call quality -- so a supervisor limited to one queue heard about all of them.
+                // Each queue now has a supervisor group of its own, joined only for the queues this one oversees.
+                var supervisor = await services.AgentManager.FindByUserIdAsync(userId, HubConnectionWork.MustComplete);
+
+                foreach (var queueId in GetSupervisedQueueIds(supervisor))
+                {
+                    await Groups.AddToGroupAsync(
+                        Context.ConnectionId,
+                        TenantSignalRGroupName.ForGroup(_tenantName, SupervisorQueueGroup(queueId)),
+                        HubConnectionWork.MustComplete);
+                }
             }
         });
 
@@ -221,6 +259,11 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
 
         return _scopeExecutor.ExecuteAsync<ContactCenterHubScopeContext>(async services =>
         {
+            if (!await StillAuthorizedAsync(services, "Heartbeat"))
+            {
+                return;
+            }
+
             await services.SessionService.HeartbeatAsync(userId, Context.ConnectionId, HubConnectionWork.MustComplete);
         });
     }
@@ -242,10 +285,40 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
 
         await _scopeExecutor.ExecuteAsync<ContactCenterHubScopeContext>(async services =>
         {
+            if (!await StillAuthorizedAsync(services, "GetSnapshot"))
+            {
+                return;
+            }
+
             snapshot = await services.SessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
         });
 
         return snapshot;
+    }
+
+    // Permission is checked when the connection opens, and these two calls repeat for as long as it stays open. A user
+    // whose agent permission was taken away while connected kept their session alive through the heartbeat, stayed in
+    // their queues' groups, and kept reading their desktop snapshot. A connection that is now only a supervisor's does
+    // no agent work; one with neither permission is closed, which drops every group it joined.
+    private async Task<bool> StillAuthorizedAsync(ContactCenterHubScopeContext services, string actionName)
+    {
+        if (await AuthorizeAsync(services, ContactCenterPermissions.SignIntoQueues))
+        {
+            return true;
+        }
+
+        if (!await AuthorizeAsync(services, ContactCenterPermissions.MonitorContactCenter))
+        {
+            _logger.LogWarning(
+                "Closed the Contact Center connection '{ConnectionId}' of user '{UserId}' on {Action}: they no longer have a Contact Center permission.",
+                Context.ConnectionId.SanitizeLogValue(),
+                Context.UserIdentifier.SanitizeLogValue(),
+                actionName);
+
+            Context.Abort();
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -551,10 +624,5 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
     private string GetQueueGroup(string queueId)
     {
         return TenantSignalRGroupName.ForGroup(_tenantName, QueueGroup(queueId));
-    }
-
-    private string GetSupervisorsGroup()
-    {
-        return TenantSignalRGroupName.ForGroup(_tenantName, SupervisorsGroup);
     }
 }

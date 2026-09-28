@@ -142,6 +142,18 @@ public sealed class BroadcastsController : Controller
             ModelState.AddModelError(nameof(model.RecipientsText), S["At least one recipient is required."]);
         }
 
+        // Each recipient is written to in their own conversation, and one that already exists may belong to a
+        // colleague or another queue. The broadcast is sent later with nobody signed in to check, so it is checked now.
+        if (channel is not null && recipients.Count > 0)
+        {
+            var unreachable = await _workspaceBuilder.FindUnreachableRecipientsAsync(User, channel.Name, recipients, HttpContext.RequestAborted);
+
+            if (unreachable.Count > 0)
+            {
+                ModelState.AddModelError(nameof(model.RecipientsText), S["These recipients already have a conversation you cannot send on, handled by a colleague or another queue: {0}", string.Join(", ", unreachable)]);
+            }
+        }
+
         if (!ModelState.IsValid)
         {
             await PopulateEndpointsAsync(model);
