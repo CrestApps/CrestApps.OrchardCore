@@ -23,6 +23,7 @@ Configure the provider under **Settings** -> **Phone Number Verifications** on t
 
 | Setting | Default | Purpose |
 | --- | --- | --- |
+| **Enable this provider** | Off | Makes the provider available. Its other settings appear, and it can be picked as the **Default provider**, only after this is switched on and saved. |
 | **Authentication type** | API key SID and secret | The Twilio authentication strategy. |
 | **API key SID** / **API key secret** | _(empty)_ | Recommended production credentials. The secret is stored as a protected value. |
 | **Account SID** / **Auth Token** | _(empty)_ | Local testing credentials. The token is stored as a protected value. |
