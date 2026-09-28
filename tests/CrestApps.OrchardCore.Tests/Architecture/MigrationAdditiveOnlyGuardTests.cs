@@ -515,6 +515,16 @@ public sealed class MigrationAdditiveOnlyGuardTests
             null,
             "Timestamp of the chat opt-out, shipped in stable 2.0.0 and dropped in 3.0.0 alongside the column it dates. It records when a preference no channel can act on was taken, and no released version read it, so a customer upgrading from 2.0.0 loses nothing; the original timestamp survives in the contact's own document because only the projection is dropped."),
         new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.Omnichannel/Migrations/OmnichannelContactCommunicationPreferenceIndexMigrations.cs",
+            "OmnichannelContactCommunicationPreferenceIndexMigrations",
+            "DropSqlServerColumnDefaultAsync",
+            "raw SQL",
+            "alter",
+            MigrationContractJustification.ContractPhase,
+            "2.0.0",
+            null,
+            "SQL Server refuses to drop a column while a default constraint still references it, so on SQL Server alone the auto-named default constraint DoNotChat shipped with in stable 2.0.0 is dropped immediately before the column, and only when the catalog shows one is present. The constraint belongs to the column being retired in the same step and has no meaning without it; PostgreSQL, MySQL, and SQLite drop the default with the column, so the statement never runs there."),
+        new MigrationContractEntry(
             "src/Modules/CrestApps.OrchardCore.ContactCenter/Migrations/InteractionDuplicateRepair.cs",
             "InteractionDuplicateRepair",
             "DeleteIndexRowAsync",
