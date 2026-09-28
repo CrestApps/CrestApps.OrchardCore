@@ -544,6 +544,29 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "3.0.0",
             null,
             "A row-level repair, not a schema change: it removes an interaction document that an earlier defect stored a second time, and only after its content has been merged into the document kept for the same interaction in this same step. No table, column or index is removed, and every interaction keeps exactly one document holding what both copies recorded."),
+        new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.ContactCenter/Migrations/InteractionEventIndexMigrations.cs",
+            "InteractionEventIndexMigrations",
+            "UpdateFrom4Async",
+            "raw SQL",
+            "drop",
+            MigrationContractJustification.InPlaceRebuild,
+            "3.0.0",
+            null,
+            "PostgreSQL and SQLite name only the index in a drop, so the name is resolved against the connection's search path rather than the table's schema, and a tenant whose tables live in a named schema drops nothing at all. This statement removes only the aggregate index over the column this same step widens, and it is recreated over the widened column here; it is issued only on the engines whose own drop cannot find it.",
+            "CreateIndex",
+            "IDX_InteractionEventIndex_Aggregate"),
+        new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.ContactCenter/Migrations/InteractionEventIndexMigrations.cs",
+            "InteractionEventIndexMigrations",
+            "UpdateFrom4Async",
+            "DropIndex",
+            "IDX_InteractionEventIndex_Aggregate",
+            MigrationContractJustification.InPlaceRebuild,
+            "3.0.0",
+            null,
+            "SQLite refuses to drop a column an index refers to, so the aggregate index comes down before the aggregate column is widened to hold a provider's call id and is recreated over the same columns in the same step.",
+            "CreateIndex"),
     ];
 
     private static readonly ReviewedDynamicSqlEntry[] _reviewedDynamicSqlSites =
