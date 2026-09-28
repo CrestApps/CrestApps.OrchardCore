@@ -12,6 +12,7 @@ using CrestApps.OrchardCore.Tests.Utilities;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -59,7 +60,7 @@ public sealed class VoiceIngressGateWriteLockTests
                     callerLegHoldsTheLease.SetResult();
                     await agentLegHasWritten.Task;
 
-                    var interactionStore = new DefaultTelephonyInteractionStore(session, store, new ProviderIdentityResolver([]), []);
+                    var interactionStore = new DefaultTelephonyInteractionStore(session, store, new ProviderIdentityResolver([]), [], NullLogger<DefaultTelephonyInteractionStore>.Instance);
 
                     await interactionStore.UpdateByProviderCallIdAsync(
                         ProviderName,

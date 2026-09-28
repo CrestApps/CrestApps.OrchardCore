@@ -1,6 +1,10 @@
-﻿using CrestApps.OrchardCore.Telephony.Core.Services;
+﻿using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Indexes;
 using CrestApps.OrchardCore.Telephony.Models;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using OrchardCore.Environment.Shell.Scope;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Telephony.Services;
@@ -19,6 +23,10 @@ public sealed class DefaultTelephonyInteractionStore : ITelephonyInteractionStor
     private readonly IStore _store;
     private readonly IProviderIdentityResolver _providerIdentityResolver;
     private readonly IEnumerable<ITelephonyCallObserver> _callObservers;
+    private readonly ILogger _logger;
+    private readonly Dictionary<string, PendingNotification> _pendingNotifications = new(StringComparer.Ordinal);
+
+    private bool _notificationsScheduled;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultTelephonyInteractionStore"/> class.
@@ -26,17 +34,20 @@ public sealed class DefaultTelephonyInteractionStore : ITelephonyInteractionStor
     /// <param name="session">The ambient YesSql session used for reads and creates.</param>
     /// <param name="store">The YesSql store used to open the short isolated sessions that concurrency retries require.</param>
     /// <param name="providerIdentityResolver">The resolver used to canonicalize provider aliases so a provider and its configuration-backed default variant correlate under a single identity.</param>
-    /// <param name="callObservers">The observers told when a saved call has started or ended.</param>
+    /// <param name="callObservers">The observers told, once the call is committed, that a saved call has started or ended.</param>
+    /// <param name="logger">The logger.</param>
     public DefaultTelephonyInteractionStore(
         ISession session,
         IStore store,
         IProviderIdentityResolver providerIdentityResolver,
-        IEnumerable<ITelephonyCallObserver> callObservers)
+        IEnumerable<ITelephonyCallObserver> callObservers,
+        ILogger<DefaultTelephonyInteractionStore> logger)
     {
         _session = session;
         _store = store;
         _providerIdentityResolver = providerIdentityResolver;
         _callObservers = callObservers;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -52,13 +63,7 @@ public sealed class DefaultTelephonyInteractionStore : ITelephonyInteractionStor
         interaction.ProviderName = _providerIdentityResolver.Canonicalize(interaction.ProviderName);
 
         await _session.SaveAsync(interaction, cancellationToken: cancellationToken);
-
-        foreach (var observer in _callObservers)
-        {
-            await observer.CallStartedAsync(interaction, cancellationToken);
-        }
-
-        await NotifyIfEndedAsync(interaction, cancellationToken);
+        await NotifyAsync(interaction, started: true, ended: IsEnded(interaction), cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -67,22 +72,133 @@ public sealed class DefaultTelephonyInteractionStore : ITelephonyInteractionStor
         ArgumentNullException.ThrowIfNull(interaction);
 
         await _session.SaveAsync(interaction, checkConcurrency: true, cancellationToken: cancellationToken);
-        await NotifyIfEndedAsync(interaction, cancellationToken);
+
+        // Every writer that settles a call saves it through this store, so this is the one place its end is seen,
+        // whichever path -- the soft phone, the provider's events or reconciliation -- settled it.
+        await NotifyAsync(interaction, started: false, ended: IsEnded(interaction), cancellationToken);
     }
 
-    // Every writer that settles a call saves it through this store, so this is the one place its end is seen,
-    // whichever path -- the soft phone, the provider's events or reconciliation -- settled it.
-    private async Task NotifyIfEndedAsync(TelephonyInteraction interaction, CancellationToken cancellationToken)
+    private static bool IsEnded(TelephonyInteraction interaction)
+        => interaction.Outcome != CallOutcome.InProgress && interaction.EndedUtc.HasValue;
+
+    // Observers are told once the call is committed, in a scope of their own. They used to run inside the caller's
+    // unit of work, on its session: an observer's write that the database refused cancelled that session, and the
+    // call it was told about was never committed. Live, a Contact Center audit event the database rejected took the
+    // soft phone's own call record with it, and the phone hung up the call on its next refresh because the server no
+    // longer knew it. Outside a shell scope, where there is no commit to wait for, they are told at once.
+    private async Task NotifyAsync(TelephonyInteraction interaction, bool started, bool ended, CancellationToken cancellationToken)
     {
-        if (interaction.Outcome == CallOutcome.InProgress || !interaction.EndedUtc.HasValue)
+        if (!started && !ended)
         {
             return;
         }
 
-        foreach (var observer in _callObservers)
+        if (ShellScope.Current is null || string.IsNullOrEmpty(interaction.InteractionId))
         {
-            await observer.CallEndedAsync(interaction, cancellationToken);
+            await NotifyObserversAsync(_callObservers, interaction, started, ended, _logger, cancellationToken);
+
+            return;
         }
+
+        if (!_pendingNotifications.TryGetValue(interaction.InteractionId, out var pending))
+        {
+            pending = new PendingNotification();
+            _pendingNotifications[interaction.InteractionId] = pending;
+        }
+
+        pending.Started |= started;
+        pending.Ended |= ended;
+
+        if (_notificationsScheduled)
+        {
+            return;
+        }
+
+        _notificationsScheduled = true;
+
+        var notifications = _pendingNotifications;
+        var logger = _logger;
+
+        ShellScope.AddDeferredTask(scope => NotifyCommittedAsync(scope.ServiceProvider, notifications, logger));
+    }
+
+    private static async Task NotifyCommittedAsync(
+        IServiceProvider services,
+        Dictionary<string, PendingNotification> notifications,
+        ILogger logger)
+    {
+        var session = services.GetRequiredService<ISession>();
+        var observers = services.GetServices<ITelephonyCallObserver>().ToArray();
+
+        foreach (var (interactionId, pending) in notifications)
+        {
+            // Read back what was committed: a save that rolled back never happened, so it is not reported, and a
+            // call saved more than once is reported as it finally stood.
+            var interaction = await session
+                .Query<TelephonyInteraction, TelephonyInteractionIndex>(x => x.InteractionId == interactionId)
+                .FirstOrDefaultAsync(CancellationToken.None);
+
+            if (interaction is null)
+            {
+                if (logger.IsEnabled(LogLevel.Debug))
+                {
+                    logger.LogDebug(
+                        "The telephony call '{InteractionId}' was not committed, so its observers were not told about it.",
+                        interactionId.SanitizeLogValue());
+                }
+
+                continue;
+            }
+
+            await NotifyObserversAsync(observers, interaction, pending.Started, pending.Ended && IsEnded(interaction), logger, CancellationToken.None);
+        }
+    }
+
+    private static async Task NotifyObserversAsync(
+        IEnumerable<ITelephonyCallObserver> observers,
+        TelephonyInteraction interaction,
+        bool started,
+        bool ended,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        foreach (var observer in observers)
+        {
+            try
+            {
+                if (started)
+                {
+                    await observer.CallStartedAsync(interaction, cancellationToken);
+                }
+
+                if (ended)
+                {
+                    await observer.CallEndedAsync(interaction, cancellationToken);
+                }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                if (logger.IsEnabled(LogLevel.Warning))
+                {
+                    logger.LogWarning(
+                        ex,
+                        "The telephony call observer '{Observer}' failed for the call '{CallId}'. The call itself is saved.",
+                        observer.GetType().Name,
+                        interaction.CallId.SanitizeLogValue());
+                }
+            }
+        }
+    }
+
+    private sealed class PendingNotification
+    {
+        public bool Started { get; set; }
+
+        public bool Ended { get; set; }
     }
 
     /// <inheritdoc/>
@@ -208,7 +324,7 @@ public sealed class DefaultTelephonyInteractionStore : ITelephonyInteractionStor
 
         if (wasInProgress)
         {
-            await NotifyIfEndedAsync(interaction, cancellationToken);
+            await NotifyAsync(interaction, started: false, ended: IsEnded(interaction), cancellationToken);
         }
 
         return (true, interaction);

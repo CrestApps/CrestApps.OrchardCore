@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Tests.Utilities;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -45,8 +46,8 @@ public sealed class TelephonyInteractionStoreConcurrencyTests
 
             await using var sessionA = store.CreateSession();
             await using var sessionB = store.CreateSession();
-            var storeA = new DefaultTelephonyInteractionStore(sessionA, store, CreateProviderIdentityResolver(), []);
-            var storeB = new DefaultTelephonyInteractionStore(sessionB, store, CreateProviderIdentityResolver(), []);
+            var storeA = new DefaultTelephonyInteractionStore(sessionA, store, CreateProviderIdentityResolver(), [], NullLogger<DefaultTelephonyInteractionStore>.Instance);
+            var storeB = new DefaultTelephonyInteractionStore(sessionB, store, CreateProviderIdentityResolver(), [], NullLogger<DefaultTelephonyInteractionStore>.Instance);
 
             var fromA = await storeA.FindByCallIdAsync("user-1", "call-1", TestContext.Current.CancellationToken);
             var fromB = await storeB.FindByCallIdAsync("user-1", "call-1", TestContext.Current.CancellationToken);
@@ -88,7 +89,7 @@ public sealed class TelephonyInteractionStoreConcurrencyTests
             await SeedAsync(store);
 
             await using var session = store.CreateSession();
-            var interactionStore = new DefaultTelephonyInteractionStore(session, store, CreateProviderIdentityResolver(), []);
+            var interactionStore = new DefaultTelephonyInteractionStore(session, store, CreateProviderIdentityResolver(), [], NullLogger<DefaultTelephonyInteractionStore>.Instance);
             var attempts = 0;
 
             // Act
@@ -138,7 +139,7 @@ public sealed class TelephonyInteractionStoreConcurrencyTests
         try
         {
             await using var session = store.CreateSession();
-            var interactionStore = new DefaultTelephonyInteractionStore(session, store, CreateProviderIdentityResolver(), [observer]);
+            var interactionStore = new DefaultTelephonyInteractionStore(session, store, CreateProviderIdentityResolver(), [observer], NullLogger<DefaultTelephonyInteractionStore>.Instance);
 
             // Act
             await interactionStore.CreateAsync(new TelephonyInteraction
@@ -187,7 +188,7 @@ public sealed class TelephonyInteractionStoreConcurrencyTests
             await SeedAsync(store);
 
             await using var session = store.CreateSession();
-            var interactionStore = new DefaultTelephonyInteractionStore(session, store, CreateProviderIdentityResolver(), []);
+            var interactionStore = new DefaultTelephonyInteractionStore(session, store, CreateProviderIdentityResolver(), [], NullLogger<DefaultTelephonyInteractionStore>.Instance);
             var attempts = 0;
             var observedOutcomes = new List<CallOutcome>();
 
@@ -245,7 +246,7 @@ public sealed class TelephonyInteractionStoreConcurrencyTests
             await SeedAsync(store);
 
             await using var session = store.CreateSession();
-            var interactionStore = new DefaultTelephonyInteractionStore(session, store, CreateProviderIdentityResolver(), []);
+            var interactionStore = new DefaultTelephonyInteractionStore(session, store, CreateProviderIdentityResolver(), [], NullLogger<DefaultTelephonyInteractionStore>.Instance);
 
             // Act
             var updated = await interactionStore.UpdateByIdAsync(
@@ -282,7 +283,7 @@ public sealed class TelephonyInteractionStoreConcurrencyTests
             await SeedAsync(store);
 
             await using var session = store.CreateSession();
-            var interactionStore = new DefaultTelephonyInteractionStore(session, store, CreateProviderIdentityResolver(), []);
+            var interactionStore = new DefaultTelephonyInteractionStore(session, store, CreateProviderIdentityResolver(), [], NullLogger<DefaultTelephonyInteractionStore>.Instance);
             var invoked = false;
 
             // Act
@@ -318,7 +319,7 @@ public sealed class TelephonyInteractionStoreConcurrencyTests
         {
             await using (var session = store.CreateSession())
             {
-                var interactionStore = new DefaultTelephonyInteractionStore(session, store, resolver, []);
+                var interactionStore = new DefaultTelephonyInteractionStore(session, store, resolver, [], NullLogger<DefaultTelephonyInteractionStore>.Instance);
                 var interaction = new TelephonyInteraction
                 {
                     InteractionId = "interaction-alias",
@@ -341,7 +342,7 @@ public sealed class TelephonyInteractionStoreConcurrencyTests
 
             await using (var session = store.CreateSession())
             {
-                var interactionStore = new DefaultTelephonyInteractionStore(session, store, resolver, []);
+                var interactionStore = new DefaultTelephonyInteractionStore(session, store, resolver, [], NullLogger<DefaultTelephonyInteractionStore>.Instance);
                 matched = await interactionStore.UpdateByProviderCallIdAsync(
                     "Asterisk",
                     "call-alias",
@@ -423,7 +424,7 @@ public sealed class TelephonyInteractionStoreConcurrencyTests
     private static async Task SeedAsync(IStore store)
     {
         await using var session = store.CreateSession();
-        var interactionStore = new DefaultTelephonyInteractionStore(session, store, CreateProviderIdentityResolver(), []);
+        var interactionStore = new DefaultTelephonyInteractionStore(session, store, CreateProviderIdentityResolver(), [], NullLogger<DefaultTelephonyInteractionStore>.Instance);
         var interaction = new TelephonyInteraction
         {
             InteractionId = "interaction-1",
