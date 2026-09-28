@@ -156,6 +156,7 @@ The endpoint logs one line for each event it receives, with the event type and t
 - **Information:** the event was mapped to the `SMS` channel and the `SmsReceived` event, with the provider message id and the message length.
 - **Information:** the event is a delivery report, with its status, and it is stored but not routed.
 - **Information:** a redelivery of a text that was already processed was ignored.
+- **Warning:** storing an inbound text hit a concurrency conflict and is retried (up to three attempts in total). An **Error** is logged only when every attempt fails, or on any other failure.
 - **Warning:** a recognized event could not be mapped, and why.
 - **Debug:** the event type has no mapping.
 

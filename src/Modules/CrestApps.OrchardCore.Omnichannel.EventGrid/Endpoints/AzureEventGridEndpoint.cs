@@ -24,11 +24,22 @@ using Microsoft.IdentityModel.Tokens;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Modules;
+using YesSql;
 using YesSqlSession = YesSql.ISession;
 
 internal static class AzureEventGridEndpoint
 {
     private const long _maximumRequestBodySizeBytes = 1024 * 1024;
+
+    // A concurrency conflict while storing an inbound text is retried in a fresh scope, because Event Grid has
+    // already been answered and will not redeliver it. The delays sit between attempts 1-2 and 2-3.
+    private const int _maximumInboundSmsAttempts = 3;
+
+    private static readonly TimeSpan[] _inboundSmsRetryDelays =
+    [
+        TimeSpan.FromMilliseconds(200),
+        TimeSpan.FromMilliseconds(500),
+    ];
 
     /// <summary>
     /// Adds the azure event grid endpoint.
@@ -277,24 +288,24 @@ internal static class AzureEventGridEndpoint
             ? e.Id
             : mapping.ProviderMessageId;
 
-        var omnichannelMessage = new OmnichannelMessage
-        {
-            CustomerAddress = mapping.From,
-            ServiceAddress = mapping.To,
-            Content = mapping.Content,
-            Channel = mapping.Channel,
-            CreatedUtc = createdUtc,
-            IsInbound = true,
-            ProviderMessageId = providerMessageId,
-        };
-
-        var omnichannelEvent = new OmnichannelEvent
+        // A retry must not reuse objects a failed attempt's handlers may have changed, so each attempt builds its
+        // own message and event from the mapped values.
+        OmnichannelEvent CreateEvent() => new()
         {
             Id = providerMessageId,
             EventType = mapping.EventName,
             Subject = "SMS received",
             Data = BinaryData.FromString(mapping.Content),
-            Message = omnichannelMessage,
+            Message = new OmnichannelMessage
+            {
+                CustomerAddress = mapping.From,
+                ServiceAddress = mapping.To,
+                Content = mapping.Content,
+                Channel = mapping.Channel,
+                CreatedUtc = createdUtc,
+                IsInbound = true,
+                ProviderMessageId = providerMessageId,
+            },
         };
 
         if (logger.IsEnabled(LogLevel.Information))
@@ -313,57 +324,94 @@ internal static class AzureEventGridEndpoint
         // together can outlast the 30 seconds Event Grid waits for a response. Event Grid would then treat the
         // delivery as failed and send it again, racing the original for the same conversation. So, as the Twilio
         // webhook does, acknowledge now and process the text in a fresh shell scope off the request thread.
-        var backgroundScope = await shellHost.GetScopeAsync(shellSettings);
-
-        _ = ProcessInboundSmsAsync(backgroundScope, omnichannelMessage, omnichannelEvent, providerMessageId, logger);
+        _ = ProcessInboundSmsAsync(shellHost, shellSettings, CreateEvent, mapping.Channel, providerMessageId, logger);
     }
 
     private static async Task ProcessInboundSmsAsync(
-        ShellScope backgroundScope,
-        OmnichannelMessage omnichannelMessage,
-        OmnichannelEvent omnichannelEvent,
+        IShellHost shellHost,
+        ShellSettings shellSettings,
+        Func<OmnichannelEvent> createEvent,
+        string channel,
         string providerMessageId,
         ILogger logger)
     {
-        try
+        // Event Grid delivers at least once, so the same text can arrive again. Claim its id once, before it is
+        // stored or any handler runs, so a redelivery is neither recorded twice nor answered again. The claim is
+        // made on the first attempt only; a retry below is this same delivery and must not see itself as a
+        // duplicate. The gate ships with Omnichannel management; without it, the handlers' own idempotency applies.
+        var claimed = false;
+
+        for (var attempt = 1; ; attempt++)
         {
-            await backgroundScope.UsingAsync(async scope =>
+            try
             {
-                var scopedSession = scope.ServiceProvider.GetRequiredService<YesSqlSession>();
-                var scopedHandlers = scope.ServiceProvider.GetServices<IOmnichannelEventHandler>();
-                var scopedLogger = scope.ServiceProvider.GetRequiredService<ILogger<Startup>>();
+                var isDuplicate = false;
 
-                using var logScope = scopedLogger.BeginScope(new Dictionary<string, object>
+                // Each attempt runs in its own shell scope, so a retry starts from a clean session rather than one
+                // whose commit already failed.
+                var backgroundScope = await shellHost.GetScopeAsync(shellSettings);
+
+                await backgroundScope.UsingAsync(async scope =>
                 {
-                    ["ProviderMessageId"] = providerMessageId.SanitizeLogValue(),
-                    ["Channel"] = omnichannelMessage.Channel,
-                });
+                    var scopedSession = scope.ServiceProvider.GetRequiredService<YesSqlSession>();
+                    var scopedHandlers = scope.ServiceProvider.GetServices<IOmnichannelEventHandler>();
+                    var scopedLogger = scope.ServiceProvider.GetRequiredService<ILogger<Startup>>();
 
-                // Event Grid delivers at least once, so the same text can arrive again. Claim its id once, before it
-                // is stored or any handler runs, so a redelivery is neither recorded twice nor answered again. The
-                // gate ships with Omnichannel management; without it, the handlers' own idempotency still applies.
-                var conversationGate = scope.ServiceProvider.GetService<IAutomatedConversationGate>();
-
-                if (conversationGate is not null && !conversationGate.TryClaimInboundMessage(providerMessageId))
-                {
-                    if (scopedLogger.IsEnabled(LogLevel.Information))
+                    using var logScope = scopedLogger.BeginScope(new Dictionary<string, object>
                     {
-                        scopedLogger.LogInformation("Ignoring a duplicate Event Grid SMS delivery for ProviderMessageId {ProviderMessageId}.", providerMessageId.SanitizeLogValue());
+                        ["ProviderMessageId"] = providerMessageId.SanitizeLogValue(),
+                        ["Channel"] = channel,
+                    });
+
+                    if (!claimed)
+                    {
+                        var conversationGate = scope.ServiceProvider.GetService<IAutomatedConversationGate>();
+
+                        if (conversationGate is not null && !conversationGate.TryClaimInboundMessage(providerMessageId))
+                        {
+                            isDuplicate = true;
+
+                            return;
+                        }
+
+                        claimed = true;
                     }
 
-                    return;
+                    var omnichannelEvent = createEvent();
+
+                    await scopedSession.SaveAsync(omnichannelEvent.Message, collection: OmnichannelConstants.CollectionName);
+
+                    await scopedHandlers.InvokeAsync((handler, evt) => handler.HandleAsync(evt), omnichannelEvent, scopedLogger);
+                });
+
+                if (isDuplicate && logger.IsEnabled(LogLevel.Information))
+                {
+                    logger.LogInformation("Ignoring a duplicate Event Grid SMS delivery for ProviderMessageId {ProviderMessageId}.", providerMessageId.SanitizeLogValue());
                 }
 
-                await scopedSession.SaveAsync(omnichannelMessage, collection: OmnichannelConstants.CollectionName);
+                return;
+            }
+            catch (ConcurrencyException) when (attempt < _maximumInboundSmsAttempts)
+            {
+                // Another writer changed a document this attempt also wrote, and the session was not committed.
+                // Event Grid has already been answered, so this is the only place the text can be retried.
+                logger.LogWarning(
+                    "Retrying inbound Event Grid SMS {ProviderMessageId} after a concurrency conflict (attempt {Attempt} of {MaxAttempts}).",
+                    providerMessageId.SanitizeLogValue(),
+                    attempt,
+                    _maximumInboundSmsAttempts);
 
-                await scopedHandlers.InvokeAsync((handler, evt) => handler.HandleAsync(evt), omnichannelEvent, scopedLogger);
-            });
-        }
-        catch (Exception ex)
-        {
-            // Event Grid has already been answered, so nothing upstream is left to retry this work, and an
-            // exception escaping here would be unobserved. Record it so the lost text is visible in the logs.
-            logger.LogError(ex, "Failed to process the inbound Event Grid SMS {ProviderMessageId} in the background.", providerMessageId.SanitizeLogValue());
+                await Task.Delay(_inboundSmsRetryDelays[attempt - 1]);
+            }
+            catch (Exception ex)
+            {
+                // Any other failure, or a concurrency conflict on the last attempt. Event Grid has already been
+                // answered, so nothing upstream is left to retry this work, and an exception escaping here would be
+                // unobserved. Record it so the lost text is visible in the logs.
+                logger.LogError(ex, "Failed to process the inbound Event Grid SMS {ProviderMessageId} in the background.", providerMessageId.SanitizeLogValue());
+
+                return;
+            }
         }
     }
 
