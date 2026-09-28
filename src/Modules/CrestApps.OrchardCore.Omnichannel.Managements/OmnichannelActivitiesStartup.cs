@@ -84,7 +84,8 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
             .AddYesSqlDocumentCatalog<Cadence, CadenceIndex>(collection: OmnichannelConstants.CollectionName)
             .AddScoped<ICatalogEntryHandler<Cadence>, CadenceHandler>()
             .AddIndexProvider<CadenceIndexProvider>()
-            .AddDataMigration<CadenceIndexMigrations>();
+            .AddDataMigration<CadenceIndexMigrations>()
+            .AddDataMigration<DocumentTypeColumnMigrations>();
 
         services.AddContentPart<OmnichannelContactPart>();
         services.AddContentPart<OmnichannelSubjectPart>();
