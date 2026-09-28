@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Security.Cryptography;
 using CrestApps.OrchardCore.DncRegistry.Models;
 using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.AspNetCore.DataProtection;
@@ -77,8 +78,7 @@ public sealed class UsaFtcDncRegistry : INationalDoNotCallRegistry
             return dncNumbers;
         }
 
-        var protector = _dataProtectionProvider.CreateProtector("CrestApps.OrchardCore.DncRegistry.UsaFtcSettings");
-        var apiKey = protector.Unprotect(settings.ProtectedApiKey);
+        string apiKey = null;
 
         var client = _httpClientFactory.CreateClient(nameof(UsaFtcDncRegistry));
         var baseUrl = string.IsNullOrWhiteSpace(settings.BaseUrl)
@@ -92,14 +92,19 @@ public sealed class UsaFtcDncRegistry : INationalDoNotCallRegistry
                 continue;
             }
 
+            var apiNumber = ConvertToApiFormat(phoneNumber.Value);
+
+            if (apiNumber is null)
+            {
+                continue;
+            }
+
+            // The key is only read once a number this registry can answer for is actually being checked, so
+            // a batch with no United States numbers never depends on the saved key being readable.
+            apiKey ??= UnprotectApiKey(settings.ProtectedApiKey);
+
             try
             {
-                var apiNumber = ConvertToApiFormat(phoneNumber.Value);
-
-                if (apiNumber is null)
-                {
-                    continue;
-                }
                 var requestUrl = $"{baseUrl}Check?PhoneNumber={apiNumber}&OrganizationId={settings.OrganizationId}&api_key={apiKey}";
 
                 var response = await client.GetAsync(requestUrl, cancellationToken);
@@ -134,6 +139,36 @@ public sealed class UsaFtcDncRegistry : INationalDoNotCallRegistry
         }
 
         return dncNumbers;
+    }
+
+    /// <summary>
+    /// Decrypts the saved API key. A key that cannot be decrypted (saved under different data-protection
+    /// keys, for example after the tenant's key ring was replaced) leaves the registry unable to answer. That
+    /// is reported as a screening failure, the same as an unreachable registry, so callers treat the numbers
+    /// as unscreened instead of crashing or treating them as cleared.
+    /// </summary>
+    /// <param name="protectedApiKey">The encrypted API key from the site settings.</param>
+    /// <returns>The decrypted API key.</returns>
+    private string UnprotectApiKey(string protectedApiKey)
+    {
+        try
+        {
+            var protector = _dataProtectionProvider.CreateProtector(DncRegistryConstants.DataProtectionPurposes.UsaFtcApiKey);
+
+            return protector.Unprotect(protectedApiKey);
+        }
+        catch (CryptographicException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "The saved API key for do-not-call registry {RegistryKey} could not be read, so the registry is unavailable for this check. Re-enter the API key in the USA FTC DNC Registry settings.",
+                Key);
+
+            throw new DoNotCallScreeningException(
+                Key,
+                "The saved API key for the United States FTC do-not-call registry could not be read, so it could not report whether the number is listed. Re-enter the API key in the registry settings.",
+                ex);
+        }
     }
 
     /// <summary>
