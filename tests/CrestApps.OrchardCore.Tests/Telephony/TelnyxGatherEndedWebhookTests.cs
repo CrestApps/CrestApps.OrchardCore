@@ -137,7 +137,7 @@ public sealed class TelnyxGatherEndedWebhookTests
                 new NoExternalTransferOutcomeSink(),
                 new TelnyxApiClient(
                     new HttpClient(new RecordingHttpMessageHandler()) { BaseAddress = new Uri("https://api.telnyx.com/v2/") },
-                    new OptionsWrapper<TelnyxOptions>(new TelnyxOptions { ApiBaseUrl = "https://api.telnyx.com/v2/", ApiKey = "KEY" }),
+                    new TestOptionsMonitor<TelnyxOptions>(new TelnyxOptions { ApiBaseUrl = "https://api.telnyx.com/v2/", ApiKey = "KEY" }),
                     new TelnyxApiRetryPolicy(TimeSpan.Zero),
                     NullLogger<TelnyxApiClient>.Instance),
                 new Mock<IClock>().Object,

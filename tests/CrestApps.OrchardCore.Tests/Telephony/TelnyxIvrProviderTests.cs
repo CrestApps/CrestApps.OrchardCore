@@ -334,7 +334,7 @@ public sealed class TelnyxIvrProviderTests
 
         var apiClient = new TelnyxApiClient(
             httpClient,
-            new OptionsWrapper<TelnyxOptions>(new TelnyxOptions
+            new TestOptionsMonitor<TelnyxOptions>(new TelnyxOptions
             {
                 ApiBaseUrl = "https://api.telnyx.com/v2/",
                 ApiKey = "test-api-key",

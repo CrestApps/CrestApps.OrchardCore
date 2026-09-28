@@ -24,24 +24,35 @@ public sealed partial class TelnyxApiClient
     private static readonly JsonSerializerOptions _serializerOptions = new(JsonSerializerDefaults.Web);
 
     private readonly HttpClient _httpClient;
-    private readonly TelnyxOptions _options;
+    private readonly IOptionsMonitor<TelnyxOptions> _options;
     private readonly TelnyxApiRetryPolicy _retryPolicy;
     private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TelnyxApiClient"/> class.
     /// </summary>
+    /// <param name="httpClient">The HTTP client the commands are sent with.</param>
+    /// <param name="options">The Telnyx settings, read again for every request.</param>
+    /// <param name="retryPolicy">The policy that decides whether a failed command is repeated.</param>
+    /// <param name="logger">The logger.</param>
     public TelnyxApiClient(
         HttpClient httpClient,
-        IOptions<TelnyxOptions> options,
+        IOptionsMonitor<TelnyxOptions> options,
         TelnyxApiRetryPolicy retryPolicy,
         ILogger<TelnyxApiClient> logger)
     {
         _httpClient = httpClient;
-        _options = options.Value;
+        _options = options;
         _retryPolicy = retryPolicy;
         _logger = logger;
     }
+
+    // The settings as they are now. Saving the Telnyx settings does not restart the tenant, and this client used to
+    // read them once through IOptions, so a corrected API key was ignored: the rest of the provider saw the new
+    // settings and called Telnyx, and this client kept sending the old key until the app restarted. Live, a key a
+    // browser had autofilled with the admin's password went on being refused ("Could not find any usable
+    // credentials") after the real key was saved.
+    private TelnyxOptions CurrentOptions => _options.CurrentValue;
 
     /// <summary>
     /// Answers a ringing call. Answering an already-answered call is harmless, so this is retried.
@@ -555,7 +566,7 @@ public sealed partial class TelnyxApiClient
 
                 // The bearer is attached per request rather than on the shared client, because the client is
                 // registered once for the process while the key is a per-tenant setting.
-                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.ApiKey);
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", CurrentOptions.ApiKey);
 
                 if (body is not null)
                 {

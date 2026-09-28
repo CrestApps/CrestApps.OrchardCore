@@ -40,7 +40,7 @@ internal static class TelnyxContactCenterProviderFactory
 
         var apiClient = new TelnyxApiClient(
             new HttpClient(handler) { BaseAddress = new Uri("https://api.telnyx.test/v2/") },
-            new OptionsWrapper<TelnyxOptions>(options),
+            new TestOptionsMonitor<TelnyxOptions>(options),
             new TelnyxApiRetryPolicy(TimeSpan.Zero),
             NullLogger<TelnyxApiClient>.Instance);
 
@@ -74,7 +74,7 @@ internal static class TelnyxContactCenterProviderFactory
 
         var apiClient = new TelnyxApiClient(
             new HttpClient(handler) { BaseAddress = new Uri("https://api.telnyx.test/v2/") },
-            new OptionsWrapper<TelnyxOptions>(options),
+            new TestOptionsMonitor<TelnyxOptions>(options),
             new TelnyxApiRetryPolicy(TimeSpan.Zero),
             NullLogger<TelnyxApiClient>.Instance);
 

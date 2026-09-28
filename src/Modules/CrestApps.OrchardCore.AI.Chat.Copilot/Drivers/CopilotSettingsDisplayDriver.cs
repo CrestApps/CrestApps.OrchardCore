@@ -11,6 +11,7 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Environment.Options;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
 
@@ -27,6 +28,7 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
     private readonly IAuthorizationService _authorizationService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly CopilotCallbackUrlProvider _callbackUrlProvider;
+    private readonly IOptionsUpdateNotifier _optionsUpdateNotifier;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -45,6 +47,7 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
         IAuthorizationService authorizationService,
         IDataProtectionProvider dataProtectionProvider,
         CopilotCallbackUrlProvider callbackUrlProvider,
+        IOptionsUpdateNotifier optionsUpdateNotifier,
         IHtmlLocalizer<CopilotSettingsDisplayDriver> htmlLocalizer,
         IStringLocalizer<CopilotSettingsDisplayDriver> stringLocalizer)
     {
@@ -52,6 +55,7 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
         _authorizationService = authorizationService;
         _dataProtectionProvider = dataProtectionProvider;
         _callbackUrlProvider = callbackUrlProvider;
+        _optionsUpdateNotifier = optionsUpdateNotifier;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -171,6 +175,12 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.ApiKey), S["API key is required for Azure provider."]);
             }
+        }
+
+        if (context.Updater.ModelState.IsValid)
+        {
+            // The next read of CopilotOptions sees these settings; the tenant keeps running.
+            _optionsUpdateNotifier.RequestUpdate<CopilotOptions>();
         }
 
         return await EditAsync(site, settings, context);

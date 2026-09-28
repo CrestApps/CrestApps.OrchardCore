@@ -77,7 +77,7 @@ public sealed partial class TelnyxApiClient
 
     private void ApplySpeech(Dictionary<string, object> body, string voice, string language)
     {
-        body["voice"] = string.IsNullOrWhiteSpace(voice) ? TelnyxPrompts.ResolveVoice(_options) : voice;
-        body["language"] = string.IsNullOrWhiteSpace(language) ? TelnyxPrompts.ResolveLanguage(_options) : language;
+        body["voice"] = string.IsNullOrWhiteSpace(voice) ? TelnyxPrompts.ResolveVoice(CurrentOptions) : voice;
+        body["language"] = string.IsNullOrWhiteSpace(language) ? TelnyxPrompts.ResolveLanguage(CurrentOptions) : language;
     }
 }

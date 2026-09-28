@@ -6,7 +6,9 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Environment.Shell;
+using CrestApps.OrchardCore.Telnyx.Services;
+using OrchardCore.Environment.Options;
+using OrchardCore.Sms;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
 
@@ -23,19 +25,19 @@ public sealed class TelnyxSmsSettingsDisplayDriver : SiteDisplayDriver<TelnyxSms
     private const string SmsSettingsGroupId = "sms";
 
     private readonly IDataProtectionProvider _dataProtectionProvider;
-    private readonly IShellReleaseManager _shellReleaseManager;
+    private readonly IOptionsUpdateNotifier _optionsUpdateNotifier;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
     internal readonly IStringLocalizer S;
 
     public TelnyxSmsSettingsDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
-        IShellReleaseManager shellReleaseManager,
+        IOptionsUpdateNotifier optionsUpdateNotifier,
         IHttpContextAccessor httpContextAccessor,
         IStringLocalizer<TelnyxSmsSettingsDisplayDriver> stringLocalizer)
     {
         _dataProtectionProvider = dataProtectionProvider;
-        _shellReleaseManager = shellReleaseManager;
+        _optionsUpdateNotifier = optionsUpdateNotifier;
         _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
     }
@@ -115,9 +117,11 @@ public sealed class TelnyxSmsSettingsDisplayDriver : SiteDisplayDriver<TelnyxSms
 
         if (context.Updater.ModelState.IsValid)
         {
-            // The provider options and the provider list are resolved from these settings; request a shell
-            // release so the new configuration takes effect.
-            _shellReleaseManager.RequestRelease();
+            // The provider options and Orchard Core's provider list are both built from these settings, and both are
+            // read through IOptionsMonitor, so signalling them applies the change without restarting the tenant.
+            _optionsUpdateNotifier
+                .RequestUpdate<TelnyxSmsOptions>()
+                .RequestUpdate<SmsProviderOptions>();
         }
 
         return Edit(site, settings, context);

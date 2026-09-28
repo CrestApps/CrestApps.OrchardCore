@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Modules;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -64,7 +65,7 @@ public sealed class TelnyxConnectToAgentConcurrencyTests
 
         var apiClient = new TelnyxApiClient(
             new HttpClient(handler) { BaseAddress = new Uri("https://api.telnyx.test/v2/") },
-            new OptionsWrapper<TelnyxOptions>(options),
+            new TestOptionsMonitor<TelnyxOptions>(options),
             new TelnyxApiRetryPolicy(TimeSpan.Zero),
             NullLogger<TelnyxApiClient>.Instance);
 

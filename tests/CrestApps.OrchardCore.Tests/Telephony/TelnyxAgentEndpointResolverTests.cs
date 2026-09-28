@@ -227,7 +227,7 @@ public sealed class TelnyxAgentEndpointResolverTests
     private static TelnyxAgentEndpointResolver Resolver(Mock<ITelnyxAgentCredentialStore> store)
         => new(
             store.Object,
-            new OptionsWrapper<TelnyxOptions>(new TelnyxOptions { SipDomain = "sip.example.com" }),
+            new TestOptionsMonitor<TelnyxOptions>(new TelnyxOptions { SipDomain = "sip.example.com" }),
             new StubClock(_now),
             NullLogger<TelnyxAgentEndpointResolver>.Instance);
 
@@ -254,7 +254,7 @@ public sealed class TelnyxAgentEndpointResolverTests
 
         return new TelnyxAgentEndpointResolver(
             store.Object,
-            new OptionsWrapper<TelnyxOptions>(new TelnyxOptions { SipDomain = "sip.example.com" }),
+            new TestOptionsMonitor<TelnyxOptions>(new TelnyxOptions { SipDomain = "sip.example.com" }),
             new StubClock(_now),
             logger);
     }

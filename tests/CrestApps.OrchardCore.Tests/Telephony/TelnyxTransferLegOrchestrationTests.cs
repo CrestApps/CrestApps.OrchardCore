@@ -533,7 +533,7 @@ public sealed class TelnyxTransferLegOrchestrationTests
         return new(
             new TelnyxApiClient(
                 new HttpClient(handler) { BaseAddress = new Uri("https://api.telnyx.com/v2/") },
-                new OptionsWrapper<TelnyxOptions>(options),
+                new TestOptionsMonitor<TelnyxOptions>(options),
                 new TelnyxApiRetryPolicy(TimeSpan.Zero),
                 NullLogger<TelnyxApiClient>.Instance),
             NullLogger<TelnyxOutboundBridgeOrchestrator>.Instance,
