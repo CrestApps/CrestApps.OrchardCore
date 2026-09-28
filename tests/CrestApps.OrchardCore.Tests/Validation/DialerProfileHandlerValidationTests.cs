@@ -63,6 +63,24 @@ public class DialerProfileHandlerValidationTests
         AssertFailedFor(context, nameof(DialerProfile.Mode));
     }
 
+    // Bug: the Predictive refusal told the user to choose Manual, a mode the editor no longer offers. The message must
+    // name only the modes that can be chosen.
+    [Fact]
+    public async Task ValidatingAsync_WhenTheModeIsPredictive_NamesOnlyPreviewPowerAndProgressive()
+    {
+        // Arrange
+        var profile = CreateValidProfile();
+        profile.Mode = DialerMode.Predictive;
+
+        // Act
+        var context = await ValidateAsync(profile);
+
+        // Assert
+        var error = Assert.Single(context.Result.Errors, error => error.MemberNames.Contains(nameof(DialerProfile.Mode)));
+        Assert.Equal("Predictive dialing is not available yet. Choose Preview, Power, or Progressive.", error.ErrorMessage);
+        Assert.DoesNotContain("Manual", error.ErrorMessage);
+    }
+
     [Theory]
     [InlineData(DialerMode.Power)]
     [InlineData(DialerMode.Progressive)]
