@@ -83,15 +83,15 @@ Revise, do not rewrite. Each page keeps its feature-focused content and gains a 
 | Page | Change |
 | --- | --- |
 | `contact-center/index.md` | Add a "Built on the CrestApps.Core Contact Center Suite" section: what the framework owns (orchestration services, stores, hub bases, providers) and what the Orchard modules add (features, admin, permissions, recipes, deployments, workflows, reports). Keep feature/administration tables and the layer diagram |
-| `contact-center/public-api-surface.md` | Update the governed-assembly list (framework assemblies are governed upstream); explain that changing a framework surface happens in the Core repository |
-| `contact-center/production-readiness-changelog.md` | Entry for the split (Phase 1) and the package switch (Phase 2) |
+| `docs/engineering/contact-center/public-api-surface.md` | Update the governed-assembly list (framework assemblies are governed upstream); explain that changing a framework surface happens in the Core repository |
+| `docs/engineering/contact-center/production-readiness-changelog.md` | Entry for the split (Phase 1) and the package switch (Phase 2) |
 | `contact-center/runbooks.md`, `production-support.md` | Package versions matter now: add "check the `CrestApps.Core.*` package version" to the diagnostics checklist |
 | `contact-center/configuration-deployment.md` | Options sections unchanged; note which options classes are framework types |
 | `contact-center/agents-queues-dialer.md`, `routing-work-state.md`, `voice-routing.md`, `live-call-topology.md`, `workflows.md`, `report-catalog.md`, `agent-desktop.md`, `user-manual.md` | Replace `CrestApps.OrchardCore.ContactCenter.Core.*` type references with the `CrestApps.Core.ContactCenter.*` names; link to Core docs for service contracts |
 | `telephony/index.md`, `custom-providers.md` | Provider contracts now live in `CrestApps.Core.Telephony.Abstractions`; a provider can be an Orchard module or a plain package; show both registration styles (`AddTelephonyProvider<T>` in a framework builder vs. an Orchard `Startup`) |
 | `telephony/telnyx.md`, `asterisk.md`, `dialpad.md`, `extension-dialing.md`, `recording-azure-blob-storage.md` | Settings screens unchanged; note options classes and framework packages |
-| `telephony/*-project-plan.md`, `production-readiness-soft-phone-telnyx.md`, `soft-phone-endpoint-implementation-plan.md` | Historical; add a banner that the implementation moved to the framework |
-| `omnichannel/index.md`, `management.md`, `cadences.md`, `sms.md`, `sms-portal.md`, `event-grid.md`, `azure-communication-services.md`, `ai-agent-handoff-project-plan.md`, `production-readiness-sms-portal.md` | Same treatment: framework note, type-name updates, link to `contact-center/omnichannel.md` and `sms-portal.md` in the Core docs |
+| `docs/engineering/telephony/*-project-plan.md`, `production-readiness-soft-phone-telnyx.md`, `soft-phone-endpoint-implementation-plan.md` (moved out of the docs site) | Historical; add a banner that the implementation moved to the framework |
+| `omnichannel/index.md`, `management.md`, `cadences.md`, `sms.md`, `sms-portal.md`, `event-grid.md`, `azure-communication-services.md`, `ai-agent-handoff-project-plan.md` and `production-readiness-sms-portal.md` (now under `docs/engineering/omnichannel/`) | Same treatment: framework note, type-name updates, link to `contact-center/omnichannel.md` and `sms-portal.md` in the Core docs |
 | `feature-reference.md` | Unchanged feature ids; add package column if it lists assemblies |
 | `sidebars.js` | Unchanged unless pages are added |
 

@@ -787,5 +787,8 @@ public sealed class ContactCenterSecurePauseTests
 
         public Task NotifyCallQualityAlertAsync(CallQualityAlertNotification notification, CancellationToken cancellationToken = default)
             => Task.CompletedTask;
+
+        public Task NotifyInteractionChangedAsync(AgentInteractionNotification notification, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
     }
 }

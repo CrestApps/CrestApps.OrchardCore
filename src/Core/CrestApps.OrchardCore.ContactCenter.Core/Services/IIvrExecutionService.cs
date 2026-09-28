@@ -39,4 +39,17 @@ public interface IIvrExecutionService
     /// <param name="reason">Why they left.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     Task EndAsync(Interaction interaction, string reason, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Answers the caller and speaks the entry point's welcome or closed message. The message is recorded as being
+    /// spoken, and committed, before the provider is asked to say it, so the provider's report that it has ended can
+    /// never arrive for a call that does not yet say it is waiting on one.
+    /// </summary>
+    /// <param name="interaction">The caller's interaction.</param>
+    /// <param name="text">What to say.</param>
+    /// <param name="endCallAfter">Whether the provider ends the call once the message has been said.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns><see langword="true"/> when the provider accepted the message; <see langword="false"/> when it cannot be said.</returns>
+    Task<bool> AnnounceAsync(Interaction interaction, string text, bool endCallAfter, CancellationToken cancellationToken = default)
+        => Task.FromResult(false);
 }

@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Modules;
 using OrchardCore.Users;
@@ -449,7 +450,8 @@ public sealed class ContactCenterRealTimeEventHandlerTests
         return new ContactCenterRealTimeEventHandler(
             notifier.Object,
             new TestContactCenterScopeExecutor(provider),
-            clock.Object);
+            clock.Object,
+            NullLogger<ContactCenterRealTimeEventHandler>.Instance);
     }
 
     private static Mock<IDisplayNameProvider> MockDisplayNameProvider()

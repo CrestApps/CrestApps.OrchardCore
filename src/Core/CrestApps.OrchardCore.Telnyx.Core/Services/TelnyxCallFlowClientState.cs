@@ -7,7 +7,8 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 /// <summary>
 /// The <c>client_state</c> the platform attaches to a Telnyx command whose webhooks it has to act on later: the new leg
 /// of an external transfer, whose answer or hang-up says whether the transfer worked, and a last message the caller is
-/// told before the call is ended, whose <c>call.speak.ended</c> is the moment to hang up.
+/// told before the call is ended, whose <c>call.speak.ended</c> is the moment to hang up, and an entry point's welcome or
+/// closed message, whose <c>call.speak.ended</c> is the moment the caller goes on to the menu, the queue or voicemail.
 /// </summary>
 /// <remarks>
 /// Telnyx echoes a command's <c>client_state</c> on every later webhook for the leg, and <c>target_leg_client_state</c>
@@ -26,6 +27,11 @@ public sealed class TelnyxCallFlowClientState
     /// The intent carried by a last message after which the call is ended.
     /// </summary>
     public const string HangUpAfterSpeechIntent = "cc-bye";
+
+    /// <summary>
+    /// The intent carried by an entry point's welcome or closed message, after which the caller goes on.
+    /// </summary>
+    public const string AnnouncementIntent = "cc-ann";
 
     private static readonly JsonSerializerOptions _options = new(JsonSerializerDefaults.Web)
     {
@@ -58,6 +64,12 @@ public sealed class TelnyxCallFlowClientState
         => new() { Intent = HangUpAfterSpeechIntent };
 
     /// <summary>
+    /// The state for an entry point's welcome or closed message, after which the caller goes on.
+    /// </summary>
+    public static TelnyxCallFlowClientState ForAnnouncement()
+        => new() { Intent = AnnouncementIntent };
+
+    /// <summary>
     /// Serializes the state without encoding it, for an API method that encodes <c>client_state</c> itself.
     /// </summary>
     public string ToJson()
@@ -87,7 +99,7 @@ public sealed class TelnyxCallFlowClientState
         {
             var parsed = JsonSerializer.Deserialize<TelnyxCallFlowClientState>(decodedClientState, _options);
 
-            if (parsed?.Intent is not (TransferLegIntent or HangUpAfterSpeechIntent))
+            if (parsed?.Intent is not (TransferLegIntent or HangUpAfterSpeechIntent or AnnouncementIntent))
             {
                 return false;
             }

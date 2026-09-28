@@ -242,6 +242,89 @@ public sealed class TelnyxIvrProviderTests
         Assert.False(played);
     }
 
+    [Fact]
+    public async Task AnEntryPointMessage_IsSpokenWithTheAnnouncementState_SoItsEndMovesTheCallerOn()
+    {
+        // Arrange
+        // Issued without a state, the end of the message was indistinguishable from any other speech on the call, so
+        // nothing knew when to start the menu, the queue or voicemail after it.
+        var handler = new RecordingHttpMessageHandler().AlwaysRespondWith(HttpStatusCode.OK);
+        var provider = CreateProvider(handler, options: new TelnyxOptions { TtsVoice = "AWS.Polly.Lupe-Neural", TtsLanguage = "es-US" });
+
+        // Act
+        var accepted = await provider.AnnounceAsync("ctrl-1", "Gracias por llamar.", endCallAfter: false, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(accepted);
+        Assert.Equal("/v2/calls/ctrl-1/actions/speak", handler.Requests.Single().Path);
+
+        using var body = JsonDocument.Parse(handler.Requests[0].Body);
+        Assert.Equal("Gracias por llamar.", body.RootElement.GetProperty("payload").GetString());
+        Assert.Equal("AWS.Polly.Lupe-Neural", body.RootElement.GetProperty("voice").GetString());
+        Assert.Equal("es-US", body.RootElement.GetProperty("language").GetString());
+        Assert.Equal(TelnyxCallFlowClientState.AnnouncementIntent, ReadIntent(body));
+    }
+
+    [Fact]
+    public async Task AClosedMessageBeforeReject_IsSpokenWithTheHangUpState_SoTheCallEndsOnceItIsSaid()
+    {
+        // Arrange
+        var handler = new RecordingHttpMessageHandler().AlwaysRespondWith(HttpStatusCode.OK);
+        var provider = CreateProvider(handler);
+
+        // Act
+        var accepted = await provider.AnnounceAsync("ctrl-1", "We are closed.", endCallAfter: true, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(accepted);
+
+        using var body = JsonDocument.Parse(handler.Requests.Single().Body);
+        Assert.Equal(TelnyxCallFlowClientState.HangUpAfterSpeechIntent, ReadIntent(body));
+    }
+
+    [Fact]
+    public async Task ARefusedEntryPointMessage_IsReportedRatherThanThrown()
+    {
+        // Arrange
+        // The router moves the caller on at once when the message cannot be said; a throw would strand them.
+        var handler = new RecordingHttpMessageHandler().AlwaysRespondWith(HttpStatusCode.UnprocessableEntity);
+        var provider = CreateProvider(handler);
+
+        // Act
+        var accepted = await provider.AnnounceAsync("ctrl-1", "Thanks for calling.", endCallAfter: false, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(accepted);
+    }
+
+    [Theory]
+    [InlineData(null, "Thanks for calling.")]
+    [InlineData("ctrl-1", null)]
+    [InlineData("ctrl-1", "  ")]
+    public async Task AnEntryPointMessageWithNothingToSayOrNoCall_SendsNothing(string callId, string text)
+    {
+        // Arrange
+        var handler = new RecordingHttpMessageHandler();
+        var provider = CreateProvider(handler);
+
+        // Act
+        var accepted = await provider.AnnounceAsync(callId, text, endCallAfter: false, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(accepted);
+        Assert.Empty(handler.Requests);
+    }
+
+    // The speak command's client_state is base64 JSON; decoded, it must parse as the call-flow state the webhook acts on.
+    private static string ReadIntent(JsonDocument body)
+    {
+        var decoded = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(body.RootElement.GetProperty("client_state").GetString()));
+
+        Assert.True(TelnyxCallFlowClientState.TryParse(decoded, out var state), decoded);
+
+        return state.Intent;
+    }
+
     private static TelnyxIvrProvider CreateProvider(HttpMessageHandler handler, VoiceMediaItem media = null, TelnyxOptions options = null)
     {
         var httpClient = new HttpClient(handler)

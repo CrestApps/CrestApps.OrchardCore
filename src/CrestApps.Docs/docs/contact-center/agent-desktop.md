@@ -13,19 +13,19 @@ This guide covers the two day-to-day Contact Center surfaces:
 Both build on the [real-time SignalR layer](index.md#real-time-experience) and the [Telephony](../telephony/index.md) soft phone. The CRM still owns the work (activities, contacts, subjects, dispositions), the Contact Center orchestrates it, and Telephony executes the media.
 
 :::tip Looking for step-by-step instructions?
-This page explains how the surfaces work. For a searchable, task-by-task how-to (sign in, accept a call, request a break, create a queue, load inventory, monitor/whisper/barge) with screencasts, see the [Agent & Supervisor User Manual](user-manual.md).
+This page explains how the surfaces work. For a task-by-task how-to (sign in, accept a call, request a break, create a queue, load inventory, monitor/whisper/barge) with screencasts, see the [User Manual](../user-manual/index.md).
 :::
 
 ## Choosing the agent experience
 
 There are two agent tiers, so enable the one that matches how your agents work:
 
-- **Soft-phone agents** - the Contact Center soft-phone projection is integration glue rather than a standalone feature: it activates automatically whenever **Contact Center Voice**, **Contact Center Real-Time**, and the **Telephony soft phone** (`CrestApps.OrchardCore.Telephony.SoftPhone`) are all enabled. Agents then get live Contact Center call state, presence, and work offers inside the Telephony soft phone, without the full-screen workspace.
-- **Full-desktop agents** - the CRM-integrated Agent Workspace is integration glue rather than a standalone feature. It activates automatically whenever **Contact Center Agents**, **Contact Center Voice**, **Contact Center Real-Time**, and the **Telephony soft phone** are all enabled, so it also surfaces the soft-phone projection automatically. There is no separate Agent Desktop feature to enable.
+- **Soft-phone agents** - the Contact Center soft-phone projection is integration glue rather than a standalone feature: it activates automatically whenever **Contact Center Voice**, **Contact Center Real-Time**, and the shared **Telephony Soft Phone Core** client (`CrestApps.OrchardCore.Telephony.SoftPhone.Core`) are all enabled. Soft Phone Core is enabled by dependency: turning on the **Telephony Soft Phone** widget or the **Telephony Soft Phone Extension** feature switches it on. Agents then get live Contact Center call state, presence, and work offers inside the Telephony soft phone, without the full-screen workspace.
+- **Full-desktop agents** - the CRM-integrated Agent Workspace is integration glue rather than a standalone feature. It activates automatically whenever **Contact Center Agents**, **Contact Center Voice**, **Contact Center Real-Time**, and **Telephony Soft Phone Core** are all enabled, so it also surfaces the soft-phone projection automatically. There is no separate Agent Desktop feature to enable.
 
 ## Enabling the surfaces
 
-The **My workspace** Agent Workspace activates on its own once **Contact Center Agents**, the **Telephony soft phone**, and a Contact Center voice capability — such as **Contact Center Inbound Voice** or the **Outbound Dialer**, which turn on **Contact Center Voice** and, with it, **Contact Center Real-Time** — are all enabled. It is gated on exactly those capabilities so the workspace cannot activate with missing services. Enable **Contact Center Supervision & Live Dashboard** (`CrestApps.OrchardCore.ContactCenter.Supervision`) for the **Live dashboard**; it explicitly composes Real-Time and Voice. Configure a voice provider such as [Dialpad](../telephony/dialpad.md) for voice work.
+The **My workspace** Agent Workspace activates on its own once **Contact Center Agents**, the **Telephony soft phone**, and a Contact Center voice capability — such as **Contact Center Inbound Voice** or the **Outbound Dialer**, which turn on **Contact Center Voice** and, with it, **Contact Center Real-Time** — are all enabled. It is gated on exactly those capabilities so the workspace cannot activate with missing services. Enable **Contact Center Supervision & Live Dashboard** (`CrestApps.OrchardCore.ContactCenter.Supervision`) for the **Live dashboard**; it explicitly composes Real-Time and Voice. Configure a voice provider such as [Telnyx](../telephony/telnyx.md) or [Asterisk](../telephony/asterisk.md) for voice work.
 
 The corresponding entries appear independently under **Interaction Center**:
 
@@ -34,16 +34,16 @@ The corresponding entries appear independently under **Interaction Center**:
 
 ## The docked agent bar
 
-Agents do not have to keep the Agent Workspace (or even the soft phone) focused to receive work. When the full-desktop agent experience is active — that is, whenever **Contact Center Agents**, **Contact Center Real-Time**, **Contact Center Voice**, and the **Telephony soft phone** are all enabled — a persistent **docked agent bar** is injected into the **admin** chrome (the layout `Footer` zone) of **every** admin page for any signed-in user who has the `ContactCenterSignIntoQueues` permission. It is admin chrome, not a placeable widget, so no page can accidentally omit it, and it auto-manages itself: it appears and disappears with the agent's live state rather than being added by hand.
+Agents do not have to keep the Agent Workspace (or even the soft phone) focused to receive work. When the full-desktop agent experience is active — that is, whenever **Contact Center Agents**, **Contact Center Real-Time**, **Contact Center Voice**, and **Telephony Soft Phone Core** are all enabled — a persistent **docked agent bar** is injected into the **admin** chrome (the layout `Footer` zone) of **every** admin page for any signed-in user who has the `ContactCenterSignIntoQueues` permission. It is admin chrome, not a placeable widget, so no page can accidentally omit it. The bar is always there as a small collapsed tab showing your presence; click it to open the bar. A new phone offer opens it on its own, and it tucks itself away again when that work is finished or when you click elsewhere on the page.
 
-The bar is the **CRM-side bridge to the call router**. It holds its own live Contact Center hub connection *outside* the soft phone, so a work assignment reaches the agent wherever they are in the CRM even when the soft phone is running in its own window or the [browser extension](../telephony/index.md). When work is assigned, the bar pops the matched record and drives the disposition, exactly like the in-page workspace.
+The bar is the **CRM-side bridge to the call router**. It holds its own live Contact Center hub connection *outside* the soft phone, so a work assignment reaches the agent wherever they are in the CRM even when the soft phone is running in its own window or the [browser extension](../telephony/index.md). When work is assigned, the bar pops the matched record. It shows the ringing offer with **Accept** and **Decline** (a preview offer shows **Dial** and **Skip**), then the active call with a link to the activity. Presence on the bar is read-only: change your status from the soft phone. The bar has no disposition controls of its own; you disposition the work on the activity's **Complete activity** page.
 
 The bar is deliberately **not** injected on:
 
 - the standalone soft-phone page (`/softphone`) — that page *is* the phone, and a second hub connection there would pop the matched record over the live call and navigate the phone away; and
 - non-admin (front-end) pages, and any non-view response (JSON, files, redirects) that has no layout to inject into.
 
-Because it rides the soft phone's capability model, a provider without in-browser audio (for example [Dialpad](../telephony/dialpad.md)) still gets the provider-neutral bar and workspace.
+Because it rides the soft phone's capability model, a provider without in-browser audio still gets the provider-neutral bar and workspace.
 
 ## For contact center managers: preparing the environment
 
@@ -54,9 +54,9 @@ Agents can only receive work once the routing environment exists. Configure thes
 3. **Business hours** (*Interaction Center → Management → Business hours*) - attach a calendar to a queue so it pauses routing (or overflows) when closed.
 4. **Inbound entry points** (*Interaction Center → Inbound entry points*, Entry Points feature) - map an inbound DID to a queue with a priority, business-hours gating, and a closed-hours action (hold, voicemail, overflow, or reject).
 5. **Agent state reason codes** (*Interaction Center → Management → Agent states*) - define the not-ready presence reasons agents can choose (for example `Lunch`, `Coaching`, `Admin`). These appear in the agent presence menu.
-6. **Agent entitlements** (*Interaction Center → Management → Agent entitlements*) - select an Orchard user and grant the queues and campaigns that user may join. The soft phone lists only these choices, sign-in rejects requests with no authorized membership, routing ignores stale or imported live memberships that are not also entitled, and removing an entitlement immediately prunes the corresponding live session membership, removes connected clients from revoked queue groups, and refreshes their membership snapshot.
+6. **Agent entitlements** (*Interaction Center → Management → Agent entitlements*, optional Agent Entitlements feature; without it any agent may sign in to any queue or campaign) - select an Orchard user and grant the queues and campaigns that user may join. The soft phone lists only these choices, sign-in rejects requests with no authorized membership, routing ignores stale or imported live memberships that are not also entitled, and removing an entitlement immediately prunes the corresponding live session membership, removes connected clients from revoked queue groups, and refreshes their membership snapshot.
 7. **Campaigns and dispositions** - campaigns and dispositions live in the [Omnichannel](../omnichannel/index.md) **Interaction Center**. Every activity carries a **Subject** whose **Subject Flow** is the single decision controller: it defines the dispositions an agent can choose and the follow-up actions each disposition triggers. See [Subject Flow is the single decision controller](index.md#subject-flow-is-the-single-decision-controller).
-8. **Dialer profiles** (*Interaction Center → Management → Dialer Profiles*, Dialer feature) - for outbound work, tie a campaign's activities to a queue, a dialing mode (manual, preview, power, or progressive), pacing, and compliance rules. See [Dialer](agents-queues-dialer.md#dialer).
+8. **Dialer profiles** (*Interaction Center → Management → Dialer Profiles*, Dialer feature) - for outbound work, define a reusable dialing mode (preview, power, or progressive), pacing, and compliance rules. The campaign is picked when inventory is loaded, not on the profile. See [Dialer](agents-queues-dialer.md#dialer).
 9. **Callbacks** - use the callback service or workflow bridge to schedule callback requests against a contact, destination, due window, and optional queue. Due callbacks are promoted into outbound callback activities and, when a queue is set, enter the same routing path as other work.
 
 Grant agents the `ContactCenterSignIntoQueues` permission (or a role that includes it), and grant supervisors the built-in **Supervisor** role (or the `MonitorContactCenter` permission).
@@ -85,7 +85,7 @@ Use this checklist before publishing a new inbound line:
 2. Configure the Subject Flow for that endpoint so inbound activities get the right subject, campaign, disposition list, required-disposition policy, and follow-up subject actions.
 3. Create the target queue, set its SLA, reservation timeout, routing strategy, required skills, and overflow queue.
 4. Attach a business-hours calendar when the queue should pause or overflow outside staffed hours.
-5. Create an **Inbound entry point** for the DID. Set the target queue (or a specific agent), priority, optional welcome/closed messages, the **default voicemail greeting** (spoken to callers who reach voicemail on this line when the agent has no greeting of their own), and the closed action: hold, voicemail, overflow, or reject. To let callers choose where they go, build an [IVR menu](#building-an-ivr-menu) on the same screen.
+5. Create an **Inbound entry point** for the DID. Set the target queue (or a specific agent), priority, the **default voicemail greeting** (spoken to callers who reach voicemail on this line when the agent has no greeting of their own), and the closed action: hold, voicemail, overflow, or reject. To let callers choose where they go, build an [IVR menu](#building-an-ivr-menu) on the same screen. The **Welcome message** is spoken to callers while the entry point is open, before the IVR menu or, without one, before they are put through to the target; the **Closed message** is spoken while it is closed, before the closed action. Both are optional; see [Voice Routing → Welcome and closed messages](voice-routing.md#welcome-and-closed-messages). The queue's own **Welcome message** is separate and is spoken when the caller starts waiting in the queue.
 6. Sign at least one skilled agent in to the queue, then place a test call. The expected path is **provider webhook → entry point → queue → reservation → Agent Workspace offer → soft-phone media**.
 7. Watch **Live dashboard** while testing. The queue waiting count should increase before assignment, then the selected agent should move from available to reserved/busy/wrap-up as the call progresses.
 
@@ -101,7 +101,7 @@ An entry point can play a phone menu ("press 1 for sales, 2 for support") before
    | --- | --- | --- |
    | Send to a queue | `RouteToQueue` | A queue, picked from the tenant's queues. |
    | Send to an agent | `RouteToAgent` | An agent, picked from the tenant's agents. |
-   | Open another menu | `SubMenu` | One of the menus defined here, or **+ New menu** to create one. |
+   | Open a submenu | `SubMenu` | One of the menus defined here, or **+ New menu** to create one. A key that jumps to a menu drawn under another key (for example back to the main menu) shows as **Go to another menu**. |
    | Send to voicemail | `Voicemail` | None. |
    | Transfer to an approved external number | `ExternalTransfer` | An approved destination from the **External transfer destinations** section of *Settings → Contact Center*. |
    | Repeat this menu | `Repeat` | None. |
@@ -141,10 +141,10 @@ Use CRM campaigns and activities as the source of outbound work; the dialer prof
 
 1. Create the campaign and Subject Flow in Omnichannel. Configure dispositions and subject actions first so every outcome has a business result.
 2. Load activities through **Load Inventory**. Choose a dialer source for dialer inventory so activities are loaded unassigned and available for reservation.
-3. Create a dialer profile that points to the campaign, queue, voice provider, dialing mode, pacing, and compliance settings.
+3. Create a dialer profile with the voice provider, dialing mode, pacing, and compliance settings, and pick it together with the campaign on the dialer inventory load.
 4. Confirm do-not-call, retry delay, calling window, and national registry settings before enabling an automated mode.
 5. For callbacks, schedule a callback request with the destination, due time, queue, and notes. The callback dispatcher promotes due callbacks into outbound callback activities and enqueues them when a queue is set.
-6. Agents receive preview/manual work from their signed-in campaign or automated power/progressive work from the queue, then complete it with the same disposition flow used for inbound work.
+6. Agents receive preview work, or automated power/progressive work, from the campaigns they are signed in to, then complete it with the same disposition flow used for inbound work.
 
 ## For contact center managers: workflow automation
 
@@ -170,19 +170,15 @@ Open **Interaction Center → My workspace**. This is the screen an agent keeps 
 - Select at least one queue or campaign before signing in. The Work tab shows an inline error when nothing is selected.
 - After sign-in, the Work tab lists every queue and campaign you are signed in to. Use the individual **Sign out** action to leave one membership while remaining signed in to the others, or **Sign out of all** to leave every membership.
 - If inbound voice work is already waiting in one of those queues, signing in or switching back to **Available** immediately asks routing to offer the next queued call instead of waiting for another inbound event.
-- The soft-phone **Work** tab now signs you in and out over the Contact Center SignalR hub instead of reloading the page, so queue membership updates stay in-place and the same browser connection immediately joins or leaves the live queue groups.
-- If the browser refreshes or the soft phone reconnects while you are still signed in and available, Contact Center now re-checks those queues again as soon as the soft phone reconnects, so already-waiting calls are re-offered instead of staying parked until the next inbound routing event.
-- If a ringing inbound offer was already assigned to you when the page refreshed, the soft phone now restores that same offer from the active reservation and keeps the ringing modal visible until you accept it, decline it, or the reservation timeout sends it back to routing.
-- New inbound offers now also reopen the soft-phone ringing modal from the live Contact Center hub event as soon as routing assigns them, so agents no longer need a page refresh or reconnect cycle to see the next queued call.
-- If a restart or earlier failure leaves behind a half-cleared voice offer, queued-voice recovery now cancels that orphaned pending reservation before it re-checks waiting calls, so a ghost reservation cannot keep blocking the next inbound assignment.
-- Queue sign-in, sign-out, and reconnect-driven availability recovery now all run the same self-healing pass before routing resumes, so impossible leftovers such as a pending reservation without a live ringing interaction, or an available agent still owning assigned voice work, are reclaimed and re-queued automatically instead of silently blocking the next inbound offer.
-- Once you accept an inbound voice offer, the soft phone now suppresses any duplicate restore of that same ringing reservation and will not show a new inbound modal over an already active call.
-- If the real-time layer revokes the pending offer at the same moment your accept finishes, the soft phone now keeps the accepted call active instead of snapping back to **Ready**, so the ringing modal can disappear without losing the live call card.
-- Queue sign-in no longer eagerly resolves the queued-voice re-offer pipeline while the sign-in postback is being processed, so signing into queues stays responsive even when the Voice feature is enabled.
-- When a timed-out voice offer is re-queued, Contact Center now clears the stale ringing interaction assignment before putting the work back into the queue, so the same agent is not left falsely at capacity for the next inbound offer.
-- Reconnect-driven queued-voice recovery also repairs a stale ringing offer that no longer has an active reservation before it asks routing for the next queued call, so an abandoned old offer cannot keep the agent falsely at capacity forever.
-- Queue sign-in and sign-out now also synchronize the live agent-session membership used by the real-time layer, so a soft-phone sign-out immediately removes the current browser session from the signed-in queue and campaign state instead of waiting for a reconnect.
-- **Set your presence** from the presence button at the top of the workspace. Choose **Available** to receive work, pick a **reason code** (for example *Lunch* or *Coaching*) to go not-ready, or choose **Request break**. A break is granted immediately when nothing is being routed to you; if an offer is already in flight, you finish it and the break is granted automatically afterward.
+- The **Work** tab signs you in and out over the live Contact Center connection without reloading the page, so your queue membership updates in place and your browser joins or leaves the live queue groups at once. Your live session membership follows too, so signing out removes this browser session from the queue and campaign state immediately.
+- Signing in stays responsive even when the Voice feature is enabled, because the re-offer of waiting calls runs separately from the sign-in request.
+- If the browser refreshes or the soft phone reconnects while you are signed in and available, your queues are re-checked as soon as the soft phone reconnects, so calls already waiting are offered to you rather than parked until the next inbound call.
+- If a ringing offer was already assigned to you when the page refreshed, the soft phone restores that same offer and keeps the ringing modal visible until you accept it, decline it, or the reservation timeout sends it back to routing.
+- A new inbound offer opens the soft-phone ringing modal as soon as routing assigns it; you do not need to refresh.
+- Sign-in, sign-out, and reconnect all run the same self-healing pass before routing resumes. Leftovers such as a half-cleared offer from a restart, a pending reservation without a live ringing call, a stale ringing offer with no active reservation, or an available agent still holding assigned voice work are reclaimed and re-queued, so they cannot block your next offer or leave you counted as busy.
+- When a timed-out offer goes back to the queue, its ringing assignment is cleared first, so you are not left at capacity for the next offer.
+- Once you accept a call, the soft phone ignores any repeat of that same ringing offer and never shows a new inbound modal over the active call. If the offer is revoked at the same moment your accept finishes, the accepted call stays active instead of snapping back to **Ready**.
+- **Set your presence** from the presence button at the top of the workspace. Choose **Available** to receive work, pick a **reason code** (for example *Lunch* or *Coaching*) to go not-ready, or choose **Break**. A break is granted immediately when nothing is being routed to you. While work holds you, the same item reads **Request break**: you finish the work and the break starts automatically afterward. The workspace menu has no **Offline** item; sign out from the soft phone's **Work** tab, or choose **Offline** from the soft phone's presence menu.
 
 The top bar also shows a live chip per signed-in queue with its current waiting count, so you can see where the pressure is.
 
@@ -190,12 +186,12 @@ The top bar also shows a live chip per signed-in queue with its current waiting 
 
 When routing selects you for a piece of work, a **ringing offer card** appears with the customer name (or number), the queue, and a countdown showing how long you have to respond. You have two choices:
 
-- **Accept** - accepts the reservation, connects the media, and moves the work into your active panel. For providers that ring your device (such as Dialpad's soft phone), your device rings and you answer there; the workspace and the incoming-call modal now revalidate the current provider call state before accept and do not mark the interaction connected until the provider's authoritative event says it is connected. That means you do not get stuck on a call the server already ended while the offer was in flight. For server-side queue delivery on provider-only integrations such as the current Asterisk path, Contact Center still answers the live provider call during the authoritative accept so the connected call stays visible and controllable after the ringing offer is accepted.
-- **Decline** - releases the offer so it is immediately re-offered to the next available agent, and the incoming modal no longer follows that reservation decline with a second raw telephony reject against the same call.
+- **Accept** - accepts the reservation, connects the media, and moves the work into your active panel. For providers that ring your own device, your device rings and you answer there. The workspace and the incoming-call modal re-check the provider's current call state before accepting, and the interaction is marked connected only when the provider reports it connected, so you never get stuck on a call the server already ended while the offer was in flight. For server-side queue delivery (for example Asterisk), Contact Center answers the live provider call during the accept, so the connected call stays visible and controllable.
+- **Decline** - releases the offer so it is immediately re-offered to the next available agent. The incoming modal does not send a separate telephony reject for the same call.
 
 If you do not respond before the countdown ends, the offer is revoked and routed elsewhere.
 
-Dialer work is distinguished from inbound queue offers by its activity source. When Preview, Power, Progressive, Predictive, or generic dialer inventory is assigned to you, the browser opens the assigned activity's shared **Complete activity** page automatically. Inbound work continues to show the ringing offer instead, so it is never redirected before you choose **Accept** or **Decline**.
+Dialer work is distinguished from inbound queue offers by its activity source. When Preview, Power, Progressive, or generic dialer inventory is assigned to you, the browser opens the assigned activity's shared **Complete activity** page automatically. Inbound work continues to show the ringing offer instead, so it is never redirected before you choose **Accept** or **Decline**.
 
 ### 3. Handle the active interaction
 
@@ -208,21 +204,21 @@ Once you accept, the **active interaction** panel shows:
 - The **queue** the work came from.
 - A **Complete activity** link that opens the same Omnichannel CRM completion page used by manual activities.
 
-Use the soft phone for hold, mute, transfer, and hang-up. Controls are shown from the provider's advertised Telephony capabilities, and the server repeats the same capability check before invoking the provider. When a call is held, the keypad becomes available for a second call. The soft phone lists every active interaction by phone number and state, lets the agent select the current call, conferences two selected calls without requiring a provider call id, and can disconnect all active calls. The workspace reflects call state in real time.
+Use the soft phone for hold, mute, transfer, and hang-up. Controls are shown from the provider's advertised Telephony capabilities, and the server repeats the same capability check before invoking the provider. To place a second call, use **Add call**, which puts the current call on hold and opens the keypad; **Hold** on its own only holds the call. The soft phone lists every active interaction by phone number and state, lets the agent select the current call, conferences two selected calls without requiring a provider call id, and can disconnect all active calls. The workspace reflects call state in real time.
 
-A Contact Center call is transferred through the Contact Center: the soft phone's transfer panel lists the other agents with their presence, the queues with who is waiting, and the approved outside numbers, and a warm transfer runs as a consult the agent completes or cancels from the panel (see [How to transfer a call](user-manual.md)). Consultative transfer still depends on the provider: Telnyx supports it; Asterisk currently supports blind transfer and two-call conference but rejects warm transfer; Dialpad exposes its provider transfer and merge actions when configured. The shared Telephony contract does not yet expose an agent-specific conference participant or leave-conference operation, so the UI does not claim that an agent can leave a conference while keeping all remote participants connected.
+A Contact Center call is transferred through the Contact Center: the soft phone's transfer panel lists the other agents with their presence, the queues with who is waiting, and the approved outside numbers, and a warm transfer runs as a consult the agent completes or cancels from the panel (see [How to transfer a call](user-manual.md)). Consultative transfer depends on the provider: Telnyx supports it; Asterisk supports blind transfer and two-call conference but rejects warm transfer. In a conference where the others stay on the call, the soft phone's hang-up button reads **Leave**: it takes you out of the conference and the others stay connected. **End for all** ends the conference for everyone.
 
-The soft phone also keeps the active remote number visible while you are on the call, and the **Recent** tab now includes inbound calls as well as outbound history.
+The soft phone also keeps the active remote number visible while you are on the call, and the **Recent** tab lists inbound as well as outbound calls.
 
-When Contact Center owns the assigned voice interaction, server-side call-session changes now flow back into the Telephony soft phone in real time, so provider-side disconnects, failed calls, transfers, hold/resume, mute/unmute, and other normalized call-state changes immediately update the live call card and the persisted **Recent** history instead of waiting for the next browser reconnect.
+When Contact Center owns the assigned voice interaction, server-side call-session changes flow back into the Telephony soft phone in real time, so provider-side disconnects, failed calls, transfers, hold/resume, mute/unmute, and other normalized call-state changes update the live call card and the persisted **Recent** history at once.
 
-For an answered call, a terminal provider event moves the agent from **Busy** to **Wrap-up** immediately. Wrap-up is not a timed auto-return: the agent reviews the CRM context, selects the disposition, records notes or scheduling changes, and completes the activity. Completion records the wrap-up end time and returns the agent to a previously requested break when one is pending; otherwise it returns the signed-in agent to **Available** and routing can offer the next call. This avoids sending another call while after-call work is unfinished.
+For an answered queue or campaign call, a terminal provider event moves the agent from **Busy** to **Wrap-up** immediately. (A direct call, such as an extension call, skips wrap-up and returns the agent to work.) Wrap-up is not a timed auto-return: the agent reviews the CRM context, selects the disposition, records notes or scheduling changes, and completes the activity. Completion records the wrap-up end time and returns the agent to a previously requested break when one is pending; otherwise it returns the signed-in agent to **Available** and routing can offer the next call. This avoids sending another call while after-call work is unfinished. The platform caps wrap-up at 15 minutes (`MaximumWrapUpDuration`): after that the agent is released automatically, while the activity stays open and no disposition is recorded for it.
 
-Presence changes and queued-call recovery run as separate operations. The soft phone no longer constructs the voice routing graph inside the same presence-change request, which prevents a circular activation or pending YesSql flush from leaving the presence control spinning indefinitely.
+Presence changes and queued-call recovery run as separate operations, so a presence change never waits on voice routing and the presence control cannot be left spinning.
 
 Contact Center also runs a provider-truth reconciliation pass when the tenant activates and on a periodic safety cadence. If Orchard Core restarts during busy hours, persisted ringing or active interactions are revalidated against the telephony server before routing resumes, and a pre-connect offer that already ended on the provider side is removed from the queue instead of being re-offered as a ghost call.
 
-If a prior terminal provider event was already recorded in the call session but another recovery path left the interaction nonterminal, reconciliation now repairs the interaction from the terminal call session before capacity is evaluated, then clears stale queue, reservation, and agent state. This prevents an ended call from consuming the agent's `MaxConcurrentInteractions` slot indefinitely.
+If a prior terminal provider event was already recorded in the call session but another recovery path left the interaction nonterminal, reconciliation repairs the interaction from the terminal call session before capacity is evaluated, then clears stale queue, reservation, and agent state. This prevents an ended call from consuming the agent's `MaxConcurrentInteractions` slot indefinitely.
 
 For inbound server-side calls, a provider may report the caller leg as connected before an agent accepts the Contact Center offer. Ended-offer cleanup therefore uses the accepted reservation or assigned queue item—not the provider leg's answered timestamp—to decide whether the work reached an agent. A terminal call that was only waiting or reserved is removed and releases the agent so routing can continue to the next live call.
 
@@ -232,8 +228,8 @@ When a customer must read out a card number, a national identity number, or anot
 
 The **Pause recording** control appears on the active interaction only when every one of these is true:
 
-- The **Recording** feature is enabled and the tenant has turned on **Allow agents to pause recording for sensitive data** in *Interaction Center → Settings → Recording*.
-- The agent holds the `SecurePauseRecording` permission (granted to the built-in **Agent** stereotype).
+- The **Recording** feature is enabled and the tenant has turned on **Allow agents to pause recording** on the **Recording governance** tab of *Settings → Contact Center*.
+- The agent holds the `ContactCenterSecurePauseRecording` permission (granted to the built-in **Agent** stereotype).
 - The active voice provider advertises the **RecordingPause** capability and implements the executable recording contract for the live call (for example, the Asterisk provider).
 
 When the agent pauses, the server re-checks the setting, the reason policy, the provider capability, and—most importantly—that the agent owns the live interaction before it asks the provider to pause. If the tenant requires a reason, the agent must supply one; the reason is stored on the interaction for the audit trail but never appears in the recording. A paused recording shows a clear **Recording paused** badge to the agent, and the control switches to **Resume recording**.
@@ -252,7 +248,7 @@ Pausing recording keeps a spoken value out of the recorded media, but the agent 
 The **Collect data securely** control appears on the active interaction only when every one of these is true:
 
 - The **Secure Data Capture** feature is enabled and the tenant has turned on **Enable agent-assisted secure data capture** in *Interaction Center → Settings → Secure Data Capture*.
-- The agent holds the `InitiateSecureCapture` permission (granted to the built-in **Agent** stereotype).
+- The agent holds the `ContactCenterInitiateSecureCapture` permission (granted to the built-in **Agent** stereotype).
 
 When the agent starts a capture, the server re-checks the setting and confirms the agent owns the live interaction before it mints a one-time access token. Only one secure capture may be in progress for an interaction at a time, so a second request is refused while one is still collecting. The token is returned to the agent exactly once as a short-lived secure link to share with the customer over the existing channel; only its SHA-256 hash is stored, so a leaked datastore can never reconstruct a usable link. The secure page is served with `Cache-Control: no-store` and `Referrer-Policy: no-referrer` so the token in the link is never cached or leaked through a referrer header. Starting a capture also pauses recording as defense in depth when the tenant leaves **Pause recording during capture** enabled, so a provider that records the whole media path cannot retain the segment either. If the capture cannot be persisted after recording was paused, recording is resumed immediately so a failed start never leaves recording suppressed.
 
@@ -282,6 +278,8 @@ Completion links opened from Contact Center include a local return location. Aft
 
 ### 5. Review recent activity
 
+The workspace's **Recent activity** panel lists the interactions you finished most recently: the direction, the customer's number, the outcome, when it ended, and the talk time. It says **No recent interactions** until you finish your first one.
+
 The soft phone keeps your history on two tabs, both of which update in real time as calls end (no page refresh needed):
 
 - **Recent** lists your most recent calls with their direction, outcome, and time, and a **Call** button to dial the number back.
@@ -303,7 +301,7 @@ The platform puts a voicemail in an inbox once, when the call reaches voicemail:
 | A direct call to an agent (their extension, or an entry point that targets them) that was not answered | The agent the call was for. |
 | An agent pressed **Voicemail** on a ringing call | That agent. |
 | A queued call that reached the queue's voicemail on its maximum wait, after an offer to an agent expired | The agent the call was last offered to. |
-| A call on a queue line that reached voicemail with no agent of its own (the caller chose voicemail from the phone menu, the queue was full, or they waited too long before anybody was offered the call) | The entry point's **Voicemail inbox** agent. With none set, the message is recorded but is in nobody's inbox. When the entry point delivers to **The queue's shared voicemail box**, the message is in no agent's inbox: it is on the **Shared voicemail** page for the queue's team, including the case above where an offer had expired earlier (see [The queue's shared voicemail box](voice-routing.md#the-queues-shared-voicemail-box)). |
+| A call on a queue line that reached voicemail with no agent of its own (the caller chose voicemail from the phone menu, the queue was full, or they waited too long before anybody was offered the call) | The entry point's **Voicemail inbox** agent. With none set, the message is recorded but is in nobody's inbox. When the entry point delivers to **The queue's shared voicemail box**, the message is in no agent's inbox: it is on the **Shared voicemail** page for the queue, including the case above where an offer had expired earlier (see [The queue's shared voicemail box](voice-routing.md#the-queues-shared-voicemail-box)). |
 
 Unless the entry point delivers to the queue's shared voicemail box, a queue voicemail is not shared among the queue's members and is not listed for supervisors. To have a supervisor hear the messages left on a queue line, set the entry point's **Voicemail inbox** to the supervisor's agent profile; the messages then appear in that person's **Voicemail** tab like their own. A supervisor who must remove a recording uses recording erasure, which is audited as the supervisor's action.
 
@@ -331,7 +329,7 @@ A saved greeting is uploaded to the telephony provider's own media storage (for 
 | Permission | Grants |
 | --- | --- |
 | `ContactCenterSignIntoQueues` | Sign in to queues/campaigns, change own presence, and use the Agent Workspace (accept/decline offers, complete work). |
-| `SecurePauseRecording` | Pause and resume recording on the agent's own live interaction to keep sensitive customer data out of the recording. Included in the **Agent** stereotype. |
-| `InitiateSecureCapture` | Start an agent-assisted hosted secure data capture on the agent's own live interaction, so the customer enters sensitive data on a secure page instead of reading it to the agent. Included in the **Agent** stereotype. |
+| `ContactCenterSecurePauseRecording` | Pause and resume recording on the agent's own live interaction to keep sensitive customer data out of the recording. Included in the **Agent** stereotype. |
+| `ContactCenterInitiateSecureCapture` | Start an agent-assisted hosted secure data capture on the agent's own live interaction, so the customer enters sensitive data on a secure page instead of reading it to the agent. Included in the **Agent** stereotype. |
 | `MonitorContactCenter` | Open the Supervisor Dashboard and watch queues in real time. Included in the **Supervisor** role. |
 | `ManageContactCenterQueues`, `ManageContactCenterAgents`, `ManageContactCenterSkills`, `ManageContactCenterDialer` | Configure the routing environment (queues, agents, skills, dialer). See [Agents, Queues & Dialer](agents-queues-dialer.md). |

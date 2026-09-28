@@ -16,6 +16,41 @@ public interface IInboundVoiceDigitsSink
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns><see langword="true"/> when the press belonged to a menu and was applied.</returns>
     Task<bool> HandleDigitsAsync(InboundVoiceDigitsEvent digitsEvent, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Moves a caller on once the entry point's welcome or closed message has been said to them.
+    /// </summary>
+    /// <remarks>
+    /// The same sink as a key press because it answers the same question, where the caller goes next in the entry
+    /// point, and arrives on the same kind of provider event for a call that is already tracked. The end of any other
+    /// speech on the call is not an announcement ending and is not claimed.
+    /// </remarks>
+    /// <param name="announcementEvent">Which call the message ended on.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns><see langword="true"/> when the call was waiting on the message and has been moved on.</returns>
+    Task<bool> HandleAnnouncementEndedAsync(InboundVoiceAnnouncementEndedEvent announcementEvent, CancellationToken cancellationToken = default)
+        => Task.FromResult(false);
+}
+
+/// <summary>
+/// The end of an entry point's welcome or closed message, reported by a telephony provider.
+/// </summary>
+public sealed class InboundVoiceAnnouncementEndedEvent
+{
+    /// <summary>
+    /// Gets or sets the technical name of the provider that reported it.
+    /// </summary>
+    public string ProviderName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider's identifier for the caller's leg.
+    /// </summary>
+    public string ProviderCallId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider's identifier for this delivery.
+    /// </summary>
+    public string DeliveryId { get; set; }
 }
 
 /// <summary>

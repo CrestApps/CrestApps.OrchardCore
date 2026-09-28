@@ -10,9 +10,9 @@ description: Reusable, business-hours-aware follow-up cadences that re-engage au
 | **Feature Name** | Omnichannel Management |
 | **Feature ID** | `CrestApps.OrchardCore.Omnichannel.Managements` |
 
-A **cadence** is a reusable, named series of follow-up messages that re-engages a contact who has gone quiet in an **automated** conversation. You define a cadence once, then select it on any automatic loading campaign. A campaign with no cadence selected never sends follow-ups, so re-engagement is off by default.
+A **cadence** is a reusable, named series of follow-up messages that re-engages a contact who has gone quiet in an **automated** conversation. You define a cadence once, then select it in the **Re-engagement** field of any **Automatic** inventory load. A load with no cadence selected never sends follow-ups, so re-engagement is off by default.
 
-Cadences are administered from **Interaction Center → Management → Cadences**, alongside campaigns and dispositions, and follow the same create / edit / delete experience.
+Cadences are administered from **Interaction Center > Management > Cadences** (requires the **Manage cadences** permission), alongside campaigns and dispositions. Cadences can be created, edited, and deleted; unlike campaigns, which cannot be deleted. For a step-by-step walkthrough, see [Cadences](../user-manual/cadences.md) in the user manual.
 
 ## What a cadence contains
 
@@ -27,15 +27,15 @@ Each step has:
 
 The number of steps is the cap on how many follow-ups are ever sent. When the last step has been sent, the cadence stops and the conversation is left to its normal no-response handling — so a cadence can never nudge a contact indefinitely.
 
-## Selecting a cadence on a campaign
+## Selecting a cadence on an inventory load
 
-On an **Automatic** inventory load, the AI settings include a **Re-engagement** picker. Choose a cadence to enable follow-ups for every conversation loaded from that campaign, or leave it as **No follow-up cadence** to never follow up. The chosen cadence is snapshotted onto each activity when the inventory is loaded, so editing or deleting a cadence later does not disturb conversations already in flight.
+On an **Automatic** inventory load (**Interaction Center > Management > Load Inventory**), the AI settings include a **Re-engagement** picker. Choose a cadence to enable follow-ups for every conversation loaded from that inventory load, or leave it as **No follow-up cadence** to never follow up. The chosen cadence is snapshotted onto each activity when the inventory is loaded, so editing or deleting a cadence later does not disturb conversations already in flight. See [Load inventory](../user-manual/load-inventory.md) in the user manual.
 
-The same section also exposes the **Business hours** calendar (see below), which every follow-up respects.
+The same inventory load also has a **Business hours** field (see below), which every follow-up respects. It is shown only when at least one business-hours calendar exists.
 
 ## Business hours
 
-Every follow-up is **background-initiated** — the automation sends it on its own, not in response to a live message. Such sends are only made while the campaign's **business-hours calendar** is open, evaluated in the **contact's local time zone**, so a contact is never followed up after hours. Business-hours calendars come from the [Contact Center](../contact-center/index.md) **Business Hours** feature, which the SMS automation feature brings in automatically; when no calendar is set the cadence still runs but is not restricted by hours.
+Every follow-up is **background-initiated** — the automation sends it on its own, not in response to a live message. Such sends are only made while the inventory load's **business-hours calendar** is open, evaluated in the **contact's local time zone**, so a contact is never followed up after hours. Business-hours calendars come from the [Contact Center](../contact-center/index.md) **Business Hours** feature, which the SMS automation feature brings in automatically; when no calendar is set the cadence still runs but is not restricted by hours.
 
 A **live reply** to a contact who is *actively messaging* is never gated — only the proactive follow-ups a cadence sends are. Likewise, a reply the automation owes to a message the contact just sent is completed normally, not treated as a follow-up.
 

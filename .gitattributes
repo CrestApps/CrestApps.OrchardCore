@@ -25,3 +25,5 @@ tests/CrestApps.OrchardCore.Tests/Telephony/Cassettes/** -text
 *.woff2 binary
 *.ttf binary
 *.eot binary
+*.mp4 binary
+*.webm binary

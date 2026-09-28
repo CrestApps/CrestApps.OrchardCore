@@ -290,4 +290,4 @@ protected override bool AllowAdditionalProperties => false;
 
 ## Auditing coverage
 
-Activities registered with `AddActivity<TActivity, TDriver>()` that have no schema definition still appear in the `Name` enum, but their `Properties` object is left unconstrained. The unit test suite audits this: it asserts that every built-in activity has a definition, that every definition is actually registered by the Recipes module, that names are unique, and that each definition supplies a category, a description, a description for every property, and either outcomes or `HasDynamicOutcomes`. When you add a new activity to a CrestApps module, add its schema definition and its registration in the same change or the audit will fail.
+Activities registered with `AddActivity<TActivity, TDriver>()` that have no schema definition still appear in the `Name` enum, but their `Properties` object is left unconstrained. When you add a new activity to a CrestApps module, add its schema definition and its registration in the same change.

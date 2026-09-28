@@ -108,12 +108,14 @@ public sealed class ContactCenterEntryPoint : CatalogItem, INameAwareModel, IMod
     public string OverflowQueueId { get; set; }
 
     /// <summary>
-    /// Gets or sets the greeting or announcement shown to the caller.
+    /// Gets or sets the message spoken once to a caller who rings while the entry point is open, before the phone menu
+    /// or, without one, before the caller is put through to the target. Empty says nothing.
     /// </summary>
     public string WelcomeMessage { get; set; }
 
     /// <summary>
-    /// Gets or sets the message played when the entry point is closed.
+    /// Gets or sets the message spoken to a caller who rings while the entry point is closed, before the
+    /// <see cref="ClosedAction"/> is applied. Empty applies the closed action without a message.
     /// </summary>
     public string ClosedMessage { get; set; }
 

@@ -441,6 +441,25 @@
     }
     return resolved.href;
   }
+
+  // What a live test reads to follow the Active interaction card: every push that says the agent's call moved, and
+  // every time the card changes what it shows. Logged at info level with a fixed prefix, never per poll.
+  function diagnostic(code, details) {
+    if (window.console && typeof window.console.info === 'function') {
+      window.console.info('[cc-workspace] ' + code, details || {});
+    }
+  }
+
+  // Everything but the id and status is left out of the log line, so a number or a name never lands in it.
+  function describeActive(active) {
+    return active ? {
+      interactionId: active.interactionId,
+      direction: active.direction,
+      status: active.status
+    } : {
+      interactionId: null
+    };
+  }
   function init(root) {
     var config = parseConfig(root);
     var strings = config.strings;
@@ -608,6 +627,7 @@
       if (!activeChanged(panels.activeInteractionSignature(active))) {
         return;
       }
+      diagnostic('active-interaction-shown', describeActive(active));
       if (!active) {
         refs.active.innerHTML = panels.emptyStateHtml({
           icon: 'fa-solid fa-headset',
@@ -983,11 +1003,31 @@
         },
         onOfferRevoked: refresh,
         onQueueStatsChanged: refresh,
-        onRecordingStateChanged: refresh
+        onRecordingStateChanged: refresh,
+        // The agent's call rang, connected, was held or ended. An outbound dialer call is accepted before it
+        // is placed, so this, not the acceptance, is what fills the card in while the call is live.
+        onInteractionChanged: function (notification) {
+          diagnostic('interaction-changed', notification ? {
+            interactionId: notification.interactionId,
+            eventType: notification.eventType,
+            direction: notification.direction,
+            status: notification.status
+          } : {});
+          refresh();
+        }
       });
     }
     refresh();
     window.setInterval(tick, 1000);
+
+    // Backstop for a push that never arrived (the hub reconnecting at the wrong moment): while the agent is on a
+    // call, or the card shows one, re-read the state now and then. An idle agent costs nothing.
+    window.setInterval(function () {
+      var status = state && state.presence && state.presence.status;
+      if (state && (state.activeInteraction || status === 'Busy')) {
+        refresh();
+      }
+    }, 12000);
   }
   function boot() {
     var roots = document.querySelectorAll('[data-cc-workspace]');

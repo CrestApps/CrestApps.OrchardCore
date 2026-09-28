@@ -10,10 +10,10 @@ description: Provider-agnostic soft phone, SignalR hub, and telephony provider m
 | **Feature Name** | Telephony |
 | **Feature ID** | `CrestApps.OrchardCore.Telephony` |
 
-The **Telephony** module adds a provider-agnostic soft phone to Orchard Core. It exposes a SignalR hub that receives call-control requests from the browser and routes them to whichever telephony provider is configured for the tenant. The UI never talks to a provider directly, so the same soft phone works with any provider that implements the telephony abstractions (for example [Dialpad](dialpad)).
+The **Telephony** module adds a provider-agnostic soft phone to Orchard Core. It exposes a SignalR hub that receives call-control requests from the browser and routes them to whichever telephony provider is configured for the tenant. The UI never talks to a provider directly, so the same soft phone works with any provider that implements the telephony abstractions (for example [Telnyx](telnyx) or [Asterisk](asterisk)).
 
-In this module, **provider** means the configured **telephony backend adapter** (for example Asterisk,
-Dialpad, or another PBX/carrier API integration), not the user's phone company in the business or
+In this module, **provider** means the configured **telephony backend adapter** (for example Telnyx, Asterisk,
+or another PBX/carrier API integration), not the user's phone company in the business or
 billing sense.
 
 `CrestApps.OrchardCore.Telephony` registers the provider-neutral runtime services and the **Settings → Communication → Telephony** configuration screen. Every provider feature depends on Telephony and contributes its settings tab directly, so enabling a provider always makes its configuration available. The floating widget remains optional and is registered only by `CrestApps.OrchardCore.Telephony.SoftPhone`.
@@ -33,7 +33,7 @@ Provider event stream/webhook ──► server projection/reconciliation ──�
 - **`CrestApps.OrchardCore.Telephony.Abstractions`** contains the provider-agnostic contracts: `ITelephonyProvider`, the per-capability operation contracts (`ITelephonyCallControlProvider`, `ITelephonyInboundCallProvider`, `ITelephonyHoldProvider`, `ITelephonyMuteProvider`, `ITelephonyTransferProvider`, `ITelephonyAttendedTransferProvider`, `ITelephonyConferenceProvider`, `ITelephonyDtmfProvider`, `ITelephonyVoicemailProvider`, `ITelephonySoftPhoneCredentialsProvider`) and their `TelephonyCapabilityContracts` map, `ITelephonyCallStateProvider`, `ITelephonyService`, `ITelephonyProviderResolver`, `ITelephonyClient`, `ITelephonyAuthenticationProvider`, `ITelephonyAuthenticationService`, `ITelephonyUserTokenStore`, `ITelephonyInteractionStore`, `ITelephonyInteractionSynchronizationService`, the request/response and interaction models, `TelephonyProviderOptions`, `TelephonySettings`, and `TelephonyPermissions`. A provider module depends only on this package.
 - **`CrestApps.OrchardCore.Telephony`** contains the `TelephonyHub`, the default service and resolver
   implementations, the site settings, and the soft phone widget.
-- A **provider module** (such as Dialpad or Asterisk) implements `ITelephonyProvider` and registers itself as a
+- A **provider module** (such as Telnyx or Asterisk) implements `ITelephonyProvider` and registers itself as a
   selectable provider.
 
 If you are building another provider, see [Custom Telephony and Contact Center Providers](custom-providers.md).
@@ -86,7 +86,7 @@ On `ITelephonyAudioProvider`, `TelephonyAudioCapabilities` distinguishes browser
 - A provider that supports both must expose a provider setting and return the administrator-selected `ConfiguredAudioMode`.
 - Browser audio fails closed unless the provider also names an executable browser media adapter.
 
-The built-in providers differ in how they carry audio. **[Telnyx](telnyx)** advertises `Browser` and delivers the call audio to the browser over WebRTC through the vendored `@telnyx/webrtc` SDK adapter. **Asterisk** advertises `Browser` when the tenant supplies the required WebRTC configuration (a just-in-time SIP.js browser endpoint) and otherwise advertises no browser audio while controlling calls through ARI. **Dialpad** advertises `ExternalDevice`: its call control relies on its REST integration and provider-owned clients, so microphone and speaker handling stay outside Orchard. Asterisk *External Media* is a separate server-side Contact Center media seam, not the same thing as the embedded browser WebRTC endpoint.
+The built-in providers differ in how they carry audio. **[Telnyx](telnyx)** advertises `Browser` and delivers the call audio to the browser over WebRTC through the vendored `@telnyx/webrtc` SDK adapter. **Asterisk** advertises `Browser` when the tenant supplies the required WebRTC configuration (a just-in-time SIP.js browser endpoint) and otherwise advertises no browser audio while controlling calls through ARI. A provider that controls calls through a REST integration and its own provider-owned clients would advertise `ExternalDevice`, leaving microphone and speaker handling outside Orchard. Asterisk *External Media* is a separate server-side Contact Center media seam, not the same thing as the embedded browser WebRTC endpoint.
 
 Call operations can also carry an optional provider-neutral metadata bag through `CallReference` and
 `TelephonyCall`. This keeps the shared contracts clean while still letting integrations exchange
@@ -133,10 +133,12 @@ The settings screen and its admin menu entry are part of the **Telephony** featu
 administration feature to enable.
 :::
 
-The screen follows the same multi-provider tab layout as the Orchard Core SMS settings:
+The screen follows the same multi-provider tab layout as the Orchard Core SMS settings. For a step-by-step
+walkthrough, see [Telephony settings](../user-manual/telephony-settings.md) in the user manual.
 
 - The **Soft Phone** tab selects the **default provider** from the list of enabled providers (as its
-  first option) and configures where the soft phone widget appears.
+  first option). When the **Telephony Soft Phone** widget feature is enabled, the same tab also configures
+  where the soft phone widget appears (see [Soft phone widget](#soft-phone-widget)).
 - The **Soft Phone** tab also carries **Allowed short codes**: the short codes this tenant may dial, one per
   line. A short code is not an international number, so it is refused by default; list a code here to open it
   (a carrier service number, for example). Only digits are stored. Emergency codes can never be opened this
@@ -185,11 +187,15 @@ new default is chosen.
 Enable the **Telephony Soft Phone** feature
 (`CrestApps.OrchardCore.Telephony.SoftPhone`) to add a floating soft phone to the site. The feature
 adds the phone to the admin dashboard automatically, and provides a **Soft Phone** widget you can place
-on the front end. Configure it on the **Soft Phone** tab of the telephony settings:
+on the front end. The options below appear on the **Soft Phone** tab of the telephony settings only while
+this feature is enabled:
 
-- **Enable the soft phone** is the master switch (a kill switch). When turned off, the widget is not
-  shown anywhere and its scripts are not loaded, so the soft phone can be shut off site-wide instantly
-  without a redeploy — useful during an incident or maintenance. It is enabled by default.
+- **Enable the soft phone** is the widget's master switch (a kill switch). When turned off, the floating
+  widget is not shown anywhere and its scripts are not loaded, so the widget can be shut off site-wide
+  instantly without a redeploy — useful during an incident or maintenance. It is enabled by default. The
+  switch covers the widget only: the standalone `/softphone` page and `GET /softphone/extension-config`
+  from the [Telephony Soft Phone Extension](#standalone-soft-phone-page-and-browser-extension) feature keep
+  working while it is off.
 - **Show the soft phone on the admin dashboard** displays the widget on admin pages. This is enabled
   by default. To show the phone on the front end, add the **Soft Phone** widget from **Design → Widgets**
   (see [Adding the soft phone to the website](#adding-the-soft-phone-to-the-website)).
@@ -211,6 +217,25 @@ Modules can contribute display-driver tabs and views to the widget by registerin
 agent queue/campaign sign-in, sign-out, and presence controls when the current user can sign in to
 Contact Center work.
 
+For the agent's view of the phone — placing, answering, transferring, and merging calls — see
+[Soft phone](../user-manual/soft-phone.md) in the user manual.
+
+### Standalone soft phone page and browser extension
+
+Enable the **Telephony Soft Phone Extension** feature (`CrestApps.OrchardCore.Telephony.SoftPhone.Extension`)
+to serve the soft phone outside the admin layout, for the CrestApps Soft Phone browser extension and desktop
+app. Because the phone runs in its own window, a call survives the agent navigating other pages and the phone
+can ring while no admin page is open. The feature adds two endpoints; both require a signed-in user with the
+`Use the telephony soft phone` permission:
+
+| Endpoint | Purpose |
+| --- | --- |
+| `/softphone` | The same soft phone the widget renders, chromeless and full-window. An optional `answerCallId` query value answers that pending offer when the page loads. Unauthenticated requests are sent to the login page and returned here. |
+| `GET /softphone/extension-config` | Returns JSON with the tenant-aware hub URL, the `/softphone` page URL, the Contact Center pending-offer URL (present only when Contact Center is enabled), and the signed-in user's id and display name. The browser extension calls it once after sign-in and then opens its own background connection for inbound calls. |
+
+These endpoints do not depend on the widget feature or its **Enable the soft phone** switch. To install and
+sign in to the phone apps, see [Phone apps](../user-manual/phone-apps.md) in the user manual.
+
 ### Moving and persisting the widget
 
 The soft phone is draggable by its header. Its position, open/closed state, and the selected footer tab are saved to the browser's `localStorage`, so the widget reappears exactly where you left it after a page reload — and it is restored before the first paint, so there is no flash or jump as the page loads. You can drag the widget anywhere on the screen, including all the way to the right edge and on top of other widgets such as the AI chat widget. By **default**, when the AI chat widget is also present, the soft phone automatically offsets itself so the two widgets sit side by side instead of overlapping.
@@ -221,9 +246,9 @@ The widget reflects the live connection status reported by the hub and only enab
 
 - When the provider status has not resolved yet (the brief moment right after the page loads), the widget keeps the keypad, the call buttons, and every status message hidden, so it never flashes the keypad before the real state — unavailable, connect, or operating — is known.
 - When no provider is enabled, the widget shows a compact warning at the top of the panel that explains how to fix the setup: enable at least one provider and set the default phone provider in site settings. The warning is shown only after the hub resolves the real provider status, so a configured tenant does not flash a false **No provider is configured** warning during page load. The keypad and call buttons stay hidden, and the warning does not stretch to fill the widget.
-- When the provider requires a per-user connection, the widget shows the **Connect to provider** button (see [Authenticating users with a provider](#authenticating-users-with-a-provider)). While the connect panel is shown the widget keeps its normal height instead of stretching, because the height-reserving keypad body is collapsed behind the connect panel. Clicking **Connect to provider** opens the provider's authorization window in a new browser tab; if the URL cannot be resolved or the browser blocks the popup, the widget shows an inline error inside the connect panel instead of silently doing nothing.
+- When the provider requires a per-user connection, the widget shows the **Connect to provider** button (see [Per-user provider authentication](#per-user-provider-authentication); the built-in providers do not need it). While the connect panel is shown the widget keeps its normal height instead of stretching, because the height-reserving keypad body is collapsed behind the connect panel. Clicking **Connect to provider** opens the provider's authorization window in a new browser tab; if the URL cannot be resolved or the browser blocks the popup, the widget shows an inline error inside the connect panel instead of silently doing nothing.
 - During an active call the main floating toggle keeps its normal accent color and phone icon; hang-up remains on the keypad itself. The widget exposes hold/resume and transfer when the provider supports them, and only exposes mute/unmute after the selected call has reached the **Connected** state. End-user error messages stay provider-neutral even when the active provider logs provider-specific details on the server.
-- The in-call controls are laid out the way mainstream phones lay them out (the iOS and Android in-call screens, Zoom Phone, RingCentral, Teams, Webex, Dialpad), decided by `planInCallControls` in `Assets/js/soft-phone/in-call-controls.js`:
+- The in-call controls are laid out the way mainstream phones lay them out (the iOS and Android in-call screens, Zoom Phone, RingCentral, Teams, Webex), decided by `planInCallControls` in `Assets/js/soft-phone/in-call-controls.js`:
   - **The agent's own call controls** sit in one row, each an icon over its label: **Mute**, **Hold**, **Keypad** and **Hang up**. Only **Hang up** is red. **Mute** and **Hold** read **Unmute** and **Resume**, filled with the accent colour, while they are on. **Keypad** is a toggle (`aria-pressed`): on a connected call the keypad stays closed until the agent opens it to send digits.
   - **The actions that bring someone else in or hand the call over** sit in a second, neutral row with text labels: **Transfer**, **Add call**, and, once two or more calls are up, **End all**. In a conference **End all** reads **End for all**. It is outlined in red rather than filled, and asks for confirmation inside the phone before anything is hung up. The confirmation starts on **Keep talking**.
   - **Add call** puts the current call on hold and gives the agent an empty, focused number field and the keypad. The held call stays listed so the agent knows who is waiting. Only **Call** and **Back to call** are offered. **Enter** dials, and **Escape** or **Back to call** takes the held call off hold again. While a call is being added, the keypad enters the number to add and never sends digits to the held call. A provider that cannot hold a call cannot add one, and the button's title says so.
@@ -253,7 +278,26 @@ The factory receives `credentials`, `localStream`, `remoteAudioElement`, `setRem
 
 ### Audio device settings
 
-When the soft phone uses browser audio, a **gear** icon appears in the widget header. It opens a **Settings** panel where the agent can choose which **microphone** and **speaker** the soft phone uses, instead of relying on the operating-system default. The choice is saved per agent in the browser's `localStorage` and applied to microphone capture (`getUserMedia`) and speaker output (`setSinkId`, where the browser supports it); the device lists refresh automatically when devices are plugged in or removed.
+When the soft phone uses browser audio, a **headset** icon (titled **Settings**) appears in the widget header. It opens a **Settings** panel where the agent can choose which **microphone** and **speaker** the soft phone uses, instead of relying on the operating-system default. The choice is saved per agent in the browser's `localStorage` and applied to microphone capture (`getUserMedia`) and speaker output (`setSinkId`, where the browser supports it); the device lists refresh automatically when devices are plugged in or removed.
+
+The same panel holds the rest of the agent's audio settings:
+
+| Group | Setting | Description |
+| --- | --- | --- |
+| Microphone processing | **Echo cancellation**, **Noise suppression**, **Automatic gain control** | The browser's microphone processing, each on by default. Changes apply immediately, including on a call in progress. Turn one off at a time if the other party hears the agent hollow, distant, or with artifacts. |
+| Microphone processing | **Microphone boost** | **Off**, **+3 dB**, **+6 dB**, **+9 dB**, or **+12 dB**. Raises the agent's voice before it is sent, with a limiter so loud words do not distort. |
+| Incoming audio | **Audio delay** | **Automatic**, **120 ms**, **80 ms**, **40 ms**, or **20 ms**. How long incoming audio is held before it plays; shorter shortens the pause before the agent hears the other party, but too short makes their voice break up. Applies to the current call. |
+| Connection | **Region** | **Automatic** or a specific provider location (US West, US Central, US East, Canada Central, Europe, Asia Pacific, South Asia). Automatic follows the team's setting and then the provider's own choice. Changing it re-registers the phone, so it waits until the current call ends. |
+
+When a caller says the agent sounds quiet, try **Microphone boost** and watch the microphone level on the
+[Diagnostics](#diagnostics) tab while the agent speaks: a level that moves around the middle of the meter is
+healthy, and one that sits pinned at the top means the boost is too high and loud words are being clipped. When
+there is a noticeable pause before the agent hears a reply, shorten **Audio delay** one step at a time and stop
+if the caller's voice starts to break up; a **Region** closer to the agent can also shorten the round trip, so
+compare the round-trip time on the Diagnostics tab before and after changing it. Some limits no setting
+removes: a call to an ordinary phone number travels over the telephone network at narrowband quality, so it will
+sound like a landline even when every setting is right, and a browser call bridged to the telephone network
+always has a little more delay than a direct phone-to-phone call.
 
 This matters because a browser's *default* input device is not always the agent's real microphone — a common cause of "the other side can't hear me" is a virtual audio device (for example VB-Audio Virtual Cable) being the system default. The picker lists only real, unambiguous devices so the agent can select their actual microphone; the [Diagnostics](#diagnostics) tab's microphone meter shows which device is live and whether it is producing audio.
 
@@ -280,12 +324,16 @@ The widget's footer is a tab bar that switches the panel between built-in and co
 
 - **Keypad** – the number field, dial pad, and call controls.
 - **Recent** – the call history, listing active calls, recent inbound and outbound interactions, and missed calls (highlighted in red with a direction icon). Phone numbers are formatted for display, active calls stay visually highlighted, and the list does not add a separate **In progress** text label for them. It loads the configured number of calls, `30` by default. Selecting a recent call dials it again.
+- **Voicemail** – the user's voicemail messages, with a badge counting unread ones; messages can be played
+  from the tab (see [Voicemail](../user-manual/voicemail.md) in the user manual).
+- **Diagnostics** – shown only when diagnostics are enabled (see [Diagnostics](#diagnostics)).
 - **Contributed tabs** – modules can add their own views through Display Management. For example,
-  Contact Center adds a **Work** tab for queue/campaign sign-in and presence.
+  Contact Center adds a **Work** tab for queue/campaign sign-in and presence when the user can sign in to
+  Contact Center work.
 
 Pressing **Enter** while the number field is focused starts the call. The dialed value is cleared immediately to prevent an accidental repeated Enter press. While the selected call is connected, the field remains visible and disabled with the connected phone number formatted for display. After the selected call is placed on hold, the field is cleared again and the keypad becomes available for a second outbound call. The **Active calls** list shows every provider-authoritative in-progress interaction in compact rows with the phone number and state on one line; selecting a row changes which call the individual hold, resume, mute, transfer, and hang-up controls operate on. The active-call list remains on the Keypad because it is the selection context for those controls, while the Keypad view scrolls within a bounded height instead of increasing the widget size.
 
-Every row of the active-call list carries a checkbox. Whenever two or more calls can be joined the list offers **Merge calls**, which stays disabled until two or more rows are ticked (or **Select all** is), then reads **Merge N calls** and names the calls it joins. A running conference counts as one row: ticking any participant and another call reads **Add to conference**, and the merge request names the conference (`MergeRequest.ConferenceName`, carried back from the provider's merge result as `conferenceName` call metadata) so the provider joins the new call to it instead of making a second conference. A call the browser placed itself has no server-side handle, so its checkbox is disabled and the list says it cannot be merged. On a provider that advertises `BridgedDial` (Telnyx), a keypad dial is not placed by the browser: the soft phone invokes `Dial` with `RequestMetadata.SoftPhoneCredentialId` set to the credential it is registered on, arms the same one-shot auto-answer it uses for an extension call, and answers the leg the provider rings back to that credential. The call is then a server-tracked call like any other. A provider that cannot connect the dial that way answers `TelephonyResult.ErrorCode` = `TelephonyConstants.ErrorCodes.BridgeUnavailable` having created no leg, and only then does the soft phone dial from the browser (any other failure is shown, never dialed a second time). The soft phone reports `SoftPhoneClientCapabilities.BridgedDialLeg` after it registers, and a provider rings only a credential that reported it. Each server-tracked call's audio is applied to its own leg (matched by the provider's leg id), so hold, resume and hang-up of one of several such calls never reach another, and a merge takes every merged leg off its local hold. Any number of active calls can be merged; provider-specific participant limits are enforced by the executing provider rather than by the shared UI. After a successful merge the calls are listed under a **Conference** heading with their participant count, each row shows **In conference**, and each has its own hang-up that ends only that participant's call. Asterisk adds all selected channels to one mixing bridge and clears their prior hold markers, while Dialpad merges each additional call into the primary call sequentially. Transfer is hidden for a conference until one call row is selected explicitly, preventing an accidental transfer of the conference context.
+Every row of the active-call list carries a checkbox. Whenever two or more calls can be joined the list offers **Merge calls**, which stays disabled until two or more rows are ticked (or **Select all** is), then reads **Merge N calls** and names the calls it joins. A running conference counts as one row: ticking any participant and another call reads **Add to conference**, and the merge request names the conference (`MergeRequest.ConferenceName`, carried back from the provider's merge result as `conferenceName` call metadata) so the provider joins the new call to it instead of making a second conference. A call the browser placed itself has no server-side handle, so its checkbox is disabled and the list says it cannot be merged. On a provider that advertises `BridgedDial` (Telnyx), a keypad dial is not placed by the browser: the soft phone invokes `Dial` with `RequestMetadata.SoftPhoneCredentialId` set to the credential it is registered on, arms the same one-shot auto-answer it uses for an extension call, and answers the leg the provider rings back to that credential. The call is then a server-tracked call like any other. A provider that cannot connect the dial that way answers `TelephonyResult.ErrorCode` = `TelephonyConstants.ErrorCodes.BridgeUnavailable` having created no leg, and only then does the soft phone dial from the browser (any other failure is shown, never dialed a second time). The soft phone reports `SoftPhoneClientCapabilities.BridgedDialLeg` after it registers, and a provider rings only a credential that reported it. Each server-tracked call's audio is applied to its own leg (matched by the provider's leg id), so hold, resume and hang-up of one of several such calls never reach another, and a merge takes every merged leg off its local hold. Any number of active calls can be merged; provider-specific participant limits are enforced by the executing provider rather than by the shared UI. After a successful merge the calls are listed under a **Conference** heading with their participant count, each row shows **In conference**, and each has its own hang-up that ends only that participant's call. Asterisk adds all selected channels to one mixing bridge and clears their prior hold markers. Transfer is hidden for a conference until one call row is selected explicitly, preventing an accidental transfer of the conference context.
 
 **Leaving a conference versus ending it for everyone.** In a conference that two or more other parties are still in, **Hang up** reads **Leave**, as on a phone system. The soft phone hangs up each of the agent's calls in it with the request flag `TelephonyConstants.RequestMetadata.ConferenceLeave` (`conferenceLeave`), and the provider takes only the agent's own leg out, so the others stay connected to each other. Two cases differ:
 
@@ -294,7 +342,7 @@ Every row of the active-call list carries a checkbox. Whenever two or more calls
 
 **End for all** (after the in-app confirmation) hangs up every call. The hang-up of the call the conference was made from carries `TelephonyConstants.RequestMetadata.ConferenceEnd` (`conferenceEnd`) and the `conferenceName`, so the provider ends the conference for every participant, including any the phone does not know of. Planning both cases is `planConferenceHangup` and `planConferenceEnd` in `Assets/js/soft-phone/conference.js`. A provider that does not implement the flags treats them as an ordinary hang-up of that call. Telnyx implements both; see [Telnyx](telnyx.md#leaving-a-conference-and-ending-it-for-everyone).
 
-Choosing **Transfer** opens the soft phone's own transfer panel in place of the keypad; the phone never uses the browser's prompt, alert or confirm dialogs, which are cut off inside the desktop app's window. The panel has the keypad's **Number / Extension** toggle. In number mode its field is enhanced by the same intl-tel-input country-flag input as the keypad and checked the way the keypad checks a number (the tenant's own number and incomplete numbers are refused before anything is sent), and the number is sent in international form. In extension mode the digits are sent with `TransferRequest.IsExtension` set: the transfer target policy accepts only digits as an extension, `DefaultTelephonyService` resolves the extension to the user it rings (`TransferRequest.TargetUserId`) and fails closed when nobody owns it, and the provider reaches that user the way an extension call does. A call the browser placed itself cannot be transferred by a hub command, so for such a call the panel explains that instead of offering a target. The panel offers **Blind** and **Warm** only when the provider advertises both `Transfer` and `AttendedTransfer`. Providers can also advertise the `Directory` capability and implement `ITelephonyDirectoryProvider`; the panel then lists and searches the provider directory by name, extension or number. Asterisk lists ARI endpoints, while Dialpad lists company users and prefers their extension as the transfer destination before falling back to the assigned phone number.
+Choosing **Transfer** opens the soft phone's own transfer panel in place of the keypad; the phone never uses the browser's prompt, alert or confirm dialogs, which are cut off inside the desktop app's window. The panel has the keypad's **Number / Extension** toggle. In number mode its field is enhanced by the same intl-tel-input country-flag input as the keypad and checked the way the keypad checks a number (the tenant's own number and incomplete numbers are refused before anything is sent), and the number is sent in international form. In extension mode the digits are sent with `TransferRequest.IsExtension` set: the transfer target policy accepts only digits as an extension, `DefaultTelephonyService` resolves the extension to the user it rings (`TransferRequest.TargetUserId`) and fails closed when nobody owns it, and the provider reaches that user the way an extension call does. A call the browser placed itself cannot be transferred by a hub command, so for such a call the panel explains that instead of offering a target. The panel offers **Blind** and **Warm** only when the provider advertises both `Transfer` and `AttendedTransfer`. Providers can also advertise the `Directory` capability and implement `ITelephonyDirectoryProvider`; the panel then lists and searches the provider directory by name, extension or number. Asterisk lists ARI endpoints.
 
 A provider may carry a transfer out as a call of its own instead of handing the call over at once (Telnyx does for a keypad dial; see [Transferring a keypad call](telnyx.md#transferring-a-keypad-call)). On a provider that advertises `BridgedDial`, the soft phone holds the call first, so the caller hears the usual hold tone while the destination rings, and sends `TransferRequest.Metadata` with `RequestMetadata.SoftPhoneCredentialId`; the hub stamps `SoftPhoneUserId` and `SoftPhoneUserDisplayName` over whatever the client sent. When the result's call carries `CallMetadata.ConsultId` and `ConsultStatus`, the panel follows the transfer as a consult: a blind transfer rings until the destination answers (it then completes itself) or does not (the call stays held here, and **Cancel** takes it off hold); a warm transfer's result is the consult call itself (`CallMetadata.ConsultOf` names the call being consulted about), which the hub records as a new call of the agent's and the provider rings back to this phone, and **Complete transfer** is offered once the destination answers. The panel polls the hub's `GetConsult` and finishes with `CompleteConsult` or `CancelConsult` (a provider implements `ITelephonyConsultTransferProvider`); only the call being transferred is authorized against the agent's history, and the provider checks that the leg named was rung for it. A call handed to a colleague that way rings their phone on a leg the phone recognizes, with **Answer** and **Decline** and *Transferred by* and the agent's name; once answered it is a call the platform tracks, so it can be held, transferred and merged again.
 
@@ -303,12 +351,15 @@ The history is read from the hub's `GetInteractions` method and is backed by the
 ## Incoming calls
 
 When an inbound call is offered to a user, the soft phone raises an **incoming-call modal** with
-three actions:
+three buttons:
 
 - **Answer** connects the call (`AnswerAsync`).
-- **Send to voicemail** routes the caller to voicemail (`SendToVoicemailAsync`); it is shown only when
+- **Voicemail** routes the caller to voicemail (`SendToVoicemailAsync`); it is shown only when
   the provider advertises the `Voicemail` capability.
 - **Ignore** declines the ringing call on this device (`RejectAsync`).
+
+When other modules match the caller to records, the modal also lists them as cards, each with an
+**Answer & open** shortcut and an **Open** link (see [Enriching the modal from another module](#enriching-the-modal-from-another-module)).
 
 The modal appears for a ringing **inbound** call even when the panel is closed. When Contact Center is using the soft phone for queue offers, the modal restores the current ringing offer after a page refresh or reconnect, reopens immediately when the Contact Center hub reports a new queued offer, and keeps the ringing state visible until the offer is accepted, declined, or the authoritative reservation timeout expires. Those Contact Center offer actions go through the authoritative reservation endpoints without sending an extra duplicate reject/answer device action. If the real-time revoke event arrives while the authoritative accept is still completing, the soft phone preserves the accepted call instead of clearing it back to idle. The successful accept response does not mark the browser connected; the widget waits for the normalized provider state event or provider-authoritative lookup before changing the call state. For provider-only server-side queue flows that do not register a Contact Center voice provider, Contact Center also answers the underlying telephony call during accept so the provider can emit the resulting live state. The keypad **Hangup** control stays hidden while a call is still only ringing and appears only once the provider reports that the call is connected or held.
 
@@ -415,32 +466,6 @@ automatically, and on the shared `telephony-client` helper script, which exposes
 soft phone and the contact-center clients. ResourceManager resolves both dependencies for you, so you
 only reference `telephony-soft-phone`.
 
-## Authenticating users with a provider
-
-Providers use one of two authentication scenarios, and the soft phone adapts automatically:
-
-- **Account-level credentials** – the provider authenticates with a shared key configured by an
-  administrator (for example an API token). No per-user step is needed and the dialer is shown
-  immediately. This is the right model for providers such as Twilio.
-- **Per-user OAuth 2.0** – the provider requires each user to connect their own account (for example
-  Dialpad). When the user is not yet connected, the widget shows a **Connect to provider** button
-  that starts the OAuth 2.0 authorization code flow in a popup. After the user grants access, the
-  tokens are stored **encrypted on the user's account** and the dialer is shown. When the user is
-  connected over OAuth 2.0, the widget header also shows a **Disconnect provider** action so the user
-  can clear that provider connection without leaving the soft phone. Expired tokens are refreshed
-  automatically when a refresh token is available.
-
-On connection the widget asks the hub for the user's status (`GetConnectionStatus`). The hub reports
-whether authentication is required, whether the user is connected, and which authentication scheme
-the provider uses. The widget's connect experience is extensible: a provider that uses a different
-per-user scenario can register a handler for its scheme on
-`window.telephonySoftPhone.authHandlers`, so new authentication scenarios can be supported without
-changing the widget.
-
-The OAuth callback URL the soft phone uses is `{scheme}://{host}/Telephony/Connect/Callback`
-(prefixed with the tenant URL prefix when one is configured). Register this URL as an allowed
-redirect URI in your provider's OAuth application.
-
 ## Phone field click-to-dial
 
 When the soft phone is present on a page, the [Phone Field](../modules/content-fields) editor and
@@ -488,11 +513,24 @@ To add a new provider:
 4. Add a `SiteDisplayDriver<MyProviderSettings>` whose `SettingsGroupId` is
    `TelephonyConstants.SettingsGroupId` so the provider gets its own tab on the telephony settings
    screen.
-5. For per-user authentication, also implement `ITelephonyAuthenticationProvider`. Declare the
-   `AuthenticationScheme` (for example `TelephonyConstants.AuthenticationSchemes.OAuth2`), build the
-   authorization URL, exchange the authorization code for tokens, and refresh tokens. The framework
-   stores the tokens securely on the user's account and supplies them back to your provider through
-   `ITelephonyAuthenticationService`. Providers that only use a shared account key do not implement
-   this interface.
+5. For per-user authentication, also implement `ITelephonyAuthenticationProvider` (see below).
+   Providers that only use a shared account key do not implement this interface.
 
-See the [Dialpad](dialpad) and [Asterisk](asterisk) providers for complete examples.
+See the [Telnyx](telnyx) and [Asterisk](asterisk) providers for complete examples.
+
+### Per-user provider authentication
+
+The built-in providers authenticate with account-level credentials configured by an administrator, so no
+per-user step is needed and the dialer is shown immediately. A custom provider that requires each user to
+connect their own account implements `ITelephonyAuthenticationProvider`: it declares the
+`AuthenticationScheme` (for example `TelephonyConstants.AuthenticationSchemes.OAuth2`), builds the
+authorization URL, exchanges the authorization code for tokens, and refreshes tokens. The framework stores the
+tokens encrypted on the user's account and supplies them back to the provider through
+`ITelephonyAuthenticationService`.
+
+For such a provider, the widget asks the hub for the user's status (`GetConnectionStatus`) and shows a
+**Connect to provider** button until the user is connected, and a **Disconnect provider** action afterwards.
+A provider with a different per-user scheme can register a handler for it on
+`window.telephonySoftPhone.authHandlers`. The OAuth callback URL is
+`{scheme}://{host}/Telephony/Connect/Callback` (prefixed with the tenant URL prefix when one is configured);
+register it as an allowed redirect URI in the provider's OAuth application.

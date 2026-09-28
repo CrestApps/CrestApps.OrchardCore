@@ -131,6 +131,50 @@ public sealed class TelnyxIvrProvider : IIvrProvider
         return result.Succeeded;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Spoken with <c>speak</c> in the same voice and language as the menu. The command carries a call-flow
+    /// <c>client_state</c>, which Telnyx echoes on the message's <c>call.speak.ended</c>: that webhook is what moves the
+    /// caller on, so the menu, the hold music or the voicemail greeting is only started once the whole message has been
+    /// heard, rather than being issued straight after it and cutting it off. A message after which the call is ended
+    /// carries the hang-up state instead, and the same webhook hangs up.
+    /// </remarks>
+    public async Task<bool> AnnounceAsync(
+        string providerCallId,
+        string text,
+        bool endCallAfter,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(providerCallId) || string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        var options = _options.CurrentValue;
+        var clientState = endCallAfter
+            ? TelnyxCallFlowClientState.ForHangUpAfterSpeech()
+            : TelnyxCallFlowClientState.ForAnnouncement();
+
+        var result = await _apiClient.SpeakAsync(
+            providerCallId,
+            text,
+            TelnyxPrompts.ResolveVoice(options),
+            TelnyxPrompts.ResolveLanguage(options),
+            clientState.ToJson(),
+            cancellationToken);
+
+        if (!result.Succeeded)
+        {
+            _logger.LogWarning(
+                "Telnyx refused to speak the entry point's message on call '{CallId}' (status {StatusCode}): {Error}",
+                providerCallId.SanitizeLogValue(),
+                result.StatusCode,
+                result.ErrorBody.SanitizeLogValue());
+        }
+
+        return result.Succeeded;
+    }
+
     /// <summary>
     /// Turns the menu's configured media into what Telnyx will play: the <c>media_name</c> a voice media catalog clip
     /// was stored under, or an <c>audio_url</c> for externally hosted audio.

@@ -22,7 +22,7 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
     /// Initializes a new instance of the <see cref="DialerProfileDisplayDriver"/> class.
     /// </summary>
     /// <param name="optionsProvider">The admin form options provider.</param>
-    /// <param name="shellFeaturesManager">The shell features manager used to detect the Automated Dialer feature.</param>
+    /// <param name="shellFeaturesManager">The shell features manager used to detect the Paced Dialing feature.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public DialerProfileDisplayDriver(
         ContactCenterAdminFormOptionsProvider optionsProvider,

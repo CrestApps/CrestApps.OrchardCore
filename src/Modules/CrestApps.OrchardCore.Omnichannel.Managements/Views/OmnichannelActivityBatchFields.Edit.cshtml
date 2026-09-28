@@ -76,7 +76,14 @@
             <div class="ocat-end">
                 <select asp-for="CampaignId" asp-items="Model.Campaigns" class="form-select"></select>
                 <span asp-validation-for="CampaignId" class="text-danger"></span>
-                <span class="hint">@T["Optional. Campaigns are used for grouping and reporting only."]</span>
+                @if (string.Equals(Model.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase))
+                {
+                    <span class="hint">@T["Required unless the subject has a default campaign. Agents sign in to this campaign to receive the dialer calls from this load, and a dialer load without a campaign cannot be queued for dialing."]</span>
+                }
+                else
+                {
+                    <span class="hint">@T["Optional. Leave empty to use the subject's default campaign, if it has one. Campaigns group the loaded activities for reporting."]</span>
+                }
             </div>
         </div>
 
@@ -204,7 +211,7 @@
                     <select asp-for="DialerProfileId" asp-items="Model.DialerProfiles" class="form-select">
                     </select>
                     <span asp-validation-for="DialerProfileId" class="text-danger"></span>
-                    <span class="hint">@T["Required. The selected dialer profile controls the outbound dialing mode, queue, and campaign assignment for the loaded activities."]</span>
+                    <span class="hint">@T["Required. The dialer profile chooses how the loaded activities are dialed: the dialing mode (preview, power, or progressive) and its pacing. The campaign comes from the Campaign field above, or from the subject's default campaign."]</span>
                 </div>
             </div>
         }

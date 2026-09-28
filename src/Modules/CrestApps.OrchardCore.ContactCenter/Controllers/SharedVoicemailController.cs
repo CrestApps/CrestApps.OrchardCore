@@ -417,7 +417,7 @@ public sealed class SharedVoicemailController : Controller
             SharedVoicemailReasons.AlreadyResolved => H["This voicemail was already marked as done. Return it to the queue to work it again."],
             SharedVoicemailReasons.ManagePermissionRequired => H["You are not allowed to delete shared voicemail."],
             SharedVoicemailReasons.NoCallerNumber => H["The caller left no number to call back."],
-            SharedVoicemailReasons.CallbacksUnavailable => H["Callbacks are not available. Enable the Contact Center Outbound Dialer feature to queue callbacks."],
+            SharedVoicemailReasons.CallbacksUnavailable => H["Calling back is not available. The call is placed from your own soft phone, so a telephony provider must be configured and your soft phone must be signed in."],
             SharedVoicemailReasons.CallbackAlreadyStarted => H["You are already calling this caller back. If your soft phone did not start the call, wait a moment and try again."],
             SharedVoicemailReasons.LegalHold => H["The voicemail's recording is under legal hold and cannot be deleted."],
             _ when result.Status == SharedVoicemailActionStatus.NotFound => H["The voicemail could not be found."],

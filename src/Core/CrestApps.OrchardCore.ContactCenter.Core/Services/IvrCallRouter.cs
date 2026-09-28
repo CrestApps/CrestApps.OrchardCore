@@ -315,6 +315,238 @@ public sealed class IvrCallRouter : IIvrCallRouter
         await RouteAsync(interactionId, entryPoint, FallbackAfterFailedTransfer(entryPoint.IvrFlow, failedDestinationId), cancellationToken);
     }
 
+    /// <inheritdoc />
+    public async Task AnnounceAsync(string interactionId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(interactionId);
+
+        var interaction = await _interactionManager.FindByIdAsync(interactionId, cancellationToken);
+        var announcement = interaction is null ? null : EntryPointAnnouncement.Read(interaction);
+
+        // Only a caller the routing has just marked as owed a message is announced to: one that is already hearing it,
+        // or has had it, is never given it twice.
+        if (announcement is null || announcement.Status != EntryPointAnnouncement.Scheduled)
+        {
+            return;
+        }
+
+        // A caller who hung up before the routing that created their call committed has nothing to hear.
+        if (interaction.IsSettled)
+        {
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "The entry point's {AnnouncementKind} message was not said on interaction '{InteractionId}': the call ended before it could start.",
+                    announcement.Kind,
+                    interactionId.SanitizeLogValue());
+            }
+
+            return;
+        }
+
+        var entryPoint = await _flowResolver.FindEntryPointAsync(interaction, cancellationToken);
+
+        if (entryPoint is null)
+        {
+            _logger.LogWarning(
+                "The entry point for interaction '{InteractionId}' no longer exists, so its {AnnouncementKind} message cannot be said and the caller cannot be put through.",
+                interactionId.SanitizeLogValue(),
+                announcement.Kind);
+
+            return;
+        }
+
+        var text = announcement.Kind == EntryPointAnnouncement.Closed ? entryPoint.ClosedMessage : entryPoint.WelcomeMessage;
+
+        // The message was removed after the call arrived: the caller goes on exactly as they would have without one.
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "The entry point's {AnnouncementKind} message was skipped on interaction '{InteractionId}' because entry point '{EntryPointId}' no longer has one; the caller goes on to {AnnouncementNext}.",
+                    announcement.Kind,
+                    interactionId.SanitizeLogValue(),
+                    entryPoint.ItemId.SanitizeLogValue(),
+                    announcement.Next);
+            }
+
+            EntryPointAnnouncement.SetStatus(interaction, EntryPointAnnouncement.Skipped);
+            await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
+            await ContinueAfterAnnouncementAsync(interaction, entryPoint, announcement, cancellationToken);
+
+            return;
+        }
+
+        // A closed entry point that turns callers away ends the call itself once the message has been said, so nothing
+        // has to wait for the end of the speech to hang up.
+        var endCallAfter = announcement.Next == EntryPointAnnouncement.NextReject;
+        var accepted = await _ivrExecutionService.AnnounceAsync(interaction, text, endCallAfter, cancellationToken);
+
+        // The message's status was committed before the provider was asked, and a commit forgets what the session had
+        // loaded, so the interaction is read again rather than saved from the copy taken before.
+        var current = await _interactionManager.FindByIdAsync(interactionId, cancellationToken) ?? interaction;
+
+        if (!accepted)
+        {
+            _logger.LogWarning(
+                "The entry point's {AnnouncementKind} message could not be said on interaction '{InteractionId}' (the provider cannot speak on this call, or refused); the caller goes on to {AnnouncementNext} without it.",
+                announcement.Kind,
+                interactionId.SanitizeLogValue(),
+                announcement.Next);
+
+            EntryPointAnnouncement.SetStatus(current, EntryPointAnnouncement.Failed);
+            await _interactionManager.UpdateAsync(current, cancellationToken: cancellationToken);
+            await ContinueAfterAnnouncementAsync(current, entryPoint, announcement, cancellationToken);
+
+            return;
+        }
+
+        if (endCallAfter)
+        {
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "The entry point's {AnnouncementKind} message is being said on interaction '{InteractionId}'; the provider ends the call once it has been said.",
+                    announcement.Kind,
+                    interactionId.SanitizeLogValue());
+            }
+
+            EntryPointAnnouncement.SetStatus(current, EntryPointAnnouncement.Played);
+            await _interactionManager.UpdateAsync(current, cancellationToken: cancellationToken);
+
+            if (!await _inboundProcessor.EndInboundAsync(current.ActivityItemId, EntryPointAnnouncement.ClosedRejectReasonCode, providerEndsCall: true, cancellationToken))
+            {
+                _logger.LogWarning(
+                    "The call on interaction '{InteractionId}' could not be recorded as ended after the entry point's closed message.",
+                    interactionId.SanitizeLogValue());
+            }
+
+            return;
+        }
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "The entry point's {AnnouncementKind} message is being said on interaction '{InteractionId}'; the caller goes on to {AnnouncementNext} when the provider reports that it has ended.",
+                announcement.Kind,
+                interactionId.SanitizeLogValue(),
+                announcement.Next);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> CompleteAnnouncementAsync(string interactionId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(interactionId);
+
+        var interaction = await _interactionManager.FindByIdAsync(interactionId, cancellationToken);
+        var announcement = interaction is null ? null : EntryPointAnnouncement.Read(interaction);
+
+        // The end of any other speech on the call (a queue announcement, a repeated report of this one) is not the end
+        // of a message the caller is waiting on, and must not move them a second time.
+        if (announcement is null || announcement.Status != EntryPointAnnouncement.Speaking)
+        {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Speech ended on interaction '{InteractionId}', which is not waiting on an entry point message (status '{AnnouncementStatus}'); nothing to do.",
+                    interactionId.SanitizeLogValue(),
+                    announcement?.Status);
+            }
+
+            return false;
+        }
+
+        if (interaction.IsSettled)
+        {
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "The entry point's {AnnouncementKind} message ended on interaction '{InteractionId}' after the call had already ended; the caller is not moved on.",
+                    announcement.Kind,
+                    interactionId.SanitizeLogValue());
+            }
+
+            return false;
+        }
+
+        var entryPoint = await _flowResolver.FindEntryPointAsync(interaction, cancellationToken);
+
+        if (entryPoint is null)
+        {
+            _logger.LogWarning(
+                "The entry point for interaction '{InteractionId}' no longer exists, so the caller who heard its {AnnouncementKind} message cannot be put through.",
+                interactionId.SanitizeLogValue(),
+                announcement.Kind);
+
+            return false;
+        }
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "The entry point's {AnnouncementKind} message was said on interaction '{InteractionId}'; the caller goes on to {AnnouncementNext}.",
+                announcement.Kind,
+                interactionId.SanitizeLogValue(),
+                announcement.Next);
+        }
+
+        // Left to commit with the routing it causes, like a menu choice: committed on its own, a routing that then
+        // failed on a concurrency conflict would be retried against a caller already marked as moved on, and do nothing.
+        EntryPointAnnouncement.SetStatus(interaction, EntryPointAnnouncement.Played);
+        await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
+        await ContinueAfterAnnouncementAsync(interaction, entryPoint, announcement, cancellationToken);
+
+        return true;
+    }
+
+    private async Task ContinueAfterAnnouncementAsync(
+        Interaction interaction,
+        ContactCenterEntryPoint entryPoint,
+        EntryPointAnnouncement announcement,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(interaction.ActivityItemId))
+        {
+            return;
+        }
+
+        switch (announcement.Next)
+        {
+            case EntryPointAnnouncement.NextMenu:
+                // The menu starts here rather than through StartAsync, which answers a fresh caller: this one has been
+                // answered and welcomed, and only the menu is left. Going back to the main menu later is a menu step,
+                // not a new start, so the welcome is never said again.
+                var step = await _ivrExecutionService.StartAsync(interaction, entryPoint.IvrFlow, cancellationToken);
+                await RouteAsync(interaction.ItemId, entryPoint, step, cancellationToken);
+                break;
+
+            case EntryPointAnnouncement.NextQueue:
+                await RouteToQueueAsync(interaction, entryPoint, announcement.QueueId, isEntryPointTarget: false, cancellationToken);
+                break;
+
+            case EntryPointAnnouncement.NextVoicemail:
+                await SendToVoicemailAsync(interaction, entryPoint, EntryPointAnnouncement.ClosedVoicemailReasonCode, cancellationToken);
+                break;
+
+            case EntryPointAnnouncement.NextReject:
+                // Reached only when the message could not be said: the call is turned away the way it always was.
+                if (!await _inboundProcessor.EndInboundAsync(interaction.ActivityItemId, EntryPointAnnouncement.ClosedRejectReasonCode, providerEndsCall: false, cancellationToken))
+                {
+                    _logger.LogWarning(
+                        "The call on interaction '{InteractionId}' could not be rejected after the entry point's closed message.",
+                        interaction.ItemId.SanitizeLogValue());
+                }
+
+                break;
+
+            default:
+                await RouteToEntryPointTargetAsync(interaction, entryPoint, cancellationToken);
+                break;
+        }
+    }
+
     // What the menu does with a caller who has nowhere else to go is also what it does with one whose chosen number did
     // not answer. A fallback that is a menu is not replayed — the caller has already made their choice — and one that
     // is the number that just failed would ring it again, so both go to the entry point's own target instead.

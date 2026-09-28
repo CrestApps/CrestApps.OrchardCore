@@ -17,7 +17,7 @@ namespace CrestApps.OrchardCore.DncRegistry.Drivers;
 /// </summary>
 public sealed class CanadaDnclRegistrySettingsDisplayDriver : SiteDisplayDriver<CanadaDnclRegistrySettings>
 {
-    private const string ProtectorPurpose = "canada-dncl";
+    private const string ProtectorPurpose = DncRegistryConstants.DataProtectionPurposes.CanadaDnclApiKey;
 
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;

@@ -37,10 +37,39 @@ public sealed partial class TelnyxWebhookService
             return null;
         }
 
+        if (state.Intent == TelnyxCallFlowClientState.AnnouncementIntent)
+        {
+            return await HandleAnnouncementEndedAsync(callEvent, cancellationToken);
+        }
+
         // Hanging up a leg that has already ended is harmless; the caller may well have gone first.
         await _apiClient.HangupAsync(callEvent.CallControlId, cancellationToken);
 
         return TelnyxWebhookResult.Updated;
+    }
+
+    // The end of an entry point's welcome or closed message: the caller goes on to the menu, the queue or voicemail.
+    // Because the state stays on the leg, a later speak.ended on the same call (a queue announcement) carries it too;
+    // the sink recognises that the caller is no longer waiting on the message and claims nothing, and the event goes on
+    // as it always did.
+    private async Task<TelnyxWebhookResult?> HandleAnnouncementEndedAsync(TelnyxCallEvent callEvent, CancellationToken cancellationToken)
+    {
+        var handled = await _digitsSink.HandleAnnouncementEndedAsync(new InboundVoiceAnnouncementEndedEvent
+        {
+            ProviderName = TelnyxConstants.ProviderTechnicalName,
+            ProviderCallId = callEvent.CallControlId,
+            DeliveryId = callEvent.EventId,
+        }, cancellationToken);
+
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug(
+                "The entry point's message ended on Telnyx call '{CallControlId}'; the caller was moved on: {Handled}.",
+                callEvent.CallControlId.SanitizeLogValue(),
+                handled);
+        }
+
+        return handled ? TelnyxWebhookResult.Routed : null;
     }
 
     // The leg a transfer created belongs to nothing the platform tracks: it only says whether the transfer worked.

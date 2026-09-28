@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
@@ -37,6 +38,7 @@ public sealed class AdminController : Controller
     private readonly IShapeFactory _shapeFactory;
 
     private readonly INotifier _notifier;
+    private readonly ILogger _logger;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -53,6 +55,7 @@ public sealed class AdminController : Controller
     /// <param name="updateModelAccessor">The update model accessor.</param>
     /// <param name="shapeFactory">The shape factory.</param>
     /// <param name="notifier">The notifier.</param>
+    /// <param name="logger">The logger.</param>
     /// <param name="htmlLocalizer">The html localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AdminController(
@@ -65,6 +68,7 @@ public sealed class AdminController : Controller
         IUpdateModelAccessor updateModelAccessor,
         IShapeFactory shapeFactory,
         INotifier notifier,
+        ILogger<AdminController> logger,
         IHtmlLocalizer<AdminController> htmlLocalizer,
         IStringLocalizer<AdminController> stringLocalizer
         )
@@ -78,6 +82,7 @@ public sealed class AdminController : Controller
         _updateModelAccessor = updateModelAccessor;
         _shapeFactory = shapeFactory;
         _notifier = notifier;
+        _logger = logger;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -127,18 +132,50 @@ public sealed class AdminController : Controller
 
             if (chatSession == null || chatSession.ProfileId != profile.ItemId)
             {
+                _logger.LogWarning(
+                    "AI chat session page: session {SessionId} was not found for profile {ProfileId} (stored profile {StoredProfileId}, resource {ResourceId}).",
+                    sessionId,
+                    profile.ItemId,
+                    chatSession?.ProfileId,
+                    resourceId);
+
                 return NotFound();
             }
 
             if (!string.IsNullOrEmpty(chatSession.UserId) && chatSession.UserId != userId)
             {
+                _logger.LogWarning(
+                    "AI chat session page: user {UserId} was refused session {SessionId} of profile {ProfileId} because it belongs to another user.",
+                    userId,
+                    sessionId,
+                    profile.ItemId);
+
                 return Forbid();
             }
 
-            if (string.IsNullOrEmpty(chatSession.UserId) &&
-                !await CanAccessSystemSessionAsync(profile.ItemId, sessionId, resourceId))
+            if (string.IsNullOrEmpty(chatSession.UserId))
             {
-                return Forbid();
+                if (!await CanAccessSystemSessionAsync(profile.ItemId, sessionId, resourceId))
+                {
+                    _logger.LogWarning(
+                        "AI chat session page: user {UserId} was refused system-owned session {SessionId} of profile {ProfileId}; no access provider authorized resource {ResourceId}.",
+                        userId,
+                        sessionId,
+                        profile.ItemId,
+                        resourceId);
+
+                    return Forbid();
+                }
+
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug(
+                        "AI chat session page: user {UserId} is reviewing system-owned session {SessionId} of profile {ProfileId} through resource {ResourceId}; the transcript is rendered read-only and the chat hub is not asked to load it.",
+                        userId,
+                        sessionId,
+                        profile.ItemId,
+                        resourceId);
+                }
             }
 
             model.SessionId = sessionId;

@@ -1,3 +1,4 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -7,6 +8,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 using OrchardCore.Users;
 
@@ -22,6 +24,7 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
     private readonly IContactCenterRealTimeNotifier _notifier;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IClock _clock;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterRealTimeEventHandler"/> class.
@@ -29,14 +32,17 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
     /// <param name="notifier">The real-time notifier used to broadcast updates.</param>
     /// <param name="scopeExecutor">The executor used to isolate projections from the outbox persistence scope.</param>
     /// <param name="clock">The clock used to stamp notifications.</param>
+    /// <param name="logger">The logger that records which interaction changes reached an agent's screens.</param>
     public ContactCenterRealTimeEventHandler(
         IContactCenterRealTimeNotifier notifier,
         IContactCenterScopeExecutor scopeExecutor,
-        IClock clock)
+        IClock clock,
+        ILogger<ContactCenterRealTimeEventHandler> logger)
     {
         _notifier = notifier;
         _scopeExecutor = scopeExecutor;
         _clock = clock;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -124,6 +130,26 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
                     cancellationToken);
                 break;
 
+            // The call the agent is on moved. Offers and presence alone never told the agent's screens that an
+            // outbound dialer call had been placed or answered: the dial is accepted before it is placed, so the
+            // refresh that acceptance caused found nothing live, and the next one came only with wrap-up.
+            case ContactCenterConstants.Events.DialStarted:
+            case ContactCenterConstants.Events.DialFailed:
+            case ContactCenterConstants.Events.CallConnected:
+            case ContactCenterConstants.Events.CallHeld:
+            case ContactCenterConstants.Events.CallResumed:
+            case ContactCenterConstants.Events.CallConferenceChanged:
+            case ContactCenterConstants.Events.CallEnded:
+            case ContactCenterConstants.Events.InteractionTransferred:
+            case ContactCenterConstants.Events.AgentLegAnswered:
+            case ContactCenterConstants.Events.AgentLegFailed:
+                await BroadcastInteractionChangedAsync(
+                    interactionEvent,
+                    context.InteractionManager,
+                    context.AgentManager,
+                    cancellationToken);
+                break;
+
             case ContactCenterConstants.Events.CallQualityAlertRaised:
                 if (interactionEvent.GetData<CallQualityAlertNotification>() is { } alert)
                 {
@@ -131,6 +157,74 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
                 }
 
                 break;
+        }
+    }
+
+    private async Task BroadcastInteractionChangedAsync(
+        InteractionEvent interactionEvent,
+        IInteractionManager interactionManager,
+        IAgentProfileManager agentManager,
+        CancellationToken cancellationToken)
+    {
+        var interactionId = string.IsNullOrEmpty(interactionEvent.InteractionId)
+            ? interactionEvent.AggregateId
+            : interactionEvent.InteractionId;
+
+        if (string.IsNullOrEmpty(interactionId))
+        {
+            return;
+        }
+
+        var interaction = await interactionManager.FindByIdAsync(interactionId, cancellationToken);
+
+        // A call still in the IVR or waiting in a queue has no agent yet; its screens are told through the offer.
+        if (interaction is null || string.IsNullOrEmpty(interaction.AgentId))
+        {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Did not push {EventType} for interaction '{InteractionId}' to an agent: the interaction {Reason}.",
+                    interactionEvent.EventType,
+                    interactionId.SanitizeLogValue(),
+                    interaction is null ? "was not found" : "has no agent");
+            }
+
+            return;
+        }
+
+        var agent = await agentManager.FindByIdAsync(interaction.AgentId, cancellationToken);
+
+        if (agent is null || string.IsNullOrEmpty(agent.UserId))
+        {
+            _logger.LogWarning(
+                "Did not push {EventType} for interaction '{InteractionId}' because agent '{AgentId}' could not be resolved to a user.",
+                interactionEvent.EventType,
+                interactionId.SanitizeLogValue(),
+                interaction.AgentId.SanitizeLogValue());
+
+            return;
+        }
+
+        await _notifier.NotifyInteractionChangedAsync(new AgentInteractionNotification
+        {
+            InteractionId = interaction.ItemId,
+            UserId = agent.UserId,
+            AgentId = agent.ItemId,
+            EventType = interactionEvent.EventType,
+            Status = interaction.Status.ToString(),
+            Direction = interaction.Direction.ToString(),
+            ServerTimeUtc = _clock.UtcNow,
+        }, cancellationToken);
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Pushed InteractionChanged to agent '{AgentId}' for {EventType}: interaction '{InteractionId}' is {Direction} {Status}.",
+                agent.ItemId.SanitizeLogValue(),
+                interactionEvent.EventType,
+                interaction.ItemId.SanitizeLogValue(),
+                interaction.Direction,
+                interaction.Status);
         }
     }
 

@@ -1,6 +1,6 @@
 # SMS Communication Portal — Implementation Progress
 
-Authoritative spec: `src/CrestApps.Docs/docs/telephony/sms-portal-project-plan.md`. Re-read the plan and this
+Authoritative spec: `docs/engineering/telephony/sms-portal-project-plan.md`. Re-read the plan and this
 file at the start of every work cycle. Every decision in the plan is FINAL — implement, do not redesign.
 
 Legend: `[ ]` not started · `[~]` in progress · `[x]` done & green (builds + tests pass) · `[!]` needs live validation

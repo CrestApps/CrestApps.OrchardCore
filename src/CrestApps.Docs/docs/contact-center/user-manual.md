@@ -2,8 +2,12 @@
 sidebar_label: Agent & Supervisor User Manual
 sidebar_position: 3
 title: Contact Center Agent and Supervisor User Manual
-description: A task-oriented, searchable how-to manual for every day-to-day Contact Center action an agent or supervisor performs, with step-by-step instructions and screencast demos.
+description: A task-oriented, searchable how-to manual for every day-to-day Contact Center action an agent or supervisor performs, with step-by-step instructions.
 ---
+
+:::info New task-by-task manual
+The [User Manual](../user-manual/index.md) covers the same tasks one page at a time, with a screencast for each. Each task below links to its page there.
+:::
 
 This is the task-oriented user manual for the two people who operate the Contact Center every day:
 
@@ -16,21 +20,15 @@ Each task below is written as an independent, searchable **how-to** with its own
 The [Telephony soft phone](../telephony/index.md) is where call audio and the device controls (dial pad, hold, mute, transfer, hang up) live. The **Agent Workspace** (*Interaction Center → My workspace*) adds the CRM context, work offers, and wrap-up. Keep both open during a shift.
 :::
 
-## About the screencasts
-
-Every task in this manual is paired with a short screencast so the written steps and the on-screen actions stay in sync. The recordings follow the same convention as the rest of the documentation site: full-screen capture at **1600×1000**, delivered as **MP4** (H.264, `yuv420p`) under `static/img/docs/`, and embedded with an HTML `<video controls preload="metadata" width="100%">` player.
-
-The exact click path, the audit checklist, and the target file name for each recording are collected in the [Screencast library](#screencast-library) at the end of this page. Tasks whose demo is not yet published show a **Screencast** callout with the file name that will be used, so the video can be dropped in without editing the surrounding steps.
-
 ## Roles and permissions
 
 | You are a… | Grant the role/permission | It lets you… |
 | --- | --- | --- |
 | Agent | `ContactCenterSignIntoQueues` | Sign in to queues/campaigns, change your own presence, accept/decline offers, and complete work in **My workspace**. |
 | Supervisor | **Supervisor** role (includes `MonitorContactCenter` and `ContactCenterInterveneInCalls`) | Open the **Live dashboard**, listen to, whisper to, or barge into live calls, and message agents. `ContactCenterInterveneInCalls` adds taking a call over, ending, transferring and recording it, and setting an agent's state. |
-| Administrator | `ManageContactCenterQueues`, `ManageContactCenterAgents`, `ManageContactCenterSkills`, `ManageContactCenterDialer` | Create queues, agents, skills, reason codes, business hours, entry points, and dialer profiles. |
+| Administrator | `ManageContactCenter` (everything below), or individually `ManageContactCenterQueues`, `ManageContactCenterAgents`, `ManageContactCenterSkills`, `ManageContactCenterBusinessHours`, `ManageContactCenterVoiceMedia`, `ManageContactCenterDialer` | Create queues and entry points, skills, reason codes, agent entitlements, business hours, voice media, and dialer profiles. There is no separate screen for creating agents: an agent is an Orchard user with the agent permission. |
 
-Confirm your role with your administrator before starting. Agents only see the queues and campaigns they are **entitled** to; supervisors only see monitoring actions the active voice provider actually supports.
+Confirm your role with your administrator before starting. When the optional **Agent Entitlements** feature is enabled, agents only see the queues and campaigns they are **entitled** to; without it, any agent may sign in to any queue or campaign. Supervisors only see monitoring actions the active voice provider actually supports.
 
 ---
 
@@ -40,19 +38,19 @@ Everything in this part happens in the floating **Telephony soft phone** and the
 
 ## How to sign in to a queue or campaign
 
-**Prerequisites:** the `ContactCenterSignIntoQueues` permission and at least one queue or campaign entitlement assigned by your administrator.
+**Prerequisites:** the `ContactCenterSignIntoQueues` permission and, when the Agent Entitlements feature is enabled, at least one queue or campaign entitlement assigned by your administrator.
 
-1. Open **Interaction Center → My workspace** and make sure the Telephony soft phone is visible.
+You sign in from the soft phone, not from **My workspace**; the workspace only shows a chip for each queue you are signed in to.
+
+1. Open the Telephony soft phone.
 2. In the soft phone, open the **Work** tab.
-3. In **Select queue(s)** and/or **Select campaign(s)**, choose the memberships you want to receive work from. You can only pick memberships you are entitled to.
+3. In **Select queue(s)** and/or **Select campaign(s)**, choose the memberships you want to receive work from. When entitlements are enforced, you can only pick memberships you are entitled to.
 4. Click **Sign in**. Your presence changes to **Available** and the Work tab lists every queue and campaign you are now signed in to.
 5. If inbound calls are already waiting in one of those queues, routing offers you the next queued call immediately after sign-in.
 
 To leave a single membership, use its **Sign out** action; to leave everything, use **Sign out of all**. Sign-in and sign-out happen over the real-time hub, so the page does not reload.
 
-:::note Screencast
-`contact-center-agent-signin.mp4`
-:::
+See [Agent Workspace](../user-manual/agent-workspace.md).
 
 ## How to set your presence to Available
 
@@ -63,16 +61,14 @@ To leave a single membership, use its **Sign out** action; to leave everything, 
 
 Returning to **Available** immediately asks routing to offer any call already waiting in your signed-in queues, so you do not have to wait for a new inbound event.
 
-:::note Screencast
-`contact-center-agent-presence.mp4`
-:::
+See [Agent Workspace](../user-manual/agent-workspace.md).
 
 ## How to request a break
 
 **Prerequisites:** you are signed in.
 
 1. Open the **presence** dropdown in the soft-phone header.
-2. Choose **Request break**.
+2. Choose **Break**. While work holds you, the same item reads **Request break**.
 
 A break is **system-approved**:
 
@@ -81,9 +77,7 @@ A break is **system-approved**:
 
 While in **RequestBreak** or **Break** you are not eligible for new routing decisions. Return to **Available** when you are ready for work again.
 
-:::note Screencast
-`contact-center-agent-break.mp4`
-:::
+See [Agent Workspace](../user-manual/agent-workspace.md).
 
 ## How to go not-ready with a reason code
 
@@ -92,11 +86,9 @@ While in **RequestBreak** or **Break** you are not eligible for new routing deci
 1. Open the **presence** dropdown.
 2. Pick a **reason code** (for example *Lunch*, *Coaching*, or *Team meeting*).
 
-The reason sets your presence to the state the administrator mapped it to (for example `Break`, `Meeting`, or `Training`) and records the reason on your profile and in the audit trail. If no reason codes are configured, the dropdown falls back to the built-in not-ready states.
+The reason sets your presence to the state the administrator mapped it to (for example `Meeting` or `Training`) and records the reason on your profile and in the audit trail. A reason mapped to `Break` submits a break request instead: the break starts at once when you are idle, or when your current work ends. If no reason codes are configured, the dropdown falls back to the built-in not-ready states. **Available** and **Offline** are always listed.
 
-:::note Screencast
-`contact-center-agent-reason-code.mp4`
-:::
+See [Agent States](../user-manual/agent-states.md).
 
 ## How to receive and accept an inbound call from a queue
 
@@ -105,13 +97,11 @@ The reason sets your presence to the state the administrator mapped it to (for e
 1. When routing selects you, a **ringing offer card** appears showing the customer (name or number), the source **queue**, and a **countdown**.
 2. Click **Accept** before the countdown ends.
 3. The reservation is accepted, the media connects, and the work moves into your **active interaction** panel. (Until then the panel reads **No active interactions right now**.)
-   - On providers that ring your device (for example Dialpad), your device rings and you answer there.
+   - On providers that ring your own device, your device rings and you answer there.
    - On server-side delivery (for example the bundled Asterisk path), the call is connected during accept and stays controllable from the soft phone.
 4. If you do nothing before the countdown ends, the offer is revoked and re-routed to another agent.
 
-:::note Screencast
-`contact-center-agent-accept-inbound.mp4`
-:::
+See [Placing and Handling Calls](../user-manual/calls.md).
 
 ## How to decline an offer
 
@@ -120,22 +110,20 @@ The reason sets your presence to the state the administrator mapped it to (for e
 1. Click **Decline** on the ringing offer card.
 2. The offer is released and immediately re-offered to the next available agent.
 
-:::note Screencast
-`contact-center-agent-decline.mp4`
-:::
+See [Placing and Handling Calls](../user-manual/calls.md).
 
 ## How to put a call on hold and resume it
 
 **Prerequisites:** you are on an active call and the provider advertises the **Hold** capability.
 
-1. In the soft phone, click **Hold**. The caller is placed on hold and the keypad becomes available for a second call.
+1. In the soft phone, click **Hold**. The caller is placed on hold.
 2. Click **Resume** to return to the caller.
+
+Hold only holds the call. To place a second call, use **Add call** (see [How to conference two calls](#how-to-conference-two-calls)).
 
 If the provider does not advertise Hold, the button is hidden.
 
-:::note Screencast
-`contact-center-agent-hold-resume.mp4`
-:::
+See [Placing and Handling Calls](../user-manual/calls.md).
 
 ## How to mute and unmute
 
@@ -144,9 +132,7 @@ If the provider does not advertise Hold, the button is hidden.
 1. Click **Mute** to stop sending your microphone audio.
 2. Click **Unmute** to resume.
 
-:::note Screencast
-`contact-center-agent-mute.mp4`
-:::
+See [Placing and Handling Calls](../user-manual/calls.md).
 
 ## How to send DTMF digits (dial pad)
 
@@ -155,9 +141,7 @@ If the provider does not advertise Hold, the button is hidden.
 1. Open the soft-phone **keypad**.
 2. Press the digits you need (for example an IVR menu selection). Each press sends a DTMF tone to the far end.
 
-:::note Screencast
-`contact-center-agent-dtmf.mp4`
-:::
+See [Placing and Handling Calls](../user-manual/calls.md).
 
 ## How to transfer a call
 
@@ -199,7 +183,7 @@ In every case the call leaves your phone at once and you go into wrap-up, or str
 If the person you consulted hangs up or does not answer within 30 seconds, the caller comes straight back to you and the panel says so. If the caller hangs up during the consult, the consult ends and the person you consulted is released. A queue cannot be consulted; send the call to a queue with a blind transfer.
 
 :::caution Provider differences
-Transfer support is provider-dependent. The bundled **Asterisk** provider supports **blind transfer** and a **two-call conference** but rejects warm (consultative) transfer. **Dialpad** exposes its own transfer and merge actions when configured. **Telnyx** supports every Contact Center transfer above, including the consult. Only the actions the active provider supports are shown.
+Transfer support is provider-dependent. The bundled **Asterisk** provider supports **blind transfer** and a **two-call conference** but rejects warm (consultative) transfer. **Telnyx** supports every Contact Center transfer above, including the consult. Only the actions the active provider supports are shown.
 
 On **Telnyx**, a number you dial from the keypad is connected by the phone system: your phone rings its own line for a moment and answers it by itself, and the number is dialed from there. Such a call can be transferred -- blind or warm, to a number or an extension -- and merged like any other. If the phone system cannot connect the call that way -- for example your phone is still registering -- the phone dials the number itself, and that call cannot be transferred or merged: the transfer panel says so instead of offering a target, and its line in **Active calls** shows a disabled checkbox.
 
@@ -210,9 +194,7 @@ On **Telnyx**, a number you dial from the keypad is connected by the phone syste
 - **Receiving one:** a call a colleague hands you rings your phone with **Answer** and **Decline**, showing the caller's number and *Transferred by* and the colleague's name. Declining it gives the caller back to the colleague. Once answered it is an ordinary call on your phone: you can hold it, transfer it again or merge it.
 :::
 
-:::note Screencast
-`contact-center-agent-transfer.mp4`
-:::
+See [Placing and Handling Calls](../user-manual/calls.md).
 
 ## How to conference two calls
 
@@ -233,9 +215,7 @@ To add another call to a running conference, tick any participant of the confere
 
 **Leaving a conference or ending it for everyone.** In a conference, **Hang up** reads **Leave**: you drop out and everyone else stays connected to each other. A Contact Center caller is never disconnected by you leaving; their call stays on your phone. If only one other person is left, **Hang up** simply ends the call, so nobody is left alone on the line. To end the call for everyone, click **End for all** and confirm. The confirmation starts on **Keep talking**, so pressing Enter does not end the call by accident.
 
-:::note Screencast
-`contact-center-agent-conference.mp4`
-:::
+See [Placing and Handling Calls](../user-manual/calls.md).
 
 ## How to end a call (hang up)
 
@@ -243,17 +223,15 @@ To add another call to a running conference, tick any participant of the confere
 
 1. Click the red **Hang up** to end the selected call. It sits with your own call controls: **Mute**, **Hold** and **Keypad**. The keypad stays closed during a call until you open it to send digits. With two or more calls up, **End all** (outlined in red, in the row with **Transfer** and **Add call**) ends every call after you confirm. In a conference, see [leaving a conference or ending it for everyone](#how-to-conference-two-calls).
 
-When an answered call ends, a terminal provider event moves you from **Busy** to **Wrap-up** so you can complete after-call work.
+When an answered queue or campaign call ends, a terminal provider event moves you from **Busy** to **Wrap-up** so you can complete after-call work. A direct call to you, or a call you dialed yourself, skips wrap-up and returns you to work.
 
-:::note Screencast
-`contact-center-agent-hangup.mp4`
-:::
+See [Placing and Handling Calls](../user-manual/calls.md).
 
 ## How to complete after-call work (wrap-up) and become available again
 
 **Prerequisites:** the call has ended and you are in **Wrap-up**.
 
-Wrap-up is **not** a timed auto-return — you control when it ends by completing the activity:
+Wrap-up is **not** a timed auto-return — you control when it ends by completing the activity. The platform does cap it: after 15 minutes (a setting your administrator can change) you are released automatically, and the activity stays open.
 
 1. In the active interaction panel, click **Complete activity**. This opens the shared Omnichannel completion page for the assigned activity.
 2. Review the customer/contact context and open the customer record if details need correcting.
@@ -264,21 +242,18 @@ Wrap-up is **not** a timed auto-return — you control when it ends by completin
 
 Completion records the wrap-up end time and returns you to a **pending break** if you requested one during the call; otherwise it returns you to **Available** so routing can offer the next call. This is what prevents a new call from arriving before after-call work is finished.
 
-:::note Screencast
-`contact-center-agent-wrapup.mp4`
-:::
+See [Agent Workspace](../user-manual/agent-workspace.md).
 
 ## How to preview-dial a record
 
-**Prerequisites:** you are signed in to a campaign whose dialer profile uses the **Preview** mode.
+**Prerequisites:** you are signed in to a campaign loaded with a dialer profile that uses the **Preview** mode.
 
-1. When preview work is assigned to you, the browser automatically opens the assigned activity's **Complete activity** page so the record is ready — no extra navigation.
+1. When preview work is assigned to you, the docked agent bar shows the offer (*Preview — review then dial*) with **Dial** and **Skip**, and the browser opens the assigned activity's **Complete activity** page so the record is ready (unless the page you are on has unsaved changes).
 2. Review the customer and activity context before dialing.
-3. Place the call from the soft phone (see [manual dialing](#how-to-place-a-manual-outbound-call)), talk to the customer, then complete the activity with a disposition.
+3. Click **Dial**: the platform places the call for you, so you do not dial it yourself. **Skip** passes on the record.
+4. Talk to the customer, then complete the activity with a disposition.
 
-:::note Screencast
-`contact-center-agent-preview-dial.mp4`
-:::
+See [Agent Workspace](../user-manual/agent-workspace.md).
 
 ## How to place a manual outbound call
 
@@ -288,13 +263,11 @@ Completion records the wrap-up end time and returns you to a **pending break** i
 2. Enter the destination in E.164 form (or select the country and type the national number — the field normalizes it).
 3. Click **Call**. Use hold, mute, transfer, and hang up as needed during the call.
 
-:::note Screencast
-`contact-center-agent-manual-dial.mp4`
-:::
+See [Placing and Handling Calls](../user-manual/calls.md).
 
 ## What to expect in power and progressive (automated) dialing
 
-**Prerequisites:** an administrator has enabled **Contact Center Paced Dialing** and created a Power or Progressive dialer profile pointing at your queue. Automated pacing is compliance-gated.
+**Prerequisites:** an administrator has enabled **Contact Center Paced Dialing** and loaded inventory for your campaign with a Power or Progressive dialer profile, and you are signed in to that campaign. Automated pacing is compliance-gated.
 
 In automated modes you do **not** press dial. When the pacer connects a customer and reserves you:
 
@@ -304,26 +277,21 @@ In automated modes you do **not** press dial. When the pacer connects a customer
 
 Pacing, retry, do-not-call, and calling-window rules are enforced by the profile — see [Dialer](agents-queues-dialer.md#dialer).
 
-:::note Screencast
-`contact-center-agent-paced-dial.mp4`
-:::
+See [Dialer Profiles](../user-manual/dialer-profiles.md).
 
 ## How to protect sensitive data (credit cards) in a recording
 
-Recording is orchestrated by the Contact Center **recording service**, which supports **Start**, **Pause**, **Resume**, and **Stop**. `Pause` is intended for exactly this scenario — suppressing capture *"while sensitive data is captured"* — and it emits the auditable `Recording paused` / `Recording resumed` events.
+**Prerequisites:** the **Contact Center Call Recording** feature, **Allow agents to pause recording** turned on (the **Recording governance** tab of *Settings → Contact Center*), the `ContactCenterSecurePauseRecording` permission, and a voice provider that can pause recording on the live call.
 
-How this reaches a live call today:
+1. On the active interaction in **My workspace**, click **Pause recording** before the customer reads out the sensitive data. If your tenant requires a reason, enter one.
+2. The interaction shows **Recording paused for sensitive-data capture** and the button becomes **Resume recording**.
+3. Click **Resume recording** as soon as the customer has finished.
 
-1. **Automation-driven (supported now).** Bracket the sensitive step with recording state changes so the card number is never captured. Use the **Start Call Recording** and **Stop Call Recording** workflow tasks (or a custom automation that calls the recording service's `PauseAsync`/`ResumeAsync`) around the payment step, then resume normal recording.
-2. **Provider-side (when available).** Some voice providers can pause media capture on their side; when the provider advertises it, the pause/resume flows through the same recording service and audit events.
+If you forget to resume, the platform resumes recording by itself after the tenant's maximum secure-pause window. While recording is paused, supervisors cannot listen, whisper, or barge. Every pause and resume is audited.
 
-:::caution Availability
-There is **no dedicated agent "pause recording" button** in the Agent Workspace today. Sensitive-data suppression is driven by automation or the provider, not by a self-service control on the desktop. Do not tell customers a card segment is excluded unless your tenant has configured one of the mechanisms above. Recording access and deletion are additionally governed by the recording governance and erasure services.
-:::
+Automation can also bracket a step with the **Start Call Recording** and **Stop Call Recording** workflow tasks, and the **Collect data securely** control (Secure Data Capture feature) lets the customer type the value on a secure page instead of reading it out.
 
-:::note Screencast
-`contact-center-agent-recording-pause.mp4`
-:::
+See [Agent Workspace](../user-manual/agent-workspace.md).
 
 ## How to review your recent activity
 
@@ -332,9 +300,7 @@ There is **no dedicated agent "pause recording" button** in the Agent Workspace 
 1. In the soft phone, open the **Recent** tab (inbound and outbound history), or use the **Recent activity** panel in **My workspace**.
 2. Review the direction, outcome, and time of your last interactions before taking the next offer.
 
-:::note Screencast
-`contact-center-agent-recent.mp4`
-:::
+See [Agent Workspace](../user-manual/agent-workspace.md).
 
 ---
 
@@ -347,53 +313,49 @@ Supervisors prepare the environment and monitor operations. The configuration sc
 **Prerequisites:** the `ManageContactCenterQueues` permission and the **Work Distribution** (Queues) feature enabled. Define any required **Skills** and **Business hours** first.
 
 1. Go to **Interaction Center → Management → Queues** and click **Add** (create).
-2. Give the queue a **name** and, for inbound voice, associate the dialed number (DID) that feeds it.
+2. Give the queue a **name**. For inbound voice, pick the dialed number's channel endpoint in **Inbound channel endpoint** on the **Hours and overflow** card.
 3. Choose the **routing strategy** (longest-idle, round-robin, or least-busy) and, optionally, a sticky-agent preference.
 4. Set the **SLA threshold** and the **reservation timeout**.
 5. Add any **required skills** so routing only offers work to agents who have them.
-6. Attach a **business-hours** calendar and choose the closed-hours behavior (hold, overflow, or close).
+6. Attach a **business-hours** calendar and choose the **After-hours action**: **Hold in queue** or **Overflow**.
 7. Optionally set an **overflow queue** for long waits.
 8. **Save**. Then create an [Inbound entry point](agent-desktop.md#for-contact-center-managers-inbound-routing-runbook) that maps the DID to this queue, and sign a skilled agent in to test.
 
-:::note Screencast
-`contact-center-manager-create-queue.mp4`
-:::
+See [Queues and Queue Groups](../user-manual/queues.md).
 
 ## How to configure a dialer (dialing) profile
 
-**Prerequisites:** the `ManageContactCenterDialer` permission and the **Outbound Dialer** feature. A campaign and a target queue should already exist. Power/Progressive modes also require **Paced Dialing**.
+**Prerequisites:** the `ManageContactCenterDialer` permission and the **Outbound Dialer** feature. Power/Progressive modes also require **Paced Dialing**.
+
+A dialer profile is a reusable set of dialing settings. It does not name a campaign or a queue: you pick the campaign together with the profile when you [load dialer inventory](#how-to-load-dialer-inventory), and agents get the calls by signing in to that campaign.
 
 1. Go to **Interaction Center → Management → Dialer Profiles** and click **Add**.
-2. Select the **campaign** whose activities this profile dials.
-3. Select the **queue** whose available agents the profile reserves.
-4. Choose the **dialing mode**: Manual, Preview, Power, or Progressive.
-5. Set the **pacing** and the **voice provider**.
-6. Configure the **compliance** settings: retry delay, do-not-call/suppression, and the allowed **calling window**.
-7. **Save**. The profile now governs how the campaign's activities are executed.
+2. Choose the **dialing mode**: Preview, Power, or Progressive.
+3. Choose the **voice call provider**. For Power, set **Calls per agent** (1 to 3), the only pacing setting.
+4. On the **Dialing** card, set **Max attempts** and **Retry delay (minutes)** for the automated modes.
+5. Configure the **compliance** settings: do-not-call/suppression and the allowed **calling window**.
+6. **Save**.
 
-:::note Screencast
-`contact-center-manager-dialer-profile.mp4`
-:::
+See [Dialer Profiles](../user-manual/dialer-profiles.md).
 
 ## How to load dialer inventory
 
-**Prerequisites:** the `ManageActivityBatches` permission. Dialer inventory loads require an existing **dialer profile** so the loaded activities inherit the correct dialing mode and campaign.
+**Prerequisites:** the `ManageActivityBatches` permission. Dialer inventory loads require an existing **dialer profile**.
 
 1. Go to **Interaction Center → Management → Load Inventory**.
-2. Start a new load and, in the creation dialog, **select the source first**:
-   - **Manual work** — loads user-assigned activities.
-   - **Dialer inventory** — loads **unassigned** work available for reservation; this choice requires a dialer profile.
-3. For dialer inventory, choose the **dialer profile** so the activities inherit its dialing mode and campaign.
-4. Provide the source data for the batch and start the load.
-5. The loaded activities become available to routing/dialing according to the selected profile.
+2. Click **Add Inventory Load** and, in the creation dialog, **select the source first**:
+   - **Manual** — activities assigned to the agents you pick.
+   - **Automatic** — unassigned automated activities an AI profile works on its own.
+   - **Dialer** — unassigned phone activities queued for the outbound dialer.
+3. For a dialer load, choose the **Dialer profile** (it sets the dialing mode) and the **Campaign**. The campaign comes from the load, or from the subject's default campaign when you leave it empty; agents sign in to that campaign to get the calls.
+4. Fill in the contact filters and **Save**, then choose **Actions > Load batch** to run the load in the background.
+5. The loaded activities become available to dialing according to the selected profile.
 
-:::note Screencast
-`contact-center-manager-load-inventory.mp4`
-:::
+See [Load Inventory](../user-manual/load-inventory.md).
 
 ## How to monitor the live dashboard (workload, queues, and productivity)
 
-**Prerequisites:** the **Supervisor** role (or `MonitorContactCenter`) and the **Supervision & Live Dashboard** feature.
+**Prerequisites:** the **Supervisor** role (or `MonitorContactCenter`), the **Supervision & Live Dashboard** feature, and an agent entitlement record of your own that lists the queues you supervise. The dashboard shows only the queues and campaigns on your own entitlement; without a record it is empty.
 
 1. Open **Interaction Center → Live dashboard**. It connects to the real-time hub and refreshes automatically, so it can be left open on a wallboard.
 2. Read the three sections:
@@ -402,9 +364,7 @@ Supervisors prepare the environment and monitor operations. The configuration sc
    - **Agent board** — every agent's live presence, current reason, and how many interactions they are handling.
 3. Use it to spot a backing-up queue, an SLA breach, or too few available agents, then rebalance staffing or open a campaign.
 
-:::note Screencast
-`contact-center-manager-live-dashboard.mp4`
-:::
+See [Live Dashboard](../user-manual/live-dashboard.md).
 
 ## How to monitor a live call
 
@@ -420,9 +380,7 @@ The action invokes the provider first and only records the audited monitoring ev
 
 While you are on the call, the card's **Listen**, **Whisper** and **Barge** buttons (and the same switcher on your phone's banner) change how you are heard without ringing you again; the active one is shown pressed. **Stop** — on the card or the banner — hangs up only your leg: the call goes on for the agent and the customer exactly as before.
 
-:::note Screencast
-`contact-center-manager-monitor.mp4`
-:::
+See [Live Dashboard](../user-manual/live-dashboard.md).
 
 ## How to whisper to an agent
 
@@ -431,9 +389,7 @@ While you are on the call, the card's **Listen**, **Whisper** and **Barge** butt
 1. On the **Live dashboard**, find the agent on a live call.
 2. Click **Whisper** on the agent's card. You can coach the agent and only the **agent** hears you; the customer does not.
 
-:::note Screencast
-`contact-center-manager-whisper.mp4`
-:::
+See [Live Dashboard](../user-manual/live-dashboard.md).
 
 ## How to barge into a call
 
@@ -442,9 +398,7 @@ While you are on the call, the card's **Listen**, **Whisper** and **Barge** butt
 1. On the **Live dashboard**, find the agent on a live call.
 2. Click **Barge** on the agent's card. You join the call as a full participant that **both** the agent and the customer hear.
 
-:::note Screencast
-`contact-center-manager-barge.mp4`
-:::
+See [Live Dashboard](../user-manual/live-dashboard.md).
 
 ## How to take over a call
 
@@ -476,61 +430,12 @@ Every intervention is audited under your name (`SupervisorEndedCall`, `Superviso
 
 ## How to review productivity with reports
 
-**Prerequisites:** the **Reports & Analytics** feature and the reporting permissions.
+**Prerequisites:** the **Contact Center Work Distribution** and **Reports** features (the Contact Center reports appear when both are enabled) and the `ViewContactCenterReports` permission.
 
 1. Open the **Reports** area and choose a Contact Center report — for example the agent, queue/SLA, interaction, transfer, recording, or campaign report.
 2. Apply filters (date range, queue, agent, campaign) and review the metrics. Talk time, wrap-up time, and average handle time come from the interaction timestamps recorded on each call.
-3. Export to CSV when you need the data outside the dashboard.
+3. Export to CSV, or to Excel (.xlsx) when the **Reports (OpenXml)** feature is enabled, when you need the data outside the dashboard.
 
 See the [Enterprise report catalog](report-catalog.md) for every report, its formula, and its drill paths.
 
-:::note Screencast
-`contact-center-manager-reports.mp4`
-:::
-
----
-
-## Screencast library
-
-The table lists every screencast that accompanies this manual. Capture each one full-screen at **1600×1000**, export to **MP4** (H.264, `-pix_fmt yuv420p`, even dimensions), save it under `src/CrestApps.Docs/static/img/docs/`, and replace the task's **Screencast** callout with the embed snippet below.
-
-Embed snippet (replace `FILE`):
-
-```html
-<video controls preload="metadata" width="100%">
-  <source src="/img/docs/FILE.mp4" type="video/mp4" />
-</video>
-```
-
-| Task | File | Audience |
-| --- | --- | --- |
-| Sign in to a queue or campaign | `contact-center-agent-signin.mp4` | Agent |
-| Set presence to Available | `contact-center-agent-presence.mp4` | Agent |
-| Request a break | `contact-center-agent-break.mp4` | Agent |
-| Go not-ready with a reason code | `contact-center-agent-reason-code.mp4` | Agent |
-| Receive and accept an inbound call | `contact-center-agent-accept-inbound.mp4` | Agent |
-| Decline an offer | `contact-center-agent-decline.mp4` | Agent |
-| Hold and resume | `contact-center-agent-hold-resume.mp4` | Agent |
-| Mute and unmute | `contact-center-agent-mute.mp4` | Agent |
-| Send DTMF digits | `contact-center-agent-dtmf.mp4` | Agent |
-| Transfer a call | `contact-center-agent-transfer.mp4` | Agent |
-| Conference two calls | `contact-center-agent-conference.mp4` | Agent |
-| End a call | `contact-center-agent-hangup.mp4` | Agent |
-| Complete after-call work | `contact-center-agent-wrapup.mp4` | Agent |
-| Preview-dial a record | `contact-center-agent-preview-dial.mp4` | Agent |
-| Place a manual outbound call | `contact-center-agent-manual-dial.mp4` | Agent |
-| Power/Progressive dialing experience | `contact-center-agent-paced-dial.mp4` | Agent |
-| Protect sensitive data in a recording | `contact-center-agent-recording-pause.mp4` | Agent |
-| Review recent activity | `contact-center-agent-recent.mp4` | Agent |
-| Create an inbound queue | `contact-center-manager-create-queue.mp4` | Supervisor |
-| Configure a dialer profile | `contact-center-manager-dialer-profile.mp4` | Supervisor |
-| Load dialer inventory | `contact-center-manager-load-inventory.mp4` | Supervisor |
-| Monitor the live dashboard | `contact-center-manager-live-dashboard.mp4` | Supervisor |
-| Monitor a live call | `contact-center-manager-monitor.mp4` | Supervisor |
-| Whisper to an agent | `contact-center-manager-whisper.mp4` | Supervisor |
-| Barge into a call | `contact-center-manager-barge.mp4` | Supervisor |
-| Review productivity with reports | `contact-center-manager-reports.mp4` | Supervisor |
-
-:::caution Recording the operational (live-call) demos
-The configuration demos (create queue, dialer profile, load inventory, live dashboard layout, presence, sign-in) can be captured against any tenant with the Contact Center features enabled. The **live-call** demos (accept from queue, hold/transfer/conference, monitor, whisper, barge, recording pause) require a working voice provider — the bundled **Asterisk Contact Center Voice** provider with real browser audio, or **Dialpad** — and at least one real inbound/outbound call in flight. Capture those against a provisioned voice environment as described in [Voice Routing](voice-routing.md) and [Asterisk](../telephony/asterisk.md).
-:::
+See [Reports](../user-manual/reports.md).

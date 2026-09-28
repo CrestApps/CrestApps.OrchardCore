@@ -82,9 +82,10 @@ else automatically — a Telnyx API key carries full account access.
 Use **Disconnect** to delete the resources Connect created and clear the ids.
 
 :::note
-**Manual setup (advanced).** You can skip Connect and create the Call Control application, Credential SIP
-connection, outbound voice profile, and number assignment yourself in the portal, then enter the ids under
-the advanced settings. Connect is simply the automated version of those same steps.
+**Connect owns the ids.** The Call Control connection id, SIP connection id, and outbound voice profile id
+are written by Connect and shown read-only once you are connected; the settings form never accepts or
+overwrites them, so a plain **Save** cannot wipe them. To start over, use **Disconnect** and then **Connect
+Telnyx** again.
 :::
 
 ## Configuration
@@ -101,11 +102,10 @@ Telnyx** button. The rest appear after you connect:
 | **API key** | Always | The Telnyx v2 API key, presented as a bearer token on every REST call. Stored encrypted. Leave blank to keep the stored value. |
 | **Connect Telnyx** / **Disconnect** | Before / after connecting | Auto-provisions (or removes) the Call Control application, Credential SIP connection, and outbound voice profile using the API key. |
 | **Call Control / SIP / outbound voice profile ids** | After connecting | Managed by Connect and shown read-only. |
-| **Default outbound caller id** | After connecting | The E.164 number presented on outbound calls when no per-agent or per-request caller id is supplied. Connect suggests one; editable. Must be a Telnyx-owned number for STIR/SHAKEN attestation. |
+| **Default outbound caller id** | After connecting | The E.164 number presented on outbound calls when the call does not carry its own caller id (a dialer profile's **Caller ID**, or the number a caller dialled when a phone menu sends them on to an outside number). Connect suggests one; editable. Must be a Telnyx-owned number for STIR/SHAKEN attestation. |
 | **Webhook public key** | After connecting | The Telnyx account **Ed25519 public key** (from the portal) used to verify signed webhooks. Stored encrypted. Inbound webhooks are rejected when empty. |
-| **Browser WebRTC (advanced)** | After connecting | Credential lifetime, SIP signaling, codecs, and ICE (STUN/TURN) settings — see [Browser WebRTC settings](#browser-webrtc-settings) for each field. Defaults work out of the box. |
-| **Text-to-speech voice** | After connecting | The voice the platform's spoken prompts use: entry-point phone menus, the voicemail greeting, queue announcements, a queue's callback offer and its confirmation, the AI voice agent's key collection, and the apology read to an orphaned call. `female`, `male`, or a Telnyx voice name in the form `Provider.Model.VoiceId`, such as `AWS.Polly.Joanna-Neural`. Blank means `female`. Telnyx requires a voice on every `speak` and `gather_using_speak` and refuses the command without one. |
-| **Text-to-speech language** | After connecting | The language those prompts are spoken in, such as `en-US` or `es-ES`. Blank means `en-US`. Telnyx ignores it for `AWS.Polly` voices, which carry their own language. |
+| **Webhook endpoint** | After connecting | The webhook URL Connect set on your Call Control application, shown read-only for reference. |
+| **Advanced — browser WebRTC (optional)** | After connecting | A collapsed section holding credential lifetime, the audio test destination, orphaned-call handling, answering machine detection, text-to-speech voice and language, SIP signaling, codecs, region, and ICE (STUN/TURN) settings — see [Browser WebRTC settings](#browser-webrtc-settings) for each field. Defaults work out of the box. |
 
 When you enable Telnyx and no default provider is set yet, Telnyx becomes the default automatically. When
 you disable Telnyx while it is the default provider, the default is cleared and the soft phone is disabled
@@ -144,22 +144,27 @@ bridging a call.
 
 ### Browser WebRTC settings
 
-These live under **Browser WebRTC (advanced)** in the provider settings and are only shown after you connect.
-Every one has a working default, so you can leave them empty unless your network or account requires otherwise.
+These live under the collapsed **Advanced — browser WebRTC (optional)** section in the provider settings and are
+only shown after you connect. Every one has a working default, so you can leave them empty unless your network or
+account requires otherwise.
 
 | Setting | Default | Description |
 | --- | --- | --- |
 | **Credential lifetime (minutes)** | `180` | How long a browser SIP telephony credential is valid. Kept short so a lost session cannot register indefinitely; renewal is deferred during a live call so media is never dropped mid-call. |
+| **Audio test destination** | — | Optional Telnyx number or SIP URI that echoes audio back, used by the diagnostics **Run audio test** action and the health canary to verify round-trip audio without a second person. When empty, the audio test is unavailable. |
+| **Calls with no local record** | Report | What to do when the connection has a call up that the platform has no interaction for, such as one placed immediately before a restart. **Report** records it and leaves it connected; **End call** speaks an apology and hangs up. |
+| **Answering machine detection** | Premium | How an automated call learns whether a person or a voicemail answered, so a voicemail is left one message after its tone. **Premium** and **Standard** are billed by Telnyx per call. With **Off**, a voicemail is still recognised from its greeting or from a line nobody speaks on. |
+| **Text-to-speech voice** | `female` | The voice the platform's spoken prompts use: entry-point phone menus, the voicemail greeting, queue announcements, a queue's callback offer and its confirmation, the AI voice agent's key collection, and the apology read to an orphaned call. `female`, `male`, or a Telnyx voice name in the form `Provider.Model.VoiceId`, such as `AWS.Polly.Joanna-Neural`. Telnyx requires a voice on every `speak` and `gather_using_speak` and refuses the command without one. |
+| **Text-to-speech language** | `en-US` | The language those prompts are spoken in, such as `en-US` or `es-ES`. Telnyx ignores it for `AWS.Polly` voices, which carry their own language. |
 | **SIP WebSocket URL** | `wss://sip.telnyx.com:7443` | The SIP-over-WebSocket signaling endpoint the browser registers against. Telnyx SIP-over-WSS is on **:7443** (not :443); a wrong port produces a `1006` socket close. |
 | **SIP domain** | `sip.telnyx.com` | The SIP domain browser credentials register under. |
-| **Preferred codecs** | Telnyx SDK default | Comma- or space-separated preferred WebRTC audio codecs advertised to the browser (for example `opus,g722,pcmu`). |
-| **Soft phone region** | Automatic | The Telnyx location agents' soft phones connect to. Telnyx normally resolves this by looking up where the browser appears to be, and documents that the answer can be wrong (their example: a client in India routed to Frankfurt rather than Chennai). Set it when your team is in one place. Each agent can still pick a nearer location for themselves under the soft phone's gear icon, which is what a team split across continents needs. This moves the **signaling** edge; Telnyx does not document how a browser leg's media gateway is chosen, so confirm any improvement with the `rtt` figure in the diagnostics readout. |
+| **Preferred audio codecs** | Telnyx SDK default | Comma- or space-separated preferred WebRTC audio codecs advertised to the browser (for example `opus,g722,pcmu`). |
+| **Soft phone region** | Automatic | The Telnyx location agents' soft phones connect to. Telnyx normally resolves this by looking up where the browser appears to be, and documents that the answer can be wrong (their example: a client in India routed to Frankfurt rather than Chennai). Set it when your team is in one place. Each agent can still pick a nearer location for themselves under the soft phone's headset (settings) icon, which is what a team split across continents needs. This moves the **signaling** edge; Telnyx does not document how a browser leg's media gateway is chosen, so confirm any improvement with the `rtt` figure in the diagnostics readout. |
 | **ICE (STUN/TURN) URLs** | Telnyx SDK default | Comma- or space-separated STUN/TURN URLs advertised to the browser. See [STUN and TURN](#stun-and-turn) — the behavior here is Telnyx-specific. |
 | **TURN username** | — | Optional static TURN username advertised alongside the ICE URLs. |
 | **TURN credential** | — | Optional static TURN credential (password) advertised alongside the ICE URLs. Stored encrypted. |
 | **ICE transport policy** | `all` | `all` uses direct/host, STUN, and TURN candidates; `relay` forces all media through TURN (useful for locked-down networks or TURN validation). |
-| **Echo test destination** | — | Optional Telnyx number or SIP URI that echoes audio back, used by the diagnostics **Run audio test** action and the health canary to verify round-trip audio without a second person. When empty, the audio test is unavailable. |
-| **REST API base URL** | `https://api.telnyx.com/v2/` | Optional override of the Telnyx REST API base address (internal/testing use). |
+| **API base URL override (optional)** | `https://api.telnyx.com/v2/` | Optional override of the Telnyx REST API base address (internal/testing use). |
 
 ### STUN and TURN
 
@@ -550,7 +555,10 @@ your platform, encrypted at rest — not left only in Telnyx's cloud.
 ## Capabilities
 
 The Telnyx telephony provider advertises dialing, hang up, hold, resume, mute, blind and attended transfer,
-merge (conference), sending DTMF digits, and receiving inbound calls. Hold and mute are executed by the
+merge (conference), sending DTMF digits, sending a ringing call to voicemail, receiving inbound calls,
+[extension dialing and adding an extension to a conference](./extension-dialing.md), and bridged dialing (a number
+typed on the keypad is placed by ringing the agent's own registered browser and connecting that leg to the number
+on the server, so the call can be transferred, merged, and sent digits like any server-placed call). Hold and mute are executed by the
 browser media adapter because Telnyx delivers this call's audio to the browser. Telnyx therefore never
 reports a call muted, so the soft phone keeps the agent's mute itself: it lasts through state reports, refreshes,
 hold and resume, a merge (a conference is muted or unmuted as a whole) and a replaced microphone, until the agent
@@ -638,8 +646,8 @@ The provider is enabled only when it is configured with an API key.
 
 ### Configuration from the UI
 
-Alternatively, go to **Settings → SMS** (`/Admin/Settings/sms`), open the **Telnyx** settings, tick
-**Enable**, and enter the API key, messaging profile id, and webhook public key. Secrets are protected at
+Alternatively, go to **Settings > Communication > SMS** (`/Admin/Settings/sms`), open the **Telnyx** settings,
+tick **Enable the Telnyx SMS provider**, and enter the API key, messaging profile id, and webhook public key. Secrets are protected at
 rest with the data-protection provider. Values entered in the UI take precedence over appsettings.
 
 Set the tenant **default provider** on the same SMS settings screen if Telnyx should be the default sender.

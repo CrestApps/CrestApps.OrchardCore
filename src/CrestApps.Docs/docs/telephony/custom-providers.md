@@ -216,7 +216,7 @@ Typical flow:
 3. the provider's `IProviderWebhookInboxHandler` deserializes the payload and normalizes one or more `ProviderVoiceEvent` records
 4. `IProviderVoiceEventService` ingests them
 
-The durable inbox (commit-then-dispatch) makes ingress idempotent and recoverable, so a retried delivery is de-duplicated and an event is never lost to an inline dispatch race. The shipping Dialpad provider follows exactly this shape (`api/dialpad/webhook/call` → inbox → `DialpadWebhookInboxHandler`).
+The durable inbox (commit-then-dispatch) makes ingress idempotent and recoverable, so a retried delivery is de-duplicated and an event is never lost to an inline dispatch race. The shipping Telnyx provider follows exactly this shape (`api/telnyx/webhook/call` → inbox → `TelnyxWebhookInboxHandler`).
 
 ### Live stream model
 
@@ -246,7 +246,7 @@ When documenting or deploying a provider, be explicit about which protocols the 
 | Scenario | Protocol(s) to allow | Notes |
 | --- | --- | --- |
 | Browser soft phone ↔ Orchard | `https`, `wss` | Required for the Telephony/Contact Center SignalR experience. Keep HTTPS fallback traffic available too because SignalR may use SSE or long polling when WebSockets are blocked. |
-| Provider webhook → Orchard | `https` | Recommended for all production webhook ingress, including Dialpad-style signed callbacks. |
+| Provider webhook → Orchard | `https` | Recommended for all production webhook ingress, including signed callbacks such as Telnyx's. |
 | Orchard → provider REST API | `https` | Used for call control, authentication, and call-state lookup when the provider exposes HTTP APIs. |
 | Orchard → provider live socket | `wss` | Preferred for production provider event streams. |
 | Orchard → provider live socket (dev/lab only) | `ws` | Acceptable only in trusted non-production environments or when TLS terminates before the provider connection. |
@@ -257,14 +257,14 @@ If a proxy, ingress controller, or firewall is involved, make sure it allows:
 
 1. **WebSocket upgrade headers** for browser SignalR and provider live-stream connections.
 2. **Long-lived outbound sockets** from Orchard to provider event streams such as Asterisk ARI.
-3. **Inbound HTTPS webhook posts** from providers such as Dialpad.
+3. **Inbound HTTPS webhook posts** from providers such as Telnyx.
 4. **Outbound HTTPS API calls** for provider lookup and control endpoints.
 5. **Explicit outbound egress rules** on locked-down hosts. If Orchard runs in an environment where outbound traffic is restricted by default, you must allow the app to open outbound `https`, `ws`, or `wss` connections to the provider endpoints it depends on.
 
-In other words, yes: the docs now distinguish **inbound to Orchard**, **outbound from Orchard**, and **bidirectional browser traffic**, because providers do not all use the same direction:
+Distinguish **inbound to Orchard**, **outbound from Orchard**, and **bidirectional browser traffic**, because providers do not all use the same direction:
 
-- **Dialpad webhook delivery** is primarily **inbound to Orchard**
-- **Dialpad REST lookup/control** is **outbound from Orchard**
+- **Telnyx webhook delivery** is primarily **inbound to Orchard**
+- **Telnyx REST lookup/control** is **outbound from Orchard**
 - **Asterisk ARI control** is **outbound from Orchard**
 - **Asterisk ARI real-time events** are also **outbound from Orchard** because Orchard opens the `ws`/`wss` connection to Asterisk
 - **Browser soft-phone SignalR** is **bidirectional**
@@ -294,7 +294,7 @@ The rule the codebase enforces is:
 - **Shared contracts** hold keys the platform itself supplies or consumes. `ContactCenterConstants.TransferMetadata.AgentUserId`, `ConferenceMetadata.AgentUserId`, and `AttendedTransferMetadata.AgentUserId` are shared because the platform passes them *into* every provider. `RecordingMetadata.ProviderRecordingId` and `RecordingMetadata.RecordingUrl` are shared because neutral recording and governance code reads them back out.
 - **Provider-private keys** live in your own module. The Asterisk adapter keeps its channel, snoop, and bridge identifiers in `AsteriskVoiceResultMetadata`, an `internal` class inside `CrestApps.OrchardCore.Asterisk`. Nothing outside that module can reference them, which is exactly right: nothing outside that module knows what they mean.
 
-Provider-neutral projects must also avoid vendor vocabulary in the names they declare. Use platform words for platform concepts — a call session's joined media is `MediaTopologyId`, not a vendor's word for its own grouping primitive. Prose in comments and docs may still name a provider as a concrete example; it is the declared identifiers and metadata key literals that must stay neutral. `ProviderNeutralContractArchitectureTests` fails the build when either rule is broken.
+Provider-neutral projects must also avoid vendor vocabulary in the names they declare. Use platform words for platform concepts — a call session's joined media is `MediaTopologyId`, not a vendor's word for its own grouping primitive. Prose in comments and docs may still name a provider as a concrete example; it is the declared identifiers and metadata key literals that must stay neutral.
 
 ## 8. Registration checklist
 
@@ -322,7 +322,7 @@ For a new provider module, the usual registration checklist is:
 
 | Provider | Transport into Orchard | Notes |
 | --- | --- | --- |
-| Dialpad | Signed webhook + per-call REST lookup | Converts call-event webhooks into `ProviderVoiceEvent`, routes new inbound calls, and supports current-state reconciliation by call id. Telephony audio is currently external-device/provider-client only; it does not advertise embedded browser audio or bidirectional Contact Center media. |
+| [Telnyx](telnyx.md) | Ed25519-signed Call Control webhook + durable inbox + per-call REST lookup | Converts call-event webhooks into `ProviderVoiceEvent`, routes new inbound calls, and supports current-state reconciliation by call id. Advertises browser audio: agents' soft phones register over SIP-over-WebSocket through the `@telnyx/webrtc` SDK adapter. |
 | Asterisk | ARI HTTP control + per-call ARI lookup + tenant-scoped ARI event stream + External Media RTP/UDP | Handles call control, call-state lookup, live normalized events, and server-side bidirectional G.711 mu-law media sessions attached to call bridges. Telephony audio is currently external-device only; the External Media adapter is not browser WebRTC. |
 
 ## Related interfaces

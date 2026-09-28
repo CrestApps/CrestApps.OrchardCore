@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.ContentManagement;
@@ -21,8 +22,8 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
 {
     private const string ServiceAddressMetadataKey = "serviceAddress";
     private const string RoutingTerminalReasonMetadataKey = "routing_terminal_reason";
-    private const string ClosedVoicemailReasonCode = "entry_point_closed_voicemail";
-    private const string ClosedRejectReasonCode = "entry_point_closed_reject";
+    private const string ClosedVoicemailReasonCode = EntryPointAnnouncement.ClosedVoicemailReasonCode;
+    private const string ClosedRejectReasonCode = EntryPointAnnouncement.ClosedRejectReasonCode;
     private const string DirectAgentHeldReasonCode = "direct_agent_held";
     private const string DirectAgentTimeoutVoicemailReasonCode = "direct_agent_timeout_voicemail";
     private const string TargetQueueMissingReasonCode = "target_queue_missing";
@@ -49,6 +50,7 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
     private readonly IContactCenterFeatureWorkManager _workManager;
     private readonly IContactCenterAuditRecorder _auditRecorder;
     private readonly IClock _clock;
+    private readonly ILogger _logger;
     private readonly TimeSpan _inboundLockTimeout;
     private readonly TimeSpan _inboundLockExpiration;
 
@@ -76,6 +78,7 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
     /// <param name="auditRecorder">The recorder that writes each inbound call's interaction to the audit log.</param>
     /// <param name="clock">The clock used to stamp times.</param>
     /// <param name="coordinationOptions">The distributed-lock timings this deployment coordinates inbound routing with.</param>
+    /// <param name="logger">The logger.</param>
     public InboundVoiceCallProcessor(
         IOmnichannelChannelEndpointManager channelEndpointManager,
         ISubjectFlowSettingsService subjectFlowSettingsService,
@@ -97,7 +100,8 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
         IContactCenterFeatureWorkManager workManager,
         IContactCenterAuditRecorder auditRecorder,
         IClock clock,
-        IOptions<ContactCenterCoordinationOptions> coordinationOptions)
+        IOptions<ContactCenterCoordinationOptions> coordinationOptions,
+        ILogger<InboundVoiceCallProcessor> logger)
     {
         _channelEndpointManager = channelEndpointManager;
         _subjectFlowSettingsService = subjectFlowSettingsService;
@@ -119,6 +123,7 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
         _workManager = workManager;
         _auditRecorder = auditRecorder;
         _clock = clock;
+        _logger = logger;
         _inboundLockTimeout = coordinationOptions.Value.InboundLockTimeout;
         _inboundLockExpiration = coordinationOptions.Value.InboundLockExpiration;
     }
@@ -284,11 +289,16 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
             ? ContactCenterConstants.DirectRouting.QueueId
             : queue?.ItemId;
 
+        // The entry point's welcome message (open) or closed message (closed) is said before the caller goes
+        // anywhere. Such a caller is not admitted, queued or offered here: that happens once the message has been
+        // said, the same way it happens once a caller has chosen from the menu.
+        var announcement = ResolveAnnouncement(plan, hasMenu, isDirect, queue);
+
         // A full queue does not take another caller: its size limit decides whether they wait in an overflow
         // queue instead, or go to voicemail. A personal line and a missing queue have nothing to admit to.
         QueueAdmissionDecision admission = null;
 
-        if (!isDirect && queue is not null)
+        if (announcement is null && !isDirect && queue is not null)
         {
             admission = await _queueLimitService.AdmitAsync(queue, cancellationToken);
 
@@ -312,6 +322,11 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
             plan?.VoicemailGreetingText,
             isDirect ? null : plan?.EntryPoint);
         result.InteractionId = interaction.ItemId;
+
+        if (announcement is not null)
+        {
+            return await StartAnnouncementAsync(plan, interaction, announcement, result, cancellationToken);
+        }
 
         if (plan is not null && !plan.ShouldQueue)
         {
@@ -511,13 +526,16 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
         ActivityStatus activityStatus,
         InteractionStatus interactionStatus,
         string reasonCode,
-        ProviderCommandType providerCommandType,
+        ProviderCommandType? providerCommandType,
         DateTime endedUtc,
         CancellationToken cancellationToken)
     {
         ProviderCommandRegistration providerCommand = null;
 
-        if (!string.IsNullOrWhiteSpace(interaction.ProviderName) &&
+        // No command type means the provider is already ending the call itself (after a last message), so only the
+        // end is recorded.
+        if (providerCommandType.HasValue &&
+            !string.IsNullOrWhiteSpace(interaction.ProviderName) &&
             !string.IsNullOrWhiteSpace(interaction.ProviderInteractionId))
         {
             var commandId = IdGenerator.GenerateId();
@@ -526,7 +544,7 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
             {
                 CommandId = commandId,
                 ProviderName = interaction.ProviderName,
-                CommandType = providerCommandType,
+                CommandType = providerCommandType.Value,
                 ActivityItemId = activity.ItemId,
                 InteractionId = interaction.ItemId,
                 RemoveReservationFromQueueOnFailure = false,

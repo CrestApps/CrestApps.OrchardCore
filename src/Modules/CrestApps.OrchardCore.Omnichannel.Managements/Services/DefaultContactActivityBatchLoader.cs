@@ -169,6 +169,20 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 _logger.LogError("Unable to find the dialer profile '{DialerProfileId}' for the dialer batch with ID '{BatchId}'.", batch.DialerProfileId, batch.ItemId);
                 return;
             }
+
+            // Dialer activities are queued on their campaign's queue, which is also what agents sign in to. Without
+            // a campaign every enqueue would fail after its activity was created, leaving a half-loaded batch, so
+            // the load stops before creating anything. The load editor refuses this case; older or imported loads
+            // can still reach it.
+            if (string.IsNullOrWhiteSpace(batch.CampaignId) && string.IsNullOrWhiteSpace(flowSettings.CampaignId))
+            {
+                batch.Status = OmnichannelActivityBatchStatus.New;
+
+                await _catalog.UpdateAsync(batch, cancellationToken);
+
+                _logger.LogWarning("The dialer batch with ID '{BatchId}' was not loaded because it has no campaign and its subject '{SubjectContentType}' has no default campaign, so its activities could not be queued for dialing. Choose a campaign on the inventory load or set a default campaign on the subject.", batch.ItemId, batch.SubjectContentType);
+                return;
+            }
         }
 
         long documentId = 0;

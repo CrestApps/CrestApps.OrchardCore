@@ -21,16 +21,18 @@ Extensions are a provider-neutral, tenant-scoped map from a dialed **number** to
 the system of record: providers translate the resolved user into their own live endpoint, so the same
 extension keeps working if you switch providers.
 
-Manage extensions under **Communication → Extensions** (requires the **Manage telephony extensions**
-permission). Each extension has:
+Manage extensions under **Interaction Center > Management > Extensions** (requires the **Manage telephony
+extensions** permission). For a step-by-step walkthrough, see [Extensions](../user-manual/extensions.md) in the
+user manual. Each extension has:
 
 | Field | Description |
 | --- | --- |
-| **Name** | A label for the entry. |
-| **Extension number** | The number an agent dials, unique per tenant (for example `1001`). |
-| **User** | The Orchard user the extension rings. |
-| **Display name** | A name for the extension itself (for example `Front desk`). Leave it empty, or equal to the user name, to show the user's own display name. |
-| **Enabled** | A disabled extension is not dialable and is skipped by the resolver. |
+| **Extension number** | Required. The number an agent dials, unique per tenant (for example `1001`). |
+| **User** | Required. The Orchard user the extension rings, picked from a searchable list of enabled users. |
+| **Display name** | A name for the extension itself (for example `Front desk`). When left empty it defaults to the user name, which shows the user's own display name. |
+
+The entry's name is generated from the extension number and the display name, so the list search matches either.
+Every saved extension is dialable; there is no enabled or disabled state. To stop an extension ringing, delete it.
 
 In the list, each entry shows its extension number as a grey badge with a `#` icon, then the display name, then the
 user name as a separate badge with a person icon, so the number never reads as part of the name.
@@ -91,7 +93,7 @@ colleague because it does not know the target's ephemeral provider endpoint:
 Soft phone (Dial extension) ──► TelephonyHub.DialExtension
                                      │
                                      ▼
-        ITelephonyService resolves the extension → target user  (fails closed if unknown/disabled)
+        ITelephonyService resolves the extension → target user  (fails closed if unknown)
                                      │
                                      ▼
         ITelephonyExtensionDialProvider  (capability + contract checked together)
@@ -149,7 +151,6 @@ provider is responsible only for turning that user into its own live endpoint an
 | --- | --- | --- |
 | **Telnyx** | ✅ Supported | Both legs are Telnyx SIP-over-WebSocket registrations. Extension dialing reuses the same two-leg originate-and-bridge orchestration as browser-audio outbound calls, with a SIP target on both sides. Conference-add originates the participant leg and joins it to a Telnyx conference formed from the active call. |
 | **Asterisk** | Not yet | Connecting two just-in-time WebRTC PJSIP browser endpoints over ARI is part of the same server-side originate/bridge wave that gates browser-agent connection, so Asterisk does not advertise the capability yet and the control is hidden for it. |
-| **Dialpad** | Not applicable | Dialpad has no in-browser audio; it is a control surface for the Dialpad app. |
 
 ## Related guides
 

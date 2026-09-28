@@ -399,6 +399,19 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.CampaignId), S["The selected campaign is invalid."]);
         }
+        else if (string.IsNullOrWhiteSpace(model.CampaignId) &&
+            string.Equals(model.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase) &&
+            !string.IsNullOrWhiteSpace(model.SubjectContentType))
+        {
+            // Dialer activities are queued on their campaign's queue, and agents sign in to the campaign to
+            // receive them, so a dialer load needs a campaign: its own, or the subject's default one.
+            var subjectFlowSettings = await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(model.SubjectContentType);
+
+            if (subjectFlowSettings is not null && string.IsNullOrWhiteSpace(subjectFlowSettings.CampaignId))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.CampaignId), S["A campaign is required for dialer inventory loads because the selected subject has no default campaign."]);
+            }
+        }
 
         var isAutomatic = string.Equals(model.Source, ActivitySources.Automatic, StringComparison.OrdinalIgnoreCase);
 

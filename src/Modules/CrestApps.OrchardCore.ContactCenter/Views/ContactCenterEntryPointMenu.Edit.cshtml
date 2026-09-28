@@ -119,6 +119,7 @@
     <div class="ocat-end">
         <textarea asp-for="WelcomeMessage" class="form-control" rows="2"></textarea>
         <span asp-validation-for="WelcomeMessage" class="text-danger"></span>
+        <span class="hint">@T["Read out once to every caller who rings while the entry point is open: before the IVR menu, or, without a menu, before the caller is put through to the target. The call is answered to say it, so the caller then hears the queue's hold music or a ringing tone. Leave it empty to say nothing."]</span>
     </div>
 </div>
 

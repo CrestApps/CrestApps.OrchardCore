@@ -22,14 +22,22 @@ You describe what you want the AI to do (tone, rules, goals), and the AI carries
 
 ## What this module provides
 
-- An SMS channel implementation for Omnichannel automated activities.
-- Integration points for an SMS provider (for example [Telnyx SMS](../telephony/telnyx#telnyx-sms) or Twilio) to send/receive messages.
+- An SMS channel processor and inbound event handler for Omnichannel automated activities. Messages are sent through the Orchard Core SMS provider (for example [Telnyx SMS](../telephony/telnyx#telnyx-sms) or Twilio).
+- The Twilio inbound SMS webhook, `POST ~/api/twilio/webhook/sms`. Telnyx SMS maps its own webhook (`api/telnyx/webhook/sms`).
 - AI chat session orchestration for "automated activities".
+- Re-engagement follow-ups through [Cadences](cadences), gated by business-hours calendars.
+- A background task that recovers owed replies: when a contact's latest message (from the last 30 minutes) never got an answer, for example because the site restarted mid-reply, the reply is generated and sent.
 
 ## Enable the feature
 
 1. In Orchard Core Admin, go to `Tools` → `Features`.
-2. Enable `SMS Omnichannel Automation`.
+2. Enable `SMS Omnichannel Automation`. It depends on the AI features, Omnichannel Management, Orchard Core SMS, and **Contact Center Business Hours**, which it enables so that background follow-ups can respect business-hours calendars.
+
+For the step-by-step setup with screencasts, see [Automated AI](../user-manual/automated-ai.md) in the user manual.
+
+### Twilio webhook signature
+
+The Twilio webhook verifies Twilio's `X-Twilio-Signature` header with the auth token from the Twilio SMS settings; a request without a valid signature is refused, and a missing auth token answers `400 Bad Request`. Twilio signs the public URL it was configured with, so when the site runs behind a TLS-terminating proxy or load balancer, set the site's **Base URL** (**Settings > General**) to the public address. The signature is then checked against that URL instead of the internal hop's scheme and host.
 
 ## Typical setup (high level)
 
@@ -50,5 +58,9 @@ Inbound SMS replies are added to the same AI chat session, the selected profile 
 Use the subject-flow SMS automation settings to control:
 
 - **No-response timeout**: fails an automated SMS activity when the contact stops responding.
-- **Response delay**: waits before sending each AI SMS reply.
+- **Response delay**: the minimum wait before each AI SMS reply; replies are paced naturally on top of it. A reply delay chosen on the inventory load is saved on each activity when it is loaded and takes precedence; the subject flow's value applies only when the load set none.
 - **Opt-out keywords**: customizes the keywords that stop the SMS conversation and update the contact preference.
+
+## Handing off to a live agent
+
+The subject's **Live agent handoff** card (see [Subject Flow](management#subject-flow)) lets the AI escalate an automated SMS conversation to a person: pick the **Handoff queue** and at least one **Escalate when** condition. The SMS handoff is carried out by the [Messaging Workspace](messaging-workspace), so enable the **SMS Messaging Channel** feature: the thread, with its whole automated transcript, moves into the queue's inbox for an agent to pick up. Without the workspace there is nowhere to hand an SMS conversation to.

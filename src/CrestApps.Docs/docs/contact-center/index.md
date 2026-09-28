@@ -15,7 +15,7 @@ The **Contact Center** module set turns the CRM into a full contact center that 
 Enable `CrestApps.OrchardCore.ContactCenter` for the interaction lifecycle, durable event log, baseline permissions, settings, and administration menu.
 
 :::tip Operating the Contact Center day to day
-If you just need to *do* something — sign in to a queue, accept a call, request a break, create a queue, load dialer inventory, or monitor and whisper to an agent — go to the task-oriented [Agent & Supervisor User Manual](user-manual.md). Each action has its own searchable how-to and screencast.
+If you just need to *do* something — sign in to a queue, accept a call, request a break, create a queue, load dialer inventory, or monitor and whisper to an agent — go to the task-by-task [User Manual](../user-manual/index.md), where each task has its own how-to and screencast. The older [Agent & Supervisor User Manual](user-manual.md) covers the same ground in one page.
 :::
 
 ## Feature and administration model
@@ -24,11 +24,13 @@ Each Contact Center capability owns both its runtime services and the administra
 
 | Capability feature | Included administration screens |
 | --- | --- |
-| `CrestApps.OrchardCore.ContactCenter` | Contact Center settings and administration menu |
-| `CrestApps.OrchardCore.ContactCenter.Agents` | Agent profile, presence, and reason-code screens |
-| `CrestApps.OrchardCore.ContactCenter.Queues` | Queue, queue group, skill, business-hours, and agent-entitlement screens |
+| `CrestApps.OrchardCore.ContactCenter` | Contact Center settings, the **External transfer destinations** settings tab, the **Voice Media** library, and the administration menu |
+| `CrestApps.OrchardCore.ContactCenter.Agents` | The **Agent states** reason-code screens |
+| `CrestApps.OrchardCore.ContactCenter.AgentEntitlements` | The **Agent entitlements** screen |
+| `CrestApps.OrchardCore.ContactCenter.BusinessHours` | The **Business hours** calendar screens |
+| `CrestApps.OrchardCore.ContactCenter.Queues` | Queue, queue group, and skill screens |
 | `CrestApps.OrchardCore.ContactCenter.Dialer` | Outbound dialer profile screens |
-| `CrestApps.OrchardCore.ContactCenter.Recording` | Recording and monitoring settings screens |
+| `CrestApps.OrchardCore.ContactCenter.Recording` | The **Recording governance** settings tab |
 | `CrestApps.OrchardCore.ContactCenter.InboundVoice` | Inbound entry-point screens |
 
 :::note
@@ -39,7 +41,7 @@ Enable the outcome you need and let Orchard resolve its dependencies. For paced 
 Contact Center depends on the headless **Omnichannel Activities** feature (`CrestApps.OrchardCore.Omnichannel.Activities`), not the full **Omnichannel Management** CRM. That gives it the contact/subject model, the activity and channel-endpoint services, and the message store it needs — without forcing the campaign, subject-flow, disposition, and load-inventory admin. If you want the CRM experience (campaign catalog, subject flows, CRM reports), enable **Omnichannel Management** (`CrestApps.OrchardCore.Omnichannel.Managements`) explicitly.
 :::
 
-The commercial release is not yet approved. See [Production support](production-support.md) for the finite candidate GA profiles, initial capacity tier, and explicitly unsupported combinations. The [Public API surface](public-api-surface.md) page describes which assemblies have a recorded public surface, why the set is derived from the project graph rather than listed, and how to accept a deliberate surface change. The [Single-Node Completion Roadmap](single-node-completion.md) describes the phased plan to make a single node fully functional first - real browser audio, inbound routing, supervisor monitoring, and recording - with multi-node hardening following as a secondary phase.
+The commercial release is not yet approved. See [Production support](production-support.md) for the finite candidate GA profiles, initial capacity tier, and explicitly unsupported combinations.
 
 The CRM **Activity** remains the universal unit of work. Activities can be created before an owner exists, then later reserved and assigned by a dialer, queue, or agent workflow. An **Interaction** is communication history for a single attempt on that activity - for example a busy call attempt, a no-answer attempt, or a connected call - and it never owns workflow or disposition.
 
@@ -71,7 +73,7 @@ Contact Center extends `OmnichannelActivity` with metadata needed by queues and 
 - Nullable ownership so preview, power, progressive, and predictive dialing can create activities before an agent is selected.
 - Activity kind and extensible source metadata so the same Activity model can represent calls, SMS, email, meetings, tasks, callbacks, inbound work, workflow-created work, API-created work, and dialer inventory.
 - Assignment and reservation metadata so multiple dialer or routing instances do not claim the same record concurrently.
-- Load Inventory can load either user-assigned manual work or unassigned dialer work. The creation dialog selects a source first, and dialer inventory loads require a dialer profile so the loaded activities inherit the correct dialing mode and campaign.
+- Load Inventory can load either user-assigned manual work or unassigned dialer work. The creation dialog selects a source first, and a dialer inventory load picks both a campaign and a dialer profile, so the loaded activities take their campaign from the load and their dialing mode from the profile.
 
 Dispositions are applied to Activities, not Interactions. Agent, provider, AI, workflow, and system outcomes converge through the activity disposition service before Subject Actions or workflow automation runs.
 
@@ -84,7 +86,7 @@ The Contact Center is delivered as a set of feature-gated modules so tenants ena
 - **Routing** - skills-based, priority, sticky-agent, round robin, longest-idle, and business-hours routing with auditable routing decisions.
 - **Agents and presence** - agent profiles, real-time presence and reason codes, skills, capacity, and queue membership.
 - **Voice** - a voice channel adapter over the Telephony module that maps provider calls to interactions.
-- **Dialer** - outbound manual, preview, power, and progressive dialing driven by CRM activities.
+- **Dialer** - outbound preview, power, and progressive dialing driven by CRM activities, plus compliance-screened manual dialing from the soft phone.
 - **Wrap-up** - disposition-based after-call work, required activity dispositions, CRM activity completion, agent presence release, and post-communication automation.
 - **Supervision** - live queue and agent monitoring with audited supervisor call-control intents.
 - **Analytics** - queue, agent, and campaign metrics and historical reporting.
@@ -97,17 +99,20 @@ Contact Center administration is intentionally split into focused menu entries u
 
 | Menu entry | What it controls | Example |
 | --- | --- | --- |
-| **Agent states** | The not-ready reason codes agents can choose when they are unavailable. The selected reason changes presence and leaves an audit trail. | `Lunch` sets the agent to `Break`; `Coaching` sets the agent to `Training`. |
-| **Agents** | The Orchard users who can receive contact center work, their capacity, allowed queues/campaigns, and administrator-assigned skills. | Maria can handle two chats but only one voice call, belongs to the Billing queue, and has the `Spanish` skill. |
-| **Business hours** | Reusable open/closed calendars with time zone, weekly schedule, and holiday dates. Queues and entry points use them to decide whether work should route, hold, overflow, or close. | The Support calendar is open Monday-Friday 08:00-17:00 America/New_York and closed on holidays. |
+| **Agent states** | The not-ready reason codes agents can choose when they are unavailable. The selected reason changes presence and leaves an audit trail. | `Lunch` sets the agent to `Break`; `Coaching` sets the agent to `Meeting`. |
+| **Agent entitlements** | Provided by the optional Agent Entitlements feature: which queues and campaigns each agent may sign in to, and their administrator-assigned skills. An agent's capacity (`MaxConcurrentInteractions`, a single number) is set only through the `ContactCenterAgentEntitlement` recipe step. | Maria may sign in to the Billing queue and has the `Spanish` skill. |
+| **Business hours** | Reusable open/closed calendars with time zone, weekly schedule, and holiday dates. While a calendar is closed, a queue either holds its waiting work or overflows it, and an entry point applies its closed-hours handling. | The Support calendar is open Monday-Friday 08:00-17:00 America/New_York and closed on holidays. |
 | **Campaigns** | Omnichannel CRM grouping and reporting records. Campaigns describe the business initiative; they do not decide routing or media execution. | `July renewal outreach` groups all outbound renewal activities and reports outcomes. |
 | **Channel endpoints** | Omnichannel sender/receiver addresses such as SMS numbers, phone numbers, or email addresses. Contact Center references them but Telephony/provider modules still execute media. | `+1 800 555 0100` is the public support number used by an inbound entry point. |
 | **Inbound entry points** | Inbound front doors for voice work. They map dialed numbers to queues, apply business-hours behavior, set priority, and define closed-hours handling. | Calls to the support DID route to Tier 1 during business hours and overflow to voicemail after hours. |
 | **Queues** | Waiting rooms for activities. A queue owns priority, SLA threshold, reservation timeout, routing strategy, required skills, business-hours behavior, and overflow. | `Billing Voice` requires the Billing skill, uses longest-idle routing, and overflows to General Support after 10 minutes. |
 | **Skills** | Routeable capabilities assigned by supervisors/administrators. Queues can require skills, and routing filters out agents who do not have them. | A Spanish-language queue requires both `Spanish` and `Billing`. |
-| **Dialer profiles** | Outbound execution policy over existing CRM activities. The profile selects queue, dialing mode, pacing, voice provider, retry, and compliance rules. | A power dialer profile reserves available Billing agents and dials renewal activities within the allowed calling window. |
+| **Dialer profiles** | Reusable outbound dialing settings: dialing mode, pacing, voice provider, retry, and compliance rules. A profile does not select a queue or campaign; the campaign is chosen when inventory is loaded, and for outbound work the campaign itself is the routing queue. | A power dialer profile dials renewal activities for the agents signed in to the campaign, within the allowed calling window. |
 | **My workspace** | The agent desktop where agents receive offers, accept or decline work, see active customer context, and complete the activity with a disposition. | An agent accepts an inbound support offer, handles the call, selects `Resolved`, and completes the activity. |
 | **Live dashboard** | Supervisor wallboard for queue depth, SLA health, and live agent presence. | A supervisor sees Billing Voice breaching SLA and asks another skilled agent to sign in. |
+| **Voice Media** | The library of uploaded audio used for hold music and phone-menu prompts. | The `Main menu` prompt plays when callers reach the support line. |
+| **Shared voicemail** | Voicemail left on queue lines. Users see the messages for the queues on their own agent entitlement (users with `ManageContactCenter` see all), play them, call the caller back, or return a message to the queue. | A billing agent calls back a caller who left a message after hours. |
+| **My voicemail greeting** | Each agent records or uploads the greeting callers hear before leaving them a voicemail; without one, the default greeting plays. | An agent records a greeting that names them. |
 
 The practical setup sequence is: create channel endpoints and campaigns in Omnichannel, configure subject flows and dispositions, define skills and business hours, create queues, map inbound entry points or dialer profiles, assign agents, then use My workspace and Live dashboard for daily operations.
 
@@ -169,7 +174,7 @@ Break requests are approved by the routing system, not by another user. If nothi
 
 The [Agent Workspace](agent-desktop.md) is the full-screen desktop where agents spend the shift: it handles activity offers, accept/reject actions, active CRM activity context, interaction history, and completion handoff to the shared Omnichannel activity completion page. When an agent accepts a ringing offer, the workspace (and the soft-phone incoming modal) drive a single server-side command that accepts the reservation and connects the media before the agent's device answers, so the same live call is never answered while it is being re-offered to another agent.
 
-Managers configure queue membership, campaign assignment, dialer mode, priority, capacity, and compliance rules. Inbound queues, callback queues, preview dial queues, power/progressive/predictive campaigns, and future channels all offer Activities through the same real-time agent-offer model.
+Managers configure queue membership, campaign assignment, dialer mode, priority, capacity, and compliance rules. Inbound queues, callback queues, preview dial queues, power/progressive campaigns, and future channels all offer Activities through the same real-time agent-offer model.
 
 The current soft-phone **Work** tab lets agents choose queues and campaigns. Campaigns come from the Omnichannel Management **Interaction Center → Management** campaign catalog. Routing skills come from **Interaction Center → Management → Skills**, but they are assigned by administrators/supervisors rather than self-selected by agents. Skill, queue, and dialer profile admin screens use display drivers and extensible summary/editor shapes so providers and future desktop panels can extend the model without replacing the base UI.
 
@@ -190,7 +195,7 @@ Providers register `IContactCenterVoiceProvider` implementations and are resolve
 
 Every voice provider declares a **delivery model** so the orchestration layer knows whether it must bridge media to the agent itself:
 
-- `AgentDeviceNative` - the provider rings the agent's own registered device or soft-phone client (for example WebRTC). The live call already reaches the agent, so the Contact Center reserves, offers, and tracks the work, and the agent answers the media on their device. The Dialpad provider uses this model.
+- `AgentDeviceNative` - the provider rings the agent's own registered device or soft-phone client (for example WebRTC). The live call already reaches the agent, so the Contact Center reserves, offers, and tracks the work, and the agent answers the media on their device.
 - `ServerSideAcd` - the provider parks or queues the live call server-side. The Contact Center explicitly asks the provider to connect (bridge) the call to the selected agent through `ConnectToAgentAsync` once the offer is accepted (inbound) or the dialed call is answered (outbound).
 
 Providers advertise `ContactCenterVoiceProviderCapabilities.AgentConnect` when they can bridge calls. The agent desktop and supervisor UI hide or disable actions the active provider cannot perform, the same way the Telephony soft phone gates controls on `TelephonyCapabilities`.
@@ -203,7 +208,7 @@ Accepting or declining an offered call is a single, authoritative server-side co
 
 A **call session** (`CallSession`) is the Contact Center's business-oriented projection of a voice call. It maps a provider call to an interaction, agent, and queue and tracks the normalized call lifecycle (`Planned`, `Dialing`, `Ringing`, `Connected`, `OnHold`, `Ending`, `Ended`, `Failed`, `NoAnswer`, `Rejected`, `Canceled`, `Transferred`) plus talk and hold durations, without owning media execution.
 
-Providers and PBX webhooks feed call-state changes in as normalized `ProviderVoiceEvent` instances through `IProviderVoiceEventService`. The service matches the event to the interaction and call session by provider call identifier, advances their state and timestamps, bridges the agent for answered outbound calls on `ServerSideAcd` providers, and publishes the corresponding Contact Center domain events. Each canonical provider-call stream is serialized with Orchard's tenant-scoped distributed lock, and the domain/session/outbox transaction commits before the lock is released. Multiple application nodes may therefore receive the same Asterisk stream payload or Dialpad delivery without applying it concurrently. Each event's idempotency key is scoped by its canonical provider (`{provider}|{deliveryId}`) before the duplicate check and publication, so the serialized retry observes the first commit and exits without republishing.
+Providers and PBX webhooks feed call-state changes in as normalized `ProviderVoiceEvent` instances through `IProviderVoiceEventService`. The service matches the event to the interaction and call session by provider call identifier, advances their state and timestamps, bridges the agent for answered outbound calls on `ServerSideAcd` providers, and publishes the corresponding Contact Center domain events. Each canonical provider-call stream is serialized with Orchard's tenant-scoped distributed lock, and the domain/session/outbox transaction commits before the lock is released. Multiple application nodes may therefore receive the same Asterisk stream payload or provider webhook delivery without applying it concurrently. Each event's idempotency key is scoped by its canonical provider (`{provider}|{deliveryId}`) before the duplicate check and publication, so the serialized retry observes the first commit and exits without republishing.
 
 Before any interaction, call, or event key is built, the service resolves the event's provider name to a single **canonical identity** through `IProviderIdentityResolver`. Provider modules contribute their canonical name and aliases through the implementation-free `IProviderIdentityProvider` contract — for example the Asterisk adapter maps its configuration-backed `Default Asterisk` runtime name to the canonical `Asterisk` — so an alias delivery resolves to the same stored call session instead of mutating the stored provider identity, and Contact Center never references provider implementation assemblies to do it.
 
@@ -215,7 +220,7 @@ Provider webhook inbox deliveries are likewise keyed by canonical provider name,
 
 > **Feature ID** `CrestApps.OrchardCore.ContactCenter.Recording`
 
-Recording orchestration is governed by a tenant-scoped policy that is enforced server-side **before** any provider media capture. The **Recording governance** section on the Contact Center settings screen configures whether recording is enabled for the tenant, the consent model (all parties must consent, or single-party consent is sufficient), whether explicit consent must be captured on the interaction before recording may start, the retention window in days, and whether captured recordings begin under legal hold.
+Recording orchestration is governed by a tenant-scoped policy that is enforced server-side **before** any provider media capture. The **Recording governance** section on the Contact Center settings screen configures whether recording is enabled for the tenant, the consent model (all parties must consent, or single-party consent is sufficient), whether explicit consent must be captured on the interaction before recording may start, the retention window in days, and whether captured recordings begin under legal hold. Its **Agent secure pause** part sets whether agents may pause recording (**Allow agents to pause recording**), the **Maximum secure-pause window** in seconds before the platform resumes a forgotten pause (zero keeps the pause until it is resumed), and whether an agent must give a reason to pause (**Require a reason to pause**).
 
 On every start or resume, the recording service evaluates `IRecordingGovernancePolicy` before invoking the provider. Recording **fails closed** — the provider is never called — when recording is disabled for the tenant, or when the all-parties consent model requires explicit consent that has not yet been captured on the interaction; a `RecordingDenied` domain event is published carrying the machine-readable deny reason. Pause and stop are never gated, so a tenant can always halt an in-progress capture.
 
@@ -248,7 +253,7 @@ When a normalized inbound call arrives, the feature:
 1. Resolves the dialed number to an Omnichannel **channel endpoint**, then resolves the configured **subject flow** for that endpoint to obtain the subject content type and campaign.
 2. Looks up the **contact** by the caller's phone number (matched against the contact's normalized primary cell and home numbers).
 3. Creates an `OmnichannelActivity` (`Kind = Call`, `Source = Inbound`) with its **Subject** content item, and an `Interaction` (`Voice`, `Inbound`) linked to that activity.
-4. Enqueues the activity into the inbound **queue** and reserves the longest-idle available agent who is signed in to that queue.
+4. Enqueues the activity into the inbound **queue** and reserves the available agent, signed in to that queue, whom the queue's routing strategy picks (longest idle by default).
 5. Offers the ringing call to that agent through `IIncomingCallDispatcher`, which raises the soft-phone modal.
 
 When the agent accepts the offer, the [unified call command](#unified-call-commands) accepts the reservation, connects the media to the agent for `ServerSideAcd` providers, and creates the [call session](#call-sessions-and-normalized-provider-events) and marks the interaction connected in one server-side step.
@@ -292,9 +297,9 @@ A Subject Flow can mark a subject as **requiring a disposition**. When set, an a
 
 ## Reports and analytics
 
-Contact center **reports and analytics** contribute to the reusable [Reports](../modules/reports.md) framework, so they appear under the top-level admin **Reports** menu (grouped under **Contact Center**) alongside CRM and other reports. They are not a separate feature: the reports activate automatically whenever both Contact Center Work Distribution (`CrestApps.OrchardCore.ContactCenter.Queues`) and the Reports framework (`CrestApps.OrchardCore.Reports`) are enabled. Every report shares the standard from/to date-range filter and a CSV export.
+Contact center **reports and analytics** contribute to the reusable [Reports](../modules/reports.md) framework, so they appear under the top-level admin **Reports** menu, grouped by category (such as Operations, Queue & Routing, Agent Performance, Workforce & Payroll, and Compliance & Audit), alongside CRM and other reports. They are not a separate feature: the reports activate automatically whenever both Contact Center Work Distribution (`CrestApps.OrchardCore.ContactCenter.Queues`) and the Reports framework (`CrestApps.OrchardCore.Reports`) are enabled. Every report shares the standard from/to date-range filter and exports to CSV, and to Excel (.xlsx) when the **Reports (OpenXml)** feature is enabled.
 
-The combined Contact Center and Omnichannel Management catalog contributes 78 runnable executive, interaction, queue, agent, transfer, recording, campaign, subject, and CRM activity reports. See the [Enterprise report catalog](report-catalog.md) for the full list of reports plus the exact formulas, columns, filters, grouping, sorting, drill paths, permissions, export behavior, validation rules, and known data limitations.
+The combined Contact Center and Omnichannel Management catalog contributes runnable executive, interaction, queue, agent, transfer, recording, campaign, subject, and CRM activity reports. See the [Enterprise report catalog](report-catalog.md) for the full list of reports plus the exact formulas, columns, filters, grouping, sorting, drill paths, permissions, export behavior, validation rules, and known data limitations.
 
 - **Call insights** - inbound/outbound volume, answered, abandoned, and failed counts; average handle time and speed of answer; breakdowns by channel and status; and a daily volume trend.
 - **Agent productivity** - per-agent handled volume (inbound/outbound), talk time, average handle time, and completed activities.

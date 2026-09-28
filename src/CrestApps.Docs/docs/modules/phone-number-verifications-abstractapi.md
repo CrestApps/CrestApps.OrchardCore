@@ -23,11 +23,11 @@ Configure the provider under **Settings** -> **Phone Number Verifications** on t
 
 | Setting | Default | Purpose |
 | --- | --- | --- |
+| **Enable this provider** | Off | Makes the provider available. Its other settings appear, and it can be picked as the **Default provider**, only after this is switched on and saved. |
 | **API key** | _(empty)_ | The API key issued by AbstractAPI. Stored as a protected value. |
 
 ![AbstractAPI provider settings tab](/img/docs/phone-number-verifications-provider-settings.png)
 
-> Screenshot placeholder: the AbstractAPI settings tab.
 
 ## Authentication
 

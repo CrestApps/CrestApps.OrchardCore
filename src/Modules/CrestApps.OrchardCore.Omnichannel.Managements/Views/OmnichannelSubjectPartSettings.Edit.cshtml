@@ -72,6 +72,7 @@
 
     const refresh = () => {
         const isInbound = directionSelect.value === '@nameof(SubjectDirection.Inbound)';
+        const isOutbound = directionSelect.value === '@nameof(SubjectDirection.Outbound)';
         const isInboundAutomated = isInbound && interactionTypeSelect && interactionTypeSelect.value === '@nameof(ActivityInteractionType.Automated)';
         const channel = isInbound && channelSelect ? channelSelect.value : '';
 
@@ -79,9 +80,15 @@
         // configured when the inventory is loaded, so the section stays hidden for outbound subjects.
         const canAutomate = isInboundAutomated;
 
+        // Live agent handoff applies to any automated conversation: an inbound automated subject, or any outbound
+        // subject (whose AI settings are chosen at inventory load). This mirrors ShowHandoffSettings in
+        // OmnichannelSubjectAISettingsDisplayDriver so the card follows the selection before the settings are saved.
+        const showHandoff = canAutomate || isOutbound;
+
         toggle('.subject-inbound-only', isInbound);
         toggle('.subject-inbound-automated-only', isInboundAutomated);
         toggle('.subject-ai-settings', canAutomate);
+        toggle('.subject-ai-handoff', showHandoff);
         toggle('.subject-ai-voice-only', canAutomate && channel === '@OmnichannelConstants.Channels.Phone');
         toggle('.subject-ai-sms-only', canAutomate && channel === '@OmnichannelConstants.Channels.Sms');
     };

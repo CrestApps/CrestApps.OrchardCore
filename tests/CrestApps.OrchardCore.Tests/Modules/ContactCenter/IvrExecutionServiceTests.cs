@@ -4,7 +4,8 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Tests.Modules.ContactCenter.Integration;
-using Microsoft.Extensions.Logging.Abstractions;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
@@ -380,6 +381,70 @@ public sealed class IvrExecutionServiceTests
         Assert.Equal(["delivery-1"], state.AppliedDeliveryIds);
     }
 
+    [Fact]
+    public async Task AnEntryPointMessage_IsCommittedAsSpeaking_BeforeTheCallerIsAnsweredAndSpokenTo()
+    {
+        // Arrange
+        // The end of the message arrives as its own webhook and moves the caller on only from "speaking". Recorded
+        // after the provider was asked, a quick speak.ended would find the caller still "scheduled" and be dropped.
+        var harness = new IvrHarness();
+        EntryPointAnnouncement.Schedule(harness.Interaction, EntryPointAnnouncement.Welcome, EntryPointAnnouncement.NextMenu);
+
+        // Act
+        var accepted = await harness.Service.AnnounceAsync(harness.Interaction, "  Thanks for calling.  ", endCallAfter: false, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(accepted);
+        Assert.Equal(["commit", "answer:call-1", "speak:Speaking"], harness.Sequence);
+        Assert.Equal(("Thanks for calling.", false), harness.Provider.Announcements.Single());
+    }
+
+    [Fact]
+    public async Task AnEntryPointMessageBeforeReject_AsksTheProviderToEndTheCallAfterIt()
+    {
+        // Arrange
+        var harness = new IvrHarness();
+
+        // Act
+        await harness.Service.AnnounceAsync(harness.Interaction, "We are closed.", endCallAfter: true, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(harness.Provider.Announcements.Single().EndCallAfter);
+    }
+
+    [Fact]
+    public async Task AnEntryPointMessageTheProviderFailsOn_IsReportedAsNotSaid_AndLogged()
+    {
+        // Arrange
+        // A caller who hung up as the message started makes the provider throw; that must not surface as an unhandled
+        // failure on the inbound path, but come back as "not said" so the caller is moved on.
+        var harness = new IvrHarness();
+        harness.Provider.AnnounceThrows = true;
+
+        // Act
+        var accepted = await harness.Service.AnnounceAsync(harness.Interaction, "Thanks for calling.", endCallAfter: false, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(accepted);
+        Assert.Contains(harness.Log.At(LogLevel.Warning), message => message.Contains("could not be spoken", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData(null, "Thanks for calling.")]
+    [InlineData("call-1", "  ")]
+    public async Task AnEntryPointMessageWithNoCallOrNothingToSay_AsksTheProviderForNothing(string providerCallId, string text)
+    {
+        // Arrange
+        var harness = new IvrHarness(providerCallId);
+
+        // Act
+        var accepted = await harness.Service.AnnounceAsync(harness.Interaction, text, endCallAfter: false, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(accepted);
+        Assert.Empty(harness.Sequence);
+    }
+
     private sealed class IvrHarness
     {
         private readonly Interaction _interaction;
@@ -396,7 +461,11 @@ public sealed class IvrExecutionServiceTests
             _interactionManager.Setup(x => x.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(_interaction);
 
-            Provider = new RecordingIvrProvider(Sequence);
+            Provider = new RecordingIvrProvider(Sequence)
+            {
+                // What the caller's message status was when the provider was asked to speak.
+                AnnouncementStatus = () => EntryPointAnnouncement.Read(_interaction)?.Status,
+            };
 
             var session = new Mock<global::YesSql.ISession>();
             session.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
@@ -427,10 +496,14 @@ public sealed class IvrExecutionServiceTests
                 audit.Object,
                 session.Object,
                 new TestClock(),
-                NullLogger<IvrExecutionService>.Instance);
+                Log);
         }
 
         public List<string> Sequence { get; } = [];
+
+        public RecordingLogger<IvrExecutionService> Log { get; } = new();
+
+        public Interaction Interaction => _interaction;
 
         public List<(string EventType, CallLifecycleEventData Data, string Key)> Audit { get; } = [];
 
@@ -466,6 +539,25 @@ public sealed class IvrExecutionServiceTests
         public List<(string Text, string ValidDigits)> Prompts { get; } = [];
 
         public bool PromptSucceeds { get; set; } = true;
+
+        public List<(string Text, bool EndCallAfter)> Announcements { get; } = [];
+
+        public bool AnnounceThrows { get; set; }
+
+        public Func<string> AnnouncementStatus { get; set; }
+
+        public Task<bool> AnnounceAsync(string providerCallId, string text, bool endCallAfter, CancellationToken cancellationToken = default)
+        {
+            if (AnnounceThrows)
+            {
+                throw new HttpRequestException("The call has already ended.");
+            }
+
+            Announcements.Add((text, endCallAfter));
+            _sequence.Add($"speak:{AnnouncementStatus?.Invoke()}");
+
+            return Task.FromResult(true);
+        }
 
         public Task<bool> AnswerAsync(string providerCallId, CancellationToken cancellationToken = default)
         {

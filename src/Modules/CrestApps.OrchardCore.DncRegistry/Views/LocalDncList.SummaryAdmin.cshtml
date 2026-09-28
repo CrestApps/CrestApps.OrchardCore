@@ -2,6 +2,14 @@
 
 @{
     LocalDncList entry = Model.LocalDncList;
+
+    // The name the user typed is the list's title. The uploaded file name is only a fallback for a list that
+    // has no name, and is otherwise shown next to the title so the source file can still be identified.
+    var hasName = !string.IsNullOrWhiteSpace(entry.Name);
+    var title = hasName ? entry.Name : entry.UploadedFileName;
+    var showFileName = hasName
+        && !string.IsNullOrWhiteSpace(entry.UploadedFileName)
+        && !string.Equals(entry.Name, entry.UploadedFileName, StringComparison.OrdinalIgnoreCase);
 }
 
 <div class="row">
@@ -9,8 +17,14 @@
         <div class="summary d-flex flex-column flex-md-row">
             <div class="me-2">
                 <p class="mb-0">
-                    @entry.UploadedFileName
+                    @title
                 </p>
+                @if (showFileName)
+                {
+                    <small class="text-muted" title="@T["Uploaded file"]">
+                        <i class="fa-solid fa-file-csv" aria-hidden="true"></i> @entry.UploadedFileName
+                    </small>
+                }
             </div>
 
             @if (Model.Meta != null)

@@ -34,4 +34,23 @@ public interface IIvrCallRouter
     /// <param name="failedDestinationId">The approved destination that did not answer.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     Task RecoverFailedTransferAsync(string interactionId, string failedDestinationId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Answers the caller and says the entry point's welcome or closed message the routing decided they are owed.
+    /// Once it has been said (<see cref="CompleteAnnouncementAsync"/>) they go on to the menu, the entry point's target,
+    /// the queue a closed entry point holds them in, voicemail, or the end of the call. A caller the message cannot be
+    /// said to goes on at once, as if no message were configured. A caller owed no message, or who has already had it,
+    /// is left alone.
+    /// </summary>
+    /// <param name="interactionId">The caller's interaction.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task AnnounceAsync(string interactionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Moves on a caller whose welcome or closed message has just been said.
+    /// </summary>
+    /// <param name="interactionId">The caller's interaction.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns><see langword="true"/> when the caller was waiting on the message and has been moved on.</returns>
+    Task<bool> CompleteAnnouncementAsync(string interactionId, CancellationToken cancellationToken = default);
 }

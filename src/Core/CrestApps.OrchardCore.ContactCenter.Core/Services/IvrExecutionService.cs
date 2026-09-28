@@ -238,6 +238,49 @@ public sealed class IvrExecutionService : IIvrExecutionService
         await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
     }
 
+    /// <inheritdoc/>
+    public async Task<bool> AnnounceAsync(Interaction interaction, string text, bool endCallAfter, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(interaction);
+
+        if (string.IsNullOrEmpty(interaction.ProviderInteractionId) || string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        // Committed before the provider is asked for anything; see the remarks on this class. The end of the message
+        // moves the caller on only from this status, which is what keeps a late or repeated report from moving them twice.
+        EntryPointAnnouncement.SetStatus(interaction, EntryPointAnnouncement.Speaking);
+        await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
+        await _session.SaveChangesAsync(cancellationToken);
+
+        // The caller's leg is still ringing, and nothing can be said on a leg nobody has picked up. A leg that is
+        // already up refuses the answer, which is not a reason to stop.
+        if (!await _ivrProvider.AnswerAsync(interaction.ProviderInteractionId, cancellationToken) &&
+            _logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug(
+                "The provider did not answer call '{ProviderCallId}' for the entry point's message; it may already be answered.",
+                interaction.ProviderInteractionId.SanitizeLogValue());
+        }
+
+        try
+        {
+            return await _ivrProvider.AnnounceAsync(interaction.ProviderInteractionId, text.Trim(), endCallAfter, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            // A caller who hung up as the message started must not surface as an unhandled failure on the inbound path.
+            _logger.LogWarning(ex, "The entry point's message could not be spoken on interaction '{InteractionId}'.", interaction.ItemId.SanitizeLogValue());
+
+            return false;
+        }
+    }
+
     /// <summary>
     /// Reads the caller's menu position off the interaction, or starts a fresh one.
     /// </summary>
