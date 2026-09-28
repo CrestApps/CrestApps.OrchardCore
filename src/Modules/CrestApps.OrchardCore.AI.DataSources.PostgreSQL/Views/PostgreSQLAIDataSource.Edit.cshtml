@@ -21,7 +21,7 @@
 
             <div class="mb-3" data-ai-data-source-postgresql-connection-string-settings>
                 <label asp-for="ConnectionString" class="form-label">@T["Connection string"]</label>
-                <input asp-for="ConnectionString" class="form-control" type="password" placeholder="@(Model.HasConnectionString ? T["Leave empty to keep the saved connection string"].Value : string.Empty)" />
+                <input asp-for="ConnectionString" class="form-control" type="password" placeholder="@(Model.HasConnectionString ? T["Leave empty to keep the saved connection string"].Value : string.Empty)" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
                 <span asp-validation-for="ConnectionString" class="text-danger"></span>
             </div>
 

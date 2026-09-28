@@ -39,7 +39,7 @@
         <div class="ocat-wrapper">
             <label asp-for="ApiKeySecret" class="ocat-label">@T["API key secret"]</label>
             <div class="ocat-end">
-                <input type="password" class="form-control" asp-for="ApiKeySecret" autocomplete="off" placeholder='@T["Enter a new API key secret to replace the saved value"]' />
+                <input type="password" class="form-control" asp-for="ApiKeySecret" autocomplete="new-password" placeholder='@T["Enter a new API key secret to replace the saved value"]' data-1p-ignore data-lpignore="true" data-bwignore="true" />
                 <span asp-validation-for="ApiKeySecret" class="text-danger"></span>
                 @if (Model.HasApiKeySecret)
                 {
@@ -66,7 +66,7 @@
         <div class="ocat-wrapper">
             <label asp-for="AuthToken" class="ocat-label">@T["Auth Token"]</label>
             <div class="ocat-end">
-                <input type="password" class="form-control" asp-for="AuthToken" autocomplete="off" placeholder='@T["Enter a new Auth Token to replace the saved value"]' />
+                <input type="password" class="form-control" asp-for="AuthToken" autocomplete="new-password" placeholder='@T["Enter a new Auth Token to replace the saved value"]' data-1p-ignore data-lpignore="true" data-bwignore="true" />
                 <span asp-validation-for="AuthToken" class="text-danger"></span>
                 @if (Model.HasAuthToken)
                 {
