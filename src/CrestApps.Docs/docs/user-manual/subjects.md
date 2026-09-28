@@ -16,8 +16,16 @@ A **subject** is what a call or message is about: *Lead generation*, *Support re
 | **Permission** | Manage subject flows; Edit content types (to change settings) |
 | **Feature** | Omnichannel Management |
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating an outbound and an inbound subject and configuring their subject settings">
-  <source src="/img/docs/um-subjects.mp4" type="video/mp4" />
+Create an **outbound** subject for calls you make. This one uses a default campaign and adds a *Vehicle of interest* field:
+
+<video controls preload="metadata" width="100%" aria-label="Screencast of creating an outbound subject, attaching the Omnichannel Subject part, choosing its default campaign and adding a field">
+  <source src="/img/docs/um-subject-outbound.mp4" type="video/mp4" />
+</video>
+
+Create an **inbound** subject for calls customers make. This one is a manual phone subject with a *Question* field:
+
+<video controls preload="metadata" width="100%" aria-label="Screencast of creating an inbound manual phone subject and adding a field">
+  <source src="/img/docs/um-subject-inbound.mp4" type="video/mp4" />
 </video>
 
 ## Create a subject

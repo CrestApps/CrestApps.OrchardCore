@@ -172,16 +172,16 @@ On a contact's **Activities** page, the **Add Activity** button is a dropdown wi
 - The activity is stored as **completed by the current user**, and the subject flow runs immediately, so it may create a follow-up activity depending on the inbound subject's actions. The logged activity then appears in the contact's completed activities list.
 - If no inbound subject is configured, a warning is shown and inbound logging is blocked.
 
-The screencast below walks through a complete inbound scenario for a call center. It first creates an `Inbound` subject content type and configures its flow with the **Inbound** direction on the `Phone` channel (a basic flow that does not require a disposition so agents can log a call quickly). Then it simulates a customer calling in: the agent searches Content Items with `phone:7025556666`, finds the matching contact, opens the contact's **Activities** page, chooses **Inbound** from the **Add Activity** menu, selects the `Inbound` subject, adds a note about the call, and logs the completed activity.
+The screencast below opens an existing contact from **Interaction Center** -> **Contacts**, schedules an outbound *Test Drive Follow-up* activity with **Add Activity** -> **Outbound**, then logs an inbound call with **Add Activity** -> **Inbound**: it picks the *Sales Inquiry* subject, fills in its *Question* field and notes, and picks **Test Drive Booked**. The **Workflow results** preview shows the follow-up the subject flow will create, and after **Log Activity** the contact has the completed inbound call and the new follow-up.
 
-<video controls preload="metadata" width="100%" aria-label="Screen cast of creating an inbound subject and logging an inbound call for an existing contact">
-  <source src="/img/docs/omni-inbound-existing.mp4" type="video/mp4" />
+<video controls preload="metadata" width="100%" aria-label="Screencast of opening a contact, scheduling an outbound activity and logging an inbound call whose disposition schedules a follow-up">
+  <source src="/img/docs/um-contact-activities.mp4" type="video/mp4" />
 </video>
 
-Sometimes an inbound caller is not in the system yet. The screencast below shows that variation: the agent searches Content Items with `phone:7025559999`, gets no match, creates a new `Contact` content item for the caller (capturing their name, time zone, and phone number), and then logs the inbound call under the new contact.
+Sometimes an inbound caller is not in the system yet. The screencast below shows that variation: the agent searches the contacts with `phone:0199`, gets no match, creates a new *Customer* contact with the caller's name and cell number, and then logs the inbound call under the new contact.
 
-<video controls preload="metadata" width="100%" aria-label="Screen cast of creating a new contact for an unknown inbound caller and logging the call">
-  <source src="/img/docs/omni-inbound-new-contact.mp4" type="video/mp4" />
+<video controls preload="metadata" width="100%" aria-label="Screencast of searching for an unknown caller, creating the contact and logging the inbound call">
+  <source src="/img/docs/um-inbound-new-contact.mp4" type="video/mp4" />
 </video>
 
 ### Load Inventory
@@ -326,10 +326,10 @@ Because subject content items are authored and completed through the omnichannel
 2. Create dispositions that represent outcomes (e.g. `Follow up`, `Not interested`, `Sold`).
 3. After a disposition is created, you can still change its description, but its name remains read-only.
 
-For a lead-conversion story, create outcomes such as `No answer`, `Call back`, `Follow up 30 days`, `Lead won`, and `Do not call`. The screencast below adds all five:
+For a test-drive story, create outcomes such as `Test Drive Booked`, `Call Back Later` and `Not Interested`. The screencast below adds all three, each with a description:
 
-<video controls preload="metadata" width="100%" aria-label="Screen cast of creating omnichannel dispositions">
-  <source src="/img/docs/omni-dispositions.mp4" type="video/mp4" />
+<video controls preload="metadata" width="100%" aria-label="Screencast of creating three dispositions with descriptions">
+  <source src="/img/docs/um-dispositions.mp4" type="video/mp4" />
 </video>
 
 ### 5) Create Campaign Groups and Campaigns
@@ -401,10 +401,10 @@ The screencast below walks through a complete lead-generation flow. It assigns t
 
 A Manual load starts only when you run **Actions > Load batch**; it then creates and assigns the activities in the background like every other source.
 
-The screencast below creates a **Manual** inventory load for the *Lead Generation* subject, targets the `Contact` content type on the phone channel, assigns the generated activities to an agent, and loads the call list for the `Spring Lead Drive` campaign.
+The screencast below creates a **Manual** inventory load for the *Test Drive Follow-up* subject on the phone channel, shares the activities between two agents, targets the `Customer` contact type, loads the batch, and then finds the new activities on **Manage Activities**.
 
-<video controls preload="metadata" width="100%" aria-label="Screen cast of creating a manual inventory load">
-  <source src="/img/docs/omni-load-inventory-manual.mp4" type="video/mp4" />
+<video controls preload="metadata" width="100%" aria-label="Screencast of creating a manual inventory load for two agents, loading it, and finding the new activities on Manage Activities">
+  <source src="/img/docs/um-load-manual.mp4" type="video/mp4" />
 </video>
 
 The inventory load runs in the background and loads activities incrementally. Each created activity resolves its campaign, channel, channel endpoint, and interaction type from the batch selections, falling back to the subject's part settings. The interaction type is derived from the source: the **Automatic** source creates **Automated** activities, while other sources create **Manual** activities. Manual inventory loads assign each created activity to a selected user. Dialer inventory loads use the phone channel, leave activities unassigned with assignment status `Available`, and apply the selected dialer profile so the created activities inherit the profile's dialing mode before dialers reserve them later. The campaign on a dialer-loaded activity comes from the load, falling back to the subject flow's default campaign; the dialer profile never sets it.
@@ -436,10 +436,10 @@ When an inventory load is started, the `IActivityBatchLoadCoordinator` transitio
 5. Adjust the schedule dates if needed, and optionally add **Preparation notes** for any result. A note is stored as the instructions of the follow-up activity it generates.
 6. Click **Complete** to save and execute the subject actions.
 
-The screencast below shows an agent working their assigned queue. The first call is completed with **No answer**, which triggers the *Try Again* action: an inline **Schedule at** calendar and **Preparation notes** field appear so the agent can override the default next call time and leave a note for the retry. A second lead is completed with **Lead won**, and the *New Activity* action automatically schedules a *New Customer - Welcome* call three days out.
+The screencast below shows an agent working their assigned activities: they open **Interaction Center** -> **Activities**, click **Complete** on an activity, add notes, and complete it with **No Answer**, which triggers the subject flow's *Try Again* action.
 
-<video controls preload="metadata" width="100%" aria-label="Screen cast of an agent completing activities with dispositions">
-  <source src="/img/docs/omni-agent-activities.mp4" type="video/mp4" />
+<video controls preload="metadata" width="100%" aria-label="Screencast of an agent opening their activity list, completing an activity and picking a disposition">
+  <source src="/img/docs/um-complete-activity.mp4" type="video/mp4" />
 </video>
 
 ### Scheduled activities list
@@ -535,10 +535,10 @@ Activity rows display an urgency icon so managers can identify priority visually
 
 Use the **Bulk actions** card to choose an action and its scope:
 
-The screencast below shows a manager redistributing queued work: they select the activities, open the **Select an action** menu (which exposes Assign, Reschedule, Set Urgency Level, Change Subject, and more), reassign the activities to an agent, and execute the bulk action.
+The screencast below shows a manager redistributing queued work: they filter by subject and assignment status, tick two activities, choose **Assign** in the **Select an action** menu (which also offers Reschedule, Set Urgency Level, Change Subject and more), pick another agent and click **Execute Action**. Then they tick **Apply to all matching activities** and raise the urgency of every result at once.
 
-<video controls preload="metadata" width="100%" aria-label="Screen cast of a manager reassigning activities in bulk">
-  <source src="/img/docs/omni-manager-redistribute.mp4" type="video/mp4" />
+<video controls preload="metadata" width="100%" aria-label="Screencast of a manager filtering activities, reassigning two of them to another agent, and raising the urgency of every matching activity">
+  <source src="/img/docs/um-manage-activities.mp4" type="video/mp4" />
 </video>
 
 - Apply the action to the activities selected on the current page

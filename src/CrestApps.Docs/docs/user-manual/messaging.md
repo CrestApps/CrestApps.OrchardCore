@@ -54,6 +54,11 @@ A banner warns you during the customer's **quiet hours** (outside the queue's bu
 
 ## Start a new conversation
 
+<video controls preload="metadata" width="100%" aria-label="Screencast of starting a new SMS conversation and sending it">
+  <source src="/img/docs/um-messaging-send.mp4" type="video/mp4" />
+</video>
+
+
 1. Click the **New conversation** (pencil) button.
 2. Pick **From**, the number you send from (it decides the channel).
 3. In **To**, search for contacts; add other numbers under **Other**, separated by commas.
@@ -95,5 +100,5 @@ With Twilio, inbound texts reach the workspace through the Twilio webhook, which
 :::
 
 :::note About the screencasts
-The demo site is not connected to an SMS provider, so the screencasts fill in replies and broadcasts without sending them.
+The inbox and broadcast screencasts fill in replies and broadcasts without sending them; the new-conversation screencast sends a real text.
 :::

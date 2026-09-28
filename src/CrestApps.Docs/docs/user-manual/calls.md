@@ -41,6 +41,11 @@ When you have the phone open in several tabs, answering in one stops the others 
 
 ## During a call
 
+<video controls preload="metadata" width="100%" aria-label="Screencast of a live call in the soft phone window: mute, hold, keypad, the transfer panel and hang up">
+  <source src="/img/docs/um-preview-dial.mp4" type="video/mp4" />
+</video>
+
+
 | Button | What it does |
 | --- | --- |
 | **Mute** / **Unmute** | Stops the customer hearing you. |
@@ -72,5 +77,5 @@ Transferring to an outside number needs the *Transfer calls externally* permissi
 A queue or campaign call puts you in **Wrap-up** until you complete the activity. See [Agent workspace](agent-workspace.md#after-the-call-wrap-up).
 
 :::note About the screencast
-The screencast shows the keypad and the extension search on the demo site, which is not connected to a live phone line, so it stops before a call is placed. Answering, transfer and conference use the buttons described above once a call is connected.
+The first screencast shows the keypad and the extension search and stops before a call is placed; the second is a live call. Answering an incoming call, completing a transfer and conferencing use the buttons described above.
 :::

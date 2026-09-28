@@ -9,7 +9,7 @@
 <script asp-name="flatpickr-culture" at="Foot"></script>
 <style asp-name="flatpickr"></style>
 
-<form asp-route-area="CrestApps.OrchardCore.Omnichannel.Managements" asp-action="ManageActivities" asp-controller="Activities" method="post" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-item-input-name="ItemIds">
+<form asp-route-area="CrestApps.OrchardCore.Omnichannel.Managements" asp-action="ManageActivities" asp-controller="Activities" method="post" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-item-input-name="ItemIds" data-bulk-action-selector="">
     <input type="submit" name="submit.Filter" id="submitFilter" value="Filter" class="visually-hidden" />
     <input type="submit" name="submit.BulkAction" value="Execute" class="visually-hidden" />
     <input type="hidden" name="BulkAction" id="BulkAction" value="@nameof(BulkActivityAction.None)" />

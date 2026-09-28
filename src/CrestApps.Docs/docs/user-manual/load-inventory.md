@@ -23,13 +23,13 @@ There are three sources:
 
 ## Manual loads
 
-<video controls preload="metadata" width="100%" aria-label="Screen cast of creating a manual inventory load">
-  <source src="/img/docs/omni-load-inventory-manual.mp4" type="video/mp4" />
+<video controls preload="metadata" width="100%" aria-label="Screencast of creating a manual inventory load for two agents, loading it, and finding the new activities on Manage Activities">
+  <source src="/img/docs/um-load-manual.mp4" type="video/mp4" />
 </video>
 
 1. Open **Interaction Center > Management > Load Inventory**, click **Add Inventory Load** and choose **Manual**.
-2. Fill in the load (fields below), pick the **Users** who get the work, and **Save**.
-3. In the list, open the load's **Actions** menu and choose **Load batch**. The status moves through *Started* and *Loading* to *Loaded*.
+2. Fill in the load (fields below). A manual load needs a **Channel** and at least one user in **User(s) to assign activities to**; the activities are shared between the users you pick. Click **Save**.
+3. In the list, open the load's **Actions** menu, choose **Load batch** and confirm with **Ok**. The load runs in the background: the status moves through *Started* and *Loading* to *Loaded*, and the row then shows how many activities it created.
 
 Once a load has started it can no longer be edited or deleted.
 

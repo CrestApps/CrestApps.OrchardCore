@@ -54,7 +54,7 @@ Open **Interaction Center > My workspace**. From top to bottom:
 | **Live dashboard** | A shortcut, shown to supervisors only. |
 | **Queue chips** | The queues you are signed in to, with how many items are waiting in each. Sign in and out from the soft phone Work tab. |
 | **Offer card** | A new offer, with the caller, the queue and a countdown (*Respond in 25s*). Click **Accept** or **Decline**. An unanswered offer follows the queue's *Unanswered offer action*. |
-| **Active interaction** | The call you are on: customer, direction, queue, number, status and talk time, with **Open customer record**, **Complete activity**, and the recording controls below. |
+| **Active interaction** | The interaction you are working: customer, direction, queue, number, status and talk time, with **Open customer record**, **Complete activity**, and the recording controls below. For an outbound dialer call it fills in when the call ends and wrap-up starts. |
 | **Recent activity** | Your latest interactions with their status, time and talk time. |
 
 When you accept a preview or dialer offer that is set to open the activity automatically, the workspace goes straight to the activity's **Complete** page.

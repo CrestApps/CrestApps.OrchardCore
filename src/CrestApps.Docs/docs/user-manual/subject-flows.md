@@ -13,8 +13,16 @@ A **subject flow** is the list of actions a subject takes for each disposition. 
 | **Permission** | Manage subject flows |
 | **Feature** | Omnichannel Management |
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of configuring a subject flow with Finish, Try Again and New Activity actions">
-  <source src="/img/docs/um-subject-flow.mp4" type="video/mp4" />
+The two screencasts below build the flows for a pair of subjects that work together. The outbound *Test Drive Follow-up* call finishes when a drive is booked or the customer is not interested, and tries again when nobody answers or the customer asks for a call back:
+
+<video controls preload="metadata" width="100%" aria-label="Screencast of building an outbound subject flow with Finish and Try Again actions for four dispositions">
+  <source src="/img/docs/um-flow-outbound.mp4" type="video/mp4" />
+</video>
+
+The inbound *Sales Inquiry* call finishes when the question is answered, and when the caller books a test drive it creates a **New Activity** for the *Test Drive Follow-up* subject, scheduled 48 hours later with a higher urgency:
+
+<video controls preload="metadata" width="100%" aria-label="Screencast of building an inbound subject flow whose disposition creates an outbound follow-up activity for another subject">
+  <source src="/img/docs/um-flow-inbound.mp4" type="video/mp4" />
 </video>
 
 ## Add actions to a flow

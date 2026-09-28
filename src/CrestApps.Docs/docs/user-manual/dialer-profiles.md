@@ -28,6 +28,22 @@ A **dialer profile** decides **how** outbound calls are placed: whether an agent
 
 Older profiles saved as *Manual* are shown and saved as **Preview**.
 
+### Preview dialing, start to finish
+
+<video controls preload="metadata" width="100%" aria-label="Screencast of a live preview-dial call: the offer arrives, the agent clicks Dial, uses mute, hold, keypad and transfer, hangs up and completes the activity">
+  <source src="/img/docs/um-preview-dial.mp4" type="video/mp4" />
+</video>
+
+The agent is signed in to the campaign in the soft phone (right). The record is offered in the docked bar and the workspace; the agent clicks **Dial**, the customer answers, and when the call ends the agent is in **Wrap-up** until the activity is completed.
+
+### Power dialing, start to finish
+
+<video controls preload="metadata" width="100%" aria-label="Screencast of a live power-dial call: the agent signs in to the campaign, the dialer places the call, the record opens and the activity is completed">
+  <source src="/img/docs/um-power-dial.mp4" type="video/mp4" />
+</video>
+
+With a Power profile the agent only signs in and stays **Available**. Within a minute the dialer places the call, and the record opens on its own as the call rings.
+
 ## Create a profile
 
 1. Open **Interaction Center > Management > Dialer Profiles** and click **Add Dialer Profile**.

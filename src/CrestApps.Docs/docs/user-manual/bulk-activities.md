@@ -13,8 +13,8 @@ description: Filter every open activity and reassign, reschedule, purge, re-prio
 | **Permission** | Manage activities (the Purge action also needs Purge activity) |
 | **Feature** | Omnichannel Management |
 
-<video controls preload="metadata" width="100%" aria-label="Screen cast of a manager reassigning activities in bulk">
-  <source src="/img/docs/omni-manager-redistribute.mp4" type="video/mp4" />
+<video controls preload="metadata" width="100%" aria-label="Screencast of a manager filtering activities, reassigning two of them to another agent, and raising the urgency of every matching activity">
+  <source src="/img/docs/um-manage-activities.mp4" type="video/mp4" />
 </video>
 
 ## Filter the activities

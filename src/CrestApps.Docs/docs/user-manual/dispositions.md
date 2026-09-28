@@ -13,8 +13,8 @@ A **disposition** is the outcome of an activity: *No answer*, *Call back*, *Lead
 | **Permission** | Manage dispositions |
 | **Feature** | Omnichannel Management |
 
-<video controls preload="metadata" width="100%" aria-label="Screen cast of creating omnichannel dispositions">
-  <source src="/img/docs/omni-dispositions.mp4" type="video/mp4" />
+<video controls preload="metadata" width="100%" aria-label="Screencast of creating three dispositions with descriptions">
+  <source src="/img/docs/um-dispositions.mp4" type="video/mp4" />
 </video>
 
 ## Create a disposition
