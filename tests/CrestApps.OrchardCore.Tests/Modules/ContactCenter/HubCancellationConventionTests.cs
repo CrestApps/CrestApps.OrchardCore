@@ -58,6 +58,7 @@ public sealed partial class HubCancellationConventionTests
         Assert.Equal(
             [
                 "AIChatHub.cs",
+                "AIChatHubLoadSessionTests.cs",
                 "ContactCenterHub.cs",
                 "ContactCenterRealTimeNotifier.cs",
                 "ContactCenterRealTimeNotifierTests.cs",
