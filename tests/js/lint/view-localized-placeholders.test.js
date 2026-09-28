@@ -30,7 +30,7 @@ const unformatted = new RegExp('@(?:T|H)\\["([^"]*\\{\\d+\\}[^"]*)"\\](?!\\s*[.,
 
 describe('views', () => {
     // It reads every view in the repository: a few seconds, and more while a build runs beside it.
-    it('never render a localized placeholder string without its arguments', () => {
+    it('never render a localized placeholder string without its arguments', { timeout: 30000 }, () => {
         const offenders = [];
 
         for (const file of views(root)) {
@@ -44,5 +44,5 @@ describe('views', () => {
         }
 
         expect(offenders).toEqual([]);
-    }, 30000);
+    });
 });
