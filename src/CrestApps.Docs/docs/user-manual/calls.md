@@ -39,6 +39,12 @@ An incoming call opens a window in the soft phone with the caller and any **Matc
 
 When you have the phone open in several tabs, answering in one stops the others ringing.
 
+A call from a queue arrives as an **offer** first: the workspace and the docked agent bar show the caller, the queue and a countdown, and the soft phone lists the contacts that match the number. This screencast signs in to the *Support* queue, accepts a live call, puts the caller on hold and back, mutes and unmutes, hangs up, and lands in wrap-up with **Complete activity**:
+
+<video controls preload="metadata" width="100%" aria-label="Screencast of an agent signing in to a queue, accepting an inbound call from the queue, using hold and mute, hanging up and entering wrap-up">
+  <source src="/img/docs/um-answer-queue.mp4" type="video/mp4" />
+</video>
+
 ## During a call
 
 <video controls preload="metadata" width="100%" aria-label="Screencast of a live call in the soft phone window: mute, hold, keypad, the transfer panel and hang up">
@@ -77,5 +83,5 @@ Transferring to an outside number needs the *Transfer calls externally* permissi
 A queue or campaign call puts you in **Wrap-up** until you complete the activity. See [Agent workspace](agent-workspace.md#after-the-call-wrap-up).
 
 :::note About the screencast
-The first screencast shows the keypad and the extension search and stops before a call is placed; the second is a live call. Answering an incoming call, completing a transfer and conferencing use the buttons described above.
+The first screencast shows the keypad and the extension search and stops before a call is placed; the others are live calls. Completing a transfer and conferencing use the buttons described above.
 :::
