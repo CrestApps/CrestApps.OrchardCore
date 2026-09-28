@@ -9,7 +9,7 @@
  * A thin convenience wrapper around the Microsoft SignalR client for connecting to the Contact Center
  * hub (`ContactCenterHub`). It manages the connection, sends periodic heartbeats so the server does not
  * consider the agent session stale, retrieves the reconnect snapshot, and dispatches the strongly-typed
- * server callbacks (`PresenceChanged`, `OfferReceived`, `OfferRevoked`, `QueueStatsChanged`).
+ * server callbacks (`PresenceChanged`, `OfferReceived`, `OfferRevoked`, `QueueStatsChanged`, `InteractionChanged`).
  *
  * Usage:
  *   const client = window.contactCenterRealTime.connect({
@@ -18,7 +18,8 @@
  *       onPresenceChanged: (n) => { ... },
  *       onOfferReceived: (n) => { ... },
  *       onOfferRevoked: (n) => { ... },
- *       onQueueStatsChanged: (n) => { ... }
+ *       onQueueStatsChanged: (n) => { ... },
+ *       onInteractionChanged: (n) => { ... }
  *   });
  */
 (function (window) {
@@ -56,6 +57,7 @@
     connection.on('OfferRevoked', options.onOfferRevoked || noop);
     connection.on('QueueStatsChanged', options.onQueueStatsChanged || noop);
     connection.on('RecordingStateChanged', options.onRecordingStateChanged || noop);
+    connection.on('InteractionChanged', options.onInteractionChanged || noop);
     connection.on('CallQualityAlert', options.onCallQualityAlert || noop);
     connection.on('MembershipChanged', function () {
       loadSnapshot().catch(function () {});

@@ -56,6 +56,14 @@ public interface IContactCenterRealTimeNotifier
     Task NotifyRecordingStateChangedAsync(RecordingStateNotification notification, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Tells the handling agent's own connections that their interaction changed state (ringing, connected, held,
+    /// resumed or ended), so the agent workspace and the docked agent bar re-read it while the call is live.
+    /// </summary>
+    /// <param name="notification">The interaction change.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task NotifyInteractionChangedAsync(AgentInteractionNotification notification, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Tells supervisors that an agent's calls keep rating poor.
     /// </summary>
     /// <param name="notification">The alert.</param>

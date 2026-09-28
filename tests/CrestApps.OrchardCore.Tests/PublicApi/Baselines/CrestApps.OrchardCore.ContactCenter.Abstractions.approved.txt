@@ -328,6 +328,7 @@ namespace CrestApps.OrchardCore.ContactCenter
     {
         System.Threading.Tasks.Task NotifyAgentMembershipChangedAsync(string userId, System.Collections.Generic.IEnumerable<string> removedQueueIds, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task NotifyCallQualityAlertAsync(CrestApps.OrchardCore.ContactCenter.Models.CallQualityAlertNotification notification, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task NotifyInteractionChangedAsync(CrestApps.OrchardCore.ContactCenter.Models.AgentInteractionNotification notification, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task NotifyOfferReceivedAsync(CrestApps.OrchardCore.ContactCenter.Models.AgentOfferNotification notification, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task NotifyOfferRevokedAsync(CrestApps.OrchardCore.ContactCenter.Models.AgentOfferRevokedNotification notification, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task NotifyPresenceChangedAsync(CrestApps.OrchardCore.ContactCenter.Models.AgentPresenceNotification notification, System.Threading.CancellationToken cancellationToken = default);
@@ -482,6 +483,17 @@ namespace CrestApps.OrchardCore.ContactCenter
 }
 namespace CrestApps.OrchardCore.ContactCenter.Models
 {
+    public sealed class AgentInteractionNotification
+    {
+        public AgentInteractionNotification() { }
+        public string AgentId { get; set; }
+        public string Direction { get; set; }
+        public string EventType { get; set; }
+        public string InteractionId { get; set; }
+        public System.DateTime ServerTimeUtc { get; set; }
+        public string Status { get; set; }
+        public string UserId { get; set; }
+    }
     [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
     public enum AgentOfferKind
     {

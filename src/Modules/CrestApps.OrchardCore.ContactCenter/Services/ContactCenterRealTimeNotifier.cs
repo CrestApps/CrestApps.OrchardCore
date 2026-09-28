@@ -138,6 +138,20 @@ public sealed class ContactCenterRealTimeNotifier : IContactCenterRealTimeNotifi
     }
 
     /// <inheritdoc/>
+    public async Task NotifyInteractionChangedAsync(AgentInteractionNotification notification, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(notification);
+
+        // The agent's own screens only: supervisors already follow agents through presence and their own board.
+        if (string.IsNullOrEmpty(notification.UserId))
+        {
+            return;
+        }
+
+        await _hubContext.Clients.Group(UserGroup(notification.UserId)).InteractionChanged(notification);
+    }
+
+    /// <inheritdoc/>
     public async Task NotifyCallQualityAlertAsync(CallQualityAlertNotification notification, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(notification);

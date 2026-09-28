@@ -45,6 +45,13 @@ public interface IContactCenterHubClient
     Task RecordingStateChanged(RecordingStateNotification notification);
 
     /// <summary>
+    /// Notifies the agent's own clients that the interaction they are on changed state, so the workspace and the
+    /// docked agent bar re-read it while the call is ringing, connected or on hold, and when it ends.
+    /// </summary>
+    /// <param name="notification">The interaction change.</param>
+    Task InteractionChanged(AgentInteractionNotification notification);
+
+    /// <summary>
     /// Tells a supervisor that an agent's calls keep rating poor.
     /// </summary>
     /// <param name="notification">The alert.</param>

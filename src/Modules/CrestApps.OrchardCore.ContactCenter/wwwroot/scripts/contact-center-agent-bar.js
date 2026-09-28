@@ -616,6 +616,29 @@
       var current = state && state.presence || {};
       return presence ? presence.presenceLabel(current, config.presenceLabels) : current.reason || presenceStatus();
     }
+
+    // What a live test reads to follow the bar's call card: every push that says the agent's call moved, and every
+    // time the card changes the call it shows or its status. Only ids and states are logged, never a number.
+    function diagnostic(code, details) {
+      if (window.console && typeof window.console.info === 'function') {
+        window.console.info('[cc-agent-bar] ' + code, details || {});
+      }
+    }
+    var loggedActiveSignature = null;
+    function logActiveChange(active) {
+      var signature = active ? active.interactionId + ':' + active.status : 'none';
+      if (signature === loggedActiveSignature) {
+        return;
+      }
+      loggedActiveSignature = signature;
+      diagnostic('active-interaction-shown', active ? {
+        interactionId: active.interactionId,
+        direction: active.direction,
+        status: active.status
+      } : {
+        interactionId: null
+      });
+    }
     function renderBar() {
       if (!inner || !state) {
         return;
@@ -629,6 +652,7 @@
         return;
       }
       activeSignature = signature;
+      logActiveChange(active);
 
       // The bar stacks vertically: a compact top row carries the read-only status chip and the connection
       // tail (headphone), and the work context — the ringing offer, active call, or wrap-up — expands as a
@@ -915,7 +939,18 @@
         onOfferReceived: onOfferReceived,
         onOfferRevoked: onOfferRevoked,
         onQueueStatsChanged: refresh,
-        onRecordingStateChanged: refresh
+        onRecordingStateChanged: refresh,
+        // The agent's call rang, connected, was held or ended; the workspace listens for the same push, so the
+        // bar and the workspace move together.
+        onInteractionChanged: function (notification) {
+          diagnostic('interaction-changed', notification ? {
+            interactionId: notification.interactionId,
+            eventType: notification.eventType,
+            direction: notification.direction,
+            status: notification.status
+          } : {});
+          refresh();
+        }
       });
     }
     refresh();
@@ -923,10 +958,11 @@
 
     // Backstop reconciliation: completing an activity happens on the activity screen and does not push a hub
     // event to this bar, so without this the post-call "Complete activity" prompt could linger until the next
-    // unrelated event. Re-poll only while an interaction is showing (never when idle), so the bar clears itself
-    // shortly after the activity is completed or the call ends, with no polling cost the rest of the time.
+    // unrelated event. Re-poll only while an interaction is showing or the agent is on a call (never when idle), so
+    // the bar clears itself shortly after the activity is completed or the call ends, and a call whose push was
+    // missed still appears, with no polling cost the rest of the time.
     window.setInterval(function () {
-      if (state && state.activeInteraction) {
+      if (state && (state.activeInteraction || presenceStatus() === 'Busy')) {
         refresh();
       }
     }, 12000);
