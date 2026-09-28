@@ -63,7 +63,7 @@ See [Activities](activities.md).
 
 ## Import and export contacts
 
-<video controls preload="metadata" width="100%" aria-label="Screen cast of exporting contacts and importing leads with DNC auto-scrub">
+<video controls preload="metadata" width="100%" aria-label="Screencast of exporting contacts to CSV, then importing a file of leads that skips a number on the Local Do Not Call Registry">
   <source src="/img/docs/omni-contact-import-export.mp4" type="video/mp4" />
 </video>
 
@@ -72,5 +72,7 @@ Use **Content > Export** to download contacts as CSV or Excel, and **Content > I
 - Pick the **Lead country** the file's phone numbers belong to, so local numbers are converted to international format. It is required.
 - Tick **Ignore duplicate by phone number** to skip rows whose number is already on a contact.
 - Tick **Ignore numbers on national do-not-call registries** and pick the registries to scrub, such as the Local Do Not Call Registry. Registries your administrator enforces are always checked. See [DNC Registry](../modules/dnc-registry.md).
+
+The import runs in the background. Its entry on the **Import** page ends as *Completed*, or as *Completed with errors* with a count of the rows that were skipped, such as a number on a do-not-call list. In the screencast, four leads are created and the fifth is skipped because its number is on the local list.
 
 Exports can also add each contact's last completed activity for a chosen subject (the **CRM last activity** section). See [Omnichannel Management](../omnichannel/management.md#import-and-export-contact-methods) for the file columns.

@@ -58,4 +58,10 @@ Follow the same steps with **Phone** as the channel and a phone endpoint. The AI
 
 The AI picks a disposition using your hints, the summary is saved as the activity's notes, and the subject flow runs exactly as if an agent had completed it. Open **Review AI conversation** on the activity to read the full transcript.
 
+To find it, open the contact from **Interaction Center > Contacts**, click **List Activities**, and look under **Completed Activities**: each completed AI activity shows its disposition, channel and summary, with a **Review AI conversation** button. The screencast opens a completed AI phone call and reads the whole conversation:
+
+<video controls preload="metadata" width="100%" aria-label="Screencast of opening a contact's completed AI call and reading its transcript with Review AI conversation">
+  <source src="/img/docs/um-review-ai.mp4" type="video/mp4" />
+</video>
+
 If the subject allows **live agent handoff**, the AI can pass the customer to the handoff queue when they ask for a person, look like a qualified lead, or are frustrated. SMS conversations appear in the [Messaging workspace](messaging.md); calls ring an agent in the queue.

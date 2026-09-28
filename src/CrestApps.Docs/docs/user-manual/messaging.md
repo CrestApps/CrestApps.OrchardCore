@@ -41,6 +41,12 @@ Open a conversation to read the thread. At the top:
 - **Close** or **Mark spam** finishes it; **Reopen** brings it back.
 - The channel tabs show where the conversation happens and whether the customer can be reached there.
 
+This screencast opens the **Unassigned** view, claims a conversation, closes it (a closed conversation shows *This conversation is closed and cannot be replied to*), and reopens it:
+
+<video controls preload="metadata" width="100%" aria-label="Screencast of claiming an unassigned conversation, closing it and reopening it">
+  <source src="/img/docs/um-messaging-actions.mp4" type="video/mp4" />
+</video>
+
 In the composer, type your reply and press **Enter** to send (**Shift+Enter** adds a line). **Insert a canned response...** fills in a [template](#templates). A counter shows the characters left when the channel has a limit. The side panel has an **AI summary** of the thread and the **Customer** card, with **View account** for the linked contact.
 
 A banner warns you during the customer's **quiet hours** (outside the queue's business hours). It does not stop you sending.

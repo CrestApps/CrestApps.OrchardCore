@@ -27,6 +27,8 @@ Both apps show your site's own `/softphone` page, so the call controls are exact
 
 ## Browser extension
 
+![The soft phone browser extension floating above a web page, with its keypad and the Keypad, Recent, Voicemail and Work tabs](/img/docs/phone-app-browser-extension.png)
+
 1. Install **CrestApps Soft Phone** from the Chrome Web Store or Firefox Add-ons.
 2. Open the extension's **options**, enter your site's domain without `https://`, and click **Save & grant access**. The browser asks for access to that one site only.
 3. Sign in to the site in the same browser, then click **Open Soft Phone** (or the toolbar button).
@@ -35,6 +37,8 @@ Both apps show your site's own `/softphone` page, so the call controls are exact
 When a call comes in, you get a popup with **Answer**, **Decline** and **Voicemail**, a ringtone, and a desktop notification. In Chrome, clicking the notification answers; its buttons decline or send to voicemail. The options page also has **Enable diagnostics**, which adds **Run connection test** and **Simulate incoming call**.
 
 ## Windows app
+
+![The Soft Phone Windows app window with its keypad, presence menu and settings button](/img/docs/phone-app-windows.png)
 
 1. Download and run `SoftPhone-Setup-vX.Y.Z.exe` from the [GitHub releases](https://github.com/CrestApps/CrestApps.SoftPhone.Windows/releases). It installs for your user only, with no administrator rights. You can also use the portable zip, or the Microsoft Store where your organization has published it.
 2. Enter your site's domain when asked (the installer can ask for it up front) and choose whether to start with Windows, play a ringtone and keep the phone on top.
