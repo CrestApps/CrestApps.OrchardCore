@@ -339,7 +339,7 @@ namespace CrestApps.OrchardCore.Telephony.Services
     }
     public sealed class DefaultTelephonyInteractionStore : CrestApps.OrchardCore.Telephony.ITelephonyInteractionStore
     {
-        public DefaultTelephonyInteractionStore(YesSql.ISession session, YesSql.IStore store, CrestApps.OrchardCore.Telephony.Core.Services.IProviderIdentityResolver providerIdentityResolver, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Telephony.ITelephonyCallObserver> callObservers) { }
+        public DefaultTelephonyInteractionStore(YesSql.ISession session, YesSql.IStore store, CrestApps.OrchardCore.Telephony.Core.Services.IProviderIdentityResolver providerIdentityResolver, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Telephony.ITelephonyCallObserver> callObservers, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Telephony.Services.DefaultTelephonyInteractionStore> logger) { }
         public System.Threading.Tasks.Task CreateAsync(CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction interaction, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task DeleteAsync(CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction interaction, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction> FindActiveByUserAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }

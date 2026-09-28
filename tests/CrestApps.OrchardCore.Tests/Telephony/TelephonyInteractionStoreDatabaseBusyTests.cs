@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Tests.Utilities;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -36,7 +37,7 @@ public sealed class TelephonyInteractionStoreDatabaseBusyTests
             await SeedAsync(store, "interaction-1", "call-1");
 
             await using var ambient = store.CreateSession();
-            var interactionStore = new DefaultTelephonyInteractionStore(ambient, store, new ProviderIdentityResolver([]), []);
+            var interactionStore = new DefaultTelephonyInteractionStore(ambient, store, new ProviderIdentityResolver([]), [], NullLogger<DefaultTelephonyInteractionStore>.Instance);
 
             // What the webhook scope did before the projection ran: it wrote something of its own, and a query
             // flushed it, so its transaction now holds the database's only write lock.
@@ -96,7 +97,7 @@ public sealed class TelephonyInteractionStoreDatabaseBusyTests
             }, TestContext.Current.CancellationToken);
 
             await using var ambient = store.CreateSession();
-            var interactionStore = new DefaultTelephonyInteractionStore(ambient, store, new ProviderIdentityResolver([]), []);
+            var interactionStore = new DefaultTelephonyInteractionStore(ambient, store, new ProviderIdentityResolver([]), [], NullLogger<DefaultTelephonyInteractionStore>.Instance);
 
             // Act
             var updated = await interactionStore.UpdateByProviderCallIdAsync(
@@ -140,7 +141,7 @@ public sealed class TelephonyInteractionStoreDatabaseBusyTests
             await competing.FlushAsync(TestContext.Current.CancellationToken);
 
             await using var ambient = store.CreateSession();
-            var interactionStore = new DefaultTelephonyInteractionStore(ambient, store, new ProviderIdentityResolver([]), []);
+            var interactionStore = new DefaultTelephonyInteractionStore(ambient, store, new ProviderIdentityResolver([]), [], NullLogger<DefaultTelephonyInteractionStore>.Instance);
             var attempts = 0;
 
             // Act

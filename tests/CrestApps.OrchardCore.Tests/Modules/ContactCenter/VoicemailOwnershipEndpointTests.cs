@@ -25,6 +25,7 @@ using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
 using YesSqlSession = YesSql.ISession;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -403,7 +404,7 @@ public sealed class VoicemailOwnershipEndpointTests : IAsyncLifetime
 
     private DefaultTelephonyInteractionStore CreateInteractionStore(YesSqlSession session)
     {
-        return new DefaultTelephonyInteractionStore(session, _store, new ProviderIdentityResolver([]), []);
+        return new DefaultTelephonyInteractionStore(session, _store, new ProviderIdentityResolver([]), [], NullLogger<DefaultTelephonyInteractionStore>.Instance);
     }
 
     private async Task ProjectAsync(Interaction interaction, string sessionAgentId)

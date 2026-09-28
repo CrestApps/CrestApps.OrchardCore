@@ -58,6 +58,7 @@ public sealed class Startup : StartupBase
         services.AddContentPart<OmnichannelContactPart>()
             .UseDisplayDriver<OmnichannelContactPartDisplayDriver>();
         services.AddScoped<IContentHandler, OmnichannelContactTimeZoneHandler>();
+        services.AddScoped<IContentHandler, OmnichannelContactMethodIdsHandler>();
 
         services
             .AddDisplayDriver<OmnichannelActivity, OmnichannelActivityDisplayDriver>();
