@@ -26,7 +26,7 @@
 
     <div class="mb-3">
         <label asp-for="ApiKey">@T["API key"]</label>
-        <input type="password" class="form-control" asp-for="ApiKey" autocomplete="off" placeholder="@(Model.HasApiKey ? T["A key is already stored. Enter a new value to replace it."].Value : T["Enter the Telnyx API key."].Value)" />
+        <input type="password" class="form-control" asp-for="ApiKey" autocomplete="new-password" placeholder="@(Model.HasApiKey ? T["A key is already stored. Enter a new value to replace it."].Value : T["Enter the Telnyx API key."].Value)" data-1p-ignore data-lpignore="true" data-bwignore="true" />
         <span asp-validation-for="ApiKey" class="text-danger"></span>
         <span class="hint">@T["Telnyx portal → Account → Keys & Credentials → API Keys → Create API key (V2). Stored encrypted; leave blank to keep the stored value."]</span>
     </div>
@@ -83,7 +83,7 @@
 
         <div class="mb-3">
             <label asp-for="WebhookPublicKey">@T["Webhook public key"]</label>
-            <input type="password" class="form-control" asp-for="WebhookPublicKey" autocomplete="off" placeholder="@(Model.HasWebhookPublicKey ? T["A key is already stored. Enter a new value to replace it."].Value : T["Paste the Telnyx public key from the portal."].Value)" />
+            <input type="password" class="form-control" asp-for="WebhookPublicKey" autocomplete="new-password" placeholder="@(Model.HasWebhookPublicKey ? T["A key is already stored. Enter a new value to replace it."].Value : T["Paste the Telnyx public key from the portal."].Value)" data-1p-ignore data-lpignore="true" data-bwignore="true" />
             <span asp-validation-for="WebhookPublicKey" class="text-danger"></span>
             <span class="hint">@T["Required for all call events (outbound audio, call state, and inbound routing) — Telnyx rejects every webhook until it is set. Telnyx portal → Account → Keys & Credentials → copy the Public Key. Telnyx signs every webhook with it (Ed25519); this is not a secret you generate. Stored encrypted; leave blank to keep the stored value."]</span>
         </div>
@@ -182,7 +182,7 @@
 
             <div class="mb-3">
                 <label asp-for="TurnCredential">@T["TURN credential"]</label>
-                <input type="password" class="form-control" asp-for="TurnCredential" autocomplete="off" placeholder="@(Model.HasTurnCredential ? T["A value is already stored. Enter a new value to replace it."].Value : string.Empty)" />
+                <input type="password" class="form-control" asp-for="TurnCredential" autocomplete="new-password" placeholder="@(Model.HasTurnCredential ? T["A value is already stored. Enter a new value to replace it."].Value : string.Empty)" data-1p-ignore data-lpignore="true" data-bwignore="true" />
             </div>
 
             <div class="mb-3">

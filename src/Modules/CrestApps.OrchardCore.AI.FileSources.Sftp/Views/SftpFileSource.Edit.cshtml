@@ -29,7 +29,7 @@
 <div class="ocat-wrapper">
     <label asp-for="Password" class="ocat-label">@T["Password"]</label>
     <div class="ocat-end">
-        <input asp-for="Password" class="form-control" type="password" autocomplete="new-password" />
+        <input asp-for="Password" class="form-control" type="password" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
         <span class="hint">
             @if (Model.HasPassword)
             {
@@ -63,7 +63,7 @@
 <div class="ocat-wrapper">
     <label asp-for="Passphrase" class="ocat-label">@T["Key passphrase"]</label>
     <div class="ocat-end">
-        <input asp-for="Passphrase" class="form-control" type="password" autocomplete="new-password" />
+        <input asp-for="Passphrase" class="form-control" type="password" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
         <span class="hint">
             @if (Model.HasPassphrase)
             {
@@ -154,7 +154,7 @@
 <div class="ocat-wrapper">
     <label asp-for="ProxyPassword" class="ocat-label">@T["Proxy password"]</label>
     <div class="ocat-end">
-        <input asp-for="ProxyPassword" class="form-control" type="password" autocomplete="new-password" />
+        <input asp-for="ProxyPassword" class="form-control" type="password" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
         <span class="hint">
             @if (Model.HasProxyPassword)
             {

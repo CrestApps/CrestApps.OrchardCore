@@ -63,7 +63,7 @@
     <div class="ocat-wrapper">
         <label asp-for="ApiKey" class="ocat-label">@T["API Key"]</label>
         <div class="ocat-end">
-            <input type="password" asp-for="ApiKey" class="form-control" autocomplete="off" placeholder="@(Model.HasApiKey? securedPlaceholder : string.Empty)" />
+            <input type="password" asp-for="ApiKey" class="form-control" autocomplete="new-password" placeholder="@(Model.HasApiKey? securedPlaceholder : string.Empty)" data-1p-ignore data-lpignore="true" data-bwignore="true" />
             <span asp-validation-for="ApiKey" class="text-danger"></span>
         </div>
     </div>
@@ -82,7 +82,7 @@
     <div class="ocat-wrapper">
         <label asp-for="BasicPassword" class="ocat-label">@T["Password"]</label>
         <div class="ocat-end">
-            <input type="password" asp-for="BasicPassword" class="form-control" autocomplete="off" placeholder="@(Model.HasBasicPassword? securedPlaceholder : string.Empty)" />
+            <input type="password" asp-for="BasicPassword" class="form-control" autocomplete="new-password" placeholder="@(Model.HasBasicPassword? securedPlaceholder : string.Empty)" data-1p-ignore data-lpignore="true" data-bwignore="true" />
             <span asp-validation-for="BasicPassword" class="text-danger"></span>
         </div>
     </div>
@@ -121,7 +121,7 @@
     <div class="ocat-wrapper">
         <label asp-for="OAuth2ClientSecret" class="ocat-label">@T["Client Secret"]</label>
         <div class="ocat-end">
-            <input type="password" asp-for="OAuth2ClientSecret" class="form-control" autocomplete="off" placeholder="@(Model.HasOAuth2ClientSecret? securedPlaceholder : string.Empty)" />
+            <input type="password" asp-for="OAuth2ClientSecret" class="form-control" autocomplete="new-password" placeholder="@(Model.HasOAuth2ClientSecret? securedPlaceholder : string.Empty)" data-1p-ignore data-lpignore="true" data-bwignore="true" />
             <span asp-validation-for="OAuth2ClientSecret" class="text-danger"></span>
         </div>
     </div>
@@ -161,7 +161,7 @@
     <div class="ocat-wrapper">
         <label asp-for="OAuth2ClientCertificatePassword" class="ocat-label">@T["Certificate Password"]</label>
         <div class="ocat-end">
-            <input type="password" asp-for="OAuth2ClientCertificatePassword" class="form-control" autocomplete="off" placeholder="@(Model.HasOAuth2ClientCertificatePassword? securedPlaceholder : string.Empty)" />
+            <input type="password" asp-for="OAuth2ClientCertificatePassword" class="form-control" autocomplete="new-password" placeholder="@(Model.HasOAuth2ClientCertificatePassword? securedPlaceholder : string.Empty)" data-1p-ignore data-lpignore="true" data-bwignore="true" />
             <span asp-validation-for="OAuth2ClientCertificatePassword" class="text-danger"></span>
             <span class="hint">@T["Optional password for the PFX certificate file."]</span>
         </div>

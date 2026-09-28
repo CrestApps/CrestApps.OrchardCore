@@ -34,12 +34,12 @@
     <div class="ocat-end">
         @if (Model.HasPassword)
         {
-            <input asp-for="Password" type="password" class="form-control" placeholder="@T["Keep current password"]" />
+            <input asp-for="Password" type="password" class="form-control" placeholder="@T["Keep current password"]" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
             <span class="hint">@T["Leave empty to keep the current password."]</span>
         }
         else
         {
-            <input asp-for="Password" type="password" class="form-control" />
+            <input asp-for="Password" type="password" class="form-control" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
         }
         <span asp-validation-for="Password" class="text-danger"></span>
         <span class="hint">@T["The password for password-based authentication. Optional if using private key."]</span>
@@ -68,12 +68,12 @@
     <div class="ocat-end">
         @if (Model.HasPassphrase)
         {
-            <input asp-for="Passphrase" type="password" class="form-control" placeholder="@T["Keep current passphrase"]" />
+            <input asp-for="Passphrase" type="password" class="form-control" placeholder="@T["Keep current passphrase"]" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
             <span class="hint">@T["Leave empty to keep the current passphrase."]</span>
         }
         else
         {
-            <input asp-for="Passphrase" type="password" class="form-control" />
+            <input asp-for="Passphrase" type="password" class="form-control" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
         }
         <span asp-validation-for="Passphrase" class="text-danger"></span>
         <span class="hint">@T["The passphrase for the private key. Only required if the private key is encrypted."]</span>
@@ -126,12 +126,12 @@
         <div class="ocat-end">
             @if (Model.HasProxyPassword)
             {
-                <input asp-for="ProxyPassword" type="password" class="form-control" placeholder="@T["Keep current password"]" />
+                <input asp-for="ProxyPassword" type="password" class="form-control" placeholder="@T["Keep current password"]" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
                 <span class="hint">@T["Leave empty to keep the current proxy password."]</span>
             }
             else
             {
-                <input asp-for="ProxyPassword" type="password" class="form-control" />
+                <input asp-for="ProxyPassword" type="password" class="form-control" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
             }
             <span asp-validation-for="ProxyPassword" class="text-danger"></span>
         </div>

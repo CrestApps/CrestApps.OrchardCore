@@ -81,7 +81,7 @@
 
                     <div class="mb-3">
                         <label asp-for="Password" class="form-label">@T["Password"]</label>
-                        <input asp-for="Password" class="form-control" type="password" placeholder="@(Model.HasPassword ? T["Leave empty to keep the saved password"].Value : string.Empty)" />
+                        <input asp-for="Password" class="form-control" type="password" placeholder="@(Model.HasPassword ? T["Leave empty to keep the saved password"].Value : string.Empty)" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
                         <span asp-validation-for="Password" class="text-danger"></span>
                     </div>
                 </div>
@@ -89,7 +89,7 @@
                 <div data-ai-data-source-elasticsearch-api-key-settings hidden>
                     <div class="mb-3">
                         <label asp-for="ApiKey" class="form-label">@T["API key"]</label>
-                        <input asp-for="ApiKey" class="form-control" type="password" placeholder="@(Model.HasApiKey ? T["Leave empty to keep the saved API key"].Value : string.Empty)" />
+                        <input asp-for="ApiKey" class="form-control" type="password" placeholder="@(Model.HasApiKey ? T["Leave empty to keep the saved API key"].Value : string.Empty)" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
                         <span asp-validation-for="ApiKey" class="text-danger"></span>
                     </div>
                 </div>
@@ -97,7 +97,7 @@
                 <div data-ai-data-source-elasticsearch-base64-api-key-settings hidden>
                     <div class="mb-3">
                         <label asp-for="Base64ApiKey" class="form-label">@T["Base64 API key"]</label>
-                        <input asp-for="Base64ApiKey" class="form-control" type="password" placeholder="@(Model.HasBase64ApiKey ? T["Leave empty to keep the saved base64 API key"].Value : string.Empty)" />
+                        <input asp-for="Base64ApiKey" class="form-control" type="password" placeholder="@(Model.HasBase64ApiKey ? T["Leave empty to keep the saved base64 API key"].Value : string.Empty)" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
                         <span asp-validation-for="Base64ApiKey" class="text-danger"></span>
                     </div>
                 </div>

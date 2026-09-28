@@ -45,7 +45,7 @@
             <div data-ai-data-source-azure-ai-search-api-key-settings hidden>
                 <div class="mb-0">
                     <label asp-for="ApiKey" class="form-label">@T["API key"]</label>
-                    <input asp-for="ApiKey" class="form-control" type="password" placeholder="@(Model.HasApiKey ? T["Leave empty to keep the saved API key"].Value : string.Empty)" />
+                    <input asp-for="ApiKey" class="form-control" type="password" placeholder="@(Model.HasApiKey ? T["Leave empty to keep the saved API key"].Value : string.Empty)" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
                     <span asp-validation-for="ApiKey" class="text-danger"></span>
                 </div>
             </div>

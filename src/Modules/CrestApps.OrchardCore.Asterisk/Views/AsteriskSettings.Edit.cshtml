@@ -33,7 +33,7 @@
     <div class="ocat-wrapper" asp-validation-class-for="Password">
         <label asp-for="Password" class="ocat-label">@T["ARI password"]</label>
         <div class="ocat-end">
-            <input asp-for="Password" class="form-control" type="password" autocomplete="off" />
+            <input asp-for="Password" class="form-control" type="password" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
             <span asp-validation-for="Password"></span>
             @if (Model.HasPassword)
             {
@@ -139,7 +139,7 @@
     <div class="ocat-wrapper" asp-validation-class-for="TurnSharedSecret">
         <label asp-for="TurnSharedSecret" class="ocat-label">@T["TURN shared secret"]</label>
         <div class="ocat-end">
-            <input asp-for="TurnSharedSecret" class="form-control" type="password" autocomplete="off" />
+            <input asp-for="TurnSharedSecret" class="form-control" type="password" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
             <span asp-validation-for="TurnSharedSecret"></span>
             @if (Model.HasTurnSharedSecret)
             {
@@ -200,7 +200,7 @@
     <div class="ocat-wrapper" asp-validation-class-for="PjsipRealtimeConnectionString">
         <label asp-for="PjsipRealtimeConnectionString" class="ocat-label">@T["PJSIP Realtime connection string"]</label>
         <div class="ocat-end">
-            <input asp-for="PjsipRealtimeConnectionString" class="form-control" type="password" autocomplete="off" />
+            <input asp-for="PjsipRealtimeConnectionString" class="form-control" type="password" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
             <span asp-validation-for="PjsipRealtimeConnectionString"></span>
             @if (Model.HasPjsipRealtimeConnectionString)
             {

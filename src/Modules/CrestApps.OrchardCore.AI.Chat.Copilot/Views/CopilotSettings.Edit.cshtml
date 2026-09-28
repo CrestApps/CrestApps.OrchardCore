@@ -60,7 +60,7 @@
     <div class="ocat-wrapper" asp-validation-class-for="ClientSecret">
         <label asp-for="ClientSecret" class="ocat-label">@T["Client secret"]</label>
         <div class="ocat-end">
-            <input asp-for="ClientSecret" type="password" class="form-control" placeholder="@T["Enter a new secret to update"]" />
+            <input asp-for="ClientSecret" type="password" class="form-control" placeholder="@T["Enter a new secret to update"]" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
             <span asp-validation-for="ClientSecret" class="text-danger"></span>
             @if (Model.HasSecret)
             {
@@ -135,7 +135,7 @@
     <div class="ocat-wrapper" asp-validation-class-for="ApiKey">
         <label asp-for="ApiKey" class="ocat-label">@T["API key"]</label>
         <div class="ocat-end">
-            <input asp-for="ApiKey" type="password" class="form-control" placeholder="@T["Enter API key"]" />
+            <input asp-for="ApiKey" type="password" class="form-control" placeholder="@T["Enter API key"]" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
             <span asp-validation-for="ApiKey" class="text-danger"></span>
             @if (Model.HasApiKey)
             {
