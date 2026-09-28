@@ -272,6 +272,23 @@ public sealed class AdminController : Controller
             ModelState.AddModelError(nameof(model.Recipients), S["You are not allowed to send to more than one recipient."]);
         }
 
+        // A recipient who already has a conversation is written to in that conversation, so the composer is held to
+        // the same rule as replying in it.
+        if (channel is not null && recipients.Count > 0)
+        {
+            var unreachable = await _workspaceBuilder.FindUnreachableRecipientsAsync(User, channel.Name, recipients, HttpContext.RequestAborted);
+
+            if (unreachable.Count > 0)
+            {
+                _logger.LogWarning(
+                    "Refused a new message from user '{UserId}' to {Count} recipient(s) whose conversation they may not send on.",
+                    User.FindFirstValue(ClaimTypes.NameIdentifier).SanitizeLogValue(),
+                    unreachable.Count);
+
+                ModelState.AddModelError(nameof(model.Recipients), S["These recipients already have a conversation you cannot send on, handled by a colleague or another queue: {0}", string.Join(", ", unreachable)]);
+            }
+        }
+
         if (!ModelState.IsValid)
         {
             await PopulateEndpointsAsync(model, model.EndpointId);

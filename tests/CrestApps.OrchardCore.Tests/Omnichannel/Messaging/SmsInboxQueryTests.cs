@@ -443,6 +443,7 @@ public sealed class SmsInboxQueryTests
             Mock.Of<IOmnichannelChannelEndpointManager>(),
             Mock.Of<IMessageTemplateManager>(),
             agentProfiles.Object,
+            new PermissiveAgentEntitlementPolicy(),
             Mock.Of<IMessagingAvailabilityService>(),
             Mock.Of<IMessagingAgentNameProvider>(),
             [],

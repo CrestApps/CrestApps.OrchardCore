@@ -1,6 +1,8 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell.Scope;
 
 namespace CrestApps.OrchardCore.Telephony.Hubs;
@@ -31,6 +33,22 @@ public sealed partial class TelephonyHub
             if (!await AuthorizeAsync(scope.ServiceProvider))
             {
                 LogHubActionUnauthorized("RecordBrowserCall");
+                return;
+            }
+
+            // A call in someone's history is one they may hang up, transfer or send digits on, and this is the one
+            // place the phone names a call id of its own choosing. A call the phone just placed is new, so a call id
+            // another user already holds is never this phone's: recording it would hand the caller control of
+            // somebody else's call.
+            var store = scope.ServiceProvider.GetService<ITelephonyInteractionStore>();
+
+            if (store is not null && await store.IsHeldByAnotherUserAsync(Context.UserIdentifier, callId, Context.ConnectionAborted))
+            {
+                _logger.LogWarning(
+                    "Refused to record browser call '{CallId}' for user '{UserId}': the call is already in another user's history.",
+                    callId.SanitizeLogValue(),
+                    Context.UserIdentifier.SanitizeLogValue());
+
                 return;
             }
 

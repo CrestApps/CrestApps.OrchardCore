@@ -1,7 +1,9 @@
+using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Telephony;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -44,17 +46,20 @@ public sealed class MyVoicemailGreetingController : Controller
     ];
 
     private readonly IAgentProfileManager _agentProfileManager;
+    private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
     private readonly IHtmlLocalizer H;
     private readonly IStringLocalizer S;
 
     public MyVoicemailGreetingController(
         IAgentProfileManager agentProfileManager,
+        IAuthorizationService authorizationService,
         INotifier notifier,
         IHtmlLocalizer<MyVoicemailGreetingController> htmlLocalizer,
         IStringLocalizer<MyVoicemailGreetingController> stringLocalizer)
     {
         _agentProfileManager = agentProfileManager;
+        _authorizationService = authorizationService;
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
@@ -172,8 +177,16 @@ public sealed class MyVoicemailGreetingController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    // The signed-in user's own agent profile, or null when they may not work as an agent. Every action goes through
+    // here, so the permission is checked before the profile is read. Having a profile was the only check once: a user
+    // whose agent role was taken away, but whose profile remained, could still upload and set the greeting callers hear.
     private async Task<AgentProfile> GetCurrentAgentAsync()
     {
+        if (!await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.SignIntoQueues))
+        {
+            return null;
+        }
+
         var userId = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
         return string.IsNullOrEmpty(userId)

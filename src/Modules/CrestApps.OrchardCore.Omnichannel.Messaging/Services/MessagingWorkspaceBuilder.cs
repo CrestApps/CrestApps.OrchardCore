@@ -39,6 +39,7 @@ public sealed class MessagingWorkspaceBuilder
     private readonly IOmnichannelChannelEndpointManager _endpointManager;
     private readonly IMessageTemplateManager _templateManager;
     private readonly IAgentProfileManager _agentProfileManager;
+    private readonly IAgentEntitlementPolicy _entitlementPolicy;
     private readonly IMessagingAvailabilityService _availabilityService;
     private readonly IMessagingAgentNameProvider _agentNames;
     private readonly bool _supportsQueues;
@@ -58,6 +59,7 @@ public sealed class MessagingWorkspaceBuilder
         IOmnichannelChannelEndpointManager endpointManager,
         IMessageTemplateManager templateManager,
         IAgentProfileManager agentProfileManager,
+        IAgentEntitlementPolicy entitlementPolicy,
         IMessagingAvailabilityService availabilityService,
         IMessagingAgentNameProvider agentNames,
         IEnumerable<IActivityQueueManager> queueManagers,
@@ -76,6 +78,7 @@ public sealed class MessagingWorkspaceBuilder
         _endpointManager = endpointManager;
         _templateManager = templateManager;
         _agentProfileManager = agentProfileManager;
+        _entitlementPolicy = entitlementPolicy;
         _availabilityService = availabilityService;
         _agentNames = agentNames;
         // Queues are a feature of their own; without it a conversation can only be transferred to a person.
@@ -450,12 +453,52 @@ public sealed class MessagingWorkspaceBuilder
         return (items, endpointChannels);
     }
 
-    // The queues whose shared conversations the agent sees: the ones they belong to and the ones they may serve.
-    private static string[] GetVisibleQueueIds(AgentProfile agent)
+    /// <summary>
+    /// Lists the recipients who already have a conversation on the channel that the user may not send on. Starting a
+    /// message to one of them does not start anything: it posts into that conversation, from its number, and reopens it
+    /// when closed, so a colleague's or another queue's customer could be written to from the composer.
+    /// </summary>
+    /// <param name="user">The user starting the message.</param>
+    /// <param name="channel">The channel's technical name.</param>
+    /// <param name="contactAddresses">The recipients, normalized for the channel.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The recipients the user may not reach, in the order given.</returns>
+    public async Task<IReadOnlyList<string>> FindUnreachableRecipientsAsync(
+        ClaimsPrincipal user,
+        string channel,
+        IEnumerable<string> contactAddresses,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+
+        if (await _authorizationService.AuthorizeAsync(user, MessagingPermissions.ViewAllConversations))
+        {
+            return [];
+        }
+
+        var unreachable = new List<string>();
+
+        foreach (var address in contactAddresses ?? [])
+        {
+            var existing = await _conversationStore.FindByContactAsync(channel, address, cancellationToken);
+
+            if (existing is not null && !await AuthorizeAsync(user, existing, ConversationOperation.Send))
+            {
+                unreachable.Add(address);
+            }
+        }
+
+        return unreachable;
+    }
+
+    // The queues whose shared conversations the agent sees: the ones they belong to and the ones they may serve, as
+    // far as their entitlements allow. Opening a conversation already applies the entitlements; the list, the count
+    // and the notifications did not, so an agent whose queue was taken away kept seeing its customers there.
+    private string[] GetVisibleQueueIds(AgentProfile agent)
         => agent is null
             ? []
             : agent.QueueIds.Concat(agent.AllowedQueueIds)
-                .Where(queueId => !string.IsNullOrEmpty(queueId))
+                .Where(queueId => !string.IsNullOrEmpty(queueId) && _entitlementPolicy.AllowsQueue(agent, queueId))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
 

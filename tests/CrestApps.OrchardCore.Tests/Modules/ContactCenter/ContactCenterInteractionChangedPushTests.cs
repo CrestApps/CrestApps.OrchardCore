@@ -165,6 +165,7 @@ public sealed class ContactCenterInteractionChangedPushTests
         var notifier = new ContactCenterRealTimeNotifier(
             hubContext.Object,
             new Mock<IAgentSessionManager>().Object,
+            Mock.Of<IAgentProfileManager>(),
             new ShellSettings { Name = "TenantA" });
 
         var notification = new AgentInteractionNotification
@@ -182,7 +183,7 @@ public sealed class ContactCenterInteractionChangedPushTests
         userClient.Verify(client => client.InteractionChanged(notification), Times.Once);
         otherClient.Verify(client => client.InteractionChanged(It.IsAny<AgentInteractionNotification>()), Times.Never);
         clients.Verify(c => c.Group(It.IsAny<string>()), Times.Once);
-        clients.Verify(c => c.Group(TenantSignalRGroupName.ForGroup("TenantA", ContactCenterHub.SupervisorsGroup)), Times.Never);
+        clients.Verify(c => c.Groups(It.IsAny<IReadOnlyList<string>>()), Times.Never);
     }
 
     [Theory]
@@ -198,6 +199,7 @@ public sealed class ContactCenterInteractionChangedPushTests
         var notifier = new ContactCenterRealTimeNotifier(
             hubContext.Object,
             new Mock<IAgentSessionManager>().Object,
+            Mock.Of<IAgentProfileManager>(),
             new ShellSettings { Name = "TenantA" });
 
         // Act
