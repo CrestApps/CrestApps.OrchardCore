@@ -113,7 +113,7 @@
             presenceDot: root.querySelector('[data-cc-presence-dot]'),
             presenceLabel: root.querySelector('[data-cc-presence-label]'),
             presenceMenu: root.querySelector('[data-cc-presence-menu]'),
-            queues: root.querySelector('[data-cc-queues]'),
+            signIns: root.querySelector('[data-cc-sign-ins]'),
             offer: root.querySelector('[data-cc-offer]'),
             active: root.querySelector('[data-cc-active]'),
             history: root.querySelector('[data-cc-history]'),
@@ -215,31 +215,25 @@
             }
         }
 
+        // The "Signed in to" card: the queues (with how many are waiting) and the campaigns the agent works.
         function renderQueues() {
-            if (!refs.queues || !state) {
+            if (!refs.signIns || !state) {
                 return;
             }
 
-            var queues = state.queues || [];
-            var queuesHtml;
-
-            if (!queues.length) {
-                queuesHtml = '<span class="cc-queue-chip">' + escapeHtml(label('noQueues', 'Not signed in to any queue')) + '</span>';
-            } else {
-                queuesHtml = queues.map(function (queue) {
-                    var empty = queue.waitingCount > 0 ? '' : ' is-empty';
-
-                    return '<span class="cc-queue-chip">' + escapeHtml(queue.name) +
-                        '<span class="cc-queue-chip__count' + empty + '">' + queue.waitingCount + '</span></span>';
-                }).join('');
-            }
+            var queuesHtml = panels.signInsHtml(state.queues || [], state.campaigns || [], {
+                queues: label('signInQueues', 'Queues'),
+                campaigns: label('signInCampaigns', 'Campaigns'),
+                noSignIns: label('noSignIns', 'You are not signed in to any queue or campaign.'),
+                waiting: label('queueWaiting', '{0} waiting')
+            });
 
             if (queuesHtml === queuesSignature) {
                 return;
             }
 
             queuesSignature = queuesHtml;
-            refs.queues.innerHTML = queuesHtml;
+            refs.signIns.innerHTML = queuesHtml;
         }
 
         function renderOffer() {

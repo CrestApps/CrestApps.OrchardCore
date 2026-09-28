@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using CrestApps.Core.Services;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
@@ -146,6 +147,8 @@ internal static partial class AgentWorkspaceEndpoints
             });
         }
 
+        model.Campaigns = await ResolveCampaignsAsync(profile, httpContext.RequestServices, httpContext.RequestAborted);
+
         // Read once and share. The active interaction and the history panel are built from the same recent
         // interactions, so reading them per panel would run the same query twice on every poll.
         var recentInteractions = await interactionManager.GetRecentByAgentAsync(profile.ItemId, RecentHistoryCount, httpContext.RequestAborted);
@@ -155,6 +158,44 @@ internal static partial class AgentWorkspaceEndpoints
         model.RecentHistory = BuildRecentHistory(recentInteractions);
 
         return TypedResults.Ok(model);
+    }
+
+    // The campaigns the agent is signed in to, by name, whether sign-in recorded them among their campaigns or only as
+    // a campaign's queue among their queues. Campaigns are an optional feature: without their catalog a campaign is
+    // shown by its identifier.
+    private static async Task<IList<WorkspaceCampaignViewModel>> ResolveCampaignsAsync(
+        AgentProfile profile,
+        IServiceProvider services,
+        CancellationToken cancellationToken)
+    {
+        var campaignIds = (profile.CampaignIds ?? [])
+            .Concat((profile.QueueIds ?? []).Select(ContactCenterConstants.CampaignQueue.GetCampaignId))
+            .Where(campaignId => !string.IsNullOrEmpty(campaignId))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        if (campaignIds.Count == 0)
+        {
+            return [];
+        }
+
+        var campaignManager = services.GetService<ICatalogManager<OmnichannelCampaign>>();
+        var campaigns = new List<WorkspaceCampaignViewModel>(campaignIds.Count);
+
+        foreach (var campaignId in campaignIds)
+        {
+            var campaign = campaignManager is null ? null : await campaignManager.FindByIdAsync(campaignId, cancellationToken);
+
+            campaigns.Add(new WorkspaceCampaignViewModel
+            {
+                Id = campaignId,
+                Name = string.IsNullOrWhiteSpace(campaign?.DisplayText) ? campaignId : campaign.DisplayText,
+            });
+        }
+
+        return campaigns
+            .OrderBy(campaign => campaign.Name, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
     }
 
     private static async Task<IResult> HandleSetPresenceAsync(

@@ -330,7 +330,43 @@
     var tag = tagName || 'div';
     return '<' + tag + ' class="cc-empty" data-cc-empty>' + '<div class="cc-empty__icon" aria-hidden="true"><i class="' + escape(settings.icon || 'fa-regular fa-circle-check') + '"></i></div>' + '<div class="cc-empty__title">' + escape(settings.title) + '</div>' + (settings.hint ? '<div class="cc-empty__hint">' + escape(settings.hint) + '</div>' : '') + '</' + tag + '>';
   }
+  function format(template, value) {
+    return String(template || '').replace('{0}', value);
+  }
+
+  // What the "Signed in to" card shows: a group of chips for the queues (with how many are waiting) and one for the
+  // campaigns, leaving out a group the agent has nothing in. A long name is cut short on screen, so each chip keeps
+  // the whole name in its title. It used to be a row of chips in the top bar, which an agent signed in to many queues
+  // and campaigns, or to long-named ones, crowded.
+  //   queues    - [{ name, waitingCount }]
+  //   campaigns - [{ name }]
+  //   labels    - { queues, campaigns, noSignIns, waiting ('{0} waiting') }
+  function signInsHtml(queues, campaigns, labels) {
+    var text = labels || {};
+    var queueList = queues || [];
+    var campaignList = campaigns || [];
+    if (!queueList.length && !campaignList.length) {
+      return '<div class="cc-sign-ins__none">' + escape(text.noSignIns || 'You are not signed in to any queue or campaign.') + '</div>';
+    }
+    function group(title, chips) {
+      return '<div class="cc-sign-ins__group">' + '<div class="cc-sign-ins__label">' + escape(title) + '</div>' + '<div class="cc-sign-ins__chips">' + chips.join('') + '</div>' + '</div>';
+    }
+    var html = '';
+    if (queueList.length) {
+      html += group(text.queues || 'Queues', queueList.map(function (queue) {
+        var count = Number(queue && queue.waitingCount) || 0;
+        return '<span class="cc-queue-chip" title="' + escape(queue && queue.name) + '">' + '<span class="cc-queue-chip__name">' + escape(queue && queue.name) + '</span>' + '<span class="cc-queue-chip__count' + (count > 0 ? '' : ' is-empty') + '" title="' + escape(format(text.waiting || '{0} waiting', count)) + '">' + count + '</span></span>';
+      }));
+    }
+    if (campaignList.length) {
+      html += group(text.campaigns || 'Campaigns', campaignList.map(function (campaign) {
+        return '<span class="cc-queue-chip cc-queue-chip--campaign" title="' + escape(campaign && campaign.name) + '">' + '<i class="fa-solid fa-bullhorn" aria-hidden="true"></i>' + '<span class="cc-queue-chip__name">' + escape(campaign && campaign.name) + '</span></span>';
+      }));
+    }
+    return html;
+  }
   contactCenter.NO_ACTIVE_INTERACTION = NO_ACTIVE_INTERACTION;
+  contactCenter.signInsHtml = signInsHtml;
   contactCenter.activeInteractionSignature = activeInteractionSignature;
   contactCenter.createChangeGate = createChangeGate;
   contactCenter.emptyStateHtml = emptyStateHtml;
@@ -440,7 +476,7 @@
       presenceDot: root.querySelector('[data-cc-presence-dot]'),
       presenceLabel: root.querySelector('[data-cc-presence-label]'),
       presenceMenu: root.querySelector('[data-cc-presence-menu]'),
-      queues: root.querySelector('[data-cc-queues]'),
+      signIns: root.querySelector('[data-cc-sign-ins]'),
       offer: root.querySelector('[data-cc-offer]'),
       active: root.querySelector('[data-cc-active]'),
       history: root.querySelector('[data-cc-history]'),
@@ -531,25 +567,23 @@
         refs.presenceDot.className = 'cc-presence__dot is-' + status.toLowerCase();
       }
     }
+
+    // The "Signed in to" card: the queues (with how many are waiting) and the campaigns the agent works.
     function renderQueues() {
-      if (!refs.queues || !state) {
+      if (!refs.signIns || !state) {
         return;
       }
-      var queues = state.queues || [];
-      var queuesHtml;
-      if (!queues.length) {
-        queuesHtml = '<span class="cc-queue-chip">' + escapeHtml(label('noQueues', 'Not signed in to any queue')) + '</span>';
-      } else {
-        queuesHtml = queues.map(function (queue) {
-          var empty = queue.waitingCount > 0 ? '' : ' is-empty';
-          return '<span class="cc-queue-chip">' + escapeHtml(queue.name) + '<span class="cc-queue-chip__count' + empty + '">' + queue.waitingCount + '</span></span>';
-        }).join('');
-      }
+      var queuesHtml = panels.signInsHtml(state.queues || [], state.campaigns || [], {
+        queues: label('signInQueues', 'Queues'),
+        campaigns: label('signInCampaigns', 'Campaigns'),
+        noSignIns: label('noSignIns', 'You are not signed in to any queue or campaign.'),
+        waiting: label('queueWaiting', '{0} waiting')
+      });
       if (queuesHtml === queuesSignature) {
         return;
       }
       queuesSignature = queuesHtml;
-      refs.queues.innerHTML = queuesHtml;
+      refs.signIns.innerHTML = queuesHtml;
     }
     function renderOffer() {
       if (!refs.offer || !state) {
