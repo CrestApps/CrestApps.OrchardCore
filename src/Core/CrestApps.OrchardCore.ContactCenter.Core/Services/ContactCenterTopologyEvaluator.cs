@@ -51,25 +51,15 @@ public static class ContactCenterTopologyEvaluator
 
         if (string.IsNullOrEmpty(declaredProfileId))
         {
-            // An undeclared topology is normal for development, tests, and demos, and is the default. It is not
-            // acceptable in a production host, where it would let a deployment escape every requirement below
-            // simply by setting nothing.
-            return observations.IsProductionHostEnvironment
-                ? new ContactCenterTopologyValidationResult
-                {
-                    DeclaredProfileId = null,
-                    IsProductionTopology = false,
-                    Failures =
-                    [
-                        "The host is running in a production environment but no Contact Center topology profile is declared. " +
-                        $"Set 'CrestApps:ContactCenter:Topology:ProfileId' to '{ContactCenterTopologyProfiles.SingleNodeDistributedId}'.",
-                    ],
-                }
-                : new ContactCenterTopologyValidationResult
-                {
-                    DeclaredProfileId = null,
-                    IsProductionTopology = false,
-                };
+            // An undeclared topology is a single node with no infrastructure requirements, in every environment. A
+            // production host used to be refused here, and the refusal was invisible where it hurt: every Contact
+            // Center connection was closed straight after it opened and every call was turned away, on a node that
+            // was otherwise healthy. Declaring a production profile is how a deployment opts in to its checks.
+            return new ContactCenterTopologyValidationResult
+            {
+                DeclaredProfileId = null,
+                IsProductionTopology = false,
+            };
         }
 
         var profile = ContactCenterTopologyProfiles.Find(declaredProfileId);

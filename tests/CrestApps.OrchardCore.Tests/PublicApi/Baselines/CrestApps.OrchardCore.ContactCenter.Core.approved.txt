@@ -1436,7 +1436,6 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string DatabaseProvider { get; init; }
         public string DeclaredProfileId { get; init; }
         public bool DistributedLockIsProcessLocal { get; init; }
-        public bool IsProductionHostEnvironment { get; init; }
         public bool RedisFeatureEnabled { get; init; }
         public bool RedisLockFeatureEnabled { get; init; }
         public bool SignalRRedisBackplaneFeatureEnabled { get; init; }

@@ -38,7 +38,7 @@ internal sealed class ContactCenterTopologyValidator : ModularTenantEvents
     /// <param name="shellSettings">The tenant shell settings, read for the configured database provider.</param>
     /// <param name="shellFeaturesManager">The feature manager used to observe which features are enabled.</param>
     /// <param name="distributedLock">The resolved distributed lock, inspected for a process-local implementation.</param>
-    /// <param name="hostEnvironment">The host environment, used to reject an undeclared production deployment.</param>
+    /// <param name="hostEnvironment">The host environment, used to note an undeclared topology on a production host.</param>
     /// <param name="logger">The logger.</param>
     public ContactCenterTopologyValidator(
         ContactCenterTopologyState state,
@@ -105,6 +105,22 @@ internal sealed class ContactCenterTopologyValidator : ModularTenantEvents
             return;
         }
 
+        if (string.IsNullOrWhiteSpace(result.DeclaredProfileId) && _hostEnvironment.IsProduction())
+        {
+            // An undeclared topology runs as one node with nothing checked. That is the supported default, so it is
+            // admitted; the note says which checks a declared production profile would add, on the one-time
+            // activation log where operators read deployment facts.
+            if (_logger.IsEnabled(LogLevel.Warning))
+            {
+                _logger.LogWarning(
+                    "Tenant '{TenantName}' declares no Contact Center topology, so it runs as a single node with no infrastructure checks. To have the shared database, Redis lock and SignalR backplane verified, set 'CrestApps:ContactCenter:Topology:ProfileId' to '{ProfileId}'.",
+                    _shellSettings.Name,
+                    ContactCenterTopologyProfiles.SingleNodeDistributedId);
+            }
+
+            return;
+        }
+
         if (result.IsProductionTopology)
         {
             var profile = ContactCenterTopologyProfiles.Find(result.DeclaredProfileId);
@@ -147,7 +163,6 @@ internal sealed class ContactCenterTopologyValidator : ModularTenantEvents
         return new ContactCenterTopologyObservations
         {
             DeclaredProfileId = _options.ProfileId,
-            IsProductionHostEnvironment = _hostEnvironment.IsProduction(),
             DatabaseProvider = _shellSettings["DatabaseProvider"],
             RedisFeatureEnabled = enabledFeatureIds.Contains(ContactCenterTopologyEvaluator.RedisFeatureId),
             RedisLockFeatureEnabled = enabledFeatureIds.Contains(ContactCenterTopologyEvaluator.RedisLockFeatureId),

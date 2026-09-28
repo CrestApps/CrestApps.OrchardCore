@@ -20,39 +20,29 @@ public sealed class ContactCenterTopologyEvaluatorTests
         Assert.Throws<ArgumentNullException>(() => ContactCenterTopologyEvaluator.Evaluate(null));
     }
 
-    [Fact]
-    public void Evaluate_IsSatisfied_WhenNoProfileIsDeclaredOutsideProduction()
-    {
-        // Development, tests, and demos declare nothing. Requiring a declaration everywhere would make the
-        // default experience fail closed for deployments that never claimed support in the first place.
-        var result = ContactCenterTopologyEvaluator.Evaluate(new ContactCenterTopologyObservations
-        {
-            DeclaredProfileId = null,
-            IsProductionHostEnvironment = false,
-        });
-
-        Assert.True(result.IsSatisfied);
-        Assert.Null(result.DeclaredProfileId);
-        Assert.False(result.IsProductionTopology);
-    }
-
     [Theory]
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void Evaluate_Fails_WhenNoProfileIsDeclaredInProduction(string declaredProfileId)
+    public void Evaluate_AdmitsASingleNode_WhenNoProfileIsDeclared(string declaredProfileId)
     {
-        // Without this branch the entire validator is bypassed by omitting one configuration key, which is the
-        // single most likely way an operator reaches production on an unchecked deployment.
+        // Declaring nothing is the default and runs as one node with no requirements, whatever the host
+        // environment. A production host used to be refused, which closed every Contact Center connection straight
+        // after it opened and turned every call away on a deployed site that had simply not set the key -- on a
+        // SQL Server database and without Redis, so it could not have met the production profile anyway.
         var result = ContactCenterTopologyEvaluator.Evaluate(new ContactCenterTopologyObservations
         {
             DeclaredProfileId = declaredProfileId,
-            IsProductionHostEnvironment = true,
+            DatabaseProvider = "SqlConnection",
+            RedisFeatureEnabled = false,
+            RedisLockFeatureEnabled = false,
+            SignalRRedisBackplaneFeatureEnabled = false,
+            DistributedLockIsProcessLocal = true,
         });
 
-        Assert.False(result.IsSatisfied);
-        Assert.Contains(result.Failures, failure => failure.Contains("CrestApps:ContactCenter:Topology:ProfileId", StringComparison.Ordinal));
-        Assert.Contains(result.Failures, failure => failure.Contains(ContactCenterTopologyProfiles.SingleNodeDistributedId, StringComparison.Ordinal));
+        Assert.True(result.IsSatisfied);
+        Assert.Empty(result.Failures);
+        Assert.False(result.IsProductionTopology);
     }
 
     [Fact]
@@ -62,7 +52,6 @@ public sealed class ContactCenterTopologyEvaluatorTests
         var result = ContactCenterTopologyEvaluator.Evaluate(new ContactCenterTopologyObservations
         {
             DeclaredProfileId = "single-node-distrubuted",
-            IsProductionHostEnvironment = true,
         });
 
         Assert.False(result.IsSatisfied);
@@ -81,7 +70,6 @@ public sealed class ContactCenterTopologyEvaluatorTests
         var result = ContactCenterTopologyEvaluator.Evaluate(new ContactCenterTopologyObservations
         {
             DeclaredProfileId = profileId,
-            IsProductionHostEnvironment = true,
             DatabaseProvider = "Sqlite",
             RedisFeatureEnabled = false,
             RedisLockFeatureEnabled = false,
@@ -216,7 +204,6 @@ public sealed class ContactCenterTopologyEvaluatorTests
         var observations = new ContactCenterTopologyObservations
         {
             DeclaredProfileId = ContactCenterTopologyProfiles.SingleNodeDistributedId,
-            IsProductionHostEnvironment = true,
             DatabaseProvider = "Sqlite",
             RedisFeatureEnabled = false,
             RedisLockFeatureEnabled = false,
@@ -289,7 +276,6 @@ public sealed class ContactCenterTopologyEvaluatorTests
         var mutable = new MutableObservations
         {
             DeclaredProfileId = ContactCenterTopologyProfiles.SingleNodeDistributedId,
-            IsProductionHostEnvironment = true,
             DatabaseProvider = ContactCenterTopologyEvaluator.RequiredProductionDatabaseProvider,
             RedisFeatureEnabled = true,
             RedisLockFeatureEnabled = true,
@@ -306,8 +292,6 @@ public sealed class ContactCenterTopologyEvaluatorTests
     {
         public string DeclaredProfileId { get; set; }
 
-        public bool IsProductionHostEnvironment { get; set; }
-
         public string DatabaseProvider { get; set; }
 
         public bool RedisFeatureEnabled { get; set; }
@@ -322,7 +306,6 @@ public sealed class ContactCenterTopologyEvaluatorTests
             => new()
             {
                 DeclaredProfileId = DeclaredProfileId,
-                IsProductionHostEnvironment = IsProductionHostEnvironment,
                 DatabaseProvider = DatabaseProvider,
                 RedisFeatureEnabled = RedisFeatureEnabled,
                 RedisLockFeatureEnabled = RedisLockFeatureEnabled,
