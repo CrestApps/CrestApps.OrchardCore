@@ -69,7 +69,7 @@ public sealed class ContactCenterHubSecurityTests
 
         Assert.DoesNotContain(
             harness.Groups.Operations,
-            operation => operation.Contains(ContactCenterHub.SupervisorsGroup, StringComparison.Ordinal));
+            operation => operation.Contains(ContactCenterHub.SupervisorQueueGroup(string.Empty), StringComparison.Ordinal));
     }
 
     [Fact]
@@ -90,7 +90,7 @@ public sealed class ContactCenterHubSecurityTests
 
         Assert.Equal(
             [
-                $"add:{TenantSignalRGroupName.ForGroup(TenantName, ContactCenterHub.SupervisorsGroup)}",
+                $"add:{TenantSignalRGroupName.ForGroup(TenantName, ContactCenterHub.SupervisorQueueGroup("sales"))}",
                 $"add:{TenantSignalRGroupName.ForUser(TenantName, UserId)}",
             ],
             harness.Groups.Operations);
@@ -243,7 +243,7 @@ public sealed class ContactCenterHubSecurityTests
             [
                 $"add:{TenantSignalRGroupName.ForGroup(TenantName, ContactCenterHub.QueueGroup("sales"))}",
                 $"add:{TenantSignalRGroupName.ForGroup(TenantName, ContactCenterHub.QueueGroup("support"))}",
-                $"add:{TenantSignalRGroupName.ForGroup(TenantName, ContactCenterHub.SupervisorsGroup)}",
+                $"add:{TenantSignalRGroupName.ForGroup(TenantName, ContactCenterHub.SupervisorQueueGroup("sales"))}",
                 $"add:{TenantSignalRGroupName.ForUser(TenantName, UserId)}",
             ],
             harness.Groups.Operations);
@@ -313,6 +313,7 @@ public sealed class ContactCenterHubSecurityTests
                 .AddSingleton<IAgentSessionService>(SessionService)
                 .AddSingleton(Mock.Of<IAgentPresenceManager>())
                 .AddSingleton(Mock.Of<ISupervisorQueueAuthorizationService>())
+                .AddSingleton(SupervisorProfiles())
                 .AddSingleton(MockUserManager())
                 .AddSingleton(Mock.Of<IDisplayNameProvider>())
                 .AddSingleton<IQueuedVoiceWorkOfferService>(new NoQueuedVoiceWorkOfferService())
@@ -359,6 +360,17 @@ public sealed class ContactCenterHubSecurityTests
         public void Grant(Permission permission)
         {
             AuthorizationService.GrantedPermissions.Add(permission.Name);
+        }
+
+        // The supervisor oversees the sales queue only, so a supervising connection joins that queue's supervisor group.
+        private static IAgentProfileManager SupervisorProfiles()
+        {
+            var profiles = new Mock<IAgentProfileManager>();
+            profiles
+                .Setup(manager => manager.FindByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new AgentProfile { ItemId = "supervisor-agent", UserId = UserId, AllowedQueueIds = ["sales"] });
+
+            return profiles.Object;
         }
 
         private static UserManager<IUser> MockUserManager()

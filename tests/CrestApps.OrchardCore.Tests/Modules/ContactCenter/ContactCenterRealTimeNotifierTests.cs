@@ -22,14 +22,14 @@ public sealed class ContactCenterRealTimeNotifierTests
         var tenantBSupervisorClient = new Mock<IContactCenterHubClient>();
         var clients = new Mock<IHubClients<IContactCenterHubClient>>();
         var tenantAUserGroup = TenantSignalRGroupName.ForUser("TenantA", "u1");
-        var tenantASupervisorsGroup = TenantSignalRGroupName.ForGroup("TenantA", ContactCenterHub.SupervisorsGroup);
+        var tenantASupervisorsGroup = TenantSignalRGroupName.ForGroup("TenantA", ContactCenterHub.SupervisorQueueGroup("q1"));
         var tenantBUserGroup = TenantSignalRGroupName.ForUser("TenantB", "u1");
-        var tenantBSupervisorsGroup = TenantSignalRGroupName.ForGroup("TenantB", ContactCenterHub.SupervisorsGroup);
+        var tenantBSupervisorsGroup = TenantSignalRGroupName.ForGroup("TenantB", ContactCenterHub.SupervisorQueueGroup("q1"));
 
         clients.Setup(c => c.Group(tenantAUserGroup)).Returns(tenantAUserClient.Object);
-        clients.Setup(c => c.Group(tenantASupervisorsGroup)).Returns(tenantASupervisorClient.Object);
+        clients.Setup(c => c.Groups(It.Is<IReadOnlyList<string>>(groups => groups.SequenceEqual(new[] { tenantASupervisorsGroup })))).Returns(tenantASupervisorClient.Object);
         clients.Setup(c => c.Group(tenantBUserGroup)).Returns(tenantBUserClient.Object);
-        clients.Setup(c => c.Group(tenantBSupervisorsGroup)).Returns(tenantBSupervisorClient.Object);
+        clients.Setup(c => c.Groups(It.Is<IReadOnlyList<string>>(groups => groups.SequenceEqual(new[] { tenantBSupervisorsGroup })))).Returns(tenantBSupervisorClient.Object);
 
         var hubContext = new Mock<IHubContext<ContactCenterHub, IContactCenterHubClient>>();
         hubContext.SetupGet(c => c.Clients).Returns(clients.Object);
@@ -38,20 +38,24 @@ public sealed class ContactCenterRealTimeNotifierTests
         var tenantANotifier = new ContactCenterRealTimeNotifier(
             hubContext.Object,
             sessionManager,
+            Mock.Of<IAgentProfileManager>(),
             new ShellSettings { Name = "TenantA" });
         var tenantBNotifier = new ContactCenterRealTimeNotifier(
             hubContext.Object,
             sessionManager,
+            Mock.Of<IAgentProfileManager>(),
             new ShellSettings { Name = "TenantB" });
         var tenantANotification = new AgentPresenceNotification
         {
             UserId = "u1",
             AgentId = "agent-a",
+            QueueIds = ["q1"],
         };
         var tenantBNotification = new AgentPresenceNotification
         {
             UserId = "u1",
             AgentId = "agent-b",
+            QueueIds = ["q1"],
         };
 
         // Act
@@ -71,7 +75,7 @@ public sealed class ContactCenterRealTimeNotifierTests
         tenantASupervisorClient.Verify(c => c.PresenceChanged(tenantBNotification), Times.Never);
         tenantBUserClient.Verify(c => c.PresenceChanged(tenantANotification), Times.Never);
         tenantBSupervisorClient.Verify(c => c.PresenceChanged(tenantANotification), Times.Never);
-        clients.Verify(c => c.Group(ContactCenterHub.SupervisorsGroup), Times.Never);
+        clients.Verify(c => c.Groups(It.Is<IReadOnlyList<string>>(groups => groups.Contains(ContactCenterHub.SupervisorQueueGroup("q1")))), Times.Never);
     }
 
     [Fact]
@@ -88,11 +92,11 @@ public sealed class ContactCenterRealTimeNotifierTests
         };
         var userGroup = TenantSignalRGroupName.ForUser(shellSettings.Name, "u1");
         var queueGroup = TenantSignalRGroupName.ForGroup(shellSettings.Name, ContactCenterHub.QueueGroup("q1"));
-        var supervisorsGroup = TenantSignalRGroupName.ForGroup(shellSettings.Name, ContactCenterHub.SupervisorsGroup);
+        var supervisorsGroup = TenantSignalRGroupName.ForGroup(shellSettings.Name, ContactCenterHub.SupervisorQueueGroup("q1"));
 
         clients.Setup(c => c.Group(userGroup)).Returns(assignedUserClient.Object);
         clients.Setup(c => c.Group(queueGroup)).Returns(queueClient.Object);
-        clients.Setup(c => c.Group(supervisorsGroup)).Returns(supervisorClient.Object);
+        clients.Setup(c => c.Groups(It.Is<IReadOnlyList<string>>(groups => groups.SequenceEqual(new[] { supervisorsGroup })))).Returns(supervisorClient.Object);
 
         var hubContext = new Mock<IHubContext<ContactCenterHub, IContactCenterHubClient>>();
         hubContext.SetupGet(c => c.Clients).Returns(clients.Object);
@@ -100,6 +104,7 @@ public sealed class ContactCenterRealTimeNotifierTests
         var notifier = new ContactCenterRealTimeNotifier(
             hubContext.Object,
             new Mock<IAgentSessionManager>().Object,
+            Mock.Of<IAgentProfileManager>(),
             shellSettings);
         var notification = new AgentOfferNotification
         {
@@ -156,6 +161,7 @@ public sealed class ContactCenterRealTimeNotifierTests
         var notifier = new ContactCenterRealTimeNotifier(
             hubContext.Object,
             sessionManager.Object,
+            Mock.Of<IAgentProfileManager>(),
             shellSettings);
 
         // Act

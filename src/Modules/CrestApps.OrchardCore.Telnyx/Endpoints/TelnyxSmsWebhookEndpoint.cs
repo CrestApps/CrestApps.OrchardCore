@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -86,6 +87,16 @@ internal static class TelnyxSmsWebhookEndpoint
             logger.LogWarning("Rejected a Telnyx SMS webhook because the signature could not be validated.");
 
             return TypedResults.Unauthorized();
+        }
+
+        // The signature proves Telnyx sent the delivery, not that it was sent now: a captured delivery would verify
+        // forever. Delivery receipts are not de-duplicated, so a replay could rewrite a message's delivery status. The
+        // voice webhook has always held deliveries to this window.
+        if (!IsFresh(timestamp, clock.UtcNow))
+        {
+            logger.LogWarning("Rejected a Telnyx SMS webhook because its signed timestamp was stale or too far in the future.");
+
+            return TypedResults.BadRequest();
         }
 
         if (!TelnyxSmsWebhookParser.TryParse(body, out var messagingEvent))
@@ -206,5 +217,27 @@ internal static class TelnyxSmsWebhookEndpoint
         };
 
         await handlers.InvokeAsync((handler, evt) => handler.HandleAsync(evt), omnichannelEvent, logger);
+    }
+
+    // The same window the voice webhook allows: 15 minutes old, or 2 minutes ahead for clock drift.
+    internal static bool IsFresh(string timestamp, DateTime nowUtc)
+    {
+        if (!long.TryParse(timestamp, NumberStyles.Integer, CultureInfo.InvariantCulture, out var unixSeconds))
+        {
+            return false;
+        }
+
+        DateTime signedUtc;
+
+        try
+        {
+            signedUtc = DateTimeOffset.FromUnixTimeSeconds(unixSeconds).UtcDateTime;
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            return false;
+        }
+
+        return signedUtc >= nowUtc.AddSeconds(-900) && signedUtc <= nowUtc.AddSeconds(120);
     }
 }

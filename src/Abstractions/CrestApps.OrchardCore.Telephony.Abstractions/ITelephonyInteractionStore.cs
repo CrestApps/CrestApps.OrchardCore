@@ -80,6 +80,16 @@ public interface ITelephonyInteractionStore
     Task<TelephonyInteraction> FindByCallIdAsync(string userId, string callId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Determines whether a user other than the given one already has the call in their history. A call in someone's
+    /// history is a call they may control, so a phone reporting a call it placed must never claim one this way.
+    /// </summary>
+    /// <param name="userId">The user reporting the call.</param>
+    /// <param name="callId">The provider-specific call identifier.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns><see langword="true"/> when another user's history holds the call.</returns>
+    Task<bool> IsHeldByAnotherUserAsync(string userId, string callId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Finds one of the user's own interactions by the identifier carried on their inbox row.
     /// </summary>
     /// <remarks>

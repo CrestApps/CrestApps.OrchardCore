@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Hubs;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -15,6 +16,7 @@ public sealed class ContactCenterRealTimeNotifier : IContactCenterRealTimeNotifi
 {
     private readonly IHubContext<ContactCenterHub, IContactCenterHubClient> _hubContext;
     private readonly IAgentSessionManager _sessionManager;
+    private readonly IAgentProfileManager _agentManager;
     private readonly string _tenantName;
 
     /// <summary>
@@ -22,14 +24,17 @@ public sealed class ContactCenterRealTimeNotifier : IContactCenterRealTimeNotifi
     /// </summary>
     /// <param name="hubContext">The Contact Center hub context used to push events to connected clients.</param>
     /// <param name="sessionManager">The agent session manager used to resolve active connections.</param>
+    /// <param name="agentManager">The agent profile manager used to find the queues an agent's events concern.</param>
     /// <param name="shellSettings">The current Orchard shell settings.</param>
     public ContactCenterRealTimeNotifier(
         IHubContext<ContactCenterHub, IContactCenterHubClient> hubContext,
         IAgentSessionManager sessionManager,
+        IAgentProfileManager agentManager,
         ShellSettings shellSettings)
     {
         _hubContext = hubContext;
         _sessionManager = sessionManager;
+        _agentManager = agentManager;
         _tenantName = shellSettings.Name;
     }
 
@@ -43,7 +48,12 @@ public sealed class ContactCenterRealTimeNotifier : IContactCenterRealTimeNotifi
             await _hubContext.Clients.Group(UserGroup(notification.UserId)).PresenceChanged(notification);
         }
 
-        await _hubContext.Clients.Group(SupervisorsGroup).PresenceChanged(notification);
+        var supervisors = await GetSupervisorGroupsAsync(notification.QueueIds, notification.AgentId, notification.UserId, cancellationToken);
+
+        if (supervisors.Count > 0)
+        {
+            await _hubContext.Clients.Groups(supervisors).PresenceChanged(notification);
+        }
     }
 
     /// <inheritdoc/>
@@ -63,7 +73,12 @@ public sealed class ContactCenterRealTimeNotifier : IContactCenterRealTimeNotifi
             await _hubContext.Clients.Group(QueueGroup(notification.QueueId)).OfferReceived(observerNotification);
         }
 
-        await _hubContext.Clients.Group(SupervisorsGroup).OfferReceived(observerNotification);
+        var supervisors = await GetOfferSupervisorGroupsAsync(notification.QueueId, notification.AgentId, notification.UserId, cancellationToken);
+
+        if (supervisors.Count > 0)
+        {
+            await _hubContext.Clients.Groups(supervisors).OfferReceived(observerNotification);
+        }
     }
 
     /// <inheritdoc/>
@@ -81,7 +96,12 @@ public sealed class ContactCenterRealTimeNotifier : IContactCenterRealTimeNotifi
             await _hubContext.Clients.Group(QueueGroup(notification.QueueId)).OfferRevoked(notification);
         }
 
-        await _hubContext.Clients.Group(SupervisorsGroup).OfferRevoked(notification);
+        var supervisors = await GetOfferSupervisorGroupsAsync(notification.QueueId, notification.AgentId, notification.UserId, cancellationToken);
+
+        if (supervisors.Count > 0)
+        {
+            await _hubContext.Clients.Groups(supervisors).OfferRevoked(notification);
+        }
     }
 
     /// <inheritdoc/>
@@ -92,9 +112,8 @@ public sealed class ContactCenterRealTimeNotifier : IContactCenterRealTimeNotifi
         if (!string.IsNullOrEmpty(notification.QueueId))
         {
             await _hubContext.Clients.Group(QueueGroup(notification.QueueId)).QueueStatsChanged(notification);
+            await _hubContext.Clients.Group(SupervisorQueueGroup(notification.QueueId)).QueueStatsChanged(notification);
         }
-
-        await _hubContext.Clients.Group(SupervisorsGroup).QueueStatsChanged(notification);
     }
 
     /// <inheritdoc/>
@@ -134,7 +153,12 @@ public sealed class ContactCenterRealTimeNotifier : IContactCenterRealTimeNotifi
             await _hubContext.Clients.Group(UserGroup(notification.UserId)).RecordingStateChanged(notification);
         }
 
-        await _hubContext.Clients.Group(SupervisorsGroup).RecordingStateChanged(notification);
+        var supervisors = await GetSupervisorGroupsAsync([], notification.AgentId, notification.UserId, cancellationToken);
+
+        if (supervisors.Count > 0)
+        {
+            await _hubContext.Clients.Groups(supervisors).RecordingStateChanged(notification);
+        }
     }
 
     /// <inheritdoc/>
@@ -157,15 +181,77 @@ public sealed class ContactCenterRealTimeNotifier : IContactCenterRealTimeNotifi
         ArgumentNullException.ThrowIfNull(notification);
 
         // Supervisors only: the agent is not the one to act on it mid-shift, and is often not the cause.
-        await _hubContext.Clients.Group(SupervisorsGroup).CallQualityAlert(notification);
+        var supervisors = await GetSupervisorGroupsAsync([], notification.AgentId, notification.UserId, cancellationToken);
+
+        if (supervisors.Count > 0)
+        {
+            await _hubContext.Clients.Groups(supervisors).CallQualityAlert(notification);
+        }
     }
 
-    private string SupervisorsGroup
+    // An offer belongs to its queue: only that queue's supervisors hear of it. One with no queue (a call straight to
+    // the agent) is heard by the supervisors of the agent's queues.
+    private async Task<IReadOnlyList<string>> GetOfferSupervisorGroupsAsync(string queueId, string agentId, string userId, CancellationToken cancellationToken)
     {
-        get
+        if (!string.IsNullOrWhiteSpace(queueId))
         {
-            return TenantSignalRGroupName.ForGroup(_tenantName, ContactCenterHub.SupervisorsGroup);
+            return [SupervisorQueueGroup(queueId)];
         }
+
+        return await GetSupervisorGroupsAsync([], agentId, userId, cancellationToken);
+    }
+
+    // The supervisor groups of the queues an agent's event concerns: the queues it names, and every queue and campaign
+    // the agent belongs to or may serve. The agent's queues are read from their profile because an event does not
+    // always name them: signing out names none, though the supervisors of the queues just left still need to hear it.
+    private async Task<IReadOnlyList<string>> GetSupervisorGroupsAsync(IEnumerable<string> queueIds, string agentId, string userId, CancellationToken cancellationToken)
+    {
+        var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var queueId in queueIds ?? [])
+        {
+            if (!string.IsNullOrWhiteSpace(queueId))
+            {
+                ids.Add(queueId);
+            }
+        }
+
+        AgentProfile agent = null;
+
+        if (!string.IsNullOrWhiteSpace(agentId))
+        {
+            agent = await _agentManager.FindByIdAsync(agentId, cancellationToken);
+        }
+        else if (!string.IsNullOrWhiteSpace(userId))
+        {
+            agent = await _agentManager.FindByUserIdAsync(userId, cancellationToken);
+        }
+
+        if (agent is not null)
+        {
+            foreach (var queueId in (agent.QueueIds ?? []).Concat(agent.AllowedQueueIds ?? []))
+            {
+                if (!string.IsNullOrWhiteSpace(queueId))
+                {
+                    ids.Add(queueId);
+                }
+            }
+
+            foreach (var campaignId in (agent.CampaignIds ?? []).Concat(agent.AllowedCampaignIds ?? []))
+            {
+                if (!string.IsNullOrWhiteSpace(campaignId))
+                {
+                    ids.Add(ContactCenterConstants.CampaignQueue.CreateId(campaignId));
+                }
+            }
+        }
+
+        return ids.Select(SupervisorQueueGroup).ToArray();
+    }
+
+    private string SupervisorQueueGroup(string queueId)
+    {
+        return TenantSignalRGroupName.ForGroup(_tenantName, ContactCenterHub.SupervisorQueueGroup(queueId));
     }
 
     private string QueueGroup(string queueId)

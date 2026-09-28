@@ -29,6 +29,7 @@ function views(dir, found = []) {
 const unformatted = new RegExp('@(?:T|H)\\["([^"]*\\{\\d+\\}[^"]*)"\\](?!\\s*[.,(\\[])', 'g');
 
 describe('views', () => {
+    // It reads every view in the repository: a few seconds, and more while a build runs beside it.
     it('never render a localized placeholder string without its arguments', () => {
         const offenders = [];
 
@@ -43,5 +44,5 @@ describe('views', () => {
         }
 
         expect(offenders).toEqual([]);
-    });
+    }, 30000);
 });

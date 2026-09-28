@@ -238,6 +238,19 @@ public sealed class DefaultTelephonyInteractionStore : ITelephonyInteractionStor
     }
 
     /// <inheritdoc/>
+    public async Task<bool> IsHeldByAnotherUserAsync(string userId, string callId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(callId))
+        {
+            return false;
+        }
+
+        return await _session
+            .Query<TelephonyInteraction, TelephonyInteractionIndex>(x => x.CallId == callId && x.UserId != userId)
+            .FirstOrDefaultAsync(cancellationToken) is not null;
+    }
+
+    /// <inheritdoc/>
     public async Task<TelephonyInteraction> FindByInteractionIdAsync(string userId, string interactionId, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(interactionId))

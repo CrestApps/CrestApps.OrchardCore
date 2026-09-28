@@ -123,6 +123,7 @@ public sealed class MessagingHubPresenceTests
 
         var hub = new MessagingHub(
             agentProfiles.Object,
+            new PermissiveAgentEntitlementPolicy(),
             new PermissionGrants(granted),
             presence.Object,
             new ShellSettings { Name = TenantName },

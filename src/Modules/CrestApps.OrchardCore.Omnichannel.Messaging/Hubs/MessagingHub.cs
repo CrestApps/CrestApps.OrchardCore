@@ -38,6 +38,7 @@ public sealed class MessagingHub : Hub<IMessagingHubClient>
     private static readonly object _passiveConnectionKey = new();
 
     private readonly IAgentProfileManager _agentProfileManager;
+    private readonly IAgentEntitlementPolicy _entitlementPolicy;
     private readonly IAuthorizationService _authorizationService;
     private readonly IMessagingPresenceTracker _presenceTracker;
     private readonly ILogger _logger;
@@ -47,18 +48,21 @@ public sealed class MessagingHub : Hub<IMessagingHubClient>
     /// Initializes a new instance of the <see cref="MessagingHub"/> class.
     /// </summary>
     /// <param name="agentProfileManager">The agent profile manager used to resolve the connected agent.</param>
+    /// <param name="entitlementPolicy">The policy that decides which queues the agent may still serve.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="presenceTracker">The tracker that records the connected agent's workspace as open.</param>
     /// <param name="shellSettings">The current Orchard shell settings.</param>
     /// <param name="logger">The logger.</param>
     public MessagingHub(
         IAgentProfileManager agentProfileManager,
+        IAgentEntitlementPolicy entitlementPolicy,
         IAuthorizationService authorizationService,
         IMessagingPresenceTracker presenceTracker,
         ShellSettings shellSettings,
         ILogger<MessagingHub> logger)
     {
         _agentProfileManager = agentProfileManager;
+        _entitlementPolicy = entitlementPolicy;
         _authorizationService = authorizationService;
         _presenceTracker = presenceTracker;
         _tenantName = shellSettings.Name;
@@ -120,7 +124,10 @@ public sealed class MessagingHub : Hub<IMessagingHubClient>
                 await Groups.AddToGroupAsync(Context.ConnectionId, ForGroup(MessagingHub.AgentGroup(profile.ItemId)));
                 groupCount++;
 
-                foreach (var queueId in profile.QueueIds.Concat(profile.AllowedQueueIds).Distinct())
+                // Only the queues the agent's entitlements still allow: every new message in a queue reaches its group
+                // with the customer's address and a preview, and one they may no longer open is none of theirs.
+                foreach (var queueId in profile.QueueIds.Concat(profile.AllowedQueueIds).Distinct()
+                    .Where(queueId => !string.IsNullOrEmpty(queueId) && _entitlementPolicy.AllowsQueue(profile, queueId)))
                 {
                     await Groups.AddToGroupAsync(Context.ConnectionId, ForGroup(QueueGroup(queueId)));
                     groupCount++;
