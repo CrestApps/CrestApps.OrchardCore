@@ -22,6 +22,22 @@ jobs:
       run:
         working-directory: src/CrestApps.Docs
     steps:
+      # A Pages site whose source is "Deploy from a branch" runs its own "pages build and deployment"
+      # on every push to main, next to this workflow. Both publish, and whichever finishes last is
+      # what the site serves -- the branch build publishes /docs, which holds no site, so the site
+      # goes dark whenever that build happens to finish second. Only GitHub Actions as the source
+      # stops the second publisher, so refuse to deploy until it is set.
+      - name: Require GitHub Actions as the Pages source
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          build_type="$(gh api "repos/${GITHUB_REPOSITORY}/pages" --jq .build_type)"
+          if [ "$build_type" != "workflow" ]; then
+            echo "::error::The Pages source is '$build_type'. Set Settings > Pages > Source to 'GitHub Actions', or a branch build will race this deployment and can overwrite the site."
+            exit 1
+          fi
+
       - name: Checkout
         uses: actions/checkout@v7
 
@@ -46,6 +62,11 @@ jobs:
           test -f build/index.html
           test -f build/CNAME
 
+      # Stamps the build so the deploy job can tell that the site now serves this build, and not an
+      # older one or another publisher's.
+      - name: Stamp build
+        run: echo "${GITHUB_SHA}" > build/build-id.txt
+
       # The name is deliberately left at the default. GitHub Pages publishes the artifact called
       # "github-pages" and nothing else, so naming it anything else leaves the deployment reporting
       # success while the site it serves never changes.
@@ -64,3 +85,24 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
+
+      # deploy-pages reports success once Pages accepts the artifact, whether or not that is what
+      # ends up being served. Check the live site instead, so a site that has gone dark or stale
+      # fails this run rather than going unnoticed.
+      - name: Verify the live site serves this build
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          base="${PAGE_URL%/}"
+          for attempt in $(seq 1 30); do
+            served="$(curl -fsS "${base}/build-id.txt?nocache=${GITHUB_RUN_ID}-${attempt}" 2>/dev/null | tr -d '[:space:]' || true)"
+            status="$(curl -s -o /dev/null -w '%{http_code}' "${base}/?nocache=${GITHUB_RUN_ID}-${attempt}" || true)"
+            if [ "$served" = "$GITHUB_SHA" ] && [ "$status" = "200" ]; then
+              echo "${base} serves ${GITHUB_SHA}."
+              exit 0
+            fi
+            echo "Attempt ${attempt}: home page returned ${status:-nothing}, build-id is '${served:-missing}'. Waiting..."
+            sleep 10
+          done
+          echo "::error::${base} is not serving this build (${GITHUB_SHA}) five minutes after deployment."
+          exit 1

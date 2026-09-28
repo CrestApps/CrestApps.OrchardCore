@@ -5,8 +5,6 @@ const sidebars = {
     docsSidebar: [
         'intro',
         'getting-started',
-        'supply-chain',
-        'feature-reference',
         {
             type: 'category',
             label: 'User Manual',
@@ -257,6 +255,7 @@ const sidebars = {
                 'samples/a2a-client',
             ],
         },
+        'feature-reference',
         {
             type: 'category',
             label: 'Changelog',
