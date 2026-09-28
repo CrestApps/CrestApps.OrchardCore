@@ -8,6 +8,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Migrations;
 
 internal sealed class OmnichannelContactCommunicationPreferenceIndexMigrations : DataMigration
 {
+    private const string SqlServerDialectName = "SqlServer";
+
     private readonly IStore _store;
     private readonly ILogger _logger;
 
@@ -58,10 +60,17 @@ internal sealed class OmnichannelContactCommunicationPreferenceIndexMigrations :
         // table that never had these columns has to be recognised before anything is attempted. The check and the
         // drops run on that same transaction: a second connection would wait on SQLite for the write lock this
         // transaction already holds, stall every startup for the full busy timeout, and fail.
+        //
+        // SQL Server refuses to drop a column while a default constraint still references it, and DoNotChat was
+        // declared with a default, so the constraint SQL Server generated for it comes down first. Without that, the
+        // drop throws, the host cancels the session every migration shares, and every other feature's pending
+        // migration is rolled back with it on each start.
         var columns = await GetColumnNamesAsync();
 
         if (columns.Contains("DoNotChat"))
         {
+            await DropSqlServerColumnDefaultAsync("DoNotChat");
+
             await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactCommunicationPreferenceIndex>(table =>
                 table.DropColumn("DoNotChat"));
         }
@@ -75,13 +84,74 @@ internal sealed class OmnichannelContactCommunicationPreferenceIndexMigrations :
         return 3;
     }
 
+    // The constraint is engine-generated, so its name is read from the catalog rather than assumed. The other engines
+    // drop a column's default together with the column, so nothing runs there.
+    private async Task DropSqlServerColumnDefaultAsync(string columnName)
+    {
+        if (!string.Equals(SchemaBuilder.Dialect.Name, SqlServerDialectName, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var quotedTableName = GetQuotedTableName();
+        var constraintName = await ReadSqlServerColumnDefaultNameAsync(quotedTableName, columnName);
+
+        if (constraintName is null)
+        {
+            return;
+        }
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Dropping the default constraint '{ConstraintName}' on column '{ColumnName}' of '{TableName}' so the column can be dropped.",
+                constraintName,
+                columnName,
+                quotedTableName);
+        }
+
+        await using var command = SchemaBuilder.Connection.CreateCommand();
+        command.Transaction = SchemaBuilder.Transaction;
+        command.CommandText = "alter table " + quotedTableName + " drop constraint " + SchemaBuilder.Dialect.QuoteForColumnName(constraintName);
+
+        await command.ExecuteNonQueryAsync();
+    }
+
+    private async Task<string> ReadSqlServerColumnDefaultNameAsync(string quotedTableName, string columnName)
+    {
+        await using var command = SchemaBuilder.Connection.CreateCommand();
+        command.Transaction = SchemaBuilder.Transaction;
+        command.CommandText =
+            "SELECT dc.name FROM sys.default_constraints dc " +
+            "INNER JOIN sys.columns c ON c.object_id = dc.parent_object_id AND c.column_id = dc.parent_column_id " +
+            "WHERE dc.parent_object_id = OBJECT_ID(@table) AND c.name = @column";
+
+        var tableParameter = command.CreateParameter();
+        tableParameter.ParameterName = "@table";
+        tableParameter.Value = quotedTableName;
+        command.Parameters.Add(tableParameter);
+
+        var columnParameter = command.CreateParameter();
+        columnParameter.ParameterName = "@column";
+        columnParameter.Value = columnName;
+        command.Parameters.Add(columnParameter);
+
+        return await command.ExecuteScalarAsync() as string;
+    }
+
+    private string GetQuotedTableName()
+    {
+        var tableName = SchemaBuilder.TablePrefix +
+            SchemaBuilder.TableNameConvention.GetIndexTable(typeof(OmnichannelContactCommunicationPreferenceIndex), null);
+
+        return SchemaBuilder.Dialect.QuoteForTableName(tableName, _store.Configuration.Schema);
+    }
+
     // Columns are read through the data reader rather than an engine-specific catalog view, so the same probe works
     // on every supported engine, and the query matches no rows because only the declared columns are wanted.
     private async Task<HashSet<string>> GetColumnNamesAsync()
     {
-        var tableName = SchemaBuilder.TablePrefix +
-            SchemaBuilder.TableNameConvention.GetIndexTable(typeof(OmnichannelContactCommunicationPreferenceIndex), null);
-        var quotedTableName = SchemaBuilder.Dialect.QuoteForTableName(tableName, _store.Configuration.Schema);
+        var quotedTableName = GetQuotedTableName();
 
         await using var command = SchemaBuilder.Connection.CreateCommand();
         command.Transaction = SchemaBuilder.Transaction;
