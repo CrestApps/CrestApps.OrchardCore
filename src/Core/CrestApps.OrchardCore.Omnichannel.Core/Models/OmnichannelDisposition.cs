@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CrestApps.Core;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
@@ -79,6 +80,10 @@ public sealed class OmnichannelDisposition : CatalogItem, INameAwareModel, IModi
             ModifiedUtc = ModifiedUtc,
             Author = Author,
             OwnerId = OwnerId,
+            // Everything a driver stores with Put lives here; a clone without it drops those settings on every save.
+            Properties = Properties is null
+                ? null
+                : JsonSerializer.Deserialize<Dictionary<string, object>>(JsonSerializer.Serialize(Properties)),
         };
     }
 }
