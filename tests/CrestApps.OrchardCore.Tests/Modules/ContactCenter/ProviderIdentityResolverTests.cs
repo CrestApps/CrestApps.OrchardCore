@@ -41,10 +41,10 @@ public sealed class ProviderIdentityResolverTests
             [new TestProviderIdentityProvider(new ProviderIdentity("Asterisk", "Default Asterisk"))]);
 
         // Act
-        var canonical = resolver.Canonicalize("Dialpad");
+        var canonical = resolver.Canonicalize("Contoso");
 
         // Assert
-        Assert.Equal("Dialpad", canonical);
+        Assert.Equal("Contoso", canonical);
     }
 
     [Theory]

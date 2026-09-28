@@ -10,7 +10,6 @@ public sealed class ContactCenterSetupRecipeTests
     private static readonly Dictionary<string, string> _recipeToTenantProfile = new(StringComparer.Ordinal)
     {
         ["contact-center-asterisk-ga-core.recipe.json"] = "ga-core-asterisk",
-        ["contact-center-dialpad-ga-core.recipe.json"] = "ga-core-dialpad",
     };
 
     private static readonly Dictionary<string, string[]> _tenantProfileFeatures = new(StringComparer.Ordinal)
@@ -24,16 +23,6 @@ public sealed class ContactCenterSetupRecipeTests
             "CrestApps.OrchardCore.Telephony.SoftPhone",
             "CrestApps.OrchardCore.ContactCenter.Dialer",
             "CrestApps.OrchardCore.Asterisk",
-        ],
-        ["ga-core-dialpad"] =
-        [
-            "CrestApps.OrchardCore.ContactCenter",
-            "CrestApps.OrchardCore.ContactCenter.Agents",
-            "CrestApps.OrchardCore.ContactCenter.Queues",
-            "CrestApps.OrchardCore.ContactCenter.InboundVoice",
-            "CrestApps.OrchardCore.Telephony.SoftPhone",
-            "CrestApps.OrchardCore.ContactCenter.Dialer",
-            "CrestApps.OrchardCore.Dialpad",
         ],
     };
 
@@ -51,7 +40,6 @@ public sealed class ContactCenterSetupRecipeTests
 
     [Theory]
     [InlineData("contact-center-asterisk-ga-core.recipe.json")]
-    [InlineData("contact-center-dialpad-ga-core.recipe.json")]
     public void SetupRecipe_IsWellFormedAndHarvestable(string recipeFileName)
     {
         // Arrange
@@ -70,7 +58,6 @@ public sealed class ContactCenterSetupRecipeTests
 
     [Theory]
     [InlineData("contact-center-asterisk-ga-core.recipe.json")]
-    [InlineData("contact-center-dialpad-ga-core.recipe.json")]
     public void SetupRecipe_ReferencesOnlyRegisteredSteps(string recipeFileName)
     {
         // Arrange
@@ -92,7 +79,6 @@ public sealed class ContactCenterSetupRecipeTests
 
     [Theory]
     [InlineData("contact-center-asterisk-ga-core.recipe.json")]
-    [InlineData("contact-center-dialpad-ga-core.recipe.json")]
     public void SetupRecipe_EnablesExactlyItsSupportedTenantProfileFeatureSet(string recipeFileName)
     {
         // Arrange

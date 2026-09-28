@@ -16,7 +16,7 @@ namespace CrestApps.OrchardCore.ContactCenter;
 /// integration glue rather than a separately selectable feature: it activates automatically whenever the
 /// agents, real-time transport, voice, and Telephony soft-phone capabilities it composes are all enabled.
 /// The soft phone itself remains capability-gated at request time by the Telephony soft-phone widget, so a
-/// provider without in-browser audio (for example Dialpad) still gets the provider-neutral workspace.
+/// provider without in-browser audio still gets the provider-neutral workspace.
 /// </summary>
 [RequireFeatures(
     ContactCenterConstants.Feature.Agents,

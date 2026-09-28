@@ -148,11 +148,10 @@ W5.6 Regenerate Orchard baselines for `ContactCenter.Abstractions`, `ContactCent
 2. Orchard: `Omnichannel.Sms/Startup.cs` maps the framework endpoint; an `IConfigureOptions<TwilioOptions>` reads the Orchard Twilio SMS settings (`OrchardCore.Sms.Twilio`) so the existing settings screen keeps working; outbound sends still go through `OrchardCore.Sms` via the resolver adapter (S12), so no behaviour changes.
 3. Tests: `TwilioWebhookEndpointSignatureTests` moves; add `TwilioSmsProviderTests` with a recorded HTTP handler (same style as the Telnyx API client tests).
 
-### W8 - Asterisk and Dialpad
+### W8 - Asterisk
 
 1. Asterisk: move everything except `Manifest.cs`, `Startup.cs` (rewired), `Drivers/AsteriskSettingsDisplayDriver`, `Views`, `AsteriskSettings` (site document) into `CrestApps.Core.Telephony.Asterisk`. `AsteriskRealtimeVoiceTenantEvents` becomes an `IStartupCheck`/hosted lifecycle service (S14); the Orchard tenant events wrapper stays. `DynamicProxyGenAssembly2` `InternalsVisibleTo` moves with the internals used by Moq.
-2. Dialpad: move everything except manifest, startups, settings driver/views, `DialpadWebhookRegistrationController` into `CrestApps.Core.Telephony.Dialpad`.
-3. Tests: move `Telephony/Asterisk*Tests`, `Telephony/ProviderContracts/**`, `Telephony/Cassettes/**` (as content files), `Modules/Dialpad/*` except `DialpadWebhookControllerTests`, `Doubles/FakeAsterisk*`.
+2. Tests: move `Telephony/Asterisk*Tests`, `Telephony/ProviderContracts/**`, `Telephony/Cassettes/**` (as content files), `Doubles/FakeAsterisk*`.
 
 ### W9 - Optional packages (D-8)
 
@@ -174,7 +173,7 @@ W5.6 Regenerate Orchard baselines for `ContactCenter.Abstractions`, `ContactCent
 
 ### W12 - Test project consolidation and public API
 
-1. `tests/Transitions/CrestApps.Core.ContactCenter.Tests` folders: `Hosting/`, `PhoneNumbers/`, `WebSockets/`, `Omnichannel/`, `Omnichannel.Sms/`, `Omnichannel.Voice/`, `Telephony/`, `Telephony.Telnyx/`, `Telephony.Asterisk/`, `Telephony.Dialpad/`, `ContactCenter/` (with `Integration`, `Lifecycles`, `StateMachine`, `RollingUpgrade`, `Reports`), `SmsPortal/`, `Data.YesSql/`, `PublicApi/`, `Support/`.
+1. `tests/Transitions/CrestApps.Core.ContactCenter.Tests` folders: `Hosting/`, `PhoneNumbers/`, `WebSockets/`, `Omnichannel/`, `Omnichannel.Sms/`, `Omnichannel.Voice/`, `Telephony/`, `Telephony.Telnyx/`, `Telephony.Asterisk/`, `ContactCenter/` (with `Integration`, `Lifecycles`, `StateMachine`, `RollingUpgrade`, `Reports`), `SmsPortal/`, `Data.YesSql/`, `PublicApi/`, `Support/`.
 2. Replace Orchard doubles with framework ones: `StubClock` -> `FakeTimeProvider`; `FakeDistributedLock` -> `FakeDistributedLockProvider`; `SiteServiceFactory` -> `TestOptionsMonitor<T>`; `FakeUser`/`FakeTelephonyUserAccessor` -> `FakeUserDirectory` + `ClaimsPrincipal` helpers; `TestContactCenterScopeExecutor` moves as-is; `RecordingSchemaBuilder` moves; SQLite-backed store tests use `AddCoreYesSqlDataStore` with an in-memory SQLite connection and the framework schema extensions (no Orchard `DataMigration`).
 3. Public API: the Orchard `PublicApiApprovalTests` governs the assemblies that remain in `src/` (baselines regenerated); the transition test project governs every `CrestApps.Core.*` assembly created in Phase 1 (new baselines committed).
 4. `DistributedTests` and `FeatureActivationTests` keep their project references but are updated for moved types; they must pass unchanged in behaviour.

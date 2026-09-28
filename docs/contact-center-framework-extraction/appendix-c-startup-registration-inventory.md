@@ -271,13 +271,6 @@ Regenerate with the script in appendix B when startups change. Use this list in 
 - services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AsteriskRecordingIngestBackgroundTask>()); [stay]
 
 ### Startup.cs / AsteriskContactCenterMediaStartup [RequireFeatures(ContactCenterConstants.Feature.VoiceMedia)]
-## CrestApps.OrchardCore.DialPad
-
-### DialerStartup.cs / DialerStartup [RequireFeatures(DialpadConstants.Feature.Area, ContactCenterConstants.Feature.Voice)]
-- services.AddHttpClient(DialpadConstants.ProviderTechnicalName) [fw]
-- services.AddScoped<IDialpadWebhookService, DialpadWebhookService>(); [fw]
-- services.AddScoped<IDialpadInboundCallRouter, DialpadDirectInboundCallRouter>(); [fw]
-- services.AddScoped<IDialpadWebhookApiService, DialpadWebhookApiService>(); [fw]
 ## CrestApps.OrchardCore.ContactCenter
 
 ### AgentDesktopStartup.cs / AgentDesktopStartup [RequireFeatures(

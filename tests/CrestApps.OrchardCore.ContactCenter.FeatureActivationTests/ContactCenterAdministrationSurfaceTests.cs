@@ -1,7 +1,6 @@
 using System.Reflection;
 using System.Text;
 using CrestApps.OrchardCore.Asterisk;
-using CrestApps.OrchardCore.Dialpad;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
@@ -33,7 +32,6 @@ public sealed class ContactCenterAdministrationSurfaceTests
         "CrestApps.OrchardCore.ContactCenter",
         "CrestApps.OrchardCore.Telephony",
         "CrestApps.OrchardCore.Asterisk",
-        "CrestApps.OrchardCore.Dialpad",
         "CrestApps.OrchardCore.Omnichannel",
     ];
 
@@ -59,9 +57,6 @@ public sealed class ContactCenterAdministrationSurfaceTests
     [InlineData(
         AsteriskConstants.Feature.Area,
         "CrestApps.OrchardCore.Asterisk.Drivers.AsteriskSettingsDisplayDriver")]
-    [InlineData(
-        DialpadConstants.Feature.Area,
-        "CrestApps.OrchardCore.Dialpad.Drivers.DialpadSettingsDisplayDriver")]
     public async Task TelephonyProviderFeature_RegistersItsSettingsSurface(
         string featureId,
         string settingsDriverType)

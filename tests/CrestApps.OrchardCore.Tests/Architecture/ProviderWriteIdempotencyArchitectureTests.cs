@@ -24,8 +24,8 @@ public sealed class ProviderWriteIdempotencyArchitectureTests
         var handlers = GetHandlerTypes();
 
         Assert.True(
-            handlers.Length >= 4,
-            $"Only {handlers.Length} inbox handlers were discovered, which is fewer than the four known to exist. " +
+            handlers.Length >= 3,
+            $"Only {handlers.Length} inbox handlers were discovered, which is fewer than the three known to exist. " +
             "The reflection that finds them has stopped working, so this test would pass without checking anything.");
 
         var violations = new List<string>();
@@ -99,7 +99,7 @@ public sealed class ProviderWriteIdempotencyArchitectureTests
     /// <summary>
     /// One type from each assembly that declares a handler. Reflecting over
     /// <see cref="AppDomain.CurrentDomain"/> alone only sees assemblies the runtime has already loaded, so the
-    /// guard found four handlers in a full run and two under a filter — quietly passing while a handler went
+    /// guard found every handler in a full run and only some under a filter — quietly passing while a handler went
     /// unchecked. Naming a type from each assembly forces the load and makes the result the same every run.
     /// </summary>
     private static readonly Type[] _assemblyAnchors =
@@ -108,7 +108,6 @@ public sealed class ProviderWriteIdempotencyArchitectureTests
         typeof(CrestApps.OrchardCore.ContactCenter.Core.Services.ProviderVoiceEventInboxHandler),
         typeof(CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services.SmsInboundInboxHandler),
         typeof(CrestApps.OrchardCore.Telnyx.Services.TelnyxWebhookInboxHandler),
-        typeof(CrestApps.OrchardCore.Dialpad.Services.DialpadWebhookInboxHandler),
     ];
 
     private static Type[] GetHandlerTypes()

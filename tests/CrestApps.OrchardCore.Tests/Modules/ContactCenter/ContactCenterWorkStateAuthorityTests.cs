@@ -81,7 +81,6 @@ public sealed class ContactCenterWorkStateAuthorityTests
         "CrestApps.OrchardCore.ContactCenter",
         "CrestApps.OrchardCore.Telephony",
         "CrestApps.OrchardCore.Asterisk",
-        "CrestApps.OrchardCore.Dialpad",
     ];
 
     private static readonly string[] _sourceProjectFolders =
@@ -92,7 +91,6 @@ public sealed class ContactCenterWorkStateAuthorityTests
         Path.Combine("Modules", "CrestApps.OrchardCore.ContactCenter"),
         Path.Combine("Modules", "CrestApps.OrchardCore.Telephony"),
         Path.Combine("Modules", "CrestApps.OrchardCore.Asterisk"),
-        Path.Combine("Modules", "CrestApps.OrchardCore.Dialpad"),
     ];
 
     /// <summary>

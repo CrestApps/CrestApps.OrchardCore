@@ -1,5 +1,4 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.Dialpad.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -85,51 +84,10 @@ public sealed class WebhookInboxHandlerReplayTests
     }
 
     [Fact]
-    public async Task DialpadWebhookInboxHandler_ARedeliveredEvent_ReachesTheGuardedServiceBothTimes()
-    {
-        // Arrange
-        // This handler holds no state of its own; its replay contract is entirely that it forwards the parsed
-        // event to the webhook service, which is the thing that deduplicates. A handler that short-circuited or
-        // mutated on the second pass would break that contract silently.
-        var webhookService = new Mock<IDialpadWebhookService>();
-        var handler = new DialpadWebhookInboxHandler(webhookService.Object);
-
-        // Serialized with the same options the handler reads it back with, so the test exercises the real
-        // wire shape rather than a PascalCase body Dialpad would never send.
-        var payload = JsonSerializer.Serialize(
-            new DialpadCallEvent
-            {
-                CallId = "call-1",
-                State = "connected",
-            },
-            DialpadJsonSerializerOptions.Default);
-
-        // Act
-        await handler.HandleAsync(payload, TestContext.Current.CancellationToken);
-        await handler.HandleAsync(payload, TestContext.Current.CancellationToken);
-
-        // Assert
-        webhookService.Verify(
-            service => service.ProcessAsync(It.Is<DialpadCallEvent>(value => value.CallId == "call-1"), It.IsAny<CancellationToken>()),
-            Times.Exactly(2));
-    }
-
-    [Fact]
-    public async Task DialpadWebhookInboxHandler_RefusesAPayloadItCannotRead()
-    {
-        // Arrange
-        var handler = new DialpadWebhookInboxHandler(new Mock<IDialpadWebhookService>().Object);
-
-        // Act & Assert
-        await Assert.ThrowsAnyAsync<Exception>(() => handler.HandleAsync("null", TestContext.Current.CancellationToken));
-    }
-
-
-    [Fact]
     public async Task TelnyxWebhookInboxHandler_ARedeliveredEvent_ReachesTheGuardedServiceBothTimes()
     {
         // Arrange
-        // Like the Dialpad handler, this one holds no state: its replay contract is that it parses and forwards,
+        // This handler holds no state of its own: its replay contract is that it parses and forwards,
         // and the webhook service is what deduplicates. A handler that short-circuited the second delivery would
         // break that contract silently, and every call in a Telnyx tenant flows through here.
         var webhookService = new Mock<ITelnyxWebhookService>();

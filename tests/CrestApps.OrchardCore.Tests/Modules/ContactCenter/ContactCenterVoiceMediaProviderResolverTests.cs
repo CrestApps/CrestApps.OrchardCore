@@ -32,16 +32,16 @@ public sealed class ContactCenterVoiceMediaProviderResolverTests
     {
         // Arrange
         var voiceProvider = CreateVoiceProvider(
-            "dialpad",
+            "contoso",
             ContactCenterVoiceProviderCapabilities.None);
-        var mediaProvider = CreateMediaProvider("dialpad");
+        var mediaProvider = CreateMediaProvider("contoso");
         var voiceProviderResolver = CreateVoiceProviderResolver(voiceProvider);
         var resolver = new ContactCenterVoiceMediaProviderResolver(
             voiceProviderResolver.Object,
             [mediaProvider.Object]);
 
         // Act
-        var result = resolver.Get("dialpad");
+        var result = resolver.Get("contoso");
 
         // Assert
         Assert.Same(mediaProvider.Object, result);
@@ -74,10 +74,10 @@ public sealed class ContactCenterVoiceMediaProviderResolverTests
             "asterisk",
             ContactCenterVoiceProviderCapabilities.DialerDial);
         var secondVoiceProvider = CreateVoiceProvider(
-            "dialpad",
+            "contoso",
             ContactCenterVoiceProviderCapabilities.DialerDial);
         var firstMediaProvider = CreateMediaProvider("asterisk");
-        var secondMediaProvider = CreateMediaProvider("dialpad");
+        var secondMediaProvider = CreateMediaProvider("contoso");
         var orphanedMediaProvider = CreateMediaProvider("unregistered");
         var voiceProviderResolver = new Mock<IContactCenterVoiceProviderResolver>();
 

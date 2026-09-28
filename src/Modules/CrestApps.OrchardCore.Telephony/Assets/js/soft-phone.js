@@ -6477,11 +6477,6 @@
                 return strings.inConference || 'In conference';
             }
 
-            if (normalizeState(call && call.state) === 'Connecting' &&
-                metadataBoolean(call, 'requiresActiveDialpadDevice')) {
-                return strings.answerOnDialpadDevice || 'Answer on your Dialpad device...';
-            }
-
             return statusTextForState(normalizeState(call && call.state));
         }
 

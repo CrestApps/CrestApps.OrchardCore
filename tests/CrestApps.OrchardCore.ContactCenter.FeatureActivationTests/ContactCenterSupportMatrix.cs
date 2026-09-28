@@ -25,21 +25,6 @@ public sealed class ContactCenterSupportMatrix
                         "CrestApps.OrchardCore.Asterisk",
                     ],
                 },
-                new ContactCenterTenantProfile
-                {
-                    Id = "ga-core-dialpad",
-                    ProviderProfile = "dialpad-ga-core",
-                    Features =
-                    [
-                        "CrestApps.OrchardCore.ContactCenter",
-                        "CrestApps.OrchardCore.ContactCenter.Agents",
-                        "CrestApps.OrchardCore.ContactCenter.Queues",
-                        "CrestApps.OrchardCore.ContactCenter.InboundVoice",
-                        "CrestApps.OrchardCore.Telephony.SoftPhone",
-                        "CrestApps.OrchardCore.ContactCenter.Dialer",
-                        "CrestApps.OrchardCore.Dialpad",
-                    ],
-                },
             ],
         };
 
