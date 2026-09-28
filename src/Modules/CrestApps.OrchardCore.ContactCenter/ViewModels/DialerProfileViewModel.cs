@@ -32,7 +32,7 @@ public class DialerProfileViewModel
     public DialerMode Mode { get; set; } = DialerMode.Preview;
 
     /// <summary>
-    /// Gets or sets a value indicating whether the Contact Center Automated Dialer feature is enabled, which
+    /// Gets or sets a value indicating whether the Contact Center Paced Dialing feature is enabled, which
     /// determines whether the Power and Progressive automated pacing modes are offered in the editor.
     /// </summary>
     public bool AutomatedDialerEnabled { get; set; }

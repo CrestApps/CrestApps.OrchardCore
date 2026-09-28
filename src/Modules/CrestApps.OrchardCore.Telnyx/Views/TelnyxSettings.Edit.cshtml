@@ -78,7 +78,7 @@
         <div class="mb-3">
             <label asp-for="DefaultOutboundCallerId">@T["Default outbound caller id"]</label>
             <input type="text" class="form-control" asp-for="DefaultOutboundCallerId" placeholder="+15551234567" />
-            <span class="hint">@T["The E.164 number presented on outbound calls (a Telnyx-owned number). Connect suggests one from your account; change it here anytime. Set a per-agent caller id on the agent profile to override it."]</span>
+            <span class="hint">@T["The E.164 number presented on outbound calls (a Telnyx-owned number). Connect suggests one from your account; change it here anytime. A dialer profile's Caller ID replaces it for the calls that profile places, and a caller sent on from a phone menu to an outside number is shown as the number they dialled."]</span>
         </div>
 
         <div class="mb-3">
@@ -111,13 +111,20 @@
 
             <div class="mb-3">
                 <label asp-for="OrphanedCallHandling">@T["Calls with no local record"]</label>
-                <select class="form-select" asp-for="OrphanedCallHandling" asp-items="@Html.GetEnumSelectList<TelnyxOrphanedCallHandling>()"></select>
+                <select class="form-select" asp-for="OrphanedCallHandling">
+                    <option value="@TelnyxOrphanedCallHandling.Report">@T["Report"]</option>
+                    <option value="@TelnyxOrphanedCallHandling.EndCall">@T["End call"]</option>
+                </select>
                 <span class="hint">@T["What to do when this connection has a call up that the platform has no interaction for - one placed immediately before a restart. Report records it and leaves it connected; End call speaks an apology and hangs up. Reporting is the default because an orphaned call may still be a conversation that is working."]</span>
             </div>
 
             <div class="mb-3">
                 <label asp-for="AnsweringMachineDetection">@T["Answering machine detection"]</label>
-                <select class="form-select" asp-for="AnsweringMachineDetection" asp-items="@Html.GetEnumSelectList<TelnyxAnsweringMachineDetection>()"></select>
+                <select class="form-select" asp-for="AnsweringMachineDetection">
+                    <option value="@TelnyxAnsweringMachineDetection.Premium">@T["Premium"]</option>
+                    <option value="@TelnyxAnsweringMachineDetection.Standard">@T["Standard"]</option>
+                    <option value="@TelnyxAnsweringMachineDetection.Disabled">@T["Off"]</option>
+                </select>
                 <span class="hint">@T["How an automated call learns whether a person or a voicemail answered, so a voicemail is left one message after its tone instead of being talked to. Premium and Standard are billed by Telnyx per call. With detection off, a voicemail is still recognised from its greeting or from a line nobody speaks on."]</span>
             </div>
 

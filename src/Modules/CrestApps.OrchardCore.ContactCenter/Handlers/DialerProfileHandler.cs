@@ -24,7 +24,7 @@ internal sealed class DialerProfileHandler : CatalogEntryHandlerBase<DialerProfi
     /// Initializes a new instance of the <see cref="DialerProfileHandler"/> class.
     /// </summary>
     /// <param name="clock">The clock used to stamp audit times.</param>
-    /// <param name="shellFeaturesManager">The shell features manager used to detect the Automated Dialer feature.</param>
+    /// <param name="shellFeaturesManager">The shell features manager used to detect the Paced Dialing feature.</param>
     /// <param name="phoneNumberService">The phone number service used to validate the outbound caller id.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public DialerProfileHandler(
@@ -77,7 +77,7 @@ internal sealed class DialerProfileHandler : CatalogEntryHandlerBase<DialerProfi
 
         if (profile.Mode == DialerMode.Predictive)
         {
-            context.Result.Fail(new ValidationResult(S["Predictive dialing is not available yet. Choose Manual, Preview, Power, or Progressive."], [nameof(DialerProfile.Mode)]));
+            context.Result.Fail(new ValidationResult(S["Predictive dialing is not available yet. Choose Preview, Power, or Progressive."], [nameof(DialerProfile.Mode)]));
         }
         else if (profile.Mode.RequiresPacedDialerFeature() &&
             !await _shellFeaturesManager.IsFeatureEnabledAsync(ContactCenterConstants.Feature.DialerPaced))
