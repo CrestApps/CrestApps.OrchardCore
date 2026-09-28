@@ -233,7 +233,7 @@ In Orchard Core Admin:
 
 Typically a single contact content type is all you need for the CRM record that represents your customer or contact. You can create more than one when you want to manage different kinds of contacts separately (for example, `Customer` versus `Employee`). The content type can carry any parts and fields your business needs, so model it around the data your agents capture.
 
-The screencast below creates a `Contact` type, attaches `OmnichannelContactPart`, and then logs a new lead with a time zone and a cell phone number:
+The screencast below creates a `Lead` type, attaches `OmnichannelContactPart` and `TitlePart`, and then adds a new lead with a time zone and a cell phone number:
 
 <video controls preload="metadata" width="100%" aria-label="Screen cast of creating a Contact content type and a contact item">
   <source src="/img/docs/omni-contact-type.mp4" type="video/mp4" />
