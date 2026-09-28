@@ -1104,10 +1104,12 @@ namespace CrestApps.OrchardCore.ContactCenter.Services
     }
     public interface IInboundVoiceDigitsSink
     {
+        System.Threading.Tasks.Task<bool> HandleAnnouncementEndedAsync(CrestApps.OrchardCore.ContactCenter.Services.InboundVoiceAnnouncementEndedEvent announcementEvent, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> HandleDigitsAsync(CrestApps.OrchardCore.ContactCenter.Services.InboundVoiceDigitsEvent digitsEvent, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IIvrProvider
     {
+        System.Threading.Tasks.Task<bool> AnnounceAsync(string providerCallId, string text, bool endCallAfter, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> AnswerAsync(string providerCallId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> PromptAsync(string providerCallId, string text, string mediaId, string validDigits, System.Threading.CancellationToken cancellationToken = default);
     }
@@ -1120,6 +1122,13 @@ namespace CrestApps.OrchardCore.ContactCenter.Services
         System.Threading.Tasks.Task StartHoldMusicAsync(string providerCallId, string mediaId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task StartRingbackAsync(string providerCallId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task StopHoldMusicAsync(string providerCallId, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public sealed class InboundVoiceAnnouncementEndedEvent
+    {
+        public InboundVoiceAnnouncementEndedEvent() { }
+        public string DeliveryId { get; set; }
+        public string ProviderCallId { get; set; }
+        public string ProviderName { get; set; }
     }
     public sealed class InboundVoiceDigitsEvent
     {

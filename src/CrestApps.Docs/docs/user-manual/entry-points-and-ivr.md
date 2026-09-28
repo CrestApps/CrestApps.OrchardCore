@@ -54,12 +54,15 @@ An **inbound entry point** is the front door for one or more phone numbers. It d
 | **Business hours calendar** | When the entry point is open. Empty means *Always open*. See [Business hours](business-hours.md). |
 | **Closed action** | What to do with calls while closed: **Hold in queue** (the default), **Voicemail**, **Overflow** (to the overflow queue below), or **Reject**. On a specific-agent line every choice except Reject becomes Voicemail. |
 | **Overflow queue** | The queue that takes after-hours calls when the closed action is Overflow. |
-
-The **Closed message** field is saved but not played yet; use the queue's **Welcome message** or an IVR prompt instead.
+| **Closed message** | Spoken to a caller who rings while the entry point is closed, before the closed action. Once it has been said the caller is held in the queue, moved to the overflow queue or sent to voicemail; with **Reject** the call ends after the message. Empty applies the closed action straight away, with no message. |
 
 ### Welcome and IVR menu
 
-The IVR menu is optional. With no menu, callers go straight to the routing target. The **Welcome message** field on this card is saved but not played yet; put your greeting in the first menu's prompt instead.
+The IVR menu is optional. With no menu, callers go straight to the routing target.
+
+The **Welcome message** is spoken to every caller who rings while the entry point is open: before the first menu's prompt, or, with no menu, before the caller is put through to the target queue or agent. Each caller hears it once. It is not repeated when a caller goes back to the main menu, presses a key the menu does not offer, or is moved on to another queue. Empty means nothing is said.
+
+To speak the welcome, the call is answered. On a line with no menu the caller then hears the queue's hold music, or a ringing tone, instead of the phone network's ringing while they wait for an agent.
 
 ### Voicemail
 

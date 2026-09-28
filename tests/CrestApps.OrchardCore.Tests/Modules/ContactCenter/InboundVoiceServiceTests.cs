@@ -1432,7 +1432,8 @@ public sealed partial class InboundVoiceServiceTests
                 workManager,
                 AuditRecorder,
                 clock.Object,
-                Options.Create(new ContactCenterCoordinationOptions()));
+                Options.Create(new ContactCenterCoordinationOptions()),
+                NullLogger<InboundVoiceCallProcessor>.Instance);
 
             return new VoiceContactCenterCallRouter(
                 VoiceProviderResolver.Object,

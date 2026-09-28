@@ -241,6 +241,24 @@ An inbound entry point can carry a phone menu, built with the visual menu editor
 
 Business hours and the closed action are decided first. A closed entry point applies its closed action (voicemail, reject, hold in queue or overflow) and never plays the menu. An open one answers the caller and plays the first menu instead of queueing them. The menu is started only after inbound routing has committed the call's activity and interaction, so the provider's `call.answered` event always finds the call it belongs to.
 
+### Welcome and closed messages
+
+An entry point's **Welcome message** is spoken to a caller who rings while it is open, and its **Closed message** to one who rings while it is closed. Either is said before anything else happens to the caller:
+
+| Entry point | After the message |
+| --- | --- |
+| Open, with a menu | The first menu's prompt is played. |
+| Open, no menu | The caller is put through to the target the way a menu's **Done** is: a queue line admits them to the queue (a full queue still overflows or goes to voicemail) with its hold music or treatment, and a personal line rings the agent with the entry point's ring window. |
+| Closed, **Hold in queue** or **Overflow** | The caller is admitted to the target or overflow queue and waits there with its hold music or treatment. |
+| Closed, **Voicemail** | The caller is sent to voicemail, greeted and recorded as usual. |
+| Closed, **Reject** | The call is ended once the message has been said. |
+
+An empty message changes nothing: the call is routed exactly as it would be without the field. A message is also not said to a caller who has nowhere to go afterwards (an open or holding entry point whose target queue is missing or disabled); that call is turned away as before.
+
+Like the menu, the message is started after inbound routing commits, and the call is answered to say it. It is spoken with text-to-speech in the same voice and language as menu prompts. With Telnyx it is a `speak` carrying a `cc-ann` client state, and the caller is moved on only when that message's `call.speak.ended` webhook arrives, so the menu, hold music or voicemail greeting never cuts it off. A closed message before **Reject** carries the `cc-bye` client state instead, and its `call.speak.ended` hangs up.
+
+Each caller hears the message once. The call's interaction records which message it is owed and how far it has got (scheduled, speaking, played, skipped or failed). The message is started only from *scheduled* and the caller is moved on only from *speaking*, so a repeated webhook, the end of a later queue announcement, a caller going back to the main menu, and a caller re-routed after an overflow never hear it again or get moved twice. When the provider cannot speak on the call, or refuses the command, a warning is logged and the caller is moved on at once without the message.
+
 ### What each key can do
 
 | Action | What happens to the caller |

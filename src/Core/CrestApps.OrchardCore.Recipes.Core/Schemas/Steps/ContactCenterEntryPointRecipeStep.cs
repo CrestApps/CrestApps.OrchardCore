@@ -37,8 +37,8 @@ public sealed class ContactCenterEntryPointRecipeStep : IRecipeStep
                             ("BusinessHoursCalendarId", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Identifier of the business-hours calendar that gates when the entry point is open. When empty, the entry point is always open.")),
                             ("ClosedAction", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("HoldInQueue", "Voicemail", "Overflow", "Reject").Description("Action taken for calls while the entry point is closed.")),
                             ("OverflowQueueId", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Identifier of the queue used when 'ClosedAction' is 'Overflow'.")),
-                            ("WelcomeMessage", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Greeting or announcement shown to the caller.")),
-                            ("ClosedMessage", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Message played when the entry point is closed.")),
+                            ("WelcomeMessage", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Message spoken once to a caller while the entry point is open, before the IVR menu or the target.")),
+                            ("ClosedMessage", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Message spoken to a caller while the entry point is closed, before the closed action is applied.")),
                             ("Enabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the entry point is enabled.")))
                         .AdditionalProperties(true))
                     .Description("The Contact Center entry points to create or update.")))

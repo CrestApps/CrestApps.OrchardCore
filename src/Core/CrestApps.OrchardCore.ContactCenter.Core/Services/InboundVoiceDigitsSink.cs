@@ -119,6 +119,31 @@ public sealed class InboundVoiceDigitsSink : IInboundVoiceDigitsSink
         return true;
     }
 
+    /// <inheritdoc/>
+    public async Task<bool> HandleAnnouncementEndedAsync(InboundVoiceAnnouncementEndedEvent announcementEvent, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(announcementEvent);
+
+        if (string.IsNullOrEmpty(announcementEvent.ProviderCallId))
+        {
+            return false;
+        }
+
+        var interaction = await _interactionManager.FindByProviderInteractionIdAsync(
+            announcementEvent.ProviderName,
+            announcementEvent.ProviderCallId,
+            cancellationToken);
+
+        if (interaction is null)
+        {
+            return false;
+        }
+
+        // Whether this caller is actually waiting on the message is the router's to decide: it is what records that the
+        // message was said, so a redelivered report conflicts with the first and is recognised on the retry.
+        return await _callRouter.CompleteAnnouncementAsync(interaction.ItemId, cancellationToken);
+    }
+
     // A caller who gives up in the menu abandoned the call. The platform answered them to play it, which the reports
     // would otherwise read as a call somebody answered.
     private async Task RecordHungUpAsync(Interaction interaction, CancellationToken cancellationToken)

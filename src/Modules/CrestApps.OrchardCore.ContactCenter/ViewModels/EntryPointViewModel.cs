@@ -102,12 +102,12 @@ public class EntryPointViewModel
     public IList<SelectListItem> OverflowQueueOptions { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the welcome message.
+    /// Gets or sets the message spoken to a caller while the entry point is open, before the menu or the target.
     /// </summary>
     public string WelcomeMessage { get; set; }
 
     /// <summary>
-    /// Gets or sets the closed message.
+    /// Gets or sets the message spoken to a caller while the entry point is closed, before the closed action.
     /// </summary>
     public string ClosedMessage { get; set; }
 

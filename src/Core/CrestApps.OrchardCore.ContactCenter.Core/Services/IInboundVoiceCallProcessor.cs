@@ -51,4 +51,16 @@ public interface IInboundVoiceCallProcessor
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns><see langword="true"/> when the caller was sent to voicemail; otherwise <see langword="false"/>.</returns>
     Task<bool> SendToVoicemailAsync(string activityItemId, string reasonCode, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Ends a live inbound caller who is in no queue and held by no offer, such as a caller a closed entry point turns
+    /// away once its closed message has been said. The call is rejected through the provider, or, when the provider has
+    /// already been asked to end it once its last message is said, only the end is recorded.
+    /// </summary>
+    /// <param name="activityItemId">The activity whose call is ended.</param>
+    /// <param name="reasonCode">The reason recorded against the activity and interaction.</param>
+    /// <param name="providerEndsCall">Whether the provider is already ending the call itself.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns><see langword="true"/> when the call was ended; otherwise <see langword="false"/>.</returns>
+    Task<bool> EndInboundAsync(string activityItemId, string reasonCode, bool providerEndsCall, CancellationToken cancellationToken = default);
 }
