@@ -32,11 +32,6 @@
                 <input id="@Html.IdFor(m => m.SetDoNotEmail)" name="@Html.NameFor(m => m.SetDoNotEmail)" class="form-check-input js-communication-preference-option" type="checkbox" value="true" checked="@(Model.SetDoNotEmail == true)" />
                 <label for="@Html.IdFor(m => m.SetDoNotEmail)" class="form-check-label">@T["Set do not email"]</label>
             </div>
-
-            <div class="form-check">
-                <input id="@Html.IdFor(m => m.SetDoNotChat)" name="@Html.NameFor(m => m.SetDoNotChat)" class="form-check-input js-communication-preference-option" type="checkbox" value="true" checked="@(Model.SetDoNotChat == true)" />
-                <label for="@Html.IdFor(m => m.SetDoNotChat)" class="form-check-label">@T["Set do not chat"]</label>
-            </div>
         </div>
     </div>
 </div>

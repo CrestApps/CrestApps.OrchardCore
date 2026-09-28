@@ -38,6 +38,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
     private readonly IDbConnectionAccessor _dbConnectionAccessor;
     private readonly IEnumerable<IActivityDialerContributor> _dialerContributors;
     private readonly ActivityBatchSourceOptions _sourceOptions;
+    private readonly IContactOptOutResolver _optOutResolver;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -65,6 +66,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         IDbConnectionAccessor dbConnectionAccessor,
         IEnumerable<IActivityDialerContributor> dialerContributors,
         IOptions<ActivityBatchSourceOptions> sourceOptions,
+        IContactOptOutResolver optOutResolver,
         ILogger<DefaultContactActivityBatchLoader> logger)
     {
         _catalog = catalog;
@@ -77,6 +79,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         _dbConnectionAccessor = dbConnectionAccessor;
         _dialerContributors = dialerContributors;
         _sourceOptions = sourceOptions.Value;
+        _optOutResolver = optOutResolver;
         _logger = logger;
     }
 
@@ -164,6 +167,20 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 await _catalog.UpdateAsync(batch, cancellationToken);
 
                 _logger.LogError("Unable to find the dialer profile '{DialerProfileId}' for the dialer batch with ID '{BatchId}'.", batch.DialerProfileId, batch.ItemId);
+                return;
+            }
+
+            // Dialer activities are queued on their campaign's queue, which is also what agents sign in to. Without
+            // a campaign every enqueue would fail after its activity was created, leaving a half-loaded batch, so
+            // the load stops before creating anything. The load editor refuses this case; older or imported loads
+            // can still reach it.
+            if (string.IsNullOrWhiteSpace(batch.CampaignId) && string.IsNullOrWhiteSpace(flowSettings.CampaignId))
+            {
+                batch.Status = OmnichannelActivityBatchStatus.New;
+
+                await _catalog.UpdateAsync(batch, cancellationToken);
+
+                _logger.LogWarning("The dialer batch with ID '{BatchId}' was not loaded because it has no campaign and its subject '{SubjectContentType}' has no default campaign, so its activities could not be queued for dialing. Choose a campaign on the inventory load or set a default campaign on the subject.", batch.ItemId, batch.SubjectContentType);
                 return;
             }
         }
@@ -358,11 +375,18 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
             {
                 var contentItemsIds = contacts.Select(x => x.ContentItemId).ToArray();
 
+                // A contact counts as a duplicate only while it still has an OPEN activity. Every terminal state
+                // is excluded so a finished contact can be re-loaded: a completed or purged activity was already
+                // excluded, and a failed or cancelled one is just as terminal — leaving those in would let a
+                // single failed dial (for example a busy or no-answer) permanently bar the lead from ever being
+                // loaded again.
                 inQueueActivities = (await readonlySession.QueryIndex<OmnichannelActivityIndex>(index =>
                     index.ContactContentType == batch.ContactContentType &&
                     index.ContactContentItemId.IsIn(contentItemsIds) &&
                     index.Status != ActivityStatus.Completed &&
-                    index.Status != ActivityStatus.Purged, collection: OmnichannelConstants.CollectionName)
+                    index.Status != ActivityStatus.Purged &&
+                    index.Status != ActivityStatus.Failed &&
+                    index.Status != ActivityStatus.Cancelled, collection: OmnichannelConstants.CollectionName)
                 .ListAsync(cancellationToken))
                 .Select(x => x.ContactContentItemId)
                 .ToHashSet();
@@ -413,14 +437,23 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
 
                 if (dialerProfile is not null)
                 {
+                    // The campaign comes from the batch (resolved above); the profile only decides how the
+                    // contacts are dialed, so it no longer overrides which campaign they belong to.
                     activitySource = dialerProfile.ActivitySource;
-                    campaignId = dialerProfile.CampaignId;
                     interactionType = ActivityInteractionType.Manual;
                     channel = OmnichannelConstants.Channels.Phone;
                     automatedSettings.AIProfileId = null;
                     automatedSettings.SpeechToTextDeploymentName = null;
                     automatedSettings.TextToSpeechDeploymentName = null;
                     automatedSettings.TextToSpeechVoiceId = null;
+                    automatedSettings.UseCallAmbience = false;
+                    automatedSettings.AllowAIToUpdateContact = false;
+                    automatedSettings.AllowAIToUpdateSubject = false;
+                    automatedSettings.ResponseDelayMode = OmnichannelResponseDelayMode.None;
+                    automatedSettings.ResponseDelaySeconds = 0;
+                    automatedSettings.ResponseDelayJitterSeconds = 0;
+                    automatedSettings.BusinessHoursCalendarId = null;
+                    automatedSettings.CadenceId = null;
                 }
 
                 activity.Kind = GetActivityKind(channel);
@@ -431,10 +464,38 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 activity.SpeechToTextDeploymentName = automatedSettings.SpeechToTextDeploymentName;
                 activity.TextToSpeechDeploymentName = automatedSettings.TextToSpeechDeploymentName;
                 activity.TextToSpeechVoiceId = automatedSettings.TextToSpeechVoiceId;
+                activity.UseCallAmbience = automatedSettings.UseCallAmbience;
+                activity.AllowAIToUpdateContact = automatedSettings.AllowAIToUpdateContact;
+                activity.AllowAIToUpdateSubject = automatedSettings.AllowAIToUpdateSubject;
+                activity.ResponseDelayMode = automatedSettings.ResponseDelayMode;
+                activity.ResponseDelaySeconds = automatedSettings.ResponseDelaySeconds;
+                activity.ResponseDelayJitterSeconds = automatedSettings.ResponseDelayJitterSeconds;
+                activity.BusinessHoursCalendarId = automatedSettings.BusinessHoursCalendarId;
+                activity.CadenceId = automatedSettings.CadenceId;
                 activity.ContactContentItemId = contact.ContentItemId;
                 activity.ContactContentType = batch.ContactContentType;
                 activity.SubjectContentType = batch.SubjectContentType;
-                activity.PreferredDestination = OmnichannelHelper.GetPreferredDestenation(contact, activity.Channel);
+                // Asked before a destination is looked for, and asked whatever kind of activity this is. The
+                // check underneath excludes an opted-out contact only from automated work, which left an agent
+                // being handed a call sheet containing people who had asked not to be called -- the obligation is
+                // the same whoever ends up dialling. The batch's own "include" flag is the operator's explicit
+                // override for the cases a preference is not meant to block, such as a recall notice; until now
+                // it was stored, editable and read by nothing at all.
+                //
+                // Asked of everybody reachable at the contact's numbers, not only of this record: live, a contact
+                // who had asked not to be called shared a number with a second record, and the second record was
+                // dialled on its other number. Whoever asked to stop may not be reached at any number that leads
+                // to them.
+                if (!IncludesOptedOutContacts(batch, activity.Channel) &&
+                    await _optOutResolver.HasOptedOutAsync(contact, activity.Channel, cancellationToken))
+                {
+                    continue;
+                }
+
+                // The consent question was settled on the line above, so this only has to find the address. Asking
+                // the version that answers both would refuse an address to exactly the contacts the operator just
+                // said to include, and the override would do nothing.
+                activity.PreferredDestination = OmnichannelHelper.FindDestination(contact, activity.Channel);
 
                 if (activity.InteractionType == ActivityInteractionType.Automated &&
                     string.IsNullOrWhiteSpace(activity.PreferredDestination))
@@ -473,10 +534,18 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
 
                 if (dialerProfile is not null)
                 {
+                    // Queueing for the dialer commits the unit of work, and a committed session no longer tracks what
+                    // it loaded before: the batch saved after it would be stored as a second document. The batch goes
+                    // into this commit, and is read again as the commit left it.
+                    await _catalog.UpdateAsync(batch, cancellationToken);
+
                     await dialerContributor.EnqueueAsync(
                         activity.ItemId,
+                        campaignId,
                         dialerProfile,
                         cancellationToken);
+
+                    batch = await _catalog.FindByIdAsync(batch.ItemId, cancellationToken) ?? batch;
                 }
             }
 
@@ -568,5 +637,33 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         }
 
         return ActivityKind.Task;
+    }
+
+    /// <summary>
+    /// Whether this batch was told to load contacts who have asked not to be reached on this channel.
+    /// </summary>
+    /// <remarks>
+    /// Unticked is the form's way of saying "respect the preference", so the default excludes them. Ticking it is
+    /// a deliberate act by somebody who has decided this particular message is not the kind the preference is
+    /// meant to stop -- and it is per channel, because agreeing to a text is not agreeing to a call.
+    /// </remarks>
+    private static bool IncludesOptedOutContacts(OmnichannelActivityBatch batch, string channel)
+    {
+        if (channel == OmnichannelConstants.Channels.Phone)
+        {
+            return batch.IncludeDoNoCalls;
+        }
+
+        if (channel == OmnichannelConstants.Channels.Sms)
+        {
+            return batch.IncludeDoNoSms;
+        }
+
+        if (channel == OmnichannelConstants.Channels.Email)
+        {
+            return batch.IncludeDoNoEmail;
+        }
+
+        return false;
     }
 }

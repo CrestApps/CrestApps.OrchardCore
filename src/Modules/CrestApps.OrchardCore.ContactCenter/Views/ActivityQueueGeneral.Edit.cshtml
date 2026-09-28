@@ -1,0 +1,42 @@
+@using CrestApps.OrchardCore.ContactCenter.Core.Models
+@model QueueViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<div class="ocat-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Description">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Description" class="form-control"></textarea>
+        <span asp-validation-for="Description" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="QueueGroupId">
+    <label asp-for="QueueGroupId" class="ocat-label">@T["Queue group"]</label>
+    <div class="ocat-end">
+        <select asp-for="QueueGroupId" asp-items="Model.QueueGroupOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a queue group"]" data-width="100%" title="@T["No queue group"]">
+            <option value="">@T["No queue group"]</option>
+        </select>
+        <span asp-validation-for="QueueGroupId" class="text-danger"></span>
+        <span class="hint">@T["Queue groups organize the catalog and reports only. They do not change routing, SLA settings, entitlements, or queue behavior."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Enabled">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="Enabled" class="form-check-input" />
+            <label asp-for="Enabled" class="form-check-label">@T["Enabled"]</label>
+        </div>
+        <span class="hint dashed">@T["Disabled queues do not receive routing assignments."]</span>
+    </div>
+</div>

@@ -1,0 +1,28 @@
+@using System.Globalization
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<Cadence>
+
+@{
+    var modifiedAt = Model.Value.ModifiedUtc ?? Model.Value.CreatedUtc;
+}
+
+@if (modifiedAt > DateTime.UnixEpoch)
+{
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@await DisplayAsync(await New.DateTime(Utc: modifiedAt, Format: "g"))">
+        <i class="fa-solid fa-calendar text-secondary" aria-hidden="true"></i>
+        <time datetime="@modifiedAt.ToString(DateTimeFormatConstants.HtmlDateTimeOffset, CultureInfo.InvariantCulture)">@await DisplayAsync(await New.Timespan(Utc: modifiedAt))</time>
+    </span>
+}
+
+@{
+    var stepCount = Model.Value.Steps?.Count ?? 0;
+}
+<span class="badge ta-badge font-weight-normal">
+    <i class="fa-solid fa-bell text-secondary me-1" aria-hidden="true"></i>@T["{0} step(s)", stepCount]
+</span>
+@if (!Model.Value.Enabled)
+{
+    <span class="badge bg-secondary font-weight-normal">@T["Disabled"]</span>
+}

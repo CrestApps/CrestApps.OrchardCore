@@ -23,6 +23,7 @@ Configure the provider under **Settings** -> **Phone Number Verifications** on t
 
 | Setting | Default | Purpose |
 | --- | --- | --- |
+| **Enable this provider** | Off | Makes the provider available. Its other settings appear, and it can be picked as the **Default provider**, only after this is switched on and saved. |
 | **API key** | _(empty)_ | The API key issued by Veriphone. Stored as a protected value. |
 
 ## Authentication

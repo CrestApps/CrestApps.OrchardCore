@@ -41,14 +41,4 @@ public sealed class OmnichannelContactCommunicationPreferenceIndex : MapIndex
     /// Gets or sets the do not email utc.
     /// </summary>
     public DateTime? DoNotEmailUtc { get; set; }
-
-    /// <summary>
-    /// Gets or sets the do not chat.
-    /// </summary>
-    public bool DoNotChat { get; set; }
-
-    /// <summary>
-    /// Gets or sets the do not chat utc.
-    /// </summary>
-    public DateTime? DoNotChatUtc { get; set; }
 }

@@ -1,0 +1,33 @@
+@model ShapeViewModel<SupervisorSoftPhoneViewModel>
+@using System.Text.Json
+
+@{
+    var strings = new Dictionary<string, string>
+    {
+        ["listen"] = T["Listen"].Value,
+        ["whisper"] = T["Whisper"].Value,
+        ["barge"] = T["Barge"].Value,
+        ["listenHint"] = T["Listening: nobody hears you."].Value,
+        ["whisperHint"] = T["Whispering: only the agent hears you."].Value,
+        ["bargeHint"] = T["Barging: the agent and the customer hear you."].Value,
+        ["modes"] = T["Monitoring mode"].Value,
+        ["monitoring"] = T["Monitoring {0}"].Value,
+        ["connectingTo"] = T["Connecting to {0}'s call…"].Value,
+        ["tookOver"] = T["You took over {0}'s call"].Value,
+        ["anAgent"] = T["an agent"].Value,
+        ["stop"] = T["Stop"].Value,
+        ["hangUp"] = T["Hang up"].Value,
+        ["failed"] = T["The supervisor action could not be completed."].Value,
+        ["unavailable"] = T["The Contact Center connection is not available."].Value,
+    };
+}
+
+@* Moved by contact-center-supervisor-phone.js above the phone's call list, and filled while the supervisor is on a call. *@
+<div class="telephony-soft-phone__monitor alert alert-primary py-2 px-2 mb-2 small"
+     data-cc-monitor-banner
+     data-cc-monitor-hub-url="@Model.Value.HubUrl"
+     data-cc-monitor-strings="@JsonSerializer.Serialize(strings)"
+     role="region"
+     aria-label="@T["Supervisor monitoring"]"
+     aria-live="polite"
+     hidden></div>

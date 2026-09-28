@@ -3,7 +3,6 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 using Moq;
 using YesSql;
-using YesSql.Services;
 using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Managements.Handlers;

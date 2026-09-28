@@ -26,6 +26,23 @@ public interface IPhoneNumberService
     bool TryFormatToE164(string phoneNumber, string regionCode, out string e164Number);
 
     /// <summary>
+    /// Formats a phone number the way a person in its own country would write it, for display only.
+    /// </summary>
+    /// <remarks>
+    /// E.164 is the right format to store and dial, and the wrong one to read: an agent reading a customer's
+    /// number back over the phone should see it grouped the way they would say it. A number that cannot be parsed
+    /// is returned exactly as it came in rather than mangled, because showing something wrong is worse than
+    /// showing something plain.
+    /// </remarks>
+    /// <param name="phoneNumber">The phone number, typically in E.164 format.</param>
+    /// <param name="regionCode">
+    /// The ISO 3166-1 alpha-2 region code used as context when the number carries no country calling code, and to
+    /// decide whether the number is local enough to show without its country code.
+    /// </param>
+    /// <returns>The number formatted for reading, or the original input when it cannot be parsed.</returns>
+    string FormatForDisplay(string phoneNumber, string regionCode = null);
+
+    /// <summary>
     /// Validates whether the given phone number is valid for the specified region.
     /// </summary>
     /// <param name="phoneNumber">The phone number to validate.</param>

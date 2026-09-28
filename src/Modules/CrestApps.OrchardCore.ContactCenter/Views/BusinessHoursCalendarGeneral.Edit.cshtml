@@ -1,0 +1,42 @@
+@model BusinessHoursCalendarViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<div class="ocat-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+        <span class="hint">@T["A clear calendar name, such as Support Hours or US Holidays."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Description">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Description" class="form-control"></textarea>
+        <span asp-validation-for="Description" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="TimeZoneId">
+    <label asp-for="TimeZoneId" class="ocat-label">@T["Time zone"]</label>
+    <div class="ocat-end">
+        <select asp-for="TimeZoneId" asp-items="Model.TimeZoneOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a time zone"]" data-width="100%" title="@T["UTC"]">
+            <option value="">@T["UTC"]</option>
+        </select>
+        <span asp-validation-for="TimeZoneId" class="text-danger"></span>
+        <span class="hint">@T["The time zone the weekly schedule and holidays are evaluated in. Leave empty to use UTC."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Enabled">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="Enabled" class="form-check-input" />
+            <label asp-for="Enabled" class="form-check-label">@T["Enabled"]</label>
+        </div>
+        <span class="hint dashed">@T["Disabled calendars do not gate routing; queues that use them route around the clock."]</span>
+    </div>
+</div>

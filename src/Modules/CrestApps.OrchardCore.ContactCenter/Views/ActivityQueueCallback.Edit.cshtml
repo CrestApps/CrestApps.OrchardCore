@@ -1,0 +1,20 @@
+@using CrestApps.OrchardCore.ContactCenter.Core.Models
+@model QueueViewModel
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="Treatment.CallbackDtmfKey">
+    <label asp-for="Treatment.CallbackDtmfKey" class="ocat-label">@T["Callback key"]</label>
+    <div class="ocat-limited">
+        <input asp-for="Treatment.CallbackDtmfKey" class="form-control" maxlength="1" placeholder="1" />
+        <span asp-validation-for="Treatment.CallbackDtmfKey" class="text-danger"></span>
+        <span class="hint">@T["The key a caller presses to keep their place in line and be called back. Leave empty to offer no callback."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="Treatment.CallbackOfferAfterSeconds">
+    <label asp-for="Treatment.CallbackOfferAfterSeconds" class="ocat-label">@T["Offer callback after (seconds)"]</label>
+    <div class="ocat-limited">
+        <input asp-for="Treatment.CallbackOfferAfterSeconds" class="form-control" />
+        <span asp-validation-for="Treatment.CallbackOfferAfterSeconds" class="text-danger"></span>
+        <span class="hint">@T["How long a caller waits before the callback is offered."]</span>
+    </div>
+</div>

@@ -148,6 +148,7 @@ public sealed class McpServerStartup : StartupBase
         // Also register OC implementations under the framework interfaces
         // so the shared WithCrestAppsHandlers() can resolve them.
         services.AddTransient<IConfigureOptions<McpServerOptions>, McpServerOptionsConfiguration>();
+        services.AddSignalOptionsChangeTokenSource<McpServerOptions>();
         services.AddPermissionProvider<McpServerPermissionsProvider>();
 
         // Register the MCP server site settings editor so operators can configure authentication and

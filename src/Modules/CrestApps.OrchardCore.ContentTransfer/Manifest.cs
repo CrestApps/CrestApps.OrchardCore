@@ -7,5 +7,9 @@ using OrchardCore.Modules.Manifest;
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version,
     Description = "Provides bulk content import and export with pluggable file format support.",
-    Category = "Content Management"
+    Category = "Content Management",
+    Dependencies =
+    [
+        "OrchardCore.Resources",
+    ]
 )]

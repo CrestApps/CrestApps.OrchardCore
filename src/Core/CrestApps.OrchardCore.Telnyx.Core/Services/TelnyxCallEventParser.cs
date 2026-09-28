@@ -1,0 +1,241 @@
+using System.Globalization;
+using System.Text.Json;
+using CrestApps.OrchardCore.Telephony.Models;
+
+namespace CrestApps.OrchardCore.Telnyx.Services;
+
+/// <summary>
+/// Parses the Telnyx call-event webhook envelope (<c>{ "data": { "event_type", "payload": { ... } } }</c>)
+/// into the flattened <see cref="TelnyxCallEvent"/> the rest of the pipeline consumes.
+/// </summary>
+public static class TelnyxCallEventParser
+{
+    /// <summary>
+    /// Attempts to parse a validated Telnyx webhook payload into a <see cref="TelnyxCallEvent"/>.
+    /// </summary>
+    /// <param name="payloadJson">The validated Telnyx webhook JSON body.</param>
+    /// <param name="callEvent">When this method returns, contains the parsed event when successful.</param>
+    /// <returns><see langword="true"/> when the payload was parsed; otherwise, <see langword="false"/>.</returns>
+    public static bool TryParse(string payloadJson, out TelnyxCallEvent callEvent)
+    {
+        callEvent = null;
+
+        if (string.IsNullOrWhiteSpace(payloadJson))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(payloadJson);
+            var root = document.RootElement;
+
+            if (root.ValueKind != JsonValueKind.Object ||
+                !root.TryGetProperty("data", out var data) ||
+                data.ValueKind != JsonValueKind.Object)
+            {
+                return false;
+            }
+
+            var eventType = ReadString(data, "event_type");
+
+            if (string.IsNullOrWhiteSpace(eventType))
+            {
+                return false;
+            }
+
+            var payload = data.TryGetProperty("payload", out var payloadElement) && payloadElement.ValueKind == JsonValueKind.Object
+                ? payloadElement
+                : default;
+
+            callEvent = new TelnyxCallEvent
+            {
+                EventType = eventType,
+                EventId = ReadString(data, "id"),
+                OccurredUtc = ReadDateTime(data, "occurred_at"),
+                CallControlId = ReadString(payload, "call_control_id"),
+                CallLegId = ReadString(payload, "call_leg_id"),
+                CallSessionId = ReadString(payload, "call_session_id"),
+                ConnectionId = ReadString(payload, "connection_id"),
+                Direction = ReadString(payload, "direction"),
+                From = ReadFrom(payload),
+                To = ReadTo(payload),
+                State = ReadString(payload, "state"),
+                HangupCause = ReadString(payload, "hangup_cause"),
+                HangupSource = ReadString(payload, "hangup_source"),
+                SipHangupCause = ReadString(payload, "sip_hangup_cause"),
+                CallQualityStats = ReadCallQualityStats(payload),
+                RecordingId = ReadString(payload, "recording_id"),
+                TranscriptionText = ReadNestedString(payload, "transcription_data", "transcript"),
+                TranscriptionIsFinal = ReadNestedBool(payload, "transcription_data", "is_final"),
+                Digits = ReadString(payload, "digits"),
+
+                // Read only for the gather event, for the same reason as the detection result below: "status" is too
+                // common a field name to trust on any other event.
+                GatherStatus = eventType.Equals(TelnyxConstants.Gather.EndedEventType, StringComparison.OrdinalIgnoreCase)
+                    ? ReadString(payload, "status")
+                    : null,
+
+                // Read only for the detection events: "result" is a common enough field name that another event
+                // carrying one must not be mistaken for a verdict on who answered.
+                MachineDetectionResult = eventType.StartsWith("call.machine.", StringComparison.OrdinalIgnoreCase)
+                    ? ReadString(payload, "result")
+                    : null,
+                ClientState = ReadClientState(payload),
+                ConferenceId = ReadString(payload, "conference_id"),
+                FailureReason = ReadString(payload, "failure_reason"),
+            };
+
+            return !string.IsNullOrWhiteSpace(callEvent.CallControlId);
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static ProviderCallQualityStats ReadCallQualityStats(JsonElement payload)
+    {
+        // A hangup carries the provider's measurement of the leg, one side for the audio it received and one for the
+        // audio it sent. Telnyx sends every figure as a string.
+        if (payload.ValueKind != JsonValueKind.Object ||
+            !payload.TryGetProperty("call_quality_stats", out var stats) ||
+            stats.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        var inbound = stats.TryGetProperty("inbound", out var inboundElement) ? inboundElement : default;
+        var outbound = stats.TryGetProperty("outbound", out var outboundElement) ? outboundElement : default;
+
+        var result = new ProviderCallQualityStats
+        {
+            InboundMos = ReadNumber(inbound, "mos"),
+            InboundJitterMaxVarianceMs = ReadNumber(inbound, "jitter_max_variance"),
+            InboundJitterPacketCount = ReadCount(inbound, "jitter_packet_count"),
+            InboundPacketCount = ReadCount(inbound, "packet_count"),
+            InboundSkipPacketCount = ReadCount(inbound, "skip_packet_count"),
+            OutboundPacketCount = ReadCount(outbound, "packet_count"),
+            OutboundSkipPacketCount = ReadCount(outbound, "skip_packet_count"),
+        };
+
+        return result.HasMeasurements ? result : null;
+    }
+
+    private static double? ReadNumber(JsonElement element, string propertyName)
+    {
+        if (element.ValueKind != JsonValueKind.Object || !element.TryGetProperty(propertyName, out var value))
+        {
+            return null;
+        }
+
+        if (value.ValueKind == JsonValueKind.Number && value.TryGetDouble(out var number))
+        {
+            return number;
+        }
+
+        return value.ValueKind == JsonValueKind.String &&
+            double.TryParse(value.GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed) &&
+            double.IsFinite(parsed)
+            ? parsed
+            : null;
+    }
+
+    private static long? ReadCount(JsonElement element, string propertyName)
+    {
+        var number = ReadNumber(element, propertyName);
+
+        return number is >= 0 ? (long)number.Value : null;
+    }
+
+    private static string ReadClientState(JsonElement payload)
+    {
+        // Telnyx transports client_state as a base64-encoded string it echoes back on every event for the leg.
+        var raw = ReadString(payload, "client_state");
+
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return null;
+        }
+
+        try
+        {
+            return System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(raw));
+        }
+        catch (FormatException)
+        {
+            // A value we did not originate (or a non-base64 state) is not actionable; ignore it.
+            return null;
+        }
+    }
+
+    private static string ReadFrom(JsonElement payload)
+    {
+        // Telnyx reports the caller either as a scalar "from" or as a nested "from" object with a "phone_number".
+        var scalar = ReadString(payload, "from");
+
+        return !string.IsNullOrWhiteSpace(scalar) ? scalar : ReadNestedString(payload, "from", "phone_number");
+    }
+
+    private static string ReadTo(JsonElement payload)
+    {
+        var scalar = ReadString(payload, "to");
+
+        return !string.IsNullOrWhiteSpace(scalar) ? scalar : ReadNestedString(payload, "to", "phone_number");
+    }
+
+    private static string ReadString(JsonElement element, string propertyName)
+    {
+        if (element.ValueKind != JsonValueKind.Object || !element.TryGetProperty(propertyName, out var value))
+        {
+            return null;
+        }
+
+        return value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+    }
+
+    private static string ReadNestedString(JsonElement element, string propertyName, string nestedPropertyName)
+    {
+        if (element.ValueKind == JsonValueKind.Object &&
+            element.TryGetProperty(propertyName, out var value) &&
+            value.ValueKind == JsonValueKind.Object &&
+            value.TryGetProperty(nestedPropertyName, out var nested) &&
+            nested.ValueKind == JsonValueKind.String)
+        {
+            return nested.GetString();
+        }
+
+        return null;
+    }
+
+    private static bool ReadNestedBool(JsonElement element, string propertyName, string nestedPropertyName)
+    {
+        if (element.ValueKind == JsonValueKind.Object &&
+            element.TryGetProperty(propertyName, out var value) &&
+            value.ValueKind == JsonValueKind.Object &&
+            value.TryGetProperty(nestedPropertyName, out var nested))
+        {
+            return nested.ValueKind == JsonValueKind.True ||
+                (nested.ValueKind == JsonValueKind.String && bool.TryParse(nested.GetString(), out var parsed) && parsed);
+        }
+
+        return false;
+    }
+
+    private static DateTime? ReadDateTime(JsonElement element, string propertyName)
+    {
+        if (element.ValueKind == JsonValueKind.Object &&
+            element.TryGetProperty(propertyName, out var value) &&
+            value.ValueKind == JsonValueKind.String &&
+            DateTimeOffset.TryParse(
+                value.GetString(),
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                out var parsed))
+        {
+            return parsed.UtcDateTime;
+        }
+
+        return null;
+    }
+}

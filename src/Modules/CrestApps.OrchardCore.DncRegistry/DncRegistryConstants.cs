@@ -35,4 +35,17 @@ public static class DncRegistryConstants
 
         public const string CanadaDnclRegistry = "canadaDnclRegistry";
     }
+
+    /// <summary>
+    /// The data-protection purposes used to encrypt and decrypt the saved registry API keys. The settings
+    /// editor that writes a key and the registry that reads it must use the same purpose, or the saved key
+    /// can never be decrypted. These values are the ones the settings editors have always written with, so
+    /// keys already saved through the admin UI keep working; changing them would orphan every saved key.
+    /// </summary>
+    public static class DataProtectionPurposes
+    {
+        public const string UsaFtcApiKey = "usa-ftc";
+
+        public const string CanadaDnclApiKey = "canada-dncl";
+    }
 }

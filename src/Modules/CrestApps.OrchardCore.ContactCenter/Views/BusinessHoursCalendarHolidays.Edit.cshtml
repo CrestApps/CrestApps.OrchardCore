@@ -1,0 +1,10 @@
+@model BusinessHoursCalendarViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="HolidaysText">
+    <label asp-for="HolidaysText" class="ocat-label">@T["Holidays"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="HolidaysText" class="form-control" rows="4" placeholder="2026-01-01&#10;2026-12-25"></textarea>
+        <span asp-validation-for="HolidaysText" class="text-danger"></span>
+        <span class="hint">@T["One date per line in yyyy-MM-dd format. The queue is closed all day on these dates."]</span>
+    </div>
+</div>

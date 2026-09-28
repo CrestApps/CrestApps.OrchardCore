@@ -5,6 +5,7 @@ using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Deployments;
 using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.AspNetCore.Http;
@@ -20,6 +21,7 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
     private readonly IClock _clock;
     private readonly IPhoneNumberService _phoneNumberService;
     private readonly IEmailAddressValidator _emailAddressValidator;
+    private readonly IEnumerable<IChannelEndpointAddressPolicy> _addressPolicies;
 
     internal readonly IStringLocalizer S;
 
@@ -30,18 +32,21 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
     /// <param name="clock">The clock.</param>
     /// <param name="phoneNumberService">The phone number service for E.164 formatting.</param>
     /// <param name="emailAddressValidator">The email address validator.</param>
+    /// <param name="addressPolicies">The address rules other features contribute for the channels they add.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelChannelEndpointHandler(
         IHttpContextAccessor httpContextAccessor,
         IClock clock,
         IPhoneNumberService phoneNumberService,
         IEmailAddressValidator emailAddressValidator,
+        IEnumerable<IChannelEndpointAddressPolicy> addressPolicies,
         IStringLocalizer<OmnichannelCampaignHandler> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _clock = clock;
         _phoneNumberService = phoneNumberService;
         _emailAddressValidator = emailAddressValidator;
+        _addressPolicies = addressPolicies;
         S = stringLocalizer;
     }
 
@@ -86,6 +91,20 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
         if (endpoint.Channel != OmnichannelConstants.Channels.Phone &&
             endpoint.Channel != OmnichannelConstants.Channels.Sms)
         {
+            // A channel another feature contributes (a messaging channel such as WhatsApp) says how its addresses are
+            // stored, so its endpoints match their inbound traffic the way phone endpoints do.
+            var policy = _addressPolicies.FirstOrDefault(candidate => candidate.AppliesTo(endpoint.Channel));
+
+            if (policy is not null)
+            {
+                var normalized = policy.Normalize(endpoint.Channel, endpoint.Value);
+
+                if (!string.IsNullOrEmpty(normalized))
+                {
+                    endpoint.Value = normalized;
+                }
+            }
+
             return;
         }
 
@@ -128,6 +147,11 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
                 {
                     context.Result.Fail(new ValidationResult(S["Invalid email address."], [nameof(OmnichannelChannelEndpoint.Value)]));
                 }
+            }
+            else if (_addressPolicies.FirstOrDefault(candidate => candidate.AppliesTo(context.Model.Channel)) is { } policy &&
+                policy.Validate(context.Model.Channel, context.Model.Value) is { } error)
+            {
+                context.Result.Fail(new ValidationResult(error, [nameof(OmnichannelChannelEndpoint.Value)]));
             }
         }
 

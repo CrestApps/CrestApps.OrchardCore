@@ -1,0 +1,12 @@
+{
+  "description": "An unrecognized provider state must be ignored rather than guessed at.",
+  "payload": {
+    "call_id": "3456789012345683",
+    "state": "queued",
+    "direction": "inbound",
+    "external_number": "+15125550188"
+  },
+  "expected": {
+    "result": "Ignored"
+  }
+}

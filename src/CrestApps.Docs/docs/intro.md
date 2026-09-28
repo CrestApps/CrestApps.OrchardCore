@@ -63,7 +63,8 @@ The AI modules add Orchard admin experiences and feature wiring on top of CrestA
 ### Telephony
 
 - **[Telephony soft phone](telephony/)**
-- **[Dialpad provider](telephony/dialpad)**
+- **[Telnyx provider](telephony/telnyx)**
+- **[Asterisk provider](telephony/asterisk)**
 
 ### Samples
 

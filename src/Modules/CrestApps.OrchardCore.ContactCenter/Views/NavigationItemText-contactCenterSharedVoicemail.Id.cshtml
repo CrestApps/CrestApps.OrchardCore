@@ -1,0 +1,81 @@
+<span class="icon icon-none" title="@Model.Text"></span>
+<span class="title">@Model.Text</span>
+@* The shared voicemails nobody has picked up yet, in the queues the user may see. The menu is on every admin page, so a
+   message waiting for the queue is noticed from anywhere, and while there is one the group's icon turns red, so a
+   collapsed menu still says so. The count is read once the page has loaded -- the menu never waits on it -- and again
+   every minute and whenever the tab comes back into view. *@
+<span class="badge rounded-pill text-bg-danger ms-auto me-3 align-self-center flex-shrink-0 d-none" title="@T["Voicemails nobody has picked up yet"]" data-shared-voicemail-badge data-admin-menu-attention></span>
+<script at="Foot">
+    (function () {
+        'use strict';
+
+        // The item can be drawn more than once on a page (the menu and the page's own navigation); one reader serves all.
+        if (window.crestAppsSharedVoicemailBadge) {
+            return;
+        }
+
+        window.crestAppsSharedVoicemailBadge = true;
+
+        var url = '@Url.RouteUrl("ContactCenterSharedVoicemailCount")';
+
+        // Turns a menu group's icon red while any item under it shows a count, and back once none does. Every count on
+        // the admin menu marks itself with data-admin-menu-attention, whichever module draws it (the messaging inbox
+        // applies the same rule), so each can run this after it changes.
+        function flagMenuGroups() {
+            document.querySelectorAll('[data-admin-menu-attention]').forEach(function (badge) {
+                var item = badge.closest('li');
+                var group = item && item.parentElement ? item.parentElement.closest('li') : null;
+
+                while (group) {
+                    // The group's own label (a figure > figcaption in the admin theme), not one of its items' labels.
+                    var header = Array.prototype.find.call(group.querySelectorAll('.item-label'), function (label) {
+                        return label.closest('li') === group;
+                    });
+                    var icon = header ? header.querySelector(':scope > .icon') : null;
+
+                    if (icon) {
+                        icon.classList.toggle('text-danger', !!group.querySelector('[data-admin-menu-attention]:not(.d-none)'));
+                    }
+
+                    group = group.parentElement ? group.parentElement.closest('li') : null;
+                }
+            });
+        }
+
+        function show(count) {
+            var value = Math.floor(Number(count) || 0);
+
+            document.querySelectorAll('[data-shared-voicemail-badge]').forEach(function (badge) {
+                badge.textContent = value > 99 ? '99+' : (value > 0 ? String(value) : '');
+                badge.classList.toggle('d-none', value <= 0);
+            });
+
+            flagMenuGroups();
+        }
+
+        function refresh() {
+            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin', cache: 'no-store' })
+                .then(function (response) { return response.ok ? response.json() : null; })
+                .then(function (data) {
+                    if (data && typeof data.count === 'number') {
+                        show(data.count);
+                    }
+                })
+                .catch(function () { /* the next read tries again */ });
+        }
+
+        refresh();
+
+        window.setInterval(function () {
+            if (!document.hidden) {
+                refresh();
+            }
+        }, 60000);
+
+        document.addEventListener('visibilitychange', function () {
+            if (!document.hidden) {
+                refresh();
+            }
+        });
+    })();
+</script>

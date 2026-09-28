@@ -45,9 +45,11 @@ public sealed class TelephonyOAuthController : Controller
     /// </summary>
     /// <param name="returnUrl">An optional local URL to return to when the flow completes outside a popup.</param>
     /// <returns>A redirect to the provider authorization endpoint, or a completion page on failure.</returns>
+    [HttpGet]
+    [Route("Telephony/Connect", Name = TelephonyConstants.RouteNames.OAuthConnect)]
     public async Task<IActionResult> Connect(string returnUrl = null)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, TelephonyPermissions.UseSoftPhone))
+        if (!await CanConnectAsync())
         {
             return Forbid();
         }
@@ -60,7 +62,7 @@ public sealed class TelephonyOAuthController : Controller
             return BuildCompletionPage(false, returnUrl);
         }
 
-        var authorizationRequest = await _authenticationService.GetAuthorizationUrlAsync(redirectUri, state);
+        var authorizationRequest = await _authenticationService.GetAuthorizationUrlAsync(redirectUri, state, HttpContext.RequestAborted);
 
         if (authorizationRequest is null || string.IsNullOrEmpty(authorizationRequest.Url))
         {
@@ -87,15 +89,18 @@ public sealed class TelephonyOAuthController : Controller
     /// <param name="state">The state value returned by the provider.</param>
     /// <param name="error">The error returned by the provider, when the user denied access.</param>
     /// <returns>A completion page that closes the popup or redirects back.</returns>
+    [HttpGet]
+    [Route("Telephony/Connect/Callback", Name = TelephonyConstants.RouteNames.OAuthCallback)]
     public async Task<IActionResult> Callback(string code = null, string state = null, string error = null)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, TelephonyPermissions.UseSoftPhone))
+        if (!await CanConnectAsync())
         {
             return Forbid();
         }
 
         var success = false;
         string returnUrl = null;
+        string failureReason = null;
 
         if (Request.Cookies.TryGetValue(StateCookieName, out var payload))
         {
@@ -112,49 +117,105 @@ public sealed class TelephonyOAuthController : Controller
                     returnUrl = string.IsNullOrEmpty(parts[2]) ? null : parts[2];
                     var codeVerifier = string.IsNullOrEmpty(parts[3]) ? null : parts[3];
 
-                    if (string.IsNullOrEmpty(error) &&
-                        !string.IsNullOrEmpty(code) &&
-                        !string.IsNullOrEmpty(storedState) &&
-                        string.Equals(storedState, state, StringComparison.Ordinal))
+                    if (!string.IsNullOrEmpty(error))
                     {
-                        var result = await _authenticationService.CompleteAuthorizationAsync(code, redirectUri, codeVerifier);
-                        success = result.Succeeded;
+                        failureReason = "The telephony provider reported that access was not granted.";
+
+                        _logger.LogWarning("The telephony provider returned an error during the OAuth authorization callback.");
                     }
+                    else if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(storedState) || !string.Equals(storedState, state, StringComparison.Ordinal))
+                    {
+                        failureReason = "The authorization response could not be validated. Please try connecting again.";
+
+                        _logger.LogWarning("The telephony OAuth callback could not be validated because the authorization code or state was missing or did not match the value that started the flow.");
+                    }
+                    else
+                    {
+                        var result = await _authenticationService.CompleteAuthorizationAsync(code, redirectUri, codeVerifier, HttpContext.RequestAborted);
+                        success = result.Succeeded;
+
+                        if (!success)
+                        {
+                            failureReason = string.IsNullOrEmpty(result.Error)
+                                ? "The telephony provider did not complete the connection."
+                                : result.Error;
+
+                            _logger.LogWarning("The telephony OAuth token exchange did not succeed.");
+                        }
+                    }
+                }
+                else
+                {
+                    failureReason = "The authorization session could not be validated. Please try connecting again.";
+
+                    _logger.LogWarning("The telephony OAuth state cookie payload was malformed, so the authorization callback could not be validated.");
                 }
             }
             catch (Exception ex)
             {
+                failureReason = "The connection could not be completed because of an unexpected error.";
+
                 _logger.LogError(ex, "Failed to complete the telephony OAuth authorization flow.");
             }
         }
+        else
+        {
+            failureReason = "The connection session expired or was blocked by the browser. Please try connecting again.";
 
-        return BuildCompletionPage(success, returnUrl);
+            _logger.LogWarning("The telephony OAuth state cookie was not present on the authorization callback, so the flow could not be validated. This usually indicates the cookie was blocked, expired, or the callback was reached without starting the flow.");
+        }
+
+        return BuildCompletionPage(success, returnUrl, failureReason);
     }
 
     /// <summary>
-    /// Disconnects the current user from the configured provider by removing the stored tokens.
+    /// Disconnects the current user from the configured provider by removing the stored tokens. The
+    /// local connection is always cleared; the response indicates whether the provider confirmed that
+    /// the remote grant was revoked.
     /// </summary>
-    /// <returns>An empty success result.</returns>
-    [HttpPost]
+    /// <returns>
+    /// A success result when the remote grant was revoked, or an accepted result carrying a warning when
+    /// the local connection was cleared but the remote grant may still be active.
+    /// </returns>
+    [HttpPost("Telephony/Disconnect", Name = TelephonyConstants.RouteNames.OAuthDisconnect)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Disconnect()
     {
-        if (!await _authorizationService.AuthorizeAsync(User, TelephonyPermissions.UseSoftPhone))
+        if (!await CanConnectAsync())
         {
             return Forbid();
         }
 
-        await _authenticationService.DisconnectAsync();
+        var result = await _authenticationService.DisconnectAsync(HttpContext.RequestAborted);
 
-        return Ok();
+        if (result.Succeeded)
+        {
+            return Ok();
+        }
+
+        return Ok(new
+        {
+            remoteRevocationConfirmed = false,
+            message = result.Error,
+        });
     }
 
-    private ContentResult BuildCompletionPage(bool success, string returnUrl)
+    private async Task<bool> CanConnectAsync()
+        => await _authorizationService.AuthorizeAsync(User, TelephonyPermissions.UseSoftPhone) ||
+            await _authorizationService.AuthorizeAsync(User, TelephonyPermissions.ManageTelephonySettings);
+
+    private ContentResult BuildCompletionPage(bool success, string returnUrl, string errorMessage = null)
     {
         var safeReturnUrl = !string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl) ? returnUrl : "/";
         var successLiteral = success ? "true" : "false";
         var returnUrlJson = JsonSerializer.Serialize(safeReturnUrl);
-        var message = success ? "You are connected. You can close this window." : "The connection could not be completed. You can close this window.";
+        var resolvedError = success
+            ? null
+            : string.IsNullOrEmpty(errorMessage) ? "The connection could not be completed." : errorMessage;
+        var errorJson = JsonSerializer.Serialize(resolvedError);
+        var message = success
+            ? "You are connected. You can close this window."
+            : $"{resolvedError} You can close this window.";
 
         var html = $$"""
         <!DOCTYPE html>
@@ -165,9 +226,10 @@ public sealed class TelephonyOAuthController : Controller
             <script>
                 (function () {
                     var success = {{successLiteral}};
+                    var error = {{errorJson}};
                     try {
                         if (window.opener) {
-                            window.opener.postMessage({ type: 'telephony-oauth', success: success }, window.location.origin);
+                            window.opener.postMessage({ type: 'telephony-oauth', success: success, error: error }, window.location.origin);
                         }
                     } catch (e) { }
                     if (window.opener) {

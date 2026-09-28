@@ -26,6 +26,13 @@ public class OmnichannelContactPartViewModel
     public bool RequireTimeZone { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the contact time zone is automatically
+    /// detected from the contact's phone number when one was not explicitly selected.
+    /// </summary>
+    [BindNever]
+    public bool AutoDetectTimeZone { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the Do not call preference is available.
     /// </summary>
     [BindNever]
@@ -42,12 +49,6 @@ public class OmnichannelContactPartViewModel
     /// </summary>
     [BindNever]
     public bool UseDoNotSms { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether the Do not chat preference is available.
-    /// </summary>
-    [BindNever]
-    public bool UseDoNotChat { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether phone calls are blocked for this contact.
@@ -78,14 +79,4 @@ public class OmnichannelContactPartViewModel
     /// Gets or sets the UTC timestamp when SMS was blocked for this contact.
     /// </summary>
     public DateTime? DoNotSmsUtc { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether chat is blocked for this contact.
-    /// </summary>
-    public bool DoNotChat { get; set; }
-
-    /// <summary>
-    /// Gets or sets the UTC timestamp when chat was blocked for this contact.
-    /// </summary>
-    public DateTime? DoNotChatUtc { get; set; }
 }

@@ -99,6 +99,16 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
 
         await _session.SaveAsync(list, false, DncRegistryConstants.CollectionName, cancellationToken);
 
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Queued local DNC list {ListId} named '{Name}' ({CountryCode}) from uploaded file '{UploadedFileName}'.",
+                list.ListId,
+                list.Name,
+                list.CountryCode,
+                list.UploadedFileName);
+        }
+
         return list;
     }
 
@@ -612,7 +622,16 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
 
             if (rowIndex == 1 && value.Any(char.IsLetter))
             {
-                AddRowError(list, rowIndex, "Header row ignored.");
+                // A header is expected and optional, not a rejected record. Recording it as an error would
+                // put it in the error download and mark a list whose every number imported as completed
+                // with errors.
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation(
+                        "Skipped the header row of local DNC list {ListId}; it is not counted as a rejected record.",
+                        list.ListId);
+                }
+
                 continue;
             }
 

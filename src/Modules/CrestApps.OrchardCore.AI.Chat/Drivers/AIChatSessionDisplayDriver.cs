@@ -36,11 +36,17 @@ public sealed class AIChatSessionDisplayDriver : DisplayDriver<AIChatSession>
             return null;
         }
 
+        // A stored session without a user is system-owned (an automated SMS or voice conversation). The admin
+        // controller only serves one after a resource access provider authorized the review, and it is a
+        // transcript to read, not a chat to continue.
+        var isReadOnly = !context.IsNew && string.IsNullOrEmpty(session.UserId);
+
         var headerResult = Initialize<ChatSessionCapsuleViewModel>("AIChatSessionHeader", model =>
         {
             model.Session = session;
             model.Profile = profile;
             model.IsNew = context.IsNew;
+            model.IsReadOnly = isReadOnly;
         }).Location("Header");
 
         var contentResult = Initialize<ChatSessionCapsuleViewModel>("AIChatSessionChat", model =>
@@ -48,6 +54,7 @@ public sealed class AIChatSessionDisplayDriver : DisplayDriver<AIChatSession>
             model.Session = session;
             model.Profile = profile;
             model.IsNew = context.IsNew;
+            model.IsReadOnly = isReadOnly;
         }).Location("Content");
 
         return Combine(headerResult, contentResult);

@@ -2,20 +2,21 @@ using System.Security.Claims;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Security;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 
 internal sealed class OmnichannelActivityAuthorizationHandler : AuthorizationHandler<PermissionRequirement>
 {
-    private readonly IServiceProvider _serviceProvider;
+    private readonly Lazy<IAuthorizationService> _authorizationService;
 
-    private IAuthorizationService _authorizationService;
-
-    public OmnichannelActivityAuthorizationHandler(IServiceProvider serviceProvider)
+    /// <param name="authorizationService">
+    /// The authorization service, resolved lazily: an authorization handler that constructed it eagerly would
+    /// close the cycle between the service and the handlers it runs.
+    /// </param>
+    public OmnichannelActivityAuthorizationHandler(Lazy<IAuthorizationService> authorizationService)
     {
-        _serviceProvider = serviceProvider;
+        _authorizationService = authorizationService;
     }
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, PermissionRequirement requirement)
@@ -37,10 +38,7 @@ internal sealed class OmnichannelActivityAuthorizationHandler : AuthorizationHan
             return;
         }
 
-        _authorizationService ??= _serviceProvider.GetService<IAuthorizationService>();
-
-        if (_authorizationService is not null &&
-            await _authorizationService.AuthorizeAsync(context.User, OmnichannelConstants.Permissions.CompleteOwnActivity))
+        if (await _authorizationService.Value.AuthorizeAsync(context.User, OmnichannelConstants.Permissions.CompleteOwnActivity))
         {
             context.Succeed(requirement);
         }

@@ -1,0 +1,27 @@
+@model SecureCaptureSettingsViewModel
+
+<p class="alert alert-info">
+    @T["Hosted secure data capture lets an agent send the customer a one-time secure page to enter sensitive data, such as a card number, so the value is tokenized and never reaches the agent, the supervisor, or the recording. Only a masked reference is retained."]
+</p>
+
+<div class="mb-3">
+    <div class="form-check">
+        <input type="checkbox" asp-for="Enabled" class="form-check-input" />
+        <label asp-for="Enabled" class="form-check-label">@T["Enable agent-assisted secure data capture"]</label>
+        <span class="hint d-block">@T["When disabled, the platform refuses to start a capture regardless of permission or provider capability, and the agent-facing control is never shown."]</span>
+    </div>
+</div>
+
+<div class="mb-3">
+    <label asp-for="LinkTimeToLiveSeconds" class="form-label">@T["Capture link lifetime (seconds)"]</label>
+    <input type="number" min="30" max="3600" asp-for="LinkTimeToLiveSeconds" class="form-control" />
+    <span class="hint">@T["How long the one-time customer capture link stays valid before it expires. Keep this short so an unused link cannot be replayed later."]</span>
+</div>
+
+<div class="mb-3">
+    <div class="form-check">
+        <input type="checkbox" asp-for="PauseRecordingDuringCapture" class="form-check-input" />
+        <label asp-for="PauseRecordingDuringCapture" class="form-check-label">@T["Pause recording during capture"]</label>
+        <span class="hint d-block">@T["When enabled, starting a capture pauses recording for the duration of the capture, so a provider that also records the data path cannot retain the sensitive segment."]</span>
+    </div>
+</div>

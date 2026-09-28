@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Threading.Channels;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
@@ -11,6 +12,7 @@ using CrestApps.Core.AI.Orchestration;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.ResponseHandling;
 using CrestApps.Core.AI.Security;
+using CrestApps.Core.Security;
 using CrestApps.OrchardCore.AI.Chat.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -82,6 +84,152 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
         var httpContext = Context.GetHttpContext();
 
         return await accessEvaluator.CanAccessProfileAsync(httpContext?.User ?? Context.User, profile);
+    }
+
+    /// <summary>
+    /// Loads one of the caller's sessions and sends its messages to the caller, logging why a session could not be
+    /// loaded.
+    /// </summary>
+    /// <param name="sessionId">The session id.</param>
+    /// <remarks>
+    /// This follows <see cref="AIChatHubCore{TClient}.LoadSession(string)"/> step for step. The base answers every
+    /// miss with the same "Session not found." error, which is right for the caller -- it must not reveal whether
+    /// someone else's session exists -- but leaves nothing in the logs to tell the cases apart.
+    /// <para>
+    /// The lookup is user-scoped: <see cref="IAIChatSessionManager.FindAsync"/> only returns a session owned by the
+    /// caller. A system-owned session (an automated SMS or voice conversation, which carries no user) therefore never
+    /// loads here. The admin "Review AI conversation" page reviews those through their owning resource, renders the
+    /// transcript itself and does not call this method; the log below names that case when a client still does.
+    /// </para>
+    /// </remarks>
+    public override async Task LoadSession(string sessionId)
+    {
+        if (string.IsNullOrWhiteSpace(sessionId))
+        {
+            await base.LoadSession(sessionId);
+
+            return;
+        }
+
+        // Captured eagerly, as the base hub does: the caller context is not guaranteed once the invocation returns.
+        var user = Context?.User;
+        var connectionId = Context?.ConnectionId;
+        var userId = user?.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        await ExecuteInScopeAsync(async services =>
+        {
+            var userAccessor = services.GetService<IUserAccessor>();
+
+            if (userAccessor is not null)
+            {
+                userAccessor.User = user;
+            }
+
+            var sessionManager = services.GetRequiredService<IAIChatSessionManager>();
+            var chatSession = await sessionManager.FindAsync(sessionId);
+
+            if (chatSession is null)
+            {
+                await LogUnloadableSessionAsync(sessionManager, sessionId, userId, connectionId);
+                await Clients.Caller.ReceiveError(GetSessionNotFoundMessage());
+
+                return;
+            }
+
+            var profileManager = services.GetRequiredService<IAIProfileManager>();
+            var profile = await profileManager.FindByIdAsync(chatSession.ProfileId);
+
+            if (profile is null)
+            {
+                Logger.LogWarning(
+                    "AI chat hub {HubMethod}: session {SessionId} references profile {ProfileId}, which no longer exists. User {UserId}, connection {ConnectionId}.",
+                    nameof(LoadSession),
+                    sessionId,
+                    chatSession.ProfileId,
+                    userId,
+                    connectionId);
+
+                await Clients.Caller.ReceiveError(GetProfileNotFoundMessage());
+
+                return;
+            }
+
+            if (!await AuthorizeProfileAsync(services, profile))
+            {
+                Logger.LogWarning(
+                    "AI chat hub {HubMethod}: user {UserId} is not authorized for profile {ProfileId} of session {SessionId}. Connection {ConnectionId}.",
+                    nameof(LoadSession),
+                    userId,
+                    profile.ItemId,
+                    sessionId,
+                    connectionId);
+
+                await Clients.Caller.ReceiveError(GetNotAuthorizedMessage());
+
+                return;
+            }
+
+            var promptStore = services.GetRequiredService<IAIChatSessionPromptStore>();
+            var prompts = await promptStore.GetPromptsAsync(chatSession.SessionId);
+            await Groups.AddToGroupAsync(Context.ConnectionId, GetSessionGroupName(chatSession.SessionId));
+            await Clients.Caller.LoadSession(CreateSessionPayload(chatSession, profile, prompts));
+
+            if (Logger.IsEnabled(LogLevel.Debug))
+            {
+                Logger.LogDebug(
+                    "AI chat hub {HubMethod}: loaded session {SessionId} of profile {ProfileId} with {MessageCount} messages for user {UserId} on connection {ConnectionId}.",
+                    nameof(LoadSession),
+                    sessionId,
+                    profile.ItemId,
+                    prompts.Count,
+                    userId,
+                    connectionId);
+            }
+        });
+    }
+
+    private async Task LogUnloadableSessionAsync(
+        IAIChatSessionManager sessionManager,
+        string sessionId,
+        string userId,
+        string connectionId)
+    {
+        // The unscoped lookup only classifies the miss for the log. The caller still gets the generic error.
+        var storedSession = await sessionManager.FindByIdAsync(sessionId);
+
+        if (storedSession is null)
+        {
+            Logger.LogWarning(
+                "AI chat hub {HubMethod}: session {SessionId} does not exist. User {UserId}, connection {ConnectionId}.",
+                nameof(LoadSession),
+                sessionId,
+                userId,
+                connectionId);
+
+            return;
+        }
+
+        if (string.IsNullOrEmpty(storedSession.UserId) && string.IsNullOrEmpty(storedSession.ClientId))
+        {
+            Logger.LogWarning(
+                "AI chat hub {HubMethod}: session {SessionId} of profile {ProfileId} is system-owned (no user or visitor), so the user-scoped lookup cannot return it. System sessions are reviewed read-only through their owning resource and are not loaded over the hub. User {UserId}, connection {ConnectionId}.",
+                nameof(LoadSession),
+                sessionId,
+                storedSession.ProfileId,
+                userId,
+                connectionId);
+
+            return;
+        }
+
+        Logger.LogWarning(
+            "AI chat hub {HubMethod}: session {SessionId} of profile {ProfileId} belongs to another owner (owner is a {OwnerKind}) and was not loaded for user {UserId}. Connection {ConnectionId}.",
+            nameof(LoadSession),
+            sessionId,
+            storedSession.ProfileId,
+            string.IsNullOrEmpty(storedSession.UserId) ? "visitor" : "user",
+            userId,
+            connectionId);
     }
 
     protected override DateTime GetUtcNow()

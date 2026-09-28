@@ -1,0 +1,39 @@
+@using CrestApps.OrchardCore.Users.ViewComponents
+
+@model UserPickerViewModel
+
+@{
+    var endpoint = Url.Content($"~/Admin/api/crestapps/users/search?valueType={Uri.EscapeDataString(Model.ValueType)}");
+
+    foreach (var role in Model.Roles)
+    {
+        if (!string.IsNullOrWhiteSpace(role))
+        {
+            endpoint += $"&role={Uri.EscapeDataString(role)}";
+        }
+    }
+}
+
+@if (!string.IsNullOrEmpty(Model.Label))
+{
+    <label class="form-label">@Model.Label</label>
+}
+
+@await Component.InvokeAsync("ItemSelector", new
+{
+    id = Model.Id,
+    inputName = Model.InputName,
+    endpoint = endpoint,
+    initialItemsJson = Model.InitialItemsJson,
+    multiple = Model.Multiple,
+    enableSearch = true,
+    buttonText = Model.ButtonText ?? (Model.Multiple ? T["Browse users"].Value : T["Select a user"].Value),
+    searchPlaceholder = Model.SearchPlaceholder ?? T["Search users"].Value,
+    emptyResultsText = T["No users found."].Value,
+    noSelectionText = Model.Multiple ? T["No users selected."].Value : T["No user selected."].Value,
+    loadingText = T["Loading users..."].Value,
+    loadErrorText = T["Unable to load users."].Value,
+    resultsTextFormat = T["Found {0} user(s)."].Value,
+    selectedItemsLabel = Model.Multiple ? T["Selected users"].Value : T["Selected user"].Value,
+    availableItemsLabel = T["Available users"].Value
+})

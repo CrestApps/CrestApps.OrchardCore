@@ -12,6 +12,8 @@ using CrestApps.OrchardCore.PhoneNumbers.Verifications.Reports;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.Services;
 using CrestApps.OrchardCore.Reports;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Localization;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
@@ -47,7 +49,7 @@ public sealed class Startup : StartupBase
         services.AddIndexProvider<PhoneNumberVerificationPartIndexProvider>();
         services.AddDataMigration<PhoneNumberVerificationsMigrations>();
 
-        services.AddSingleton<IBackgroundTask, PhoneNumberRevalidationBackgroundTask>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, PhoneNumberRevalidationBackgroundTask>());
     }
 }
 
@@ -83,7 +85,7 @@ public sealed class AbstractApiStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddHttpClient(nameof(AbstractApiPhoneNumberVerificationProvider))
-            .AddStandardResilienceHandler();
+            .AddStandardResilienceHandler(options => options.Retry.DisableForUnsafeHttpMethods());
 
         services.AddPhoneNumberVerificationProvider<AbstractApiPhoneNumberVerificationProvider, AbstractApiPhoneNumberVerificationSettings>(
             PhoneNumberVerificationsConstants.Providers.AbstractApi,
@@ -118,7 +120,7 @@ public sealed class VeriphoneStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddHttpClient(nameof(VeriphonePhoneNumberVerificationProvider))
-            .AddStandardResilienceHandler();
+            .AddStandardResilienceHandler(options => options.Retry.DisableForUnsafeHttpMethods());
 
         services.AddPhoneNumberVerificationProvider<VeriphonePhoneNumberVerificationProvider, VeriphonePhoneNumberVerificationSettings>(
             PhoneNumberVerificationsConstants.Providers.Veriphone,
@@ -153,7 +155,7 @@ public sealed class TwilioStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddHttpClient(nameof(TwilioPhoneNumberVerificationProvider))
-            .AddStandardResilienceHandler();
+            .AddStandardResilienceHandler(options => options.Retry.DisableForUnsafeHttpMethods());
 
         services.AddPhoneNumberVerificationProvider<TwilioPhoneNumberVerificationProvider, TwilioPhoneNumberVerificationSettings>(
             PhoneNumberVerificationsConstants.Providers.Twilio,

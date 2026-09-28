@@ -1,0 +1,112 @@
+@using CrestApps.OrchardCore.ContactCenter.Core.Models
+@model QueueViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+@{
+    var skillRequirementsPrefix = Html.NameFor(m => m.SkillRequirements);
+    var proficiencyLevels = Enumerable.Range(AgentSkill.MinimumProficiency, AgentSkill.MaximumProficiency - AgentSkill.MinimumProficiency + 1).ToArray();
+}
+
+<div class="ocat-wrapper" asp-validation-class-for="RequiredSkills">
+    <label asp-for="RequiredSkills" class="ocat-label">@T["Required skills"]</label>
+    <div class="ocat-end">
+        <select asp-for="RequiredSkills" asp-items="Model.SkillOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-header="@T["Select skills"]" data-width="100%" data-selected-text-format="count > 2" data-count-selected-text="{0} skills selected" title="@T["No required skills"]"></select>
+        <span asp-validation-for="RequiredSkills" class="text-danger"></span>
+        <span class="hint">@T["Agents must have every selected skill, at the default proficiency, to receive work from this queue. Use the requirements below to ask for a specific proficiency, make a skill preferred rather than required, or relax it after a wait."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Skill requirements"]</label>
+    <div class="ocat-end">
+        <div data-repeater data-repeater-prefix="@skillRequirementsPrefix">
+            <table class="table table-sm align-middle mb-2">
+                <thead>
+                    <tr>
+                        <th>@T["Skill"]</th>
+                        <th>@T["Minimum proficiency"]</th>
+                        <th>@T["Required"]</th>
+                        <th>@T["Relax after (seconds)"]</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody data-repeater-rows>
+                    @for (var i = 0; i < Model.SkillRequirements.Count; i++)
+                    {
+                        var row = Model.SkillRequirements[i];
+                        var key = i.ToString();
+
+                        <tr data-repeater-row>
+                            <td>
+                                <input type="hidden" name="@(skillRequirementsPrefix).Index" value="@key" />
+                                <select name="@(skillRequirementsPrefix)[@key].SkillId" class="form-select form-select-sm">
+                                    <option value="">@T["Select a skill"]</option>
+                                    @foreach (var option in Model.SkillOptions)
+                                    {
+                                        <option value="@option.Value" selected="@(string.Equals(option.Value, row.SkillId, StringComparison.OrdinalIgnoreCase))">@option.Text</option>
+                                    }
+                                </select>
+                            </td>
+                            <td>
+                                <select name="@(skillRequirementsPrefix)[@key].MinimumProficiency" class="form-select form-select-sm">
+                                    @foreach (var level in proficiencyLevels)
+                                    {
+                                        <option value="@level" selected="@(level == row.MinimumProficiency)">@level</option>
+                                    }
+                                </select>
+                            </td>
+                            <td>
+                                <input type="checkbox" name="@(skillRequirementsPrefix)[@key].Required" value="true" class="form-check-input" checked="@row.Required" />
+                                <input type="hidden" name="@(skillRequirementsPrefix)[@key].Required" value="false" />
+                            </td>
+                            <td>
+                                <input type="number" min="0" name="@(skillRequirementsPrefix)[@key].RelaxAfterSeconds" value="@row.RelaxAfterSeconds" class="form-control form-control-sm" />
+                            </td>
+                            <td class="text-end">
+                                <button type="button" class="btn btn-sm btn-outline-danger" data-repeater-remove title="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <template data-repeater-template>
+                <tr data-repeater-row>
+                    <td>
+                        <input type="hidden" name="@(skillRequirementsPrefix).Index" value="__KEY__" />
+                        <select name="@(skillRequirementsPrefix)[__KEY__].SkillId" class="form-select form-select-sm">
+                            <option value="">@T["Select a skill"]</option>
+                            @foreach (var option in Model.SkillOptions)
+                            {
+                                <option value="@option.Value">@option.Text</option>
+                            }
+                        </select>
+                    </td>
+                    <td>
+                        <select name="@(skillRequirementsPrefix)[__KEY__].MinimumProficiency" class="form-select form-select-sm">
+                            @foreach (var level in proficiencyLevels)
+                            {
+                                <option value="@level" selected="@(level == AgentSkill.DefaultProficiency)">@level</option>
+                            }
+                        </select>
+                    </td>
+                    <td>
+                        <input type="checkbox" name="@(skillRequirementsPrefix)[__KEY__].Required" value="true" class="form-check-input" checked />
+                        <input type="hidden" name="@(skillRequirementsPrefix)[__KEY__].Required" value="false" />
+                    </td>
+                    <td>
+                        <input type="number" min="0" name="@(skillRequirementsPrefix)[__KEY__].RelaxAfterSeconds" value="0" class="form-control form-control-sm" />
+                    </td>
+                    <td class="text-end">
+                        <button type="button" class="btn btn-sm btn-outline-danger" data-repeater-remove title="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                    </td>
+                </tr>
+            </template>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-repeater-add><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add skill requirement"]</button>
+        </div>
+        <span class="hint">@T["A required skill excludes agents below the minimum proficiency; a preferred skill only ranks them lower. A relax time drops the requirement once a caller has waited that long, so a specialist queue still answers when no specialist is free."]</span>
+    </div>
+</div>
+
+@await Html.PartialAsync("_ContactCenterRepeaterScript")

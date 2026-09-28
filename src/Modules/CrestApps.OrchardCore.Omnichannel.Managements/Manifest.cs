@@ -33,6 +33,20 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Name = "Omnichannel Channel Endpoints",
+    Id = OmnichannelConstants.Features.ChannelEndpoints,
+    Category = "Contact Center",
+    Description = "Adds only the channel-endpoint (number/address) administration screen and services, so a feature that needs to reuse channel endpoints can depend on this without pulling in the full Omnichannel management screens.",
+    EnabledByDependencyOnly = true,
+    Dependencies =
+    [
+        OmnichannelConstants.Features.Activities,
+        "CrestApps.OrchardCore.Resources",
+        "OrchardCore.Resources",
+    ]
+)]
+
+[assembly: Feature(
     Name = "Omnichannel Management",
     Id = OmnichannelConstants.Features.Managements,
     Category = "Contact Center",
@@ -40,7 +54,9 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         OmnichannelConstants.Features.Activities,
+        OmnichannelConstants.Features.ChannelEndpoints,
         "CrestApps.OrchardCore.Resources",
+        "OrchardCore.Resources",
         "OrchardCore.ContentTypes",
     ]
 )]

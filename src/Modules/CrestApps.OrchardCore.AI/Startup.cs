@@ -15,6 +15,7 @@ using CrestApps.Core.Services;
 using CrestApps.Core.Templates.Extensions;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Handlers;
+using CrestApps.OrchardCore.AI.Core.Indexes;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Deployments.Drivers;
 using CrestApps.OrchardCore.AI.Deployments.Sources;
@@ -91,6 +92,7 @@ public sealed class Startup : StartupBase
             .AddScoped<IAIToolInstanceAccessor, DefaultAIToolInstanceAccessor>()
             .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
             .AddTransient<IConfigureOptions<GeneralAIOptions>, GeneralAIOptionsConfiguration>()
+            .AddSignalOptionsChangeTokenSource<GeneralAIOptions>()
             .AddTransient<IConfigureOptions<DefaultAIOptions>, DefaultAIOptionsConfiguration>()
             .AddNavigationProvider<AIProfileAdminMenu>();
 
@@ -299,8 +301,9 @@ public sealed class ChatCoreStartup : StartupBase
         services
             .AddCoreAIChatSessionStoresYesSql()
             .AddScoped<IAIChatSessionManager, DefaultAIChatSessionManager>()
-            .AddDataMigration<AIChatSessionIndexMigrations>()
-            .AddSingleton<IBackgroundTask, AIChatSessionCloseBackgroundTask>();
+            .AddDataMigration<AIChatSessionIndexMigrations>();
+
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AIChatSessionCloseBackgroundTask>());
 
         services.AddDisplayDriver<AIProfile, AIProfileResponseHandlerDisplayDriver>();
 
@@ -417,7 +420,13 @@ public sealed class ChatAnalyticsStartup : StartupBase
         services
             .AddDataMigration<AIChatSessionMetricsIndexMigrations>()
             .AddDataMigration<AICompletionUsageIndexMigrations>()
-            .AddIndexProvider<AICompletionUsageIndexProvider>();
+            .AddIndexProvider<AICompletionUsageIndexProvider>()
+            .AddDataMigration<AIVoiceSessionSummaryIndexMigrations>()
+            .AddIndexProvider<AIVoiceSessionSummaryIndexProvider>();
+
+        // The table is this feature's, so the store that fills it is too. Without it the tenant keeps the default
+        // that records nothing, and the voice loop's summaries are dropped rather than written to a missing table.
+        services.Replace(ServiceDescriptor.Scoped<IAIVoiceSessionSummaryStore, YesSqlAIVoiceSessionSummaryStore>());
     }
 }
 

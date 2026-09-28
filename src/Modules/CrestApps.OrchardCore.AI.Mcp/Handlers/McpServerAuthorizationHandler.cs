@@ -25,7 +25,7 @@ internal sealed class McpServerAuthorizationHandler : AuthorizationHandler<McpSe
         AuthorizationHandlerContext context,
         McpServerAuthorizationRequirement requirement)
     {
-        var options = _serviceProvider.GetRequiredService<IOptions<McpServerOptions>>().Value;
+        var options = _serviceProvider.GetRequiredService<IOptionsMonitor<McpServerOptions>>().CurrentValue;
 
         switch (options.AuthenticationType)
         {

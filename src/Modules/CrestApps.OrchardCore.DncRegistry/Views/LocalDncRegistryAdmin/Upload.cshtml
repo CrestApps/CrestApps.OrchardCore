@@ -34,12 +34,13 @@
     <div class="card-body">
         <ul>
             <li>@T["The uploaded file must be a CSV file (comma-separated values)."]</li>
-            <li>@T["The file must contain a single column with phone numbers only."]</li>
+            <li>@T["Put one phone number on each row, in a single column."]</li>
             <li>@T["If your data source has multiple columns or tabs, export the phone number column to a separate CSV file first."]</li>
-            <li>@T["A header row (e.g., \"Phone Number\") is optional and will be automatically skipped if detected."]</li>
-            <li>@T["Blank rows, duplicate phone numbers, and invalid values are automatically skipped and tracked as rejected records."]</li>
-            <li>@T["Phone numbers are normalized (all non-digit characters removed) before storage for consistent lookup."]</li>
-            <li>@T["After the import completes, rejected records can be downloaded as a CSV file with reasons for rejection."]</li>
+            <li>@T["A header row (e.g., \"Phone Number\") is optional. It is skipped and is not counted as a rejected record."]</li>
+            <li>@T["Numbers that do not start with a + are read as numbers of the selected country."]</li>
+            <li>@T["Each number is converted to its international (E.164) format before it is stored. Numbers that cannot be converted to a valid international number are rejected."]</li>
+            <li>@T["Blank rows, rows with more than one value, and duplicate phone numbers are also skipped and tracked as rejected records."]</li>
+            <li>@T["After the import completes, use Download errors in the list's actions to download the rejected records, with the reason for each, as a CSV file."]</li>
             <li>@T["To replace an existing list, upload the new file and then delete the old list from the registry."]</li>
         </ul>
     </div>

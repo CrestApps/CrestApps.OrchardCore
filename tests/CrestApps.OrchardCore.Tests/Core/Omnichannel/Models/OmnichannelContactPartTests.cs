@@ -8,7 +8,6 @@ public sealed class OmnichannelContactPartTests
     [InlineData("Call")]
     [InlineData("Email")]
     [InlineData("Sms")]
-    [InlineData("Chat")]
     public void SetPreference_WhenEnabledFirstTime_ShouldSetFlagAndTimestamp(string preference)
     {
         // Arrange
@@ -27,7 +26,6 @@ public sealed class OmnichannelContactPartTests
     [InlineData("Call")]
     [InlineData("Email")]
     [InlineData("Sms")]
-    [InlineData("Chat")]
     public void SetPreference_WhenAlreadyEnabled_ShouldPreserveOriginalTimestamp(string preference)
     {
         // Arrange
@@ -48,7 +46,6 @@ public sealed class OmnichannelContactPartTests
     [InlineData("Call")]
     [InlineData("Email")]
     [InlineData("Sms")]
-    [InlineData("Chat")]
     public void SetPreference_WhenDisabled_ShouldClearFlagAndTimestamp(string preference)
     {
         // Arrange
@@ -77,9 +74,6 @@ public sealed class OmnichannelContactPartTests
             case "Sms":
                 part.SetDoNotSms(value, utcNow);
                 break;
-            case "Chat":
-                part.SetDoNotChat(value, utcNow);
-                break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(preference), preference, null);
         }
@@ -92,7 +86,6 @@ public sealed class OmnichannelContactPartTests
             "Call" => part.DoNotCall,
             "Email" => part.DoNotEmail,
             "Sms" => part.DoNotSms,
-            "Chat" => part.DoNotChat,
             _ => throw new ArgumentOutOfRangeException(nameof(preference), preference, null),
         };
     }
@@ -104,7 +97,6 @@ public sealed class OmnichannelContactPartTests
             "Call" => part.DoNotCallUtc,
             "Email" => part.DoNotEmailUtc,
             "Sms" => part.DoNotSmsUtc,
-            "Chat" => part.DoNotChatUtc,
             _ => throw new ArgumentOutOfRangeException(nameof(preference), preference, null),
         };
     }

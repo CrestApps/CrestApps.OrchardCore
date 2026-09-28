@@ -7,7 +7,6 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using OrchardCore;
 using OrchardCore.ContentManagement;
 using OrchardCore.Entities;
 using OrchardCore.Modules;
@@ -293,6 +292,66 @@ public sealed class DefaultSubjectActionExecutorTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_TryAgainOnAnAutomatedCall_TheRetryIsPlacedTheSameWay()
+    {
+        // Arrange
+        // An automated call that rang out was retried as a manual task with no AI profile, so the processor picked
+        // it up with nothing to place the call and the contact was never tried again.
+        var action = CreateAction(OmnichannelConstants.ActionTypes.TryAgain, SubjectActionOwnerAssignmentType.SameOwner);
+        var session = new Mock<ISession>();
+        OmnichannelActivity savedActivity = null;
+
+        SetupSave(session, activity => savedActivity = activity);
+
+        var executor = CreateExecutor(action, session);
+        var context = CreateContext();
+        var activity = context.Activity;
+        activity.Kind = ActivityKind.Call;
+        activity.Source = ActivitySources.Automatic;
+        activity.InteractionType = ActivityInteractionType.Automated;
+        activity.AISessionId = "previous-session-id";
+        activity.AIProfileId = "ai-profile-id";
+        activity.SpeechToTextDeploymentName = "stt";
+        activity.TextToSpeechDeploymentName = "tts";
+        activity.TextToSpeechVoiceId = "voice";
+        activity.UseCallAmbience = true;
+        activity.AllowAIToUpdateContact = true;
+        activity.AllowAIToUpdateSubject = false;
+        activity.ResponseDelayMode = OmnichannelResponseDelayMode.Fixed;
+        activity.ResponseDelaySeconds = 3;
+        activity.ResponseDelayJitterSeconds = 2;
+        activity.BusinessHoursCalendarId = "calendar-id";
+        activity.CadenceId = "cadence-id";
+        activity.ReEngagementAttempts = 2;
+        activity.LastReEngagementUtc = _now.AddHours(-1);
+
+        // Act
+        await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(savedActivity);
+        Assert.Equal(ActivityKind.Call, savedActivity.Kind);
+        Assert.Equal(ActivitySources.Automatic, savedActivity.Source);
+        Assert.Equal("ai-profile-id", savedActivity.AIProfileId);
+        Assert.Equal("stt", savedActivity.SpeechToTextDeploymentName);
+        Assert.Equal("tts", savedActivity.TextToSpeechDeploymentName);
+        Assert.Equal("voice", savedActivity.TextToSpeechVoiceId);
+        Assert.True(savedActivity.UseCallAmbience);
+        Assert.True(savedActivity.AllowAIToUpdateContact);
+        Assert.False(savedActivity.AllowAIToUpdateSubject);
+        Assert.Equal(OmnichannelResponseDelayMode.Fixed, savedActivity.ResponseDelayMode);
+        Assert.Equal(3, savedActivity.ResponseDelaySeconds);
+        Assert.Equal(2, savedActivity.ResponseDelayJitterSeconds);
+        Assert.Equal("calendar-id", savedActivity.BusinessHoursCalendarId);
+        Assert.Equal("cadence-id", savedActivity.CadenceId);
+
+        // The retry is a new conversation, and its re-engagement count starts over.
+        Assert.Null(savedActivity.AISessionId);
+        Assert.Equal(0, savedActivity.ReEngagementAttempts);
+        Assert.Null(savedActivity.LastReEngagementUtc);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_WithoutPreparationNotes_NewActivityHasNoInstructions()
     {
         // Arrange
@@ -314,17 +373,93 @@ public sealed class DefaultSubjectActionExecutorTests
         Assert.Null(savedActivity.Instructions);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_WhenAPreferenceIsSet_SavesTheContact()
+    {
+        // Arrange
+        // The preference was applied to the content item in memory and nothing wrote it back, so a customer who
+        // asked not to be called was dispositioned correctly and dialled again on the next load.
+        var action = CreateAction(OmnichannelConstants.ActionTypes.Finish, SubjectActionOwnerAssignmentType.SameOwner);
+        action.SetDoNotCall = true;
+
+        var session = new Mock<ISession>();
+        var contentManager = new Mock<IContentManager>();
+        var executor = CreateExecutor(action, session, contentManager: contentManager);
+
+        var contact = new ContentItem();
+        var context = CreateContext();
+        context.Contact = contact;
+        context.Activity.ContactResolutionStatus = ContactResolutionStatus.Resolved;
+
+        // Act
+        await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        contentManager.Verify(x => x.UpdateAsync(contact), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenThePublishedContactChanges_ThatChangeIsPublished()
+    {
+        // Arrange
+        // The lists that decide who gets dialled query published contacts, so a preference left on the draft
+        // suppresses nothing.
+        var action = CreateAction(OmnichannelConstants.ActionTypes.Finish, SubjectActionOwnerAssignmentType.SameOwner);
+        action.SetDoNotSms = true;
+
+        var session = new Mock<ISession>();
+        var contentManager = new Mock<IContentManager>();
+        var executor = CreateExecutor(action, session, contentManager: contentManager);
+
+        var contact = new ContentItem { Published = true };
+        var context = CreateContext();
+        context.Contact = contact;
+        context.Activity.ContactResolutionStatus = ContactResolutionStatus.Resolved;
+
+        // Act
+        await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        contentManager.Verify(x => x.PublishAsync(contact), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenNoPreferenceIsSet_LeavesTheContactAlone()
+    {
+        // Arrange
+        // Most dispositions say nothing about how the customer may be contacted, and those must not write a new
+        // version of the contact every time an activity is completed.
+        var action = CreateAction(OmnichannelConstants.ActionTypes.Finish, SubjectActionOwnerAssignmentType.SameOwner);
+
+        var session = new Mock<ISession>();
+        var contentManager = new Mock<IContentManager>();
+        var executor = CreateExecutor(action, session, contentManager: contentManager);
+
+        var contact = new ContentItem { Published = true };
+        var context = CreateContext();
+        context.Contact = contact;
+        context.Activity.ContactResolutionStatus = ContactResolutionStatus.Resolved;
+
+        // Act
+        await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        contentManager.Verify(x => x.UpdateAsync(It.IsAny<ContentItem>()), Times.Never);
+        contentManager.Verify(x => x.PublishAsync(It.IsAny<ContentItem>()), Times.Never);
+    }
+
     private static DefaultSubjectActionExecutor CreateExecutor(
         SubjectAction action,
         Mock<ISession> session,
-        ILocalClock localClock = null)
+        ILocalClock localClock = null,
+        Mock<IContentManager> contentManager = null)
     {
         var actionCatalog = new Mock<ISourceCatalog<SubjectAction>>();
         actionCatalog
             .Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { action });
 
-        var contentManager = new Mock<IContentManager>();
+        contentManager ??= new Mock<IContentManager>();
         contentManager
             .Setup(x => x.NewAsync(It.IsAny<string>()))
             .ReturnsAsync((string contentType) => new ContentItem { ContentType = contentType });

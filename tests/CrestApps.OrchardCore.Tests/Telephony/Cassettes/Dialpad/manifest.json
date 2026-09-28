@@ -1,0 +1,6 @@
+{
+  "provider": "dialpad",
+  "contractKind": "recorded-payload",
+  "description": "Recorded Dialpad call event webhook deliveries. Dialpad does not publish a machine-readable schema that can be vendored the way the Asterisk project publishes its REST Interface declarations, so this contract is payload-bound rather than specification-bound: it pins the production normalizer to concrete deliveries and enforces a coverage floor over every provider token the normalizer interprets.",
+  "payloadEncoding": "snake_case JSON delivered either as a bare body or as an HS256 JWT whose payload claim carries the call event"
+}

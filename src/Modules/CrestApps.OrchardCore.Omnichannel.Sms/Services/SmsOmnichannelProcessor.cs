@@ -6,6 +6,7 @@ using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Fluid;
 using Fluid.Values;
@@ -32,6 +33,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
     private readonly ISmsService _smsService;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IContentManager _contentManager;
+    private readonly IContactOptOutResolver _optOutResolver;
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
@@ -60,6 +62,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
         ISmsService smsService,
         ILiquidTemplateManager liquidTemplateManager,
         IContentManager contentManager,
+        IContactOptOutResolver optOutResolver,
         IClock clock,
         IStringLocalizer<SmsOmnichannelProcessor> stringLocalizer)
     {
@@ -72,6 +75,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
         _smsService = smsService;
         _liquidTemplateManager = liquidTemplateManager;
         _contentManager = contentManager;
+        _optOutResolver = optOutResolver;
         _clock = clock;
         S = stringLocalizer;
     }
@@ -178,6 +182,19 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
             }
         }
 
+        // Asked here as well as in the pass that schedules this, because this is not the only way in: the
+        // "Place Call or Send Message" workflow task calls StartAsync directly and screens nothing, and a retry
+        // re-enters here too. This method is the last code before the carrier and it has already loaded the
+        // contact for the template, so the question costs nothing and asking it is what makes the guarantee hold
+        // for every caller rather than for one of them.
+        //
+        // Asked of everybody reachable at the number, not only this record: a person who said stop on one record
+        // is the same person on another that holds their number, and texting them there is the same violation.
+        if (await _optOutResolver.HasOptedOutAsync(contact, activity.Channel, cancellationToken))
+        {
+            return;
+        }
+
         var smsResult = await _smsService.SendAsync(message, cancellationToken);
 
         if (smsResult.Succeeded)
@@ -188,6 +205,10 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
                 SessionId = chatSession.SessionId,
                 Role = ChatRole.Assistant,
                 Content = initialPrompt,
+                // Stamp the opening message so it orders before the customer's first reply. Without a time it
+                // defaults to DateTime.MinValue and sorts ahead of every later message, corrupting the owed-reply
+                // scan and the transcript for the rest of the conversation.
+                CreatedUtc = _clock.UtcNow,
             }, cancellationToken);
 
             chatSession.LastActivityUtc = _clock.UtcNow;

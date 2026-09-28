@@ -1,0 +1,9 @@
+# SanitizeLogValue replaces every control character, line breaks included, so a value it returns cannot break a
+# log line or forge a new one. The analysis cannot see that through the helper's character loop, so every value
+# passed through it was still reported as log injection, including values sanitized all along.
+extensions:
+  - addsTo:
+      pack: codeql/csharp-all
+      extensible: barrierModel
+    data:
+      - ["CrestApps.Core.Support", "SanitizedLoggingExtensions", False, "SanitizeLogValue", "(System.String)", "", "ReturnValue", "log-injection", "manual"]

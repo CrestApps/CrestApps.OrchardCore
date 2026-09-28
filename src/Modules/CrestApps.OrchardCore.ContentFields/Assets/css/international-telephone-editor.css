@@ -22,3 +22,13 @@
   flex: 1 1 auto;
   min-width: 0;
 }
+
+/* The dial placeholder holds the action buttons injected by other features (soft-phone call, send SMS, ...).
+   Keep it a non-shrinking horizontal row so those buttons sit next to each other instead of wrapping into a
+   vertical stack when the tel input grows to fill the row. */
+.phone-field-dial {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 0.25rem;
+}

@@ -1,0 +1,46 @@
+@using CrestApps.OrchardCore.ContactCenter.Core.Models
+@model QueueViewModel
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="MaxQueueSize">
+    <label asp-for="MaxQueueSize" class="ocat-label">@T["Maximum callers waiting"]</label>
+    <div class="ocat-limited">
+        <input asp-for="MaxQueueSize" class="form-control" />
+        <span asp-validation-for="MaxQueueSize" class="text-danger"></span>
+        <span class="hint">@T["How many callers may wait at once. A caller who arrives when the queue is full gets the queue-full action. Set to 0 for no limit."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="QueueFullAction">
+    <label asp-for="QueueFullAction" class="ocat-label">@T["Queue-full action"]</label>
+    <div class="ocat-limited">
+        <select asp-for="QueueFullAction" class="form-select">
+            <option value="@QueueMaxWaitAction.None">@T["Admit anyway"]</option>
+            <option value="@QueueMaxWaitAction.Overflow">@T["Overflow to the first queue with room"]</option>
+            <option value="@QueueMaxWaitAction.Voicemail">@T["Send to voicemail"]</option>
+        </select>
+        <span asp-validation-for="QueueFullAction" class="text-danger"></span>
+        <span class="hint">@T["Overflow walks the overflow chain (or the single overflow queue) and admits the caller to the first queue that is enabled and has room; when none has, the caller is admitted here over the limit rather than dropped."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="MaxWaitSeconds">
+    <label asp-for="MaxWaitSeconds" class="ocat-label">@T["Maximum wait (seconds)"]</label>
+    <div class="ocat-limited">
+        <input asp-for="MaxWaitSeconds" class="form-control" />
+        <span asp-validation-for="MaxWaitSeconds" class="text-danger"></span>
+        <span class="hint">@T["How long this queue is willing to make anybody wait, measured from when they entered it. Set to 0 for no limit."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="MaxWaitAction">
+    <label asp-for="MaxWaitAction" class="ocat-label">@T["Maximum-wait action"]</label>
+    <div class="ocat-limited">
+        <select asp-for="MaxWaitAction" class="form-select">
+            <option value="@QueueMaxWaitAction.None">@T["Keep waiting"]</option>
+            <option value="@QueueMaxWaitAction.Overflow">@T["Overflow to the next queue"]</option>
+            <option value="@QueueMaxWaitAction.Voicemail">@T["Send to voicemail"]</option>
+        </select>
+        <span asp-validation-for="MaxWaitAction" class="text-danger"></span>
+        <span class="hint">@T["Applied by the queue sweep within about ten seconds of the limit. Overflow takes the first hop the caller has not been through regardless of that hop's own wait; voicemail needs the Voice feature, which moves the live call."]</span>
+    </div>
+</div>

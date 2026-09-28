@@ -1,0 +1,24 @@
+@using CrestApps.OrchardCore.Omnichannel.Messaging.Hubs
+@{
+    // Carried by every admin page but the workspace (see MessagingNotificationsFilter). The script reads what it needs
+    // from here: where the hub is, which agent the page belongs to, and the sentences it completes for each toast.
+    var agentId = Model.AgentId as string;
+}
+
+<div class="d-none"
+     data-messaging-notifications
+     data-hub-url="@(Html.SignalRHubUrl<MessagingHub>())"
+     data-agent-id="@agentId"
+     data-attention-url="@Url.RouteUrl("MessagingAttention")"
+     data-conversation-url="@Url.RouteUrl("MessagingConversation", new { id = "__ID__" })"
+     data-new-message-text="@T["New message"]"
+     data-new-message-from-text="@T["New message from {0}"].Value"
+     data-open-text="@T["Open conversation"]"
+     data-close-text="@T["Close"]"
+     data-someone-text="@T["Someone"]"
+     data-transferred-to-you-text="@T["{0} transferred a conversation to you"].Value"
+     data-transferred-to-queue-text="@T["{0} sent a conversation to the {1} queue"].Value"
+     data-transferred-to-your-queue-text="@T["{0} sent a conversation to one of your queues"].Value"></div>
+
+@* Bottom right, like the workspace's toasts, and lifted clear of the Contact Center bar's tab at the bottom edge. *@
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1090; margin-bottom: 2.5rem;" data-messaging-toast-container></div>

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.WebSockets</RootNamespace>
+    <Title>CrestApps OrchardCore WebSockets Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Contracts for hosting raw WebSocket endpoints across a CrestApps OrchardCore deployment, including the
+      connection registry that correlates a provider-initiated WebSocket callback with the request that started it.
+      Consumers depend on these abstractions so a distributed implementation can be swapped in without changing them.
+    </Description>
+    <PackageTags>$(PackageTags) WebSockets Abstractions</PackageTags>
+  </PropertyGroup>
+
+</Project>

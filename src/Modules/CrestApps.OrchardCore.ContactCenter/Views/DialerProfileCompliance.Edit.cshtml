@@ -1,0 +1,35 @@
+@model DialerProfileViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<div class="ocat-wrapper" asp-validation-class-for="RespectDoNotCall">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="RespectDoNotCall" class="form-check-input" />
+            <label asp-for="RespectDoNotCall" class="form-check-label">@T["Respect do-not-call and communication preferences"]</label>
+            <span class="hint dashed">@T["When enabled, contacts that opted out of phone calls and destinations listed on a national do-not-call registry are suppressed before dialing."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="EnforceCallingWindow">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="EnforceCallingWindow" class="form-check-input" />
+            <label asp-for="EnforceCallingWindow" class="form-check-label">@T["Enforce a calling window"]</label>
+            <span class="hint dashed">@T["When enabled, the contact is only dialed while the selected calendar is open. Contact time zones override the calendar time zone, and region-specific calendar rules configured through deployment data take precedence."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="CallingCalendarId">
+    <label asp-for="CallingCalendarId" class="ocat-label">@T["Outbound calling calendar"]</label>
+    <div class="ocat-end">
+        <select asp-for="CallingCalendarId" asp-items="Model.CallingCalendarOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select an outbound calling calendar"]" data-width="100%" title="@T["Select an outbound calling calendar"]">
+            <option value="">@T["Select an outbound calling calendar"]</option>
+        </select>
+        <span asp-validation-for="CallingCalendarId" class="text-danger"></span>
+        <span class="hint">@T["The calendar supplies minute-precision weekday, overnight, holiday, and default time-zone rules. Required when a calling window is enforced."]</span>
+    </div>
+</div>

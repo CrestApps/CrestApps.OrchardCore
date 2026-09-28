@@ -51,7 +51,7 @@ public interface IOmnichannelActivityManager : ICatalogManager<OmnichannelActivi
     /// </summary>
     /// <param name="filter">The bulk manage filter criteria.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    Task<IReadOnlyList<OmnichannelActivity>> ListBulkManageableAsync(BulkManageActivityFilter filter, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<OmnichannelActivity>> GetBulkManageableAsync(BulkManageActivityFilter filter, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Lists the activities matching the supplied identifiers using a single query. Identifiers that do not
@@ -61,5 +61,5 @@ public interface IOmnichannelActivityManager : ICatalogManager<OmnichannelActivi
     /// <param name="itemIds">The activity identifiers to resolve.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The activities that resolved.</returns>
-    Task<IReadOnlyList<OmnichannelActivity>> ListByIdsAsync(IReadOnlyCollection<string> itemIds, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<OmnichannelActivity>> GetByIdsAsync(IReadOnlyCollection<string> itemIds, CancellationToken cancellationToken = default);
 }

@@ -1,0 +1,25 @@
+{
+  "description": "Recording, mute, and conference telemetry must survive normalization onto the provider voice event.",
+  "payload": {
+    "call_id": "3456789012345680",
+    "state": "connected",
+    "direction": "inbound",
+    "external_number": "+15125550188",
+    "internal_number": "+15125550100",
+    "event_timestamp": 1699887620000,
+    "is_muted": true,
+    "recording_state": "recording",
+    "recording_id": "rec-9911",
+    "is_conference": true,
+    "participant_count": 3
+  },
+  "expected": {
+    "result": "Routed",
+    "state": "Connected",
+    "isMuted": true,
+    "recordingState": "Recording",
+    "recordingReference": "rec-9911",
+    "isConference": true,
+    "participantCount": 3
+  }
+}

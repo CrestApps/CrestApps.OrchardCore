@@ -25,5 +25,6 @@ public sealed class TelephonySettingsConfiguration : IPostConfigureOptions<Telep
         var settings = _siteService.GetSettings<TelephonySettings>();
 
         options.DefaultProviderName = settings.DefaultProviderName;
+        options.AllowedShortCodes = settings.AllowedShortCodes ?? [];
     }
 }

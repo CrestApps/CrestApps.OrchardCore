@@ -1,0 +1,87 @@
+{
+  "RootNodeId": "main",
+  "MaxRetries": 2,
+  "FallbackAction": {
+    "Kind": "RouteToQueue",
+    "TargetId": "queue-general"
+  },
+  "Nodes": [
+    {
+      "NodeId": "main",
+      "Prompt": "Press 1 for sales, 2 for support, 3 for the front desk, 4 for billing, 5 to leave a message, or 9 to hear this again.",
+      "PromptMediaId": null,
+      "Options": [
+        {
+          "Digit": "1",
+          "Action": {
+            "Kind": "RouteToQueue",
+            "TargetId": "queue-sales"
+          }
+        },
+        {
+          "Digit": "2",
+          "Action": {
+            "Kind": "SubMenu",
+            "TargetId": "support"
+          }
+        },
+        {
+          "Digit": "3",
+          "Action": {
+            "Kind": "RouteToAgent",
+            "TargetId": "agent-front-desk"
+          }
+        },
+        {
+          "Digit": "4",
+          "Action": {
+            "Kind": "ExternalTransfer",
+            "TargetId": "destination-billing"
+          }
+        },
+        {
+          "Digit": "5",
+          "Action": {
+            "Kind": "Voicemail",
+            "TargetId": null
+          }
+        },
+        {
+          "Digit": "9",
+          "Action": {
+            "Kind": "Repeat",
+            "TargetId": null
+          }
+        }
+      ]
+    },
+    {
+      "NodeId": "support",
+      "Prompt": null,
+      "PromptMediaId": "support-menu-recording",
+      "Options": [
+        {
+          "Digit": "1",
+          "Action": {
+            "Kind": "RouteToQueue",
+            "TargetId": "queue-support"
+          }
+        },
+        {
+          "Digit": "*",
+          "Action": {
+            "Kind": "SubMenu",
+            "TargetId": "main"
+          }
+        },
+        {
+          "Digit": "#",
+          "Action": {
+            "Kind": "Repeat",
+            "TargetId": null
+          }
+        }
+      ]
+    }
+  ]
+}

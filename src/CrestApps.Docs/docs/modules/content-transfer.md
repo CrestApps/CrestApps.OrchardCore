@@ -61,7 +61,7 @@ Bulk imports now default to saving drafts only. Enable **Publish imported conten
 
 For content types that attach `OmnichannelContactPart`, each import file should contain leads from a single country unless every phone number in the file already uses E.164. Selecting that lead country in the import UI is now required so non-E.164 values are normalized before duplicate checks, before DNC registry providers receive the lookup values, and before contact-method storage runs. The picker shows the same `Country (+calling code)` labels used by the Local DNC import UI.
 
-The Omnichannel contact columns `DoNotCall`, `DoNotSms`, `DoNotEmail`, and `DoNotChat` now advertise `true` and `false` as the expected values in the import metadata so spreadsheet templates make the required boolean values clear.
+The Omnichannel contact columns `DoNotCall`, `DoNotSms`, and `DoNotEmail` now advertise `true` and `false` as the expected values in the import metadata so spreadsheet templates make the required boolean values clear.
 
 ## Bulk export
 

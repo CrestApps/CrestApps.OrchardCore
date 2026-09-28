@@ -16,4 +16,9 @@ public static class TelephonyPermissions
     /// The permission required to use the soft phone to place and control calls.
     /// </summary>
     public static readonly Permission UseSoftPhone = new("UseTelephonySoftPhone", "Use the telephony soft phone");
+
+    /// <summary>
+    /// The permission required to manage internal extensions (the number-to-user registry).
+    /// </summary>
+    public static readonly Permission ManageExtensions = new("ManageTelephonyExtensions", "Manage telephony extensions");
 }

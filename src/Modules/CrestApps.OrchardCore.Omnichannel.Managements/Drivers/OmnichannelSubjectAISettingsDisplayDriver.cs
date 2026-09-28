@@ -20,6 +20,7 @@ internal sealed class OmnichannelSubjectAISettingsDisplayDriver : ContentTypePar
     private readonly IAIProfileManager _profileManager;
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly DefaultSpeechVoicePresenter _speechVoicePresenter;
+    private readonly IHandoffQueueOptionsProvider _handoffQueueOptionsProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OmnichannelSubjectAISettingsDisplayDriver"/> class.
@@ -27,14 +28,17 @@ internal sealed class OmnichannelSubjectAISettingsDisplayDriver : ContentTypePar
     /// <param name="profileManager">The AI profile manager.</param>
     /// <param name="deploymentManager">The AI deployment manager.</param>
     /// <param name="speechVoicePresenter">The speech voice presenter.</param>
+    /// <param name="handoffQueueOptionsProvider">The optional handoff queue options provider (present when Contact Center is enabled).</param>
     public OmnichannelSubjectAISettingsDisplayDriver(
         IAIProfileManager profileManager,
         IAIDeploymentManager deploymentManager,
-        DefaultSpeechVoicePresenter speechVoicePresenter)
+        DefaultSpeechVoicePresenter speechVoicePresenter,
+        IHandoffQueueOptionsProvider handoffQueueOptionsProvider = null)
     {
         _profileManager = profileManager;
         _deploymentManager = deploymentManager;
         _speechVoicePresenter = speechVoicePresenter;
+        _handoffQueueOptionsProvider = handoffQueueOptionsProvider;
     }
 
     public override IDisplayResult Edit(ContentTypePartDefinition contentTypePartDefinition, BuildEditorContext context)
@@ -49,6 +53,11 @@ internal sealed class OmnichannelSubjectAISettingsDisplayDriver : ContentTypePar
             // subjects are configured for automation when their inventory is loaded using the Automatic source,
             // so the AI defaults are chosen there rather than on the subject type.
             model.CanAutomate = isInbound && baseSettings.InteractionType == ActivityInteractionType.Automated;
+
+            // Handoff applies to any automated conversation for this subject: an inbound automated subject, or any
+            // outbound subject (whose AI settings are chosen at inventory load). So it is shown more broadly than
+            // the inbound-only AI configuration.
+            model.ShowHandoffSettings = model.CanAutomate || baseSettings.Direction == SubjectDirection.Outbound;
             model.ShowVoiceSettings = model.CanAutomate && string.Equals(baseSettings.Channel, OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase);
             model.ShowSmsSettings = model.CanAutomate && string.Equals(baseSettings.Channel, OmnichannelConstants.Channels.Sms, StringComparison.OrdinalIgnoreCase);
 
@@ -62,6 +71,24 @@ internal sealed class OmnichannelSubjectAISettingsDisplayDriver : ContentTypePar
             model.NoResponseTimeoutInMinutes = settings.NoResponseTimeoutInMinutes;
             model.SmsResponseDelayInSeconds = settings.SmsResponseDelayInSeconds;
             model.SmsOptOutKeywords = string.Join(Environment.NewLine, OmnichannelSmsComplianceHelper.NormalizeOptOutKeywords(settings.SmsOptOutKeywords));
+            model.EnableAgentHandoff = settings.EnableAgentHandoff;
+            model.HandoffQueueId = settings.HandoffQueueId;
+            model.HandoffOnUserRequest = settings.HandoffOnUserRequest;
+            model.HandoffOnQualifiedLead = settings.HandoffOnQualifiedLead;
+            model.HandoffOnFrustration = settings.HandoffOnFrustration;
+
+            // When Contact Center is enabled, offer a queue picker; otherwise the editor falls back to a free-text
+            // queue id (the runtime reads the id regardless of how it was entered).
+            if (_handoffQueueOptionsProvider is not null)
+            {
+                var queues = await _handoffQueueOptionsProvider.GetQueuesAsync();
+
+                model.HandoffQueues = queues.Select(queue => new SelectListItem(queue.Name, queue.Id)
+                {
+                    Selected = string.Equals(queue.Id, settings.HandoffQueueId, StringComparison.OrdinalIgnoreCase),
+                });
+                model.HasHandoffQueuePicker = true;
+            }
 
             var chatProfiles = await _profileManager.GetAsync(AIProfileType.Chat);
 
@@ -99,6 +126,11 @@ internal sealed class OmnichannelSubjectAISettingsDisplayDriver : ContentTypePar
             NoResponseTimeoutInMinutes = model.NoResponseTimeoutInMinutes,
             SmsResponseDelayInSeconds = model.SmsResponseDelayInSeconds,
             SmsOptOutKeywords = OmnichannelSmsComplianceHelper.ParseOptOutKeywords(model.SmsOptOutKeywords).ToArray(),
+            EnableAgentHandoff = model.EnableAgentHandoff,
+            HandoffQueueId = model.HandoffQueueId?.Trim(),
+            HandoffOnUserRequest = model.HandoffOnUserRequest,
+            HandoffOnQualifiedLead = model.HandoffOnQualifiedLead,
+            HandoffOnFrustration = model.HandoffOnFrustration,
         });
 
         return Edit(contentTypePartDefinition, context);

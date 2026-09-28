@@ -12,7 +12,13 @@
       "commandName": "IISExpress",
       "launchBrowser": true,
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "OrchardCore__CrestApps__Asterisk__Default__BaseUrl": "http://localhost:8088/ari/",
+        "OrchardCore__CrestApps__Asterisk__Default__UserName": "crestapps",
+        "OrchardCore__CrestApps__Asterisk__Default__Password": "crestapps-dev",
+        "OrchardCore__CrestApps__Asterisk__Default__ApplicationName": "crestapps-telephony",
+        "OrchardCore__CrestApps__Asterisk__Default__EndpointTemplate": "Local/{number}@default",
+        "OrchardCore__CrestApps__Asterisk__Default__TimeoutSeconds": "30"
       }
     },
     "CrestApps.OrchardCore.Cms.Web": {
@@ -20,7 +26,13 @@
       "launchBrowser": true,
       "applicationUrl": "https://localhost:5001;http://localhost:5000",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "OrchardCore__CrestApps__Asterisk__Default__BaseUrl": "http://localhost:8088/ari/",
+        "OrchardCore__CrestApps__Asterisk__Default__UserName": "crestapps",
+        "OrchardCore__CrestApps__Asterisk__Default__Password": "crestapps-dev",
+        "OrchardCore__CrestApps__Asterisk__Default__ApplicationName": "crestapps-telephony",
+        "OrchardCore__CrestApps__Asterisk__Default__EndpointTemplate": "Local/{number}@default",
+        "OrchardCore__CrestApps__Asterisk__Default__TimeoutSeconds": "30"
       }
     }
   }

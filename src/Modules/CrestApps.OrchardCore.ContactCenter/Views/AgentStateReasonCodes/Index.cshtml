@@ -1,0 +1,22 @@
+@model ListCatalogEntryViewModel<CatalogEntryViewModel<AgentStateReasonCode>>
+
+@{
+    var listModel = new CatalogListViewModel
+    {
+        Title = T["Agent states"],
+        CreateLabel = T["Add reason code"],
+        ListId = "agent-states-list",
+        EmptyMessage = T["<strong>Nothing here!</strong> There are no agent state reason codes at the moment."],
+        Options = Model.Options,
+        Pager = Model.Pager,
+        Entries = Model.Models
+            .Select(entry => new CatalogListEntry
+            {
+                Shape = entry.Shape,
+                FilterValue = entry.Model.Name?.ToLowerInvariant(),
+            })
+            .ToList(),
+    };
+}
+
+<partial name="_CatalogList" model="listModel" />

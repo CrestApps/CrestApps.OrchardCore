@@ -1,0 +1,24 @@
+@model DialerProfileViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<div class="ocat-wrapper" asp-validation-class-for="CallerId">
+    <label asp-for="CallerId" class="ocat-label">@T["Caller ID"]</label>
+    <div class="ocat-end">
+        <input asp-for="CallerId" class="form-control" />
+        <span asp-validation-for="CallerId" class="text-danger"></span>
+        <span class="hint">@T["The phone number shown to the person being called, when the provider supports setting it. Leave blank to use the provider default."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="DefaultRegionCode">
+    <label asp-for="DefaultRegionCode" class="ocat-label">@T["Default calling region"]</label>
+    <div class="ocat-end">
+        <select asp-for="DefaultRegionCode" asp-items="Model.DefaultRegionOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a country"]" data-width="100%" title="@T["Auto-detect from the number"]">
+            <option value="">@T["Auto-detect from the number"]</option>
+        </select>
+        <span asp-validation-for="DefaultRegionCode" class="text-danger"></span>
+        <span class="hint dashed">@T["The country a destination is assumed to be in when the number has no international calling code — common for campaign lists imported in national format. Numbers that still cannot be read are suppressed, because they cannot be checked against a do-not-call registry."]</span>
+    </div>
+</div>

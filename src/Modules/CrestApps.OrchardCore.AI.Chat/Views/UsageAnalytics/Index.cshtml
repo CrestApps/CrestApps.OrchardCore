@@ -1,10 +1,29 @@
 @model CrestApps.OrchardCore.AI.Chat.ViewModels.UsageAnalyticsIndexViewModel
 @using System.Globalization
+@using CrestApps.OrchardCore.AI.Chat.Models
 
 @{
     ViewData["Title"] = T["AI Usage Analytics"];
     var datePattern = CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern;
     var timePattern = CultureInfo.CurrentCulture.DateTimeFormat.ShortTimePattern;
+    var groupedByUser = Model.GroupBy == AICompletionUsageGroupBy.UserAndModel;
+    var groupLabel = Model.GroupBy switch
+    {
+        AICompletionUsageGroupBy.Model => T["Model"],
+        AICompletionUsageGroupBy.Deployment => T["Deployment"],
+        AICompletionUsageGroupBy.Profile => T["AI profile"],
+        AICompletionUsageGroupBy.Connection => T["Connection"],
+        _ => T["User"],
+    };
+    var voiceGroupLabel = Model.VoiceGroupBy switch
+    {
+        AIVoiceUsageGroupBy.Profile => T["AI profile"],
+        AIVoiceUsageGroupBy.Campaign => T["Campaign"],
+        AIVoiceUsageGroupBy.Channel => T["Channel"],
+        AIVoiceUsageGroupBy.Engine => T["Engine"],
+        AIVoiceUsageGroupBy.Day => T["Day"],
+        _ => T["Deployment (model)"],
+    };
 }
 
 <style asp-name="flatpickr"></style>
@@ -13,13 +32,13 @@
 
 <div class="mb-3">
     <h1>@T["AI Usage Analytics"]</h1>
-    <p class="text-muted mb-0">@T["Review provider usage by user, model, and conversation type across chat sessions and chat interactions."]</p>
+    <p class="text-muted mb-0">@T["Review provider usage by user, model, deployment, profile and connection across chat sessions and chat interactions, and the talk time of automated voice calls."]</p>
 </div>
 
 @if (!Model.IsAIUsageTrackingEnabled)
 {
     <div class="alert alert-warning">
-        @T["AI usage tracking is currently disabled. Enable AI usage tracking in Settings -> Artificial Intelligence to capture future provider usage data for this report."]
+        @T["AI usage tracking is currently disabled. Enable AI usage tracking in Settings -> Artificial Intelligence to capture future provider usage data and automated voice call summaries for this report."]
     </div>
 }
 
@@ -27,7 +46,7 @@
     <div class="card-header">
         <form asp-action="Index" method="post">
             @Html.AntiForgeryToken()
-            <div class="row row-cols-1 row-cols-sm-2 row-cols-md-2 row-cols-lg-5 no-gutters">
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-6 no-gutters">
                 <div class="col p-1">
                     <label asp-for="StartDate" class="form-label">@T["From"]</label>
                     <input type="text" asp-for="StartDate" class="form-control" placeholder="@T["From"]" />
@@ -35,6 +54,33 @@
                 <div class="col p-1">
                     <label asp-for="EndDate" class="form-label">@T["To"]</label>
                     <input type="text" asp-for="EndDate" class="form-control" placeholder="@T["To"]" />
+                </div>
+                <div class="col p-1">
+                    <label asp-for="ProfileId" class="form-label">@T["AI profile"]</label>
+                    <select asp-for="ProfileId" asp-items="Model.Profiles" class="form-select">
+                        <option value="">@T["Any profile"]</option>
+                    </select>
+                </div>
+                <div class="col p-1">
+                    <label asp-for="GroupBy" class="form-label">@T["Group completions by"]</label>
+                    <select asp-for="GroupBy" class="form-select">
+                        <option value="@AICompletionUsageGroupBy.UserAndModel">@T["User and model"]</option>
+                        <option value="@AICompletionUsageGroupBy.Model">@T["Model"]</option>
+                        <option value="@AICompletionUsageGroupBy.Deployment">@T["Deployment"]</option>
+                        <option value="@AICompletionUsageGroupBy.Profile">@T["AI profile"]</option>
+                        <option value="@AICompletionUsageGroupBy.Connection">@T["Connection"]</option>
+                    </select>
+                </div>
+                <div class="col p-1">
+                    <label asp-for="VoiceGroupBy" class="form-label">@T["Group voice calls by"]</label>
+                    <select asp-for="VoiceGroupBy" class="form-select">
+                        <option value="@AIVoiceUsageGroupBy.Deployment">@T["Deployment (model)"]</option>
+                        <option value="@AIVoiceUsageGroupBy.Profile">@T["AI profile"]</option>
+                        <option value="@AIVoiceUsageGroupBy.Campaign">@T["Campaign"]</option>
+                        <option value="@AIVoiceUsageGroupBy.Channel">@T["Channel"]</option>
+                        <option value="@AIVoiceUsageGroupBy.Engine">@T["Engine"]</option>
+                        <option value="@AIVoiceUsageGroupBy.Day">@T["Day"]</option>
+                    </select>
                 </div>
                 <div class="col p-1 d-flex align-items-end">
                     <button type="submit" class="btn btn-dark">
@@ -50,60 +96,147 @@
         {
             <div class="alert alert-info mb-0">@T["Use the filters above to generate the usage report."]</div>
         }
-        else if (Model.Rows.Count == 0)
-        {
-            <div class="alert alert-warning mb-0">@T["No usage data was found for the selected filters."]</div>
-        }
         else
         {
-            <div class="row g-3 mb-3">
-                <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">@T["Provider calls"]</div><div class="fs-3 fw-semibold">@Model.TotalCalls</div></div></div></div>
-                <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">@T["Chat sessions"]</div><div class="fs-3 fw-semibold">@Model.TotalSessions</div></div></div></div>
-                <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">@T["Chat interactions"]</div><div class="fs-3 fw-semibold">@Model.TotalChatInteractions</div></div></div></div>
-                <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">@T["Total tokens"]</div><div class="fs-3 fw-semibold">@Model.TotalTokens</div></div></div></div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">@T["Usage by user and model"]</div>
-                <div class="table-responsive">
-                    <table class="table table-striped align-middle mb-0">
-                        <thead>
-                            <tr>
-                                <th>@T["User"]</th>
-                                <th>@T["Client"]</th>
-                                <th>@T["Model"]</th>
-                                <th class="text-end">@T["Calls"]</th>
-                                <th class="text-end">@T["Sessions"]</th>
-                                <th class="text-end">@T["Interactions"]</th>
-                                <th class="text-end">@T["Input"]</th>
-                                <th class="text-end">@T["Output"]</th>
-                                <th class="text-end">@T["Tokens"]</th>
-                                <th class="text-end">@T["Avg latency"]</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        @foreach (var row in Model.Rows)
-                        {
-                            <tr>
-                                <td>
-                                    <div class="fw-semibold">@row.UserLabel</div>
-                                    <div class="text-muted small">@(row.IsAuthenticated ? T["Authenticated"] : T["Anonymous"])</div>
-                                </td>
-                                <td>@row.ClientName</td>
-                                <td>@row.ModelName</td>
-                                <td class="text-end">@row.TotalCalls</td>
-                                <td class="text-end">@row.TotalSessions</td>
-                                <td class="text-end">@row.TotalChatInteractions</td>
-                                <td class="text-end">@row.TotalInputTokens</td>
-                                <td class="text-end">@row.TotalOutputTokens</td>
-                                <td class="text-end fw-semibold">@row.TotalTokens</td>
-                                <td class="text-end">@(row.AverageResponseLatencyMs > 0 ? $"{row.AverageResponseLatencyMs} ms" : "-")</td>
-                            </tr>
-                        }
-                        </tbody>
-                    </table>
+            if (Model.Rows.Count == 0)
+            {
+                <div class="alert alert-warning">@T["No usage data was found for the selected filters."]</div>
+            }
+            else
+            {
+                <div class="row g-3 mb-3">
+                    <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">@T["Provider calls"]</div><div class="fs-3 fw-semibold">@Model.TotalCalls</div></div></div></div>
+                    <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">@T["Chat sessions"]</div><div class="fs-3 fw-semibold">@Model.TotalSessions</div></div></div></div>
+                    <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">@T["Chat interactions"]</div><div class="fs-3 fw-semibold">@Model.TotalChatInteractions</div></div></div></div>
+                    <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">@T["Total tokens"]</div><div class="fs-3 fw-semibold">@Model.TotalTokens</div></div></div></div>
                 </div>
-            </div>
+
+                <div class="card mb-3">
+                    <div class="card-header">@(groupedByUser ? T["Usage by user and model"] : T["Usage by {0}", groupLabel.Value.ToLower(CultureInfo.CurrentCulture)])</div>
+                    <div class="table-responsive">
+                        <table class="table table-striped align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    @if (groupedByUser)
+                                    {
+                                        <th>@T["User"]</th>
+                                        <th>@T["Client"]</th>
+                                        <th>@T["Model"]</th>
+                                    }
+                                    else
+                                    {
+                                        <th>@groupLabel</th>
+                                    }
+                                    <th class="text-end">@T["Calls"]</th>
+                                    <th class="text-end">@T["Sessions"]</th>
+                                    <th class="text-end">@T["Interactions"]</th>
+                                    <th class="text-end">@T["Input"]</th>
+                                    <th class="text-end">@T["Output"]</th>
+                                    <th class="text-end">@T["Tokens"]</th>
+                                    <th class="text-end">@T["Avg latency"]</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            @foreach (var row in Model.Rows)
+                            {
+                                <tr>
+                                    @if (groupedByUser)
+                                    {
+                                        <td>
+                                            <div class="fw-semibold">@row.UserLabel</div>
+                                            <div class="text-muted small">@(row.IsAuthenticated ? T["Authenticated"] : T["Anonymous"])</div>
+                                        </td>
+                                        <td>@row.ClientName</td>
+                                        <td>@row.ModelName</td>
+                                    }
+                                    else
+                                    {
+                                        <td class="fw-semibold">@row.GroupLabel</td>
+                                    }
+                                    <td class="text-end">@row.TotalCalls</td>
+                                    <td class="text-end">@row.TotalSessions</td>
+                                    <td class="text-end">@row.TotalChatInteractions</td>
+                                    <td class="text-end">@row.TotalInputTokens</td>
+                                    <td class="text-end">@row.TotalOutputTokens</td>
+                                    <td class="text-end fw-semibold">@row.TotalTokens</td>
+                                    <td class="text-end">@(row.AverageResponseLatencyMs > 0 ? $"{row.AverageResponseLatencyMs} ms" : "-")</td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+
+            <h2 class="h4 mt-4">@T["Voice"]</h2>
+            <p class="text-muted">@T["Automated voice calls held by an AI profile, measured from the call audio: how long the caller heard the assistant, how long the caller spoke, and how long neither did. Figures a call's engine cannot measure are left out of that figure rather than counted as zero."]</p>
+
+            if (Model.VoiceTotals is null || Model.VoiceTotals.Calls == 0)
+            {
+                <div class="alert alert-warning mb-0">@T["No automated voice calls were recorded for the selected filters."]</div>
+            }
+            else
+            {
+                var totals = Model.VoiceTotals;
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-3 col-lg"><div class="card h-100"><div class="card-body"><div class="text-muted small">@T["Calls"]</div><div class="fs-3 fw-semibold">@totals.Calls</div></div></div></div>
+                    <div class="col-md-3 col-lg"><div class="card h-100"><div class="card-body"><div class="text-muted small">@T["AI minutes"]</div><div class="fs-3 fw-semibold">@totals.AIMinutes.ToString("N1", CultureInfo.CurrentCulture)</div></div></div></div>
+                    <div class="col-md-3 col-lg"><div class="card h-100"><div class="card-body"><div class="text-muted small">@T["Caller minutes"]</div><div class="fs-3 fw-semibold">@(totals.CallerMinutes?.ToString("N1", CultureInfo.CurrentCulture) ?? "-")</div></div></div></div>
+                    <div class="col-md-3 col-lg"><div class="card h-100"><div class="card-body"><div class="text-muted small">@T["Silence minutes"]</div><div class="fs-3 fw-semibold">@(totals.SilenceMinutes?.ToString("N1", CultureInfo.CurrentCulture) ?? "-")</div></div></div></div>
+                    <div class="col-md-3 col-lg"><div class="card h-100"><div class="card-body"><div class="text-muted small">@T["Average call"]</div><div class="fs-3 fw-semibold">@(totals.AverageSessionSeconds.HasValue ? T["{0} s", totals.AverageSessionSeconds.Value.ToString("N0", CultureInfo.CurrentCulture)] : T["-"])</div></div></div></div>
+                    <div class="col-md-3 col-lg"><div class="card h-100"><div class="card-body"><div class="text-muted small">@T["Handoff rate"]</div><div class="fs-3 fw-semibold">@totals.HandoffRate.ToString("P0", CultureInfo.CurrentCulture)</div></div></div></div>
+                    <div class="col-md-3 col-lg"><div class="card h-100"><div class="card-body"><div class="text-muted small">@T["Barge-ins per call"]</div><div class="fs-3 fw-semibold">@(totals.BargeInsPerCall?.ToString("N2", CultureInfo.CurrentCulture) ?? "-")</div></div></div></div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">@T["Voice usage by {0}", voiceGroupLabel.Value.ToLower(CultureInfo.CurrentCulture)]</div>
+                    <div class="table-responsive">
+                        <table class="table table-striped align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>@voiceGroupLabel</th>
+                                    <th class="text-end">@T["Calls"]</th>
+                                    <th class="text-end">@T["Call minutes"]</th>
+                                    <th class="text-end">@T["AI minutes"]</th>
+                                    <th class="text-end">@T["Caller minutes"]</th>
+                                    <th class="text-end">@T["Silence minutes"]</th>
+                                    <th class="text-end">@T["Avg call"]</th>
+                                    <th class="text-end">@T["Avg first word"]</th>
+                                    <th class="text-end">@T["Handoff rate"]</th>
+                                    <th class="text-end">@T["Barge-ins / call"]</th>
+                                    <th class="text-end">@T["Idle prompts"]</th>
+                                    <th class="text-end">@T["Text tokens"]</th>
+                                    <th class="text-end">@T["Audio tokens"]</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            @foreach (var row in Model.VoiceRows)
+                            {
+                                <tr>
+                                    <td class="fw-semibold">@row.Label</td>
+                                    <td class="text-end">@row.Calls</td>
+                                    <td class="text-end">@row.SessionMinutes.ToString("N1", CultureInfo.CurrentCulture)</td>
+                                    <td class="text-end">@row.AIMinutes.ToString("N1", CultureInfo.CurrentCulture)</td>
+                                    <td class="text-end">@(row.CallerMinutes?.ToString("N1", CultureInfo.CurrentCulture) ?? "-")</td>
+                                    <td class="text-end">@(row.SilenceMinutes?.ToString("N1", CultureInfo.CurrentCulture) ?? "-")</td>
+                                    <td class="text-end">@(row.AverageSessionSeconds.HasValue ? $"{row.AverageSessionSeconds.Value.ToString("N0", CultureInfo.CurrentCulture)} s" : "-")</td>
+                                    <td class="text-end">@(row.AverageTimeToFirstAudioMs.HasValue ? $"{row.AverageTimeToFirstAudioMs.Value.ToString("N0", CultureInfo.CurrentCulture)} ms" : "-")</td>
+                                    <td class="text-end">@row.HandoffRate.ToString("P0", CultureInfo.CurrentCulture)</td>
+                                    <td class="text-end">@(row.BargeInsPerCall?.ToString("N2", CultureInfo.CurrentCulture) ?? "-")</td>
+                                    <td class="text-end">@row.IdlePrompts</td>
+                                    <td class="text-end">@row.TextTokens</td>
+                                    <td class="text-end">@(row.AudioTokens?.ToString(CultureInfo.CurrentCulture) ?? "-")</td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="card-footer text-muted small">
+                        @T["Text tokens are the completions recorded against each call's chat session, including the review that concludes the call. Audio tokens appear once the realtime provider's usage is reported."]
+                    </div>
+                </div>
+            }
         }
     </div>
 </div>

@@ -1,0 +1,66 @@
+@using CrestApps.OrchardCore.Omnichannel.Messaging.Models
+@model InboxViewModel
+
+@{
+    var show = Model.Filter == MessagingInboxFilter.All ? null : Model.Filter.ToString().ToLowerInvariant();
+}
+
+@if (Model.Rows.Count == 0)
+{
+    <div class="text-muted small p-3">@T["Nothing here yet. Start a new conversation, or messages that reach the endpoints you serve will appear here."]</div>
+}
+else
+{
+    <div class="list-group list-group-flush" data-inbox-rows>
+        @foreach (var row in Model.Rows)
+        {
+            var isSelected = string.Equals(row.CustomerKey, Model.SelectedCustomerKey, StringComparison.Ordinal);
+            var unread = row.UnreadCount > 0;
+
+            <a class="list-group-item list-group-item-action messaging-inbox-row px-2 py-2 @(isSelected ? "active" : string.Empty) @(unread ? "messaging-unread" : string.Empty)"
+               asp-route-action="Conversation" asp-route-id="@row.Conversation.ItemId" asp-route-show="@show" asp-route-channel="@Model.ChannelFilter"
+               data-customer-key="@row.CustomerKey"
+               data-conversation-id="@row.Conversation.ItemId"
+               data-filter-value="@($"{row.Conversation.ContactAddress} {row.Conversation.LastMessagePreview}")">
+                <div class="d-flex gap-2 align-items-start">
+                    <div class="flex-grow-1" style="min-width: 0;">
+                        @await DisplayAsync(row.Shape)
+                    </div>
+                    <div class="d-flex flex-column align-items-end gap-1 flex-shrink-0">
+                        <span class="badge rounded-pill text-bg-danger @(unread ? string.Empty : "d-none")" data-row-unread>@row.UnreadCount</span>
+                        @if (row.Channels.Count > 1)
+                        {
+                            <span class="text-muted small text-nowrap" title="@T["Channels this customer wrote on"]">
+                                @foreach (var channel in row.Channels)
+                                {
+                                    <i class="@channel.IconCssClass ms-1" aria-label="@channel.DisplayName"></i>
+                                }
+                            </span>
+                        }
+                    </div>
+                </div>
+            </a>
+        }
+    </div>
+
+    <div class="d-none text-muted small p-3" data-inbox-no-results>@T["Your search returned no results."]</div>
+
+    @if (Model.HasPreviousPage || Model.HasNextPage)
+    {
+        <nav class="d-flex justify-content-between align-items-center p-2 border-top small" aria-label="@T["Inbox pages"]">
+            <div>
+                @if (Model.HasPreviousPage)
+                {
+                    <a class="btn btn-sm btn-outline-secondary" asp-route-action="Index" asp-route-show="@show" asp-route-channel="@Model.ChannelFilter" asp-route-page="@(Model.Page - 1)">@T["Newer"]</a>
+                }
+            </div>
+            <span class="text-muted">@T["Page {0} of {1}", Model.Page, Math.Max(1, (int)Math.Ceiling(Model.TotalCount / (double)Model.PageSize))]</span>
+            <div>
+                @if (Model.HasNextPage)
+                {
+                    <a class="btn btn-sm btn-outline-secondary" asp-route-action="Index" asp-route-show="@show" asp-route-channel="@Model.ChannelFilter" asp-route-page="@(Model.Page + 1)">@T["Older"]</a>
+                }
+            </div>
+        </nav>
+    }
+}

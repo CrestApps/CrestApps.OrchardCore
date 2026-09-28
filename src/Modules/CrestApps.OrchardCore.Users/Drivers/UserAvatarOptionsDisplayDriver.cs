@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Http;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Environment.Shell;
+using OrchardCore.Environment.Options;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Users.Drivers;
@@ -19,22 +19,22 @@ public sealed class UserAvatarOptionsDisplayDriver : SiteDisplayDriver<UserAvata
 
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
-    private readonly IShellReleaseManager _shellReleaseManager;
+    private readonly IOptionsUpdateNotifier _optionsUpdateNotifier;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="UserAvatarOptionsDisplayDriver"/> class.
     /// </summary>
     /// <param name="httpContextAccessor">The http context accessor.</param>
     /// <param name="authorizationService">The authorization service.</param>
-    /// <param name="shellReleaseManager">The shell release manager.</param>
+    /// <param name="optionsUpdateNotifier">The options update notifier.</param>
     public UserAvatarOptionsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
-        IShellReleaseManager shellReleaseManager)
+        IOptionsUpdateNotifier optionsUpdateNotifier)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
-        _shellReleaseManager = shellReleaseManager;
+        _optionsUpdateNotifier = optionsUpdateNotifier;
     }
 
     protected override string SettingsGroupId
@@ -42,8 +42,6 @@ public sealed class UserAvatarOptionsDisplayDriver : SiteDisplayDriver<UserAvata
 
     public override IDisplayResult Edit(ISite site, UserAvatarOptions settings, BuildEditorContext context)
     {
-        context.AddTenantReloadWarningWrapper();
-
         return Initialize<UserAvatarOptions>("UserAvatarOptions_Edit", model =>
         {
             model.Required = settings.Required;
@@ -64,12 +62,17 @@ public sealed class UserAvatarOptionsDisplayDriver : SiteDisplayDriver<UserAvata
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        settings.Required = model.Required;
-        settings.UseDefaultStyle |= model.UseDefaultStyle;
+        var useDefaultStyle = settings.UseDefaultStyle | model.UseDefaultStyle;
+        var settingsChanged =
+            settings.Required != model.Required ||
+            settings.UseDefaultStyle != useDefaultStyle;
 
-        if (model.Required != settings.Required || model.UseDefaultStyle != settings.UseDefaultStyle)
+        settings.Required = model.Required;
+        settings.UseDefaultStyle = useDefaultStyle;
+
+        if (settingsChanged)
         {
-            _shellReleaseManager.RequestRelease();
+            _optionsUpdateNotifier.RequestUpdate<UserAvatarOptions>();
         }
 
         return Edit(site, settings, context);

@@ -50,6 +50,7 @@ public sealed class Startup : StartupBase
             .AddCoreAIDataSourceStoresYesSql();
 
         services.AddTransient<IConfigureOptions<AIDataSourceOptions>, AIDataSourceOptionsConfiguration>();
+        services.AddSignalOptionsChangeTokenSource<AIDataSourceOptions>();
         services.AddDataMigration<AIDataSourceIndexMigrations>();
         services.AddDataMigration<DataSourceMetadataMigrations>();
         services.AddDisplayDriver<AIDataSource, AIDataSourceDisplayDriver>();
@@ -75,7 +76,7 @@ public sealed class Startup : StartupBase
         // This source reads an index it did not shape, so it has to ask which field carries the content.
         services.Configure<AIDataSourceFieldMappingOptions>(options => options.Require(AIDataSourceSourceTypes.SearchIndexProfile));
 
-        services.AddSingleton<IBackgroundTask, DataSourceAlignmentBackgroundTask>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, DataSourceAlignmentBackgroundTask>());
         services.AddScoped<IDocumentIndexHandler, AIDataSourceDocumentIndexNotificationHandler>();
         services.AddIndexProfileHandler<DataSourceIndexProfileHandler>();
         services.AddIndexProfileHandler<DataSourceSourceIndexProfileHandler>();

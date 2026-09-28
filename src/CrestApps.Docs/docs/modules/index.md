@@ -28,6 +28,7 @@ CrestApps provides a set of standard modules that enhance core Orchard Core CMS 
 | [SignalR compatibility](signalr) | `CrestApps.OrchardCore.SignalR` | Deprecated compatibility feature for the Orchard Core SignalR module |
 | [Time Zones](time-zones) | `CrestApps.OrchardCore.TimeZones` | Friendly named time zone maps and grouped time zone selection |
 | [Users](users) | `CrestApps.OrchardCore.Users` | Enhanced user management with display names and avatars |
+| [WebSockets](websockets) | `CrestApps.OrchardCore.WebSockets` | Per-tenant WebSocket hosting and a swappable connection registry for features that host raw WebSocket endpoints |
 
 ## Installation
 

@@ -26,7 +26,7 @@ public sealed class DefaultUserCacheService : IUserCacheService
         _lookupNormalizer = lookupNormalizer;
         _userStore = userStore;
     }
-
+
     /// <inheritdoc />
     public async Task<IUser> GetUserAsync(string username, CancellationToken cancellationToken = default)
     {
@@ -47,7 +47,7 @@ public sealed class DefaultUserCacheService : IUserCacheService
 
         return user;
     }
-
+
     /// <inheritdoc />
     public Task SetAsync(IUser user, CancellationToken cancellationToken = default)
     {
@@ -60,7 +60,7 @@ public sealed class DefaultUserCacheService : IUserCacheService
 
         return Task.CompletedTask;
     }
-
+
     /// <inheritdoc />
     public Task RemoveAsync(string username, CancellationToken cancellationToken = default)
     {

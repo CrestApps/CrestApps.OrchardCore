@@ -33,7 +33,7 @@ public sealed class DefaultTelephonyUserTokenStoreTests
         Assert.Equal("access-token-value", retrieved.AccessToken);
         Assert.Equal("refresh-token-value", retrieved.RefreshToken);
         Assert.Equal("Bearer", retrieved.TokenType);
-        Assert.True(accessor.UpdateCount > 0);
+        Assert.True(accessor.PersistCount > 0);
     }
 
     [Fact]

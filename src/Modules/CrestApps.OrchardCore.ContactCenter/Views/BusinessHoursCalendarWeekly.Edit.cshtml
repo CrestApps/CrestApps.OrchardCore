@@ -1,0 +1,40 @@
+@model BusinessHoursCalendarViewModel
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Weekly schedule"]</label>
+    <div class="ocat-end">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">@T["Day"]</th>
+                    <th scope="col">@T["Open"]</th>
+                    <th scope="col">@T["From"]</th>
+                    <th scope="col">@T["To"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (var i = 0; i < Model.Days.Count; i++)
+                {
+                    <tr>
+                        <td>
+                            <input type="hidden" asp-for="Days[i].Day" />
+                            @Model.Days[i].DayName
+                        </td>
+                        <td>
+                            <div class="form-check">
+                                <input asp-for="Days[i].IsOpen" class="form-check-input" />
+                            </div>
+                        </td>
+                        <td>
+                            <input asp-for="Days[i].OpenTime" type="time" class="form-control" />
+                        </td>
+                        <td>
+                            <input asp-for="Days[i].CloseTime" type="time" class="form-control" />
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <span class="hint">@T["Uncheck a day to mark the queue closed. The close time is exclusive."]</span>
+    </div>
+</div>

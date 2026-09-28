@@ -1,0 +1,7 @@
+<span class="icon icon-none" title="@Model.Text"></span>
+<span class="title">@Model.Text</span>
+@* The unread conversations waiting on the user. It is filled in by the page's messaging script once the page has
+   loaded, and kept current as messages arrive, so the menu itself never waits on a count and stays the same for
+   everyone who sees it. While it shows, the Messaging group's icon turns red, so a collapsed menu still says so. It
+   stays hidden for anyone without the workspace, whose pages carry no such script. *@
+<span class="badge rounded-pill text-bg-danger ms-auto me-3 align-self-center flex-shrink-0 d-none" title="@T["Unread conversations waiting for you"]" data-messaging-attention-badge data-admin-menu-attention></span>

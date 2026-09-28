@@ -1,0 +1,603 @@
+﻿using CrestApps.Core;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Handlers;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Orchestration;
+using CrestApps.Core.AI.Realtime;
+using CrestApps.Core.Support;
+using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Voice.Tools;
+using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using OrchardCore.Modules;
+using YesSql;
+
+namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
+
+/// <summary>
+/// Holds an automated phone conversation as a live speech-to-speech session: caller audio goes to the model as it
+/// arrives, and the model's voice goes back to the caller as it is produced.
+/// </summary>
+public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConversationRunner
+{
+    private readonly IRealtimeOrchestrator _orchestrator;
+    private readonly IContactCenterVoiceMediaProviderResolver _mediaResolver;
+    private readonly IAIChatSessionPromptStore _promptStore;
+    private readonly IAIChatSessionManager _chatSessionManager;
+    private readonly ISession _session;
+    private readonly IClock _clock;
+    private readonly ILogger _logger;
+
+    /// <summary>
+    /// The length of one ambience frame, in milliseconds. Matches the packet size a phone call is carried in.
+    /// </summary>
+    private const int AmbienceFrameMilliseconds = 20;
+
+    /// <summary>
+    /// How long after the last assistant audio the bed waits before filling the silence itself.
+    /// </summary>
+    private const int AssistantSilenceHoldoffMilliseconds = 200;
+
+    /// <summary>
+    /// When the assistant's audio will have finished playing to the caller, so the bed can stay out of its way and
+    /// the closing watchdog waits for the goodbye to be heard.
+    /// </summary>
+    /// <remarks>
+    /// In the future for as long as speech is still queued on the line. The model speaks faster than real time, so
+    /// the moment audio arrives is not the moment the caller hears the end of it: see
+    /// <see cref="ExtendAssistantPlayback(int)"/>.
+    /// </remarks>
+    private long _lastAssistantAudioTicks;
+
+    /// <summary>
+    /// When the assistant's speech is projected to finish playing, or zero before it has said anything.
+    /// </summary>
+    /// <remarks>
+    /// Kept apart from <see cref="_lastAssistantAudioTicks"/>, which the watchdogs also stamp with "now" to restart
+    /// their silence clocks. This one moves only when speech is actually written to the line, because it is what
+    /// the echo guard reads to decide whether the caller's audio could be the assistant coming back.
+    /// </remarks>
+    private long _assistantSpeechEndsTicks;
+
+    /// <summary>
+    /// When the caller was last heard to say something, so a closing call can tell "they are done" from "they
+    /// had one more thing".
+    /// </summary>
+    private long _lastCallerSpeechTicks;
+
+    /// <summary>
+    /// Set when the call was ended with nothing being said, which means the goodbye is already behind the
+    /// assistant and anything it says next is suppressed as a repeat.
+    /// </summary>
+    /// <remarks>
+    /// Shared with the closing watchdog so it does not wait for a goodbye to begin that the assistant pump has
+    /// already decided nobody will hear.
+    /// </remarks>
+    private bool _goodbyeAlreadySaid;
+
+    /// <summary>
+    /// What this call's audio is measured into for the usage report, or <see langword="null"/> when nobody asked.
+    /// </summary>
+    private AIVoiceSessionMeter _meter;
+
+    /// <summary>
+    /// The call's line, as one continuous stream the voice and the room bed are both written through.
+    /// </summary>
+    private OutgoingCallAudio _outgoing;
+
+    /// <summary>
+    /// How long the session is given to finish its closing line after the model asks to transfer, before it is
+    /// closed and the caller is handed to the queue. Long enough for "connecting you now", short enough that a
+    /// caller is never left with the assistant after being promised a person.
+    /// </summary>
+    private static readonly TimeSpan HandoffClosingGrace = TimeSpan.FromSeconds(4);
+
+    /// <summary>
+    /// How long the assistant is given to begin its closing line after asking to end the call.
+    /// </summary>
+    /// <remarks>
+    /// The tool call and the goodbye are one action as far as the model is concerned, and the tool usually lands
+    /// first. Without this wait the silence in between reads as "finished speaking" and the goodbye is cut off at
+    /// the first word. Bounded, because a model that ends a call without saying anything must still hang up.
+    /// </remarks>
+    private static readonly TimeSpan ClosingSpeechStartGrace = TimeSpan.FromSeconds(4);
+
+    /// <summary>
+    /// How long the caller is left the line after the assistant's goodbye before the call is hung up.
+    /// </summary>
+    /// <remarks>
+    /// Hanging up the instant the closing line ends cuts off the person who was drawing breath to say "actually,
+    /// one more thing" — and being hung up on is remembered long after the rest of the call is forgotten. If they
+    /// do speak, the assistant answers and the call carries on; this window only ends a conversation that both
+    /// sides have finished.
+    /// <para>
+    /// Two seconds was about the length of a breath, and it read on a real call as being hung up on. The cost of
+    /// the extra couple of seconds is a little silence at the end of a call that was over anyway.
+    /// </para>
+    /// </remarks>
+    private static readonly TimeSpan ClosingListeningGrace = TimeSpan.FromSeconds(4);
+
+    /// <summary>
+    /// How long a voicemail message is allowed past the projected end of its playback before the call is hung up.
+    /// </summary>
+    /// <remarks>
+    /// A recording has nobody to leave a moment for, so the listening grace does not apply; this only covers the
+    /// delay between audio leaving here and reaching the far end, so the last word of the message is not clipped.
+    /// Live, the listening grace and the wait before it came out as silence at the end of the customer's voicemail.
+    /// </remarks>
+    private static readonly TimeSpan VoicemailTailGrace = TimeSpan.FromSeconds(1);
+
+    /// <summary>
+    /// How often the closing watchdog re-checks. Fine enough that the hangup lands when it was meant to.
+    /// </summary>
+    private static readonly TimeSpan ClosingPollInterval = TimeSpan.FromMilliseconds(150);
+
+    /// <summary>
+    /// How long the line may be quiet on both sides before the assistant speaks up.
+    /// </summary>
+    /// <remarks>
+    /// Long enough to be a silence rather than a pause for thought: people take a few seconds to answer a
+    /// question about their budget, and being chivvied for it is worse than the wait.
+    /// </remarks>
+    private static readonly TimeSpan IdleBeforeSpeakingUp = TimeSpan.FromSeconds(12);
+
+    /// <summary>
+    /// How often the idle watchdog looks.
+    /// </summary>
+    private static readonly TimeSpan IdlePollInterval = TimeSpan.FromSeconds(1);
+
+    /// <summary>
+    /// How many times a silence is worth breaking before accepting that the caller has gone.
+    /// </summary>
+    private const int MaximumIdlePrompts = 2;
+
+    /// <summary>
+    /// How long the caller must be quiet before the session treats their turn as finished. Longer than the
+    /// provider default, because a person on the phone pauses mid-sentence and a call carries noise through those
+    /// pauses; cutting in on them is what makes an assistant feel like it is not listening.
+    /// </summary>
+    /// <remarks>
+    /// Only in effect when the session runs <c>server_vad</c>, which is a tenant setting. Under the default
+    /// semantic detector Core drops it: see <see cref="ApplyTelephonyTurnDetectionAsync"/>.
+    /// </remarks>
+    private const int TelephonySilenceDurationMilliseconds = 900;
+
+    /// <summary>
+    /// How confident the detector must be that it is hearing speech.
+    /// </summary>
+    /// <remarks>
+    /// Left at roughly the provider default on purpose. Raising it to 0.62 to suppress phantom turns seemed to
+    /// suppress them, and a caller's short quiet "yeah" on the same build reached the model as a fragment that came
+    /// back transcribed as "That's causing a fever somewhere." The assistant read that as a brush-off and politely
+    /// ended the call on somebody who had just agreed to talk.
+    /// <para>
+    /// Neither observation can be pinned on this number. Like the silence above, it only applies under
+    /// <c>server_vad</c>, and the tenant these calls run on configures no detector, so it gets the default semantic
+    /// one, which ignores it. It stays at the default all the same: a short affirmative is the most common thing a caller
+    /// says, and a detector made harder to trigger is exactly what clips one. Phantom turns are dealt with before
+    /// the detector instead, by <see cref="CallerEchoGuard"/>, which leaves the caller's audio untouched whenever
+    /// the assistant is not speaking.
+    /// </para>
+    /// </remarks>
+    private const float TelephonyVadThreshold = 0.5f;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RealtimeVoiceConversationRunner"/> class.
+    /// </summary>
+    /// <param name="orchestrator">The realtime orchestrator, which owns tools, the system prompt and data sources.</param>
+    /// <param name="mediaResolver">The resolver for the provider that can carry live audio on this call.</param>
+    /// <param name="promptStore">The transcript store.</param>
+    /// <param name="chatSessionManager">The chat session manager.</param>
+    /// <param name="session">The document session, flushed after each turn so the call does not hold a write transaction open.</param>
+    /// <param name="clock">The clock.</param>
+    /// <param name="logger">The logger.</param>
+    public RealtimeVoiceConversationRunner(
+        IRealtimeOrchestrator orchestrator,
+        IContactCenterVoiceMediaProviderResolver mediaResolver,
+        IAIChatSessionPromptStore promptStore,
+        IAIChatSessionManager chatSessionManager,
+        ISession session,
+        IClock clock,
+        ILogger<RealtimeVoiceConversationRunner> logger)
+    {
+        _orchestrator = orchestrator;
+        _mediaResolver = mediaResolver;
+        _promptStore = promptStore;
+        _chatSessionManager = chatSessionManager;
+        _session = session;
+        _clock = clock;
+        _logger = logger;
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> RunAsync(RealtimeVoiceConversationContext context, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        if (context.Profile is null || context.Session is null || string.IsNullOrEmpty(context.ProviderCallId))
+        {
+            return false;
+        }
+
+        // Opened before the session and held for the whole call. A session that carries tools is refused without
+        // one, because a tool reads its context from this scope -- and the tools here are the call's controls:
+        // ending it and handing it to a person. Refused meant the call fell back to the turn-based loop, so the
+        // symptom was not an error on the line but an assistant that could not hear the caller while it spoke.
+        using var invocationScope = AIInvocationScope.Begin();
+
+        // The call was answered moments ago; the caller's wait for the assistant's first word starts here.
+        var answeredTicks = DateTime.UtcNow.Ticks;
+        _meter = context.Meter;
+
+        var mediaProvider = _mediaResolver.Get(context.ProviderName);
+
+        // No live media means no realtime: the model needs the caller's audio, not a transcript of it. Reporting
+        // that here lets the caller fall back to the turn-based loop instead of sitting on a silent call.
+        if (mediaProvider is null)
+        {
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Provider '{Provider}' cannot carry live media, so activity '{ActivityId}' runs the turn-based voice loop instead of a realtime session.",
+                    context.ProviderName.SanitizeLogValue(),
+                    context.Activity?.ItemId.SanitizeLogValue());
+            }
+
+            return false;
+        }
+
+        await using var media = await mediaProvider.OpenSessionAsync(new ContactCenterVoiceMediaSessionRequest
+        {
+            ProviderCallId = context.ProviderCallId,
+            InteractionId = context.InteractionId,
+        }, cancellationToken);
+
+        _outgoing = new OutgoingCallAudio(media.OutgoingFormat);
+
+        var first = await StartConversationAsync(context, conversationSoFar: null, cancellationToken);
+
+        if (first is null)
+        {
+            return false;
+        }
+
+        using var callScope = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+        // Holds whichever session is carrying the call. Usually that is this first one for the whole call; when a
+        // session is lost with the caller still there it is replaced, and everything that talks to the model reads
+        // it from here rather than keeping the one it started with.
+        await using var live = new LiveConversation(first, callScope.Token);
+
+        // Only now: a session that never opened held nothing, and the turn-based loop takes the call instead.
+        _meter?.Start(answeredTicks);
+
+        await ApplyTelephonyTurnDetectionAsync(first, cancellationToken);
+
+        // We placed this call, so the silence after the customer picks up is ours to fill. Left to itself the
+        // session waits to be spoken to -- voice detection is how a turn begins -- and every live transcript
+        // opened with the customer saying "Hello?" into dead air before the assistant introduced itself. A
+        // session that creates its own responses ignores this, so it is safe to ask either way.
+        await first.RequestUnpromptedResponseAsync(cancellationToken: cancellationToken);
+
+        // Both silence clocks start now rather than at zero. Left unset, "quiet since the beginning of time" is a
+        // very long silence indeed, and the watchdog below would speak up a second into the call -- over the top
+        // of the opening line it was asked to wait for.
+        var startedTicks = DateTime.UtcNow.Ticks;
+        Interlocked.Exchange(ref _lastAssistantAudioTicks, startedTicks);
+        Interlocked.Exchange(ref _lastCallerSpeechTicks, startedTicks);
+        Interlocked.Exchange(ref _assistantSpeechEndsTicks, 0);
+        Volatile.Write(ref _goodbyeAlreadySaid, false);
+
+        // The moment the model asks to transfer, the caller stops being the assistant's to talk to. Without this
+        // the session ran until the caller hung up — the transfer was recorded, the caller was told someone was
+        // coming, and then the assistant kept right on chatting, with the enqueue only happening when the call
+        // would have ended anyway. Observed live at 19 seconds on one call and 40 on the next.
+        //
+        // It is a short grace rather than an immediate cut: the model announces the transfer in the same breath
+        // as it invokes the tool ("connecting you with an agent right now"), so cutting the audio the instant the
+        // tool fires would clip that line mid-word and drop the caller into silence with no idea what happened.
+        using var handoffRegistration = context.HandoffRequested.CanBeCanceled
+            ? context.HandoffRequested.Register(() => callScope.CancelAfter(HandoffClosingGrace))
+            : default;
+
+        // The model saying the conversation is over is not the same as the call being over, which is why this is
+        // a watchdog rather than another CancelAfter: it waits for the goodbye to finish and then leaves the line
+        // open a moment, and abandons the hangup entirely if the caller uses it.
+        var closing = context.EndCallRequested.CanBeCanceled
+            ? CloseWhenConversationEndsAsync(callScope, context.ReachedVoicemail, context.EndCallRequests, context.EndCallRequested)
+            : Task.CompletedTask;
+
+        // Nobody has said anything for a while, and on a phone call somebody has to. Usually it is the caller's
+        // turn that went missing -- a short "yes" the provider returned no transcript for -- which leaves the
+        // assistant waiting for a turn it never saw while the caller waits for an answer they think they already
+        // gave. Neither side will break that on its own.
+        var idle = SpeakUpWhenNobodyHasAsync(live, context, callScope.Token);
+
+        // One generator drives both paths, at the rate the model speaks: the bed is mixed under the assistant's
+        // own audio while it talks, and written on its own while it does not, so the room never cuts in and out.
+        var ambience = context.UseCallAmbience
+            ? new CallAmbience(RealtimeAudioConverter.RealtimeSampleRate)
+            : null;
+
+        // Both directions run at once. That is the entire point: a turn-based loop cannot answer until the caller
+        // has finished, and this one starts answering while they are still talking.
+        // Shared by the two, because an interruption is only known for certain when both sides agree: the caller's
+        // side heard a voice over the assistant, and the model's side heard the caller start.
+        var bargeIn = new AssistantBargeIn();
+
+        var toModel = PumpCallerAudioAsync(media, live, context, bargeIn, callScope.Token);
+        var bed = ambience is null
+            ? Task.CompletedTask
+            : PumpAmbienceAsync(media, ambience, callScope.Token);
+
+        try
+        {
+            // The caller hanging up ends the call. The session closing does not, on its own: a session lost with
+            // the caller still there is replaced (see HoldTheConversationAsync). The bed never ends by itself, and
+            // a call must not be held open by it.
+            await HoldTheConversationAsync(media, live, context, ambience, bargeIn, toModel, callScope);
+        }
+        finally
+        {
+            _meter?.Stop(DateTime.UtcNow.Ticks);
+            await callScope.CancelAsync();
+
+            // All of them are awaited so none is left writing to a disposed session.
+            await Task.WhenAll(Settle(toModel), Settle(bed), Settle(closing), Settle(idle));
+            await media.StopAsync(CancellationToken.None);
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Ends the call once the model has said the conversation is over and the goodbye has actually been said.
+    /// </summary>
+    /// <remarks>
+    /// Three things have to be true before a call is cut, and each was learned by picturing the person holding
+    /// the phone. The model has to have decided the conversation is finished. Its closing line has to have
+    /// finished playing, or the caller hears "thanks for your ti-" and a dead line. And the caller has to have
+    /// been given a breath to say the thing people say after goodbye — if they take it, the hangup is abandoned
+    /// altogether and the assistant answers them, because a caller who is still talking has not finished the
+    /// call no matter what the model concluded.
+    /// </remarks>
+    /// <param name="callScope">The scope whose cancellation ends the call.</param>
+    /// <param name="endCallRequested">Cancelled when the model reports the conversation finished.</param>
+    /// <summary>
+    /// Speaks again when the line has gone quiet on both sides for too long.
+    /// </summary>
+    /// <remarks>
+    /// The turn-based loop has always done this -- "are you still there?" -- and the live session never did, so a
+    /// caller whose reply was lost sat in silence until they gave up and spoke again. It stops after a couple of
+    /// attempts: a caller who has genuinely gone is not brought back by asking a third time, and the call's own
+    /// ending handles the rest.
+    /// </remarks>
+    private async Task SpeakUpWhenNobodyHasAsync(
+        LiveConversation live,
+        RealtimeVoiceConversationContext context,
+        CancellationToken callToken)
+    {
+        var attempts = 0;
+
+        try
+        {
+            while (!callToken.IsCancellationRequested && attempts < MaximumIdlePrompts)
+            {
+                await Task.Delay(IdlePollInterval, callToken);
+
+                // The call is closing, and the silence at the end of it is deliberate.
+                if (context.EndCallRequested.IsCancellationRequested || context.HandoffRequested.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                var now = DateTime.UtcNow.Ticks;
+                var quietFor = now - Math.Max(
+                    Interlocked.Read(ref _lastAssistantAudioTicks),
+                    Interlocked.Read(ref _lastCallerSpeechTicks));
+
+                // No session to ask while one that was lost is being replaced; the replacement speaks first anyway.
+                var conversation = live.Current;
+
+                if (quietFor < IdleBeforeSpeakingUp.Ticks || conversation is null)
+                {
+                    continue;
+                }
+
+                attempts++;
+                _meter?.IdlePrompt();
+
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation(
+                        "Nobody has spoken on activity '{ActivityId}' for {Seconds} seconds, so the assistant is asking whether the caller is still there (attempt {Attempt}).",
+                        context.Activity?.ItemId.SanitizeLogValue(),
+                        (int)TimeSpan.FromTicks(quietFor).TotalSeconds,
+                        attempts);
+                }
+
+                // Stamped before asking rather than after, so the next check measures from this prompt instead of
+                // firing again while the model is still deciding what to say.
+                Interlocked.Exchange(ref _lastAssistantAudioTicks, now);
+
+                // Worded tightly because the first attempt was not. Asked only to "check whether they are still
+                // there", the model filled the silence by moving the sale along -- a new question the customer
+                // had even less chance of answering than the one they had just missed. What a person does here
+                // is ask again, so that is what this asks for, and it forbids the alternative outright.
+                await conversation.RequestUnpromptedResponseAsync(
+                    "The line has gone quiet and the customer has not answered. Say one short sentence only: " +
+                    "either ask whether they are still there, or repeat the question you just asked them. Do not " +
+                    "ask anything new, do not move on to another topic, and do not continue the previous sentence.",
+                    callToken);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // The call ended, which is the ordinary way this stops.
+        }
+        catch (Exception ex)
+        {
+            // A prompt that cannot be sent must not take the call down with it.
+            _logger.LogWarning(ex, "Could not ask whether the caller is still there during a realtime voice session.");
+        }
+    }
+
+    /// <summary>
+    /// Pushes the end of the assistant's playback out by the length of audio just written to the line.
+    /// </summary>
+    /// <remarks>
+    /// The clock used to be stamped with the time each piece of audio arrived. The model delivers speech faster than
+    /// it plays -- a seven-second goodbye arrived in under three -- so "the assistant has gone quiet" was measured
+    /// from seconds before the caller had heard the last of it, and the call was hung up on its final words. Heard
+    /// live. Audio queues on the line and plays in order, so each piece ends one duration after whichever is later:
+    /// now, or the end of what is already queued.
+    /// </remarks>
+    /// <param name="pcmByteCount">The length of the audio, in bytes of 16-bit PCM at the realtime rate.</param>
+    /// <returns>When the audio starts playing to the caller, in UTC ticks.</returns>
+    private long ExtendAssistantPlayback(int pcmByteCount)
+    {
+        var duration = AssistantBargeIn.DurationTicks(pcmByteCount);
+        var now = DateTime.UtcNow.Ticks;
+        long queuedUntil;
+        long playsUntil;
+
+        do
+        {
+            queuedUntil = Interlocked.Read(ref _lastAssistantAudioTicks);
+            playsUntil = Math.Max(queuedUntil, now) + duration;
+        }
+        while (Interlocked.CompareExchange(ref _lastAssistantAudioTicks, playsUntil, queuedUntil) != queuedUntil);
+
+        // Only this pump writes speech, so a plain store of the later value is enough.
+        if (playsUntil > Interlocked.Read(ref _assistantSpeechEndsTicks))
+        {
+            Interlocked.Exchange(ref _assistantSpeechEndsTicks, playsUntil);
+        }
+
+        return playsUntil - duration;
+    }
+
+    private async Task CloseWhenConversationEndsAsync(
+        CancellationTokenSource callScope,
+        Func<bool> reachedVoicemail,
+        Func<int> endCallRequests,
+        CancellationToken endCallRequested)
+    {
+        // Watched together, because a call ends for all sorts of reasons that are nothing to do with this: the
+        // caller hangs up, the model asks to transfer, the session fails. Waiting on the end-call signal alone
+        // meant that on every one of those calls this task simply never finished -- and the teardown waits for
+        // it, so the session never returned and everything after it never ran. That is what left a caller who
+        // had just been promised a person listening to nothing: the transfer was recorded and the code that
+        // would have seated them in the queue was never reached.
+        using var closing = CancellationTokenSource.CreateLinkedTokenSource(endCallRequested, callScope.Token);
+
+        try
+        {
+            // Wait for the model to say the conversation is over. Nothing below runs on an ordinary call.
+            await Task.Delay(Timeout.InfiniteTimeSpan, closing.Token);
+        }
+        catch (OperationCanceledException) when (endCallRequested.IsCancellationRequested)
+        {
+            // This is the signal, not a failure.
+        }
+        catch (OperationCanceledException)
+        {
+            // The call ended on its own. There is nothing left to close.
+            return;
+        }
+
+        while (true)
+        {
+            if (await CloseAfterTheGoodbyeAsync(callScope, reachedVoicemail))
+            {
+                return;
+            }
+
+            // The customer answered the goodbye and has the call back. The model will end it again once they are
+            // done, and that request has to be heard: live, the watch stopped here for good, the second goodbye
+            // was said, and the line stayed open until the customer hung up on it. Requests made before the
+            // customer spoke are spent, so only a newer one closes the call.
+            if (endCallRequests is null)
+            {
+                return;
+            }
+
+            var spent = endCallRequests();
+
+            while (endCallRequests() <= spent)
+            {
+                try
+                {
+                    await Task.Delay(ClosingPollInterval, callScope.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+            }
+        }
+    }
+
+    // Returns whether the call was closed, or ended on its own; false when the customer spoke and took it back.
+    private async Task<bool> CloseAfterTheGoodbyeAsync(CancellationTokenSource callScope, Func<bool> reachedVoicemail)
+    {
+        var requestedAtTicks = DateTime.UtcNow.Ticks;
+        var closingLineStarted = false;
+
+        while (!callScope.IsCancellationRequested)
+        {
+            try
+            {
+                await Task.Delay(ClosingPollInterval, callScope.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                return true;
+            }
+
+            var now = DateTime.UtcNow.Ticks;
+            var lastAssistantTicks = Interlocked.Read(ref _lastAssistantAudioTicks);
+
+            // The caller spoke after the model decided it was done. They get the call back: the assistant is
+            // already answering them, and hanging up mid-answer would be worse than never having closed at all.
+            if (Interlocked.Read(ref _lastCallerSpeechTicks) > requestedAtTicks)
+            {
+                return false;
+            }
+
+            // A goodbye the assistant pump has already marked as said counts as started: anything the model says
+            // from here is suppressed, so waiting for it to begin only holds the line open on silence.
+            closingLineStarted |= lastAssistantTicks > requestedAtTicks || Volatile.Read(ref _goodbyeAlreadySaid);
+
+            // The model usually calls the tool and says its goodbye immediately after, so the silence at this
+            // moment is the gap before it starts — not the end of anything. Waiting for it to speak is what keeps
+            // the closing line from being cut off at the first word. A model that says nothing at all still has
+            // to end the call, so the wait is bounded.
+            if (!closingLineStarted && now - requestedAtTicks < ClosingSpeechStartGrace.Ticks)
+            {
+                continue;
+            }
+
+            // Quiet since the goodbye ended — and long enough that the caller has had their moment to answer it.
+            // Measured from the end of the assistant's playback rather than from the tool call, so a long closing
+            // line does not eat the window the caller was supposed to get. A voicemail has no caller to give it
+            // to, so there the call ends as soon as the message has reached the far end.
+            var afterGoodbye = reachedVoicemail?.Invoke() == true ? VoicemailTailGrace : ClosingListeningGrace;
+
+            if (now - lastAssistantTicks < afterGoodbye.Ticks)
+            {
+                continue;
+            }
+
+            await callScope.CancelAsync();
+
+            return true;
+        }
+
+        return true;
+    }
+}

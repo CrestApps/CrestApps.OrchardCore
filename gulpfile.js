@@ -314,6 +314,10 @@ function buildJsPipeline(assetGroup, doConcat, doRebuild) {
             .pipe(gulpif(enableSourceMaps, sourcemaps.init()))
             .pipe(gulpif("*.ts", typescript(tsCompilerOptions)))
             .pipe(babel({
+                // Babel compacts any input over 500,000 characters by default. The soft phone is just under that with
+                // Unix line endings and just over it in a Windows checkout, so the same source built two different
+                // bundles depending on the machine.
+                "compact": false,
                 "presets": [
                     [
                         "@babel/preset-env",

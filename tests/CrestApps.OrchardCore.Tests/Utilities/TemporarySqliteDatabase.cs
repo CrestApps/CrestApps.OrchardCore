@@ -1,6 +1,3 @@
-using System;
-using System.IO;
-using System.Threading;
 using Microsoft.Data.Sqlite;
 using YesSql;
 
@@ -35,6 +32,9 @@ public static class TemporarySqliteDatabase
         store?.Dispose();
         SqliteConnection.ClearAllPools();
         Delete(databasePath);
+
+        // A database opened with a kept journal leaves it behind, emptied, when the last connection closes.
+        Delete(databasePath + "-journal");
     }
 
     /// <summary>

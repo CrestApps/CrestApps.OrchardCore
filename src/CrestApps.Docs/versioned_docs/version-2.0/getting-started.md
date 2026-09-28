@@ -50,7 +50,6 @@ cd CrestApps.OrchardCore
 npm install
 npm run rebuild
 dotnet build .\CrestApps.OrchardCore.slnx -c Release /p:NuGetAudit=false
-dotnet test .\tests\CrestApps.OrchardCore.Tests\CrestApps.OrchardCore.Tests.csproj -c Release /p:NuGetAudit=false
 ```
 
 > The .NET build depends on Orchard Core preview packages. If Cloudsmith is unreachable, asset builds still work but the .NET restore/build will not.

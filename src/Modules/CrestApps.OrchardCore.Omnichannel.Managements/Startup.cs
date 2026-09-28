@@ -1,4 +1,6 @@
+using CrestApps.Core.AI;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.ContentTransfer.Models;
@@ -8,18 +10,24 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 using CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Managements.Reports;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
+using CrestApps.OrchardCore.Omnichannel.Managements.Tools;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using CrestApps.OrchardCore.PhoneNumbers.Core;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
+using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.Contents.Services;
+using OrchardCore.Contents.ViewModels;
 using OrchardCore.ContentTypes.Editors;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 
@@ -49,6 +57,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, OmnichannelSubjectPartSettingsDisplayDriver>();
         services.AddContentPart<OmnichannelContactPart>()
             .UseDisplayDriver<OmnichannelContactPartDisplayDriver>();
+        services.AddScoped<IContentHandler, OmnichannelContactTimeZoneHandler>();
 
         services
             .AddDisplayDriver<OmnichannelActivity, OmnichannelActivityDisplayDriver>();
@@ -77,7 +86,7 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<OmnichannelCampaignGroup, OmnichannelCampaignGroupDisplayDriver>();
 
         services
-            .AddDisplayDriver<OmnichannelChannelEndpoint, OmnichannelChannelEndpointDisplayDriver>();
+            .AddDisplayDriver<Cadence, CadenceDisplayDriver>();
 
         services
             .AddDisplayDriver<SubjectAction, SubjectActionDisplayDriver>()
@@ -87,6 +96,7 @@ public sealed class Startup : StartupBase
         services.AddNavigationProvider<AdminMenu>();
 
         services.AddTransient<IContentsAdminListFilterProvider, OmnichannelContactPhoneContentsAdminListFilterProvider>();
+        services.AddDisplayDriver<ContentOptionsViewModel, OmnichannelContactPhoneContentsAdminListDisplayDriver>();
 
         services.AddShapeTableProvider<OmnichannelSubjectButtonsShapeTableProvider>();
         services.AddShapeTableProvider<OmnichannelSubjectPartIndexSettingsShapeTableProvider>();
@@ -96,12 +106,42 @@ public sealed class Startup : StartupBase
 [RequireFeatures("CrestApps.OrchardCore.AI")]
 public sealed class AISubjectFlowStartup : StartupBase
 {
+    internal readonly IStringLocalizer S;
+    private readonly IShellConfiguration _shellConfiguration;
+
+    public AISubjectFlowStartup(
+        IStringLocalizer<AISubjectFlowStartup> stringLocalizer,
+        IShellConfiguration shellConfiguration)
+    {
+        S = stringLocalizer;
+        _shellConfiguration = shellConfiguration;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
         services
             .AddScoped<IContentTypePartDefinitionDisplayDriver, OmnichannelSubjectAISettingsDisplayDriver>()
             .AddScoped<IAIChatSessionAccessProvider, OmnichannelAIChatSessionAccessProvider>()
             .AddScoped<IAutomatedVoiceActivitySettingsResolver, AutomatedVoiceActivitySettingsResolver>();
+
+        // The automated-activity processing tunables, and their startup validation.
+        services.Configure<OmnichannelAutomationOptions>(_shellConfiguration.GetSection("CrestApps:Omnichannel:Automation"));
+        services.AddSingleton<IValidateOptions<OmnichannelAutomationOptions>, OmnichannelAutomationOptionsValidator>();
+
+        // One reply in flight per conversation. A singleton inside the tenant container, so it is shared by the
+        // scoped handlers separate inbound webhooks create and isolated from every other tenant.
+        services.AddSingleton<IAutomatedConversationGate, InMemoryAutomatedConversationGate>();
+
+        // The turn a completion records its handoff decision on. Scoped, so the tool and the handler that ran
+        // the completion share one instance and two concurrent conversations cannot see each other's decision.
+        services.TryAddScoped<IOmnichannelHandoffTurn, OmnichannelHandoffTurn>();
+
+        // The transfer-to-agent tool is enabled per-turn by the automated conversation handlers (not admin-
+        // selectable), so it is registered but intentionally not marked Selectable.
+        services.AddCoreAITool<TransferToAgentTool>(OmnichannelHandoffHelper.TransferToAgentToolName)
+            .WithTitle(S["Transfer to live agent"])
+            .WithDescription(S["Hands the automated conversation off to a human agent."])
+            .WithCategory(S["Omnichannel"]);
     }
 }
 
@@ -151,7 +191,8 @@ public sealed class ReportsStartup : StartupBase
         services
             .AddScoped<IReport, ActivitySummaryReportProvider>()
             .AddScoped<IReport, CampaignPerformanceReportProvider>()
-            .AddScoped<IReport, DispositionBreakdownReportProvider>();
+            .AddScoped<IReport, DispositionBreakdownReportProvider>()
+            .AddScoped<IReport, HandoffContainmentReportProvider>();
         services.AddDisplayDriver<ReportFilter, OmnichannelReportFilterDisplayDriver>();
 
         AddEnterpriseReport(services, "omnichannel-activity-backlog", () => S["Activity backlog"], () => S["Open CRM activity inventory, assignment, reservation, and overdue workload."], EnterpriseActivityReportKind.Backlog, ReportsConstants.Categories.QueueRouting);

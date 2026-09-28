@@ -5,11 +5,20 @@ namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 /// <summary>
 /// Schema for the <c>Settings</c> recipe step.
 /// </summary>
-public sealed class SettingsRecipeStep(IEnumerable<ISiteSettingsSchemaDefinition> schemaDefinitions) : IRecipeStep
+public sealed class SettingsRecipeStep : IRecipeStep
 {
-    private readonly IEnumerable<ISiteSettingsSchemaDefinition> _schemaDefinitions = schemaDefinitions;
+    private readonly IEnumerable<ISiteSettingsSchemaDefinition> _schemaDefinitions;
 
     private JsonSchema _cached;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SettingsRecipeStep"/> class.
+    /// </summary>
+    /// <param name="schemaDefinitions">The registered site settings schema definitions used to compose the step schema.</param>
+    public SettingsRecipeStep(IEnumerable<ISiteSettingsSchemaDefinition> schemaDefinitions)
+    {
+        _schemaDefinitions = schemaDefinitions;
+    }
 
     public string Name => "settings";
 

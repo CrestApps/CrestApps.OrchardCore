@@ -6,6 +6,12 @@ namespace CrestApps.OrchardCore.AI.Chat.ViewModels;
 public sealed class AICompletionUsageSummaryViewModel
 {
     /// <summary>
+    /// Gets or sets what the row is for when the table is grouped by a single dimension (a model, a deployment, a
+    /// profile or a connection); empty when it is grouped by user and model.
+    /// </summary>
+    public string GroupLabel { get; set; }
+
+    /// <summary>
     /// Gets or sets the user label.
     /// </summary>
     public string UserLabel { get; set; }

@@ -225,4 +225,4 @@ Both registration extensions live in `Microsoft.Extensions.DependencyInjection`.
 
 ## Auditing coverage
 
-The unit test suite validates the composed schema against complete `LayerRule` payloads, including nested groups, confirms that custom or unknown conditions are accepted, and asserts that a condition missing its `$type` discriminator is rejected. When you add a new condition or operator to a CrestApps module, add its schema definition and its registration in the same change so the `Layers` step keeps describing every supported rule.
+When you add a new condition or operator to a CrestApps module, add its schema definition and its registration in the same change so the `Layers` step keeps describing every supported rule.

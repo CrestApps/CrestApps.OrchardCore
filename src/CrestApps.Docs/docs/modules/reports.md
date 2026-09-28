@@ -22,7 +22,7 @@ The optional **Reports (OpenXml)** add-on extends the Reports area with Excel wo
 
 The implementation is split into three layers:
 
-- **`CrestApps.OrchardCore.Reports.Abstractions`** defines the shared report contracts and document models, including `IReport`, `IReportExportFormat`, `IReportManager`, and `IReportExportManager`.
+- **`CrestApps.OrchardCore.Reports.Abstractions`** defines the shared report contracts and document models, including `IReport`, `IReportProvider`, `IReportExportFormat`, `IReportManager`, and `IReportExportManager`.
 - **`CrestApps.OrchardCore.Reports.Core`** contains the default non-Orchard-specific implementations such as the report/export registries and the built-in CSV export formatter.
 - **`CrestApps.OrchardCore.Reports`** contains Orchard-specific wiring such as the admin menu, controller, views, and the display-driver-based filter UI.
 
@@ -132,6 +132,16 @@ return new ReportDocument()
 ```
 
 When the **Reports (OpenXml)** add-on is enabled, the Excel (`.xlsx`) export applies the font color, background fill, and bold weight to the matching cells. Header rows, subtotal rows, and grand-total rows are exported bold automatically. CSV has no native styling, so it always exports values only.
+
+### Contributing a family of reports
+
+When a module exposes a whole family of reports driven by data — for example a catalog of report definitions that differ only by a metric selector — registering one `IReport` service per report clutters startup code and traps the metadata in imperative registrations where another feature cannot extend it. Implement `IReportProvider` instead and register it once:
+
+```csharp
+services.AddScoped<IReportProvider, MyReportProvider>();
+```
+
+`GetReports()` returns the reports the provider contributes; the `IReportManager` merges them with the individually registered `IReport` services and enforces unique names across both. Because the provider is resolved from the request scope, it can construct a fresh report instance per enumeration and project its catalog from options, so other features can add or remove entries through the options pipeline without editing the provider. The Contact Center module uses this pattern to project its enterprise interaction and agent workforce report catalogs.
 
 ## Enable via recipe
 
