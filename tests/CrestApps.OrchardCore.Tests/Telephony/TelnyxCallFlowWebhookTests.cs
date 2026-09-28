@@ -240,7 +240,7 @@ public sealed class TelnyxCallFlowWebhookTests
 
             var apiClient = new TelnyxApiClient(
                 new HttpClient(Http) { BaseAddress = new Uri("https://api.telnyx.com/v2/") },
-                new OptionsWrapper<TelnyxOptions>(new TelnyxOptions { ApiBaseUrl = "https://api.telnyx.com/v2/", ApiKey = "KEY" }),
+                new TestOptionsMonitor<TelnyxOptions>(new TelnyxOptions { ApiBaseUrl = "https://api.telnyx.com/v2/", ApiKey = "KEY" }),
                 new TelnyxApiRetryPolicy(TimeSpan.Zero),
                 NullLogger<TelnyxApiClient>.Instance);
 

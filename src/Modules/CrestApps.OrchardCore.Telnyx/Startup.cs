@@ -61,7 +61,8 @@ public sealed class Startup : StartupBase
         // whether repeating is safe, which the transport cannot know.
         services.AddHttpClient<TelnyxApiClient>((serviceProvider, client) =>
         {
-            var options = serviceProvider.GetRequiredService<IOptions<TelnyxOptions>>().Value;
+            // Read as it is now: this runs for every client created, so a saved API base URL applies to the next one.
+            var options = serviceProvider.GetRequiredService<IOptionsMonitor<TelnyxOptions>>().CurrentValue;
 
             if (!string.IsNullOrWhiteSpace(options.ApiBaseUrl))
             {

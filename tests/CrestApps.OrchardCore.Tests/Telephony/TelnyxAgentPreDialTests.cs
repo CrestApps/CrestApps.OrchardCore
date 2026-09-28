@@ -364,7 +364,7 @@ public sealed class TelnyxAgentPreDialTests
     private static TelnyxApiClient CreateApiClient(StubHttpMessageHandler handler)
         => new(
             new HttpClient(handler) { BaseAddress = new Uri("https://api.telnyx.test/v2/") },
-            new OptionsWrapper<TelnyxOptions>(CreateOptions()),
+            new TestOptionsMonitor<TelnyxOptions>(CreateOptions()),
             new TelnyxApiRetryPolicy(TimeSpan.Zero),
             NullLogger<TelnyxApiClient>.Instance);
 

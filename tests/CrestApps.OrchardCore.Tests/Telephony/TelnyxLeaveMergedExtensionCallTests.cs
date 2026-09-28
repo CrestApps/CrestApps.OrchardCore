@@ -380,7 +380,7 @@ public sealed class TelnyxLeaveMergedExtensionCallTests
     private static TelnyxApiClient ApiClient(HttpMessageHandler handler)
         => new(
             new HttpClient(handler) { BaseAddress = new Uri("https://api.telnyx.com/v2/") },
-            new OptionsWrapper<TelnyxOptions>(Options()),
+            new TestOptionsMonitor<TelnyxOptions>(Options()),
             new TelnyxApiRetryPolicy(TimeSpan.Zero),
             NullLogger<TelnyxApiClient>.Instance);
 

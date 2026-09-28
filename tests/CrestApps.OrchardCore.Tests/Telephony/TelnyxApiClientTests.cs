@@ -323,7 +323,7 @@ public sealed class TelnyxApiClientTests
 
         return new TelnyxApiClient(
             httpClient,
-            options,
+            new TestOptionsMonitor<TelnyxOptions>(options.Value),
             new TelnyxApiRetryPolicy(TimeSpan.Zero),
             NullLogger<TelnyxApiClient>.Instance);
     }

@@ -15,6 +15,7 @@ using Moq;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -218,7 +219,7 @@ public sealed class TelnyxAiVoiceHandoffCallStateTests
             var orchestrator = new TelnyxOutboundBridgeOrchestrator(
                 new TelnyxApiClient(
                     new HttpClient(new RefusingHttpMessageHandler()) { BaseAddress = new Uri("https://api.telnyx.test/v2/") },
-                    new OptionsWrapper<TelnyxOptions>(new TelnyxOptions { ApiBaseUrl = "https://api.telnyx.test/v2/", ApiKey = "KEY" }),
+                    new TestOptionsMonitor<TelnyxOptions>(new TelnyxOptions { ApiBaseUrl = "https://api.telnyx.test/v2/", ApiKey = "KEY" }),
                     new TelnyxApiRetryPolicy(TimeSpan.Zero),
                     NullLogger<TelnyxApiClient>.Instance),
                 NullLogger<TelnyxOutboundBridgeOrchestrator>.Instance,
@@ -238,7 +239,7 @@ public sealed class TelnyxAiVoiceHandoffCallStateTests
                 new NoExternalTransferOutcomeSink(),
                 new TelnyxApiClient(
                     new HttpClient(new RefusingHttpMessageHandler()) { BaseAddress = new Uri("https://api.telnyx.test/v2/") },
-                    new OptionsWrapper<TelnyxOptions>(new TelnyxOptions { ApiBaseUrl = "https://api.telnyx.test/v2/", ApiKey = "KEY" }),
+                    new TestOptionsMonitor<TelnyxOptions>(new TelnyxOptions { ApiBaseUrl = "https://api.telnyx.test/v2/", ApiKey = "KEY" }),
                     new TelnyxApiRetryPolicy(TimeSpan.Zero),
                     NullLogger<TelnyxApiClient>.Instance),
                 clock.Object,

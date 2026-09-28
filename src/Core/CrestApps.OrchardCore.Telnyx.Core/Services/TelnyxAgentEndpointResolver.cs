@@ -19,7 +19,7 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 public sealed class TelnyxAgentEndpointResolver : ITelnyxAgentEndpointResolver
 {
     private readonly ITelnyxAgentCredentialStore _credentialStore;
-    private readonly TelnyxOptions _options;
+    private readonly IOptionsMonitor<TelnyxOptions> _options;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -28,15 +28,18 @@ public sealed class TelnyxAgentEndpointResolver : ITelnyxAgentEndpointResolver
     /// </summary>
     public TelnyxAgentEndpointResolver(
         ITelnyxAgentCredentialStore credentialStore,
-        IOptions<TelnyxOptions> options,
+        IOptionsMonitor<TelnyxOptions> options,
         IClock clock,
         ILogger<TelnyxAgentEndpointResolver> logger)
     {
         _credentialStore = credentialStore;
-        _options = options.Value;
+        _options = options;
         _clock = clock;
         _logger = logger;
     }
+
+    // The settings as they are now, so a saved SIP domain takes effect without restarting the app.
+    private TelnyxOptions CurrentOptions => _options.CurrentValue;
 
     /// <inheritdoc/>
     public Task<string> ResolveAsync(string userId, CancellationToken cancellationToken = default)
@@ -167,7 +170,7 @@ public sealed class TelnyxAgentEndpointResolver : ITelnyxAgentEndpointResolver
     }
 
     private string SipDomain
-        => string.IsNullOrWhiteSpace(_options.SipDomain) ? TelnyxConstants.DefaultSipDomain : _options.SipDomain;
+        => string.IsNullOrWhiteSpace(CurrentOptions.SipDomain) ? TelnyxConstants.DefaultSipDomain : CurrentOptions.SipDomain;
 
     // "sip:{username}@{domain}", as every agent leg is addressed.
     private static string SipUsernameOf(string endpoint)

@@ -29,7 +29,10 @@ public sealed class SmsStartup : StartupBase
             .AddOptions<TelnyxSmsOptions>()
             .Services
             .AddTransient<IConfigureOptions<TelnyxSmsOptions>, TelnyxSmsOptionsConfiguration>()
-            .AddSignalOptionsChangeTokenSource<TelnyxSmsOptions>();
+            .AddSignalOptionsChangeTokenSource<TelnyxSmsOptions>()
+            // Orchard Core reads its SMS provider list through IOptionsMonitor; this lets a saved Telnyx SMS setting
+            // rebuild it.
+            .AddSignalOptionsChangeTokenSource<SmsProviderOptions>();
 
         // Register the provider under its technical name, then gate its enabled state on the resolved options
         // (registered after AddSmsProvider so the gate's IsEnabled wins).

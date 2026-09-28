@@ -328,7 +328,7 @@ public sealed class TelnyxWarmTransferTests
     private static TelnyxApiClient CreateApiClient(StubHttpMessageHandler handler, string outboundVoiceProfileId = null)
         => new(
             new HttpClient(handler) { BaseAddress = new Uri("https://api.telnyx.test/v2/") },
-            new OptionsWrapper<TelnyxOptions>(CreateOptions(outboundVoiceProfileId)),
+            new TestOptionsMonitor<TelnyxOptions>(CreateOptions(outboundVoiceProfileId)),
             new TelnyxApiRetryPolicy(TimeSpan.Zero),
             NullLogger<TelnyxApiClient>.Instance);
 

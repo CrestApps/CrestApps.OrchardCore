@@ -258,7 +258,7 @@ public sealed class TelnyxMergeExtensionCallTests
     private static TelnyxApiClient ApiClient(RecordingHttpMessageHandler handler, TelnyxOptions options)
         => new(
             new HttpClient(handler) { BaseAddress = new Uri("https://api.telnyx.com/v2/") },
-            new OptionsWrapper<TelnyxOptions>(options),
+            new TestOptionsMonitor<TelnyxOptions>(options),
             new TelnyxApiRetryPolicy(TimeSpan.Zero),
             NullLogger<TelnyxApiClient>.Instance);
 

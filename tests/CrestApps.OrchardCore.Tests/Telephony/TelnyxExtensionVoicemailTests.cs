@@ -147,7 +147,7 @@ public sealed class TelnyxExtensionVoicemailTests
             // requests the orchestrator makes.
             new TelnyxApiClient(
                 new HttpClient(handler) { BaseAddress = new Uri("https://api.telnyx.test/v2/") },
-                new OptionsWrapper<TelnyxOptions>(new TelnyxOptions { ApiBaseUrl = "https://api.telnyx.test/v2/", ApiKey = "KEY" }),
+                new TestOptionsMonitor<TelnyxOptions>(new TelnyxOptions { ApiBaseUrl = "https://api.telnyx.test/v2/", ApiKey = "KEY" }),
                 new TelnyxApiRetryPolicy(TimeSpan.Zero),
                 NullLogger<TelnyxApiClient>.Instance),
             NullLogger<TelnyxOutboundBridgeOrchestrator>.Instance,

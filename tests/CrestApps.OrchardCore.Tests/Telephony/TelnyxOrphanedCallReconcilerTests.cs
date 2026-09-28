@@ -253,7 +253,7 @@ public sealed class TelnyxOrphanedCallReconcilerTests
 
         var apiClient = new TelnyxApiClient(
             httpClient,
-            new OptionsWrapper<TelnyxOptions>(options),
+            new TestOptionsMonitor<TelnyxOptions>(options),
             new TelnyxApiRetryPolicy(TimeSpan.Zero),
             NullLogger<TelnyxApiClient>.Instance);
 

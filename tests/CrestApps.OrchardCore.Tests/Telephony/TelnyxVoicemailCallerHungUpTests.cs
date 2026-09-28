@@ -157,7 +157,7 @@ public sealed class TelnyxVoicemailCallerHungUpTests
 
         return new TelnyxApiClient(
             httpClient,
-            new OptionsWrapper<TelnyxOptions>(CreateOptions()),
+            new TestOptionsMonitor<TelnyxOptions>(CreateOptions()),
             new TelnyxApiRetryPolicy(TimeSpan.Zero),
             NullLogger<TelnyxApiClient>.Instance);
     }

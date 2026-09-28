@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Modules;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -264,7 +265,7 @@ public sealed class ContactCenterBridgedLegHangupTests
         return new TelnyxOutboundBridgeOrchestrator(
             new TelnyxApiClient(
                 new HttpClient(new RefusingHttpMessageHandler()) { BaseAddress = new Uri("https://api.telnyx.test/v2/") },
-                new OptionsWrapper<TelnyxOptions>(new TelnyxOptions { ApiBaseUrl = "https://api.telnyx.test/v2/", ApiKey = "KEY" }),
+                new TestOptionsMonitor<TelnyxOptions>(new TelnyxOptions { ApiBaseUrl = "https://api.telnyx.test/v2/", ApiKey = "KEY" }),
                 new TelnyxApiRetryPolicy(TimeSpan.Zero),
                 NullLogger<TelnyxApiClient>.Instance),
             NullLogger<TelnyxOutboundBridgeOrchestrator>.Instance,
