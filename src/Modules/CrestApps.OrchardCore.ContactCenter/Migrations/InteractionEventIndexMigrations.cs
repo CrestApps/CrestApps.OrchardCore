@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.Data.Migration;
 using YesSql;
 using YesSql.Sql;
@@ -11,6 +12,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Migrations;
 /// </summary>
 internal sealed class InteractionEventIndexMigrations : DataMigration
 {
+    // An aggregate is usually one of the platform's own records, but a call with no interaction or call session --
+    // a soft-phone call placed outside a queue -- is filed under the provider's id for the call, which arrives
+    // verbatim from the switch. A Telnyx call control id is about 60 characters, and the original 26 made SQL Server
+    // refuse the event; the refusal cancelled the session the soft phone's own call record was saved in, so the
+    // call vanished and the phone hung up on its next refresh. 256 matches the call session's provider call id, and
+    // keeps the aggregate index's key well inside SQL Server's index key limit.
+    private const int AggregateIdLength = 256;
+
     private readonly IStore _store;
 
     /// <summary>
@@ -33,7 +42,7 @@ internal sealed class InteractionEventIndexMigrations : DataMigration
             .Column<string>("InteractionId", column => column.WithLength(26))
             .Column<string>("EventType", column => column.WithLength(128))
             .Column<string>("AggregateType", column => column.WithLength(128))
-            .Column<string>("AggregateId", column => column.WithLength(26))
+            .Column<string>("AggregateId", column => column.WithLength(AggregateIdLength))
             .Column<string>("CorrelationId", column => column.WithLength(26))
             .Column<string>("IdempotencyKey", column => column.WithLength(128))
             .Column<string>("IdempotencyClaimKey", column => column.NotNull().WithDefault(string.Empty).WithLength(128))
@@ -99,6 +108,70 @@ internal sealed class InteractionEventIndexMigrations : DataMigration
             collection: ContactCenterStorage.CollectionName);
 
         return 4;
+    }
+
+    /// <summary>
+    /// Widens the aggregate column so an event filed under a provider's call id is stored rather than refused.
+    /// </summary>
+    /// <remarks>
+    /// SQLite stores every text column as unbounded <c>TEXT</c>, so it never refused these events and the rebuild is
+    /// a value-preserving no-op there; the engines that enforce a declared length (SQL Server, PostgreSQL, MySQL) are
+    /// the ones it exists for. The aggregate index names the column, and SQLite refuses to drop a column an index
+    /// refers to, so the index comes down before the rebuild and is recreated over the widened column.
+    /// </remarks>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom4Async()
+    {
+        // On an engine that resolves an index by name alone the data layer's drop cannot see an index that belongs
+        // to a named schema, so it silently drops nothing and the recreation below fails. The qualified drop runs
+        // first and is a no-op wherever the data layer's own statement is already sufficient.
+        var qualifiedIndexName = SchemaQualifiedIndexDrop.TryGetQualifiedIndexName(
+            SchemaBuilder,
+            _store,
+            typeof(InteractionEventIndex),
+            "IDX_InteractionEventIndex_Aggregate",
+            ContactCenterStorage.CollectionName);
+
+        if (qualifiedIndexName is not null)
+        {
+            await using var command = SchemaBuilder.Connection.CreateCommand();
+            command.Transaction = SchemaBuilder.Transaction;
+            command.CommandText = "drop index if exists " + qualifiedIndexName;
+
+            await command.ExecuteNonQueryAsync();
+        }
+
+        // Tolerant because MySQL commits each schema change on its own and writes this drop without IF EXISTS, so an
+        // attempt that stopped part-way would otherwise fail every activation from here on. The recreation below
+        // runs on the strict builder, so an index that genuinely survived is still reported.
+        var tolerantSchemaBuilder = new SchemaBuilder(
+            _store.Configuration,
+            SchemaBuilder.Transaction,
+            throwOnError: false);
+
+        await tolerantSchemaBuilder.AlterIndexTableAsync<InteractionEventIndex>(
+            table => table.DropIndex("IDX_InteractionEventIndex_Aggregate"),
+            collection: ContactCenterStorage.CollectionName);
+
+        await IndexStringColumnRebuild.WidenAsync<InteractionEventIndex>(
+            SchemaBuilder,
+            _store,
+            "AggregateId",
+            AggregateIdLength,
+            isNotNull: false,
+            defaultValue: null,
+            ContactCenterStorage.CollectionName);
+
+        await SchemaBuilder.AlterIndexTableAsync<InteractionEventIndex>(table => table
+            .CreateIndex(
+                "IDX_InteractionEventIndex_Aggregate",
+                "AggregateType",
+                "AggregateId",
+                "OccurredUtc",
+                "DocumentId"),
+            collection: ContactCenterStorage.CollectionName);
+
+        return 5;
     }
 
     /// <summary>

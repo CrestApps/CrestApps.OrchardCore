@@ -11,16 +11,6 @@ public sealed class ContactCenterTopologyObservations
     public string DeclaredProfileId { get; init; }
 
     /// <summary>
-    /// Gets a value indicating whether the host is running in a production environment.
-    /// </summary>
-    /// <remarks>
-    /// Used only to reject an undeclared topology. A deployment that declares nothing cannot be checked against
-    /// anything, so tolerating that outside production and rejecting it inside production is what stops the
-    /// validator from being trivially bypassed by omitting configuration.
-    /// </remarks>
-    public bool IsProductionHostEnvironment { get; init; }
-
-    /// <summary>
     /// Gets the configured Orchard database provider for this tenant.
     /// </summary>
     public string DatabaseProvider { get; init; }
