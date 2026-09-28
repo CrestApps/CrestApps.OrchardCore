@@ -4,20 +4,27 @@ using System.Text;
 using System.Text.Json;
 using Azure.Messaging.EventGrid;
 using Azure.Messaging.EventGrid.SystemEvents;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Core.Http;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.EventGrid;
 using CrestApps.OrchardCore.Omnichannel.EventGrid.Models;
+using CrestApps.OrchardCore.Omnichannel.EventGrid.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Protocols;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
+using OrchardCore.Environment.Shell;
+using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Modules;
+using YesSqlSession = YesSql.ISession;
 
 internal static class AzureEventGridEndpoint
 {
@@ -41,9 +48,11 @@ internal static class AzureEventGridEndpoint
     private static async Task<IResult> HandleAsync(
         HttpContext context,
         IEnumerable<IOmnichannelEventHandler> handlers,
-        YesSql.ISession session,
+        YesSqlSession session,
         IClock clock,
         IOptions<EventGridOptions> options,
+        IShellHost shellHost,
+        ShellSettings shellSettings,
         ILogger<Startup> logger)
     {
         var isAuthorized = false;
@@ -112,25 +121,82 @@ internal static class AzureEventGridEndpoint
 
         foreach (var e in events)
         {
-            // Handle subscription validation
-            if (e.EventType == "Microsoft.EventGrid.SubscriptionValidationEvent")
+            // Event Grid sends this handshake before it delivers anything to a new webhook subscription, and only
+            // activates the subscription once the validation code is echoed back in this exact JSON shape.
+            if (string.Equals(e.EventType, EventGridEventTypes.SubscriptionValidation, StringComparison.OrdinalIgnoreCase))
             {
-                var data = e.Data.ToObjectFromJson<SubscriptionValidationEventData>();
+                var validation = e.Data?.ToObjectFromJson<SubscriptionValidationEventData>();
+
+                if (string.IsNullOrEmpty(validation?.ValidationCode))
+                {
+                    logger.LogWarning("Rejected an Event Grid subscription validation event {EventId} that carried no validation code.", e.Id.SanitizeLogValue());
+
+                    return TypedResults.BadRequest();
+                }
+
                 if (logger.IsEnabled(LogLevel.Information))
                 {
-                    logger.LogInformation("Subscription validation received. Code: {Code}", data.ValidationCode);
+                    logger.LogInformation("Event Grid subscription validation received for event {EventId}; answering with the validation code.", e.Id.SanitizeLogValue());
                 }
 
                 return TypedResults.Json(new
                 {
-                    validationResponse = data.ValidationCode,
+                    validationResponse = validation.ValidationCode,
                 });
             }
 
-            // Handle normal events
+            // The subject is not logged: for Azure Communication Services events it is the customer's phone number.
             if (logger.IsEnabled(LogLevel.Information))
             {
-                logger.LogInformation("Event received: {EventType}, Subject: {Subject}, Id: {Id}", e.EventType, e.Subject, e.Id);
+                logger.LogInformation("Event Grid event received. EventType: {EventType}, EventId: {EventId}.", e.EventType.SanitizeLogValue(), e.Id.SanitizeLogValue());
+            }
+
+            var dataJson = e.Data?.ToString();
+
+            var mapping = EventGridEventMapper.Map(e.EventType, dataJson);
+
+            switch (mapping.Kind)
+            {
+                case EventGridEventMappingKind.SmsReceived:
+                    await DispatchInboundSmsAsync(e, mapping, clock, shellHost, shellSettings, logger);
+
+                    continue;
+
+                case EventGridEventMappingKind.SmsDeliveryReport:
+                    // Delivery receipts reach the Messaging workspace through a direct service call from a provider's
+                    // own webhook, not through an Omnichannel event, and this module does not reference that service.
+                    // The report is therefore stored and passed to the handlers unchanged, exactly as before.
+                    if (logger.IsEnabled(LogLevel.Information))
+                    {
+                        logger.LogInformation(
+                            "Event Grid event {EventId} is an SMS delivery report for message {ProviderMessageId} with status '{DeliveryStatus}' ('{DeliveryStatusDetails}'). Delivery reports are stored but not routed; the sent message's delivery status is not updated.",
+                            e.Id.SanitizeLogValue(),
+                            mapping.ProviderMessageId.SanitizeLogValue(),
+                            mapping.DeliveryStatus.SanitizeLogValue(),
+                            mapping.DeliveryStatusDetails.SanitizeLogValue());
+                    }
+
+                    break;
+
+                case EventGridEventMappingKind.Malformed:
+                    logger.LogWarning(
+                        "Event Grid event {EventId} of type {EventType} could not be mapped because {Reason}. It is stored with its raw event type and not routed to a channel.",
+                        e.Id.SanitizeLogValue(),
+                        e.EventType.SanitizeLogValue(),
+                        mapping.Reason);
+
+                    break;
+
+                default:
+                    if (logger.IsEnabled(LogLevel.Debug))
+                    {
+                        logger.LogDebug(
+                            "Event Grid event {EventId} of type {EventType} has no Omnichannel mapping. It is stored with its raw event type and passed to the handlers unchanged.",
+                            e.Id.SanitizeLogValue(),
+                            e.EventType.SanitizeLogValue());
+                    }
+
+                    break;
             }
 
             var omnichannelMessage = new OmnichannelMessage
@@ -139,8 +205,6 @@ internal static class AzureEventGridEndpoint
                 CreatedUtc = clock.UtcNow,
                 IsInbound = true,
             };
-
-            var dataJson = e.Data.ToString();
 
             try
             {
@@ -185,6 +249,122 @@ internal static class AzureEventGridEndpoint
         }
 
         return TypedResults.Ok();
+    }
+
+    /// <summary>
+    /// Raises an inbound text delivered through Event Grid as the platform's own SMS received event, in the same
+    /// shape the Twilio and Telnyx webhooks produce, so SMS automation and the Messaging workspace both act on it.
+    /// </summary>
+    private static async Task DispatchInboundSmsAsync(
+        EventGridEvent e,
+        EventGridEventMapping mapping,
+        IClock clock,
+        IShellHost shellHost,
+        ShellSettings shellSettings,
+        ILogger logger)
+    {
+        var now = clock.UtcNow;
+
+        // The provider's receive time keeps a text that Event Grid redelivers later in its true place in the
+        // thread; a timestamp ahead of this server's clock is ignored so a reply can never sort before the text.
+        var createdUtc = mapping.ReceivedUtc is { } receivedUtc && receivedUtc <= now
+            ? receivedUtc
+            : now;
+
+        // The provider's message id is the correlation and de-duplication key, as Twilio's MessageSid is. Fall back
+        // to the Event Grid event id, which Event Grid also keeps stable across redeliveries of the same event.
+        var providerMessageId = string.IsNullOrEmpty(mapping.ProviderMessageId)
+            ? e.Id
+            : mapping.ProviderMessageId;
+
+        var omnichannelMessage = new OmnichannelMessage
+        {
+            CustomerAddress = mapping.From,
+            ServiceAddress = mapping.To,
+            Content = mapping.Content,
+            Channel = mapping.Channel,
+            CreatedUtc = createdUtc,
+            IsInbound = true,
+            ProviderMessageId = providerMessageId,
+        };
+
+        var omnichannelEvent = new OmnichannelEvent
+        {
+            Id = providerMessageId,
+            EventType = mapping.EventName,
+            Subject = "SMS received",
+            Data = BinaryData.FromString(mapping.Content),
+            Message = omnichannelMessage,
+        };
+
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation(
+                "Mapped Event Grid event {EventId} of type {EventType} to channel {Channel} and event {OmnichannelEvent}. ProviderMessageId: {ProviderMessageId}, Length: {Length}.",
+                e.Id.SanitizeLogValue(),
+                e.EventType.SanitizeLogValue(),
+                mapping.Channel,
+                mapping.EventName,
+                providerMessageId.SanitizeLogValue(),
+                mapping.Content.Length);
+        }
+
+        // An automated reply waits a humanized settle pause, calls the AI model and waits a "typing" pause, which
+        // together can outlast the 30 seconds Event Grid waits for a response. Event Grid would then treat the
+        // delivery as failed and send it again, racing the original for the same conversation. So, as the Twilio
+        // webhook does, acknowledge now and process the text in a fresh shell scope off the request thread.
+        var backgroundScope = await shellHost.GetScopeAsync(shellSettings);
+
+        _ = ProcessInboundSmsAsync(backgroundScope, omnichannelMessage, omnichannelEvent, providerMessageId, logger);
+    }
+
+    private static async Task ProcessInboundSmsAsync(
+        ShellScope backgroundScope,
+        OmnichannelMessage omnichannelMessage,
+        OmnichannelEvent omnichannelEvent,
+        string providerMessageId,
+        ILogger logger)
+    {
+        try
+        {
+            await backgroundScope.UsingAsync(async scope =>
+            {
+                var scopedSession = scope.ServiceProvider.GetRequiredService<YesSqlSession>();
+                var scopedHandlers = scope.ServiceProvider.GetServices<IOmnichannelEventHandler>();
+                var scopedLogger = scope.ServiceProvider.GetRequiredService<ILogger<Startup>>();
+
+                using var logScope = scopedLogger.BeginScope(new Dictionary<string, object>
+                {
+                    ["ProviderMessageId"] = providerMessageId.SanitizeLogValue(),
+                    ["Channel"] = omnichannelMessage.Channel,
+                });
+
+                // Event Grid delivers at least once, so the same text can arrive again. Claim its id once, before it
+                // is stored or any handler runs, so a redelivery is neither recorded twice nor answered again. The
+                // gate ships with Omnichannel management; without it, the handlers' own idempotency still applies.
+                var conversationGate = scope.ServiceProvider.GetService<IAutomatedConversationGate>();
+
+                if (conversationGate is not null && !conversationGate.TryClaimInboundMessage(providerMessageId))
+                {
+                    if (scopedLogger.IsEnabled(LogLevel.Information))
+                    {
+                        scopedLogger.LogInformation("Ignoring a duplicate Event Grid SMS delivery for ProviderMessageId {ProviderMessageId}.", providerMessageId.SanitizeLogValue());
+                    }
+
+                    return;
+                }
+
+                await scopedSession.SaveAsync(omnichannelMessage, collection: OmnichannelConstants.CollectionName);
+
+                await scopedHandlers.InvokeAsync((handler, evt) => handler.HandleAsync(evt), omnichannelEvent, scopedLogger);
+            });
+        }
+        catch (Exception ex)
+        {
+            // Event Grid has already been answered, so nothing upstream is left to retry this work, and an
+            // exception escaping here would be unobserved. Record it so the lost text is visible in the logs.
+            logger.LogError(ex, "Failed to process the inbound Event Grid SMS {ProviderMessageId} in the background.", providerMessageId.SanitizeLogValue());
+        }
     }
 
     private static string GetStringProperty(Dictionary<string, JsonElement> data, params string[] names)

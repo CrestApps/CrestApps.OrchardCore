@@ -42,11 +42,14 @@ Provider selection remains tenant-specific. Enabling this feature registers the 
 
 ## Inbound events
 
-Azure Communication Services delivery and inbound-message events are normally delivered through Azure Event Grid. Enable [Omnichannel - Azure Event Grid](./event-grid) and configure its authenticated webhook when inbound ACS events must enter the Omnichannel event pipeline.
+Azure Communication Services delivers inbound-message and delivery events through Azure Event Grid. To receive ACS texts, enable [Omnichannel - Azure Event Grid](./event-grid), configure its authenticated webhook, and subscribe it to the ACS resource's SMS events.
 
-:::caution
-Inbound ACS text messages do not reach the Messaging Workspace or SMS Automation. The Event Grid endpoint stores each event as an Omnichannel message and passes its raw event type (`Microsoft.Communication.SMSReceived`) to the event handlers, but the built-in SMS handlers only act on the platform's own `SmsReceived` event, so they ignore it. Azure SMS works for outbound messages; receiving ACS texts requires a custom `IOmnichannelEventHandler`.
-:::
+| ACS event | What happens |
+| --- | --- |
+| `Microsoft.Communication.SMSReceived` | Routed as an inbound text on the `SMS` channel. It reaches [SMS Automation](./sms) and the SMS channel of the [Messaging Workspace](./messaging-workspace) in the same shape as a Twilio or Telnyx inbound text. |
+| `Microsoft.Communication.SMSDeliveryReportReceived` | Stored, not routed. The delivery status of the sent message is not updated in the Messaging Workspace. |
+
+The ACS number that receives the text is matched to a channel endpoint by its address, so the number must be set up as an SMS channel endpoint, as it is for any other provider. See [Azure Event Grid](./event-grid#inbound-texts) for how the event fields map onto the inbound message.
 
 ## How it fits with the other Omnichannel docs
 

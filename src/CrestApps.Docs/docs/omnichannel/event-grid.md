@@ -97,7 +97,9 @@ with `401 Unauthorized`; SAS-key authentication keeps working.
 
 ## Subscription validation
 
-Azure Event Grid sends a `Microsoft.EventGrid.SubscriptionValidationEvent` handshake before it starts normal delivery. The module handles that automatically and returns the validation code in the expected JSON response shape.
+Azure Event Grid sends a `Microsoft.EventGrid.SubscriptionValidationEvent` handshake before it starts normal delivery. The module handles that automatically and returns the validation code in the expected JSON response shape. A validation event without a validation code is answered with `400 Bad Request`.
+
+The handshake goes through the same authentication as every other delivery, so the `aeg-sas-key` delivery header (or the bearer token) must already be configured on the subscription when you create it.
 
 ## Request size limit
 
@@ -110,16 +112,51 @@ A typical flow is:
 1. Provider emits inbound/outbound event.
 2. Event is delivered to Azure Event Grid.
 3. Event Grid posts to `~/api/azure/webhook/eventgrid`.
-4. Every event (other than the subscription-validation handshake) is saved as an **inbound** Omnichannel message.
-   The endpoint reads the sender, recipient, content, channel, and timestamp from common property names in the
-   event data (`from`, `to`, `content`/`message`/`body`/`text`, `channel`, `timestamp`); the channel is
-   `Unknown` unless the data carries one, and the raw event data is stored as the content when no content field
-   is found.
-5. Each registered `IOmnichannelEventHandler` is then called with the raw Event Grid event type, subject, and
+4. The endpoint maps each event by its type, as the table below shows, and answers Event Grid with `200 OK`.
+
+| Event Grid event type | What happens |
+| --- | --- |
+| `Microsoft.Communication.SMSReceived` | Routed. Raised as the platform's own `SmsReceived` event on the `SMS` channel, the same event the Twilio and Telnyx webhooks raise, so [SMS Automation](./sms) and the SMS channel of the [Messaging Workspace](./messaging-workspace) both act on it. |
+| `Microsoft.Communication.SMSDeliveryReportReceived` | Stored, not routed. The delivery status of the sent message is not updated. |
+| Any other type | Stored, not routed. |
+
+### Inbound texts
+
+For an Azure Communication Services inbound text, the event data maps onto the inbound message like this:
+
+| Event data field | Inbound message field |
+| --- | --- |
+| `from` | Customer address |
+| `to` | Service address, which selects the channel endpoint |
+| `message` | Content |
+| `messageId` | Provider message id (the Event Grid event id when `messageId` is missing) |
+| `receivedTimestamp` | Created time (the server time when the timestamp is missing or ahead of the server clock) |
+
+The endpoint answers Event Grid at once and processes the text in the background, because an automated reply can take longer than the 30 seconds Event Grid waits for a response. Event Grid delivers at least once, so a redelivery of the same `messageId` is ignored rather than stored and answered a second time.
+
+A text without a `from` or `to` number cannot be matched to a channel endpoint. It is stored with its raw event type, like an unmapped event, and a warning is logged.
+
+### Delivery reports and other events
+
+A delivery report and any event type without a mapping keep the original behaviour:
+
+1. The event is saved as an **inbound** Omnichannel message. The endpoint reads the sender, recipient, content,
+   channel, and timestamp from common property names in the event data (`from`, `to`,
+   `content`/`message`/`body`/`text`, `channel`, `timestamp`). The channel is `Unknown` unless the data carries
+   one, and the raw event data is stored as the content when no content field is found.
+2. Each registered `IOmnichannelEventHandler` is then called with the raw Event Grid event type, subject, and
    data, and decides whether the event is one it handles.
 
-:::caution
-The built-in SMS handlers do not consume Azure Communication Services `Microsoft.Communication.SMSReceived`
-events delivered this way, so an ACS inbound text is stored as a message but does not start or continue an
-SMS conversation. Handling it requires a custom `IOmnichannelEventHandler`.
-:::
+A custom `IOmnichannelEventHandler` can still act on these events by checking the raw event type.
+
+### Troubleshooting
+
+The endpoint logs one line for each event it receives, with the event type and the event id, and then one line that says what it did with it:
+
+- **Information:** the event was mapped to the `SMS` channel and the `SmsReceived` event, with the provider message id and the message length.
+- **Information:** the event is a delivery report, with its status, and it is stored but not routed.
+- **Information:** a redelivery of a text that was already processed was ignored.
+- **Warning:** a recognized event could not be mapped, and why.
+- **Debug:** the event type has no mapping.
+
+These lines never include the message text or the phone numbers.
