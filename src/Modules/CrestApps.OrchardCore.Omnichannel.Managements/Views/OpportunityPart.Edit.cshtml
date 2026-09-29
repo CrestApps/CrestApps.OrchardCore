@@ -22,7 +22,7 @@
             <option value="">@T["First stage"]</option>
         </select>
         <span asp-validation-for="StageId" class="text-danger"></span>
-        <span class="hint dashed">@T["Where the deal is in the pipeline. The stages come from the settings of this opportunity type."]</span>
+        <span class="hint">@T["Where the deal is in the pipeline. The stages come from the settings of this opportunity type."]</span>
     </div>
 </div>
 
@@ -31,7 +31,7 @@
     <div class="ocat-end">
         <input asp-for="Probability" type="number" min="0" max="100" class="form-control" />
         <span asp-validation-for="Probability" class="text-danger"></span>
-        <span class="hint dashed">@T["The chance the deal is won. It starts from the stage's probability and follows the stage when the stage changes."]</span>
+        <span class="hint">@T["The chance the deal is won. It starts from the stage's probability and follows the stage when the stage changes."]</span>
     </div>
 </div>
 
@@ -47,7 +47,7 @@
     <label asp-for="CloseDate" class="ocat-label">@T["Close date"]</label>
     <div class="ocat-end">
         <input asp-for="CloseDate" type="date" class="form-control" value="@(Model.CloseDate?.ToString("yyyy-MM-dd"))" />
-        <span class="hint dashed">@T["When the deal is expected to close."]</span>
+        <span class="hint">@T["When the deal is expected to close."]</span>
     </div>
 </div>
 
@@ -70,7 +70,7 @@
             availableItemsLabel = T["Contacts"].Value,
             smallButton = false,
         })
-        <span class="hint dashed">@(string.IsNullOrEmpty(Model.AccountContentItemId) ? T["The main person the deal is with."] : T["The main person the deal is with. The search lists the contacts of the opportunity's account."])</span>
+        <span class="hint">@(string.IsNullOrEmpty(Model.AccountContentItemId) ? T["The main person the deal is with."] : T["The main person the deal is with. The search lists the contacts of the opportunity's account."])</span>
     </div>
 </div>
 
@@ -96,7 +96,7 @@
         <select asp-for="CampaignId" asp-items="Model.Campaigns" class="form-select">
             <option value="">@T["None"]</option>
         </select>
-        <span class="hint dashed">@T["The campaign the deal came from, for campaign reporting."]</span>
+        <span class="hint">@T["The campaign the deal came from, for campaign reporting."]</span>
     </div>
 </div>
 

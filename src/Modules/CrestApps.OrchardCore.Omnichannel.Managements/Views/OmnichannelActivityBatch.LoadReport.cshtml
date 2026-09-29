@@ -33,6 +33,16 @@
         reasons.Add(T.Plural((int)batch.TotalSkippedForNoDestination, "1 has no address on this channel.", "{0} have no address on this channel."));
     }
 
+    if (batch.TotalSkippedAsConverted > 0)
+    {
+        reasons.Add(T.Plural((int)batch.TotalSkippedAsConverted, "1 lead was already converted into a contact.", "{0} leads were already converted into contacts."));
+    }
+
+    if (batch.TotalSkippedAsExistingContact > 0)
+    {
+        reasons.Add(T.Plural((int)batch.TotalSkippedAsExistingContact, "1 lead shares a phone number with a contact.", "{0} leads share a phone number with a contact."));
+    }
+
     if (batch.TotalSkippedByLimit > 0)
     {
         reasons.Add(T.Plural((int)batch.TotalSkippedByLimit, "1 was not loaded because the limit was reached.", "{0} were not loaded because the limit was reached."));

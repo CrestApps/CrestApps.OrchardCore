@@ -32,7 +32,7 @@
     <div class="ocat-end">
         <input asp-for="Order" type="number" class="form-control" />
         <span asp-validation-for="Order" class="text-danger"></span>
-        <span class="hint dashed">@T["Lists show the lowest first."]</span>
+        <span class="hint">@T["Lists show the lowest first."]</span>
     </div>
 </div>
 
@@ -41,7 +41,7 @@
     <div class="ocat-end">
         <input asp-for="Probability" type="number" class="form-control" min="0" max="100" />
         <span asp-validation-for="Probability" class="text-danger"></span>
-        <span class="hint dashed">@T["The chance, from 0 to 100, that an opportunity in this stage is won. The weighted pipeline uses it."]</span>
+        <span class="hint">@T["The chance, from 0 to 100, that an opportunity in this stage is won. The weighted pipeline uses it."]</span>
     </div>
 </div>
 

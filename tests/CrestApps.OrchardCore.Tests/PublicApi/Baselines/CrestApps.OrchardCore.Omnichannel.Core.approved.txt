@@ -509,6 +509,17 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         CallbackScheduled = 2,
         Failed = 3,
     }
+    public sealed class LeadBatchFilter
+    {
+        public LeadBatchFilter() { }
+        public bool IncludeClosedLeads { get; set; }
+        public string ListName { get; set; }
+        public string OwnerId { get; set; }
+        public string[] Ratings { get; set; }
+        public bool SkipLeadsThatAreContacts { get; set; }
+        public string Source { get; set; }
+        public string[] StatusIds { get; set; }
+    }
     public enum LeadConversionAccountMode
     {
         None = 0,
@@ -745,7 +756,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string[] TimeZoneIds { get; set; }
         public long? TotalLoaded { get; set; }
         public long? TotalMatched { get; set; }
+        public long TotalSkippedAsConverted { get; set; }
         public long TotalSkippedAsDuplicate { get; set; }
+        public long TotalSkippedAsExistingContact { get; set; }
         public long TotalSkippedAsOptedOut { get; set; }
         public long TotalSkippedAsSharedNumberOptedOut { get; set; }
         public long TotalSkippedByLimit { get; set; }

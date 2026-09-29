@@ -47,6 +47,14 @@ internal sealed class AccountPickerDisplayDriver : ContentDisplayDriver
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Gives the picker fields their own prefix, so they cannot collide with another content-wide editor.
+    /// </summary>
+    protected override void BuildPrefix(ContentItem model, string htmlFieldPrefix)
+    {
+        Prefix = string.IsNullOrEmpty(htmlFieldPrefix) ? "AccountPicker" : $"{htmlFieldPrefix}.AccountPicker";
+    }
+
     public override async Task<IDisplayResult> DisplayAsync(ContentItem contentItem, BuildDisplayContext context)
     {
         if (!contentItem.TryGet<ContainedPart>(out var contained) ||

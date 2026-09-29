@@ -155,7 +155,10 @@ internal sealed class LeadConversionService : ILeadConversionService
 
         var contactTypeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(context.Contact.ContentType);
 
-        if (context.Account is not null && OmnichannelRecordKinds.IsAccountChild(contactTypeDefinition))
+        // A contact the lead is merged into keeps the account it already has; conversion never moves a customer.
+        if (context.Account is not null &&
+            OmnichannelRecordKinds.IsAccountChild(contactTypeDefinition) &&
+            (context.ContactCreated || !BelongsToAccount(context.Contact)))
         {
             PlaceInAccount(context.Contact, context.Account);
         }
@@ -306,9 +309,16 @@ internal sealed class LeadConversionService : ILeadConversionService
                 return true;
 
             case LeadConversionAccountMode.Automatic:
-                // A merged contact that already belongs to an account keeps it.
+                // A merged contact that already belongs to an account keeps it, and the opportunity joins that account.
                 if (!context.ContactCreated && context.Contact.TryGet<ContainedPart>(out var contained) && !string.IsNullOrEmpty(contained.ListContentItemId))
                 {
+                    var contactAccount = await _contentManager.GetAsync(contained.ListContentItemId, VersionOptions.Latest);
+
+                    if (contactAccount is not null && accountTypes.Any(type => type.Name == contactAccount.ContentType))
+                    {
+                        context.Account = contactAccount;
+                    }
+
                     return true;
                 }
 
@@ -538,6 +548,9 @@ internal sealed class LeadConversionService : ILeadConversionService
             await _contentManager.PublishAsync(contentItem);
         }
     }
+
+    private static bool BelongsToAccount(ContentItem contentItem)
+        => contentItem.TryGet<ContainedPart>(out var contained) && !string.IsNullOrEmpty(contained.ListContentItemId);
 
     private static void PlaceInAccount(ContentItem contentItem, ContentItem account)
     {

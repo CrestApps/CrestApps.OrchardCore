@@ -54,7 +54,7 @@
                     <select asp-for="ContactContentType" asp-items="Model.ContactContentTypes" class="form-select">
                         <option value="">@T["Choose a contact type"]</option>
                     </select>
-                    <span class="hint dashed">@T["The lead type can set this, so it does not need choosing every time."]</span>
+                    <span class="hint">@T["The lead type can set this, so it does not need choosing every time."]</span>
                 </div>
             </div>
         </div>
@@ -94,7 +94,7 @@
                 </div>
                 <div class="ms-4 mb-2" data-account-panel="@LeadConversionAccountMode.CreateNew">
                     <input asp-for="AccountName" class="form-control" placeholder="@T["Account name"]" />
-                    <span class="hint dashed">@T["Starts from the lead's company."]</span>
+                    <span class="hint">@T["Starts from the lead's company."]</span>
                 </div>
 
                 <div class="form-check">
@@ -131,7 +131,7 @@
                         <label asp-for="OpportunityName" class="ocat-label">@T["Name"]</label>
                         <div class="ocat-end">
                             <input asp-for="OpportunityName" class="form-control" />
-                            <span class="hint dashed">@T["Leave empty to name it after the company and today's date."]</span>
+                            <span class="hint">@T["Leave empty to name it after the company and today's date."]</span>
                         </div>
                     </div>
 

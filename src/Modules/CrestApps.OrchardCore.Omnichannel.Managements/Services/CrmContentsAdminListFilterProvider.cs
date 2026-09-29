@@ -1,9 +1,12 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 using OrchardCore.Contents.Services;
+using OrchardCore.Users;
+using OrchardCore.Users.Models;
 using YesSql;
 using YesSql.Filters.Query;
 
@@ -39,7 +42,12 @@ internal sealed class CrmContentsAdminListFilterProvider : IContentsAdminListFil
             .WithNamedTerm("list", term => term
                 .OneCondition((value, query) => query.With<LeadIndex>(index => index.ListName == value)))
             .WithNamedTerm("owner", term => term
-                .OneCondition((value, query) => query.With<LeadIndex>(index => index.OwnerId == value)))
+                .OneCondition(async (value, query, context) =>
+                {
+                    var ownerId = await ResolveUserIdAsync(value, context);
+
+                    return query.With<LeadIndex>(index => index.OwnerId == ownerId);
+                }))
             .WithNamedTerm("rating", term => term
                 .OneCondition((value, query) =>
                 {
@@ -81,6 +89,14 @@ internal sealed class CrmContentsAdminListFilterProvider : IContentsAdminListFil
         var entry = await catalog.FindByNameAsync(value);
 
         return entry?.ItemId ?? value;
+    }
+
+    // People type a user name; the index stores the user id. An id works too, for links built by code.
+    private static async ValueTask<string> ResolveUserIdAsync(string value, object context)
+    {
+        var userManager = ((ContentQueryContext)context).ServiceProvider.GetRequiredService<UserManager<IUser>>();
+
+        return await userManager.FindByNameAsync(value) is User user ? user.UserId : value;
     }
 
     private static bool ParseBoolean(string value)

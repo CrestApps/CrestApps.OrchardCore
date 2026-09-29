@@ -8,7 +8,7 @@
         <select asp-for="TargetContactContentType" asp-items="Model.ContactContentTypes" class="form-select">
             <option value="">@T["Choose when converting"]</option>
         </select>
-        <span class="hint dashed">@T["The contact type a lead of this type becomes when it is converted. Lead types attach both the Omnichannel Contact part and the Lead part."]</span>
+        <span class="hint">@T["The contact type a lead of this type becomes when it is converted. Lead types attach both the Omnichannel Contact part and the Lead part."]</span>
     </div>
 </div>
 
@@ -18,6 +18,6 @@
         <select asp-for="DefaultOpportunityContentType" asp-items="Model.OpportunityContentTypes" class="form-select">
             <option value="">@T["None"]</option>
         </select>
-        <span class="hint dashed">@T["The opportunity type offered first when a conversion also creates an opportunity."]</span>
+        <span class="hint">@T["The opportunity type offered first when a conversion also creates an opportunity."]</span>
     </div>
 </div>

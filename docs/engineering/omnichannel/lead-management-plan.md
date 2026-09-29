@@ -7,8 +7,48 @@ description: Design plan for Salesforce-style leads, accounts and opportunities 
 
 # Leads, Accounts and Opportunities — Project Plan
 
-> **Status: proposed.** Nothing in this plan is built yet. It is based on a read of the current code at
-> `df12548ed` (main).
+> **Status: built** in the *Omnichannel CRM* feature (`CrestApps.OrchardCore.Omnichannel.Crm`). Phases 1 to 5 and
+> the reports from phase 6 are in. The items under [Deferred](#deferred) are not. The rest of this page is the
+> design record, written against `df12548ed` (main); where the build differs, [As built](#as-built) wins.
+
+## As built
+
+These are the places where the build differs from the design below.
+
+- **Names.** The lead part is `LeadPart`, and its index is `LeadIndex`. Opportunities have `OpportunityIndex`.
+- **Record kinds.** There is no enum. `OmnichannelRecordKinds` decides the kind from a type's parts: `IsContact`,
+  `IsLead`, `IsAccount`, `IsOpportunity` and `IsAccountChild`.
+- **Contact index.** `OmnichannelContactIndex` gained `ContentType` and `IsConverted`, with no `RecordKind` column.
+  Migration `UpdateFrom11Async` backfills both columns in SQL, one content type at a time.
+- **Lead settings.** `LeadPartSettings` holds only `TargetContactContentType` and `DefaultOpportunityContentType`.
+  - Conversion copies the parts and fields that the lead and contact types share by name and kind. There is no
+    mapping screen.
+  - `ListId` was not built; `ListName` is the list key.
+  - There is no `ConvertedStatusId` override; the catalog's converted status is used.
+- **Feature dependencies.** The feature depends on Omnichannel Management, `OrchardCore.Lists` and `OrchardCore.Title`.
+  Content Transfer is optional: the lead import and export columns and options register only when it is on.
+- **Accounts on conversion.** A contact the lead is merged into keeps the account it already has.
+  - The chosen account, or the one *Automatic* finds or creates, applies to a new contact and to the opportunity.
+  - In *Automatic* mode, the opportunity joins the merged contact's account.
+- **Subject actions.** *Convert lead* runs before the other actions of the same disposition, so a follow-up *New
+  activity* lands on the contact. *Set lead status* is a field on every action and has no effect on contacts.
+- **Channels.** The callback and voicemail indexes have no contact id, so they have no conversion re-pointer yet.
+  Messaging conversations are re-pointed by `MessagingLeadConversionRepointer`.
+- **Reports.** There are three reports in the CRM and campaigns category: *Lead funnel*, *Lead conversion by source and
+  list* and *Opportunity pipeline*.
+  - They read leads and opportunities, not activities, so they declare only the date range through
+    `IReportFilterMetadata`.
+  - The activity filters (campaign, channel, source, status) are not shown for them.
+
+## Deferred
+
+- The `convertLead` AI tool. The *Convert lead* subject action converts on a disposition instead, and that covers
+  automated SMS and voice qualification too.
+- Lead status auto-advance on the first attempt.
+- The optional registry re-check at load time.
+- A field-mapping screen.
+- A Workflows task and event for conversion.
+- Re-pointers for callbacks, voicemail and messaging favorites.
 
 ## The problem
 
@@ -146,12 +186,12 @@ free. What is missing is:
 ## Design decision: a lead is a contact-capable type with a lead marker
 
 **Recommended.** Keep `OmnichannelContactPart` on lead types, which makes the part mean "a reachable party", and add
-an `OmnichannelLeadPart` that marks the type as a lead type and holds lead state.
+an `LeadPart` that marks the type as a lead type and holds lead state.
 
-- Contact types are types with `OmnichannelContactPart` and **without** `OmnichannelLeadPart`.
+- Contact types are types with `OmnichannelContactPart` and **without** `LeadPart`.
 - Lead types are types with both parts.
 
-**Rejected alternative:** a parallel `OmnichannelLeadPart` with its own methods bag and index, used *instead of* the
+**Rejected alternative:** a parallel `LeadPart` with its own methods bag and index, used *instead of* the
 contact part. The deep dive found about 60 call sites that key off `OmnichannelContactPart`, the `ContactMethods` bag
 or `OmnichannelContactIndex`. They cover the dialer, screener, SMS channel, STOP handling, opt-out resolver, subject
 writer, time-zone handler, phone verification, import, export, loader and reports. Every one would need a second code
@@ -178,7 +218,7 @@ public enum OmnichannelRecordKind
 
 ## Data model
 
-### `OmnichannelLeadPart` (Omnichannel.Core)
+### `LeadPart` (Omnichannel.Core)
 
 | Member | Purpose |
 | --- | --- |
@@ -217,7 +257,7 @@ It gets a deployment step, a recipe step and a schema, matching the inventory's 
 
 ### Indexes
 
-- **New `OmnichannelLeadIndex`**, a map index over items with `OmnichannelLeadPart`. Columns: `ContentItemId`,
+- **New `LeadIndex`**, a map index over items with `LeadPart`. Columns: `ContentItemId`,
   `ContentType`, `Published`, `Latest`, `StatusId`, `IsClosed`, `IsConverted`, `Source`, `ListId`, `OwnerId`,
   `ConvertedContactItemId` and `ConvertedUtc`. It drives the Leads list filters, inventory filters and lead reports.
 - **Add `ContentType` and `RecordKind` to `OmnichannelContactIndex`.** Add `IsConverted` too, or join through the lead
@@ -273,7 +313,7 @@ So the list's allowed types are driven by a small set of **account-child parts**
   `ContactMethods` bag is injected, which would silently undo an administrator's removal.
 - **The same handler covers new account types.** When `AccountPart` is attached to a new type, its list is seeded
   with the current account-child types.
-- **Lead types are never contained.** A type carrying `OmnichannelLeadPart` is skipped, and attaching the lead part to
+- **Lead types are never contained.** A type carrying `LeadPart` is skipped, and attaching the lead part to
   a type removes it from the account lists. A lead is not yet anyone's contact; it carries the company as text until
   conversion.
 - The account page then shows one **Create** button per contained type: *Customer*, *Sales Opportunity*, *Resell
@@ -383,9 +423,9 @@ kind, the way Contacts works today:
 
 | Item | Types listed | Default filter |
 | --- | --- | --- |
-| Leads | Types with `OmnichannelLeadPart` | `converted:false` |
+| Leads | Types with `LeadPart` | `converted:false` |
 | Accounts | Types with `AccountPart` | |
-| Contacts | Types with `OmnichannelContactPart` and without `OmnichannelLeadPart` | |
+| Contacts | Types with `OmnichannelContactPart` and without `LeadPart` | |
 | Opportunities | Types with `OpportunityPart`, so *Sales*, *Resell* and *Business* opportunities appear in one list | `closed:false` |
 
 **When each item shows**
@@ -522,7 +562,7 @@ Lead types carry `OmnichannelContactPart`, so the whole existing pipeline applie
 the lead-country picker, the ContactMethods mapping, time-zone inference, the DNC columns and the registry filter.
 What changes:
 
-**Lead columns.** A new `OmnichannelLeadPartContentImportHandler` maps `Status` (by name), `Source`, `List`,
+**Lead columns.** A new `LeadPartContentImportHandler` maps `Status` (by name), `Source`, `List`,
 `Company`, `Rating` and `Owner` (by user name). Export writes the same columns plus `IsConverted`, `ConvertedUtc` and
 `ConvertedContactItemId`.
 
@@ -662,7 +702,7 @@ type, while `ConvertedFromLeadItemId` lets the conversion reports count them as 
 
 **Rule: an upgrade changes nothing a user can see or rely on for existing contacts.** Everything new is behind the
 **Omnichannel CRM** feature. Even with the feature on, an existing contact type stays a contact type, because only
-types carrying `OmnichannelLeadPart` are leads, and that part does not exist yet.
+types carrying `LeadPart` are leads, and that part does not exist yet.
 
 **What does change on upgrade, and why it is safe**
 
@@ -698,7 +738,7 @@ types carrying `OmnichannelLeadPart` are leads, and that part does not exist yet
 
 **The one opt-in that moves records.** A tenant that already models leads as a contact type (the docs screencast
 creates a type named `Lead`) keeps treating those records as contacts until an administrator attaches
-`OmnichannelLeadPart` to that type. Attaching it is the deliberate step that moves them:
+`LeadPart` to that type. Attaching it is the deliberate step that moves them:
 
 - into the Leads menu;
 - out of the account lists;
@@ -721,7 +761,7 @@ Detaching the part moves them back. No data is lost either way, because the lead
   is on.
 - The re-pointers live in the features that own their stores.
 - A **Lead management starter** recipe creates:
-  - a `Lead` type with `TitlePart`, first and last name, company, `OmnichannelContactPart` and `OmnichannelLeadPart`,
+  - a `Lead` type with `TitlePart`, first and last name, company, `OmnichannelContactPart` and `LeadPart`,
     targeting `Contact`;
   - a `Contact` type, if it does not exist;
   - the seeded statuses;
@@ -734,7 +774,7 @@ Detaching the part moves them back. No data is lost either way, because the lead
 
 | Phase | Scope | Exit criteria |
 | --- | --- | --- |
-| **1. Records** | **Accounts:** `AccountPart`, the `Account` type with `ListPart` (header shown), account-child types added to its list at migration and on attach, the Account picker on contacts and opportunities, the account Activities card. **Opportunities:** attachable `OpportunityPart` with per-type stage settings, the Opportunity Stage catalog + recipe/deployment/schema, `OpportunityIndex`. **Leads:** `OmnichannelRecordKind`, the kind-aware providers, `OmnichannelLeadPart` + settings, the `LeadStatus` catalog + recipe/deployment/schema, `OmnichannelLeadIndex`, the `ContentType`/`RecordKind` columns on `OmnichannelContactIndex` + backfill migration. **UI:** the Leads, Accounts and Opportunities menus, the Contacts menu narrowed, the list filters, the lead editor, the starter recipe. | Accounts hold contacts and opportunities. Leads and contacts are in separate lists. Every existing channel works on a lead. Migrations pass on SQLite, SQL Server and Postgres and leave existing types untouched. |
+| **1. Records** | **Accounts:** `AccountPart`, the `Account` type with `ListPart` (header shown), account-child types added to its list at migration and on attach, the Account picker on contacts and opportunities, the account Activities card. **Opportunities:** attachable `OpportunityPart` with per-type stage settings, the Opportunity Stage catalog + recipe/deployment/schema, `OpportunityIndex`. **Leads:** `OmnichannelRecordKind`, the kind-aware providers, `LeadPart` + settings, the `LeadStatus` catalog + recipe/deployment/schema, `LeadIndex`, the `ContentType`/`RecordKind` columns on `OmnichannelContactIndex` + backfill migration. **UI:** the Leads, Accounts and Opportunities menus, the Contacts menu narrowed, the list filters, the lead editor, the starter recipe. | Accounts hold contacts and opportunities. Leads and contacts are in separate lists. Every existing channel works on a lead. Migrations pass on SQLite, SQL Server and Postgres and leave existing types untouched. |
 | **2. Conversion** | `ILeadConversionService` and the conversion screen: account (new, existing or none), contact (new or merge) and optional opportunity. Also mapping, compliance OR-merge, activity re-pointing, `ILeadConversionRepointer` for messaging, callbacks and voicemail, the read-only guard, the Workflows task and event, and audit. | Converting a lead with history creates the account, contact and opportunity and moves every activity and thread, and the lead is read-only and hidden. Converting twice is a no-op. Conversion is blocked during a live call. |
 | **3. Channels** | Tiered matching for inbound voice and SMS, the composer, *Send SMS* and screen-pop badges, the `ContactContentType` column on conversations, callbacks and voicemail, the `ScheduleCallbackTask` fix. | A number shared by a contact and a lead resolves to the contact on both channels. |
 | **4. Import/export** | The lead column handler, file-level source, list, status and owner, the duplicate scope options, the registry "import as DNC" mode, `LastScrubbedUtc`, export columns and the exclude-converted option. | A dirty list imports as one list with duplicates against contacts skipped, and registry numbers are flagged or skipped per the option. |
@@ -747,12 +787,15 @@ the SQLite integration harness for a load → dial → disposition → convert r
 
 ## Open questions
 
-1. **Per-type stages.** Should each opportunity type choose its own subset of the stage catalog, as proposed, or
-   should one stage list apply to every type?
-2. **Open activities on conversion.** Should the default be *move to the contact* (recommended, Salesforce) or
-   *cancel*, and should the subject flow be able to choose?
-3. **Lead rows matching an existing contact at import.** Skip (recommended default) or import and link as a hint?
-4. **Owner semantics.** Is `OwnerId` informational, or should Manual inventory loads be able to "assign each lead's
-   activity to the lead owner" instead of round-robin?
-5. **Web-to-lead.** Is a public intake endpoint or form (Salesforce Web-to-Lead) in scope, or does an Orchard form
-   plus a workflow that creates a lead item cover it?
+The build settled the first four the recommended way. They are kept here so the choices can be revisited.
+
+1. **Per-type stages.** *Built:* each opportunity type picks its own subset of the stage catalog, and an empty
+   selection means every stage.
+2. **Open activities on conversion.** *Built:* the default is *move to the contact*. The conversion screen and the
+   *Convert lead* subject action can choose *cancel* instead.
+3. **Lead rows matching an existing contact at import.** *Built:* skipped by default. *Skip numbers that already
+   belong to a contact* can be turned off per import.
+4. **Owner semantics.** *Built:* `OwnerId` is informational. It filters the Leads list and inventory loads, but
+   assignment still follows the load's users.
+5. **Web-to-lead.** Still open. Until it is decided, an Orchard form plus a workflow that creates a lead item covers
+   it.

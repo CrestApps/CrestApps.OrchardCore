@@ -98,6 +98,7 @@ public sealed class CrmStartup : StartupBase
         services.AddScoped<LeadMatchFinder>();
         services.AddScoped<ISubjectActionHandler, ConvertLeadSubjectActionHandler>();
         services.AddDisplayDriver<SubjectAction, LeadSubjectActionDisplayDriver>();
+        services.AddDisplayDriver<OmnichannelActivityBatch, LeadBatchFilterDisplayDriver>();
 
         services.Configure<SubjectActionOptions>(options =>
         {
@@ -161,5 +162,24 @@ public sealed class CrmContentTransferStartup : StartupBase
     {
         services.AddContentPartImportHandler<LeadPart, LeadPartContentImportHandler>();
         services.AddScoped<IContentImportHandler, AccountContentImportHandler>();
+        services.AddScoped<IContentImportHandler, LeadExportFilterHandler>();
+        services.AddDisplayDriver<ExportRequest, LeadExportOptionsDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Registers the lead and pipeline reports.
+/// </summary>
+[Feature(OmnichannelConstants.Features.Crm)]
+[RequireFeatures(CrestApps.OrchardCore.Reports.ReportsConstants.Feature)]
+public sealed class CrmReportsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddScoped<CrestApps.OrchardCore.Reports.IReport, Reports.LeadFunnelReportProvider>()
+            .AddScoped<CrestApps.OrchardCore.Reports.IReport, Reports.LeadConversionReportProvider>()
+            .AddScoped<CrestApps.OrchardCore.Reports.IReport, Reports.OpportunityPipelineReportProvider>();
     }
 }

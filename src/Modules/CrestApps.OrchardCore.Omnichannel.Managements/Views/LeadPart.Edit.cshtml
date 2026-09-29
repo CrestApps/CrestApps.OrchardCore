@@ -9,7 +9,7 @@
             <option value="">@T["Default status"]</option>
         </select>
         <span asp-validation-for="StatusId" class="text-danger"></span>
-        <span class="hint dashed">@T["Where the lead is in qualification. A lead takes the converted status only when it is converted."]</span>
+        <span class="hint">@T["Where the lead is in qualification. A lead takes the converted status only when it is converted."]</span>
     </div>
 </div>
 
@@ -17,7 +17,7 @@
     <label asp-for="Company" class="ocat-label">@T["Company"]</label>
     <div class="ocat-end">
         <input asp-for="Company" class="form-control" />
-        <span class="hint dashed">@T["The company the lead works for. Converting the lead creates or picks an account with this name."]</span>
+        <span class="hint">@T["The company the lead works for. Converting the lead creates or picks an account with this name."]</span>
     </div>
 </div>
 
@@ -25,7 +25,7 @@
     <label asp-for="Source" class="ocat-label">@T["Lead source"]</label>
     <div class="ocat-end">
         <input asp-for="Source" class="form-control" />
-        <span class="hint dashed">@T["Where the lead came from, for example Web form, Purchased list or Trade show."]</span>
+        <span class="hint">@T["Where the lead came from, for example Web form, Purchased list or Trade show."]</span>
     </div>
 </div>
 
@@ -33,7 +33,7 @@
     <label asp-for="ListName" class="ocat-label">@T["List"]</label>
     <div class="ocat-end">
         <input asp-for="ListName" class="form-control" />
-        <span class="hint dashed">@T["The list or import the lead arrived in, so the whole list can be loaded and reported on together."]</span>
+        <span class="hint">@T["The list or import the lead arrived in, so the whole list can be loaded and reported on together."]</span>
     </div>
 </div>
 
@@ -59,6 +59,6 @@
             searchPlaceholder = T["Search users"].Value,
             smallButton = false,
         })
-        <span class="hint dashed">@T["The person responsible for working the lead."]</span>
+        <span class="hint">@T["The person responsible for working the lead."]</span>
     </div>
 </div>
