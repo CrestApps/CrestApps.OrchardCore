@@ -212,9 +212,21 @@ public sealed class AdminController : Controller
 
         var model = new ComposeViewModel
         {
-            Recipients = to,
             Channel = _channelResolver.Get(channel)?.Name,
         };
+
+        // A known customer goes in the To line by name; only an address no contact owns is left under Other.
+        var contact = await _contactSearch.FindByAddressAsync(to, model.Channel, HttpContext.RequestAborted);
+
+        if (contact is not null)
+        {
+            model.ContactAddresses = [contact.Address];
+            model.SelectedContacts = [contact];
+        }
+        else
+        {
+            model.Recipients = to;
+        }
 
         await PopulateEndpointsAsync(model);
         model.EndpointId = model.Endpoints.FirstOrDefault(item => item.Selected)?.Value;
@@ -708,6 +720,21 @@ public sealed class AdminController : Controller
     // its own, so starting a conversation never leaves the inbox.
     private async Task<IActionResult> ComposeViewAsync(ComposeViewModel model)
     {
+        // A composer shown again after a refused send must keep the contacts picked in its To line; the select only
+        // has the options the view renders, so each posted address is resolved back to its contact.
+        if (model.SelectedContacts.Count == 0 && model.ContactAddresses?.Count > 0)
+        {
+            var channel = !string.IsNullOrEmpty(model.EndpointId) && model.EndpointChannels.TryGetValue(model.EndpointId, out var endpointChannel)
+                ? endpointChannel
+                : model.Channel;
+
+            foreach (var address in model.ContactAddresses.Where(address => !string.IsNullOrWhiteSpace(address)).Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                model.SelectedContacts.Add(await _contactSearch.FindByAddressAsync(address, channel, HttpContext.RequestAborted)
+                    ?? new ContactSearchResult { Address = address, Name = address, DisplayAddress = address });
+            }
+        }
+
         var agent = await _workspaceBuilder.GetCurrentAgentAsync(User);
 
         return View("Workspace", new WorkspaceViewModel

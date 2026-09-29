@@ -110,4 +110,48 @@ public sealed class MessagingContactSearch
 
         return results;
     }
+
+    /// <summary>
+    /// Finds the contact that owns an exact address on the channel, so a composer opened for that address can show
+    /// the contact in its To line rather than as a bare address.
+    /// </summary>
+    /// <param name="address">The address, in any format the channel accepts.</param>
+    /// <param name="channelName">The channel the message will be sent on.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The contact, messaged at the requested address; <see langword="null"/> when no contact owns it.</returns>
+    public async Task<ContactSearchResult> FindByAddressAsync(string address, string channelName, CancellationToken cancellationToken)
+    {
+        var channel = _channelResolver.Get(channelName);
+        var normalized = channel?.NormalizeAddress(address);
+
+        if (string.IsNullOrEmpty(normalized))
+        {
+            return null;
+        }
+
+        var contactIds = await channel.FindContactIdsAsync(normalized, cancellationToken);
+
+        if (contactIds.Count == 0)
+        {
+            return null;
+        }
+
+        var contact = await _contentManager.GetAsync(contactIds[0], VersionOptions.Latest);
+
+        if (contact is null)
+        {
+            return null;
+        }
+
+        var displayAddress = channel.FormatAddress(normalized);
+
+        // The contact is messaged at the address asked for, not at their preferred one: the agent chose that number.
+        return new ContactSearchResult
+        {
+            Id = contact.ContentItemId,
+            Name = string.IsNullOrEmpty(contact.DisplayText) ? displayAddress : contact.DisplayText,
+            Address = normalized,
+            DisplayAddress = displayAddress,
+        };
+    }
 }
