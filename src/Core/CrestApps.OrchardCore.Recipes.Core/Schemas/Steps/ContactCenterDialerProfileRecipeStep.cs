@@ -25,7 +25,7 @@ public sealed class ContactCenterDialerProfileRecipeStep : IRecipeStep
                     .Items(new JsonSchemaBuilder()
                         .Type(SchemaValueType.Object)
                         .Properties(
-                            ("ItemId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional unique identifier. When supplied and found, the existing dialer profile is updated instead of a new one being created.")),
+                            ("ItemId", CatalogRecipeStepSchemas.ItemId("dialer profile")),
                             ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Unique name of the dialer profile.")),
                             ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Description of the dialer profile.")),
                             ("Mode", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Manual", "Preview", "Power", "Progressive", "Predictive").Description("Dialing mode that controls pacing and agent reservation behavior.")),
@@ -33,6 +33,8 @@ public sealed class ContactCenterDialerProfileRecipeStep : IRecipeStep
                             ("CallsPerAgent", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("Number of calls placed per available agent for power dialing.")),
                             ("MaxAttempts", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("Maximum number of dialing attempts allowed per activity.")),
                             ("RetryDelayMinutes", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("Delay, in minutes, before a no-answer activity is retried.")),
+                            ("PreviewExtensionSeconds", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("Seconds each extension adds when a preview agent asks for more time to review a record before it is dialed.")),
+                            ("MaxPreviewExtensions", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("How many times one preview offer may be extended.")),
                             ("CallerId", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Caller identifier presented to the customer when supported.")),
                             ("DefaultRegionCode", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("ISO 3166-1 alpha-2 region a destination is read in when it carries no country calling code.")),
                             ("RespectDoNotCall", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether do-not-call and communication preferences suppress activities.")),
@@ -47,7 +49,9 @@ public sealed class ContactCenterDialerProfileRecipeStep : IRecipeStep
                                 .Type(SchemaValueType.Object)
                                 .AdditionalProperties(new JsonSchemaBuilder().Type(SchemaValueType.String).Description("A business-hours calendar identifier."))
                                 .Description("Region-specific business-hours calendar overrides keyed by ISO 3166-1 alpha-2 region code.")),
-                            ("Enabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the dialer profile is enabled.")))
+                            ("Enabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the dialer profile is enabled.")),
+                            ("Properties", CatalogRecipeStepSchemas.Properties("dialer profile")))
+                        .Required("Name")
                         .AdditionalProperties(true))
                     .Description("The Contact Center dialer profiles to create or update.")))
             .Required("name", "DialerProfiles")

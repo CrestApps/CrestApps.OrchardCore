@@ -25,9 +25,11 @@ public sealed class ContactCenterQueueGroupRecipeStep : IRecipeStep
                     .Items(new JsonSchemaBuilder()
                         .Type(SchemaValueType.Object)
                         .Properties(
-                            ("ItemId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional unique identifier. When supplied and found, the existing queue group is updated instead of a new one being created.")),
+                            ("ItemId", CatalogRecipeStepSchemas.ItemId("queue group")),
                             ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Unique queue-group name.")),
-                            ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Queue-group description.")))
+                            ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Queue-group description.")),
+                            ("Properties", CatalogRecipeStepSchemas.Properties("queue group")))
+                        .Required("Name")
                         .AdditionalProperties(true))
                     .Description("The Contact Center queue groups to create or update.")))
             .Required("name", "QueueGroups")

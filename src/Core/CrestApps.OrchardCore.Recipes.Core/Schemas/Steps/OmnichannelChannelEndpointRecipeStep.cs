@@ -25,11 +25,13 @@ public sealed class OmnichannelChannelEndpointRecipeStep : IRecipeStep
                     .Items(new JsonSchemaBuilder()
                         .Type(SchemaValueType.Object)
                         .Properties(
-                            ("ItemId", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Stable identifier of the channel endpoint. When it matches an existing endpoint the entry is updated; otherwise a new endpoint is created.")),
+                            ("ItemId", CatalogRecipeStepSchemas.ItemId("channel endpoint")),
                             ("DisplayText", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Human-readable name of the channel endpoint.")),
                             ("Channel", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Communication channel this endpoint belongs to, for example 'SMS', 'Chat', or 'Email'.")),
                             ("Value", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Address of the endpoint on the channel, for example a phone number or email address.")),
-                            ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Administrative description of the channel endpoint.")))
+                            ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Administrative description of the channel endpoint.")),
+                            ("ProviderName", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Technical name of the messaging or telephony provider that owns this address (for example 'Twilio', 'Telnyx' or 'AzureCommunicationServices'). When empty, the tenant-default provider is used.")),
+                            ("Properties", CatalogRecipeStepSchemas.Properties("channel endpoint")))
                         .AdditionalProperties(true))
                     .Description("Channel endpoints to create or update.")))
             .Required("name", "ChannelEndpoints")
