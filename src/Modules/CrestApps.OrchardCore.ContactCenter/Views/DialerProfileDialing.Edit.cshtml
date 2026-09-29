@@ -3,8 +3,12 @@
 <style asp-name="bootstrap-select"></style>
 <script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
 
-<div class="alert alert-info" role="alert">
-    @T["A dialer profile is a reusable set of dialing settings — a mode that sets the pacing, plus provider, caller ID, and compliance rules. You choose the campaign (the records to call) and this profile when you load inventory, so one profile can dial many campaigns. Agents handle the answered calls by signing into the campaign; the routing is set up automatically (queues are only used for inbound routing)."]
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="alert alert-info" role="alert">
+            @T["A dialer profile is a reusable set of dialing settings — a mode that sets the pacing, plus provider, caller ID, and compliance rules. You choose the campaign (the records to call) and this profile when you load inventory, so one profile can dial many campaigns. Agents handle the answered calls by signing into the campaign; the routing is set up automatically (queues are only used for inbound routing)."]
+        </div>
+    </div>
 </div>
 
 <div class="ocat-wrapper" asp-validation-class-for="Mode">
@@ -42,27 +46,27 @@
     </div>
 </div>
 
-<div class="ocat-limited-wrapper" asp-validation-class-for="CallsPerAgent" data-dialer-modes="Power">
+<div class="ocat-wrapper" asp-validation-class-for="CallsPerAgent" data-dialer-modes="Power">
     <label asp-for="CallsPerAgent" class="ocat-label">@T["Calls per agent"]</label>
-    <div class="ocat-limited">
+    <div class="ocat-end">
         <input asp-for="CallsPerAgent" type="number" min="1" max="@Model.MaxCallsPerAgent" class="form-control" />
         <span asp-validation-for="CallsPerAgent" class="text-danger"></span>
         <span class="hint">@T["How many calls Power dialing places per available agent each pacing cycle. Capped at {0} until predictive pacing is available.", Model.MaxCallsPerAgent]</span>
     </div>
 </div>
 
-<div class="ocat-limited-wrapper" asp-validation-class-for="MaxAttempts" data-dialer-modes="Power Progressive Predictive">
+<div class="ocat-wrapper" asp-validation-class-for="MaxAttempts" data-dialer-modes="Power Progressive Predictive">
     <label asp-for="MaxAttempts" class="ocat-label">@T["Max attempts"]</label>
-    <div class="ocat-limited">
+    <div class="ocat-end">
         <input asp-for="MaxAttempts" type="number" min="1" class="form-control" />
         <span asp-validation-for="MaxAttempts" class="text-danger"></span>
         <span class="hint">@T["The maximum number of times an unanswered activity is dialed before it is given up."]</span>
     </div>
 </div>
 
-<div class="ocat-limited-wrapper" asp-validation-class-for="RetryDelayMinutes" data-dialer-modes="Power Progressive Predictive">
+<div class="ocat-wrapper" asp-validation-class-for="RetryDelayMinutes" data-dialer-modes="Power Progressive Predictive">
     <label asp-for="RetryDelayMinutes" class="ocat-label">@T["Retry delay (minutes)"]</label>
-    <div class="ocat-limited">
+    <div class="ocat-end">
         <input asp-for="RetryDelayMinutes" type="number" min="0" class="form-control" />
         <span asp-validation-for="RetryDelayMinutes" class="text-danger"></span>
         <span class="hint">@T["How long to wait before re-dialing an activity that was not answered on a previous attempt."]</span>
@@ -95,7 +99,7 @@
                     return;
                 }
 
-                var visible = Array.prototype.some.call(card.querySelectorAll('.ocat-wrapper, .ocat-limited-wrapper'), function (field) {
+                var visible = Array.prototype.some.call(card.querySelectorAll('.ocat-wrapper'), function (field) {
                     return field.style.display !== 'none';
                 });
 
