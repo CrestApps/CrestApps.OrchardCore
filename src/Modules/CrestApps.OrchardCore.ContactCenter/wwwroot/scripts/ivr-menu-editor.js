@@ -1365,11 +1365,14 @@
       var mediaId = idPrefix + '-m-' + nodeIndex;
       var canAddKey = ivr.availableDigits(node, -1).length > 0;
       var isUnused = tree.unused.indexOf(nodeIndex) >= 0;
+
+      // The header follows the bag-part item card: the menu name, its role, and the delete (trash) button on the
+      // right of the header rather than a separate labelled button.
       return h('div', {
         className: 'card mb-3',
         'data-ivr-node-card': String(nodeIndex)
       }, [h('div', {
-        className: 'card-header d-flex flex-wrap align-items-center gap-2'
+        className: 'card-header d-flex flex-wrap align-items-center gap-2 py-1 ps-2 pe-1'
       }, [h('span', {
         className: 'fw-semibold',
         text: menuLabel(nodeIndex)
@@ -1379,12 +1382,17 @@
       }, [icon('fa-solid fa-play me-1'), t('rootBadge', 'First menu')]) : h('span', {
         className: 'badge ' + (isUnused ? 'text-bg-warning' : 'text-bg-secondary'),
         text: isUnused ? t('unusedBadge', 'Not used') : t('submenuBadge', 'Submenu')
-      }), nodeIndex === tree.rootIndex ? null : h('button', {
+      }), nodeIndex === tree.rootIndex ? null : h('div', {
+        className: 'btn-group btn-group-sm ms-auto',
+        role: 'group'
+      }, [h('button', {
         type: 'button',
-        className: 'btn btn-outline-danger btn-sm ms-auto',
+        className: 'btn btn-danger',
         'data-ivr-command': 'remove-menu',
-        'data-ivr-node': String(nodeIndex)
-      }, [icon('fa-solid fa-trash me-1'), t('removeSubmenu', 'Remove submenu')])]), h('div', {
+        'data-ivr-node': String(nodeIndex),
+        title: t('removeSubmenu', 'Remove submenu'),
+        'aria-label': t('removeSubmenu', 'Remove submenu')
+      }, [icon('fa-solid fa-trash')])])]), h('div', {
         className: 'card-body'
       }, [h('div', {
         className: 'small mb-2',
