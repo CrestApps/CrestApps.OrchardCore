@@ -108,6 +108,12 @@ public class ComposeViewModel
     /// </summary>
     [BindNever]
     public IReadOnlyDictionary<string, string> EndpointChannels { get; set; } = new Dictionary<string, string>();
+
+    /// <summary>
+    /// Gets or sets the contacts already chosen in the To line, rendered as its selected options so they show by name.
+    /// </summary>
+    [BindNever]
+    public IList<ContactSearchResult> SelectedContacts { get; set; } = [];
 }
 
 public class ContactSearchResult

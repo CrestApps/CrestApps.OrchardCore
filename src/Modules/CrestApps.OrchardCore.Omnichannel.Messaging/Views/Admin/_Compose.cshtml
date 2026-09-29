@@ -38,7 +38,12 @@
                     data-messaging-contact-picker
                     data-search-url="@Url.RouteUrl("MessagingSearchContacts")"
                     data-endpoint-select="#endpoint-select"
-                    data-endpoint-channels="@JsonSerializer.Serialize(Model.EndpointChannels)"></select>
+                    data-endpoint-channels="@JsonSerializer.Serialize(Model.EndpointChannels)">
+                @foreach (var contact in Model.SelectedContacts)
+                {
+                    <option value="@contact.Address" data-subtext="@contact.DisplayAddress" selected>@contact.Name</option>
+                }
+            </select>
         </div>
     </div>
 
