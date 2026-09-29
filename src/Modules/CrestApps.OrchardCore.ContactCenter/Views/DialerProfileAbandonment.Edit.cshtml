@@ -10,9 +10,9 @@
     </div>
 </div>
 
-<div class="ocat-limited-wrapper" asp-validation-class-for="MaxAbandonmentRatePercent" data-dialer-modes="Power Progressive Predictive">
+<div class="ocat-wrapper" asp-validation-class-for="MaxAbandonmentRatePercent" data-dialer-modes="Power Progressive Predictive">
     <label asp-for="MaxAbandonmentRatePercent" class="ocat-label">@T["Maximum abandonment rate"]</label>
-    <div class="ocat-limited">
+    <div class="ocat-end">
         <div class="input-group">
             <input asp-for="MaxAbandonmentRatePercent" type="number" min="0" max="100" step="0.1" class="form-control" />
             <span class="input-group-text">@T["%"]</span>
@@ -22,9 +22,9 @@
     </div>
 </div>
 
-<div class="ocat-limited-wrapper" asp-validation-class-for="AbandonmentSampleFloor" data-dialer-modes="Power Progressive Predictive">
+<div class="ocat-wrapper" asp-validation-class-for="AbandonmentSampleFloor" data-dialer-modes="Power Progressive Predictive">
     <label asp-for="AbandonmentSampleFloor" class="ocat-label">@T["Abandonment sample floor"]</label>
-    <div class="ocat-limited">
+    <div class="ocat-end">
         <input asp-for="AbandonmentSampleFloor" type="number" min="0" class="form-control" />
         <span asp-validation-for="AbandonmentSampleFloor" class="text-danger"></span>
         <span class="hint">@T["The minimum number of live-answered calls in the rolling window before the abandonment rate is enforced, so the cap is not triggered by a small, noisy sample."]</span>
