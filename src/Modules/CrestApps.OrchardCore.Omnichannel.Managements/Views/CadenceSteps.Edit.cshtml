@@ -39,7 +39,7 @@
                                 <label class="ocat-label cadence-step-delay-label" for="@(stepId)-delay">@T["After (minutes)"]</label>
                                 <div class="ocat-end">
                                     <input type="number" min="1" id="@(stepId)-delay" class="form-control cadence-step-delay" name="@(stepsName)[@i].DelayMinutes" value="@step.DelayMinutes" />
-                                    <span class="hint dashed">@T["Minutes of silence since our previous message before this follow-up is sent."]</span>
+                                    <span class="hint">@T["Minutes of silence since our previous message before this follow-up is sent."]</span>
                                 </div>
                             </div>
 
@@ -50,7 +50,7 @@
                                         <option value="false" selected="@(!step.IsAiGenerated)">@T["Defined message"]</option>
                                         <option value="true" selected="@(step.IsAiGenerated)">@T["AI-generated"]</option>
                                     </select>
-                                    <span class="hint dashed">@T["Defined sends your exact text; AI-generated composes it from the conversation."]</span>
+                                    <span class="hint">@T["Defined sends your exact text; AI-generated composes it from the conversation."]</span>
                                 </div>
                             </div>
 
@@ -92,7 +92,7 @@
                     <label class="ocat-label cadence-step-delay-label">@T["After (minutes)"]</label>
                     <div class="ocat-end">
                         <input type="number" min="1" class="form-control cadence-step-delay" value="60" />
-                        <span class="hint dashed">@T["Minutes of silence since our previous message before this follow-up is sent."]</span>
+                        <span class="hint">@T["Minutes of silence since our previous message before this follow-up is sent."]</span>
                     </div>
                 </div>
 
@@ -103,7 +103,7 @@
                             <option value="false" selected>@T["Defined message"]</option>
                             <option value="true">@T["AI-generated"]</option>
                         </select>
-                        <span class="hint dashed">@T["Defined sends your exact text; AI-generated composes it from the conversation."]</span>
+                        <span class="hint">@T["Defined sends your exact text; AI-generated composes it from the conversation."]</span>
                     </div>
                 </div>
 
