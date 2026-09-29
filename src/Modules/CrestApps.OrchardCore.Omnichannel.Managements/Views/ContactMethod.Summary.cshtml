@@ -1,0 +1,79 @@
+@using CrestApps.OrchardCore.Omnichannel.Core
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using CrestApps.OrchardCore.Omnichannel.Managements.Services
+@using CrestApps.OrchardCore.PhoneNumbers
+@using OrchardCore.ContentManagement
+@using OrchardCore.Mvc.Utilities
+
+@inject IPhoneNumberService PhoneNumberService
+
+@*
+    A contact method (a bag item of the ContactMethod stereotype) in a contact's summary, such as the contact
+    information card on the activity pages. Each email address and phone number renders as one label and value row;
+    the default layout rendered the title as a heading and then the same value again as a field. A method with no
+    value renders nothing. Other contact method types keep the default layout.
+*@
+@{
+    var contentItem = (ContentItem)Model.ContentItem;
+}
+
+@if (contentItem.ContentType == OmnichannelConstants.ContentTypes.EmailAddress)
+{
+    var email = contentItem.TryGet<EmailInfoPart>(out var emailPart) ? emailPart.Email?.Text?.Trim() : null;
+
+    if (!string.IsNullOrEmpty(email))
+    {
+        <div class="ocat-wrapper">
+            <span class="ocat-label">@T["Email"]</span>
+            <div class="ocat-end">
+                <a href="mailto:@email">@email</a>
+            </div>
+        </div>
+    }
+}
+else if (contentItem.ContentType == OmnichannelConstants.ContentTypes.PhoneNumber)
+{
+    var number = contentItem.TryGet<PhoneNumberInfoPart>(out var phonePart) ? phonePart.Number?.PhoneNumber?.Trim() : null;
+
+    if (!string.IsNullOrEmpty(number))
+    {
+        var type = phonePart.Type?.Text?.Trim();
+        var extension = phonePart.Extension?.Text?.Trim();
+
+        <div class="ocat-wrapper">
+            <span class="ocat-label">@(string.IsNullOrEmpty(type) ? T["Phone"].Value : type)</span>
+            <div class="ocat-end d-flex align-items-center flex-wrap gap-2">
+                @* The tel: href keeps the exact stored number; the text is grouped so it can be read back. *@
+                <a href="tel:@number">@PhoneNumberService.FormatForDisplay(number)</a>
+                @if (!string.IsNullOrEmpty(extension))
+                {
+                    <span class="text-muted">@T["ext. {0}", extension]</span>
+                }
+                @* The call and SMS buttons are added by the soft phone and messaging modules when they are enabled.
+                   Only a mobile number gets the SMS button. *@
+                @await DisplayAsync(await New.PhoneNumberActions(PhoneNumber: number, CanText: ContactPrimaryMethodsResolver.IsMobileType(type)))
+            </div>
+        </div>
+    }
+}
+else
+{
+    <article class="content content-@contentItem.ContentType.HtmlClassify()">
+        <header>
+            @await DisplayAsync(Model.Header)
+            @if (Model.Meta != null)
+            {
+                <div class="metadata">
+                    @await DisplayAsync(Model.Meta)
+                </div>
+            }
+        </header>
+        @await DisplayAsync(Model.Content)
+        @if (Model.Footer != null)
+        {
+            <footer>
+                @await DisplayAsync(Model.Footer)
+            </footer>
+        }
+    </article>
+}

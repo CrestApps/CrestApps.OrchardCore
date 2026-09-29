@@ -1,0 +1,17 @@
+@*
+    The phone actions placeholder for a number shown outside a phone field, such as a contact's primary numbers.
+    Modules that act on phone numbers (the soft phone's call button, the messaging workspace's SMS button) enhance
+    every [data-phone-dial] placeholder and register their scripts when this shape or a PhoneField renders.
+    Properties:
+    - PhoneNumber: the number to act on.
+    - CanText: false when the number cannot receive text messages, such as a home line; the SMS button is omitted.
+*@
+@{
+    var phoneNumber = Model.PhoneNumber as string;
+    var canText = Model.CanText as bool? ?? true;
+}
+
+@if (!string.IsNullOrWhiteSpace(phoneNumber))
+{
+    <span class="phone-field-dial" data-phone-dial data-phone-number="@phoneNumber" data-phone-sms="@(canText ? null : "false")"></span>
+}

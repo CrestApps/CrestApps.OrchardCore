@@ -1,0 +1,5 @@
+@* Orchard Core's Content.HeaderAdmin view renders only the display text. A contact's header also renders its
+   content zone, so the primary contact methods placed there show under the contact's name. *@
+<h1 class="fs-5">@Model.ContentItem</h1>
+
+@await DisplayAsync(Model.Content)

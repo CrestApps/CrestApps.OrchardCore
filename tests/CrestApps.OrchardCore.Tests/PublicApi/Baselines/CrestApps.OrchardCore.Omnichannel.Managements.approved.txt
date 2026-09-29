@@ -907,6 +907,24 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         public OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition ContactContentTypeDefinition { get; set; }
         public bool ShowEdit { get; set; }
     }
+    public sealed class ContactPrimaryMethod
+    {
+        public ContactPrimaryMethod() { }
+        public bool CanText { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.ContactPrimaryMethodKind Kind { get; set; }
+        public string Label { get; set; }
+        public string Value { get; set; }
+    }
+    public enum ContactPrimaryMethodKind
+    {
+        Phone = 0,
+        Email = 1,
+    }
+    public class ContactPrimaryMethodsViewModel
+    {
+        public ContactPrimaryMethodsViewModel() { }
+        public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.ContactPrimaryMethod> Methods { get; set; }
+    }
     public class CreateInboundActivityViewModel
     {
         public CreateInboundActivityViewModel() { }

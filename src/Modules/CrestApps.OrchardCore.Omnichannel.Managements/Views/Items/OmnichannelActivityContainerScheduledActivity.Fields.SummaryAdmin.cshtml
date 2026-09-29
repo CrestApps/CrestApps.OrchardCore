@@ -1,9 +1,13 @@
+@using CrestApps.OrchardCore.Omnichannel.Core
 @using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Html
 @using Microsoft.AspNetCore.Mvc.Localization
 @using OrchardCore.DisplayManagement.Views
 
 @model ShapeViewModel<OmnichannelActivityContainer>
+
+@inject IAuthorizationService AuthorizationService
 
 @{
     var urgencyIcon = Model.Value.Activity.UrgencyLevel switch
@@ -15,6 +19,7 @@
         ActivityUrgencyLevel.VeryHigh => "urgency_very_high.png",
         _ => "urgency_normal.png",
     };
+    var subjectName = Model.Value.SubjectContentTypeDefinition?.DisplayName ?? T["Unknown Subject"].Value;
 }
 
 <h5 class="mb-0 d-flex align-items-center gap-2">
@@ -22,7 +27,13 @@
          alt="@Model.Value.Activity.UrgencyLevel"
          width="20"
          height="20" />
-    <a asp-action="Complete" asp-route-id="@Model.Value.Activity.ItemId">
-        @(Model.Value.SubjectContentTypeDefinition?.DisplayName ?? T["Unknown Subject"].Value)
-    </a>
+    @* The title opens the completion page, for users allowed to complete the activity, the same as the Complete button. *@
+    @if (await AuthorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.CompleteActivity, Model.Value.Activity))
+    {
+        <a asp-action="Complete" asp-route-id="@Model.Value.Activity.ItemId">@subjectName</a>
+    }
+    else
+    {
+        <span>@subjectName</span>
+    }
 </h5>

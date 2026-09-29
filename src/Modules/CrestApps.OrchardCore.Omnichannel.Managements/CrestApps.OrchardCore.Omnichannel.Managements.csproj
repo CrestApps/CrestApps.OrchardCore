@@ -23,6 +23,7 @@
     <PackageReference Include="OrchardCore.ContentFields" />
     <PackageReference Include="OrchardCore.Title" />
     <PackageReference Include="OrchardCore.Flows.Core" />
+    <PackageReference Include="OrchardCore.Lists" />
     <PackageReference Include="OrchardCore.Navigation.Core" />
     <PackageReference Include="OrchardCore.Sms.Abstractions" />
     <PackageReference Include="NodaTime" />

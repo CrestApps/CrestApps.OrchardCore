@@ -39,6 +39,10 @@ internal sealed class SmsPhoneFieldButtonShapeTableProvider : IShapeTableProvide
         builder.Describe("PhoneField").OnDisplaying(_ => RegisterButton());
         builder.Describe("PhoneField_Edit").OnDisplaying(_ => RegisterButton());
 
+        // The phone actions placeholder that a number shown outside a phone field renders, such as a contact's
+        // primary numbers in its list header.
+        builder.Describe("PhoneNumberActions").OnDisplaying(_ => RegisterButton());
+
         return ValueTask.CompletedTask;
     }
 
@@ -112,6 +116,8 @@ internal sealed class SmsPhoneFieldButtonShapeTableProvider : IShapeTableProvide
 
                 function enhance(placeholder) {
                     if (placeholder.__smsMessagingEnhanced) { return; }
+                    // A number that cannot receive text messages, such as a home line, opts out of the button.
+                    if (placeholder.getAttribute('data-phone-sms') === 'false') { return; }
                     placeholder.__smsMessagingEnhanced = true;
 
                     var button = document.createElement('button');
