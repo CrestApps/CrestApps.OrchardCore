@@ -35,20 +35,43 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments
         public static int GetSkippedAttachmentCount(this CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage message) { }
         public static void SetAttachments(this CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage message, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingAttachment> attachments) { }
     }
-    public static class MessagingImageFormat
+    public sealed class MessagingFileFormat
     {
-        public const string Gif = "image/gif";
-        public const string Jpeg = "image/jpeg";
-        public const string Png = "image/png";
-        public const string WebP = "image/webp";
-        public static System.Collections.Generic.IReadOnlyList<string> SupportedContentTypes { get; }
-        public static string GetExtension(string contentType) { }
-        public static bool TryDetect(System.ReadOnlySpan<byte> content, out string contentType) { }
+        public MessagingFileFormat(string name, string contentType, System.Collections.Generic.IReadOnlyList<string> extensions, bool isImage = false, bool canShrink = false, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileSignature signature = null) { }
+        public bool CanShrink { get; }
+        public string ContentType { get; }
+        public System.Collections.Generic.IReadOnlyList<string> Extensions { get; }
+        public bool HasSignature { get; }
+        public bool IsImage { get; }
+        public string Name { get; }
+        public string PreferredExtension { get; }
+        public bool MatchesExtension(string fileName) { }
+        public bool MatchesSignature(System.ReadOnlySpan<byte> content) { }
     }
+    public static class MessagingFileFormats
+    {
+        public static readonly CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat Csv;
+        public static readonly CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat Excel;
+        public static readonly CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat Gif;
+        public static readonly CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat Jpeg;
+        public static readonly CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat Pdf;
+        public static readonly CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat Png;
+        public static readonly CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat PowerPoint;
+        public static readonly CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat Text;
+        public static readonly CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat VCard;
+        public static readonly CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat WebP;
+        public static readonly CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat Word;
+        public static System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat> All { get; }
+        public static System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat> Documents { get; }
+        public static System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat> Images { get; }
+        public static CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat Detect(System.ReadOnlySpan<byte> content, string fileName, string declaredContentType, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat> allowed) { }
+        public static CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat FindByContentType(string contentType) { }
+    }
+    public delegate bool MessagingFileSignature(System.ReadOnlySpan<byte> content);
     public sealed class MessagingInboundMediaIngestor : CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.IMessagingInboundMediaIngestor
     {
         public const string HttpClientName = "CrestApps.Omnichannel.Messaging.InboundMedia";
-        public MessagingInboundMediaIngestor(System.Net.Http.IHttpClientFactory httpClientFactory, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.IMessagingAttachmentStore attachmentStore, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.IMessagingMediaRequestAuthenticator> authenticators, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingWorkspaceOptions> options, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingInboundMediaIngestor> logger) { }
+        public MessagingInboundMediaIngestor(System.Net.Http.IHttpClientFactory httpClientFactory, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.IMessagingAttachmentStore attachmentStore, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.IMessagingChannelResolver channelResolver, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.IMessagingMediaRequestAuthenticator> authenticators, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingWorkspaceOptions> options, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingInboundMediaIngestor> logger) { }
         public System.Threading.Tasks.Task<bool> IngestAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage message, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class MessagingMessageAttachments
@@ -88,16 +111,26 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels
         System.Threading.Tasks.Task ReceivedAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.MessagingInboundContext context, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task ReceivingAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.MessagingInboundContext context, System.Threading.CancellationToken cancellationToken = default);
     }
+    public sealed class MessagingAttachmentCapabilities
+    {
+        public MessagingAttachmentCapabilities() { }
+        public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat> Formats { get; init; }
+        public bool ImagesOnly { get; }
+        public bool IsSupported { get; }
+        public int MaxCount { get; init; }
+        public long MaxTotalBytes { get; init; }
+        public bool ShrinkImagesToFit { get; init; }
+        public static CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.MessagingAttachmentCapabilities None { get; }
+    }
     public sealed class MessagingChannelCapabilities
     {
         public MessagingChannelCapabilities() { }
+        public CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.MessagingAttachmentCapabilities Attachments { get; init; }
         public int? MaxBodyLength { get; init; }
-        public long MaxMediaBytes { get; init; }
-        public int MaxMediaCount { get; init; }
         public bool ObservesQuietHours { get; init; }
         public bool SupportsBroadcast { get; init; }
         public bool SupportsDeliveryReceipts { get; init; }
-        public bool SupportsMedia { get; init; }
+        public bool SupportsMedia { get; }
         public bool SupportsSubject { get; init; }
     }
     public sealed class MessagingChannelResolver : CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.IMessagingChannelResolver

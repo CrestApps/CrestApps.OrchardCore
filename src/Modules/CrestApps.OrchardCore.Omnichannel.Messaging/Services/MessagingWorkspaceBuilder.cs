@@ -178,6 +178,9 @@ public sealed class MessagingWorkspaceBuilder
 
         // Filter tabs, mirroring the OrchardCore content list: "mine" is assigned to the current agent,
         // "unassigned" is anything not yet owned by a specific agent (unassigned or pooled), "all" is the default.
+        // "favorites" lists the customers the agent starred instead of conversations.
+        viewModel.ShowFavorites = string.Equals(show?.Trim(), "favorites", StringComparison.OrdinalIgnoreCase);
+
         var filter = show?.Trim().ToLowerInvariant() switch
         {
             "mine" => MessagingInboxFilter.Mine,
@@ -217,14 +220,28 @@ public sealed class MessagingWorkspaceBuilder
             _ => viewModel.AllCount,
         };
 
-        var conversations = await _conversationStore.QueryAsync(
-            BuildQuery(filter, (currentPage - 1) * pageSize, pageSize),
-            cancellationToken);
-
         var channelsByName = viewModel.Channels.ToDictionary(item => item.Name, StringComparer.OrdinalIgnoreCase);
         var favorites = _favoritesService.GetFavorites(currentAgent);
 
         viewModel.Favorites = await BuildFavoritesAsync(favorites, selectedCustomerKey);
+
+        if (viewModel.ShowFavorites)
+        {
+            // Each starred customer with their latest conversation the agent may open, so the list reads like the
+            // inbox; one with none yet opens the composer instead.
+            foreach (var favorite in viewModel.Favorites)
+            {
+                favorite.Conversation = await FindFavoriteConversationAsync(user, favorite.Favorite, cancellationToken);
+            }
+
+            viewModel.TotalCount = viewModel.Favorites.Count;
+
+            return viewModel;
+        }
+
+        var conversations = await _conversationStore.QueryAsync(
+            BuildQuery(filter, (currentPage - 1) * pageSize, pageSize),
+            cancellationToken);
 
         foreach (var group in InboxRowGrouping.Group(conversations))
         {
@@ -243,6 +260,32 @@ public sealed class MessagingWorkspaceBuilder
         }
 
         return viewModel;
+    }
+
+    private async Task<MessagingConversation> FindFavoriteConversationAsync(ClaimsPrincipal user, MessagingFavorite favorite, CancellationToken cancellationToken)
+    {
+        var candidates = (await _conversationStore.GetForCustomerAsync(favorite.CustomerKey, cancellationToken))?.ToList() ?? [];
+
+        // A customer starred by their number, who has since been linked to a contact, is found by the number.
+        if (candidates.Count == 0 && !string.IsNullOrEmpty(favorite.Channel) && !string.IsNullOrEmpty(favorite.ContactAddress))
+        {
+            var byAddress = await _conversationStore.FindByContactAsync(favorite.Channel, favorite.ContactAddress, cancellationToken);
+
+            if (byAddress is not null)
+            {
+                candidates.Add(byAddress);
+            }
+        }
+
+        foreach (var conversation in candidates.OrderByDescending(item => item.LastMessageUtc ?? item.CreatedUtc))
+        {
+            if (await AuthorizeAsync(user, conversation, ConversationOperation.View))
+            {
+                return conversation;
+            }
+        }
+
+        return null;
     }
 
     // The starred customers, named by their contact record as it reads now, and by the name they were starred under
@@ -391,9 +434,7 @@ public sealed class MessagingWorkspaceBuilder
             ServiceAddressDisplay = channel?.FormatAddress(conversation.ServiceAddress) ?? conversation.ServiceAddress,
             SupportsSubject = channel?.Capabilities.SupportsSubject == true,
             MaxBodyLength = channel?.Capabilities.MaxBodyLength,
-            SupportsMedia = channel?.Capabilities.SupportsMedia == true,
-            MaxMediaCount = channel?.Capabilities.MaxMediaCount ?? 0,
-            MaxMediaBytes = channel?.Capabilities.MaxMediaBytes ?? 0,
+            Attachments = channel?.Capabilities.Attachments ?? MessagingAttachmentCapabilities.None,
             Messages = messages,
             Events = ThreadTimeline.ForPage(conversation.History, messages, beforeUtc, hasEarlierMessages),
             Templates = (await _templateManager.GetAllAsync(cancellationToken)).ToArray(),

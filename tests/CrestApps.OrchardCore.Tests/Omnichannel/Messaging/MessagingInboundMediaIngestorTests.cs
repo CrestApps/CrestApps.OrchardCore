@@ -30,7 +30,7 @@ public sealed class MessagingInboundMediaIngestorTests
 
         var attachment = Assert.Single(message.GetAttachments());
 
-        Assert.Equal(MessagingImageFormat.Png, attachment.ContentType);
+        Assert.Equal(MessagingFileFormats.Png.ContentType, attachment.ContentType);
         Assert.Equal(TestImages.Png, store.Items[attachment.Id]);
         Assert.Equal(0, message.GetSkippedAttachmentCount());
     }
@@ -115,6 +115,7 @@ public sealed class MessagingInboundMediaIngestorTests
         var ingestor = new MessagingInboundMediaIngestor(
             new StubHttpClientFactory(handler),
             new InMemoryAttachmentStore(),
+            MessagingTestChannels.Resolver(MessagingTestChannels.AcceptingDispatcher().Object),
             [],
             new OptionsWrapper<MessagingWorkspaceOptions>(new MessagingWorkspaceOptions()),
             NullLogger<MessagingInboundMediaIngestor>.Instance);
@@ -125,6 +126,21 @@ public sealed class MessagingInboundMediaIngestorTests
 
         Assert.Empty(handler.Requests);
         Assert.Equal(1, message.GetSkippedAttachmentCount());
+    }
+
+    [Fact]
+    public async Task IngestAsync_SkipsAGenuineFileTheChannelDoesNotCarry()
+    {
+        // A customer can text a PDF, but the SMS channel carries pictures only, so it is counted as not shown.
+        var store = new InMemoryAttachmentStore();
+        var ingestor = CreateIngestor(_ => Picture("%PDF-1.7\n"u8.ToArray()), store);
+        var message = Inbound("https://media.provider.test/form.pdf");
+
+        await ingestor.IngestAsync(message, TestContext.Current.CancellationToken);
+
+        Assert.Empty(message.GetAttachments());
+        Assert.Equal(1, message.GetSkippedAttachmentCount());
+        Assert.Empty(store.Items);
     }
 
     [Fact]
@@ -156,6 +172,7 @@ public sealed class MessagingInboundMediaIngestorTests
         => new(
             new StubHttpClientFactory(new StubHttpMessageHandler(respond)),
             store,
+            MessagingTestChannels.Resolver(MessagingTestChannels.AcceptingDispatcher().Object),
             [],
             new OptionsWrapper<MessagingWorkspaceOptions>(options ?? new MessagingWorkspaceOptions()),
             NullLogger<MessagingInboundMediaIngestor>.Instance);

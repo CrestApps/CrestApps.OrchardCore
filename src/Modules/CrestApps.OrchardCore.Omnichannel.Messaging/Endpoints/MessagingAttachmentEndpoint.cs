@@ -8,9 +8,9 @@ using Microsoft.Extensions.Logging;
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Endpoints;
 
 /// <summary>
-/// Serves an outbound picture to the provider that delivers it. A picture message carries links rather than bytes,
-/// and the provider fetches each link without signing in, so this endpoint is anonymous; what it serves is decided
-/// entirely by the signed, expiring token in the link.
+/// Serves an outbound file to the provider that delivers it. A message with attachments carries links rather than
+/// bytes, and the provider fetches each link without signing in, so this endpoint is anonymous; what it serves is
+/// decided entirely by the signed, expiring token in the link.
 /// </summary>
 internal static class MessagingAttachmentEndpoint
 {
@@ -30,10 +30,13 @@ internal static class MessagingAttachmentEndpoint
         IMessagingAttachmentStore attachmentStore,
         ILogger<MessagingAttachmentLinks> logger)
     {
-        if (!links.TryReadPublicToken(token, out var attachmentId, out var contentType) ||
-            !MessagingImageFormat.SupportedContentTypes.Contains(contentType))
+        var format = links.TryReadPublicToken(token, out var attachmentId, out var contentType)
+            ? MessagingFileFormats.FindByContentType(contentType)
+            : null;
+
+        if (format is null)
         {
-            logger.LogWarning("Refused a request for a messaging picture whose link was not genuine or had expired.");
+            logger.LogWarning("Refused a request for a messaging attachment whose link was not genuine or had expired.");
 
             return TypedResults.NotFound();
         }
@@ -42,19 +45,19 @@ internal static class MessagingAttachmentEndpoint
 
         if (bytes is null)
         {
-            logger.LogWarning("A provider asked for a messaging picture that is no longer stored.");
+            logger.LogWarning("A provider asked for a messaging attachment that is no longer stored.");
 
             return TypedResults.NotFound();
         }
 
         if (logger.IsEnabled(LogLevel.Information))
         {
-            logger.LogInformation("Served a {Length}-byte messaging picture to the provider delivering it.", bytes.Length);
+            logger.LogInformation("Served a {Length}-byte {Format} attachment to the provider delivering it.", bytes.Length, format.Name);
         }
 
         httpContext.Response.Headers.XContentTypeOptions = "nosniff";
         httpContext.Response.Headers.CacheControl = "private, max-age=3600";
 
-        return TypedResults.File(bytes, contentType);
+        return TypedResults.File(bytes, format.ContentType);
     }
 }

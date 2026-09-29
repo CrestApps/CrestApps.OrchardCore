@@ -371,12 +371,13 @@
   messaging.flagMenuGroups = flagMenuGroups;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*
- * The decisions the composer makes about pictures an agent attaches, kept free of the DOM so they can be tested.
+ * The decisions the composer makes about the files an agent attaches, kept free of the DOM so they can be tested.
  *
- * A picture message is held to what the channel carries: a number of pictures and a total size. A phone photo is
- * usually several times larger than a carrier accepts, so the composer shrinks a still picture to its share of the
- * budget rather than refusing it. An animated GIF cannot be redrawn without losing its animation, so it is sent as it
- * is or not at all.
+ * Each channel says which file formats it carries (SMS: pictures; email could add documents), how many per message
+ * and how large they may be together. The composer offers only those formats and holds a message to those limits.
+ * A channel whose carriers cap the message size, as SMS does, also has its still pictures shrunk to their share of the
+ * budget rather than refused. An animated GIF cannot be redrawn without losing its animation, so it is sent as it is
+ * or not at all, and so is every file that is not a picture.
  *
  * Concatenated ahead of the scripts that use it by the module asset pipeline. It attaches to a shared namespace
  * rather than exporting, so the same file runs in the browser bundle and under the unit tests.
@@ -385,21 +386,36 @@
   'use strict';
 
   var messaging = root.CrestAppsMessaging = root.CrestAppsMessaging || {};
-  var sendableTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-  function isSendableImageType(type) {
-    return sendableTypes.indexOf(String(type || '').toLowerCase()) >= 0;
+  function extensionOf(name) {
+    var match = /\.[^.\\/]+$/.exec(String(name || ''));
+    return match ? match[0].toLowerCase() : '';
   }
 
-  // Splits newly dropped files into the pictures that can be attached, the files that are not pictures, and the
-  // pictures that do not fit because the message already carries as many as it may.
-  function planAttachments(existingCount, incoming, maxCount) {
+  // The channel format a file is, by its declared type or, when the browser gave none it knows, by its extension.
+  // The server decides for certain from the bytes; this only keeps the composer from offering what will be refused.
+  function findFormat(file, formats) {
+    if (!file) {
+      return null;
+    }
+    var type = String(file.type || '').toLowerCase();
+    var extension = extensionOf(file.name);
+    return (formats || []).filter(function (format) {
+      return type && String(format.contentType).toLowerCase() === type || extension && (format.extensions || []).some(function (item) {
+        return String(item).toLowerCase() === extension;
+      });
+    })[0] || null;
+  }
+
+  // Splits newly dropped files into the ones that can be attached, the ones the channel does not carry, and the
+  // ones that do not fit because the message already carries as many as it may.
+  function planAttachments(existingCount, incoming, maxCount, formats) {
     var accepted = [];
-    var notImages = [];
+    var notAllowed = [];
     var overCount = [];
     var room = Math.max(0, (maxCount || 0) - (existingCount || 0));
     Array.prototype.forEach.call(incoming || [], function (file) {
-      if (!file || !isSendableImageType(file.type)) {
-        notImages.push(file);
+      if (!findFormat(file, formats)) {
+        notAllowed.push(file);
       } else if (accepted.length < room) {
         accepted.push(file);
       } else {
@@ -408,12 +424,12 @@
     });
     return {
       accepted: accepted,
-      notImages: notImages,
+      notAllowed: notAllowed,
       overCount: overCount
     };
   }
 
-  // Each picture's share of the message's size budget.
+  // Each file's share of the message's size budget.
   function perFileBudget(maxBytes, count) {
     if (!maxBytes || maxBytes <= 0) {
       return 0;
@@ -421,9 +437,9 @@
     return Math.floor(maxBytes / Math.max(1, count || 1));
   }
 
-  // Whether a picture must be redrawn smaller to fit its share. A GIF never is: it is sent whole or refused.
-  function needsShrinking(file, budget) {
-    return !!file && budget > 0 && file.size > budget && String(file.type).toLowerCase() !== 'image/gif';
+  // Whether a file must be redrawn smaller to fit its share: only a still picture, on a channel that shrinks them.
+  function needsShrinking(file, budget, format, shrinkImages) {
+    return !!file && !!format && !!shrinkImages && !!format.canShrink && budget > 0 && file.size > budget;
   }
 
   // The size a picture is redrawn at so its longer edge is at most maxEdge, keeping its proportions. A picture that
@@ -470,13 +486,27 @@
       return sum + (file && file.size || 0);
     }, 0);
   }
-  messaging.isSendableImageType = isSendableImageType;
+
+  // The value of the file picker's accept attribute for the channel's formats.
+  function acceptAttribute(formats) {
+    var values = [];
+    (formats || []).forEach(function (format) {
+      [format.contentType].concat(format.extensions || []).forEach(function (value) {
+        if (value && values.indexOf(value) < 0) {
+          values.push(value);
+        }
+      });
+    });
+    return values.join(',');
+  }
+  messaging.findAttachmentFormat = findFormat;
   messaging.planAttachments = planAttachments;
   messaging.perFileBudget = perFileBudget;
   messaging.needsShrinking = needsShrinking;
   messaging.fitDimensions = fitDimensions;
   messaging.shrinkSteps = shrinkSteps;
   messaging.totalAttachmentSize = totalSize;
+  messaging.attachmentAcceptAttribute = acceptAttribute;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*
  * The messaging workspace page: the customer list, the open customer's conversation and its channel tabs.
@@ -800,16 +830,24 @@
     });
   }
 
-  // ---- Pictures ----------------------------------------------------------------------------------------------
+  // ---- Attachments -------------------------------------------------------------------------------------------
 
-  // The pictures waiting to go with the next message, as the agent attached them. They are shrunk to fit only when
-  // the message is sent, because the share of the size budget each gets depends on how many there are by then.
+  // The files waiting to go with the next message, as the agent attached them. What may be attached is the
+  // channel's own list of formats. Pictures are shrunk to fit only when the message is sent, because the share of
+  // the size budget each gets depends on how many files there are by then.
   var composerForm = composerBody ? composerBody.form : null;
   var fileInput = composerForm ? composerForm.querySelector('[data-composer-files]') : null;
   var pending = [];
   function composerText(name) {
     return composerForm ? composerForm.getAttribute(name) || '' : '';
   }
+  var attachmentFormats = function () {
+    try {
+      return JSON.parse(composerText('data-attachment-formats') || '[]');
+    } catch (e) {
+      return [];
+    }
+  }();
   var mediaError = composerForm ? composerForm.querySelector('[data-composer-media-error]') : null;
   function showMediaError(text) {
     if (!mediaError) {
@@ -819,10 +857,33 @@
     mediaError.classList.toggle('d-none', !text);
   }
   function syncRequired() {
-    // A picture on its own is a message; only an empty composer with no picture is refused.
+    // An attachment on its own is a message; only an empty composer with nothing attached is refused.
     if (composerBody) {
       composerBody.required = pending.length === 0;
     }
+  }
+  function fileTile(item) {
+    var tile = document.createElement('div');
+    if (item.url) {
+      tile.className = 'messaging-composer-preview rounded border overflow-hidden';
+      var image = document.createElement('img');
+      image.src = item.url;
+      image.alt = item.file.name || '';
+      tile.appendChild(image);
+    } else {
+      // Anything that is not a picture is shown by its name and format.
+      tile.className = 'messaging-composer-preview messaging-composer-file rounded border d-flex flex-column justify-content-center px-2';
+      var name = document.createElement('span');
+      name.className = 'small text-truncate fw-semibold';
+      name.textContent = item.file.name || '';
+      tile.appendChild(name);
+      var kind = document.createElement('span');
+      kind.className = 'text-muted';
+      kind.style.fontSize = '.7rem';
+      kind.textContent = item.format ? item.format.name : '';
+      tile.appendChild(kind);
+    }
+    return tile;
   }
   function renderPreviews() {
     var previews = composerForm ? composerForm.querySelector('[data-composer-previews]') : null;
@@ -831,18 +892,15 @@
     }
     previews.innerHTML = '';
     pending.forEach(function (item, index) {
-      var tile = document.createElement('div');
-      tile.className = 'messaging-composer-preview rounded border overflow-hidden';
-      var image = document.createElement('img');
-      image.src = item.url;
-      image.alt = item.file.name || '';
-      tile.appendChild(image);
+      var tile = fileTile(item);
       var remove = document.createElement('button');
       remove.type = 'button';
       remove.className = 'btn-close';
       remove.setAttribute('aria-label', composerText('data-remove-text'));
       remove.addEventListener('click', function () {
-        URL.revokeObjectURL(item.url);
+        if (item.url) {
+          URL.revokeObjectURL(item.url);
+        }
         pending.splice(index, 1);
         showMediaError('');
         renderPreviews();
@@ -858,14 +916,16 @@
       return;
     }
     var maxCount = parseInt(composerText('data-max-media-count'), 10) || 0;
-    var plan = messaging.planAttachments(pending.length, files, maxCount);
+    var plan = messaging.planAttachments(pending.length, files, maxCount, attachmentFormats);
     plan.accepted.forEach(function (file) {
+      var format = messaging.findAttachmentFormat(file, attachmentFormats);
       pending.push({
         file: file,
-        url: URL.createObjectURL(file)
+        format: format,
+        url: format && format.isImage ? URL.createObjectURL(file) : null
       });
     });
-    if (plan.notImages.length > 0) {
+    if (plan.notAllowed.length > 0) {
       showMediaError(composerText('data-not-image-text'));
     } else if (plan.overCount.length > 0) {
       showMediaError(composerText('data-too-many-text'));
@@ -908,11 +968,12 @@
     });
   }
 
-  // Redraws a still picture smaller, step by step, until it fits its share. Resolves to null when even the smallest
-  // step is too large.
-  function shrink(file, budget) {
-    if (!messaging.needsShrinking(file, budget)) {
-      return Promise.resolve(budget <= 0 || file.size <= budget ? file : null);
+  // Redraws a still picture smaller, step by step, until it fits its share. Any other file goes as it is. Resolves to
+  // null when a picture cannot be made small enough.
+  function fit(item, budget, shrinkImages) {
+    var file = item.file;
+    if (!messaging.needsShrinking(file, budget, item.format, shrinkImages)) {
+      return Promise.resolve(file);
     }
     return loadImage(file).then(function (image) {
       var steps = messaging.shrinkSteps();
@@ -948,7 +1009,7 @@
       addFiles(chosen);
     });
 
-    // A picture pasted into the message box is attached like a dropped one.
+    // A file pasted into the message box is attached like a dropped one.
     composerBody.addEventListener('paste', function (event) {
       var files = event.clipboardData ? Array.prototype.slice.call(event.clipboardData.files || []) : [];
       if (files.length > 0) {
@@ -957,7 +1018,7 @@
       }
     });
 
-    // Dropping anywhere on the conversation attaches the pictures, with the composer showing where they go.
+    // Dropping anywhere on the conversation attaches the files, with the composer showing where they go.
     var dropTarget = composerForm.closest('.messaging-thread') || composerForm;
     var overlay = composerForm.querySelector('[data-composer-drop-overlay]');
     var dragDepth = 0;
@@ -1003,7 +1064,7 @@
       addFiles(Array.prototype.slice.call(event.dataTransfer.files || []));
     });
 
-    // Sending: fit the pictures to the channel's size budget, put them on the form, and post it.
+    // Sending: fit the attachments to the channel's size budget, put them on the form, and post it.
     composerForm.addEventListener('submit', function (event) {
       if (pending.length === 0) {
         return;
@@ -1018,9 +1079,10 @@
         submitButton.disabled = true;
       }
       var maxBytes = parseInt(composerText('data-max-media-bytes'), 10) || 0;
+      var shrinkImages = composerText('data-shrink-images') === 'true';
       var budget = messaging.perFileBudget(maxBytes, pending.length);
       Promise.all(pending.map(function (item) {
-        return shrink(item.file, budget).catch(function () {
+        return fit(item, budget, shrinkImages).catch(function () {
           return null;
         }).then(function (fitted) {
           return {
@@ -1029,14 +1091,20 @@
           };
         });
       })).then(function (results) {
-        var tooLarge = results.filter(function (result) {
+        var failed = results.filter(function (result) {
           return !result.fitted;
         });
-        if (tooLarge.length > 0 || maxBytes > 0 && messaging.totalAttachmentSize(results.map(function (r) {
-          return r.fitted;
-        })) > maxBytes) {
-          var name = tooLarge.length > 0 ? tooLarge[0].item.file.name || '' : '';
-          showMediaError(composerText('data-too-large-text').replace('{0}', name));
+        var total = messaging.totalAttachmentSize(results.map(function (result) {
+          return result.fitted;
+        }));
+        if (failed.length > 0 || maxBytes > 0 && total > maxBytes) {
+          // Name the file that did not fit, or else the largest one.
+          var culprit = failed.length > 0 ? failed[0].item.file : results.map(function (result) {
+            return result.fitted;
+          }).sort(function (a, b) {
+            return b.size - a.size;
+          })[0];
+          showMediaError(composerText('data-too-large-text').replace('{0}', culprit && culprit.name || ''));
           sending = false;
           if (submitButton) {
             submitButton.disabled = false;
@@ -1049,7 +1117,7 @@
         });
         fileInput.files = transfer.files;
 
-        // The native submit skips this handler, so the pictures go exactly as fitted.
+        // The native submit skips this handler, so the files go exactly as fitted.
         composerForm.submit();
       });
     });

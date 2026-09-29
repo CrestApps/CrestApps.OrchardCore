@@ -17,7 +17,7 @@ namespace CrestApps.OrchardCore.Tests.Omnichannel.Messaging;
 /// </summary>
 public sealed class MessagingAttachmentLinksTests
 {
-    private static readonly MessagingAttachment _attachment = new() { Id = "out-1", ContentType = MessagingImageFormat.Png };
+    private static readonly MessagingAttachment _attachment = new() { Id = "out-1", ContentType = "image/png", FileName = "form.png" };
 
     [Fact]
     public async Task GetPublicUrlAsync_BuildsALinkUnderTheSiteBaseUrl_ThatReadsBackToThePicture()
@@ -33,7 +33,7 @@ public sealed class MessagingAttachmentLinksTests
 
         Assert.True(links.TryReadPublicToken(token, out var attachmentId, out var contentType));
         Assert.Equal("out-1", attachmentId);
-        Assert.Equal(MessagingImageFormat.Png, contentType);
+        Assert.Equal("image/png", contentType);
     }
 
     [Fact]
@@ -56,9 +56,10 @@ public sealed class MessagingAttachmentLinksTests
         var links = CreateLinks("https://crm.example.test");
         var token = links.CreateViewToken("conv-1", _attachment);
 
-        Assert.True(links.TryReadViewToken("conv-1", token, out var attachmentId, out _));
+        Assert.True(links.TryReadViewToken("conv-1", token, out var attachmentId, out _, out var fileName));
         Assert.Equal("out-1", attachmentId);
-        Assert.False(links.TryReadViewToken("conv-2", token, out _, out _));
+        Assert.Equal("form.png", fileName);
+        Assert.False(links.TryReadViewToken("conv-2", token, out _, out _, out _));
     }
 
     [Fact]
@@ -85,7 +86,7 @@ public sealed class MessagingAttachmentLinksTests
 
             var onDisk = await File.ReadAllBytesAsync(Assert.Single(Directory.GetFiles(folder)), TestContext.Current.CancellationToken);
 
-            Assert.False(MessagingImageFormat.TryDetect(onDisk, out _));
+            Assert.Null(MessagingFileFormats.Detect(onDisk, "in-1.png", null, MessagingFileFormats.All));
             Assert.Equal(TestImages.Png, await store.ReadAsync("in-1", TestContext.Current.CancellationToken));
             Assert.True(await store.DeleteAsync("in-1", TestContext.Current.CancellationToken));
             Assert.Null(await store.ReadAsync("in-1", TestContext.Current.CancellationToken));

@@ -29,6 +29,20 @@
     var skippedAttachments = message.GetSkippedAttachmentCount();
 }
 
+@functions {
+    private static string FileIcon(MessagingFileFormat format)
+        => format?.ContentType switch
+        {
+            "application/pdf" => "fa-regular fa-file-pdf",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document" => "fa-regular fa-file-word",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" => "fa-regular fa-file-excel",
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation" => "fa-regular fa-file-powerpoint",
+            "text/csv" => "fa-solid fa-file-csv",
+            "text/vcard" => "fa-regular fa-address-card",
+            _ => "fa-regular fa-file-lines",
+        };
+}
+
 <div class="messaging-message d-flex flex-column mb-2 @(outbound ? "align-items-end" : "align-items-start")"
      data-message-id="@message.Id"
      data-inbound="@(message.IsInbound ? "true" : "false")"
@@ -40,10 +54,31 @@
                 @foreach (var attachment in attachments)
                 {
                     var src = Url.Action("Show", "Attachments", new { area = "CrestApps.OrchardCore.Omnichannel.Messaging", id = message.ConversationId, token = AttachmentLinks.CreateViewToken(message.ConversationId, attachment) });
-                    var label = string.IsNullOrEmpty(attachment.FileName) ? T["Picture"].Value : attachment.FileName;
-                    <a href="@src" target="_blank" rel="noopener" class="messaging-attachment d-block rounded-3 overflow-hidden" title="@label">
-                        <img src="@src" alt="@label" loading="lazy" data-messaging-attachment />
-                    </a>
+                    var format = MessagingFileFormats.FindByContentType(attachment.ContentType);
+
+                    @* A picture is shown as a thumbnail; every other file is a download, named as it was sent. *@
+                    if (format?.IsImage == true)
+                    {
+                        var label = string.IsNullOrEmpty(attachment.FileName) ? T["Picture"].Value : attachment.FileName;
+                        <a href="@src" target="_blank" rel="noopener" class="messaging-attachment d-block rounded-3 overflow-hidden" title="@label">
+                            <img src="@src" alt="@label" loading="lazy" data-messaging-attachment />
+                        </a>
+                    }
+                    else
+                    {
+                        var fileLabel = string.IsNullOrEmpty(attachment.FileName) ? T["Attachment"].Value : attachment.FileName;
+                        var sizeLabel = attachment.Length >= 1024 * 1024
+                            ? $"{attachment.Length / (1024d * 1024):0.#} MB"
+                            : $"{Math.Max(1, attachment.Length / 1024)} KB";
+                        <a href="@src" class="messaging-file d-flex align-items-center gap-2 rounded-3 border bg-body px-2 py-1 text-decoration-none text-body" title="@T["Download {0}", fileLabel]" data-messaging-file>
+                            <i class="@FileIcon(format) fa-lg text-secondary" aria-hidden="true"></i>
+                            <span class="d-flex flex-column" style="min-width: 0;">
+                                <span class="text-truncate small fw-semibold">@fileLabel</span>
+                                <span class="text-muted" style="font-size: .7rem;">@(format?.Name ?? T["File"].Value) &middot; @sizeLabel</span>
+                            </span>
+                            <i class="fa-solid fa-download text-secondary small ms-1" aria-hidden="true"></i>
+                        </a>
+                    }
                 }
             </div>
         }

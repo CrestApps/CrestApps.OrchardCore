@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
@@ -129,6 +130,18 @@ public class InboxViewModel
     /// </summary>
     public IList<FavoriteViewModel> Favorites { get; set; } = [];
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the list shows the agent's favorites instead of conversations.
+    /// </summary>
+    public bool ShowFavorites { get; set; }
+
+    /// <summary>
+    /// Gets the value of the <c>show</c> route value that keeps the list on the current view.
+    /// </summary>
+    public string ShowRouteValue => ShowFavorites
+        ? "favorites"
+        : Filter == MessagingInboxFilter.All ? null : Filter.ToString().ToLowerInvariant();
+
     public bool HasAgentProfile { get; set; }
 
     /// <summary>
@@ -191,6 +204,12 @@ public class FavoriteViewModel
     public string ChannelIconCssClass { get; set; }
 
     public bool IsSelected { get; set; }
+
+    /// <summary>
+    /// Gets or sets the customer's most recent conversation the viewer may open, or <see langword="null"/> when there
+    /// is none yet, in which case opening the favorite starts one.
+    /// </summary>
+    public MessagingConversation Conversation { get; set; }
 }
 
 public class InboxRow
@@ -264,19 +283,10 @@ public class ThreadViewModel
     public bool IsFavorite { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether the composer can attach pictures.
+    /// Gets or sets the files the conversation's channel can carry, which decides what the composer's drag and drop,
+    /// paste and file picker accept.
     /// </summary>
-    public bool SupportsMedia { get; set; }
-
-    /// <summary>
-    /// Gets or sets the most pictures one message may carry.
-    /// </summary>
-    public int MaxMediaCount { get; set; }
-
-    /// <summary>
-    /// Gets or sets the largest total size, in bytes, of the pictures one message may carry.
-    /// </summary>
-    public long MaxMediaBytes { get; set; }
+    public MessagingAttachmentCapabilities Attachments { get; set; } = MessagingAttachmentCapabilities.None;
 
     public IReadOnlyList<OmnichannelMessage> Messages { get; set; } = [];
 

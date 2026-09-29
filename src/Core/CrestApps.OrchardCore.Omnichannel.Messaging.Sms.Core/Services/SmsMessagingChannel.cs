@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
 using Microsoft.Extensions.Localization;
@@ -23,15 +24,19 @@ public sealed class SmsMessagingChannel : IMessagingChannel
     private static readonly MessagingChannelCapabilities _capabilities = new()
     {
         SupportsSubject = false,
-        SupportsMedia = true,
         SupportsDeliveryReceipts = true,
         SupportsBroadcast = true,
         ObservesQuietHours = true,
 
-        // A picture message is limited by the carriers more than by the providers: most refuse one much over a
-        // megabyte, so the composer shrinks photos to fit.
-        MaxMediaCount = 10,
-        MaxMediaBytes = 1024 * 1024,
+        // A text message carries pictures only (MMS), and the carriers refuse one much over a megabyte, so the
+        // composer shrinks photos to fit.
+        Attachments = new MessagingAttachmentCapabilities
+        {
+            Formats = MessagingFileFormats.Images,
+            MaxCount = 10,
+            MaxTotalBytes = 1024 * 1024,
+            ShrinkImagesToFit = true,
+        },
     };
 
     // Lazy because the channel is built whenever the channel registry is, including while a channel endpoint is being

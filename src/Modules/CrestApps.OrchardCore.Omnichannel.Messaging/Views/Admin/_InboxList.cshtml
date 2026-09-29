@@ -3,7 +3,81 @@
 @model InboxViewModel
 
 @{
-    var show = Model.Filter == MessagingInboxFilter.All ? null : Model.Filter.ToString().ToLowerInvariant();
+    var show = Model.ShowRouteValue;
+}
+
+@if (Model.ShowFavorites)
+{
+    @* The agent's starred customers, each with their latest conversation, or a new one when they have none yet. *@
+    if (Model.Favorites.Count == 0)
+    {
+        <div class="text-muted small p-3" data-favorites-empty>
+            <p class="mb-2"><i class="fa-regular fa-star me-1" aria-hidden="true"></i>@T["You have no favorites yet."]</p>
+            <p class="mb-0">@T["Open a conversation and click Add to favorites at the top of it or on the Customer card. The customers you message most then stay one click away here and above your conversation list."]</p>
+        </div>
+    }
+    else
+    {
+        <div class="list-group list-group-flush" data-inbox-rows>
+            @foreach (var favorite in Model.Favorites)
+            {
+                var conversation = favorite.Conversation;
+                var unread = conversation?.UnreadCount > 0;
+                var href = conversation is null
+                    ? Url.Action("Start", new { channel = favorite.Favorite.Channel, address = favorite.Favorite.ContactAddress })
+                    : Url.Action("Conversation", new { id = conversation.ItemId, show });
+
+                <a class="list-group-item list-group-item-action messaging-inbox-row px-2 py-2 @(favorite.IsSelected ? "active" : string.Empty) @(unread ? "messaging-unread" : string.Empty)"
+                   href="@href"
+                   data-customer-key="@favorite.Favorite.CustomerKey"
+                   data-filter-value="@($"{favorite.Name} {favorite.AddressDisplay} {favorite.Favorite.ContactAddress}")">
+                    <div class="d-flex gap-2 align-items-center">
+                        <span class="messaging-avatar rounded-circle @AvatarPalette.For(favorite.Favorite.CustomerKey) d-inline-flex align-items-center justify-content-center flex-shrink-0 fw-semibold" aria-hidden="true">
+                            @if (AvatarPalette.Initials(favorite.Name) is { } initials)
+                            {
+                                @initials
+                            }
+                            else
+                            {
+                                <i class="fa-solid fa-user"></i>
+                            }
+                        </span>
+                        <div class="flex-grow-1" style="min-width: 0;">
+                            <div class="d-flex justify-content-between gap-2">
+                                <span class="messaging-row-name text-truncate fw-semibold">@favorite.Name</span>
+                                @if (conversation?.LastMessageUtc is { } lastMessageUtc)
+                                {
+                                    <span class="text-muted small text-nowrap">@lastMessageUtc.ToLocalTime().ToString("g")</span>
+                                }
+                            </div>
+                            <div class="messaging-row-preview text-muted small text-truncate">
+                                @if (!string.IsNullOrEmpty(favorite.ChannelIconCssClass))
+                                {
+                                    <i class="@favorite.ChannelIconCssClass me-1" aria-hidden="true"></i>
+                                }
+                                @if (conversation is null)
+                                {
+                                    @favorite.AddressDisplay<text> &middot; </text>@T["No conversation yet: click to write"]
+                                }
+                                else
+                                {
+                                    @(string.IsNullOrEmpty(conversation.LastMessagePreview) ? favorite.AddressDisplay : conversation.LastMessagePreview)
+                                }
+                            </div>
+                        </div>
+                        <div class="d-flex flex-column align-items-end gap-1 flex-shrink-0">
+                            <i class="fa-solid fa-star text-warning small" aria-hidden="true"></i>
+                            <span class="badge rounded-pill text-bg-danger @(unread ? string.Empty : "d-none")" data-row-unread>@conversation?.UnreadCount</span>
+                        </div>
+                    </div>
+                </a>
+            }
+        </div>
+
+        <div class="d-none text-muted small p-3" data-inbox-no-results>@T["Your search returned no results."]</div>
+    }
+
+    return;
 }
 
 @if (Model.Favorites.Count > 0)

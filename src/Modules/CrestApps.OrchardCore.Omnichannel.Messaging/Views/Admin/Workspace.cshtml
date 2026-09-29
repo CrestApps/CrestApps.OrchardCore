@@ -5,14 +5,16 @@
 @{
     var inbox = Model.Inbox;
     var thread = Model.Thread;
-    var show = inbox.Filter == MessagingInboxFilter.All ? null : inbox.Filter.ToString().ToLowerInvariant();
+    var show = inbox.ShowRouteValue;
 
-    var filterLabel = inbox.Filter switch
-    {
-        MessagingInboxFilter.Mine => T["My conversations"],
-        MessagingInboxFilter.Unassigned => T["Unassigned"],
-        _ => T["All conversations"],
-    };
+    var filterLabel = inbox.ShowFavorites
+        ? T["Favorites"]
+        : inbox.Filter switch
+        {
+            MessagingInboxFilter.Mine => T["My conversations"],
+            MessagingInboxFilter.Unassigned => T["Unassigned"],
+            _ => T["All conversations"],
+        };
 }
 
 <zone Name="Title"><h1>@RenderTitleSegments(T["Messaging"])</h1></zone>
@@ -50,7 +52,7 @@
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li>
-                            <a class="dropdown-item d-flex justify-content-between align-items-center gap-3 @(inbox.Filter == MessagingInboxFilter.All ? "active" : string.Empty)" asp-route-action="Index" asp-route-channel="@inbox.ChannelFilter">
+                            <a class="dropdown-item d-flex justify-content-between align-items-center gap-3 @(inbox.Filter == MessagingInboxFilter.All && !inbox.ShowFavorites ? "active" : string.Empty)" asp-route-action="Index" asp-route-channel="@inbox.ChannelFilter">
                                 <span>@T["All conversations"]</span>
                                 <span class="badge rounded-pill text-bg-secondary">@inbox.AllCount</span>
                             </a>
@@ -58,14 +60,20 @@
                         @if (inbox.HasAgentProfile)
                         {
                             <li>
-                                <a class="dropdown-item d-flex justify-content-between align-items-center gap-3 @(inbox.Filter == MessagingInboxFilter.Mine ? "active" : string.Empty)" asp-route-action="Index" asp-route-show="mine" asp-route-channel="@inbox.ChannelFilter">
+                                <a class="dropdown-item d-flex justify-content-between align-items-center gap-3 @(inbox.Filter == MessagingInboxFilter.Mine && !inbox.ShowFavorites ? "active" : string.Empty)" asp-route-action="Index" asp-route-show="mine" asp-route-channel="@inbox.ChannelFilter">
                                     <span>@T["My conversations"]</span>
                                     <span class="badge rounded-pill text-bg-secondary">@inbox.MineCount</span>
                                 </a>
                             </li>
+                            <li>
+                                <a class="dropdown-item d-flex justify-content-between align-items-center gap-3 @(inbox.ShowFavorites ? "active" : string.Empty)" asp-route-action="Index" asp-route-show="favorites">
+                                    <span><i class="fa-solid fa-star text-warning me-1" aria-hidden="true"></i>@T["Favorites"]</span>
+                                    <span class="badge rounded-pill text-bg-secondary">@inbox.Favorites.Count</span>
+                                </a>
+                            </li>
                         }
                         <li>
-                            <a class="dropdown-item d-flex justify-content-between align-items-center gap-3 @(inbox.Filter == MessagingInboxFilter.Unassigned ? "active" : string.Empty)" asp-route-action="Index" asp-route-show="unassigned" asp-route-channel="@inbox.ChannelFilter">
+                            <a class="dropdown-item d-flex justify-content-between align-items-center gap-3 @(inbox.Filter == MessagingInboxFilter.Unassigned && !inbox.ShowFavorites ? "active" : string.Empty)" asp-route-action="Index" asp-route-show="unassigned" asp-route-channel="@inbox.ChannelFilter">
                                 <span>@T["Unassigned"]</span>
                                 <span class="badge rounded-pill text-bg-secondary">@inbox.UnassignedCount</span>
                             </a>
@@ -88,6 +96,16 @@
                         }
                     </ul>
                 </div>
+                @if (inbox.HasAgentProfile)
+                {
+                    @* One click to the agent's starred customers, and back to the conversations. *@
+                    <a class="btn btn-sm @(inbox.ShowFavorites ? "btn-warning" : "btn-outline-secondary")"
+                       asp-route-action="Index" asp-route-show="@(inbox.ShowFavorites ? null : "favorites")"
+                       title="@(inbox.ShowFavorites ? T["Back to conversations"] : T["Your favorite customers"])"
+                       aria-label="@T["Favorites"]" aria-pressed="@(inbox.ShowFavorites ? "true" : "false")" data-favorites-toggle>
+                        <i class="@(inbox.ShowFavorites ? "fa-solid" : "fa-regular") fa-star" aria-hidden="true"></i>
+                    </a>
+                }
                 <a class="btn btn-sm btn-primary" asp-route-action="New" title="@T["New conversation"]" aria-label="@T["New conversation"]">
                     <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
                 </a>
@@ -269,6 +287,15 @@
         position: relative;
         width: 4.5rem;
         height: 4.5rem;
+    }
+
+    .messaging-composer-file {
+        width: 9rem;
+        padding-right: 1.5rem !important;
+    }
+
+    .messaging-file {
+        max-width: 16rem;
     }
 
     .messaging-composer-preview img {

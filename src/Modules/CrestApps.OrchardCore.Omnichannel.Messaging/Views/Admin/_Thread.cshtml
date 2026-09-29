@@ -6,7 +6,21 @@
     var conversation = Model.Conversation;
     var contactLabel = string.IsNullOrEmpty(Model.ContactDisplayText) ? Model.ContactAddressDisplay : Model.ContactDisplayText;
     var canReply = Model.CanSend && conversation.Status != ConversationStatus.Closed && conversation.Status != ConversationStatus.Spam;
-    var supportsMedia = Model.SupportsMedia;
+    // What the composer's drag and drop, paste and file picker accept is the channel's own list of formats.
+    var attachments = Model.Attachments;
+    var supportsMedia = attachments.IsSupported;
+    var imagesOnly = attachments.ImagesOnly;
+    var channelName = Model.Channel?.DisplayName ?? conversation.Channel;
+    var formatNames = string.Join(", ", attachments.Formats.Select(format => format.Name));
+    var acceptTypes = string.Join(",", attachments.Formats.SelectMany(format => format.Extensions.Prepend(format.ContentType)).Distinct());
+    var formatsJson = System.Text.Json.JsonSerializer.Serialize(attachments.Formats.Select(format => new
+    {
+        name = format.Name,
+        contentType = format.ContentType,
+        extensions = format.Extensions,
+        isImage = format.IsImage,
+        canShrink = format.CanShrink,
+    }));
 }
 
 <div class="d-flex flex-grow-1 overflow-hidden">
@@ -29,21 +43,25 @@
                 </span>
                 <span class="fw-semibold text-truncate">@contactLabel</span>
                 <span class="text-muted small text-nowrap">@Model.ContactAddressDisplay</span>
-                @if (Model.CanFavorite)
+                @if (Model.IsFavorite)
                 {
-                    <form method="post" asp-controller="Favorites" asp-action="Set" asp-route-id="@conversation.ItemId" class="d-inline" data-favorite-form>
-                        <input type="hidden" name="favorite" value="@(Model.IsFavorite ? "false" : "true")" />
-                        <input type="hidden" name="name" value="@contactLabel" />
-                        <button type="submit" class="btn btn-sm btn-link px-1 @(Model.IsFavorite ? "text-warning" : "text-secondary")"
-                                title="@(Model.IsFavorite ? T["Remove from your favorites"] : T["Add to your favorites, so they are one click away above your list"])"
-                                aria-label="@(Model.IsFavorite ? T["Remove from favorites"] : T["Add to favorites"])"
-                                aria-pressed="@(Model.IsFavorite ? "true" : "false")">
-                            <i class="@(Model.IsFavorite ? "fa-solid" : "fa-regular") fa-star" aria-hidden="true"></i>
-                        </button>
-                    </form>
+                    <i class="fa-solid fa-star text-warning" title="@T["One of your favorites"]" aria-label="@T["One of your favorites"]"></i>
                 }
             </div>
             <div class="d-flex flex-wrap gap-2">
+                @if (Model.CanFavorite)
+                {
+                    @* Starring keeps the customer one click away: in the row above the list and under Favorites. *@
+                    <form method="post" asp-controller="Favorites" asp-action="Set" asp-route-id="@conversation.ItemId" class="d-inline" data-favorite-form>
+                        <input type="hidden" name="favorite" value="@(Model.IsFavorite ? "false" : "true")" />
+                        <input type="hidden" name="name" value="@contactLabel" />
+                        <button type="submit" class="btn btn-sm @(Model.IsFavorite ? "btn-warning" : "btn-outline-warning")"
+                                title="@(Model.IsFavorite ? T["Remove this customer from your favorites"] : T["Add this customer to your favorites, so they are one click away above your list"])"
+                                aria-pressed="@(Model.IsFavorite ? "true" : "false")">
+                            <i class="@(Model.IsFavorite ? "fa-solid" : "fa-regular") fa-star me-1" aria-hidden="true"></i>@(Model.IsFavorite ? T["Favorite"] : T["Add to favorites"])
+                        </button>
+                    </form>
+                }
                 @if (Model.CanClaim && conversation.AssignmentStatus != ConversationAssignmentStatus.Assigned)
                 {
                     <form method="post" asp-route-action="Claim" asp-route-id="@conversation.ItemId" class="d-inline">
@@ -170,18 +188,20 @@
 
                 <form method="post" asp-route-action="Send" asp-route-id="@conversation.ItemId" data-composer
                       enctype="@(supportsMedia ? "multipart/form-data" : "application/x-www-form-urlencoded")"
-                      data-max-media-count="@(Model.MaxMediaCount)"
-                      data-max-media-bytes="@(Model.MaxMediaBytes)"
-                      data-too-many-text="@T["A message can carry at most {0} pictures.", Model.MaxMediaCount]"
-                      data-not-image-text="@T["Only JPEG, PNG, GIF and WebP pictures can be sent."]"
-                      data-too-large-text="@T["{0} is too large to send, even after shrinking it.", "{0}"]"
+                      data-attachment-formats="@formatsJson"
+                      data-max-media-count="@attachments.MaxCount"
+                      data-max-media-bytes="@attachments.MaxTotalBytes"
+                      data-shrink-images="@(attachments.ShrinkImagesToFit ? "true" : "false")"
+                      data-too-many-text="@T["A message can carry at most {0} attachments.", attachments.MaxCount]"
+                      data-not-image-text="@T["{0} accepts: {1}.", channelName, formatNames]"
+                      data-too-large-text="@(attachments.ShrinkImagesToFit ? T["{0} is too large to send, even after shrinking it.", "{0}"] : T["{0} is too large to send.", "{0}"])"
                       data-remove-text="@T["Remove"]">
                     <div class="bg-body text-body rounded border w-100 position-relative" data-composer-dropzone>
                         @if (supportsMedia)
                         {
-                            <input type="file" name="attachments" class="d-none" accept="image/jpeg,image/png,image/gif,image/webp" multiple data-composer-files />
+                            <input type="file" name="attachments" class="d-none" accept="@acceptTypes" multiple data-composer-files />
                             <div class="messaging-drop-overlay rounded d-none align-items-center justify-content-center text-primary fw-semibold" data-composer-drop-overlay aria-hidden="true">
-                                <i class="fa-regular fa-image me-2" aria-hidden="true"></i>@T["Drop pictures to attach them"]
+                                <i class="@(imagesOnly ? "fa-regular fa-image" : "fa-solid fa-paperclip") me-2" aria-hidden="true"></i>@(imagesOnly ? T["Drop pictures to attach them"] : T["Drop files to attach them"])
                             </div>
                             <div class="d-flex flex-wrap gap-2 px-3 pt-2 d-none" data-composer-previews></div>
                             <div class="alert alert-warning py-1 px-2 mx-3 mt-2 mb-0 small d-none" role="alert" data-composer-media-error></div>
@@ -196,8 +216,10 @@
                             <div class="d-flex align-items-center gap-2">
                                 @if (supportsMedia)
                                 {
-                                    <button type="button" class="btn btn-sm btn-link text-secondary px-1" data-composer-attach title="@T["Attach pictures (or drag and drop them here)"]" aria-label="@T["Attach pictures"]">
-                                        <i class="fa-regular fa-image" aria-hidden="true"></i>
+                                    <button type="button" class="btn btn-sm btn-link text-secondary px-1" data-composer-attach
+                                            title="@T["Attach {0} (or drag and drop, or paste). {1} accepts: {2}.", imagesOnly ? T["pictures"] : T["files"], channelName, formatNames]"
+                                            aria-label="@(imagesOnly ? T["Attach pictures"] : T["Attach files"])">
+                                        <i class="@(imagesOnly ? "fa-regular fa-image" : "fa-solid fa-paperclip")" aria-hidden="true"></i>
                                     </button>
                                 }
                                 @if (Model.Channel is not null)
@@ -268,11 +290,23 @@
             </div>
             <div class="card-body">
                 <div class="mb-3">
-                    @if (Model.Channel is not null)
+                    <div class="text-nowrap">
+                        @if (Model.Channel is not null)
+                        {
+                            <i class="@Model.Channel.IconCssClass text-muted me-1" aria-hidden="true"></i>
+                        }
+                        <span class="user-select-all">@Model.ContactAddressDisplay</span>
+                    </div>
+                    @if (Model.CanFavorite)
                     {
-                        <i class="@Model.Channel.IconCssClass text-muted me-1" aria-hidden="true"></i>
+                        <form method="post" asp-controller="Favorites" asp-action="Set" asp-route-id="@conversation.ItemId" class="mt-1">
+                            <input type="hidden" name="favorite" value="@(Model.IsFavorite ? "false" : "true")" />
+                            <input type="hidden" name="name" value="@contactLabel" />
+                            <button type="submit" class="btn btn-sm btn-link text-nowrap p-0 @(Model.IsFavorite ? "text-warning" : string.Empty)">
+                                <i class="@(Model.IsFavorite ? "fa-solid" : "fa-regular") fa-star me-1" aria-hidden="true"></i>@(Model.IsFavorite ? T["Remove from favorites"] : T["Add to favorites"])
+                            </button>
+                        </form>
                     }
-                    <span class="user-select-all">@Model.ContactAddressDisplay</span>
                 </div>
 
                 @if (Model.Contacts.Count == 0)

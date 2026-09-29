@@ -89,7 +89,16 @@ public sealed class MessagingAttachmentLinks : IMessagingAttachmentUrlProvider
         var token = _publicProtector.Protect(attachment.Id + Separator + attachment.ContentType, lifetime);
 
         // The file name only helps a provider that judges a picture by its extension; the endpoint ignores it.
-        return $"{root.AbsoluteUri.TrimEnd('/')}/{PublicPathPrefix}/{token}/image{MessagingImageFormat.GetExtension(attachment.ContentType)}";
+        return $"{root.AbsoluteUri.TrimEnd('/')}/{PublicPathPrefix}/{token}/{PublicFileName(attachment)}";
+    }
+
+    // A provider may judge a file by its extension, so the link ends in the format's own; the endpoint ignores it.
+    private static string PublicFileName(MessagingAttachment attachment)
+    {
+        var format = MessagingFileFormats.FindByContentType(attachment.ContentType);
+        var extension = format?.PreferredExtension ?? string.Empty;
+
+        return (format?.IsImage == true ? "image" : "file") + extension;
     }
 
     /// <summary>
@@ -129,16 +138,19 @@ public sealed class MessagingAttachmentLinks : IMessagingAttachmentUrlProvider
     }
 
     /// <summary>
-    /// Issues the token a picture is shown in a conversation with.
+    /// Issues the token a file is shown or downloaded in a conversation with.
     /// </summary>
-    /// <param name="conversationId">The conversation the picture belongs to.</param>
-    /// <param name="attachment">The stored picture.</param>
+    /// <param name="conversationId">The conversation the file belongs to.</param>
+    /// <param name="attachment">The stored file.</param>
     /// <returns>The token.</returns>
     public string CreateViewToken(string conversationId, MessagingAttachment attachment)
     {
         ArgumentNullException.ThrowIfNull(attachment);
 
-        return _viewProtector.Protect(conversationId + Separator + attachment.Id + Separator + attachment.ContentType);
+        // The name is only ever used as the download name, and the separator cannot appear in it.
+        var fileName = (attachment.FileName ?? string.Empty).Replace(Separator, ' ');
+
+        return _viewProtector.Protect(conversationId + Separator + attachment.Id + Separator + attachment.ContentType + Separator + fileName);
     }
 
     /// <summary>
@@ -146,13 +158,15 @@ public sealed class MessagingAttachmentLinks : IMessagingAttachmentUrlProvider
     /// </summary>
     /// <param name="conversationId">The conversation the request names.</param>
     /// <param name="token">The token from the request.</param>
-    /// <param name="attachmentId">The stored picture it names.</param>
-    /// <param name="contentType">The picture's media type.</param>
+    /// <param name="attachmentId">The stored file it names.</param>
+    /// <param name="contentType">The file's media type.</param>
+    /// <param name="fileName">The file's name as the agent attached it, when it had one.</param>
     /// <returns><see langword="true"/> when the token is genuine and belongs to <paramref name="conversationId"/>.</returns>
-    public bool TryReadViewToken(string conversationId, string token, out string attachmentId, out string contentType)
+    public bool TryReadViewToken(string conversationId, string token, out string attachmentId, out string contentType, out string fileName)
     {
         attachmentId = null;
         contentType = null;
+        fileName = null;
 
         if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(conversationId))
         {
@@ -163,12 +177,12 @@ public sealed class MessagingAttachmentLinks : IMessagingAttachmentUrlProvider
         {
             var parts = _viewProtector.Unprotect(token).Split(Separator);
 
-            if (parts.Length != 3 || !string.Equals(parts[0], conversationId, StringComparison.Ordinal))
+            if (parts.Length != 4 || !string.Equals(parts[0], conversationId, StringComparison.Ordinal))
             {
                 return false;
             }
 
-            (attachmentId, contentType) = (parts[1], parts[2]);
+            (attachmentId, contentType, fileName) = (parts[1], parts[2], parts[3]);
 
             return true;
         }

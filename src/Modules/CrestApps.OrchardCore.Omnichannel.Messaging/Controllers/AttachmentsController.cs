@@ -12,8 +12,8 @@ using OrchardCore.Admin;
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Controllers;
 
 /// <summary>
-/// Shows the pictures in a conversation. The link names its conversation, and a picture is only served to someone
-/// who may read that conversation, so a copied link is no use to anyone else.
+/// Shows the pictures and serves the files in a conversation. The link names its conversation, and a file is only
+/// served to someone who may read that conversation, so a copied link is no use to anyone else.
 /// </summary>
 public sealed class AttachmentsController : Controller
 {
@@ -48,8 +48,11 @@ public sealed class AttachmentsController : Controller
             return Forbid();
         }
 
-        if (!_attachmentLinks.TryReadViewToken(id, token, out var attachmentId, out var contentType) ||
-            !MessagingImageFormat.SupportedContentTypes.Contains(contentType))
+        var format = _attachmentLinks.TryReadViewToken(id, token, out var attachmentId, out var contentType, out var fileName)
+            ? MessagingFileFormats.FindByContentType(contentType)
+            : null;
+
+        if (format is null)
         {
             return NotFound();
         }
@@ -70,7 +73,7 @@ public sealed class AttachmentsController : Controller
 
         if (bytes is null)
         {
-            _logger.LogWarning("A picture in messaging conversation {ConversationId} is no longer stored.", id.SanitizeLogValue());
+            _logger.LogWarning("A file in messaging conversation {ConversationId} is no longer stored.", id.SanitizeLogValue());
 
             return NotFound();
         }
@@ -78,6 +81,16 @@ public sealed class AttachmentsController : Controller
         Response.Headers.XContentTypeOptions = "nosniff";
         Response.Headers.CacheControl = "private, max-age=86400";
 
-        return File(bytes, contentType);
+        // Only a picture recognised by its own bytes is shown in the page; anything else is only ever downloaded.
+        if (format.IsImage)
+        {
+            return File(bytes, format.ContentType);
+        }
+
+        var downloadName = string.IsNullOrWhiteSpace(fileName)
+            ? "attachment" + format.PreferredExtension
+            : Path.GetFileName(fileName);
+
+        return File(bytes, format.ContentType, downloadName);
     }
 }

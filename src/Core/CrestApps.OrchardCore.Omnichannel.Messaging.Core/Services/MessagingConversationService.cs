@@ -106,7 +106,7 @@ public sealed class MessagingConversationService : IMessagingConversationService
 
         if (attachments.Length > 0 && !channel.Capabilities.SupportsMedia)
         {
-            return MessagingSendResult.Failed($"{channel.DisplayName.Value} cannot carry pictures.");
+            return MessagingSendResult.Failed($"{channel.DisplayName.Value} cannot carry attachments.");
         }
 
         var message = CreateOutboundMessage(conversation, request.Body, request.ActingAgentId);

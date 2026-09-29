@@ -322,10 +322,11 @@
         });
     }
 
-    // ---- Pictures ----------------------------------------------------------------------------------------------
+    // ---- Attachments -------------------------------------------------------------------------------------------
 
-    // The pictures waiting to go with the next message, as the agent attached them. They are shrunk to fit only when
-    // the message is sent, because the share of the size budget each gets depends on how many there are by then.
+    // The files waiting to go with the next message, as the agent attached them. What may be attached is the
+    // channel's own list of formats. Pictures are shrunk to fit only when the message is sent, because the share of
+    // the size budget each gets depends on how many files there are by then.
     var composerForm = composerBody ? composerBody.form : null;
     var fileInput = composerForm ? composerForm.querySelector('[data-composer-files]') : null;
     var pending = [];
@@ -333,6 +334,14 @@
     function composerText(name) {
         return composerForm ? (composerForm.getAttribute(name) || '') : '';
     }
+
+    var attachmentFormats = (function () {
+        try {
+            return JSON.parse(composerText('data-attachment-formats') || '[]');
+        } catch (e) {
+            return [];
+        }
+    }());
 
     var mediaError = composerForm ? composerForm.querySelector('[data-composer-media-error]') : null;
 
@@ -344,10 +353,39 @@
     }
 
     function syncRequired() {
-        // A picture on its own is a message; only an empty composer with no picture is refused.
+        // An attachment on its own is a message; only an empty composer with nothing attached is refused.
         if (composerBody) {
             composerBody.required = pending.length === 0;
         }
+    }
+
+    function fileTile(item) {
+        var tile = document.createElement('div');
+
+        if (item.url) {
+            tile.className = 'messaging-composer-preview rounded border overflow-hidden';
+
+            var image = document.createElement('img');
+            image.src = item.url;
+            image.alt = item.file.name || '';
+            tile.appendChild(image);
+        } else {
+            // Anything that is not a picture is shown by its name and format.
+            tile.className = 'messaging-composer-preview messaging-composer-file rounded border d-flex flex-column justify-content-center px-2';
+
+            var name = document.createElement('span');
+            name.className = 'small text-truncate fw-semibold';
+            name.textContent = item.file.name || '';
+            tile.appendChild(name);
+
+            var kind = document.createElement('span');
+            kind.className = 'text-muted';
+            kind.style.fontSize = '.7rem';
+            kind.textContent = item.format ? item.format.name : '';
+            tile.appendChild(kind);
+        }
+
+        return tile;
     }
 
     function renderPreviews() {
@@ -358,20 +396,14 @@
         previews.innerHTML = '';
 
         pending.forEach(function (item, index) {
-            var tile = document.createElement('div');
-            tile.className = 'messaging-composer-preview rounded border overflow-hidden';
-
-            var image = document.createElement('img');
-            image.src = item.url;
-            image.alt = item.file.name || '';
-            tile.appendChild(image);
+            var tile = fileTile(item);
 
             var remove = document.createElement('button');
             remove.type = 'button';
             remove.className = 'btn-close';
             remove.setAttribute('aria-label', composerText('data-remove-text'));
             remove.addEventListener('click', function () {
-                URL.revokeObjectURL(item.url);
+                if (item.url) { URL.revokeObjectURL(item.url); }
                 pending.splice(index, 1);
                 showMediaError('');
                 renderPreviews();
@@ -389,13 +421,15 @@
         if (!fileInput) { return; }
 
         var maxCount = parseInt(composerText('data-max-media-count'), 10) || 0;
-        var plan = messaging.planAttachments(pending.length, files, maxCount);
+        var plan = messaging.planAttachments(pending.length, files, maxCount, attachmentFormats);
 
         plan.accepted.forEach(function (file) {
-            pending.push({ file: file, url: URL.createObjectURL(file) });
+            var format = messaging.findAttachmentFormat(file, attachmentFormats);
+
+            pending.push({ file: file, format: format, url: format && format.isImage ? URL.createObjectURL(file) : null });
         });
 
-        if (plan.notImages.length > 0) {
+        if (plan.notAllowed.length > 0) {
             showMediaError(composerText('data-not-image-text'));
         } else if (plan.overCount.length > 0) {
             showMediaError(composerText('data-too-many-text'));
@@ -438,11 +472,13 @@
         });
     }
 
-    // Redraws a still picture smaller, step by step, until it fits its share. Resolves to null when even the smallest
-    // step is too large.
-    function shrink(file, budget) {
-        if (!messaging.needsShrinking(file, budget)) {
-            return Promise.resolve(budget <= 0 || file.size <= budget ? file : null);
+    // Redraws a still picture smaller, step by step, until it fits its share. Any other file goes as it is. Resolves to
+    // null when a picture cannot be made small enough.
+    function fit(item, budget, shrinkImages) {
+        var file = item.file;
+
+        if (!messaging.needsShrinking(file, budget, item.format, shrinkImages)) {
+            return Promise.resolve(file);
         }
 
         return loadImage(file).then(function (image) {
@@ -482,7 +518,7 @@
             addFiles(chosen);
         });
 
-        // A picture pasted into the message box is attached like a dropped one.
+        // A file pasted into the message box is attached like a dropped one.
         composerBody.addEventListener('paste', function (event) {
             var files = event.clipboardData ? Array.prototype.slice.call(event.clipboardData.files || []) : [];
 
@@ -492,7 +528,7 @@
             }
         });
 
-        // Dropping anywhere on the conversation attaches the pictures, with the composer showing where they go.
+        // Dropping anywhere on the conversation attaches the files, with the composer showing where they go.
         var dropTarget = composerForm.closest('.messaging-thread') || composerForm;
         var overlay = composerForm.querySelector('[data-composer-drop-overlay]');
         var dragDepth = 0;
@@ -537,7 +573,7 @@
             addFiles(Array.prototype.slice.call(event.dataTransfer.files || []));
         });
 
-        // Sending: fit the pictures to the channel's size budget, put them on the form, and post it.
+        // Sending: fit the attachments to the channel's size budget, put them on the form, and post it.
         composerForm.addEventListener('submit', function (event) {
             if (pending.length === 0) { return; }
 
@@ -552,19 +588,24 @@
             if (submitButton) { submitButton.disabled = true; }
 
             var maxBytes = parseInt(composerText('data-max-media-bytes'), 10) || 0;
+            var shrinkImages = composerText('data-shrink-images') === 'true';
             var budget = messaging.perFileBudget(maxBytes, pending.length);
 
             Promise.all(pending.map(function (item) {
-                return shrink(item.file, budget).catch(function () { return null; }).then(function (fitted) {
+                return fit(item, budget, shrinkImages).catch(function () { return null; }).then(function (fitted) {
                     return { item: item, fitted: fitted };
                 });
             })).then(function (results) {
-                var tooLarge = results.filter(function (result) { return !result.fitted; });
+                var failed = results.filter(function (result) { return !result.fitted; });
+                var total = messaging.totalAttachmentSize(results.map(function (result) { return result.fitted; }));
 
-                if (tooLarge.length > 0 || (maxBytes > 0 && messaging.totalAttachmentSize(results.map(function (r) { return r.fitted; })) > maxBytes)) {
-                    var name = tooLarge.length > 0 ? (tooLarge[0].item.file.name || '') : '';
+                if (failed.length > 0 || (maxBytes > 0 && total > maxBytes)) {
+                    // Name the file that did not fit, or else the largest one.
+                    var culprit = failed.length > 0
+                        ? failed[0].item.file
+                        : results.map(function (result) { return result.fitted; }).sort(function (a, b) { return b.size - a.size; })[0];
 
-                    showMediaError(composerText('data-too-large-text').replace('{0}', name));
+                    showMediaError(composerText('data-too-large-text').replace('{0}', (culprit && culprit.name) || ''));
                     sending = false;
 
                     if (submitButton) { submitButton.disabled = false; }
@@ -577,7 +618,7 @@
                 results.forEach(function (result) { transfer.items.add(result.fitted); });
                 fileInput.files = transfer.files;
 
-                // The native submit skips this handler, so the pictures go exactly as fitted.
+                // The native submit skips this handler, so the files go exactly as fitted.
                 composerForm.submit();
             });
         });

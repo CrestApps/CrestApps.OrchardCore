@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -13,8 +14,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 
 /// <summary>
 /// The default <see cref="IMessagingInboundMediaIngestor"/>. It downloads each announced media item over HTTPS,
-/// keeps it only when its bytes are a supported picture no larger than the configured limit, and stores it under a
-/// key derived from the provider's message id, so a redelivered message overwrites its own pictures rather than
+/// keeps it only when it is one of the formats the message's channel carries and no larger than the configured limit,
+/// and stores it under a key derived from the provider's message id, so a redelivered message overwrites its own files
+/// rather than
 /// storing them again.
 /// </summary>
 public sealed class MessagingInboundMediaIngestor : IMessagingInboundMediaIngestor
@@ -26,6 +28,7 @@ public sealed class MessagingInboundMediaIngestor : IMessagingInboundMediaIngest
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IMessagingAttachmentStore _attachmentStore;
+    private readonly IMessagingChannelResolver _channelResolver;
     private readonly IEnumerable<IMessagingMediaRequestAuthenticator> _authenticators;
     private readonly MessagingWorkspaceOptions _options;
     private readonly ILogger _logger;
@@ -34,19 +37,22 @@ public sealed class MessagingInboundMediaIngestor : IMessagingInboundMediaIngest
     /// Initializes a new instance of the <see cref="MessagingInboundMediaIngestor"/> class.
     /// </summary>
     /// <param name="httpClientFactory">The factory of the client media is downloaded with.</param>
-    /// <param name="attachmentStore">The store the pictures are kept in.</param>
+    /// <param name="attachmentStore">The store the files are kept in.</param>
+    /// <param name="channelResolver">The resolver of the channel whose formats decide what is kept.</param>
     /// <param name="authenticators">The providers' signers for media they serve only to their own account.</param>
     /// <param name="options">The workspace options carrying the size and count limits.</param>
     /// <param name="logger">The logger.</param>
     public MessagingInboundMediaIngestor(
         IHttpClientFactory httpClientFactory,
         IMessagingAttachmentStore attachmentStore,
+        IMessagingChannelResolver channelResolver,
         IEnumerable<IMessagingMediaRequestAuthenticator> authenticators,
         IOptions<MessagingWorkspaceOptions> options,
         ILogger<MessagingInboundMediaIngestor> logger)
     {
         _httpClientFactory = httpClientFactory;
         _attachmentStore = attachmentStore;
+        _channelResolver = channelResolver;
         _authenticators = authenticators ?? [];
         _options = options.Value;
         _logger = logger;
@@ -73,13 +79,14 @@ public sealed class MessagingInboundMediaIngestor : IMessagingInboundMediaIngest
             .Where(reference => !string.IsNullOrWhiteSpace(reference))
             .ToArray();
 
+        var formats = _channelResolver.Get(message.Channel)?.Capabilities.Attachments?.Formats ?? [];
         var maxCount = Math.Max(1, _options.MaxInboundAttachments);
         var stored = new List<MessagingAttachment>();
         var skipped = Math.Max(0, sources.Length - maxCount);
 
         for (var index = 0; index < Math.Min(sources.Length, maxCount); index++)
         {
-            var attachment = await TryIngestAsync(message, sources[index], index, cancellationToken);
+            var attachment = await TryIngestAsync(message, sources[index], index, formats, cancellationToken);
 
             if (attachment is null)
             {
@@ -109,8 +116,19 @@ public sealed class MessagingInboundMediaIngestor : IMessagingInboundMediaIngest
         return true;
     }
 
-    private async Task<MessagingAttachment> TryIngestAsync(OmnichannelMessage message, string source, int index, CancellationToken cancellationToken)
+    private async Task<MessagingAttachment> TryIngestAsync(OmnichannelMessage message, string source, int index, IReadOnlyList<MessagingFileFormat> formats, CancellationToken cancellationToken)
     {
+        if (formats.Count == 0)
+        {
+            _logger.LogWarning(
+                "Skipped media item {Index} of {Channel} message {ProviderMessageId} because the channel carries no attachments.",
+                index,
+                message.Channel,
+                message.ProviderMessageId.SanitizeLogValue());
+
+            return null;
+        }
+
         // The address comes from a signed provider webhook, but it is still only ever fetched over HTTPS, so a
         // payload naming a plain-text address is never followed.
         if (!Uri.TryCreate(source, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps)
@@ -130,7 +148,7 @@ public sealed class MessagingInboundMediaIngestor : IMessagingInboundMediaIngest
         {
             using var client = _httpClientFactory.CreateClient(HttpClientName);
             using var request = new HttpRequestMessage(HttpMethod.Get, uri);
-            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("image/*"));
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*"));
 
             foreach (var authenticator in _authenticators)
             {
@@ -170,16 +188,21 @@ public sealed class MessagingInboundMediaIngestor : IMessagingInboundMediaIngest
                 return null;
             }
 
-            if (!MessagingImageFormat.TryDetect(bytes, out var contentType))
+            // The last segment of the address stands in for a file name: some formats are only known by their extension.
+            var fileName = Path.GetFileName(uri.AbsolutePath);
+            var declaredType = response.Content.Headers.ContentType?.MediaType;
+            var format = MessagingFileFormats.Detect(bytes, fileName, declaredType, formats);
+
+            if (format is null)
             {
                 if (_logger.IsEnabled(LogLevel.Information))
                 {
                     _logger.LogInformation(
-                        "Skipped media item {Index} of {Channel} message {ProviderMessageId}: it is not a supported picture (declared as {DeclaredType}).",
+                        "Skipped media item {Index} of {Channel} message {ProviderMessageId}: the channel does not carry it (declared as {DeclaredType}).",
                         index,
                         message.Channel,
                         message.ProviderMessageId.SanitizeLogValue(),
-                        response.Content.Headers.ContentType?.MediaType.SanitizeLogValue());
+                        declaredType.SanitizeLogValue());
                 }
 
                 return null;
@@ -188,7 +211,8 @@ public sealed class MessagingInboundMediaIngestor : IMessagingInboundMediaIngest
             var attachment = new MessagingAttachment
             {
                 Id = CreateAttachmentId(message, index),
-                ContentType = contentType,
+                ContentType = format.ContentType,
+                FileName = format.MatchesExtension(fileName) ? fileName : null,
                 Length = bytes.Length,
             };
 
