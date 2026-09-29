@@ -65,7 +65,9 @@ public sealed class DefaultActivityBatchLoadCoordinator : IActivityBatchLoadCoor
         var loader = ResolveLoader(batch.Source);
 
         batch.Status = OmnichannelActivityBatchStatus.Loading;
-        batch.TotalLoaded = 0;
+        // A reload starts from nothing, so the counts shown afterwards describe this load and not the sum of every
+        // load the batch has been through.
+        batch.ResetLoadCounts();
 
         await _catalog.UpdateAsync(batch, cancellationToken);
 

@@ -29,7 +29,7 @@ There are three sources:
 
 1. Open **Interaction Center > Management > Load Inventory**, click **Add Inventory Load** and choose **Manual**.
 2. Fill in the load (fields below). A manual load needs a **Channel** and at least one user in **User(s) to assign activities to**; the activities are shared between the users you pick. Click **Save**.
-3. In the list, open the load's **Actions** menu, choose **Load batch** and confirm with **Ok**. The load runs in the background: the status moves through *Started* and *Loading* to *Loaded*, and the row then shows how many activities it created.
+3. In the list, open the load's **Actions** menu, choose **Load batch** and confirm with **Ok**. The load runs in the background: the status moves through *Started* and *Loading* to *Loaded*, and the row then shows how many activities it created, how many contacts matched the filters, and why any matching contact was skipped (see [What a load reports](#what-a-load-reports)).
 
 Once a load has started it can no longer be edited or deleted.
 
@@ -58,14 +58,28 @@ Dialer loads always use the phone channel and create manual (agent-handled) acti
 | **Schedule at** | When the activities become due. |
 | **Users** | Manual loads: who gets the work. |
 | **Urgency** / **Instructions** | Copied onto every activity. Instructions are notes the agent reads first. |
-| **Prevent duplicate activity with the same subject** | Skips contacts that already have an open activity for this subject. |
+| **Prevent duplicate activity with the same subject** | Skips contacts that already have an open activity for this subject, on any campaign or channel. An open activity for a different subject does not stop a contact from loading. |
 | **Contact content type** | Which contacts to pick. Required. |
 | **Contact created from / to** | Only contacts created in this range. |
 | **Only published contacts** | Skips drafts. |
 | **Include do not call / SMS / email contacts** | By default, contacts who opted out of the channel are skipped, including any contact that shares their number. Tick to include them. |
-| **Phone number** and match type | Contains, Exact, Begins with, or Ends with. |
+| **Phone number** and match type | Contains, Exact, Begins with, or Ends with. **Exact** finds the number however it was stored: `5555550123`, `15555550123` and `+15555550123` all find the same contact. A ten-digit number is read as a North American number. |
 | **Time zones** | Only contacts in these time zones. |
 | **Limit** | The most activities to create. |
 | **Last activity subject** / **Last activity disposition** | Only contacts whose last completed activity had this subject and outcome, for example everyone whose last *Lead generation* call was *No answer*. |
 
 The automatic source adds AI fields; see [Automated AI SMS and voice](automated-ai.md).
+
+## What a load reports
+
+When a load finishes, its row in the list and the top of its page say how many of the matching contacts were loaded, for example *Loaded 0 of 2 matching contacts. 2 already have an open activity for this subject.* Every matching contact that was not loaded is counted against one reason:
+
+| Reason | Why |
+| --- | --- |
+| Already has an open activity for this subject | **Prevent duplicate activity with the same subject** is ticked. |
+| Asked not to be reached on this channel | The contact opted out, and the matching **Include do not call / SMS / email** box is not ticked. |
+| Shares a phone number with a contact who asked not to be reached | Another record with the same number opted out. |
+| Has no address on this channel | An automatic load needs a number or email to send to. |
+| Not loaded because the limit was reached | The **Limit** was reached before this contact. |
+
+If the filters match nobody, the load says so. Loading the same batch again replaces the counts rather than adding to them.
