@@ -1367,7 +1367,8 @@
       var isUnused = tree.unused.indexOf(nodeIndex) >= 0;
 
       // The header follows the bag-part item card: the menu name, its role, and the delete (trash) button on the
-      // right of the header rather than a separate labelled button.
+      // right of the header rather than a separate labelled button. On the first menu the trash removes the whole
+      // IVR menu, since callers cannot have a menu without one.
       return h('div', {
         className: 'card mb-3',
         'data-ivr-node-card': String(nodeIndex)
@@ -1382,10 +1383,16 @@
       }, [icon('fa-solid fa-play me-1'), t('rootBadge', 'First menu')]) : h('span', {
         className: 'badge ' + (isUnused ? 'text-bg-warning' : 'text-bg-secondary'),
         text: isUnused ? t('unusedBadge', 'Not used') : t('submenuBadge', 'Submenu')
-      }), nodeIndex === tree.rootIndex ? null : h('div', {
+      }), h('div', {
         className: 'btn-group btn-group-sm ms-auto',
         role: 'group'
-      }, [h('button', {
+      }, [nodeIndex === tree.rootIndex ? h('button', {
+        type: 'button',
+        className: 'btn btn-danger',
+        'data-ivr-command': 'clear',
+        title: t('clear', 'Remove the IVR menu'),
+        'aria-label': t('clear', 'Remove the IVR menu')
+      }, [icon('fa-solid fa-trash')]) : h('button', {
         type: 'button',
         className: 'btn btn-danger',
         'data-ivr-command': 'remove-menu',
@@ -1531,13 +1538,6 @@
             children.push(renderNode(model.nodes[index], index));
           });
         }
-        children.push(h('div', {
-          className: 'd-flex flex-wrap gap-2'
-        }, [h('button', {
-          type: 'button',
-          className: 'btn btn-outline-danger btn-sm ms-auto',
-          'data-ivr-command': 'clear'
-        }, [icon('fa-solid fa-xmark me-1'), t('clear', 'Remove the IVR menu')])]));
       }
       visual.replaceChildren.apply(visual, children);
       sync();
