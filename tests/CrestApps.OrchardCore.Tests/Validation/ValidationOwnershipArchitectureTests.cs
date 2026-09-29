@@ -71,6 +71,19 @@ public class ValidationOwnershipArchitectureTests
         @"class\s+\w+\s*:\s*(?<base>\w+)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
+    /// <summary>
+    /// Editor inputs that exist only in the editor, keyed by the driver that reads them. A problem with such an input is
+    /// reported where it is read, because no other write path ever carries it, so there is no rule for a recipe to skip.
+    /// Each entry names the input and why no other write path has it.
+    /// </summary>
+    private static readonly (string DriverPath, string InputMarker, string Justification)[] _editorOnlyInputs =
+    [
+        (
+            "src/Modules/CrestApps.OrchardCore.ContactCenter/Drivers/VoiceMediaItemDisplayDriver.cs",
+            "nameof(VoiceMediaItemViewModel.Audio)",
+            "The uploaded audio file is streamed to the telephony provider by the editor; a recipe carries the resulting media reference, never a file."),
+    ];
+
     private static readonly Regex _typeNameRegex = new(
         @"(?:class|record)\s+(?<name>\w+)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -107,9 +120,15 @@ public class ValidationOwnershipArchitectureTests
                 continue;
             }
 
+            var editorOnlyInputs = _editorOnlyInputs
+                .Where(input => string.Equals(input.DriverPath, driver.RelativePath, StringComparison.OrdinalIgnoreCase))
+                .Select(input => input.InputMarker)
+                .ToArray();
+
             for (var index = 0; index < lines.Length; index++)
             {
-                if (lines[index].Contains("AddModelError", StringComparison.Ordinal))
+                if (lines[index].Contains("AddModelError", StringComparison.Ordinal)
+                    && !editorOnlyInputs.Any(marker => lines[index].Contains(marker, StringComparison.Ordinal)))
                 {
                     violations.Add($"{driver.RelativePath}({index + 1}): {lines[index].Trim()}");
                 }

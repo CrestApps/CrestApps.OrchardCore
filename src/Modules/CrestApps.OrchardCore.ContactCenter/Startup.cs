@@ -301,6 +301,7 @@ public sealed class ContactCenterDeploymentAdminStartup : StartupBase
         services.AddDisplayDriver<DeploymentStep, ContactCenterQueueDeploymentStepDisplayDriver>();
         services.AddDisplayDriver<DeploymentStep, ContactCenterEntryPointDeploymentStepDisplayDriver>();
         services.AddDisplayDriver<DeploymentStep, ContactCenterDialerProfileDeploymentStepDisplayDriver>();
+        services.AddDisplayDriver<DeploymentStep, ContactCenterVoiceMediaDeploymentStepDisplayDriver>();
     }
 }
 
