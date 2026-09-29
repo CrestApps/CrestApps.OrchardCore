@@ -1,4 +1,5 @@
 using CrestApps.Core;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -77,8 +78,8 @@ internal sealed class ConvertLeadSubjectActionHandler : ISubjectActionHandler
         {
             _logger.LogWarning(
                 "The Convert lead action of activity {ActivityId} could not convert lead {LeadId}: {Errors}",
-                context.Activity.ItemId,
-                lead.ContentItemId,
+                context.Activity.ItemId.SanitizeLogValue(),
+                lead.ContentItemId.SanitizeLogValue(),
                 string.Join(" ", result.Errors));
 
             return;

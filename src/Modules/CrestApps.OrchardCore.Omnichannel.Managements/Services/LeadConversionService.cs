@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.Services;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -201,18 +202,19 @@ internal sealed class LeadConversionService : ILeadConversionService
         result.Account = context.Account;
         result.Opportunity = context.Opportunity;
 
+        // The lead and contact ids trace a conversion; the account and opportunity are logged as present or not, and
+        // who converted stays on the lead's own audit fields rather than in the log.
         if (_logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation(
-                "Converted lead {LeadId} into {ContactMode} contact {ContactId} (account {AccountId}, opportunity {OpportunityId}); moved {MovedActivities} activities and cancelled {CancelledActivities}. Converted by {UserName}.",
-                lead.ContentItemId,
+                "Converted lead {LeadId} into {ContactMode} contact {ContactId} (account: {HasAccount}, opportunity: {HasOpportunity}); moved {MovedActivities} activities and cancelled {CancelledActivities}.",
+                lead.ContentItemId.SanitizeLogValue(),
                 context.ContactCreated ? "new" : "existing",
-                context.Contact.ContentItemId,
-                context.Account?.ContentItemId ?? "none",
-                context.Opportunity?.ContentItemId ?? "none",
+                context.Contact.ContentItemId.SanitizeLogValue(),
+                context.Account is not null,
+                context.Opportunity is not null,
                 result.MovedActivities,
-                result.CancelledActivities,
-                request.UserName ?? "the system");
+                result.CancelledActivities);
         }
 
         return result;

@@ -75,12 +75,12 @@ internal sealed class AccountPartHandler : ContentPartHandler<AccountPart>
             await session.SaveChangesAsync();
         }
 
+        // Counts only: the account's id stays out of the log, like every other record identifier.
         if (detached > 0 && logger.IsEnabled(LogLevel.Information))
         {
             logger.LogInformation(
-                "Detached {Count} content item(s) from the removed account '{AccountId}'.",
-                detached,
-                accountId);
+                "Detached {Count} content item(s) from a removed account.",
+                detached);
         }
     }
 }
