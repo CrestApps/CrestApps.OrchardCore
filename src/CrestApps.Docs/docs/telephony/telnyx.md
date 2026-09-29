@@ -638,7 +638,10 @@ acts on next:
 The AI profile, speech-to-text deployment, text-to-speech deployment, voice, update permissions, and reply
 delay are the **automated voice settings** configured on the subject flow (and overridable per activity
 batch), resolved in order **activity batch → subject flow → global AI site settings**. See
-[Subject Flow](../omnichannel/management#subject-flow) for where these fields live and how they cascade.
+[Subject Flow](../omnichannel/management#subject-flow) for where these fields live and how they cascade. The
+**Phone calls** starting points in the **New AI Profile** picker (**Answer calls at the front desk**, **Qualify
+leads by phone**, **Confirm appointments by phone**) create a profile ready for these calls; see
+[Text messaging and phone call starting points](../ai/profile-templates.md#text-messaging-and-phone-call-starting-points).
 
 Bidirectional call audio is carried over a Telnyx **media-streaming WebSocket** (`api/telnyx/media/stream`,
 G.711 mu-law) — the Telnyx equivalent of Asterisk's ARI External Media seam — so the agent both hears the

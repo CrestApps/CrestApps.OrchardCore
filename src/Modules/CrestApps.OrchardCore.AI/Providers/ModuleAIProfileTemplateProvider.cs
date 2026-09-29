@@ -120,6 +120,7 @@ internal sealed class ModuleAIProfileTemplateProvider : IAIProfileTemplateProvid
 
                     var template = AIProfileTemplateParser.Parse(id, parseResult);
                     ProfileScenarioMetadataReader.Apply(template, parseResult.Metadata);
+                    ProfileTemplateDefaultsReader.Apply(template, parseResult.Metadata);
 
                     templates.Add(template);
                 }
