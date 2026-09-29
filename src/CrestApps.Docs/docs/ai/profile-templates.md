@@ -92,6 +92,30 @@ The AI module ships four featured scenarios:
 
 After creating **Answers from your docs**, upload its documents in the editor's **Knowledge** tab. After creating **Guided intake**, choose the fields it collects in the **Data Extraction** card.
 
+### Text messaging and phone call starting points
+
+The SMS and automated voice modules ship starting points for conversations the AI holds on its own, over text or on the phone. They are listed after the featured scenarios, under **Text messaging** and **Phone calls**, and each one is greyed out until its feature is enabled.
+
+| Starting point | Category | Needs | What it does |
+| --- | --- | --- | --- |
+| Qualify leads by text | Text messaging | SMS Omnichannel Automation | Texts people who showed interest and learns what they need, how soon, and who decides, one short question at a time. |
+| Customer care by text | Text messaging | SMS Omnichannel Automation | Answers customers' texts from the facts you give it and gathers what your team needs for anything it cannot resolve. |
+| Answer calls at the front desk | Phone calls | Automated Voice | Answers incoming calls, answers simple questions, takes messages, and transfers callers when a person is available. |
+| Qualify leads by phone | Phone calls | Automated Voice | Calls people who showed interest, checks it is a good time, and learns what they need, how soon, and who decides. |
+| Confirm appointments by phone | Phone calls | Automated Voice | Calls customers to confirm an upcoming appointment and notes cancellations and requests to reschedule. |
+
+Every one of them creates a **Chat** profile with **Add initial prompt** already turned on, because automated SMS conversations and calls only offer profiles that have an initial prompt. The initial prompt is the opening text, or the greeting on a call, and greets the contact by first name when the contact has one.
+
+After creating one:
+
+- Fill in the **About the business** section at the end of the system prompt. Until you do, the assistant treats anything still in square brackets as unknown and offers to have the team follow up instead of guessing.
+- Add your business name to the **Initial prompt**. It starts out generic so that nothing unfinished is ever sent to a customer. It can use Liquid, for example `{{ Contact.DisplayText }}`, and the appointment starting point is the place to add the appointment's date and time when your subject stores them.
+- Choose the profile on the subject flow or the automatic inventory load. See [Automated AI SMS and Voice](../user-manual/automated-ai.md).
+
+The prompts leave two things to the platform. Whether the assistant may hand the conversation to a person, and when, comes from the subject's **live agent handoff** settings, and the platform tells the assistant how to do it only when an agent can actually take the conversation. The platform also tells the assistant how to end a call, and a `STOP` text opts the contact out before the assistant ever sees it.
+
+The phone starting points do not change the profile's chat mode or name a deployment. An automated call speaks through the telephony provider's speech-to-text and text-to-speech, or as a live speech-to-speech session when the profile's chat deployment can hold one.
+
 ### Featuring your own template
 
 A profile template stored as a file becomes a featured scenario through four front-matter keys. The AI module reads template files from:
@@ -128,6 +152,12 @@ You are a friendly, helpful assistant on this website.
 ```
 
 A value that does not parse, such as a non-numeric `Order`, is ignored. These keys describe the template only and are never copied onto a profile created from it.
+
+A template file can also give the profile it creates an initial prompt with the `InitialPrompt` key. The value becomes the profile's **Initial prompt** and turns on **Add initial prompt**. It may use Liquid, and it is kept on one line.
+
+```md
+InitialPrompt: Hi {{ Contact.DisplayText }}, thanks for reaching out! Do you have a minute?
+```
 
 Multi-line values use a `Key: |` block. The parser trims every continuation line and drops blank lines, so keep a multi-line value such as a Liquid `PromptTemplate` short and free of meaningful indentation.
 

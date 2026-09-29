@@ -200,7 +200,7 @@ When you choose the **Automatic** source for an inventory load, the batch can di
 To load automated SMS activities:
 
 1. Enable the **SMS Omnichannel Automation** feature so the SMS channel processor is available.
-2. Create an **AI profile** (type **Chat**) with **Add initial prompt** enabled and an initial prompt written for your outreach.
+2. Create an **AI profile** (type **Chat**) with **Add initial prompt** enabled and an initial prompt written for your outreach. The **Text messaging** starting points in the **New AI Profile** picker create one ready to adjust; see [Text messaging and phone call starting points](../ai/profile-templates.md#text-messaging-and-phone-call-starting-points).
 3. In **Interaction Center > Management > Channel Endpoints**, add an **SMS** endpoint for the number you send from.
 4. In **Load Inventory**, click **Add Inventory Load → Automatic**, then select the subject, the AI profile, the **SMS** channel, the SMS channel endpoint, and the contact type.
 5. Save the load, then open its **Actions → Load batch** menu to generate the activities in the background.

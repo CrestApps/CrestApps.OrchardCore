@@ -43,7 +43,7 @@ The Twilio webhook verifies Twilio's `X-Twilio-Signature` header with the auth t
 
 1. Configure Omnichannel Management (contacts, subjects, dispositions, campaigns, and subject flows).
 2. Create a subject flow that uses the **SMS** channel and **Automated** interaction type.
-3. Create a chat AI profile with **Add initial prompt** enabled. The profile's initial prompt is sent as the first outbound SMS message that starts the conversation.
+3. Create a chat AI profile with **Add initial prompt** enabled. The profile's initial prompt is sent as the first outbound SMS message that starts the conversation. The **Qualify leads by text** and **Customer care by text** starting points under **Artificial Intelligence > Profiles > Add Profile** create such a profile with the initial prompt already filled in. See [Text messaging and phone call starting points](../ai/profile-templates.md#text-messaging-and-phone-call-starting-points).
 4. If the AI feature is enabled, select that initial-prompt chat profile on the subject flow, then configure the subject goal, update permissions, no-response timeout, response delay, and opt-out keywords.
 5. Configure your SMS provider webhook to deliver inbound SMS messages to Orchard Core.
 6. Load activities via **Load Inventory** using the **Automatic** source.
