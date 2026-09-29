@@ -37,6 +37,13 @@ internal sealed class CallSessionIndexMigrations : DataMigration
         "IDX_CallSessionIndex_DocumentId",
     ];
 
+    // The indexes over the queue column. SQLite refuses to drop a column an index refers to, so each comes down
+    // before the widening rebuild and is recreated after it.
+    private static readonly string[] _queueColumnIndexNames =
+    [
+        "IDX_CallSessionIndex_Lookup",
+    ];
+
     private readonly IStore _store;
     private readonly IProviderIdentityResolver _providerIdentityResolver;
 
@@ -68,7 +75,7 @@ internal sealed class CallSessionIndexMigrations : DataMigration
             .Column<string>("ProviderCallClaimKey", column => column.NotNull().WithDefault(string.Empty).WithLength(ProviderCallClaimKeyLength))
             .Column<VoiceCallState>("State")
             .Column<string>("AgentId", column => column.WithLength(26))
-            .Column<string>("QueueId", column => column.WithLength(26))
+            .Column<string>("QueueId", column => column.WithLength(ContactCenterStorage.QueueIdLength))
             .Column<DateTime>("CreatedUtc", column => column.NotNull())
             .Column<DateTime>("EndedUtc"),
             collection: ContactCenterStorage.CollectionName
@@ -256,6 +263,73 @@ internal sealed class CallSessionIndexMigrations : DataMigration
             "ProviderCallClaimKey");
 
         return 4;
+    }
+
+    /// <summary>
+    /// Widens the queue column so work routed under a campaign's virtual queue is stored rather than refused.
+    /// </summary>
+    /// <remarks>
+    /// A campaign call's session records the campaign's virtual queue it was routed under. A campaign's virtual queue id is longer than the original 26 characters, so SQL Server refused the
+    /// row. SQLite stores every text column as unbounded <c>TEXT</c>, so the rebuild is a value-preserving no-op
+    /// there. SQLite also refuses to drop a column an index refers to, so the index over the queue
+    /// column comes down before the rebuild and is recreated over the widened column.
+    /// </remarks>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom4Async()
+    {
+        // On an engine that resolves an index by name alone the data layer's drop cannot see an index that belongs
+        // to a named schema, so it silently drops nothing and the recreation below fails. The qualified drop runs
+        // first and is a no-op wherever the data layer's own statement is already sufficient.
+        foreach (var indexName in _queueColumnIndexNames)
+        {
+            var qualifiedIndexName = SchemaQualifiedIndexDrop.TryGetQualifiedIndexName(
+                SchemaBuilder,
+                _store,
+                typeof(CallSessionIndex),
+                indexName,
+                ContactCenterStorage.CollectionName);
+
+            if (qualifiedIndexName is null)
+            {
+                continue;
+            }
+
+            await using var command = SchemaBuilder.Connection.CreateCommand();
+            command.Transaction = SchemaBuilder.Transaction;
+            command.CommandText = "drop index if exists " + qualifiedIndexName;
+
+            await command.ExecuteNonQueryAsync();
+        }
+
+        // Tolerant because MySQL commits each schema change on its own and writes this drop without IF EXISTS, so an
+        // attempt that stopped part-way would otherwise fail every activation from here on. The recreation below
+        // runs on the strict builder, so an index that genuinely survived is still reported.
+        var tolerantSchemaBuilder = new SchemaBuilder(
+            _store.Configuration,
+            SchemaBuilder.Transaction,
+            throwOnError: false);
+
+        await tolerantSchemaBuilder.AlterIndexTableAsync<CallSessionIndex>(
+            table => table.DropIndex("IDX_CallSessionIndex_Lookup"),
+            collection: ContactCenterStorage.CollectionName);
+
+        await IndexStringColumnRebuild.WidenAsync<CallSessionIndex>(
+            SchemaBuilder,
+            _store,
+            "QueueId",
+            ContactCenterStorage.QueueIdLength,
+            isNotNull: false,
+            defaultValue: null,
+            ContactCenterStorage.CollectionName);
+
+        await SchemaBuilder.AlterIndexTableAsync<CallSessionIndex>(table => table
+            .CreateIndex("IDX_CallSessionIndex_Lookup",
+                "ActivityItemId",
+                "AgentId",
+                "QueueId"),
+            collection: ContactCenterStorage.CollectionName);
+
+        return 5;
     }
 
     private async Task EnsureNoDuplicateClaimKeysAsync()
