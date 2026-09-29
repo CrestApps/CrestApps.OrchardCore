@@ -30,9 +30,9 @@
     </div>
 </div>
 
-<div class="ocat-limited-wrapper" asp-validation-class-for="AfterHoursAction">
+<div class="ocat-wrapper" asp-validation-class-for="AfterHoursAction">
     <label asp-for="AfterHoursAction" class="ocat-label">@T["After-hours action"]</label>
-    <div class="ocat-limited">
+    <div class="ocat-end">
         <select asp-for="AfterHoursAction" class="form-select">
             <option value="@QueueAfterHoursAction.HoldInQueue">@T["Hold in queue"]</option>
             <option value="@QueueAfterHoursAction.Overflow">@T["Overflow"]</option>
@@ -53,9 +53,9 @@
     </div>
 </div>
 
-<div class="ocat-limited-wrapper" asp-validation-class-for="OverflowAfterSeconds">
+<div class="ocat-wrapper" asp-validation-class-for="OverflowAfterSeconds">
     <label asp-for="OverflowAfterSeconds" class="ocat-label">@T["Overflow after (seconds)"]</label>
-    <div class="ocat-limited">
+    <div class="ocat-end">
         <input asp-for="OverflowAfterSeconds" class="form-control" />
         <span asp-validation-for="OverflowAfterSeconds" class="text-danger"></span>
         <span class="hint">@T["How long an item may wait before it overflows to the single overflow queue. Set to 0 to disable wait-time overflow."]</span>

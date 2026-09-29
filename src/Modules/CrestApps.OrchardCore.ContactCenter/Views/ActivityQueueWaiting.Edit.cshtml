@@ -24,9 +24,9 @@
     </div>
 </div>
 
-<div class="ocat-limited-wrapper" asp-validation-class-for="Treatment.AnnouncementIntervalSeconds">
+<div class="ocat-wrapper" asp-validation-class-for="Treatment.AnnouncementIntervalSeconds">
     <label asp-for="Treatment.AnnouncementIntervalSeconds" class="ocat-label">@T["Announcement interval (seconds)"]</label>
-    <div class="ocat-limited">
+    <div class="ocat-end">
         <input asp-for="Treatment.AnnouncementIntervalSeconds" class="form-control" />
         <span asp-validation-for="Treatment.AnnouncementIntervalSeconds" class="text-danger"></span>
         <span class="hint">@T["How often the position and estimated-wait announcements repeat. Set to 0 to announce nothing."]</span>
@@ -52,26 +52,26 @@
     </div>
 </div>
 
-<div class="ocat-limited-wrapper" asp-validation-class-for="Treatment.AverageHandleTimeSeconds">
+<div class="ocat-wrapper" asp-validation-class-for="Treatment.AverageHandleTimeSeconds">
     <label asp-for="Treatment.AverageHandleTimeSeconds" class="ocat-label">@T["Average handle time (seconds)"]</label>
-    <div class="ocat-limited">
+    <div class="ocat-end">
         <input asp-for="Treatment.AverageHandleTimeSeconds" class="form-control" />
         <span asp-validation-for="Treatment.AverageHandleTimeSeconds" class="text-danger"></span>
         <span class="hint">@T["Used by the estimated-wait announcement. Set to 0 to use the platform default."]</span>
     </div>
 </div>
 
-<div class="ocat-limited-wrapper" asp-validation-class-for="Treatment.MinimumEstimateSeconds">
+<div class="ocat-wrapper" asp-validation-class-for="Treatment.MinimumEstimateSeconds">
     <label asp-for="Treatment.MinimumEstimateSeconds" class="ocat-label">@T["Minimum announced estimate (seconds)"]</label>
-    <div class="ocat-limited">
+    <div class="ocat-end">
         <input asp-for="Treatment.MinimumEstimateSeconds" class="form-control" />
         <span asp-validation-for="Treatment.MinimumEstimateSeconds" class="text-danger"></span>
     </div>
 </div>
 
-<div class="ocat-limited-wrapper" asp-validation-class-for="Treatment.MaximumEstimateSeconds">
+<div class="ocat-wrapper" asp-validation-class-for="Treatment.MaximumEstimateSeconds">
     <label asp-for="Treatment.MaximumEstimateSeconds" class="ocat-label">@T["Maximum announced estimate (seconds)"]</label>
-    <div class="ocat-limited">
+    <div class="ocat-end">
         <input asp-for="Treatment.MaximumEstimateSeconds" class="form-control" />
         <span asp-validation-for="Treatment.MaximumEstimateSeconds" class="text-danger"></span>
         <span class="hint">@T["An estimate is never announced above this, so a caller is not told to expect an hour."]</span>
