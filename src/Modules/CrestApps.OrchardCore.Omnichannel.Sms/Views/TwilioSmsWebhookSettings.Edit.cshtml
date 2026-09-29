@@ -1,0 +1,22 @@
+@model CrestApps.OrchardCore.Omnichannel.Sms.ViewModels.TwilioSmsWebhookSettingsViewModel
+
+<div class="ocat-wrapper" id="twilio-sms-webhook">
+    <label class="ocat-label" for="twilio-sms-webhook-url">@T["Webhook URL"]</label>
+    <div class="ocat-end">
+        <input id="twilio-sms-webhook-url" class="form-control" value="@Model.WebhookUrl" readonly onclick="this.select();" />
+        <span class="hint">@T["In the Twilio console, open your phone number, and under <em>Messaging</em> set <em>A message comes in</em> to <em>Webhook</em>, <em>HTTP POST</em>, and this address. Incoming texts then reach the messaging workspace."]</span>
+    </div>
+</div>
+
+<script at="Foot">
+    (function () {
+        // Orchard Core's Twilio editor shows its credentials in a block that collapses with the Enable checkbox. The
+        // address leads that block, as it leads the Telnyx settings, and so hides with the rest when Twilio is off.
+        var webhook = document.getElementById('twilio-sms-webhook');
+        var settings = document.getElementById('Twilio_Provider_Settings');
+
+        if (webhook && settings) {
+            settings.prepend(webhook);
+        }
+    })();
+</script>

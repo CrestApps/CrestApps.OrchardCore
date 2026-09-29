@@ -2,6 +2,7 @@
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.BackgroundTasks;
+using CrestApps.OrchardCore.Omnichannel.Sms.Drivers;
 using CrestApps.OrchardCore.Omnichannel.Sms.Endpoints;
 using CrestApps.OrchardCore.Omnichannel.Sms.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Sms.Indexes;
@@ -15,7 +16,9 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
+using OrchardCore.Settings;
 using OrchardCore.Sms.Services;
 
 namespace CrestApps.OrchardCore.Omnichannel.Sms;
@@ -49,6 +52,9 @@ public sealed class Startup : StartupBase
         services.AddTransient<TwilioErrorLoggingHandler>();
         services.AddHttpClient(TwilioSmsProvider.TechnicalName)
             .AddHttpMessageHandler<TwilioErrorLoggingHandler>();
+
+        // Shows the inbound-SMS webhook address under Orchard Core's Twilio settings, beside the endpoint it names.
+        services.AddDisplayDriver<ISite, TwilioSmsWebhookSettingsDisplayDriver>();
 
         services
             .AddDataMigration<OminchannelActivityAIChatSessionIndexMigrations>()

@@ -26,10 +26,15 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Endpoints;
 /// </summary>
 internal static class TwilioWebhookEndpoint
 {
+    /// <summary>
+    /// The path Twilio posts inbound texts to, relative to the tenant, shown to the operator on the SMS settings screen.
+    /// </summary>
+    public const string SmsWebhookPath = "api/twilio/webhook/sms";
+
     public static IEndpointRouteBuilder AddTwilioWebhookEndpoint(this IEndpointRouteBuilder builder)
     {
         // Provider webhooks follow the api/{provider}/webhook/{kind} convention (see the Telnyx SMS/voice webhooks).
-        _ = builder.MapPost("api/twilio/webhook/sms", HandleAsync)
+        _ = builder.MapPost(SmsWebhookPath, HandleAsync)
             .DisableAntiforgery()
             .AllowAnonymous();
 
