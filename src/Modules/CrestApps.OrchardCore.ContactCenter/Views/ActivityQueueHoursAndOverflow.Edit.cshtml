@@ -6,6 +6,8 @@
 
 @{
     var overflowTargetsPrefix = Html.NameFor(m => m.OverflowTargets);
+    var overflowTargetsId = Html.IdFor(m => m.OverflowTargets);
+    var noQueueTitle = T["Select a queue"].Value;
 }
 
 <div class="ocat-wrapper" asp-validation-class-for="InboundChannelEndpointId">
@@ -65,61 +67,92 @@
 <div class="ocat-wrapper">
     <label class="ocat-label">@T["Overflow chain"]</label>
     <div class="ocat-end">
+        @* Each hop is drawn like an Orchard bag-part item: a collapsible card whose header names the queue, with the
+           delete (trash) button on its right. *@
         <div data-repeater data-repeater-prefix="@overflowTargetsPrefix">
-            <table class="table table-sm align-middle mb-2">
-                <thead>
-                    <tr>
-                        <th>@T["Queue"]</th>
-                        <th>@T["After (seconds)"]</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody data-repeater-rows>
-                    @for (var i = 0; i < Model.OverflowTargets.Count; i++)
-                    {
-                        var row = Model.OverflowTargets[i];
-                        var key = i.ToString();
+            <div data-repeater-rows>
+                @for (var i = 0; i < Model.OverflowTargets.Count; i++)
+                {
+                    var row = Model.OverflowTargets[i];
+                    var key = i.ToString();
+                    var itemId = $"{overflowTargetsId}-{key}";
+                    var queueName = Model.OverflowQueueOptions.FirstOrDefault(option => string.Equals(option.Value, row.QueueId, StringComparison.Ordinal))?.Text;
 
-                        <tr data-repeater-row>
-                            <td>
-                                <input type="hidden" name="@(overflowTargetsPrefix).Index" value="@key" />
-                                <select name="@(overflowTargetsPrefix)[@key].QueueId" class="form-select form-select-sm">
-                                    <option value="">@T["Select a queue"]</option>
-                                    @foreach (var option in Model.OverflowQueueOptions)
-                                    {
-                                        <option value="@option.Value" selected="@(string.Equals(option.Value, row.QueueId, StringComparison.Ordinal))">@option.Text</option>
-                                    }
-                                </select>
-                            </td>
-                            <td>
-                                <input type="number" min="0" name="@(overflowTargetsPrefix)[@key].AfterSeconds" value="@row.AfterSeconds" class="form-control form-control-sm" />
-                            </td>
-                            <td class="text-end">
-                                <button type="button" class="btn btn-sm btn-outline-danger" data-repeater-remove title="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+                    <div class="widget-editor card mb-2" data-repeater-row>
+                        <input type="hidden" name="@(overflowTargetsPrefix).Index" value="@key" />
+                        <div class="widget-editor-header card-header text-muted d-flex align-items-center gap-2 py-1 ps-2 pe-1">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#@(itemId)-body" aria-expanded="true" aria-controls="@(itemId)-body" title="@T["Collapse or expand"]"><i class="fa-solid fa-angle-down" aria-hidden="true"></i></button>
+                            <span class="flex-grow-1 text-truncate">
+                                <span data-repeater-title data-repeater-title-empty="@noQueueTitle">@(string.IsNullOrEmpty(queueName) ? noQueueTitle : queueName)</span>
+                                <span class="hint dashed">@T["Overflow hop"]</span>
+                            </span>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-danger" data-repeater-remove title="@T["Remove"]" aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                            </div>
+                        </div>
+                        <div id="@(itemId)-body" class="collapse show">
+                            <div class="widget-editor-body card-body">
+                                <div class="ocat-wrapper">
+                                    <label class="ocat-label" for="@(itemId)-queue">@T["Queue"]</label>
+                                    <div class="ocat-end">
+                                        <select id="@(itemId)-queue" name="@(overflowTargetsPrefix)[@key].QueueId" class="form-select" data-repeater-title-source>
+                                            <option value="">@T["Select a queue"]</option>
+                                            @foreach (var option in Model.OverflowQueueOptions)
+                                            {
+                                                <option value="@option.Value" selected="@(string.Equals(option.Value, row.QueueId, StringComparison.Ordinal))">@option.Text</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="ocat-wrapper">
+                                    <label class="ocat-label" for="@(itemId)-after">@T["After (seconds)"]</label>
+                                    <div class="ocat-end">
+                                        <input type="number" min="0" id="@(itemId)-after" name="@(overflowTargetsPrefix)[@key].AfterSeconds" value="@row.AfterSeconds" class="form-control" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
             <template data-repeater-template>
-                <tr data-repeater-row>
-                    <td>
-                        <input type="hidden" name="@(overflowTargetsPrefix).Index" value="__KEY__" />
-                        <select name="@(overflowTargetsPrefix)[__KEY__].QueueId" class="form-select form-select-sm">
-                            <option value="">@T["Select a queue"]</option>
-                            @foreach (var option in Model.OverflowQueueOptions)
-                            {
-                                <option value="@option.Value">@option.Text</option>
-                            }
-                        </select>
-                    </td>
-                    <td>
-                        <input type="number" min="0" name="@(overflowTargetsPrefix)[__KEY__].AfterSeconds" value="0" class="form-control form-control-sm" />
-                    </td>
-                    <td class="text-end">
-                        <button type="button" class="btn btn-sm btn-outline-danger" data-repeater-remove title="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
-                    </td>
-                </tr>
+                <div class="widget-editor card mb-2" data-repeater-row>
+                    <input type="hidden" name="@(overflowTargetsPrefix).Index" value="__KEY__" />
+                    <div class="widget-editor-header card-header text-muted d-flex align-items-center gap-2 py-1 ps-2 pe-1">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#@(overflowTargetsId)-__KEY__-body" aria-expanded="true" aria-controls="@(overflowTargetsId)-__KEY__-body" title="@T["Collapse or expand"]"><i class="fa-solid fa-angle-down" aria-hidden="true"></i></button>
+                        <span class="flex-grow-1 text-truncate">
+                            <span data-repeater-title data-repeater-title-empty="@noQueueTitle">@noQueueTitle</span>
+                            <span class="hint dashed">@T["Overflow hop"]</span>
+                        </span>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-danger" data-repeater-remove title="@T["Remove"]" aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                        </div>
+                    </div>
+                    <div id="@(overflowTargetsId)-__KEY__-body" class="collapse show">
+                        <div class="widget-editor-body card-body">
+                            <div class="ocat-wrapper">
+                                <label class="ocat-label" for="@(overflowTargetsId)-__KEY__-queue">@T["Queue"]</label>
+                                <div class="ocat-end">
+                                    <select id="@(overflowTargetsId)-__KEY__-queue" name="@(overflowTargetsPrefix)[__KEY__].QueueId" class="form-select" data-repeater-title-source>
+                                        <option value="">@T["Select a queue"]</option>
+                                        @foreach (var option in Model.OverflowQueueOptions)
+                                        {
+                                            <option value="@option.Value">@option.Text</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="ocat-wrapper">
+                                <label class="ocat-label" for="@(overflowTargetsId)-__KEY__-after">@T["After (seconds)"]</label>
+                                <div class="ocat-end">
+                                    <input type="number" min="0" id="@(overflowTargetsId)-__KEY__-after" name="@(overflowTargetsPrefix)[__KEY__].AfterSeconds" value="0" class="form-control" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </template>
             <button type="button" class="btn btn-sm btn-outline-secondary" data-repeater-add><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add overflow hop"]</button>
         </div>
