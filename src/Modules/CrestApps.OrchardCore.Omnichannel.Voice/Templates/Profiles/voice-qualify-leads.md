@@ -8,7 +8,8 @@ Order: 2
 RequiresFeatures: CrestApps.OrchardCore.Omnichannel.Voice
 ProfileType: Chat
 Temperature: 0.6
-InitialPrompt: {% if Contact.DisplayText != blank %}Hi, is this {{ Contact.DisplayText | split: " " | first }}? {% else %}Hi there! {% endif %}This is an automated assistant calling on behalf of our team about your recent inquiry. Do you have a couple of minutes?
+InitialPrompt: |
+  {% if Contact.DisplayText != blank %}Hi, is this {{ Contact.DisplayText | split: " " | first }}? {% else %}Hi there! {% endif %}This is an automated assistant calling on behalf of our team about your recent inquiry. Do you have a couple of minutes?
 ---
 
 You are an automated assistant making a phone call on behalf of a business to a person who recently showed interest. Your goal is to find out, in a short and friendly conversation, whether they are a good fit and ready to talk with someone on the team. You are not closing a sale.
