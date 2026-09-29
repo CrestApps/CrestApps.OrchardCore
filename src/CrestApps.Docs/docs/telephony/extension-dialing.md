@@ -152,6 +152,30 @@ provider is responsible only for turning that user into its own live endpoint an
 | **Telnyx** | ✅ Supported | Both legs are Telnyx SIP-over-WebSocket registrations. Extension dialing reuses the same two-leg originate-and-bridge orchestration as browser-audio outbound calls, with a SIP target on both sides. Conference-add originates the participant leg and joins it to a Telnyx conference formed from the active call. |
 | **Asterisk** | Not yet | Connecting two just-in-time WebRTC PJSIP browser endpoints over ARI is part of the same server-side originate/bridge wave that gates browser-agent connection, so Asterisk does not advertise the capability yet and the control is hidden for it. |
 
+## Exporting and importing extensions
+
+Extensions travel between environments through the **Telephony Extensions** deployment step and the `TelephonyExtension` recipe step. A user's identifier is issued by the environment that created the account, so an imported extension finds the user it rings by **user name** and is stored with that user's identifier in the destination. An extension whose user name does not exist in the destination is reported and skipped, and so is one whose number another extension already holds.
+
+```json
+{
+  "steps": [
+    {
+      "name": "TelephonyExtension",
+      "Extensions": [
+        {
+          "ItemId": "9vt3k7x1m5q2c8z4b6n0r3h7y",
+          "Number": "1001",
+          "UserName": "agent.smith",
+          "DisplayName": "Agent Smith"
+        }
+      ]
+    }
+  ]
+}
+```
+
+When `Name` is omitted it is built from the number and the display name, and when `DisplayName` is omitted the user name is shown to callers.
+
 ## Related guides
 
 - [Telephony soft phone](./index.md)

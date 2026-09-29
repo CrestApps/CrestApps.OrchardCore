@@ -6,11 +6,19 @@
 <script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
 
 <div class="ocat-wrapper">
+    <label asp-for="DisplayName" class="ocat-label">@T["Display name"]</label>
+    <div class="ocat-end">
+        <input asp-for="DisplayName" class="form-control" autofocus />
+        <span class="hint">@T["Shown to a colleague who calls this extension. Defaults to the user name."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
     <label asp-for="Number" class="ocat-label ocat-label-required">@T["Extension number"]</label>
     <div class="ocat-end">
         <div class="input-group">
             <span class="input-group-text" title="@T["Extension number"]"><i class="fa-solid fa-hashtag" aria-hidden="true"></i></span>
-            <input asp-for="Number" class="form-control font-monospace" inputmode="numeric" autofocus />
+            <input asp-for="Number" class="form-control font-monospace" inputmode="numeric" />
         </div>
         <span asp-validation-for="Number" class="text-danger"></span>
         <span class="hint">@T["The number an agent dials to reach this user, for example 1001. Must be unique."]</span>
@@ -24,13 +32,5 @@
         </select>
         <span asp-validation-for="UserId" class="text-danger"></span>
         <span class="hint">@T["The user this extension rings. Type to search."]</span>
-    </div>
-</div>
-
-<div class="ocat-wrapper">
-    <label asp-for="DisplayName" class="ocat-label">@T["Display name"]</label>
-    <div class="ocat-end">
-        <input asp-for="DisplayName" class="form-control" />
-        <span class="hint">@T["Shown to a colleague who calls this extension. Defaults to the user name."]</span>
     </div>
 </div>

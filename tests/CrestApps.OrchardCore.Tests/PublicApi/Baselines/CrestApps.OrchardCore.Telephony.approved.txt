@@ -31,6 +31,22 @@ namespace CrestApps.OrchardCore.Telephony.BackgroundTasks
 }
 namespace CrestApps.OrchardCore.Telephony
 {
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Telephony")]
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "OrchardCore.Deployment"})]
+    public sealed class ConfigurationDeploymentStartup : OrchardCore.Modules.StartupBase
+    {
+        public ConfigurationDeploymentStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Telephony")]
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "OrchardCore.Recipes.Core"})]
+    public sealed class ConfigurationRecipesStartup : OrchardCore.Modules.StartupBase
+    {
+        public ConfigurationRecipesStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
     [OrchardCore.Modules.RequireFeatures(new string[] {
             "OrchardCore.Contents"})]
     public sealed class ContentsStartup : OrchardCore.Modules.StartupBase
@@ -50,6 +66,14 @@ namespace CrestApps.OrchardCore.Telephony
     {
         public SoftPhoneExtensionStartup() { }
         public override void Configure(Microsoft.AspNetCore.Builder.IApplicationBuilder app, Microsoft.AspNetCore.Routing.IEndpointRouteBuilder routes, System.IServiceProvider serviceProvider) { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Telephony.SoftPhone")]
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "OrchardCore.Deployment"})]
+    public sealed class SoftPhoneWidgetDeploymentStartup : OrchardCore.Modules.StartupBase
+    {
+        public SoftPhoneWidgetDeploymentStartup() { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Telephony.SoftPhone")]
@@ -120,6 +144,21 @@ namespace CrestApps.OrchardCore.Telephony.Controllers
         [Microsoft.AspNetCore.Mvc.HttpPost("Telephony/Disconnect", Name="TelephonyOAuthDisconnect")]
         [Microsoft.AspNetCore.Mvc.ValidateAntiForgeryToken]
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Disconnect() { }
+    }
+}
+namespace CrestApps.OrchardCore.Telephony.Deployments.Steps
+{
+    public sealed class TelephonyExtensionDeploymentStep : OrchardCore.Deployment.DeploymentStep
+    {
+        public TelephonyExtensionDeploymentStep() { }
+        public TelephonyExtensionDeploymentStep(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Telephony.Deployments.Steps.TelephonyExtensionDeploymentStep> stringLocalizer) { }
+    }
+}
+namespace CrestApps.OrchardCore.Telephony.Deployments
+{
+    public static class TelephonyDeploymentSteps
+    {
+        public const string Extension = "TelephonyExtension";
     }
 }
 namespace CrestApps.OrchardCore.Telephony.Drivers

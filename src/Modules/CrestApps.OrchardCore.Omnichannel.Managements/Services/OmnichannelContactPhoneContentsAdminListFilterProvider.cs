@@ -85,42 +85,7 @@ internal sealed class OmnichannelContactPhoneContentsAdminListFilterProvider : I
             return query.With<OmnichannelContactIndex>(index => index.ContentItemId == string.Empty);
         }
 
-        if (searchTerm.IsE164)
-        {
-            return matchType switch
-            {
-                PhoneNumberMatchType.Exact => query.With<OmnichannelContactIndex>(index =>
-                    index.NormalizedPrimaryCellPhoneNumber == searchTerm.Value ||
-                    index.NormalizedPrimaryHomePhoneNumber == searchTerm.Value),
-                PhoneNumberMatchType.BeginsWith => query.With<OmnichannelContactIndex>(index =>
-                    index.NormalizedPrimaryCellPhoneNumber.StartsWith(searchTerm.Value) ||
-                    index.NormalizedPrimaryHomePhoneNumber.StartsWith(searchTerm.Value)),
-                PhoneNumberMatchType.EndsWith => query.With<OmnichannelContactIndex>(index =>
-                    index.NormalizedPrimaryCellPhoneNumber.EndsWith(searchTerm.Value) ||
-                    index.NormalizedPrimaryHomePhoneNumber.EndsWith(searchTerm.Value)),
-                PhoneNumberMatchType.Contains => query.With<OmnichannelContactIndex>(index =>
-                    index.NormalizedPrimaryCellPhoneNumber.Contains(searchTerm.Value) ||
-                    index.NormalizedPrimaryHomePhoneNumber.Contains(searchTerm.Value)),
-                _ => throw new ArgumentOutOfRangeException(nameof(matchType), matchType, "Unsupported phone number match type."),
-            };
-        }
-
-        return matchType switch
-        {
-            PhoneNumberMatchType.Exact => query.With<OmnichannelContactIndex>(index =>
-                index.PrimaryCellPhoneNumber == searchTerm.Value ||
-                index.PrimaryHomePhoneNumber == searchTerm.Value),
-            PhoneNumberMatchType.BeginsWith => query.With<OmnichannelContactIndex>(index =>
-                index.PrimaryCellPhoneNumber.StartsWith(searchTerm.Value) ||
-                index.PrimaryHomePhoneNumber.StartsWith(searchTerm.Value)),
-            PhoneNumberMatchType.EndsWith => query.With<OmnichannelContactIndex>(index =>
-                index.PrimaryCellPhoneNumber.EndsWith(searchTerm.Value) ||
-                index.PrimaryHomePhoneNumber.EndsWith(searchTerm.Value)),
-            PhoneNumberMatchType.Contains => query.With<OmnichannelContactIndex>(index =>
-                index.PrimaryCellPhoneNumber.Contains(searchTerm.Value) ||
-                index.PrimaryHomePhoneNumber.Contains(searchTerm.Value)),
-            _ => throw new ArgumentOutOfRangeException(nameof(matchType), matchType, "Unsupported phone number match type."),
-        };
+        return query.With(OmnichannelContactPhonePredicates.Match(searchTerm, matchType));
     }
 
     private static Func<IQuery<ContentItem>, IQuery<ContentItem>> DisplayTextMatch(string value, bool useExactMatch)
@@ -140,18 +105,7 @@ internal sealed class OmnichannelContactPhoneContentsAdminListFilterProvider : I
             return;
         }
 
-        if (searchTerm.IsE164)
-        {
-            predicates.Add(query => query.With<OmnichannelContactIndex>(index =>
-                index.NormalizedPrimaryCellPhoneNumber.Contains(searchTerm.Value) ||
-                index.NormalizedPrimaryHomePhoneNumber.Contains(searchTerm.Value)));
-
-            return;
-        }
-
-        predicates.Add(query => query.With<OmnichannelContactIndex>(index =>
-            index.PrimaryCellPhoneNumber.Contains(searchTerm.Value) ||
-            index.PrimaryHomePhoneNumber.Contains(searchTerm.Value)));
+        predicates.Add(query => query.With(OmnichannelContactPhonePredicates.Match(searchTerm, PhoneNumberMatchType.Contains)));
     }
 
     private static void AddPhoneNotContainsPredicate(string value, List<Func<IQuery<ContentItem>, IQuery<ContentItem>>> predicates)
@@ -161,18 +115,7 @@ internal sealed class OmnichannelContactPhoneContentsAdminListFilterProvider : I
             return;
         }
 
-        if (searchTerm.IsE164)
-        {
-            predicates.Add(query => query.With<OmnichannelContactIndex>(index =>
-                index.NormalizedPrimaryCellPhoneNumber.NotContains(searchTerm.Value) &&
-                index.NormalizedPrimaryHomePhoneNumber.NotContains(searchTerm.Value)));
-
-            return;
-        }
-
-        predicates.Add(query => query.With<OmnichannelContactIndex>(index =>
-            index.PrimaryCellPhoneNumber.NotContains(searchTerm.Value) &&
-            index.PrimaryHomePhoneNumber.NotContains(searchTerm.Value)));
+        predicates.Add(query => query.With(OmnichannelContactPhonePredicates.NotContains(searchTerm)));
     }
 
     private static bool IsExactE164(string value)

@@ -4,6 +4,7 @@ using CrestApps.Core.Models;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Deployments;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -41,6 +42,15 @@ internal sealed class VoiceMediaItemHandler : CatalogEntryHandlerBase<VoiceMedia
     }
 
     /// <inheritdoc/>
+    public override Task InitializingAsync(InitializingContext<VoiceMediaItem> context, CancellationToken cancellationToken = default)
+    {
+        // A recipe or deployment plan hands the entry's JSON to the manager; the editor hands none.
+        ContactCenterDeploymentSerializer.Populate(context.Model, context.Data);
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
     public override Task InitializedAsync(InitializedContext<VoiceMediaItem> context, CancellationToken cancellationToken = default)
     {
         context.Model.CreatedUtc = _clock.UtcNow;
@@ -51,6 +61,8 @@ internal sealed class VoiceMediaItemHandler : CatalogEntryHandlerBase<VoiceMedia
     /// <inheritdoc/>
     public override Task UpdatingAsync(UpdatingContext<VoiceMediaItem> context, CancellationToken cancellationToken = default)
     {
+        ContactCenterDeploymentSerializer.Populate(context.Model, context.Data);
+
         context.Model.ModifiedUtc = _clock.UtcNow;
 
         return Task.CompletedTask;

@@ -28,6 +28,7 @@
     <PackageReference Include="OrchardCore.DisplayManagement" />
     <PackageReference Include="OrchardCore.Deployment.Abstractions" />
     <PackageReference Include="OrchardCore.Recipes.Abstractions" />
+    <PackageReference Include="OrchardCore.Settings.Core" />
     <PackageReference Include="OrchardCore.Redis.Abstractions" />
     <PackageReference Include="OrchardCore.SignalR" />
     <PackageReference Include="OrchardCore.Workflows.Abstractions" />

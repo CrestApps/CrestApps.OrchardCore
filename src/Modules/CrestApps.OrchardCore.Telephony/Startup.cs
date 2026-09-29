@@ -1,3 +1,4 @@
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Configuration;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony.BackgroundTasks;
@@ -6,6 +7,7 @@ using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Drivers;
 using CrestApps.OrchardCore.Telephony.Endpoints;
 using CrestApps.OrchardCore.Telephony.Filters;
+using CrestApps.OrchardCore.Telephony.Handlers;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Indexes;
 using CrestApps.OrchardCore.Telephony.Migrations;
@@ -129,6 +131,7 @@ public sealed class Startup : StartupBase
         // number to an on-platform user. Providers translate the resolved user into their own live endpoint.
         services.AddScoped<ITelephonyExtensionStore, TelephonyExtensionStore>();
         services.AddScoped<ITelephonyExtensionManager, TelephonyExtensionManager>();
+        services.AddScoped<ICatalogEntryHandler<TelephonyExtension>, TelephonyExtensionHandler>();
         // Extensions name the person they ring as the site names its users (see TelephonyExtensionNames).
         services.AddScoped<ITelephonyUserDisplayNames, TelephonyUserDisplayNames>();
         services.AddScoped<ITelephonyExtensionResolver, DisplayNameTelephonyExtensionResolver>();

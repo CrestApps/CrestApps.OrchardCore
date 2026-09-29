@@ -25,10 +25,12 @@ public sealed class ContactCenterSkillRecipeStep : IRecipeStep
                     .Items(new JsonSchemaBuilder()
                         .Type(SchemaValueType.Object)
                         .Properties(
-                            ("ItemId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional unique identifier. When supplied and found, the existing skill is updated instead of a new one being created.")),
+                            ("ItemId", CatalogRecipeStepSchemas.ItemId("skill")),
                             ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Unique skill name.")),
                             ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Skill description.")),
-                            ("Enabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the skill can be selected by agents and queues.")))
+                            ("Enabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the skill can be selected by agents and queues.")),
+                            ("Properties", CatalogRecipeStepSchemas.Properties("skill")))
+                        .Required("Name")
                         .AdditionalProperties(true))
                     .Description("The Contact Center skills to create or update.")))
             .Required("name", "Skills")

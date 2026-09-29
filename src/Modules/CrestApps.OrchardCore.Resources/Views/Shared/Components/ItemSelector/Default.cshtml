@@ -11,7 +11,7 @@
     <div class="item-selector-hidden-inputs"></div>
 
     <button type="button"
-            class="btn btn-sm btn-outline-secondary dropdown-toggle item-selector-toggle"
+            class="btn @(Model.SmallButton ? "btn-sm " : string.Empty)btn-outline-secondary dropdown-toggle item-selector-toggle"
             aria-expanded="false"
             data-item-selector-toggle>
         @T["Select item"]

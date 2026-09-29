@@ -44,4 +44,9 @@ public static class ContactCenterDeploymentSteps
     /// The recipe step that carries manager-owned agent entitlements.
     /// </summary>
     public const string AgentEntitlement = "ContactCenterAgentEntitlement";
+
+    /// <summary>
+    /// The recipe step that carries the voice media library.
+    /// </summary>
+    public const string VoiceMedia = "ContactCenterVoiceMedia";
 }

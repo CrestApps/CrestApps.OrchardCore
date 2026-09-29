@@ -25,7 +25,7 @@ public sealed class ContactCenterBusinessHoursCalendarRecipeStep : IRecipeStep
                     .Items(new JsonSchemaBuilder()
                         .Type(SchemaValueType.Object)
                         .Properties(
-                            ("ItemId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional unique identifier. When supplied and found, the existing calendar is updated instead of a new one being created.")),
+                            ("ItemId", CatalogRecipeStepSchemas.ItemId("calendar")),
                             ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Unique name of the calendar.")),
                             ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Description of the calendar.")),
                             ("TimeZoneId", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Time zone the weekly schedule and holidays are evaluated in. When empty, UTC is used.")),
@@ -44,7 +44,9 @@ public sealed class ContactCenterBusinessHoursCalendarRecipeStep : IRecipeStep
                                 .Type(SchemaValueType.Array)
                                 .Items(new JsonSchemaBuilder().Type(SchemaValueType.String).Description("A closed date in 'yyyy-MM-dd' format."))
                                 .Description("Dates the queue is closed all day regardless of the weekly schedule.")),
-                            ("Enabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the calendar is enabled. Disabled calendars do not gate routing.")))
+                            ("Enabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the calendar is enabled. Disabled calendars do not gate routing.")),
+                            ("Properties", CatalogRecipeStepSchemas.Properties("calendar")))
+                        .Required("Name")
                         .AdditionalProperties(true))
                     .Description("The Contact Center business-hours calendars to create or update.")))
             .Required("name", "Calendars")

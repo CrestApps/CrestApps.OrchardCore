@@ -178,6 +178,47 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
     public long? TotalLoaded { get; set; }
 
     /// <summary>
+    /// Gets or sets how many contacts matched the batch filters on its last load, whether or not an activity was
+    /// created for them. <see langword="null"/> for a batch loaded before the load was reported.
+    /// </summary>
+    /// <remarks>
+    /// A load that finds fewer people than the operator expected has to say why, or the only way to find out is to
+    /// read the database. This and the skip counts below are that explanation: every matching contact is either
+    /// loaded or counted against exactly one reason.
+    /// </remarks>
+    public long? TotalMatched { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many matching contacts were skipped on the last load because they already had an open
+    /// activity for the batch subject.
+    /// </summary>
+    public long TotalSkippedAsDuplicate { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many matching contacts were skipped on the last load because they had asked not to be
+    /// reached on the batch channel.
+    /// </summary>
+    public long TotalSkippedAsOptedOut { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many matching contacts were skipped on the last load because another record sharing one of
+    /// their phone numbers had asked not to be reached on the batch channel.
+    /// </summary>
+    public long TotalSkippedAsSharedNumberOptedOut { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many matching contacts were skipped on the last load because they had no address on the
+    /// batch channel for an automated activity to use.
+    /// </summary>
+    public long TotalSkippedForNoDestination { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many matching contacts were not examined on the last load because the limit had already been
+    /// reached.
+    /// </summary>
+    public long TotalSkippedByLimit { get; set; }
+
+    /// <summary>
     /// Gets or sets the prevent duplicates.
     /// </summary>
     public bool PreventDuplicates { get; set; }
@@ -240,6 +281,20 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
     public string LastActivityDispositionId { get; set; }
 
     /// <summary>
+    /// Clears the counts of the previous load, so a reload reports only what it did itself.
+    /// </summary>
+    public void ResetLoadCounts()
+    {
+        TotalLoaded = 0;
+        TotalMatched = 0;
+        TotalSkippedAsDuplicate = 0;
+        TotalSkippedAsOptedOut = 0;
+        TotalSkippedAsSharedNumberOptedOut = 0;
+        TotalSkippedForNoDestination = 0;
+        TotalSkippedByLimit = 0;
+    }
+
+    /// <summary>
     /// Creates a copy of the current activity batch.
     /// </summary>
     public OmnichannelActivityBatch Clone()
@@ -278,6 +333,12 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
             ScheduleAt = ScheduleAt,
             Instructions = Instructions,
             TotalLoaded = TotalLoaded,
+            TotalMatched = TotalMatched,
+            TotalSkippedAsDuplicate = TotalSkippedAsDuplicate,
+            TotalSkippedAsOptedOut = TotalSkippedAsOptedOut,
+            TotalSkippedAsSharedNumberOptedOut = TotalSkippedAsSharedNumberOptedOut,
+            TotalSkippedForNoDestination = TotalSkippedForNoDestination,
+            TotalSkippedByLimit = TotalSkippedByLimit,
             PreventDuplicates = PreventDuplicates,
             UrgencyLevel = UrgencyLevel,
             Status = Status,

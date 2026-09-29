@@ -483,18 +483,33 @@
 
             var isUnused = tree.unused.indexOf(nodeIndex) >= 0;
 
+            // The header follows the bag-part item card: the menu name, its role, and the delete (trash) button on the
+            // right of the header rather than a separate labelled button. On the first menu the trash removes the whole
+            // IVR menu, since callers cannot have a menu without one.
             return h('div', { className: 'card mb-3', 'data-ivr-node-card': String(nodeIndex) }, [
-                h('div', { className: 'card-header d-flex flex-wrap align-items-center gap-2' }, [
+                h('div', { className: 'card-header d-flex flex-wrap align-items-center gap-2 py-1 ps-2 pe-1' }, [
                     h('span', { className: 'fw-semibold', text: menuLabel(nodeIndex) }),
                     nodeIndex === tree.rootIndex
                         ? h('span', { className: 'badge text-bg-primary', title: t('rootBadgeHint', 'Callers hear this menu first.') }, [icon('fa-solid fa-play me-1'), t('rootBadge', 'First menu')])
                         : h('span', { className: 'badge ' + (isUnused ? 'text-bg-warning' : 'text-bg-secondary'), text: isUnused ? t('unusedBadge', 'Not used') : t('submenuBadge', 'Submenu') }),
-                    nodeIndex === tree.rootIndex ? null : h('button', {
-                        type: 'button',
-                        className: 'btn btn-outline-danger btn-sm ms-auto',
-                        'data-ivr-command': 'remove-menu',
-                        'data-ivr-node': String(nodeIndex)
-                    }, [icon('fa-solid fa-trash me-1'), t('removeSubmenu', 'Remove submenu')])
+                    h('div', { className: 'btn-group btn-group-sm ms-auto', role: 'group' }, [
+                        nodeIndex === tree.rootIndex
+                            ? h('button', {
+                                type: 'button',
+                                className: 'btn btn-danger',
+                                'data-ivr-command': 'clear',
+                                title: t('clear', 'Remove the IVR menu'),
+                                'aria-label': t('clear', 'Remove the IVR menu')
+                            }, [icon('fa-solid fa-trash')])
+                            : h('button', {
+                                type: 'button',
+                                className: 'btn btn-danger',
+                                'data-ivr-command': 'remove-menu',
+                                'data-ivr-node': String(nodeIndex),
+                                title: t('removeSubmenu', 'Remove submenu'),
+                                'aria-label': t('removeSubmenu', 'Remove submenu')
+                            }, [icon('fa-solid fa-trash')])
+                    ])
                 ]),
                 h('div', { className: 'card-body' }, [
                     h('div', { className: 'small mb-2', 'data-ivr-issues': 'node:' + nodeIndex, hidden: true }),
@@ -606,10 +621,6 @@
                         children.push(renderNode(model.nodes[index], index));
                     });
                 }
-
-                children.push(h('div', { className: 'd-flex flex-wrap gap-2' }, [
-                    h('button', { type: 'button', className: 'btn btn-outline-danger btn-sm ms-auto', 'data-ivr-command': 'clear' }, [icon('fa-solid fa-xmark me-1'), t('clear', 'Remove the IVR menu')])
-                ]));
             }
 
             visual.replaceChildren.apply(visual, children);

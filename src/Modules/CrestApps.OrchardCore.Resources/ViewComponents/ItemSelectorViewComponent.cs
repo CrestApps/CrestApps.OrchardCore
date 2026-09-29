@@ -35,6 +35,7 @@ public sealed class ItemSelectorViewComponent : ViewComponent
     /// <param name="showSelectedItems">Whether the selected items list is shown below the toggle button.</param>
     /// <param name="closeOnSelect">Whether the dropdown closes after selecting an item.</param>
     /// <param name="searchDelay">The debounce delay, in milliseconds, used for search-as-you-type.</param>
+    /// <param name="smallButton">Whether the toggle button uses the small button size. Pass <see langword="false"/> when the selector sits in a form row beside full-height inputs.</param>
     /// <returns>The rendered selector view.</returns>
     public IViewComponentResult Invoke(
         string id,
@@ -60,7 +61,8 @@ public sealed class ItemSelectorViewComponent : ViewComponent
         bool enableSearchButton = true,
         bool showSelectedItems = true,
         bool closeOnSelect = false,
-        int searchDelay = 300)
+        int searchDelay = 300,
+        bool smallButton = true)
     {
         ArgumentException.ThrowIfNullOrEmpty(id);
         ArgumentException.ThrowIfNullOrEmpty(inputName);
@@ -103,6 +105,7 @@ public sealed class ItemSelectorViewComponent : ViewComponent
         {
             Id = id,
             ConfigurationJson = configurationJson,
+            SmallButton = smallButton,
         });
     }
 }

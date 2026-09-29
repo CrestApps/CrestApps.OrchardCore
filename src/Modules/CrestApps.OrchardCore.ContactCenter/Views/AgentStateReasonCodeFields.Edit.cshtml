@@ -17,18 +17,18 @@
     </div>
 </div>
 
-<div class="ocat-limited-wrapper" asp-validation-class-for="AppliesTo">
+<div class="ocat-wrapper" asp-validation-class-for="AppliesTo">
     <label asp-for="AppliesTo" class="ocat-label">@T["Applies to state"]</label>
-    <div class="ocat-limited">
+    <div class="ocat-end">
         <select asp-for="AppliesTo" asp-items="Model.AppliesToOptions" class="form-select"></select>
         <span asp-validation-for="AppliesTo" class="text-danger"></span>
         <span class="hint">@T["The presence state the agent enters when they choose this reason."]</span>
     </div>
 </div>
 
-<div class="ocat-limited-wrapper" asp-validation-class-for="SortOrder">
+<div class="ocat-wrapper" asp-validation-class-for="SortOrder">
     <label asp-for="SortOrder" class="ocat-label">@T["Sort order"]</label>
-    <div class="ocat-limited">
+    <div class="ocat-end">
         <input asp-for="SortOrder" type="number" class="form-control" />
         <span asp-validation-for="SortOrder" class="text-danger"></span>
         <span class="hint">@T["Lower values are listed first in the agent presence menu."]</span>
