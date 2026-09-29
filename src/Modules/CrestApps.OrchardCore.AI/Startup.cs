@@ -145,7 +145,6 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<AIProfileTemplate, SystemPromptTemplateDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateToolsDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateAgentsDisplayDriver>()
-            .AddDisplayDriver<AIProfile, AIProfileTemplateSelectionDisplayDriver>()
             .AddNavigationProvider<AITemplateAdminMenu>()
             .AddPermissionProvider<AIProfileTemplatePermissionsProvider>();
     }

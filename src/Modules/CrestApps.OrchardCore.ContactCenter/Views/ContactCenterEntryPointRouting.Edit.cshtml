@@ -31,8 +31,8 @@
         <div class="form-check">
             <input asp-for="VoicemailEnabled" class="form-check-input" data-entry-point-voicemail-toggle />
             <label asp-for="VoicemailEnabled" class="form-check-label">@T["Send unanswered calls to voicemail"]</label>
+            <span class="hint dashed">@T["When off, the caller keeps ringing and is held for the agent until answered or they hang up."]</span>
         </div>
-        <span class="hint dashed">@T["When off, the caller keeps ringing and is held for the agent until answered or they hang up."]</span>
     </div>
 </div>
 

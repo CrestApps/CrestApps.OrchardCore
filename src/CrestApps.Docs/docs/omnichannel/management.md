@@ -101,7 +101,7 @@ For outbound subjects the interaction type and channel are resolved at load time
 
 When the AI feature is enabled, a second part-settings editor adds an **AI configuration** card with AI-specific settings for:
 
-- the chat AI profile, filtered to profiles with **Add initial prompt** enabled
+- the chat AI profile, filtered to profiles with **Start the conversation automatically** enabled
 - the subject goal
 - AI update permissions for the contact and subject
 - phone automation defaults for speech-to-text deployment, text-to-speech deployment, and voice
@@ -195,12 +195,12 @@ Dialer profile selection is an optional integration supplied through the Omnicha
 
 #### Loading Automated SMS Activities with an AI Profile
 
-When you choose the **Automatic** source for an inventory load, the batch can dispatch work through a channel processor (such as SMS) and drive each conversation with an AI profile. The **AI profile** selector on the inventory-load form lists only **Chat** profiles that have **Add initial prompt** enabled, because the initial prompt is what starts the automated conversation.
+When you choose the **Automatic** source for an inventory load, the batch can dispatch work through a channel processor (such as SMS) and drive each conversation with an AI profile. The **AI profile** selector on the inventory-load form lists only **Chat** profiles that have **Start the conversation automatically** enabled, because the opening message is what starts the automated conversation.
 
 To load automated SMS activities:
 
 1. Enable the **SMS Omnichannel Automation** feature so the SMS channel processor is available.
-2. Create an **AI profile** (type **Chat**) with **Add initial prompt** enabled and an initial prompt written for your outreach.
+2. Create an **AI profile** (type **Chat**) with **Start the conversation automatically** enabled and an opening message written for your outreach.
 3. In **Interaction Center > Management > Channel Endpoints**, add an **SMS** endpoint for the number you send from.
 4. In **Load Inventory**, click **Add Inventory Load → Automatic**, then select the subject, the AI profile, the **SMS** channel, the SMS channel endpoint, and the contact type.
 5. Save the load, then open its **Actions → Load batch** menu to generate the activities in the background.

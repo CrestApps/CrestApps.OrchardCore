@@ -50,11 +50,11 @@
             <label asp-for="IsListable" class="form-check-label">@T["Listable"]</label>
             @if (Model.IsProfileTemplate)
             {
-                <span class="hint">@T["Whether this template is offered when creating a profile, in the New AI Profile picker and the Apply Templates list."]</span>
+                <span class="hint dashed">@T["Whether this template is offered in the New AI Profile picker when creating a profile."]</span>
             }
             else
             {
-                <span class="hint">@T["Whether this template appears in the template selection list."]</span>
+                <span class="hint dashed">@T["Whether this template appears in the template selection list."]</span>
             }
         </div>
     </div>

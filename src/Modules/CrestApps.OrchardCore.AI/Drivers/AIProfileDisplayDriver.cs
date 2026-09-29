@@ -247,7 +247,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
 
         if (model.ProfileType == AIProfileType.Chat && model.AddInitialPrompt && string.IsNullOrWhiteSpace(metadata.InitialPrompt))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.InitialPrompt), S["Initial prompt is required when add initial prompt is enabled."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.InitialPrompt), S["An opening message is required when Start the conversation automatically is enabled."]);
         }
 
         if (model.ProfileType == AIProfileType.Chat)

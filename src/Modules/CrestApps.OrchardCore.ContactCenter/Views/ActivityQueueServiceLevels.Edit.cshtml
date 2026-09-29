@@ -14,8 +14,8 @@
         <div class="form-check">
             <input asp-for="EnableSlaAging" class="form-check-input" />
             <label asp-for="EnableSlaAging" class="form-check-label">@T["Age waiting items past the SLA threshold"]</label>
+            <span class="hint dashed">@T["When enabled, items waiting beyond the SLA threshold gain priority so aging work is routed first."]</span>
         </div>
-        <span class="hint dashed">@T["When enabled, items waiting beyond the SLA threshold gain priority so aging work is routed first."]</span>
     </div>
 </div>
 

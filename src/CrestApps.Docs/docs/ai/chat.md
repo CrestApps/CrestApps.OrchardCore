@@ -30,7 +30,7 @@ The AI Profile editor groups the most common profile settings into five cards at
 
 - **General** — title, technical name, data source, profile type, orchestrator, and admin menu visibility
 - **Deployments** — chat deployment and utility deployment
-- **Interactions** — title behavior, welcome/initial prompt behavior, chat mode, and per-profile user memory. **Prompt subject** appears only for **Template generated prompt** profiles.
+- **Interactions** — title behavior, welcome message and opening message behavior, chat mode, and per-profile user memory. **Prompt subject** appears only for **Template generated prompt** profiles.
 - **Instructions** — prompt template selection, template-specific prompt text, and system instructions
 - **Parameters** — model tuning values and data-source retrieval parameters
 
@@ -59,7 +59,7 @@ When the AI Documents features are enabled, the **Knowledge** tab for **AI Profi
 
 When an AI profile has a **Welcome Message** configured, it is displayed as placeholder text for new sessions. It is not automatically added to the model conversation history.
 
-If **Add initial prompt** is enabled on the profile, the welcome message is ignored for new sessions. The initial prompt is now saved lazily: Orchard creates and persists the chat session only after the visitor sends the first real message, then the configured assistant **Initial prompt** is inserted ahead of that first user prompt in the stored conversation history.
+If **Start the conversation automatically** is enabled on the profile, the welcome message is ignored for new sessions. The opening message is now saved lazily: Orchard creates and persists the chat session only after the visitor sends the first real message, then the configured assistant **Opening message** is inserted ahead of that first user prompt in the stored conversation history.
 
 This avoids creating empty anonymous chat sessions just because a page or widget loaded.
 
@@ -239,7 +239,7 @@ Frontend widgets now also work with the shared anonymous-visitor protection flow
 
 - Anonymous visitors receive a stable first-party visitor cookie for more accurate unique-visitor analytics.
 - Chat message throttling and anonymous session-start throttling use that visitor identity together with the configured remote-address mode.
-- Widgets no longer auto-create sessions on page load just because a profile has an initial prompt.
+- Widgets no longer auto-create sessions on page load just because a profile has an opening message.
 - **Settings → Artificial Intelligence** now includes **Prompt security** and **Anonymous visitor identity** sections so operators can tune rate limits, prompt filtering, and remote-address handling.
 
 #### Adding the Frontend Widget

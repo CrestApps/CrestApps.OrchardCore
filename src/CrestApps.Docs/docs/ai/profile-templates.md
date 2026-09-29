@@ -41,7 +41,7 @@ Profile templates are how new profiles begin. Instead of opening a single page w
 
 ![The New AI Profile picker, with a filter box and categories on the left and a card for each starting point](/img/docs/ai-profile-new-picker.png)
 
-- **Blank profile** is always the first card. It opens the full profile editor with nothing filled in, exactly as **Add Profile** did before. The editor's **Apply Templates** card still works as it always has.
+- **Blank profile** is always the first card. It opens the full profile editor with nothing filled in, exactly as **Add Profile** did before. The editor no longer has an **Apply Templates** card; to start from a template, pick its card in the picker instead.
 - The featured scenarios come next, then every other starting point, sorted by category and title.
 - Each card shows the title, the description, the kind of profile it creates (**Chat**, **Utility**, **Agent**) and a **Start** button.
 - Type in **Filter** to narrow the cards by title, description, category or profile type, or pick a category on the left to see only that category. **All** shows everything again.
@@ -70,12 +70,12 @@ The picker builds its cards from the profile templates themselves, so a new temp
 | Rule | Why |
 | --- | --- |
 | Its source is **Profile**. | System prompt templates fill in instructions; they do not create profiles. |
-| **Listable** is checked (`IsListable: true` in a template file, which is the default). | Uncheck **Listable** on the template to keep it out of the picker and out of the **Apply Templates** list. |
+| **Listable** is checked (`IsListable: true` in a template file, which is the default). | Uncheck **Listable** on the template to keep it out of the picker. |
 | Its profile type is not **Template generated prompt**. | Such a profile runs inside an existing chat session rather than standing on its own. |
 
 Templates come from every source the site has: the ones created under **Artificial Intelligence -> Templates**, the files shipped in modules (including the starter scenarios and the building-block agents), and files placed in `App_Data`. A template created under **Artificial Intelligence -> Templates** gets a card with its title, description and category; only template files can be featured today (see [Featuring your own template](#featuring-your-own-template)).
 
-A template left out of the picker can still create a profile: **Artificial Intelligence -> Templates** shows a **Create profile** button on every profile template, for users who can manage AI profiles, and it opens the same setup step. The blank editor's **Apply Templates** card lists every listable template, template-generated prompts included.
+A template left out of the picker can still create a profile: **Artificial Intelligence -> Templates** shows a **Create profile** button on every profile template, for users who can manage AI profiles, and it opens the same setup step.
 
 `/Admin/ai/profile/new` opens the profiles list with the picker showing, so it can be linked to directly.
 

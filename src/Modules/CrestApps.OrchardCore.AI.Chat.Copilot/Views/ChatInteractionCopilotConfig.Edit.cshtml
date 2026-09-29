@@ -87,8 +87,8 @@
                     <div class="form-check">
                         <input asp-for="IsAllowAll" class="form-check-input setting-input" data-setting="isAllowAll" type="checkbox" />
                         <label asp-for="IsAllowAll" class="form-check-label">@T["Allow all tool executions"]</label>
+                        <span class="hint dashed">@T["When checked, the Copilot CLI runs with the --allow-all flag, permitting all tool executions without confirmation."]</span>
                     </div>
-                    <span class="hint">@T["When checked, the Copilot CLI runs with the --allow-all flag, permitting all tool executions without confirmation."]</span>
                 </div>
             </div>
         }
@@ -123,8 +123,8 @@
                 <div class="form-check">
                     <input asp-for="IsAllowAll" class="form-check-input setting-input" data-setting="isAllowAll" type="checkbox" />
                     <label asp-for="IsAllowAll" class="form-check-label">@T["Allow all tool executions"]</label>
+                    <span class="hint dashed">@T["When checked, the Copilot CLI runs with the --allow-all flag, permitting all tool executions without confirmation."]</span>
                 </div>
-                <span class="hint">@T["When checked, the Copilot CLI runs with the --allow-all flag, permitting all tool executions without confirmation."]</span>
             </div>
         </div>
     }

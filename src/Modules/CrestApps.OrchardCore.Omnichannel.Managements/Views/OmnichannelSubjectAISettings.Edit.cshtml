@@ -15,7 +15,7 @@
                 <option value="">@T["Select a profile"]</option>
             </select>
             <span asp-validation-for="ProfileId" class="text-danger"></span>
-            <span class="hint">@T["Only chat profiles with Add initial prompt enabled are shown because the initial prompt is sent as the first outbound message."]</span>
+            <span class="hint">@T["Only chat profiles with Start the conversation automatically enabled are shown because the opening message is sent as the first outbound message."]</span>
         </div>
 
         <div class="mb-3">
@@ -59,8 +59,8 @@
             <div class="form-check">
                 <input asp-for="AllowAIToUpdateSubject" class="form-check-input" type="checkbox" />
                 <label asp-for="AllowAIToUpdateSubject" class="form-check-label">@T["Allow AI to update subject"]</label>
+                <span class="hint dashed">@T["Opt-out SMS requests always update the contact's Do not SMS preference, even when contact updates are disabled."]</span>
             </div>
-            <span class="hint dashed">@T["Opt-out SMS requests always update the contact's Do not SMS preference, even when contact updates are disabled."]</span>
         </div>
 
         <div class="mb-3 subject-ai-sms-only@(Model.ShowSmsSettings ? string.Empty : " d-none")">
@@ -95,8 +95,8 @@
         <div class="form-check">
             <input asp-for="EnableAgentHandoff" class="form-check-input" type="checkbox" />
             <label asp-for="EnableAgentHandoff" class="form-check-label">@T["Allow the AI to hand off to a live agent"]</label>
+            <span class="hint dashed">@T["When enabled, the AI can escalate the conversation to a human. SMS threads move into the Messaging inbox (Messaging > Inbox) of the queue below; phone calls are placed into the queue and offered to an agent. Applies to inbound and outbound automated conversations for this subject."]</span>
         </div>
-        <span class="hint dashed">@T["When enabled, the AI can escalate the conversation to a human. SMS threads move into the Messaging inbox (Messaging > Inbox) of the queue below; phone calls are placed into the queue and offered to an agent. Applies to inbound and outbound automated conversations for this subject."]</span>
         <div class="mt-3">
             <label asp-for="HandoffQueueId" class="form-label">@T["Handoff queue"]</label>
             @if (Model.HasHandoffQueuePicker)
