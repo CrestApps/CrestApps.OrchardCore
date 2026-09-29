@@ -36,11 +36,11 @@ internal sealed class ContactListPartShapeTableProvider : IShapeTableProvider
 
     internal const string NavigationShapeType = "ListPartNavigationAdmin";
 
-    internal const string NavigationContactAlternate = NavigationShapeType + "__OmnichannelContact";
+    internal const string NavigationContactAlternate = "ListPartNavigationAdmin__OmnichannelContact";
 
     internal const string HeaderShapeType = "Content_HeaderAdmin";
 
-    internal const string HeaderContactAlternate = HeaderShapeType + "__OmnichannelContact";
+    internal const string HeaderContactAlternate = "Content_HeaderAdmin__OmnichannelContact";
 
     /// <inheritdoc/>
     public ValueTask DiscoverAsync(ShapeTableBuilder builder)

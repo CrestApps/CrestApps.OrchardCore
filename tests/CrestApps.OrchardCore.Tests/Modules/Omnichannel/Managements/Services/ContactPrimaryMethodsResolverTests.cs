@@ -40,6 +40,41 @@ public sealed class ContactPrimaryMethodsResolverTests
     }
 
     [Fact]
+    public void Resolve_OnlyAMobileNumberCanReceiveTextMessages()
+    {
+        // Arrange
+        var contact = CreateContact(
+            CreatePhoneNumber("+17785550100", "Cell"),
+            CreatePhoneNumber("+17025550100", "Home"),
+            CreatePhoneNumber("+13105550100", "Work"),
+            CreateEmailAddress("lead@example.com"));
+
+        // Act
+        var methods = ContactPrimaryMethodsResolver.Resolve(contact);
+
+        // Assert
+        Assert.Equal([true, false, false, false], methods.Select(method => method.CanText));
+    }
+
+    [Theory]
+    [InlineData("Cell", true)]
+    [InlineData(" cell ", true)]
+    [InlineData("Mobile", true)]
+    [InlineData("Home", false)]
+    [InlineData("Work", false)]
+    [InlineData("Fax", false)]
+    [InlineData("", false)]
+    [InlineData(null, false)]
+    public void IsMobileType_OnlyCellAndMobileNumbersCanBeTexted(string phoneType, bool expected)
+    {
+        // Act
+        var canText = ContactPrimaryMethodsResolver.IsMobileType(phoneType);
+
+        // Assert
+        Assert.Equal(expected, canText);
+    }
+
+    [Fact]
     public void Resolve_SkipsBlankMethodsSoALaterOneOfTheSameKindIsPrimary()
     {
         // Arrange

@@ -30,6 +30,11 @@ public sealed class ContactPrimaryMethod
     /// Gets or sets the stored value: the phone number or the email address.
     /// </summary>
     public string Value { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the method can receive text messages. Only a cell (mobile) number can.
+    /// </summary>
+    public bool CanText { get; set; }
 }
 
 /// <summary>

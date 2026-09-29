@@ -9,7 +9,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 /// <summary>
 /// Picks a contact's primary contact methods: the first email address and the first phone number of each phone
 /// type. This is the same first-of-its-kind rule the contact index uses for its primary email, cell and home
-/// numbers, widened to every phone type so a contact whose only number is typed "Work" still shows it.
+/// numbers, widened to every phone type so a contact whose only number is typed "Work" still shows it. Only a cell
+/// (mobile) number is marked as able to receive text messages.
 /// </summary>
 internal static class ContactPrimaryMethodsResolver
 {
@@ -65,9 +66,18 @@ internal static class ContactPrimaryMethodsResolver
                 Kind = ContactPrimaryMethodKind.Phone,
                 Label = phoneType,
                 Value = phonePart.Number.PhoneNumber.Trim(),
+                CanText = IsMobileType(phoneType),
             });
         }
 
         return methods;
     }
+
+    /// <summary>
+    /// Determines whether a phone number of the given type can receive text messages. Only a mobile number can; a
+    /// home, work or fax line cannot.
+    /// </summary>
+    public static bool IsMobileType(string phoneType)
+        => string.Equals(phoneType?.Trim(), "Cell", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(phoneType?.Trim(), "Mobile", StringComparison.OrdinalIgnoreCase);
 }

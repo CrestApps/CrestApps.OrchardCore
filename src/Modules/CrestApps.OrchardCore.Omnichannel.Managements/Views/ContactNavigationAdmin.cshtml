@@ -1,16 +1,47 @@
 @using CrestApps.OrchardCore.Omnichannel.Core
+@using CrestApps.OrchardCore.Omnichannel.Managements.Services
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
 @using Microsoft.AspNetCore.Authorization
 @using OrchardCore.ContentManagement.Metadata
 @using OrchardCore.Contents
+@using OrchardCore.Lists.ViewModels
 
 @model ContactNavigationAdminShapeViewModel
 
 @inject IAuthorizationService AuthorizationService
 @inject IContentDefinitionManager ContentDefinitionManager
+@inject ContactListPartNavigationResolver ListPartNavigationResolver
 @{
     if (Model.ContactContentItem is null)
     {
+        return;
+    }
+
+    // A contact that is also a list shows the list part's header and bar on its content pages. The contact's own
+    // pages, such as the activity list and editor, show the same ones so the contact looks the same everywhere.
+    // The bar's contact alternate carries the activity buttons.
+    var listPartNavigation = await ListPartNavigationResolver.ResolveAsync(Model.ContactContentItem, Model.Definition);
+
+    if (listPartNavigation is not null)
+    {
+        if (listPartNavigation.ShowHeader)
+        {
+            @await DisplayAsync(await Factory.CreateAsync<ListPartHeaderAdminViewModel>("ListPartHeaderAdmin", header =>
+            {
+                header.ContainerContentItem = Model.ContactContentItem;
+                header.ContainedContentTypeDefinitions = listPartNavigation.ContainedContentTypeDefinitions;
+                header.EnableOrdering = listPartNavigation.EnableOrdering;
+            }))
+        }
+
+        @await DisplayAsync(await Factory.CreateAsync<ListPartNavigationAdminViewModel>("ListPartNavigationAdmin", navigation =>
+        {
+            navigation.Container = Model.ContactContentItem;
+            navigation.ContainerContentTypeDefinition = listPartNavigation.ContactTypeDefinition;
+            navigation.ContainedContentTypeDefinitions = listPartNavigation.ContainedContentTypeDefinitions;
+            navigation.EnableOrdering = listPartNavigation.EnableOrdering;
+        }))
+
         return;
     }
 }

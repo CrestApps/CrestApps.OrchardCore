@@ -910,6 +910,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
     public sealed class ContactPrimaryMethod
     {
         public ContactPrimaryMethod() { }
+        public bool CanText { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.ContactPrimaryMethodKind Kind { get; set; }
         public string Label { get; set; }
         public string Value { get; set; }

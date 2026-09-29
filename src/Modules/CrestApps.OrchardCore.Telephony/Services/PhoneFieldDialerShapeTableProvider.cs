@@ -44,6 +44,10 @@ internal sealed class PhoneFieldDialerShapeTableProvider : IShapeTableProvider
         builder.Describe("PhoneField").OnDisplaying(_ => RegisterDialer());
         builder.Describe("PhoneField_Edit").OnDisplaying(_ => RegisterDialer());
 
+        // The phone actions placeholder that a number shown outside a phone field renders, such as a contact's
+        // primary numbers in its list header.
+        builder.Describe("PhoneNumberActions").OnDisplaying(_ => RegisterDialer());
+
         return ValueTask.CompletedTask;
     }
 

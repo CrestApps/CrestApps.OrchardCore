@@ -102,6 +102,7 @@ public sealed class Startup : StartupBase
         services.AddShapeTableProvider<OmnichannelSubjectButtonsShapeTableProvider>();
         services.AddShapeTableProvider<OmnichannelSubjectPartIndexSettingsShapeTableProvider>();
         services.AddShapeTableProvider<ContactListPartShapeTableProvider>();
+        services.AddScoped<ContactListPartNavigationResolver>();
     }
 }
 

@@ -20,7 +20,11 @@
     contact gets a single bar. Keep the list part's buttons in sync with Orchard Core's ListPartNavigationAdmin view.
 *@
 @{
-    var actionName = ViewContext.RouteData.Values["action"]?.ToString();
+    // Orchard Core hides the button of the page being shown. This bar also renders on the contact's activity
+    // pages, whose actions are named Edit and List too, so only hide a button on the content pages themselves.
+    var isContentsAdmin = string.Equals(ViewContext.RouteData.Values["area"]?.ToString(), "OrchardCore.Contents", StringComparison.OrdinalIgnoreCase) &&
+        string.Equals(ViewContext.RouteData.Values["controller"]?.ToString(), "Admin", StringComparison.OrdinalIgnoreCase);
+    var actionName = isContentsAdmin ? ViewContext.RouteData.Values["action"]?.ToString() : null;
     var containedContentTypeDefinitions = Model.ContainedContentTypeDefinitions ?? [];
     var authorizedContentTypeDefinitions = new List<ContentTypeDefinition>();
 

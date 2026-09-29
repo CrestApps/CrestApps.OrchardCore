@@ -22,7 +22,9 @@ using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
+using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.DisplayManagement.Zones;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
@@ -458,7 +460,7 @@ public sealed class ActivitiesController : Controller
         model.Container = new CompleteOmnichannelActivityContainer
         {
             ContactContentItem = contact,
-            Contact = await _contentItemDisplayManager.BuildDisplayAsync(contact, _updateModelAccessor.ModelUpdater, "Detail"),
+            Contact = await BuildContactInformationAsync(contact),
             Activity = await _activityDisplayManager.BuildEditorAsync(activity, _updateModelAccessor.ModelUpdater, isNew: true, OmnichannelConstants.CompleteActivityGroup),
         };
 
@@ -567,7 +569,7 @@ public sealed class ActivitiesController : Controller
         model.Container = new CompleteOmnichannelActivityContainer
         {
             ContactContentItem = contact,
-            Contact = await _contentItemDisplayManager.BuildDisplayAsync(contact, _updateModelAccessor.ModelUpdater, "Detail"),
+            Contact = await BuildContactInformationAsync(contact),
             Activity = activityEditor,
         };
 
@@ -765,7 +767,7 @@ public sealed class ActivitiesController : Controller
             ContactContentItem = contact,
             Contact = contact is null
                 ? null
-                : await _contentItemDisplayManager.BuildDisplayAsync(contact, _updateModelAccessor.ModelUpdater, "Detail"),
+                : await BuildContactInformationAsync(contact),
             Activity = await _activityDisplayManager.BuildEditorAsync(activity, _updateModelAccessor.ModelUpdater, isNew: false, OmnichannelConstants.CompleteActivityGroup),
             Subject = subject is null
                 ? null
@@ -837,7 +839,7 @@ public sealed class ActivitiesController : Controller
             ContactContentItem = contact,
             Contact = contact is null
                 ? null
-                : await _contentItemDisplayManager.BuildDisplayAsync(contact, _updateModelAccessor.ModelUpdater, "Detail"),
+                : await BuildContactInformationAsync(contact),
             Activity = activityEditor,
             Subject = subjectEditor,
             ReturnUrl = GetSafeReturnUrl(returnUrl),
@@ -878,6 +880,39 @@ public sealed class ActivitiesController : Controller
         }
 
         return View(model);
+    }
+
+    /// <summary>
+    /// Builds the contact information card shown on the activity pages. The card shows who the contact is, so a
+    /// list part on the contact type does not render the items listed under the contact there.
+    /// </summary>
+    private async Task<IShape> BuildContactInformationAsync(ContentItem contact)
+    {
+        var shape = await _contentItemDisplayManager.BuildDisplayAsync(contact, _updateModelAccessor.ModelUpdater, "Detail");
+
+        RemoveListPartShapes(shape);
+
+        return shape;
+    }
+
+    internal static void RemoveListPartShapes(IShape contactShape)
+    {
+        if (contactShape is not IZoneHolding zoneHolding ||
+            zoneHolding.Zones["Content"] is not Shape content ||
+            !content.HasItems)
+        {
+            return;
+        }
+
+        var listPartShapes = content.Items
+            .OfType<IShape>()
+            .Where(shape => shape.Metadata.Type == ContactListPartShapeTableProvider.ListPartName)
+            .ToArray();
+
+        foreach (var listPartShape in listPartShapes)
+        {
+            content.Remove(listPartShape.Metadata.Name);
+        }
     }
 
     private string GetSafeReturnUrl(string returnUrl)
