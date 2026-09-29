@@ -3087,9 +3087,10 @@
         // setSinkId. Both persist per soft-phone instance in localStorage.
         var selectedInputDeviceId = null;
         var selectedOutputDeviceId = null;
-        // Mic-permission recovery UX (item 9). 'denied' or 'notfound' when getUserMedia is rejected for a
-        // permission/device reason; drives an actionable message plus a Retry affordance (distinct from a generic
-        // transient error). Cleared on a successful capture or when the agent retries.
+        // Mic-permission recovery UX (item 9). The cause of a capture that stays refused until something changes
+        // ('site-denied', 'dismissed', 'system-denied', 'insecure', 'policy' or 'not-found'; see
+        // soft-phone/microphone-errors.js); drives an actionable message plus a Retry affordance (distinct from a
+        // transient error, which is retried on its own). Cleared on a successful capture or when the agent retries.
         var micPermissionState = null;
         // Whether the settings overlay (opened from the header gear) is showing. It holds the audio device
         // pickers off the keypad; it is an overlay, not a footer tab.
@@ -3860,52 +3861,155 @@
             return { audio: audio, video: false };
         }
 
-        // Maps a getUserMedia rejection to an actionable error and records the recovery state (item 9). A denied
-        // permission and a missing device are distinguished from a generic failure so the agent gets a specific,
-        // localized message plus a Retry affordance instead of an opaque error. Never retries on its own.
+        // Maps a getUserMedia rejection to an actionable error and records the recovery state (item 9). The browser's
+        // error name alone is not enough: NotAllowedError is thrown whether the agent blocked the site, dismissed the
+        // prompt, or the operating system blocks the browser from every microphone, and each has a different fix. So
+        // the facts that tell them apart are gathered first (see soft-phone/microphone-errors.js), the agent is shown
+        // the specific reason followed by the browser's own words, and every fact goes to the server log.
+        // Resolves to the error to fail with; never retries on its own.
         function categorizeMicError(error) {
-            var name = (error && error.name) || '';
+            return gatherMicrophoneFacts(error).then(function (facts) {
+                var kind = softPhoneModules.classifyMicrophoneError(facts);
+                var guidance = microphoneGuidance(kind);
+                var browserError = softPhoneModules.describeBrowserError(facts);
+                var shown = guidance + ' ' + (strings.micBrowserError || 'Browser error:') + ' ' + browserError;
 
-            if (name === 'NotAllowedError' || name === 'PermissionDeniedError' || name === 'SecurityError') {
-                reportDiagnostic('error', 'mic-permission-denied', name, null);
-                setMicPermissionIssue('denied');
-
-                return new Error(strings.micPermissionDenied ||
-                    'Microphone access is blocked. Allow microphone access in your browser, then retry.');
-            }
-
-            if (name === 'NotFoundError' || name === 'DevicesNotFoundError' || name === 'OverconstrainedError') {
                 // A selected input device that has gone away throws OverconstrainedError; drop the stale selection
                 // so a retry falls back to the browser default input.
-                if (name === 'OverconstrainedError') {
+                if (facts.name === 'OverconstrainedError') {
                     selectedInputDeviceId = null;
                     persistDeviceSelection();
                 }
 
-                reportDiagnostic('error', 'mic-not-found', name, null);
-                setMicPermissionIssue('notfound');
+                reportDiagnostic('error', MICROPHONE_DIAGNOSTIC_CODES[kind] || 'mic-error',
+                    kind + ': ' + browserError, softPhoneModules.describeMicrophoneFacts(facts));
 
-                return new Error(strings.micNotFound ||
-                    'No microphone was found. Connect a microphone, then retry.');
-            }
+                setMicPermissionIssue(kind, shown);
 
-            reportDiagnostic('error', 'mic-error', name || (error && error.message) || 'getUserMedia failed', null);
+                var categorized = new Error(shown);
+                categorized.microphoneIssue = kind;
 
-            return error instanceof Error ? error : new Error(String(error));
+                return categorized;
+            });
         }
 
-        function setMicPermissionIssue(kind) {
-            micPermissionState = kind;
+        var MICROPHONE_DIAGNOSTIC_CODES = {
+            'insecure': 'mic-insecure-context',
+            'policy': 'mic-policy-blocked',
+            'system-denied': 'mic-system-denied',
+            'site-denied': 'mic-permission-denied',
+            'dismissed': 'mic-prompt-dismissed',
+            'not-found': 'mic-not-found',
+            'in-use': 'mic-in-use',
+            'unknown': 'mic-error'
+        };
 
-            var message = kind === 'denied'
-                ? (strings.micPermissionDenied || 'Microphone access is blocked. Allow microphone access in your browser, then retry.')
-                : (strings.micNotFound || 'No microphone was found. Connect a microphone, then retry.');
+        function microphoneGuidance(kind) {
+            switch (kind) {
+                case 'insecure':
+                    return strings.micInsecure ||
+                        'The microphone only works on a secure (https) address. Open this site over https, then retry.';
+                case 'policy':
+                    return strings.micPolicyBlocked ||
+                        'This page is not allowed to use the microphone: the browser, or the page it is shown inside, blocks it.';
+                case 'system-denied':
+                    return strings.micSystemDenied ||
+                        'Your computer is blocking the browser from using the microphone. On Windows, open Settings > Privacy & security > Microphone and allow microphone access for desktop apps and your browser; on a Mac, allow your browser under System Settings > Privacy & Security > Microphone. Then retry.';
+                case 'site-denied':
+                    return strings.micPermissionDenied ||
+                        'Microphone access is blocked for this site. Click the icon at the left of the address bar, allow the microphone, then retry.';
+                case 'dismissed':
+                    return strings.micPromptDismissed ||
+                        'The browser asked to use the microphone, but the request was dismissed. Click Retry and choose Allow.';
+                case 'not-found':
+                    return strings.micNotFound ||
+                        'No microphone was found. Connect a microphone, then retry.';
+                case 'in-use':
+                    return strings.micInUse ||
+                        'The microphone could not be started. Another application (such as Teams or Zoom) may be using it, or the device stopped responding. Close that application or reconnect the microphone, then retry.';
+                default:
+                    return strings.micUnknown || 'The microphone could not be started.';
+            }
+        }
+
+        // What the browser will say about the failure. Every lookup is best effort and bounded: a browser without the
+        // Permissions API, or one that never answers, still gets its error classified from what is known.
+        function gatherMicrophoneFacts(error) {
+            var facts = {
+                name: (error && error.name) || '',
+                message: (error && error.message) || (error ? String(error) : ''),
+                permissionState: null,
+                isSecureContext: typeof window.isSecureContext === 'boolean' ? window.isSecureContext : null,
+                policyAllowed: readMicrophonePolicy(),
+                audioInputCount: null,
+                origin: window.location ? window.location.origin : null,
+                userAgent: navigator.userAgent || null
+            };
+
+            var permission = navigator.permissions && typeof navigator.permissions.query === 'function'
+                ? withTimeout(navigator.permissions.query({ name: 'microphone' }).then(function (status) {
+                    return status ? status.state : null;
+                }), 1000)
+                : Promise.resolve(null);
+
+            var inputs = navigator.mediaDevices && typeof navigator.mediaDevices.enumerateDevices === 'function'
+                ? withTimeout(navigator.mediaDevices.enumerateDevices().then(function (devices) {
+                    return devices.filter(function (device) { return device.kind === 'audioinput'; }).length;
+                }), 1000)
+                : Promise.resolve(null);
+
+            return Promise.all([permission, inputs]).then(function (results) {
+                facts.permissionState = results[0];
+                facts.audioInputCount = results[1];
+
+                return facts;
+            });
+        }
+
+        // Resolves to the promise's value, or to null when it fails or has not answered in time.
+        function withTimeout(promise, milliseconds) {
+            return new Promise(function (resolve) {
+                var timer = window.setTimeout(function () { resolve(null); }, milliseconds);
+
+                promise.then(function (value) {
+                    window.clearTimeout(timer);
+                    resolve(value);
+                }, function () {
+                    window.clearTimeout(timer);
+                    resolve(null);
+                });
+            });
+        }
+
+        // Whether the page's permissions policy lets it use the microphone at all (false inside an iframe that was not
+        // given it), or null when the browser cannot say.
+        function readMicrophonePolicy() {
+            var policy = document.permissionsPolicy || document.featurePolicy;
+
+            if (!policy || typeof policy.allowsFeature !== 'function') {
+                return null;
+            }
+
+            try {
+                return !!policy.allowsFeature('microphone');
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function setMicPermissionIssue(kind, message) {
+            // Only a microphone that stays refused until someone changes something (a permission, a setting, a
+            // device) holds the phone for the agent's Retry. A busy or failed device is still tried again on its own,
+            // backing off, as before; the agent just sees why it is failing meanwhile.
+            if (kind !== 'in-use' && kind !== 'unknown') {
+                micPermissionState = kind;
+            }
 
             // Show the guidance directly (not through showError, which would double-report the diagnostic) so it
             // appears regardless of which path hit the error: a dial surfaces it through the promise chain, but
             // the idle background registration swallows failures to a debug log.
             if (dom.error) {
-                dom.error.textContent = message;
+                dom.error.textContent = message || microphoneGuidance(kind);
                 dom.error.hidden = false;
             }
 
@@ -4569,8 +4673,11 @@
                 }, function (mediaError) {
                     captureInFlight = false;
 
-                    // Turn a permission/device rejection into an actionable, categorized error (item 9).
-                    throw categorizeMicError(mediaError);
+                    // Turn a permission/device rejection into an actionable, categorized error (item 9), once the
+                    // facts that name its cause have been gathered.
+                    return categorizeMicError(mediaError).then(function (categorized) {
+                        throw categorized;
+                    });
                 }).then(function (stream) {
                     if (abandoned) {
                         stream.getTracks().forEach(function (track) {
