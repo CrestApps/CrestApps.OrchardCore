@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using Microsoft.AspNetCore.DataProtection;
@@ -82,7 +83,8 @@ public sealed class MessagingAttachmentLinks : IMessagingAttachmentUrlProvider
         // is the first thing to check when a picture message fails to deliver.
         if (_logger.IsEnabled(LogLevel.Information))
         {
-            _logger.LogInformation("Built a public picture link on {Host}, taken from {Source}.", root.Authority, source);
+            // The host can come from the request, so it is sanitized like any other request value.
+            _logger.LogInformation("Built a public picture link on {Host}, taken from {Source}.", root.Authority.SanitizeLogValue(), source);
         }
 
         var lifetime = TimeSpan.FromHours(Math.Max(1, _options.AttachmentLinkLifetimeHours));

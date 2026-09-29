@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
@@ -109,7 +110,7 @@ public sealed class TwilioSmsMediaSender : ISmsMediaSender, IMessagingMediaReque
                     return optedOut;
                 }
 
-                _logger.LogWarning("Twilio refused a picture message with status {StatusCode}. Response: {Response}", (int)response.StatusCode, Truncate(body));
+                _logger.LogWarning("Twilio refused a picture message with status {StatusCode}. Response: {Response}", (int)response.StatusCode, Truncate(body).SanitizeLogValue());
 
                 return MessageDispatchResult.Failed($"The Twilio messaging API returned {(int)response.StatusCode}: {Truncate(body)}");
             }

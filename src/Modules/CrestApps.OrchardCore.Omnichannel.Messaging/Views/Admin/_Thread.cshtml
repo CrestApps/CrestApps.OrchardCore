@@ -15,12 +15,12 @@
     var acceptTypes = string.Join(",", attachments.Formats.SelectMany(format => format.Extensions.Prepend(format.ContentType)).Distinct());
     var formatsJson = System.Text.Json.JsonSerializer.Serialize(attachments.Formats.Select(format => new
     {
-        name = format.Name,
-        contentType = format.ContentType,
-        extensions = format.Extensions,
-        isImage = format.IsImage,
-        canShrink = format.CanShrink,
-    }));
+        format.Name,
+        format.ContentType,
+        format.Extensions,
+        format.IsImage,
+        format.CanShrink,
+    }), System.Text.Json.JOptions.CamelCase);
 }
 
 <div class="d-flex flex-grow-1 overflow-hidden">

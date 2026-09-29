@@ -109,7 +109,7 @@ public sealed class MessagingInboundMediaIngestor : IMessagingInboundMediaIngest
                 "Stored {Stored} of {Announced} media item(s) received on {Channel} message {ProviderMessageId}.",
                 stored.Count,
                 sources.Length,
-                message.Channel,
+                message.Channel.SanitizeLogValue(),
                 message.ProviderMessageId.SanitizeLogValue());
         }
 
@@ -123,7 +123,7 @@ public sealed class MessagingInboundMediaIngestor : IMessagingInboundMediaIngest
             _logger.LogWarning(
                 "Skipped media item {Index} of {Channel} message {ProviderMessageId} because the channel carries no attachments.",
                 index,
-                message.Channel,
+                message.Channel.SanitizeLogValue(),
                 message.ProviderMessageId.SanitizeLogValue());
 
             return null;
@@ -136,7 +136,7 @@ public sealed class MessagingInboundMediaIngestor : IMessagingInboundMediaIngest
             _logger.LogWarning(
                 "Skipped media item {Index} of {Channel} message {ProviderMessageId} because its address is not an absolute HTTPS URL.",
                 index,
-                message.Channel,
+                message.Channel.SanitizeLogValue(),
                 message.ProviderMessageId.SanitizeLogValue());
 
             return null;
@@ -165,7 +165,7 @@ public sealed class MessagingInboundMediaIngestor : IMessagingInboundMediaIngest
                 _logger.LogWarning(
                     "Skipped media item {Index} of {Channel} message {ProviderMessageId}: the provider answered {StatusCode}.",
                     index,
-                    message.Channel,
+                    message.Channel.SanitizeLogValue(),
                     message.ProviderMessageId.SanitizeLogValue(),
                     (int)response.StatusCode);
 
@@ -200,7 +200,7 @@ public sealed class MessagingInboundMediaIngestor : IMessagingInboundMediaIngest
                     _logger.LogInformation(
                         "Skipped media item {Index} of {Channel} message {ProviderMessageId}: the channel does not carry it (declared as {DeclaredType}).",
                         index,
-                        message.Channel,
+                        message.Channel.SanitizeLogValue(),
                         message.ProviderMessageId.SanitizeLogValue(),
                         declaredType.SanitizeLogValue());
                 }
@@ -226,7 +226,7 @@ public sealed class MessagingInboundMediaIngestor : IMessagingInboundMediaIngest
                 ex,
                 "Skipped media item {Index} of {Channel} message {ProviderMessageId} because it could not be downloaded.",
                 index,
-                message.Channel,
+                message.Channel.SanitizeLogValue(),
                 message.ProviderMessageId.SanitizeLogValue());
 
             return null;
@@ -237,7 +237,7 @@ public sealed class MessagingInboundMediaIngestor : IMessagingInboundMediaIngest
         => _logger.LogWarning(
             "Skipped media item {Index} of {Channel} message {ProviderMessageId}: {Length} bytes is over the {MaxBytes} byte limit.",
             index,
-            message.Channel,
+            message.Channel.SanitizeLogValue(),
             message.ProviderMessageId.SanitizeLogValue(),
             length,
             maxBytes);
