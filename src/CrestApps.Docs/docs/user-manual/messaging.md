@@ -51,6 +51,24 @@ In the composer, type your reply and press **Enter** to send (**Shift+Enter** ad
 
 A banner warns you during the customer's **quiet hours** (outside the queue's business hours). It does not stop you sending.
 
+### Send and receive attachments
+
+Each channel accepts its own kinds of files. SMS takes pictures (JPEG, PNG, GIF and WebP); hover over the attach button to see what the conversation's channel accepts.
+
+- **Attach a file** by dragging it onto the conversation, pasting it into the message box, or clicking the attach button beside the channel name. Each file shows above your message; the **×** removes it.
+- You can send attachments on their own or with text, up to 10 at a time. On SMS, large photos are shrunk automatically so the carrier accepts them.
+- Files the customer sends appear in the conversation. Click a picture to open it full size in a new tab; any other file downloads.
+- If a file cannot be shown (for example, a customer sends a document by text message), the message says *An attachment could not be shown*, and its text is still there.
+
+### Favorites
+
+Keep the customers you message most one click away.
+
+- **Add a favorite:** open their conversation and click **Add to favorites** at the top, beside **Transfer**, or on the **Customer** card. The button then reads **Favorite**; click it again to remove them.
+- **See your favorites:** click the **star button** beside the filter above the conversation list, or choose **Favorites** in the filter menu. Each favorite shows their latest conversation; one with none yet says *No conversation yet: click to write* and opens a new message. Your favorites also appear in a row above the conversation list.
+
+Your favorites are your own; other agents do not see them.
+
 ## Transfer a conversation
 
 1. Click **Transfer**.

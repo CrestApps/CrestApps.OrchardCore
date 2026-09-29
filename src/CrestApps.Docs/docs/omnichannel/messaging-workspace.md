@@ -38,6 +38,12 @@ For the agent's step-by-step guide with screencasts, see [Messaging](../user-man
   - a channel where the customer has an address but no conversation yet opens the composer on that channel;
   - a channel where the customer cannot be reached is greyed out.
 - **Conversation.** The thread, the composer (canned-response templates, Enter to send), and the customer card with every contact record that matches the address.
+- **Attachments.** Each channel says which files it carries, and the composer follows it: drag files onto the conversation, paste them into the message box, or pick them with the attach button beside the channel name (a picture icon on a channel that carries pictures only, a paperclip on one that carries other files too). The button's tooltip lists what the channel accepts, and anything else is refused. Attached files show above the message and can be removed before sending; a message can be only attachments. SMS carries pictures (see [Pictures (MMS)](#pictures-mms)); a channel such as email can list documents as well. In the thread, pictures show as thumbnails that open the full picture in a new tab, and any other file shows as a download with its name and size.
+- **Favorites.** Mark the customers you message most as favorites, and keep them one click away:
+  - **Add to favorites** is a button at the top of every conversation, beside **Transfer**, and on the **Customer** card. Once a customer is a favorite, the button reads **Favorite** and clicking it again removes them.
+  - The **star button** beside the filter above the customer list opens your favorites; **Favorites** in the filter menu does the same and shows how many you have. Each favorite shows their latest conversation, or *No conversation yet: click to write*, which opens the composer to them.
+  - Your favorites also sit in a row above the customer list, and starred customers carry a star in it. The list's search narrows both.
+  - Favorites are your own: each agent keeps a separate list of up to 100 customers, and starring someone changes nothing for anyone else.
 - **New message.** The compose button opens a mail-style composer in the conversation pane, beside the customer list: pick the address to send **From** (which decides the channel), search contacts reachable on that channel for **To**, add other addresses, and write the message. One recipient starts a conversation; several get a private conversation each.
 - **Claim, transfer, close, spam, reopen.** The same on every channel. Replying to a conversation nobody holds claims it for you, under the same rules as **Claim**; replying never takes a conversation from the agent who already holds it.
 - **Transfer.** **Transfer** in the conversation header hands the conversation to another person, searched by name, or, when Contact Center Work Distribution is enabled, sends it **back to a queue**'s shared inbox for any member to claim. It stays the same conversation, so its whole history goes with it, and the customer is not told. An optional note for the recipient is kept in the conversation's history and never sent to the customer.
@@ -109,6 +115,22 @@ An outbound message the provider does not accept is queued and retried after 1, 
 
 Some providers manage opt-outs themselves (Twilio's opt-out management on toll-free numbers and Messaging Services, Telnyx's STOP handling): they confirm the opt-out to the customer and refuse any further message to them, including the workspace's own STOP confirmation. That refusal is expected and is logged as information, not as a warning. Whenever a provider refuses a message because the recipient opted out, the contact is marked **Do not SMS** and the message is marked failed at once rather than retried.
 
+### Pictures (MMS)
+
+The SMS channel carries pictures in both directions: JPEG, PNG, GIF and WebP, up to 10 per message. A file is accepted as a picture only when its contents are one of those formats, whatever its name or the type the browser reports; anything else, including documents, is refused on SMS.
+
+**Sending.** Carriers refuse picture messages much over 1 MB, so the composer shrinks larger photos to fit before sending: each picture gets its share of that budget, and a still picture is redrawn smaller as a JPEG until it fits. An animated GIF is never redrawn, because that would lose the animation, so a GIF over its share is refused. A picture message is sent through a provider that can carry pictures:
+
+- **Telnyx** sends the pictures with the message.
+- **Twilio** numbers send pictures through the workspace's own Twilio sender, which uses the account in **Settings > SMS** (OrchardCore's Twilio provider sends text only).
+- Any other provider refuses a message with pictures rather than delivering the text alone, and the message is marked failed without retries.
+
+The provider downloads each picture from the site, so the site must be reachable from the internet. The link is built from the **Base URL** in **Settings > General**, or from the address of the current request when no base URL is set. Messages retried later in the background, and messages sent from a site reached only by a local or internal address, need the base URL set to the public address. The links are signed, name nothing but the picture, and expire after `AttachmentLinkLifetimeHours` (72 by default); a retried message gets fresh ones. The information-level log line *Built a public picture link on (host)* shows which address the provider was given.
+
+**Receiving.** When a customer sends a picture, the workspace copies it from the provider as the message arrives, because providers only keep it for a while. A picture over `MaxInboundAttachmentBytes` (10 MB by default), a file that is not a supported picture, or one the provider refuses to hand over is not kept; the thread then says an attachment could not be shown, and the text of the message is kept either way. Pictures sent to a Twilio number are downloaded with the tenant's Twilio credentials, so an account that requires authentication for media works as well. Each copied or skipped item is logged at the `Information` or `Warning` level with the provider's message id.
+
+**Storage.** Pictures are kept in the tenant's own `App_Data` folder (`MessagingAttachments`), encrypted with the tenant's data protection keys, never in the public media library. In the workspace they are only shown to someone who may open the conversation they belong to.
+
 ## Hand-off from an automated conversation
 
 While an automated (AI) activity is handling a contact on an endpoint, the workspace leaves that contact's messages to the automated agent, even when a workspace conversation for them already exists. When the automated agent hands off, the whole automated transcript is copied into the conversation, so the agent inherits every message, in order, each exactly once. Customer messages keep the provider's message id, which is how a message the thread already holds, or a provider's redelivery of one, is recognised and not recorded again. Threads written before this behaviour are shown with such duplicates collapsed. This works the same on every messaging channel.
@@ -145,7 +167,7 @@ Permissions apply to every channel; there is no per-channel permission. An endpo
 
 | Section | Settings |
 | --- | --- |
-| `CrestApps:Omnichannel:Messaging` | `InboxPageSize`, `ConversationLockTimeoutSeconds`, `ConversationLockExpirationSeconds`, `OutboxBatchSize`, `MaxMessagesPerPassPerEndpoint` |
+| `CrestApps:Omnichannel:Messaging` | `InboxPageSize`, `ConversationLockTimeoutSeconds`, `ConversationLockExpirationSeconds`, `OutboxBatchSize`, `MaxMessagesPerPassPerEndpoint`, `MaxInboundAttachmentBytes`, `MaxInboundAttachments`, `AttachmentLinkLifetimeHours` |
 | `CrestApps:Omnichannel:Messaging:RoutedDistribution` | Routed (push) distribution tunables |
 | `CrestApps:Omnichannel:Messaging:Sms:KeywordReplies` | `StopMessage`, `HelpMessage`, `StartMessage` |
 
@@ -180,6 +202,8 @@ The channel answers only what differs between channels:
 | `IsOptedOut`, `GetContactAddresses`, `FindContactIdsAsync`, `SearchContactIdsByAddressAsync` | How a CRM contact is reached, recognised and opted out on the channel. |
 
 Inbound traffic reaches the workspace when the channel's receiver (a webhook, an event handler) calls `IMessagingInboundProcessor.ProcessAsync` with a normalized `OmnichannelMessage` whose `Channel` is the channel's name. The workspace then finds or creates the conversation, routes it, starts the first-response clock, stores the message and notifies the inbox. Rules that belong to one channel only (as the carrier keywords belong to SMS) go in an `IMessagingInboundHandler`. Delivery receipts go to `IMessagingConversationService.ApplyDeliveryReceiptAsync`, naming the channel.
+
+A channel that carries files lists them in `Capabilities.Attachments`: the `Formats` it accepts (from `MessagingFileFormats`, such as `Images` or `Documents`, or its own `MessagingFileFormat`), `MaxCount`, `MaxTotalBytes`, and `ShrinkImagesToFit` when its carriers cap the message size. The composer then offers exactly those formats, the server refuses anything else, and `SendAsync` receives a signed public link to each file in `MessagingOutboundMessage.MediaUrls`. A format with a signature is matched by the file's bytes; one without (plain text) by its extension, and it is only ever served as a download. Only pictures are shown inline. On the way in, the receiver puts the provider's media links on `OmnichannelMessage.MediaReferences`, and the workspace copies the ones the channel carries into its own store. A provider that serves media only to its own account registers an `IMessagingMediaRequestAuthenticator` to sign those downloads. For SMS, a provider sends pictures by implementing `ISmsMediaDispatchProvider`, or, when its `ISmsProvider` cannot be changed, through an `ISmsMediaSender` registered under the provider's name.
 
 Everything else — routing, ownership, SLA, templates, broadcasts, retries, AI hand-off, permissions and the UI — is shared, so a new channel gets all of it without writing any. That includes its endpoints: the workspace stores every messaging channel's endpoint address in the channel's normalized form (so inbound traffic matches it), validates it with the channel's `IsValidAddress`, and adds the inbound-routing editor to it.
 

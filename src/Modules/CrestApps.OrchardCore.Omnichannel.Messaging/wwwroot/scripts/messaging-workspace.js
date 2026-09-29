@@ -371,6 +371,144 @@
   messaging.flagMenuGroups = flagMenuGroups;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*
+ * The decisions the composer makes about the files an agent attaches, kept free of the DOM so they can be tested.
+ *
+ * Each channel says which file formats it carries (SMS: pictures; email could add documents), how many per message
+ * and how large they may be together. The composer offers only those formats and holds a message to those limits.
+ * A channel whose carriers cap the message size, as SMS does, also has its still pictures shrunk to their share of the
+ * budget rather than refused. An animated GIF cannot be redrawn without losing its animation, so it is sent as it is
+ * or not at all, and so is every file that is not a picture.
+ *
+ * Concatenated ahead of the scripts that use it by the module asset pipeline. It attaches to a shared namespace
+ * rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var messaging = root.CrestAppsMessaging = root.CrestAppsMessaging || {};
+  function extensionOf(name) {
+    var match = /\.[^.\\/]+$/.exec(String(name || ''));
+    return match ? match[0].toLowerCase() : '';
+  }
+
+  // The channel format a file is, by its declared type or, when the browser gave none it knows, by its extension.
+  // The server decides for certain from the bytes; this only keeps the composer from offering what will be refused.
+  function findFormat(file, formats) {
+    if (!file) {
+      return null;
+    }
+    var type = String(file.type || '').toLowerCase();
+    var extension = extensionOf(file.name);
+    return (formats || []).filter(function (format) {
+      return type && String(format.contentType).toLowerCase() === type || extension && (format.extensions || []).some(function (item) {
+        return String(item).toLowerCase() === extension;
+      });
+    })[0] || null;
+  }
+
+  // Splits newly dropped files into the ones that can be attached, the ones the channel does not carry, and the
+  // ones that do not fit because the message already carries as many as it may.
+  function planAttachments(existingCount, incoming, maxCount, formats) {
+    var accepted = [];
+    var notAllowed = [];
+    var overCount = [];
+    var room = Math.max(0, (maxCount || 0) - (existingCount || 0));
+    Array.prototype.forEach.call(incoming || [], function (file) {
+      if (!findFormat(file, formats)) {
+        notAllowed.push(file);
+      } else if (accepted.length < room) {
+        accepted.push(file);
+      } else {
+        overCount.push(file);
+      }
+    });
+    return {
+      accepted: accepted,
+      notAllowed: notAllowed,
+      overCount: overCount
+    };
+  }
+
+  // Each file's share of the message's size budget.
+  function perFileBudget(maxBytes, count) {
+    if (!maxBytes || maxBytes <= 0) {
+      return 0;
+    }
+    return Math.floor(maxBytes / Math.max(1, count || 1));
+  }
+
+  // Whether a file must be redrawn smaller to fit its share: only a still picture, on a channel that shrinks them.
+  function needsShrinking(file, budget, format, shrinkImages) {
+    return !!file && !!format && !!shrinkImages && !!format.canShrink && budget > 0 && file.size > budget;
+  }
+
+  // The size a picture is redrawn at so its longer edge is at most maxEdge, keeping its proportions. A picture that
+  // is already small enough keeps its size.
+  function fitDimensions(width, height, maxEdge) {
+    var longest = Math.max(width || 0, height || 0);
+    if (!longest || !maxEdge || longest <= maxEdge) {
+      return {
+        width: width || 0,
+        height: height || 0
+      };
+    }
+    var scale = maxEdge / longest;
+    return {
+      width: Math.max(1, Math.round(width * scale)),
+      height: Math.max(1, Math.round(height * scale))
+    };
+  }
+
+  // The attempts made to fit a picture, largest first: a quality step, then a smaller edge, until one fits.
+  function shrinkSteps() {
+    return [{
+      maxEdge: 2048,
+      quality: 0.85
+    }, {
+      maxEdge: 1600,
+      quality: 0.8
+    }, {
+      maxEdge: 1280,
+      quality: 0.75
+    }, {
+      maxEdge: 1024,
+      quality: 0.7
+    }, {
+      maxEdge: 800,
+      quality: 0.65
+    }, {
+      maxEdge: 640,
+      quality: 0.6
+    }];
+  }
+  function totalSize(files) {
+    return Array.prototype.reduce.call(files || [], function (sum, file) {
+      return sum + (file && file.size || 0);
+    }, 0);
+  }
+
+  // The value of the file picker's accept attribute for the channel's formats.
+  function acceptAttribute(formats) {
+    var values = [];
+    (formats || []).forEach(function (format) {
+      [format.contentType].concat(format.extensions || []).forEach(function (value) {
+        if (value && values.indexOf(value) < 0) {
+          values.push(value);
+        }
+      });
+    });
+    return values.join(',');
+  }
+  messaging.findAttachmentFormat = findFormat;
+  messaging.planAttachments = planAttachments;
+  messaging.perFileBudget = perFileBudget;
+  messaging.needsShrinking = needsShrinking;
+  messaging.fitDimensions = fitDimensions;
+  messaging.shrinkSteps = shrinkSteps;
+  messaging.totalAttachmentSize = totalSize;
+  messaging.attachmentAcceptAttribute = acceptAttribute;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
  * The messaging workspace page: the customer list, the open customer's conversation and its channel tabs.
  *
  * One SignalR connection keeps all three current. A message for the conversation on screen is appended to it; a message
@@ -436,6 +574,20 @@
         visible++;
       }
     });
+
+    // The starred customers above the list narrow with the same search, and their row hides when none match.
+    var favorites = list.querySelector('[data-inbox-favorites]');
+    if (favorites) {
+      var favoritesVisible = 0;
+      favorites.querySelectorAll('[data-favorite-key]').forEach(function (favorite) {
+        var match = messaging.rowMatchesFilter(favorite.getAttribute('data-filter-value') + ' ' + favorite.textContent, term);
+        favorite.classList.toggle('d-none', !match);
+        if (match) {
+          favoritesVisible++;
+        }
+      });
+      favorites.classList.toggle('d-none', favoritesVisible === 0);
+    }
     var empty = list.querySelector('[data-inbox-no-results]');
     if (empty) {
       empty.classList.toggle('d-none', rows.length === 0 || visible > 0);
@@ -632,6 +784,20 @@
   }
   if (thread) {
     scrollToBottom();
+
+    // A picture grows its bubble only once it has loaded, after the thread was scrolled. A thread the agent was
+    // reading at the bottom stays at the bottom; one they scrolled up in stays where they left it.
+    var followBottom = true;
+    thread.addEventListener('scroll', function () {
+      followBottom = isPinnedToBottom();
+    }, {
+      passive: true
+    });
+    thread.addEventListener('load', function (event) {
+      if (followBottom && event.target && event.target.hasAttribute && event.target.hasAttribute('data-messaging-attachment')) {
+        scrollToBottom();
+      }
+    }, true);
     thread.addEventListener('scroll', clearUnseenWhenVisible, {
       passive: true
     });
@@ -663,6 +829,299 @@
       updateCounter();
     });
   }
+
+  // ---- Attachments -------------------------------------------------------------------------------------------
+
+  // The files waiting to go with the next message, as the agent attached them. What may be attached is the
+  // channel's own list of formats. Pictures are shrunk to fit only when the message is sent, because the share of
+  // the size budget each gets depends on how many files there are by then.
+  var composerForm = composerBody ? composerBody.form : null;
+  var fileInput = composerForm ? composerForm.querySelector('[data-composer-files]') : null;
+  var pending = [];
+  function composerText(name) {
+    return composerForm ? composerForm.getAttribute(name) || '' : '';
+  }
+  var attachmentFormats = function () {
+    try {
+      return JSON.parse(composerText('data-attachment-formats') || '[]');
+    } catch (e) {
+      return [];
+    }
+  }();
+  var mediaError = composerForm ? composerForm.querySelector('[data-composer-media-error]') : null;
+  function showMediaError(text) {
+    if (!mediaError) {
+      return;
+    }
+    mediaError.textContent = text || '';
+    mediaError.classList.toggle('d-none', !text);
+  }
+  function syncRequired() {
+    // An attachment on its own is a message; only an empty composer with nothing attached is refused.
+    if (composerBody) {
+      composerBody.required = pending.length === 0;
+    }
+  }
+  function fileTile(item) {
+    var tile = document.createElement('div');
+    if (item.url) {
+      tile.className = 'messaging-composer-preview rounded border overflow-hidden';
+      var image = document.createElement('img');
+      image.src = item.url;
+      image.alt = item.file.name || '';
+      tile.appendChild(image);
+    } else {
+      // Anything that is not a picture is shown by its name and format.
+      tile.className = 'messaging-composer-preview messaging-composer-file rounded border d-flex flex-column justify-content-center px-2';
+      var name = document.createElement('span');
+      name.className = 'small text-truncate fw-semibold';
+      name.textContent = item.file.name || '';
+      tile.appendChild(name);
+      var kind = document.createElement('span');
+      kind.className = 'text-muted';
+      kind.style.fontSize = '.7rem';
+      kind.textContent = item.format ? item.format.name : '';
+      tile.appendChild(kind);
+    }
+    return tile;
+  }
+  function renderPreviews() {
+    var previews = composerForm ? composerForm.querySelector('[data-composer-previews]') : null;
+    if (!previews) {
+      return;
+    }
+    previews.innerHTML = '';
+    pending.forEach(function (item, index) {
+      var tile = fileTile(item);
+      var remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'btn-close';
+      remove.setAttribute('aria-label', composerText('data-remove-text'));
+      remove.addEventListener('click', function () {
+        if (item.url) {
+          URL.revokeObjectURL(item.url);
+        }
+        pending.splice(index, 1);
+        showMediaError('');
+        renderPreviews();
+      });
+      tile.appendChild(remove);
+      previews.appendChild(tile);
+    });
+    previews.classList.toggle('d-none', pending.length === 0);
+    syncRequired();
+  }
+  function addFiles(files) {
+    if (!fileInput) {
+      return;
+    }
+    var maxCount = parseInt(composerText('data-max-media-count'), 10) || 0;
+    var plan = messaging.planAttachments(pending.length, files, maxCount, attachmentFormats);
+    plan.accepted.forEach(function (file) {
+      var format = messaging.findAttachmentFormat(file, attachmentFormats);
+      pending.push({
+        file: file,
+        format: format,
+        url: format && format.isImage ? URL.createObjectURL(file) : null
+      });
+    });
+    if (plan.notAllowed.length > 0) {
+      showMediaError(composerText('data-not-image-text'));
+    } else if (plan.overCount.length > 0) {
+      showMediaError(composerText('data-too-many-text'));
+    } else {
+      showMediaError('');
+    }
+    renderPreviews();
+    if (composerBody) {
+      composerBody.focus();
+    }
+  }
+  function loadImage(file) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(file);
+      var image = new Image();
+      image.onload = function () {
+        URL.revokeObjectURL(url);
+        resolve(image);
+      };
+      image.onerror = function () {
+        URL.revokeObjectURL(url);
+        reject(new Error('unreadable'));
+      };
+      image.src = url;
+    });
+  }
+  function toJpeg(image, step) {
+    var size = messaging.fitDimensions(image.naturalWidth, image.naturalHeight, step.maxEdge);
+    var canvas = document.createElement('canvas');
+    canvas.width = size.width;
+    canvas.height = size.height;
+    var context = canvas.getContext('2d');
+
+    // A JPEG has no transparency, so a transparent PNG is laid on white rather than black.
+    context.fillStyle = '#fff';
+    context.fillRect(0, 0, size.width, size.height);
+    context.drawImage(image, 0, 0, size.width, size.height);
+    return new Promise(function (resolve) {
+      canvas.toBlob(resolve, 'image/jpeg', step.quality);
+    });
+  }
+
+  // Redraws a still picture smaller, step by step, until it fits its share. Any other file goes as it is. Resolves to
+  // null when a picture cannot be made small enough.
+  function fit(item, budget, shrinkImages) {
+    var file = item.file;
+    if (!messaging.needsShrinking(file, budget, item.format, shrinkImages)) {
+      return Promise.resolve(file);
+    }
+    return loadImage(file).then(function (image) {
+      var steps = messaging.shrinkSteps();
+      function attempt(index) {
+        if (index >= steps.length) {
+          return null;
+        }
+        return toJpeg(image, steps[index]).then(function (blob) {
+          if (blob && blob.size <= budget) {
+            var name = (file.name || 'picture').replace(/\.[^.]+$/, '') + '.jpg';
+            return new File([blob], name, {
+              type: 'image/jpeg'
+            });
+          }
+          return attempt(index + 1);
+        });
+      }
+      return attempt(0);
+    });
+  }
+  var sending = false;
+  if (composerForm && fileInput) {
+    var attachButton = composerForm.querySelector('[data-composer-attach]');
+    if (attachButton) {
+      attachButton.addEventListener('click', function () {
+        fileInput.click();
+      });
+    }
+    fileInput.addEventListener('change', function () {
+      // The input only ever carries what is about to be sent; the picker's choice joins the pending list.
+      var chosen = Array.prototype.slice.call(fileInput.files || []);
+      fileInput.value = '';
+      addFiles(chosen);
+    });
+
+    // A file pasted into the message box is attached like a dropped one.
+    composerBody.addEventListener('paste', function (event) {
+      var files = event.clipboardData ? Array.prototype.slice.call(event.clipboardData.files || []) : [];
+      if (files.length > 0) {
+        event.preventDefault();
+        addFiles(files);
+      }
+    });
+
+    // Dropping anywhere on the conversation attaches the files, with the composer showing where they go.
+    var dropTarget = composerForm.closest('.messaging-thread') || composerForm;
+    var overlay = composerForm.querySelector('[data-composer-drop-overlay]');
+    var dragDepth = 0;
+    var carriesFiles = function (event) {
+      return event.dataTransfer && Array.prototype.indexOf.call(event.dataTransfer.types || [], 'Files') >= 0;
+    };
+    var setOverlay = function (visible) {
+      if (overlay) {
+        overlay.classList.toggle('show', visible);
+      }
+    };
+    dropTarget.addEventListener('dragenter', function (event) {
+      if (!carriesFiles(event)) {
+        return;
+      }
+      event.preventDefault();
+      dragDepth++;
+      setOverlay(true);
+    });
+    dropTarget.addEventListener('dragover', function (event) {
+      if (!carriesFiles(event)) {
+        return;
+      }
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'copy';
+    });
+    dropTarget.addEventListener('dragleave', function (event) {
+      if (!carriesFiles(event)) {
+        return;
+      }
+      dragDepth = Math.max(0, dragDepth - 1);
+      if (dragDepth === 0) {
+        setOverlay(false);
+      }
+    });
+    dropTarget.addEventListener('drop', function (event) {
+      if (!carriesFiles(event)) {
+        return;
+      }
+      event.preventDefault();
+      dragDepth = 0;
+      setOverlay(false);
+      addFiles(Array.prototype.slice.call(event.dataTransfer.files || []));
+    });
+
+    // Sending: fit the attachments to the channel's size budget, put them on the form, and post it.
+    composerForm.addEventListener('submit', function (event) {
+      if (pending.length === 0) {
+        return;
+      }
+      event.preventDefault();
+      if (sending) {
+        return;
+      }
+      sending = true;
+      var submitButton = composerForm.querySelector('button[type="submit"]');
+      if (submitButton) {
+        submitButton.disabled = true;
+      }
+      var maxBytes = parseInt(composerText('data-max-media-bytes'), 10) || 0;
+      var shrinkImages = composerText('data-shrink-images') === 'true';
+      var budget = messaging.perFileBudget(maxBytes, pending.length);
+      Promise.all(pending.map(function (item) {
+        return fit(item, budget, shrinkImages).catch(function () {
+          return null;
+        }).then(function (fitted) {
+          return {
+            item: item,
+            fitted: fitted
+          };
+        });
+      })).then(function (results) {
+        var failed = results.filter(function (result) {
+          return !result.fitted;
+        });
+        var total = messaging.totalAttachmentSize(results.map(function (result) {
+          return result.fitted;
+        }));
+        if (failed.length > 0 || maxBytes > 0 && total > maxBytes) {
+          // Name the file that did not fit, or else the largest one.
+          var culprit = failed.length > 0 ? failed[0].item.file : results.map(function (result) {
+            return result.fitted;
+          }).sort(function (a, b) {
+            return b.size - a.size;
+          })[0];
+          showMediaError(composerText('data-too-large-text').replace('{0}', culprit && culprit.name || ''));
+          sending = false;
+          if (submitButton) {
+            submitButton.disabled = false;
+          }
+          return;
+        }
+        var transfer = new DataTransfer();
+        results.forEach(function (result) {
+          transfer.items.add(result.fitted);
+        });
+        fileInput.files = transfer.files;
+
+        // The native submit skips this handler, so the files go exactly as fitted.
+        composerForm.submit();
+      });
+    });
+  }
   if (composerBody) {
     composerBody.addEventListener('input', updateCounter);
 
@@ -670,7 +1129,7 @@
     composerBody.addEventListener('keydown', function (event) {
       if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
         event.preventDefault();
-        if (composerBody.value.trim()) {
+        if (composerBody.value.trim() || pending.length > 0) {
           composerBody.form.requestSubmit();
         }
       }

@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -38,6 +39,7 @@ public sealed class AdminController : Controller
     private readonly IMessagingAvailabilityService _availabilityService;
     private readonly MessagingWorkspaceBuilder _workspaceBuilder;
     private readonly MessagingContactSearch _contactSearch;
+    private readonly MessagingAttachmentUploads _attachmentUploads;
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
     private readonly ILogger _logger;
@@ -56,6 +58,7 @@ public sealed class AdminController : Controller
         IMessagingAvailabilityService availabilityService,
         MessagingWorkspaceBuilder workspaceBuilder,
         MessagingContactSearch contactSearch,
+        MessagingAttachmentUploads attachmentUploads,
         IAuthorizationService authorizationService,
         INotifier notifier,
         ILogger<AdminController> logger,
@@ -72,6 +75,7 @@ public sealed class AdminController : Controller
         _availabilityService = availabilityService;
         _workspaceBuilder = workspaceBuilder;
         _contactSearch = contactSearch;
+        _attachmentUploads = attachmentUploads;
         _authorizationService = authorizationService;
         _notifier = notifier;
         _logger = logger;
@@ -481,7 +485,7 @@ public sealed class AdminController : Controller
 
     [HttpPost]
     [Admin("messaging/conversation/{id}/send", "MessagingSend")]
-    public async Task<IActionResult> Send(string id, string body, string subject)
+    public async Task<IActionResult> Send(string id, string body, string subject, IFormFileCollection attachments)
     {
         if (!await _authorizationService.AuthorizeAsync(User, MessagingPermissions.UseMessagingWorkspace))
         {
@@ -500,6 +504,15 @@ public sealed class AdminController : Controller
             return Forbid();
         }
 
+        var (stored, refusal) = await _attachmentUploads.StoreAsync(_channelResolver.Get(conversation.Channel), attachments, HttpContext.RequestAborted);
+
+        if (refusal is not null)
+        {
+            await _notifier.WarningAsync(H["The message could not be sent: {0}", refusal]);
+
+            return RedirectToAction(nameof(Conversation), new { id });
+        }
+
         var agent = await _workspaceBuilder.GetCurrentAgentAsync(User);
 
         var result = await _conversationService.SendAsync(new MessagingSendRequest
@@ -507,9 +520,16 @@ public sealed class AdminController : Controller
             ConversationId = id,
             Body = body,
             Subject = subject,
+            Attachments = stored,
             ActingAgentId = agent?.ItemId,
             Principal = User,
         });
+
+        // A send refused before any message was recorded leaves nothing that refers to the pictures.
+        if (result.Message is null)
+        {
+            await _attachmentUploads.DeleteAsync(stored);
+        }
 
         if (!result.Succeeded)
         {
@@ -669,6 +689,7 @@ public sealed class AdminController : Controller
 
         return (conversation, null);
     }
+
 
     private static List<string> ParseRecipients(string text)
     {

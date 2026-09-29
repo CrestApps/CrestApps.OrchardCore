@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
@@ -124,6 +125,23 @@ public class InboxViewModel
 {
     public IList<InboxRow> Rows { get; set; } = [];
 
+    /// <summary>
+    /// Gets or sets the customers the current agent has starred, shown above the list.
+    /// </summary>
+    public IList<FavoriteViewModel> Favorites { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the list shows the agent's favorites instead of conversations.
+    /// </summary>
+    public bool ShowFavorites { get; set; }
+
+    /// <summary>
+    /// Gets the value of the <c>show</c> route value that keeps the list on the current view.
+    /// </summary>
+    public string ShowRouteValue => ShowFavorites
+        ? "favorites"
+        : Filter == MessagingInboxFilter.All ? null : Filter.ToString().ToLowerInvariant();
+
     public bool HasAgentProfile { get; set; }
 
     /// <summary>
@@ -172,9 +190,36 @@ public class InboxViewModel
 /// One customer in the list: their most recent conversation, with the unread messages and channels of every
 /// conversation of theirs on the page folded in.
 /// </summary>
+/// <summary>
+/// A starred customer, as the row of favorites above the customer list shows them.
+/// </summary>
+public class FavoriteViewModel
+{
+    public MessagingFavorite Favorite { get; set; }
+
+    public string Name { get; set; }
+
+    public string AddressDisplay { get; set; }
+
+    public string ChannelIconCssClass { get; set; }
+
+    public bool IsSelected { get; set; }
+
+    /// <summary>
+    /// Gets or sets the customer's most recent conversation the viewer may open, or <see langword="null"/> when there
+    /// is none yet, in which case opening the favorite starts one.
+    /// </summary>
+    public MessagingConversation Conversation { get; set; }
+}
+
 public class InboxRow
 {
     public MessagingConversation Conversation { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the current agent has starred this customer.
+    /// </summary>
+    public bool IsFavorite { get; set; }
 
     public IShape Shape { get; set; }
 
@@ -225,6 +270,23 @@ public class ThreadViewModel
     /// Gets or sets the longest body the channel accepts, when it has a limit.
     /// </summary>
     public int? MaxBodyLength { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the viewer can star customers: only someone with an agent profile has a
+    /// list of favorites.
+    /// </summary>
+    public bool CanFavorite { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the viewer has starred this customer.
+    /// </summary>
+    public bool IsFavorite { get; set; }
+
+    /// <summary>
+    /// Gets or sets the files the conversation's channel can carry, which decides what the composer's drag and drop,
+    /// paste and file picker accept.
+    /// </summary>
+    public MessagingAttachmentCapabilities Attachments { get; set; } = MessagingAttachmentCapabilities.None;
 
     public IReadOnlyList<OmnichannelMessage> Messages { get; set; } = [];
 

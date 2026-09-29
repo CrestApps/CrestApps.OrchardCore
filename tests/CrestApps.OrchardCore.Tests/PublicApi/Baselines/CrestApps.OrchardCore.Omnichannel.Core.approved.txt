@@ -74,6 +74,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core
         }
         public static class SmsErrorCodes
         {
+            public const string MediaNotSupported = "media_not_supported";
             public const string RecipientOptedOut = "recipient_opted_out";
         }
         public static class Sterotypes

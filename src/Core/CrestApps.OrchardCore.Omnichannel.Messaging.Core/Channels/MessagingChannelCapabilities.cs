@@ -11,9 +11,16 @@ public sealed class MessagingChannelCapabilities
     public bool SupportsSubject { get; init; }
 
     /// <summary>
-    /// Gets a value indicating whether a message can carry media attachments.
+    /// Gets a value indicating whether a message can carry files, which is whether <see cref="Attachments"/> lists any
+    /// format.
     /// </summary>
-    public bool SupportsMedia { get; init; }
+    public bool SupportsMedia => Attachments?.IsSupported == true;
+
+    /// <summary>
+    /// Gets the files a message on the channel can carry: which formats, how many and how large. The composer's drag
+    /// and drop, paste and file picker offer exactly these, and the server refuses anything else.
+    /// </summary>
+    public MessagingAttachmentCapabilities Attachments { get; init; } = MessagingAttachmentCapabilities.None;
 
     /// <summary>
     /// Gets a value indicating whether the channel's providers report delivery receipts, so the workspace shows

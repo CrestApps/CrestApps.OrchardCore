@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
@@ -28,6 +29,12 @@ public sealed class MessagingSendRequest
     /// Gets or sets the media URLs to attach, on a channel that supports media.
     /// </summary>
     public IList<string> MediaUrls { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the pictures to send, already kept in the attachment store, on a channel that supports media.
+    /// The provider is given a signed link to each.
+    /// </summary>
+    public IList<MessagingAttachment> Attachments { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the identifier of the agent sending the message. Null for a system-sent message such as an

@@ -52,7 +52,8 @@ public sealed class OutboundDeliveryState
     /// <returns><see langword="true"/> when the schedule has an attempt left and a retry could succeed.</returns>
     public static bool CanRetry(int attempts, string errorCode)
         => CanRetry(attempts) &&
-            !string.Equals(errorCode, OmnichannelConstants.SmsErrorCodes.RecipientOptedOut, StringComparison.Ordinal);
+            !string.Equals(errorCode, OmnichannelConstants.SmsErrorCodes.RecipientOptedOut, StringComparison.Ordinal) &&
+            !string.Equals(errorCode, OmnichannelConstants.SmsErrorCodes.MediaNotSupported, StringComparison.Ordinal);
 
     /// <summary>
     /// Gets the delay before the attempt that follows the given number of attempts.

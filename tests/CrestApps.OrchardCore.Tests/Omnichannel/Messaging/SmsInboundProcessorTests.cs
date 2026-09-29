@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -413,6 +414,7 @@ public class SmsInboundProcessorTests
                         new OptionsWrapper<SmsKeywordReplySettings>(new SmsKeywordReplySettings()),
                         clock.Object),
                 ],
+                new FakeInboundMediaIngestor(),
                 distributedLock,
                 new OptionsWrapper<MessagingWorkspaceOptions>(new MessagingWorkspaceOptions()),
                 session.Object,

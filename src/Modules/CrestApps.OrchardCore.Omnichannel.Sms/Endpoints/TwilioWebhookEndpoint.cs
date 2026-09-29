@@ -101,6 +101,7 @@ internal static class TwilioWebhookEndpoint
             Channel = channel,
             CreatedUtc = clock.UtcNow,
             IsInbound = true,
+            MediaReferences = ReadMediaUrls(form),
         };
 
         var omnichannelEvent = new OmnichannelEvent()
@@ -175,6 +176,30 @@ internal static class TwilioWebhookEndpoint
         // Return empty 200 OK to Twilio immediately.
 
         return TypedResults.Ok();
+    }
+
+    // A picture message (MMS) lists its media as NumMedia plus MediaUrl0..MediaUrlN-1. The messaging workspace copies
+    // them into its own store when it receives the message.
+    internal static List<string> ReadMediaUrls(IFormCollection form)
+    {
+        if (form is null || !int.TryParse(form["NumMedia"].ToString(), out var count) || count <= 0)
+        {
+            return [];
+        }
+
+        var urls = new List<string>();
+
+        for (var index = 0; index < Math.Min(count, 10); index++)
+        {
+            var url = form[$"MediaUrl{index}"].ToString();
+
+            if (!string.IsNullOrWhiteSpace(url))
+            {
+                urls.Add(url);
+            }
+        }
+
+        return urls;
     }
 
     internal static bool IsRequestValid(HttpContext context, string authToken, string siteBaseUrl, ILogger logger)

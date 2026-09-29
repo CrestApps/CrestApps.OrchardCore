@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Drivers;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Models;
@@ -41,6 +42,13 @@ public sealed class Startup : StartupBase
         // carriers needs the send routed to the provider that owns the sending number.
         services.AddScoped<ISmsDispatcher, SmsDispatcher>();
         services.AddScoped(sp => new Lazy<ISmsDispatcher>(sp.GetRequiredService<ISmsDispatcher>));
+
+        // OrchardCore's Twilio provider sends text only, so picture messages on a Twilio number go through this sender,
+        // which also signs the download of a picture a customer sent to a Twilio number.
+        services.AddScoped<TwilioSmsMediaSender>();
+        services.AddScoped<ISmsMediaSender>(sp => sp.GetRequiredService<TwilioSmsMediaSender>());
+        services.AddScoped<IMessagingMediaRequestAuthenticator>(sp => sp.GetRequiredService<TwilioSmsMediaSender>());
+        services.AddHttpClient(TwilioSmsMediaSender.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(30));
 
         // Every SMS provider webhook raises SmsReceived on the shared Omnichannel event bus; this is what hands those
         // texts to the workspace.

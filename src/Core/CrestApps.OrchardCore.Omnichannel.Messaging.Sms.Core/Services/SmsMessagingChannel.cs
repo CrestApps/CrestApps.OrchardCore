@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
 using Microsoft.Extensions.Localization;
@@ -23,10 +24,19 @@ public sealed class SmsMessagingChannel : IMessagingChannel
     private static readonly MessagingChannelCapabilities _capabilities = new()
     {
         SupportsSubject = false,
-        SupportsMedia = false,
         SupportsDeliveryReceipts = true,
         SupportsBroadcast = true,
         ObservesQuietHours = true,
+
+        // A text message carries pictures only (MMS), and the carriers refuse one much over a megabyte, so the
+        // composer shrinks photos to fit.
+        Attachments = new MessagingAttachmentCapabilities
+        {
+            Formats = MessagingFileFormats.Images,
+            MaxCount = 10,
+            MaxTotalBytes = 1024 * 1024,
+            ShrinkImagesToFit = true,
+        },
     };
 
     // Lazy because the channel is built whenever the channel registry is, including while a channel endpoint is being
@@ -99,14 +109,18 @@ public sealed class SmsMessagingChannel : IMessagingChannel
     {
         ArgumentNullException.ThrowIfNull(message);
 
-        return _dispatcher.Value.SendAsync(
-            new SmsMessage
-            {
-                From = message.ServiceAddress,
-                To = message.ContactAddress,
-                Body = message.Body,
-            },
-            cancellationToken);
+        var sms = new SmsMessage
+        {
+            From = message.ServiceAddress,
+            To = message.ContactAddress,
+            Body = message.Body,
+        };
+
+        var mediaUrls = message.MediaUrls?.Where(url => !string.IsNullOrWhiteSpace(url)).ToArray() ?? [];
+
+        return mediaUrls.Length == 0
+            ? _dispatcher.Value.SendAsync(sms, cancellationToken)
+            : _dispatcher.Value.SendAsync(sms, mediaUrls, cancellationToken);
     }
 
     /// <inheritdoc/>
