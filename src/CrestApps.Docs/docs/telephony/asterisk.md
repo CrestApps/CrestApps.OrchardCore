@@ -83,6 +83,35 @@ Configure the tenant-specific **Asterisk** provider on the **Asterisk** tab unde
 
 When you enable **Asterisk** and no default telephony provider is set yet, **Asterisk** becomes the default automatically. When you disable **Asterisk** while it is the default, the default provider is cleared and the soft phone is disabled until another provider is selected.
 
+## Exporting and importing the settings
+
+The tenant-configured Asterisk settings travel through the **Asterisk Settings** deployment step and the `AsteriskSettings` recipe step. The ARI password, the TURN shared secret and the PJSIP Realtime connection string are stored encrypted with keys that belong to the tenant, so they are never written into a plan. When a plan is imported, the destination keeps the secrets it already stores; enter them on the destination's settings screen, or supply them in clear text in a hand-written recipe, where they are encrypted before they are stored.
+
+```json
+{
+  "steps": [
+    {
+      "name": "AsteriskSettings",
+      "Settings": {
+        "IsEnabled": true,
+        "BaseUrl": "https://pbx.example.com/ari/",
+        "UserName": "orchard",
+        "Password": "supply-in-clear-text-or-omit",
+        "ApplicationName": "orchard-tenant-a",
+        "EndpointTemplate": "PJSIP/{number}@phones",
+        "TimeoutSeconds": 30,
+        "WebSocketUrl": "wss://pbx.example.com:8089/ws",
+        "SipDomain": "pbx.example.com",
+        "IceTransportPolicy": "all",
+        "WebRtcCodecs": "opus,g722,ulaw"
+      }
+    }
+  ]
+}
+```
+
+An import applies the same rules as saving the settings screen: the ARI address is normalized, enabling the provider makes it the default when no default is set, and an import that would disable the provider or change its ARI address or Stasis application while calls are still bound to it is refused. Members the step does not carry keep their stored values.
+
 ## Configuration-backed Default Asterisk provider
 
 The **Default Asterisk** provider is not managed through site settings. Instead, the host configures it through shell configuration. When all required values are present, the provider appears automatically in the **Default telephony provider** selector for every tenant where the module is enabled.

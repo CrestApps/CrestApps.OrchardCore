@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Core.Models;
+using CrestApps.OrchardCore.Core.Validation;
 using CrestApps.OrchardCore.Telephony.Core.Models;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -159,7 +160,9 @@ public sealed class ExtensionsController : Controller
             Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
-        if (ModelState.IsValid)
+        var isValid = await CatalogEntryValidation.ValidateAsync(_manager, model, _updateModelAccessor.ModelUpdater, nameof(TelephonyExtension));
+
+        if (isValid && ModelState.IsValid)
         {
             await _manager.CreateAsync(model);
             await _notifier.SuccessAsync(H["A new extension has been created successfully."]);
@@ -217,7 +220,9 @@ public sealed class ExtensionsController : Controller
             Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false),
         };
 
-        if (ModelState.IsValid)
+        var isValid = await CatalogEntryValidation.ValidateAsync(_manager, model, _updateModelAccessor.ModelUpdater, nameof(TelephonyExtension));
+
+        if (isValid && ModelState.IsValid)
         {
             await _manager.UpdateAsync(model);
             await _notifier.SuccessAsync(H["The extension has been updated successfully."]);

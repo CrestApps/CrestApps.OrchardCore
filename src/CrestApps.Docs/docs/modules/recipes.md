@@ -76,15 +76,25 @@ For `AIDataSource`, the schema also derives the `Source` enum from the currently
 
 More broadly, the exported recipe-step schemas now attach descriptions to the known properties across the built-in CrestApps recipe steps so human authors and AI tools can discover what each property is for directly from the schema surface.
 
-## Contact Center and Omnichannel schemas
+## Contact Center, Omnichannel and phone system schemas
 
-The feature also exports dedicated schemas for the Contact Center and Omnichannel configuration steps, each gated on the feature that provides the step so tooling only suggests steps the tenant can actually import:
+The feature also exports dedicated schemas for the Contact Center, Omnichannel and phone system configuration steps, each gated on the feature that provides the step so tooling only suggests steps the tenant can actually import. Each schema describes every member the matching deployment step exports, including the `Properties` extension data an entry carries:
 
-- **Contact Center queues** (`CrestApps.OrchardCore.ContactCenter.Queues`): `ContactCenterSkill`, `ContactCenterQueueGroup`, `ContactCenterBusinessHoursCalendar`, `ContactCenterQueue`, and `ContactCenterAgentEntitlement`.
+- **Contact Center** (`CrestApps.OrchardCore.ContactCenter`): `ContactCenterVoiceMedia`, and the `ContactCenterExternalTransferSettings` site settings.
+- **Contact Center queues** (`CrestApps.OrchardCore.ContactCenter.Queues`): `ContactCenterSkill`, `ContactCenterQueueGroup`, and `ContactCenterQueue`.
+- **Contact Center business hours** (`CrestApps.OrchardCore.ContactCenter.BusinessHours`): `ContactCenterBusinessHoursCalendar`.
+- **Contact Center agent entitlements** (`CrestApps.OrchardCore.ContactCenter.AgentEntitlements`): `ContactCenterAgentEntitlement`.
 - **Contact Center agents** (`CrestApps.OrchardCore.ContactCenter.Agents`): `AgentStateReasonCode`.
 - **Contact Center inbound voice** (`CrestApps.OrchardCore.ContactCenter.InboundVoice`): `ContactCenterEntryPoint`.
 - **Contact Center dialer** (`CrestApps.OrchardCore.ContactCenter.Dialer`): `ContactCenterDialerProfile`.
-- **Omnichannel activities** (`CrestApps.OrchardCore.Omnichannel.Activities`): `OmnichannelCampaignGroup`, `OmnichannelCampaign`, `OmnichannelChannelEndpoint`, `OmnichannelDisposition`, and `OmnichannelSubjectAction`.
+- **Contact Center recording** and **secure capture**: the `ContactCenterRecordingSettings` and `SecureCaptureSettings` site settings.
+- **Omnichannel activities** (`CrestApps.OrchardCore.Omnichannel.Activities`): `OmnichannelCampaignGroup`, `OmnichannelCampaign`, `OmnichannelChannelEndpoint`, `OmnichannelDisposition`, `OmnichannelCadence`, and `OmnichannelSubjectAction`.
+- **Omnichannel messaging** (`CrestApps.OrchardCore.Omnichannel.Messaging`): `OmnichannelMessageTemplate`.
+- **Telephony** (`CrestApps.OrchardCore.Telephony`): `TelephonyExtension`, and the `TelephonySettings` site settings; the soft phone widget feature adds the `SoftPhoneWidgetSettings` site settings.
+- **Telnyx** (`CrestApps.OrchardCore.Telnyx`, `CrestApps.OrchardCore.Telnyx.Sms`): `TelnyxSettings` and `TelnyxSmsSettings`, plus site settings schemas of the same names.
+- **Asterisk** (`CrestApps.OrchardCore.Asterisk`): `AsteriskSettings`, plus a site settings schema of the same name.
+
+The provider settings steps take secrets in clear text and protect them on import, never export them, and keep the stored secret when a recipe omits it. Their site settings schemas describe the generic `Settings` step instead, which stores a value exactly as given, so a secret there must already be protected by the destination tenant.
 
 The Contact Center workflows bridge (available automatically when `OrchardCore.Workflows` is enabled alongside Contact Center) additionally contributes workflow-activity schemas for the `ContactCenterEvent` event and the `EnqueueActivityTask`, `ScheduleCallbackTask`, `SetAgentPresenceTask`, `StartCallRecordingTask`, and `StopCallRecordingTask` tasks, so the `WorkflowType` step can describe their properties and outcomes.
 

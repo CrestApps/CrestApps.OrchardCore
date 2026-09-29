@@ -25,9 +25,10 @@ public sealed class OmnichannelCampaignGroupRecipeStep : IRecipeStep
                     .Items(new JsonSchemaBuilder()
                         .Type(SchemaValueType.Object)
                         .Properties(
-                            ("ItemId", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Stable identifier of the campaign group. When it matches an existing group the entry is updated; otherwise a new group is created.")),
+                            ("ItemId", CatalogRecipeStepSchemas.ItemId("campaign group")),
                             ("DisplayText", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Human-readable name of the campaign group.")),
-                            ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Administrative description of the campaign group.")))
+                            ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Administrative description of the campaign group.")),
+                            ("Properties", CatalogRecipeStepSchemas.Properties("campaign group")))
                         .AdditionalProperties(true))
                     .Description("Campaign groups to create or update.")))
             .Required("name", "CampaignGroups")

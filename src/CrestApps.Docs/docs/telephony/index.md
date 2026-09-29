@@ -146,6 +146,37 @@ walkthrough, see [Telephony settings](../user-manual/telephony-settings.md) in t
 - Each enabled provider contributes **its own tab** (rendered by a display driver in the provider
   module) where you enable the provider and supply its credentials.
 
+### Exporting and importing the settings
+
+The shared telephony settings and the soft phone widget settings travel through the standard **Site Settings**
+deployment steps (**Telephony Settings** and **Soft Phone Widget Settings**) and are imported by the built-in
+`Settings` recipe step:
+
+```json
+{
+  "steps": [
+    {
+      "name": "Settings",
+      "TelephonySettings": {
+        "DefaultProviderName": "Telnyx",
+        "AllowedShortCodes": ["611"]
+      },
+      "SoftPhoneWidgetSettings": {
+        "Enabled": true,
+        "DisplayOnAdmin": true,
+        "EnableDiagnostics": false,
+        "AccentColor": "#2f6fed",
+        "RecentCallsCount": 30,
+        "DefaultCountryCode": "US"
+      }
+    }
+  ]
+}
+```
+
+A provider's own settings hold credentials, so they travel through the provider's own step instead; see
+[Telnyx](./telnyx.md#exporting-and-importing-the-settings) and [Asterisk](./asterisk.md#exporting-and-importing-the-settings).
+
 ## Dial destination safety
 
 Every path that places or transfers a call answers to one policy, `IDialDestinationPolicy`, before a provider is

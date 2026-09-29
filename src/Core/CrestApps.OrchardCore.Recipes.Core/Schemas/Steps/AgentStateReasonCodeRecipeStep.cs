@@ -25,12 +25,14 @@ public sealed class AgentStateReasonCodeRecipeStep : IRecipeStep
                     .Items(new JsonSchemaBuilder()
                         .Type(SchemaValueType.Object)
                         .Properties(
-                            ("ItemId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional unique identifier. When supplied and found, the existing reason code is updated instead of a new one being created.")),
+                            ("ItemId", CatalogRecipeStepSchemas.ItemId("reason code")),
                             ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Unique reason code name shown to agents and supervisors.")),
                             ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Reason code description.")),
                             ("AppliesTo", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Offline", "Available", "Reserved", "Busy", "WrapUp", "Break", "RequestBreak", "Away", "DoNotDisturb", "Meeting", "Training", "AfterHoursUnavailable").Description("Presence state an agent enters when they select this reason code.")),
                             ("SortOrder", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("Relative order the reason code is listed in, lowest first.")),
-                            ("Enabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the reason code can be selected by agents.")))
+                            ("Enabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the reason code can be selected by agents.")),
+                            ("Properties", CatalogRecipeStepSchemas.Properties("reason code")))
+                        .Required("Name")
                         .AdditionalProperties(true))
                     .Description("The agent state reason codes to create or update.")))
             .Required("name", "ReasonCodes")

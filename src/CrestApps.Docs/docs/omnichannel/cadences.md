@@ -39,6 +39,34 @@ Every follow-up is **background-initiated** — the automation sends it on its o
 
 A **live reply** to a contact who is *actively messaging* is never gated — only the proactive follow-ups a cadence sends are. Likewise, a reply the automation owes to a message the contact just sent is completed normally, not treated as a follow-up.
 
+## Exporting and importing cadences
+
+Cadences travel between environments through the **Omnichannel Cadences** deployment step and the `OmnichannelCadence` recipe step. An imported cadence keeps its identifier, so a campaign that selects it still points at it after the plan is replayed. Import cadences before the campaigns that select them.
+
+```json
+{
+  "steps": [
+    {
+      "name": "OmnichannelCadence",
+      "Cadences": [
+        {
+          "ItemId": "7rq2m9x4k1c6v3b8n5t0h2y7z",
+          "DisplayText": "Gentle reminder",
+          "Description": "Two follow-ups for a contact who stops replying.",
+          "Enabled": true,
+          "Steps": [
+            { "DelayMinutes": 60, "IsAiGenerated": false, "Message": "Just checking in. Do you still need help?" },
+            { "DelayMinutes": 1440, "IsAiGenerated": true, "Message": "Offer to call them back at a time that suits them." }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+A step that is not AI-generated must carry its message, the same rule the editor applies; an entry that breaks it is reported and skipped.
+
 ## How follow-ups are sent
 
 A background task evaluates due follow-ups on a short interval. For each automated conversation it only acts when:

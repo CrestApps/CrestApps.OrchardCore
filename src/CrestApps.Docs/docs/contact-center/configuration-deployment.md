@@ -35,18 +35,37 @@ Each configurable entity has its own deployment step and a matching recipe step,
 | Dialer profile | Contact Center Dialer Profiles | `ContactCenterDialerProfile` | `DialerProfiles` |
 | Agent state reason code | Contact Center Agent State Reason Codes | `AgentStateReasonCode` | `ReasonCodes` |
 | Agent entitlements | Contact Center Agent Entitlements | `ContactCenterAgentEntitlement` | `Agents` |
+| Voice media clip | Contact Center Voice Media Library | `ContactCenterVoiceMedia` | `VoiceMedia` |
 
 The CRM configuration a contact centre routes and reports on travels the same way. Those steps are described in [Omnichannel management](../omnichannel/management.md#exporting-and-importing-configuration).
 
 A step only appears when the feature that owns its entity is enabled, so a tenant that does not run the dialer is not offered a dialer profile step.
 
-Some configuration has no Contact Center deployment step and must be set up again in the destination: the **Voice Media** library, shared voicemail messages, and the Contact Center site settings (such as recording governance and external transfer destinations). Because voice media does not travel, an imported IVR menu keeps a recorded prompt's `PromptMediaId` that the destination does not have; upload the recording there and pick it again on the entry point's menu; until then the menu falls back to its prompt text, as described in [Voice Routing](voice-routing.md#prompts).
+A voice media clip travels as its library entry: its name, description, provider, format and the provider's media reference. The audio itself stays in the telephony provider's media storage and is not part of the plan. When the destination uses the same provider account, the imported clip plays as it did in the source. When it uses a different account, open the imported clip in the destination and upload its audio again; because the clip keeps its identifier, the queues, entry points and IVR prompts that reference it keep pointing at it and start playing the new audio as soon as it is uploaded. Until then an IVR menu falls back to its prompt text, as described in [Voice Routing](voice-routing.md#prompts).
+
+:::caution
+Deleting a voice media clip also deletes its audio from the provider's media storage. When two environments share one provider account, deleting a clip in one environment removes the audio the other environment plays.
+:::
+
+Shared voicemail messages do not travel: each is a message a caller left, not configuration.
 
 Full agent profiles do not travel. A profile names the person who holds it, carries their contact details, and records the state they are in right now; it is a record of who works in an environment rather than of how that environment is configured, so it is treated as runtime state and stays where it is produced. The manager-owned entitlement configuration an operator does grant — display name, maximum concurrent interactions, allowed queues, allowed campaigns and skills — travels through the **Contact Center Agent Entitlements** step. That step is a deliberate projection: it is keyed by the Orchard user name (the internal user identifier differs between environments) and it never carries live presence, the internal user identifier, or the profile item identifier. The user name is resolved from the live user record at export time, so a plan stays valid even after an administrator renames the user. On import each entry is matched to a user by name — an entry whose user is absent from the destination is reported and skipped — dangling queue and campaign references are dropped, and an existing profile has only its configuration promoted, so a signed-in agent's presence and active reservation are left untouched.
 
 Runtime state deliberately does not travel. Activities, activity batches, interactions, interaction events, call sessions, queue items, reservations, agent sessions, callback requests, provider commands, webhook inbox messages, the outbox, the deduplication ledger, projection checkpoints, work state, and aggregated metrics are produced by traffic in the environment that owns them; copying them would move one tenant's live work into another. Every stored entity is either carried by a step or recorded as runtime state, and a build fails if a new entity is neither.
 
-Provider credentials and connection settings are not part of a plan. They are bound from configuration - `appsettings.json`, environment variables, or a secret store - so that a plan committed to source control never carries a secret and a destination environment keeps its own provider account.
+### Settings
+
+The Contact Center settings travel through Orchard Core's standard **Site Settings** deployment steps and are imported by the built-in `Settings` recipe step, each under the property named after its settings object:
+
+| Settings | Deployment step | `Settings` property | Feature |
+| --- | --- | --- | --- |
+| External transfer destinations | Contact Center External Transfer Settings | `ContactCenterExternalTransferSettings` | Contact Center |
+| Recording and monitoring | Contact Center Recording Settings | `ContactCenterRecordingSettings` | Contact Center Recording |
+| Secure capture | Contact Center Secure Capture Settings | `SecureCaptureSettings` | Contact Center Secure Capture |
+
+The `Settings` step replaces a settings object as a whole, so a plan always carries every member of the object it exports.
+
+The telephony provider settings are different, because they hold credentials. Each provider exports its settings through a step of its own that never writes a secret into the plan, and its import keeps the secret the destination already stores. See [Telnyx](../telephony/telnyx.md#exporting-and-importing-the-settings) and [Asterisk](../telephony/asterisk.md#exporting-and-importing-the-settings). The configuration-backed default providers are bound from configuration (`appsettings.json`, environment variables or a secret store) and are not part of a plan at all.
 
 ## Exporting a tenant
 
@@ -72,7 +91,7 @@ Because identifiers are preserved, cross-references keep working after the impor
 
 A recipe runs its steps in file order, and a reference is checked when the entry that carries it is stored. Order a plan's Contact Center steps as follows:
 
-1. Skills, queue groups, and business hours calendars.
+1. Voice media clips, skills, queue groups, and business hours calendars.
 2. Queues.
 3. Entry points.
 4. Dialer profiles.
@@ -110,6 +129,33 @@ The steps are plain recipe steps, so a tenant can also be scripted from scratch.
           "Enabled": true
         }
       ]
+    },
+    {
+      "name": "ContactCenterVoiceMedia",
+      "VoiceMedia": [
+        {
+          "ItemId": "4xk6r3m7y0q8c2z5v9b1n3h6t",
+          "Name": "Support hold music",
+          "Description": "Played while callers wait in the support queue.",
+          "ProviderName": "Telnyx",
+          "MediaReference": "support-hold-music",
+          "Format": "mp3"
+        }
+      ]
+    },
+    {
+      "name": "Settings",
+      "ContactCenterExternalTransferSettings": {
+        "Destinations": [
+          {
+            "Id": "after-hours-desk",
+            "DisplayName": "After-hours desk",
+            "E164Address": "+15551230000",
+            "Enabled": true
+          }
+        ],
+        "AllowUnlistedNumbers": false
+      }
     },
     {
       "name": "ContactCenterAgentEntitlement",

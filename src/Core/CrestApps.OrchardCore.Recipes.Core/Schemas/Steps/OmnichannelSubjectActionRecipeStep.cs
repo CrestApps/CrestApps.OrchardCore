@@ -25,7 +25,7 @@ public sealed class OmnichannelSubjectActionRecipeStep : IRecipeStep
                     .Items(new JsonSchemaBuilder()
                         .Type(SchemaValueType.Object)
                         .Properties(
-                            ("ItemId", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Stable identifier of the subject action. When it matches an existing action the entry is updated; otherwise a new action is created.")),
+                            ("ItemId", CatalogRecipeStepSchemas.ItemId("subject action")),
                             ("Source", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Source that owns the subject action. A subject action cannot be imported without a source.")),
                             ("DisplayText", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Human-readable name of the subject action.")),
                             ("SubjectContentType", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Subject content type this action belongs to.")),
@@ -33,7 +33,8 @@ public sealed class OmnichannelSubjectActionRecipeStep : IRecipeStep
                             ("DispositionGuidance", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("What this disposition means for this subject, given to the AI when it dispositions an automated call or message. Replaces the disposition's own description.")),
                             ("SetDoNotCall", new JsonSchemaBuilder().Type(SchemaValueType.Boolean | SchemaValueType.Null).Description("Whether to set the contact's 'Do Not Call' preference when this action runs.")),
                             ("SetDoNotSms", new JsonSchemaBuilder().Type(SchemaValueType.Boolean | SchemaValueType.Null).Description("Whether to set the contact's 'Do Not SMS' preference when this action runs.")),
-                            ("SetDoNotEmail", new JsonSchemaBuilder().Type(SchemaValueType.Boolean | SchemaValueType.Null).Description("Whether to set the contact's 'Do Not Email' preference when this action runs.")))
+                            ("SetDoNotEmail", new JsonSchemaBuilder().Type(SchemaValueType.Boolean | SchemaValueType.Null).Description("Whether to set the contact's 'Do Not Email' preference when this action runs.")),
+                            ("Properties", CatalogRecipeStepSchemas.Properties("subject action")))
                         .Required("Source")
                         .AdditionalProperties(true))
                     .Description("Subject actions to create or update.")))

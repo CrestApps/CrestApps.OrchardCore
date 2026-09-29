@@ -13,6 +13,16 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Deployments;
 using CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Steps;
+using CrestApps.OrchardCore.Omnichannel.Messaging;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Deployments;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Deployments.Steps;
+using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Telephony.Core.Models;
+using CrestApps.OrchardCore.Telephony.Core.Services;
+using CrestApps.OrchardCore.Telephony.Deployments;
+using CrestApps.OrchardCore.Telephony.Deployments.Steps;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Deployment;
 using OrchardCore.Recipes.Models;
@@ -33,13 +43,16 @@ namespace CrestApps.OrchardCore.ContactCenter.FeatureActivationTests;
 /// exported entry to a stored one by identifier alone, creating the entry when the identifier is absent and preserving
 /// the exported identifier so that the references other entries hold keep resolving.
 /// </remarks>
-public sealed class ContactCenterConfigurationPortabilityTests
+public sealed partial class ContactCenterConfigurationPortabilityTests
 {
     private const string DeploymentFeatureId = "OrchardCore.Deployment";
     private const string RecipesFeatureId = "OrchardCore.Recipes.Core";
+    private const string RecipeSchemasFeatureId = "CrestApps.OrchardCore.Recipes";
 
     private const string ContactCenterGroup = "ContactCenter";
     private const string OmnichannelGroup = "Omnichannel";
+    private const string MessagingGroup = "Messaging";
+    private const string TelephonyGroup = "Telephony";
 
     /// <summary>
     /// The members a destination environment writes for itself, excluded from the settings comparison. Creation and
@@ -64,8 +77,11 @@ public sealed class ContactCenterConfigurationPortabilityTests
         ContactCenterConstants.Feature.Queues,
         ContactCenterConstants.Feature.InboundVoice,
         ContactCenterConstants.Feature.Dialer,
+        MessagingConstants.Feature.Workspace,
+        TelephonyConstants.Feature.Area,
         DeploymentFeatureId,
         RecipesFeatureId,
+        RecipeSchemasFeatureId,
     ];
 
     private static readonly ConfigurationGroup[] _groups =
@@ -80,6 +96,7 @@ public sealed class ContactCenterConfigurationPortabilityTests
                 new ConfigurationCatalog(ContactCenterDeploymentSteps.EntryPoint, "EntryPoints", typeof(ContactCenterEntryPoint), typeof(IContactCenterEntryPointManager), static () => new ContactCenterEntryPointDeploymentStep()),
                 new ConfigurationCatalog(ContactCenterDeploymentSteps.DialerProfile, "DialerProfiles", typeof(DialerProfile), typeof(IDialerProfileManager), static () => new ContactCenterDialerProfileDeploymentStep()),
                 new ConfigurationCatalog(ContactCenterDeploymentSteps.AgentStateReasonCode, "ReasonCodes", typeof(AgentStateReasonCode), typeof(IAgentStateReasonCodeManager), static () => new AgentStateReasonCodeDeploymentStep()),
+                new ConfigurationCatalog(ContactCenterDeploymentSteps.VoiceMedia, "VoiceMedia", typeof(VoiceMediaItem), typeof(IVoiceMediaItemManager), static () => new ContactCenterVoiceMediaDeploymentStep()),
             ]),
         new ConfigurationGroup(
             OmnichannelGroup,
@@ -89,6 +106,19 @@ public sealed class ContactCenterConfigurationPortabilityTests
                 new ConfigurationCatalog(OmnichannelDeploymentSteps.CampaignGroup, "CampaignGroups", typeof(OmnichannelCampaignGroup), typeof(ICatalogManager<OmnichannelCampaignGroup>), static () => new OmnichannelCampaignGroupDeploymentStep()),
                 new ConfigurationCatalog(OmnichannelDeploymentSteps.Campaign, "Campaigns", typeof(OmnichannelCampaign), typeof(ICatalogManager<OmnichannelCampaign>), static () => new OmnichannelCampaignDeploymentStep()),
                 new ConfigurationCatalog(OmnichannelDeploymentSteps.SubjectAction, "SubjectActions", typeof(SubjectAction), typeof(ISourceCatalogManager<SubjectAction>), static () => new OmnichannelSubjectActionDeploymentStep()),
+                new ConfigurationCatalog(OmnichannelDeploymentSteps.Cadence, "Cadences", typeof(Cadence), typeof(ICatalogManager<Cadence>), static () => new CadenceDeploymentStep()),
+            ]),
+        new ConfigurationGroup(
+            MessagingGroup,
+            [
+                new ConfigurationCatalog(MessagingDeploymentSteps.MessageTemplate, "Templates", typeof(MessageTemplate), typeof(IMessageTemplateManager), static () => new OmnichannelMessageTemplateDeploymentStep()),
+            ]),
+        new ConfigurationGroup(
+            TelephonyGroup,
+            [
+                // A user's identifier is minted by the tenant that created the account, so an extension is matched to
+                // its user by user name and lands holding the destination's identifier for that user.
+                new ConfigurationCatalog(TelephonyDeploymentSteps.Extension, "Extensions", typeof(TelephonyExtension), typeof(ITelephonyExtensionManager), static () => new TelephonyExtensionDeploymentStep(), [nameof(TelephonyExtension.UserId)]),
             ]),
     ];
 
@@ -100,12 +130,14 @@ public sealed class ContactCenterConfigurationPortabilityTests
     /// <param name="EntryType">The entity type the catalog stores.</param>
     /// <param name="ManagerType">The catalog manager that owns the stored entries.</param>
     /// <param name="CreateStep">Creates the deployment step that exports the entity.</param>
+    /// <param name="DestinationOwnedMembers">Members the destination resolves for itself, excluded from the comparison.</param>
     private sealed record ConfigurationCatalog(
         string StepName,
         string CollectionName,
         Type EntryType,
         Type ManagerType,
-        Func<DeploymentStep> CreateStep);
+        Func<DeploymentStep> CreateStep,
+        string[] DestinationOwnedMembers = null);
 
     /// <summary>
     /// Describes the catalogs a feature area exports, listed in the order a plan has to import them so that every
@@ -121,6 +153,8 @@ public sealed class ContactCenterConfigurationPortabilityTests
     [Theory]
     [InlineData(ContactCenterGroup)]
     [InlineData(OmnichannelGroup)]
+    [InlineData(MessagingGroup)]
+    [InlineData(TelephonyGroup)]
     public async Task EveryConfigurationCatalog_IsExportedByTheDeploymentStep(string group)
     {
         await using var host = await ContactCenterFeatureActivationHost.StartAsync();
@@ -147,6 +181,8 @@ public sealed class ContactCenterConfigurationPortabilityTests
     [Theory]
     [InlineData(ContactCenterGroup)]
     [InlineData(OmnichannelGroup)]
+    [InlineData(MessagingGroup)]
+    [InlineData(TelephonyGroup)]
     public async Task ExportedConfiguration_ReplaysIntoAnEmptyTenantWithoutLosingAnySetting(string group)
     {
         await using var host = await ContactCenterFeatureActivationHost.StartAsync();
@@ -198,6 +234,8 @@ public sealed class ContactCenterConfigurationPortabilityTests
     [Theory]
     [InlineData(ContactCenterGroup)]
     [InlineData(OmnichannelGroup)]
+    [InlineData(MessagingGroup)]
+    [InlineData(TelephonyGroup)]
     public async Task ReplayingTheSamePlanTwice_DoesNotDuplicateConfiguration(string group)
     {
         await using var host = await ContactCenterFeatureActivationHost.StartAsync();
@@ -465,6 +503,8 @@ public sealed class ContactCenterConfigurationPortabilityTests
     [Theory]
     [InlineData(ContactCenterGroup)]
     [InlineData(OmnichannelGroup)]
+    [InlineData(MessagingGroup)]
+    [InlineData(TelephonyGroup)]
     public async Task ImportedConfiguration_KeepsTheIdentifiersThatOtherEntriesPointAt(string group)
     {
         await using var host = await ContactCenterFeatureActivationHost.StartAsync();
@@ -542,6 +582,8 @@ public sealed class ContactCenterConfigurationPortabilityTests
 
     private static readonly (string OwningStep, string PropertyName, JsonNode Value)[] _seedOverrides =
     [
+        // An extension must ring a user that exists, and every test tenant is set up with an administrator named "admin".
+        (TelephonyDeploymentSteps.Extension, nameof(TelephonyExtension.UserName), JsonValue.Create("admin")),
         (ContactCenterDeploymentSteps.DialerProfile, nameof(DialerProfile.Mode), JsonValue.Create(nameof(DialerMode.Preview))),
         (ContactCenterDeploymentSteps.DialerProfile, nameof(DialerProfile.CallsPerAgent), JsonValue.Create(PowerDialerStrategy.MaxCallsPerAgent)),
         // The generic seeder fills every string with a marker value, but the caller id is validated as a real
@@ -815,9 +857,13 @@ public sealed class ContactCenterConfigurationPortabilityTests
         JsonObject actual,
         List<string> differences)
     {
+        var ignored = _environmentOwnedMembers
+            .Concat(_groups.SelectMany(group => group.Catalogs).First(catalog => catalog.StepName == stepName).DestinationOwnedMembers ?? [])
+            .ToHashSet(StringComparer.Ordinal);
+
         foreach (var property in expected)
         {
-            if (_environmentOwnedMembers.Contains(property.Key, StringComparer.Ordinal))
+            if (ignored.Contains(property.Key))
             {
                 continue;
             }
@@ -834,7 +880,7 @@ public sealed class ContactCenterConfigurationPortabilityTests
 
         foreach (var property in actual)
         {
-            if (_environmentOwnedMembers.Contains(property.Key, StringComparer.Ordinal))
+            if (ignored.Contains(property.Key))
             {
                 continue;
             }

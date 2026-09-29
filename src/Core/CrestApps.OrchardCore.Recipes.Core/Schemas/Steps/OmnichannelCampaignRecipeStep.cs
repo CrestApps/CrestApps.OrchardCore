@@ -25,7 +25,7 @@ public sealed class OmnichannelCampaignRecipeStep : IRecipeStep
                     .Items(new JsonSchemaBuilder()
                         .Type(SchemaValueType.Object)
                         .Properties(
-                            ("ItemId", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Stable identifier of the campaign. When it matches an existing campaign the entry is updated; otherwise a new campaign is created.")),
+                            ("ItemId", CatalogRecipeStepSchemas.ItemId("campaign")),
                             ("DisplayText", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Human-readable name of the campaign.")),
                             ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Administrative description of the campaign.")),
                             ("CampaignGroupId", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Identifier of the campaign group this campaign is reported under.")),
@@ -51,7 +51,8 @@ public sealed class OmnichannelCampaignRecipeStep : IRecipeStep
                                 .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))
                                 .Description("Names of the tools the automation is allowed to invoke.")),
                             ("AllowAIToUpdateContact", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the AI is allowed to update the contact during an automated conversation.")),
-                            ("AllowAIToUpdateSubject", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the AI is allowed to update the subject during an automated conversation.")))
+                            ("AllowAIToUpdateSubject", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the AI is allowed to update the subject during an automated conversation.")),
+                            ("Properties", CatalogRecipeStepSchemas.Properties("campaign")))
                         .AdditionalProperties(true))
                     .Description("Campaigns to create or update.")))
             .Required("name", "Campaigns")
