@@ -37,4 +37,15 @@ public sealed class MessagingChannelCapabilities
     /// Gets the longest body the channel accepts, or <see langword="null"/> when there is no practical limit.
     /// </summary>
     public int? MaxBodyLength { get; init; }
+
+    /// <summary>
+    /// Gets the most pictures one message may carry, on a channel that supports media.
+    /// </summary>
+    public int MaxMediaCount { get; init; } = 10;
+
+    /// <summary>
+    /// Gets the largest total size, in bytes, of the pictures one message may carry, on a channel that supports
+    /// media. The composer shrinks a larger photo to fit before it is sent.
+    /// </summary>
+    public long MaxMediaBytes { get; init; } = 5 * 1024 * 1024;
 }

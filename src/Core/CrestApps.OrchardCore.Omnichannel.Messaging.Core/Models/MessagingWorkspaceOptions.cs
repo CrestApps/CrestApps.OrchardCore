@@ -36,6 +36,23 @@ public sealed class MessagingWorkspaceOptions
     public int MaxMessagesPerPassPerEndpoint { get; set; } = 20;
 
     /// <summary>
+    /// Gets or sets the largest picture, in bytes, kept from a received message. A larger one is counted as not
+    /// shown rather than stored. Defaults to 10 MB.
+    /// </summary>
+    public long MaxInboundAttachmentBytes { get; set; } = 10 * 1024 * 1024;
+
+    /// <summary>
+    /// Gets or sets how many pictures are kept from one received message. Defaults to 10.
+    /// </summary>
+    public int MaxInboundAttachments { get; set; } = 10;
+
+    /// <summary>
+    /// Gets or sets how long, in hours, the link a provider downloads an outbound picture from stays valid.
+    /// Defaults to 72.
+    /// </summary>
+    public int AttachmentLinkLifetimeHours { get; set; } = 72;
+
+    /// <summary>
     /// Gets the per-thread lock wait as a <see cref="TimeSpan"/>.
     /// </summary>
     public TimeSpan ConversationLockTimeout => TimeSpan.FromSeconds(Math.Max(1, ConversationLockTimeoutSeconds));

@@ -29,6 +29,7 @@ public sealed class SmsDispatcher : ISmsDispatcher
     private readonly IContentManager _contentManager;
     private readonly IClock _clock;
     private readonly Redactor _addressRedactor;
+    private readonly IEnumerable<ISmsMediaSender> _mediaSenders;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -41,6 +42,7 @@ public sealed class SmsDispatcher : ISmsDispatcher
     /// <param name="contentManager">The content manager used to record a contact's SMS opt-out.</param>
     /// <param name="clock">The clock the opt-out is stamped with.</param>
     /// <param name="redactorProvider">The redactor provider used to keep phone numbers out of the log.</param>
+    /// <param name="mediaSenders">The picture-message senders for providers whose own implementation carries text only.</param>
     /// <param name="logger">The logger instance.</param>
     public SmsDispatcher(
         IOmnichannelChannelEndpointManager endpointManager,
@@ -50,6 +52,7 @@ public sealed class SmsDispatcher : ISmsDispatcher
         IContentManager contentManager,
         IClock clock,
         IRedactorProvider redactorProvider,
+        IEnumerable<ISmsMediaSender> mediaSenders,
         ILogger<SmsDispatcher> logger)
     {
         _endpointManager = endpointManager;
@@ -59,13 +62,20 @@ public sealed class SmsDispatcher : ISmsDispatcher
         _contentManager = contentManager;
         _clock = clock;
         _addressRedactor = redactorProvider.GetRedactor(LogDataClassifications.AddressSet);
+        _mediaSenders = mediaSenders ?? [];
         _logger = logger;
     }
 
     /// <inheritdoc/>
-    public async Task<MessageDispatchResult> SendAsync(SmsMessage message, CancellationToken cancellationToken = default)
+    public Task<MessageDispatchResult> SendAsync(SmsMessage message, CancellationToken cancellationToken = default)
+        => SendAsync(message, [], cancellationToken);
+
+    /// <inheritdoc/>
+    public async Task<MessageDispatchResult> SendAsync(SmsMessage message, IReadOnlyList<string> mediaUrls, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(message);
+
+        mediaUrls ??= [];
 
         if (string.IsNullOrEmpty(message.From))
         {
@@ -88,6 +98,22 @@ public sealed class SmsDispatcher : ISmsDispatcher
             return MessageDispatchResult.Failed($"The SMS provider '{providerName}' is not registered or enabled.");
         }
 
+        // Pictures only leave through a provider that can carry them. Sending the text alone would tell the customer
+        // about a picture they never receive.
+        var mediaSender = mediaUrls.Count > 0 && provider is not ISmsMediaDispatchProvider
+            ? _mediaSenders.FirstOrDefault(sender => string.Equals(sender.ProviderName, providerName, StringComparison.OrdinalIgnoreCase))
+            : null;
+
+        if (mediaUrls.Count > 0 && provider is not ISmsMediaDispatchProvider && mediaSender is null)
+        {
+            _logger.LogWarning("The SMS provider '{ProviderName}' cannot send picture messages, so a message with {Count} picture(s) was refused.", providerName, mediaUrls.Count);
+
+            var refused = MessageDispatchResult.Failed($"The SMS provider '{providerName}' cannot send pictures.");
+            refused.ErrorCode = OmnichannelConstants.SmsErrorCodes.MediaNotSupported;
+
+            return refused;
+        }
+
         // A provider that only answers "not sent" can still say why through the refusal scope: the provider-specific
         // code that reads its response reports the reason into it.
         using var refusal = SmsProviderRefusalScope.Begin();
@@ -96,7 +122,15 @@ public sealed class SmsDispatcher : ISmsDispatcher
 
         // A provider that can report its own message id does so, because that identifier is what makes a later
         // delivery receipt match this exact message instead of the newest one without an id.
-        if (provider is ISmsDispatchProvider dispatchProvider)
+        if (mediaUrls.Count > 0 && provider is ISmsMediaDispatchProvider mediaProvider)
+        {
+            dispatch = await mediaProvider.DispatchAsync(message, mediaUrls, cancellationToken);
+        }
+        else if (mediaSender is not null)
+        {
+            dispatch = await mediaSender.SendAsync(message, mediaUrls, cancellationToken);
+        }
+        else if (provider is ISmsDispatchProvider dispatchProvider)
         {
             dispatch = await dispatchProvider.DispatchAsync(message, cancellationToken);
         }

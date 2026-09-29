@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Omnichannel.Core;
@@ -439,6 +440,7 @@ public sealed class SmsHandoffTranscriptTests
                 CreateRouter(clock),
                 new NoOpSmsFirstResponseSlaService(),
                 [],
+                new FakeInboundMediaIngestor(),
                 _distributedLock,
                 new OptionsWrapper<MessagingWorkspaceOptions>(new MessagingWorkspaceOptions()),
                 session,

@@ -5,12 +5,14 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.BackgroundTasks;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.Routing;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.Routers;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Drivers;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Endpoints;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Filters;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Hubs;
@@ -20,18 +22,23 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Notifications;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Configuration;
+using OrchardCore.FileStorage.FileSystem;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
@@ -132,12 +139,39 @@ public sealed class Startup : StartupBase
         // inbox toggle works whether or not push distribution is enabled.
         services.AddScoped<IMessagingAvailabilityService, MessagingAvailabilityService>();
 
+        // Each agent's starred customers, kept on their agent profile like their availability.
+        services.AddScoped<IMessagingFavoritesService, MessagingFavoritesService>();
+
         // Workspace presence lives in the distributed cache: a heartbeat is a fact that expires, and the cache is
         // shared across nodes wherever the deployment has configured it to be.
         services.AddSingleton<IMessagingPresenceTracker, DistributedCacheMessagingPresenceTracker>();
 
         // The inbound pipeline every channel's receiver hands its messages to.
         services.AddScoped<IMessagingInboundProcessor, MessagingInboundProcessor>();
+
+        // Pictures. They are kept encrypted in the tenant's own application data rather than the public media
+        // library, copied in from the provider when a message arrives, shown to agents through an action that
+        // checks the conversation, and handed to the provider for an outbound message as a signed, expiring link.
+        services.AddSingleton<IMessagingAttachmentStore>(serviceProvider =>
+        {
+            var shellOptions = serviceProvider.GetRequiredService<IOptions<ShellOptions>>().Value;
+            var shellSettings = serviceProvider.GetRequiredService<ShellSettings>();
+            var path = Path.Combine(
+                shellOptions.ShellsApplicationDataPath,
+                shellOptions.ShellsContainerName,
+                shellSettings.Name,
+                LocalEncryptedMessagingAttachmentStore.FolderName);
+
+            return new LocalEncryptedMessagingAttachmentStore(
+                new FileSystemStore(path, serviceProvider.GetRequiredService<ILogger<FileSystemStore>>()),
+                serviceProvider.GetRequiredService<IDataProtectionProvider>());
+        });
+        services.AddHttpContextAccessor();
+        services.AddScoped<MessagingAttachmentLinks>();
+        services.AddScoped<MessagingAttachmentUploads>();
+        services.AddScoped<IMessagingAttachmentUrlProvider>(serviceProvider => serviceProvider.GetRequiredService<MessagingAttachmentLinks>());
+        services.AddScoped<IMessagingInboundMediaIngestor, MessagingInboundMediaIngestor>();
+        services.AddHttpClient(MessagingInboundMediaIngestor.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(30));
 
         // Resolve the CRM contact behind a contact address, through the address's own channel. The contact content
         // types are read from the content definitions, so contact search works without the Omnichannel Management
@@ -205,5 +239,6 @@ public sealed class Startup : StartupBase
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes.MapHub<MessagingHub>(SignalRHubRoutes.GetHubPath<MessagingHub>());
+        routes.AddMessagingAttachmentEndpoint();
     }
 }

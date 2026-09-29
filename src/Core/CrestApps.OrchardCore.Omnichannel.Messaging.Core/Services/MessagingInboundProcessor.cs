@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
@@ -36,6 +37,7 @@ public sealed class MessagingInboundProcessor : IMessagingInboundProcessor
     private readonly IMessagingConversationRouter _router;
     private readonly IMessagingFirstResponseSlaService _slaService;
     private readonly IEnumerable<IMessagingInboundHandler> _inboundHandlers;
+    private readonly IMessagingInboundMediaIngestor _mediaIngestor;
     private readonly IDistributedLock _distributedLock;
     private readonly MessagingWorkspaceOptions _options;
     private readonly ISession _session;
@@ -56,6 +58,7 @@ public sealed class MessagingInboundProcessor : IMessagingInboundProcessor
         IMessagingConversationRouter router,
         IMessagingFirstResponseSlaService slaService,
         IEnumerable<IMessagingInboundHandler> inboundHandlers,
+        IMessagingInboundMediaIngestor mediaIngestor,
         IDistributedLock distributedLock,
         IOptions<MessagingWorkspaceOptions> options,
         ISession session,
@@ -72,6 +75,7 @@ public sealed class MessagingInboundProcessor : IMessagingInboundProcessor
         _router = router;
         _slaService = slaService;
         _inboundHandlers = inboundHandlers.OrderBy(handler => handler.Order).ToArray();
+        _mediaIngestor = mediaIngestor;
         _distributedLock = distributedLock;
         _options = options.Value;
         _session = session;
@@ -111,6 +115,14 @@ public sealed class MessagingInboundProcessor : IMessagingInboundProcessor
             _logger.LogWarning("No channel endpoint found for an incoming {Channel} message. Service Address: {ServiceAddress}", channel.Name, _addressRedactor.Redact(message.ServiceAddress));
 
             return null;
+        }
+
+        // The provider hosts the pictures only for a while, so they are copied in whoever answers the message: a person
+        // here, or the automated path this pipeline yields to below. It happens before the thread lock, so a slow
+        // download never holds up the next message from the same customer.
+        if (await _mediaIngestor.IngestAsync(message, cancellationToken))
+        {
+            await _session.SaveAsync(message, collection: OmnichannelConstants.CollectionName, cancellationToken: cancellationToken);
         }
 
         // Find-or-create and the thread roll-up are serialized per address pair. Without this, two messages arriving
@@ -235,7 +247,11 @@ public sealed class MessagingInboundProcessor : IMessagingInboundProcessor
         }
 
         // Roll up the thread and link the message to it.
-        MessagingConversationRollup.ApplyInbound(conversation, message.Content, message.CreatedUtc, _clock.UtcNow);
+        MessagingConversationRollup.ApplyInbound(
+            conversation,
+            MessagingConversationRollup.DescribeContent(message.Content, message.GetAttachments().Count + message.GetSkippedAttachmentCount()),
+            message.CreatedUtc,
+            _clock.UtcNow);
 
         if (isNew)
         {

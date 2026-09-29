@@ -24,6 +24,18 @@ public interface ISmsDispatcher
     Task<MessageDispatchResult> SendAsync(SmsMessage message, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Resolves the provider that owns the message's <c>From</c> number and sends the message through it as a picture
+    /// message. A provider that cannot send pictures refuses it with
+    /// <see cref="CrestApps.OrchardCore.Omnichannel.Core.OmnichannelConstants.SmsErrorCodes.MediaNotSupported"/> rather
+    /// than delivering the text without them.
+    /// </summary>
+    /// <param name="message">The message to send. Its <see cref="SmsMessage.From"/> selects the provider.</param>
+    /// <param name="mediaUrls">The public links the provider downloads the pictures from. Empty sends a plain text.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The dispatch outcome, carrying the provider message identifier when the provider reports one.</returns>
+    Task<MessageDispatchResult> SendAsync(SmsMessage message, IReadOnlyList<string> mediaUrls, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Resolves the technical name of the provider that would be used to send from the specified number,
     /// applying the same number-pin → tenant-default resolution as <see cref="SendAsync"/>.
     /// </summary>

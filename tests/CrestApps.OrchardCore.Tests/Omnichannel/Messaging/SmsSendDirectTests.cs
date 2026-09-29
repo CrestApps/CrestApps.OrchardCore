@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
@@ -86,6 +87,7 @@ public class SmsSendDirectTests
             Mock.Of<IMessagingConversationAuthorizationService>(),
             session.Object,
             new NoOpSmsFirstResponseSlaService(),
+            new FakeAttachmentUrlProvider(),
             clock.Object,
             NullLogger<MessagingConversationService>.Instance);
 

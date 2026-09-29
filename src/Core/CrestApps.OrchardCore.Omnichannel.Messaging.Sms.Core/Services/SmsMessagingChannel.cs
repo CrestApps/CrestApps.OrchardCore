@@ -23,10 +23,15 @@ public sealed class SmsMessagingChannel : IMessagingChannel
     private static readonly MessagingChannelCapabilities _capabilities = new()
     {
         SupportsSubject = false,
-        SupportsMedia = false,
+        SupportsMedia = true,
         SupportsDeliveryReceipts = true,
         SupportsBroadcast = true,
         ObservesQuietHours = true,
+
+        // A picture message is limited by the carriers more than by the providers: most refuse one much over a
+        // megabyte, so the composer shrinks photos to fit.
+        MaxMediaCount = 10,
+        MaxMediaBytes = 1024 * 1024,
     };
 
     // Lazy because the channel is built whenever the channel registry is, including while a channel endpoint is being
@@ -99,14 +104,18 @@ public sealed class SmsMessagingChannel : IMessagingChannel
     {
         ArgumentNullException.ThrowIfNull(message);
 
-        return _dispatcher.Value.SendAsync(
-            new SmsMessage
-            {
-                From = message.ServiceAddress,
-                To = message.ContactAddress,
-                Body = message.Body,
-            },
-            cancellationToken);
+        var sms = new SmsMessage
+        {
+            From = message.ServiceAddress,
+            To = message.ContactAddress,
+            Body = message.Body,
+        };
+
+        var mediaUrls = message.MediaUrls?.Where(url => !string.IsNullOrWhiteSpace(url)).ToArray() ?? [];
+
+        return mediaUrls.Length == 0
+            ? _dispatcher.Value.SendAsync(sms, cancellationToken)
+            : _dispatcher.Value.SendAsync(sms, mediaUrls, cancellationToken);
     }
 
     /// <inheritdoc/>

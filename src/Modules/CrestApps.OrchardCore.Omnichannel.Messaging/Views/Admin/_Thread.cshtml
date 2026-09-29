@@ -6,6 +6,7 @@
     var conversation = Model.Conversation;
     var contactLabel = string.IsNullOrEmpty(Model.ContactDisplayText) ? Model.ContactAddressDisplay : Model.ContactDisplayText;
     var canReply = Model.CanSend && conversation.Status != ConversationStatus.Closed && conversation.Status != ConversationStatus.Spam;
+    var supportsMedia = Model.SupportsMedia;
 }
 
 <div class="d-flex flex-grow-1 overflow-hidden">
@@ -28,6 +29,19 @@
                 </span>
                 <span class="fw-semibold text-truncate">@contactLabel</span>
                 <span class="text-muted small text-nowrap">@Model.ContactAddressDisplay</span>
+                @if (Model.CanFavorite)
+                {
+                    <form method="post" asp-controller="Favorites" asp-action="Set" asp-route-id="@conversation.ItemId" class="d-inline" data-favorite-form>
+                        <input type="hidden" name="favorite" value="@(Model.IsFavorite ? "false" : "true")" />
+                        <input type="hidden" name="name" value="@contactLabel" />
+                        <button type="submit" class="btn btn-sm btn-link px-1 @(Model.IsFavorite ? "text-warning" : "text-secondary")"
+                                title="@(Model.IsFavorite ? T["Remove from your favorites"] : T["Add to your favorites, so they are one click away above your list"])"
+                                aria-label="@(Model.IsFavorite ? T["Remove from favorites"] : T["Add to favorites"])"
+                                aria-pressed="@(Model.IsFavorite ? "true" : "false")">
+                            <i class="@(Model.IsFavorite ? "fa-solid" : "fa-regular") fa-star" aria-hidden="true"></i>
+                        </button>
+                    </form>
+                }
             </div>
             <div class="d-flex flex-wrap gap-2">
                 @if (Model.CanClaim && conversation.AssignmentStatus != ConversationAssignmentStatus.Assigned)
@@ -154,8 +168,24 @@
                     </div>
                 }
 
-                <form method="post" asp-route-action="Send" asp-route-id="@conversation.ItemId" data-composer>
-                    <div class="bg-body text-body rounded border w-100">
+                <form method="post" asp-route-action="Send" asp-route-id="@conversation.ItemId" data-composer
+                      enctype="@(supportsMedia ? "multipart/form-data" : "application/x-www-form-urlencoded")"
+                      data-max-media-count="@(Model.MaxMediaCount)"
+                      data-max-media-bytes="@(Model.MaxMediaBytes)"
+                      data-too-many-text="@T["A message can carry at most {0} pictures.", Model.MaxMediaCount]"
+                      data-not-image-text="@T["Only JPEG, PNG, GIF and WebP pictures can be sent."]"
+                      data-too-large-text="@T["{0} is too large to send, even after shrinking it.", "{0}"]"
+                      data-remove-text="@T["Remove"]">
+                    <div class="bg-body text-body rounded border w-100 position-relative" data-composer-dropzone>
+                        @if (supportsMedia)
+                        {
+                            <input type="file" name="attachments" class="d-none" accept="image/jpeg,image/png,image/gif,image/webp" multiple data-composer-files />
+                            <div class="messaging-drop-overlay rounded d-none align-items-center justify-content-center text-primary fw-semibold" data-composer-drop-overlay aria-hidden="true">
+                                <i class="fa-regular fa-image me-2" aria-hidden="true"></i>@T["Drop pictures to attach them"]
+                            </div>
+                            <div class="d-flex flex-wrap gap-2 px-3 pt-2 d-none" data-composer-previews></div>
+                            <div class="alert alert-warning py-1 px-2 mx-3 mt-2 mb-0 small d-none" role="alert" data-composer-media-error></div>
+                        }
                         @if (Model.SupportsSubject)
                         {
                             <input name="subject" class="form-control bg-transparent border-0 border-bottom rounded-0 px-3" placeholder="@T["Subject"]" />
@@ -164,6 +194,12 @@
                                   data-composer-body maxlength="@Model.MaxBodyLength"></textarea>
                         <div class="d-flex justify-content-between align-items-center px-3 pb-2 gap-2 pt-1">
                             <div class="d-flex align-items-center gap-2">
+                                @if (supportsMedia)
+                                {
+                                    <button type="button" class="btn btn-sm btn-link text-secondary px-1" data-composer-attach title="@T["Attach pictures (or drag and drop them here)"]" aria-label="@T["Attach pictures"]">
+                                        <i class="fa-regular fa-image" aria-hidden="true"></i>
+                                    </button>
+                                }
                                 @if (Model.Channel is not null)
                                 {
                                     <span class="text-muted small text-nowrap" title="@T["This reply is sent by {0}", Model.Channel.DisplayName]">

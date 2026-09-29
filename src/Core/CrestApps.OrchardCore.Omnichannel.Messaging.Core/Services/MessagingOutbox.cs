@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
@@ -25,6 +26,7 @@ public sealed class MessagingOutbox : IMessagingOutbox
     private readonly IMessagingChannelResolver _channelResolver;
     private readonly IMessagingRealTimeNotifier _notifier;
     private readonly IMessagingConversationStore _conversationStore;
+    private readonly IMessagingAttachmentUrlProvider _attachmentUrlProvider;
     private readonly MessagingWorkspaceOptions _options;
     private readonly ISession _session;
     private readonly IClock _clock;
@@ -36,6 +38,7 @@ public sealed class MessagingOutbox : IMessagingOutbox
     /// <param name="channelResolver">The resolver of the enabled channels each message is sent through.</param>
     /// <param name="notifier">The real-time notifier that moves the bubble's state in the open thread.</param>
     /// <param name="conversationStore">The conversation store used to address the notification.</param>
+    /// <param name="attachmentUrlProvider">The provider of the links a picture message is re-sent with.</param>
     /// <param name="options">The workspace options carrying the batch size and per-endpoint budget.</param>
     /// <param name="session">The session the messages are read from and saved to.</param>
     /// <param name="clock">The clock.</param>
@@ -44,6 +47,7 @@ public sealed class MessagingOutbox : IMessagingOutbox
         IMessagingChannelResolver channelResolver,
         IMessagingRealTimeNotifier notifier,
         IMessagingConversationStore conversationStore,
+        IMessagingAttachmentUrlProvider attachmentUrlProvider,
         IOptions<MessagingWorkspaceOptions> options,
         ISession session,
         IClock clock,
@@ -52,6 +56,7 @@ public sealed class MessagingOutbox : IMessagingOutbox
         _channelResolver = channelResolver;
         _notifier = notifier;
         _conversationStore = conversationStore;
+        _attachmentUrlProvider = attachmentUrlProvider;
         _options = options.Value;
         _session = session;
         _clock = clock;
@@ -117,14 +122,20 @@ public sealed class MessagingOutbox : IMessagingOutbox
             perEndpointBudget[endpoint] = used + 1;
             attempted++;
 
-            var dispatch = await channel.SendAsync(
-                new MessagingOutboundMessage
-                {
-                    ServiceAddress = message.ServiceAddress,
-                    ContactAddress = message.CustomerAddress,
-                    Body = message.Content,
-                },
-                cancellationToken);
+            // A picture message is re-sent with fresh links: the ones the first attempt carried may have expired.
+            var mediaUrls = await BuildMediaUrlsAsync(message, cancellationToken);
+
+            var dispatch = mediaUrls is null
+                ? MessageDispatchResult.Failed("The site has no public address the provider could download the pictures from. Set the site's base URL.")
+                : await channel.SendAsync(
+                    new MessagingOutboundMessage
+                    {
+                        ServiceAddress = message.ServiceAddress,
+                        ContactAddress = message.CustomerAddress,
+                        Body = message.Content,
+                        MediaUrls = mediaUrls,
+                    },
+                    cancellationToken);
 
             state.Attempts += 1;
 
@@ -171,6 +182,25 @@ public sealed class MessagingOutbox : IMessagingOutbox
         }
 
         return accepted;
+    }
+
+    private async Task<IList<string>> BuildMediaUrlsAsync(OmnichannelMessage message, CancellationToken cancellationToken)
+    {
+        var urls = message.MediaReferences?.Where(url => !string.IsNullOrWhiteSpace(url)).ToList() ?? [];
+
+        foreach (var attachment in message.GetAttachments())
+        {
+            var url = await _attachmentUrlProvider.GetPublicUrlAsync(attachment, cancellationToken);
+
+            if (string.IsNullOrEmpty(url))
+            {
+                return null;
+            }
+
+            urls.Add(url);
+        }
+
+        return urls;
     }
 
     private async Task NotifyAsync(OmnichannelMessage message, CancellationToken cancellationToken)

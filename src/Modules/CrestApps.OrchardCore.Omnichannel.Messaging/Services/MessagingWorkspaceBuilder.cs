@@ -42,6 +42,7 @@ public sealed class MessagingWorkspaceBuilder
     private readonly IAgentEntitlementPolicy _entitlementPolicy;
     private readonly IMessagingAvailabilityService _availabilityService;
     private readonly IMessagingAgentNameProvider _agentNames;
+    private readonly IMessagingFavoritesService _favoritesService;
     private readonly bool _supportsQueues;
     private readonly IContentManager _contentManager;
     private readonly IAuthorizationService _authorizationService;
@@ -62,6 +63,7 @@ public sealed class MessagingWorkspaceBuilder
         IAgentEntitlementPolicy entitlementPolicy,
         IMessagingAvailabilityService availabilityService,
         IMessagingAgentNameProvider agentNames,
+        IMessagingFavoritesService favoritesService,
         IEnumerable<IActivityQueueManager> queueManagers,
         IContentManager contentManager,
         IAuthorizationService authorizationService,
@@ -81,6 +83,7 @@ public sealed class MessagingWorkspaceBuilder
         _entitlementPolicy = entitlementPolicy;
         _availabilityService = availabilityService;
         _agentNames = agentNames;
+        _favoritesService = favoritesService;
         // Queues are a feature of their own; without it a conversation can only be transferred to a person.
         _supportsQueues = queueManagers.Any();
         _contentManager = contentManager;
@@ -219,12 +222,16 @@ public sealed class MessagingWorkspaceBuilder
             cancellationToken);
 
         var channelsByName = viewModel.Channels.ToDictionary(item => item.Name, StringComparer.OrdinalIgnoreCase);
+        var favorites = _favoritesService.GetFavorites(currentAgent);
+
+        viewModel.Favorites = await BuildFavoritesAsync(favorites, selectedCustomerKey);
 
         foreach (var group in InboxRowGrouping.Group(conversations))
         {
             viewModel.Rows.Add(new InboxRow
             {
                 Conversation = group.Latest,
+                IsFavorite = favorites.Any(favorite => favorite.Matches(group.Latest)),
                 CustomerKey = group.CustomerKey,
                 UnreadCount = group.UnreadCount,
                 Channels = group.Channels
@@ -236,6 +243,54 @@ public sealed class MessagingWorkspaceBuilder
         }
 
         return viewModel;
+    }
+
+    // The starred customers, named by their contact record as it reads now, and by the name they were starred under
+    // when the record is gone.
+    private async Task<IList<FavoriteViewModel>> BuildFavoritesAsync(IReadOnlyList<MessagingFavorite> favorites, string selectedCustomerKey)
+    {
+        if (favorites.Count == 0)
+        {
+            return [];
+        }
+
+        var contactIds = favorites
+            .Select(favorite => favorite.ContactContentItemId)
+            .Where(id => !string.IsNullOrEmpty(id))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        var contacts = contactIds.Length == 0
+            ? new Dictionary<string, ContentItem>(StringComparer.Ordinal)
+            : (await _contentManager.GetAsync(contactIds, VersionOptions.Latest))
+                .Where(item => item is not null)
+                .GroupBy(item => item.ContentItemId, StringComparer.Ordinal)
+                .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+
+        var result = new List<FavoriteViewModel>();
+
+        foreach (var favorite in favorites)
+        {
+            var channel = _channelResolver.Get(favorite.Channel);
+            var addressDisplay = channel?.FormatAddress(favorite.ContactAddress) ?? favorite.ContactAddress;
+            var contactName = !string.IsNullOrEmpty(favorite.ContactContentItemId) && contacts.TryGetValue(favorite.ContactContentItemId, out var contact)
+                ? contact.DisplayText
+                : null;
+
+            result.Add(new FavoriteViewModel
+            {
+                Favorite = favorite,
+                Name = !string.IsNullOrWhiteSpace(contactName)
+                    ? contactName
+                    : !string.IsNullOrWhiteSpace(favorite.DisplayName) ? favorite.DisplayName : addressDisplay,
+                AddressDisplay = addressDisplay,
+                ChannelIconCssClass = channel?.IconCssClass,
+                IsSelected = !string.IsNullOrEmpty(selectedCustomerKey) &&
+                    string.Equals(favorite.CustomerKey, selectedCustomerKey, StringComparison.Ordinal),
+            });
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -314,9 +369,14 @@ public sealed class MessagingWorkspaceBuilder
 
         var customerKey = conversation.GetCustomerKey();
 
+        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        var viewer = string.IsNullOrEmpty(userId) ? null : await _agentProfileManager.FindByUserIdAsync(userId, cancellationToken);
+
         return new ThreadViewModel
         {
             Conversation = conversation,
+            CanFavorite = viewer is not null,
+            IsFavorite = _favoritesService.IsFavorite(viewer, conversation),
             Channel = channel is null ? null : ToViewModel(channel),
             CustomerKey = customerKey,
             ChannelTabs = ChannelTabsBuilder.Build(
@@ -331,6 +391,9 @@ public sealed class MessagingWorkspaceBuilder
             ServiceAddressDisplay = channel?.FormatAddress(conversation.ServiceAddress) ?? conversation.ServiceAddress,
             SupportsSubject = channel?.Capabilities.SupportsSubject == true,
             MaxBodyLength = channel?.Capabilities.MaxBodyLength,
+            SupportsMedia = channel?.Capabilities.SupportsMedia == true,
+            MaxMediaCount = channel?.Capabilities.MaxMediaCount ?? 0,
+            MaxMediaBytes = channel?.Capabilities.MaxMediaBytes ?? 0,
             Messages = messages,
             Events = ThreadTimeline.ForPage(conversation.History, messages, beforeUtc, hasEarlierMessages),
             Templates = (await _templateManager.GetAllAsync(cancellationToken)).ToArray(),

@@ -220,6 +220,73 @@
         opacity: .35;
     }
 
+    .messaging-favorite {
+        width: 4rem;
+    }
+
+    .messaging-favorite:hover,
+    .messaging-favorite.active {
+        background-color: var(--bs-primary-bg-subtle);
+    }
+
+    .messaging-favorite-name {
+        max-width: 100%;
+        font-size: .72rem;
+    }
+
+    .messaging-favorite-channel {
+        position: absolute;
+        right: -.25rem;
+        bottom: -.2rem;
+        font-size: .65rem;
+        padding: .12rem;
+        border-radius: 50%;
+        background-color: var(--bs-body-bg);
+        color: var(--bs-secondary-color);
+    }
+
+    /* Pictures in a bubble are thumbnails; the full picture opens in a new tab. */
+    .messaging-attachment img {
+        display: block;
+        max-width: 15rem;
+        max-height: 15rem;
+        object-fit: cover;
+    }
+
+    .messaging-drop-overlay {
+        position: absolute;
+        inset: 0;
+        z-index: 5;
+        background-color: rgba(var(--bs-primary-rgb), .08);
+        border: 2px dashed var(--bs-primary);
+    }
+
+    .messaging-drop-overlay.show {
+        display: flex !important;
+    }
+
+    .messaging-composer-preview {
+        position: relative;
+        width: 4.5rem;
+        height: 4.5rem;
+    }
+
+    .messaging-composer-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .messaging-composer-preview .btn-close {
+        position: absolute;
+        top: .15rem;
+        right: .15rem;
+        padding: .3rem;
+        background-color: var(--bs-body-bg);
+        border-radius: 50%;
+        opacity: .85;
+    }
+
     .messaging-channel-tabs .messaging-tab-badge {
         position: absolute;
         top: .1rem;

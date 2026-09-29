@@ -124,6 +124,12 @@ public static class OmnichannelConstants
         /// them itself. Retrying cannot succeed; the recipient is to be recorded as opted out.
         /// </summary>
         public const string RecipientOptedOut = "recipient_opted_out";
+
+        /// <summary>
+        /// The message carries pictures and the provider serving the sending number cannot send picture messages.
+        /// Retrying cannot succeed.
+        /// </summary>
+        public const string MediaNotSupported = "media_not_supported";
     }
 
     /// <summary>

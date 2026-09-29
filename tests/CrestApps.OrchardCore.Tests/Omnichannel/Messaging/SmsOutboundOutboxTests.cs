@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
@@ -86,6 +87,7 @@ public sealed class SmsOutboundOutboxTests
             Mock.Of<IMessagingChannelResolver>(),
             Mock.Of<IMessagingRealTimeNotifier>(),
             Mock.Of<IMessagingConversationStore>(),
+            new FakeAttachmentUrlProvider(),
             new OptionsWrapper<MessagingWorkspaceOptions>(new MessagingWorkspaceOptions()),
             Mock.Of<ISession>(),
             Mock.Of<IClock>(),

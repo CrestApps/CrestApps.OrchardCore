@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Controllers;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
@@ -125,7 +126,7 @@ public sealed class SmsPortalAdminControllerTests
         var conversationService = new Mock<IMessagingConversationService>();
         var controller = CreateController(conversation, allowConversation: false, conversationService: conversationService);
 
-        var result = await controller.Send(ConversationId, "hello", subject: null);
+        var result = await controller.Send(ConversationId, "hello", subject: null, attachments: null);
 
         Assert.IsType<ForbidResult>(result);
         conversationService.Verify(
@@ -563,6 +564,7 @@ public sealed class SmsPortalAdminControllerTests
             new PermissiveAgentEntitlementPolicy(),
             availabilityService.Object,
             Mock.Of<IMessagingAgentNameProvider>(),
+            new MessagingFavoritesService(Mock.Of<IAgentProfileManager>(), Mock.Of<IClock>()),
             queueManagers,
             Mock.Of<IContentManager>(),
             authorizationService,
@@ -589,6 +591,10 @@ public sealed class SmsPortalAdminControllerTests
             Mock.Of<IMessagingAvailabilityService>(),
             workspaceBuilder,
             new MessagingContactSearch(channels, Mock.Of<IOmnichannelContactTypeProvider>(), Mock.Of<IContentManager>(), Mock.Of<YesSqlSession>()),
+            new MessagingAttachmentUploads(
+                Mock.Of<IMessagingAttachmentStore>(),
+                NullLogger<MessagingAttachmentUploads>.Instance,
+                new NullStringLocalizer<MessagingAttachmentUploads>()),
             authorizationService,
             Mock.Of<INotifier>(),
             NullLogger<AdminController>.Instance,

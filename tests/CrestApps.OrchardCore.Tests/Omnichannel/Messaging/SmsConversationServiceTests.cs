@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using System.Security.Claims;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -375,6 +376,87 @@ public class SmsConversationServiceTests
             new PermissiveAgentEntitlementPolicy());
     }
 
+    [Fact]
+    public async Task SendAsync_WithAPicture_SendsItsSignedLink_AndKeepsThePictureOnTheMessage()
+    {
+        var conversation = PictureConversation();
+        OmnichannelMessage saved = null;
+        var (service, dispatcher) = CreateService(conversation, dispatchSucceeds: true, onSave: m => saved = m);
+
+        var result = await service.SendAsync(new MessagingSendRequest
+        {
+            ConversationId = "conv-1",
+            Body = "Here is the form",
+            Attachments = [new MessagingAttachment { Id = "out-1", ContentType = "image/png", Length = 12 }],
+            ActingAgentId = "agent-7",
+        }, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal("out-1", Assert.Single(saved.GetAttachments()).Id);
+        dispatcher.Verify(
+            d => d.SendAsync(
+                It.IsAny<SmsMessage>(),
+                It.Is<IReadOnlyList<string>>(urls => urls.Count == 1 && urls[0] == "https://site.test/messaging/attachments/out-1"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task SendAsync_WithOnlyAPicture_IsAMessage_AndThePreviewSaysSo()
+    {
+        // A picture sent without words is still a message, and the customer's row must not go blank.
+        var conversation = PictureConversation();
+        var (service, _) = CreateService(conversation, dispatchSucceeds: true, onSave: _ => { });
+
+        var result = await service.SendAsync(new MessagingSendRequest
+        {
+            ConversationId = "conv-1",
+            Attachments = [new MessagingAttachment { Id = "out-1", ContentType = "image/jpeg", Length = 12 }],
+            ActingAgentId = "agent-7",
+        }, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal("[Image]", conversation.LastMessagePreview);
+    }
+
+    [Fact]
+    public async Task SendAsync_WithAPicture_WhenTheSiteHasNoPublicAddress_DoesNotSendTheTextAlone()
+    {
+        // The provider must fetch the picture from us. Without a public address it could not, and sending only the
+        // words would tell the customer about a picture that never arrives.
+        var conversation = PictureConversation();
+        OmnichannelMessage saved = null;
+        var (service, dispatcher) = CreateService(
+            conversation,
+            dispatchSucceeds: true,
+            onSave: m => saved = m,
+            attachmentUrlProvider: new FakeAttachmentUrlProvider { HasPublicAddress = false });
+
+        var result = await service.SendAsync(new MessagingSendRequest
+        {
+            ConversationId = "conv-1",
+            Body = "Here is the form",
+            Attachments = [new MessagingAttachment { Id = "out-1", ContentType = "image/png", Length = 12 }],
+            ActingAgentId = "agent-7",
+        }, TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.NotEqual(MessageDeliveryStatus.Sent.ToString(), saved.DeliveryStatus);
+        dispatcher.Verify(d => d.SendAsync(It.IsAny<SmsMessage>(), It.IsAny<CancellationToken>()), Times.Never);
+        dispatcher.Verify(d => d.SendAsync(It.IsAny<SmsMessage>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    private static MessagingConversation PictureConversation()
+        => new()
+        {
+            Channel = "SMS",
+            ItemId = "conv-1",
+            ServiceAddress = "+15553334444",
+            ContactAddress = "+15551112222",
+            OwnerType = ConversationOwnerType.Personal,
+            AssignmentStatus = ConversationAssignmentStatus.Unassigned,
+        };
+
     private static (MessagingConversationService Service, Mock<ISmsDispatcher> Dispatcher) CreateService(
         MessagingConversation conversation,
         bool dispatchSucceeds,
@@ -382,7 +464,8 @@ public class SmsConversationServiceTests
         ContentItem contact = null,
         bool conversationAuthorized = true,
         IMessagingConversationAuthorizationService conversationAuthorization = null,
-        Mock<IMessagingRealTimeNotifier> notifier = null)
+        Mock<IMessagingRealTimeNotifier> notifier = null,
+        IMessagingAttachmentUrlProvider attachmentUrlProvider = null)
     {
         var store = new Mock<IMessagingConversationStore>();
         store.Setup(s => s.FindByIdAsync(conversation.ItemId, It.IsAny<CancellationToken>()))
@@ -392,6 +475,10 @@ public class SmsConversationServiceTests
 
         var dispatcher = new Mock<ISmsDispatcher>();
         dispatcher.Setup(d => d.SendAsync(It.IsAny<SmsMessage>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(dispatchSucceeds
+                ? MessageDispatchResult.Success("provider-message-1")
+                : MessageDispatchResult.Failed("provider down"));
+        dispatcher.Setup(d => d.SendAsync(It.IsAny<SmsMessage>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(dispatchSucceeds
                 ? MessageDispatchResult.Success("provider-message-1")
                 : MessageDispatchResult.Failed("provider down"));
@@ -423,6 +510,7 @@ public class SmsConversationServiceTests
             conversationAuthorization ?? CreateConversationAuthorizationService(conversationAuthorized),
             session.Object,
             new NoOpSmsFirstResponseSlaService(),
+            attachmentUrlProvider ?? new FakeAttachmentUrlProvider(),
             clock.Object,
             NullLogger<MessagingConversationService>.Instance);
 

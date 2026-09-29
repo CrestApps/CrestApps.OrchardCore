@@ -1,8 +1,45 @@
 @using CrestApps.OrchardCore.Omnichannel.Messaging.Models
+@using CrestApps.OrchardCore.Omnichannel.Messaging.Services
 @model InboxViewModel
 
 @{
     var show = Model.Filter == MessagingInboxFilter.All ? null : Model.Filter.ToString().ToLowerInvariant();
+}
+
+@if (Model.Favorites.Count > 0)
+{
+    @* The customers the agent starred, one click from their conversation, or from a new one when they have none yet. *@
+    <div class="messaging-favorites border-bottom px-2 pt-2 pb-1" data-inbox-favorites>
+        <div class="d-flex align-items-center gap-1 text-muted small fw-semibold mb-1">
+            <i class="fa-solid fa-star text-warning" aria-hidden="true"></i>@T["Favorites"]
+        </div>
+        <div class="d-flex gap-2 overflow-x-auto pb-1">
+            @foreach (var favorite in Model.Favorites)
+            {
+                <a class="messaging-favorite text-decoration-none text-body d-flex flex-column align-items-center flex-shrink-0 rounded-3 p-1 @(favorite.IsSelected ? "active" : string.Empty)"
+                   asp-route-action="Start" asp-route-channel="@favorite.Favorite.Channel" asp-route-address="@favorite.Favorite.ContactAddress"
+                   title="@favorite.Name — @favorite.AddressDisplay"
+                   data-favorite-key="@favorite.Favorite.CustomerKey"
+                   data-filter-value="@($"{favorite.Name} {favorite.AddressDisplay} {favorite.Favorite.ContactAddress}")">
+                    <span class="messaging-avatar rounded-circle @AvatarPalette.For(favorite.Favorite.CustomerKey) d-inline-flex align-items-center justify-content-center fw-semibold position-relative" aria-hidden="true">
+                        @if (AvatarPalette.Initials(favorite.Name) is { } initials)
+                        {
+                            @initials
+                        }
+                        else
+                        {
+                            <i class="fa-solid fa-user"></i>
+                        }
+                        @if (!string.IsNullOrEmpty(favorite.ChannelIconCssClass))
+                        {
+                            <i class="@favorite.ChannelIconCssClass messaging-favorite-channel" aria-hidden="true"></i>
+                        }
+                    </span>
+                    <span class="messaging-favorite-name text-truncate small">@favorite.Name</span>
+                </a>
+            }
+        </div>
+    </div>
 }
 
 @if (Model.Rows.Count == 0)
@@ -27,6 +64,10 @@ else
                         @await DisplayAsync(row.Shape)
                     </div>
                     <div class="d-flex flex-column align-items-end gap-1 flex-shrink-0">
+                        @if (row.IsFavorite)
+                        {
+                            <i class="fa-solid fa-star text-warning small" title="@T["Favorite"]" aria-label="@T["Favorite"]"></i>
+                        }
                         <span class="badge rounded-pill text-bg-danger @(unread ? string.Empty : "d-none")" data-row-unread>@row.UnreadCount</span>
                         @if (row.Channels.Count > 1)
                         {

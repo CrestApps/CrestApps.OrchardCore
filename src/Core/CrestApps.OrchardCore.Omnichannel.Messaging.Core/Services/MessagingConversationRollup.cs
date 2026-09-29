@@ -34,6 +34,23 @@ public static class MessagingConversationRollup
     }
 
     /// <summary>
+    /// Describes a message for the inbox preview: its words, or what it carried when it has none, so a picture sent
+    /// on its own does not leave the customer's row blank.
+    /// </summary>
+    /// <param name="content">The message body.</param>
+    /// <param name="attachmentCount">How many pictures the message carries.</param>
+    /// <returns>The text the preview is built from.</returns>
+    public static string DescribeContent(string content, int attachmentCount)
+    {
+        if (!string.IsNullOrWhiteSpace(content) || attachmentCount <= 0)
+        {
+            return content;
+        }
+
+        return attachmentCount == 1 ? "[Image]" : $"[{attachmentCount} images]";
+    }
+
+    /// <summary>
     /// Rolls a received message (or an imported transcript) up onto the thread and marks it unread.
     /// </summary>
     /// <param name="conversation">The conversation to roll up.</param>

@@ -144,12 +144,58 @@ public class SmsDispatcherTests
         contentManager.Verify(m => m.UpdateAsync(It.IsAny<ContentItem>()), Times.Never);
     }
 
+    [Fact]
+    public async Task SendAsync_WithPictures_RefusesAProviderThatCannotSendThem_RatherThanSendingTheTextAlone()
+    {
+        // A text-only provider would deliver "here is the photo" without the photo. The send is refused with a reason
+        // that is never retried, so the bubble shows the failure instead.
+        var provider = new Mock<ISmsProvider>();
+        provider.As<ISmsDispatchProvider>();
+
+        var dispatcher = CreateDispatcher("Twilio", smsDefault: null, name => provider.Object);
+
+        var result = await dispatcher.SendAsync(
+            new SmsMessage { From = "+15553334444", To = "+15551112222", Body = "here is the photo" },
+            ["https://site.test/messaging/attachments/a/image.jpg"],
+            TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(OmnichannelConstants.SmsErrorCodes.MediaNotSupported, result.ErrorCode);
+        Assert.False(OutboundDeliveryState.CanRetry(1, result.ErrorCode));
+        provider.Verify(p => p.SendAsync(It.IsAny<SmsMessage>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SendAsync_WithPictures_HandsTheLinksToAMediaProvider()
+    {
+        var provider = new Mock<ISmsProvider>();
+        var media = provider.As<ISmsMediaDispatchProvider>();
+        media.Setup(p => p.DispatchAsync(It.IsAny<SmsMessage>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(MessageDispatchResult.Success("provider-message-1"));
+
+        var dispatcher = CreateDispatcher("Telnyx", smsDefault: null, name => provider.Object);
+
+        var result = await dispatcher.SendAsync(
+            new SmsMessage { From = "+15553334444", To = "+15551112222", Body = string.Empty },
+            ["https://site.test/messaging/attachments/a/image.jpg"],
+            TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        media.Verify(
+            p => p.DispatchAsync(
+                It.IsAny<SmsMessage>(),
+                It.Is<IReadOnlyList<string>>(urls => urls.Count == 1 && urls[0] == "https://site.test/messaging/attachments/a/image.jpg"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
     private static SmsDispatcher CreateDispatcher(
         string endpointProvider,
         string smsDefault,
         Func<string, ISmsProvider> resolver = null,
         Mock<IContentManager> contentManager = null,
-        string contactContentItemId = null)
+        string contactContentItemId = null,
+        IEnumerable<ISmsMediaSender> mediaSenders = null)
     {
         var endpointManager = new Mock<IOmnichannelChannelEndpointManager>();
         endpointManager.Setup(m => m.GetByServiceAddressAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -180,6 +226,7 @@ public class SmsDispatcherTests
             (contentManager ?? new Mock<IContentManager>()).Object,
             clock.Object,
             RedactorProviderFactory.Create(),
+            mediaSenders ?? [],
             NullLogger<SmsDispatcher>.Instance);
     }
 }

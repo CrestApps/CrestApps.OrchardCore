@@ -26,6 +26,7 @@
     <PackageReference Include="OrchardCore.ContentManagement" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
     <PackageReference Include="OrchardCore.SignalR" />
+    <PackageReference Include="OrchardCore.FileStorage.FileSystem" />
     <PackageReference Include="OrchardCore.Flows.Core" />
     <PackageReference Include="OrchardCore.Roles.Abstractions" />
   </ItemGroup>

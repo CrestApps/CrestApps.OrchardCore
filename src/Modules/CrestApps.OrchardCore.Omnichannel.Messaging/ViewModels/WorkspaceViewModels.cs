@@ -124,6 +124,11 @@ public class InboxViewModel
 {
     public IList<InboxRow> Rows { get; set; } = [];
 
+    /// <summary>
+    /// Gets or sets the customers the current agent has starred, shown above the list.
+    /// </summary>
+    public IList<FavoriteViewModel> Favorites { get; set; } = [];
+
     public bool HasAgentProfile { get; set; }
 
     /// <summary>
@@ -172,9 +177,30 @@ public class InboxViewModel
 /// One customer in the list: their most recent conversation, with the unread messages and channels of every
 /// conversation of theirs on the page folded in.
 /// </summary>
+/// <summary>
+/// A starred customer, as the row of favorites above the customer list shows them.
+/// </summary>
+public class FavoriteViewModel
+{
+    public MessagingFavorite Favorite { get; set; }
+
+    public string Name { get; set; }
+
+    public string AddressDisplay { get; set; }
+
+    public string ChannelIconCssClass { get; set; }
+
+    public bool IsSelected { get; set; }
+}
+
 public class InboxRow
 {
     public MessagingConversation Conversation { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the current agent has starred this customer.
+    /// </summary>
+    public bool IsFavorite { get; set; }
 
     public IShape Shape { get; set; }
 
@@ -225,6 +251,32 @@ public class ThreadViewModel
     /// Gets or sets the longest body the channel accepts, when it has a limit.
     /// </summary>
     public int? MaxBodyLength { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the viewer can star customers: only someone with an agent profile has a
+    /// list of favorites.
+    /// </summary>
+    public bool CanFavorite { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the viewer has starred this customer.
+    /// </summary>
+    public bool IsFavorite { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the composer can attach pictures.
+    /// </summary>
+    public bool SupportsMedia { get; set; }
+
+    /// <summary>
+    /// Gets or sets the most pictures one message may carry.
+    /// </summary>
+    public int MaxMediaCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the largest total size, in bytes, of the pictures one message may carry.
+    /// </summary>
+    public long MaxMediaBytes { get; set; }
 
     public IReadOnlyList<OmnichannelMessage> Messages { get; set; } = [];
 

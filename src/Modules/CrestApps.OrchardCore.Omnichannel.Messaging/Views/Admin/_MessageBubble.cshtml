@@ -1,4 +1,7 @@
+@using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments
+@using CrestApps.OrchardCore.Omnichannel.Messaging.Services
 @model MessageBubbleViewModel
+@inject MessagingAttachmentLinks AttachmentLinks
 
 @{
     var message = Model.Message;
@@ -21,6 +24,9 @@
         .Replace("\r", "\n")
         .Trim();
     var content = System.Text.RegularExpressions.Regex.Replace(normalized, "\n{2,}", "\n");
+
+    var attachments = message.GetAttachments();
+    var skippedAttachments = message.GetSkippedAttachmentCount();
 }
 
 <div class="messaging-message d-flex flex-column mb-2 @(outbound ? "align-items-end" : "align-items-start")"
@@ -28,7 +34,29 @@
      data-inbound="@(message.IsInbound ? "true" : "false")"
      data-created-ticks="@message.CreatedUtc.Ticks">
     <div class="p-2 px-3 rounded-4 @bubbleClass" style="max-width: 80%; min-width: 6rem;">
-        <div style="white-space: pre-wrap; word-break: break-word;">@content</div>
+        @if (attachments.Count > 0 && !string.IsNullOrEmpty(message.ConversationId))
+        {
+            <div class="messaging-attachments d-flex flex-wrap gap-1 @(string.IsNullOrEmpty(content) ? string.Empty : "mb-2")">
+                @foreach (var attachment in attachments)
+                {
+                    var src = Url.Action("Show", "Attachments", new { area = "CrestApps.OrchardCore.Omnichannel.Messaging", id = message.ConversationId, token = AttachmentLinks.CreateViewToken(message.ConversationId, attachment) });
+                    var label = string.IsNullOrEmpty(attachment.FileName) ? T["Picture"].Value : attachment.FileName;
+                    <a href="@src" target="_blank" rel="noopener" class="messaging-attachment d-block rounded-3 overflow-hidden" title="@label">
+                        <img src="@src" alt="@label" loading="lazy" data-messaging-attachment />
+                    </a>
+                }
+            </div>
+        }
+        @if (skippedAttachments > 0)
+        {
+            <div class="small text-muted fst-italic @(string.IsNullOrEmpty(content) ? string.Empty : "mb-1")">
+                <i class="fa-regular fa-image me-1" aria-hidden="true"></i>@(skippedAttachments == 1 ? T["An attachment could not be shown."] : T["{0} attachments could not be shown.", skippedAttachments])
+            </div>
+        }
+        @if (!string.IsNullOrEmpty(content))
+        {
+            <div style="white-space: pre-wrap; word-break: break-word;">@content</div>
+        }
 
         @* Sender name and time sit below the message in a slightly smaller, muted font. *@
         <div class="d-flex justify-content-between align-items-baseline gap-3 text-muted mt-1" style="font-size: .72rem;">

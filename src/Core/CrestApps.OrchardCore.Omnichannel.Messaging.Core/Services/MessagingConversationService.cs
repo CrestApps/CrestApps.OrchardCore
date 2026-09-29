@@ -4,6 +4,7 @@ using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
@@ -31,6 +32,7 @@ public sealed class MessagingConversationService : IMessagingConversationService
     private readonly IMessagingConversationAuthorizationService _conversationAuthorizationService;
     private readonly ISession _session;
     private readonly IMessagingFirstResponseSlaService _slaService;
+    private readonly IMessagingAttachmentUrlProvider _attachmentUrlProvider;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -46,6 +48,7 @@ public sealed class MessagingConversationService : IMessagingConversationService
         IMessagingConversationAuthorizationService conversationAuthorizationService,
         ISession session,
         IMessagingFirstResponseSlaService slaService,
+        IMessagingAttachmentUrlProvider attachmentUrlProvider,
         IClock clock,
         ILogger<MessagingConversationService> logger)
     {
@@ -57,6 +60,7 @@ public sealed class MessagingConversationService : IMessagingConversationService
         _conversationAuthorizationService = conversationAuthorizationService;
         _session = session;
         _slaService = slaService;
+        _attachmentUrlProvider = attachmentUrlProvider;
         _clock = clock;
         _logger = logger;
     }
@@ -66,7 +70,11 @@ public sealed class MessagingConversationService : IMessagingConversationService
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        if (string.IsNullOrWhiteSpace(request.Body) && (request.MediaUrls is null || request.MediaUrls.Count == 0))
+        var attachments = request.Attachments?.Where(attachment => !string.IsNullOrEmpty(attachment?.Id)).ToArray() ?? [];
+
+        if (string.IsNullOrWhiteSpace(request.Body) &&
+            (request.MediaUrls is null || request.MediaUrls.Count == 0) &&
+            attachments.Length == 0)
         {
             return MessagingSendResult.Failed("The message body is required.");
         }
@@ -96,17 +104,31 @@ public sealed class MessagingConversationService : IMessagingConversationService
             return MessagingSendResult.Failed($"The contact has opted out of {channel.DisplayName.Value}.");
         }
 
+        if (attachments.Length > 0 && !channel.Capabilities.SupportsMedia)
+        {
+            return MessagingSendResult.Failed($"{channel.DisplayName.Value} cannot carry pictures.");
+        }
+
         var message = CreateOutboundMessage(conversation, request.Body, request.ActingAgentId);
         message.MediaReferences = request.MediaUrls?.ToList() ?? [];
 
-        var dispatch = await channel.SendAsync(new MessagingOutboundMessage
+        if (attachments.Length > 0)
         {
-            ServiceAddress = conversation.ServiceAddress,
-            ContactAddress = conversation.ContactAddress,
-            Subject = request.Subject,
-            Body = request.Body,
-            MediaUrls = request.MediaUrls ?? [],
-        }, cancellationToken);
+            message.SetAttachments(attachments);
+        }
+
+        var mediaUrls = await BuildMediaUrlsAsync(request.MediaUrls, attachments, cancellationToken);
+
+        var dispatch = mediaUrls is null
+            ? MessageDispatchResult.Failed("The site has no public address the provider could download the pictures from. Set the site's base URL.")
+            : await channel.SendAsync(new MessagingOutboundMessage
+            {
+                ServiceAddress = conversation.ServiceAddress,
+                ContactAddress = conversation.ContactAddress,
+                Subject = request.Subject,
+                Body = request.Body,
+                MediaUrls = mediaUrls,
+            }, cancellationToken);
 
         ApplyDispatchOutcome(message, dispatch, conversation.ItemId);
 
@@ -120,7 +142,8 @@ public sealed class MessagingConversationService : IMessagingConversationService
 
         // Sending marks the thread read.
         conversation.LastMessageUtc = message.CreatedUtc;
-        conversation.LastMessagePreview = MessagingConversationRollup.BuildPreview(request.Body);
+        conversation.LastMessagePreview = MessagingConversationRollup.BuildPreview(
+            MessagingConversationRollup.DescribeContent(request.Body, attachments.Length));
         conversation.IsRead = true;
         conversation.UnreadCount = 0;
         // The agent engaged, so a routed thread is picked up and no longer subject to reassignment, and the
@@ -409,6 +432,29 @@ public sealed class MessagingConversationService : IMessagingConversationService
         await _conversationStore.UpdateAsync(conversation, cancellationToken);
 
         return new MessagingSendResult { Succeeded = true };
+    }
+
+    // The links a provider downloads the pictures from, after any external media links the caller supplied. Null when a
+    // picture has no public address to be fetched from, which refuses the send rather than delivering the text alone.
+    private async Task<IList<string>> BuildMediaUrlsAsync(IList<string> mediaUrls, IReadOnlyList<MessagingAttachment> attachments, CancellationToken cancellationToken)
+    {
+        var urls = mediaUrls?.Where(url => !string.IsNullOrWhiteSpace(url)).ToList() ?? [];
+
+        foreach (var attachment in attachments)
+        {
+            var url = await _attachmentUrlProvider.GetPublicUrlAsync(attachment, cancellationToken);
+
+            if (string.IsNullOrEmpty(url))
+            {
+                _logger.LogWarning("A picture could not be sent because the site has no public base URL for the provider to download it from.");
+
+                return null;
+            }
+
+            urls.Add(url);
+        }
+
+        return urls;
     }
 
     private OmnichannelMessage CreateOutboundMessage(MessagingConversation conversation, string body, string actingAgentId)

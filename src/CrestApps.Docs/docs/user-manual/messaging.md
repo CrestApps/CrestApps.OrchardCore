@@ -51,6 +51,17 @@ In the composer, type your reply and press **Enter** to send (**Shift+Enter** ad
 
 A banner warns you during the customer's **quiet hours** (outside the queue's business hours). It does not stop you sending.
 
+### Send and receive pictures
+
+- **Attach a picture** by dragging it onto the conversation, pasting it into the message box, or clicking the picture button beside the channel name. Each picture shows as a thumbnail above your message; the **×** on a thumbnail removes it.
+- You can send a picture on its own or with text, up to 10 pictures at a time. Large photos are shrunk automatically so the carrier accepts them.
+- Pictures the customer sends appear in the conversation. Click a thumbnail to open the full picture in a new tab.
+- If a picture cannot be shown (for example, the customer sent a file that is not a picture), the message says *An attachment could not be shown*, and its text is still there.
+
+### Favorites
+
+Click the **star** beside the customer's name at the top of the conversation to add them to your favorites. Your favorites appear in a row above the conversation list: click one to open their conversation, or to start one if there is none yet. Click the star again to remove them. Your favorites are your own; other agents do not see them.
+
 ## Transfer a conversation
 
 1. Click **Transfer**.

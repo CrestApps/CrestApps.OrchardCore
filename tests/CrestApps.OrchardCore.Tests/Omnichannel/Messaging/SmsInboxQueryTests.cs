@@ -446,6 +446,7 @@ public sealed class SmsInboxQueryTests
             new PermissiveAgentEntitlementPolicy(),
             Mock.Of<IMessagingAvailabilityService>(),
             Mock.Of<IMessagingAgentNameProvider>(),
+            new MessagingFavoritesService(Mock.Of<IAgentProfileManager>(), Mock.Of<IClock>()),
             [],
             Mock.Of<IContentManager>(),
             new PermissionGrants(granted.Select(permission => permission.Name).ToHashSet()),

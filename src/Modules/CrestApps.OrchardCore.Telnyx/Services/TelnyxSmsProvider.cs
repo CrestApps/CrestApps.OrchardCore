@@ -18,7 +18,7 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 /// <see cref="IOptionsMonitor{TOptions}"/> of <see cref="TelnyxSmsOptions"/> (merged appsettings + UI settings),
 /// mirroring OrchardCore's Twilio provider structure. Registered under the technical name "Telnyx".
 /// </summary>
-public sealed class TelnyxSmsProvider : ISmsProvider, ISmsDispatchProvider
+public sealed class TelnyxSmsProvider : ISmsProvider, ISmsDispatchProvider, ISmsMediaDispatchProvider
 {
     /// <summary>
     /// Telnyx's "Blocked due to STOP message": the recipient opted out of the sending number.
@@ -60,7 +60,11 @@ public sealed class TelnyxSmsProvider : ISmsProvider, ISmsDispatchProvider
     }
 
     /// <inheritdoc/>
-    public async Task<MessageDispatchResult> DispatchAsync(SmsMessage message, CancellationToken cancellationToken = default)
+    public Task<MessageDispatchResult> DispatchAsync(SmsMessage message, CancellationToken cancellationToken = default)
+        => DispatchAsync(message, [], cancellationToken);
+
+    /// <inheritdoc/>
+    public async Task<MessageDispatchResult> DispatchAsync(SmsMessage message, IReadOnlyList<string> mediaUrls, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(message);
 
@@ -100,6 +104,20 @@ public sealed class TelnyxSmsProvider : ISmsProvider, ISmsDispatchProvider
         if (!string.IsNullOrEmpty(options.MessagingProfileId))
         {
             payload["messaging_profile_id"] = options.MessagingProfileId;
+        }
+
+        // Telnyx sends a picture message (MMS) when the request carries media links, and downloads each picture from
+        // its link itself, so the links must be reachable from the internet.
+        var media = mediaUrls?.Where(url => !string.IsNullOrWhiteSpace(url)).ToArray() ?? [];
+
+        if (media.Length > 0)
+        {
+            payload["media_urls"] = media;
+
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("Sending a Telnyx MMS with {Count} picture(s).", media.Length);
+            }
         }
 
         using var client = _httpClientFactory.CreateClient(TelnyxConstants.ProviderTechnicalName);
