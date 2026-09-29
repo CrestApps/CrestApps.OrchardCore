@@ -14,9 +14,13 @@
 
 <script asp-name="contact-center-external-transfer-settings" at="Foot"></script>
 
-<p class="alert alert-info">
-    @T["Approved external transfer destinations are resolved exclusively server-side. Callers supply only a destination identifier; the canonical phone number is always taken from this catalog. Only enabled entries are reachable."]
-</p>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <p class="alert alert-info">
+            @T["Approved external transfer destinations are resolved exclusively server-side. Callers supply only a destination identifier; the canonical phone number is always taken from this catalog. Only enabled entries are reachable."]
+        </p>
+    </div>
+</div>
 
 <div class="ocat-wrapper" data-cc-ext-transfer data-config="@JsonSerializer.Serialize(config, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase })">
     <label class="ocat-label">@T["Approved destinations"]</label>
@@ -77,7 +81,7 @@
 </div>
 
 <div class="ocat-wrapper">
-    <div class="ocat-end">
+    <div class="ocat-end-offset">
         <div class="form-check">
             <input type="checkbox" asp-for="AllowUnlistedNumbers" class="form-check-input" />
             <label class="form-check-label" asp-for="AllowUnlistedNumbers">@T["Let agents transfer to numbers that are not on this list"]</label>

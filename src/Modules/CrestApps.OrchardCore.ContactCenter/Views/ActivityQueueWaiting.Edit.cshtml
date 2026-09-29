@@ -47,8 +47,8 @@
         <div class="form-check">
             <input asp-for="Treatment.AnnounceEstimatedWait" class="form-check-input" />
             <label asp-for="Treatment.AnnounceEstimatedWait" class="form-check-label">@T["Announce the estimated wait"]</label>
+            <span class="hint dashed">@T["The estimate is the caller's position times the average handle time, divided by the agents available, clamped to the bounds below."]</span>
         </div>
-        <span class="hint dashed">@T["The estimate is the caller's position times the average handle time, divided by the agents available, clamped to the bounds below."]</span>
     </div>
 </div>
 
