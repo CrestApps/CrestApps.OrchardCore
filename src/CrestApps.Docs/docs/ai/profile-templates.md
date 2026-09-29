@@ -41,7 +41,7 @@ Profile templates are how new profiles begin. Instead of opening a single page w
 
 ![The New AI Profile picker, with a filter box and categories on the left and a card for each starting point](/img/docs/ai-profile-new-picker.png)
 
-- **Blank profile** is always the first card. It opens the full profile editor with nothing filled in, exactly as **Add Profile** did before. The editor's **Apply Templates** card still works as it always has.
+- **Blank profile** is always the first card. It opens the full profile editor with nothing filled in, exactly as **Add Profile** did before. The editor no longer has an **Apply Templates** card; to start from a template, pick its card in the picker instead.
 - The featured scenarios come next, then every other starting point, sorted by category and title.
 - Each card shows the title, the description, the kind of profile it creates (**Chat**, **Utility**, **Agent**) and a **Start** button.
 - Type in **Filter** to narrow the cards by title, description, category or profile type, or pick a category on the left to see only that category. **All** shows everything again.
@@ -70,12 +70,12 @@ The picker builds its cards from the profile templates themselves, so a new temp
 | Rule | Why |
 | --- | --- |
 | Its source is **Profile**. | System prompt templates fill in instructions; they do not create profiles. |
-| **Listable** is checked (`IsListable: true` in a template file, which is the default). | Uncheck **Listable** on the template to keep it out of the picker and out of the **Apply Templates** list. |
+| **Listable** is checked (`IsListable: true` in a template file, which is the default). | Uncheck **Listable** on the template to keep it out of the picker. |
 | Its profile type is not **Template generated prompt**. | Such a profile runs inside an existing chat session rather than standing on its own. |
 
 Templates come from every source the site has: the ones created under **Artificial Intelligence -> Templates**, the files shipped in modules (including the starter scenarios and the building-block agents), and files placed in `App_Data`. A template created under **Artificial Intelligence -> Templates** gets a card with its title, description and category; only template files can be featured today (see [Featuring your own template](#featuring-your-own-template)).
 
-A template left out of the picker can still create a profile: **Artificial Intelligence -> Templates** shows a **Create profile** button on every profile template, for users who can manage AI profiles, and it opens the same setup step. The blank editor's **Apply Templates** card lists every listable template, template-generated prompts included.
+A template left out of the picker can still create a profile: **Artificial Intelligence -> Templates** shows a **Create profile** button on every profile template, for users who can manage AI profiles, and it opens the same setup step.
 
 `/Admin/ai/profile/new` opens the profiles list with the picker showing, so it can be linked to directly.
 
@@ -104,12 +104,12 @@ The SMS and automated voice modules ship starting points for conversations the A
 | Qualify leads by phone | Phone calls | Automated Voice | Calls people who showed interest, checks it is a good time, and learns what they need, how soon, and who decides. |
 | Confirm appointments by phone | Phone calls | Automated Voice | Calls customers to confirm an upcoming appointment and notes cancellations and requests to reschedule. |
 
-Every one of them creates a **Chat** profile with **Add initial prompt** already turned on, because automated SMS conversations and calls only offer profiles that have an initial prompt. The initial prompt is the opening text, or the greeting on a call, and greets the contact by first name when the contact has one.
+Every one of them creates a **Chat** profile with **Start the conversation automatically** already turned on, because automated SMS conversations and calls only offer profiles that have an opening message. The opening message is the first text, or the greeting on a call, and greets the contact by first name when the contact has one.
 
 After creating one:
 
 - Fill in the **About the business** section at the end of the system prompt. Until you do, the assistant treats anything still in square brackets as unknown and offers to have the team follow up instead of guessing.
-- Add your business name to the **Initial prompt**. It starts out generic so that nothing unfinished is ever sent to a customer. It can use Liquid, for example `{{ Contact.DisplayText }}`, and the appointment starting point is the place to add the appointment's date and time when your subject stores them.
+- Add your business name to the **Opening message**. It starts out generic so that nothing unfinished is ever sent to a customer. It can use Liquid, for example `{{ Contact.DisplayText }}`, and the appointment starting point is the place to add the appointment's date and time when your subject stores them.
 - Choose the profile on the subject flow or the automatic inventory load. See [Automated AI SMS and Voice](../user-manual/automated-ai.md).
 
 The prompts leave two things to the platform. Whether the assistant may hand the conversation to a person, and when, comes from the subject's **live agent handoff** settings, and the platform tells the assistant how to do it only when an agent can actually take the conversation. The platform also tells the assistant how to end a call, and a `STOP` text opts the contact out before the assistant ever sees it.
@@ -153,7 +153,7 @@ You are a friendly, helpful assistant on this website.
 
 A value that does not parse, such as a non-numeric `Order`, is ignored. These keys describe the template only and are never copied onto a profile created from it.
 
-A template file can also give the profile it creates an initial prompt with the `InitialPrompt` key. The value becomes the profile's **Initial prompt** and turns on **Add initial prompt**. It may use Liquid, and it is kept on one line.
+A template file can also give the profile it creates an opening message with the `InitialPrompt` key. The value becomes the profile's **Opening message** and turns on **Start the conversation automatically**. It may use Liquid. A value that starts with a Liquid tag or contains a colon followed by a space must be written as a `InitialPrompt: |` block, with the text on the next, indented line, so the front matter stays valid YAML.
 
 ```md
 InitialPrompt: Hi {{ Contact.DisplayText }}, thanks for reaching out! Do you have a minute?

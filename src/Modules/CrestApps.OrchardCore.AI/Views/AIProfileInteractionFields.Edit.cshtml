@@ -16,8 +16,8 @@
     <div class="ocat-end-offset">
         <div class="form-check">
             <input asp-for="AddInitialPrompt" class="form-check-input" />
-            <label asp-for="AddInitialPrompt" class="form-check-label">@T["Add initial prompt"]</label>
-            <span class="hint">@T["When enabled, each new chat session starts with an assistant message from the initial prompt and the welcome message is ignored."]</span>
+            <label asp-for="AddInitialPrompt" class="form-check-label">@T["Start the conversation automatically"]</label>
+            <span class="hint dashed">@T["When enabled, the assistant opens every new conversation with the opening message below instead of waiting for the user, and the welcome message is not shown."]</span>
         </div>
     </div>
 </div>
@@ -32,11 +32,11 @@
 </div>
 
 <div id="initialPromptGroup" class="ocat-wrapper profile-type profile-type-chat d-none">
-    <label asp-for="InitialPrompt" class="ocat-label">@T["Initial prompt"]</label>
+    <label asp-for="InitialPrompt" class="ocat-label">@T["Opening message"]</label>
     <div class="ocat-end">
         <textarea asp-for="InitialPrompt" class="form-control" rows="4"></textarea>
         <span asp-validation-for="InitialPrompt" class="text-danger"></span>
-        <span class="hint">@T["This assistant message is added as the first chat history entry when a new session is created."]</span>
+        <span class="hint">@T["The first message the assistant sends in every new conversation. It is saved as the first entry in the chat history."]</span>
     </div>
 </div>
 

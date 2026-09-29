@@ -119,7 +119,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
 
         if (string.IsNullOrWhiteSpace(initialPromptPattern))
         {
-            throw new InvalidOperationException($"The AI profile '{profile.ItemId}' must have Add initial prompt enabled.");
+            throw new InvalidOperationException($"The AI profile '{profile.ItemId}' must have Start the conversation automatically enabled, with an opening message.");
         }
 
         var campaign = string.IsNullOrWhiteSpace(activity.CampaignId)

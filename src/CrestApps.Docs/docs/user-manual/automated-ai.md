@@ -15,7 +15,7 @@ An **automatic** inventory load creates activities that an **AI profile** works 
 
 ## Before you start
 
-1. **An AI profile.** Under **Artificial Intelligence > AI Profiles**, create a profile of type **Chat** with **Add initial prompt** turned on. The initial prompt is the opening message. It can use Liquid, for example `{{ Contact.DisplayText }}`. The quickest way is **Add Profile** and one of the **Text messaging** or **Phone calls** starting points (**Qualify leads by text**, **Customer care by text**, **Answer calls at the front desk**, **Qualify leads by phone**, **Confirm appointments by phone**), which fill in the initial prompt and the instructions for you. Then name your business in the initial prompt and fill in the **About the business** section of the system prompt. See [Text messaging and phone call starting points](../ai/profile-templates.md#text-messaging-and-phone-call-starting-points).
+1. **An AI profile.** Under **Artificial Intelligence > AI Profiles**, create a profile of type **Chat** with **Start the conversation automatically** turned on. The **Opening message** is the first message the customer receives. It can use Liquid, for example `{{ Contact.DisplayText }}`. The quickest way is **Add Profile** and one of the **Text messaging** or **Phone calls** starting points (**Qualify leads by text**, **Customer care by text**, **Answer calls at the front desk**, **Qualify leads by phone**, **Confirm appointments by phone**), which fill in the opening message and the instructions for you. Then name your business in the opening message and fill in the **About the business** section of the system prompt. See [Text messaging and phone call starting points](../ai/profile-templates.md#text-messaging-and-phone-call-starting-points).
 2. **A subject and its flow**, with the dispositions the AI may choose and a **When to choose this disposition** hint on each action. See [Subject flows](subject-flows.md).
 3. **A channel endpoint** for the number you send from or call from. See [Channel endpoints](channel-endpoints.md).
 4. **Optionally a cadence** for follow-ups ([Cadences](cadences.md)) and a **business hours** calendar ([Business hours](business-hours.md)).
@@ -47,7 +47,7 @@ Follow the same steps with **Phone** as the channel and a phone endpoint. The AI
 
 | Field | What it does |
 | --- | --- |
-| **AI profile** | The profile that runs the conversation. Only chat profiles with an initial prompt are listed. |
+| **AI profile** | The profile that runs the conversation. Only chat profiles with an opening message are listed. |
 | **Allow AI to update the subject** / **contact** | Lets the AI save what it learns onto the records. |
 | **Play background office sound on calls** | Voice only: a quiet office ambience behind the AI voice. |
 | **Reply delay** | **No delay**, **Fixed** (a number of seconds), or **Random** (a base plus or minus a jitter), so replies feel human. |

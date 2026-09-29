@@ -52,7 +52,7 @@ When the AI features are enabled, more settings appear:
 
 | Setting | Applies to | What it does |
 | --- | --- | --- |
-| **AI profile** | Inbound automated | The chat profile that runs the conversation. Only profiles with an initial prompt are listed. Automatic inventory loads can pick a different profile. |
+| **AI profile** | Inbound automated | The chat profile that runs the conversation. Only profiles with an opening message are listed. Automatic inventory loads can pick a different profile. |
 | **Subject goal** | Inbound automated | What the AI is trying to achieve, in plain words. |
 | **Speech-to-text**, **Text-to-speech**, **Voice** | Inbound automated phone | The speech models and voice. Empty uses the site's AI defaults. |
 | **Allow AI to update contact** / **subject** | Inbound automated | Lets the AI write what it learns back to the records. |
