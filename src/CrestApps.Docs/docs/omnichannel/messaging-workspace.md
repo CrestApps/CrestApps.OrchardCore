@@ -141,6 +141,29 @@ Permissions apply to every channel; there is no per-channel permission. An endpo
 
 **Queue broadcast** sends it in the background; each recipient gets their own 1:1 thread and cannot see the others. A queued broadcast cannot be cancelled.
 
+### Exporting and importing templates
+
+Templates travel between environments through the **Messaging Templates** deployment step and the `OmnichannelMessageTemplate` recipe step. An imported template keeps its identifier, and every template needs a name and a body.
+
+```json
+{
+  "steps": [
+    {
+      "name": "OmnichannelMessageTemplate",
+      "Templates": [
+        {
+          "ItemId": "2hb7c4x9m1q6z3v8k5r0t2n7y",
+          "Name": "Opening hours",
+          "Body": "We are open Monday to Friday, 8am to 6pm."
+        }
+      ]
+    }
+  ]
+}
+```
+
+Conversations and broadcasts do not travel: they are the workspace's record of what was said and sent, and replaying a broadcast would message its recipients again. An endpoint's inbound routing travels with the endpoint through the **Omnichannel Channel Endpoints** step.
+
 ## Configuration
 
 | Section | Settings |

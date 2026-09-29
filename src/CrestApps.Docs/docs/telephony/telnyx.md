@@ -567,6 +567,41 @@ provider advertises dialer dialing, agent connect (bridge), call transfer, atten
 monitor, whisper and barge (with mode switching and takeover, see [Supervisor monitoring](#supervisor-monitoring)),
 and — with the Call Recording feature — recording.
 
+## Exporting and importing the settings
+
+The Telnyx voice settings travel through the **Telnyx Settings** deployment step and the `TelnyxSettings` recipe step, and the Telnyx SMS settings through the **Telnyx SMS Settings** step and the `TelnyxSmsSettings` recipe step. The API keys, the webhook public keys and the TURN credential are stored encrypted with keys that belong to the tenant, so they are never written into a plan. When a plan is imported, the destination keeps the secrets it already stores; enter them on the destination's settings screen, or supply them in clear text in a hand-written recipe, where they are encrypted before they are stored.
+
+```json
+{
+  "steps": [
+    {
+      "name": "TelnyxSettings",
+      "Settings": {
+        "IsEnabled": true,
+        "ApiKey": "supply-in-clear-text-or-omit",
+        "ConnectionId": "1234567890",
+        "SipConnectionId": "2345678901",
+        "DefaultOutboundCallerId": "+15551230000",
+        "CredentialLifetimeMinutes": 180,
+        "OrphanedCallHandling": "Report",
+        "AnsweringMachineDetection": "Premium",
+        "TtsVoice": "AWS.Polly.Joanna-Neural",
+        "TtsLanguage": "en-US"
+      }
+    },
+    {
+      "name": "TelnyxSmsSettings",
+      "Settings": {
+        "IsEnabled": true,
+        "MessagingProfileId": "40017a1b-0000-0000-0000-000000000000"
+      }
+    }
+  ]
+}
+```
+
+The connection identifiers belong to one Telnyx account. Replaying a plan into an environment that uses a different account needs **Connect Telnyx** to be run there afterwards, which provisions that account's own connections. An import applies the same rules as saving the settings screen: the signaling region is normalized, enabling the provider makes it the default when no default is set, and the provider options are refreshed without restarting the tenant. Members the step does not carry keep their stored values.
+
 ## Telnyx AI Voice Agent
 
 The **Telnyx AI Voice Agent** feature (`CrestApps.OrchardCore.Telnyx.AiVoice`) is the **voice** counterpart
