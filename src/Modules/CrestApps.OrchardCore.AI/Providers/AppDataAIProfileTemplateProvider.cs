@@ -106,6 +106,7 @@ internal sealed class AppDataAIProfileTemplateProvider : IAIProfileTemplateProvi
 
                 var template = AIProfileTemplateParser.Parse(id, parseResult);
                 ProfileScenarioMetadataReader.Apply(template, parseResult.Metadata);
+                ProfileTemplateDefaultsReader.Apply(template, parseResult.Metadata);
 
                 templates.Add(template);
             }
