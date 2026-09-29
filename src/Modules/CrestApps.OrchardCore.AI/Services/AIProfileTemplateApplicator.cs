@@ -17,7 +17,8 @@ internal static class AIProfileTemplateApplicator
                 // particular would otherwise ride along onto every profile created from a featured scenario.
                 if (string.Equals(property.Key, nameof(ProfileTemplateMetadata), StringComparison.Ordinal) ||
                     string.Equals(property.Key, nameof(SystemPromptTemplateMetadata), StringComparison.Ordinal) ||
-                    string.Equals(property.Key, nameof(ProfileScenarioMetadata), StringComparison.Ordinal))
+                    string.Equals(property.Key, nameof(ProfileScenarioMetadata), StringComparison.Ordinal) ||
+                    string.Equals(property.Key, nameof(ProfileTemplateDefaultsMetadata), StringComparison.Ordinal))
                 {
                     continue;
                 }
@@ -112,6 +113,14 @@ internal static class AIProfileTemplateApplicator
         if (!string.IsNullOrEmpty(templateMetadata.SystemMessage))
         {
             metadata.SystemMessage = templateMetadata.SystemMessage;
+        }
+
+        // The shared template model has no initial prompt, so a template file carries it separately. Automated SMS
+        // conversations and calls only offer profiles that have one, because it is their opening message.
+        if (template.TryGet<ProfileTemplateDefaultsMetadata>(out var defaults) &&
+            !string.IsNullOrWhiteSpace(defaults.InitialPrompt))
+        {
+            metadata.InitialPrompt = defaults.InitialPrompt.Trim();
         }
 
         if (templateMetadata.Temperature.HasValue)
