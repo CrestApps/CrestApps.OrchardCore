@@ -110,10 +110,38 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             results.Add(View("OmnichannelActivityBatch_ActionsMenuItems_SummaryAdmin", batch).Location("ActionsMenu:10"));
         }
 
+        if (HasLoadReport(batch))
+        {
+            results.Add(View("OmnichannelActivityBatch_LoadReport", batch).Location("Description:5"));
+        }
+
         return CombineAsync(results);
     }
 
     public override IDisplayResult Edit(OmnichannelActivityBatch batch, BuildEditorContext context)
+    {
+        var editor = BuildEditor(batch, context);
+
+        if (!HasLoadReport(batch))
+        {
+            return editor;
+        }
+
+        // The editor is read-only once a batch has loaded, so the report of what the load did sits above it: it is
+        // the first thing somebody opening a loaded batch wants to know.
+        return Combine(
+            View("OmnichannelActivityBatch_LoadReport", batch).Location("Content:0"),
+            editor);
+    }
+
+    /// <summary>
+    /// Whether the batch finished a load that recorded why each matching contact was or was not loaded. Batches loaded
+    /// before the counts existed have none to show.
+    /// </summary>
+    private static bool HasLoadReport(OmnichannelActivityBatch batch)
+        => batch.Status == OmnichannelActivityBatchStatus.Loaded && batch.TotalMatched.HasValue;
+
+    private ShapeResult BuildEditor(OmnichannelActivityBatch batch, BuildEditorContext context)
     {
         return Initialize<OmnichannelActivityBatchViewModel>("OmnichannelActivityBatchFields_Edit", async model =>
         {

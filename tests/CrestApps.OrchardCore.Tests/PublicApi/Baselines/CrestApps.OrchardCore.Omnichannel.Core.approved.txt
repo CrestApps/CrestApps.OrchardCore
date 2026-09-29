@@ -574,10 +574,17 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string TextToSpeechVoiceId { get; set; }
         public string[] TimeZoneIds { get; set; }
         public long? TotalLoaded { get; set; }
+        public long? TotalMatched { get; set; }
+        public long TotalSkippedAsDuplicate { get; set; }
+        public long TotalSkippedAsOptedOut { get; set; }
+        public long TotalSkippedAsSharedNumberOptedOut { get; set; }
+        public long TotalSkippedByLimit { get; set; }
+        public long TotalSkippedForNoDestination { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityUrgencyLevel UrgencyLevel { get; set; }
         public bool UseCallAmbience { get; set; }
         public string[] UserIds { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityBatch Clone() { }
+        public void ResetLoadCounts() { }
     }
     public enum OmnichannelActivityBatchStatus
     {

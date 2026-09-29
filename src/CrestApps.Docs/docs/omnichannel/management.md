@@ -463,6 +463,7 @@ Phone filters in **Load Inventory**, **Manage Activities**, and Content Admin se
 - Input that does not begin with `+` is reduced to digits and matched against the national number, so values such as `702499`, `(702) 499`, or `702-499` are accepted.
 - Input whose trimmed value begins with `+` is matched against the E.164 value. The plus sign is a literal format indicator, not a wildcard.
 - **Contains** is the default match mode. **Exact match**, **Begins with**, and **Ends with** are also available in Load Inventory and Manage Activities.
+- In Load Inventory and Content Admin, **Exact match** looks for the number in every shape it may have been stored in. A national entry is also compared with the E.164 value: a ten-digit entry is read as a North American (`+1`) number, and a longer entry as one that already carries its country code, so `5555550123`, `15555550123` and `+15555550123` find the same contact. A number imported without a country, whose E.164 value is empty, is found by its stored digits with or without the leading `1`. Both screens share one definition of the phone match.
 
 Content Admin evaluates the displayed content version. Load Inventory uses published or latest contact values according to **Only published leads**, while Manage Activities uses the latest saved contact values.
 
