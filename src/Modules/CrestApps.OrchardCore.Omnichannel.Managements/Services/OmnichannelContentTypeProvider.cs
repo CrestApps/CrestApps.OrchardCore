@@ -1,5 +1,8 @@
 using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.ContentTypes.Events;
@@ -7,33 +10,52 @@ using OrchardCore.ContentTypes.Events;
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 
 /// <summary>
-/// Maintains tenant-scoped snapshots of the content types that have the <c>OmnichannelSubjectPart</c> or the
-/// <c>OmnichannelContactPart</c> attached so callers can answer that question, and build subject and contact
-/// content type drop downs, without scanning every content type definition on each request. The sets are warmed
-/// once from the content definitions and then kept in sync through the <see cref="IContentDefinitionEventHandler"/>
+/// Maintains tenant-scoped snapshots of the content types that carry the omnichannel and CRM marker parts, so
+/// callers can answer "is this a subject, a contact, a lead, an account or an opportunity?" and build content type
+/// drop downs without scanning every content type definition on each request. The snapshots are warmed once from
+/// the content definitions and then kept in sync through the <see cref="IContentDefinitionEventHandler"/>
 /// notifications.
 /// </summary>
 public sealed class OmnichannelContentTypeProvider : IContentDefinitionEventHandler
 {
+    [Flags]
+    private enum Markers
+    {
+        None = 0,
+        Subject = 1,
+        Reachable = 2,
+        Lead = 4,
+        Account = 8,
+        Opportunity = 16,
+    }
+
+    private static readonly IReadOnlyCollection<string> _empty = Array.Empty<string>();
+
     private readonly object _lock = new();
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly bool _crmEnabled;
 
     // Bumped under _lock whenever a relevant content definition change is observed, including before the
-    // sets are warmed. A warm captures this value before reading the definitions and discards its snapshot
+    // snapshot is warmed. A warm captures this value before reading the definitions and discards its snapshot
     // if the version moved while the read was in flight, so an attach or detach that races the warm is
     // never lost.
     private long _version;
-    private volatile HashSet<string> _subjectContentTypes;
-    private volatile HashSet<string> _contactContentTypes;
+    private Dictionary<string, Markers> _markers;
+    private volatile Snapshot _snapshot;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OmnichannelContentTypeProvider"/> class.
     /// </summary>
     /// <param name="scopeFactory">The scope factory used to warm the sets on demand from the async accessors,
     /// since this provider is a singleton and cannot capture the scoped content definition manager directly.</param>
-    public OmnichannelContentTypeProvider(IServiceScopeFactory scopeFactory)
+    /// <param name="crmOptions">Whether the CRM feature is enabled. While it is off there are no lead types, so a
+    /// type carrying the lead part is a plain contact type.</param>
+    public OmnichannelContentTypeProvider(
+        IServiceScopeFactory scopeFactory,
+        IOptions<OmnichannelCrmOptions> crmOptions = null)
     {
         _scopeFactory = scopeFactory;
+        _crmEnabled = crmOptions?.Value?.Enabled == true;
     }
 
     /// <summary>
@@ -42,29 +64,76 @@ public sealed class OmnichannelContentTypeProvider : IContentDefinitionEventHand
     /// <param name="contentType">The technical name of the content type to test.</param>
     /// <returns><see langword="true"/> when the content type is a subject; otherwise, <see langword="false"/>.</returns>
     public bool IsSubjectContentType(string contentType)
-        => Contains(_subjectContentTypes, contentType);
+        => Contains(_snapshot?.Subjects, contentType);
 
     /// <summary>
-    /// Determines whether the specified content type has the <c>OmnichannelContactPart</c> attached.
+    /// Determines whether the specified content type has the <c>OmnichannelContactPart</c> attached. Lead types
+    /// carry the part too, so they are reachable content types as well.
     /// </summary>
     /// <param name="contentType">The technical name of the content type to test.</param>
     /// <returns><see langword="true"/> when the content type is a contact; otherwise, <see langword="false"/>.</returns>
     public bool IsContactContentType(string contentType)
-        => Contains(_contactContentTypes, contentType);
+        => Contains(_snapshot?.Reachable, contentType);
+
+    /// <summary>
+    /// Determines whether the specified content type is a lead type.
+    /// </summary>
+    /// <param name="contentType">The technical name of the content type to test.</param>
+    public bool IsLeadContentType(string contentType)
+        => Contains(_snapshot?.Leads, contentType);
+
+    /// <summary>
+    /// Determines whether the specified content type is an account type.
+    /// </summary>
+    /// <param name="contentType">The technical name of the content type to test.</param>
+    public bool IsAccountContentType(string contentType)
+        => Contains(_snapshot?.Accounts, contentType);
+
+    /// <summary>
+    /// Determines whether the specified content type is an opportunity type.
+    /// </summary>
+    /// <param name="contentType">The technical name of the content type to test.</param>
+    public bool IsOpportunityContentType(string contentType)
+        => Contains(_snapshot?.Opportunities, contentType);
 
     /// <summary>
     /// Gets the technical names of the content types that have the <c>OmnichannelSubjectPart</c> attached.
     /// </summary>
     /// <returns>A read-only snapshot of the subject content type names.</returns>
     public IReadOnlyCollection<string> GetSubjectContentTypes()
-        => _subjectContentTypes ?? (IReadOnlyCollection<string>)Array.Empty<string>();
+        => _snapshot?.Subjects ?? _empty;
 
     /// <summary>
-    /// Gets the technical names of the content types that have the <c>OmnichannelContactPart</c> attached.
+    /// Gets the technical names of the content types that have the <c>OmnichannelContactPart</c> attached,
+    /// leads included.
     /// </summary>
     /// <returns>A read-only snapshot of the contact content type names.</returns>
     public IReadOnlyCollection<string> GetContactContentTypes()
-        => _contactContentTypes ?? (IReadOnlyCollection<string>)Array.Empty<string>();
+        => _snapshot?.Reachable ?? _empty;
+
+    /// <summary>
+    /// Gets the technical names of the contact types that are not lead types: the clean contact records.
+    /// </summary>
+    public IReadOnlyCollection<string> GetContactKindContentTypes()
+        => _snapshot?.Contacts ?? _empty;
+
+    /// <summary>
+    /// Gets the technical names of the lead types.
+    /// </summary>
+    public IReadOnlyCollection<string> GetLeadContentTypes()
+        => _snapshot?.Leads ?? _empty;
+
+    /// <summary>
+    /// Gets the technical names of the account types.
+    /// </summary>
+    public IReadOnlyCollection<string> GetAccountContentTypes()
+        => _snapshot?.Accounts ?? _empty;
+
+    /// <summary>
+    /// Gets the technical names of the opportunity types.
+    /// </summary>
+    public IReadOnlyCollection<string> GetOpportunityContentTypes()
+        => _snapshot?.Opportunities ?? _empty;
 
     /// <summary>
     /// Gets the subject content type names, warming the cached sets on demand when they have not been
@@ -80,8 +149,8 @@ public sealed class OmnichannelContentTypeProvider : IContentDefinitionEventHand
     }
 
     /// <summary>
-    /// Gets the contact content type names, warming the cached sets on demand when they have not been
-    /// initialized yet.
+    /// Gets the contact content type names, leads included, warming the cached sets on demand when they have not
+    /// been initialized yet.
     /// </summary>
     /// <returns>A read-only snapshot of the contact content type names.</returns>
     public async ValueTask<IReadOnlyCollection<string>> GetContactContentTypesAsync()
@@ -92,12 +161,52 @@ public sealed class OmnichannelContentTypeProvider : IContentDefinitionEventHand
     }
 
     /// <summary>
+    /// Gets the contact types that are not lead types, warming the cached sets on demand.
+    /// </summary>
+    public async ValueTask<IReadOnlyCollection<string>> GetContactKindContentTypesAsync()
+    {
+        await EnsureInitializedAsync();
+
+        return GetContactKindContentTypes();
+    }
+
+    /// <summary>
+    /// Gets the lead types, warming the cached sets on demand.
+    /// </summary>
+    public async ValueTask<IReadOnlyCollection<string>> GetLeadContentTypesAsync()
+    {
+        await EnsureInitializedAsync();
+
+        return GetLeadContentTypes();
+    }
+
+    /// <summary>
+    /// Gets the account types, warming the cached sets on demand.
+    /// </summary>
+    public async ValueTask<IReadOnlyCollection<string>> GetAccountContentTypesAsync()
+    {
+        await EnsureInitializedAsync();
+
+        return GetAccountContentTypes();
+    }
+
+    /// <summary>
+    /// Gets the opportunity types, warming the cached sets on demand.
+    /// </summary>
+    public async ValueTask<IReadOnlyCollection<string>> GetOpportunityContentTypesAsync()
+    {
+        await EnsureInitializedAsync();
+
+        return GetOpportunityContentTypes();
+    }
+
+    /// <summary>
     /// Warms the cached sets on demand using a fresh scope, for the async accessors used by callers that do not
     /// pass an <see cref="IContentDefinitionManager"/> themselves.
     /// </summary>
     private async Task EnsureInitializedAsync()
     {
-        if (_subjectContentTypes is not null && _contactContentTypes is not null)
+        if (_snapshot is not null)
         {
             return;
         }
@@ -123,7 +232,7 @@ public sealed class OmnichannelContentTypeProvider : IContentDefinitionEventHand
 
             lock (_lock)
             {
-                if (_subjectContentTypes is not null && _contactContentTypes is not null)
+                if (_snapshot is not null)
                 {
                     return;
                 }
@@ -133,25 +242,21 @@ public sealed class OmnichannelContentTypeProvider : IContentDefinitionEventHand
 
             var definitions = await contentDefinitionManager.ListTypeDefinitionsAsync();
 
-            var subjectContentTypes = new HashSet<string>(StringComparer.Ordinal);
-            var contactContentTypes = new HashSet<string>(StringComparer.Ordinal);
+            var markers = new Dictionary<string, Markers>(StringComparer.Ordinal);
 
             foreach (var definition in definitions)
             {
-                if (OmnichannelSubjectDefinitionService.HasOmnichannelSubjectPart(definition))
-                {
-                    subjectContentTypes.Add(definition.Name);
-                }
+                var value = GetMarkers(definition);
 
-                if (OmnichannelContactDefinitionService.HasOmnichannelContactPart(definition))
+                if (value != Markers.None)
                 {
-                    contactContentTypes.Add(definition.Name);
+                    markers[definition.Name] = value;
                 }
             }
 
             lock (_lock)
             {
-                if (_subjectContentTypes is not null && _contactContentTypes is not null)
+                if (_snapshot is not null)
                 {
                     // Another thread finished warming while this read was in flight. Its result already
                     // reflects every event applied incrementally, so keep it.
@@ -160,8 +265,8 @@ public sealed class OmnichannelContentTypeProvider : IContentDefinitionEventHand
 
                 if (_version == versionSnapshot)
                 {
-                    _subjectContentTypes = subjectContentTypes;
-                    _contactContentTypes = contactContentTypes;
+                    _markers = markers;
+                    _snapshot = BuildSnapshot(markers);
 
                     return;
                 }
@@ -186,36 +291,27 @@ public sealed class OmnichannelContentTypeProvider : IContentDefinitionEventHand
 
     /// <inheritdoc/>
     public void ContentTypeRemoved(ContentTypeRemovedContext context)
-    {
-        var contentType = context.ContentTypeDefinition?.Name;
-
-        SetSubjectMembership(contentType, isMember: false);
-        SetContactMembership(contentType, isMember: false);
-    }
+        => SetMarkers(context.ContentTypeDefinition?.Name, _ => Markers.None);
 
     /// <inheritdoc/>
     public void ContentPartAttached(ContentPartAttachedContext context)
     {
-        if (IsSubjectPart(context.ContentPartName))
+        var marker = GetMarker(context.ContentPartName);
+
+        if (marker != Markers.None)
         {
-            SetSubjectMembership(context.ContentTypeName, isMember: true);
-        }
-        else if (IsContactPart(context.ContentPartName))
-        {
-            SetContactMembership(context.ContentTypeName, isMember: true);
+            SetMarkers(context.ContentTypeName, current => current | marker);
         }
     }
 
     /// <inheritdoc/>
     public void ContentPartDetached(ContentPartDetachedContext context)
     {
-        if (IsSubjectPart(context.ContentPartName))
+        var marker = GetMarker(context.ContentPartName);
+
+        if (marker != Markers.None)
         {
-            SetSubjectMembership(context.ContentTypeName, isMember: false);
-        }
-        else if (IsContactPart(context.ContentPartName))
-        {
-            SetContactMembership(context.ContentTypeName, isMember: false);
+            SetMarkers(context.ContentTypeName, current => current & ~marker);
         }
     }
 
@@ -281,11 +377,12 @@ public sealed class OmnichannelContentTypeProvider : IContentDefinitionEventHand
             return;
         }
 
-        SetSubjectMembership(contentTypeDefinition.Name, OmnichannelSubjectDefinitionService.HasOmnichannelSubjectPart(contentTypeDefinition));
-        SetContactMembership(contentTypeDefinition.Name, OmnichannelContactDefinitionService.HasOmnichannelContactPart(contentTypeDefinition));
+        var markers = GetMarkers(contentTypeDefinition);
+
+        SetMarkers(contentTypeDefinition.Name, _ => markers);
     }
 
-    private void SetSubjectMembership(string contentType, bool isMember)
+    private void SetMarkers(string contentType, Func<Markers, Markers> update)
     {
         if (string.IsNullOrEmpty(contentType))
         {
@@ -294,56 +391,127 @@ public sealed class OmnichannelContentTypeProvider : IContentDefinitionEventHand
 
         lock (_lock)
         {
-            // Bump the version even when the set is still null so an in-flight warm re-reads. The
-            // incremental update below is a no-op until the set has been warmed.
+            // Bump the version even when the snapshot is still null so an in-flight warm re-reads. The
+            // incremental update below is a no-op until the snapshot has been warmed, because the warm reads the
+            // current definitions and needs no events applied on top.
             _version++;
-            _subjectContentTypes = WithMembership(_subjectContentTypes, contentType, isMember);
+
+            if (_markers is null)
+            {
+                return;
+            }
+
+            var current = _markers.GetValueOrDefault(contentType);
+            var updated = update(current);
+
+            if (updated == current)
+            {
+                return;
+            }
+
+            var markers = new Dictionary<string, Markers>(_markers, StringComparer.Ordinal);
+
+            if (updated == Markers.None)
+            {
+                markers.Remove(contentType);
+            }
+            else
+            {
+                markers[contentType] = updated;
+            }
+
+            _markers = markers;
+            _snapshot = BuildSnapshot(markers);
         }
     }
 
-    private void SetContactMembership(string contentType, bool isMember)
+    private Snapshot BuildSnapshot(Dictionary<string, Markers> markers)
     {
-        if (string.IsNullOrEmpty(contentType))
+        var subjects = new HashSet<string>(StringComparer.Ordinal);
+        var reachable = new HashSet<string>(StringComparer.Ordinal);
+        var contacts = new HashSet<string>(StringComparer.Ordinal);
+        var leads = new HashSet<string>(StringComparer.Ordinal);
+        var accounts = new HashSet<string>(StringComparer.Ordinal);
+        var opportunities = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var (contentType, value) in markers)
         {
-            return;
+            if (value.HasFlag(Markers.Subject))
+            {
+                subjects.Add(contentType);
+            }
+
+            if (value.HasFlag(Markers.Reachable))
+            {
+                reachable.Add(contentType);
+
+                // Until the CRM feature is enabled a lead part is inert, so the type stays a plain contact.
+                if (_crmEnabled && value.HasFlag(Markers.Lead))
+                {
+                    leads.Add(contentType);
+                }
+                else
+                {
+                    contacts.Add(contentType);
+                }
+            }
+
+            if (value.HasFlag(Markers.Account))
+            {
+                accounts.Add(contentType);
+            }
+
+            if (value.HasFlag(Markers.Opportunity))
+            {
+                opportunities.Add(contentType);
+            }
         }
 
-        lock (_lock)
-        {
-            // Bump the version even when the set is still null so an in-flight warm re-reads. The
-            // incremental update below is a no-op until the set has been warmed.
-            _version++;
-            _contactContentTypes = WithMembership(_contactContentTypes, contentType, isMember);
-        }
+        return new Snapshot(subjects, reachable, contacts, leads, accounts, opportunities);
     }
 
-    private static HashSet<string> WithMembership(HashSet<string> contentTypes, string contentType, bool isMember)
+    private static Markers GetMarkers(ContentTypeDefinition definition)
     {
-        // The initial warm reads the current definitions, so events received before it completes need no
-        // incremental update.
-        if (contentTypes is null)
+        var markers = Markers.None;
+
+        if (OmnichannelSubjectDefinitionService.HasOmnichannelSubjectPart(definition))
         {
-            return null;
+            markers |= Markers.Subject;
         }
 
-        if (isMember == contentTypes.Contains(contentType))
+        if (OmnichannelContactDefinitionService.HasOmnichannelContactPart(definition))
         {
-            return contentTypes;
+            markers |= Markers.Reachable;
         }
 
-        var updated = new HashSet<string>(contentTypes, StringComparer.Ordinal);
-
-        if (isMember)
+        if (OmnichannelRecordKinds.HasPart(definition, OmnichannelConstants.ContentParts.Lead))
         {
-            updated.Add(contentType);
-        }
-        else
-        {
-            updated.Remove(contentType);
+            markers |= Markers.Lead;
         }
 
-        return updated;
+        if (OmnichannelRecordKinds.IsAccount(definition))
+        {
+            markers |= Markers.Account;
+        }
+
+        if (OmnichannelRecordKinds.IsOpportunity(definition))
+        {
+            markers |= Markers.Opportunity;
+        }
+
+        return markers;
     }
+
+    private static Markers GetMarker(string partName)
+        => partName switch
+        {
+            OmnichannelConstants.ContentParts.OmnichannelSubject => Markers.Subject,
+            OmnichannelConstants.ContentParts.OmnichannelContact => Markers.Reachable,
+            OmnichannelConstants.ContentParts.Lead => Markers.Lead,
+            OmnichannelConstants.ContentParts.Account => Markers.Account,
+            OmnichannelConstants.ContentParts.Opportunity => Markers.Opportunity,
+            _ => Markers.None,
+        };
 
     private static bool Contains(HashSet<string> contentTypes, string contentType)
     {
@@ -355,9 +523,11 @@ public sealed class OmnichannelContentTypeProvider : IContentDefinitionEventHand
         return contentTypes is not null && contentTypes.Contains(contentType);
     }
 
-    private static bool IsSubjectPart(string partName)
-        => string.Equals(partName, OmnichannelConstants.ContentParts.OmnichannelSubject, StringComparison.Ordinal);
-
-    private static bool IsContactPart(string partName)
-        => string.Equals(partName, OmnichannelConstants.ContentParts.OmnichannelContact, StringComparison.Ordinal);
+    private sealed record Snapshot(
+        HashSet<string> Subjects,
+        HashSet<string> Reachable,
+        HashSet<string> Contacts,
+        HashSet<string> Leads,
+        HashSet<string> Accounts,
+        HashSet<string> Opportunities);
 }

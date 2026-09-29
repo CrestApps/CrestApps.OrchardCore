@@ -1,0 +1,57 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model LeadStatusViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+    <div class="ocat-end">
+        @if (Model.IsNew)
+        {
+            <input asp-for="Name" class="form-control" />
+        }
+        else
+        {
+            <input value="@Model.Name" class="form-control" readonly />
+            <input asp-for="Name" type="hidden" />
+            <span class="hint">@T["The name is fixed after creation."]</span>
+        }
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Description" class="form-control"></textarea>
+        <span asp-validation-for="Description" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Order" class="ocat-label">@T["Order"]</label>
+    <div class="ocat-end">
+        <input asp-for="Order" type="number" class="form-control" />
+        <span asp-validation-for="Order" class="text-danger"></span>
+        <span class="hint dashed">@T["Lists show the lowest first."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="IsDefault" class="form-check-input" type="checkbox" />
+            <label asp-for="IsDefault" class="form-check-label">@T["A new lead starts in this status"]</label>
+            <span class="hint dashed">@T["Only one status can be the default. Choosing this one clears it from the others."]</span>
+        </div>
+        <div class="form-check">
+            <input asp-for="IsClosed" class="form-check-input" type="checkbox" />
+            <label asp-for="IsClosed" class="form-check-label">@T["Leads in this status are closed"]</label>
+            <span class="hint dashed">@T["Closed leads are skipped by inventory loads unless a load asks for them."]</span>
+        </div>
+        <div class="form-check">
+            <input asp-for="IsConverted" class="form-check-input" type="checkbox" />
+            <label asp-for="IsConverted" class="form-check-label">@T["This is the converted status"]</label>
+            <span class="hint dashed">@T["A lead takes this status when it is converted, and it cannot be chosen by hand. Only one status can be the converted status, and it is always closed."]</span>
+        </div>
+    </div>
+</div>

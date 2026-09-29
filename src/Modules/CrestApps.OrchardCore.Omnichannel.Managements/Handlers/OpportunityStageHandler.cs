@@ -1,0 +1,107 @@
+using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
+using System.Text.Json.Nodes;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Managements.Deployments;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Localization;
+using OrchardCore.Modules;
+
+namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
+
+internal sealed class OpportunityStageHandler : CatalogEntryHandlerBase<OpportunityStage>
+{
+    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IClock _clock;
+
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OpportunityStageHandler"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="clock">The clock.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public OpportunityStageHandler(
+        IHttpContextAccessor httpContextAccessor,
+        IClock clock,
+        IStringLocalizer<OpportunityStageHandler> stringLocalizer)
+    {
+        _httpContextAccessor = httpContextAccessor;
+        _clock = clock;
+        S = stringLocalizer;
+    }
+
+    public override Task InitializingAsync(InitializingContext<OpportunityStage> context, CancellationToken cancellationToken = default)
+        => PopulateAsync(context.Model, context.Data);
+
+    public override Task UpdatingAsync(UpdatingContext<OpportunityStage> context, CancellationToken cancellationToken = default)
+    {
+        context.Model.ModifiedUtc = _clock.UtcNow;
+
+        return PopulateAsync(context.Model, context.Data);
+    }
+
+    public override Task ValidatingAsync(ValidatingContext<OpportunityStage> context, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(context.Model.Name))
+        {
+            context.Result.Fail(new ValidationResult(S["Name is required."], [nameof(OpportunityStage.Name)]));
+        }
+
+        if (context.Model.Probability < 0 || context.Model.Probability > 100)
+        {
+            context.Result.Fail(new ValidationResult(S["The probability must be between 0 and 100."], [nameof(OpportunityStage.Probability)]));
+        }
+
+        if (context.Model.IsWon && !context.Model.IsClosed)
+        {
+            context.Result.Fail(new ValidationResult(S["Only a closed stage can be won."], [nameof(OpportunityStage.IsWon)]));
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public override Task InitializedAsync(InitializedContext<OpportunityStage> context, CancellationToken cancellationToken = default)
+    {
+        context.Model.CreatedUtc = _clock.UtcNow;
+
+        var user = _httpContextAccessor.HttpContext?.User;
+
+        if (user != null)
+        {
+            context.Model.OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            context.Model.Author = user.Identity.Name;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private static Task PopulateAsync(OpportunityStage model, JsonNode data)
+    {
+        OmnichannelDeploymentSerializer.Populate(model, data);
+
+        var name = data[nameof(OpportunityStage.Name)]?.GetValue<string>()?.Trim();
+
+        if (!string.IsNullOrEmpty(name))
+        {
+            model.Name = name;
+        }
+
+        var properties = data[nameof(OpportunityStage.Properties)]?.AsObject();
+
+        if (properties != null)
+        {
+            model.Properties ??= new Dictionary<string, object>();
+
+            foreach (var (key, value) in properties)
+            {
+                model.Properties[key] = value;
+            }
+        }
+
+        return Task.CompletedTask;
+    }
+}

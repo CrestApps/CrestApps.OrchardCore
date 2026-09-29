@@ -264,7 +264,7 @@ public sealed class ManualCallScreenerTests
 
         public List<INationalDoNotCallRegistry> Registries { get; } = [];
 
-        public Mock<IInboundContactLookup> ContactLookup { get; } = new();
+        public Mock<IInboundContactLookup> ContactLookup { get; } = new() { CallBase = true };
 
         public Mock<IContentManager> ContentManager { get; } = new();
 

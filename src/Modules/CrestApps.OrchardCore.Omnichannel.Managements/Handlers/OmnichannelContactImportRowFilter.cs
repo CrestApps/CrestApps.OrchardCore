@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.DncRegistry;
 using CrestApps.OrchardCore.DncRegistry.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.PhoneNumbers;
@@ -27,7 +28,10 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
     private readonly IPhoneNumberService _phoneNumberService;
     private readonly ISiteService _siteService;
     private readonly ILogger _logger;
+    private readonly IOmnichannelContactTypeProvider? _contactTypeProvider;
+    private readonly ImportRowDoNotCallFlags? _doNotCallFlags;
     private bool _ignoreDuplicates;
+    private bool _markRegistryNumbersDoNotCall;
     private bool _ignoreDoNotCallNumbers;
     private string? _selectedCountryCode;
     private string[] _selectedRegistryKeys = [];
@@ -43,13 +47,19 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
     /// <param name="phoneNumberService">The phone number service for E.164 formatting.</param>
     /// <param name="siteService">The site service.</param>
     /// <param name="logger">The logger.</param>
+    /// <param name="contactTypeProviders">Tells lead types from contact types, for the duplicate scope.</param>
+    /// <param name="doNotCallFlags">Carries the rows imported marked Do not call to the import handler.</param>
     public OmnichannelContactImportRowFilter(
         IEnumerable<INationalDoNotCallRegistry> registries,
         IOmnichannelContactDuplicateLookupService duplicateLookupService,
         IPhoneNumberService phoneNumberService,
         ISiteService siteService,
-        ILogger<OmnichannelContactImportRowFilter> logger)
+        ILogger<OmnichannelContactImportRowFilter> logger,
+        IEnumerable<IOmnichannelContactTypeProvider>? contactTypeProviders = null,
+        ImportRowDoNotCallFlags? doNotCallFlags = null)
     {
+        _contactTypeProvider = contactTypeProviders?.FirstOrDefault();
+        _doNotCallFlags = doNotCallFlags;
         _registries = registries;
         _duplicateLookupService = duplicateLookupService;
         _phoneNumberService = phoneNumberService;
@@ -71,6 +81,7 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
         var options = context.Entry.GetOrCreate<OmnichannelContactImportOptionsPart>();
         _ignoreDuplicates = options.IgnoreDuplicateByPhoneNumber;
         _ignoreDoNotCallNumbers = options.IgnoreDoNotCallNumbers;
+        _markRegistryNumbersDoNotCall = options.MarkRegistryNumbersDoNotCall && _doNotCallFlags is not null;
         _selectedCountryCode = NormalizeCountryCode(options.SelectedCountryCode);
         _selectedRegistryKeys = options.SelectedRegistryKeys ?? [];
         _seenPhoneOwners = new Dictionary<string, SeenPhoneOwnerState>(StringComparer.OrdinalIgnoreCase);
@@ -103,7 +114,11 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
 
         if (_ignoreDuplicates)
         {
-            _existingPhoneOwners = await _duplicateLookupService.GetAllExistingNormalizedPhoneNumberOwnersAsync(CancellationToken.None);
+            var include = await GetDuplicateScopeAsync(context.ContentTypeDefinition.Name, options);
+
+            _existingPhoneOwners = include is null
+                ? await _duplicateLookupService.GetAllExistingNormalizedPhoneNumberOwnersAsync(CancellationToken.None)
+                : await _duplicateLookupService.GetExistingNormalizedPhoneNumberOwnersAsync(include, CancellationToken.None);
         }
 
         return true;
@@ -220,6 +235,24 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
                     return true;
                 }
 
+                if (doNotCallNumbers.Contains(entry.Canonical) && _markRegistryNumbersDoNotCall)
+                {
+                    // The operator chose to keep registry numbers as records marked Do not call, so the number is
+                    // recognised if it comes back, while the flag keeps it out of every call.
+                    _doNotCallFlags!.Mark(context.Row);
+
+                    if (_logger.IsEnabled(LogLevel.Debug))
+                    {
+                        _logger.LogDebug(
+                            "Importing row {RowIndex} marked Do not call: {Label} '{RawValue}' is registered on a national do-not-call registry.",
+                            context.RowIndex,
+                            entry.Label,
+                            entry.RawValue);
+                    }
+
+                    continue;
+                }
+
                 if (doNotCallNumbers.Contains(entry.Canonical))
                 {
                     context.SkipReason = $"{entry.Label} '{entry.RawValue}' is registered on a national do-not-call registry.";
@@ -238,6 +271,41 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Returns which existing records the file is compared against, or <see langword="null"/> for every record. A
+    /// contact import compares against contacts, so a customer who was once a lead can still be imported; a lead
+    /// import compares against contacts and open leads, as its options say. Without the CRM feature there are no
+    /// lead types and a contact import compares against every record, as it always did.
+    /// </summary>
+    private async Task<Func<Omnichannel.Core.Indexes.OmnichannelContactIndex, bool>?> GetDuplicateScopeAsync(
+        string contentType,
+        OmnichannelContactImportOptionsPart options)
+    {
+        var leadTypes = _contactTypeProvider is null
+            ? []
+            : (await _contactTypeProvider.GetLeadContentTypesAsync()).ToHashSet(StringComparer.Ordinal);
+
+        bool IsLead(Omnichannel.Core.Indexes.OmnichannelContactIndex index)
+            => !string.IsNullOrEmpty(index.ContentType) && leadTypes.Contains(index.ContentType);
+
+        if (leadTypes.Contains(contentType))
+        {
+            var skipContacts = options.SkipNumbersOfExistingContacts;
+            var skipLeads = options.SkipNumbersOfOpenLeads;
+
+            return index => IsLead(index)
+                ? skipLeads && !index.IsConverted
+                : skipContacts;
+        }
+
+        return options.DuplicateScope switch
+        {
+            ContactImportDuplicateScope.AllRecords => null,
+            ContactImportDuplicateScope.SameType => index => string.Equals(index.ContentType, contentType, StringComparison.Ordinal),
+            _ => leadTypes.Count == 0 ? null : index => !IsLead(index),
+        };
     }
 
     private List<PhoneEntry> ExtractPhoneEntries(DataRow row, DataColumnCollection columns)

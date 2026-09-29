@@ -193,7 +193,7 @@ public sealed class ContactCenterIncomingCallContextProviderTests
                 ExpiresUtc = new DateTime(2026, 9, 24, 4, 10, 0, DateTimeKind.Utc),
             });
 
-        var contactLookup = new Mock<IInboundContactLookup>();
+        var contactLookup = new Mock<IInboundContactLookup> { CallBase = true };
         contactLookup
             .Setup(lookup => lookup.FindContactItemIdsAsync("+15125550100", It.IsAny<CancellationToken>()))
             .ReturnsAsync(["contact-1"]);

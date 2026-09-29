@@ -1,0 +1,108 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model OpportunityPartViewModel
+
+@{
+    var contactEndpoint = Url.Content("~/Admin/api/crestapps/omnichannel/crm/contacts/search");
+
+    if (!string.IsNullOrEmpty(Model.AccountContentItemId))
+    {
+        contactEndpoint += "?accountId=" + Uri.EscapeDataString(Model.AccountContentItemId);
+    }
+
+    var contactInitialJson = string.IsNullOrEmpty(Model.PrimaryContactItemId)
+        ? "[]"
+        : System.Text.Json.JsonSerializer.Serialize(new[] { new { value = Model.PrimaryContactItemId, text = Model.PrimaryContactDisplayText ?? Model.PrimaryContactItemId, selected = true } });
+}
+
+<div class="ocat-wrapper" asp-validation-class-for="StageId">
+    <label asp-for="StageId" class="ocat-label">@T["Stage"]</label>
+    <div class="ocat-end">
+        <select asp-for="StageId" asp-items="Model.Stages" class="form-select">
+            <option value="">@T["First stage"]</option>
+        </select>
+        <span asp-validation-for="StageId" class="text-danger"></span>
+        <span class="hint dashed">@T["Where the deal is in the pipeline. The stages come from the settings of this opportunity type."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Probability">
+    <label asp-for="Probability" class="ocat-label">@T["Probability (%)"]</label>
+    <div class="ocat-end">
+        <input asp-for="Probability" type="number" min="0" max="100" class="form-control" />
+        <span asp-validation-for="Probability" class="text-danger"></span>
+        <span class="hint dashed">@T["The chance the deal is won. It starts from the stage's probability and follows the stage when the stage changes."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Amount">
+    <label asp-for="Amount" class="ocat-label">@T["Amount"]</label>
+    <div class="ocat-end">
+        <input asp-for="Amount" type="number" min="0" step="0.01" class="form-control" />
+        <span asp-validation-for="Amount" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="CloseDate">
+    <label asp-for="CloseDate" class="ocat-label">@T["Close date"]</label>
+    <div class="ocat-end">
+        <input asp-for="CloseDate" type="date" class="form-control" value="@(Model.CloseDate?.ToString("yyyy-MM-dd"))" />
+        <span class="hint dashed">@T["When the deal is expected to close."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Primary contact"]</label>
+    <div class="ocat-end">
+        @await Component.InvokeAsync("ItemSelector", new
+        {
+            id = Html.IdFor(m => m.PrimaryContactItemId).ToString() + "-selector",
+            inputName = Html.NameFor(m => m.PrimaryContactItemId).ToString(),
+            endpoint = contactEndpoint,
+            initialItemsJson = contactInitialJson,
+            multiple = false,
+            enableSearch = true,
+            buttonText = T["Select a contact"].Value,
+            searchPlaceholder = T["Search contacts"].Value,
+            emptyResultsText = T["No contacts found."].Value,
+            noSelectionText = T["No contact selected."].Value,
+            selectedItemsLabel = T["Selected contact"].Value,
+            availableItemsLabel = T["Contacts"].Value,
+            smallButton = false,
+        })
+        <span class="hint dashed">@(string.IsNullOrEmpty(Model.AccountContentItemId) ? T["The main person the deal is with."] : T["The main person the deal is with. The search lists the contacts of the opportunity's account."])</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Opportunity owner"]</label>
+    <div class="ocat-end">
+        @await Component.InvokeAsync("UserPicker", new
+        {
+            name = Html.NameFor(m => m.OwnerId).ToString(),
+            selectedValues = string.IsNullOrEmpty(Model.OwnerId) ? Array.Empty<string>() : new[] { Model.OwnerId },
+            valueType = "userId",
+            multiple = false,
+            buttonText = T["Select an owner"].Value,
+            searchPlaceholder = T["Search users"].Value,
+            smallButton = false,
+        })
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="CampaignId">
+    <label asp-for="CampaignId" class="ocat-label">@T["Campaign"]</label>
+    <div class="ocat-end">
+        <select asp-for="CampaignId" asp-items="Model.Campaigns" class="form-select">
+            <option value="">@T["None"]</option>
+        </select>
+        <span class="hint dashed">@T["The campaign the deal came from, for campaign reporting."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Source">
+    <label asp-for="Source" class="ocat-label">@T["Source"]</label>
+    <div class="ocat-end">
+        <input asp-for="Source" class="form-control" />
+    </div>
+</div>

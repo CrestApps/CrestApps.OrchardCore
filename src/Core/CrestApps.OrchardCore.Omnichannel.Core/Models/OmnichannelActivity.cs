@@ -145,6 +145,12 @@ public sealed class OmnichannelActivity : CatalogItem
     public string ContactContentType { get; set; }
 
     /// <summary>
+    /// Gets or sets the content item identifier of the lead this activity belonged to before the lead was converted
+    /// and its activities moved to the contact it became.
+    /// </summary>
+    public string ConvertedFromLeadItemId { get; set; }
+
+    /// <summary>
     /// Gets or sets the contact-attribution state.
     /// </summary>
     public ContactResolutionStatus ContactResolutionStatus { get; set; }

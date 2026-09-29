@@ -1,0 +1,217 @@
+@using Microsoft.AspNetCore.Mvc.Localization
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model ConvertLeadViewModel
+
+@{
+    var accountEndpoint = Url.Content("~/Admin/api/crestapps/omnichannel/crm/accounts/search");
+    var selectedAccount = Model.MatchingAccounts.FirstOrDefault(account => account.ContentItemId == Model.ExistingAccountItemId);
+    var accountInitialJson = string.IsNullOrEmpty(Model.ExistingAccountItemId)
+        ? "[]"
+        : System.Text.Json.JsonSerializer.Serialize(new[] { new { value = Model.ExistingAccountItemId, text = selectedAccount?.DisplayText ?? Model.ExistingAccountItemId, selected = true } });
+}
+
+<zone Name="Title">
+    <h1>@RenderTitleSegments(T["Convert {0}", Model.Lead.DisplayText])</h1>
+</zone>
+
+<p class="text-muted">
+    @T["Converting a lead turns it into a contact. The lead's phone numbers, email addresses and matching fields are copied, its opt-outs carry over, and its activity history moves to the contact. The lead is then kept, read-only, as the record of what happened before."]
+</p>
+
+<form method="post" asp-action="Convert" asp-route-contentItemId="@Model.Lead.ContentItemId" class="no-multisubmit" data-convert-lead>
+    @Html.ValidationSummary()
+
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header">@T["Contact"]</div>
+        <div class="card-body">
+            @if (Model.MatchingContacts.Count > 0)
+            {
+                <p>@T.Plural(Model.MatchingContacts.Count, "One contact already has this lead's phone number or email. Merge into it to avoid a duplicate.", "{0} contacts already have this lead's phone number or email. Merge into one of them to avoid a duplicate.")</p>
+
+                @foreach (var contact in Model.MatchingContacts)
+                {
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="@Html.NameFor(m => m.ExistingContactItemId)" id="contact-@contact.ContentItemId" value="@contact.ContentItemId" checked="@(Model.ExistingContactItemId == contact.ContentItemId)" data-contact-choice />
+                        <label class="form-check-label" for="contact-@contact.ContentItemId">
+                            @T["Merge into {0}", contact.DisplayText]
+                            <a class="ms-1" asp-action="Edit" asp-controller="Admin" asp-route-area="OrchardCore.Contents" asp-route-contentItemId="@contact.ContentItemId" target="_blank">@T["View"]</a>
+                        </label>
+                        <span class="hint dashed">@T["The contact keeps its own values; it only gains the lead's phone numbers, email addresses and fields it does not have yet."]</span>
+                    </div>
+                }
+            }
+
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="@Html.NameFor(m => m.ExistingContactItemId)" id="contact-new" value="" checked="@string.IsNullOrEmpty(Model.ExistingContactItemId)" data-contact-choice data-contact-new />
+                <label class="form-check-label" for="contact-new">@T["Create a new contact"]</label>
+            </div>
+
+            <div class="ocat-wrapper mt-3" data-new-contact-type>
+                <label asp-for="ContactContentType" class="ocat-label">@T["Contact type"]</label>
+                <div class="ocat-end">
+                    <select asp-for="ContactContentType" asp-items="Model.ContactContentTypes" class="form-select">
+                        <option value="">@T["Choose a contact type"]</option>
+                    </select>
+                    <span class="hint dashed">@T["The lead type can set this, so it does not need choosing every time."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.HasAccountTypes)
+    {
+        <div class="card text-bg-theme mb-3">
+            <div class="card-header">@T["Account"]</div>
+            <div class="card-body">
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" asp-for="AccountMode" id="account-existing" value="@LeadConversionAccountMode.UseExisting" data-account-mode />
+                    <label class="form-check-label" for="account-existing">@T["Add the contact to an existing account"]</label>
+                </div>
+                <div class="ms-4 mb-2" data-account-panel="@LeadConversionAccountMode.UseExisting">
+                    @await Component.InvokeAsync("ItemSelector", new
+                    {
+                        id = "convert-lead-account-selector",
+                        inputName = Html.NameFor(m => m.ExistingAccountItemId).ToString(),
+                        endpoint = accountEndpoint,
+                        initialItemsJson = accountInitialJson,
+                        multiple = false,
+                        enableSearch = true,
+                        buttonText = T["Select an account"].Value,
+                        searchPlaceholder = T["Search accounts"].Value,
+                        emptyResultsText = T["No accounts found."].Value,
+                        noSelectionText = T["No account selected."].Value,
+                        selectedItemsLabel = T["Account"].Value,
+                        availableItemsLabel = T["Accounts"].Value,
+                        smallButton = false,
+                    })
+                </div>
+
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" asp-for="AccountMode" id="account-new" value="@LeadConversionAccountMode.CreateNew" data-account-mode />
+                    <label class="form-check-label" for="account-new">@T["Create a new account"]</label>
+                </div>
+                <div class="ms-4 mb-2" data-account-panel="@LeadConversionAccountMode.CreateNew">
+                    <input asp-for="AccountName" class="form-control" placeholder="@T["Account name"]" />
+                    <span class="hint dashed">@T["Starts from the lead's company."]</span>
+                </div>
+
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" asp-for="AccountMode" id="account-none" value="@LeadConversionAccountMode.None" data-account-mode />
+                    <label class="form-check-label" for="account-none">@T["No account"]</label>
+                    <span class="hint dashed">@T["A contact the lead is merged into keeps the account it already has."]</span>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (Model.OpportunityContentTypes.Count > 0)
+    {
+        <div class="card text-bg-theme mb-3">
+            <div class="card-header">@T["Opportunity"]</div>
+            <div class="card-body">
+                <div class="form-check mb-2">
+                    <input asp-for="CreateOpportunity" class="form-check-input" type="checkbox" data-create-opportunity />
+                    <label asp-for="CreateOpportunity" class="form-check-label">@T["Create an opportunity"]</label>
+                    <span class="hint dashed">@T["Records the deal the lead is interested in, with the contact as its primary contact."]</span>
+                </div>
+
+                <div data-opportunity-panel>
+                    <div class="ocat-wrapper">
+                        <label asp-for="OpportunityContentType" class="ocat-label">@T["Opportunity type"]</label>
+                        <div class="ocat-end">
+                            <select asp-for="OpportunityContentType" asp-items="Model.OpportunityContentTypes" class="form-select">
+                                <option value="">@T["Choose an opportunity type"]</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="ocat-wrapper">
+                        <label asp-for="OpportunityName" class="ocat-label">@T["Name"]</label>
+                        <div class="ocat-end">
+                            <input asp-for="OpportunityName" class="form-control" />
+                            <span class="hint dashed">@T["Leave empty to name it after the company and today's date."]</span>
+                        </div>
+                    </div>
+
+                    <div class="ocat-wrapper">
+                        <label asp-for="OpportunityAmount" class="ocat-label">@T["Amount"]</label>
+                        <div class="ocat-end">
+                            <input asp-for="OpportunityAmount" type="number" min="0" step="0.01" class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="ocat-wrapper">
+                        <label asp-for="OpportunityCloseDate" class="ocat-label">@T["Close date"]</label>
+                        <div class="ocat-end">
+                            <input asp-for="OpportunityCloseDate" type="date" class="form-control" value="@(Model.OpportunityCloseDate?.ToString("yyyy-MM-dd"))" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header">@T["Activities"]</div>
+        <div class="card-body">
+            <p>
+                @T["{0} finished and {1} open activities.", Model.FinishedActivityCount, Model.OpenActivityCount]
+                @T["Finished activities always move to the contact."]
+            </p>
+
+            @if (Model.OpenActivityCount > 0)
+            {
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" asp-for="OpenActivities" id="open-move" value="@LeadOpenActivityMode.Move" />
+                    <label class="form-check-label" for="open-move">@T["Move the open activities to the contact"]</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" asp-for="OpenActivities" id="open-cancel" value="@LeadOpenActivityMode.Cancel" />
+                    <label class="form-check-label" for="open-cancel">@T["Cancel the open activities"]</label>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <button class="btn btn-primary" type="submit">@T["Convert"]</button>
+        <a class="btn btn-secondary" asp-action="Edit" asp-controller="Admin" asp-route-area="OrchardCore.Contents" asp-route-contentItemId="@Model.Lead.ContentItemId">@T["Cancel"]</a>
+    </div>
+</form>
+
+<script at="Foot">
+    (() => {
+        const form = document.querySelector('[data-convert-lead]');
+
+        if (!form) {
+            return;
+        }
+
+        const refresh = () => {
+            const newContact = form.querySelector('[data-contact-new]');
+            const typePanel = form.querySelector('[data-new-contact-type]');
+
+            if (newContact && typePanel) {
+                typePanel.classList.toggle('d-none', !newContact.checked);
+            }
+
+            const mode = form.querySelector('[data-account-mode]:checked')?.value;
+
+            form.querySelectorAll('[data-account-panel]').forEach(panel => {
+                panel.classList.toggle('d-none', panel.dataset.accountPanel !== mode);
+            });
+
+            const createOpportunity = form.querySelector('[data-create-opportunity]');
+            const opportunityPanel = form.querySelector('[data-opportunity-panel]');
+
+            if (createOpportunity && opportunityPanel) {
+                opportunityPanel.classList.toggle('d-none', !createOpportunity.checked);
+            }
+        };
+
+        form.addEventListener('change', refresh);
+        refresh();
+    })();
+</script>

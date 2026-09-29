@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
 using OrchardCore.Workflows.Abstractions.Models;
 using OrchardCore.Workflows.Activities;
@@ -20,6 +21,7 @@ public sealed class ScheduleCallbackTask : TaskActivity<ScheduleCallbackTask>
     private readonly IWorkflowExpressionEvaluator _expressionEvaluator;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly IContentManager _contentManager;
 
     internal readonly IStringLocalizer S;
 
@@ -31,13 +33,16 @@ public sealed class ScheduleCallbackTask : TaskActivity<ScheduleCallbackTask>
     /// <param name="clock">The clock used to compute the scheduled time.</param>
     /// <param name="logger">The logger instance.</param>
     /// <param name="stringLocalizer">The string localizer for this task.</param>
+    /// <param name="contentManager">The content manager used to read the contact's content type.</param>
     public ScheduleCallbackTask(
         ICallbackService callbackService,
         IWorkflowExpressionEvaluator expressionEvaluator,
         IClock clock,
         ILogger<ScheduleCallbackTask> logger,
-        IStringLocalizer<ScheduleCallbackTask> stringLocalizer)
+        IStringLocalizer<ScheduleCallbackTask> stringLocalizer,
+        IContentManager contentManager)
     {
+        _contentManager = contentManager;
         _callbackService = callbackService;
         _expressionEvaluator = expressionEvaluator;
         _clock = clock;
@@ -125,6 +130,15 @@ public sealed class ScheduleCallbackTask : TaskActivity<ScheduleCallbackTask>
             QueueId = await ResolveOptionalAsync(QueueId, workflowContext),
             ContactContentItemId = await ResolveOptionalAsync(ContactContentItemId, workflowContext),
         };
+
+        // The activity the callback creates records which kind of record it is for, the same as every other
+        // activity, so it is reported and listed with the right contact type rather than as "(Not set)".
+        if (!string.IsNullOrEmpty(callback.ContactContentItemId))
+        {
+            var contact = await _contentManager.GetAsync(callback.ContactContentItemId, VersionOptions.Latest);
+
+            callback.ContactContentType = contact?.ContentType;
+        }
 
         if (DelayMinutes > 0)
         {

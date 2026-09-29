@@ -1,0 +1,23 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model LeadPartSettingsViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="TargetContactContentType">
+    <label asp-for="TargetContactContentType" class="ocat-label">@T["Converts into"]</label>
+    <div class="ocat-end">
+        <select asp-for="TargetContactContentType" asp-items="Model.ContactContentTypes" class="form-select">
+            <option value="">@T["Choose when converting"]</option>
+        </select>
+        <span class="hint dashed">@T["The contact type a lead of this type becomes when it is converted. Lead types attach both the Omnichannel Contact part and the Lead part."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="DefaultOpportunityContentType">
+    <label asp-for="DefaultOpportunityContentType" class="ocat-label">@T["Opportunity type"]</label>
+    <div class="ocat-end">
+        <select asp-for="DefaultOpportunityContentType" asp-items="Model.OpportunityContentTypes" class="form-select">
+            <option value="">@T["None"]</option>
+        </select>
+        <span class="hint dashed">@T["The opportunity type offered first when a conversion also creates an opportunity."]</span>
+    </div>
+</div>

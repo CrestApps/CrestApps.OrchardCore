@@ -45,6 +45,32 @@ public static class OmnichannelConstants
         public const string EmailInfo = "EmailInfoPart";
 
         public const string PhoneNumberInfo = "PhoneNumberInfoPart";
+
+        /// <summary>
+        /// The part that marks a contact-capable content type as a lead: a prospect that can be reached like a
+        /// contact but is kept apart from contacts until it is converted.
+        /// </summary>
+        public const string Lead = "LeadPart";
+
+        /// <summary>
+        /// The part that marks a content type as an account, the container of contacts and opportunities.
+        /// </summary>
+        public const string Account = "AccountPart";
+
+        /// <summary>
+        /// The part that marks a content type as an opportunity, a deal in progress on an account.
+        /// </summary>
+        public const string Opportunity = "OpportunityPart";
+
+        /// <summary>
+        /// The Orchard Core list part, which an account uses to contain its contacts and opportunities.
+        /// </summary>
+        public const string List = "ListPart";
+
+        /// <summary>
+        /// The Orchard Core part a contained content item carries to point at its list.
+        /// </summary>
+        public const string Contained = "ContainedPart";
     }
 
     /// <summary>
@@ -57,6 +83,11 @@ public static class OmnichannelConstants
         public const string EmailAddress = "EmailAddress";
 
         public const string PhoneNumber = "PhoneNumber";
+
+        /// <summary>
+        /// The account content type the CRM feature creates.
+        /// </summary>
+        public const string Account = "Account";
     }
 
     /// <summary>
@@ -78,6 +109,8 @@ public static class OmnichannelConstants
         public const string TryAgain = "TryAgain";
 
         public const string NewActivity = "NewActivity";
+
+        public const string ConvertLead = "ConvertLead";
     }
 
     /// <summary>
@@ -104,6 +137,11 @@ public static class OmnichannelConstants
         /// after hours), so a callback was scheduled instead.
         /// </summary>
         public const string HandedOffAfterHoursCallback = "handed_off_after_hours_callback";
+
+        /// <summary>
+        /// The activity was open when its lead was converted, and the conversion was asked to cancel open work.
+        /// </summary>
+        public const string LeadConverted = "lead_converted";
 
         /// <summary>
         /// The set of terminal reason codes that count as an escalation to a human for reporting.
@@ -146,6 +184,8 @@ public static class OmnichannelConstants
         public const string ChannelEndpoints = "CrestApps.OrchardCore.Omnichannel.ChannelEndpoints";
 
         public const string Managements = "CrestApps.OrchardCore.Omnichannel.Managements";
+
+        public const string Crm = "CrestApps.OrchardCore.Omnichannel.Crm";
 
     }
 
@@ -229,5 +269,25 @@ public static class OmnichannelConstants
         /// Gets the permission to view the Omnichannel reports.
         /// </summary>
         public readonly static Permission ViewReports = new("ViewOmnichannelReports", "View Omnichannel reports", [ManageActivities]);
+
+        /// <summary>
+        /// Gets the permission to convert a lead into a contact.
+        /// </summary>
+        public readonly static Permission ConvertLead = new("ConvertLead", "Convert leads", [ManageActivities]);
+
+        /// <summary>
+        /// Gets the permission to edit a lead after it was converted, for correcting its record only.
+        /// </summary>
+        public readonly static Permission EditConvertedLead = new("EditConvertedLead", "Edit converted leads");
+
+        /// <summary>
+        /// Gets the permission to manage lead statuses.
+        /// </summary>
+        public readonly static Permission ManageLeadStatuses = new("ManageLeadStatuses", "Manage lead statuses");
+
+        /// <summary>
+        /// Gets the permission to manage opportunity stages.
+        /// </summary>
+        public readonly static Permission ManageOpportunityStages = new("ManageOpportunityStages", "Manage opportunity stages");
     }
 }

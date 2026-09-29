@@ -1,3 +1,7 @@
+@using OrchardCore.ContentManagement
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using Microsoft.Extensions.Options
+@using OrchardCore.Lists.Models
 @using CrestApps.OrchardCore.Omnichannel.Core
 @using CrestApps.OrchardCore.Omnichannel.Managements.Services
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
@@ -8,6 +12,8 @@
 
 @model ContactNavigationAdminShapeViewModel
 
+@inject IOptions<OmnichannelCrmOptions> CrmOptions
+@inject CrestApps.OrchardCore.Omnichannel.Managements.Services.OmnichannelContentTypeProvider CrmContentTypes
 @inject IAuthorizationService AuthorizationService
 @inject IContentDefinitionManager ContentDefinitionManager
 @inject ContactListPartNavigationResolver ListPartNavigationResolver
@@ -50,6 +56,22 @@
     <div class="card-body">
         <div class="d-flex justify-content-end">
 
+            @if (CrmOptions.Value.Enabled &&
+                Model.ContactContentItem.TryGet<LeadPart>(out var leadPart) &&
+                !leadPart.IsConverted &&
+                await AuthorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ConvertLead, Model.ContactContentItem))
+            {
+                <a class="btn btn-success me-1" asp-action="Convert" asp-controller="Leads" asp-route-contentItemId="@Model.ContactContentItem.ContentItemId" asp-route-area="@OmnichannelConstants.Features.Managements">@T["Convert Lead"]</a>
+            }
+
+            @if (CrmOptions.Value.Enabled &&
+                Model.ContactContentItem.TryGet<ContainedPart>(out var containedPart) &&
+                !string.IsNullOrEmpty(containedPart.ListContentItemId) &&
+                (await CrmContentTypes.GetAccountContentTypesAsync()).Contains(containedPart.ListContentType))
+            {
+                <a class="btn btn-secondary me-1" asp-action="Display" asp-controller="Admin" asp-route-contentItemId="@containedPart.ListContentItemId" asp-route-area="OrchardCore.Contents">@T["View Account"]</a>
+            }
+
             @if (await AuthorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ListContactActivities, Model.ContactContentItem))
             {
                 <a class="btn btn-secondary me-1" asp-action="List" asp-controller="Activities" asp-route-contentItemId="@Model.ContactContentItem.ContentItemId" asp-route-area="@OmnichannelConstants.Features.Managements">@T["List Activities"]</a>
@@ -64,7 +86,8 @@
                 </a>
             }
 
-            @if (await AuthorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.EditActivity))
+            @if (!(Model.ContactContentItem.TryGet<LeadPart>(out var addActivityLead) && addActivityLead.IsConverted) &&
+                await AuthorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.EditActivity))
             {
                 <div class="btn-group me-1">
                     <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">

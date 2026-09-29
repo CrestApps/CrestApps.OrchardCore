@@ -656,6 +656,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services
                     Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingInboundProcessor> logger) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation> ProcessAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage message, System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public sealed class MessagingLeadConversionRepointer : CrestApps.OrchardCore.Omnichannel.Core.Services.ILeadConversionRepointer
+    {
+        public MessagingLeadConversionRepointer(YesSql.ISession session, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingLeadConversionRepointer> logger) { }
+        public System.Threading.Tasks.Task RepointAsync(CrestApps.OrchardCore.Omnichannel.Core.Services.LeadConversionContext context, System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public sealed class MessagingOutbox : CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingOutbox
     {
         public MessagingOutbox(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.IMessagingChannelResolver channelResolver, CrestApps.OrchardCore.Omnichannel.Messaging.Notifications.IMessagingRealTimeNotifier notifier, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingConversationStore conversationStore, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.IMessagingAttachmentUrlProvider attachmentUrlProvider, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingWorkspaceOptions> options, YesSql.ISession session, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingOutbox> logger) { }

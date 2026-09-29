@@ -314,7 +314,7 @@ public sealed class InboundVoiceVoicemailDispatchTests
                 queueItemManager.Object,
                 QueueService.Object,
                 new Mock<IQueueLimitService>().Object,
-                new Mock<IInboundContactLookup>().Object,
+                new Mock<IInboundContactLookup> { CallBase = true }.Object,
                 new EntryPointResolverChain([]),
                 commandStateService.Object,
                 new Mock<IVoiceQueueOfferService>().Object,

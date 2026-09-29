@@ -37,6 +37,7 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
         ("IDX_OCIndex_E164Home", ["NormalizedPrimaryHomePhoneNumber", "Published", "Latest"]),
         ("IDX_OCIndex_PrimaryHome", ["PrimaryHomePhoneNumber", "Published", "Latest"]),
         ("IDX_OCIndex_TimeZoneVersion", ["TimeZoneId", "Published", "Latest"]),
+        ("IDX_OCIndex_ContentType", ["ContentType", "Published", "Latest"]),
     ];
 
     private readonly IContentDefinitionManager _contentDefinitionManager;
@@ -79,7 +80,7 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
         await CreateContactIndexIndexesAsync(SchemaBuilder);
         ScheduleContactDefinitionRepair();
 
-        return 11;
+        return 12;
     }
 
     /// <summary>
@@ -213,6 +214,83 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
         return 11;
     }
 
+    /// <summary>
+    /// Adds the content type and converted-lead columns, so a lookup can tell a lead from a contact without loading
+    /// the item, and fills the content type of every existing row from the content item index. No content item is
+    /// saved again: the value is copied in SQL, one statement per content type.
+    /// </summary>
+    public async Task<int> UpdateFrom11Async()
+    {
+        await EnsureColumnExistsAsync<OmnichannelContactIndex>(
+            collection: null,
+            columnName: nameof(OmnichannelContactIndex.ContentType),
+            addColumn: table => table.AddColumn<string>(nameof(OmnichannelContactIndex.ContentType), column => column.WithLength(255)),
+            operation: "add the 'ContentType' column to the contact index");
+
+        await EnsureColumnExistsAsync<OmnichannelContactIndex>(
+            collection: null,
+            columnName: nameof(OmnichannelContactIndex.IsConverted),
+            addColumn: table => table.AddColumn<bool>(nameof(OmnichannelContactIndex.IsConverted), column => column.NotNull().WithDefault(false)),
+            operation: "add the 'IsConverted' column to the contact index");
+
+        await ApplyIsolatedSchemaChangeAsync(
+            builder => builder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
+                table.CreateIndex("IDX_OCIndex_ContentType", "ContentType", "Published", "Latest")),
+            "create the 'IDX_OCIndex_ContentType' index");
+
+        var failure = await TryApplyIsolatedAsync(BackfillContactIndexContentTypesAsync);
+
+        if (failure is not null)
+        {
+            // A row left without a content type is ranked as a contact, which is what every row was before the
+            // column existed, and the next save of the contact fills it. The failure is still worth seeing.
+            Logger.LogWarning(failure, "The content type of the existing contact index rows could not be filled in.");
+        }
+
+        return 12;
+    }
+
+    private async Task BackfillContactIndexContentTypesAsync(ISchemaBuilder builder)
+    {
+        var dialect = Store.Configuration.SqlDialect;
+        var schema = Store.Configuration.Schema;
+        var prefix = Store.Configuration.TablePrefix;
+        var contactTable = dialect.QuoteForTableName(
+            $"{prefix}{Store.Configuration.TableNameConvention.GetIndexTable(typeof(OmnichannelContactIndex))}",
+            schema);
+        var contentItemTable = dialect.QuoteForTableName(
+            $"{prefix}{Store.Configuration.TableNameConvention.GetIndexTable(typeof(ContentItemIndex))}",
+            schema);
+        var documentId = dialect.QuoteForColumnName("DocumentId");
+        var contentType = dialect.QuoteForColumnName("ContentType");
+
+        // One statement per content type keeps the update free of a correlated reference to the updated table,
+        // which the supported databases spell differently.
+        var contentTypes = (await builder.Connection.QueryAsync<string>(
+            $"SELECT DISTINCT {contentType} FROM {contentItemTable} WHERE {documentId} IN (SELECT {documentId} FROM {contactTable} WHERE {contentType} IS NULL)",
+            transaction: builder.Transaction))
+            .Where(value => !string.IsNullOrEmpty(value))
+            .ToArray();
+
+        var updated = 0;
+
+        foreach (var value in contentTypes)
+        {
+            updated += await builder.Connection.ExecuteAsync(
+                $"UPDATE {contactTable} SET {contentType} = @ContentType WHERE {contentType} IS NULL AND {documentId} IN (SELECT {documentId} FROM {contentItemTable} WHERE {contentType} = @ContentType)",
+                new { ContentType = value },
+                builder.Transaction);
+        }
+
+        if (Logger.IsEnabled(LogLevel.Information))
+        {
+            Logger.LogInformation(
+                "Filled in the content type of {RowCount} contact index row(s) across {ContentTypeCount} content type(s).",
+                updated,
+                contentTypes.Length);
+        }
+    }
+
     private void ScheduleContactDefinitionRepair()
     {
         Logger.LogDebug("Scheduling deferred omnichannel contact definition repair.");
@@ -227,6 +305,8 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
     {
         await schemaBuilder.CreateMapIndexTableAsync<OmnichannelContactIndex>(table => table
             .Column<string>("ContentItemId", column => column.WithLength(26))
+            .Column<string>("ContentType", column => column.WithLength(255))
+            .Column<bool>("IsConverted", column => column.NotNull().WithDefault(false))
             .Column<bool>("Published", column => column.NotNull().WithDefault(false))
             .Column<bool>("Latest", column => column.NotNull().WithDefault(false))
             .Column<string>("PrimaryCellPhoneNumber", column => column.WithLength(50))

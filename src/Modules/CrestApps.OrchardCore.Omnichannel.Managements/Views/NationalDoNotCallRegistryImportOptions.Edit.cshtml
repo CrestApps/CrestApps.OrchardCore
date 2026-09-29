@@ -14,6 +14,20 @@
             }
         </div>
 
+        <div class="mt-2 ms-4">
+            <span class="fw-semibold">@T["When a number is on a registry:"]</span>
+            <div class="form-check mt-1">
+                <input type="radio" class="form-check-input" id="MarkRegistryNumbersDoNotCall_Skip" name="@Html.NameFor(m => m.MarkRegistryNumbersDoNotCall)" value="false" checked="@(!Model.MarkRegistryNumbersDoNotCall)" />
+                <label class="form-check-label" for="MarkRegistryNumbersDoNotCall_Skip">@T["Skip the row"]</label>
+                <span class="hint dashed">@T["The row is left out of the import and listed in the error export."]</span>
+            </div>
+            <div class="form-check">
+                <input type="radio" class="form-check-input" id="MarkRegistryNumbersDoNotCall_Mark" name="@Html.NameFor(m => m.MarkRegistryNumbersDoNotCall)" value="true" checked="@Model.MarkRegistryNumbersDoNotCall" />
+                <label class="form-check-label" for="MarkRegistryNumbersDoNotCall_Mark">@T["Import it marked Do not call"]</label>
+                <span class="hint dashed">@T["The record is kept, so the number is recognised if it is bought or imported again, and Do not call keeps it out of every call."]</span>
+            </div>
+        </div>
+
         @if (Model.AvailableRegistries.Length > 0)
         {
             <div class="mt-2 ms-4">

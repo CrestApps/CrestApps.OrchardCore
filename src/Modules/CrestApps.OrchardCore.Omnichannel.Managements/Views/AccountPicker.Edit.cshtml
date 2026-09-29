@@ -1,0 +1,35 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model AccountPickerViewModel
+
+@{
+    var endpoint = Url.Content("~/Admin/api/crestapps/omnichannel/crm/accounts/search");
+    var initialJson = string.IsNullOrEmpty(Model.AccountContentItemId)
+        ? "[]"
+        : System.Text.Json.JsonSerializer.Serialize(new[] { new { value = Model.AccountContentItemId, text = Model.AccountDisplayText ?? Model.AccountContentItemId, selected = true } });
+}
+
+<input type="hidden" name="@Html.NameFor(m => m.Rendered)" value="true" />
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Account"]</label>
+    <div class="ocat-end">
+        @await Component.InvokeAsync("ItemSelector", new
+        {
+            id = Html.IdFor(m => m.AccountContentItemId).ToString() + "-selector",
+            inputName = Html.NameFor(m => m.AccountContentItemId).ToString(),
+            endpoint,
+            initialItemsJson = initialJson,
+            multiple = false,
+            enableSearch = true,
+            buttonText = T["Select an account"].Value,
+            searchPlaceholder = T["Search accounts"].Value,
+            emptyResultsText = T["No accounts found."].Value,
+            noSelectionText = T["No account."].Value,
+            selectedItemsLabel = T["Account"].Value,
+            availableItemsLabel = T["Accounts"].Value,
+            smallButton = false,
+        })
+        <span class="hint dashed">@T["The company or household this record belongs to. Leave it empty when it belongs to none."]</span>
+    </div>
+</div>

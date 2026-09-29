@@ -90,7 +90,13 @@ public sealed class OmnichannelContactDuplicateLookupService : IOmnichannelConta
     }
 
     /// <inheritdoc />
-    public async Task<Dictionary<string, string[]>> GetAllExistingNormalizedPhoneNumberOwnersAsync(CancellationToken cancellationToken)
+    public Task<Dictionary<string, string[]>> GetAllExistingNormalizedPhoneNumberOwnersAsync(CancellationToken cancellationToken)
+        => GetExistingNormalizedPhoneNumberOwnersAsync(null, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<Dictionary<string, string[]>> GetExistingNormalizedPhoneNumberOwnersAsync(
+        Func<OmnichannelContactIndex, bool> include,
+        CancellationToken cancellationToken)
     {
         var phoneOwners = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
         var publishedIndexes = await _session.QueryIndex<OmnichannelContactIndex>(index => index.Published)
@@ -103,6 +109,11 @@ public sealed class OmnichannelContactDuplicateLookupService : IOmnichannelConta
 
         foreach (var index in publishedIndexes)
         {
+            if (include is not null && !include(index))
+            {
+                continue;
+            }
+
             AddPhoneOwners(phoneOwners, index.ContentItemId, index.NormalizedPrimaryCellPhoneNumber, index.PrimaryCellPhoneNumber);
             AddPhoneOwners(phoneOwners, index.ContentItemId, index.NormalizedPrimaryHomePhoneNumber, index.PrimaryHomePhoneNumber);
         }

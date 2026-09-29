@@ -1,0 +1,30 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model OpportunityPartSettingsViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-label">@T["Stages"]</div>
+    <div class="ocat-end">
+        @if (Model.Stages.Count == 0)
+        {
+            <div class="alert alert-warning mb-0">
+                @T["There are no opportunity stages yet. Add them from Interaction Center > Management > Opportunity Stages."]
+            </div>
+        }
+        else
+        {
+            @for (var i = 0; i < Model.Stages.Count; i++)
+            {
+                var stage = Model.Stages[i];
+                var id = Html.IdFor(m => m.StageIds) + "-" + i;
+
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="@id" name="@Html.NameFor(m => m.StageIds)" value="@stage.Value" checked="@stage.Selected" />
+                    <label class="form-check-label" for="@id">@stage.Text</label>
+                </div>
+            }
+
+            <span class="hint">@T["The stages an opportunity of this type moves through, in pipeline order. Leave every stage cleared to use them all."]</span>
+        }
+    </div>
+</div>

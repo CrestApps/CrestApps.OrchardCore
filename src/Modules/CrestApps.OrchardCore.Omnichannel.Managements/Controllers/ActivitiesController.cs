@@ -1,7 +1,9 @@
 using System.Globalization;
 using System.Security.Claims;
 using CrestApps.Core;
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
@@ -22,9 +24,10 @@ using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
-using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Zones;
+using OrchardCore.Lists.Indexes;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
@@ -316,6 +319,150 @@ public sealed class ActivitiesController : Controller
     }
 
     /// <summary>
+    /// Lists the scheduled and completed activities of every contact in an account.
+    /// </summary>
+    /// <param name="contentItemId">The account content item id.</param>
+    /// <param name="pagerParameters">The pager of the completed activities.</param>
+    /// <param name="scheduledPagerParameters">The pager of the scheduled activities.</param>
+    /// <param name="pagerOptions">The pager options.</param>
+    /// <param name="shapeFactory">The shape factory.</param>
+    [Admin("omnichannel/accounts/{contentItemId}/activities", "OmnichannelAccountActivities")]
+    public async Task<IActionResult> Account(
+        string contentItemId,
+        PagerParameters pagerParameters,
+        [Bind(Prefix = "s")] PagerParameters scheduledPagerParameters,
+        [FromServices] IOptions<PagerOptions> pagerOptions,
+        [FromServices] IShapeFactory shapeFactory)
+    {
+        var account = await _contentManager.GetAsync(contentItemId, VersionOptions.Latest);
+
+        if (account is null || !account.Has<AccountPart>())
+        {
+            return NotFound();
+        }
+
+        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ListContactActivities, account))
+        {
+            return Forbid();
+        }
+
+        // An account holds its contacts through the list part, so its activities are those of the items it contains.
+        var memberIds = (await _session.QueryIndex<ContainedPartIndex>(index => index.ListContentItemId == contentItemId)
+            .ListAsync())
+            .Select(index => index.ContentItemId)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        var scheduledPager = new Pager(scheduledPagerParameters, pagerOptions.Value.GetPageSize());
+        var completedPager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+
+        var scheduled = await PageAccountActivitiesAsync(memberIds, completed: false, scheduledPager);
+        var completed = await PageAccountActivitiesAsync(memberIds, completed: true, completedPager);
+
+        var scheduledPagerShape = await shapeFactory.PagerAsync(scheduledPager, scheduled.Count);
+        scheduledPagerShape.Properties["PagerId"] = "s.pagenum";
+        var completedPagerShape = await shapeFactory.PagerAsync(completedPager, completed.Count);
+
+        var userIds = scheduled.Entries.Select(x => x.AssignedToId)
+            .Concat(completed.Entries.Select(x => x.CompletedById))
+            .Where(x => !string.IsNullOrEmpty(x))
+            .Distinct()
+            .ToArray();
+
+        var users = userIds.Length == 0
+            ? []
+            : (await _session.Query<User, UserIndex>(index => index.UserId.IsIn(userIds)).ListAsync()).ToArray();
+
+        var contactIds = scheduled.Entries.Concat(completed.Entries)
+            .Select(activity => activity.ContactContentItemId)
+            .Where(id => !string.IsNullOrEmpty(id))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        var contacts = (await _contentManager.GetAsync(contactIds, VersionOptions.Latest))
+            .ToDictionary(contact => contact.ContentItemId, StringComparer.Ordinal);
+
+        var contentTypeDefinitions = new Dictionary<string, ContentTypeDefinition>(StringComparer.OrdinalIgnoreCase);
+
+        var model = new ListAccountActivitiesViewModel
+        {
+            Account = account,
+            ScheduledPager = scheduledPagerShape,
+            CompletedPager = completedPagerShape,
+        };
+
+        foreach (var activity in scheduled.Entries)
+        {
+            contacts.TryGetValue(activity.ContactContentItemId ?? string.Empty, out var contact);
+
+            var container = new OmnichannelActivityContainer(
+                activity,
+                await GetSubjectContentTypeDefinitionAsync(activity, contentTypeDefinitions),
+                contact,
+                users.FirstOrDefault(x => x.UserId == activity.AssignedToId));
+
+            model.Scheduled.Add(new AccountActivityEntry
+            {
+                Contact = contact,
+                Shape = await _containerDisplayManager.BuildDisplayAsync(container, _updateModelAccessor.ModelUpdater, "SummaryAdmin", groupId: "ScheduledActivity"),
+            });
+        }
+
+        foreach (var activity in completed.Entries)
+        {
+            contacts.TryGetValue(activity.ContactContentItemId ?? string.Empty, out var contact);
+
+            var container = new OmnichannelActivityContainer(
+                activity,
+                await GetSubjectContentTypeDefinitionAsync(activity, contentTypeDefinitions),
+                contact,
+                users.FirstOrDefault(x => x.UserId == activity.CompletedById));
+
+            model.Completed.Add(new AccountActivityEntry
+            {
+                Contact = contact,
+                Shape = await _containerDisplayManager.BuildDisplayAsync(container, _updateModelAccessor.ModelUpdater, "SummaryAdmin", "CompletedActivity"),
+            });
+        }
+
+        return View(model);
+    }
+
+    private static bool IsConvertedLead(ContentItem contact)
+        => contact.TryGet<LeadPart>(out var leadPart) && leadPart.IsConverted;
+
+    private async Task<PageResult<OmnichannelActivity>> PageAccountActivitiesAsync(string[] contactIds, bool completed, Pager pager)
+    {
+        if (contactIds.Length == 0)
+        {
+            return new PageResult<OmnichannelActivity> { Count = 0, Entries = [] };
+        }
+
+        var query = completed
+            ? _session.Query<OmnichannelActivity, OmnichannelActivityIndex>(index =>
+                index.ContactContentItemId.IsIn(contactIds) &&
+                index.Status == ActivityStatus.Completed,
+                collection: OmnichannelConstants.CollectionName)
+                .OrderByDescending(index => index.CompletedUtc)
+                .ThenBy(index => index.Id)
+            : _session.Query<OmnichannelActivity, OmnichannelActivityIndex>(index =>
+                index.ContactContentItemId.IsIn(contactIds) &&
+                index.Status == ActivityStatus.NotStated &&
+                index.InteractionType == ActivityInteractionType.Manual,
+                collection: OmnichannelConstants.CollectionName)
+                .OrderBy(index => index.ScheduledUtc)
+                .ThenBy(index => index.Id);
+
+        var skip = (Math.Max(pager.Page, 1) - 1) * pager.PageSize;
+
+        return new PageResult<OmnichannelActivity>
+        {
+            Count = await query.CountAsync(),
+            Entries = (await query.Skip(skip).Take(pager.PageSize).ListAsync()).ToArray(),
+        };
+    }
+
+    /// <summary>
     /// Creates a new outbound (scheduled) activity.
     /// </summary>
     /// <param name="contentItemId">The content item id.</param>
@@ -332,6 +479,13 @@ public sealed class ActivitiesController : Controller
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.EditActivity))
         {
             return Forbid();
+        }
+
+        if (IsConvertedLead(contact))
+        {
+            await _notifier.WarningAsync(H["This lead was converted, so new activities go on the contact it became."]);
+
+            return RedirectToAction(nameof(List), new { contentItemId = contact.ContentItemId });
         }
 
         var outboundSubjects = await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync(SubjectDirection.Outbound);
@@ -374,6 +528,13 @@ public sealed class ActivitiesController : Controller
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.EditActivity))
         {
             return Forbid();
+        }
+
+        if (IsConvertedLead(contact))
+        {
+            await _notifier.WarningAsync(H["This lead was converted, so new activities go on the contact it became."]);
+
+            return RedirectToAction(nameof(List), new { contentItemId = contact.ContentItemId });
         }
 
         var outboundSubjects = await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync(SubjectDirection.Outbound);
@@ -428,6 +589,13 @@ public sealed class ActivitiesController : Controller
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.EditActivity))
         {
             return Forbid();
+        }
+
+        if (IsConvertedLead(contact))
+        {
+            await _notifier.WarningAsync(H["This lead was converted, so new activities go on the contact it became."]);
+
+            return RedirectToAction(nameof(List), new { contentItemId = contact.ContentItemId });
         }
 
         var inboundSubjects = await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync(SubjectDirection.Inbound);
@@ -493,6 +661,13 @@ public sealed class ActivitiesController : Controller
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.EditActivity))
         {
             return Forbid();
+        }
+
+        if (IsConvertedLead(contact))
+        {
+            await _notifier.WarningAsync(H["This lead was converted, so new activities go on the contact it became."]);
+
+            return RedirectToAction(nameof(List), new { contentItemId = contact.ContentItemId });
         }
 
         var inboundSubjects = await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync(SubjectDirection.Inbound);

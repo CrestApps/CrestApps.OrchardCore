@@ -73,6 +73,9 @@ public sealed class Startup : StartupBase
             .AddScoped<IMessagingConversationStore, MessagingConversationStore>()
             .AddScoped<IMessagingConversationManager, MessagingConversationManager>();
 
+        // A converted lead's threads move to the contact it became.
+        services.AddScoped<ILeadConversionRepointer, MessagingLeadConversionRepointer>();
+
         // Canned-response template catalog.
         services
             .AddScoped<IMessageTemplateStore, MessageTemplateStore>()

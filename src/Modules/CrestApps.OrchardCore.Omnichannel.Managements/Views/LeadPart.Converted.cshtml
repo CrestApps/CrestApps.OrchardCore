@@ -1,0 +1,25 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model LeadPartViewModel
+
+<div class="alert alert-success d-flex align-items-center" role="status">
+    <i class="fa-solid fa-circle-check me-2" aria-hidden="true"></i>
+    <div>
+        @if (Model.ConvertedContact is not null)
+        {
+            @T["This lead was converted into the contact {0}", Model.ConvertedContact.DisplayText]
+            <a class="ms-1" asp-action="Edit" asp-controller="Admin" asp-route-area="OrchardCore.Contents" asp-route-contentItemId="@Model.ConvertedContact.ContentItemId">@T["Open the contact"]</a>
+        }
+        else
+        {
+            @T["This lead was converted into a contact."]
+        }
+
+        @if (Model.Part?.ConvertedUtc is not null)
+        {
+            <span class="ms-1 text-muted">(@await DisplayAsync(await New.DateTime(Utc: Model.Part.ConvertedUtc.Value, Format: "g")))</span>
+        }
+
+        <div class="small text-muted">@T["A converted lead is kept as the record of what happened before it became a contact, and it can no longer be edited."]</div>
+    </div>
+</div>

@@ -1,0 +1,61 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model OpportunityStageViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+    <div class="ocat-end">
+        @if (Model.IsNew)
+        {
+            <input asp-for="Name" class="form-control" />
+        }
+        else
+        {
+            <input value="@Model.Name" class="form-control" readonly />
+            <input asp-for="Name" type="hidden" />
+            <span class="hint">@T["The name is fixed after creation."]</span>
+        }
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Description" class="form-control"></textarea>
+        <span asp-validation-for="Description" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Order" class="ocat-label">@T["Order"]</label>
+    <div class="ocat-end">
+        <input asp-for="Order" type="number" class="form-control" />
+        <span asp-validation-for="Order" class="text-danger"></span>
+        <span class="hint dashed">@T["Lists show the lowest first."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Probability" class="ocat-label">@T["Probability"]</label>
+    <div class="ocat-end">
+        <input asp-for="Probability" type="number" class="form-control" min="0" max="100" />
+        <span asp-validation-for="Probability" class="text-danger"></span>
+        <span class="hint dashed">@T["The chance, from 0 to 100, that an opportunity in this stage is won. The weighted pipeline uses it."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="IsClosed" class="form-check-input" type="checkbox" />
+            <label asp-for="IsClosed" class="form-check-label">@T["Opportunities in this stage are closed"]</label>
+            <span class="hint dashed">@T["Closed opportunities are left out of the open pipeline."]</span>
+        </div>
+        <div class="form-check">
+            <input asp-for="IsWon" class="form-check-input" type="checkbox" />
+            <label asp-for="IsWon" class="form-check-label">@T["Opportunities in this stage are won"]</label>
+            <span class="hint dashed">@T["Only a closed stage can be won."]</span>
+        </div>
+    </div>
+</div>

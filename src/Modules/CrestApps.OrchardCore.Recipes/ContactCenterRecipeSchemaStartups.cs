@@ -138,6 +138,19 @@ public sealed class OmnichannelActivitiesRecipeStartup : StartupBase
 }
 
 /// <summary>
+/// Registers recipe step schemas for the Omnichannel CRM feature.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.Omnichannel.Crm")]
+public sealed class OmnichannelCrmRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, OmnichannelLeadStatusRecipeStep>();
+        services.AddScoped<IRecipeStep, OmnichannelOpportunityStageRecipeStep>();
+    }
+}
+
+/// <summary>
 /// Registers recipe step schemas for the Omnichannel messaging workspace feature.
 /// </summary>
 [RequireFeatures("CrestApps.OrchardCore.Omnichannel.Messaging")]

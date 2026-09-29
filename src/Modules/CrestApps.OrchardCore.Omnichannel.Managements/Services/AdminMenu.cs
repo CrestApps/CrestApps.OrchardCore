@@ -34,7 +34,9 @@ internal sealed class AdminMenu : AdminNavigationProvider
     {
         await _contentTypeProvider.EnsureInitializedAsync(_contentDefinitionManager);
 
-        var contactContentTypes = _contentTypeProvider.GetContactContentTypes();
+        // Leads are listed on their own menu item, so the contacts list shows only the clean contact records. Until
+        // the CRM feature is enabled there are no lead types, and this is every contact type, as it always was.
+        var contactContentTypes = _contentTypeProvider.GetContactKindContentTypes();
 
         builder
             .Add(S["Interaction Center"], "80", interactionCenter => interactionCenter
