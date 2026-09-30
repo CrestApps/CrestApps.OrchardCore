@@ -33,6 +33,7 @@ using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Workflows.Helpers;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements;
 
@@ -181,5 +182,21 @@ public sealed class CrmReportsStartup : StartupBase
             .AddScoped<CrestApps.OrchardCore.Reports.IReport, Reports.LeadFunnelReportProvider>()
             .AddScoped<CrestApps.OrchardCore.Reports.IReport, Reports.LeadConversionReportProvider>()
             .AddScoped<CrestApps.OrchardCore.Reports.IReport, Reports.OpportunityPipelineReportProvider>();
+    }
+}
+
+/// <summary>
+/// Registers the Lead Converted workflow event and the Convert Lead workflow task, when Orchard Core Workflows is on.
+/// </summary>
+[Feature(OmnichannelConstants.Features.Crm)]
+[RequireFeatures("OrchardCore.Workflows")]
+public sealed class CrmWorkflowsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddActivity<Workflows.Models.LeadConvertedEvent, Workflows.Drivers.LeadConvertedEventDisplayDriver>();
+        services.AddActivity<Workflows.Models.ConvertLeadTask, Workflows.Drivers.ConvertLeadTaskDisplayDriver>();
+        services.AddScoped<ILeadConversionHandler, Workflows.LeadConvertedWorkflowHandler>();
     }
 }

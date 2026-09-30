@@ -51,7 +51,8 @@ The **Omnichannel CRM starter** recipe (`OmnichannelCrmStarter`) turns the featu
 
 Holds the lead's qualification state:
 - status, closed flag, source, list name, company, rating (Hot, Warm or Cold) and owner;
-- the conversion audit: when, by whom, and the contact, account and opportunity the lead produced.
+- the conversion audit: when, by whom, and the contact, account and opportunity the lead produced;
+- `LastScrubbedUtc`: when an import last checked the lead's numbers against a do-not-call registry.
 
 | Setting | Purpose |
 | --- | --- |
@@ -91,15 +92,45 @@ A number shared by a contact and a lead resolves to the contact on both channels
 3. **Account.** The modes are none, a new account, an existing account, or *automatic*. *Automatic* finds the one account named like the lead's company, or creates it. A merged contact keeps the account it already has.
 4. **Opportunity.** It is created optionally, with the contact as primary contact, in the account.
 5. **Activities.** Finished activities move to the contact and keep `ConvertedFromLeadItemId`. Open activities move, or are cancelled.
-6. **Re-pointers and handlers** run, and the lead is closed with the converted status.
+6. **Re-pointers and handlers** run, and the lead is closed with the converted status. The built-in re-pointers move:
+   - the lead's message threads;
+   - its open callbacks (pending, scheduled or in progress);
+   - its unresolved voicemails.
+
+   Finished callbacks and resolved voicemails stay with the lead as its history.
 
 ## Extension points
 
 | Interface | Use it to |
 | --- | --- |
 | `ILeadConversionHandler` | Run code before (`ConvertingAsync`) and after (`ConvertedAsync`) a conversion, for example to copy extra data or notify another system. |
-| `ILeadConversionRepointer` | Move records your module keeps against the lead's id to the contact. Messaging conversations use this. |
+| `ILeadConversionRepointer` | Move records your module keeps against the lead's id to the contact. Messaging, callbacks and voicemail use this. |
 | `ISubjectActionHandler` | Add a subject action type that runs on a disposition. `Order` decides when it runs among the actions of the same disposition; **Convert Lead** uses `-100` so it runs first. |
+
+## Workflows
+
+With Orchard Core **Workflows** on, the feature adds a **Lead Converted** event and a **Convert Lead** task, both in the *Omnichannel CRM* category.
+
+- **Lead Converted** starts for every conversion, whatever started it.
+  - `Workflow.Input.ContentItem` is the contact, so content tasks that follow act on the customer.
+  - The input also carries `Lead`, `LeadContentItemId`, `ContactContentItemId`, `AccountContentItemId`, `OpportunityContentItemId` and `ContactCreated`.
+  - The workflow is correlated with the contact's id.
+- **Convert Lead** converts the lead its Liquid expression resolves to, by default `{{ Workflow.Input.ContentItem.ContentItemId }}`.
+  - It uses the same unattended rules as the subject action: it merges only into a single matching contact.
+  - Its outcomes are **Converted**, with the contact's id in `Workflow.LastResult`, and **Failed**.
+  - A lead that was already converted counts as **Converted** and does not start **Lead Converted** again.
+
+## Lead status types
+
+A lead status is exactly one of three types, stored as the `IsClosed` and `IsConverted` flags so recipes and deployments carry them unchanged:
+
+| Type | Flags | Notes |
+| --- | --- | --- |
+| Open | neither | Only an open status can be the default (`IsDefault`). |
+| Closed | `IsClosed` | Inventory loads skip it unless a load includes closed leads. |
+| Converted | `IsClosed` and `IsConverted` | Set only by conversion. Marking another status converted takes the type from the old one, which becomes Closed. |
+
+A status saved with `IsDefault` and either closed flag is rejected, so a recipe cannot make new leads start out closed.
 
 ## Recipes and deployment
 

@@ -657,12 +657,12 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         await _catalog.UpdateAsync(batch, cancellationToken);
         await _session.SaveChangesAsync(cancellationToken);
 
-        // One line per load that accounts for every matching contact, so a load that found fewer people than
+        // One line per load that accounts for every matching record, so a load that found fewer people than
         // expected can be explained from the log alone. Counts only: names and numbers stay out of it.
         if (_logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation(
-                "Loaded {TotalLoaded} of {TotalMatched} matching contacts for the activity batch '{BatchId}' and subject '{SubjectContentType}'. Skipped: {SkippedAsDuplicate} already had an open activity for the subject, {SkippedAsOptedOut} had opted out of the channel, {SkippedAsSharedNumberOptedOut} shared a number with a contact who had opted out, {SkippedForNoDestination} had no destination on the channel, {SkippedByLimit} were over the limit.",
+                "Loaded {TotalLoaded} of {TotalMatched} matching records for the activity batch '{BatchId}' and subject '{SubjectContentType}'. Skipped: {SkippedAsDuplicate} already had an open activity for the subject, {SkippedAsOptedOut} had opted out of the channel, {SkippedAsSharedNumberOptedOut} shared a number with a record that had opted out, {SkippedForNoDestination} had no destination on the channel, {SkippedAsConverted} were converted leads, {SkippedAsExistingContact} were leads sharing a number with a contact, {SkippedByLimit} were over the limit.",
                 batch.TotalLoaded ?? 0,
                 batch.TotalMatched ?? 0,
                 batch.ItemId.SanitizeLogValue(),
@@ -671,6 +671,8 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 batch.TotalSkippedAsOptedOut,
                 batch.TotalSkippedAsSharedNumberOptedOut,
                 batch.TotalSkippedForNoDestination,
+                batch.TotalSkippedAsConverted,
+                batch.TotalSkippedAsExistingContact,
                 batch.TotalSkippedByLimit);
         }
     }

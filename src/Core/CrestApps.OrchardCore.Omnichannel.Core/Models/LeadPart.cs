@@ -88,13 +88,8 @@ public sealed class LeadPart : ContentPart
     public string ConvertedOpportunityItemId { get; set; }
 
     /// <summary>
-    /// Gets or sets the content item identifier of an existing contact that shares this lead's phone number or
-    /// email, recorded when the lead was imported, so the agent can see the lead may already be a customer.
-    /// </summary>
-    public string MatchedContactItemId { get; set; }
-
-    /// <summary>
-    /// Gets or sets when a do-not-call registry check last cleared the lead's numbers, in UTC.
+    /// Gets or sets when the lead's numbers were last checked against a do-not-call registry, in UTC. An import that
+    /// checks registries sets it, including for a row it imports marked Do not call.
     /// </summary>
     public DateTime? LastScrubbedUtc { get; set; }
 }

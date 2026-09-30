@@ -38,8 +38,9 @@ internal sealed class LeadStatusDisplayDriver : DisplayDriver<LeadStatus>
             model.Description = entry.Description;
             model.Order = entry.Order;
             model.IsDefault = entry.IsDefault;
-            model.IsClosed = entry.IsClosed;
-            model.IsConverted = entry.IsConverted;
+            model.Kind = entry.IsConverted
+                ? LeadStatusKind.Converted
+                : entry.IsClosed ? LeadStatusKind.Closed : LeadStatusKind.Open;
         }).Location("Content:1%General;1");
     }
 
@@ -56,15 +57,11 @@ internal sealed class LeadStatusDisplayDriver : DisplayDriver<LeadStatus>
 
         entry.Description = model.Description?.Trim();
         entry.Order = model.Order;
-        entry.IsDefault = model.IsDefault;
-        entry.IsClosed = model.IsClosed;
-        entry.IsConverted = model.IsConverted;
+        entry.IsConverted = model.Kind == LeadStatusKind.Converted;
+        entry.IsClosed = model.Kind != LeadStatusKind.Open;
 
-        // The converted status is always closed: a converted lead is never worked again.
-        if (entry.IsConverted)
-        {
-            entry.IsClosed = true;
-        }
+        // The default box is hidden, not cleared, when another type is picked, so it only counts for an open status.
+        entry.IsDefault = model.IsDefault && model.Kind == LeadStatusKind.Open;
 
         return Edit(entry, context);
     }

@@ -51,6 +51,12 @@ internal sealed class LeadStatusHandler : CatalogEntryHandlerBase<LeadStatus>
             context.Result.Fail(new ValidationResult(S["Name is required."], [nameof(LeadStatus.Name)]));
         }
 
+        // A new lead cannot start out finished, so only an open status can be the default.
+        if (context.Model.IsDefault && (context.Model.IsClosed || context.Model.IsConverted))
+        {
+            context.Result.Fail(new ValidationResult(S["Only an open status can be the one a new lead starts in."], [nameof(LeadStatus.IsDefault)]));
+        }
+
         return Task.CompletedTask;
     }
 
@@ -78,6 +84,12 @@ internal sealed class LeadStatusHandler : CatalogEntryHandlerBase<LeadStatus>
         if (!string.IsNullOrEmpty(name))
         {
             model.Name = name;
+        }
+
+        // The converted status is always closed: a converted lead is never worked again.
+        if (model.IsConverted)
+        {
+            model.IsClosed = true;
         }
 
         var properties = data[nameof(LeadStatus.Properties)]?.AsObject();

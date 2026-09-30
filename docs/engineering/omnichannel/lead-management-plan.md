@@ -8,8 +8,9 @@ description: Design plan for Salesforce-style leads, accounts and opportunities 
 # Leads, Accounts and Opportunities — Project Plan
 
 > **Status: built** in the *Omnichannel CRM* feature (`CrestApps.OrchardCore.Omnichannel.Crm`). Phases 1 to 5 and
-> the reports from phase 6 are in. The items under [Deferred](#deferred) are not. The rest of this page is the
-> design record, written against `df12548ed` (main); where the build differs, [As built](#as-built) wins.
+> the reports and workflows from phase 6 are in. [Deferred](#deferred) lists what was added later and what was
+> decided against. The rest of this page is the design record, written against `df12548ed` (main); where the build
+> differs, [As built](#as-built) wins.
 
 ## As built
 
@@ -32,8 +33,10 @@ These are the places where the build differs from the design below.
   - In *Automatic* mode, the opportunity joins the merged contact's account.
 - **Subject actions.** *Convert lead* runs before the other actions of the same disposition, so a follow-up *New
   activity* lands on the contact. *Set lead status* is a field on every action and has no effect on contacts.
-- **Channels.** The callback and voicemail indexes have no contact id, so they have no conversion re-pointer yet.
-  Messaging conversations are re-pointed by `MessagingLeadConversionRepointer`.
+- **Channels.** Messaging conversations are re-pointed by `MessagingLeadConversionRepointer`.
+  - Open callbacks and unresolved voicemails are re-pointed too. Their indexes have no contact column, so they are
+    read by status.
+  - Finished callbacks and resolved voicemails stay with the lead.
 - **Reports.** There are three reports in the CRM and campaigns category: *Lead funnel*, *Lead conversion by source and
   list* and *Opportunity pipeline*.
   - They read leads and opportunities, not activities, so they declare only the date range through
@@ -42,13 +45,19 @@ These are the places where the build differs from the design below.
 
 ## Deferred
 
-- The `convertLead` AI tool. The *Convert lead* subject action converts on a disposition instead, and that covers
-  automated SMS and voice qualification too.
-- Lead status auto-advance on the first attempt.
-- The optional registry re-check at load time.
-- A field-mapping screen.
-- A Workflows task and event for conversion.
-- Re-pointers for callbacks, voicemail and messaging favorites.
+Built after the first pass:
+- **Workflows.** A **Lead Converted** event and a **Convert Lead** task.
+- **Callback and voicemail re-pointers.** They move a converted lead's open callbacks and unresolved voicemails, read by status because those indexes have no contact column.
+- **`LastScrubbedUtc`.** An import that checks registries now sets it, and the export includes it.
+- **Lead status Type menu.** Open, Closed or Converted replaces separate closed and converted flags that could contradict each other. A default status must be open.
+- **Unused field removed.** `MatchedContactItemId` was never set, so it was dropped; the Convert screen finds matching contacts live.
+
+Decided against, with the reason:
+- **An AI `convertLead` tool.** The AI already dispositions automated conversations, and the *Convert Lead* subject action runs on that disposition. That path keeps the subject flow's settings and audit, while a separate tool would let the model convert outside the flow.
+- **Lead status auto-advance.** *Set lead status* on each subject action moves the status per disposition. An automatic rule would compete with it.
+- **A load-time registry re-check.** Every call is already screened against the registries when it is dialed, by the dialer eligibility service and the manual call screener. Registries change daily, so a check at load time would only be an older copy of that same check.
+- **A field-mapping screen.** Conversion copies the parts and fields both types share by name, so naming fields alike covers it. Revisit if a tenant needs differently named fields mapped.
+- **A favorites re-pointer.** A messaging favorite also matches its thread by channel and address, which conversion keeps, so favorites keep working.
 
 ## The problem
 

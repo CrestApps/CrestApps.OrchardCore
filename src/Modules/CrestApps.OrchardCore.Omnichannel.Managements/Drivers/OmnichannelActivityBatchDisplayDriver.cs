@@ -391,7 +391,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
 
         if (string.IsNullOrEmpty(model.ContactContentType))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ContactContentType), S["Contact is required."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ContactContentType), S["Record type is required."]);
         }
 
         if ((sourceEntry?.RequiresUserAssignment ?? true) && (model.UserIds is null || model.UserIds.Length == 0))

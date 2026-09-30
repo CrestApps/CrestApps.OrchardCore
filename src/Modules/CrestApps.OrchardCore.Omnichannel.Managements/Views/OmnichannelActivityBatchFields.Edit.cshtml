@@ -109,8 +109,8 @@
                     </div>
                     <div class="form-check">
                         <input type="checkbox" class="form-check-input" asp-for="AllowAIToUpdateContact">
-                        <label class="form-check-label" asp-for="AllowAIToUpdateContact">@T["Allow AI to update the contact"]</label>
-                        <span class="hint dashed">@T["When enabled, the AI may write back fields on the contact (for example a corrected phone number or email) it captures during the automated conversation."]</span>
+                        <label class="form-check-label" asp-for="AllowAIToUpdateContact">@T["Allow AI to update the contact or lead"]</label>
+                        <span class="hint dashed">@T["When enabled, the AI may write back fields on the contact or lead (for example a corrected phone number or email) it captures during the automated conversation."]</span>
                     </div>
                     <div class="form-check">
                         <input type="checkbox" class="form-check-input" asp-for="UseCallAmbience">
@@ -284,7 +284,7 @@
                 <div class="form-check">
                     <input type="checkbox" class="form-check-input" asp-for="PreventDuplicates">
                     <label class="form-check-label" asp-for="PreventDuplicates">@T["Prevent duplicate activity with the same subject"]</label>
-                    <span class="hint dashed">@T["When enabled, if a contact already has an outstanding activity with the same subject, a new one will not be created."]</span>
+                    <span class="hint dashed">@T["When enabled, a record that already has an open activity with the same subject does not get another one."]</span>
                 </div>
             </div>
         </div>
@@ -293,44 +293,44 @@
 
 <div class="card mb-3">
     <div class="card-header">
-        @T["Contact filters"]
+        @T["Record filters"]
     </div>
     <div class="card-body">
         <div class="ocat-wrapper">
-            <label asp-for="ContactContentType" class="ocat-label">@T["Contact content type"]</label>
+            <label asp-for="ContactContentType" class="ocat-label">@T["Record type"]</label>
             <div class="ocat-end">
                 <select asp-for="ContactContentType" asp-items="Model.ContactContentTypes" class="form-select">
-                    <option value="">@T["Select a contact content type"]</option>
+                    <option value="">@T["Select a contact or lead type"]</option>
                 </select>
                 <span asp-validation-for="ContactContentType" class="text-danger"></span>
             </div>
         </div>
 
         <div class="ocat-wrapper">
-            <label asp-for="LeadCreatedFrom" class="ocat-label">@T["Contact created from"]</label>
+            <label asp-for="LeadCreatedFrom" class="ocat-label">@T["Created from"]</label>
             <div class="ocat-end">
                 <input type="text"
                        id="@contactCreatedFromId"
                        name="@Html.NameFor(m => m.LeadCreatedFrom)"
                        value="@contactCreatedFromValue"
                        class="form-control"
-                       placeholder="@T["Contact created from"]" />
+                       placeholder="@T["Created from"]" />
                 <span asp-validation-for="LeadCreatedFrom" class="text-danger"></span>
-                <span class="hint">@T["Optionally, only include contacts created on or after this date."]</span>
+                <span class="hint">@T["Optionally, only include records created on or after this date."]</span>
             </div>
         </div>
 
         <div class="ocat-wrapper">
-            <label asp-for="LeadCreatedTo" class="ocat-label">@T["Contact created to"]</label>
+            <label asp-for="LeadCreatedTo" class="ocat-label">@T["Created to"]</label>
             <div class="ocat-end">
                 <input type="text"
                        id="@contactCreatedToId"
                        name="@Html.NameFor(m => m.LeadCreatedTo)"
                        value="@contactCreatedToValue"
                        class="form-control"
-                       placeholder="@T["Contact created to"]" />
+                       placeholder="@T["Created to"]" />
                 <span asp-validation-for="LeadCreatedTo" class="text-danger"></span>
-                <span class="hint">@T["Optionally, only include contacts created on or before this date."]</span>
+                <span class="hint">@T["Optionally, only include records created on or before this date."]</span>
             </div>
         </div>
 
@@ -338,8 +338,8 @@
             <div class="ocat-end-offset">
                 <div class="form-check">
                     <input type="checkbox" class="form-check-input" asp-for="OnlyPublishedLeads">
-                    <label class="form-check-label" asp-for="OnlyPublishedLeads">@T["Only published contacts"]</label>
-                    <span class="hint dashed">@T["When enabled, only published contacts will be included. When disabled, the latest version of contacts will be included regardless of their publish status."]</span>
+                    <label class="form-check-label" asp-for="OnlyPublishedLeads">@T["Only published records"]</label>
+                    <span class="hint dashed">@T["When enabled, only published records are included. When disabled, the latest version of each record is included, whatever its publish status."]</span>
                 </div>
             </div>
         </div>
@@ -348,8 +348,8 @@
             <div class="ocat-end-offset">
                 <div class="form-check">
                     <input type="checkbox" class="form-check-input" asp-for="IncludeDoNoCalls">
-                    <label class="form-check-label" asp-for="IncludeDoNoCalls">@T["Include do not call contacts"]</label>
-                    <span class="hint dashed">@T["When enabled, we'll include any contact that is flagged as do not call."]</span>
+                    <label class="form-check-label" asp-for="IncludeDoNoCalls">@T["Include records marked Do not call"]</label>
+                    <span class="hint dashed">@T["When enabled, records marked Do not call are loaded too."]</span>
                 </div>
             </div>
         </div>
@@ -358,8 +358,8 @@
             <div class="ocat-end-offset">
                 <div class="form-check">
                     <input type="checkbox" class="form-check-input" asp-for="IncludeDoNoEmail">
-                    <label class="form-check-label" asp-for="IncludeDoNoEmail">@T["Include do not email contacts"]</label>
-                    <span class="hint dashed">@T["When enabled, we'll include any contact that is flagged as do not email."]</span>
+                    <label class="form-check-label" asp-for="IncludeDoNoEmail">@T["Include records marked Do not email"]</label>
+                    <span class="hint dashed">@T["When enabled, records marked Do not email are loaded too."]</span>
                 </div>
             </div>
         </div>
@@ -368,8 +368,8 @@
             <div class="ocat-end-offset">
                 <div class="form-check">
                     <input type="checkbox" class="form-check-input" asp-for="IncludeDoNoSms">
-                    <label class="form-check-label" asp-for="IncludeDoNoSms">@T["Include do not SMS contacts"]</label>
-                    <span class="hint dashed">@T["When enabled, we'll include any contact that is flagged as do not SMS."]</span>
+                    <label class="form-check-label" asp-for="IncludeDoNoSms">@T["Include records marked Do not SMS"]</label>
+                    <span class="hint dashed">@T["When enabled, records marked Do not SMS are loaded too."]</span>
                 </div>
             </div>
         </div>
@@ -391,15 +391,15 @@
             <div class="ocat-end">
                 <select asp-for="TimeZoneIds" asp-items="Model.TimeZones" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-header="@T["Select time zones"]" data-width="100%" data-selected-text-format="count > 2" data-count-selected-text="{0} time zones selected" title="@T["Any time zone"]">
                 </select>
-                <span class="hint">@T["Optionally, only include contacts in the selected time zones."]</span>
+                <span class="hint">@T["Optionally, only include records in the selected time zones."]</span>
             </div>
         </div>
 
         <div class="ocat-wrapper">
             <label asp-for="Limit" class="ocat-label">@T["Limit"]</label>
             <div class="ocat-end">
-                <input type="number" asp-for="Limit" class="form-control" placeholder="@T["Max contacts"]" min="1" />
-                <span class="hint">@T["Optionally, limit the number of contacts loaded into this batch."]</span>
+                <input type="number" asp-for="Limit" class="form-control" placeholder="@T["Max records"]" min="1" />
+                <span class="hint">@T["Optionally, limit the number of records loaded into this batch."]</span>
             </div>
         </div>
     </div>
@@ -410,7 +410,7 @@
         @T["Last activity filters"]
     </div>
     <div class="card-body">
-        <p class="text-muted mb-3">@T["Filter contacts based on their last completed activity. For example, find contacts whose last activity had a specific subject and disposition."]</p>
+        <p class="text-muted mb-3">@T["Filter records by their last completed activity. For example, find the records whose last activity had a specific subject and disposition."]</p>
 
         <div class="ocat-wrapper">
             <label asp-for="LastActivitySubjectContentType" class="ocat-label">@T["Last activity subject"]</label>
@@ -418,7 +418,7 @@
                 <select asp-for="LastActivitySubjectContentType" asp-items="Model.SubjectContentTypes" class="form-select">
                     <option value="">@T["Any subject"]</option>
                 </select>
-                <span class="hint">@T["Filter contacts whose last completed activity had this subject type."]</span>
+                <span class="hint">@T["Only include records whose last completed activity had this subject."]</span>
             </div>
         </div>
 
@@ -427,7 +427,7 @@
             <div class="ocat-end">
                 <select asp-for="LastActivityDispositionId" asp-items="Model.Dispositions" class="form-select">
                 </select>
-                <span class="hint">@T["Filter contacts whose last completed activity had this disposition."]</span>
+                <span class="hint">@T["Only include records whose last completed activity had this disposition."]</span>
             </div>
         </div>
     </div>

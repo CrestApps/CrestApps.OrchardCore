@@ -419,7 +419,7 @@ public sealed class ActivityBatchesController : Controller
             });
         });
 
-        await _notifier.SuccessAsync(H["The inventory load has started loading in the background. When it finishes, the list shows how many matching contacts were loaded and why any were skipped."]);
+        await _notifier.SuccessAsync(H["The inventory load has started loading in the background. When it finishes, the list shows how many matching records were loaded and why any were skipped."]);
 
         return RedirectToAction(nameof(Index));
     }

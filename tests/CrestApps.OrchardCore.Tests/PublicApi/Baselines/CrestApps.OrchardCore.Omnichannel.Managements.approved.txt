@@ -122,6 +122,14 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements
         public override void Configure(Microsoft.AspNetCore.Builder.IApplicationBuilder app, Microsoft.AspNetCore.Routing.IEndpointRouteBuilder routes, System.IServiceProvider serviceProvider) { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Crm")]
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "OrchardCore.Workflows"})]
+    public sealed class CrmWorkflowsStartup : OrchardCore.Modules.StartupBase
+    {
+        public CrmWorkflowsStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
     [OrchardCore.Modules.RequireFeatures(new string[] {
             "CrestApps.OrchardCore.DncRegistry",
             "CrestApps.OrchardCore.ContentTransfer"})]
@@ -607,7 +615,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers
     }
     public sealed class LeadPartContentImportHandler : CrestApps.OrchardCore.ContentTransfer.Handlers.ContentImportHandlerBase, CrestApps.OrchardCore.ContentTransfer.IContentPartImportHandler
     {
-        public LeadPartContentImportHandler(CrestApps.Core.Services.INamedCatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.LeadStatus> statuses, Microsoft.AspNetCore.Identity.UserManager<OrchardCore.Users.IUser> userManager, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Handlers.LeadPartContentImportHandler> stringLocalizer) { }
+        public LeadPartContentImportHandler(CrestApps.Core.Services.INamedCatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.LeadStatus> statuses, Microsoft.AspNetCore.Identity.UserManager<OrchardCore.Users.IUser> userManager, CrestApps.OrchardCore.Omnichannel.Managements.Services.ImportRowDoNotCallFlags doNotCallFlags, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Handlers.LeadPartContentImportHandler> stringLocalizer) { }
         public System.Threading.Tasks.Task ExportAsync(CrestApps.OrchardCore.ContentTransfer.ContentPartExportMapContext context) { }
         public System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContentTransfer.ImportColumn> GetColumns(CrestApps.OrchardCore.ContentTransfer.ImportContentPartContext context) { }
         public System.Threading.Tasks.Task ImportAsync(CrestApps.OrchardCore.ContentTransfer.ContentPartImportMapContext context) { }
@@ -923,7 +931,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
     {
         public ImportRowDoNotCallFlags() { }
         public bool IsMarked(System.Data.DataRow row) { }
+        public bool IsScreened(System.Data.DataRow row) { }
         public void Mark(System.Data.DataRow row) { }
+        public void MarkScreened(System.Data.DataRow row) { }
     }
     public sealed class LeadMatchFinder
     {
@@ -1286,14 +1296,19 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Statuses { get; set; }
     }
+    public enum LeadStatusKind
+    {
+        Open = 0,
+        Closed = 1,
+        Converted = 2,
+    }
     public class LeadStatusViewModel
     {
         public LeadStatusViewModel() { }
         public string Description { get; set; }
-        public bool IsClosed { get; set; }
-        public bool IsConverted { get; set; }
         public bool IsDefault { get; set; }
         public bool IsNew { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.LeadStatusKind Kind { get; set; }
         public string Name { get; set; }
         public int Order { get; set; }
     }
@@ -1795,5 +1810,59 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> SelectedUsers { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityUrgencyLevel? UrgencyLevel { get; set; }
+    }
+}
+namespace CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Drivers
+{
+    public sealed class ConvertLeadTaskDisplayDriver : OrchardCore.Workflows.Display.ActivityDisplayDriver<CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.ConvertLeadTask, CrestApps.OrchardCore.Omnichannel.Managements.Workflows.ViewModels.ConvertLeadTaskViewModel>
+    {
+        public ConvertLeadTaskDisplayDriver(OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager, OrchardCore.Liquid.ILiquidTemplateManager liquidTemplateManager, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Drivers.ConvertLeadTaskDisplayDriver> stringLocalizer) { }
+        protected override System.Threading.Tasks.ValueTask EditActivityAsync(CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.ConvertLeadTask activity, CrestApps.OrchardCore.Omnichannel.Managements.Workflows.ViewModels.ConvertLeadTaskViewModel model) { }
+        public override System.Threading.Tasks.Task<OrchardCore.DisplayManagement.Views.IDisplayResult> UpdateAsync(CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.ConvertLeadTask activity, OrchardCore.DisplayManagement.Handlers.UpdateEditorContext context) { }
+    }
+    public sealed class LeadConvertedEventDisplayDriver : OrchardCore.Workflows.Display.ActivityDisplayDriver<CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.LeadConvertedEvent>
+    {
+        public LeadConvertedEventDisplayDriver() { }
+    }
+}
+namespace CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models
+{
+    public sealed class ConvertLeadTask : OrchardCore.Workflows.Activities.TaskActivity<CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.ConvertLeadTask>
+    {
+        public const string DefaultLeadExpression = "{{ Workflow.Input.ContentItem.ContentItemId }}";
+        public ConvertLeadTask(CrestApps.OrchardCore.Omnichannel.Core.Services.ILeadConversionService conversionService, CrestApps.OrchardCore.Omnichannel.Managements.Services.LeadMatchFinder matchFinder, OrchardCore.ContentManagement.IContentManager contentManager, OrchardCore.Workflows.Services.IWorkflowExpressionEvaluator expressionEvaluator, Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.ConvertLeadTask> logger, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.ConvertLeadTask> stringLocalizer) { }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.LeadConversionAccountMode AccountMode { get; set; }
+        public override Microsoft.Extensions.Localization.LocalizedString Category { get; }
+        public bool CreateOpportunity { get; set; }
+        public override Microsoft.Extensions.Localization.LocalizedString DisplayText { get; }
+        public string LeadContentItemId { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.LeadOpenActivityMode OpenActivities { get; set; }
+        public string OpportunityContentType { get; set; }
+        public override System.Threading.Tasks.Task<OrchardCore.Workflows.Activities.ActivityExecutionResult> ExecuteAsync(OrchardCore.Workflows.Models.WorkflowExecutionContext workflowContext, OrchardCore.Workflows.Models.ActivityContext activityContext) { }
+        public override System.Collections.Generic.IEnumerable<OrchardCore.Workflows.Abstractions.Models.Outcome> GetPossibleOutcomes(OrchardCore.Workflows.Models.WorkflowExecutionContext workflowContext, OrchardCore.Workflows.Models.ActivityContext activityContext) { }
+    }
+    public sealed class LeadConvertedEvent : OrchardCore.Workflows.Activities.EventActivity
+    {
+        public LeadConvertedEvent(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.LeadConvertedEvent> stringLocalizer) { }
+        public override Microsoft.Extensions.Localization.LocalizedString Category { get; }
+        public override Microsoft.Extensions.Localization.LocalizedString DisplayText { get; }
+        public override string Name { get; }
+        public override OrchardCore.Workflows.Activities.ActivityExecutionResult Execute(OrchardCore.Workflows.Models.WorkflowExecutionContext workflowContext, OrchardCore.Workflows.Models.ActivityContext activityContext) { }
+        public override System.Collections.Generic.IEnumerable<OrchardCore.Workflows.Abstractions.Models.Outcome> GetPossibleOutcomes(OrchardCore.Workflows.Models.WorkflowExecutionContext workflowContext, OrchardCore.Workflows.Models.ActivityContext activityContext) { }
+        public override OrchardCore.Workflows.Activities.ActivityExecutionResult Resume(OrchardCore.Workflows.Models.WorkflowExecutionContext workflowContext, OrchardCore.Workflows.Models.ActivityContext activityContext) { }
+    }
+}
+namespace CrestApps.OrchardCore.Omnichannel.Managements.Workflows.ViewModels
+{
+    public class ConvertLeadTaskViewModel
+    {
+        public ConvertLeadTaskViewModel() { }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.LeadConversionAccountMode AccountMode { get; set; }
+        public bool CreateOpportunity { get; set; }
+        public string LeadContentItemId { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.LeadOpenActivityMode OpenActivities { get; set; }
+        public string OpportunityContentType { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> OpportunityContentTypes { get; set; }
     }
 }

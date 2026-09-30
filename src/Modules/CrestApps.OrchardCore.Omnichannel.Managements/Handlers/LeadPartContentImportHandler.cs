@@ -4,10 +4,12 @@ using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.ContentTransfer.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
+using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement;
 using OrchardCore.Entities;
+using OrchardCore.Modules;
 using OrchardCore.Users;
 using OrchardCore.Users.Models;
 
@@ -23,6 +25,8 @@ public sealed class LeadPartContentImportHandler : ContentImportHandlerBase, ICo
 {
     private readonly INamedCatalog<LeadStatus> _statuses;
     private readonly UserManager<IUser> _userManager;
+    private readonly ImportRowDoNotCallFlags _doNotCallFlags;
+    private readonly IClock _clock;
     private readonly Dictionary<string, string> _userIdsByName = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _userNamesById = new(StringComparer.Ordinal);
 
@@ -37,6 +41,7 @@ public sealed class LeadPartContentImportHandler : ContentImportHandlerBase, ICo
     private ImportColumn _isConvertedColumn;
     private ImportColumn _convertedUtcColumn;
     private ImportColumn _convertedContactColumn;
+    private ImportColumn _lastScrubbedColumn;
 
     internal readonly IStringLocalizer S;
 
@@ -45,14 +50,20 @@ public sealed class LeadPartContentImportHandler : ContentImportHandlerBase, ICo
     /// </summary>
     /// <param name="statuses">The lead status catalog.</param>
     /// <param name="userManager">The user manager used to resolve owners by user name.</param>
+    /// <param name="doNotCallFlags">What the do-not-call screening decided about each row of the import.</param>
+    /// <param name="clock">The clock.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public LeadPartContentImportHandler(
         INamedCatalog<LeadStatus> statuses,
         UserManager<IUser> userManager,
+        ImportRowDoNotCallFlags doNotCallFlags,
+        IClock clock,
         IStringLocalizer<LeadPartContentImportHandler> stringLocalizer)
     {
         _statuses = statuses;
         _userManager = userManager;
+        _doNotCallFlags = doNotCallFlags;
+        _clock = clock;
         S = stringLocalizer;
     }
 
@@ -122,6 +133,13 @@ public sealed class LeadPartContentImportHandler : ContentImportHandlerBase, ICo
             Type = ImportColumnType.ExportOnly,
         };
 
+        _lastScrubbedColumn ??= new ImportColumn
+        {
+            Name = "LastScrubbedUtc",
+            Description = S["When the lead's numbers were last checked against a do-not-call registry, in UTC. Exported only."],
+            Type = ImportColumnType.ExportOnly,
+        };
+
         return
         [
             _statusColumn,
@@ -133,6 +151,7 @@ public sealed class LeadPartContentImportHandler : ContentImportHandlerBase, ICo
             _isConvertedColumn,
             _convertedUtcColumn,
             _convertedContactColumn,
+            _lastScrubbedColumn,
         ];
     }
 
@@ -202,6 +221,12 @@ public sealed class LeadPartContentImportHandler : ContentImportHandlerBase, ICo
         part.Rating = LeadRatings.Normalize(rating) ?? part.Rating;
         part.OwnerId = await ResolveUserIdAsync(owner) ?? part.OwnerId ?? options?.LeadOwnerId;
 
+        // The import checked this row's numbers against a do-not-call registry, so the lead records when.
+        if (_doNotCallFlags.IsScreened(context.Row))
+        {
+            part.LastScrubbedUtc = _clock.UtcNow;
+        }
+
         context.ContentItem.Apply(part);
     }
 
@@ -233,6 +258,11 @@ public sealed class LeadPartContentImportHandler : ContentImportHandlerBase, ICo
         }
 
         context.Row[_convertedContactColumn.Name] = part.ConvertedContactItemId;
+
+        if (part.LastScrubbedUtc.HasValue)
+        {
+            context.Row[_lastScrubbedColumn.Name] = part.LastScrubbedUtc.Value;
+        }
     }
 
     private async Task<string> ResolveStatusIdAsync(string name)

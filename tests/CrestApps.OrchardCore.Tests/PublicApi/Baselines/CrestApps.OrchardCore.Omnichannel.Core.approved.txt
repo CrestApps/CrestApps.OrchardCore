@@ -583,7 +583,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public bool IsConverted { get; set; }
         public System.DateTime? LastScrubbedUtc { get; set; }
         public string ListName { get; set; }
-        public string MatchedContactItemId { get; set; }
         public string OwnerId { get; set; }
         public string Rating { get; set; }
         public string Source { get; set; }

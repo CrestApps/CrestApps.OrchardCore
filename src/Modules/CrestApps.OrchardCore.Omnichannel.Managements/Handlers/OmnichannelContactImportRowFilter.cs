@@ -268,6 +268,14 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
                     return true;
                 }
             }
+
+            // The row passed a registry check, so a lead imported from it records when its numbers were checked.
+            if (_doNotCallFlags is not null &&
+                phoneEntries.Any(entry => entry.Canonical.HasValue) &&
+                _registries.Any(registry => _selectedRegistryKeys.Contains(registry.Key, StringComparer.OrdinalIgnoreCase)))
+            {
+                _doNotCallFlags.MarkScreened(context.Row);
+            }
         }
 
         return false;

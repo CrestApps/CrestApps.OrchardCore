@@ -37,21 +37,41 @@
 </div>
 
 <div class="ocat-wrapper">
+    <label asp-for="Kind" class="ocat-label">@T["Type"]</label>
+    <div class="ocat-end">
+        <select asp-for="Kind" class="form-select" data-lead-status-kind>
+            <option value="@LeadStatusKind.Open">@T["Open"]</option>
+            <option value="@LeadStatusKind.Closed">@T["Closed"]</option>
+            <option value="@LeadStatusKind.Converted">@T["Converted"]</option>
+        </select>
+        <span class="hint">@T["Open: leads are still worked and loaded. Closed: leads are finished without being converted, and inventory loads skip them unless a load asks for them. Converted: the status a lead takes when it is converted. It cannot be chosen by hand, and only one status can be the converted status."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" data-lead-status-default>
     <div class="ocat-end-offset">
         <div class="form-check">
             <input asp-for="IsDefault" class="form-check-input" type="checkbox" />
             <label asp-for="IsDefault" class="form-check-label">@T["A new lead starts in this status"]</label>
             <span class="hint dashed">@T["Only one status can be the default. Choosing this one clears it from the others."]</span>
-        </div>
-        <div class="form-check">
-            <input asp-for="IsClosed" class="form-check-input" type="checkbox" />
-            <label asp-for="IsClosed" class="form-check-label">@T["Leads in this status are closed"]</label>
-            <span class="hint dashed">@T["Closed leads are skipped by inventory loads unless a load asks for them."]</span>
-        </div>
-        <div class="form-check">
-            <input asp-for="IsConverted" class="form-check-input" type="checkbox" />
-            <label asp-for="IsConverted" class="form-check-label">@T["This is the converted status"]</label>
-            <span class="hint dashed">@T["A lead takes this status when it is converted, and it cannot be chosen by hand. Only one status can be the converted status, and it is always closed."]</span>
+            <span asp-validation-for="IsDefault" class="text-danger"></span>
         </div>
     </div>
 </div>
+
+<script at="Foot">
+    (() => {
+        const kind = document.querySelector('[data-lead-status-kind]');
+        const defaultRow = document.querySelector('[data-lead-status-default]');
+
+        if (!kind || !defaultRow) {
+            return;
+        }
+
+        // Only an open status can be the one new leads start in.
+        const refresh = () => defaultRow.classList.toggle('d-none', kind.value !== '@LeadStatusKind.Open');
+
+        kind.addEventListener('change', refresh);
+        refresh();
+    })();
+</script>
