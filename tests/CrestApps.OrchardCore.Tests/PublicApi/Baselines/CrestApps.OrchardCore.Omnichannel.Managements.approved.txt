@@ -27,6 +27,7 @@
     " pulling in the full Omnichannel management screens.", EnabledByDependencyOnly=true, Id="CrestApps.OrchardCore.Omnichannel.ChannelEndpoints", Name="Omnichannel Channel Endpoints")]
 [assembly: OrchardCore.Modules.Manifest.Feature(Category="Contact Center", Dependencies=new string[] {
         "CrestApps.OrchardCore.Omnichannel.Managements",
+        "OrchardCore.ContentFields",
         "OrchardCore.Lists",
         "OrchardCore.Title"}, Description="Adds leads, accounts and opportunities to the omnichannel CRM: lead records that " +
     "are called and texted like contacts but kept apart until they are converted, acc" +

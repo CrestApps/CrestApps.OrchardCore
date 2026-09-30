@@ -120,9 +120,9 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
 
     /// <summary>
     /// Adds the lead source content type, moves the data of the lead and opportunity parts into content fields, and
-    /// replaces the free-text source columns of the lead and opportunity indexes with the identifier of the lead
-    /// source item. Stored values move into the fields; free-text sources cannot name a lead source item, so they
-    /// are dropped.
+    /// adds the lead source identifier column to the lead and opportunity indexes. Stored values move into the
+    /// fields; free-text sources cannot name a lead source item, so they are dropped. The old free-text
+    /// <c>Source</c> columns are left in place, unused, because migrations only add to the schema.
     /// </summary>
     /// <returns>The migration version number.</returns>
     public async Task<int> UpdateFrom1Async()
@@ -142,14 +142,6 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
             "SourceId",
             table => table.AddColumn<string>("SourceId", column => column.WithLength(26)),
             "add the 'SourceId' column to the opportunity index");
-
-        await ApplyIsolatedSchemaChangeAsync(
-            builder => builder.AlterIndexTableAsync<LeadIndex>(table => table.DropColumn("Source")),
-            "drop the 'Source' column from the lead index");
-
-        await ApplyIsolatedSchemaChangeAsync(
-            builder => builder.AlterIndexTableAsync<OpportunityIndex>(table => table.DropColumn("Source")),
-            "drop the 'Source' column from the opportunity index");
 
         ShellScope.AddDeferredTask(MoveValuesIntoFieldsAsync);
 
