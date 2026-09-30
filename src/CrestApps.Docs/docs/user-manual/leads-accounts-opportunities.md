@@ -27,6 +27,8 @@ The quickest way is the **Omnichannel CRM starter** recipe:
    - **Contact**, if you do not have one;
    - **Sales Opportunity**.
 
+   **Lead** and **Contact** both get **First name**, **Last name** (required) and **Job title** fields. Their title is built from the first and last name, so it is not typed by hand. Converting a lead copies these fields to the contact.
+
    It also adds a starting set of lead sources: *Web form*, *Referral*, *Trade show*, *Purchased list*, *Advertisement* and *Cold call*.
 
 The feature itself adds the **Account** and **Lead Source** types, a starting set of **lead statuses** and a starting set of **opportunity stages**. It never changes a type you already have.
