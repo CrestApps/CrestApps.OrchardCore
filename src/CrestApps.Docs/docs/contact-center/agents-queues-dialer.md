@@ -17,6 +17,7 @@ This phase adds the operational core of the Contact Center: agent presence, work
 | Contact Center Work Distribution | `CrestApps.OrchardCore.ContactCenter.Queues` | Managed skills, work queues, queue items, and reservations, plus policy-based routing strategies and availability-based activity assignment over Contact Center queues. |
 | Contact Center Outbound Dialer | `CrestApps.OrchardCore.ContactCenter.Dialer` | Outbound profiles, callbacks, Preview inventory loads routed through Contact Center Voice, and mandatory eligibility, suppression, retry, do-not-call, and calling-window enforcement. |
 | Contact Center Paced Dialing | `CrestApps.OrchardCore.ContactCenter.Dialer.Paced` | Compliance-gated Power and Progressive strategies, paced batch source, and scheduled pacing. Its base Dialer dependency includes the Dialer Profiles UI. |
+| Contact Center Outbound Lines | `CrestApps.OrchardCore.ContactCenter.OutboundLines` | Optional. Turns the tenant's phone numbers into lines agents dial out from, so each agent's calls show the number assigned to them. See [Outbound lines](#outbound-lines). |
 | Contact Center Inbound Voice | `CrestApps.OrchardCore.ContactCenter.InboundVoice` | Inbound voice entry-point administration, business-hours qualification, closed actions, and queue ingress. |
 | Contact Center Call Recording | `CrestApps.OrchardCore.ContactCenter.Recording` | Optional recording orchestration and recording-state events over Contact Center Voice. |
 | Contact Center Voice Media | `CrestApps.OrchardCore.ContactCenter.Voice.Media` | Dependency-only, non-GA executable media resolution foundation; transport certification is deferred to R9. |
@@ -200,9 +201,33 @@ The durable provider-command state machine orchestrates these actions using expl
 
 Callbacks use the same Activity, queue, routing, and disposition path as outbound campaign calls. A `CallbackRequest` records the contact, destination, optional campaign and queue, requested/due window, attempt count, status, and notes. The callback dispatcher runs every minute and promotes each due pending callback into an outbound `Callback` activity. When the request has a queue, that activity is enqueued so the next eligible signed-in agent receives it through the Agent Workspace.
 
-A queued callback is dialed with a built-in Preview-style profile (the agent accepts, then the platform places the call from the provider's default caller ID) that skips do-not-call and calling-window screening: the customer asked to be called back, so neither rule may refuse that call.
+A queued callback is dialed with a built-in Preview-style profile (the agent accepts, then the platform places the call from the agent's [outbound line](#outbound-lines), or the provider's default caller ID when they have none) that skips do-not-call and calling-window screening: the customer asked to be called back, so neither rule may refuse that call.
 
 Use callbacks when an agent schedules a later follow-up, an inbound entry point offers a callback instead of waiting in queue, or workflow automation decides the next best action is a phone callback. Managers should configure a dedicated callback queue when callbacks need different SLA, skills, or priority from live inbound calls. Agents handle the promoted callback like any other outbound call: answer the offer, complete the conversation, select a disposition, and finish wrap-up through the Subject Flow.
+
+## Outbound lines
+
+A tenant with more than one phone number often wants different agents to call from different numbers: the sales team from the sales number and support from the support number, so a customer who calls back reaches the right people. The **Contact Center Outbound Lines** feature does this with the phone numbers you already manage.
+
+1. Enable **Contact Center Outbound Lines**. It adds the **Phone** channel to **Channel endpoints** if Inbound Voice has not already.
+2. Open **Channel endpoints** and add each number the tenant dials from as a **Phone** endpoint.
+3. On each number, open **Outbound line** and pick the **Agents who dial from this number**.
+
+Each agent dials from one number. Saving a number that lists an agent who is already on another number's line is refused with a message naming that line, and a recipe import is held to the same rule. Agents who are not on any line keep showing the provider's default caller ID, so you only need to assign the agents who should call from a different number.
+
+The assigned number is used wherever an agent places a call:
+
+| Call | Number shown |
+| --- | --- |
+| Soft phone keypad dial, including a call the browser places itself | The agent's line, otherwise the provider default. |
+| Extension call to a colleague | The agent's line, otherwise the provider default. |
+| Dialer attempt (Preview, Power, Progressive) and queued callback | The agent's line, then the dialer profile's **Caller ID**, then the provider default. |
+
+The server always decides the number. A caller ID the browser sends with a dial is ignored, so an agent cannot show a number that was not assigned to them.
+
+A dialer profile that must always show its own number, whoever makes the call, can tick **Always show this caller ID** under **Caller ID**. Transfers, consult calls and supervisor legs still show the provider default.
+
+The number has to be one your provider lets you show, which for Telnyx means a number on the account or a verified number. To send callbacks to the agent who called, point an inbound entry point for that number at the agent or their queue.
 
 ## Voice Contact Center Call Router
 

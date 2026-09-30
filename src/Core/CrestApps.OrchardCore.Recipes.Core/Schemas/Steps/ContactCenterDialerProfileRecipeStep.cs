@@ -36,6 +36,7 @@ public sealed class ContactCenterDialerProfileRecipeStep : IRecipeStep
                             ("PreviewExtensionSeconds", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("Seconds each extension adds when a preview agent asks for more time to review a record before it is dialed.")),
                             ("MaxPreviewExtensions", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("How many times one preview offer may be extended.")),
                             ("CallerId", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Caller identifier presented to the customer when supported.")),
+                            ("AlwaysUseCallerId", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the caller identifier is presented even for an agent who has their own outbound line; when false, agents with a line call from it.")),
                             ("DefaultRegionCode", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("ISO 3166-1 alpha-2 region a destination is read in when it carries no country calling code.")),
                             ("RespectDoNotCall", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether do-not-call and communication preferences suppress activities.")),
                             ("EnforceCallingWindow", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether calls are restricted by business-hours calendars.")),

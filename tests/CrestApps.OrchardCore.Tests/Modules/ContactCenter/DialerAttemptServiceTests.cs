@@ -6,6 +6,9 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Telephony.Core.Services;
+using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Telephony.Services;
 using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -431,6 +434,153 @@ public sealed class DialerAttemptServiceTests
         VerifyNoOutboundRouting(voiceCallRouter);
     }
 
+    [Fact]
+    public async Task TryDialAsync_WhenAgentHasOutboundLine_PresentsTheLineInsteadOfTheProfileCallerId()
+    {
+        // Arrange
+        var profile = CreateProfile();
+        profile.CallerId = "+15550000001";
+        var resolver = LineResolver("user-a1", "+15550000002");
+
+        // Act
+        var request = await DialAndCaptureRequestAsync(profile, resolver.Object);
+
+        // Assert
+        Assert.Equal("+15550000002", request.CallerId);
+        resolver.Verify(value => value.ResolveAsync("user-a1", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task TryDialAsync_WhenProfileAlwaysUsesCallerId_PresentsTheProfileCallerIdWithoutReadingTheLine()
+    {
+        // Arrange
+        var profile = CreateProfile();
+        profile.CallerId = "+15550000001";
+        profile.AlwaysUseCallerId = true;
+        var resolver = LineResolver("user-a1", "+15550000002");
+
+        // Act
+        var request = await DialAndCaptureRequestAsync(profile, resolver.Object);
+
+        // Assert
+        Assert.Equal("+15550000001", request.CallerId);
+        resolver.Verify(value => value.ResolveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task TryDialAsync_WhenProfileAlwaysUsesAnEmptyCallerId_StillPresentsTheAgentLine()
+    {
+        // Arrange
+        var profile = CreateProfile();
+        profile.AlwaysUseCallerId = true;
+
+        // Act
+        var request = await DialAndCaptureRequestAsync(profile, LineResolver("user-a1", "+15550000002").Object);
+
+        // Assert
+        Assert.Equal("+15550000002", request.CallerId);
+    }
+
+    [Fact]
+    public async Task TryDialAsync_WhenAgentHasNoOutboundLine_PresentsTheProfileCallerId()
+    {
+        // Arrange
+        var profile = CreateProfile();
+        profile.CallerId = "+15550000001";
+
+        // Act
+        var request = await DialAndCaptureRequestAsync(profile, new NoOutboundLineResolver());
+
+        // Assert
+        Assert.Equal("+15550000001", request.CallerId);
+    }
+
+    [Fact]
+    public async Task TryDialAsync_WhenTheOutboundLineCannotBeRead_PresentsTheProfileCallerIdAndStillDials()
+    {
+        // Arrange
+        var profile = CreateProfile();
+        profile.CallerId = "+15550000001";
+        var resolver = new Mock<IOutboundLineResolver>(MockBehavior.Strict);
+        resolver
+            .Setup(value => value.ResolveAsync("user-a1", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("The endpoint catalog is unavailable."));
+
+        // Act
+        var request = await DialAndCaptureRequestAsync(profile, resolver.Object);
+
+        // Assert
+        Assert.Equal("+15550000001", request.CallerId);
+    }
+
+    private static Mock<IOutboundLineResolver> LineResolver(string userId, string number)
+    {
+        var resolver = new Mock<IOutboundLineResolver>(MockBehavior.Strict);
+        resolver
+            .Setup(value => value.ResolveAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OutboundLine { Id = "line-1", Name = "Line 1", Number = number });
+
+        return resolver;
+    }
+
+    // Runs one successful attempt and returns the dial request it registered for the provider.
+    private static async Task<ContactCenterDialRequest> DialAndCaptureRequestAsync(DialerProfile profile, IOutboundLineResolver resolver)
+    {
+        var reservation = Reservation();
+        var activity = CreateActivity();
+        var interaction = CreateInteraction();
+        ProviderCommandRegistration? capturedRegistration = null;
+
+        var providerCommandStateService = new Mock<IProviderCommandStateService>();
+        providerCommandStateService
+            .Setup(service => service.RegisterAsync(It.IsAny<ProviderCommandRegistration>(), It.IsAny<CancellationToken>()))
+            .Callback<ProviderCommandRegistration, CancellationToken>((registration, _) => capturedRegistration = registration)
+            .ReturnsAsync(new ProviderCommand { CommandId = interaction.ItemId, Status = ProviderCommandStatus.Pending });
+
+        var reservationService = new Mock<IActivityReservationService>();
+        reservationService
+            .Setup(service => service.AcceptAsync("r1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+
+        var activityManager = CreateActivityManager(activity);
+        activityManager
+            .Setup(manager => manager.UpdateAsync(activity, It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()))
+            .Returns(ValueTask.CompletedTask);
+
+        var interactionManager = CreateInteractionManager(interaction);
+        interactionManager
+            .Setup(manager => manager.CreateAsync(interaction, It.IsAny<CancellationToken>()))
+            .Returns(ValueTask.CompletedTask);
+
+        var publisher = new Mock<IContactCenterEventPublisher>();
+        publisher
+            .Setup(service => service.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var scopeExecutor = new Mock<IContactCenterScopeExecutor>();
+        scopeExecutor
+            .Setup(executor => executor.ScheduleAfterCommit<IProviderCommandProcessor>(It.IsAny<Func<IProviderCommandProcessor, Task>>()))
+            .Returns(true);
+
+        var service = CreateService(
+            EligibleGate(),
+            reservationService,
+            interactionManager,
+            activityManager,
+            CreateVoiceCallRouter(),
+            publisher,
+            scopeExecutor,
+            providerCommandStateService,
+            outboundLineResolver: resolver);
+
+        Assert.True(await service.TryDialAsync(profile, reservation, TestContext.Current.CancellationToken));
+
+        var registered = Assert.IsType<ProviderCommandRegistration>(capturedRegistration);
+        var request = System.Text.Json.JsonSerializer.Deserialize<ContactCenterDialRequest>(registered.RequestPayload);
+
+        return Assert.IsType<ContactCenterDialRequest>(request);
+    }
+
     private static ActivityReservation Reservation()
     {
         return new ActivityReservation
@@ -535,7 +685,8 @@ public sealed class DialerAttemptServiceTests
         Mock<IContactCenterScopeExecutor>? scopeExecutor = null,
         Mock<IProviderCommandStateService>? providerCommandStateService = null,
         Mock<IAgentProfileManager>? agentManager = null,
-        IDialerAttemptCompensationService? compensationService = null)
+        IDialerAttemptCompensationService? compensationService = null,
+        IOutboundLineResolver? outboundLineResolver = null)
     {
         publisher ??= new Mock<IContactCenterEventPublisher>(MockBehavior.Strict);
         scopeExecutor ??= new Mock<IContactCenterScopeExecutor>(MockBehavior.Strict);
@@ -557,6 +708,7 @@ public sealed class DialerAttemptServiceTests
             new RecordingContactCenterAuditRecorder(),
             scopeExecutor.Object,
             providerCommandStateService.Object,
+            outboundLineResolver ?? new NoOutboundLineResolver(),
             new Mock<ILogger<DialerAttemptService>>().Object);
     }
 

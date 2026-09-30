@@ -1,0 +1,19 @@
+@model OutboundLineEndpointViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="UserIds">
+    <label asp-for="UserIds" class="ocat-label">@T["Agents who dial from this number"]</label>
+    <div class="ocat-end">
+        @await Component.InvokeAsync("UserPicker", new
+        {
+            name = Html.NameFor(m => m.UserIds).ToString(),
+            selectedValues = Model.UserIds,
+            valueType = "userId",
+            multiple = true,
+            buttonText = T["Select agents"].Value,
+            searchPlaceholder = T["Search agents"].Value,
+            smallButton = false,
+        })
+        <span asp-validation-for="UserIds" class="text-danger"></span>
+        <span class="hint">@T["Calls these agents place from the soft phone or the dialer show this number. Each agent dials from one number; agents who are not on any number's line show the provider's default caller ID."]</span>
+    </div>
+</div>

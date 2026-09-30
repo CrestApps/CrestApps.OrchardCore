@@ -140,6 +140,18 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = ContactCenterConstants.Feature.OutboundLines,
+    Name = "Contact Center Outbound Lines",
+    Description = "Turns the tenant's phone numbers into lines agents dial out from. Assign agents to a phone number's line and the calls they place from the soft phone or the dialer show that number; agents without a line keep the provider's default caller ID.",
+    Category = "Contact Center",
+    Dependencies =
+    [
+        ContactCenterConstants.Feature.Voice,
+        OmnichannelConstants.Features.ChannelEndpoints,
+    ]
+)]
+
+[assembly: Feature(
     Id = ContactCenterConstants.Feature.VoiceMedia,
     Name = "Contact Center Voice Media",
     Description = "Adds executable bidirectional media-provider resolution for active voice calls. Enable it to give automated calls a live two-way audio path, which is what realtime speech-to-speech needs; without it those calls fall back to the turn-based speak-and-transcribe loop.",

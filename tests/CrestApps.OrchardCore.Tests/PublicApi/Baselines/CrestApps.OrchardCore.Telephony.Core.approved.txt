@@ -105,6 +105,11 @@ namespace CrestApps.OrchardCore.Telephony.Core.Services
         System.Threading.Tasks.Task<System.IAsyncDisposable> AcquireAsync(string providerName, string providerCallId, System.Threading.CancellationToken cancellationToken = default);
         bool IsHeld(string providerName, string providerCallId);
     }
+    public sealed class NoOutboundLineResolver : CrestApps.OrchardCore.Telephony.Services.IOutboundLineResolver
+    {
+        public NoOutboundLineResolver() { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.OutboundLine> ResolveAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public sealed class NormalizedVoiceEventIngestor : CrestApps.OrchardCore.Telephony.Core.Services.INormalizedVoiceEventIngestor
     {
         public NormalizedVoiceEventIngestor(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Telephony.Core.Services.INormalizedVoiceEventHandler> handlers, CrestApps.OrchardCore.Telephony.Core.Services.IProviderIdentityResolver providerIdentityResolver, CrestApps.OrchardCore.Telephony.Core.Services.IVoiceIngressGate ingressGate, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Telephony.Core.Services.NormalizedVoiceEventIngestor> logger) { }

@@ -57,6 +57,30 @@ public sealed class TelnyxBridgedDialTests
         Assert.Null(state.VoicemailRecipientUserId);
     }
 
+    // An agent with an outbound line dials from it: the agent leg carries the line, and so does the bridge state the
+    // customer leg is dialed from once the agent answers.
+    [Fact]
+    public async Task KeypadDial_FromAnAgentsOutboundLine_PresentsTheLineInsteadOfTheTenantCallerId()
+    {
+        // Arrange
+        const string line = "+17785559999";
+        var handler = new RecordingHttpMessageHandler().AlwaysRespondWith(HttpStatusCode.OK, """{"data":{"call_control_id":"agent-leg-1"}}""");
+        var provider = CreateProvider(handler, Credentials(Registered(CredentialId, "gencred1")));
+        var request = KeypadDial();
+        request.From = line;
+
+        // Act
+        var result = await provider.DialAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+
+        var dial = Assert.Single(handler.Requests);
+        Assert.Equal(line, ReadString(dial.Body, "from"));
+        Assert.True(TelnyxOutboundBridgeState.TryParseEncoded(ReadString(dial.Body, "client_state"), out var state));
+        Assert.Equal(line, state.CallerId);
+    }
+
     // Bug guarded: with the soft phone open in two windows, ringing whichever registered last put the call in the
     // window that did not dial it.
     [Fact]

@@ -527,11 +527,11 @@ entry point maps one or more DIDs and now chooses a **Route to** target:
 To give an agent a dedicated inbound line, create an entry point with the agent's DID, set **Route to** to
 **Specific agent**, pick the agent, and set a **Target queue** as the fallback.
 
-:::note
-A **per-agent** outbound caller id is not yet wired up: the `AgentProfile.OutboundCallerId` field exists on
-the model but has no editor UI and is not resolved on the dial path. Today outbound calls present the tenant
-**Default outbound caller id** (or a per-call/campaign number), so a caller who dials back an agent's personal
-DID still reaches them through that DID's entry point rather than because the agent dialed out from it.
+:::tip
+To have an agent call out from their own number, enable **Contact Center Outbound Lines**, add the number as a
+**Phone** channel endpoint, and list the agent under the number's **Outbound line**. Their keypad dials, extension
+calls and dialer attempts then show that number, and a customer who calls it back reaches the agent through the
+entry point above. See [Outbound lines](../contact-center/agents-queues-dialer.md#outbound-lines).
 :::
 
 ## Call recording

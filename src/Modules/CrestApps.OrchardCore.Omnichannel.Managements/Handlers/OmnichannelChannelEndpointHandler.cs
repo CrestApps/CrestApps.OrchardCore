@@ -22,6 +22,7 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
     private readonly IPhoneNumberService _phoneNumberService;
     private readonly IEmailAddressValidator _emailAddressValidator;
     private readonly IEnumerable<IChannelEndpointAddressPolicy> _addressPolicies;
+    private readonly IEnumerable<IChannelEndpointRule> _rules = [];
 
     internal readonly IStringLocalizer S;
 
@@ -48,6 +49,30 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
         _emailAddressValidator = emailAddressValidator;
         _addressPolicies = addressPolicies;
         S = stringLocalizer;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OmnichannelChannelEndpointHandler"/> class that also runs the rules
+    /// other features add to the endpoints they extend.
+    /// </summary>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="clock">The clock.</param>
+    /// <param name="phoneNumberService">The phone number service for E.164 formatting.</param>
+    /// <param name="emailAddressValidator">The email address validator.</param>
+    /// <param name="addressPolicies">The address rules other features contribute for the channels they add.</param>
+    /// <param name="rules">The endpoint rules other features contribute.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public OmnichannelChannelEndpointHandler(
+        IHttpContextAccessor httpContextAccessor,
+        IClock clock,
+        IPhoneNumberService phoneNumberService,
+        IEmailAddressValidator emailAddressValidator,
+        IEnumerable<IChannelEndpointAddressPolicy> addressPolicies,
+        IEnumerable<IChannelEndpointRule> rules,
+        IStringLocalizer<OmnichannelCampaignHandler> stringLocalizer)
+        : this(httpContextAccessor, clock, phoneNumberService, emailAddressValidator, addressPolicies, stringLocalizer)
+    {
+        _rules = rules;
     }
 
     public override async Task InitializingAsync(InitializingContext<OmnichannelChannelEndpoint> context, CancellationToken cancellationToken = default)
@@ -114,7 +139,7 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
         }
     }
 
-    public override Task ValidatingAsync(ValidatingContext<OmnichannelChannelEndpoint> context, CancellationToken cancellationToken = default)
+    public override async Task ValidatingAsync(ValidatingContext<OmnichannelChannelEndpoint> context, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(context.Model.DisplayText))
         {
@@ -155,7 +180,11 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
             }
         }
 
-        return Task.CompletedTask;
+        // The rules of the features that extend endpoints, such as the agents a phone number's outbound line names.
+        foreach (var rule in _rules)
+        {
+            await rule.ValidateAsync(context, cancellationToken);
+        }
     }
 
     public override Task InitializedAsync(InitializedContext<OmnichannelChannelEndpoint> context, CancellationToken cancellationToken = default)

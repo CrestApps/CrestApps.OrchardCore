@@ -76,6 +76,11 @@ public class DialerProfileViewModel
     public string CallerId { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the caller ID is presented even for agents who have their own line.
+    /// </summary>
+    public bool AlwaysUseCallerId { get; set; }
+
+    /// <summary>
     /// Gets or sets the ISO 3166-1 alpha-2 region a destination without a country calling code is read in.
     /// </summary>
     public string DefaultRegionCode { get; set; }

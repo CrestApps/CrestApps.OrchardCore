@@ -64,6 +64,7 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             MaxAttempts = profile.MaxAttempts,
             RetryDelayMinutes = profile.RetryDelayMinutes,
             CallerId = profile.CallerId,
+            AlwaysUseCallerId = profile.AlwaysUseCallerId,
             DefaultRegionCode = profile.DefaultRegionCode,
             RespectDoNotCall = profile.RespectDoNotCall,
             EnforceCallingWindow = profile.EnforceCallingWindow,
@@ -95,6 +96,7 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             model.MaxAttempts = viewModel.MaxAttempts;
             model.RetryDelayMinutes = viewModel.RetryDelayMinutes;
             model.CallerId = viewModel.CallerId;
+            model.AlwaysUseCallerId = viewModel.AlwaysUseCallerId;
             model.DefaultRegionCode = viewModel.DefaultRegionCode;
             model.DefaultRegionOptions = viewModel.DefaultRegionOptions;
             model.RespectDoNotCall = viewModel.RespectDoNotCall;
@@ -137,6 +139,7 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
         profile.MaxAttempts = model.MaxAttempts;
         profile.RetryDelayMinutes = model.RetryDelayMinutes;
         profile.CallerId = model.CallerId?.Trim();
+        profile.AlwaysUseCallerId = model.AlwaysUseCallerId;
         profile.DefaultRegionCode = model.DefaultRegionCode?.Trim().ToUpperInvariant();
         profile.RespectDoNotCall = model.RespectDoNotCall;
         profile.EnforceCallingWindow = model.EnforceCallingWindow;

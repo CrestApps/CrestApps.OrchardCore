@@ -106,5 +106,10 @@ public static partial class ContactCenterConstants
         /// The identifier of the Agent Entitlements feature.
         /// </summary>
         public const string AgentEntitlements = "CrestApps.OrchardCore.ContactCenter.AgentEntitlements";
+
+        /// <summary>
+        /// The identifier of the Outbound Lines feature, which assigns agents the phone number they dial out from.
+        /// </summary>
+        public const string OutboundLines = "CrestApps.OrchardCore.ContactCenter.OutboundLines";
     }
 }

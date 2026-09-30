@@ -8,7 +8,17 @@
     <div class="ocat-end">
         <input asp-for="CallerId" class="form-control" />
         <span asp-validation-for="CallerId" class="text-danger"></span>
-        <span class="hint">@T["The phone number shown to the person being called, when the provider supports setting it. Leave blank to use the provider default."]</span>
+        <span class="hint">@T["The phone number shown to the person being called, when the provider supports setting it. Agents who have their own outbound line call from it instead. Leave blank to use the provider default."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="AlwaysUseCallerId">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="AlwaysUseCallerId" class="form-check-input" />
+            <label asp-for="AlwaysUseCallerId" class="form-check-label">@T["Always show this caller ID"]</label>
+            <span class="hint dashed">@T["Show this number even for agents who have their own outbound line."]</span>
+        </div>
     </div>
 </div>
 

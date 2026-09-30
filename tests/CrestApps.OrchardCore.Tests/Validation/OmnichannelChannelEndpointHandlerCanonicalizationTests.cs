@@ -143,5 +143,41 @@ public class OmnichannelChannelEndpointHandlerCanonicalizationTests
             new PassThroughStringLocalizer<OmnichannelCampaignHandler>());
     }
 
+    // A feature that extends endpoints (outbound lines) adds its rules here, so a recipe import is held to them just
+    // as the editor is.
+    [Fact]
+    public async Task ValidatingAsync_RunsTheRulesOtherFeaturesAdd()
+    {
+        // Arrange
+        var endpoint = new OmnichannelChannelEndpoint
+        {
+            DisplayText = "Sales",
+            Channel = OmnichannelConstants.Channels.Phone,
+            Value = "(415) 555-2671",
+        };
+        var rule = new Mock<IChannelEndpointRule>();
+        rule
+            .Setup(value => value.ValidateAsync(It.IsAny<ValidatingContext<OmnichannelChannelEndpoint>>(), It.IsAny<CancellationToken>()))
+            .Callback<ValidatingContext<OmnichannelChannelEndpoint>, CancellationToken>((context, _) =>
+                context.Result.Fail(new System.ComponentModel.DataAnnotations.ValidationResult("Refused by the rule.")))
+            .Returns(Task.CompletedTask);
+
+        var handler = new OmnichannelChannelEndpointHandler(
+            new Mock<IHttpContextAccessor>().Object,
+            new Mock<IClock>().Object,
+            new Mock<IPhoneNumberService>().Object,
+            new Mock<IEmailAddressValidator>().Object,
+            [],
+            [rule.Object],
+            new PassThroughStringLocalizer<OmnichannelCampaignHandler>());
+        var context = new ValidatingContext<OmnichannelChannelEndpoint>(endpoint);
+
+        // Act
+        await handler.ValidatingAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Contains(context.Result.Errors, error => error.ErrorMessage == "Refused by the rule.");
+    }
+
     private delegate bool TryFormatToE164Callback(string rawNumber, string regionCode, out string e164Number);
 }
