@@ -97,9 +97,11 @@ public sealed class CrmStartup : StartupBase
 
         services.AddScoped<ILeadConversionService, LeadConversionService>();
         services.AddScoped<LeadMatchFinder>();
+        services.AddScoped<IUnattendedLeadConverter, UnattendedLeadConverter>();
         services.AddScoped<ISubjectActionHandler, ConvertLeadSubjectActionHandler>();
         services.AddDisplayDriver<SubjectAction, LeadSubjectActionDisplayDriver>();
         services.AddDisplayDriver<OmnichannelActivityBatch, LeadBatchFilterDisplayDriver>();
+        services.AddDisplayDriver<OmnichannelActivityBatch, LeadAIConversionBatchDisplayDriver>();
 
         services.Configure<SubjectActionOptions>(options =>
         {

@@ -1,0 +1,78 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model LeadAIConversionViewModel
+
+@{
+    var panelId = Html.IdFor(m => m.Rendered) + "_Panel";
+}
+
+<div id="@panelId" class="card text-bg-theme mb-3 d-none" data-lead-types="@string.Join(",", Model.LeadContentTypes)">
+    <div class="card-header">@T["AI lead conversion"]</div>
+    <div class="card-body">
+        <input type="hidden" name="@Html.NameFor(m => m.Rendered)" value="true" />
+
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="Enabled" class="form-check-input" type="checkbox" data-lead-ai-conversion-enabled />
+                    <label asp-for="Enabled" class="form-check-label">@T["Allow AI to convert the lead"]</label>
+                    <span class="hint dashed">@T["When the AI judges from the conversation that the lead qualified, it converts the lead into a contact, finding or creating the account named after the lead's company. The disposition's follow-up actions then work on the contact."]</span>
+                </div>
+            </div>
+        </div>
+
+        <div data-lead-ai-conversion-options>
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <div class="form-check">
+                        <input asp-for="CreateOpportunity" class="form-check-input" type="checkbox" />
+                        <label asp-for="CreateOpportunity" class="form-check-label">@T["Also create an opportunity"]</label>
+                        <span class="hint dashed">@T["Records the deal, with the contact as its primary contact, in the contact's account."]</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper">
+                <label asp-for="OpportunityContentType" class="ocat-label">@T["Opportunity type"]</label>
+                <div class="ocat-end">
+                    <select asp-for="OpportunityContentType" asp-items="Model.OpportunityContentTypes" class="form-select">
+                        <option value="">@T["The lead type's default"]</option>
+                    </select>
+                    <span asp-validation-for="OpportunityContentType" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper">
+                <label asp-for="QualificationGuidance" class="ocat-label">@T["When a lead is qualified"]</label>
+                <div class="ocat-end">
+                    <textarea asp-for="QualificationGuidance" class="form-control" rows="2"></textarea>
+                    <span class="hint">@T["Given to the AI to decide, in plain words, for example: has a budget and wants to buy within three months. Leave empty to use the subject goal. The AI never converts a lead who declined, was undecided or asked not to be contacted."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script at="Foot">
+    (() => {
+        const panel = document.getElementById('@panelId');
+        const form = panel?.closest('form');
+        const select = form?.querySelector('select[name$=".ContactContentType"], select[name="ContactContentType"]');
+        const enabled = panel?.querySelector('[data-lead-ai-conversion-enabled]');
+        const options = panel?.querySelector('[data-lead-ai-conversion-options]');
+
+        if (!panel || !select) {
+            return;
+        }
+
+        const leadTypes = (panel.dataset.leadTypes || '').split(',').filter(Boolean);
+        const refresh = () => {
+            panel.classList.toggle('d-none', !leadTypes.includes(select.value));
+            options?.classList.toggle('d-none', !enabled?.checked);
+        };
+
+        select.addEventListener('change', refresh);
+        enabled?.addEventListener('change', refresh);
+        refresh();
+    })();
+</script>

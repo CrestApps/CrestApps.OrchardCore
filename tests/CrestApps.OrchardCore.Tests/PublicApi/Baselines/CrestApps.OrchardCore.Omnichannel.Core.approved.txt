@@ -543,6 +543,14 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         CallbackScheduled = 2,
         Failed = 3,
     }
+    public sealed class LeadAIConversionSettings
+    {
+        public LeadAIConversionSettings() { }
+        public bool CreateOpportunity { get; set; }
+        public bool Enabled { get; set; }
+        public string OpportunityContentType { get; set; }
+        public string QualificationGuidance { get; set; }
+    }
     public sealed class LeadBatchFilter
     {
         public LeadBatchFilter() { }
@@ -1442,12 +1450,24 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition>> GetConfiguredSubjectTypesAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectDirection direction, System.Threading.CancellationToken cancellationToken = default);
         bool IsConfigured(CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings flowSettings);
     }
+    public interface IUnattendedLeadConverter
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.LeadConversionResult> ConvertAsync(OrchardCore.ContentManagement.ContentItem lead, CrestApps.OrchardCore.Omnichannel.Core.Models.LeadConversionRequest request);
+    }
     public sealed class InMemoryAutomatedConversationGate : CrestApps.OrchardCore.Omnichannel.Core.Services.IAutomatedConversationGate
     {
         public InMemoryAutomatedConversationGate() { }
         public CrestApps.OrchardCore.Omnichannel.Core.Services.IAutomatedConversationGeneration Begin(string sessionId, System.Threading.CancellationToken hostToken) { }
         public bool IsGenerating(string sessionId) { }
         public bool TryClaimInboundMessage(string providerMessageId) { }
+    }
+    public static class LeadAIConversion
+    {
+        public const string DefaultQualification = "the customer is genuinely interested and agreed to the next step";
+        public static string BuildInstruction(CrestApps.OrchardCore.Omnichannel.Core.Models.LeadAIConversionSettings settings, string subjectGoal) { }
+        public static CrestApps.OrchardCore.Omnichannel.Core.Models.LeadConversionRequest CreateRequest(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity, CrestApps.OrchardCore.Omnichannel.Core.Models.LeadAIConversionSettings settings) { }
+        public static string GetQualification(CrestApps.OrchardCore.Omnichannel.Core.Models.LeadAIConversionSettings settings, string subjectGoal) { }
+        public static bool TryGetSettings(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity, OrchardCore.ContentManagement.ContentItem record, out CrestApps.OrchardCore.Omnichannel.Core.Models.LeadAIConversionSettings settings) { }
     }
     public sealed class LeadConversionContext
     {

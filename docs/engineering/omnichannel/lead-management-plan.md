@@ -51,9 +51,9 @@ Built after the first pass:
 - **`LastScrubbedUtc`.** An import that checks registries now sets it, and the export includes it.
 - **Lead status Type menu.** Open, Closed or Converted replaces separate closed and converted flags that could contradict each other. A default status must be open.
 - **Unused field removed.** `MatchedContactItemId` was never set, so it was dropped; the Convert screen finds matching contacts live.
+- **AI conversion.** An automatic load of leads can let the AI convert the leads it qualifies. It is not a mid-conversation tool: the conclusion step asks the model for `ConvertLead`, and the lead is converted before the disposition's actions run. The load chooses the opportunity and what qualified means, and conversion goes through the same unattended converter as the subject action and workflow task.
 
 Decided against, with the reason:
-- **An AI `convertLead` tool.** The AI already dispositions automated conversations, and the *Convert Lead* subject action runs on that disposition. That path keeps the subject flow's settings and audit, while a separate tool would let the model convert outside the flow.
 - **Lead status auto-advance.** *Set lead status* on each subject action moves the status per disposition. An automatic rule would compete with it.
 - **A load-time registry re-check.** Every call is already screened against the registries when it is dialed, by the dialer eligibility service and the manual call screener. Registries change daily, so a check at load time would only be an older copy of that same check.
 - **A field-mapping screen.** Conversion copies the parts and fields both types share by name, so naming fields alike covers it. Revisit if a tenant needs differently named fields mapped.

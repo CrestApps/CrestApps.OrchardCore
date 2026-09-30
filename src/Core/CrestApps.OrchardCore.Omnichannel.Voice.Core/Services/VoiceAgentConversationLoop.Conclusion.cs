@@ -195,6 +195,10 @@ public sealed partial class VoiceAgentConversationLoop
             : await contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
         var subject = activity.Subject ?? (string.IsNullOrWhiteSpace(activity.SubjectContentType) ? null : await contentManager.NewAsync(activity.SubjectContentType));
 
+        // The load may let the AI convert a lead it qualified; the model is told it is talking to a lead only when the
+        // record is one that is not converted yet.
+        var allowLeadConversion = LeadAIConversion.TryGetSettings(activity, contact, out var leadConversion);
+
         // The subject's updatable text fields, read from the content type definition so the model is asked for the
         // exact fields that exist (rather than authoring a free-form content item, which produced values in shapes
         // the field editors could not read).
@@ -214,6 +218,8 @@ public sealed partial class VoiceAgentConversationLoop
             {
                 ["AllowSubjectFields"] = allowUpdateSubject && subjectTextFields.Count > 0,
                 ["AllowContactEmail"] = allowUpdateContact,
+                ["AllowLeadConversion"] = allowLeadConversion,
+                ["LeadQualification"] = allowLeadConversion ? LeadAIConversion.GetQualification(leadConversion, flowSettings?.SubjectGoal) : null,
             });
 
         var userPrompt = $"""
@@ -365,6 +371,14 @@ public sealed partial class VoiceAgentConversationLoop
             }
         }
 
+        // The AI judged the lead qualified and the load allows it to convert: the lead becomes a contact before the
+        // disposition's actions run, so follow-ups land on the contact. Only a real conversation that ran its course
+        // can qualify anybody, and a failed conversion leaves the lead as it was while the actions still run.
+        if (allowLeadConversion && hasConversation && !sessionLost && result?.ConvertLead == true)
+        {
+            contact = await ConvertQualifiedLeadAsync(services, concluded, contact, leadConversion, activityId) ?? contact;
+        }
+
         if (disposition is not null)
         {
             await executor.ExecuteAsync(new SubjectActionExecutionContext
@@ -425,6 +439,53 @@ public sealed partial class VoiceAgentConversationLoop
             };
     }
 
+    /// <summary>
+    /// Converts a lead the AI judged qualified at the end of an automated call, the way the Convert Lead subject action
+    /// does. Returns the contact, or <see langword="null"/> when the lead was not converted.
+    /// </summary>
+    /// <param name="services">The conclusion scope's services.</param>
+    /// <param name="activity">The completed activity.</param>
+    /// <param name="lead">The lead.</param>
+    /// <param name="settings">The load's AI conversion settings.</param>
+    /// <param name="activityId">The activity id, for the log.</param>
+    private async Task<ContentItem> ConvertQualifiedLeadAsync(
+        IServiceProvider services,
+        OmnichannelActivity activity,
+        ContentItem lead,
+        LeadAIConversionSettings settings,
+        string activityId)
+    {
+        // Without the CRM feature there is nothing to convert with.
+        var converter = services.GetService<IUnattendedLeadConverter>();
+
+        if (converter is null || lead is null)
+        {
+            return null;
+        }
+
+        var result = await converter.ConvertAsync(lead, LeadAIConversion.CreateRequest(activity, settings));
+
+        if (!result.Succeeded)
+        {
+            _logger.LogWarning(
+                "The AI qualified the lead of AI voice activity '{ActivityId}', but the lead could not be converted: {Errors}",
+                activityId.SanitizeLogValue(),
+                string.Join(" ", result.Errors));
+
+            return null;
+        }
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "The AI qualified and converted the lead of AI voice activity '{ActivityId}' ({ContactMode} contact).",
+                activityId.SanitizeLogValue(),
+                result.ContactCreated ? "new" : "existing");
+        }
+
+        return result.Contact;
+    }
+
     private sealed class VoiceConclusionResult
     {
         public string Summary { get; set; }
@@ -441,5 +502,10 @@ public sealed partial class VoiceAgentConversationLoop
         /// Gets or sets the email address the customer provided for follow-up, when allowed. Null otherwise.
         /// </summary>
         public string ContactEmail { get; set; }
+
+        /// <summary>
+        /// Gets or sets whether the AI judged the lead qualified and asks to convert it, when allowed. Null otherwise.
+        /// </summary>
+        public bool? ConvertLead { get; set; }
     }
 }

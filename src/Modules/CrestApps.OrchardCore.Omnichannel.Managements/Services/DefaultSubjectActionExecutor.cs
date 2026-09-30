@@ -181,6 +181,12 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
             Status = ActivityStatus.NotStated,
         };
 
+        // Whether the AI may convert the lead is one of the automation settings the retry keeps.
+        if (activity.TryGet<LeadAIConversionSettings>(out var leadAIConversion))
+        {
+            nextAttempt.Put(leadAIConversion);
+        }
+
         nextAttempt.ScheduledUtc = await ResolveScheduleDateAsync(action, context, metadata.DefaultScheduleHours);
 
         if (!await TryAssignOwnerAsync(

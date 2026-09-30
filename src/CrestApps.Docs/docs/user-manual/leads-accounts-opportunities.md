@@ -95,6 +95,19 @@ What conversion does:
 
 You cannot convert a lead while a call or message with it is in progress.
 
+### Let the AI convert leads
+
+An **Automatic** inventory load of a lead type shows an **AI lead conversion** card. Tick **Allow AI to convert the lead**, and when an automated text or call ends, the AI decides from the conversation whether the lead qualified. If it did, the lead is converted before the disposition's follow-up actions run, so those work on the new contact.
+
+| Option | What it does |
+| --- | --- |
+| **Allow AI to convert the lead** | Lets the AI convert a lead it judged qualified. Off by default. |
+| **Also create an opportunity** | Creates an opportunity at the same time, with the contact as its primary contact. |
+| **Opportunity type** | The type of that opportunity. *The lead type's default* uses the opportunity type set on the lead type; if the lead type has none, pick one here. |
+| **When a lead is qualified** | Tells the AI what qualified means for this load, for example *has a budget and wants to buy within three months*. Empty uses the subject goal. |
+
+The AI never converts a lead who declined, was undecided, only asked for information, or asked not to be contacted. It merges into an existing contact only when exactly one shares the lead's phone number or email; otherwise it creates a new contact. The account is the one named after the lead's company, created if needed. A retried activity keeps the option.
+
 ### Convert from a disposition
 
 A subject flow can convert a lead when an activity is completed with a certain disposition. For example, *Qualified* can convert the lead and schedule a welcome call on the new contact.

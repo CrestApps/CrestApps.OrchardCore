@@ -33,6 +33,16 @@ keys.
 Do not return SubjectFields.
 {% endif %}
 
+{% if AllowLeadConversion %}
+## Lead conversion
+
+The customer is a lead: a prospect who has not been qualified yet. Set ConvertLead to true if, and only if, the
+call clearly shows the lead qualified, meaning {{ LeadQualification }}. Otherwise set ConvertLead to false. Never
+convert a customer who declined, was undecided, only asked for information, or asked not to be contacted.
+{% else %}
+Do not return ConvertLead.
+{% endif %}
+
 {% if AllowContactEmail %}
 ## Contact email
 

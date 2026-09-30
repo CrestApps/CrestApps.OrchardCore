@@ -562,6 +562,15 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 activity.ResponseDelayJitterSeconds = automatedSettings.ResponseDelayJitterSeconds;
                 activity.BusinessHoursCalendarId = automatedSettings.BusinessHoursCalendarId;
                 activity.CadenceId = automatedSettings.CadenceId;
+
+                // Letting the AI convert a lead is one of the load's AI options, snapshotted the same way. Only an
+                // automated conversation has an AI to decide, and the conclusion checks the record is an open lead.
+                if (interactionType == ActivityInteractionType.Automated &&
+                    batch.TryGet<LeadAIConversionSettings>(out var leadAIConversion) &&
+                    leadAIConversion.Enabled)
+                {
+                    activity.Put(leadAIConversion);
+                }
                 activity.ContactContentItemId = contact.ContentItemId;
                 activity.ContactContentType = batch.ContactContentType;
                 activity.SubjectContentType = batch.SubjectContentType;
