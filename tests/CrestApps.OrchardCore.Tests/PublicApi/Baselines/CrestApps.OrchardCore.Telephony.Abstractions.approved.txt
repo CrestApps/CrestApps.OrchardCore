@@ -618,6 +618,13 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public static CrestApps.OrchardCore.Telephony.Models.OutboundCallScreeningResult Allow() { }
         public static CrestApps.OrchardCore.Telephony.Models.OutboundCallScreeningResult Deny(string reason, string description) { }
     }
+    public sealed class OutboundLine
+    {
+        public OutboundLine() { }
+        public string Id { get; init; }
+        public string Name { get; init; }
+        public string Number { get; init; }
+    }
     public sealed class ProviderCallQualityStats
     {
         public ProviderCallQualityStats() { }
@@ -1024,6 +1031,10 @@ namespace CrestApps.OrchardCore.Telephony.Services
     public interface IDialDestinationPolicy
     {
         CrestApps.OrchardCore.Telephony.Services.DialDestinationDecision Evaluate(string address, CrestApps.OrchardCore.Telephony.Services.DialDestinationContext context);
+    }
+    public interface IOutboundLineResolver
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.OutboundLine> ResolveAsync(string userId, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface ITransferTargetPolicy
     {

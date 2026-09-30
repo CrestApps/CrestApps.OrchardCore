@@ -98,14 +98,9 @@ implemented as `TelnyxContactCenterVoiceMediaProvider` / `TelnyxContactCenterVoi
 - Implement `IContactCenterVoiceConferenceProvider` (add participants) and advertise `Conference`.
 - Extend `TelnyxWebhookService` to normalize conference events (`conference.*`) into `ProviderVoiceEvent` conference fields.
 
-### 2. Per‑agent outbound caller id — editor UI + dial‑path wiring
+### 2. ✅ Per‑agent outbound caller id
 
-**Status:** the `AgentProfile.OutboundCallerId` model field exists, but there is no editor UI and the dialer/manual‑dial path does not yet resolve it into the dial request.
-
-**Needed to complete:**
-
-- Add the field to the agent‑profile editor (view model + display driver + view) under **Contact Center → Agents**.
-- In the outbound dial path (the Voice Contact Center Call Router / manual‑dial), resolve the reserved agent's `OutboundCallerId` and set it as `ContactCenterDialRequest.CallerId` (falling back to the tenant default). No Telnyx change is required — the provider already honors `from` per call.
+**Status:** done, as the **Contact Center Outbound Lines** feature. A Phone channel endpoint lists the agents who dial from it (`OutboundLineSettings`), and `IOutboundLineResolver` resolves a user's line. The soft‑phone hub stamps it as the dial's `From` (discarding any client value), the Telnyx registration config presents it on browser‑originated calls, and `DialerAttemptService` uses it before the dialer profile's caller ID unless the profile sets `AlwaysUseCallerId`. The unused `AgentProfile.OutboundCallerId` field was removed.
 
 ### 3. Automated tests
 

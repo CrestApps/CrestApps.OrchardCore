@@ -78,6 +78,13 @@ public sealed class DialerProfile : CatalogItem, INameAwareModel, IModifiedUtcAw
     public string CallerId { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether <see cref="CallerId"/> is presented even for an agent who has their own
+    /// outbound line. When <see langword="false"/>, an agent with a line calls from it and <see cref="CallerId"/>
+    /// applies to everybody else.
+    /// </summary>
+    public bool AlwaysUseCallerId { get; set; }
+
+    /// <summary>
     /// Gets or sets the ISO 3166-1 alpha-2 region a destination is read in when it carries no country
     /// calling code. A campaign's activities are commonly imported in national format, and without a region
     /// such a destination cannot be canonicalized, so it cannot be compared with a do-not-call registry or

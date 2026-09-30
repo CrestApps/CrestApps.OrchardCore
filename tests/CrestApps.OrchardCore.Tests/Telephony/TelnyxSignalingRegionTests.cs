@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telnyx;
 using CrestApps.OrchardCore.Telnyx.Services;
@@ -116,6 +117,6 @@ public sealed class TelnyxSignalingRegionTests
             WebRtcRegion = region,
         });
 
-        return new TelnyxSoftPhoneRegistrationConfigContributor(issuer.Object, options);
+        return new TelnyxSoftPhoneRegistrationConfigContributor(issuer.Object, new NoOutboundLineResolver(), options);
     }
 }

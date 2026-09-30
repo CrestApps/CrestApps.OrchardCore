@@ -676,7 +676,6 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.YesSql.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? ModifiedUtc { get; set; }
         public string Name { get; set; }
-        public string OutboundCallerId { get; set; }
         [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.YesSql.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? PresenceChangedUtc { get; set; }
         public string PresenceReason { get; set; }
@@ -1550,6 +1549,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
     {
         public DialerProfile() { }
         public int AbandonmentSampleFloor { get; set; }
+        public bool AlwaysUseCallerId { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Core.Models.DialerAnsweringMachineDetection AnsweringMachineDetection { get; set; }
         public string CallerId { get; set; }
         public string CallingCalendarId { get; set; }
@@ -1924,6 +1924,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public double? RingSeconds { get; set; }
         public System.DateTime? SettledUtc { get; set; }
         public string UserId { get; set; }
+    }
+    public sealed class OutboundLineSettings
+    {
+        public OutboundLineSettings() { }
+        public System.Collections.Generic.IList<string> UserIds { get; set; }
     }
     public enum OutboxMessageStatus
     {
@@ -3120,6 +3125,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public int Order { get; }
         public System.Threading.Tasks.ValueTask ApplyAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityRoutingContext context, System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public sealed class ChannelEndpointOutboundLineResolver : CrestApps.OrchardCore.Telephony.Services.IOutboundLineResolver
+    {
+        public ChannelEndpointOutboundLineResolver(CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointManager endpointManager) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.OutboundLine> ResolveAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }
+        public static CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint FindAssignedLine(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint> endpoints, string userId, string excludeEndpointId = null) { }
+        public static System.Collections.Generic.IReadOnlyList<string> GetUserIds(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint endpoint) { }
+        public static bool IsLine(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint endpoint) { }
+    }
     public sealed class ConsultLegEventSink : CrestApps.OrchardCore.ContactCenter.Core.Services.IConsultLegEventSink
     {
         public ConsultLegEventSink(CrestApps.OrchardCore.ContactCenter.Core.Services.ICallSessionManager callSessionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IConsultTransferService consults, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentPresenceManager presenceManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterAgentLegFailureService agentLegService, YesSql.ISession session, OrchardCore.Modules.IClock clock) { }
@@ -3579,6 +3592,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public sealed class DialerAttemptService : CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerAttemptService
     {
         public DialerAttemptService(CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerEligibilityService eligibilityService, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityReservationService reservationService, CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerAttemptCompensationService compensationService, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityManager activityManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterWorkStateService workStateService, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterActivityWriter activityWriter, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IVoiceContactCenterCallRouter voiceCallRouter, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventPublisher publisher, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterAuditRecorder auditRecorder, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterScopeExecutor scopeExecutor, CrestApps.OrchardCore.ContactCenter.Core.Services.IProviderCommandStateService providerCommandStateService, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.DialerAttemptService> logger) { }
+        public DialerAttemptService(CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerEligibilityService eligibilityService, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityReservationService reservationService, CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerAttemptCompensationService compensationService, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityManager activityManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterWorkStateService workStateService, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterActivityWriter activityWriter, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IVoiceContactCenterCallRouter voiceCallRouter, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventPublisher publisher, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterAuditRecorder auditRecorder, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterScopeExecutor scopeExecutor, CrestApps.OrchardCore.ContactCenter.Core.Services.IProviderCommandStateService providerCommandStateService, CrestApps.OrchardCore.Telephony.Services.IOutboundLineResolver outboundLineResolver, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.DialerAttemptService> logger) { }
         public System.Threading.Tasks.Task<bool> TryDialAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile profile, CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation reservation, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class DialerEligibilityContext
@@ -4914,6 +4928,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         public OrphanedActivityRecoveryService(YesSql.ISession session, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityReservationManager reservationManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterActivityWriter activityWriter, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterWorkStateService workStateService, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueService queueService, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemManager queueItemManager, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.OrphanedActivityRecoveryService> logger) { }
         public System.Threading.Tasks.Task<int> RecoverAsync(System.TimeSpan gracePeriod, int maxToRecover, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class OutboundLineOwnNumberSource : CrestApps.OrchardCore.ContactCenter.IContactCenterOwnNumberSource
+    {
+        public OutboundLineOwnNumberSource(CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointManager endpointManager) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<string>> GetOwnNumbersAsync(System.Threading.CancellationToken cancellationToken = default) { }
     }
     public static class OverflowScheduler
     {

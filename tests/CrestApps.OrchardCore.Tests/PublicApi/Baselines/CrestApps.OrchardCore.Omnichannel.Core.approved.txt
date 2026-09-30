@@ -1340,6 +1340,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         string Normalize(string channel, string address);
         Microsoft.Extensions.Localization.LocalizedString Validate(string channel, string address);
     }
+    public interface IChannelEndpointRule
+    {
+        System.Threading.Tasks.Task ValidateAsync(CrestApps.Core.Models.ValidatingContext<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint> context, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IContactOptOutResolver
     {
         System.Threading.Tasks.Task<bool> HasOptedOutAsync(OrchardCore.ContentManagement.ContentItem contact, string channel, System.Threading.CancellationToken cancellationToken = default);

@@ -98,7 +98,7 @@ public sealed partial class TelephonyHub : Hub<ITelephonyClient>
             request.Metadata[TelephonyConstants.RequestMetadata.SoftPhoneUserId] = Context.UserIdentifier;
         }
 
-        return ExecuteAsync("Dial", () => DescribeDialRequest(request), (service, token) => service.DialAsync(request, token));
+        return ExecuteAsync("Dial", () => DescribeDialRequest(request), (service, token) => service.DialAsync(request, token), preflight: (services, token) => StampOutboundLineAsync(services, request, token));
     }
 
     /// <summary>
@@ -229,7 +229,7 @@ public sealed partial class TelephonyHub : Hub<ITelephonyClient>
             request.Metadata[TelephonyConstants.RequestMetadata.SoftPhoneUserId] = Context.UserIdentifier;
         }
 
-        return ExecuteAsync("DialExtension", () => DescribeExtensionDialRequest(request), (service, token) => service.DialExtensionAsync(request, token), preflight: (services, token) => StampCallerDisplayNameAsync(services, request, token));
+        return ExecuteAsync("DialExtension", () => DescribeExtensionDialRequest(request), (service, token) => service.DialExtensionAsync(request, token), preflight: (services, token) => StampExtensionCallerAsync(services, request, token));
     }
 
     /// <summary>

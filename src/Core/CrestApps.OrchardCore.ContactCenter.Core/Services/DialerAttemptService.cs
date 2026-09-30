@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -30,6 +31,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
     private readonly IContactCenterAuditRecorder _auditRecorder;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IProviderCommandStateService _providerCommandStateService;
+    private readonly IOutboundLineResolver _outboundLineResolver;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -79,6 +81,60 @@ public sealed class DialerAttemptService : IDialerAttemptService
         _scopeExecutor = scopeExecutor;
         _providerCommandStateService = providerCommandStateService;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DialerAttemptService"/> class that presents each agent's own
+    /// outbound line on the calls dialed for them.
+    /// </summary>
+    /// <param name="eligibilityService">The compliance gate evaluated before every attempt.</param>
+    /// <param name="reservationService">The reservation service used to release failed or suppressed attempts.</param>
+    /// <param name="compensationService">The service used to release failed or suppressed attempts.</param>
+    /// <param name="interactionManager">The interaction manager used to record attempts.</param>
+    /// <param name="activityManager">The CRM activity manager.</param>
+    /// <param name="workStateService">The routing-owned work state service.</param>
+    /// <param name="activityWriter">The writer used to apply CRM activity changes outside the routing transaction.</param>
+    /// <param name="agentManager">The agent profile manager used to resolve the reserved agent.</param>
+    /// <param name="voiceCallRouter">The voice call router.</param>
+    /// <param name="publisher">The Contact Center event publisher.</param>
+    /// <param name="auditRecorder">The recorder that writes each interaction a dial creates to the audit log.</param>
+    /// <param name="scopeExecutor">The executor used for compensation and post-commit command wake-up.</param>
+    /// <param name="providerCommandStateService">The service used to persist provider command intent.</param>
+    /// <param name="outboundLineResolver">The resolver of the line each agent dials out from.</param>
+    /// <param name="logger">The logger instance.</param>
+    public DialerAttemptService(
+        IDialerEligibilityService eligibilityService,
+        IActivityReservationService reservationService,
+        IDialerAttemptCompensationService compensationService,
+        IInteractionManager interactionManager,
+        IOmnichannelActivityManager activityManager,
+        IContactCenterWorkStateService workStateService,
+        IContactCenterActivityWriter activityWriter,
+        IAgentProfileManager agentManager,
+        IVoiceContactCenterCallRouter voiceCallRouter,
+        IContactCenterEventPublisher publisher,
+        IContactCenterAuditRecorder auditRecorder,
+        IContactCenterScopeExecutor scopeExecutor,
+        IProviderCommandStateService providerCommandStateService,
+        IOutboundLineResolver outboundLineResolver,
+        ILogger<DialerAttemptService> logger)
+        : this(
+            eligibilityService,
+            reservationService,
+            compensationService,
+            interactionManager,
+            activityManager,
+            workStateService,
+            activityWriter,
+            agentManager,
+            voiceCallRouter,
+            publisher,
+            auditRecorder,
+            scopeExecutor,
+            providerCommandStateService,
+            logger)
+    {
+        _outboundLineResolver = outboundLineResolver;
     }
 
     /// <inheritdoc/>
@@ -148,7 +204,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
             QueueId = reservation.QueueId,
             CampaignId = activity.CampaignId,
             Destination = activity.PreferredDestination,
-            CallerId = profile.CallerId,
+            CallerId = await ResolveCallerIdAsync(profile, agent, cancellationToken),
             Metadata = new Dictionary<string, string>
             {
                 [ContactCenterConstants.CommandMetadata.CommandId] = interaction.ItemId,
@@ -204,6 +260,52 @@ public sealed class DialerAttemptService : IDialerAttemptService
             processor.DispatchAsync(interaction.ItemId, CancellationToken.None));
 
         return true;
+    }
+
+    // The number the customer sees. The agent's own line comes first, so a customer who calls back reaches the agent
+    // who called them, unless the profile insists on its own caller ID. Otherwise the profile's caller ID applies, and
+    // with neither the provider presents its default. A line that cannot be read never stops the attempt.
+    private async Task<string> ResolveCallerIdAsync(DialerProfile profile, AgentProfile agent, CancellationToken cancellationToken)
+    {
+        if (profile.AlwaysUseCallerId && !string.IsNullOrWhiteSpace(profile.CallerId))
+        {
+            return profile.CallerId;
+        }
+
+        if (_outboundLineResolver is null)
+        {
+            return profile.CallerId;
+        }
+
+        try
+        {
+            var line = await _outboundLineResolver.ResolveAsync(agent.UserId, cancellationToken);
+
+            if (!string.IsNullOrWhiteSpace(line?.Number))
+            {
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation(
+                        "Dialer profile '{Profile}' presents agent '{AgentId}''s outbound line {LineId} ({LineNumber}) instead of the profile caller ID.",
+                        profile.Name,
+                        agent.ItemId.SanitizeLogValue(),
+                        line.Id,
+                        line.Number);
+                }
+
+                return line.Number;
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(
+                ex,
+                "The outbound line of agent '{AgentId}' could not be read; dialer profile '{Profile}' presents its own caller ID instead.",
+                agent.ItemId.SanitizeLogValue(),
+                profile.Name);
+        }
+
+        return profile.CallerId;
     }
 
     private async Task SuppressAsync(

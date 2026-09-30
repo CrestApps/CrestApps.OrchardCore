@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Telnyx.Services;
@@ -12,6 +13,7 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 public sealed class TelnyxSoftPhoneRegistrationConfigContributor : ISoftPhoneRegistrationConfigContributor
 {
     private readonly ITelnyxTelephonyCredentialIssuer _credentialIssuer;
+    private readonly IOutboundLineResolver _outboundLineResolver;
     private readonly TelnyxOptions _options;
 
     /// <summary>
@@ -19,9 +21,11 @@ public sealed class TelnyxSoftPhoneRegistrationConfigContributor : ISoftPhoneReg
     /// </summary>
     public TelnyxSoftPhoneRegistrationConfigContributor(
         ITelnyxTelephonyCredentialIssuer credentialIssuer,
+        IOutboundLineResolver outboundLineResolver,
         IOptionsMonitor<TelnyxOptions> telnyxOptions)
     {
         _credentialIssuer = credentialIssuer;
+        _outboundLineResolver = outboundLineResolver;
         _options = telnyxOptions.CurrentValue;
     }
 
@@ -46,6 +50,9 @@ public sealed class TelnyxSoftPhoneRegistrationConfigContributor : ISoftPhoneReg
         {
             return null;
         }
+
+        // A call the browser places itself presents this number, so it is the agent's own line when they have one.
+        var line = await _outboundLineResolver.ResolveAsync(context.UserId, cancellationToken);
 
         var codecs = ParseDelimited(_options.WebRtcCodecs);
 
@@ -94,10 +101,10 @@ public sealed class TelnyxSoftPhoneRegistrationConfigContributor : ISoftPhoneReg
                 ExpiresAtUtc = credential.ExpiresAtUtc,
             },
             // Telnyx rejects a server-originated call placed to a registered WebRTC credential, so the browser
-            // places its own outbound calls through the Telnyx WebRTC SDK, presenting the tenant caller id as
-            // the newCall callerNumber.
+            // places its own outbound calls through the Telnyx WebRTC SDK, presenting the agent's line (or the
+            // tenant caller id when they have none) as the newCall callerNumber.
             ClientOriginatesCalls = true,
-            OutboundCallerId = _options.DefaultOutboundCallerId,
+            OutboundCallerId = string.IsNullOrWhiteSpace(line?.Number) ? _options.DefaultOutboundCallerId : line.Number,
             EchoTestDestination = _options.EchoTestDestination,
         };
     }

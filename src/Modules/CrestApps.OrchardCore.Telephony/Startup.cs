@@ -111,6 +111,10 @@ public sealed class Startup : StartupBase
         // curated destinations, so the soft phone transfer field stops accepting a raw number there.
         services.TryAddScoped<ITransferTargetPolicy, DefaultTransferTargetPolicy>();
 
+        // The line each user dials out from. Contact Center Outbound Lines replaces this with the lines assigned
+        // on the tenant's phone numbers; without it every call presents the provider's default caller ID.
+        services.TryAddScoped<IOutboundLineResolver, NoOutboundLineResolver>();
+
         // Sends each call to voicemail once, however many requests ask for it, so a caller is never greeted twice.
         services.AddScoped<ITelephonyVoicemailSendGuard, TelephonyVoicemailSendGuard>();
         services.AddScoped<ITelephonyService, DefaultTelephonyService>();
