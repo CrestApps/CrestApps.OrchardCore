@@ -29,7 +29,7 @@ namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Managements.Migrations
 /// </remarks>
 public sealed class OmnichannelContactsMigrationsTests
 {
-    private const int FinalVersion = 11;
+    private const int FinalVersion = 12;
     private const string LegacyPhoneIndexTableName = "OmnichannelContactPhoneIndex";
 
     private static readonly TimeSpan _runLimit = TimeSpan.FromSeconds(10);

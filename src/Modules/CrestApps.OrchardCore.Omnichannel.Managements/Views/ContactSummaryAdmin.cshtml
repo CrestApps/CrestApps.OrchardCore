@@ -1,10 +1,22 @@
+@using OrchardCore.ContentManagement
 @using CrestApps.OrchardCore.Omnichannel.Core
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.Extensions.Options
 @model OrchardCore.ContentManagement.Display.ViewModels.ContentItemViewModel
 
 @inject IAuthorizationService AuthorizationService
+@inject IOptions<OmnichannelCrmOptions> CrmOptions
 
 @if (await AuthorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ListContactActivities, Model.ContentItem))
 {
     <a class="btn btn-sm btn-secondary" asp-action="List" asp-controller="Activities" asp-route-contentItemId="@Model.ContentItem.ContentItemId" asp-area="@OmnichannelConstants.Features.Managements">@T["List Activities"]</a>
+}
+
+@if (CrmOptions.Value.Enabled &&
+    Model.ContentItem.TryGet<LeadPart>(out var leadPart) &&
+    !leadPart.IsConverted &&
+    await AuthorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ConvertLead, Model.ContentItem))
+{
+    <a class="btn btn-sm btn-success" asp-action="Convert" asp-controller="Leads" asp-route-contentItemId="@Model.ContentItem.ContentItemId" asp-area="@OmnichannelConstants.Features.Managements">@T["Convert"]</a>
 }

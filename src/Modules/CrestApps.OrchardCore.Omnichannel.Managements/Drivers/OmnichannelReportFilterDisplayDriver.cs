@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Reports;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
+using CrestApps.OrchardCore.Reports.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -13,26 +14,36 @@ using OrchardCore.DisplayManagement.Views;
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 
 /// <summary>
-/// Adds campaign, channel, source, and status filters to Omnichannel reports.
+/// Adds campaign, channel, source, and status filters to Omnichannel reports. A report that declares its filters
+/// through <see cref="IReportFilterMetadata"/> gets them only when it names <see cref="FilterName"/>.
 /// </summary>
 public sealed class OmnichannelReportFilterDisplayDriver : DisplayDriver<ReportFilter>
 {
     private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
     private readonly ICatalogManager<OmnichannelCampaignGroup> _campaignGroupManager;
+    private readonly IReportManager _reportManager;
+
+    /// <summary>
+    /// The filter name a report lists in <see cref="IReportFilterMetadata.FilterNames"/> to get these filters.
+    /// </summary>
+    public const string FilterName = "OmnichannelActivity";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OmnichannelReportFilterDisplayDriver"/> class.
     /// </summary>
     /// <param name="campaignManager">The campaign manager.</param>
     /// <param name="campaignGroupManager">The campaign group manager.</param>
+    /// <param name="reportManager">The report manager.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelReportFilterDisplayDriver(
         ICatalogManager<OmnichannelCampaign> campaignManager,
         ICatalogManager<OmnichannelCampaignGroup> campaignGroupManager,
+        IReportManager reportManager,
         IStringLocalizer<OmnichannelReportFilterDisplayDriver> stringLocalizer)
     {
         _campaignManager = campaignManager;
         _campaignGroupManager = campaignGroupManager;
+        _reportManager = reportManager;
         S = stringLocalizer;
     }
 
@@ -41,7 +52,7 @@ public sealed class OmnichannelReportFilterDisplayDriver : DisplayDriver<ReportF
     /// <inheritdoc/>
     public override IDisplayResult Edit(ReportFilter filter, BuildEditorContext context)
     {
-        if (filter.ReportName?.StartsWith("omnichannel-", StringComparison.Ordinal) != true)
+        if (!AppliesTo(filter.ReportName))
         {
             return null;
         }
@@ -55,7 +66,7 @@ public sealed class OmnichannelReportFilterDisplayDriver : DisplayDriver<ReportF
     /// <inheritdoc/>
     public override async Task<IDisplayResult> UpdateAsync(ReportFilter filter, UpdateEditorContext context)
     {
-        if (filter.ReportName?.StartsWith("omnichannel-", StringComparison.Ordinal) != true)
+        if (!AppliesTo(filter.ReportName))
         {
             return null;
         }
@@ -70,6 +81,17 @@ public sealed class OmnichannelReportFilterDisplayDriver : DisplayDriver<ReportF
         filter.Set(OmnichannelReportFilter.Status, model.Status);
 
         return Edit(filter, context);
+    }
+
+    private bool AppliesTo(string reportName)
+    {
+        if (reportName?.StartsWith("omnichannel-", StringComparison.Ordinal) != true)
+        {
+            return false;
+        }
+
+        return _reportManager.FindByName(reportName) is not IReportFilterMetadata metadata ||
+            metadata.FilterNames.Contains(FilterName, StringComparer.Ordinal);
     }
 
     private async Task PopulateAsync(OmnichannelReportFilterViewModel model, ReportFilter filter)

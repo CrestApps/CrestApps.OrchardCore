@@ -13,6 +13,18 @@ public sealed class OmnichannelContactIndex : MapIndex
     public string ContentItemId { get; set; }
 
     /// <summary>
+    /// Gets or sets the content type of the indexed item, so a lookup can tell a lead from a contact without
+    /// loading the item.
+    /// </summary>
+    public string ContentType { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the indexed item is a lead that was converted. A converted lead stays indexed, so its
+    /// history can still be found and its opt-outs still protect the number, but it is never matched as a caller.
+    /// </summary>
+    public bool IsConverted { get; set; }
+
+    /// <summary>
     /// Gets or sets whether the indexed content item version is published.
     /// </summary>
     public bool Published { get; set; }

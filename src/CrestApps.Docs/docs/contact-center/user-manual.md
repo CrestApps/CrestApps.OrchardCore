@@ -348,7 +348,7 @@ See [Dialer Profiles](../user-manual/dialer-profiles.md).
    - **Automatic** — unassigned automated activities an AI profile works on its own.
    - **Dialer** — unassigned phone activities queued for the outbound dialer.
 3. For a dialer load, choose the **Dialer profile** (it sets the dialing mode) and the **Campaign**. The campaign comes from the load, or from the subject's default campaign when you leave it empty; agents sign in to that campaign to get the calls.
-4. Fill in the contact filters and **Save**, then choose **Actions > Load batch** to run the load in the background.
+4. Fill in the record filters and **Save**, then choose **Actions > Load batch** to run the load in the background.
 5. The loaded activities become available to dialing according to the selected profile.
 
 See [Load Inventory](../user-manual/load-inventory.md).

@@ -38,6 +38,8 @@ internal sealed class OmnichannelContactIndexProvider : IndexProvider<ContentIte
         var index = new OmnichannelContactIndex
         {
             ContentItemId = contact.ContentItemId,
+            ContentType = Truncate(contact.ContentType, 255),
+            IsConverted = contact.TryGet<LeadPart>(out var leadPart) && leadPart.IsConverted,
             Published = contact.Published,
             Latest = contact.Latest,
             TimeZoneId = TruncateTrimmed(contactPart.TimeZoneId, 64),

@@ -617,7 +617,7 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
         string fromAddress,
         CancellationToken cancellationToken)
     {
-        var contactIds = await _contactLookup.FindContactItemIdsAsync(fromAddress, cancellationToken);
+        var contactIds = await _contactLookup.FindCallerItemIdsAsync(fromAddress, cancellationToken);
 
         return contactIds
             .Where(contactId => !string.IsNullOrEmpty(contactId))

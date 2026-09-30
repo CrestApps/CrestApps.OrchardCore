@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services;
@@ -32,7 +33,7 @@ internal static class MessagingTestChannels
     /// Creates the SMS channel over the specified dispatcher.
     /// </summary>
     public static SmsMessagingChannel Sms(ISmsDispatcher dispatcher, ISession session = null)
-        => new(new Lazy<ISmsDispatcher>(() => dispatcher), session ?? Mock.Of<ISession>(), new PassThroughStringLocalizer<SmsMessagingChannel>());
+        => new(new Lazy<ISmsDispatcher>(() => dispatcher), session ?? Mock.Of<ISession>(), new PassThroughStringLocalizer<SmsMessagingChannel>(), Mock.Of<IOmnichannelContactTypeProvider>());
 
     /// <summary>
     /// Creates a registry holding only the SMS channel over the specified dispatcher.

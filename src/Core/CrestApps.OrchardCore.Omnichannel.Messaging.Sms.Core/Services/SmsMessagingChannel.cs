@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
@@ -43,6 +44,7 @@ public sealed class SmsMessagingChannel : IMessagingChannel
     // saved (the endpoint address policy asks the registry), and the dispatcher itself reads endpoints: resolving it
     // eagerly closes a dependency cycle the container cannot report, and the scope deadlocks.
     private readonly Lazy<ISmsDispatcher> _dispatcher;
+    private readonly IOmnichannelContactTypeProvider _contactTypeProvider;
     private readonly ISession _session;
     private readonly IStringLocalizer S;
 
@@ -55,11 +57,13 @@ public sealed class SmsMessagingChannel : IMessagingChannel
     public SmsMessagingChannel(
         Lazy<ISmsDispatcher> dispatcher,
         ISession session,
-        IStringLocalizer<SmsMessagingChannel> stringLocalizer)
+        IStringLocalizer<SmsMessagingChannel> stringLocalizer,
+        IOmnichannelContactTypeProvider contactTypeProvider)
     {
         _dispatcher = dispatcher;
         _session = session;
         S = stringLocalizer;
+        _contactTypeProvider = contactTypeProvider;
     }
 
     /// <inheritdoc/>
@@ -189,10 +193,11 @@ public sealed class SmsMessagingChannel : IMessagingChannel
                     (index.NormalizedPrimaryCellPhoneNumber == normalized || index.NormalizedPrimaryHomePhoneNumber == normalized))
             .ListAsync(cancellationToken);
 
-        return matches
-            .Select(match => match.ContentItemId)
-            .Distinct(StringComparer.Ordinal)
-            .ToArray();
+        // Contacts come before leads and converted leads are left out, so a sender who is both a contact and a lead
+        // is linked to the contact, and callers that take the first match always take the same one.
+        var leadTypes = await _contactTypeProvider.GetLeadContentTypesAsync(cancellationToken);
+
+        return OmnichannelContactMatches.Order(matches, leadTypes);
     }
 
     /// <inheritdoc/>

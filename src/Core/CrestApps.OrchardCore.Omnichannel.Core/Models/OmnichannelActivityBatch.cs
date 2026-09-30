@@ -219,6 +219,17 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
     public long TotalSkippedByLimit { get; set; }
 
     /// <summary>
+    /// Gets or sets how many matching leads the last load skipped because they were already converted into contacts.
+    /// </summary>
+    public long TotalSkippedAsConverted { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many matching leads the last load skipped because their phone number already belongs to a
+    /// contact, so a customer is not called again as a stranger.
+    /// </summary>
+    public long TotalSkippedAsExistingContact { get; set; }
+
+    /// <summary>
     /// Gets or sets the prevent duplicates.
     /// </summary>
     public bool PreventDuplicates { get; set; }
@@ -292,6 +303,8 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
         TotalSkippedAsSharedNumberOptedOut = 0;
         TotalSkippedForNoDestination = 0;
         TotalSkippedByLimit = 0;
+        TotalSkippedAsConverted = 0;
+        TotalSkippedAsExistingContact = 0;
     }
 
     /// <summary>
@@ -339,6 +352,8 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
             TotalSkippedAsSharedNumberOptedOut = TotalSkippedAsSharedNumberOptedOut,
             TotalSkippedForNoDestination = TotalSkippedForNoDestination,
             TotalSkippedByLimit = TotalSkippedByLimit,
+            TotalSkippedAsConverted = TotalSkippedAsConverted,
+            TotalSkippedAsExistingContact = TotalSkippedAsExistingContact,
             PreventDuplicates = PreventDuplicates,
             UrgencyLevel = UrgencyLevel,
             Status = Status,

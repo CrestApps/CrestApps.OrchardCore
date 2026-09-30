@@ -184,11 +184,20 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
 
             await _contentTypeProvider.EnsureInitializedAsync(_contentDefinitionManager);
 
+            // With the CRM feature on, the picker shows contacts and leads in their own groups, so choosing a list of
+            // leads is a deliberate choice. Without it there are no lead types and the list reads as it always did.
+            var leadGroup = new SelectListGroup { Name = S["Leads"] };
+            var contactGroup = new SelectListGroup { Name = S["Contacts"] };
+            var hasLeadTypes = _contentTypeProvider.GetLeadContentTypes().Count > 0;
+
             foreach (var contentType in await _contentDefinitionManager.ListTypeDefinitionsAsync())
             {
                 if (_contentTypeProvider.IsContactContentType(contentType.Name))
                 {
-                    contactContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
+                    contactContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name)
+                    {
+                        Group = !hasLeadTypes ? null : _contentTypeProvider.IsLeadContentType(contentType.Name) ? leadGroup : contactGroup,
+                    });
                 }
             }
 
@@ -249,7 +258,9 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             model.Dispositions = dispositionItems;
 
             model.SubjectContentTypes = subjectContentTypes.OrderBy(x => x.Text);
-            model.ContactContentTypes = contactContentTypes.OrderBy(x => x.Text);
+            model.ContactContentTypes = contactContentTypes
+                .OrderBy(x => x.Group == null ? string.Empty : x.Group.Name)
+                .ThenBy(x => x.Text);
 
             var campaignItems = new List<SelectListItem>
             {
@@ -380,7 +391,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
 
         if (string.IsNullOrEmpty(model.ContactContentType))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ContactContentType), S["Contact is required."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ContactContentType), S["Record type is required."]);
         }
 
         if ((sourceEntry?.RequiresUserAssignment ?? true) && (model.UserIds is null || model.UserIds.Length == 0))

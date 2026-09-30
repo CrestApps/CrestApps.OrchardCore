@@ -8,9 +8,19 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
 public interface IOmnichannelContactTypeProvider
 {
     /// <summary>
-    /// Gets the technical names of the content types that have the Omnichannel Contact part attached.
+    /// Gets the technical names of the content types that have the Omnichannel Contact part attached. Lead types
+    /// carry the part too, so they are included.
     /// </summary>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The contact content type names, or an empty collection when the tenant defines none.</returns>
     ValueTask<IReadOnlyCollection<string>> GetContactContentTypesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the technical names of the lead content types: types that have the Omnichannel Contact part and the
+    /// lead part attached. It is empty while the CRM feature is disabled, so every contact-capable type is then a
+    /// plain contact type.
+    /// </summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The lead content type names, or an empty collection when there are none.</returns>
+    ValueTask<IReadOnlyCollection<string>> GetLeadContentTypesAsync(CancellationToken cancellationToken = default);
 }

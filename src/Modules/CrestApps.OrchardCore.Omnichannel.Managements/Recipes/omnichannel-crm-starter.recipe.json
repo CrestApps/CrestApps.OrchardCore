@@ -1,0 +1,132 @@
+{
+  "name": "OmnichannelCrmStarter",
+  "displayName": "Omnichannel CRM starter",
+  "description": "Enables the Omnichannel CRM and adds a ready-to-use Lead type, a Contact type that leads convert into, and a Sales Opportunity type. The Account type, the lead statuses and the opportunity stages come with the feature itself. Every type can be renamed or extended afterward.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [ "omnichannel" ],
+  "tags": [ "omnichannel", "crm", "leads", "accounts", "opportunities" ],
+  "steps": [
+    {
+      "name": "feature",
+      "enable": [
+        "CrestApps.OrchardCore.Omnichannel.Managements",
+        "CrestApps.OrchardCore.Omnichannel.Crm"
+      ]
+    },
+    {
+      "name": "ContentDefinition",
+      "ContentTypes": [
+        {
+          "Name": "Contact",
+          "DisplayName": "Contact",
+          "Settings": {
+            "ContentTypeSettings": {
+              "Creatable": true,
+              "Listable": true,
+              "Securable": true
+            }
+          },
+          "ContentTypePartDefinitionRecords": [
+            {
+              "PartName": "TitlePart",
+              "Name": "TitlePart",
+              "Settings": {
+                "ContentTypePartSettings": {
+                  "Position": "0"
+                }
+              }
+            },
+            {
+              "PartName": "OmnichannelContactPart",
+              "Name": "OmnichannelContactPart",
+              "Settings": {
+                "ContentTypePartSettings": {
+                  "Position": "2"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "Name": "Lead",
+          "DisplayName": "Lead",
+          "Settings": {
+            "ContentTypeSettings": {
+              "Creatable": true,
+              "Listable": true,
+              "Securable": true
+            }
+          },
+          "ContentTypePartDefinitionRecords": [
+            {
+              "PartName": "TitlePart",
+              "Name": "TitlePart",
+              "Settings": {
+                "ContentTypePartSettings": {
+                  "Position": "0"
+                }
+              }
+            },
+            {
+              "PartName": "LeadPart",
+              "Name": "LeadPart",
+              "Settings": {
+                "ContentTypePartSettings": {
+                  "Position": "1"
+                },
+                "LeadPartSettings": {
+                  "TargetContactContentType": "Contact",
+                  "DefaultOpportunityContentType": "SalesOpportunity"
+                }
+              }
+            },
+            {
+              "PartName": "OmnichannelContactPart",
+              "Name": "OmnichannelContactPart",
+              "Settings": {
+                "ContentTypePartSettings": {
+                  "Position": "2"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "Name": "SalesOpportunity",
+          "DisplayName": "Sales Opportunity",
+          "Settings": {
+            "ContentTypeSettings": {
+              "Creatable": true,
+              "Listable": true,
+              "Securable": true
+            }
+          },
+          "ContentTypePartDefinitionRecords": [
+            {
+              "PartName": "TitlePart",
+              "Name": "TitlePart",
+              "Settings": {
+                "ContentTypePartSettings": {
+                  "Position": "0"
+                }
+              }
+            },
+            {
+              "PartName": "OpportunityPart",
+              "Name": "OpportunityPart",
+              "Settings": {
+                "ContentTypePartSettings": {
+                  "Position": "1"
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "ContentParts": []
+    }
+  ]
+}

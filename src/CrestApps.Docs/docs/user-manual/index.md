@@ -45,6 +45,7 @@ Almost everything lives under **Interaction Center** in the admin menu.
 **Building the CRM**
 
 - [Contacts](contacts.md): create contacts, find them by phone number, import and export them.
+- [Leads, Accounts and Opportunities](leads-accounts-opportunities.md): keep prospects apart as leads, convert the ones that qualify, and group contacts and deals under accounts.
 - [Subjects](subjects.md): define what a call or message is about, inbound and outbound.
 - [Dispositions](dispositions.md): the outcomes an agent can pick when work is done.
 - [Subject flows](subject-flows.md): what happens next for each outcome.

@@ -1,0 +1,111 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model LeadBatchFilterViewModel
+
+@{
+    var panelId = Html.IdFor(m => m.Rendered) + "_Panel";
+}
+
+<div id="@panelId" class="card text-bg-theme mb-3 d-none" data-lead-batch-filter data-lead-types="@string.Join(",", Model.LeadContentTypes)">
+    <div class="card-header">@T["Lead filters"]</div>
+    <div class="card-body">
+        <input type="hidden" name="@Html.NameFor(m => m.Rendered)" value="true" />
+
+        <div class="ocat-wrapper">
+            <div class="ocat-label">@T["Lead status"]</div>
+            <div class="ocat-end">
+                @for (var i = 0; i < Model.Statuses.Count; i++)
+                {
+                    var status = Model.Statuses[i];
+                    var id = Html.IdFor(m => m.StatusIds) + "_" + i;
+
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="@id" name="@Html.NameFor(m => m.StatusIds)" value="@status.Value" checked="@status.Selected" />
+                        <label class="form-check-label" for="@id">@status.Text</label>
+                    </div>
+                }
+                <div class="hint">@T["Leave every status cleared to load the leads of every open status."]</div>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="IncludeClosedLeads" class="form-check-input" type="checkbox" />
+                    <label asp-for="IncludeClosedLeads" class="form-check-label">@T["Include closed leads"]</label>
+                    <span class="hint dashed">@T["Leads in a closed status are left out unless this is ticked. Converted leads are never loaded."]</span>
+                </div>
+                <div class="form-check">
+                    <input asp-for="SkipLeadsThatAreContacts" class="form-check-input" type="checkbox" />
+                    <label asp-for="SkipLeadsThatAreContacts" class="form-check-label">@T["Skip leads that are already contacts"]</label>
+                    <span class="hint dashed">@T["A lead whose phone number belongs to a contact is not loaded, so a customer is not called again as a stranger."]</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="ListName" class="ocat-label">@T["List"]</label>
+            <div class="ocat-end">
+                <input asp-for="ListName" class="form-control" />
+                <span class="hint">@T["Load only the leads of this list, for example a file imported earlier."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="Source" class="ocat-label">@T["Lead source"]</label>
+            <div class="ocat-end">
+                <input asp-for="Source" class="form-control" />
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <div class="ocat-label">@T["Rating"]</div>
+            <div class="ocat-end">
+                @for (var i = 0; i < Model.Ratings.Count; i++)
+                {
+                    var rating = Model.Ratings[i];
+                    var id = Html.IdFor(m => m.SelectedRatings) + "_" + i;
+
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="@id" name="@Html.NameFor(m => m.SelectedRatings)" value="@rating.Value" checked="@rating.Selected" />
+                        <label class="form-check-label" for="@id">@rating.Text</label>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label class="ocat-label">@T["Lead owner"]</label>
+            <div class="ocat-end">
+                @await Component.InvokeAsync("UserPicker", new
+                {
+                    name = Html.NameFor(m => m.OwnerId).ToString(),
+                    selectedValues = string.IsNullOrEmpty(Model.OwnerId) ? Array.Empty<string>() : new[] { Model.OwnerId },
+                    valueType = "userId",
+                    multiple = false,
+                    buttonText = T["Any owner"].Value,
+                    searchPlaceholder = T["Search users"].Value,
+                    smallButton = false,
+                })
+            </div>
+        </div>
+    </div>
+</div>
+
+<script at="Foot">
+    (() => {
+        const panel = document.getElementById('@panelId');
+        const form = panel?.closest('form');
+        const select = form?.querySelector('select[name$=".ContactContentType"], select[name="ContactContentType"]');
+
+        if (!panel || !select) {
+            return;
+        }
+
+        const leadTypes = (panel.dataset.leadTypes || '').split(',').filter(Boolean);
+        const refresh = () => panel.classList.toggle('d-none', !leadTypes.includes(select.value));
+
+        select.addEventListener('change', refresh);
+        refresh();
+    })();
+</script>

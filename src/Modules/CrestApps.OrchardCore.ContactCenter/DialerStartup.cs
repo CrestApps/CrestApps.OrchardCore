@@ -59,6 +59,7 @@ public sealed class DialerStartup : StartupBase
             .AddScoped<IDialerProfileManager, DialerProfileManager>()
             .AddScoped<ICallbackRequestStore, CallbackRequestStore>()
             .AddScoped<ICallbackRequestManager, CallbackRequestManager>()
+            .AddScoped<ILeadConversionRepointer, CallbackLeadConversionRepointer>()
             .AddScoped<IContactCenterRetentionPolicy, CallbackRequestRetentionPolicy>()
             .AddScoped<IDialerService, DialerService>()
             .AddScoped<IActivityDialerContributor, ContactCenterActivityDialerContributor>()

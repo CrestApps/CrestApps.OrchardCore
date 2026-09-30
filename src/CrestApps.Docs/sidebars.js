@@ -16,6 +16,7 @@ const sidebars = {
                     label: 'Building the CRM',
                     items: [
                         'user-manual/contacts',
+                        'user-manual/leads-accounts-opportunities',
                         'user-manual/subjects',
                         'user-manual/dispositions',
                         'user-manual/subject-flows',
@@ -175,6 +176,7 @@ const sidebars = {
                 'omnichannel/azure-communication-services',
                 'omnichannel/event-grid',
                 'omnichannel/management',
+                'omnichannel/crm',
                 'omnichannel/cadences',
                 'omnichannel/sms',
                 'omnichannel/messaging-workspace',
