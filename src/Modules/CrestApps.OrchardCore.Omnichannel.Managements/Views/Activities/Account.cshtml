@@ -1,0 +1,112 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.Services
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+@using OrchardCore.Lists.ViewModels
+
+@model ListAccountActivitiesViewModel
+
+@inject ContactListPartNavigationResolver ListPartNavigationResolver
+
+@{
+    var listPartNavigation = await ListPartNavigationResolver.ResolveAsync(Model.Account);
+}
+
+<zone Name="Title">
+    <h1>@RenderTitleSegments(T["Activities"])</h1>
+</zone>
+
+@if (listPartNavigation is not null)
+{
+    if (listPartNavigation.ShowHeader)
+    {
+        @await DisplayAsync(await Factory.CreateAsync<ListPartHeaderAdminViewModel>("ListPartHeaderAdmin", header =>
+        {
+            header.ContainerContentItem = Model.Account;
+            header.ContainedContentTypeDefinitions = listPartNavigation.ContainedContentTypeDefinitions;
+            header.EnableOrdering = listPartNavigation.EnableOrdering;
+        }))
+    }
+
+    @await DisplayAsync(await Factory.CreateAsync<ListPartNavigationAdminViewModel>("ListPartNavigationAdmin", navigation =>
+    {
+        navigation.Container = Model.Account;
+        navigation.ContainerContentTypeDefinition = listPartNavigation.ContactTypeDefinition;
+        navigation.ContainedContentTypeDefinitions = listPartNavigation.ContainedContentTypeDefinitions;
+        navigation.EnableOrdering = listPartNavigation.EnableOrdering;
+    }))
+}
+
+<p class="text-muted">@T["The activities of every contact in {0}.", Model.Account.DisplayText]</p>
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">
+        @T["Scheduled Activities"]
+    </div>
+    <div class="card-body">
+        @if (Model.Scheduled.Count == 0)
+        {
+            <div class="alert alert-info mb-0 text-center">
+                @T["No scheduled activities."]
+            </div>
+        }
+        else
+        {
+            <ul class="list-group with-checkbox">
+                @foreach (var entry in Model.Scheduled)
+                {
+                    <li class="list-group-item list-group-item-action list-group-striped">
+                        @if (entry.Contact is not null)
+                        {
+                            <div class="small mb-1">
+                                <i class="fa-solid fa-user text-secondary me-1" aria-hidden="true"></i>
+                                <a asp-action="List" asp-controller="Activities" asp-route-contentItemId="@entry.Contact.ContentItemId">@entry.Contact.DisplayText</a>
+                            </div>
+                        }
+                        @await DisplayAsync(entry.Shape)
+                    </li>
+                }
+            </ul>
+
+            @if (Model.ScheduledPager is not null)
+            {
+                @await DisplayAsync(Model.ScheduledPager)
+            }
+        }
+    </div>
+</div>
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">
+        @T["Completed Activities"]
+    </div>
+    <div class="card-body">
+        @if (Model.Completed.Count == 0)
+        {
+            <div class="alert alert-info mb-0 text-center">
+                @T["No completed activities."]
+            </div>
+        }
+        else
+        {
+            <ul class="list-group with-checkbox">
+                @foreach (var entry in Model.Completed)
+                {
+                    <li class="list-group-item list-group-item-action list-group-striped">
+                        @if (entry.Contact is not null)
+                        {
+                            <div class="small mb-1">
+                                <i class="fa-solid fa-user text-secondary me-1" aria-hidden="true"></i>
+                                <a asp-action="List" asp-controller="Activities" asp-route-contentItemId="@entry.Contact.ContentItemId">@entry.Contact.DisplayText</a>
+                            </div>
+                        }
+                        @await DisplayAsync(entry.Shape)
+                    </li>
+                }
+            </ul>
+
+            @if (Model.CompletedPager is not null)
+            {
+                @await DisplayAsync(Model.CompletedPager)
+            }
+        }
+    </div>
+</div>

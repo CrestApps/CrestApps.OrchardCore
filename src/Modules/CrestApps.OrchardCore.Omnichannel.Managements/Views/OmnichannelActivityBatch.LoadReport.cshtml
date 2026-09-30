@@ -6,7 +6,7 @@
 @model ShapeViewModel<OmnichannelActivityBatch>
 
 @{
-    // Every contact that matched the filters was either loaded or skipped for exactly one of these reasons, so the
+    // Every record that matched the filters was either loaded or skipped for exactly one of these reasons, so the
     // sentences below add up to the matching count and nobody has to read the database to learn why a load came up short.
     var batch = Model.Value;
     var loaded = batch.TotalLoaded ?? 0;
@@ -25,12 +25,22 @@
 
     if (batch.TotalSkippedAsSharedNumberOptedOut > 0)
     {
-        reasons.Add(T.Plural((int)batch.TotalSkippedAsSharedNumberOptedOut, "1 shares a phone number with a contact who asked not to be reached on this channel.", "{0} share a phone number with a contact who asked not to be reached on this channel."));
+        reasons.Add(T.Plural((int)batch.TotalSkippedAsSharedNumberOptedOut, "1 shares a phone number with someone who asked not to be reached on this channel.", "{0} share a phone number with someone who asked not to be reached on this channel."));
     }
 
     if (batch.TotalSkippedForNoDestination > 0)
     {
         reasons.Add(T.Plural((int)batch.TotalSkippedForNoDestination, "1 has no address on this channel.", "{0} have no address on this channel."));
+    }
+
+    if (batch.TotalSkippedAsConverted > 0)
+    {
+        reasons.Add(T.Plural((int)batch.TotalSkippedAsConverted, "1 lead was already converted into a contact.", "{0} leads were already converted into contacts."));
+    }
+
+    if (batch.TotalSkippedAsExistingContact > 0)
+    {
+        reasons.Add(T.Plural((int)batch.TotalSkippedAsExistingContact, "1 lead shares a phone number with a contact.", "{0} leads share a phone number with a contact."));
     }
 
     if (batch.TotalSkippedAsNotInService > 0)
@@ -49,11 +59,11 @@
 <div class="@(isEditor ? "alert alert-secondary mb-3" : "text-muted small mt-1")" role="status">
     @if (matched == 0)
     {
-        <span>@T["No contacts matched the filters, so nothing was loaded."]</span>
+        <span>@T["No records matched the filters, so nothing was loaded."]</span>
     }
     else
     {
-        <span>@T["Loaded {0} of {1} matching contacts.", loaded, matched]</span>
+        <span>@T["Loaded {0} of {1} matching records.", loaded, matched]</span>
     }
 
     @foreach (var reason in reasons)

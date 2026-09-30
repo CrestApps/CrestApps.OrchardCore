@@ -155,6 +155,7 @@ public sealed class ContentTransferStartup : StartupBase
     {
         services.AddContentPartImportHandler<OmnichannelContactPart, OmnichannelContactPartContentImportHandler>();
         services.AddScoped<IOmnichannelContactDuplicateLookupService, OmnichannelContactDuplicateLookupService>();
+        services.AddScoped<ImportRowDoNotCallFlags>();
         services.AddScoped<IContentImportRowFilter, OmnichannelContactImportRowFilter>();
         services.AddScoped<IDisplayDriver<ImportContent>, OmnichannelContactImportOptionsDisplayDriver>();
         services.AddScoped<IDisplayDriver<ExportRequest>, OmnichannelActivityExportDisplayDriver>();

@@ -1070,6 +1070,8 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
 
         await schemaBuilder.CreateMapIndexTableAsync<OmnichannelContactIndex>(table => table
             .Column<string>("ContentItemId", column => column.WithLength(26))
+            .Column<string>("ContentType", column => column.WithLength(255))
+            .Column<bool>("IsConverted")
             .Column<bool>("Published")
             .Column<bool>("Latest")
             .Column<string>("TimeZoneId", column => column.WithLength(64))

@@ -1,0 +1,31 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model LeadExportOptionsViewModel
+
+<div id="crm-lead-export-options" class="mb-3 w-100 d-none" data-lead-types="@string.Join(",", Model.LeadContentTypes)">
+    <hr />
+    <label class="form-label fw-bold">@T["Leads"]</label>
+    <input type="hidden" name="@Html.NameFor(m => m.Rendered)" value="true" />
+    <div class="form-check">
+        <input type="checkbox" class="form-check-input" asp-for="ExcludeConvertedLeads" />
+        <label class="form-check-label" asp-for="ExcludeConvertedLeads">@T["Leave out converted leads"]</label>
+        <span class="hint dashed">@T["A converted lead lives on as its contact, so exporting both would count the same person twice."]</span>
+    </div>
+</div>
+
+<script at="Foot">
+    (() => {
+        const container = document.getElementById('crm-lead-export-options');
+        const contentTypeMenu = document.getElementById('contentTypeId');
+
+        if (!container) {
+            return;
+        }
+
+        const leadTypes = (container.dataset.leadTypes || '').split(',').filter(Boolean);
+        const refresh = () => container.classList.toggle('d-none', !contentTypeMenu || !leadTypes.includes(contentTypeMenu.value));
+
+        contentTypeMenu?.addEventListener('change', refresh);
+        refresh();
+    })();
+</script>

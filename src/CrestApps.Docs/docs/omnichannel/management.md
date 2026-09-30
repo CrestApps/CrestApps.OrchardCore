@@ -396,7 +396,7 @@ The screencast below walks through a complete lead-generation flow. It assigns t
    - Select the channel to use for the loaded activities (**Phone** or **SMS**). The channel is hidden for the dialer source because dialer loads always use the phone channel.
    - For **Dialer** inventory loads, select the required dialer profile. The profile supplies the dialing mode and pacing settings; it does not choose the campaign, which always comes from this load.
    - Assign users when the selected source requires assignment.
-   - Optionally set contact created range, phone number, time zone, and last activity filters
+   - Optionally set the created range, phone number, time zone and last activity filters, and, for a lead type, the lead filters
 4. Click **Save**. The load does not start on save: open its **Actions** menu and choose **Load batch** to generate the activities in the background.
 
 A Manual load starts only when you run **Actions > Load batch**; it then creates and assigns the activities in the background like every other source.

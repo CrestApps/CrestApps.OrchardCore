@@ -24,6 +24,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
     private readonly IClock _clock;
     private readonly ILocalClock _localClock;
     private readonly ILogger _logger;
+    private readonly IEnumerable<ISubjectActionHandler> _handlers;
 
     public DefaultSubjectActionExecutor(
         ISourceCatalog<SubjectAction> actionCatalog,
@@ -33,7 +34,8 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         ISession session,
         IClock clock,
         ILocalClock localClock,
-        ILogger<DefaultSubjectActionExecutor> logger)
+        ILogger<DefaultSubjectActionExecutor> logger,
+        IEnumerable<ISubjectActionHandler> handlers = null)
     {
         _actionCatalog = actionCatalog;
         _subjectFlowSettingsService = subjectFlowSettingsService;
@@ -43,6 +45,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         _clock = clock;
         _localClock = localClock;
         _logger = logger;
+        _handlers = handlers ?? [];
     }
 
     public async Task ExecuteAsync(SubjectActionExecutionContext context, CancellationToken cancellationToken = default)
@@ -75,6 +78,9 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         var actions = allActions
             .Where(a => string.Equals(a.SubjectContentType, context.Activity.SubjectContentType, StringComparison.OrdinalIgnoreCase)
                      && string.Equals(a.DispositionId, context.Disposition.ItemId, StringComparison.OrdinalIgnoreCase))
+            // An action that changes which record the activity is about, such as converting a lead, runs first so
+            // the actions after it work on the new record. The sort is stable, so the others keep their order.
+            .OrderBy(a => GetHandler(a.Source)?.Order ?? 0)
             .ToArray();
 
         foreach (var action in actions)
@@ -86,6 +92,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
     private async Task ExecuteActionAsync(SubjectAction action, SubjectActionExecutionContext context)
     {
         await ApplyCommunicationPreferencesAsync(action, context.Contact);
+        await ApplyLeadStatusAsync(action, context.Contact);
 
         switch (action.Source)
         {
@@ -101,7 +108,15 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
                 break;
 
             default:
-                _logger.LogWarning("Unknown subject action type: {ActionType}", action.Source);
+                var handler = GetHandler(action.Source);
+
+                if (handler is null)
+                {
+                    _logger.LogWarning("Unknown subject action type: {ActionType}", action.Source);
+                    break;
+                }
+
+                await handler.ExecuteAsync(action, context);
                 break;
         }
     }
@@ -345,6 +360,35 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         // preference is read back from the contact's own record, and the lists that decide who gets dialled or
         // messaged query the published one. Without these two lines a customer could ask not to be called, be
         // dispositioned exactly right, and be dialled again on the next load -- which is what happened.
+        await _contentManager.UpdateAsync(contact);
+
+        if (contact.Published)
+        {
+            await _contentManager.PublishAsync(contact);
+        }
+    }
+
+    private ISubjectActionHandler GetHandler(string actionType)
+        => _handlers.FirstOrDefault(handler => string.Equals(handler.ActionType, actionType, StringComparison.Ordinal));
+
+    /// <summary>
+    /// Moves the activity's lead to the status the action names. It does nothing for a contact, for a lead that was
+    /// already converted, or for an action that names no status.
+    /// </summary>
+    private async Task ApplyLeadStatusAsync(SubjectAction action, ContentItem contact)
+    {
+        if (contact is null ||
+            !action.TryGet<SetLeadStatusActionMetadata>(out var metadata) ||
+            string.IsNullOrEmpty(metadata.StatusId) ||
+            !contact.TryGet<LeadPart>(out var leadPart) ||
+            leadPart.IsConverted ||
+            string.Equals(leadPart.StatusId, metadata.StatusId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        contact.Alter<LeadPart>(part => part.StatusId = metadata.StatusId);
+
         await _contentManager.UpdateAsync(contact);
 
         if (contact.Published)

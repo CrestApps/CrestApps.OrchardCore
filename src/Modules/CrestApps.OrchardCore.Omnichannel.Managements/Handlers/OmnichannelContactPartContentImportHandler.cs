@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.ContentTransfer.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
+using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentFields.Fields;
@@ -27,6 +28,7 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
 
     private readonly IClock _clock;
     private readonly IPhoneNumberService _phoneNumberService;
+    private readonly ImportRowDoNotCallFlags _doNotCallFlags;
 
     private ImportColumn _emailColumn;
     private ImportColumn _cellPhoneColumn;
@@ -45,11 +47,14 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
     /// <param name="clock">The clock.</param>
     /// <param name="phoneNumberService">The phone number service for E.164 formatting.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="doNotCallFlags">The rows the do-not-call screening chose to import marked Do not call.</param>
     public OmnichannelContactPartContentImportHandler(
         IClock clock,
         IPhoneNumberService phoneNumberService,
-        IStringLocalizer<OmnichannelContactPartContentImportHandler> stringLocalizer)
+        IStringLocalizer<OmnichannelContactPartContentImportHandler> stringLocalizer,
+        ImportRowDoNotCallFlags doNotCallFlags = null)
     {
+        _doNotCallFlags = doNotCallFlags;
         _clock = clock;
         _phoneNumberService = phoneNumberService;
         S = stringLocalizer;
@@ -231,6 +236,13 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
         {
             contactPart.SetDoNotCall(doNotCall, utcNow);
             contactPart.DoNotCallUtc = doNotCall ? doNotCallUtc ?? contactPart.DoNotCallUtc : null;
+        }
+
+        // A number the registry screening found is imported marked Do not call, whatever the file says, because the
+        // registry decides that the number must not be called.
+        if (_doNotCallFlags?.IsMarked(context.Row) == true)
+        {
+            contactPart.SetDoNotCall(true, utcNow);
         }
 
         if (hasDoNotSms)

@@ -3088,6 +3088,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public static CrestApps.OrchardCore.ContactCenter.Core.Models.MonitorSession StartMonitorSession(CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession session, string monitorSessionId, string supervisorUserId, string supervisorAgentId, CrestApps.OrchardCore.ContactCenter.Models.MonitorMode mode, System.DateTime startedUtc, string providerLegId = null) { }
         public static CrestApps.OrchardCore.ContactCenter.Core.Models.CallLeg UpsertLeg(CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession session, string providerLegId, CrestApps.OrchardCore.ContactCenter.Core.Models.CallPartyRole role, CrestApps.OrchardCore.ContactCenter.Core.Models.CallLegStatus status, System.DateTime utcNow, string address = null, string agentId = null) { }
     }
+    public sealed class CallbackLeadConversionRepointer : CrestApps.OrchardCore.Omnichannel.Core.Services.ILeadConversionRepointer
+    {
+        public CallbackLeadConversionRepointer(YesSql.ISession session, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallbackRequestStore store, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.CallbackLeadConversionRepointer> logger) { }
+        public System.Threading.Tasks.Task RepointAsync(CrestApps.OrchardCore.Omnichannel.Core.Services.LeadConversionContext context, System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public sealed class CallbackRequestManager : CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest>, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest>, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallbackRequestManager
     {
         public CallbackRequestManager(CrestApps.OrchardCore.ContactCenter.Core.Services.ICallbackRequestStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest>> handlers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest>> logger) { }
@@ -4280,6 +4285,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public interface IInboundContactLookup
     {
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string>> FindCallerItemIdsAsync(string phoneNumber, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string>> FindContactItemIdsAsync(string phoneNumber, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IInboundPriorityContributor
@@ -5412,6 +5418,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public static string GetSharedQueueId(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public static CrestApps.OrchardCore.ContactCenter.Core.Services.VoicemailRecipient Resolve(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, string offeredAgentId = null) { }
         public static bool StampMailbox(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint entryPoint, string queueId = null) { }
+    }
+    public sealed class VoicemailLeadConversionRepointer : CrestApps.OrchardCore.Omnichannel.Core.Services.ILeadConversionRepointer
+    {
+        public VoicemailLeadConversionRepointer(YesSql.ISession session, CrestApps.OrchardCore.ContactCenter.Core.Services.ISharedVoicemailStore store, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.VoicemailLeadConversionRepointer> logger) { }
+        public System.Threading.Tasks.Task RepointAsync(CrestApps.OrchardCore.Omnichannel.Core.Services.LeadConversionContext context, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class VoicemailRecipient : System.IEquatable<CrestApps.OrchardCore.ContactCenter.Core.Services.VoicemailRecipient>
     {

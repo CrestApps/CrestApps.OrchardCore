@@ -69,6 +69,10 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
         // them?" the same way. Whichever feature registers it first provides it.
         services.TryAddScoped<IContactOptOutResolver, ContactOptOutResolver>();
 
+        // Which content types are contacts and which are leads, for channels that match callers and search
+        // contacts without the administration screens. Whichever feature registers it first provides it.
+        services.TryAddScoped<IOmnichannelContactTypeProvider, ContentDefinitionOmnichannelContactTypeProvider>();
+
         services
             .AddYesSqlDocumentCatalog<OmnichannelActivityBatch, OmnichannelActivityBatchIndex>(collection: OmnichannelConstants.CollectionName)
             .AddScoped<IOmnichannelActivityStore, OmnichannelActivityStore>()

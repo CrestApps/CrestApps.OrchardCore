@@ -1315,7 +1315,7 @@ public sealed partial class InboundVoiceServiceTests
 
         public Mock<IAgentProfileManager> AgentManager { get; } = new();
 
-        public Mock<IInboundContactLookup> ContactLookup { get; } = new();
+        public Mock<IInboundContactLookup> ContactLookup { get; } = new() { CallBase = true };
 
         public Mock<IContactCenterVoiceProviderResolver> VoiceProviderResolver { get; } = new();
 

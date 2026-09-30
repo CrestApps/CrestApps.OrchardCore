@@ -623,6 +623,7 @@ public sealed class AdminController : Controller, IUpdateModel
                         {
                             ContentItem = contentItem,
                             ContentTypeDefinition = contentTypeDefinition,
+                            Entry = entry,
                             Row = dataTable.NewRow(),
                         };
 

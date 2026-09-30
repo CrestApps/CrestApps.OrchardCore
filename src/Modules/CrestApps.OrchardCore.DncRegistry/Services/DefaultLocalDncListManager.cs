@@ -19,6 +19,11 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
 {
     private const int BatchSize = 100;
     private const int DeleteBatchSize = 500;
+    private const int ExistingNumbersPageSize = 5_000;
+    private const int DeleteHeartbeatInterval = 20;
+
+    private static readonly TimeSpan _deleteLockTimeout = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan _deleteLockExpiration = TimeSpan.FromMinutes(30);
 
     private readonly ISession _session;
     private readonly IDistributedLock _distributedLock;
@@ -151,14 +156,29 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
             if (fileInfo == null || fileInfo.Length == 0)
             {
                 SaveListFailure(list, "The uploaded DNC file no longer exists.");
+
+                // Retrying cannot bring the file back, so the background task leaves this list alone.
+                list.FailedAttempts = LocalDncListRecoveryPolicy.MaxAutomaticImportAttempts;
                 await initSession.SaveAsync(list, false, DncRegistryConstants.CollectionName, cancellationToken);
                 await initSession.SaveChangesAsync(cancellationToken);
 
                 return;
             }
 
+            // Entries and TotalProcessed are saved in the same transaction, so a list that already made
+            // progress continues from its saved row. A failed list used to restart from row one without
+            // removing what it had imported, which would duplicate every number already saved.
             var isResuming = list.TotalProcessed > 0
-                && (list.Status == LocalDncListStatus.Paused || list.Status == LocalDncListStatus.Processing);
+                && list.Status is LocalDncListStatus.Paused or LocalDncListStatus.Processing or LocalDncListStatus.Failed;
+
+            if (isResuming && _logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Resuming local DNC list {ListId} from {Status} at row {TotalProcessed}.",
+                    list.ListId,
+                    list.Status,
+                    list.TotalProcessed);
+            }
 
             list.Status = LocalDncListStatus.Processing;
             list.Error = null;
@@ -203,38 +223,17 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
         {
             SaveListFailure(list, ex.Message);
 
-            var failSession = store.CreateSession();
-
-            try
-            {
-                var trackedList = await failSession.Query<LocalDncList, LocalDncListIndex>(
-                    i => i.ListId == list.ListId, collection: DncRegistryConstants.CollectionName)
-                    .FirstOrDefaultAsync(cancellationToken);
-
-                if (trackedList != null)
-                {
-                    trackedList.Status = list.Status;
-                    trackedList.Error = list.Error;
-                    trackedList.ProcessSaveUtc = list.ProcessSaveUtc;
-                    trackedList.CompletedUtc = list.CompletedUtc;
-
-                    await failSession.SaveAsync(trackedList, false, DncRegistryConstants.CollectionName, cancellationToken);
-                }
-
-                await failSession.SaveChangesAsync(cancellationToken);
-            }
-            finally
-            {
-                await failSession.DisposeAsync();
-            }
-
             if (_logger.IsEnabled(LogLevel.Error))
             {
                 _logger.LogError(
                     ex,
-                    "Failed to process local DNC list '{ListId}'.",
-                    list.ListId);
+                    "Failed to process local DNC list '{ListId}' at row {TotalProcessed} of {TotalRecords}.",
+                    list.ListId,
+                    list.TotalProcessed,
+                    list.TotalRecords);
             }
+
+            await TrySaveImportFailureAsync(list, cancellationToken);
 
             return;
         }
@@ -254,10 +253,12 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
                 i => i.ListId == list.ListId, collection: DncRegistryConstants.CollectionName)
                 .FirstOrDefaultAsync(cancellationToken);
 
-            if (trackedList != null)
+            // A delete or pause issued after the last batch wins over completing the import.
+            if (trackedList != null && trackedList.Status == LocalDncListStatus.Processing)
             {
                 trackedList.PhoneNumberCount = list.ImportedCount;
                 trackedList.Status = LocalDncListStatus.Completed;
+                trackedList.FailedAttempts = 0;
                 trackedList.Error = null;
                 trackedList.ProcessSaveUtc = _clock.UtcNow;
                 trackedList.CompletedUtc = _clock.UtcNow;
@@ -395,6 +396,9 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
         list.Error = null;
         list.ProcessSaveUtc = _clock.UtcNow;
 
+        // A manual resume gives the background task a fresh set of automatic retries.
+        list.FailedAttempts = 0;
+
         await _session.SaveAsync(list, false, DncRegistryConstants.CollectionName, cancellationToken);
         await _session.SaveChangesAsync(cancellationToken);
     }
@@ -416,6 +420,9 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
         list.Status = LocalDncListStatus.Deleting;
         list.ProcessSaveUtc = _clock.UtcNow;
 
+        // The old import error no longer applies, and it read as the reason the deletion was stuck.
+        list.Error = null;
+
         await _session.SaveAsync(list, false, DncRegistryConstants.CollectionName, cancellationToken);
         await _session.SaveChangesAsync(cancellationToken);
     }
@@ -427,14 +434,25 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(listId);
 
+        // A running import stops at its next batch once the list is marked as deleting, so wait long enough
+        // for it to let go. This used to give up after one second and throw from the after-request job,
+        // which left the list in Deleting with nothing to ever finish it. Now the list stays in Deleting
+        // and the background task resumes the deletion.
         (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             LocalDncImportBackgroundTask.GetImportLockKey(listId),
-            TimeSpan.FromSeconds(1),
-            TimeSpan.FromMinutes(5));
+            _deleteLockTimeout,
+            _deleteLockExpiration);
 
         if (!locked)
         {
-            throw new InvalidOperationException($"The local DNC list '{listId}' is currently being processed.");
+            if (_logger.IsEnabled(LogLevel.Warning))
+            {
+                _logger.LogWarning(
+                    "Could not delete local DNC list '{ListId}' yet because another worker holds its lock. The background task will resume the deletion.",
+                    listId);
+            }
+
+            return;
         }
 
         await using var acquiredLock = locker;
@@ -461,68 +479,231 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
             return;
         }
 
-        // Delete entries in batches to avoid excessive memory consumption and timeouts.
-        while (true)
+        if (_logger.IsEnabled(LogLevel.Information))
         {
-            var batchSession = store.CreateSession();
-
-            try
-            {
-                var entries = (await batchSession.Query<LocalDncEntry, LocalDncEntryIndex>(
-                    i => i.ListId == listId, collection: DncRegistryConstants.CollectionName)
-                    .Take(DeleteBatchSize)
-                    .ListAsync(cancellationToken))
-                    .ToList();
-
-                if (entries.Count == 0)
-                {
-                    break;
-                }
-
-                foreach (var entry in entries)
-                {
-                    batchSession.Delete(entry, collection: DncRegistryConstants.CollectionName);
-                }
-
-                await batchSession.SaveChangesAsync(cancellationToken);
-            }
-            finally
-            {
-                await batchSession.DisposeAsync();
-            }
+            _logger.LogInformation(
+                "Deleting local DNC list '{Name}' ({ListId}) with up to {PhoneNumberCount} entries.",
+                list.Name,
+                list.ListId,
+                list.PhoneNumberCount);
         }
 
-        if (!string.IsNullOrWhiteSpace(list.StoredFileName))
-        {
-            await _fileStore.TryDeleteFileAsync(list.StoredFileName);
-        }
-
-        // Delete the list document itself.
-        var deleteSession = store.CreateSession();
+        var deletedCount = 0;
+        var batchCount = 0;
 
         try
         {
-            var trackedList = await deleteSession.Query<LocalDncList, LocalDncListIndex>(
-                i => i.ListId == listId, collection: DncRegistryConstants.CollectionName)
-                .FirstOrDefaultAsync(cancellationToken);
-
-            if (trackedList != null)
+            // Delete entries in batches to avoid excessive memory consumption and timeouts.
+            while (true)
             {
-                deleteSession.Delete(trackedList, collection: DncRegistryConstants.CollectionName);
-                await deleteSession.SaveChangesAsync(cancellationToken);
+                var batchSession = store.CreateSession();
+
+                try
+                {
+                    var entries = (await batchSession.Query<LocalDncEntry, LocalDncEntryIndex>(
+                        i => i.ListId == listId, collection: DncRegistryConstants.CollectionName)
+                        .Take(DeleteBatchSize)
+                        .ListAsync(cancellationToken))
+                        .ToList();
+
+                    if (entries.Count == 0)
+                    {
+                        break;
+                    }
+
+                    foreach (var entry in entries)
+                    {
+                        batchSession.Delete(entry, collection: DncRegistryConstants.CollectionName);
+                    }
+
+                    await batchSession.SaveChangesAsync(cancellationToken);
+
+                    deletedCount += entries.Count;
+                }
+                finally
+                {
+                    await batchSession.DisposeAsync();
+                }
+
+                // The heartbeat keeps the background task from starting a second deletion of this list
+                // while a long one is still running.
+                if (++batchCount % DeleteHeartbeatInterval == 0)
+                {
+                    await TrySaveDeleteHeartbeatAsync(listId, error: null, cancellationToken);
+
+                    if (_logger.IsEnabled(LogLevel.Information))
+                    {
+                        _logger.LogInformation(
+                            "Deleted {DeletedCount} entries of local DNC list '{ListId}' so far.",
+                            deletedCount,
+                            listId);
+                    }
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(list.StoredFileName))
+            {
+                await _fileStore.TryDeleteFileAsync(list.StoredFileName);
+            }
+
+            // Delete the list document itself.
+            var deleteSession = store.CreateSession();
+
+            try
+            {
+                var trackedList = await deleteSession.Query<LocalDncList, LocalDncListIndex>(
+                    i => i.ListId == listId, collection: DncRegistryConstants.CollectionName)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                if (trackedList != null)
+                {
+                    deleteSession.Delete(trackedList, collection: DncRegistryConstants.CollectionName);
+                    await deleteSession.SaveChangesAsync(cancellationToken);
+                }
+            }
+            finally
+            {
+                await deleteSession.DisposeAsync();
             }
         }
-        finally
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            await deleteSession.DisposeAsync();
+            if (_logger.IsEnabled(LogLevel.Error))
+            {
+                _logger.LogError(
+                    ex,
+                    "Deleting local DNC list '{ListId}' stopped after {DeletedCount} entries. The background task will resume it.",
+                    listId,
+                    deletedCount);
+            }
+
+            // Leave the list in Deleting and say why, so the next run picks it up again.
+            await TrySaveDeleteHeartbeatAsync(
+                listId,
+                $"Deletion stopped and will resume automatically: {ex.Message}",
+                cancellationToken);
+
+            throw;
         }
 
         if (_logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation(
-                "Deleted local DNC list '{Name}' ({ListId}) with all its entries.",
+                "Deleted local DNC list '{Name}' ({ListId}) with all its {DeletedCount} entries.",
                 list.Name,
-                list.ListId);
+                list.ListId,
+                deletedCount);
+        }
+    }
+
+    /// <summary>
+    /// Records a failed import attempt without overwriting a status set while the import ran.
+    /// This save can fail too (a full database refuses updates); the list then stays in Processing
+    /// and the background task resumes it once its progress goes stale.
+    /// </summary>
+    private async Task TrySaveImportFailureAsync(LocalDncList list, CancellationToken cancellationToken)
+    {
+        var failSession = _session.Store.CreateSession();
+
+        try
+        {
+            var trackedList = await failSession.Query<LocalDncList, LocalDncListIndex>(
+                i => i.ListId == list.ListId, collection: DncRegistryConstants.CollectionName)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (trackedList == null)
+            {
+                return;
+            }
+
+            if (trackedList.Status != LocalDncListStatus.Processing)
+            {
+                // A delete or pause arrived while the import ran. Marking the list as failed here would
+                // silently cancel the user's delete.
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation(
+                        "Kept local DNC list '{ListId}' in {Status} after its import failed.",
+                        list.ListId,
+                        trackedList.Status);
+                }
+
+                return;
+            }
+
+            trackedList.Status = list.Status;
+            trackedList.Error = list.Error;
+            trackedList.ProcessSaveUtc = list.ProcessSaveUtc;
+            trackedList.CompletedUtc = list.CompletedUtc;
+            trackedList.FailedAttempts++;
+
+            await failSession.SaveAsync(trackedList, false, DncRegistryConstants.CollectionName, cancellationToken);
+            await failSession.SaveChangesAsync(cancellationToken);
+
+            if (trackedList.FailedAttempts >= LocalDncListRecoveryPolicy.MaxAutomaticImportAttempts
+                && _logger.IsEnabled(LogLevel.Warning))
+            {
+                _logger.LogWarning(
+                    "Local DNC list '{ListId}' failed {FailedAttempts} times in a row and will not be retried automatically. Use 'Process now' to retry it.",
+                    list.ListId,
+                    trackedList.FailedAttempts);
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            if (_logger.IsEnabled(LogLevel.Error))
+            {
+                _logger.LogError(
+                    ex,
+                    "Could not record the failure of local DNC list '{ListId}'. It stays in Processing and the background task will resume it.",
+                    list.ListId);
+            }
+        }
+        finally
+        {
+            await failSession.DisposeAsync();
+        }
+    }
+
+    /// <summary>
+    /// Saves deletion progress in its own session. A failure here is only logged: this runs while the
+    /// database may be full, and freeing that space is the point of the deletion.
+    /// </summary>
+    private async Task TrySaveDeleteHeartbeatAsync(string listId, string error, CancellationToken cancellationToken)
+    {
+        var heartbeatSession = _session.Store.CreateSession();
+
+        try
+        {
+            var trackedList = await heartbeatSession.Query<LocalDncList, LocalDncListIndex>(
+                i => i.ListId == listId, collection: DncRegistryConstants.CollectionName)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (trackedList == null)
+            {
+                return;
+            }
+
+            trackedList.Status = LocalDncListStatus.Deleting;
+            trackedList.Error = error;
+            trackedList.ProcessSaveUtc = _clock.UtcNow;
+
+            await heartbeatSession.SaveAsync(trackedList, false, DncRegistryConstants.CollectionName, cancellationToken);
+            await heartbeatSession.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            if (_logger.IsEnabled(LogLevel.Warning))
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Could not save the deletion progress of local DNC list '{ListId}'.",
+                    listId);
+            }
+        }
+        finally
+        {
+            await heartbeatSession.DisposeAsync();
         }
     }
 
@@ -563,24 +744,7 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
         // When resuming, load already-imported phone numbers to prevent duplicates.
         if (skipRows > 0)
         {
-            var store = _session.Store;
-            var lookupSession = store.CreateSession();
-
-            try
-            {
-                var existingEntries = await lookupSession.Query<LocalDncEntry, LocalDncEntryIndex>(
-                    i => i.ListId == list.ListId, collection: DncRegistryConstants.CollectionName)
-                    .ListAsync(cancellationToken);
-
-                foreach (var existing in existingEntries)
-                {
-                    seenNumbers.Add(existing.PhoneNumber);
-                }
-            }
-            finally
-            {
-                await lookupSession.DisposeAsync();
-            }
+            await LoadExistingNumbersAsync(list.ListId, seenNumbers, cancellationToken);
         }
 
         while (await reader.ReadLineAsync(cancellationToken) is { } line)
@@ -747,6 +911,57 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
         {
             entries.Clear();
             await batchSession.DisposeAsync();
+        }
+    }
+
+    /// <summary>
+    /// Reads the numbers a resumed import already saved, a page at a time from the index table. Loading
+    /// every entry document in one query can time out on a large list, which made the resume itself fail.
+    /// </summary>
+    private async Task LoadExistingNumbersAsync(
+        string listId,
+        HashSet<string> seenNumbers,
+        CancellationToken cancellationToken)
+    {
+        var lastId = 0L;
+
+        while (true)
+        {
+            var lookupSession = _session.Store.CreateSession();
+
+            try
+            {
+                var page = (await lookupSession.QueryIndex<LocalDncEntryIndex>(
+                    i => i.ListId == listId && i.Id > lastId, collection: DncRegistryConstants.CollectionName)
+                    .OrderBy(i => i.Id)
+                    .Take(ExistingNumbersPageSize)
+                    .ListAsync(cancellationToken))
+                    .ToList();
+
+                foreach (var existing in page)
+                {
+                    seenNumbers.Add(existing.PhoneNumber);
+                }
+
+                if (page.Count < ExistingNumbersPageSize)
+                {
+                    break;
+                }
+
+                lastId = page[^1].Id;
+            }
+            finally
+            {
+                await lookupSession.DisposeAsync();
+            }
+        }
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Loaded {Count} already-imported numbers for resumed local DNC list {ListId}.",
+                seenNumbers.Count,
+                listId);
         }
     }
 

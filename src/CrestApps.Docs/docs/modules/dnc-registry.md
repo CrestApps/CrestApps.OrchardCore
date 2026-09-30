@@ -114,7 +114,13 @@ Navigate to **Interaction Center** -> **Local DNC Registry** (requires the **Man
    - **Pause import** — stop an import while it is processing; it resumes with **Process now**
    - **Delete** — remove the list and all its phone numbers in the background when it is no longer needed
 
-After upload, the request returns immediately and the import continues in the background. A background task (**Local DNC Import Processor**) picks up pending and in-progress imports every 10 minutes. A list's status is **Pending**, **Processing**, **Completed**, **Completed with errors**, **Failed**, **Paused**, or **Deleting**.
+After upload, the request returns immediately and the import continues in the background. A background task (**Local DNC Import Processor**) runs every 10 minutes and keeps lists from getting stuck:
+
+- It starts **Pending** imports.
+- It resumes a **Processing** import or a **Deleting** list that has saved no progress for 10 minutes, for example after the site restarted. The work continues where it stopped rather than starting over.
+- It retries a **Failed** import up to 5 times, waiting 10 minutes longer after each failure. After that, the list stays failed until you use **Process now**, which also gives it 5 more automatic retries. An import whose uploaded file is missing is not retried.
+
+A list's status is **Pending**, **Processing**, **Completed**, **Completed with errors**, **Failed**, **Paused**, or **Deleting**.
 
 Only **Completed** lists are used for screening; a list that is still importing, paused, or failed is not consulted. Uploaded files are stored under `App_Data/Sites/{tenant}/DncRegistry` unless [Azure Blob Storage](#store-local-registry-files-in-azure-blob-storage) is enabled.
 

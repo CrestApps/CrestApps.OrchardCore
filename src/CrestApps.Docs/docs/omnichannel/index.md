@@ -23,6 +23,7 @@ The management experience layers a lightweight Customer Relationship Management 
 | Base orchestration module (includes the **Omnichannel - Azure Communication Services** feature) | This page, [Azure Communication Services](azure-communication-services) |
 | Event Grid integration | [Event Grid](event-grid) |
 | Management UI (CRM), including re-engagement cadences | [Management](management), [Cadences](cadences) |
+| Leads, accounts and opportunities (**Omnichannel CRM**) | [CRM](crm) |
 | SMS automation (AI) | [SMS](sms) |
 | Automated Voice (AI voice conversations over any telephony provider) | [Telnyx AI Voice Agent](../telephony/telnyx.md#telnyx-ai-voice-agent) |
 | Messaging workspace (human two-way, every non-voice channel) and its **SMS Messaging Channel** | [Messaging Workspace](messaging-workspace) |

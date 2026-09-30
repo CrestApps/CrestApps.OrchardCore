@@ -103,7 +103,7 @@ public sealed class ContactCenterIncomingCallContextProvider : IIncomingCallCont
             return;
         }
 
-        var contactIds = await _contactLookup.FindContactItemIdsAsync(call.From, cancellationToken);
+        var contactIds = await _contactLookup.FindCallerItemIdsAsync(call.From, cancellationToken);
 
         if (contactIds.Count == 0)
         {

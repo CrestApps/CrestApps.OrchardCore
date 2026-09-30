@@ -17,6 +17,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core
         public const string NotInServiceDispositionName = "Number Not In Service";
         public static class ActionTypes
         {
+            public const string ConvertLead = "ConvertLead";
             public const string Finish = "Finish";
             public const string NewActivity = "NewActivity";
             public const string TryAgain = "TryAgain";
@@ -29,13 +30,19 @@ namespace CrestApps.OrchardCore.Omnichannel.Core
         }
         public static class ContentParts
         {
+            public const string Account = "AccountPart";
+            public const string Contained = "ContainedPart";
             public const string EmailInfo = "EmailInfoPart";
+            public const string Lead = "LeadPart";
+            public const string List = "ListPart";
             public const string OmnichannelContact = "OmnichannelContactPart";
             public const string OmnichannelSubject = "OmnichannelSubjectPart";
+            public const string Opportunity = "OpportunityPart";
             public const string PhoneNumberInfo = "PhoneNumberInfoPart";
         }
         public static class ContentTypes
         {
+            public const string Account = "Account";
             public const string EmailAddress = "EmailAddress";
             public const string PhoneNumber = "PhoneNumber";
         }
@@ -49,6 +56,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core
             public const string Area = "CrestApps.OrchardCore.Omnichannel";
             public const string AzureCommunicationServices = "CrestApps.OrchardCore.Omnichannel.AzureCommunicationServices";
             public const string ChannelEndpoints = "CrestApps.OrchardCore.Omnichannel.ChannelEndpoints";
+            public const string Crm = "CrestApps.OrchardCore.Omnichannel.Crm";
             public const string Managements = "CrestApps.OrchardCore.Omnichannel.Managements";
         }
         public static class NamedParts
@@ -67,7 +75,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Core
         {
             public static readonly OrchardCore.Security.Permissions.Permission CompleteActivity;
             public static readonly OrchardCore.Security.Permissions.Permission CompleteOwnActivity;
+            public static readonly OrchardCore.Security.Permissions.Permission ConvertLead;
             public static readonly OrchardCore.Security.Permissions.Permission EditActivity;
+            public static readonly OrchardCore.Security.Permissions.Permission EditConvertedLead;
             public static readonly OrchardCore.Security.Permissions.Permission ListActivities;
             public static readonly OrchardCore.Security.Permissions.Permission ListContactActivities;
             public static readonly OrchardCore.Security.Permissions.Permission ManageActivities;
@@ -77,6 +87,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Core
             public static readonly OrchardCore.Security.Permissions.Permission ManageCampaigns;
             public static readonly OrchardCore.Security.Permissions.Permission ManageChannelEndpoints;
             public static readonly OrchardCore.Security.Permissions.Permission ManageDispositions;
+            public static readonly OrchardCore.Security.Permissions.Permission ManageLeadStatuses;
+            public static readonly OrchardCore.Security.Permissions.Permission ManageOpportunityStages;
             public static readonly OrchardCore.Security.Permissions.Permission ManageSubjectFlows;
             public static readonly OrchardCore.Security.Permissions.Permission PurgeActivity;
             public static readonly OrchardCore.Security.Permissions.Permission ViewReports;
@@ -95,6 +107,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core
         {
             public const string HandedOffAfterHoursCallback = "handed_off_after_hours_callback";
             public const string HandedOffToAgent = "handed_off_to_agent";
+            public const string LeadConverted = "lead_converted";
             public const string NumberNotInService = "number_not_in_service";
             public static bool IsHandoff(string terminalReasonCode) { }
         }
@@ -116,6 +129,24 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Indexes
         public System.DateTime CreatedUtc { get; set; }
         public string DisplayText { get; set; }
         public bool Enabled { get; set; }
+    }
+    public sealed class LeadIndex : YesSql.Indexes.MapIndex
+    {
+        public LeadIndex() { }
+        public string ContentItemId { get; set; }
+        public string ContentType { get; set; }
+        public string ConvertedContactItemId { get; set; }
+        public System.DateTime? ConvertedUtc { get; set; }
+        public System.DateTime? CreatedUtc { get; set; }
+        public bool IsClosed { get; set; }
+        public bool IsConverted { get; set; }
+        public bool Latest { get; set; }
+        public string ListName { get; set; }
+        public string OwnerId { get; set; }
+        public bool Published { get; set; }
+        public string Rating { get; set; }
+        public string Source { get; set; }
+        public string StatusId { get; set; }
     }
     public sealed class NotInServiceNumberIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
     {
@@ -180,6 +211,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Indexes
     {
         public OmnichannelContactIndex() { }
         public string ContentItemId { get; set; }
+        public string ContentType { get; set; }
+        public bool IsConverted { get; set; }
         public bool Latest { get; set; }
         public string NormalizedPrimaryCellPhoneNumber { get; set; }
         public string NormalizedPrimaryHomePhoneNumber { get; set; }
@@ -200,9 +233,39 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Indexes
         public string ProviderMessageId { get; set; }
         public string ServiceAddress { get; set; }
     }
+    public sealed class OpportunityIndex : YesSql.Indexes.MapIndex
+    {
+        public OpportunityIndex() { }
+        public string AccountContentItemId { get; set; }
+        public decimal? Amount { get; set; }
+        public string CampaignId { get; set; }
+        public System.DateTime? CloseDate { get; set; }
+        public string ContentItemId { get; set; }
+        public string ContentType { get; set; }
+        public string ConvertedFromLeadItemId { get; set; }
+        public System.DateTime? CreatedUtc { get; set; }
+        public bool IsClosed { get; set; }
+        public bool IsWon { get; set; }
+        public bool Latest { get; set; }
+        public string OwnerId { get; set; }
+        public string PrimaryContactItemId { get; set; }
+        public int? Probability { get; set; }
+        public bool Published { get; set; }
+        public string Source { get; set; }
+        public string StageId { get; set; }
+    }
 }
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models
 {
+    public sealed class AccountPart : OrchardCore.ContentManagement.ContentPart
+    {
+        public AccountPart() { }
+    }
+    public sealed class AccountPartSettings
+    {
+        public AccountPartSettings() { }
+        public string[] OfferedContentTypes { get; set; }
+    }
     public enum ActivityAssignmentStatus
     {
         Unassigned = 0,
@@ -441,6 +504,14 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         Resolved = 2,
         Ambiguous = 3,
     }
+    public sealed class ConvertLeadActionMetadata
+    {
+        public ConvertLeadActionMetadata() { }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.LeadConversionAccountMode AccountMode { get; set; }
+        public bool CreateOpportunity { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.LeadOpenActivityMode OpenActivities { get; set; }
+        public string OpportunityContentType { get; set; }
+    }
     public sealed class DispositionMetadata
     {
         public DispositionMetadata() { }
@@ -471,6 +542,114 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         WaitingInQueue = 1,
         CallbackScheduled = 2,
         Failed = 3,
+    }
+    public sealed class LeadBatchFilter
+    {
+        public LeadBatchFilter() { }
+        public bool IncludeClosedLeads { get; set; }
+        public string ListName { get; set; }
+        public string OwnerId { get; set; }
+        public string[] Ratings { get; set; }
+        public bool SkipLeadsThatAreContacts { get; set; }
+        public string Source { get; set; }
+        public string[] StatusIds { get; set; }
+    }
+    public enum LeadConversionAccountMode
+    {
+        None = 0,
+        CreateNew = 1,
+        UseExisting = 2,
+        Automatic = 3,
+    }
+    public sealed class LeadConversionRequest
+    {
+        public LeadConversionRequest() { }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.LeadConversionAccountMode AccountMode { get; set; }
+        public string AccountName { get; set; }
+        public string CampaignId { get; set; }
+        public string CompletingActivityId { get; set; }
+        public string ContactContentType { get; set; }
+        public bool CreateOpportunity { get; set; }
+        public string ExistingAccountItemId { get; set; }
+        public string ExistingContactItemId { get; set; }
+        public string LeadContentItemId { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.LeadOpenActivityMode OpenActivities { get; set; }
+        public decimal? OpportunityAmount { get; set; }
+        public System.DateTime? OpportunityCloseDate { get; set; }
+        public string OpportunityContentType { get; set; }
+        public string OpportunityName { get; set; }
+        public string OpportunityStageId { get; set; }
+        public string UserId { get; set; }
+        public string UserName { get; set; }
+    }
+    public sealed class LeadConversionResult
+    {
+        public LeadConversionResult() { }
+        public OrchardCore.ContentManagement.ContentItem Account { get; set; }
+        public bool AccountCreated { get; set; }
+        public bool AlreadyConverted { get; set; }
+        public int CancelledActivities { get; set; }
+        public OrchardCore.ContentManagement.ContentItem Contact { get; set; }
+        public bool ContactCreated { get; set; }
+        public System.Collections.Generic.IList<string> Errors { get; }
+        public OrchardCore.ContentManagement.ContentItem Lead { get; set; }
+        public int MovedActivities { get; set; }
+        public OrchardCore.ContentManagement.ContentItem Opportunity { get; set; }
+        public bool Succeeded { get; }
+    }
+    public enum LeadOpenActivityMode
+    {
+        Move = 0,
+        Cancel = 1,
+    }
+    public sealed class LeadPart : OrchardCore.ContentManagement.ContentPart
+    {
+        public LeadPart() { }
+        public string Company { get; set; }
+        public string ConvertedAccountItemId { get; set; }
+        public string ConvertedById { get; set; }
+        public string ConvertedByUsername { get; set; }
+        public string ConvertedContactItemId { get; set; }
+        public string ConvertedContactType { get; set; }
+        public string ConvertedOpportunityItemId { get; set; }
+        public System.DateTime? ConvertedUtc { get; set; }
+        public bool IsClosed { get; set; }
+        public bool IsConverted { get; set; }
+        public System.DateTime? LastScrubbedUtc { get; set; }
+        public string ListName { get; set; }
+        public string OwnerId { get; set; }
+        public string Rating { get; set; }
+        public string Source { get; set; }
+        public string StatusId { get; set; }
+    }
+    public sealed class LeadPartSettings
+    {
+        public LeadPartSettings() { }
+        public string DefaultOpportunityContentType { get; set; }
+        public string TargetContactContentType { get; set; }
+    }
+    public static class LeadRatings
+    {
+        public const string Cold = "Cold";
+        public const string Hot = "Hot";
+        public const string Warm = "Warm";
+        public static System.Collections.Generic.IReadOnlyList<string> All { get; }
+        public static string Normalize(string value) { }
+    }
+    public sealed class LeadStatus : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.LeadStatus>, System.ICloneable
+    {
+        public LeadStatus() { }
+        public string Author { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string Description { get; set; }
+        public bool IsClosed { get; set; }
+        public bool IsConverted { get; set; }
+        public bool IsDefault { get; set; }
+        public System.DateTime? ModifiedUtc { get; set; }
+        public string Name { get; set; }
+        public int Order { get; set; }
+        public string OwnerId { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.LeadStatus Clone() { }
     }
     public sealed class ListOmnichannelActivityFilter : OrchardCore.Entities.Entity
     {
@@ -563,6 +742,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string ContactResolvedById { get; set; }
         public string ContactResolvedByUsername { get; set; }
         public System.DateTime? ContactResolvedUtc { get; set; }
+        public string ConvertedFromLeadItemId { get; set; }
         public string CreatedById { get; set; }
         public string CreatedByUsername { get; set; }
         public System.DateTime CreatedUtc { get; set; }
@@ -644,7 +824,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string[] TimeZoneIds { get; set; }
         public long? TotalLoaded { get; set; }
         public long? TotalMatched { get; set; }
+        public long TotalSkippedAsConverted { get; set; }
         public long TotalSkippedAsDuplicate { get; set; }
+        public long TotalSkippedAsExistingContact { get; set; }
         public long TotalSkippedAsNotInService { get; set; }
         public long TotalSkippedAsOptedOut { get; set; }
         public long TotalSkippedAsSharedNumberOptedOut { get; set; }
@@ -763,6 +945,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public bool UseDoNotCall { get; set; }
         public bool UseDoNotEmail { get; set; }
         public bool UseDoNotSms { get; set; }
+    }
+    public sealed class OmnichannelCrmOptions
+    {
+        public OmnichannelCrmOptions() { }
+        public bool Enabled { get; set; }
     }
     public sealed class OmnichannelDisposition : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition>, System.ICloneable
     {
@@ -883,6 +1070,41 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityInteractionType InteractionType { get; set; }
         public bool RequireDisposition { get; set; }
     }
+    public sealed class OpportunityPart : OrchardCore.ContentManagement.ContentPart
+    {
+        public OpportunityPart() { }
+        public decimal? Amount { get; set; }
+        public string CampaignId { get; set; }
+        public System.DateTime? CloseDate { get; set; }
+        public string ConvertedFromLeadItemId { get; set; }
+        public bool IsClosed { get; set; }
+        public bool IsWon { get; set; }
+        public string OwnerId { get; set; }
+        public string PrimaryContactItemId { get; set; }
+        public int? Probability { get; set; }
+        public string Source { get; set; }
+        public string StageId { get; set; }
+    }
+    public sealed class OpportunityPartSettings
+    {
+        public OpportunityPartSettings() { }
+        public string[] StageIds { get; set; }
+    }
+    public sealed class OpportunityStage : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.OpportunityStage>, System.ICloneable
+    {
+        public OpportunityStage() { }
+        public string Author { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string Description { get; set; }
+        public bool IsClosed { get; set; }
+        public bool IsWon { get; set; }
+        public System.DateTime? ModifiedUtc { get; set; }
+        public string Name { get; set; }
+        public int Order { get; set; }
+        public string OwnerId { get; set; }
+        public int Probability { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.OpportunityStage Clone() { }
+    }
     public sealed class PhoneNumberInfoPart : OrchardCore.ContentManagement.ContentPart
     {
         public PhoneNumberInfoPart() { }
@@ -896,6 +1118,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         BeginsWith = 1,
         EndsWith = 2,
         Contains = 3,
+    }
+    public sealed class SetLeadStatusActionMetadata
+    {
+        public SetLeadStatusActionMetadata() { }
+        public string StatusId { get; set; }
     }
     public sealed class SubjectAction : CrestApps.Core.Models.SourceCatalogEntry, CrestApps.Core.IDisplayTextAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectAction>, System.ICloneable
     {
@@ -1035,8 +1262,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     }
     public sealed class ContentDefinitionOmnichannelContactTypeProvider : CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelContactTypeProvider
     {
-        public ContentDefinitionOmnichannelContactTypeProvider(OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager) { }
+        public ContentDefinitionOmnichannelContactTypeProvider(OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCrmOptions> crmOptions) { }
         public System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyCollection<string>> GetContactContentTypesAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyCollection<string>> GetLeadContentTypesAsync(System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class DispositionChoice
     {
@@ -1120,6 +1348,19 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     {
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Core.Services.HandoffQueueOption>> GetQueuesAsync(System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface ILeadConversionHandler
+    {
+        System.Threading.Tasks.Task ConvertedAsync(CrestApps.OrchardCore.Omnichannel.Core.Services.LeadConversionContext context);
+        System.Threading.Tasks.Task ConvertingAsync(CrestApps.OrchardCore.Omnichannel.Core.Services.LeadConversionContext context);
+    }
+    public interface ILeadConversionRepointer
+    {
+        System.Threading.Tasks.Task RepointAsync(CrestApps.OrchardCore.Omnichannel.Core.Services.LeadConversionContext context, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ILeadConversionService
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.LeadConversionResult> ConvertAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.LeadConversionRequest request, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IListOmnichannelActivityFilterHandler
     {
         System.Threading.Tasks.Task FilteringAsync(CrestApps.OrchardCore.Omnichannel.Core.Services.ListOmnichannelActivityFilterContext context, System.Threading.CancellationToken cancellationToken = default);
@@ -1168,6 +1409,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     public interface IOmnichannelContactTypeProvider
     {
         System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyCollection<string>> GetContactContentTypesAsync(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyCollection<string>> GetLeadContentTypesAsync(System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IOmnichannelHandoffService
     {
@@ -1186,6 +1428,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     {
         System.Threading.Tasks.Task ExecuteAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectActionExecutionContext context, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface ISubjectActionHandler
+    {
+        string ActionType { get; }
+        int Order { get; }
+        System.Threading.Tasks.Task ExecuteAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectAction action, CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectActionExecutionContext context);
+    }
     public interface ISubjectFlowSettingsService
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings> FindConfiguredFlowSettingsAsync(string subjectContentType, System.Threading.CancellationToken cancellationToken = default);
@@ -1200,6 +1448,16 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         public CrestApps.OrchardCore.Omnichannel.Core.Services.IAutomatedConversationGeneration Begin(string sessionId, System.Threading.CancellationToken hostToken) { }
         public bool IsGenerating(string sessionId) { }
         public bool TryClaimInboundMessage(string providerMessageId) { }
+    }
+    public sealed class LeadConversionContext
+    {
+        public LeadConversionContext() { }
+        public OrchardCore.ContentManagement.ContentItem Account { get; set; }
+        public OrchardCore.ContentManagement.ContentItem Contact { get; set; }
+        public bool ContactCreated { get; set; }
+        public OrchardCore.ContentManagement.ContentItem Lead { get; set; }
+        public OrchardCore.ContentManagement.ContentItem Opportunity { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.LeadConversionRequest Request { get; set; }
     }
     public sealed class ListOmnichannelActivityFilterContext
     {
@@ -1266,6 +1524,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         public OmnichannelChannelEndpointStore(OrchardCore.Documents.IDocumentManager<CrestApps.OrchardCore.Models.DictionaryDocument<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint>> documentManager) { }
         public System.Threading.Tasks.ValueTask<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint> GetByServiceAddressAsync(string channel, string serviceAddress, System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public static class OmnichannelContactMatches
+    {
+        public static System.Collections.Generic.IReadOnlyList<string> BestTier(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactIndex> matches, System.Collections.Generic.IReadOnlyCollection<string> leadContentTypes) { }
+        public static System.Collections.Generic.IReadOnlyList<string> Order(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactIndex> matches, System.Collections.Generic.IReadOnlyCollection<string> leadContentTypes) { }
+    }
     public static class OmnichannelContactPreferences
     {
         public static bool HasOptedOut(OrchardCore.ContentManagement.ContentItem contact, string channel) { }
@@ -1284,6 +1547,16 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         public string Reason { get; }
         public void RequestHandoff(string reason) { }
         public void Reset() { }
+    }
+    public static class OmnichannelRecordKinds
+    {
+        public static bool HasPart(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition definition, string partName) { }
+        public static bool IsAccount(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition definition) { }
+        public static bool IsAccountChild(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition definition) { }
+        public static bool IsContact(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition definition) { }
+        public static bool IsLead(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition definition) { }
+        public static bool IsOpportunity(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition definition) { }
+        public static bool IsReachable(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition definition) { }
     }
     public static class OmnichannelSmsComplianceHelper
     {

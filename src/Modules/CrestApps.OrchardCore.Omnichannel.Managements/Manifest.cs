@@ -60,3 +60,16 @@ using OrchardCore.Modules.Manifest;
         "OrchardCore.ContentTypes",
     ]
 )]
+
+[assembly: Feature(
+    Name = "Omnichannel CRM",
+    Id = OmnichannelConstants.Features.Crm,
+    Category = "Contact Center",
+    Description = "Adds leads, accounts and opportunities to the omnichannel CRM: lead records that are called and texted like contacts but kept apart until they are converted, accounts that hold contacts and opportunities, and opportunity stages for the pipeline.",
+    Dependencies =
+    [
+        OmnichannelConstants.Features.Managements,
+        "OrchardCore.Lists",
+        "OrchardCore.Title",
+    ]
+)]

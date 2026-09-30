@@ -1,3 +1,4 @@
+using CrestApps.Core;
 using CrestApps.Core.Services;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Core;
@@ -42,6 +43,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
     private readonly ActivityBatchSourceOptions _sourceOptions;
     private readonly IContactOptOutResolver _optOutResolver;
     private readonly INotInServiceNumberService _notInServiceNumbers;
+    private readonly IOmnichannelContactTypeProvider _contactTypeProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -73,7 +75,8 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         IOptions<ActivityBatchSourceOptions> sourceOptions,
         IContactOptOutResolver optOutResolver,
         INotInServiceNumberService notInServiceNumbers,
-        ILogger<DefaultContactActivityBatchLoader> logger)
+        ILogger<DefaultContactActivityBatchLoader> logger,
+        IEnumerable<IOmnichannelContactTypeProvider> contactTypeProviders = null)
     {
         _catalog = catalog;
         _session = session;
@@ -87,6 +90,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         _sourceOptions = sourceOptions.Value;
         _optOutResolver = optOutResolver;
         _notInServiceNumbers = notInServiceNumbers;
+        _contactTypeProvider = contactTypeProviders?.FirstOrDefault();
         _logger = logger;
     }
 
@@ -213,11 +217,27 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         var hasTimeZoneFilter = batch.TimeZoneIds is { Length: > 0 };
         var hasLastActivityFilter = !string.IsNullOrEmpty(batch.LastActivitySubjectContentType);
 
-        if (hasPhoneFilter || hasTimeZoneFilter || hasLastActivityFilter)
+        // A load of leads narrows the list by the lead filters, and always keeps closed leads out unless asked.
+        var leadTypes = _contactTypeProvider is null
+            ? []
+            : (await _contactTypeProvider.GetLeadContentTypesAsync(cancellationToken)).ToHashSet(StringComparer.Ordinal);
+        var isLeadLoad = leadTypes.Contains(batch.ContactContentType);
+        var leadFilter = isLeadLoad
+            ? (batch.TryGet<LeadBatchFilter>(out var storedLeadFilter) ? storedLeadFilter : new LeadBatchFilter())
+            : null;
+        var hasLeadFilter = leadFilter is not null;
+
+        if (hasPhoneFilter || hasTimeZoneFilter || hasLastActivityFilter || hasLeadFilter)
         {
             HashSet<string> phoneIds = null;
             HashSet<string> timeZoneIds = null;
             HashSet<string> lastActivityIds = null;
+            HashSet<string> leadIds = null;
+
+            if (hasLeadFilter)
+            {
+                leadIds = await FindLeadIdsAsync(readonlySession, batch, leadFilter, cancellationToken);
+            }
 
             if (hasPhoneFilter)
             {
@@ -308,7 +328,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
             }
 
             // Intersect all non-null filter sets.
-            foreach (var set in new[] { phoneIds, timeZoneIds, lastActivityIds })
+            foreach (var set in new[] { phoneIds, timeZoneIds, lastActivityIds, leadIds })
             {
                 if (set is null)
                 {
@@ -432,6 +452,10 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
 
             var scheduledUtc = await _localClock.ConvertToUtcAsync(batch.ScheduleAt);
 
+            var leadsThatAreContacts = leadFilter?.SkipLeadsThatAreContacts == true
+                ? await FindLeadsThatAreContactsAsync(readonlySession, contacts, batch.OnlyPublishedLeads, leadTypes, cancellationToken)
+                : null;
+
             foreach (var contact in contacts)
             {
                 documentId = Math.Max(documentId, contact.Id);
@@ -463,6 +487,22 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 }
 
                 batch.TotalMatched++;
+
+                // A converted lead is the record of what happened before it became a contact; its work continues on
+                // the contact, so it is never loaded again.
+                if (contact.TryGet<LeadPart>(out var leadPart) && leadPart.IsConverted)
+                {
+                    batch.TotalSkippedAsConverted++;
+
+                    continue;
+                }
+
+                if (leadsThatAreContacts?.Contains(contact.ContentItemId) == true)
+                {
+                    batch.TotalSkippedAsExistingContact++;
+
+                    continue;
+                }
 
                 if (preventDuplicates && inQueueActivities.Contains(contact.ContentItemId))
                 {
@@ -645,12 +685,12 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         await _catalog.UpdateAsync(batch, cancellationToken);
         await _session.SaveChangesAsync(cancellationToken);
 
-        // One line per load that accounts for every matching contact, so a load that found fewer people than
+        // One line per load that accounts for every matching record, so a load that found fewer people than
         // expected can be explained from the log alone. Counts only: names and numbers stay out of it.
         if (_logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation(
-                "Loaded {TotalLoaded} of {TotalMatched} matching contacts for the activity batch '{BatchId}' and subject '{SubjectContentType}'. Skipped: {SkippedAsDuplicate} already had an open activity for the subject, {SkippedAsOptedOut} had opted out of the channel, {SkippedAsSharedNumberOptedOut} shared a number with a contact who had opted out, {SkippedForNoDestination} had no destination on the channel, {SkippedAsNotInService} had only numbers that are not in service, {SkippedByLimit} were over the limit.",
+                "Loaded {TotalLoaded} of {TotalMatched} matching records for the activity batch '{BatchId}' and subject '{SubjectContentType}'. Skipped: {SkippedAsDuplicate} already had an open activity for the subject, {SkippedAsOptedOut} had opted out of the channel, {SkippedAsSharedNumberOptedOut} shared a number with a record that had opted out, {SkippedForNoDestination} had no destination on the channel, {SkippedAsConverted} were converted leads, {SkippedAsExistingContact} were leads sharing a number with a contact, {SkippedAsNotInService} had only numbers that are not in service, {SkippedByLimit} were over the limit.",
                 batch.TotalLoaded ?? 0,
                 batch.TotalMatched ?? 0,
                 batch.ItemId.SanitizeLogValue(),
@@ -659,9 +699,143 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 batch.TotalSkippedAsOptedOut,
                 batch.TotalSkippedAsSharedNumberOptedOut,
                 batch.TotalSkippedForNoDestination,
+                batch.TotalSkippedAsConverted,
+                batch.TotalSkippedAsExistingContact,
                 batch.TotalSkippedAsNotInService,
                 batch.TotalSkippedByLimit);
         }
+    }
+
+    /// <summary>
+    /// Returns the leads that pass the lead filters of the load. Converted leads are kept in the set so the load can
+    /// report them as converted rather than lose them silently.
+    /// </summary>
+    private static async Task<HashSet<string>> FindLeadIdsAsync(
+        ISession session,
+        OmnichannelActivityBatch batch,
+        LeadBatchFilter filter,
+        CancellationToken cancellationToken)
+    {
+        var query = batch.OnlyPublishedLeads
+            ? session.QueryIndex<LeadIndex>(index => index.Published && index.ContentType == batch.ContactContentType)
+            : session.QueryIndex<LeadIndex>(index => index.Latest && index.ContentType == batch.ContactContentType);
+
+        if (!filter.IncludeClosedLeads)
+        {
+            query = query.Where(index => !index.IsClosed || index.IsConverted);
+        }
+
+        if (filter.StatusIds is { Length: > 0 })
+        {
+            var statusIds = filter.StatusIds;
+
+            query = query.Where(index => index.StatusId.IsIn(statusIds) || index.IsConverted);
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.ListName))
+        {
+            var listName = filter.ListName.Trim();
+
+            query = query.Where(index => index.ListName == listName);
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.Source))
+        {
+            var source = filter.Source.Trim();
+
+            query = query.Where(index => index.Source == source);
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.OwnerId))
+        {
+            var ownerId = filter.OwnerId;
+
+            query = query.Where(index => index.OwnerId == ownerId);
+        }
+
+        if (filter.Ratings is { Length: > 0 })
+        {
+            var ratings = filter.Ratings;
+
+            query = query.Where(index => index.Rating.IsIn(ratings));
+        }
+
+        return (await query.ListAsync(cancellationToken))
+            .Select(index => index.ContentItemId)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Returns the leads of the page whose primary cell or home number already belongs to a contact. Only contacts
+    /// count: another lead at the number is a duplicate lead, which the lead import and duplicate prevention handle.
+    /// </summary>
+    private static async Task<HashSet<string>> FindLeadsThatAreContactsAsync(
+        ISession session,
+        IEnumerable<ContentItem> page,
+        bool onlyPublished,
+        HashSet<string> leadTypes,
+        CancellationToken cancellationToken)
+    {
+        var pageIds = page.Select(item => item.ContentItemId).ToArray();
+
+        var leadRows = onlyPublished
+            ? await session.QueryIndex<OmnichannelContactIndex>(index => index.Published && index.ContentItemId.IsIn(pageIds)).ListAsync(cancellationToken)
+            : await session.QueryIndex<OmnichannelContactIndex>(index => index.Latest && index.ContentItemId.IsIn(pageIds)).ListAsync(cancellationToken);
+
+        var leadsByNumber = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+
+        foreach (var row in leadRows)
+        {
+            foreach (var number in new[] { row.NormalizedPrimaryCellPhoneNumber, row.NormalizedPrimaryHomePhoneNumber })
+            {
+                if (string.IsNullOrEmpty(number))
+                {
+                    continue;
+                }
+
+                if (!leadsByNumber.TryGetValue(number, out var owners))
+                {
+                    owners = [];
+                    leadsByNumber[number] = owners;
+                }
+
+                owners.Add(row.ContentItemId);
+            }
+        }
+
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        if (leadsByNumber.Count == 0)
+        {
+            return result;
+        }
+
+        var numbers = leadsByNumber.Keys.ToArray();
+
+        var matches = await session.QueryIndex<OmnichannelContactIndex>(index =>
+                index.Published &&
+                !index.IsConverted &&
+                (index.NormalizedPrimaryCellPhoneNumber.IsIn(numbers) || index.NormalizedPrimaryHomePhoneNumber.IsIn(numbers)))
+            .ListAsync(cancellationToken);
+
+        foreach (var match in matches)
+        {
+            // A row written before the content type was indexed has none; it predates leads, so it is a contact.
+            if (!string.IsNullOrEmpty(match.ContentType) && leadTypes.Contains(match.ContentType))
+            {
+                continue;
+            }
+
+            foreach (var number in new[] { match.NormalizedPrimaryCellPhoneNumber, match.NormalizedPrimaryHomePhoneNumber })
+            {
+                if (!string.IsNullOrEmpty(number) && leadsByNumber.TryGetValue(number, out var owners))
+                {
+                    result.UnionWith(owners);
+                }
+            }
+        }
+
+        return result;
     }
 
     /// <summary>

@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 using Moq;
 using YesSql;
@@ -33,7 +34,7 @@ public sealed class InboundContactLookupTests
             .Setup(currentSession => currentSession.Query(null))
             .Returns(rootQuery.Object);
 
-        var lookup = new InboundContactLookup(session.Object, new DefaultPhoneNumberService());
+        var lookup = new InboundContactLookup(session.Object, new DefaultPhoneNumberService(), Mock.Of<IOmnichannelContactTypeProvider>());
 
         // Act
         await lookup.FindContactItemIdsAsync(

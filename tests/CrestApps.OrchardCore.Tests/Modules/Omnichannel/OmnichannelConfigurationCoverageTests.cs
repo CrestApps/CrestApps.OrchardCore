@@ -36,6 +36,8 @@ public sealed class OmnichannelConfigurationCoverageTests
         [nameof(OmnichannelChannelEndpoint)] = OmnichannelDeploymentSteps.ChannelEndpoint,
         [nameof(OmnichannelDisposition)] = OmnichannelDeploymentSteps.Disposition,
         [nameof(SubjectAction)] = OmnichannelDeploymentSteps.SubjectAction,
+        [nameof(LeadStatus)] = OmnichannelDeploymentSteps.LeadStatus,
+        [nameof(OpportunityStage)] = OmnichannelDeploymentSteps.OpportunityStage,
     };
 
     [Fact]
