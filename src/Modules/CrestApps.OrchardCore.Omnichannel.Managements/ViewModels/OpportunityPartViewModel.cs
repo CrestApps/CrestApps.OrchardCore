@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 
 /// <summary>
-/// Represents the editor of an opportunity.
+/// Represents the editor of an opportunity's stage and campaign, and the summary of the opportunity.
 /// </summary>
 public class OpportunityPartViewModel
 {
@@ -19,46 +19,9 @@ public class OpportunityPartViewModel
     public int? Probability { get; set; }
 
     /// <summary>
-    /// Gets or sets the expected value of the deal.
-    /// </summary>
-    public decimal? Amount { get; set; }
-
-    /// <summary>
-    /// Gets or sets the expected close date.
-    /// </summary>
-    public DateTime? CloseDate { get; set; }
-
-    /// <summary>
-    /// Gets or sets the owner.
-    /// </summary>
-    public string OwnerId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the content item identifier of the lead source.
-    /// </summary>
-    public string SourceId { get; set; }
-
-    /// <summary>
     /// Gets or sets the campaign identifier.
     /// </summary>
     public string CampaignId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the primary contact.
-    /// </summary>
-    public string PrimaryContactItemId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the display text of the primary contact.
-    /// </summary>
-    [BindNever]
-    public string PrimaryContactDisplayText { get; set; }
-
-    /// <summary>
-    /// Gets or sets the account the opportunity belongs to, which narrows the contact search.
-    /// </summary>
-    [BindNever]
-    public string AccountContentItemId { get; set; }
 
     /// <summary>
     /// Gets or sets the stages the editor can choose from.
@@ -73,10 +36,16 @@ public class OpportunityPartViewModel
     public IList<SelectListItem> Campaigns { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the lead sources the editor can choose from.
+    /// Gets or sets the expected value of the deal, for the summary.
     /// </summary>
     [BindNever]
-    public IList<SelectListItem> Sources { get; set; } = [];
+    public decimal? Amount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the expected close date, for the summary.
+    /// </summary>
+    [BindNever]
+    public DateTime? CloseDate { get; set; }
 
     /// <summary>
     /// Gets or sets the display name of the stage, for the summary.

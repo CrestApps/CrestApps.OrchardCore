@@ -174,7 +174,7 @@ public sealed class LeadConversionServiceMergeTests
         var contactDefinition = new ContentTypeDefinitionBuilder().WithName("Customer").WithPart("LeadPart").Build();
 
         var lead = new ContentItem { ContentType = "Lead" };
-        lead.Alter<LeadPart>(part => part.Company = "Acme");
+        lead.Alter<LeadPart>(part => part.Company = new TextField { Text = "Acme" });
 
         var contact = new ContentItem { ContentType = "Customer" };
 

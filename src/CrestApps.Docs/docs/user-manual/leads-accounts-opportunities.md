@@ -50,8 +50,10 @@ A type with the Omnichannel Contact part and no Lead part is a contact type, as 
 | **Company** | The company the lead works for. Conversion can find or create an account with this name. |
 | **Lead source** | Where the lead came from, for example *Trade show*. Pick one of your [lead sources](#lead-sources). |
 | **List** | The list or file it arrived in, so a whole list can be loaded, reported on and cleaned up together. |
-| **Rating** | *Hot*, *Warm* or *Cold*. |
+| **Rating** | *Hot*, *Warm* or *Cold* to start with. |
 | **Lead owner** | The user responsible for the lead. |
+
+Only **Lead status** belongs to the CRM itself. The other fields are standard content fields of the **Lead** part, so they use the normal field editors and settings. To change the rating choices, a hint or a required flag, open **Content Definition > Content Parts > Lead** and edit the field. The same fields show on every lead type. You can add your own fields to the part or to a lead type the same way.
 
 Use these search terms on the Leads list:
 
@@ -121,7 +123,7 @@ Every contact and opportunity type can join an account without extra setup. Lead
 
 ## Opportunities
 
-**Interaction Center > Opportunities** lists your open opportunities. Each one has a **Stage**, **Amount**, **Probability**, **Close date**, **Owner**, **Primary contact**, **Campaign** and **Lead source**, and can belong to an account. An opportunity created by conversion takes the lead's source. The stage decides whether the opportunity is open, won or lost. A new opportunity starts with its stage's probability, and a closed stage always sets it.
+**Interaction Center > Opportunities** lists your open opportunities. Each one has a **Stage**, **Probability** and **Campaign**, plus the **Amount**, **Close date**, **Primary contact**, **Opportunity owner** and **Lead source** fields, and can belong to an account. The fields are standard content fields of the **Opportunity** part; edit them under **Content Definition > Content Parts > Opportunity**. The **Primary contact** picker lists your contact types. An opportunity created by conversion takes the lead's owner and source. The stage decides whether the opportunity is open, won or lost. A new opportunity starts with its stage's probability, and a closed stage always sets it.
 
 Use `stage:`, `closed:`, `won:` and `account:` on the Opportunities list, for example `closed:false`.
 
@@ -129,7 +131,7 @@ Use `stage:`, `closed:`, `won:` and `account:` on the Opportunities list, for ex
 
 Lead sources are ordinary content items of the **Lead Source** type. Open **Interaction Center > Management > Lead Sources** to add, rename or remove one. You need the usual content permissions for the **Lead Source** type.
 
-Leads, opportunities, inventory loads and imports pick from the published lead sources. Unpublishing or deleting a source removes it from the list, and leads that already have it show *(Unknown source)* in the conversion report.
+The **Lead source** fields of leads and opportunities are content pickers of this type. Inventory loads and imports pick from the published lead sources too. Unpublishing or deleting a source removes it from the list, and leads that already have it show *(Unknown source)* in the conversion report.
 
 ## Lead statuses and opportunity stages
 

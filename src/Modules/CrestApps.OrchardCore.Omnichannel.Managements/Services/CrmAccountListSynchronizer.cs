@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.Logging;
+using OrchardCore.ContentFields.Settings;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.ContentManagement.Metadata.Settings;
@@ -53,6 +54,37 @@ internal sealed class CrmAccountListSynchronizer
         {
             await SynchronizeAsync(accountType, accountChildTypes, leadTypes);
         }
+
+        await SynchronizePrimaryContactFieldAsync(definitions);
+    }
+
+    // The primary contact of an opportunity is picked from the contact types, which change as types are defined.
+    private async Task SynchronizePrimaryContactFieldAsync(IEnumerable<ContentTypeDefinition> definitions)
+    {
+        var partDefinition = await _contentDefinitionManager.GetPartDefinitionAsync(OmnichannelConstants.ContentParts.Opportunity);
+        var fieldDefinition = partDefinition?.Fields.FirstOrDefault(field => field.Name == nameof(OpportunityPart.PrimaryContact));
+
+        if (fieldDefinition is null)
+        {
+            return;
+        }
+
+        var contactTypes = definitions
+            .Where(OmnichannelRecordKinds.IsContact)
+            .Select(definition => definition.Name)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+
+        var settings = fieldDefinition.GetSettings<ContentPickerFieldSettings>();
+
+        if ((settings.DisplayedContentTypes ?? []).Order(StringComparer.Ordinal).SequenceEqual(contactTypes, StringComparer.Ordinal))
+        {
+            return;
+        }
+
+        await _contentDefinitionManager.AlterPartDefinitionAsync(OmnichannelConstants.ContentParts.Opportunity, part => part
+            .WithField(fieldDefinition.Name, field => field
+                .MergeSettings<ContentPickerFieldSettings>(fieldSettings => fieldSettings.DisplayedContentTypes = contactTypes)));
     }
 
     private async Task SynchronizeAsync(ContentTypeDefinition accountType, string[] accountChildTypes, HashSet<string> leadTypes)

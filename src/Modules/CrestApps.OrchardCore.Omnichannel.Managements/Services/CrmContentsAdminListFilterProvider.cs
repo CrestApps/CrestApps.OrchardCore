@@ -54,9 +54,10 @@ internal sealed class CrmContentsAdminListFilterProvider : IContentsAdminListFil
                     return query.With<LeadIndex>(index => index.OwnerId == ownerId);
                 }))
             .WithNamedTerm("rating", term => term
-                .OneCondition((value, query) =>
+                .OneCondition(async (value, query, context) =>
                 {
-                    var rating = LeadRatings.Normalize(value) ?? value;
+                    var ratings = ((ContentQueryContext)context).ServiceProvider.GetRequiredService<LeadRatingProvider>();
+                    var rating = await ratings.NormalizeAsync(value) ?? value;
 
                     return query.With<LeadIndex>(index => index.Rating == rating);
                 }))

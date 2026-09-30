@@ -5,7 +5,7 @@ using OrchardCore.ContentManagement;
 namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 
 /// <summary>
-/// Represents the editor of a lead's state.
+/// Represents the editor of a lead's status and the summary of the lead.
 /// </summary>
 public class LeadPartViewModel
 {
@@ -15,53 +15,34 @@ public class LeadPartViewModel
     public string StatusId { get; set; }
 
     /// <summary>
-    /// Gets or sets the company.
-    /// </summary>
-    public string Company { get; set; }
-
-    /// <summary>
-    /// Gets or sets the content item identifier of the lead source.
-    /// </summary>
-    public string SourceId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the name of the lead source, for display.
-    /// </summary>
-    [BindNever]
-    public string SourceName { get; set; }
-
-    /// <summary>
-    /// Gets or sets the list the lead arrived in.
-    /// </summary>
-    public string ListName { get; set; }
-
-    /// <summary>
-    /// Gets or sets the rating.
-    /// </summary>
-    public string Rating { get; set; }
-
-    /// <summary>
-    /// Gets or sets the identifier of the user who owns the lead.
-    /// </summary>
-    public string OwnerId { get; set; }
-
-    /// <summary>
     /// Gets or sets the statuses the editor can choose from.
     /// </summary>
     [BindNever]
     public IList<SelectListItem> Statuses { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the lead sources the editor can choose from.
+    /// Gets or sets the company, for the summary.
     /// </summary>
     [BindNever]
-    public IList<SelectListItem> Sources { get; set; } = [];
+    public string Company { get; set; }
 
     /// <summary>
-    /// Gets or sets the ratings the editor can choose from.
+    /// Gets or sets the name of the lead source, for the summary.
     /// </summary>
     [BindNever]
-    public IList<SelectListItem> Ratings { get; set; } = [];
+    public string SourceName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the list the lead arrived in, for the summary.
+    /// </summary>
+    [BindNever]
+    public string ListName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the rating, for the summary.
+    /// </summary>
+    [BindNever]
+    public string Rating { get; set; }
 
     /// <summary>
     /// Gets or sets whether the lead was converted, which makes the editor read-only.

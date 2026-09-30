@@ -1,8 +1,13 @@
+using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OrchardCore.ContentFields.Fields;
+using OrchardCore.ContentFields.Settings;
+using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data;
@@ -10,13 +15,14 @@ using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Lists.Models;
 using OrchardCore.Title.Models;
 using YesSql;
+using YesSql.Indexes;
 using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 
 /// <summary>
-/// Creates the CRM parts, the <c>Account</c> content type, the lead and opportunity indexes, and seeds the lead
-/// statuses and opportunity stages.
+/// Creates the CRM parts with their content fields, the <c>Account</c> and <c>LeadSource</c> content types, the lead
+/// and opportunity indexes, and seeds the lead statuses and opportunity stages.
 /// </summary>
 /// <remarks>
 /// The migration never alters a content type that already exists, so an administrator's changes to the
@@ -25,6 +31,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 /// </remarks>
 public sealed class CrmMigrations : OmnichannelIndexMigration
 {
+    private const int FieldMoveBatchSize = 200;
+
     private readonly IContentDefinitionManager _contentDefinitionManager;
 
     /// <summary>
@@ -96,6 +104,8 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
         }
 
         await CreateLeadSourceTypeAsync();
+        await AddLeadFieldsAsync();
+        await AddOpportunityFieldsAsync();
         await CreateLeadIndexAsync(SchemaBuilder);
         await CreateOpportunityIndexAsync(SchemaBuilder);
 
@@ -107,13 +117,17 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
     }
 
     /// <summary>
-    /// Adds the lead source content type and replaces the free-text source columns of the lead and opportunity
-    /// indexes with the identifier of the lead source item. Sources typed before this change are not carried over.
+    /// Adds the lead source content type, moves the data of the lead and opportunity parts into content fields, and
+    /// replaces the free-text source columns of the lead and opportunity indexes with the identifier of the lead
+    /// source item. Stored values move into the fields; free-text sources cannot name a lead source item, so they
+    /// are dropped.
     /// </summary>
     /// <returns>The migration version number.</returns>
     public async Task<int> UpdateFrom1Async()
     {
         await CreateLeadSourceTypeAsync();
+        await AddLeadFieldsAsync();
+        await AddOpportunityFieldsAsync();
 
         await EnsureColumnExistsAsync<LeadIndex>(
             null,
@@ -135,7 +149,229 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
             builder => builder.AlterIndexTableAsync<OpportunityIndex>(table => table.DropColumn("Source")),
             "drop the 'Source' column from the opportunity index");
 
+        ShellScope.AddDeferredTask(MoveValuesIntoFieldsAsync);
+
         return 2;
+    }
+
+    // Leads and opportunities saved before the parts had fields hold plain values under the names the fields now use,
+    // which could not be read as fields. Each is rewritten into the shape of its field, then saved to reindex it.
+    private static async Task MoveValuesIntoFieldsAsync(ShellScope scope)
+    {
+        var store = scope.ServiceProvider.GetRequiredService<IStore>();
+
+        await MoveValuesAsync<LeadIndex>(store, OmnichannelConstants.ContentParts.Lead, part =>
+        {
+            WrapText(part, nameof(LeadPart.Company));
+            WrapText(part, nameof(LeadPart.ListName));
+            WrapText(part, nameof(LeadPart.Rating));
+            WrapId(part, "OwnerId", nameof(LeadPart.Owner), nameof(UserPickerField.UserIds));
+            part.Remove("SourceId");
+
+            if (part[nameof(LeadPart.Source)] is JsonValue)
+            {
+                part.Remove(nameof(LeadPart.Source));
+            }
+        });
+
+        await MoveValuesAsync<OpportunityIndex>(store, OmnichannelConstants.ContentParts.Opportunity, part =>
+        {
+            WrapValue(part, nameof(OpportunityPart.Amount));
+            WrapValue(part, nameof(OpportunityPart.CloseDate));
+            WrapId(part, "OwnerId", nameof(OpportunityPart.Owner), nameof(UserPickerField.UserIds));
+            WrapId(part, "PrimaryContactItemId", nameof(OpportunityPart.PrimaryContact), nameof(ContentPickerField.ContentItemIds));
+            part.Remove("SourceId");
+
+            if (part[nameof(OpportunityPart.Source)] is JsonValue)
+            {
+                part.Remove(nameof(OpportunityPart.Source));
+            }
+        });
+    }
+
+    private static async Task MoveValuesAsync<TIndex>(IStore store, string partName, Action<JsonObject> move)
+        where TIndex : MapIndex
+    {
+        var documentId = 0L;
+
+        while (true)
+        {
+            await using var session = store.CreateSession();
+
+            var batch = (await session.Query<ContentItem, TIndex>(index => index.DocumentId > documentId)
+                .OrderBy(index => index.DocumentId)
+                .Take(FieldMoveBatchSize)
+                .ListAsync())
+                .ToList();
+
+            if (batch.Count == 0)
+            {
+                break;
+            }
+
+            foreach (var contentItem in batch)
+            {
+                documentId = Math.Max(documentId, contentItem.Id);
+
+                if (((JsonObject)contentItem.Content)[partName] is JsonObject part)
+                {
+                    move(part);
+                    await session.SaveAsync(contentItem);
+                }
+            }
+
+            await session.SaveChangesAsync();
+        }
+    }
+
+    private static void WrapText(JsonObject part, string name)
+    {
+        if (part[name] is JsonValue value)
+        {
+            part[name] = new JsonObject
+            {
+                [nameof(TextField.Text)] = value.ToString(),
+            };
+        }
+    }
+
+    private static void WrapValue(JsonObject part, string name)
+    {
+        if (part[name] is JsonValue value)
+        {
+            part[name] = new JsonObject
+            {
+                ["Value"] = value.DeepClone(),
+            };
+        }
+    }
+
+    private static void WrapId(JsonObject part, string oldName, string fieldName, string idsName)
+    {
+        var id = part[oldName] is JsonValue value ? value.ToString() : null;
+
+        part.Remove(oldName);
+
+        if (!string.IsNullOrEmpty(id) && part[fieldName] is null)
+        {
+            part[fieldName] = new JsonObject
+            {
+                [idsName] = new JsonArray(JsonValue.Create(id)),
+            };
+        }
+    }
+
+    private Task AddLeadFieldsAsync()
+    {
+        return _contentDefinitionManager.AlterPartDefinitionAsync(OmnichannelConstants.ContentParts.Lead, part => part
+            .WithField(nameof(LeadPart.Company), field => field
+                .OfType(nameof(TextField))
+                .WithDisplayName("Company")
+                .WithPosition("1")
+                .WithSettings(new TextFieldSettings
+                {
+                    Hint = "The company the lead works for. Converting the lead creates or picks an account with this name.",
+                }))
+            .WithField(nameof(LeadPart.Source), field => field
+                .OfType(nameof(ContentPickerField))
+                .WithDisplayName("Lead source")
+                .WithPosition("2")
+                .WithSettings(new ContentPickerFieldSettings
+                {
+                    Hint = "Where the lead came from, for example Web form, Purchased list or Trade show.",
+                    DisplayedContentTypes = [OmnichannelConstants.ContentTypes.LeadSource],
+                }))
+            .WithField(nameof(LeadPart.ListName), field => field
+                .OfType(nameof(TextField))
+                .WithDisplayName("List")
+                .WithPosition("3")
+                .WithSettings(new TextFieldSettings
+                {
+                    Hint = "The list or import the lead arrived in, so the whole list can be loaded and reported on together.",
+                }))
+            .WithField(nameof(LeadPart.Rating), field => field
+                .OfType(nameof(TextField))
+                .WithDisplayName("Rating")
+                .WithPosition("4")
+                .WithEditor("PredefinedList")
+                .MergeSettings<TextFieldPredefinedListEditorSettings>(settings =>
+                {
+                    settings.Editor = EditorOption.Dropdown;
+                    settings.DefaultValue = string.Empty;
+                    settings.Options = LeadRatings.All
+                        .Select(rating => new ListValueOption
+                        {
+                            Name = rating,
+                            Value = rating,
+                        })
+                        .ToArray();
+                }))
+            .WithField(nameof(LeadPart.Owner), field => field
+                .OfType(nameof(UserPickerField))
+                .WithDisplayName("Lead owner")
+                .WithPosition("5")
+                .WithSettings(new UserPickerFieldSettings
+                {
+                    Hint = "The person responsible for working the lead.",
+                    DisplayAllUsers = true,
+                })));
+    }
+
+    private async Task AddOpportunityFieldsAsync()
+    {
+        // The primary contact picker lists the contact types; the account list synchronizer keeps it current as
+        // contact types are added or removed.
+        var contactTypes = (await _contentDefinitionManager.ListTypeDefinitionsAsync())
+            .Where(Core.Services.OmnichannelRecordKinds.IsContact)
+            .Select(definition => definition.Name)
+            .ToArray();
+
+        await _contentDefinitionManager.AlterPartDefinitionAsync(OmnichannelConstants.ContentParts.Opportunity, part => part
+            .WithField(nameof(OpportunityPart.Amount), field => field
+                .OfType(nameof(NumericField))
+                .WithDisplayName("Amount")
+                .WithPosition("1")
+                .WithSettings(new NumericFieldSettings
+                {
+                    Hint = "The expected value of the deal.",
+                    Scale = 2,
+                    Minimum = 0,
+                }))
+            .WithField(nameof(OpportunityPart.CloseDate), field => field
+                .OfType(nameof(DateField))
+                .WithDisplayName("Close date")
+                .WithPosition("2")
+                .WithSettings(new DateFieldSettings
+                {
+                    Hint = "When the deal is expected to close.",
+                }))
+            .WithField(nameof(OpportunityPart.PrimaryContact), field => field
+                .OfType(nameof(ContentPickerField))
+                .WithDisplayName("Primary contact")
+                .WithPosition("3")
+                .WithSettings(new ContentPickerFieldSettings
+                {
+                    Hint = "The main person the deal is with.",
+                    DisplayedContentTypes = contactTypes,
+                }))
+            .WithField(nameof(OpportunityPart.Owner), field => field
+                .OfType(nameof(UserPickerField))
+                .WithDisplayName("Opportunity owner")
+                .WithPosition("4")
+                .WithSettings(new UserPickerFieldSettings
+                {
+                    Hint = "The person responsible for the deal.",
+                    DisplayAllUsers = true,
+                }))
+            .WithField(nameof(OpportunityPart.Source), field => field
+                .OfType(nameof(ContentPickerField))
+                .WithDisplayName("Lead source")
+                .WithPosition("5")
+                .WithSettings(new ContentPickerFieldSettings
+                {
+                    Hint = "Where the deal came from. A converted lead passes its source on.",
+                    DisplayedContentTypes = [OmnichannelConstants.ContentTypes.LeadSource],
+                })));
     }
 
     private async Task CreateLeadSourceTypeAsync()

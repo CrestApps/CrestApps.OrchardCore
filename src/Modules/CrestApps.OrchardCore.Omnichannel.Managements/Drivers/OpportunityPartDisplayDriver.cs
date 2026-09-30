@@ -2,25 +2,23 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
-using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Lists.Models;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 
+/// <summary>
+/// Edits the stage, probability and campaign of an opportunity. The amount, close date, owner, primary contact and
+/// lead source are content fields of the part, edited by their own field editors.
+/// </summary>
 internal sealed class OpportunityPartDisplayDriver : ContentPartDisplayDriver<OpportunityPart>
 {
     private readonly INamedCatalog<OpportunityStage> _stages;
     private readonly ICatalogManager<OmnichannelCampaign> _campaigns;
-    private readonly LeadSourceProvider _sources;
-    private readonly IContentManager _contentManager;
-    private readonly IHttpContextAccessor _httpContextAccessor;
 
     internal readonly IStringLocalizer S;
 
@@ -29,23 +27,14 @@ internal sealed class OpportunityPartDisplayDriver : ContentPartDisplayDriver<Op
     /// </summary>
     /// <param name="stages">The opportunity stage catalog.</param>
     /// <param name="campaigns">The campaign manager.</param>
-    /// <param name="sources">The lead sources.</param>
-    /// <param name="contentManager">The content manager.</param>
-    /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public OpportunityPartDisplayDriver(
         INamedCatalog<OpportunityStage> stages,
         ICatalogManager<OmnichannelCampaign> campaigns,
-        LeadSourceProvider sources,
-        IContentManager contentManager,
-        IHttpContextAccessor httpContextAccessor,
         IStringLocalizer<OpportunityPartDisplayDriver> stringLocalizer)
     {
         _stages = stages;
         _campaigns = campaigns;
-        _sources = sources;
-        _contentManager = contentManager;
-        _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
     }
 
@@ -60,8 +49,8 @@ internal sealed class OpportunityPartDisplayDriver : ContentPartDisplayDriver<Op
             model.StageName = stage?.Name;
             model.IsClosed = part.IsClosed;
             model.IsWon = part.IsWon;
-            model.Amount = part.Amount;
-            model.CloseDate = part.CloseDate;
+            model.Amount = part.Amount?.Value;
+            model.CloseDate = part.CloseDate?.Value;
             model.Probability = part.Probability;
         }).Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:4");
     }
@@ -74,13 +63,7 @@ internal sealed class OpportunityPartDisplayDriver : ContentPartDisplayDriver<Op
 
             model.StageId = part.StageId;
             model.Probability = part.Probability;
-            model.Amount = part.Amount;
-            model.CloseDate = part.CloseDate;
-            model.OwnerId = part.OwnerId;
-            model.SourceId = part.SourceId;
             model.CampaignId = part.CampaignId;
-            model.PrimaryContactItemId = part.PrimaryContactItemId;
-            model.AccountContentItemId = GetAccountId(part.ContentItem);
             model.Stages = stages
                 .Select(stage => new SelectListItem($"{stage.Name} ({stage.Probability}%)", stage.ItemId, stage.ItemId == part.StageId))
                 .ToList();
@@ -88,14 +71,6 @@ internal sealed class OpportunityPartDisplayDriver : ContentPartDisplayDriver<Op
                 .OrderBy(campaign => campaign.DisplayText, StringComparer.OrdinalIgnoreCase)
                 .Select(campaign => new SelectListItem(campaign.DisplayText, campaign.ItemId, campaign.ItemId == part.CampaignId))
                 .ToList();
-            model.Sources = await _sources.GetOptionsAsync(part.SourceId);
-
-            if (!string.IsNullOrEmpty(part.PrimaryContactItemId))
-            {
-                var contact = await _contentManager.GetAsync(part.PrimaryContactItemId, VersionOptions.Latest);
-
-                model.PrimaryContactDisplayText = contact?.DisplayText ?? part.PrimaryContactItemId;
-            }
         }).Location("Parts:1");
     }
 
@@ -118,11 +93,6 @@ internal sealed class OpportunityPartDisplayDriver : ContentPartDisplayDriver<Op
             context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.Probability), S["The probability must be between 0 and 100."]);
         }
 
-        if (model.Amount is < 0)
-        {
-            context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.Amount), S["The amount cannot be negative."]);
-        }
-
         // A stage change resets the probability to the new stage's default unless the editor typed its own.
         var stageChanged = !string.Equals(part.StageId, model.StageId, StringComparison.Ordinal);
 
@@ -130,29 +100,8 @@ internal sealed class OpportunityPartDisplayDriver : ContentPartDisplayDriver<Op
         part.Probability = stageChanged && model.Probability == part.Probability
             ? stage?.Probability
             : model.Probability;
-        part.Amount = model.Amount;
-        part.CloseDate = model.CloseDate?.Date;
-        part.OwnerId = Trim(model.OwnerId);
-        part.SourceId = await _sources.FindIdAsync(model.SourceId);
-        part.CampaignId = Trim(model.CampaignId);
-        part.PrimaryContactItemId = Trim(model.PrimaryContactItemId);
+        part.CampaignId = string.IsNullOrWhiteSpace(model.CampaignId) ? null : model.CampaignId.Trim();
 
         return Edit(part, context);
     }
-
-    private string GetAccountId(ContentItem contentItem)
-    {
-        if (contentItem?.TryGet<ContainedPart>(out var contained) == true && !string.IsNullOrEmpty(contained.ListContentItemId))
-        {
-            return contained.ListContentItemId;
-        }
-
-        // A new opportunity created from inside an account carries the account in the query string until it is saved.
-        return _httpContextAccessor.HttpContext?.Request.Query["ListPart.ContainerId"].ToString() is { Length: > 0 } containerId
-            ? containerId
-            : null;
-    }
-
-    private static string Trim(string value)
-        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

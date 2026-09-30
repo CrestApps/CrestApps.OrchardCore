@@ -18,6 +18,7 @@ internal sealed class LeadBatchFilterDisplayDriver : DisplayDriver<OmnichannelAc
 {
     private readonly INamedCatalog<LeadStatus> _statuses;
     private readonly LeadSourceProvider _sources;
+    private readonly LeadRatingProvider _ratings;
     private readonly OmnichannelContentTypeProvider _contentTypeProvider;
 
     internal readonly IStringLocalizer S;
@@ -27,16 +28,19 @@ internal sealed class LeadBatchFilterDisplayDriver : DisplayDriver<OmnichannelAc
     /// </summary>
     /// <param name="statuses">The lead status catalog.</param>
     /// <param name="sources">The lead sources.</param>
+    /// <param name="ratings">The lead ratings.</param>
     /// <param name="contentTypeProvider">The CRM content type provider.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public LeadBatchFilterDisplayDriver(
         INamedCatalog<LeadStatus> statuses,
         LeadSourceProvider sources,
+        LeadRatingProvider ratings,
         OmnichannelContentTypeProvider contentTypeProvider,
         IStringLocalizer<LeadBatchFilterDisplayDriver> stringLocalizer)
     {
         _statuses = statuses;
         _sources = sources;
+        _ratings = ratings;
         _contentTypeProvider = contentTypeProvider;
         S = stringLocalizer;
     }
@@ -69,8 +73,8 @@ internal sealed class LeadBatchFilterDisplayDriver : DisplayDriver<OmnichannelAc
                 .OrderBy(status => status.Order)
                 .Select(status => new SelectListItem(status.Name, status.ItemId, selected.Contains(status.ItemId)))
                 .ToList();
-            model.Ratings = LeadRatings.All
-                .Select(rating => new SelectListItem(S[rating], rating, ratings.Contains(rating)))
+            model.Ratings = (await _ratings.GetOptionsAsync())
+                .Select(option => new SelectListItem(option.Name, option.Value, ratings.Contains(option.Value)))
                 .ToList();
         }).Location("Content:2");
     }
@@ -90,12 +94,29 @@ internal sealed class LeadBatchFilterDisplayDriver : DisplayDriver<OmnichannelAc
                 ListName = Trim(model.ListName),
                 SourceId = await _sources.FindIdAsync(model.SourceId),
                 OwnerId = Trim(model.OwnerId),
-                Ratings = (model.SelectedRatings ?? []).Select(LeadRatings.Normalize).Where(rating => rating is not null).Distinct().ToArray(),
+                Ratings = await NormalizeRatingsAsync(model.SelectedRatings),
                 SkipLeadsThatAreContacts = model.SkipLeadsThatAreContacts,
             });
         }
 
         return Edit(batch, context);
+    }
+
+    private async Task<string[]> NormalizeRatingsAsync(string[] selected)
+    {
+        var ratings = new List<string>();
+
+        foreach (var value in selected ?? [])
+        {
+            var rating = await _ratings.NormalizeAsync(value);
+
+            if (rating is not null && !ratings.Contains(rating, StringComparer.OrdinalIgnoreCase))
+            {
+                ratings.Add(rating);
+            }
+        }
+
+        return ratings.ToArray();
     }
 
     private static string Trim(string value)

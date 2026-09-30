@@ -71,16 +71,7 @@ internal sealed class LeadPartDisplayDriver : ContentPartDisplayDriver<LeadPart>
         return Initialize<LeadPartViewModel>(GetEditorShapeType(context), async model =>
         {
             model.StatusId = part.StatusId;
-            model.Company = part.Company;
-            model.SourceId = part.SourceId;
-            model.ListName = part.ListName;
-            model.Rating = part.Rating;
-            model.OwnerId = part.OwnerId;
             model.Statuses = await GetStatusOptionsAsync(part.StatusId);
-            model.Sources = await _sources.GetOptionsAsync(part.SourceId);
-            model.Ratings = LeadRatings.All
-                .Select(rating => new SelectListItem(S[rating], rating, rating == part.Rating))
-                .ToList();
         }).Location("Parts:1");
     }
 
@@ -89,7 +80,7 @@ internal sealed class LeadPartDisplayDriver : ContentPartDisplayDriver<LeadPart>
         if (part.IsConverted)
         {
             // A converted lead is the record of what happened before it became a contact. Only someone allowed to
-            // correct that record may save it, and even then the lead fields stay as they were.
+            // correct that record may save it, and even then its status and conversion stay as they were.
             var user = _httpContextAccessor.HttpContext?.User;
 
             if (user is null || !await _authorizationService.AuthorizeAsync(user, OmnichannelConstants.Permissions.EditConvertedLead))
@@ -116,12 +107,6 @@ internal sealed class LeadPartDisplayDriver : ContentPartDisplayDriver<LeadPart>
             part.StatusId = model.StatusId;
         }
 
-        part.Company = Trim(model.Company);
-        part.SourceId = await _sources.FindIdAsync(model.SourceId);
-        part.ListName = Trim(model.ListName);
-        part.Rating = LeadRatings.Normalize(model.Rating);
-        part.OwnerId = Trim(model.OwnerId);
-
         return Edit(part, context);
     }
 
@@ -131,10 +116,10 @@ internal sealed class LeadPartDisplayDriver : ContentPartDisplayDriver<LeadPart>
         model.ContentItem = part.ContentItem;
         model.IsConverted = part.IsConverted;
         model.StatusId = part.StatusId;
-        model.Rating = part.Rating;
-        model.SourceName = await _sources.GetNameAsync(part.SourceId);
-        model.ListName = part.ListName;
-        model.Company = part.Company;
+        model.Rating = part.Rating.GetTrimmedText();
+        model.SourceName = await _sources.GetNameAsync(part.Source.GetFirstContentItemId());
+        model.ListName = part.ListName.GetTrimmedText();
+        model.Company = part.Company.GetTrimmedText();
 
         var status = string.IsNullOrEmpty(part.StatusId)
             ? null
@@ -160,7 +145,4 @@ internal sealed class LeadPartDisplayDriver : ContentPartDisplayDriver<LeadPart>
             .Select(status => new SelectListItem(status.Name, status.ItemId, status.ItemId == selectedId))
             .ToList();
     }
-
-    private static string Trim(string value)
-        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

@@ -87,6 +87,7 @@ public sealed class CrmStartup : StartupBase
 
         services.AddScoped<CrmCatalogSeeder>();
         services.AddScoped<LeadStatusFlagService>();
+        services.AddScoped<LeadRatingProvider>();
         services.AddScoped<CrmAccountListSynchronizer>();
         services.AddScoped<IContentDefinitionEventHandler, CrmContentDefinitionEventHandler>();
 

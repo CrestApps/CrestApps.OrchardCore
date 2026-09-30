@@ -2,11 +2,13 @@ using System.Data;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.ContentTransfer.Handlers;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Localization;
+using OrchardCore.ContentFields.Fields;
 using OrchardCore.ContentManagement;
 using OrchardCore.Entities;
 using OrchardCore.Modules;
@@ -25,6 +27,7 @@ public sealed class LeadPartContentImportHandler : ContentImportHandlerBase, ICo
 {
     private readonly INamedCatalog<LeadStatus> _statuses;
     private readonly LeadSourceProvider _sources;
+    private readonly LeadRatingProvider _ratings;
     private readonly UserManager<IUser> _userManager;
     private readonly ImportRowDoNotCallFlags _doNotCallFlags;
     private readonly IClock _clock;
@@ -51,6 +54,7 @@ public sealed class LeadPartContentImportHandler : ContentImportHandlerBase, ICo
     /// </summary>
     /// <param name="statuses">The lead status catalog.</param>
     /// <param name="sources">The lead sources, resolved by name.</param>
+    /// <param name="ratings">The lead ratings, resolved by name.</param>
     /// <param name="userManager">The user manager used to resolve owners by user name.</param>
     /// <param name="doNotCallFlags">What the do-not-call screening decided about each row of the import.</param>
     /// <param name="clock">The clock.</param>
@@ -58,6 +62,7 @@ public sealed class LeadPartContentImportHandler : ContentImportHandlerBase, ICo
     public LeadPartContentImportHandler(
         INamedCatalog<LeadStatus> statuses,
         LeadSourceProvider sources,
+        LeadRatingProvider ratings,
         UserManager<IUser> userManager,
         ImportRowDoNotCallFlags doNotCallFlags,
         IClock clock,
@@ -65,6 +70,7 @@ public sealed class LeadPartContentImportHandler : ContentImportHandlerBase, ICo
     {
         _statuses = statuses;
         _sources = sources;
+        _ratings = ratings;
         _userManager = userManager;
         _doNotCallFlags = doNotCallFlags;
         _clock = clock;
@@ -105,7 +111,7 @@ public sealed class LeadPartContentImportHandler : ContentImportHandlerBase, ICo
         _ratingColumn ??= new ImportColumn
         {
             Name = "Rating",
-            Description = S["Hot, Warm or Cold."],
+            Description = S["One of the ratings of the lead Rating field, for example Hot, Warm or Cold."],
             AdditionalNames = ["Lead Rating"],
         };
 
@@ -219,11 +225,29 @@ public sealed class LeadPartContentImportHandler : ContentImportHandlerBase, ICo
             part.StatusId = statusId;
         }
 
-        part.SourceId = await _sources.FindIdAsync(source) ?? part.SourceId ?? options?.LeadSourceId;
-        part.ListName = list ?? part.ListName ?? options?.LeadListName;
-        part.Company = company ?? part.Company;
-        part.Rating = LeadRatings.Normalize(rating) ?? part.Rating;
-        part.OwnerId = await ResolveUserIdAsync(owner) ?? part.OwnerId ?? options?.LeadOwnerId;
+        var sourceId = await _sources.FindIdAsync(source) ?? part.Source.GetFirstContentItemId() ?? options?.LeadSourceId;
+        var ownerId = await ResolveUserIdAsync(owner) ?? part.Owner.GetFirstUserId() ?? options?.LeadOwnerId;
+
+        part.Source = new ContentPickerField
+        {
+            ContentItemIds = string.IsNullOrEmpty(sourceId) ? [] : [sourceId],
+        };
+        part.ListName = new TextField
+        {
+            Text = list ?? part.ListName.GetTrimmedText() ?? options?.LeadListName,
+        };
+        part.Company = new TextField
+        {
+            Text = company ?? part.Company.GetTrimmedText(),
+        };
+        part.Rating = new TextField
+        {
+            Text = await _ratings.NormalizeAsync(rating) ?? part.Rating.GetTrimmedText(),
+        };
+        part.Owner = new UserPickerField
+        {
+            UserIds = string.IsNullOrEmpty(ownerId) ? [] : [ownerId],
+        };
 
         // The import checked this row's numbers against a do-not-call registry, so the lead records when.
         if (_doNotCallFlags.IsScreened(context.Row))
@@ -249,11 +273,11 @@ public sealed class LeadPartContentImportHandler : ContentImportHandlerBase, ICo
         var statuses = await GetStatusesAsync();
 
         context.Row[_statusColumn.Name] = statuses.FirstOrDefault(entry => entry.ItemId == part.StatusId)?.Name;
-        context.Row[_sourceColumn.Name] = await _sources.GetNameAsync(part.SourceId);
-        context.Row[_listColumn.Name] = part.ListName;
-        context.Row[_companyColumn.Name] = part.Company;
-        context.Row[_ratingColumn.Name] = part.Rating;
-        context.Row[_ownerColumn.Name] = await ResolveUserNameAsync(part.OwnerId);
+        context.Row[_sourceColumn.Name] = await _sources.GetNameAsync(part.Source.GetFirstContentItemId());
+        context.Row[_listColumn.Name] = part.ListName.GetTrimmedText();
+        context.Row[_companyColumn.Name] = part.Company.GetTrimmedText();
+        context.Row[_ratingColumn.Name] = part.Rating.GetTrimmedText();
+        context.Row[_ownerColumn.Name] = await ResolveUserNameAsync(part.Owner.GetFirstUserId());
         context.Row[_isConvertedColumn.Name] = part.IsConverted;
 
         if (part.ConvertedUtc.HasValue)

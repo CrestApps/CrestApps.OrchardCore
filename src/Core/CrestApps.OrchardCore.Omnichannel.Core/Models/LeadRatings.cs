@@ -1,7 +1,7 @@
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 
 /// <summary>
-/// The ratings a lead can carry.
+/// The ratings the lead Rating field starts with. They can be changed in the field's predefined list.
 /// </summary>
 public static class LeadRatings
 {
@@ -15,21 +15,4 @@ public static class LeadRatings
     /// Gets every rating, hottest first.
     /// </summary>
     public static IReadOnlyList<string> All { get; } = [Hot, Warm, Cold];
-
-    /// <summary>
-    /// Returns the rating that matches the value regardless of case, or <see langword="null"/> when the value is
-    /// not a rating.
-    /// </summary>
-    /// <param name="value">The value to match.</param>
-    public static string Normalize(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return null;
-        }
-
-        var trimmed = value.Trim();
-
-        return All.FirstOrDefault(rating => string.Equals(rating, trimmed, StringComparison.OrdinalIgnoreCase));
-    }
 }
