@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
+using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -27,6 +28,7 @@ public sealed class OmnichannelContactImportOptionsDisplayDriver : DisplayDriver
     private readonly IPhoneNumberService _phoneNumberService;
     private readonly IOmnichannelContactTypeProvider _contactTypeProvider;
     private readonly INamedCatalog<LeadStatus> _leadStatuses;
+    private readonly LeadSourceProvider _leadSources;
     private readonly bool _crmEnabled;
     private readonly IStringLocalizer S;
 
@@ -38,6 +40,7 @@ public sealed class OmnichannelContactImportOptionsDisplayDriver : DisplayDriver
     /// <param name="stringLocalizer">The string localizer.</param>
     /// <param name="contactTypeProvider">Tells lead types from contact types.</param>
     /// <param name="leadStatuses">The lead status catalog.</param>
+    /// <param name="leadSources">The lead sources.</param>
     /// <param name="crmOptions">Whether the CRM feature is enabled.</param>
     public OmnichannelContactImportOptionsDisplayDriver(
         IContentDefinitionManager contentDefinitionManager,
@@ -45,10 +48,12 @@ public sealed class OmnichannelContactImportOptionsDisplayDriver : DisplayDriver
         IStringLocalizer<OmnichannelContactImportOptionsDisplayDriver> stringLocalizer,
         IOmnichannelContactTypeProvider contactTypeProvider,
         INamedCatalog<LeadStatus> leadStatuses,
+        LeadSourceProvider leadSources,
         IOptions<OmnichannelCrmOptions> crmOptions)
     {
         _contactTypeProvider = contactTypeProvider;
         _leadStatuses = leadStatuses;
+        _leadSources = leadSources;
         _crmEnabled = crmOptions.Value.Enabled;
         _contentDefinitionManager = contentDefinitionManager;
         _phoneNumberService = phoneNumberService;
@@ -75,7 +80,7 @@ public sealed class OmnichannelContactImportOptionsDisplayDriver : DisplayDriver
             viewModel.DuplicateScope = options.DuplicateScope;
             viewModel.SkipNumbersOfExistingContacts = options.SkipNumbersOfExistingContacts;
             viewModel.SkipNumbersOfOpenLeads = options.SkipNumbersOfOpenLeads;
-            viewModel.LeadSource = options.LeadSource;
+            viewModel.LeadSourceId = options.LeadSourceId;
             viewModel.LeadListName = options.LeadListName;
             viewModel.LeadStatusId = options.LeadStatusId;
             viewModel.LeadOwnerId = options.LeadOwnerId;
@@ -87,6 +92,7 @@ public sealed class OmnichannelContactImportOptionsDisplayDriver : DisplayDriver
                     .OrderBy(status => status.Order)
                     .Select(status => new SelectListItem(status.Name, status.ItemId, status.ItemId == options.LeadStatusId))
                     .ToList();
+                viewModel.LeadSources = await _leadSources.GetOptionsAsync(options.LeadSourceId);
             }
         }).Location("Content:5");
     }
@@ -116,7 +122,7 @@ public sealed class OmnichannelContactImportOptionsDisplayDriver : DisplayDriver
             {
                 options.SkipNumbersOfExistingContacts = viewModel.SkipNumbersOfExistingContacts;
                 options.SkipNumbersOfOpenLeads = viewModel.SkipNumbersOfOpenLeads;
-                options.LeadSource = Trim(viewModel.LeadSource);
+                options.LeadSourceId = await _leadSources.FindIdAsync(viewModel.LeadSourceId);
                 options.LeadListName = Trim(viewModel.LeadListName);
                 options.LeadStatusId = Trim(viewModel.LeadStatusId);
                 options.LeadOwnerId = Trim(viewModel.LeadOwnerId);

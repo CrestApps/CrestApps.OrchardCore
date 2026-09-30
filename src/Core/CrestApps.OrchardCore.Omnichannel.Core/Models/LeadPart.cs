@@ -1,3 +1,4 @@
+using OrchardCore.ContentFields.Fields;
 using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -5,7 +6,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 /// <summary>
 /// Marks a contact-capable content type as a lead and holds the lead's state. A lead type also carries
 /// <see cref="OmnichannelContactPart"/>, so it can be called, texted and loaded into activities exactly like a
-/// contact, while it is listed, matched and reported apart from contacts until it is converted.
+/// contact, while it is listed, matched and reported apart from contacts until it is converted. The properties the
+/// CRM acts on are plain values; the data a person fills in is kept in content fields of the part, so each gets the
+/// standard field editor.
 /// </summary>
 public sealed class LeadPart : ContentPart
 {
@@ -21,30 +24,32 @@ public sealed class LeadPart : ContentPart
     public bool IsClosed { get; set; }
 
     /// <summary>
-    /// Gets or sets where the lead came from, such as a web form, a purchased list or a trade show.
+    /// Gets or sets the company the lead works for. It names the account created when the lead is converted.
     /// </summary>
-    public string Source { get; set; }
+    public TextField Company { get; set; }
+
+    /// <summary>
+    /// Gets or sets the lead source the lead came from, such as a web form, a purchased list or a trade show. It
+    /// picks one item of the <see cref="OmnichannelConstants.ContentTypes.LeadSource"/> content type.
+    /// </summary>
+    public ContentPickerField Source { get; set; }
 
     /// <summary>
     /// Gets or sets the name of the list or import the lead arrived in, so a list can be loaded, reported on and
     /// cleaned up as one unit.
     /// </summary>
-    public string ListName { get; set; }
+    public TextField ListName { get; set; }
 
     /// <summary>
-    /// Gets or sets the company the lead works for. It names the account created when the lead is converted.
+    /// Gets or sets the lead's rating, one of the options of the field's predefined list. The CRM starts the list
+    /// with the <see cref="LeadRatings"/> values.
     /// </summary>
-    public string Company { get; set; }
+    public TextField Rating { get; set; }
 
     /// <summary>
-    /// Gets or sets the lead's rating, one of the <see cref="LeadRatings"/> values.
+    /// Gets or sets the user who owns the lead.
     /// </summary>
-    public string Rating { get; set; }
-
-    /// <summary>
-    /// Gets or sets the identifier of the user who owns the lead.
-    /// </summary>
-    public string OwnerId { get; set; }
+    public UserPickerField Owner { get; set; }
 
     /// <summary>
     /// Gets or sets whether the lead was converted. A converted lead is read-only and hidden from the lead list,

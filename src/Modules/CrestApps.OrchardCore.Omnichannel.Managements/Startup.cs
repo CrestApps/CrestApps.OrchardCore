@@ -103,6 +103,9 @@ public sealed class Startup : StartupBase
         services.AddShapeTableProvider<OmnichannelSubjectPartIndexSettingsShapeTableProvider>();
         services.AddShapeTableProvider<ContactListPartShapeTableProvider>();
         services.AddScoped<ContactListPartNavigationResolver>();
+
+        // Registered outside the CRM feature because the content import options driver, which is not part of it, uses it.
+        services.AddScoped<LeadSourceProvider>();
     }
 }
 

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using OrchardCore.ContentManagement;
@@ -31,10 +32,10 @@ internal sealed class LeadIndexProvider : IndexProvider<ContentItem>
             StatusId = Truncate(part.StatusId, 50),
             IsClosed = part.IsClosed || part.IsConverted,
             IsConverted = part.IsConverted,
-            Source = Truncate(part.Source?.Trim(), 255),
-            ListName = Truncate(part.ListName?.Trim(), 255),
-            Rating = Truncate(part.Rating, 20),
-            OwnerId = Truncate(part.OwnerId, 50),
+            SourceId = Truncate(part.Source.GetFirstContentItemId(), 26),
+            ListName = Truncate(part.ListName.GetTrimmedText(), 255),
+            Rating = Truncate(part.Rating.GetTrimmedText(), 20),
+            OwnerId = Truncate(part.Owner.GetFirstUserId(), 50),
             ConvertedContactItemId = Truncate(part.ConvertedContactItemId, 26),
             ConvertedUtc = part.ConvertedUtc,
             CreatedUtc = contentItem.CreatedUtc,

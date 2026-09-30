@@ -1,7 +1,7 @@
 {
   "name": "OmnichannelCrmStarter",
   "displayName": "Omnichannel CRM starter",
-  "description": "Enables the Omnichannel CRM and adds a ready-to-use Lead type, a Contact type that leads convert into, and a Sales Opportunity type. The Account type, the lead statuses and the opportunity stages come with the feature itself. Every type can be renamed or extended afterward.",
+  "description": "Enables the Omnichannel CRM and adds a ready-to-use Lead type and a Contact type that leads convert into, both with first name, last name and job title fields and a title made from the name, a Sales Opportunity type and a starter set of lead sources. The Account and Lead Source types, the lead statuses and the opportunity stages come with the feature itself. Every type can be renamed or extended afterward.",
   "author": "CrestApps",
   "website": "https://crestapps.com",
   "version": "1.0.0",
@@ -36,6 +36,19 @@
               "Settings": {
                 "ContentTypePartSettings": {
                   "Position": "0"
+                },
+                "TitlePartSettings": {
+                  "Options": "GeneratedHidden",
+                  "Pattern": "{{ Model.ContentItem.Content.Contact.FirstName.Text | append: ' ' | append: Model.ContentItem.Content.Contact.LastName.Text | strip }}"
+                }
+              }
+            },
+            {
+              "PartName": "Contact",
+              "Name": "Contact",
+              "Settings": {
+                "ContentTypePartSettings": {
+                  "Position": "1"
                 }
               }
             },
@@ -44,7 +57,7 @@
               "Name": "OmnichannelContactPart",
               "Settings": {
                 "ContentTypePartSettings": {
-                  "Position": "2"
+                  "Position": "3"
                 }
               }
             }
@@ -67,6 +80,19 @@
               "Settings": {
                 "ContentTypePartSettings": {
                   "Position": "0"
+                },
+                "TitlePartSettings": {
+                  "Options": "GeneratedHidden",
+                  "Pattern": "{{ Model.ContentItem.Content.Lead.FirstName.Text | append: ' ' | append: Model.ContentItem.Content.Lead.LastName.Text | strip }}"
+                }
+              }
+            },
+            {
+              "PartName": "Lead",
+              "Name": "Lead",
+              "Settings": {
+                "ContentTypePartSettings": {
+                  "Position": "1"
                 }
               }
             },
@@ -75,7 +101,7 @@
               "Name": "LeadPart",
               "Settings": {
                 "ContentTypePartSettings": {
-                  "Position": "1"
+                  "Position": "2"
                 },
                 "LeadPartSettings": {
                   "TargetContactContentType": "Contact",
@@ -88,7 +114,7 @@
               "Name": "OmnichannelContactPart",
               "Settings": {
                 "ContentTypePartSettings": {
-                  "Position": "2"
+                  "Position": "3"
                 }
               }
             }
@@ -126,7 +152,151 @@
           ]
         }
       ],
-      "ContentParts": []
+      "ContentParts": [
+        {
+          "Name": "Contact",
+          "Settings": {},
+          "ContentPartFieldDefinitionRecords": [
+            {
+              "FieldName": "TextField",
+              "Name": "FirstName",
+              "Settings": {
+                "ContentPartFieldSettings": {
+                  "DisplayName": "First name",
+                  "Position": "0"
+                }
+              }
+            },
+            {
+              "FieldName": "TextField",
+              "Name": "LastName",
+              "Settings": {
+                "ContentPartFieldSettings": {
+                  "DisplayName": "Last name",
+                  "Position": "1"
+                },
+                "TextFieldSettings": {
+                  "Required": true
+                }
+              }
+            },
+            {
+              "FieldName": "TextField",
+              "Name": "JobTitle",
+              "Settings": {
+                "ContentPartFieldSettings": {
+                  "DisplayName": "Job title",
+                  "Position": "2"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "Name": "Lead",
+          "Settings": {},
+          "ContentPartFieldDefinitionRecords": [
+            {
+              "FieldName": "TextField",
+              "Name": "FirstName",
+              "Settings": {
+                "ContentPartFieldSettings": {
+                  "DisplayName": "First name",
+                  "Position": "0"
+                }
+              }
+            },
+            {
+              "FieldName": "TextField",
+              "Name": "LastName",
+              "Settings": {
+                "ContentPartFieldSettings": {
+                  "DisplayName": "Last name",
+                  "Position": "1"
+                },
+                "TextFieldSettings": {
+                  "Required": true
+                }
+              }
+            },
+            {
+              "FieldName": "TextField",
+              "Name": "JobTitle",
+              "Settings": {
+                "ContentPartFieldSettings": {
+                  "DisplayName": "Job title",
+                  "Position": "2"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "content",
+      "data": [
+        {
+          "ContentItemId": "leadsource-web-form",
+          "ContentType": "LeadSource",
+          "DisplayText": "Web form",
+          "Latest": true,
+          "Published": true,
+          "TitlePart": {
+            "Title": "Web form"
+          }
+        },
+        {
+          "ContentItemId": "leadsource-referral",
+          "ContentType": "LeadSource",
+          "DisplayText": "Referral",
+          "Latest": true,
+          "Published": true,
+          "TitlePart": {
+            "Title": "Referral"
+          }
+        },
+        {
+          "ContentItemId": "leadsource-trade-show",
+          "ContentType": "LeadSource",
+          "DisplayText": "Trade show",
+          "Latest": true,
+          "Published": true,
+          "TitlePart": {
+            "Title": "Trade show"
+          }
+        },
+        {
+          "ContentItemId": "leadsource-purchased-list",
+          "ContentType": "LeadSource",
+          "DisplayText": "Purchased list",
+          "Latest": true,
+          "Published": true,
+          "TitlePart": {
+            "Title": "Purchased list"
+          }
+        },
+        {
+          "ContentItemId": "leadsource-advertisement",
+          "ContentType": "LeadSource",
+          "DisplayText": "Advertisement",
+          "Latest": true,
+          "Published": true,
+          "TitlePart": {
+            "Title": "Advertisement"
+          }
+        },
+        {
+          "ContentItemId": "leadsource-cold-call",
+          "ContentType": "LeadSource",
+          "DisplayText": "Cold call",
+          "Latest": true,
+          "Published": true,
+          "TitlePart": {
+            "Title": "Cold call"
+          }
+        }
+      ]
     }
   ]
 }

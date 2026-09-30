@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
+using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
@@ -14,18 +15,22 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports;
 public sealed class LeadConversionReportProvider : OmnichannelReportBase, IReportFilterMetadata
 {
     private readonly ISession _session;
+    private readonly LeadSourceProvider _sources;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LeadConversionReportProvider"/> class.
     /// </summary>
     /// <param name="session">The YesSql session.</param>
+    /// <param name="sources">The lead sources, which name the source of each lead.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public LeadConversionReportProvider(
         ISession session,
+        LeadSourceProvider sources,
         IStringLocalizer<LeadConversionReportProvider> stringLocalizer)
         : base(stringLocalizer)
     {
         _session = session;
+        _sources = sources;
     }
 
     /// <inheritdoc/>
@@ -55,8 +60,13 @@ public sealed class LeadConversionReportProvider : OmnichannelReportBase, IRepor
             .ListAsync(cancellationToken))
             .ToList();
 
+        var sourceNames = await _sources.GetNamesAsync();
+        var unknownSource = S["(Unknown source)"].Value;
+
         return new ReportDocument()
-            .Add(Section(S["By source"].Value, S["Source"].Value, leads, lead => lead.Source))
+            .Add(Section(S["By source"].Value, S["Source"].Value, leads, lead => string.IsNullOrEmpty(lead.SourceId)
+                ? null
+                : sourceNames.GetValueOrDefault(lead.SourceId) ?? unknownSource))
             .Add(Section(S["By list"].Value, S["List"].Value, leads, lead => lead.ListName));
     }
 

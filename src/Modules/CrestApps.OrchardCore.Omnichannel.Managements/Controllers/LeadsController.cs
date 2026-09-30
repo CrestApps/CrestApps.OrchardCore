@@ -171,9 +171,9 @@ public sealed class LeadsController : Controller
             .GetSettings<LeadPartSettings>() ?? new LeadPartSettings();
 
         model.Lead = lead;
-        model.Company = leadPart.Company;
+        model.Company = leadPart.Company.GetTrimmedText();
         model.MatchingContacts = (await _matchFinder.FindContactsAsync(lead)).ToList();
-        model.MatchingAccounts = (await _matchFinder.FindAccountsAsync(leadPart.Company)).ToList();
+        model.MatchingAccounts = (await _matchFinder.FindAccountsAsync(model.Company)).ToList();
         model.HasAccountTypes = definitions.Any(OmnichannelRecordKinds.IsAccount);
 
         if (!isPost)
@@ -181,7 +181,7 @@ public sealed class LeadsController : Controller
             model.ContactContentType = settings.TargetContactContentType;
             model.OpportunityContentType = settings.DefaultOpportunityContentType;
             model.ExistingContactItemId = model.MatchingContacts.Count == 1 ? model.MatchingContacts[0].ContentItemId : null;
-            model.AccountName = leadPart.Company;
+            model.AccountName = model.Company;
 
             if (!model.HasAccountTypes)
             {
@@ -194,7 +194,7 @@ public sealed class LeadsController : Controller
             }
             else
             {
-                model.AccountMode = string.IsNullOrWhiteSpace(leadPart.Company)
+                model.AccountMode = string.IsNullOrWhiteSpace(model.Company)
                     ? LeadConversionAccountMode.None
                     : LeadConversionAccountMode.CreateNew;
             }

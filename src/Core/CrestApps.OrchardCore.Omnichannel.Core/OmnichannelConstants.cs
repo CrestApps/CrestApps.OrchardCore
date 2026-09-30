@@ -94,6 +94,12 @@ public static class OmnichannelConstants
         /// The account content type the CRM feature creates.
         /// </summary>
         public const string Account = "Account";
+
+        /// <summary>
+        /// The lead source content type the CRM feature creates. Its items are the sources a lead or an opportunity
+        /// can come from, for example Web form or Trade show.
+        /// </summary>
+        public const string LeadSource = "LeadSource";
     }
 
     /// <summary>

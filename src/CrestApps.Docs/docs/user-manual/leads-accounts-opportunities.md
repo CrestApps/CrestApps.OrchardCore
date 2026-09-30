@@ -27,7 +27,11 @@ The quickest way is the **Omnichannel CRM starter** recipe:
    - **Contact**, if you do not have one;
    - **Sales Opportunity**.
 
-The feature itself adds the **Account** type, a starting set of **lead statuses** and a starting set of **opportunity stages**. It never changes a type you already have.
+   **Lead** and **Contact** both get **First name**, **Last name** (required) and **Job title** fields. Their title is built from the first and last name, so it is not typed by hand. Converting a lead copies these fields to the contact.
+
+   It also adds a starting set of lead sources: *Web form*, *Referral*, *Trade show*, *Purchased list*, *Advertisement* and *Cold call*.
+
+The feature itself adds the **Account** and **Lead Source** types, a starting set of **lead statuses** and a starting set of **opportunity stages**. It never changes a type you already have.
 
 To use your own types instead, turn on **Omnichannel CRM** under **Tools > Features** and attach the parts yourself:
 
@@ -46,10 +50,12 @@ A type with the Omnichannel Contact part and no Lead part is a contact type, as 
 | --- | --- |
 | **Lead status** | Where the lead is in qualification, for example *Working - Contacted*. New leads get the default status. |
 | **Company** | The company the lead works for. Conversion can find or create an account with this name. |
-| **Lead source** | Where the lead came from, for example *Trade show*. |
+| **Lead source** | Where the lead came from, for example *Trade show*. Pick one of your [lead sources](#lead-sources). |
 | **List** | The list or file it arrived in, so a whole list can be loaded, reported on and cleaned up together. |
-| **Rating** | *Hot*, *Warm* or *Cold*. |
+| **Rating** | *Hot*, *Warm* or *Cold* to start with. |
 | **Lead owner** | The user responsible for the lead. |
+
+Only **Lead status** belongs to the CRM itself. The other fields are standard content fields of the **Lead** part, so they use the normal field editors and settings. To change the rating choices, a hint or a required flag, open **Content Definition > Content Parts > Lead** and edit the field. The same fields show on every lead type. You can add your own fields to the part or to a lead type the same way.
 
 Use these search terms on the Leads list:
 
@@ -57,7 +63,7 @@ Use these search terms on the Leads list:
 | --- | --- | --- |
 | `status:` | a lead status by name | `status:Nurturing` |
 | `converted:` | converted or open leads | `converted:true` |
-| `source:` | a lead source | `source:"Trade show"` |
+| `source:` | a lead source by name | `source:"Trade show"` |
 | `list:` | a list name | `list:"Spring Import"` |
 | `rating:` | a rating | `rating:hot` |
 | `owner:` | the lead owner's user name | `owner:alex` |
@@ -132,13 +138,19 @@ Every contact and opportunity type can join an account without extra setup. Lead
 
 ## Opportunities
 
-**Interaction Center > Opportunities** lists your open opportunities. Each one has a **Stage**, **Amount**, **Probability**, **Close date**, **Owner** and **Primary contact**, and can belong to an account. The stage decides whether the opportunity is open, won or lost. A new opportunity starts with its stage's probability, and a closed stage always sets it.
+**Interaction Center > Opportunities** lists your open opportunities. Each one has a **Stage**, **Probability** and **Campaign**, plus the **Amount**, **Close date**, **Primary contact**, **Opportunity owner** and **Lead source** fields, and can belong to an account. The fields are standard content fields of the **Opportunity** part; edit them under **Content Definition > Content Parts > Opportunity**. The **Primary contact** picker lists your contact types. An opportunity created by conversion takes the lead's owner and source. The stage decides whether the opportunity is open, won or lost. A new opportunity starts with its stage's probability, and a closed stage always sets it.
 
 Use `stage:`, `closed:`, `won:` and `account:` on the Opportunities list, for example `closed:false`.
 
+## Lead sources
+
+Lead sources are ordinary content items of the **Lead Source** type. Open **Interaction Center > Management > Lead Sources** to add, rename or remove one. You need the usual content permissions for the **Lead Source** type.
+
+The **Lead source** fields of leads and opportunities are content pickers of this type. Inventory loads and imports pick from the published lead sources too. Unpublishing or deleting a source removes it from the list, and leads that already have it show *(Unknown source)* in the conversion report.
+
 ## Lead statuses and opportunity stages
 
-Manage both lists under **Interaction Center > Management**.
+Manage both lists under **Interaction Center > Management**. Unlike lead sources, these lists are part of the CRM itself, because their settings decide how leads and opportunities behave.
 
 - **Lead Statuses** (permission **Manage lead statuses**): each status has a name, a description, an order and a **Type**:
   - **Open**: leads in it are still worked and loaded. Only an open status can be the one **a new lead starts in**.
@@ -158,7 +170,7 @@ When you import a lead type, the import screen adds:
 | **Skip numbers that already belong to an open lead** | Leaves out rows that duplicate a lead you are still working. On by default. |
 | **List name**, **Lead source**, **Lead status**, **Lead owner** | Given to every new lead whose row does not set its own. |
 
-The file can also carry `LeadStatus` (by name), `LeadSource`, `LeadList`, `Company`, `Rating` and `LeadOwner` (by user name) columns. Download the template from the import screen for the full list. A converted lead in the file is left unchanged.
+The file can also carry `LeadStatus` (by name), `LeadSource` (by name; a name that matches no lead source is ignored), `LeadList`, `Company`, `Rating` and `LeadOwner` (by user name) columns. Download the template from the import screen for the full list. A converted lead in the file is left unchanged.
 
 With the Do-not-call registry option on, you can also choose what happens to a number found on a registry:
 

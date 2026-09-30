@@ -1,3 +1,4 @@
+using OrchardCore.ContentFields.Fields;
 using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -5,7 +6,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 /// <summary>
 /// Marks a content type as an opportunity, a deal in progress, and holds the values the pipeline needs. A tenant
 /// defines one content type per kind of deal, such as a sales, resell or business opportunity, and each is
-/// contained in an account.
+/// contained in an account. The stage values are plain properties because the pipeline acts on them; the data a
+/// person fills in is kept in content fields of the part, so each gets the standard field editor.
 /// </summary>
 public sealed class OpportunityPart : ContentPart
 {
@@ -34,22 +36,23 @@ public sealed class OpportunityPart : ContentPart
     /// <summary>
     /// Gets or sets the expected value of the deal.
     /// </summary>
-    public decimal? Amount { get; set; }
+    public NumericField Amount { get; set; }
 
     /// <summary>
     /// Gets or sets the date the deal is expected to close.
     /// </summary>
-    public DateTime? CloseDate { get; set; }
+    public DateField CloseDate { get; set; }
 
     /// <summary>
-    /// Gets or sets the identifier of the user who owns the opportunity.
+    /// Gets or sets the user who owns the opportunity.
     /// </summary>
-    public string OwnerId { get; set; }
+    public UserPickerField Owner { get; set; }
 
     /// <summary>
-    /// Gets or sets where the opportunity came from.
+    /// Gets or sets the lead source the opportunity came from. It picks one item of the
+    /// <see cref="OmnichannelConstants.ContentTypes.LeadSource"/> content type.
     /// </summary>
-    public string Source { get; set; }
+    public ContentPickerField Source { get; set; }
 
     /// <summary>
     /// Gets or sets the identifier of the campaign the opportunity came from.
@@ -57,9 +60,9 @@ public sealed class OpportunityPart : ContentPart
     public string CampaignId { get; set; }
 
     /// <summary>
-    /// Gets or sets the content item identifier of the opportunity's primary contact.
+    /// Gets or sets the opportunity's primary contact.
     /// </summary>
-    public string PrimaryContactItemId { get; set; }
+    public ContentPickerField PrimaryContact { get; set; }
 
     /// <summary>
     /// Gets or sets the content item identifier of the lead this opportunity was created from.

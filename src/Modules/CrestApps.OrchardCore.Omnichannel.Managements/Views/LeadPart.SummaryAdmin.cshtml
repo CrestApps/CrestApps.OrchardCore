@@ -16,7 +16,7 @@ else if (Model.Statuses.Count > 0)
 @if (!string.IsNullOrEmpty(Model.Rating))
 {
     <span class="badge ta-badge font-weight-normal" title="@T["Rating"]">
-        <i class="fa-solid fa-temperature-half text-secondary me-1" aria-hidden="true"></i>@T[Model.Rating]
+        <i class="fa-solid fa-temperature-half text-secondary me-1" aria-hidden="true"></i>@Model.Rating
     </span>
 }
 
@@ -27,10 +27,10 @@ else if (Model.Statuses.Count > 0)
     </span>
 }
 
-@if (!string.IsNullOrEmpty(Model.Source))
+@if (!string.IsNullOrEmpty(Model.SourceName))
 {
     <span class="badge ta-badge font-weight-normal" title="@T["Lead source"]">
-        <i class="fa-solid fa-bullhorn text-secondary me-1" aria-hidden="true"></i>@Model.Source
+        <i class="fa-solid fa-bullhorn text-secondary me-1" aria-hidden="true"></i>@Model.SourceName
     </span>
 }
 

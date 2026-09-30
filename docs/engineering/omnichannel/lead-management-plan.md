@@ -232,9 +232,11 @@ public enum OmnichannelRecordKind
 | Member | Purpose |
 | --- | --- |
 | `StatusId` | A `LeadStatus` catalog entry. On create it is set to the catalog's default. |
-| `Source` | Free text or a picklist such as *Web form*, *Purchased list* or *Trade show*. |
+| `Source` | A `ContentPickerField` of the part that picks a `LeadSource` item, such as *Web form*, *Purchased list* or *Trade show*. Lead sources are content items rather than a catalog because nothing in the CRM acts on which source a lead has. |
 | `ListId` / `ListName` | The import or list this lead arrived in, so a dirty list can be loaded, reported on and purged as a unit. |
 | `Company`, `Rating` | Salesforce parity. Rating is Hot, Warm or Cold. |
+
+Everything a person fills in and the CRM does not act on (`Company`, `Source`, `ListName`, `Rating`, `Owner`) is a content field of the part, so it gets the standard field editor and settings; `Company`, `ListName` and `Rating` are `TextField`s (Rating with a predefined list), `Owner` is a `UserPickerField`. The opportunity part does the same for `Amount` (`NumericField`), `CloseDate` (`DateField`), `Owner`, `PrimaryContact` and `Source`. The status, stage and conversion values stay plain properties because the CRM acts on them.
 | `OwnerId` | The user who owns the lead. It is not the Orchard author. |
 | `IsConverted`, `ConvertedUtc`, `ConvertedById`, `ConvertedByUsername` | Conversion audit. |
 | `ConvertedContactItemId`, `ConvertedContactType` | The contact the lead became or was merged into. |
@@ -267,7 +269,7 @@ It gets a deployment step, a recipe step and a schema, matching the inventory's 
 ### Indexes
 
 - **New `LeadIndex`**, a map index over items with `LeadPart`. Columns: `ContentItemId`,
-  `ContentType`, `Published`, `Latest`, `StatusId`, `IsClosed`, `IsConverted`, `Source`, `ListId`, `OwnerId`,
+  `ContentType`, `Published`, `Latest`, `StatusId`, `IsClosed`, `IsConverted`, `SourceId`, `ListId`, `OwnerId`,
   `ConvertedContactItemId` and `ConvertedUtc`. It drives the Leads list filters, inventory filters and lead reports.
 - **Add `ContentType` and `RecordKind` to `OmnichannelContactIndex`.** Add `IsConverted` too, or join through the lead
   index; denormalizing is simpler for the hot caller-ID path. This is what lets channel lookups rank and exclude

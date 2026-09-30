@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
+using OrchardCore.ContentFields.Fields;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
@@ -179,7 +180,16 @@ internal sealed class LeadConversionService : ILeadConversionService
 
         if (context.Opportunity is not null)
         {
-            context.Opportunity.Alter<OpportunityPart>(part => part.PrimaryContactItemId ??= context.Contact.ContentItemId);
+            context.Opportunity.Alter<OpportunityPart>(part =>
+            {
+                if (part.PrimaryContact.GetFirstContentItemId() is null)
+                {
+                    part.PrimaryContact = new ContentPickerField
+                    {
+                        ContentItemIds = [context.Contact.ContentItemId],
+                    };
+                }
+            });
             await SaveAsync(context.Opportunity, isNew: true);
         }
 
@@ -324,12 +334,13 @@ internal sealed class LeadConversionService : ILeadConversionService
                     return true;
                 }
 
-                if (string.IsNullOrWhiteSpace(leadPart.Company) || accountTypes.Length == 0)
+                var company = leadPart.Company.GetTrimmedText();
+
+                if (company is null || accountTypes.Length == 0)
                 {
                     return true;
                 }
 
-                var company = leadPart.Company.Trim();
                 var accountTypeNames = accountTypes.Select(type => type.Name).ToArray();
                 var matches = await _session.Query<ContentItem, ContentItemIndex>(index =>
                         index.Latest &&
@@ -356,7 +367,7 @@ internal sealed class LeadConversionService : ILeadConversionService
                 return await CreateAccountAsync(context, company, accountTypes, result);
 
             case LeadConversionAccountMode.CreateNew:
-                var name = string.IsNullOrWhiteSpace(request.AccountName) ? leadPart.Company?.Trim() : request.AccountName.Trim();
+                var name = string.IsNullOrWhiteSpace(request.AccountName) ? leadPart.Company.GetTrimmedText() : request.AccountName.Trim();
 
                 if (string.IsNullOrEmpty(name))
                 {
@@ -423,7 +434,7 @@ internal sealed class LeadConversionService : ILeadConversionService
         var opportunity = await _contentManager.NewAsync(opportunityType);
         var name = !string.IsNullOrWhiteSpace(request.OpportunityName)
             ? request.OpportunityName.Trim()
-            : $"{(string.IsNullOrWhiteSpace(leadPart.Company) ? context.Lead.DisplayText : leadPart.Company.Trim())} - {_clock.UtcNow:yyyy-MM-dd}";
+            : $"{leadPart.Company.GetTrimmedText() ?? context.Lead.DisplayText} - {_clock.UtcNow:yyyy-MM-dd}";
 
         opportunity.DisplayText = name;
 
@@ -432,16 +443,34 @@ internal sealed class LeadConversionService : ILeadConversionService
             opportunity.Alter<TitlePart>(part => part.Title = name);
         }
 
+        var ownerId = leadPart.Owner.GetFirstUserId() ?? request.UserId;
+        var sourceId = leadPart.Source.GetFirstContentItemId();
+
         opportunity.Alter<OpportunityPart>(part =>
         {
             part.StageId = stage?.ItemId;
             part.Probability = stage?.Probability;
-            part.Amount = request.OpportunityAmount;
-            part.CloseDate = request.OpportunityCloseDate?.Date;
-            part.OwnerId = leadPart.OwnerId ?? request.UserId;
-            part.Source = leadPart.Source;
+            part.Amount = new NumericField
+            {
+                Value = request.OpportunityAmount,
+            };
+            part.CloseDate = new DateField
+            {
+                Value = request.OpportunityCloseDate?.Date,
+            };
+            part.Owner = new UserPickerField
+            {
+                UserIds = string.IsNullOrEmpty(ownerId) ? [] : [ownerId],
+            };
+            part.Source = new ContentPickerField
+            {
+                ContentItemIds = sourceId is null ? [] : [sourceId],
+            };
             part.CampaignId = request.CampaignId;
-            part.PrimaryContactItemId = context.ContactCreated ? null : context.Contact.ContentItemId;
+            part.PrimaryContact = new ContentPickerField
+            {
+                ContentItemIds = context.ContactCreated ? [] : [context.Contact.ContentItemId],
+            };
             part.ConvertedFromLeadItemId = context.Lead.ContentItemId;
         });
 
