@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using CrestApps.Core;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
@@ -46,6 +47,13 @@ public sealed class OmnichannelDisposition : CatalogItem, INameAwareModel, IModi
     public bool CaptureDate { get; set; }
 
     /// <summary>
+    /// Gets or sets the outcome the platform applies this disposition for, when a call ends in a way nobody chose. A
+    /// not-in-service disposition also marks the number dead, whoever records it.
+    /// </summary>
+    [JsonConverter(typeof(DispositionOutcomeJsonConverter))]
+    public DispositionOutcome Outcome { get; set; }
+
+    /// <summary>
     /// Gets or sets the created utc.
     /// </summary>
     public DateTime CreatedUtc { get; set; }
@@ -76,6 +84,7 @@ public sealed class OmnichannelDisposition : CatalogItem, INameAwareModel, IModi
             Name = Name,
             Description = Description,
             CaptureDate = CaptureDate,
+            Outcome = Outcome,
             CreatedUtc = CreatedUtc,
             ModifiedUtc = ModifiedUtc,
             Author = Author,

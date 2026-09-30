@@ -33,6 +33,8 @@ public sealed class TelnyxAiVoiceConversationHandler : ITelnyxAiVoiceEventHandle
             return Task.CompletedTask;
         }
 
+        var notInService = TelnyxNotInServiceCauses.IsNotInService(callEvent);
+
         return _loop.HandleAsync(new VoiceAgentEvent
         {
             Kind = ResolveKind(callEvent.EventType),
@@ -45,6 +47,13 @@ public sealed class TelnyxAiVoiceConversationHandler : ITelnyxAiVoiceEventHandle
 
             // When Telnyx says it happened, so the time between two events is not the time between two webhooks.
             OccurredUtc = callEvent.OccurredUtc,
+
+            // A number the network says is not in service is completed without the assistant: there was never
+            // anybody to talk to, and nothing for a review to read.
+            HangupCause = notInService
+                ? Telephony.Models.HangupCause.NotInService
+                : IsBusy(callEvent) ? Telephony.Models.HangupCause.Busy : null,
+            HangupDetail = TelnyxNotInServiceCauses.Describe(callEvent.HangupCause, callEvent.SipHangupCause),
         }, cancellationToken);
     }
 
@@ -58,6 +67,12 @@ public sealed class TelnyxAiVoiceConversationHandler : ITelnyxAiVoiceEventHandle
             "machine" or "fax_detected" => VoiceAgentAnswerer.Machine,
             _ => VoiceAgentAnswerer.Unknown,
         };
+
+    // The called party's line was busy: Telnyx's own cause, or the carrier's SIP 486 Busy Here / 600 Busy Everywhere.
+    private static bool IsBusy(TelnyxCallEvent callEvent)
+        => string.Equals(callEvent.EventType?.Trim(), "call.hangup", StringComparison.OrdinalIgnoreCase) &&
+            (callEvent.HangupCause?.Trim().ToLowerInvariant() is "user_busy" or "busy" ||
+                callEvent.SipHangupCause?.Trim() is "486" or "600");
 
     private static VoiceAgentEventKind ResolveKind(string eventType)
         => eventType?.Trim().ToLowerInvariant() switch

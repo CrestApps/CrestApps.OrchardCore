@@ -3,4 +3,21 @@
 
 @model ShapeViewModel<OmnichannelDisposition>
 
-<h5>@(Model.Value.Name)</h5>
+@{
+    var outcome = Model.Value.Outcome switch
+    {
+        DispositionOutcome.NotInService => T["Number not in service"].Value,
+        DispositionOutcome.NoAnswer => T["No answer"].Value,
+        DispositionOutcome.Busy => T["Busy"].Value,
+        DispositionOutcome.AnsweringMachine => T["Answering machine"].Value,
+        _ => null,
+    };
+}
+
+<h5>
+    @(Model.Value.Name)
+    @if (outcome is not null)
+    {
+        <span class="badge text-bg-secondary fw-normal ms-1" title="@T["Outcome"]">@outcome</span>
+    }
+</h5>

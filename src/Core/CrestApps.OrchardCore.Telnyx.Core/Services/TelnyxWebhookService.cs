@@ -152,7 +152,8 @@ public sealed partial class TelnyxWebhookService : ITelnyxWebhookService
             IdempotencyKey = TelnyxWebhookDelivery.GetDeliveryId(callEvent),
             RecordingReference = callEvent.RecordingId,
             RecordingState = string.IsNullOrWhiteSpace(callEvent.RecordingId) ? null : Telephony.Models.RecordingState.Stopped,
-            HangupCause = ResolveHangupCause(state, callEvent.HangupCause),
+            HangupCause = ResolveHangupCause(state, callEvent),
+            AnswerClassification = ResolveAnswerClassification(callEvent),
             Metadata = BuildVoiceEventMetadata(callEvent),
         };
 
@@ -188,7 +189,11 @@ public sealed partial class TelnyxWebhookService : ITelnyxWebhookService
             "call.initiated" => VoiceCallState.Dialing,
             "call.ringing" => VoiceCallState.Ringing,
             "call.answered" or "call.bridged" => VoiceCallState.Connected,
-            "call.hangup" => MapHangup(callEvent.HangupCause),
+            "call.hangup" => MapHangup(callEvent),
+
+            // Who answered a call screened for answering machines. The call is still connected; the verdict rides on a
+            // connected delivery so the platform can connect the agent to a person or hang up on a machine.
+            "call.machine.detection.ended" or "call.machine.premium.detection.ended" => VoiceCallState.Connected,
             _ => MapStateToken(callEvent.State),
         };
 
@@ -205,6 +210,34 @@ public sealed partial class TelnyxWebhookService : ITelnyxWebhookService
             "hangup" or "ended" or "completed" => VoiceCallState.Ended,
             _ => (VoiceCallState)(-1),
         };
+
+    // Premium detection tells residences from businesses, and both are people. "Not sure" and silence say nothing,
+    // so they are Unknown, which connects the agent: hanging up on a person is worse than an agent hearing a greeting.
+    private static AnswerClassification? ResolveAnswerClassification(TelnyxCallEvent callEvent)
+    {
+        if (callEvent.EventType?.Trim().ToLowerInvariant() is not ("call.machine.detection.ended" or "call.machine.premium.detection.ended"))
+        {
+            return null;
+        }
+
+        return callEvent.MachineDetectionResult?.Trim().ToLowerInvariant() switch
+        {
+            "human" or "human_residence" or "human_business" => Telephony.Models.AnswerClassification.Human,
+            "machine" => Telephony.Models.AnswerClassification.Machine,
+            "fax_detected" => Telephony.Models.AnswerClassification.Fax,
+            _ => Telephony.Models.AnswerClassification.Unknown,
+        };
+    }
+
+    // Telnyx's own busy cause, or the carrier's SIP 486 Busy Here / 600 Busy Everywhere.
+    private static bool IsBusy(TelnyxCallEvent callEvent)
+        => callEvent.HangupCause?.Trim().ToLowerInvariant() is "user_busy" or "busy" ||
+            callEvent.SipHangupCause?.Trim() is "486" or "600";
+
+    private static VoiceCallState MapHangup(TelnyxCallEvent callEvent)
+        => TelnyxNotInServiceCauses.IsNotInService(callEvent.HangupCause, callEvent.SipHangupCause)
+            ? VoiceCallState.Failed
+            : IsBusy(callEvent) ? VoiceCallState.Rejected : MapHangup(callEvent.HangupCause);
 
     private static VoiceCallState MapHangup(string hangupCause)
         => hangupCause?.Trim().ToLowerInvariant() switch
@@ -241,8 +274,23 @@ public sealed partial class TelnyxWebhookService : ITelnyxWebhookService
         }
     }
 
-    private static HangupCause? ResolveHangupCause(VoiceCallState state, string hangupCause)
+    private static HangupCause? ResolveHangupCause(VoiceCallState state, TelnyxCallEvent callEvent)
     {
+        // A number that is not in service is a failure that says something about the number, not the attempt, so
+        // it keeps its own cause instead of the generic one its failed state would give it.
+        if (state == VoiceCallState.Failed &&
+            TelnyxNotInServiceCauses.IsNotInService(callEvent.HangupCause, callEvent.SipHangupCause))
+        {
+            return Telephony.Models.HangupCause.NotInService;
+        }
+
+        // A busy line ends in the rejected state, like a call the customer declined, but says something else: the
+        // customer may simply be on another call. It keeps its own cause so the attempt is reported as busy.
+        if (state == VoiceCallState.Rejected && IsBusy(callEvent))
+        {
+            return Telephony.Models.HangupCause.Busy;
+        }
+
         return state switch
         {
             VoiceCallState.Ended => Telephony.Models.HangupCause.NormalClearing,

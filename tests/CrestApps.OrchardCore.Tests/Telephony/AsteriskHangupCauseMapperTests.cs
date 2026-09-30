@@ -20,7 +20,7 @@ public sealed class AsteriskHangupCauseMapperTests
     [InlineData(20, false, HangupCause.NoAnswer)]
     [InlineData(102, false, HangupCause.NoAnswer)]
     [InlineData(21, false, HangupCause.Rejected)]
-    [InlineData(22, false, HangupCause.Rejected)]
+    [InlineData(22, false, HangupCause.NotInService)]
     [InlineData(23, false, HangupCause.Rejected)]
     [InlineData(34, false, HangupCause.Congestion)]
     [InlineData(38, false, HangupCause.Congestion)]
@@ -28,9 +28,9 @@ public sealed class AsteriskHangupCauseMapperTests
     [InlineData(42, false, HangupCause.Congestion)]
     [InlineData(44, false, HangupCause.Congestion)]
     [InlineData(47, false, HangupCause.Congestion)]
-    [InlineData(1, false, HangupCause.Failed)]
+    [InlineData(1, false, HangupCause.NotInService)]
     [InlineData(27, false, HangupCause.Failed)]
-    [InlineData(28, false, HangupCause.Failed)]
+    [InlineData(28, false, HangupCause.NotInService)]
     [InlineData(88, false, HangupCause.Failed)]
     [InlineData(0, false, HangupCause.Unknown)]
     public void FromCauseCode_ForEveryQ850CauseAsteriskReports_MapsToTheMatchingHangupCause(
@@ -125,7 +125,7 @@ public sealed class AsteriskHangupCauseMapperTests
     [InlineData(19, HangupCause.NoAnswer)]
     [InlineData(21, HangupCause.Rejected)]
     [InlineData(34, HangupCause.Congestion)]
-    [InlineData(28, HangupCause.Failed)]
+    [InlineData(28, HangupCause.NotInService)]
     public void TryMap_ForAChannelDestroyedEvent_CarriesTheReleaseCauseOutOfTheProviderModule(
         int causeCode,
         HangupCause expected)

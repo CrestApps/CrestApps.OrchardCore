@@ -55,6 +55,7 @@ With a Power profile the agent only signs in and stays **Available**. Within a m
    | **Calls per agent** | Power | Calls started per pacing cycle for the campaign, 1 to 3. Each call reserves its own agent, so it never dials more calls than there are available agents. |
    | **Max attempts** | Power, Progressive | How many times one record may be dialed. Default 3. |
    | **Retry delay (minutes)** | Power, Progressive | How long to wait after an attempt before dialing the record again. Default 60. |
+   | **Screen out answering machines** | Power, Progressive | **Off** (default), **Standard detection** or **Premium detection**. When on, the agent is connected only after the provider hears a person. A call answered by a voicemail or fax machine is hung up, the agent goes straight back to Ready without wrap-up, and the record is dialed again after the retry delay (it counts as an attempt). The person who answers hears a few seconds of silence while the call is screened. Telnyx only. |
 
 4. On **Caller ID**, enter the **Caller ID** number customers see (empty uses the provider's default), and pick the **Default calling region** used for numbers written without a country code.
 5. On **Compliance**:
@@ -78,10 +79,12 @@ With a Power profile the agent only signs in and stays **Available**. Within a m
 
 ## What happens to each record
 
-Before every call the dialer checks, in order: the number is valid, the record has attempts left, the retry delay has passed, the contact has not opted out, the calling window is open, the abandonment cap allows dialing, and the number is not on a do-not-call registry.
+Before every call the dialer checks, in order: the number is valid, the number is not [known to be out of service](numbers-not-in-service.md), the record has attempts left, the retry delay has passed, the contact has not opted out, the calling window is open, the abandonment cap allows dialing, and the number is not on a do-not-call registry.
 
 - A record with no valid number, or with no attempts left, becomes **Failed**.
 - A record on a do-not-call list becomes **Cancelled**.
+- A record whose number is known not to be in service becomes **Cancelled**, and is never dialed.
+- A call the carrier rejects as not in service (unallocated, SIP 404/410/484/604) is **Completed** with the not-in-service disposition, without an agent. The number is not dialed again. See [Numbers Not In Service](numbers-not-in-service.md).
 - Anything else (closed calling window, cap reached, registry unreachable) is simply tried again in a later cycle.
 
 Queue callbacks use a built-in preview profile that skips the do-not-call and calling-window checks, because the customer asked to be called.

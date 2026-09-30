@@ -118,7 +118,7 @@ public sealed class ContactCenterReportTotalsTests
         // Assert
         Assert.Equal(ReportRowKind.Subtotal, subtotal.Kind);
         Assert.Equal(ReportRowKind.GrandTotal, grandTotal.Kind);
-        Assert.Equal("33.3%", grandTotal.Cells[8]);
+        Assert.Equal("33.3%", grandTotal.Cells[9]);
     }
 
     [Fact]

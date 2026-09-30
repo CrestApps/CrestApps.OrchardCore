@@ -27,6 +27,7 @@ internal static class ContactCenterReportCells
             new ReportColumn(localizer["In progress"].Value, ReportColumnAlign.End),
             new ReportColumn(localizer["Failed"].Value, ReportColumnAlign.End),
             new ReportColumn(localizer["Cancelled"].Value, ReportColumnAlign.End),
+            new ReportColumn(localizer["Not in service"].Value, ReportColumnAlign.End),
             new ReportColumn(localizer["Attempts"].Value, ReportColumnAlign.End),
             new ReportColumn(localizer["Completion"].Value, ReportColumnAlign.End),
         ];
@@ -49,6 +50,7 @@ internal static class ContactCenterReportCells
             ReportFormat.Number(counts.InProgress),
             ReportFormat.Number(counts.Failed),
             ReportFormat.Number(counts.Cancelled),
+            ReportFormat.Number(counts.NotInService),
             ReportFormat.Number(counts.TotalAttempts),
             ReportFormat.Percent(counts.CompletionRate),
         ];

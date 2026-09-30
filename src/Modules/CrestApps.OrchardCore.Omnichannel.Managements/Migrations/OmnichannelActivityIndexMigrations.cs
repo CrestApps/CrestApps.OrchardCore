@@ -61,7 +61,8 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
             .Column<ActivityUrgencyLevel>("UrgencyLevel")
             .Column<ActivityStatus>("Status")
             .Column<ActivityInteractionType>("InteractionType")
-            .Column<bool>("AiEscalated"),
+            .Column<bool>("AiEscalated")
+            .Column<string>("TerminalReasonCode", column => column.Nullable().WithLength(64)),
         collection: OmnichannelConstants.CollectionName
         );
 
@@ -108,7 +109,7 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
         collection: OmnichannelConstants.CollectionName
         );
 
-        return 6;
+        return 7;
     }
 
     /// <summary>
@@ -296,5 +297,21 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
         collection: OmnichannelConstants.CollectionName);
 
         return 6;
+    }
+
+    /// <summary>
+    /// Adds the terminal reason, so reports can count activities that ended for a stated reason, such as a number
+    /// that is not in service, without loading every activity.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom6Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelActivityIndex>(table =>
+        {
+            table.AddColumn<string>("TerminalReasonCode", column => column.Nullable().WithLength(64));
+        },
+        collection: OmnichannelConstants.CollectionName);
+
+        return 7;
     }
 }

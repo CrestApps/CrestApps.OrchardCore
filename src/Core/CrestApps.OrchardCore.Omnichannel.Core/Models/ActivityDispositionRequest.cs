@@ -37,6 +37,12 @@ public sealed class ActivityDispositionRequest
     public IDictionary<string, string> ActionPreparationNotes { get; set; }
 
     /// <summary>
+    /// Gets or sets what found the number out of service when the platform chose a not-in-service disposition on its
+    /// own, one of <see cref="OmnichannelConstants.NotInServiceSources"/>. Left unset for a person's own disposition.
+    /// </summary>
+    public string NotInServiceSource { get; set; }
+
+    /// <summary>
     /// Gets or sets the actor identifier applying the disposition.
     /// </summary>
     public string ActorId { get; set; }

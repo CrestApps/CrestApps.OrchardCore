@@ -2,6 +2,7 @@ using System.Text.Json;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
@@ -155,6 +156,13 @@ public sealed class DialerAttemptService : IDialerAttemptService
             },
         };
 
+        // Only a paced call is screened: in preview the agent placed the call and is already listening for who answers.
+        if (profile.Mode.IsAutomated() && profile.AnsweringMachineDetection != DialerAnsweringMachineDetection.Disabled)
+        {
+            request.Metadata[TelephonyConstants.RequestMetadata.AnsweringMachineDetection] =
+                profile.AnsweringMachineDetection == DialerAnsweringMachineDetection.Premium ? "premium" : "standard";
+        }
+
         try
         {
             await _workStateService.MutateAsync(
@@ -209,9 +217,23 @@ public sealed class DialerAttemptService : IDialerAttemptService
 
         if (status.HasValue)
         {
+            // A number already known dead is recorded as the reason the attempt was never made, so a report can
+            // tell these apart from attempts that were dialed and found the number out of service.
+            var terminalReasonCode = eligibility.Reason == DialerSuppressionReason.NumberNotInService
+                ? OmnichannelConstants.TerminalReasons.NumberNotInService
+                : null;
+
             await _activityWriter.ScheduleUpdateAsync(
                 activity.ItemId,
-                suppressed => suppressed.Status = status.Value,
+                suppressed =>
+                {
+                    suppressed.Status = status.Value;
+
+                    if (terminalReasonCode is not null)
+                    {
+                        suppressed.TerminalReasonCode = terminalReasonCode;
+                    }
+                },
                 cancellationToken);
         }
 
@@ -256,6 +278,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
             DialerSuppressionReason.MaxAttemptsReached => ActivityStatus.Failed,
             DialerSuppressionReason.DoNotCall => ActivityStatus.Cancelled,
             DialerSuppressionReason.NationalDoNotCallRegistry => ActivityStatus.Cancelled,
+            DialerSuppressionReason.NumberNotInService => ActivityStatus.Cancelled,
             _ => null,
         };
     }

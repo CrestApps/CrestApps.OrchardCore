@@ -127,12 +127,21 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
             };
         }
 
-        return new ContactCenterVoiceProviderResult
+        var dialed = new ContactCenterVoiceProviderResult
         {
             Succeeded = true,
             ProviderCallId = result.Call?.CallId,
             ProviderName = TechnicalName,
         };
+
+        // Told back so the platform holds the agent until the answer says a person picked up. A call nobody asked to
+        // screen must not be held, or the agent would wait for a verdict that never comes.
+        if (TelnyxTelephonyProvider.AnsweringMachineDetectionMode(request.Metadata) is not null)
+        {
+            dialed.Metadata[ContactCenterConstants.TelephonyMetadata.AnswerDetectionRequested] = bool.TrueString;
+        }
+
+        return dialed;
     }
 
     /// <inheritdoc/>

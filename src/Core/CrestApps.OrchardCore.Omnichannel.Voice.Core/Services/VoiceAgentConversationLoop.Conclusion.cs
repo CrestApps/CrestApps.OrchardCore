@@ -12,6 +12,7 @@ using CrestApps.Core.AI.Resilience;
 using CrestApps.Core.Services;
 using CrestApps.Core.Support;
 using CrestApps.Core.Templates.Services;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
@@ -20,6 +21,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Json;
 using OrchardCore.Modules;
 using YesSql;
@@ -32,7 +34,88 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 /// </summary>
 public sealed partial class VoiceAgentConversationLoop
 {
-    private async Task ConcludeAsync(IServiceProvider services, string activityId)
+    /// <summary>
+    /// Completes a call the network reported not in service, in a deferred task, instead of concluding it.
+    /// </summary>
+    /// <remarks>
+    /// A number that is not in service was never answered by anybody: there is no transcript to review and no outcome
+    /// for the assistant to choose, so the call is completed as not in service and the number is marked.
+    /// </remarks>
+    /// <returns><see langword="true"/> when the call was not in service and its completion was scheduled.</returns>
+    private bool TryConcludeNotInService(VoiceAgentEvent voiceEvent, OmnichannelActivity activity, DateTime endedUtc)
+    {
+        if (voiceEvent.HangupCause != Telephony.Models.HangupCause.NotInService)
+        {
+            return false;
+        }
+
+        var activityId = activity.ItemId;
+        var destination = activity.PreferredDestination;
+        var detail = voiceEvent.HangupDetail;
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "AI voice activity '{ActivityId}' found '{PhoneNumber}' not in service ({Detail}); completing it without the assistant.",
+                activityId.SanitizeLogValue(),
+                destination.SanitizeLogValue(),
+                detail.SanitizeLogValue());
+        }
+
+        ShellScope.AddDeferredTask(async scope =>
+        {
+            try
+            {
+                await ConcludeNotInServiceAsync(scope.ServiceProvider, activityId, destination, detail);
+                await ObserveConclusionAsync(scope.ServiceProvider, voiceEvent, endedUtc);
+            }
+            catch (Exception ex)
+            {
+                scope.ServiceProvider.GetRequiredService<ILogger<VoiceAgentConversationLoop>>()
+                    .LogError(ex, "Failed to complete AI voice activity '{ActivityId}' as not in service.", activityId.SanitizeLogValue());
+            }
+        });
+
+        return true;
+    }
+
+    /// <summary>
+    /// Completes a call that found the number not in service: marks the number, dispositions the activity as not in
+    /// service, and never runs the review.
+    /// </summary>
+    /// <remarks>
+    /// Where the platform has no list of dead numbers to keep (no activity management), the call falls back to the
+    /// ordinary conclusion, which records it as unanswered.
+    /// </remarks>
+    private async Task ConcludeNotInServiceAsync(IServiceProvider services, string activityId, string phoneNumber, string detail)
+    {
+        var completer = services.GetService<INotInServiceActivityCompleter>();
+
+        if (completer is null)
+        {
+            await ConcludeAsync(services, activityId);
+
+            return;
+        }
+
+        var store = services.GetRequiredService<IOmnichannelActivityStore>();
+        var activity = await store.FindByIdAsync(activityId);
+
+        if (activity is null)
+        {
+            return;
+        }
+
+        await completer.CompleteAsync(new NotInServiceCompletionRequest
+        {
+            Activity = activity,
+            PhoneNumber = phoneNumber,
+            Source = OmnichannelConstants.NotInServiceSources.AutomatedCall,
+            Reason = detail,
+        });
+    }
+
+    private async Task ConcludeAsync(IServiceProvider services, string activityId, bool lineBusy = false)
     {
         var store = services.GetRequiredService<IOmnichannelActivityStore>();
         var activity = await store.FindByIdAsync(activityId);
@@ -203,7 +286,7 @@ public sealed partial class VoiceAgentConversationLoop
         var sessionLost = activity.TryGet<AIVoiceSessionLost>(out _);
 
         var disposition = !hasConversation
-            ? VoiceCallConclusionPolicy.ChooseUnansweredDisposition(dispositions, allActions, activity.SubjectContentType)
+            ? VoiceCallConclusionPolicy.ChooseUnansweredDisposition(dispositions, allActions, activity.SubjectContentType, reachedVoicemail, lineBusy)
             : sessionLost
                 ? VoiceCallConclusionPolicy.ChooseSessionLostDisposition(dispositions, allActions, activity.SubjectContentType, result?.DispositionId)
                 : VoiceCallConclusionPolicy.ChooseDisposition(dispositions, result?.DispositionId);
@@ -211,6 +294,8 @@ public sealed partial class VoiceAgentConversationLoop
 
         var notes = reachedVoicemail
             ? VoiceCallConclusionPolicy.VoicemailNote
+            : lineBusy && !hasConversation
+                ? VoiceCallConclusionPolicy.BusyNote
             : sessionLost
                 ? VoiceCallConclusionPolicy.ResolveSessionLostNotes(hasConversation, result?.Summary)
                 : VoiceCallConclusionPolicy.ResolveNotes(hasConversation, result?.Summary);
@@ -289,6 +374,21 @@ public sealed partial class VoiceAgentConversationLoop
                 Subject = subject,
                 Disposition = disposition,
             });
+        }
+
+        // The call is completed here rather than through the shared disposition service, so what that service tells
+        // everyone after a disposition -- a workflow waiting to follow up, for one -- is told here as well.
+        var completion = new ActivityDispositionRequest
+        {
+            Activity = concluded,
+            DispositionId = dispositionId,
+            Source = ActivityDispositionSource.AI,
+            Notes = notes,
+        };
+
+        foreach (var handler in services.GetServices<IActivityDispositionHandler>())
+        {
+            await handler.DispositionedAsync(completion);
         }
 
         if (_logger.IsEnabled(LogLevel.Information))

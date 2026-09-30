@@ -157,6 +157,7 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
             [dialer],
             Options.Create(sourceOptions),
             new ContactOptOutResolver(session),
+            new NoNotInServiceNumbers(),
             logger);
     }
 

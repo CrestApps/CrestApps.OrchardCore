@@ -57,4 +57,12 @@ public enum HangupCause
     /// by a live person.
     /// </summary>
     AnsweringMachine = 8,
+
+    /// <summary>
+    /// The network reported that the dialed number is not in service: it is unallocated, has been
+    /// disconnected or changed, or is not a valid number at all. It is a <see cref="Failed"/> call that
+    /// says something about the number rather than about the attempt, so the number itself can be
+    /// excluded from future dialing instead of being retried.
+    /// </summary>
+    NotInService = 9,
 }

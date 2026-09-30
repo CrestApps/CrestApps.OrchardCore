@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.DncRegistry;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -424,6 +425,8 @@ public sealed class DialerEligibilityServiceTests
 
         public List<INationalDoNotCallRegistry> Registries { get; } = [];
 
+        public Mock<INotInServiceNumberService> NotInServiceNumbers { get; } = new();
+
         public Harness()
         {
             AbandonmentPolicyService
@@ -450,6 +453,7 @@ public sealed class DialerEligibilityServiceTests
                 BusinessHoursService.Object,
                 AbandonmentPolicyService.Object,
                 Registries,
+                NotInServiceNumbers.Object,
                 clock.Object,
                 NullLogger<DefaultDialerEligibilityService>.Instance);
 

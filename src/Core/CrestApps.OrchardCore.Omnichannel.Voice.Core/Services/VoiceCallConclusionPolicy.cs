@@ -1,6 +1,7 @@
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 
@@ -30,6 +31,11 @@ public static class VoiceCallConclusionPolicy
     /// The note written for a call that was answered by voicemail rather than by the customer.
     /// </summary>
     public const string VoicemailNote = "The automated call reached voicemail and left a message; nobody spoke with the customer.";
+
+    /// <summary>
+    /// The note written for a call that found the customer's line busy.
+    /// </summary>
+    public const string BusyNote = "The automated call found the line busy; nobody spoke with the customer.";
 
     /// <summary>
     /// The note written for a call whose assistant lost its live session partway through the conversation.
@@ -123,17 +129,23 @@ public static class VoiceCallConclusionPolicy
     /// </summary>
     /// <remarks>
     /// There is no conversation for the model to judge, so it is not asked, and taking the first outcome on offer
-    /// instead recorded a call that rang out unanswered as "Done" -- finished, and never tried again. The subject's
-    /// own workflow already says which outcome schedules another attempt, so an unanswered call takes the one its
-    /// try-again action is wired to. A subject with no such action falls back to the first choice, as before.
+    /// instead recorded a call that rang out unanswered as "Done" -- finished, and never tried again. A disposition
+    /// marked with the matching outcome says what to record: a voicemail takes the answering-machine one, a busy line
+    /// the busy one, and a call nobody answered (or either of those with no disposition of its own) the no-answer one.
+    /// A subject with none of them takes the outcome its try-again action is wired to, so the call is tried again, and
+    /// failing that the first choice, as before.
     /// </remarks>
     /// <param name="choices">The dispositions the call may be concluded as.</param>
     /// <param name="subjectActions">Every configured subject action.</param>
     /// <param name="subjectContentType">The subject content type of the call being concluded.</param>
+    /// <param name="reachedVoicemail">Whether a voicemail, rather than nobody, picked up.</param>
+    /// <param name="lineBusy">Whether the network reported the customer's line busy.</param>
     public static OmnichannelDisposition ChooseUnansweredDisposition(
         IEnumerable<OmnichannelDisposition> choices,
         IEnumerable<SubjectAction> subjectActions,
-        string subjectContentType)
+        string subjectContentType,
+        bool reachedVoicemail = false,
+        bool lineBusy = false)
     {
         var offered = choices as IList<OmnichannelDisposition> ?? choices?.ToList();
 
@@ -142,7 +154,17 @@ public static class VoiceCallConclusionPolicy
             return null;
         }
 
-        return FindRetriedDisposition(offered, subjectActions, subjectContentType)
+        // The choices are already the subject's own dispositions (or every disposition when it wires none), so any of
+        // them with the outcome will do.
+        var specific = reachedVoicemail
+            ? DispositionOutcome.AnsweringMachine
+            : lineBusy ? DispositionOutcome.Busy : DispositionOutcome.None;
+
+        var byOutcome = DispositionOutcomes.Find(offered, subjectActions, subjectContentType, specific, includeUnwired: true)
+            ?? DispositionOutcomes.Find(offered, subjectActions, subjectContentType, DispositionOutcome.NoAnswer, includeUnwired: true);
+
+        return byOutcome
+            ?? FindRetriedDisposition(offered, subjectActions, subjectContentType)
             ?? ChooseDisposition(offered, modelChoiceId: null);
     }
 

@@ -408,6 +408,7 @@ public sealed class SmsConclusionDispositionTests
             actionCatalog.Object,
             Mock.Of<ISubjectFlowSettingsService>(),
             contentManager.Object,
+            Mock.Of<INotInServiceNumberService>(),
             session.Object,
             clock.Object,
             localClock.Object,

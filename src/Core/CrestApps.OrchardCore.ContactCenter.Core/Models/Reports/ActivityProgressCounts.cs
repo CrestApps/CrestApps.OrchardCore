@@ -42,6 +42,13 @@ public sealed class ActivityProgressCounts
     public long TotalAttempts { get; set; }
 
     /// <summary>
+    /// Gets or sets the number of activities that ended because the number is not in service: dialed and found dead,
+    /// or never dialed because the number was already known to be dead. They are also counted as completed or
+    /// cancelled.
+    /// </summary>
+    public long NotInService { get; set; }
+
+    /// <summary>
     /// Gets the fraction of activities that are completed, between 0 and 1.
     /// </summary>
     public double CompletionRate

@@ -19,6 +19,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
     private readonly ISourceCatalog<SubjectAction> _actionCatalog;
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
     private readonly IContentManager _contentManager;
+    private readonly INotInServiceNumberService _notInServiceNumbers;
     private readonly ISession _session;
     private readonly IClock _clock;
     private readonly ILocalClock _localClock;
@@ -29,6 +30,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         ISourceCatalog<SubjectAction> actionCatalog,
         ISubjectFlowSettingsService subjectFlowSettingsService,
         IContentManager contentManager,
+        INotInServiceNumberService notInServiceNumbers,
         ISession session,
         IClock clock,
         ILocalClock localClock,
@@ -38,6 +40,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         _actionCatalog = actionCatalog;
         _subjectFlowSettingsService = subjectFlowSettingsService;
         _contentManager = contentManager;
+        _notInServiceNumbers = notInServiceNumbers;
         _session = session;
         _clock = clock;
         _localClock = localClock;
@@ -65,6 +68,10 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
 
             return;
         }
+
+        // What the disposition itself means is applied once, whatever actions the subject wires to it -- and when it
+        // wires none, which is how a disposition the platform chose on its own is usually recorded.
+        await ApplyOutcomeAsync(context);
 
         var allActions = await _actionCatalog.GetAllAsync(cancellationToken);
 
@@ -265,6 +272,54 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
     private async Task<SubjectFlowSettings> FindFlowSettingsForSubjectAsync(string subjectContentType)
     {
         return await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(subjectContentType);
+    }
+
+    private async Task ApplyOutcomeAsync(SubjectActionExecutionContext context)
+    {
+        if (context.Disposition.Outcome == DispositionOutcome.NotInService)
+        {
+            await MarkNumberNotInServiceAsync(context);
+        }
+    }
+
+    private async Task MarkNumberNotInServiceAsync(SubjectActionExecutionContext context)
+    {
+        var activity = context.Activity;
+
+        // A disposition the platform applied because the network reported the number dead arrives with the number
+        // already marked -- the one that was actually dialed -- so it is not marked a second time.
+        if (context.NotInServiceSource is not null)
+        {
+            return;
+        }
+
+        // Only a call reaches a number; the destination of a message or an email says nothing about a phone line.
+        if (!string.Equals(activity.Channel, OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase) ||
+            string.IsNullOrWhiteSpace(activity.PreferredDestination))
+        {
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Disposition '{Disposition}' marks the number as not in service, but activity '{ActivityId}' has no phone number to mark (channel '{Channel}').",
+                    context.Disposition.Name,
+                    activity.ItemId,
+                    activity.Channel);
+            }
+
+            return;
+        }
+
+        await _notInServiceNumbers.MarkAsync(new NotInServiceMark
+        {
+            PhoneNumber = activity.PreferredDestination,
+            Source = OmnichannelConstants.NotInServiceSources.Agent,
+            Reason = context.Disposition.Name,
+            ActivityId = activity.ItemId,
+            CampaignId = activity.CampaignId,
+            ContactContentItemId = activity.ContactContentItemId,
+            MarkedById = activity.CompletedById,
+            MarkedByUsername = activity.CompletedByUsername,
+        });
     }
 
     private async Task ApplyCommunicationPreferencesAsync(SubjectAction action, ContentItem contact)

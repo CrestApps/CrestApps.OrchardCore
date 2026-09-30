@@ -179,6 +179,13 @@ public sealed partial class TelnyxTelephonyProvider :
             body["outbound_voice_profile_id"] = _options.OutboundVoiceProfileId;
         }
 
+        // A dialer call screened for answering machines: Telnyx reports who answered in its own event a few seconds
+        // after the answer, and the agent is connected only when that says a person did.
+        if (AnsweringMachineDetectionMode(request.Metadata) is { } detection)
+        {
+            body["answering_machine_detection"] = detection;
+        }
+
         // Telnyx de-duplicates a repeated command by its command_id, so an idempotency key supplied by the
         // caller becomes the command id: a retried outbound POST after a lost response is then rejected as a
         // duplicate instead of placing a second call.
@@ -252,6 +259,18 @@ public sealed partial class TelnyxTelephonyProvider :
             return TelephonyResult.Failed(S["Telnyx could not place the call."].Value);
         }
     }
+
+    /// <summary>
+    /// The Telnyx detection mode a dial request asks for, or <see langword="null"/> when it asks for none.
+    /// </summary>
+    /// <param name="metadata">The dial request metadata.</param>
+    public static string AnsweringMachineDetectionMode(IDictionary<string, string> metadata)
+        => TryGetMetadataValue(metadata, TelephonyConstants.RequestMetadata.AnsweringMachineDetection)?.Trim().ToLowerInvariant() switch
+        {
+            "premium" => "premium",
+            "standard" => "detect",
+            _ => null,
+        };
 
     private async Task<string> ResolveBrowserAgentEndpointAsync(DialRequest request, CancellationToken cancellationToken)
     {

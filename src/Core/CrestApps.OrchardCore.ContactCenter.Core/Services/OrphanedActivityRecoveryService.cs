@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 using YesSql;
@@ -177,9 +178,12 @@ public sealed class OrphanedActivityRecoveryService : IOrphanedActivityRecoveryS
         // customer. Never re-dial it; move it to a terminal state so it stops inflating the in-progress count. A
         // record still in a pre-answer status (Reserved/Dialing/Awaiting*) with no answered interaction was never
         // connected, so it is safe to return to Pending for a fresh offer.
+        //
+        // A call a machine answered (an answering machine or fax, screened out before any agent was connected) was
+        // answered by nobody: it goes back in the queue to be tried again like a call that rang out.
         var wasConnected =
             activity.Status == ActivityStatus.InProgress ||
-            interaction?.AnsweredUtc is not null;
+            interaction?.AnsweredUtc is not null && !WasAnsweredByMachine(interaction);
 
         if (wasConnected)
         {
@@ -215,8 +219,15 @@ public sealed class OrphanedActivityRecoveryService : IOrphanedActivityRecoveryS
         }
     }
 
+    private static bool WasAnsweredByMachine(Interaction interaction)
+        => interaction.TechnicalMetadata.TryGetValue(ContactCenterConstants.TelephonyMetadata.AnswerClassification, out var classification) &&
+            classification is nameof(AnswerClassification.Machine) or nameof(AnswerClassification.Fax);
+
     private async Task RequeueAsync(OmnichannelActivity activity, CancellationToken cancellationToken)
     {
+        // The dialer profile the record was queued with goes back with it. Re-queued without one, the paced dialer
+        // skipped the record's queue and the record was offered to agents as if it were an inbound call instead.
+        var dialerProfileId = (await _queueItemManager.FindByActivityIdAsync(activity.ItemId, cancellationToken))?.DialerProfileId;
         var workState = await ClearWorkStateAsync(activity.ItemId, ActivityAssignmentStatus.Available, cancellationToken);
 
         await _activityWriter.UpdateAsync(activity.ItemId, target =>
@@ -232,7 +243,7 @@ public sealed class OrphanedActivityRecoveryService : IOrphanedActivityRecoveryS
         if (!string.IsNullOrEmpty(activity.CampaignId))
         {
             var queueId = ContactCenterConstants.CampaignQueue.CreateId(activity.CampaignId);
-            await _queueService.EnqueueAsync(activity.ItemId, queueId, priority: null, cancellationToken);
+            await _queueService.EnqueueAsync(activity.ItemId, queueId, priority: null, dialerProfileId, cancellationToken);
         }
 
         if (_logger.IsEnabled(LogLevel.Information))

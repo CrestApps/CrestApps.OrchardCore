@@ -224,6 +224,12 @@ public sealed partial class DialProviderCommandTypeExecutor : IProviderCommandTy
                 : result.ProviderName;
             ownedSession.TransitionTo(VoiceCallState.Ringing);
 
+            // The provider asked the network who answers, so the agent waits for that answer before being connected.
+            if (result.Metadata?.ContainsKey(ContactCenterConstants.TelephonyMetadata.AnswerDetectionRequested) == true)
+            {
+                ownedSession.Metadata[ContactCenterConstants.TelephonyMetadata.AnswerDetectionRequested] = bool.TrueString;
+            }
+
             await _callSessionManager.UpdateAsync(ownedSession, cancellationToken: cancellationToken);
         }
 

@@ -73,6 +73,19 @@
     </div>
 </div>
 
+<div class="ocat-wrapper" asp-validation-class-for="AnsweringMachineDetection" data-dialer-modes="Power Progressive">
+    <label asp-for="AnsweringMachineDetection" class="ocat-label">@T["Screen out answering machines"]</label>
+    <div class="ocat-end">
+        <select asp-for="AnsweringMachineDetection" class="form-select">
+            <option value="@DialerAnsweringMachineDetection.Disabled">@T["Off"]</option>
+            <option value="@DialerAnsweringMachineDetection.Standard">@T["Standard detection"]</option>
+            <option value="@DialerAnsweringMachineDetection.Premium">@T["Premium detection"]</option>
+        </select>
+        <span asp-validation-for="AnsweringMachineDetection" class="text-danger"></span>
+        <span class="hint">@T["When on, the agent is connected only after the provider hears a person. Calls answered by a voicemail or fax machine are hung up and dialed again after the retry delay. The person who answers hears a few seconds of silence while the call is screened. Telnyx only."]</span>
+    </div>
+</div>
+
 <script at="Foot" depends-on="bootstrap-select">
     (function () {
         var select = document.querySelector('[data-dialer-mode-select]');

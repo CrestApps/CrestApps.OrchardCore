@@ -1,3 +1,4 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
 
 @model OmnichannelDispositionViewModel
@@ -24,5 +25,20 @@
     <div class="ocat-end">
         <textarea asp-for="Description" class="form-control"></textarea>
         <span asp-validation-for="Description" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Outcome" class="ocat-label">@T["Outcome"]</label>
+    <div class="ocat-end">
+        <select asp-for="Outcome" class="form-select">
+            <option value="@DispositionOutcome.None">@T["None"]</option>
+            <option value="@DispositionOutcome.NotInService">@T["Number not in service (dialer and automated calls)"]</option>
+            <option value="@DispositionOutcome.NoAnswer">@T["No answer (automated calls)"]</option>
+            <option value="@DispositionOutcome.Busy">@T["Busy (automated calls)"]</option>
+            <option value="@DispositionOutcome.AnsweringMachine">@T["Answering machine (automated calls)"]</option>
+        </select>
+        <span asp-validation-for="Outcome" class="text-danger"></span>
+        <span class="hint">@T["Set this only when the platform should apply the disposition on its own. When a call ends in a way nobody chose, the disposition with the matching outcome in the subject's flow is applied: a number not in service (dialer and automated calls), or an automated call nobody answered, that found the line busy, or that reached voicemail. For a number not in service, any disposition with that outcome is used when the flow has none, and picking it also stops the number from being dialed again."]</span>
     </div>
 </div>

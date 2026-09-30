@@ -42,6 +42,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
     private readonly IEnumerable<IActivityDialerContributor> _dialerContributors;
     private readonly ActivityBatchSourceOptions _sourceOptions;
     private readonly IContactOptOutResolver _optOutResolver;
+    private readonly INotInServiceNumberService _notInServiceNumbers;
     private readonly IOmnichannelContactTypeProvider _contactTypeProvider;
     private readonly ILogger _logger;
 
@@ -58,6 +59,8 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
     /// <param name="dbConnectionAccessor">The database connection accessor.</param>
     /// <param name="dialerContributors">The optional dialer contributors.</param>
     /// <param name="sourceOptions">The configured activity batch sources.</param>
+    /// <param name="optOutResolver">The resolver that decides whether a contact may be reached on a channel.</param>
+    /// <param name="notInServiceNumbers">The list of numbers known not to be in service.</param>
     /// <param name="logger">The logger.</param>
     public DefaultContactActivityBatchLoader(
         ICatalog<OmnichannelActivityBatch> catalog,
@@ -71,6 +74,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         IEnumerable<IActivityDialerContributor> dialerContributors,
         IOptions<ActivityBatchSourceOptions> sourceOptions,
         IContactOptOutResolver optOutResolver,
+        INotInServiceNumberService notInServiceNumbers,
         ILogger<DefaultContactActivityBatchLoader> logger,
         IEnumerable<IOmnichannelContactTypeProvider> contactTypeProviders = null)
     {
@@ -85,6 +89,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         _dialerContributors = dialerContributors;
         _sourceOptions = sourceOptions.Value;
         _optOutResolver = optOutResolver;
+        _notInServiceNumbers = notInServiceNumbers;
         _contactTypeProvider = contactTypeProviders?.FirstOrDefault();
         _logger = logger;
     }
@@ -404,6 +409,11 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 break;
             }
 
+            // The numbers already found dead, for every contact on this page, in one query rather than one per contact.
+            var notInServiceNumbers = await _notInServiceNumbers.GetNotInServiceAsync(
+                contacts.SelectMany(OmnichannelHelper.GetPhoneNumbers),
+                cancellationToken);
+
             var preventDuplicates = batch.PreventDuplicates;
 
             HashSet<string> inQueueActivities = null;
@@ -589,7 +599,25 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 // The consent question was settled on the line above, so this only has to find the address. Asking
                 // the version that answers both would refuse an address to exactly the contacts the operator just
                 // said to include, and the override would do nothing.
-                activity.PreferredDestination = OmnichannelHelper.FindDestination(contact, activity.Channel);
+                //
+                // A number already found not to be in service is passed over for the contact's next one. A contact
+                // whose every number on the channel is dead is not loaded at all: there is nobody to reach, and a call
+                // sheet or dialer queue full of dead numbers is exactly the work this exists to save.
+                var usesPhoneNumbers = activity.Channel is OmnichannelConstants.Channels.Phone or OmnichannelConstants.Channels.Sms;
+
+                activity.PreferredDestination = usesPhoneNumbers
+                    ? OmnichannelHelper.FindDestination(contact, activity.Channel, notInServiceNumbers.Contains)
+                    : OmnichannelHelper.FindDestination(contact, activity.Channel);
+
+                if (usesPhoneNumbers &&
+                    string.IsNullOrWhiteSpace(activity.PreferredDestination) &&
+                    notInServiceNumbers.Count > 0 &&
+                    !string.IsNullOrWhiteSpace(OmnichannelHelper.FindDestination(contact, activity.Channel)))
+                {
+                    batch.TotalSkippedAsNotInService++;
+
+                    continue;
+                }
 
                 if (activity.InteractionType == ActivityInteractionType.Automated &&
                     string.IsNullOrWhiteSpace(activity.PreferredDestination))
@@ -662,7 +690,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         if (_logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation(
-                "Loaded {TotalLoaded} of {TotalMatched} matching records for the activity batch '{BatchId}' and subject '{SubjectContentType}'. Skipped: {SkippedAsDuplicate} already had an open activity for the subject, {SkippedAsOptedOut} had opted out of the channel, {SkippedAsSharedNumberOptedOut} shared a number with a record that had opted out, {SkippedForNoDestination} had no destination on the channel, {SkippedAsConverted} were converted leads, {SkippedAsExistingContact} were leads sharing a number with a contact, {SkippedByLimit} were over the limit.",
+                "Loaded {TotalLoaded} of {TotalMatched} matching records for the activity batch '{BatchId}' and subject '{SubjectContentType}'. Skipped: {SkippedAsDuplicate} already had an open activity for the subject, {SkippedAsOptedOut} had opted out of the channel, {SkippedAsSharedNumberOptedOut} shared a number with a record that had opted out, {SkippedForNoDestination} had no destination on the channel, {SkippedAsConverted} were converted leads, {SkippedAsExistingContact} were leads sharing a number with a contact, {SkippedAsNotInService} had only numbers that are not in service, {SkippedByLimit} were over the limit.",
                 batch.TotalLoaded ?? 0,
                 batch.TotalMatched ?? 0,
                 batch.ItemId.SanitizeLogValue(),
@@ -673,6 +701,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 batch.TotalSkippedForNoDestination,
                 batch.TotalSkippedAsConverted,
                 batch.TotalSkippedAsExistingContact,
+                batch.TotalSkippedAsNotInService,
                 batch.TotalSkippedByLimit);
         }
     }

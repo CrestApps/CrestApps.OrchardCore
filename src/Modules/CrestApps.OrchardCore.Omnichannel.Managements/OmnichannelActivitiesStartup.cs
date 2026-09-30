@@ -91,6 +91,13 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
             .AddDataMigration<CadenceIndexMigrations>()
             .AddDataMigration<DocumentTypeColumnMigrations>();
 
+        // Numbers known not to be in service, read by the loader, the dialer and the automated caller alike.
+        services
+            .AddScoped<INotInServiceNumberService, NotInServiceNumberService>()
+            .AddScoped<INotInServiceActivityCompleter, NotInServiceActivityCompleter>()
+            .AddIndexProvider<NotInServiceNumberIndexProvider>()
+            .AddDataMigration<NotInServiceNumberIndexMigrations>();
+
         services.AddContentPart<OmnichannelContactPart>();
         services.AddContentPart<OmnichannelSubjectPart>();
         services.AddScoped<OmnichannelContactDefinitionService>();

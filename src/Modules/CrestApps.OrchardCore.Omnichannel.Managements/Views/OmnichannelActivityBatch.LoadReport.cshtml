@@ -43,6 +43,11 @@
         reasons.Add(T.Plural((int)batch.TotalSkippedAsExistingContact, "1 lead shares a phone number with a contact.", "{0} leads share a phone number with a contact."));
     }
 
+    if (batch.TotalSkippedAsNotInService > 0)
+    {
+        reasons.Add(T.Plural((int)batch.TotalSkippedAsNotInService, "1 has only numbers that are not in service.", "{0} have only numbers that are not in service."));
+    }
+
     if (batch.TotalSkippedByLimit > 0)
     {
         reasons.Add(T.Plural((int)batch.TotalSkippedByLimit, "1 was not loaded because the limit was reached.", "{0} were not loaded because the limit was reached."));

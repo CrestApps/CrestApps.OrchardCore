@@ -93,6 +93,7 @@ public static class VoiceCallStateProjection
             HangupCause.Canceled => VoiceCallState.Canceled,
             HangupCause.Congestion => VoiceCallState.Failed,
             HangupCause.Failed => VoiceCallState.Failed,
+            HangupCause.NotInService => VoiceCallState.Failed,
             _ => fallback,
         };
     }

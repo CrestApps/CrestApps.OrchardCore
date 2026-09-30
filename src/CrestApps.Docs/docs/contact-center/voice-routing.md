@@ -580,7 +580,8 @@ The narrowing direction is a declared, lossy projection: four distinct terminal 
 | `NoAnswer` | The call alerted but was never answered. |
 | `Rejected` | The remote party or network explicitly rejected the call. |
 | `Congestion` | No circuit was available, or the network was congested. Normally retryable. |
-| `Failed` | A permanent failure such as an unallocated number or invalid format. Not retryable. |
+| `Failed` | A permanent failure the provider did not attribute to the number, such as an incompatible destination. Not retryable. |
+| `NotInService` | The number itself cannot be reached: unallocated, disconnected or changed, or not a valid number (Telnyx `unallocated_number`/`not_found` or SIP 404, 410, 484, 604; Q.850 causes 1, 22 and 28). The attempt is completed as not in service and the number is added to the [Numbers Not In Service](../user-manual/numbers-not-in-service.md) list. |
 | `Canceled` | The originating side abandoned the call before it was answered. |
 | `AnsweringMachine` | A machine, voicemail greeting, or fax tone answered instead of a person. |
 | `Unknown` | The provider ended the call without reporting any cause. Recorded rather than presented as a normal clearing. |
