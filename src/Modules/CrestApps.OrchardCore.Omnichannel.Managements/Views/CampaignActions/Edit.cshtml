@@ -1,9 +1,13 @@
 @using CrestApps.OrchardCore.Core.Models
+@using CrestApps.OrchardCore.Omnichannel.Core
 
 @model EditCatalogEntryViewModel
 
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["Edit Campaign Action - {0}", Model.DisplayName])</h1>
+    <breadcrumb name="OmnichannelCampaignActionsEdit" title="@T["Edit Campaign Action - {0}", Model.DisplayName]">
+        <breadcrumb-item id="OmnichannelCampaigns" action="Index" controller="Campaigns" area="CrestApps.OrchardCore.Omnichannel.Managements" permission="@OmnichannelConstants.Permissions.ManageCampaigns.Name">@T["Campaigns"]</breadcrumb-item>
+        <breadcrumb-item id="OmnichannelCampaignsEdit" action="Edit" controller="Campaigns" area="CrestApps.OrchardCore.Omnichannel.Managements" route-id="@(ViewData["CampaignId"]?.ToString())" permission="@OmnichannelConstants.Permissions.ManageCampaigns.Name">@T["Edit Campaign"]</breadcrumb-item>
+    </breadcrumb>
 </zone>
 
 <form method="post" enctype="multipart/form-data" class="no-multisubmit">

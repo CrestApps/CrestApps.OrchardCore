@@ -1,9 +1,12 @@
+@using CrestApps.OrchardCore.ContactCenter.Core
 @using CrestApps.OrchardCore.Core.Models
 
 @model EditCatalogEntryViewModel
 
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["New Voice Media"])</h1>
+    <breadcrumb name="ContactCenterVoiceMediaCreate" title="@T["New Voice Media"]">
+        <breadcrumb-item id="ContactCenterVoiceMedia" action="Index" controller="VoiceMedia" area="CrestApps.OrchardCore.ContactCenter" permission="@ContactCenterPermissions.ManageVoiceMedia.Name">@T["Voice media"]</breadcrumb-item>
+    </breadcrumb>
 </zone>
 
 <form method="post" enctype="multipart/form-data" class="no-multisubmit">

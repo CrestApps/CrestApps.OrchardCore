@@ -3,7 +3,9 @@
 @model EditCatalogEntryViewModel
 
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["Edit Extension - {0}", Model.DisplayName])</h1>
+    <breadcrumb name="TelephonyExtensionsEdit" title="@T["Edit Extension - {0}", Model.DisplayName]">
+        <breadcrumb-item id="TelephonyExtensions" action="Index" controller="Extensions" area="CrestApps.OrchardCore.Telephony" permission="@TelephonyPermissions.ManageExtensions.Name">@T["Extensions"]</breadcrumb-item>
+    </breadcrumb>
 </zone>
 
 <form method="post" class="no-multisubmit">

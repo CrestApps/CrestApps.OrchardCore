@@ -12,6 +12,11 @@ namespace CrestApps.OrchardCore.ContactCenter.ViewModels;
 public class CatalogListViewModel
 {
     /// <summary>
+    /// Gets or sets the stable name of the screen's breadcrumb trail, e.g. <c>ContactCenterQueues</c>.
+    /// </summary>
+    public string BreadcrumbName { get; set; }
+
+    /// <summary>
     /// Gets or sets the localized page title.
     /// </summary>
     public IHtmlContent Title { get; set; }

@@ -5,7 +5,9 @@
 
 @model SubjectFlowsIndexViewModel
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["Subject Flows"])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="OmnichannelSubjectFlows" title="@T["Subject Flows"]" />
+</zone>
 
 @if (Model.Subjects.Count == 0)
 {

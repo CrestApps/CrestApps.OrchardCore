@@ -1,5 +1,6 @@
 @using CrestApps.OrchardCore.Omnichannel.Managements.Services
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+@using OrchardCore.Contents
 @using OrchardCore.Lists.ViewModels
 
 @model ListAccountActivitiesViewModel
@@ -11,7 +12,9 @@
 }
 
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["Activities"])</h1>
+    <breadcrumb name="OmnichannelAccountActivities" title="@T["Activities"]">
+        <breadcrumb-item id="OmnichannelAccount" action="Edit" controller="Admin" area="OrchardCore.Contents" route-contentItemId="@Model.Account.ContentItemId" permission="@CommonPermissions.EditContent.Name" resource="@Model.Account">@Model.Account.DisplayText</breadcrumb-item>
+    </breadcrumb>
 </zone>
 
 @if (listPartNavigation is not null)

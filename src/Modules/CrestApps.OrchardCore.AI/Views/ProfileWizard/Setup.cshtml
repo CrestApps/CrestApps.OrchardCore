@@ -1,15 +1,14 @@
+@using CrestApps.OrchardCore.AI.Core
 @using CrestApps.OrchardCore.AI.ViewModels
 
 @model ProfileWizardSetupViewModel
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["New AI Profile"])</h1></zone>
-
-<nav aria-label="@T["Wizard steps"]" class="mb-3">
-    <ol class="breadcrumb mb-0">
-        <li class="breadcrumb-item"><a asp-action="Index">@T["Choose a starting point"]</a></li>
-        <li class="breadcrumb-item active" aria-current="page">@T["Set up"]</li>
-    </ol>
-</nav>
+<zone Name="Title">
+    <breadcrumb name="AIProfilesNewSetup" title="@T["New AI Profile"]">
+        <breadcrumb-item id="AIProfiles" action="Index" controller="Profiles" area="CrestApps.OrchardCore.AI" permission="@AIPermissions.ManageAIProfiles.Name">@T["AI Profiles"]</breadcrumb-item>
+        <breadcrumb-item id="AIProfilesNew" action="Index" controller="ProfileWizard" area="CrestApps.OrchardCore.AI" permission="@AIPermissions.ManageAIProfiles.Name">@T["Choose a starting point"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
 
 <div class="card mb-4">
     <div class="card-body d-flex gap-3 align-items-start">

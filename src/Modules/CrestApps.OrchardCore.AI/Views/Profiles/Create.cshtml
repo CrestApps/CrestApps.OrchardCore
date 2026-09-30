@@ -1,8 +1,11 @@
 @using CrestApps.Core.Models
+@using CrestApps.OrchardCore.AI.Core
 @model EditCatalogEntryViewModel
 
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["New Profile"])</h1>
+    <breadcrumb name="AIProfilesCreate" title="@T["New Profile"]">
+        <breadcrumb-item id="AIProfiles" action="Index" controller="Profiles" area="CrestApps.OrchardCore.AI" permission="@AIPermissions.ManageAIProfiles.Name">@T["AI Profiles"]</breadcrumb-item>
+    </breadcrumb>
 </zone>
 
 @if (ViewData["IsClone"] is true)

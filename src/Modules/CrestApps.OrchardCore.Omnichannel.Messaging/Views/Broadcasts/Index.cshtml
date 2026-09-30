@@ -1,6 +1,8 @@
 @model BroadcastListViewModel
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["Broadcasts"])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="MessagingBroadcasts" title="@T["Broadcasts"]" />
+</zone>
 
 <div data-list-management data-client-side-search="true">
     <div class="card text-bg-theme mb-3 position-sticky action-bar">

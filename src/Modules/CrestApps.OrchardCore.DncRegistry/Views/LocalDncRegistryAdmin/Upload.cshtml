@@ -1,12 +1,11 @@
 @using OrchardCore.DisplayManagement
 @model IShape
 
-<nav aria-label="breadcrumb">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a asp-action="Index" asp-controller="LocalDncRegistryAdmin">@T["Local Do Not Call Registry"]</a></li>
-        <li class="breadcrumb-item active" aria-current="page">@RenderTitleSegments(T["Upload DNC List"])</li>
-    </ol>
-</nav>
+<zone Name="Title">
+    <breadcrumb name="LocalDncRegistryUpload" title="@T["Upload DNC List"]">
+        <breadcrumb-item id="LocalDncRegistry" action="Index" controller="LocalDncRegistryAdmin" area="CrestApps.OrchardCore.DncRegistry" permission="@DncRegistryPermissions.ManageDncRegistrySettings.Name">@T["Local Do Not Call Registry"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
 
 @if (!ViewContext.ModelState.IsValid)
 {

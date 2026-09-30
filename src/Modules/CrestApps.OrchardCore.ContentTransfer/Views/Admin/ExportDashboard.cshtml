@@ -1,6 +1,8 @@
 @model ListContentTransferEntriesViewModel
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["Export Dashboard"])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="ContentTransferExportDashboard" title="@T["Export Dashboard"]" />
+</zone>
 
 <div class="card text-bg-theme mb-3 position-sticky action-bar">
     <div class="card-body">

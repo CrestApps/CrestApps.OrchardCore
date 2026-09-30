@@ -1,9 +1,12 @@
 @using CrestApps.Core.Models
+@using CrestApps.OrchardCore.AI.Core
 
 @model EditCatalogEntryViewModel
 
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["New '{0}' data source", Model.DisplayName])</h1>
+    <breadcrumb name="AIDataSourcesCreate" title="@T["New '{0}' data source", Model.DisplayName]">
+        <breadcrumb-item id="AIDataSources" action="Index" controller="DataSources" area="CrestApps.OrchardCore.AI.DataSources" permission="@AIPermissions.ManageAIDataSources.Name">@T["AI Data Sources"]</breadcrumb-item>
+    </breadcrumb>
 </zone>
 
 <form method="post" enctype="multipart/form-data" class="no-multisubmit">

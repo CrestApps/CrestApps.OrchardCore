@@ -2,7 +2,9 @@
 
 @model IList<AgentProfile>
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["Agent entitlements"])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="ContactCenterAgentEntitlements" title="@T["Agent entitlements"]" />
+</zone>
 
 <div class="card text-bg-theme mb-3 position-sticky action-bar">
     <div class="card-body">

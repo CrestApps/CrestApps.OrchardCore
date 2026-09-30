@@ -6,7 +6,9 @@
 
 @model ListSourceCatalogEntryViewModel<OmnichannelChannelEndpoint>
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["Channel Endpoints"])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="OmnichannelChannelEndpoints" title="@T["Channel Endpoints"]" />
+</zone>
 
 @* The form is necessary to generate an antiforgery token for the delete and toggle actions. *@
 <form asp-action="Index" method="post" class="no-multisubmit">

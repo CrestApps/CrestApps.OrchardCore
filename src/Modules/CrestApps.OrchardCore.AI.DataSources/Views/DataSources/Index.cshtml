@@ -6,8 +6,8 @@
 
 @model ListSourceModelViewModel<AIDataSourceSourceDescriptor, CatalogEntryViewModel<AIDataSource>>
 
-<zone Name="Title" Entry>
-    <h1>@RenderTitleSegments(T["AI Data Sources"])</h1>
+<zone Name="Title">
+    <breadcrumb name="AIDataSources" title="@T["AI Data Sources"]" />
 </zone>
 
 @* The form is necessary to generate an antiforgery token for the delete and toggle actions. *@

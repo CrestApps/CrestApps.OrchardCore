@@ -1,9 +1,12 @@
+@using CrestApps.OrchardCore.ContactCenter.Core
 @using CrestApps.OrchardCore.Core.Models
 
 @model EditCatalogEntryViewModel
 
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["New Dialer Profile"])</h1>
+    <breadcrumb name="ContactCenterDialerProfilesCreate" title="@T["New Dialer Profile"]">
+        <breadcrumb-item id="ContactCenterDialerProfiles" action="Index" controller="DialerProfiles" area="CrestApps.OrchardCore.ContactCenter" permission="@ContactCenterPermissions.ManageDialer.Name">@T["Dialer profiles"]</breadcrumb-item>
+    </breadcrumb>
 </zone>
 
 <form method="post" enctype="multipart/form-data" class="no-multisubmit">

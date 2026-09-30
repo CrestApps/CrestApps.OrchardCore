@@ -1,11 +1,13 @@
-@using CrestApps.Core.Models
 @using CrestApps.Core.AI.Models
+@using CrestApps.Core.Models
 @using CrestApps.OrchardCore.Core.Models
 @using Microsoft.AspNetCore.Mvc.Localization
 
 @model ListCatalogEntryViewModel<CatalogEntryViewModel<ChatInteraction>>
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["Chat Interactions"])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="AIChatInteractions" title="@T["Chat Interactions"]" />
+</zone>
 
 @* The form is necessary to generate an antiforgery token for the delete and toggle actions. *@
 <form asp-action="Index" method="post" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-client-side-search="false">

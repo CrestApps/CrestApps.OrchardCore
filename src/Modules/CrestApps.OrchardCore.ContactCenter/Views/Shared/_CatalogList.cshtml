@@ -1,6 +1,8 @@
 @model CatalogListViewModel
 
-<zone Name="Title"><h1>@RenderTitleSegments(Model.Title)</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="@Model.BreadcrumbName" title="@Model.Title" />
+</zone>
 
 @* The form is necessary to generate an antiforgery token for delete actions. *@
 <form asp-action="Index" method="post" class="no-multisubmit">

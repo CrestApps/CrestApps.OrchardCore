@@ -1,9 +1,12 @@
 @using CrestApps.Core.Models
+@using CrestApps.OrchardCore.AI.Core
 
 @model EditCatalogEntryViewModel
 
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["New {0} Tool Instance", Model.DisplayName])</h1>
+    <breadcrumb name="AIToolInstancesCreate" title="@T["New {0} Tool Instance", Model.DisplayName]">
+        <breadcrumb-item id="AIToolInstances" action="Index" controller="AIToolInstances" area="CrestApps.OrchardCore.AI" permission="@AIPermissions.ManageAIToolInstances.Name">@T["AI Tool Instances"]</breadcrumb-item>
+    </breadcrumb>
 </zone>
 
 <form method="post" enctype="multipart/form-data" class="no-multisubmit">

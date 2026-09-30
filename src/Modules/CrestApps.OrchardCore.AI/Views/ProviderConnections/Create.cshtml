@@ -1,8 +1,11 @@
 @using CrestApps.Core.Models
+@using CrestApps.OrchardCore.AI.Core
 @model EditCatalogEntryViewModel
 
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["New '{0}' Connection", Model.DisplayName])</h1>
+    <breadcrumb name="AIProviderConnectionsCreate" title="@T["New '{0}' Connection", Model.DisplayName]">
+        <breadcrumb-item id="AIProviderConnections" action="Index" controller="ProviderConnections" area="CrestApps.OrchardCore.AI" permission="@AIPermissions.ManageProviderConnections.Name">@T["AI Provider Connections"]</breadcrumb-item>
+    </breadcrumb>
 </zone>
 
 <form method="post" enctype="multipart/form-data" class="no-multisubmit">

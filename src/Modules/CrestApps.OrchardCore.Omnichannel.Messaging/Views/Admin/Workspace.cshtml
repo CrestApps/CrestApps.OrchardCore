@@ -17,7 +17,9 @@
         };
 }
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["Messaging"])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="MessagingWorkspace" title="@T["Messaging"]" />
+</zone>
 
 <div class="messaging-workspace d-flex gap-3"
      data-messaging-workspace
@@ -161,6 +163,11 @@
     .messaging-workspace {
         height: calc(100vh - var(--oc-top-nav-height, 0px) - 5.5rem);
         min-height: 32rem;
+    }
+
+    /* Leave room for the breadcrumb trail above the title when it is shown. */
+    .ta-content:has(> .oc-breadcrumb) .messaging-workspace {
+        height: calc(100vh - var(--oc-top-nav-height, 0px) - 7.75rem);
     }
 
     /* The list and the conversation are two panes of their own, set apart by a gap, rather than one box split by a

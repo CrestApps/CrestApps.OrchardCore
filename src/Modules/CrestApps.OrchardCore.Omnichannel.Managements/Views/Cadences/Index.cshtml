@@ -6,7 +6,9 @@
 
 @model ListCatalogEntryViewModel<CatalogEntryViewModel<Cadence>>
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["Cadences"])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="OmnichannelCadences" title="@T["Cadences"]" />
+</zone>
 
 @* The form is necessary to generate an antiforgery token for the delete and toggle actions. *@
 <form asp-action="Index" method="post" class="no-multisubmit">

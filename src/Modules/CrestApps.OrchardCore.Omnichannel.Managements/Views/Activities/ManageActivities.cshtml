@@ -3,7 +3,7 @@
 @model BulkManageOmnichannelActivityContainer
 
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["Manage Activities"])</h1>
+    <breadcrumb name="OmnichannelManageActivities" title="@T["Manage Activities"]" />
 </zone>
 
 @await DisplayAsync(Model)

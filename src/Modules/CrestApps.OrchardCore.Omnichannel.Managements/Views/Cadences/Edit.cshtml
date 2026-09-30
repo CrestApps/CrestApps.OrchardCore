@@ -1,9 +1,12 @@
 @using CrestApps.Core.Models
+@using CrestApps.OrchardCore.Omnichannel.Core
 
 @model EditCatalogEntryViewModel
 
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["Edit '{0}' Cadence", Model.DisplayName])</h1>
+    <breadcrumb name="OmnichannelCadencesEdit" title="@T["Edit '{0}' Cadence", Model.DisplayName]">
+        <breadcrumb-item id="OmnichannelCadences" action="Index" controller="Cadences" area="CrestApps.OrchardCore.Omnichannel.Managements" permission="@OmnichannelConstants.Permissions.ManageCadences.Name">@T["Cadences"]</breadcrumb-item>
+    </breadcrumb>
 </zone>
 
 <form method="post" asp-route-id="@ViewContext.HttpContext.Request.RouteValues["id"]" enctype="multipart/form-data" class="no-multisubmit">
