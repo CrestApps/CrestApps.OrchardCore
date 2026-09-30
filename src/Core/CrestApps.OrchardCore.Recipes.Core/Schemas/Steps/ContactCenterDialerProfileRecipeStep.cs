@@ -33,6 +33,7 @@ public sealed class ContactCenterDialerProfileRecipeStep : IRecipeStep
                             ("CallsPerAgent", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("Number of calls placed per available agent for power dialing.")),
                             ("MaxAttempts", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("Maximum number of dialing attempts allowed per activity.")),
                             ("RetryDelayMinutes", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("Delay, in minutes, before a no-answer activity is retried.")),
+                            ("AnsweringMachineDetection", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Disabled", "Standard", "Premium").Description("Whether Power and Progressive dialing asks the provider to screen out answering machines before connecting an agent. A machine-answered call is hung up and retried.")),
                             ("PreviewExtensionSeconds", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("Seconds each extension adds when a preview agent asks for more time to review a record before it is dialed.")),
                             ("MaxPreviewExtensions", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("How many times one preview offer may be extended.")),
                             ("CallerId", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Caller identifier presented to the customer when supported.")),

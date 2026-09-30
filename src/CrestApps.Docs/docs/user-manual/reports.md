@@ -34,7 +34,7 @@ Every report lives under the **Reports** menu, grouped by category: *Agent Perfo
 | How long do agents talk, hold and ring, and how long do callers wait? | **Talk, hold, ring and queue wait** |
 | What did each agent handle, and what is their average handle time? | **Agent productivity** |
 | How busy is each queue right now and over the period? | **Queue usage** |
-| How far along is each campaign or subject? | **Campaign summary**, **Subject inventory** |
+| How far along is each campaign or subject, and how many numbers were not in service? | **Campaign summary**, **Subject inventory** |
 | What did an agent do, minute by minute? | **Agent activity timeline** |
 | How much paid time did each agent spend in each state? | **Reconciled payroll timecard** and the other *Workforce & Payroll* reports |
 | Which dispositions are agents choosing? | **Disposition breakdown** |

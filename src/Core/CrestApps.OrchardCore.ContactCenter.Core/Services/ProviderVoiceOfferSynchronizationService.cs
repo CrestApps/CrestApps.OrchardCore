@@ -107,8 +107,11 @@ public sealed partial class ProviderVoiceOfferSynchronizationService : IProvider
         // The last two describe the call's past, not its present: a caller transferred back into a queue -- waiting, or
         // ringing for the next agent -- was answered and wrapped up by the agent who sent them there, yet nobody has
         // them now. Read as answered, the ringing agent's offer was cancelled but the agent was left Reserved on it.
+        // A call a machine answered, and that was hung up before any agent joined it, was never the agent's either:
+        // it is released like a call nobody answered, so the agent goes straight back to ready and the queue lets go.
         var isBackInQueue = queueItem?.Status is QueueItemStatus.Waiting or QueueItemStatus.Reserved;
-        var wasAnsweredByAgent = providerReportedAnswered &&
+        var answeredByMachine = session?.HangupCause == HangupCause.AnsweringMachine && !HadJoinedAgentLeg(session);
+        var wasAnsweredByAgent = providerReportedAnswered && !answeredByMachine &&
             (queueItem?.Status == QueueItemStatus.Assigned ||
                 reservations.Any(reservation => reservation.Status == ReservationStatus.Accepted) ||
                 (!isBackInQueue && (interaction.WrapUpStartedUtc.HasValue || HadJoinedAgentLeg(session))));

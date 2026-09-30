@@ -316,6 +316,7 @@ namespace CrestApps.OrchardCore.Telephony
         }
         public static class RequestMetadata
         {
+            public const string AnsweringMachineDetection = "answeringMachineDetection";
             public const string ConferenceEnd = "conferenceEnd";
             public const string ConferenceLeave = "conferenceLeave";
             public const string ConferenceParticipant = "conferenceParticipant";
@@ -540,6 +541,7 @@ namespace CrestApps.OrchardCore.Telephony.Models
         Failed = 6,
         Canceled = 7,
         AnsweringMachine = 8,
+        NotInService = 9,
     }
     public sealed class IncomingCallAnsweredNotification
     {

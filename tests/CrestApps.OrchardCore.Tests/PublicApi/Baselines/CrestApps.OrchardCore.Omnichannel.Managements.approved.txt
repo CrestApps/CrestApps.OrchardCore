@@ -451,6 +451,24 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> ConvertPost(string contentItemId, CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.ConvertLeadViewModel model) { }
     }
     [OrchardCore.Admin.Admin(null, null)]
+    public sealed class NotInServiceNumbersController : Microsoft.AspNetCore.Mvc.Controller
+    {
+        public NotInServiceNumbersController(CrestApps.OrchardCore.Omnichannel.Core.Services.INotInServiceNumberService notInServiceNumbers, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaignCatalog, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, OrchardCore.DisplayManagement.Notify.INotifier notifier, Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.NotInServiceNumbersController> htmlLocalizer) { }
+        [Microsoft.AspNetCore.Mvc.HttpPost]
+        [OrchardCore.Admin.Admin("omnichannel/numbers-not-in-service/clear", "OmnichannelNotInServiceNumbersClear")]
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Clear(string phoneNumber, string returnUrl) { }
+        [OrchardCore.Admin.Admin("omnichannel/numbers-not-in-service", "OmnichannelNotInServiceNumbersIndex")]
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Index(string search, OrchardCore.Navigation.PagerParameters pagerParameters, [Microsoft.AspNetCore.Mvc.FromServices] Microsoft.Extensions.Options.IOptions<OrchardCore.Navigation.PagerOptions> pagerOptions, [Microsoft.AspNetCore.Mvc.FromServices] OrchardCore.DisplayManagement.IShapeFactory shapeFactory) { }
+        [Microsoft.AspNetCore.Mvc.ActionName("Index")]
+        [Microsoft.AspNetCore.Mvc.HttpPost]
+        [OrchardCore.Admin.Admin("omnichannel/numbers-not-in-service", "OmnichannelNotInServiceNumbersIndex")]
+        [OrchardCore.Routing.FormValueRequired("submit.Filter")]
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> IndexFilterPost(string search) { }
+        [Microsoft.AspNetCore.Mvc.HttpPost]
+        [OrchardCore.Admin.Admin("omnichannel/numbers-not-in-service/mark", "OmnichannelNotInServiceNumbersMark")]
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Mark(string phoneNumber) { }
+    }
+    [OrchardCore.Admin.Admin(null, null)]
     public sealed class OpportunityStagesController : Microsoft.AspNetCore.Mvc.Controller
     {
         public OpportunityStagesController(CrestApps.Core.Services.INamedCatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OpportunityStage> manager, CrestApps.Core.Services.INamedCatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OpportunityStage> catalog, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor updateModelAccessor, OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OpportunityStage> displayManager, OrchardCore.DisplayManagement.Notify.INotifier notifier, Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.OpportunityStagesController> htmlLocalizer, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.OpportunityStagesController> stringLocalizer) { }
@@ -912,7 +930,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
     }
     public class DefaultContactActivityBatchLoader : CrestApps.OrchardCore.Omnichannel.Core.Services.IActivityBatchLoader
     {
-        public DefaultContactActivityBatchLoader(CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityBatch> catalog, YesSql.ISession session, OrchardCore.Modules.ILocalClock localClock, OrchardCore.Modules.IClock clock, CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService subjectFlowSettingsService, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityManager activityManager, YesSql.IStore store, OrchardCore.Data.IDbConnectionAccessor dbConnectionAccessor, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Services.IActivityDialerContributor> dialerContributors, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityBatchSourceOptions> sourceOptions, CrestApps.OrchardCore.Omnichannel.Core.Services.IContactOptOutResolver optOutResolver, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Services.DefaultContactActivityBatchLoader> logger, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelContactTypeProvider> contactTypeProviders = null) { }
+        public DefaultContactActivityBatchLoader(CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityBatch> catalog, YesSql.ISession session, OrchardCore.Modules.ILocalClock localClock, OrchardCore.Modules.IClock clock, CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService subjectFlowSettingsService, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityManager activityManager, YesSql.IStore store, OrchardCore.Data.IDbConnectionAccessor dbConnectionAccessor, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Services.IActivityDialerContributor> dialerContributors, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityBatchSourceOptions> sourceOptions, CrestApps.OrchardCore.Omnichannel.Core.Services.IContactOptOutResolver optOutResolver, CrestApps.OrchardCore.Omnichannel.Core.Services.INotInServiceNumberService notInServiceNumbers, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Services.DefaultContactActivityBatchLoader> logger, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelContactTypeProvider> contactTypeProviders = null) { }
         public virtual string Source { get; }
         public virtual System.Threading.Tasks.Task LoadAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityBatchLoadContext context, System.Threading.CancellationToken cancellationToken = default) { }
     }
@@ -1424,6 +1442,20 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> SubjectContentTypes { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityUrgencyLevel? UrgencyLevel { get; set; }
     }
+    public class NotInServiceNumberEntry
+    {
+        public NotInServiceNumberEntry() { }
+        public string CampaignName { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.NotInServiceNumber Number { get; set; }
+    }
+    public class NotInServiceNumbersIndexViewModel
+    {
+        public NotInServiceNumbersIndexViewModel() { }
+        public System.Collections.Generic.IList<CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.NotInServiceNumberEntry> Entries { get; set; }
+        public object Pager { get; set; }
+        public string Search { get; set; }
+        public int TotalCount { get; set; }
+    }
     public class OmnichannelActivityBatchViewModel
     {
         public OmnichannelActivityBatchViewModel() { }
@@ -1645,6 +1677,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         public string Description { get; set; }
         public bool IsNew { get; set; }
         public string Name { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.DispositionOutcome Outcome { get; set; }
     }
     public class OmnichannelReportFilterViewModel
     {

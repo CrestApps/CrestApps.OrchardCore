@@ -29,6 +29,33 @@ internal static class OmnichannelHelper
     }
 
     /// <summary>
+    /// Every phone number on file for this contact, in the order they were entered.
+    /// </summary>
+    /// <param name="contact">The contact.</param>
+    public static IReadOnlyList<string> GetPhoneNumbers(ContentItem contact)
+    {
+        if (contact is null ||
+            !contact.TryGet<BagPart>(OmnichannelConstants.NamedParts.ContactMethods, out var bagPart) ||
+            bagPart.ContentItems is null)
+        {
+            return [];
+        }
+
+        var numbers = new List<string>();
+
+        foreach (var contentMethod in bagPart.ContentItems)
+        {
+            if (contentMethod.TryGet<PhoneNumberInfoPart>(out var phonePart) &&
+                !string.IsNullOrEmpty(phonePart.Number?.PhoneNumber))
+            {
+                numbers.Add(phonePart.Number.PhoneNumber);
+            }
+        }
+
+        return numbers;
+    }
+
+    /// <summary>
     /// Retrieves the preferred destenation.
     /// </summary>
     /// <param name="contact">The contact.</param>
@@ -56,6 +83,19 @@ internal static class OmnichannelHelper
     /// <param name="contact">The contact.</param>
     /// <param name="channel">The channel.</param>
     public static string FindDestination(ContentItem contact, string channel)
+        => FindDestination(contact, channel, isExcluded: null);
+
+    /// <summary>
+    /// Where this contact would be reached on this channel, passing over the numbers that cannot be used.
+    /// </summary>
+    /// <remarks>
+    /// A contact whose cell number is dead is still reachable at home. Passing over an excluded number keeps the same
+    /// order of preference for the ones left, rather than giving up on the contact.
+    /// </remarks>
+    /// <param name="contact">The contact.</param>
+    /// <param name="channel">The channel.</param>
+    /// <param name="isExcluded">Whether a phone number must be passed over, or <see langword="null"/> to use every number.</param>
+    public static string FindDestination(ContentItem contact, string channel, Func<string, bool> isExcluded)
     {
 
         if (!contact.TryGet<BagPart>(OmnichannelConstants.NamedParts.ContactMethods, out var bagPart) ||
@@ -86,7 +126,8 @@ internal static class OmnichannelHelper
             {
                 if (!contentMethod.TryGet<PhoneNumberInfoPart>(out var phonePart) ||
                     phonePart.Type is null ||
-                    string.IsNullOrEmpty(phonePart.Number?.PhoneNumber))
+                    string.IsNullOrEmpty(phonePart.Number?.PhoneNumber) ||
+                    isExcluded?.Invoke(phonePart.Number.PhoneNumber) == true)
                 {
                     continue;
                 }
@@ -122,7 +163,8 @@ internal static class OmnichannelHelper
                 if (!contentMethod.TryGet<PhoneNumberInfoPart>(out var phonePart) ||
                     phonePart.Type is null ||
                     phonePart.Type.Text != "Cell" ||
-                    string.IsNullOrEmpty(phonePart.Number?.PhoneNumber))
+                    string.IsNullOrEmpty(phonePart.Number?.PhoneNumber) ||
+                    isExcluded?.Invoke(phonePart.Number.PhoneNumber) == true)
                 {
                     continue;
                 }

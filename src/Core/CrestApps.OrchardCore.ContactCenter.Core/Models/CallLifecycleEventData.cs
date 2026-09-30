@@ -108,6 +108,18 @@ public sealed class CallLifecycleEventData
     public string Target { get; set; }
 
     /// <summary>
+    /// Gets or sets how a dialer attempt ended, on a <c>DialerAttemptCompleted</c> event: one of
+    /// <see cref="DialerAttemptOutcomes"/>.
+    /// </summary>
+    public string Outcome { get; set; }
+
+    /// <summary>
+    /// Gets or sets the customer's number the call was placed to, on a <c>DialerAttemptCompleted</c> event, so a workflow
+    /// can reach the customer another way, such as by text message.
+    /// </summary>
+    public string PhoneNumber { get; set; }
+
+    /// <summary>
     /// Gets or sets how long the state that just ended lasted, in seconds: the hold on a resume, the wait on leaving a
     /// queue, the call on an ending.
     /// </summary>

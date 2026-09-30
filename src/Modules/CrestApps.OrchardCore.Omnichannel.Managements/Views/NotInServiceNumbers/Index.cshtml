@@ -1,0 +1,115 @@
+@using CrestApps.OrchardCore.Omnichannel.Core
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+@using CrestApps.OrchardCore.PhoneNumbers
+
+@model NotInServiceNumbersIndexViewModel
+
+@inject IPhoneNumberService PhoneNumberService
+
+@{
+    string DescribeSource(string source) => source switch
+    {
+        OmnichannelConstants.NotInServiceSources.Dialer => T["Dialer call"].Value,
+        OmnichannelConstants.NotInServiceSources.AutomatedCall => T["Automated call"].Value,
+        OmnichannelConstants.NotInServiceSources.Agent => T["Agent disposition"].Value,
+        OmnichannelConstants.NotInServiceSources.Lookup => T["Number lookup"].Value,
+        OmnichannelConstants.NotInServiceSources.Manual => T["Marked by hand"].Value,
+        _ => source,
+    };
+}
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["Numbers Not In Service"])</h1></zone>
+
+<p class="text-muted">
+    @T["These numbers are skipped when contacts are loaded into a campaign, and the dialer and automated calls never dial them. A number is added when a call finds it not in service, a number lookup reports it disconnected or invalid, or an agent uses a disposition that marks it. Clear a number if it has been given to somebody new."]
+</p>
+
+<form asp-action="Index" method="post" class="no-multisubmit">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-1">
+                <div class="col">
+                    <div class="has-search">
+                        <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                        <input id="search-box" name="search" value="@Model.Search" class="form-control" placeholder="@T["Search by number"]" type="search" autocomplete="off" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<form asp-action="Mark" method="post" class="no-multisubmit mb-3">
+    <div class="row gx-1 align-items-center">
+        <div class="col-md-4">
+            <label for="mark-phone-number" class="visually-hidden">@T["Phone number"]</label>
+            <input id="mark-phone-number" name="phoneNumber" class="form-control" type="tel" placeholder="+17025550123" required />
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-secondary">@T["Mark as not in service"]</button>
+        </div>
+    </div>
+</form>
+
+@if (Model.Entries.Count == 0)
+{
+    <div class="alert alert-info text-center" role="status">
+        @if (string.IsNullOrWhiteSpace(Model.Search))
+        {
+            @T["<strong>Nothing here!</strong> No number is marked as not in service."]
+        }
+        else
+        {
+            @T["No marked number matches your search."]
+        }
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">@T["Number"]</th>
+                    <th scope="col">@T["Found by"]</th>
+                    <th scope="col">@T["Reason"]</th>
+                    <th scope="col">@T["Campaign"]</th>
+                    <th scope="col">@T["Last found"]</th>
+                    <th scope="col" class="text-end">@T["Times"]</th>
+                    <th scope="col"><span class="visually-hidden">@T["Actions"]</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var entry in Model.Entries)
+                {
+                    var number = entry.Number;
+
+                    <tr>
+                        <td class="text-nowrap">@PhoneNumberService.FormatForDisplay(number.PhoneNumber)</td>
+                        <td>
+                            @DescribeSource(number.Source)
+                            @if (!string.IsNullOrEmpty(number.MarkedByUsername))
+                            {
+                                <span class="text-muted">@T["({0})", number.MarkedByUsername]</span>
+                            }
+                        </td>
+                        <td>@number.Reason</td>
+                        <td>@entry.CampaignName</td>
+                        <td class="text-nowrap">@await DisplayAsync(await New.DateTime(Utc: number.LastDetectedUtc, Format: "g"))</td>
+                        <td class="text-end">@number.DetectionCount</td>
+                        <td class="text-end">
+                            <form asp-action="Clear" method="post" class="d-inline">
+                                <input type="hidden" name="phoneNumber" value="@number.PhoneNumber" />
+                                <button type="submit" class="btn btn-sm btn-primary" title="@T["Dial this number again"]">@T["Clear"]</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @await DisplayAsync(Model.Pager)
+}

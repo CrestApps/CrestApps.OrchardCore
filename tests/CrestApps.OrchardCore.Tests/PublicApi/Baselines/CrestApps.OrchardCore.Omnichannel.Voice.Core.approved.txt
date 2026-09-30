@@ -71,6 +71,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Models
         public VoiceAgentEvent() { }
         public string ActivityId { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Voice.Models.VoiceAgentAnswerer Answerer { get; set; }
+        public CrestApps.OrchardCore.Telephony.Models.HangupCause? HangupCause { get; set; }
+        public string HangupDetail { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Voice.Models.VoiceAgentEventKind Kind { get; set; }
         public System.DateTime? OccurredUtc { get; set; }
         public string ProviderCallId { get; set; }
@@ -236,6 +238,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
     }
     public static class VoiceCallConclusionPolicy
     {
+        public const string BusyNote = "The automated call found the line busy; nobody spoke with the customer.";
         public const string CompletedWithoutSummaryNote = "Automated AI voice call completed.";
         public const string NoConversationNote = "The automated call produced no conversation: nothing was said by either side.";
         public const string SessionLostNote = "The automated assistant lost its connection partway through the call, so the conv" +
@@ -245,7 +248,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
             "stomer.";
         public static CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition ChooseDisposition(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> choices, string modelChoiceId) { }
         public static CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition ChooseSessionLostDisposition(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> choices, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectAction> subjectActions, string subjectContentType, string modelChoiceId) { }
-        public static CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition ChooseUnansweredDisposition(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> choices, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectAction> subjectActions, string subjectContentType) { }
+        public static CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition ChooseUnansweredDisposition(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> choices, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectAction> subjectActions, string subjectContentType, bool reachedVoicemail = false, bool lineBusy = false) { }
         public static bool HasConversation(System.Collections.Generic.IEnumerable<CrestApps.Core.AI.Models.AIChatSessionPrompt> prompts) { }
         public static string ResolveNotes(bool hasConversation, string modelSummary) { }
         public static string ResolveSessionLostNotes(bool hasConversation, string modelSummary) { }

@@ -51,6 +51,7 @@ public sealed class OmnichannelActivityIndexProvider : IndexProvider<Omnichannel
                 UrgencyLevel = activity.UrgencyLevel,
                 Status = activity.Status,
                 AiEscalated = activity.AiEscalated,
+                TerminalReasonCode = activity.TerminalReasonCode,
             });
     }
 }

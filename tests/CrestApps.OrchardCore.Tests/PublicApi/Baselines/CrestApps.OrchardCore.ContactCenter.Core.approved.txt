@@ -427,6 +427,23 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Indexes
 }
 namespace CrestApps.OrchardCore.ContactCenter.Core.Models
 {
+    public sealed class ActivityDispositionEventData
+    {
+        public ActivityDispositionEventData() { }
+        public string ActivityItemId { get; set; }
+        public int Attempts { get; set; }
+        public string CampaignId { get; set; }
+        public string Channel { get; set; }
+        public string CompletedById { get; set; }
+        public string ContactContentItemId { get; set; }
+        public string DispositionId { get; set; }
+        public string DispositionName { get; set; }
+        public string Outcome { get; set; }
+        public string PhoneNumber { get; set; }
+        public string Source { get; set; }
+        public string SubjectContentType { get; set; }
+        public string TerminalReasonCode { get; set; }
+    }
     public sealed class ActivityQueue : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel
     {
         public ActivityQueue() { }
@@ -974,6 +991,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string HangupSource { get; set; }
         public string InteractionId { get; set; }
         public string LegRole { get; set; }
+        public string Outcome { get; set; }
+        public string PhoneNumber { get; set; }
         public string PreviousState { get; set; }
         public string ProviderCallId { get; set; }
         public string ProviderHangupCause { get; set; }
@@ -1509,11 +1528,29 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public long AbandonedCalls { get; set; }
         public long LiveAnswers { get; set; }
     }
+    public enum DialerAnsweringMachineDetection
+    {
+        Disabled = 0,
+        Standard = 1,
+        Premium = 2,
+    }
+    public static class DialerAttemptOutcomes
+    {
+        public const string Answered = "Answered";
+        public const string AnsweringMachine = "AnsweringMachine";
+        public const string Busy = "Busy";
+        public const string Failed = "Failed";
+        public const string NoAnswer = "NoAnswer";
+        public const string NotInService = "NotInService";
+        public const string Rejected = "Rejected";
+        public static string Resolve(CrestApps.OrchardCore.Telephony.Models.HangupCause? hangupCause, bool answered) { }
+    }
     public sealed class DialerProfile : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel
     {
         public DialerProfile() { }
         public int AbandonmentSampleFloor { get; set; }
         public bool AlwaysUseCallerId { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Core.Models.DialerAnsweringMachineDetection AnsweringMachineDetection { get; set; }
         public string CallerId { get; set; }
         public string CallingCalendarId { get; set; }
         public int CallsPerAgent { get; set; }
@@ -2544,6 +2581,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models.Reports
         public double CompletionRate { get; }
         public long Failed { get; set; }
         public long InProgress { get; set; }
+        public long NotInService { get; set; }
         public long Pending { get; set; }
         public long Total { get; set; }
         public long TotalAttempts { get; set; }
@@ -3572,6 +3610,13 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public CrestApps.OrchardCore.ContactCenter.Models.DialerSuppressionReason Reason { get; }
         public static CrestApps.OrchardCore.ContactCenter.Core.Services.DialerEligibilityResult Eligible() { }
         public static CrestApps.OrchardCore.ContactCenter.Core.Services.DialerEligibilityResult Suppressed(CrestApps.OrchardCore.ContactCenter.Models.DialerSuppressionReason reason, string description) { }
+    }
+    public sealed class DialerNotInServiceHandler : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventHandler
+    {
+        public DialerNotInServiceHandler(CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityStore activityStore, System.IServiceProvider serviceProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.DialerNotInServiceHandler> logger) { }
+        public string HandlerId { get; }
+        public CrestApps.OrchardCore.ContactCenter.ContactCenterHandlerReplaySafety ReplaySafety { get; }
+        public System.Threading.Tasks.Task HandleAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent interactionEvent, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class DialerProfileManager : CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile>, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile>, CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerProfileManager
     {

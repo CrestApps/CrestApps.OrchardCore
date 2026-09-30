@@ -471,6 +471,7 @@ public sealed class DefaultSubjectActionExecutorTests
             actionCatalog.Object,
             Mock.Of<ISubjectFlowSettingsService>(),
             contentManager.Object,
+            Mock.Of<INotInServiceNumberService>(),
             session.Object,
             clock.Object,
             localClock ?? Mock.Of<ILocalClock>(),

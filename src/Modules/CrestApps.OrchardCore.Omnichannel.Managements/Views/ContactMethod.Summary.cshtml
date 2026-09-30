@@ -1,11 +1,13 @@
 @using CrestApps.OrchardCore.Omnichannel.Core
 @using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using CrestApps.OrchardCore.Omnichannel.Core.Services
 @using CrestApps.OrchardCore.Omnichannel.Managements.Services
 @using CrestApps.OrchardCore.PhoneNumbers
 @using OrchardCore.ContentManagement
 @using OrchardCore.Mvc.Utilities
 
 @inject IPhoneNumberService PhoneNumberService
+@inject INotInServiceNumberService NotInServiceNumbers
 
 @*
     A contact method (a bag item of the ContactMethod stereotype) in a contact's summary, such as the contact
@@ -39,6 +41,7 @@ else if (contentItem.ContentType == OmnichannelConstants.ContentTypes.PhoneNumbe
     {
         var type = phonePart.Type?.Text?.Trim();
         var extension = phonePart.Extension?.Text?.Trim();
+        var notInService = await NotInServiceNumbers.FindAsync(number);
 
         <div class="ocat-wrapper">
             <span class="ocat-label">@(string.IsNullOrEmpty(type) ? T["Phone"].Value : type)</span>
@@ -48,6 +51,12 @@ else if (contentItem.ContentType == OmnichannelConstants.ContentTypes.PhoneNumbe
                 @if (!string.IsNullOrEmpty(extension))
                 {
                     <span class="text-muted">@T["ext. {0}", extension]</span>
+                }
+                @if (notInService is not null)
+                {
+                    @* The dialer, automated calls and campaign loads all skip this number; the reason is what the
+                       network or the lookup said. *@
+                    <span class="badge text-bg-danger" title="@(string.IsNullOrEmpty(notInService.Reason) ? T["This number is not dialed."].Value : T["This number is not dialed: {0}", notInService.Reason].Value)">@T["Not in service"]</span>
                 }
                 @* The call and SMS buttons are added by the soft phone and messaging modules when they are enabled.
                    Only a mobile number gets the SMS button. *@

@@ -114,6 +114,12 @@ internal sealed class AdminMenu : AdminNavigationProvider
                         .Action("Index", "Cadences", "CrestApps.OrchardCore.Omnichannel.Managements")
                         .Permission(OmnichannelConstants.Permissions.ManageCadences)
                         .LocalNav())
+                    .Add(S["Numbers Not In Service"], S["Numbers Not In Service"].PrefixPosition(), numbers => numbers
+                        .AddClass("numbers-not-in-service")
+                        .Id("numbersNotInService")
+                        .Action("Index", "NotInServiceNumbers", "CrestApps.OrchardCore.Omnichannel.Managements")
+                        .Permission(OmnichannelConstants.Permissions.ManageActivities)
+                        .LocalNav())
                 ),
                 priority: 1);
     }

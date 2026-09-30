@@ -53,4 +53,10 @@ public enum DialerSuppressionReason
     /// terminal, because the destination has not been shown to be unreachable — only unverified right now.
     /// </summary>
     ComplianceScreeningUnavailable,
+
+    /// <summary>
+    /// The destination is known not to be in service: an earlier call found it unallocated, disconnected or invalid,
+    /// a number lookup reported it, or somebody marked it. Dialing it again cannot reach anybody.
+    /// </summary>
+    NumberNotInService,
 }

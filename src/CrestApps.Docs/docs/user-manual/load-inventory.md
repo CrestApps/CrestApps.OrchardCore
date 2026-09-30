@@ -80,6 +80,7 @@ When a load finishes, its row in the list and the top of its page say how many o
 | Asked not to be reached on this channel | The record opted out, and the matching **Include records marked Do not ...** box is not ticked. |
 | Shares a phone number with someone who asked not to be reached | Another record with the same number opted out. |
 | Has no address on this channel | An automatic load needs a number or email to send to. |
+| Has only numbers that are not in service | Every number the contact has on the channel is on the [Numbers Not In Service](numbers-not-in-service.md) list. A contact with at least one working number is loaded on that number. |
 | Lead already converted into a contact | Lead loads only: converted leads are never loaded. |
 | Lead shares a phone number with a contact | Lead loads only, when **Skip leads that are already contacts** is ticked. |
 | Not loaded because the limit was reached | The **Limit** was reached before this record. |

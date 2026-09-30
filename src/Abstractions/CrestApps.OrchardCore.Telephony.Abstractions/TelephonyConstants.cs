@@ -119,6 +119,12 @@ public static class TelephonyConstants
         public const string SoftPhoneUserDisplayName = "softPhoneUserDisplayName";
 
         /// <summary>
+        /// Asks the provider to tell a person from an answering machine on an outbound call: <c>standard</c> or
+        /// <c>premium</c>. A provider without detection ignores it.
+        /// </summary>
+        public const string AnsweringMachineDetection = "answeringMachineDetection";
+
+        /// <summary>
         /// Marks a hang-up the soft phone sends from one participant's row of a conference: it ends that participant
         /// alone. A provider whose call is also the agent's own way into the conference hangs up only the participant's
         /// leg, and answers with the call still up and <see cref="CallMetadata.ParticipantLeft"/> set.

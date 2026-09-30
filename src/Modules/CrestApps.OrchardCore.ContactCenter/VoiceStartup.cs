@@ -143,6 +143,8 @@ public sealed class VoiceStartup : StartupBase
             // caller's goes, so the call ending releases it.
             .AddScoped<IContactCenterEventHandler, ContactCenterAgentLegReleaseHandler>()
             .AddScoped<IContactCenterEventHandler, ReofferVoiceWorkHandler>()
+            // A dialed number the network reports not in service is completed and marked without an agent.
+            .AddScoped<IContactCenterEventHandler, DialerNotInServiceHandler>()
             .AddScoped<IVoiceQueueOfferService, VoiceQueueOfferService>()
             .AddScoped<IDirectHoldTimeoutService, DirectHoldTimeoutService>()
             .AddScoped<IInboundVoiceCallProcessor, InboundVoiceCallProcessor>()

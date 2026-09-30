@@ -597,11 +597,17 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         var activityId = activity.ItemId;
         var endedUtc = _clock.UtcNow;
 
+        // A number the network says is not in service was never answered: completed as such, without the review.
+        if (TryConcludeNotInService(voiceEvent, activity, endedUtc))
+        {
+            return;
+        }
+
         ShellScope.AddDeferredTask(async scope =>
         {
             try
             {
-                await ConcludeAsync(scope.ServiceProvider, activityId);
+                await ConcludeAsync(scope.ServiceProvider, activityId, lineBusy: voiceEvent.HangupCause == Telephony.Models.HangupCause.Busy);
                 await ObserveConclusionAsync(scope.ServiceProvider, voiceEvent, endedUtc);
             }
             catch (Exception ex)

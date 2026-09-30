@@ -76,6 +76,9 @@ public sealed class DependencyInjectionArchitectureTests
             "SharedVoicemailProjectionHandler",
             "Filing a message records an event through the publisher, whose outbox constructs every event handler, so an injected filing service would close a publisher-to-handler construction cycle."),
         new DependencyInjectionException(
+            "DialerNotInServiceHandler",
+            "Completing a dead number's activity runs the disposition handlers, the agent presence manager and the queue service, which all record through the event publisher whose outbox constructs every event handler, so injecting them would close a publisher-to-handler construction cycle."),
+        new DependencyInjectionException(
             "ContactActivityExportHandler",
             "An import handler that injected the import manager would close a manager-to-handler construction cycle."),
         new DependencyInjectionException(

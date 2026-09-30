@@ -179,6 +179,7 @@ public sealed class PhoneNumberVerificationQueueProcessorTests
         return new PhoneNumberVerificationQueueProcessor(
             manager,
             delayer,
+            [],
             clock.Object,
             NullLogger<PhoneNumberVerificationQueueProcessor>.Instance);
     }

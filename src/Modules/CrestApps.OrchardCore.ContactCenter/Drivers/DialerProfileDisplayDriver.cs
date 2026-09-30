@@ -63,6 +63,7 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             CallsPerAgent = profile.CallsPerAgent,
             MaxAttempts = profile.MaxAttempts,
             RetryDelayMinutes = profile.RetryDelayMinutes,
+            AnsweringMachineDetection = profile.AnsweringMachineDetection,
             CallerId = profile.CallerId,
             AlwaysUseCallerId = profile.AlwaysUseCallerId,
             DefaultRegionCode = profile.DefaultRegionCode,
@@ -95,6 +96,7 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             model.CallsPerAgent = viewModel.CallsPerAgent;
             model.MaxAttempts = viewModel.MaxAttempts;
             model.RetryDelayMinutes = viewModel.RetryDelayMinutes;
+            model.AnsweringMachineDetection = viewModel.AnsweringMachineDetection;
             model.CallerId = viewModel.CallerId;
             model.AlwaysUseCallerId = viewModel.AlwaysUseCallerId;
             model.DefaultRegionCode = viewModel.DefaultRegionCode;
@@ -138,6 +140,7 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
         profile.CallsPerAgent = model.CallsPerAgent;
         profile.MaxAttempts = model.MaxAttempts;
         profile.RetryDelayMinutes = model.RetryDelayMinutes;
+        profile.AnsweringMachineDetection = model.AnsweringMachineDetection;
         profile.CallerId = model.CallerId?.Trim();
         profile.AlwaysUseCallerId = model.AlwaysUseCallerId;
         profile.DefaultRegionCode = model.DefaultRegionCode?.Trim().ToUpperInvariant();

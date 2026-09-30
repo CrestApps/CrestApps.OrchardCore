@@ -824,6 +824,7 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
             [],
             Options.Create(sourceOptions),
             new ContactOptOutResolver(session),
+            new NoNotInServiceNumbers(),
             NullLogger<DefaultContactActivityBatchLoader>.Instance);
     }
 
@@ -1107,7 +1108,8 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
             .Column<ActivityUrgencyLevel>("UrgencyLevel")
             .Column<ActivityStatus>("Status")
             .Column<ActivityInteractionType>("InteractionType")
-            .Column<bool>("AiEscalated"),
+            .Column<bool>("AiEscalated")
+            .Column<string>("TerminalReasonCode", column => column.Nullable().WithLength(64)),
             collection: OmnichannelConstants.CollectionName);
 
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
@@ -1193,5 +1195,30 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
 
         public bool IsConfigured(SubjectFlowSettings flowSettings)
             => flowSettings is not null;
+    }
+
+    // The loads under test find no number marked as not in service; the list itself is covered on its own.
+    private sealed class NoNotInServiceNumbers : INotInServiceNumberService
+    {
+        public Task<bool> IsNotInServiceAsync(string phoneNumber, CancellationToken cancellationToken = default)
+            => Task.FromResult(false);
+
+        public Task<IReadOnlySet<string>> GetNotInServiceAsync(IEnumerable<string> phoneNumbers, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlySet<string>>(new HashSet<string>());
+
+        public Task<NotInServiceNumber> FindAsync(string phoneNumber, CancellationToken cancellationToken = default)
+            => Task.FromResult<NotInServiceNumber>(null);
+
+        public Task<NotInServiceNumber> MarkAsync(NotInServiceMark mark, CancellationToken cancellationToken = default)
+            => Task.FromResult<NotInServiceNumber>(null);
+
+        public Task<bool> ClearAsync(string phoneNumber, CancellationToken cancellationToken = default)
+            => Task.FromResult(false);
+
+        public Task<CrestApps.Core.Models.PageResult<NotInServiceNumber>> PageAsync(int page, int pageSize, string search, CancellationToken cancellationToken = default)
+            => Task.FromResult(new CrestApps.Core.Models.PageResult<NotInServiceNumber>());
+
+        public string Normalize(string phoneNumber)
+            => phoneNumber;
     }
 }
