@@ -1,0 +1,22 @@
+@*
+    Fallback for the 'Pager_PageSizeSelector' shape. When PagerOptions.AllowPageSizeSelection is on, Orchard Core's
+    Pager_Links renders this shape, but only TheTheme and TheAdmin ship a template for it, so any other theme throws
+    "The shape type 'Pager_PageSizeSelector' is not found". Copied from Orchard Core's TheTheme; a theme's own
+    template still takes precedence over this one.
+*@
+@using Microsoft.AspNetCore.Mvc.Rendering
+@{
+    var items = Model.Items as List<SelectListItem>;
+}
+@if (items is { Count: > 0 })
+{
+    <div class="pager-page-size d-flex align-items-center ms-auto">
+        <label class="col-form-label text-nowrap me-2">@T["Items per page"]</label>
+        <select class="form-select form-select-sm w-auto" aria-label="@T["Items per page"]" onchange="if (this.value) { window.location.href = this.value; }">
+            @foreach (var item in items)
+            {
+                <option value="@item.Value" selected="@item.Selected">@item.Text</option>
+            }
+        </select>
+    </div>
+}
