@@ -18,7 +18,9 @@
     };
 }
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["Numbers Not In Service"])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="OmnichannelNotInServiceNumbers" title="@T["Numbers Not In Service"]" />
+</zone>
 
 <p class="text-muted">
     @T["These numbers are skipped when contacts are loaded into a campaign, and the dialer and automated calls never dial them. A number is added when a call finds it not in service, a number lookup reports it disconnected or invalid, or an agent uses a disposition that marks it. Clear a number if it has been given to somebody new."]

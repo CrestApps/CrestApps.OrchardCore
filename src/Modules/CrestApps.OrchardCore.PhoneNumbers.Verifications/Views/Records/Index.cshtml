@@ -14,7 +14,9 @@
     };
 }
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["Phone Verifications Queue"])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="PhoneVerifications" title="@T["Phone Verifications Queue"]" />
+</zone>
 
 <div class="row row-cols-2 row-cols-md-3 row-cols-xl-6 g-3 mb-4">
     @foreach (var filter in filters)

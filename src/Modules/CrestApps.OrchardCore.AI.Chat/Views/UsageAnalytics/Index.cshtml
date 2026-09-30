@@ -3,7 +3,6 @@
 @using CrestApps.OrchardCore.AI.Chat.Models
 
 @{
-    ViewData["Title"] = T["AI Usage Analytics"];
     var datePattern = CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern;
     var timePattern = CultureInfo.CurrentCulture.DateTimeFormat.ShortTimePattern;
     var groupedByUser = Model.GroupBy == AICompletionUsageGroupBy.UserAndModel;
@@ -30,8 +29,11 @@
 <script asp-name="flatpickr" at="Foot"></script>
 <script asp-name="flatpickr-culture" at="Foot"></script>
 
+<zone Name="Title">
+    <breadcrumb name="AIUsageAnalytics" title="@T["AI Usage Analytics"]" />
+</zone>
+
 <div class="mb-3">
-    <h1>@T["AI Usage Analytics"]</h1>
     <p class="text-muted mb-0">@T["Review provider usage by user, model, deployment, profile and connection across chat sessions and chat interactions, and the talk time of automated voice calls."]</p>
 </div>
 

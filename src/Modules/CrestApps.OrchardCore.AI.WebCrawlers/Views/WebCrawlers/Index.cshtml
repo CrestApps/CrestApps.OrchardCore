@@ -4,7 +4,9 @@
 
 @model ListSourceModelViewModel<WebCrawlerStrategyDescriptor, CatalogEntryViewModel<WebCrawler>>
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["Web Crawlers"])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="AIWebCrawlers" title="@T["Web Crawlers"]" />
+</zone>
 
 @* The form is necessary to generate an antiforgery token for the delete and bulk actions. *@
 <form asp-action="Index" method="post" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-client-side-search="true">

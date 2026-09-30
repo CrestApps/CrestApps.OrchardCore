@@ -1,6 +1,11 @@
+@using CrestApps.OrchardCore.ContactCenter.Core
 @model AgentEntitlementViewModel
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["New agent entitlements"])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="ContactCenterAgentEntitlementsCreate" title="@T["New agent entitlements"]">
+        <breadcrumb-item id="ContactCenterAgentEntitlements" action="Index" controller="AgentEntitlements" area="CrestApps.OrchardCore.ContactCenter" permission="@ContactCenterPermissions.ManageAgents.Name">@T["Agent entitlements"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
 
 <form method="post" class="no-multisubmit">
     @Html.ValidationSummary()

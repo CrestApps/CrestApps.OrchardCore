@@ -1,6 +1,12 @@
+@using OrchardCore.DisplayManagement.Html
+
 @model ReportDisplayViewModel
 
-<zone Name="Title"><h1>@RenderTitleSegments(Model.Report.DisplayName)</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="ReportsDisplay" title="@(new HtmlContentString(Model.Report.DisplayName.Value ?? string.Empty))">
+        <breadcrumb-item id="Reports" action="Index" controller="Reports" area="CrestApps.OrchardCore.Reports">@T["Reports"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
 
 @if (!string.IsNullOrEmpty(Model.Report.Description?.Value))
 {

@@ -1,9 +1,14 @@
+@using CrestApps.OrchardCore.Omnichannel.Core
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
 @using Microsoft.AspNetCore.Mvc.Localization
 
 @model ManageSubjectActionsViewModel
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["Manage Flow: {0}", Model.SubjectDisplayName])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="OmnichannelSubjectFlowsManageActions" title="@T["Manage Flow: {0}", Model.SubjectDisplayName]">
+        <breadcrumb-item id="OmnichannelSubjectFlows" action="Index" controller="SubjectFlows" area="CrestApps.OrchardCore.Omnichannel.Managements" permission="@OmnichannelConstants.Permissions.ManageSubjectFlows.Name">@T["Subject Flows"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
 
 <div class="card text-bg-theme mb-3 position-sticky action-bar">
     <div class="card-body">

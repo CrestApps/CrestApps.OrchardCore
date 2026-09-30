@@ -1,9 +1,12 @@
 @using CrestApps.Core.Models
+@using CrestApps.OrchardCore.AI.Core
 
 @model EditCatalogEntryViewModel
 
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["Edit '{0}' deployment", Model.DisplayName])</h1>
+    <breadcrumb name="AIDeploymentsEdit" title="@T["Edit '{0}' deployment", Model.DisplayName]">
+        <breadcrumb-item id="AIDeployments" action="Index" controller="Deployments" area="CrestApps.OrchardCore.AI" permission="@AIPermissions.ManageAIDeployments.Name">@T["AI Deployments"]</breadcrumb-item>
+    </breadcrumb>
 </zone>
 
 <form method="post" asp-route-id="@ViewContext.HttpContext.Request.RouteValues["Id"]" enctype="multipart/form-data" class="no-multisubmit">

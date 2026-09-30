@@ -1,7 +1,9 @@
 @using System.Linq
 @model ReportsIndexViewModel
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["Reports"])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="Reports" title="@T["Reports"]" />
+</zone>
 
 @if (Model.Reports.Count == 0)
 {

@@ -1,9 +1,12 @@
+@using CrestApps.OrchardCore.ContactCenter.Core
 @using CrestApps.OrchardCore.Core.Models
 
 @model EditCatalogEntryViewModel
 
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["New Business Hours Calendar"])</h1>
+    <breadcrumb name="ContactCenterBusinessHoursCalendarsCreate" title="@T["New Business Hours Calendar"]">
+        <breadcrumb-item id="ContactCenterBusinessHoursCalendars" action="Index" controller="BusinessHoursCalendars" area="CrestApps.OrchardCore.ContactCenter" permission="@ContactCenterPermissions.ManageBusinessHours.Name">@T["Business hours"]</breadcrumb-item>
+    </breadcrumb>
 </zone>
 
 <form method="post" enctype="multipart/form-data" class="no-multisubmit">

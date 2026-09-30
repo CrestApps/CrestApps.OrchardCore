@@ -1,9 +1,12 @@
 @using CrestApps.Core.Models
+@using CrestApps.OrchardCore.AI.Mcp.Core
 
 @model EditCatalogEntryViewModel
 
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["Edit '{0}' Connection", Model.DisplayName])</h1>
+    <breadcrumb name="McpConnectionsEdit" title="@T["Edit '{0}' Connection", Model.DisplayName]">
+        <breadcrumb-item id="McpConnections" action="Index" controller="Connections" area="CrestApps.OrchardCore.AI.Mcp" permission="@McpPermissions.ManageMcpConnections.Name">@T["MCP Connections"]</breadcrumb-item>
+    </breadcrumb>
 </zone>
 
 <form method="post" asp-route-id="@ViewContext.HttpContext.Request.RouteValues["source"]" enctype="multipart/form-data" class="no-multisubmit">

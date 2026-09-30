@@ -52,6 +52,10 @@
         min-height: calc(100vh - var(--oc-top-nav-height, 0) - 1rem - 65px);
         height: auto;
     }
+    /* Leave room for the breadcrumb trail above the title when it is shown. */
+    .ta-content:has(> .oc-breadcrumb) .chat-interaction-container {
+        min-height: calc(100vh - var(--oc-top-nav-height, 0) - 1rem - 65px - 2.25rem);
+    }
     .chat-parameters-panel {
         width: 100%;
         max-width: 100%;
@@ -83,6 +87,9 @@
         .chat-interaction-container {
             height: calc(100vh - var(--oc-top-nav-height, 0) - 1rem - 65px);
             min-height: 100%;
+        }
+        .ta-content:has(> .oc-breadcrumb) .chat-interaction-container {
+            height: calc(100vh - var(--oc-top-nav-height, 0) - 1rem - 65px - 2.25rem);
         }
         .chat-parameters-panel {
             max-width: 22rem;

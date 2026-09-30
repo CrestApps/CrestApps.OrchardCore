@@ -1,6 +1,7 @@
 @using Microsoft.AspNetCore.Mvc.Localization
 @using CrestApps.OrchardCore.Omnichannel.Core.Models
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+@using OrchardCore.Contents
 
 @model ConvertLeadViewModel
 
@@ -13,7 +14,9 @@
 }
 
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["Convert {0}", Model.Lead.DisplayText])</h1>
+    <breadcrumb name="OmnichannelLeadConvert" title="@T["Convert {0}", Model.Lead.DisplayText]">
+        <breadcrumb-item id="OmnichannelLead" action="Edit" controller="Admin" area="OrchardCore.Contents" route-contentItemId="@Model.Lead.ContentItemId" permission="@CommonPermissions.EditContent.Name" resource="@Model.Lead">@Model.Lead.DisplayText</breadcrumb-item>
+    </breadcrumb>
 </zone>
 
 <p class="text-muted">

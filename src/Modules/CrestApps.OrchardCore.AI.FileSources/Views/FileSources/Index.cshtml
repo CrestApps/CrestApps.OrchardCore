@@ -1,11 +1,13 @@
-@using CrestApps.Core.AI.Models
 @using CrestApps.Core.AI.FileSources
+@using CrestApps.Core.AI.Models
 @using CrestApps.OrchardCore.Core.Models
 
 @using CrestApps.Core.AI.Ingestion
 @model ListSourceModelViewModel<IngestionConnectorDescriptor, CatalogEntryViewModel<FileSource>>
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["File Sources"])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="AIFileSources" title="@T["File Sources"]" />
+</zone>
 
 @* The form is necessary to generate an antiforgery token for the delete and bulk actions. *@
 <form asp-action="Index" method="post" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-client-side-search="true">

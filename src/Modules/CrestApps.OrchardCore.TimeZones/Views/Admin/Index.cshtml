@@ -4,7 +4,9 @@
 
 @model ListCatalogEntryViewModel<CatalogEntryViewModel<TimeZoneMap>>
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["Time Zones"])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="TimeZones" title="@T["Time Zones"]" />
+</zone>
 
 <form asp-action="Index" method="post" class="no-multisubmit">
     <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />

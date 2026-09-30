@@ -1,6 +1,11 @@
+@using CrestApps.OrchardCore.Omnichannel.Messaging.Core
 @model EditCatalogEntryViewModel
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["New Message Template"])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="MessagingTemplatesCreate" title="@T["New Message Template"]">
+        <breadcrumb-item id="MessagingTemplates" action="Index" controller="Templates" area="CrestApps.OrchardCore.Omnichannel.Messaging" permission="@MessagingPermissions.ManageMessaging.Name">@T["Message templates"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
 
 <form method="post" enctype="multipart/form-data" class="no-multisubmit">
     @Html.ValidationSummary()

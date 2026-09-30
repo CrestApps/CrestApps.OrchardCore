@@ -3,7 +3,9 @@
 
 @model IList<CatalogEntryViewModel<LeadStatus>>
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["Lead Statuses"])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="OmnichannelLeadStatuses" title="@T["Lead Statuses"]" />
+</zone>
 
 @* The form is necessary to generate an antiforgery token for the delete action. *@
 <form asp-action="Index" method="post" class="no-multisubmit">

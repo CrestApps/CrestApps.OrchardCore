@@ -1,9 +1,12 @@
+@using CrestApps.OrchardCore.ContactCenter.Core
 @using CrestApps.OrchardCore.Core.Models
 
 @model EditCatalogEntryViewModel
 
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["New Queue"])</h1>
+    <breadcrumb name="ContactCenterQueuesCreate" title="@T["New Queue"]">
+        <breadcrumb-item id="ContactCenterQueues" action="Index" controller="Queues" area="CrestApps.OrchardCore.ContactCenter" permission="@ContactCenterPermissions.ManageQueues.Name">@T["Queues"]</breadcrumb-item>
+    </breadcrumb>
 </zone>
 
 <form method="post" enctype="multipart/form-data" class="no-multisubmit">

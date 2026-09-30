@@ -6,7 +6,9 @@
 
 @model ListCatalogEntryWithReadOnlyViewModel<AIProviderConnection>
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["AI Provider Connections"])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="AIProviderConnections" title="@T["AI Provider Connections"]" />
+</zone>
 
 @* The form is necessary to generate an antiforgery token for the delete and toggle actions. *@
 <form asp-action="Index" method="post" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-client-side-search="false">

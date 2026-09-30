@@ -1,6 +1,6 @@
-@using System.Text.Json
 @using CrestApps.OrchardCore.ContactCenter
 @using CrestApps.OrchardCore.Omnichannel.Core
+@using System.Text.Json
 @model AgentWorkspaceIndexViewModel
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 
@@ -84,7 +84,9 @@
 <style asp-name="contact-center-workspace"></style>
 <script asp-name="contact-center-agent-workspace" at="Foot"></script>
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["My workspace"])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="ContactCenterAgentWorkspace" title="@T["My workspace"]" />
+</zone>
 
 <div class="cc-workspace" data-cc-workspace data-config="@JsonSerializer.Serialize(config, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase })">
     <div class="cc-topbar">

@@ -1,7 +1,10 @@
+@using CrestApps.OrchardCore.AI.FileSources
 @model EditCatalogEntryViewModel
 
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["New File Source: {0}", Model.DisplayName])</h1>
+    <breadcrumb name="AIFileSourcesCreate" title="@T["New File Source: {0}", Model.DisplayName]">
+        <breadcrumb-item id="AIFileSources" action="Index" controller="FileSources" area="CrestApps.OrchardCore.AI.FileSources" permission="@FileSourcePermissions.ManageFileSources.Name">@T["File Sources"]</breadcrumb-item>
+    </breadcrumb>
 </zone>
 
 <form method="post" enctype="multipart/form-data" class="no-multisubmit">

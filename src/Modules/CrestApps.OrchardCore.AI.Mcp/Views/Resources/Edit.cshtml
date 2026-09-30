@@ -1,9 +1,12 @@
 @using CrestApps.Core.Models
+@using CrestApps.OrchardCore.AI.Mcp.Core
 
 @model EditCatalogEntryViewModel
 
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["Edit MCP Resource - {0}", Model.DisplayName])</h1>
+    <breadcrumb name="McpResourcesEdit" title="@T["Edit MCP Resource - {0}", Model.DisplayName]">
+        <breadcrumb-item id="McpResources" action="Index" controller="Resources" area="CrestApps.OrchardCore.AI.Mcp" permission="@McpPermissions.ManageMcpResources.Name">@T["MCP Resources"]</breadcrumb-item>
+    </breadcrumb>
 </zone>
 
 <form method="post" enctype="multipart/form-data" class="no-multisubmit">

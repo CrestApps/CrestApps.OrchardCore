@@ -1,9 +1,12 @@
 @using CrestApps.Core.Models
+@using CrestApps.OrchardCore.AI.A2A
 
 @model EditCatalogEntryViewModel
 
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["New A2A Connection"])</h1>
+    <breadcrumb name="A2AConnectionsCreate" title="@T["New A2A Connection"]">
+        <breadcrumb-item id="A2AConnections" action="Index" controller="Connections" area="CrestApps.OrchardCore.AI.A2A" permission="@A2APermissions.ManageA2AConnections.Name">@T["A2A Connections"]</breadcrumb-item>
+    </breadcrumb>
 </zone>
 
 <form method="post" enctype="multipart/form-data" class="no-multisubmit">

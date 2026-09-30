@@ -6,7 +6,9 @@
 
 @model ListSourceCatalogEntryViewModel<McpResource>
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["MCP Resources"])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="McpResources" title="@T["MCP Resources"]" />
+</zone>
 
 @* The form is necessary to generate an antiforgery token for the delete and toggle actions. *@
 <form asp-action="Index" method="post" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-client-side-search="true">

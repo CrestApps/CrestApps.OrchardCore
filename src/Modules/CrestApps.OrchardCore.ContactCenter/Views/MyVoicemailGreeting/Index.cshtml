@@ -5,7 +5,10 @@
     var clearUrl = Url.Action("Clear", "MyVoicemailGreeting", new { area = "CrestApps.OrchardCore.ContactCenter" });
 }
 
-<h1>@T["My Voicemail Greeting"]</h1>
+<zone Name="Title">
+    <breadcrumb name="ContactCenterMyVoicemailGreeting" title="@T["My Voicemail Greeting"]" />
+</zone>
+
 <p class="text-muted">@T["Record or upload the greeting callers hear before leaving you a voicemail. If you don't set one, the default greeting is used."]</p>
 
 <div class="card mb-3" data-vm-greeting>

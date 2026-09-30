@@ -1,10 +1,13 @@
 @using CrestApps.Core.Models
+@using CrestApps.OrchardCore.AI.Mcp.Core
 @using CrestApps.OrchardCore.Core.Models
 
 @model EditCatalogEntryViewModel
 
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["New MCP Prompt"])</h1>
+    <breadcrumb name="McpPromptsCreate" title="@T["New MCP Prompt"]">
+        <breadcrumb-item id="McpPrompts" action="Index" controller="Prompts" area="CrestApps.OrchardCore.AI.Mcp" permission="@McpPermissions.ManageMcpPrompts.Name">@T["MCP Prompts"]</breadcrumb-item>
+    </breadcrumb>
 </zone>
 
 <form method="post" enctype="multipart/form-data" class="no-multisubmit">

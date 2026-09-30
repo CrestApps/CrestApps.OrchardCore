@@ -1,5 +1,5 @@
-@using CrestApps.Core.Models
 @using CrestApps.Core.AI.Models
+@using CrestApps.Core.Models
 @using CrestApps.OrchardCore.AI.ViewModels
 @using Microsoft.AspNetCore.Mvc.Localization
 @using OrchardCore.DisplayManagement
@@ -7,7 +7,7 @@
 @model ListCatalogEntryWithReadOnlyViewModel<AIDeployment>
 
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["AI Deployments"])</h1>
+    <breadcrumb name="AIDeployments" title="@T["AI Deployments"]" />
 </zone>
 
 @* The form is necessary to generate an antiforgery token for the delete and toggle actions. *@

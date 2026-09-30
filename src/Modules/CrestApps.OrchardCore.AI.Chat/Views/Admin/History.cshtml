@@ -1,1 +1,18 @@
+@inject IAIProfileManager ProfileManager
+
+@{
+    string profileId = Model.ProfileId;
+    var profile = await ProfileManager.FindByIdAsync(profileId);
+}
+
+<zone Name="Title">
+    <breadcrumb name="AIChatHistory" title="@T["Chat History"]">
+        <breadcrumb-item id="AIProfiles" action="Index" controller="Profiles" area="CrestApps.OrchardCore.AI" permission="@AIPermissions.ManageAIProfiles.Name">@T["AI Profiles"]</breadcrumb-item>
+        @if (profile is not null)
+        {
+            <breadcrumb-item id="AIChat" action="Index" controller="Admin" area="CrestApps.OrchardCore.AI.Chat" route-profileId="@profile.ItemId">@(profile.DisplayText ?? profile.Name)</breadcrumb-item>
+        }
+    </breadcrumb>
+</zone>
+
 @await DisplayAsync(Model)

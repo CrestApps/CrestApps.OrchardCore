@@ -1,6 +1,8 @@
 @using OrchardCore.DisplayManagement
 @model IShape
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["Local Do Not Call Registry"])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="LocalDncRegistry" title="@T["Local Do Not Call Registry"]" />
+</zone>
 
 @await DisplayAsync(Model)

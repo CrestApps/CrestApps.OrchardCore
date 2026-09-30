@@ -1,9 +1,12 @@
+@using CrestApps.OrchardCore.ContactCenter.Core
 @using CrestApps.OrchardCore.Core.Models
 
 @model EditCatalogEntryViewModel
 
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["New Inbound Entry Point"])</h1>
+    <breadcrumb name="ContactCenterEntryPointsCreate" title="@T["New Inbound Entry Point"]">
+        <breadcrumb-item id="ContactCenterEntryPoints" action="Index" controller="EntryPoints" area="CrestApps.OrchardCore.ContactCenter" permission="@ContactCenterPermissions.ManageQueues.Name">@T["Inbound entry points"]</breadcrumb-item>
+    </breadcrumb>
 </zone>
 
 <form method="post" enctype="multipart/form-data" class="no-multisubmit">

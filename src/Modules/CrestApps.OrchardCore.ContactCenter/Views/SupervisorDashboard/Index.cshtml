@@ -100,7 +100,9 @@
 <style asp-name="contact-center-workspace"></style>
 <script asp-name="contact-center-supervisor-dashboard" at="Foot"></script>
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["Live dashboard"])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="ContactCenterSupervisorDashboard" title="@T["Live dashboard"]" />
+</zone>
 
 <div class="cc-workspace cc-dashboard" data-cc-dashboard data-config="@JsonSerializer.Serialize(config, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase })">
     <div class="cc-dashboard__topbar">

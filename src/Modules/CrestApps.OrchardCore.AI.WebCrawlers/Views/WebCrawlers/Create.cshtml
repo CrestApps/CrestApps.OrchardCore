@@ -1,7 +1,10 @@
+@using CrestApps.OrchardCore.AI.WebCrawlers
 @model EditCatalogEntryViewModel
 
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["New Web Crawler: {0}", Model.DisplayName])</h1>
+    <breadcrumb name="AIWebCrawlersCreate" title="@T["New Web Crawler: {0}", Model.DisplayName]">
+        <breadcrumb-item id="AIWebCrawlers" action="Index" controller="WebCrawlers" area="CrestApps.OrchardCore.AI.WebCrawlers" permission="@WebCrawlerPermissions.ManageWebCrawlers.Name">@T["Web Crawlers"]</breadcrumb-item>
+    </breadcrumb>
 </zone>
 
 <form method="post" enctype="multipart/form-data" class="no-multisubmit">

@@ -1,7 +1,20 @@
+@using CrestApps.OrchardCore.Omnichannel.Core
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
 @using OrchardCore.ContentManagement
+@using OrchardCore.Contents
+
+@{
+    var contact = ViewData["Contact"] as ContentItem;
+}
+
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["New Activity"])</h1>
+    <breadcrumb name="OmnichannelActivitiesCreate" title="@T["New Activity"]">
+        @if (contact is not null)
+        {
+            <breadcrumb-item id="OmnichannelContact" action="Edit" controller="Admin" area="OrchardCore.Contents" route-contentItemId="@contact.ContentItemId" permission="@CommonPermissions.EditContent.Name" resource="@contact">@contact.DisplayText</breadcrumb-item>
+            <breadcrumb-item id="OmnichannelContactActivities" action="List" controller="Activities" area="CrestApps.OrchardCore.Omnichannel.Managements" route-contentItemId="@contact.ContentItemId" permission="@OmnichannelConstants.Permissions.ListContactActivities.Name" resource="@contact">@T["Activities"]</breadcrumb-item>
+        }
+    </breadcrumb>
 </zone>
 
 @{
@@ -10,7 +23,7 @@
 
     var shape = new ContactNavigationAdminShapeViewModel
     {
-        ContactContentItem = ViewData["Contact"] as ContentItem,
+        ContactContentItem = contact,
         ShowEdit = true,
     };
 }
