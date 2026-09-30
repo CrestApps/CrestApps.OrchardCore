@@ -9,13 +9,15 @@ using OrchardCore.ContentFields.Fields;
 using OrchardCore.ContentFields.Settings;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.ContentManagement.Metadata.Models;
+using OrchardCore.ContentManagement.Records;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Lists.Models;
 using OrchardCore.Title.Models;
 using YesSql;
-using YesSql.Indexes;
+using YesSql.Services;
 using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
@@ -159,8 +161,9 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
     private static async Task MoveValuesIntoFieldsAsync(ShellScope scope)
     {
         var store = scope.ServiceProvider.GetRequiredService<IStore>();
+        var definitions = await scope.ServiceProvider.GetRequiredService<IContentDefinitionManager>().ListTypeDefinitionsAsync();
 
-        await MoveValuesAsync<LeadIndex>(store, OmnichannelConstants.ContentParts.Lead, part =>
+        await MoveValuesAsync(store, definitions, OmnichannelConstants.ContentParts.Lead, part =>
         {
             WrapText(part, nameof(LeadPart.Company));
             WrapText(part, nameof(LeadPart.ListName));
@@ -174,7 +177,7 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
             }
         });
 
-        await MoveValuesAsync<OpportunityIndex>(store, OmnichannelConstants.ContentParts.Opportunity, part =>
+        await MoveValuesAsync(store, definitions, OmnichannelConstants.ContentParts.Opportunity, part =>
         {
             WrapValue(part, nameof(OpportunityPart.Amount));
             WrapValue(part, nameof(OpportunityPart.CloseDate));
@@ -189,16 +192,31 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
         });
     }
 
-    private static async Task MoveValuesAsync<TIndex>(IStore store, string partName, Action<JsonObject> move)
-        where TIndex : MapIndex
+    private static async Task MoveValuesAsync(
+        IStore store,
+        IEnumerable<ContentTypeDefinition> definitions,
+        string partName,
+        Action<JsonObject> move)
     {
+        var contentTypes = definitions
+            .Where(definition => Core.Services.OmnichannelRecordKinds.HasPart(definition, partName))
+            .Select(definition => definition.Name)
+            .ToArray();
+
+        if (contentTypes.Length == 0)
+        {
+            return;
+        }
+
         var documentId = 0L;
 
         while (true)
         {
             await using var session = store.CreateSession();
 
-            var batch = (await session.Query<ContentItem, TIndex>(index => index.DocumentId > documentId)
+            var batch = (await session.Query<ContentItem, ContentItemIndex>(index =>
+                    index.ContentType.IsIn(contentTypes) &&
+                    index.DocumentId > documentId)
                 .OrderBy(index => index.DocumentId)
                 .Take(FieldMoveBatchSize)
                 .ListAsync())
