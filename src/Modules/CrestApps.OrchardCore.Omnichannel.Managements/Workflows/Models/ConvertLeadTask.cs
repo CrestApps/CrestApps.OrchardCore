@@ -1,7 +1,6 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
@@ -25,8 +24,7 @@ public sealed class ConvertLeadTask : TaskActivity<ConvertLeadTask>
     /// </summary>
     public const string DefaultLeadExpression = "{{ Workflow.Input.ContentItem.ContentItemId }}";
 
-    private readonly ILeadConversionService _conversionService;
-    private readonly LeadMatchFinder _matchFinder;
+    private readonly IUnattendedLeadConverter _converter;
     private readonly IContentManager _contentManager;
     private readonly IWorkflowExpressionEvaluator _expressionEvaluator;
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -37,24 +35,21 @@ public sealed class ConvertLeadTask : TaskActivity<ConvertLeadTask>
     /// <summary>
     /// Initializes a new instance of the <see cref="ConvertLeadTask"/> class.
     /// </summary>
-    /// <param name="conversionService">The lead conversion service.</param>
-    /// <param name="matchFinder">Finds the contacts that share the lead's number or email.</param>
+    /// <param name="converter">Converts the lead with nobody at the screen to choose the contact.</param>
     /// <param name="contentManager">The content manager.</param>
     /// <param name="expressionEvaluator">The workflow expression evaluator.</param>
     /// <param name="httpContextAccessor">The HTTP context accessor, for the user who converts.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ConvertLeadTask(
-        ILeadConversionService conversionService,
-        LeadMatchFinder matchFinder,
+        IUnattendedLeadConverter converter,
         IContentManager contentManager,
         IWorkflowExpressionEvaluator expressionEvaluator,
         IHttpContextAccessor httpContextAccessor,
         ILogger<ConvertLeadTask> logger,
         IStringLocalizer<ConvertLeadTask> stringLocalizer)
     {
-        _conversionService = conversionService;
-        _matchFinder = matchFinder;
+        _converter = converter;
         _contentManager = contentManager;
         _expressionEvaluator = expressionEvaluator;
         _httpContextAccessor = httpContextAccessor;
@@ -142,15 +137,10 @@ public sealed class ConvertLeadTask : TaskActivity<ConvertLeadTask>
             return Outcome("Failed");
         }
 
-        // An unattended conversion merges into an existing contact only when exactly one shares the lead's number or
-        // email; with more than one it cannot tell which, so it creates a new contact rather than guess.
-        var matches = await _matchFinder.FindContactsAsync(lead);
         var user = _httpContextAccessor.HttpContext?.User;
 
-        var result = await _conversionService.ConvertAsync(new LeadConversionRequest
+        var result = await _converter.ConvertAsync(lead, new LeadConversionRequest
         {
-            LeadContentItemId = lead.ContentItemId,
-            ExistingContactItemId = matches.Count == 1 ? matches[0].ContentItemId : null,
             AccountMode = AccountMode,
             CreateOpportunity = CreateOpportunity,
             OpportunityContentType = string.IsNullOrWhiteSpace(OpportunityContentType) ? null : OpportunityContentType,

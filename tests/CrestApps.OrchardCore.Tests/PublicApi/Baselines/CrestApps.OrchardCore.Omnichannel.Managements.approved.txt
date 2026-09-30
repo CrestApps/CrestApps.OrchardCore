@@ -1256,6 +1256,19 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         public string SubjectContentType { get; set; }
         public string SubjectDisplayName { get; set; }
     }
+    public class LeadAIConversionViewModel
+    {
+        public LeadAIConversionViewModel() { }
+        public bool CreateOpportunity { get; set; }
+        public bool Enabled { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public string[] LeadContentTypes { get; set; }
+        public string OpportunityContentType { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> OpportunityContentTypes { get; set; }
+        public string QualificationGuidance { get; set; }
+        public bool Rendered { get; set; }
+    }
     public class LeadBatchFilterViewModel
     {
         public LeadBatchFilterViewModel() { }
@@ -1863,7 +1876,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models
     public sealed class ConvertLeadTask : OrchardCore.Workflows.Activities.TaskActivity<CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.ConvertLeadTask>
     {
         public const string DefaultLeadExpression = "{{ Workflow.Input.ContentItem.ContentItemId }}";
-        public ConvertLeadTask(CrestApps.OrchardCore.Omnichannel.Core.Services.ILeadConversionService conversionService, CrestApps.OrchardCore.Omnichannel.Managements.Services.LeadMatchFinder matchFinder, OrchardCore.ContentManagement.IContentManager contentManager, OrchardCore.Workflows.Services.IWorkflowExpressionEvaluator expressionEvaluator, Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.ConvertLeadTask> logger, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.ConvertLeadTask> stringLocalizer) { }
+        public ConvertLeadTask(CrestApps.OrchardCore.Omnichannel.Core.Services.IUnattendedLeadConverter converter, OrchardCore.ContentManagement.IContentManager contentManager, OrchardCore.Workflows.Services.IWorkflowExpressionEvaluator expressionEvaluator, Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.ConvertLeadTask> logger, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.ConvertLeadTask> stringLocalizer) { }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.LeadConversionAccountMode AccountMode { get; set; }
         public override Microsoft.Extensions.Localization.LocalizedString Category { get; }
         public bool CreateOpportunity { get; set; }

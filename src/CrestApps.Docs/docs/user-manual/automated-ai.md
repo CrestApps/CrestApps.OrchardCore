@@ -30,7 +30,7 @@ An **automatic** inventory load creates activities that an **AI profile** works 
 2. Enter a **Title**, pick the **Subject content type** and the **Campaign**.
 3. Pick the **AI profile** (or leave it to use the subject's profile).
 4. Pick **SMS** as the **Channel** and the SMS **Channel endpoint**.
-5. Set the AI options (below), the record filters, and **Save**.
+5. Set the AI options (below), the record filters, and **Save**. For a lead type you can also let the AI convert the leads it qualifies; see [Let the AI convert leads](leads-accounts-opportunities.md#let-the-ai-convert-leads).
 6. Choose **Actions > Load batch**.
 
 A background task picks up due automated activities every five minutes and sends the opening message. Replies are answered by the AI after the reply delay. Each send checks the contact's opt-out first.

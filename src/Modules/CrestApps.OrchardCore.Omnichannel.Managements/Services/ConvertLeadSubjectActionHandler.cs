@@ -15,23 +15,19 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 /// </summary>
 internal sealed class ConvertLeadSubjectActionHandler : ISubjectActionHandler
 {
-    private readonly ILeadConversionService _conversionService;
-    private readonly LeadMatchFinder _matchFinder;
+    private readonly IUnattendedLeadConverter _converter;
     private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ConvertLeadSubjectActionHandler"/> class.
     /// </summary>
-    /// <param name="conversionService">The lead conversion service.</param>
-    /// <param name="matchFinder">Finds the contact a lead may already be.</param>
+    /// <param name="converter">Converts the lead with nobody at the screen to choose the contact.</param>
     /// <param name="logger">The logger.</param>
     public ConvertLeadSubjectActionHandler(
-        ILeadConversionService conversionService,
-        LeadMatchFinder matchFinder,
+        IUnattendedLeadConverter converter,
         ILogger<ConvertLeadSubjectActionHandler> logger)
     {
-        _conversionService = conversionService;
-        _matchFinder = matchFinder;
+        _converter = converter;
         _logger = logger;
     }
 
@@ -56,14 +52,8 @@ internal sealed class ConvertLeadSubjectActionHandler : ISubjectActionHandler
             metadata = new ConvertLeadActionMetadata();
         }
 
-        // An unattended conversion merges into an existing contact only when exactly one shares the lead's number or
-        // email; with more than one it cannot tell which, so it creates a new contact rather than guess.
-        var matches = await _matchFinder.FindContactsAsync(lead);
-
-        var result = await _conversionService.ConvertAsync(new LeadConversionRequest
+        var result = await _converter.ConvertAsync(lead, new LeadConversionRequest
         {
-            LeadContentItemId = lead.ContentItemId,
-            ExistingContactItemId = matches.Count == 1 ? matches[0].ContentItemId : null,
             AccountMode = metadata.AccountMode,
             CreateOpportunity = metadata.CreateOpportunity,
             OpportunityContentType = metadata.OpportunityContentType,

@@ -120,6 +120,18 @@ With Orchard Core **Workflows** on, the feature adds a **Lead Converted** event 
   - Its outcomes are **Converted**, with the contact's id in `Workflow.LastResult`, and **Failed**.
   - A lead that was already converted counts as **Converted** and does not start **Lead Converted** again.
 
+## AI conversion
+
+An automatic inventory load of a lead type can let the AI convert the leads it qualifies. The option is stored on the load as `LeadAIConversionSettings`, copied onto each automated activity it loads and onto retries, and has four settings: `Enabled`, `CreateOpportunity`, `OpportunityContentType` and `QualificationGuidance`.
+
+- When an automated SMS conversation or AI call concludes and the activity's record is still an open lead, the conclusion prompt tells the model it is talking to a lead and asks for `ConvertLead`.
+  - The model is given what qualified means: the load's `QualificationGuidance`, or else the subject goal.
+  - A call nobody spoke on, or whose AI session was lost, is never converted.
+- On `ConvertLead: true`, the lead is converted through `IUnattendedLeadConverter` before the disposition's subject actions run, so they work on the contact.
+  - That is the same converter the Convert Lead subject action and workflow task use: it merges only into a single matching contact, uses the *automatic* account mode, and moves open activities.
+  - A failed conversion is logged and leaves the lead unchanged.
+- Saving a load that creates an opportunity is refused when neither the load nor the lead type names an opportunity type, because an unattended conversion that cannot find its opportunity type fails as a whole.
+
 ## Lead status types
 
 A lead status is exactly one of three types, stored as the `IsClosed` and `IsConverted` flags so recipes and deployments carry them unchanged:

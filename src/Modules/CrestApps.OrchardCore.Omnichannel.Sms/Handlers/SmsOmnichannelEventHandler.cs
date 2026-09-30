@@ -688,6 +688,20 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
                         var sessionPrompts = await deferredPromptStore.GetPromptsAsync(chatSession.SessionId);
 
+                        // The load may let the AI convert a lead it qualified. Only an open lead can be converted, so
+                        // the record is read to check, and the model is told it is talking to a lead only then.
+                        LeadAIConversionSettings leadConversion = null;
+
+                        if (activity.TryGet<LeadAIConversionSettings>(out var storedLeadConversion) && storedLeadConversion.Enabled)
+                        {
+                            contact ??= await contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
+
+                            if (!LeadAIConversion.TryGetSettings(activity, contact, out leadConversion))
+                            {
+                                leadConversion = null;
+                            }
+                        }
+
                         var userPrompt = $"""
 
                         Current UTC time: {_clock.UtcNow:O}
@@ -701,6 +715,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                         If a follow-up is warranted, set NextActivityNotes to short preparation notes for whoever handles the next activity; otherwise leave it null.
                         {(subjectTextFields.Count > 0 ? "You are given a list of subject field keys. Return SubjectFields as a JSON object mapping the exact key shown to a short plain-text value, for any field the conversation clearly revealed; omit fields you did not learn and never invent keys." : "Do not return SubjectFields.")}
                         {(activity.AllowAIToUpdateContact ? "If, and only if, the customer clearly provided an email address for follow-up, set ContactEmail to that exact address (lowercased, no surrounding words); if it matches the current email on file or none was given, omit ContactEmail." : "Do not return ContactEmail.")}
+                        {(leadConversion is not null ? LeadAIConversion.BuildInstruction(leadConversion, flowSettings.SubjectGoal) : "Do not return ConvertLead.")}
 
                         """;
 
@@ -807,6 +822,14 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
                                     subject ??= activity.Subject ?? await contentManager.NewAsync(activity.SubjectContentType);
                                     contact ??= await contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
+
+                                    // The AI judged the lead qualified and the load allows it to convert: the lead
+                                    // becomes a contact before the disposition's actions run, so follow-ups land on the
+                                    // contact. A failed conversion leaves the lead as it was and the actions still run.
+                                    if (leadConversion is not null && result.Result.ConvertLead == true)
+                                    {
+                                        contact = await ConvertQualifiedLeadAsync(scope.ServiceProvider, omnichannelActivity, contact, leadConversion) ?? contact;
+                                    }
 
                                     var dispositionObj = dispositions.FirstOrDefault(d => d.ItemId == result.Result.DispositionId);
 
@@ -1199,6 +1222,51 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         public string Reason { get; set; }
     }
 
+    /// <summary>
+    /// Converts a lead the AI judged qualified at the end of an automated conversation, the way the Convert Lead
+    /// subject action does. Returns the contact, or <see langword="null"/> when the lead was not converted.
+    /// </summary>
+    /// <param name="services">The conclusion scope's services.</param>
+    /// <param name="activity">The completed activity.</param>
+    /// <param name="lead">The lead.</param>
+    /// <param name="settings">The load's AI conversion settings.</param>
+    private async Task<ContentItem> ConvertQualifiedLeadAsync(
+        IServiceProvider services,
+        OmnichannelActivity activity,
+        ContentItem lead,
+        LeadAIConversionSettings settings)
+    {
+        // Without the CRM feature there is nothing to convert with.
+        var converter = services.GetService<IUnattendedLeadConverter>();
+
+        if (converter is null || lead is null)
+        {
+            return null;
+        }
+
+        var result = await converter.ConvertAsync(lead, LeadAIConversion.CreateRequest(activity, settings));
+
+        if (!result.Succeeded)
+        {
+            _logger.LogWarning(
+                "The AI qualified the lead of automated SMS activity {ActivityId}, but the lead could not be converted: {Errors}",
+                activity.ItemId.SanitizeLogValue(),
+                string.Join(" ", result.Errors));
+
+            return null;
+        }
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "The AI qualified and converted the lead of automated SMS activity {ActivityId} ({ContactMode} contact).",
+                activity.ItemId.SanitizeLogValue(),
+                result.ContactCreated ? "new" : "existing");
+        }
+
+        return result.Contact;
+    }
+
     private sealed class ConverationConclusionResult
     {
         /// <summary>
@@ -1239,5 +1307,10 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         /// Gets or sets the email address the customer provided for follow-up, when allowed. Null otherwise.
         /// </summary>
         public string ContactEmail { get; set; }
+
+        /// <summary>
+        /// Gets or sets whether the AI judged the lead qualified and asks to convert it, when allowed. Null otherwise.
+        /// </summary>
+        public bool? ConvertLead { get; set; }
     }
 }
