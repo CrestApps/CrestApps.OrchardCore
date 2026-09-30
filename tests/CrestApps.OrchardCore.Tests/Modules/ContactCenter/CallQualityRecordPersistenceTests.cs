@@ -386,7 +386,7 @@ public sealed class CallQualityRecordPersistenceTests
 
         await new CallSessionIndexMigrations(store, new ProviderIdentityResolver([])) { SchemaBuilder = schemaBuilder }.CreateAsync();
         await new CallSessionLegIndexMigrations { SchemaBuilder = schemaBuilder }.CreateAsync();
-        await new CallQualityRecordIndexMigrations { SchemaBuilder = schemaBuilder }.CreateAsync();
+        await new CallQualityRecordIndexMigrations(store) { SchemaBuilder = schemaBuilder }.CreateAsync();
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 
         return store;

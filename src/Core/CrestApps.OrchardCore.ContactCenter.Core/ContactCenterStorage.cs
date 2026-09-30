@@ -39,4 +39,13 @@ internal static class ContactCenterStorage
     /// in another.
     /// </summary>
     public const int ProviderNameLength = 128;
+
+    /// <summary>
+    /// The maximum stored length, in characters, of a queue identifier. A queue record's own id is 26 characters,
+    /// but outbound campaign work is routed under a virtual queue whose id is a prefix followed by the campaign's
+    /// id, which is 44 characters. The same identifier is persisted across several Contact Center index tables, so
+    /// every migration that stores one must pin this width; a 26-character column made SQL Server refuse the
+    /// membership row written when an agent signs into a campaign, so the sign-in failed.
+    /// </summary>
+    public const int QueueIdLength = 64;
 }

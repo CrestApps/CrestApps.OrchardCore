@@ -1,6 +1,7 @@
 using System.Globalization;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.Data.Migration;
 using OrchardCore.Modules;
 using YesSql;
@@ -20,6 +21,14 @@ internal sealed class QueueItemIndexMigrations : DataMigration
         ((int)QueueItemStatus.Completed).ToString(CultureInfo.InvariantCulture);
     private static readonly string RemovedStatusValue =
         ((int)QueueItemStatus.Removed).ToString(CultureInfo.InvariantCulture);
+
+    // The indexes over the queue column. SQLite refuses to drop a column an index refers to, so each comes down
+    // before the widening rebuild and is recreated after it.
+    private static readonly string[] _queueColumnIndexNames =
+    [
+        "IDX_QueueItemIndex_DocumentId",
+        "IDX_QueueItemIndex_WaitingByQueue",
+    ];
 
     private readonly IStore _store;
     private readonly IClock _clock;
@@ -44,7 +53,7 @@ internal sealed class QueueItemIndexMigrations : DataMigration
     {
         await SchemaBuilder.CreateMapIndexTableAsync<QueueItemIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
-            .Column<string>("QueueId", column => column.WithLength(26))
+            .Column<string>("QueueId", column => column.WithLength(ContactCenterStorage.QueueIdLength))
             .Column<string>("ActivityItemId", column => column.WithLength(26))
             .Column<string>("ActivityClaimKey", column => column.NotNull().WithDefault(string.Empty).WithLength(26))
             .Column<QueueItemStatus>("Status")
@@ -230,5 +239,82 @@ internal sealed class QueueItemIndexMigrations : DataMigration
             collection: ContactCenterStorage.CollectionName);
 
         return 4;
+    }
+
+    /// <summary>
+    /// Widens the queue column so work routed under a campaign's virtual queue is stored rather than refused.
+    /// </summary>
+    /// <remarks>
+    /// Outbound campaign work is enqueued under the campaign's virtual queue. A campaign's virtual queue id is longer than the original 26 characters, so SQL Server refused the
+    /// row. SQLite stores every text column as unbounded <c>TEXT</c>, so the rebuild is a value-preserving no-op
+    /// there. SQLite also refuses to drop a column an index refers to, so the indexes over the queue
+    /// column come down before the rebuild and are recreated over the widened column.
+    /// </remarks>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom4Async()
+    {
+        // On an engine that resolves an index by name alone the data layer's drop cannot see an index that belongs
+        // to a named schema, so it silently drops nothing and the recreation below fails. The qualified drop runs
+        // first and is a no-op wherever the data layer's own statement is already sufficient.
+        foreach (var indexName in _queueColumnIndexNames)
+        {
+            var qualifiedIndexName = SchemaQualifiedIndexDrop.TryGetQualifiedIndexName(
+                SchemaBuilder,
+                _store,
+                typeof(QueueItemIndex),
+                indexName,
+                ContactCenterStorage.CollectionName);
+
+            if (qualifiedIndexName is null)
+            {
+                continue;
+            }
+
+            await using var command = SchemaBuilder.Connection.CreateCommand();
+            command.Transaction = SchemaBuilder.Transaction;
+            command.CommandText = "drop index if exists " + qualifiedIndexName;
+
+            await command.ExecuteNonQueryAsync();
+        }
+
+        // Tolerant because MySQL commits each schema change on its own and writes this drop without IF EXISTS, so an
+        // attempt that stopped part-way would otherwise fail every activation from here on. The recreation below
+        // runs on the strict builder, so an index that genuinely survived is still reported. Each index is dropped
+        // in its own alter so a swallowed failure of one cannot suppress the drop of the next.
+        var tolerantSchemaBuilder = new SchemaBuilder(
+            _store.Configuration,
+            SchemaBuilder.Transaction,
+            throwOnError: false);
+
+        await tolerantSchemaBuilder.AlterIndexTableAsync<QueueItemIndex>(
+            table => table.DropIndex("IDX_QueueItemIndex_DocumentId"),
+            collection: ContactCenterStorage.CollectionName);
+
+        await tolerantSchemaBuilder.AlterIndexTableAsync<QueueItemIndex>(
+            table => table.DropIndex("IDX_QueueItemIndex_WaitingByQueue"),
+            collection: ContactCenterStorage.CollectionName);
+
+        await IndexStringColumnRebuild.WidenAsync<QueueItemIndex>(
+            SchemaBuilder,
+            _store,
+            "QueueId",
+            ContactCenterStorage.QueueIdLength,
+            isNotNull: false,
+            defaultValue: null,
+            ContactCenterStorage.CollectionName);
+
+        await SchemaBuilder.AlterIndexTableAsync<QueueItemIndex>(table => table
+            .CreateIndex("IDX_QueueItemIndex_DocumentId", "DocumentId", "QueueId", "Status", "ActivityItemId", "AgentId"),
+            collection: ContactCenterStorage.CollectionName);
+
+        await SchemaBuilder.AlterIndexTableAsync<QueueItemIndex>(table => table
+            .CreateIndex(
+                "IDX_QueueItemIndex_WaitingByQueue",
+                "QueueId",
+                "Status",
+                "DocumentId"),
+            collection: ContactCenterStorage.CollectionName);
+
+        return 5;
     }
 }
