@@ -68,6 +68,13 @@ public sealed class LocalDncList
     public string Error { get; set; }
 
     /// <summary>
+    /// Gets or sets the number of consecutive import attempts that failed. The background task retries a
+    /// failed import automatically until this reaches its limit; a successful import or a manual
+    /// "Process now" resets it.
+    /// </summary>
+    public int FailedAttempts { get; set; }
+
+    /// <summary>
     /// Gets or sets the UTC date and time when this list was uploaded.
     /// </summary>
     public DateTime CreatedUtc { get; set; }
