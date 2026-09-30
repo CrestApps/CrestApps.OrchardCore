@@ -1,7 +1,7 @@
 {
   "name": "OmnichannelCrmStarter",
   "displayName": "Omnichannel CRM starter",
-  "description": "Enables the Omnichannel CRM and adds a ready-to-use Lead type, a Contact type that leads convert into, and a Sales Opportunity type. The Account type, the lead statuses and the opportunity stages come with the feature itself. Every type can be renamed or extended afterward.",
+  "description": "Enables the Omnichannel CRM and adds a ready-to-use Lead type, a Contact type that leads convert into, a Sales Opportunity type and a starter set of lead sources. The Account and Lead Source types, the lead statuses and the opportunity stages come with the feature itself. Every type can be renamed or extended afterward.",
   "author": "CrestApps",
   "website": "https://crestapps.com",
   "version": "1.0.0",
@@ -127,6 +127,71 @@
         }
       ],
       "ContentParts": []
+    },
+    {
+      "name": "content",
+      "data": [
+        {
+          "ContentItemId": "leadsource-web-form",
+          "ContentType": "LeadSource",
+          "DisplayText": "Web form",
+          "Latest": true,
+          "Published": true,
+          "TitlePart": {
+            "Title": "Web form"
+          }
+        },
+        {
+          "ContentItemId": "leadsource-referral",
+          "ContentType": "LeadSource",
+          "DisplayText": "Referral",
+          "Latest": true,
+          "Published": true,
+          "TitlePart": {
+            "Title": "Referral"
+          }
+        },
+        {
+          "ContentItemId": "leadsource-trade-show",
+          "ContentType": "LeadSource",
+          "DisplayText": "Trade show",
+          "Latest": true,
+          "Published": true,
+          "TitlePart": {
+            "Title": "Trade show"
+          }
+        },
+        {
+          "ContentItemId": "leadsource-purchased-list",
+          "ContentType": "LeadSource",
+          "DisplayText": "Purchased list",
+          "Latest": true,
+          "Published": true,
+          "TitlePart": {
+            "Title": "Purchased list"
+          }
+        },
+        {
+          "ContentItemId": "leadsource-advertisement",
+          "ContentType": "LeadSource",
+          "DisplayText": "Advertisement",
+          "Latest": true,
+          "Published": true,
+          "TitlePart": {
+            "Title": "Advertisement"
+          }
+        },
+        {
+          "ContentItemId": "leadsource-cold-call",
+          "ContentType": "LeadSource",
+          "DisplayText": "Cold call",
+          "Latest": true,
+          "Published": true,
+          "TitlePart": {
+            "Title": "Cold call"
+          }
+        }
+      ]
     }
   ]
 }

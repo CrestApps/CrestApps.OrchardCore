@@ -739,11 +739,11 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
             query = query.Where(index => index.ListName == listName);
         }
 
-        if (!string.IsNullOrWhiteSpace(filter.Source))
+        if (!string.IsNullOrEmpty(filter.SourceId))
         {
-            var source = filter.Source.Trim();
+            var sourceId = filter.SourceId;
 
-            query = query.Where(index => index.Source == source);
+            query = query.Where(index => index.SourceId == sourceId);
         }
 
         if (!string.IsNullOrWhiteSpace(filter.OwnerId))

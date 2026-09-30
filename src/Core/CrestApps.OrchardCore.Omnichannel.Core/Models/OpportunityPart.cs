@@ -47,9 +47,9 @@ public sealed class OpportunityPart : ContentPart
     public string OwnerId { get; set; }
 
     /// <summary>
-    /// Gets or sets where the opportunity came from.
+    /// Gets or sets the content item identifier of the lead source the opportunity came from.
     /// </summary>
-    public string Source { get; set; }
+    public string SourceId { get; set; }
 
     /// <summary>
     /// Gets or sets the identifier of the campaign the opportunity came from.

@@ -20,9 +20,15 @@ public class LeadPartViewModel
     public string Company { get; set; }
 
     /// <summary>
-    /// Gets or sets the lead source.
+    /// Gets or sets the content item identifier of the lead source.
     /// </summary>
-    public string Source { get; set; }
+    public string SourceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the lead source, for display.
+    /// </summary>
+    [BindNever]
+    public string SourceName { get; set; }
 
     /// <summary>
     /// Gets or sets the list the lead arrived in.
@@ -44,6 +50,12 @@ public class LeadPartViewModel
     /// </summary>
     [BindNever]
     public IList<SelectListItem> Statuses { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the lead sources the editor can choose from.
+    /// </summary>
+    [BindNever]
+    public IList<SelectListItem> Sources { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the ratings the editor can choose from.

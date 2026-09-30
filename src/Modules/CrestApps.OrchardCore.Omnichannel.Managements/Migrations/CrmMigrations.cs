@@ -95,6 +95,7 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
                     })));
         }
 
+        await CreateLeadSourceTypeAsync();
         await CreateLeadIndexAsync(SchemaBuilder);
         await CreateOpportunityIndexAsync(SchemaBuilder);
 
@@ -102,7 +103,59 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
             .GetRequiredService<CrmCatalogSeeder>()
             .SeedAsync());
 
-        return 1;
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds the lead source content type and replaces the free-text source columns of the lead and opportunity
+    /// indexes with the identifier of the lead source item. Sources typed before this change are not carried over.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await CreateLeadSourceTypeAsync();
+
+        await EnsureColumnExistsAsync<LeadIndex>(
+            null,
+            "SourceId",
+            table => table.AddColumn<string>("SourceId", column => column.WithLength(26)),
+            "add the 'SourceId' column to the lead index");
+
+        await EnsureColumnExistsAsync<OpportunityIndex>(
+            null,
+            "SourceId",
+            table => table.AddColumn<string>("SourceId", column => column.WithLength(26)),
+            "add the 'SourceId' column to the opportunity index");
+
+        await ApplyIsolatedSchemaChangeAsync(
+            builder => builder.AlterIndexTableAsync<LeadIndex>(table => table.DropColumn("Source")),
+            "drop the 'Source' column from the lead index");
+
+        await ApplyIsolatedSchemaChangeAsync(
+            builder => builder.AlterIndexTableAsync<OpportunityIndex>(table => table.DropColumn("Source")),
+            "drop the 'Source' column from the opportunity index");
+
+        return 2;
+    }
+
+    private async Task CreateLeadSourceTypeAsync()
+    {
+        if (await _contentDefinitionManager.GetTypeDefinitionAsync(OmnichannelConstants.ContentTypes.LeadSource) is not null)
+        {
+            return;
+        }
+
+        await _contentDefinitionManager.AlterTypeDefinitionAsync(OmnichannelConstants.ContentTypes.LeadSource, type => type
+            .WithDisplayName("Lead Source")
+            .Creatable()
+            .Listable()
+            .Securable()
+            .WithPart<TitlePart>(part => part
+                .WithPosition("1")
+                .WithSettings(new TitlePartSettings
+                {
+                    Options = TitlePartOptions.EditableRequired,
+                })));
     }
 
     private static async Task CreateLeadIndexAsync(ISchemaBuilder schemaBuilder)
@@ -115,7 +168,7 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
             .Column<string>("StatusId", column => column.WithLength(50))
             .Column<bool>("IsClosed", column => column.NotNull().WithDefault(false))
             .Column<bool>("IsConverted", column => column.NotNull().WithDefault(false))
-            .Column<string>("Source", column => column.WithLength(255))
+            .Column<string>("SourceId", column => column.WithLength(26))
             .Column<string>("ListName", column => column.WithLength(255))
             .Column<string>("Rating", column => column.WithLength(20))
             .Column<string>("OwnerId", column => column.WithLength(50))
@@ -153,7 +206,7 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
             .Column<string>("AccountContentItemId", column => column.WithLength(26))
             .Column<string>("CampaignId", column => column.WithLength(50))
             .Column<string>("PrimaryContactItemId", column => column.WithLength(26))
-            .Column<string>("Source", column => column.WithLength(255))
+            .Column<string>("SourceId", column => column.WithLength(26))
             .Column<string>("ConvertedFromLeadItemId", column => column.WithLength(26))
             .Column<DateTime>("CreatedUtc", column => column.Nullable()));
 

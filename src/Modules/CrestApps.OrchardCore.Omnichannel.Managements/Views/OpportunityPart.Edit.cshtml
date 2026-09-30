@@ -100,9 +100,12 @@
     </div>
 </div>
 
-<div class="ocat-wrapper" asp-validation-class-for="Source">
-    <label asp-for="Source" class="ocat-label">@T["Source"]</label>
+<div class="ocat-wrapper" asp-validation-class-for="SourceId">
+    <label asp-for="SourceId" class="ocat-label">@T["Lead source"]</label>
     <div class="ocat-end">
-        <input asp-for="Source" class="form-control" />
+        <select asp-for="SourceId" asp-items="Model.Sources" class="form-select">
+            <option value="">@T["None"]</option>
+        </select>
+        <span asp-validation-for="SourceId" class="text-danger"></span>
     </div>
 </div>

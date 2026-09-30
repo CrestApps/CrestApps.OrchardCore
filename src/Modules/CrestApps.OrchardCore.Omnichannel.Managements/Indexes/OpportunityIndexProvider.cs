@@ -41,7 +41,7 @@ internal sealed class OpportunityIndexProvider : IndexProvider<ContentItem>
                 : null,
             CampaignId = Truncate(part.CampaignId, 50),
             PrimaryContactItemId = Truncate(part.PrimaryContactItemId, 26),
-            Source = Truncate(part.Source?.Trim(), 255),
+            SourceId = Truncate(part.SourceId, 26),
             ConvertedFromLeadItemId = Truncate(part.ConvertedFromLeadItemId, 26),
             CreatedUtc = contentItem.CreatedUtc,
         };

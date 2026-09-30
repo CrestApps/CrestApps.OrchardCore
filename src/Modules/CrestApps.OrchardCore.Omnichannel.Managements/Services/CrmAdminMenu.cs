@@ -91,6 +91,12 @@ internal sealed class CrmAdminMenu : AdminNavigationProvider
                         .Action("Index", "LeadStatuses", OmnichannelConstants.Features.Managements)
                         .Permission(OmnichannelConstants.Permissions.ManageLeadStatuses)
                         .LocalNav())
+                    .Add(S["Lead Sources"], S["Lead Sources"].PrefixPosition(), sources => sources
+                        .AddClass("lead-sources")
+                        .Id("leadSources")
+                        .Action("List", "Admin", ContentList([OmnichannelConstants.ContentTypes.LeadSource]))
+                        .Permission(CommonPermissions.ListContent)
+                        .LocalNav())
                     .Add(S["Opportunity Stages"], S["Opportunity Stages"].PrefixPosition(), stages => stages
                         .AddClass("opportunity-stages")
                         .Id("opportunityStages")

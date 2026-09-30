@@ -44,6 +44,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core
         {
             public const string Account = "Account";
             public const string EmailAddress = "EmailAddress";
+            public const string LeadSource = "LeadSource";
             public const string PhoneNumber = "PhoneNumber";
         }
         public static class Events
@@ -145,7 +146,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Indexes
         public string OwnerId { get; set; }
         public bool Published { get; set; }
         public string Rating { get; set; }
-        public string Source { get; set; }
+        public string SourceId { get; set; }
         public string StatusId { get; set; }
     }
     public sealed class NotInServiceNumberIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
@@ -251,7 +252,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Indexes
         public string PrimaryContactItemId { get; set; }
         public int? Probability { get; set; }
         public bool Published { get; set; }
-        public string Source { get; set; }
+        public string SourceId { get; set; }
         public string StageId { get; set; }
     }
 }
@@ -551,7 +552,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string OwnerId { get; set; }
         public string[] Ratings { get; set; }
         public bool SkipLeadsThatAreContacts { get; set; }
-        public string Source { get; set; }
+        public string SourceId { get; set; }
         public string[] StatusIds { get; set; }
     }
     public enum LeadConversionAccountMode
@@ -619,7 +620,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string ListName { get; set; }
         public string OwnerId { get; set; }
         public string Rating { get; set; }
-        public string Source { get; set; }
+        public string SourceId { get; set; }
         public string StatusId { get; set; }
     }
     public sealed class LeadPartSettings
@@ -1082,7 +1083,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string OwnerId { get; set; }
         public string PrimaryContactItemId { get; set; }
         public int? Probability { get; set; }
-        public string Source { get; set; }
+        public string SourceId { get; set; }
         public string StageId { get; set; }
     }
     public sealed class OpportunityPartSettings

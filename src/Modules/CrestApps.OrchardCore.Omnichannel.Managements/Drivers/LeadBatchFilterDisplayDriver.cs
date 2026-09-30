@@ -17,6 +17,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 internal sealed class LeadBatchFilterDisplayDriver : DisplayDriver<OmnichannelActivityBatch>
 {
     private readonly INamedCatalog<LeadStatus> _statuses;
+    private readonly LeadSourceProvider _sources;
     private readonly OmnichannelContentTypeProvider _contentTypeProvider;
 
     internal readonly IStringLocalizer S;
@@ -25,14 +26,17 @@ internal sealed class LeadBatchFilterDisplayDriver : DisplayDriver<OmnichannelAc
     /// Initializes a new instance of the <see cref="LeadBatchFilterDisplayDriver"/> class.
     /// </summary>
     /// <param name="statuses">The lead status catalog.</param>
+    /// <param name="sources">The lead sources.</param>
     /// <param name="contentTypeProvider">The CRM content type provider.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public LeadBatchFilterDisplayDriver(
         INamedCatalog<LeadStatus> statuses,
+        LeadSourceProvider sources,
         OmnichannelContentTypeProvider contentTypeProvider,
         IStringLocalizer<LeadBatchFilterDisplayDriver> stringLocalizer)
     {
         _statuses = statuses;
+        _sources = sources;
         _contentTypeProvider = contentTypeProvider;
         S = stringLocalizer;
     }
@@ -56,7 +60,8 @@ internal sealed class LeadBatchFilterDisplayDriver : DisplayDriver<OmnichannelAc
             model.LeadContentTypes = (await _contentTypeProvider.GetLeadContentTypesAsync()).ToArray();
             model.IncludeClosedLeads = filter.IncludeClosedLeads;
             model.ListName = filter.ListName;
-            model.Source = filter.Source;
+            model.SourceId = filter.SourceId;
+            model.Sources = await _sources.GetOptionsAsync(filter.SourceId);
             model.OwnerId = filter.OwnerId;
             model.SkipLeadsThatAreContacts = filter.SkipLeadsThatAreContacts;
             model.Statuses = (await _statuses.GetAllAsync())
@@ -83,7 +88,7 @@ internal sealed class LeadBatchFilterDisplayDriver : DisplayDriver<OmnichannelAc
                 StatusIds = (model.StatusIds ?? []).Where(known.Contains).Distinct(StringComparer.Ordinal).ToArray(),
                 IncludeClosedLeads = model.IncludeClosedLeads,
                 ListName = Trim(model.ListName),
-                Source = Trim(model.Source),
+                SourceId = await _sources.FindIdAsync(model.SourceId),
                 OwnerId = Trim(model.OwnerId),
                 Ratings = (model.SelectedRatings ?? []).Select(LeadRatings.Normalize).Where(rating => rating is not null).Distinct().ToArray(),
                 SkipLeadsThatAreContacts = model.SkipLeadsThatAreContacts,

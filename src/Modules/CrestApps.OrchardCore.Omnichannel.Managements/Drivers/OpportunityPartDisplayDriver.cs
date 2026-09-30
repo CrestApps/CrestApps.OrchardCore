@@ -18,6 +18,7 @@ internal sealed class OpportunityPartDisplayDriver : ContentPartDisplayDriver<Op
 {
     private readonly INamedCatalog<OpportunityStage> _stages;
     private readonly ICatalogManager<OmnichannelCampaign> _campaigns;
+    private readonly LeadSourceProvider _sources;
     private readonly IContentManager _contentManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
@@ -28,18 +29,21 @@ internal sealed class OpportunityPartDisplayDriver : ContentPartDisplayDriver<Op
     /// </summary>
     /// <param name="stages">The opportunity stage catalog.</param>
     /// <param name="campaigns">The campaign manager.</param>
+    /// <param name="sources">The lead sources.</param>
     /// <param name="contentManager">The content manager.</param>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public OpportunityPartDisplayDriver(
         INamedCatalog<OpportunityStage> stages,
         ICatalogManager<OmnichannelCampaign> campaigns,
+        LeadSourceProvider sources,
         IContentManager contentManager,
         IHttpContextAccessor httpContextAccessor,
         IStringLocalizer<OpportunityPartDisplayDriver> stringLocalizer)
     {
         _stages = stages;
         _campaigns = campaigns;
+        _sources = sources;
         _contentManager = contentManager;
         _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
@@ -73,7 +77,7 @@ internal sealed class OpportunityPartDisplayDriver : ContentPartDisplayDriver<Op
             model.Amount = part.Amount;
             model.CloseDate = part.CloseDate;
             model.OwnerId = part.OwnerId;
-            model.Source = part.Source;
+            model.SourceId = part.SourceId;
             model.CampaignId = part.CampaignId;
             model.PrimaryContactItemId = part.PrimaryContactItemId;
             model.AccountContentItemId = GetAccountId(part.ContentItem);
@@ -84,6 +88,7 @@ internal sealed class OpportunityPartDisplayDriver : ContentPartDisplayDriver<Op
                 .OrderBy(campaign => campaign.DisplayText, StringComparer.OrdinalIgnoreCase)
                 .Select(campaign => new SelectListItem(campaign.DisplayText, campaign.ItemId, campaign.ItemId == part.CampaignId))
                 .ToList();
+            model.Sources = await _sources.GetOptionsAsync(part.SourceId);
 
             if (!string.IsNullOrEmpty(part.PrimaryContactItemId))
             {
@@ -128,7 +133,7 @@ internal sealed class OpportunityPartDisplayDriver : ContentPartDisplayDriver<Op
         part.Amount = model.Amount;
         part.CloseDate = model.CloseDate?.Date;
         part.OwnerId = Trim(model.OwnerId);
-        part.Source = Trim(model.Source);
+        part.SourceId = await _sources.FindIdAsync(model.SourceId);
         part.CampaignId = Trim(model.CampaignId);
         part.PrimaryContactItemId = Trim(model.PrimaryContactItemId);
 

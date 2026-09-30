@@ -34,9 +34,9 @@ public class OpportunityPartViewModel
     public string OwnerId { get; set; }
 
     /// <summary>
-    /// Gets or sets the source.
+    /// Gets or sets the content item identifier of the lead source.
     /// </summary>
-    public string Source { get; set; }
+    public string SourceId { get; set; }
 
     /// <summary>
     /// Gets or sets the campaign identifier.
@@ -71,6 +71,12 @@ public class OpportunityPartViewModel
     /// </summary>
     [BindNever]
     public IList<SelectListItem> Campaigns { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the lead sources the editor can choose from.
+    /// </summary>
+    [BindNever]
+    public IList<SelectListItem> Sources { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the display name of the stage, for the summary.

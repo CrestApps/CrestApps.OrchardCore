@@ -21,9 +21,10 @@ public sealed class LeadPart : ContentPart
     public bool IsClosed { get; set; }
 
     /// <summary>
-    /// Gets or sets where the lead came from, such as a web form, a purchased list or a trade show.
+    /// Gets or sets the content item identifier of the lead source the lead came from, such as a web form, a
+    /// purchased list or a trade show.
     /// </summary>
-    public string Source { get; set; }
+    public string SourceId { get; set; }
 
     /// <summary>
     /// Gets or sets the name of the list or import the lead arrived in, so a list can be loaded, reported on and

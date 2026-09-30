@@ -439,7 +439,7 @@ internal sealed class LeadConversionService : ILeadConversionService
             part.Amount = request.OpportunityAmount;
             part.CloseDate = request.OpportunityCloseDate?.Date;
             part.OwnerId = leadPart.OwnerId ?? request.UserId;
-            part.Source = leadPart.Source;
+            part.SourceId = leadPart.SourceId;
             part.CampaignId = request.CampaignId;
             part.PrimaryContactItemId = context.ContactCreated ? null : context.Contact.ContentItemId;
             part.ConvertedFromLeadItemId = context.Lead.ContentItemId;

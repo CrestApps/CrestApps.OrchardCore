@@ -38,7 +38,12 @@ internal sealed class CrmContentsAdminListFilterProvider : IContentsAdminListFil
                     return query.With<LeadIndex>(index => index.IsConverted == converted);
                 }))
             .WithNamedTerm("source", term => term
-                .OneCondition((value, query) => query.With<LeadIndex>(index => index.Source == value)))
+                .OneCondition(async (value, query, context) =>
+                {
+                    var sourceId = await ResolveLeadSourceIdAsync(value, context);
+
+                    return query.With<LeadIndex>(index => index.SourceId == sourceId);
+                }))
             .WithNamedTerm("list", term => term
                 .OneCondition((value, query) => query.With<LeadIndex>(index => index.ListName == value)))
             .WithNamedTerm("owner", term => term
@@ -89,6 +94,14 @@ internal sealed class CrmContentsAdminListFilterProvider : IContentsAdminListFil
         var entry = await catalog.FindByNameAsync(value);
 
         return entry?.ItemId ?? value;
+    }
+
+    // People type the name of a lead source; the index stores the id of its content item. An id works too.
+    private static async ValueTask<string> ResolveLeadSourceIdAsync(string value, object context)
+    {
+        var sources = ((ContentQueryContext)context).ServiceProvider.GetRequiredService<LeadSourceProvider>();
+
+        return await sources.FindIdAsync(value) ?? value;
     }
 
     // People type a user name; the index stores the user id. An id works too, for links built by code.

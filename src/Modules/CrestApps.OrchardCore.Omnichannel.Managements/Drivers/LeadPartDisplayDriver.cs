@@ -1,6 +1,7 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -17,6 +18,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 internal sealed class LeadPartDisplayDriver : ContentPartDisplayDriver<LeadPart>
 {
     private readonly INamedCatalog<LeadStatus> _statuses;
+    private readonly LeadSourceProvider _sources;
     private readonly IContentManager _contentManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -27,18 +29,21 @@ internal sealed class LeadPartDisplayDriver : ContentPartDisplayDriver<LeadPart>
     /// Initializes a new instance of the <see cref="LeadPartDisplayDriver"/> class.
     /// </summary>
     /// <param name="statuses">The lead status catalog.</param>
+    /// <param name="sources">The lead sources.</param>
     /// <param name="contentManager">The content manager.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public LeadPartDisplayDriver(
         INamedCatalog<LeadStatus> statuses,
+        LeadSourceProvider sources,
         IContentManager contentManager,
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
         IStringLocalizer<LeadPartDisplayDriver> stringLocalizer)
     {
         _statuses = statuses;
+        _sources = sources;
         _contentManager = contentManager;
         _authorizationService = authorizationService;
         _httpContextAccessor = httpContextAccessor;
@@ -67,11 +72,12 @@ internal sealed class LeadPartDisplayDriver : ContentPartDisplayDriver<LeadPart>
         {
             model.StatusId = part.StatusId;
             model.Company = part.Company;
-            model.Source = part.Source;
+            model.SourceId = part.SourceId;
             model.ListName = part.ListName;
             model.Rating = part.Rating;
             model.OwnerId = part.OwnerId;
             model.Statuses = await GetStatusOptionsAsync(part.StatusId);
+            model.Sources = await _sources.GetOptionsAsync(part.SourceId);
             model.Ratings = LeadRatings.All
                 .Select(rating => new SelectListItem(S[rating], rating, rating == part.Rating))
                 .ToList();
@@ -111,7 +117,7 @@ internal sealed class LeadPartDisplayDriver : ContentPartDisplayDriver<LeadPart>
         }
 
         part.Company = Trim(model.Company);
-        part.Source = Trim(model.Source);
+        part.SourceId = await _sources.FindIdAsync(model.SourceId);
         part.ListName = Trim(model.ListName);
         part.Rating = LeadRatings.Normalize(model.Rating);
         part.OwnerId = Trim(model.OwnerId);
@@ -126,7 +132,7 @@ internal sealed class LeadPartDisplayDriver : ContentPartDisplayDriver<LeadPart>
         model.IsConverted = part.IsConverted;
         model.StatusId = part.StatusId;
         model.Rating = part.Rating;
-        model.Source = part.Source;
+        model.SourceName = await _sources.GetNameAsync(part.SourceId);
         model.ListName = part.ListName;
         model.Company = part.Company;
 

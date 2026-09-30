@@ -53,9 +53,10 @@ public sealed class OmnichannelContactImportOptionsPart
     public string SelectedCountryCode { get; set; }
 
     /// <summary>
-    /// Gets or sets the lead source stamped on every lead the file creates, unless the row has its own.
+    /// Gets or sets the content item identifier of the lead source stamped on every lead the file creates, unless the
+    /// row has its own.
     /// </summary>
-    public string LeadSource { get; set; }
+    public string LeadSourceId { get; set; }
 
     /// <summary>
     /// Gets or sets the list name stamped on every lead the file creates, unless the row has its own, so a purchased

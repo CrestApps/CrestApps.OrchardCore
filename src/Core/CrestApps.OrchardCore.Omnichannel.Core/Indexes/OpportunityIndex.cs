@@ -78,9 +78,9 @@ public sealed class OpportunityIndex : MapIndex
     public string PrimaryContactItemId { get; set; }
 
     /// <summary>
-    /// Gets or sets the opportunity source.
+    /// Gets or sets the content item identifier of the opportunity's lead source.
     /// </summary>
-    public string Source { get; set; }
+    public string SourceId { get; set; }
 
     /// <summary>
     /// Gets or sets the lead the opportunity was created from.

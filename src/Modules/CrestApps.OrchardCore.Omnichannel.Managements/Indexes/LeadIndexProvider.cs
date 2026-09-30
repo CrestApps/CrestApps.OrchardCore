@@ -31,7 +31,7 @@ internal sealed class LeadIndexProvider : IndexProvider<ContentItem>
             StatusId = Truncate(part.StatusId, 50),
             IsClosed = part.IsClosed || part.IsConverted,
             IsConverted = part.IsConverted,
-            Source = Truncate(part.Source?.Trim(), 255),
+            SourceId = Truncate(part.SourceId, 26),
             ListName = Truncate(part.ListName?.Trim(), 255),
             Rating = Truncate(part.Rating, 20),
             OwnerId = Truncate(part.OwnerId, 50),
