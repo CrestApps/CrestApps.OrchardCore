@@ -117,6 +117,7 @@ public sealed class DefaultActivityDispositionService : IActivityDispositionServ
                 Disposition = disposition,
                 ActionScheduleDates = request.ActionScheduleDates,
                 ActionPreparationNotes = request.ActionPreparationNotes,
+                NotInServiceSource = request.NotInServiceSource,
             };
 
             await _subjectActionExecutor.ExecuteAsync(executionContext, cancellationToken);

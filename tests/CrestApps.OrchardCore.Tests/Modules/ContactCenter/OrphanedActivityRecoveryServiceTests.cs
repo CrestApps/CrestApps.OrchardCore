@@ -112,7 +112,7 @@ public sealed class OrphanedActivityRecoveryServiceTests
         Assert.Null(activity.ReservationId);
         Assert.Equal(ActivityAssignmentStatus.Available, activity.AssignmentStatus);
         harness.Queues.Verify(
-            q => q.EnqueueAsync(activity.ItemId, "__campaign-queue__campaign-1", null, It.IsAny<CancellationToken>()),
+            q => q.EnqueueAsync(activity.ItemId, "__campaign-queue__campaign-1", null, It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -254,7 +254,8 @@ public sealed class OrphanedActivityRecoveryServiceTests
             .Column<ActivityUrgencyLevel>("UrgencyLevel")
             .Column<ActivityStatus>("Status")
             .Column<ActivityInteractionType>("InteractionType")
-            .Column<bool>("AiEscalated"),
+            .Column<bool>("AiEscalated")
+            .Column<string>("TerminalReasonCode", column => column.Nullable().WithLength(64)),
             collection: OmnichannelConstants.CollectionName);
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 
@@ -306,7 +307,7 @@ public sealed class OrphanedActivityRecoveryServiceTests
                 });
 
             Queues
-                .Setup(q => q.EnqueueAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<InteractionPriority?>(), It.IsAny<CancellationToken>()))
+                .Setup(q => q.EnqueueAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<InteractionPriority?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((QueueItem)null);
 
             var clock = new Mock<IClock>();
@@ -356,7 +357,7 @@ public sealed class OrphanedActivityRecoveryServiceTests
 
         public void VerifyNeverEnqueued()
             => Queues.Verify(
-                q => q.EnqueueAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<InteractionPriority?>(), It.IsAny<CancellationToken>()),
+                q => q.EnqueueAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<InteractionPriority?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
                 Times.Never);
     }
 }

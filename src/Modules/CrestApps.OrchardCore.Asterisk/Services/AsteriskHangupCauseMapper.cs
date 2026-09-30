@@ -72,8 +72,13 @@ internal static class AsteriskHangupCauseMapper
             case 20:
             case 102:
                 return HangupCause.NoAnswer;
-            case 21:
+            case 1:
             case 22:
+            case 28:
+                // Unallocated number, number changed, and invalid number format all say the number itself
+                // cannot be reached, whoever dials it and whenever.
+                return HangupCause.NotInService;
+            case 21:
             case 23:
                 return HangupCause.Rejected;
             case 34:
@@ -121,6 +126,12 @@ internal static class AsteriskHangupCauseMapper
                 return true;
             case "call rejected":
                 hangupCause = HangupCause.Rejected;
+
+                return true;
+            case "unallocated (unassigned) number":
+            case "number changed":
+            case "invalid number format (address incomplete)":
+                hangupCause = HangupCause.NotInService;
 
                 return true;
             case "no circuit/channel available":

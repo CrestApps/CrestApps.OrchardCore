@@ -33,6 +33,11 @@
         reasons.Add(T.Plural((int)batch.TotalSkippedForNoDestination, "1 has no address on this channel.", "{0} have no address on this channel."));
     }
 
+    if (batch.TotalSkippedAsNotInService > 0)
+    {
+        reasons.Add(T.Plural((int)batch.TotalSkippedAsNotInService, "1 has only numbers that are not in service.", "{0} have only numbers that are not in service."));
+    }
+
     if (batch.TotalSkippedByLimit > 0)
     {
         reasons.Add(T.Plural((int)batch.TotalSkippedByLimit, "1 was not loaded because the limit was reached.", "{0} were not loaded because the limit was reached."));

@@ -1,5 +1,4 @@
-﻿using System.Text.Json;
-using CrestApps.Core.Support;
+﻿using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
@@ -307,8 +306,11 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
         // Wrap-up (after-call work) is only for ACD-routed queue and campaign work, where the platform manages
         // the agent's status so they can document and disposition the interaction before the next assignment. A
         // direct-to-agent (personal line) call is treated like a manual call: there is nothing to disposition, so
-        // the agent goes back to their ready state rather than into wrap-up.
-        var startsWrapUp = handledCallEnded && ContactCenterConstants.QueueStartsAfterCallWork(interaction.QueueId);
+        // the agent goes back to their ready state rather than into wrap-up. So does a call a machine answered: the
+        // agent was never connected to it, and it goes back to the queue on its own.
+        var startsWrapUp = handledCallEnded &&
+            session.HangupCause != HangupCause.AnsweringMachine &&
+            ContactCenterConstants.QueueStartsAfterCallWork(interaction.QueueId);
 
         if (startsWrapUp)
         {
@@ -707,31 +709,6 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
         };
     }
 
-    private static void ApplyHangupCause(CallSession session, ProviderVoiceEvent providerEvent)
-    {
-        if (!IsTerminalState(session.State) ||
-            session.HangupCause.HasValue)
-        {
-            return;
-        }
-
-        var hangupCause = providerEvent.HangupCause ?? InferHangupCause(session.State);
-
-        // The provider owns the release cause, but only the session knows whether the call was ever
-        // answered, and that is what separates a completed conversation from an abandoned one. A
-        // provider reports the same normal release for both, so this one refinement belongs here.
-        if (hangupCause == HangupCause.NormalClearing && !session.AnsweredUtc.HasValue)
-        {
-            hangupCause = HangupCause.Canceled;
-        }
-        else if (hangupCause == HangupCause.Canceled && session.AnsweredUtc.HasValue)
-        {
-            hangupCause = HangupCause.NormalClearing;
-        }
-
-        session.HangupCause = hangupCause;
-    }
-
     // A provider that reports a terminal state without a release cause has still reported the outcome
     // through the state itself, so the cause is derived from it rather than left unset. No call may end
     // without a recorded cause, because an unrecorded one cannot be counted in compliance or abandon
@@ -768,74 +745,5 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
         }
 
         return ContactCenterClaimKeys.BuildProviderDomainEventIdempotencyKey(providerEventKey, eventType);
-    }
-
-    private async Task StageAnsweredOutboundBridgeAsync(
-        CallSession session,
-        Interaction interaction,
-        CancellationToken cancellationToken)
-    {
-        if (session.Direction != InteractionDirection.Outbound || string.IsNullOrEmpty(session.AgentId))
-        {
-            return;
-        }
-
-        var provider = _voiceProviderResolver.Get(session.ProviderName);
-
-        if (provider is null ||
-            provider.DeliveryModel != VoiceProviderDeliveryModel.ServerSideAcd ||
-            !provider.Capabilities.HasFlag(ContactCenterVoiceProviderCapabilities.AgentConnect) ||
-            provider is not IContactCenterVoiceCallControlProvider)
-        {
-            return;
-        }
-
-        // The answer command that bridges the agent's soft-phone leg is only dispatchable when it carries the
-        // agent's user id (call-control authorization is keyed on the user, not the agent record). The session
-        // knows only the agent id, so resolve the user here; without it the bridge command would be refused at
-        // dispatch and compensated, which strands the answered outbound call in dead air and drops the agent
-        // straight into wrap-up.
-        var agent = await _agentManager.FindByIdAsync(session.AgentId, cancellationToken);
-
-        if (agent is null || string.IsNullOrWhiteSpace(agent.UserId))
-        {
-            _logger.LogWarning(
-                "Skipped bridging answered outbound call '{ProviderCallId}' for interaction '{InteractionId}' because agent '{AgentId}' could not be resolved to a user to authorize the connect.",
-                session.ProviderCallId.SanitizeLogValue(),
-                interaction.ItemId.SanitizeLogValue(),
-                session.AgentId.SanitizeLogValue());
-
-            return;
-        }
-
-        if (!session.Metadata.TryGetValue(ContactCenterConstants.CommandMetadata.CommandId, out var commandId) ||
-            string.IsNullOrEmpty(commandId))
-        {
-            commandId = IdGenerator.GenerateId();
-            session.Metadata[ContactCenterConstants.CommandMetadata.CommandId] = commandId;
-            await _callSessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
-        }
-
-        await _providerCommandStateService.RegisterAsync(new ProviderCommandRegistration
-        {
-            CommandId = commandId,
-            ProviderName = session.ProviderName,
-            CommandType = ProviderCommandType.Answer,
-            ActivityItemId = interaction.ActivityItemId,
-            InteractionId = interaction.ItemId,
-            RemoveReservationFromQueueOnFailure = false,
-            RequestPayload = JsonSerializer.Serialize(new ProviderAnswerCommandRequest
-            {
-                ActivityId = interaction.ActivityItemId,
-                InteractionId = interaction.ItemId,
-                ProviderCallId = session.ProviderCallId,
-                AgentId = session.AgentId,
-                AgentUserId = agent.UserId,
-                QueueId = session.QueueId,
-            }),
-        }, cancellationToken);
-
-        _scopeExecutor.ScheduleAfterCommit<IProviderCommandProcessor>(processor =>
-            processor.DispatchAsync(commandId, CancellationToken.None));
     }
 }

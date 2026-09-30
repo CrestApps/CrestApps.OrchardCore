@@ -47,6 +47,13 @@ public sealed class DialerProfile : CatalogItem, INameAwareModel, IModifiedUtcAw
     public int RetryDelayMinutes { get; set; } = 60;
 
     /// <summary>
+    /// Gets or sets whether automated dialing asks the provider to tell a person from an answering machine before
+    /// the agent is connected. A call a machine answers is hung up and tried again later, so agents only hear people.
+    /// Preview dialing ignores it: the agent placed the call and is already listening.
+    /// </summary>
+    public DialerAnsweringMachineDetection AnsweringMachineDetection { get; set; }
+
+    /// <summary>
     /// Gets or sets the seconds added to a preview offer when the agent asks for more time.
     /// </summary>
     /// <remarks>

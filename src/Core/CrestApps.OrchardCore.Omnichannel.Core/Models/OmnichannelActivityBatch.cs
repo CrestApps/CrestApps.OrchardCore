@@ -213,6 +213,12 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
     public long TotalSkippedForNoDestination { get; set; }
 
     /// <summary>
+    /// Gets or sets how many matching contacts were skipped on the last load because every phone number they had on
+    /// the batch channel is known not to be in service.
+    /// </summary>
+    public long TotalSkippedAsNotInService { get; set; }
+
+    /// <summary>
     /// Gets or sets how many matching contacts were not examined on the last load because the limit had already been
     /// reached.
     /// </summary>
@@ -291,6 +297,7 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
         TotalSkippedAsOptedOut = 0;
         TotalSkippedAsSharedNumberOptedOut = 0;
         TotalSkippedForNoDestination = 0;
+        TotalSkippedAsNotInService = 0;
         TotalSkippedByLimit = 0;
     }
 
@@ -338,6 +345,7 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
             TotalSkippedAsOptedOut = TotalSkippedAsOptedOut,
             TotalSkippedAsSharedNumberOptedOut = TotalSkippedAsSharedNumberOptedOut,
             TotalSkippedForNoDestination = TotalSkippedForNoDestination,
+            TotalSkippedAsNotInService = TotalSkippedAsNotInService,
             TotalSkippedByLimit = TotalSkippedByLimit,
             PreventDuplicates = PreventDuplicates,
             UrgencyLevel = UrgencyLevel,

@@ -32,6 +32,7 @@ const sidebars = {
                         'user-manual/automated-ai',
                         'user-manual/activities',
                         'user-manual/bulk-activities',
+                        'user-manual/numbers-not-in-service',
                     ],
                 },
                 {

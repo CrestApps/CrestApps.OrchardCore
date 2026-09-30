@@ -114,6 +114,13 @@ public static partial class ContactCenterConstants
         public const string AnswerClassification = "amd_answer_classification";
 
         /// <summary>
+        /// The key a provider sets on a dial result, and the platform then on the call session, when it asked the
+        /// network to tell a person from a machine. The agent of such a call is connected only once the answer says a
+        /// person picked up.
+        /// </summary>
+        public const string AnswerDetectionRequested = "amd_requested";
+
+        /// <summary>
         /// The key under which a provider reports its own hangup cause, unchanged, on a voice event.
         /// </summary>
         public const string ProviderHangupCause = "provider_hangup_cause";

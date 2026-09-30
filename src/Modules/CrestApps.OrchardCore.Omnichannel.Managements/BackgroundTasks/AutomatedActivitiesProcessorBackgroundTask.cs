@@ -114,6 +114,34 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
                 {
                     var processor = processors[activity.Channel];
 
+                    // A number found dead since the activity was loaded -- by another activity, a lookup or by hand
+                    // -- is not called or texted: nobody can answer it. The activity is closed with the reason, so a
+                    // report can count it as a dead number rather than as a refusal.
+                    if (await IsNotInServiceAsync(serviceProvider, activity, cancellationToken))
+                    {
+                        var reason = $"The number {activity.PreferredDestination} is known not to be in service, so it was not dialed.";
+
+                        activity.Status = ActivityStatus.Cancelled;
+                        activity.CompletedUtc ??= now;
+                        activity.TerminalReasonCode = OmnichannelConstants.TerminalReasons.NumberNotInService;
+                        activity.Notes = string.IsNullOrWhiteSpace(activity.Notes)
+                            ? reason
+                            : activity.Notes + Environment.NewLine + reason;
+
+                        await session.SaveAsync(activity, false, collection: OmnichannelConstants.CollectionName, cancellationToken);
+
+                        if (logger.IsEnabled(LogLevel.Information))
+                        {
+                            logger.LogInformation(
+                                "Activity '{ActivityId}' was cancelled instead of started on '{Channel}' because '{PhoneNumber}' is known not to be in service.",
+                                activity.ItemId.SanitizeLogValue(),
+                                activity.Channel.SanitizeLogValue(),
+                                activity.PreferredDestination.SanitizeLogValue());
+                        }
+
+                        continue;
+                    }
+
                     // Asked again here, and not only when the batch was loaded. A batch is loaded once and its
                     // activities come due later -- often hours later, and later still if they are rescheduled --
                     // so the preference read at load time is a statement about the past. Somebody who asks to be
@@ -311,6 +339,23 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
         }
 
         return null;
+    }
+
+    private static async Task<bool> IsNotInServiceAsync(
+        IServiceProvider serviceProvider,
+        OmnichannelActivity activity,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(activity.PreferredDestination) ||
+            activity.Channel is not (OmnichannelConstants.Channels.Phone or OmnichannelConstants.Channels.Sms))
+        {
+            return false;
+        }
+
+        var notInServiceNumbers = serviceProvider.GetService<INotInServiceNumberService>();
+
+        return notInServiceNumbers is not null &&
+            await notInServiceNumbers.IsNotInServiceAsync(activity.PreferredDestination, cancellationToken);
     }
 
     private static async Task<bool> HasOptedOutAsync(

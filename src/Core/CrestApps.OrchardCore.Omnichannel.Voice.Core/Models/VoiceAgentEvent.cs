@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Telephony.Models;
+
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Models;
 
 /// <summary>
@@ -48,4 +50,17 @@ public sealed class VoiceAgentEvent
     /// Webhooks arrive late and out of step, so a duration measured between two events is measured on these.
     /// </summary>
     public DateTime? OccurredUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets why the call ended, on a <see cref="VoiceAgentEventKind.Hangup"/> event, when the provider's cause
+    /// means something to the conversation: <see cref="HangupCause.NotInService"/> (the number was never reachable, so
+    /// there is nothing for the assistant to conclude) or <see cref="HangupCause.Busy"/> (the line was busy).
+    /// </summary>
+    public HangupCause? HangupCause { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider's own words for why the call ended, on a <see cref="VoiceAgentEventKind.Hangup"/>
+    /// event, such as <c>unallocated_number (SIP 404)</c>.
+    /// </summary>
+    public string HangupDetail { get; set; }
 }

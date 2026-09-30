@@ -747,7 +747,7 @@ public sealed class VoiceCallConclusionWiringTests
 
             Assert.NotNull(method);
 
-            var task = method.Invoke(_loop, [_services, Activity.ItemId]) as Task;
+            var task = method.Invoke(_loop, [_services, Activity.ItemId, false]) as Task;
 
             Assert.NotNull(task);
 

@@ -143,6 +143,7 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
             [new CommittingDialerContributor(session)],
             Options.Create(sourceOptions),
             new ContactOptOutResolver(session),
+            new NoNotInServiceNumbers(),
             NullLogger<DefaultContactActivityBatchLoader>.Instance);
     }
 

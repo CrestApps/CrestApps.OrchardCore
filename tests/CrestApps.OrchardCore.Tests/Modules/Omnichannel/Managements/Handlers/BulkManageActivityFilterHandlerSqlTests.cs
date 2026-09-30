@@ -770,7 +770,8 @@ public sealed class BulkManageActivityFilterHandlerSqlTests
             .Column<ActivityUrgencyLevel>("UrgencyLevel")
             .Column<ActivityStatus>("Status")
             .Column<ActivityInteractionType>("InteractionType")
-            .Column<bool>("AiEscalated"),
+            .Column<bool>("AiEscalated")
+            .Column<string>("TerminalReasonCode", column => column.Nullable().WithLength(64)),
             collection: OmnichannelConstants.CollectionName);
 
         // Declared exactly as the shipped migration declares it, so the do-not-call flag is a bool column here for

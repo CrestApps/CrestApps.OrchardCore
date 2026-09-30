@@ -22,6 +22,7 @@ public sealed class OmnichannelConfigurationCoverageTests
     {
         ["OmnichannelActivity"] = "Runtime state. One row per unit of work, produced by traffic and campaigns.",
         ["OmnichannelActivityBatch"] = "Runtime state. One row per batch load of activities.",
+        ["NotInServiceNumber"] = "Runtime state. One row per phone number the network or a lookup found out of service in this environment.",
     };
 
     /// <summary>

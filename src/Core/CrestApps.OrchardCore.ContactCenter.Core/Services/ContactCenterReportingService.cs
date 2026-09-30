@@ -489,7 +489,7 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
 
         foreach (var group in activities.GroupBy(activity => activity.CampaignId ?? string.Empty, StringComparer.Ordinal))
         {
-            var counts = BuildCounts(group);
+            var counts = ActivityProgressTally.Count(group);
 
             report.Rows.Add(new CampaignSummaryRow
             {
@@ -500,7 +500,7 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
                 Counts = counts,
             });
 
-            Accumulate(report.Totals, counts);
+            ActivityProgressTally.Add(report.Totals, counts);
         }
 
         report.Rows = report.Rows
@@ -517,7 +517,7 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
                 CampaignGroupName = string.IsNullOrEmpty(group.Key)
                     ? null
                     : campaignGroupNames.GetValueOrDefault(group.Key),
-                Counts = BuildCounts(group),
+                Counts = ActivityProgressTally.Count(group),
             });
         }
 
@@ -551,7 +551,7 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
 
         foreach (var group in activities.GroupBy(activity => activity.SubjectContentType ?? string.Empty, StringComparer.Ordinal))
         {
-            var counts = BuildCounts(group);
+            var counts = ActivityProgressTally.Count(group);
 
             report.Rows.Add(new SubjectInventoryRow
             {
@@ -559,7 +559,7 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
                 Counts = counts,
             });
 
-            Accumulate(report.Totals, counts);
+            ActivityProgressTally.Add(report.Totals, counts);
         }
 
         report.Rows = report.Rows
@@ -765,59 +765,6 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
         {
             accumulator.Abandoned++;
         }
-    }
-
-    private static ActivityProgressCounts BuildCounts(IEnumerable<OmnichannelActivityIndex> activities)
-    {
-        var counts = new ActivityProgressCounts();
-
-        foreach (var activity in activities)
-        {
-            counts.Total++;
-            counts.TotalAttempts += Math.Max(0, activity.Attempts);
-
-            switch (activity.Status)
-            {
-                case ActivityStatus.Completed:
-                    counts.Completed++;
-
-                    break;
-                case ActivityStatus.Failed:
-                    counts.Failed++;
-
-                    break;
-                case ActivityStatus.Cancelled:
-                case ActivityStatus.Purged:
-                    counts.Cancelled++;
-
-                    break;
-                case ActivityStatus.AwaitingAgentResponse:
-                case ActivityStatus.AwaitingCustomerAnswer:
-                case ActivityStatus.Reserved:
-                case ActivityStatus.Dialing:
-                case ActivityStatus.InProgress:
-                    counts.InProgress++;
-
-                    break;
-                default:
-                    counts.Pending++;
-
-                    break;
-            }
-        }
-
-        return counts;
-    }
-
-    private static void Accumulate(ActivityProgressCounts totals, ActivityProgressCounts counts)
-    {
-        totals.Total += counts.Total;
-        totals.Completed += counts.Completed;
-        totals.Pending += counts.Pending;
-        totals.InProgress += counts.InProgress;
-        totals.Failed += counts.Failed;
-        totals.Cancelled += counts.Cancelled;
-        totals.TotalAttempts += counts.TotalAttempts;
     }
 
     private sealed class QueueUsageAccumulator

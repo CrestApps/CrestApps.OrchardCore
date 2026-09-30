@@ -215,7 +215,8 @@ public sealed class OmnichannelActivityStoreTests
             .Column<ActivityUrgencyLevel>("UrgencyLevel")
             .Column<ActivityStatus>("Status")
             .Column<ActivityInteractionType>("InteractionType")
-            .Column<bool>("AiEscalated"),
+            .Column<bool>("AiEscalated")
+            .Column<string>("TerminalReasonCode", column => column.Nullable().WithLength(64)),
             collection: OmnichannelConstants.CollectionName);
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 

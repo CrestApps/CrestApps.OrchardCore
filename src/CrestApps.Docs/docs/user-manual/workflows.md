@@ -28,7 +28,40 @@ The screencast builds a workflow that starts recording every call as soon as it 
 5. On the canvas, drag the task away from the event, then drag from the event's **Matched** outcome to the task to connect them.
 6. Click **Save**.
 
-The event passes these values to the workflow, which you can use in any field with Liquid: `EventType`, `InteractionId`, `AggregateType`, `AggregateId`, `ActorId`, `ActorType`, `AgentId`, `AgentUserId` and `SourceComponent`, for example `{{ Workflow.Input.AgentUserId }}`.
+The event passes these values to the workflow, which you can use in any field with Liquid: `EventType`, `InteractionId`, `AggregateType`, `AggregateId`, `ActorId`, `ActorType`, `AgentId`, `AgentUserId` and `SourceComponent`, for example `{{ Workflow.Input.AgentUserId }}`. The event's own details are under `Data`, for example `{{ Workflow.Input.Data.PhoneNumber }}`; see the two events below.
+
+## Follow up on a call or a completed activity
+
+Two events carry what a follow-up needs, such as a text message to a customer the dialer could not reach.
+
+**Dialer attempt completed** fires after every call the dialer places, answered or not. The dialer does not disposition a call nobody answered (it dials the record again later), so this is the event to use for "we called and they did not answer".
+
+| Value | What it holds |
+| --- | --- |
+| `Data.Outcome` | `Answered`, `NoAnswer`, `Busy`, `AnsweringMachine`, `NotInService`, `Rejected` or `Failed`. |
+| `Data.PhoneNumber` | The number that was called. |
+| `Data.ActivityItemId` | The activity the call was for. |
+| `Data.CampaignId` | The activity's campaign. |
+| `Data.HangupCause`, `Data.ProviderHangupCause`, `Data.SipHangupCause` | How the call ended, in the platform's terms and the provider's. |
+
+**Activity disposition applied** fires whenever an activity is completed with a disposition: by an agent, by the dialer when it finds a number not in service, or by an automated (AI) call, including one nobody answered.
+
+| Value | What it holds |
+| --- | --- |
+| `Data.DispositionName` | The disposition's name. |
+| `Data.Outcome` | The disposition's [outcome](dispositions.md#outcomes): `NotInService`, `NoAnswer`, `Busy`, `AnsweringMachine` or `None`. |
+| `Data.Source` | What applied it: `Agent`, `AI`, `Provider`, `Workflow` or `System`. |
+| `Data.PhoneNumber` | The number the activity was reaching. |
+| `Data.ActivityItemId`, `Data.ContactContentItemId`, `Data.CampaignId`, `Data.SubjectContentType`, `Data.Channel`, `Data.Attempts` | The activity, its contact, campaign, subject, channel and attempt count. |
+
+### Example: text a customer the dialer could not reach
+
+1. Create a workflow and add the **Contact Center Event** event with the event type **Dialer attempt completed**.
+2. Add an **If/Else** task with the condition `input("Data").Outcome == "NoAnswer"`, and connect the event's **Matched** outcome to it.
+3. Add a **Send SMS** task. Set **Phone number** to `{{ Workflow.Input.Data.PhoneNumber }}` and write the **Body**, then connect the **If/Else** task's **True** outcome to it.
+4. Save the workflow.
+
+Every Power, Progressive or Preview call that rings out now sends the text. Use `"Busy"` or `"AnsweringMachine"` in the condition to text on those outcomes instead. For automated (AI) calls, use **Activity disposition applied** with `input("Data").Outcome == "NoAnswer"`.
 
 The **Event type** list is grouped: Interaction, Activity, Routing & queues, Agent, Offer, Dialer, Callback, Call, Recording, Supervision, Secure capture and Shared voicemail.
 

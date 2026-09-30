@@ -9,6 +9,12 @@ public static class OmnichannelConstants
 {
     public const string CollectionName = "Omnichannel";
 
+    /// <summary>
+    /// The name of the disposition applied to a call that found the number not in service when the subject flow wires
+    /// no disposition to an action that marks the number. It is created the first time it is needed.
+    /// </summary>
+    public const string NotInServiceDispositionName = "Number Not In Service";
+
     public const string AgentRole = "Agent";
 
     public const string CompleteActivityGroup = "complete";
@@ -106,10 +112,49 @@ public static class OmnichannelConstants
         public const string HandedOffAfterHoursCallback = "handed_off_after_hours_callback";
 
         /// <summary>
+        /// The number the activity was reaching is not in service. A completed activity with this reason was dialed
+        /// and the network reported the number unallocated, disconnected or invalid, so it was dispositioned
+        /// automatically without an agent or the AI; a cancelled one was not dialed at all because the number was
+        /// already known to be out of service.
+        /// </summary>
+        public const string NumberNotInService = "number_not_in_service";
+
+        /// <summary>
         /// The set of terminal reason codes that count as an escalation to a human for reporting.
         /// </summary>
         public static bool IsHandoff(string terminalReasonCode)
             => terminalReasonCode is HandedOffToAgent or HandedOffAfterHoursCallback;
+    }
+
+    /// <summary>
+    /// What found a phone number to be out of service, recorded on <see cref="Models.NotInServiceNumber.Source"/>.
+    /// </summary>
+    public static class NotInServiceSources
+    {
+        /// <summary>
+        /// The Contact Center dialer dialed the number and the network said it is not in service.
+        /// </summary>
+        public const string Dialer = "Dialer";
+
+        /// <summary>
+        /// An automated (AI) call dialed the number and the network said it is not in service.
+        /// </summary>
+        public const string AutomatedCall = "AutomatedCall";
+
+        /// <summary>
+        /// An agent dispositioned the call with a disposition whose subject action marks the number.
+        /// </summary>
+        public const string Agent = "Agent";
+
+        /// <summary>
+        /// A phone number lookup reported the line as disconnected or the number as invalid.
+        /// </summary>
+        public const string Lookup = "Lookup";
+
+        /// <summary>
+        /// A person marked the number by hand.
+        /// </summary>
+        public const string Manual = "Manual";
     }
 
     /// <summary>

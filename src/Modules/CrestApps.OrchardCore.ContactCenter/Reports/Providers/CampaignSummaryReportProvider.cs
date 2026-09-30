@@ -72,6 +72,7 @@ public sealed class CampaignSummaryReportProvider : ContactCenterReportBase
             new ReportMetric(S["Completed"].Value, ReportFormat.Number(report.Totals.Completed), ReportFormat.Percent(report.Totals.CompletionRate)),
             new ReportMetric(S["Pending"].Value, ReportFormat.Number(report.Totals.Pending)),
             new ReportMetric(S["In progress"].Value, ReportFormat.Number(report.Totals.InProgress)),
+            new ReportMetric(S["Not in service"].Value, ReportFormat.Number(report.Totals.NotInService)),
         ]));
 
         var rows = new List<ReportRow>();

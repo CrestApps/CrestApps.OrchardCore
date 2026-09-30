@@ -89,6 +89,8 @@ public sealed class AgentsStartup : StartupBase
             .AddScoped<IAgentStateTransitionService, AgentStateTransitionService>()
             .AddScoped<IAgentPresenceManager, AgentPresenceManagerService>()
             .AddScoped<IActivityDispositionHandler, ContactCenterActivityDispositionHandler>()
+            // Every completion with a disposition is published, so a workflow can follow up on it.
+            .AddScoped<IActivityDispositionHandler, ActivityDispositionAppliedPublisher>()
             .AddScoped<IAgentSessionStore, AgentSessionStore>()
             .AddScoped<IAgentSessionManager, AgentSessionManager>()
             .AddScoped<IAgentSessionService, AgentSessionService>()

@@ -244,6 +244,7 @@ namespace CrestApps.OrchardCore.ContactCenter
         public static class TelephonyMetadata
         {
             public const string AnswerClassification = "amd_answer_classification";
+            public const string AnswerDetectionRequested = "amd_requested";
             public const string HangupSource = "hangup_source";
             public const string ProviderHangupCause = "provider_hangup_cause";
             public const string ServiceAddress = "serviceAddress";
@@ -836,6 +837,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         OutsideCallingWindow = 6,
         AbandonmentRateExceeded = 7,
         ComplianceScreeningUnavailable = 8,
+        NumberNotInService = 9,
     }
     public enum EntryPointClosedAction
     {

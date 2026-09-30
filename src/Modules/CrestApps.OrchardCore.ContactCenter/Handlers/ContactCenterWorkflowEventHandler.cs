@@ -72,6 +72,11 @@ public sealed class ContactCenterWorkflowEventHandler : IContactCenterEventHandl
             ["AgentId"] = agentId,
             ["AgentUserId"] = agentUserId,
             ["SourceComponent"] = interactionEvent.SourceComponent,
+
+            // What the event itself says -- a dialer attempt's outcome and the number it called, a disposition and the
+            // contact it was for -- so a workflow can act on it, for example by texting the customer, rather than only
+            // knowing that something happened.
+            ["Data"] = ReadData(interactionEvent.Data),
         };
 
         await _workflowManager.TriggerEventAsync(
@@ -124,6 +129,56 @@ public sealed class ContactCenterWorkflowEventHandler : IContactCenterEventHandl
         }
 
         return (agentId, userId);
+    }
+
+    /// <summary>
+    /// The event's payload as a flat set of values a workflow can read, such as <c>Workflow.Input.Data.PhoneNumber</c>.
+    /// </summary>
+    /// <remarks>
+    /// Only the payload's own text, number and true/false values are carried: nested objects and lists are left out,
+    /// and a payload that is not an object gives an empty set.
+    /// </remarks>
+    internal static Dictionary<string, object> ReadData(string data)
+    {
+        var values = new Dictionary<string, object>(StringComparer.Ordinal);
+
+        if (string.IsNullOrEmpty(data))
+        {
+            return values;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(data);
+
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return values;
+            }
+
+            foreach (var property in document.RootElement.EnumerateObject())
+            {
+                switch (property.Value.ValueKind)
+                {
+                    case JsonValueKind.String:
+                        values[property.Name] = property.Value.GetString();
+                        break;
+                    case JsonValueKind.Number:
+                        values[property.Name] = property.Value.TryGetInt64(out var whole) ? whole : property.Value.GetDouble();
+                        break;
+                    case JsonValueKind.True:
+                    case JsonValueKind.False:
+                        values[property.Name] = property.Value.GetBoolean();
+                        break;
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            // A payload that cannot be read carries nothing a workflow could use.
+        }
+
+        return values;
     }
 
     private static string ReadString(JsonElement element, string propertyName)

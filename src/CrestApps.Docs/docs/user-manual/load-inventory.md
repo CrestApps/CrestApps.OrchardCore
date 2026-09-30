@@ -80,6 +80,7 @@ When a load finishes, its row in the list and the top of its page say how many o
 | Asked not to be reached on this channel | The contact opted out, and the matching **Include do not call / SMS / email** box is not ticked. |
 | Shares a phone number with a contact who asked not to be reached | Another record with the same number opted out. |
 | Has no address on this channel | An automatic load needs a number or email to send to. |
+| Has only numbers that are not in service | Every number the contact has on the channel is on the [Numbers Not In Service](numbers-not-in-service.md) list. A contact with at least one working number is loaded on that number. |
 | Not loaded because the limit was reached | The **Limit** was reached before this contact. |
 
 If the filters match nobody, the load says so. Loading the same batch again replaces the counts rather than adding to them.

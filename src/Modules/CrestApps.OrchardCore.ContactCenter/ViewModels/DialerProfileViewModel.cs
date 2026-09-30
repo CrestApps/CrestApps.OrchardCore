@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -69,6 +70,11 @@ public class DialerProfileViewModel
     /// </summary>
     [Range(1, int.MaxValue)]
     public int RetryDelayMinutes { get; set; } = 60;
+
+    /// <summary>
+    /// Gets or sets whether automated dialing screens out answering machines before connecting an agent.
+    /// </summary>
+    public DialerAnsweringMachineDetection AnsweringMachineDetection { get; set; }
 
     /// <summary>
     /// Gets or sets the caller identifier.
