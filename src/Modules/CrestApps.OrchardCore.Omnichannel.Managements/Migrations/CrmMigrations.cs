@@ -108,8 +108,51 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
         await CreateLeadSourceTypeAsync();
         await AddLeadFieldsAsync();
         await AddOpportunityFieldsAsync();
-        await CreateLeadIndexAsync(SchemaBuilder);
-        await CreateOpportunityIndexAsync(SchemaBuilder);
+
+        // A tenant can hold one of these tables from an earlier install although its migration was never recorded.
+        // Creating it again failed this step on every start ("There is already an object named ..."), so only a
+        // missing table is created, and a table that is already there is brought up to date as UpdateFrom1Async does.
+        var existingTableFound = false;
+
+        if (await IndexTableExistsAsync<LeadIndex>(null))
+        {
+            existingTableFound = true;
+
+            await EnsureColumnExistsAsync<LeadIndex>(
+                null,
+                "SourceId",
+                table => table.AddColumn<string>("SourceId", column => column.WithLength(26)),
+                "add the 'SourceId' column to the existing lead index");
+        }
+        else
+        {
+            await CreateLeadIndexAsync(SchemaBuilder);
+        }
+
+        if (await IndexTableExistsAsync<OpportunityIndex>(null))
+        {
+            existingTableFound = true;
+
+            await EnsureColumnExistsAsync<OpportunityIndex>(
+                null,
+                "SourceId",
+                table => table.AddColumn<string>("SourceId", column => column.WithLength(26)),
+                "add the 'SourceId' column to the existing opportunity index");
+        }
+        else
+        {
+            await CreateOpportunityIndexAsync(SchemaBuilder);
+        }
+
+        if (existingTableFound)
+        {
+            if (Logger.IsEnabled(LogLevel.Warning))
+            {
+                Logger.LogWarning("The CRM index tables were partly present before the CRM migration ran; existing leads and opportunities will be moved into fields and indexed again.");
+            }
+
+            ShellScope.AddDeferredTask(MoveValuesIntoFieldsAsync);
+        }
 
         ShellScope.AddDeferredTask(scope => scope.ServiceProvider
             .GetRequiredService<CrmCatalogSeeder>()

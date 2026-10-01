@@ -617,55 +617,75 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
             return new EntryDeleteBatch(0, afterDocumentId);
         }
 
-        var parameters = new
-        {
-            ListId = listId,
-            After = afterDocumentId,
-            UpTo = documentIds.Max(),
-        };
+        var upTo = documentIds.Max();
 
-        // The documents go first: their statement finds them through the index rows the second one removes.
+        // The index rows go first. On SQL Server each index row has a foreign key to its document, so deleting
+        // the documents first is refused; the documents are then deleted by the ids already read.
         await connection.ExecuteAsync(new CommandDefinition(
-            statements.DeleteDocuments,
-            parameters,
+            statements.DeleteIndexRows,
+            new { ListId = listId, After = afterDocumentId, UpTo = upTo },
             transaction,
             DeleteCommandTimeoutSeconds,
             cancellationToken: cancellationToken));
 
+        var documentParameters = new DynamicParameters();
+
+        for (var i = 0; i < documentIds.Count; i++)
+        {
+            documentParameters.Add(LocalDncEntryDeleteStatements.DocumentIdParameterName(i), documentIds[i]);
+        }
+
         await connection.ExecuteAsync(new CommandDefinition(
-            statements.DeleteIndexRows,
-            parameters,
+            statements.GetDeleteDocuments(documentIds.Count),
+            documentParameters,
             transaction,
             DeleteCommandTimeoutSeconds,
             cancellationToken: cancellationToken));
 
         await transaction.CommitAsync(cancellationToken);
 
-        return new EntryDeleteBatch(documentIds.Count, parameters.UpTo);
+        return new EntryDeleteBatch(documentIds.Count, upTo);
     }
 
     private readonly record struct EntryDeleteBatch(int Count, long LastDocumentId);
 
     /// <summary>
-    /// The statements that delete a list's entries in ranges of document ids. Each one filters on the list and
-    /// a document id range, which the existing (DocumentId, ListId, ...) index of the entry table covers, so no
-    /// statement reads the whole table. Every value is a scalar parameter, so the statements have the same
-    /// shape on every supported database.
+    /// The statements that delete a list's entries in ranges of document ids. The index statements filter on the
+    /// list and a document id range, which the existing (DocumentId, ListId, ...) index of the entry table covers,
+    /// so no statement reads the whole table. The documents are deleted by id with one placeholder per id rather
+    /// than a bound collection, so the statement has the same shape on every supported database.
     /// </summary>
     private sealed class LocalDncEntryDeleteStatements
     {
-        private LocalDncEntryDeleteStatements(string selectBatch, string deleteDocuments, string deleteIndexRows)
+        private readonly string _documentTable;
+        private readonly string _idColumn;
+        private readonly string _deleteFullBatchOfDocuments;
+
+        private LocalDncEntryDeleteStatements(string selectBatch, string deleteIndexRows, string documentTable, string idColumn)
         {
             SelectBatch = selectBatch;
-            DeleteDocuments = deleteDocuments;
             DeleteIndexRows = deleteIndexRows;
+            _documentTable = documentTable;
+            _idColumn = idColumn;
+            _deleteFullBatchOfDocuments = BuildDeleteDocuments(DeleteBatchSize);
         }
 
         public string SelectBatch { get; }
 
-        public string DeleteDocuments { get; }
-
         public string DeleteIndexRows { get; }
+
+        public static string DocumentIdParameterName(int index)
+            => "Id" + index.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+        public string GetDeleteDocuments(int count)
+            => count == DeleteBatchSize ? _deleteFullBatchOfDocuments : BuildDeleteDocuments(count);
+
+        private string BuildDeleteDocuments(int count)
+        {
+            var placeholders = string.Join(", ", Enumerable.Range(0, count).Select(index => "@" + DocumentIdParameterName(index)));
+
+            return $"DELETE FROM {_documentTable} WHERE {_idColumn} IN ({placeholders})";
+        }
 
         public static LocalDncEntryDeleteStatements Create(YesSql.IConfiguration configuration)
         {
@@ -694,8 +714,9 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
 
             return new LocalDncEntryDeleteStatements(
                 select.ToSqlString(),
-                $"DELETE FROM {documentTable} WHERE {idColumn} IN (SELECT {documentIdColumn} FROM {indexTable} WHERE {range})",
-                $"DELETE FROM {indexTable} WHERE {range}");
+                $"DELETE FROM {indexTable} WHERE {range}",
+                documentTable,
+                idColumn);
         }
     }
 
