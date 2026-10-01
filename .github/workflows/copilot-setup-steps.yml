@@ -4,7 +4,17 @@
 
 name: Copilot Setup Steps
 
-on: copilot_setup
+# "copilot_setup" is not an event GitHub Actions knows, so GitHub rejected the file and reported a failed run with no
+# jobs on every push. The Copilot coding agent runs the "copilot-setup-steps" job itself; these triggers only let the
+# steps be run by hand and checked whenever this file changes.
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
 
 permissions:
   contents: read

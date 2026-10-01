@@ -5,7 +5,6 @@ var fs = require("graceful-fs"),
     gulpif = require("gulp-if"),
     newer = require("gulp-newer"),
     plumber = require("gulp-plumber"),
-    sourcemaps = require("gulp-sourcemaps"),
     less = require("gulp-less"),
     scss = require("gulp-dart-sass"),
     minify = require("gulp-minifier"),
@@ -258,7 +257,10 @@ function buildCssPipeline(assetGroup, doConcat, doRebuild) {
         .pipe(gulp.dest(assetGroup.outputDir));
     // Uncomment to copy assets to wwwroot
     //.pipe(gulp.dest(assetGroup.webroot));
-    var devStream = gulp.src(assetGroup.inputPaths) // Non-minified output, with source mapping
+    // Gulp maps sources itself: reading with { sourcemaps: true } starts the map and writing with it inlines it,
+    // which is what gulp-sourcemaps did. That plugin is unmaintained and pulled in a vulnerable
+    // decode-uri-component, through css and source-map-resolve, that no update could reach.
+    var devStream = gulp.src(assetGroup.inputPaths, { sourcemaps: generateSourceMaps }) // Non-minified output, with source mapping
         .pipe(gulpif(!doRebuild,
             gulpif(doConcat,
                 newer(assetGroup.outputPath),
@@ -267,7 +269,6 @@ function buildCssPipeline(assetGroup, doConcat, doRebuild) {
                     ext: ".css"
                 }))))
         .pipe(plumber())
-        .pipe(gulpif(generateSourceMaps, sourcemaps.init()))
         .pipe(gulpif("*.less", less()))
         .pipe(gulpif("*.scss", scss({
             precision: 10,
@@ -275,9 +276,8 @@ function buildCssPipeline(assetGroup, doConcat, doRebuild) {
         })))
         .pipe(gulpif(doConcat, concat(assetGroup.outputFileName)))
         .pipe(gulpif(generateRTL, postcss([rtl()])))
-        .pipe(gulpif(generateSourceMaps, sourcemaps.write()))
         .pipe(eol('\n'))
-        .pipe(gulp.dest(assetGroup.outputDir));
+        .pipe(gulp.dest(assetGroup.outputDir, { sourcemaps: generateSourceMaps }));
     // Uncomment to copy assets to wwwroot
     //.pipe(gulp.dest(assetGroup.webroot));
     return waitForAll([minifiedStream, devStream]);
@@ -302,7 +302,7 @@ function buildJsPipeline(assetGroup, doConcat, doRebuild) {
     };
 
     function createJsStream(enableSourceMaps) {
-        return gulp.src(assetGroup.inputPaths)
+        return gulp.src(assetGroup.inputPaths, { sourcemaps: enableSourceMaps })
             .pipe(gulpif(!doRebuild,
                 gulpif(doConcat,
                     newer(assetGroup.outputPath),
@@ -311,7 +311,6 @@ function buildJsPipeline(assetGroup, doConcat, doRebuild) {
                         ext: ".js"
                     }))))
             .pipe(plumber())
-            .pipe(gulpif(enableSourceMaps, sourcemaps.init()))
             .pipe(gulpif("*.ts", typescript(tsCompilerOptions)))
             .pipe(babel({
                 // Babel compacts any input over 500,000 characters by default. The soft phone is just under that with
@@ -337,8 +336,7 @@ function buildJsPipeline(assetGroup, doConcat, doRebuild) {
     }
 
     var devStream = createJsStream(generateSourceMaps)
-        .pipe(gulpif(generateSourceMaps, sourcemaps.write()))
-        .pipe(gulp.dest(assetGroup.outputDir));
+        .pipe(gulp.dest(assetGroup.outputDir, { sourcemaps: generateSourceMaps }));
     // Uncomment to copy assets to wwwroot
     //.pipe(gulp.dest(assetGroup.webroot));
 
