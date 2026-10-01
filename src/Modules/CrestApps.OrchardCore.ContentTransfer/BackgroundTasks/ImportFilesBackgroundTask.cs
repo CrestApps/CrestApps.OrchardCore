@@ -1,7 +1,6 @@
 using System.ComponentModel;
 using System.Data;
 using System.Data.Common;
-using System.Diagnostics;
 using CrestApps.OrchardCore.BackgroundWork;
 using CrestApps.OrchardCore.ContentTransfer.Indexes;
 using CrestApps.OrchardCore.ContentTransfer.Models;
@@ -332,19 +331,23 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
             if (newRecords.Count + existingRows.Count >= batchSize)
             {
-                var batchStarted = Stopwatch.GetTimestamp();
-                var batchProcessed = await ProcessBatchAsync(
-                    serviceProvider,
-                    entry,
-                    dataTable,
-                    newRecords,
-                    existingRows,
-                    contentTypeDefinition,
-                    contentManager,
-                    contentImportManager,
-                    progressPart,
-                    session,
-                    clock,
+                // Batches used to run back to back, holding the database at its limit for the whole import. The
+                // batch runs through the gate every tenant's bulk work shares, which keeps that work to its share.
+                var batchProcessed = await BackgroundWorkPacer.RunBatchAsync(
+                    token => ProcessBatchAsync(
+                        serviceProvider,
+                        entry,
+                        dataTable,
+                        newRecords,
+                        existingRows,
+                        contentTypeDefinition,
+                        contentManager,
+                        contentImportManager,
+                        progressPart,
+                        session,
+                        clock,
+                        token),
+                    pacingOptions,
                     cancellationToken);
 
                 if (!batchProcessed)
@@ -356,10 +359,6 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 newRecords.Clear();
                 existingRows.Clear();
                 dataTable.Rows.Clear();
-
-                // Batches used to run back to back, holding the database at its limit for the whole import and
-                // slowing every request made meanwhile. Pausing in proportion to the batch keeps the import to its share.
-                await BackgroundWorkPacer.PauseAfterBatchAsync(Stopwatch.GetElapsedTime(batchStarted), pacingOptions, cancellationToken);
             }
 
             rowIndex++;

@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using CrestApps.OrchardCore.BackgroundWork;
 using CrestApps.OrchardCore.DncRegistry.BackgroundTasks;
 using CrestApps.OrchardCore.DncRegistry.Indexes;
@@ -511,8 +510,13 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
             // what made deleting a list of millions of numbers run for hours and time out on a small database.
             while (true)
             {
-                var batchStarted = Stopwatch.GetTimestamp();
-                var deleted = await DeleteNextEntryBatchAsync(store, statements, listId, afterDocumentId, cancellationToken);
+                // Running the batches back to back held the database at 100% for the whole delete, and several
+                // tenants deleting at once would add up. The batch runs through the gate every tenant's bulk work
+                // shares, which keeps that work together to its share of the database.
+                var deleted = await BackgroundWorkPacer.RunBatchAsync(
+                    token => DeleteNextEntryBatchAsync(store, statements, listId, afterDocumentId, token),
+                    _pacingOptions,
+                    cancellationToken);
 
                 if (deleted.Count == 0)
                 {
@@ -521,10 +525,6 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
 
                 afterDocumentId = deleted.LastDocumentId;
                 deletedCount += deleted.Count;
-
-                // Running the batches back to back held the database at 100% for the whole delete, which slowed
-                // every other request down. Pausing in proportion to the batch keeps the delete to its share.
-                await BackgroundWorkPacer.PauseAfterBatchAsync(Stopwatch.GetElapsedTime(batchStarted), _pacingOptions, cancellationToken);
 
                 // The heartbeat keeps the background task from starting a second deletion of this list
                 // while a long one is still running.
@@ -960,15 +960,15 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
 
             if (batchEntries.Count >= BatchSize)
             {
-                var batchStarted = Stopwatch.GetTimestamp();
-                var shouldContinue = await FlushBatchAndUpdateProgressAsync(list, batchEntries, cancellationToken);
+                var shouldContinue = await BackgroundWorkPacer.RunBatchAsync(
+                    token => FlushBatchAndUpdateProgressAsync(list, batchEntries, token),
+                    _pacingOptions,
+                    cancellationToken);
 
                 if (!shouldContinue)
                 {
                     return;
                 }
-
-                await BackgroundWorkPacer.PauseAfterBatchAsync(Stopwatch.GetElapsedTime(batchStarted), _pacingOptions, cancellationToken);
             }
         }
 
