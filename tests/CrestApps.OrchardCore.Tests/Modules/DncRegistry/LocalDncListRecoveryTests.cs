@@ -1,4 +1,5 @@
 using System.Text;
+using CrestApps.OrchardCore.BackgroundWork;
 using CrestApps.OrchardCore.DncRegistry;
 using CrestApps.OrchardCore.DncRegistry.BackgroundTasks;
 using CrestApps.OrchardCore.DncRegistry.Indexes;
@@ -11,6 +12,7 @@ using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.FileStorage;
 using OrchardCore.Locking;
@@ -199,6 +201,7 @@ public sealed class LocalDncListRecoveryTests
             services.AddSingleton(CreateFileStore(csv));
             services.AddSingleton<IPhoneNumberService, DefaultPhoneNumberService>();
             services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
+            services.AddSingleton(Options.Create(new BackgroundWorkPacingOptions { DatabaseShare = 1 }));
             services.AddScoped<ILocalDncListManager, DefaultLocalDncListManager>();
 
             return new Fixture(databasePath, store, services.BuildServiceProvider());

@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics;
+using CrestApps.OrchardCore.BackgroundWork;
 using CrestApps.OrchardCore.ContentTransfer.Indexes;
 using CrestApps.OrchardCore.ContentTransfer.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -220,6 +222,8 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
     {
         using var reader = formatProvider.CreateReader(stream);
 
+        var pacingOptions = serviceProvider.GetService<IOptions<BackgroundWorkPacingOptions>>()?.Value;
+
         var columnNames = reader.GetColumnNames();
         using var dataTable = new DataTable();
 
@@ -328,6 +332,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
             if (newRecords.Count + existingRows.Count >= batchSize)
             {
+                var batchStarted = Stopwatch.GetTimestamp();
                 var batchProcessed = await ProcessBatchAsync(
                     serviceProvider,
                     entry,
@@ -351,6 +356,10 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 newRecords.Clear();
                 existingRows.Clear();
                 dataTable.Rows.Clear();
+
+                // Batches used to run back to back, holding the database at its limit for the whole import and
+                // slowing every request made meanwhile. Pausing in proportion to the batch keeps the import to its share.
+                await BackgroundWorkPacer.PauseAfterBatchAsync(Stopwatch.GetElapsedTime(batchStarted), pacingOptions, cancellationToken);
             }
 
             rowIndex++;

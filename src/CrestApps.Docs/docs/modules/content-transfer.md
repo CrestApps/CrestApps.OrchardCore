@@ -114,6 +114,32 @@ Configure the module in `appsettings.json` under the `OrchardCore:CrestApps:Cont
 
 All values are read from the tenant's shell configuration, so they can be set globally for every tenant or overridden for a single tenant. See [Overriding the upload limits](#overriding-the-upload-limits).
 
+### Limiting how much of the database an import uses
+
+A large import pauses after each batch, so it never holds the database at its limit while people are using the site. The pause is proportional to how long the batch took, so it adapts to the size of the database and to how busy it is: when other work slows the batches down, the pauses grow with them. The same setting paces the import and deletion of local Do Not Call lists.
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "BackgroundWork": {
+        "Pacing": {
+          "DatabaseShare": 0.25,
+          "MaxPause": "00:00:30"
+        }
+      }
+    }
+  }
+}
+```
+
+| Setting | Default | Description |
+| --- | --- | --- |
+| `DatabaseShare` | `0.25` | The share of time, from `0.05` to `1`, the job spends working against the database. At `0.25` a batch that took one second is followed by a three-second pause. `1` turns pacing off and runs the batches back to back. |
+| `MaxPause` | `"00:00:30"` | The longest pause after one batch, however slow the batch was. |
+
+Lower the share to protect a small database during business hours; raise it to finish a large import sooner on a quiet database.
+
 ### Large file uploads
 
 Bulk import is meant to ingest large data files, so the upload limits are independent from the global
