@@ -2,11 +2,13 @@ using CrestApps.OrchardCore.DncRegistry.BackgroundTasks;
 using CrestApps.OrchardCore.DncRegistry.Indexes;
 using CrestApps.OrchardCore.DncRegistry.Models;
 using CrestApps.OrchardCore.PhoneNumbers;
+using Dapper;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;
+using YesSql.Sql;
 using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.DncRegistry.Services;
@@ -18,7 +20,8 @@ namespace CrestApps.OrchardCore.DncRegistry.Services;
 internal sealed class DefaultLocalDncListManager : ILocalDncListManager
 {
     private const int BatchSize = 100;
-    private const int DeleteBatchSize = 500;
+    private const int DeleteBatchSize = 1_000;
+    private const int DeleteCommandTimeoutSeconds = 120;
     private const int ExistingNumbersPageSize = 5_000;
     private const int DeleteHeartbeatInterval = 20;
 
@@ -493,37 +496,23 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
 
         try
         {
-            // Delete entries in batches to avoid excessive memory consumption and timeouts.
+            var statements = LocalDncEntryDeleteStatements.Create(store.Configuration);
+            var afterDocumentId = 0L;
+
+            // Entries are deleted by the database in ranges of document ids rather than loaded and deleted one
+            // at a time. Loading each entry, then sending one DELETE per document and one per index row, is
+            // what made deleting a list of millions of numbers run for hours and time out on a small database.
             while (true)
             {
-                var batchSession = store.CreateSession();
+                var deleted = await DeleteNextEntryBatchAsync(store, statements, listId, afterDocumentId, cancellationToken);
 
-                try
+                if (deleted.Count == 0)
                 {
-                    var entries = (await batchSession.Query<LocalDncEntry, LocalDncEntryIndex>(
-                        i => i.ListId == listId, collection: DncRegistryConstants.CollectionName)
-                        .Take(DeleteBatchSize)
-                        .ListAsync(cancellationToken))
-                        .ToList();
-
-                    if (entries.Count == 0)
-                    {
-                        break;
-                    }
-
-                    foreach (var entry in entries)
-                    {
-                        batchSession.Delete(entry, collection: DncRegistryConstants.CollectionName);
-                    }
-
-                    await batchSession.SaveChangesAsync(cancellationToken);
-
-                    deletedCount += entries.Count;
+                    break;
                 }
-                finally
-                {
-                    await batchSession.DisposeAsync();
-                }
+
+                afterDocumentId = deleted.LastDocumentId;
+                deletedCount += deleted.Count;
 
                 // The heartbeat keeps the background task from starting a second deletion of this list
                 // while a long one is still running.
@@ -593,6 +582,120 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
                 list.Name,
                 list.ListId,
                 deletedCount);
+        }
+    }
+
+    /// <summary>
+    /// Deletes the next batch of a list's entries, documents and index rows together, in one transaction.
+    /// The batch is the next <see cref="DeleteBatchSize"/> document ids of the list after
+    /// <paramref name="afterDocumentId"/>, so each batch starts where the last one ended instead of searching
+    /// the table again from the beginning.
+    /// </summary>
+    private static async Task<EntryDeleteBatch> DeleteNextEntryBatchAsync(
+        IStore store,
+        LocalDncEntryDeleteStatements statements,
+        string listId,
+        long afterDocumentId,
+        CancellationToken cancellationToken)
+    {
+        await using var connection = store.Configuration.ConnectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(store.Configuration.IsolationLevel, cancellationToken);
+
+        var documentIds = (await connection.QueryAsync<long>(new CommandDefinition(
+            statements.SelectBatch,
+            new { ListId = listId, After = afterDocumentId },
+            transaction,
+            DeleteCommandTimeoutSeconds,
+            cancellationToken: cancellationToken)))
+            .ToList();
+
+        if (documentIds.Count == 0)
+        {
+            await transaction.CommitAsync(cancellationToken);
+
+            return new EntryDeleteBatch(0, afterDocumentId);
+        }
+
+        var parameters = new
+        {
+            ListId = listId,
+            After = afterDocumentId,
+            UpTo = documentIds.Max(),
+        };
+
+        // The documents go first: their statement finds them through the index rows the second one removes.
+        await connection.ExecuteAsync(new CommandDefinition(
+            statements.DeleteDocuments,
+            parameters,
+            transaction,
+            DeleteCommandTimeoutSeconds,
+            cancellationToken: cancellationToken));
+
+        await connection.ExecuteAsync(new CommandDefinition(
+            statements.DeleteIndexRows,
+            parameters,
+            transaction,
+            DeleteCommandTimeoutSeconds,
+            cancellationToken: cancellationToken));
+
+        await transaction.CommitAsync(cancellationToken);
+
+        return new EntryDeleteBatch(documentIds.Count, parameters.UpTo);
+    }
+
+    private readonly record struct EntryDeleteBatch(int Count, long LastDocumentId);
+
+    /// <summary>
+    /// The statements that delete a list's entries in ranges of document ids. Each one filters on the list and
+    /// a document id range, which the existing (DocumentId, ListId, ...) index of the entry table covers, so no
+    /// statement reads the whole table. Every value is a scalar parameter, so the statements have the same
+    /// shape on every supported database.
+    /// </summary>
+    private sealed class LocalDncEntryDeleteStatements
+    {
+        private LocalDncEntryDeleteStatements(string selectBatch, string deleteDocuments, string deleteIndexRows)
+        {
+            SelectBatch = selectBatch;
+            DeleteDocuments = deleteDocuments;
+            DeleteIndexRows = deleteIndexRows;
+        }
+
+        public string SelectBatch { get; }
+
+        public string DeleteDocuments { get; }
+
+        public string DeleteIndexRows { get; }
+
+        public static LocalDncEntryDeleteStatements Create(YesSql.IConfiguration configuration)
+        {
+            var dialect = configuration.SqlDialect;
+            var prefix = configuration.TablePrefix;
+            var schema = configuration.Schema;
+            var indexTableName = configuration.TableNameConvention.GetIndexTable(typeof(LocalDncEntryIndex), DncRegistryConstants.CollectionName);
+            var documentTableName = configuration.TableNameConvention.GetDocumentTable(DncRegistryConstants.CollectionName);
+
+            var indexTable = dialect.QuoteForTableName(prefix + indexTableName, schema);
+            var documentTable = dialect.QuoteForTableName(prefix + documentTableName, schema);
+            var documentIdColumn = dialect.QuoteForColumnName("DocumentId");
+            var listIdColumn = dialect.QuoteForColumnName(nameof(LocalDncEntryIndex.ListId));
+            var idColumn = dialect.QuoteForColumnName("Id");
+
+            var select = new SqlBuilder(prefix, dialect);
+            select.Select();
+            select.Selector(documentIdColumn);
+            select.Table(indexTableName, alias: null, schema);
+            select.WhereAnd($"{listIdColumn} = @ListId");
+            select.WhereAnd($"{documentIdColumn} > @After");
+            select.OrderBy(documentIdColumn);
+            select.Take(DeleteBatchSize.ToString(System.Globalization.CultureInfo.InvariantCulture));
+
+            var range = $"{listIdColumn} = @ListId AND {documentIdColumn} > @After AND {documentIdColumn} <= @UpTo";
+
+            return new LocalDncEntryDeleteStatements(
+                select.ToSqlString(),
+                $"DELETE FROM {documentTable} WHERE {idColumn} IN (SELECT {documentIdColumn} FROM {indexTable} WHERE {range})",
+                $"DELETE FROM {indexTable} WHERE {range}");
         }
     }
 
