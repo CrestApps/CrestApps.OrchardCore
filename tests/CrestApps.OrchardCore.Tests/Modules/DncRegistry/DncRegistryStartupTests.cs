@@ -1,9 +1,12 @@
 using CrestApps.OrchardCore.DncRegistry;
 using CrestApps.OrchardCore.DncRegistry.BackgroundTasks;
 using CrestApps.OrchardCore.DncRegistry.Services;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Moq;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data.Migration;
+using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Navigation;
 using YesSql.Indexes;
 
@@ -53,7 +56,10 @@ public sealed class DncRegistryStartupTests
         var services = new ServiceCollection();
 
         // Act
-        new LocalDncRegistryStartup().ConfigureServices(services);
+        var configuration = new Mock<IShellConfiguration>();
+        configuration.Setup(c => c.GetSection(It.IsAny<string>())).Returns<string>(key => new ConfigurationBuilder().Build().GetSection(key));
+
+        new LocalDncRegistryStartup(configuration.Object).ConfigureServices(services);
 
         // Assert
         Assert.Contains(services, descriptor =>

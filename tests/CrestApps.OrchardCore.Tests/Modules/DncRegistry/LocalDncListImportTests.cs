@@ -1,4 +1,5 @@
 using System.Text;
+using CrestApps.OrchardCore.BackgroundWork;
 using CrestApps.OrchardCore.DncRegistry;
 using CrestApps.OrchardCore.DncRegistry.Indexes;
 using CrestApps.OrchardCore.DncRegistry.Migrations;
@@ -7,6 +8,7 @@ using CrestApps.OrchardCore.DncRegistry.Services;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.FileStorage;
 using OrchardCore.Locking.Distributed;
@@ -68,6 +70,7 @@ public sealed class LocalDncListImportTests
                     CreateFileStore(csv),
                     CreateClock(),
                     new DefaultPhoneNumberService(),
+                    Options.Create(new BackgroundWorkPacingOptions { DatabaseShare = 1 }),
                     NullLogger<DefaultLocalDncListManager>.Instance);
 
                 // Act

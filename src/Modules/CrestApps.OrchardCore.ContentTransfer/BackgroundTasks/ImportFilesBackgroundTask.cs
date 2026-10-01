@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Data;
 using System.Data.Common;
+using CrestApps.OrchardCore.BackgroundWork;
 using CrestApps.OrchardCore.ContentTransfer.Indexes;
 using CrestApps.OrchardCore.ContentTransfer.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -220,6 +221,8 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
     {
         using var reader = formatProvider.CreateReader(stream);
 
+        var pacingOptions = serviceProvider.GetService<IOptions<BackgroundWorkPacingOptions>>()?.Value;
+
         var columnNames = reader.GetColumnNames();
         using var dataTable = new DataTable();
 
@@ -328,18 +331,23 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
             if (newRecords.Count + existingRows.Count >= batchSize)
             {
-                var batchProcessed = await ProcessBatchAsync(
-                    serviceProvider,
-                    entry,
-                    dataTable,
-                    newRecords,
-                    existingRows,
-                    contentTypeDefinition,
-                    contentManager,
-                    contentImportManager,
-                    progressPart,
-                    session,
-                    clock,
+                // Batches used to run back to back, holding the database at its limit for the whole import. The
+                // batch runs through the gate every tenant's bulk work shares, which keeps that work to its share.
+                var batchProcessed = await BackgroundWorkPacer.RunBatchAsync(
+                    token => ProcessBatchAsync(
+                        serviceProvider,
+                        entry,
+                        dataTable,
+                        newRecords,
+                        existingRows,
+                        contentTypeDefinition,
+                        contentManager,
+                        contentImportManager,
+                        progressPart,
+                        session,
+                        clock,
+                        token),
+                    pacingOptions,
                     cancellationToken);
 
                 if (!batchProcessed)

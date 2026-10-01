@@ -1,9 +1,11 @@
+using CrestApps.OrchardCore.BackgroundWork;
 using CrestApps.OrchardCore.DncRegistry.BackgroundTasks;
 using CrestApps.OrchardCore.DncRegistry.Indexes;
 using CrestApps.OrchardCore.DncRegistry.Models;
 using CrestApps.OrchardCore.PhoneNumbers;
 using Dapper;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -33,6 +35,7 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
     private readonly ILocalDncFileStore _fileStore;
     private readonly IClock _clock;
     private readonly IPhoneNumberService _phoneNumberService;
+    private readonly BackgroundWorkPacingOptions _pacingOptions;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -43,6 +46,7 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
     /// <param name="fileStore">The tenant-local file store.</param>
     /// <param name="clock">The clock service.</param>
     /// <param name="phoneNumberService">The phone number service for E.164 formatting.</param>
+    /// <param name="pacingOptions">How much of the database the import and delete batches may use.</param>
     /// <param name="logger">The logger.</param>
     public DefaultLocalDncListManager(
         ISession session,
@@ -50,6 +54,7 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
         ILocalDncFileStore fileStore,
         IClock clock,
         IPhoneNumberService phoneNumberService,
+        IOptions<BackgroundWorkPacingOptions> pacingOptions,
         ILogger<DefaultLocalDncListManager> logger)
     {
         _session = session;
@@ -57,6 +62,7 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
         _fileStore = fileStore;
         _clock = clock;
         _phoneNumberService = phoneNumberService;
+        _pacingOptions = pacingOptions.Value;
         _logger = logger;
     }
 
@@ -504,7 +510,13 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
             // what made deleting a list of millions of numbers run for hours and time out on a small database.
             while (true)
             {
-                var deleted = await DeleteNextEntryBatchAsync(store, statements, listId, afterDocumentId, cancellationToken);
+                // Running the batches back to back held the database at 100% for the whole delete, and several
+                // tenants deleting at once would add up. The batch runs through the gate every tenant's bulk work
+                // shares, which keeps that work together to its share of the database.
+                var deleted = await BackgroundWorkPacer.RunBatchAsync(
+                    token => DeleteNextEntryBatchAsync(store, statements, listId, afterDocumentId, token),
+                    _pacingOptions,
+                    cancellationToken);
 
                 if (deleted.Count == 0)
                 {
@@ -948,7 +960,10 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
 
             if (batchEntries.Count >= BatchSize)
             {
-                var shouldContinue = await FlushBatchAndUpdateProgressAsync(list, batchEntries, cancellationToken);
+                var shouldContinue = await BackgroundWorkPacer.RunBatchAsync(
+                    token => FlushBatchAndUpdateProgressAsync(list, batchEntries, token),
+                    _pacingOptions,
+                    cancellationToken);
 
                 if (!shouldContinue)
                 {

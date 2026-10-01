@@ -114,6 +114,34 @@ Configure the module in `appsettings.json` under the `OrchardCore:CrestApps:Cont
 
 All values are read from the tenant's shell configuration, so they can be set globally for every tenant or overridden for a single tenant. See [Overriding the upload limits](#overriding-the-upload-limits).
 
+### Limiting how much of the database an import uses
+
+A large import pauses after each batch, so it never holds the database at its limit while people are using the site. The pause is proportional to how long the batch took, so it adapts to the size of the database and to how busy it is: when other work slows the batches down, the pauses grow with them. The same setting paces the import and deletion of local Do Not Call lists.
+
+The limit is shared by every tenant of the application. Bulk batches run one at a time across all tenants, and a batch keeps its turn through the pause that follows it, so one tenant deleting a list and ten tenants importing files load the database the same: each job takes longer instead. The turn lives in memory, so a restart can never leave it taken, and a batch that waits more than five minutes for its turn runs anyway, so one stuck job can slow the others down but never stop them. Each application instance keeps its own turn, so a deployment scaled to several instances runs one batch per instance.
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "BackgroundWork": {
+        "Pacing": {
+          "DatabaseShare": 0.25,
+          "MaxPause": "00:00:30"
+        }
+      }
+    }
+  }
+}
+```
+
+| Setting | Default | Description |
+| --- | --- | --- |
+| `DatabaseShare` | `0.25` | The share of time, from `0.05` to `1`, the job spends working against the database. At `0.25` a batch that took one second is followed by a three-second pause. `1` turns pacing off and runs the batches back to back. |
+| `MaxPause` | `"00:00:30"` | The longest pause after one batch, however slow the batch was. |
+
+Lower the share to protect a small database during business hours; raise it to finish a large import sooner on a quiet database.
+
 ### Large file uploads
 
 Bulk import is meant to ingest large data files, so the upload limits are independent from the global

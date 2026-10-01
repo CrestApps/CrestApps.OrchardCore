@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.BackgroundWork;
 using CrestApps.OrchardCore.ContentTransfer.BackgroundTasks;
 using CrestApps.OrchardCore.ContentTransfer.Drivers;
 using CrestApps.OrchardCore.ContentTransfer.FileFormats;
@@ -80,6 +81,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IContentImportHandler, CommonContentImportHandler>();
         services.AddScoped<INavigationProvider, AdminMenu>();
         services.Configure<ContentImportOptions>(_configuration.GetSection("CrestApps:ContentTransfer"));
+        services.Configure<BackgroundWorkPacingOptions>(_configuration.GetSection(BackgroundWorkPacingOptions.SectionName));
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ImportFilesBackgroundTask>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ExportFilesBackgroundTask>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ContentTransferUploadCleanupBackgroundTask>());
