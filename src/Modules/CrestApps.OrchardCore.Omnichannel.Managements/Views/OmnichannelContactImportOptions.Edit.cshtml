@@ -51,8 +51,10 @@
                 <span class="hint">@T["Stamped on every lead in the file that has no list of its own, so the whole list can be loaded, reported on and cleaned up together."]</span>
             </div>
             <div class="mt-3">
-                <label asp-for="LeadSource" class="form-label">@T["Lead source"]</label>
-                <input asp-for="LeadSource" class="form-control" />
+                <label asp-for="LeadSourceId" class="form-label">@T["Lead source"]</label>
+                <select asp-for="LeadSourceId" asp-items="Model.LeadSources" class="form-select">
+                    <option value="">@T["None"]</option>
+                </select>
                 <span class="hint">@T["Stamped on every lead in the file that has no source of its own, for example Purchased list or Trade show."]</span>
             </div>
             <div class="mt-3">

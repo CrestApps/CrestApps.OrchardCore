@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using OrchardCore.ContentManagement;
@@ -33,15 +34,15 @@ internal sealed class OpportunityIndexProvider : IndexProvider<ContentItem>
             IsClosed = part.IsClosed,
             IsWon = part.IsWon,
             Probability = part.Probability,
-            Amount = part.Amount,
-            CloseDate = part.CloseDate,
-            OwnerId = Truncate(part.OwnerId, 50),
+            Amount = part.Amount?.Value,
+            CloseDate = part.CloseDate?.Value,
+            OwnerId = Truncate(part.Owner.GetFirstUserId(), 50),
             AccountContentItemId = contentItem.TryGet<ContainedPart>(out var contained)
                 ? Truncate(contained.ListContentItemId, 26)
                 : null,
             CampaignId = Truncate(part.CampaignId, 50),
-            PrimaryContactItemId = Truncate(part.PrimaryContactItemId, 26),
-            Source = Truncate(part.Source?.Trim(), 255),
+            PrimaryContactItemId = Truncate(part.PrimaryContact.GetFirstContentItemId(), 26),
+            SourceId = Truncate(part.Source.GetFirstContentItemId(), 26),
             ConvertedFromLeadItemId = Truncate(part.ConvertedFromLeadItemId, 26),
             CreatedUtc = contentItem.CreatedUtc,
         };

@@ -29,9 +29,9 @@ public class LeadBatchFilterViewModel
     public string ListName { get; set; }
 
     /// <summary>
-    /// Gets or sets the source to load.
+    /// Gets or sets the content item identifier of the lead source to load.
     /// </summary>
-    public string Source { get; set; }
+    public string SourceId { get; set; }
 
     /// <summary>
     /// Gets or sets the owner whose leads are loaded.
@@ -53,6 +53,12 @@ public class LeadBatchFilterViewModel
     /// </summary>
     [BindNever]
     public IList<SelectListItem> Statuses { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the lead sources to choose from.
+    /// </summary>
+    [BindNever]
+    public IList<SelectListItem> Sources { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the ratings to choose from.

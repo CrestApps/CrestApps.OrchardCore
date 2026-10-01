@@ -52,9 +52,11 @@
         </div>
 
         <div class="ocat-wrapper">
-            <label asp-for="Source" class="ocat-label">@T["Lead source"]</label>
+            <label asp-for="SourceId" class="ocat-label">@T["Lead source"]</label>
             <div class="ocat-end">
-                <input asp-for="Source" class="form-control" />
+                <select asp-for="SourceId" asp-items="Model.Sources" class="form-select">
+                    <option value="">@T["Any source"]</option>
+                </select>
             </div>
         </div>
 

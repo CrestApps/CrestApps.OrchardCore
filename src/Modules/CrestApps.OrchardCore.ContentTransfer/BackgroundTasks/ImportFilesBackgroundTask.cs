@@ -1,8 +1,11 @@
+using System.ComponentModel;
 using System.Data;
+using System.Data.Common;
 using CrestApps.OrchardCore.ContentTransfer.Indexes;
 using CrestApps.OrchardCore.ContentTransfer.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
@@ -175,9 +178,16 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 return;
             }
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // The host is stopping. The entry stays in Processing and the next run resumes it from its saved row.
+            return;
+        }
         catch (Exception ex)
         {
-            await SaveEntryWithErrorAsync(session, clock, entry, localizer["Error processing file: {0}", ex.Message], cancellationToken);
+            // The session that ran the import is unusable after a failed save, and saving the failure through it
+            // fails too, which left the entry in Processing with no error and the same rows retried every run.
+            await RecordImportFailureAsync(serviceProvider, entry.EntryId, ex, localizer, cancellationToken);
             return;
         }
 
@@ -240,12 +250,6 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         {
             if (cancellationToken.IsCancellationRequested)
             {
-                break;
-            }
-
-            if (await ShouldStopImportAsync(serviceProvider, entry.EntryId, cancellationToken))
-            {
-                importInterrupted = true;
                 break;
             }
 
@@ -324,7 +328,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
             if (newRecords.Count + existingRows.Count >= batchSize)
             {
-                await ProcessBatchAsync(
+                var batchProcessed = await ProcessBatchAsync(
                     serviceProvider,
                     entry,
                     dataTable,
@@ -337,6 +341,13 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                     session,
                     clock,
                     cancellationToken);
+
+                if (!batchProcessed)
+                {
+                    importInterrupted = true;
+                    break;
+                }
+
                 newRecords.Clear();
                 existingRows.Clear();
                 dataTable.Rows.Clear();
@@ -352,7 +363,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
         if (newRecords.Count + existingRows.Count > 0)
         {
-            await ProcessBatchAsync(
+            return await ProcessBatchAsync(
                 serviceProvider,
                 entry,
                 dataTable,
@@ -370,7 +381,13 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         return true;
     }
 
-    private static async Task ProcessBatchAsync(
+    /// <summary>
+    /// Imports one batch of rows and saves the progress. Returns <see langword="false"/> without importing
+    /// anything when the entry was paused or deleted; its saved row is unchanged, so a resume reads the batch
+    /// again. The status is checked once per batch: checking it before every row, including the rows a resume
+    /// skips, cost one query per row of the file.
+    /// </summary>
+    private static async Task<bool> ProcessBatchAsync(
         IServiceProvider serviceProvider,
         ContentTransferEntry entry,
         DataTable dataTable,
@@ -384,6 +401,11 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         IClock clock,
         CancellationToken cancellationToken)
     {
+        if (await ShouldStopImportAsync(serviceProvider, entry.EntryId, cancellationToken))
+        {
+            return false;
+        }
+
         if (existingRows.Count > 0)
         {
             var existingContentItems = (await contentManager.GetAsync(existingRows.Keys, VersionOptions.DraftRequired))
@@ -391,11 +413,6 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
             foreach (var existingRow in existingRows)
             {
-                if (await ShouldStopImportAsync(serviceProvider, entry.EntryId, cancellationToken))
-                {
-                    return;
-                }
-
                 var isNew = false;
 
                 if (!existingContentItems.TryGetValue(existingRow.Key, out var contentItem))
@@ -420,11 +437,6 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
         foreach (var record in newRecords)
         {
-            if (await ShouldStopImportAsync(serviceProvider, entry.EntryId, cancellationToken))
-            {
-                return;
-            }
-
             await ProcessRowAsync(
                 entry,
                 await contentManager.NewAsync(entry.ContentType),
@@ -443,6 +455,8 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
         await session.SaveAsync(entry, false, collection: null, cancellationToken);
         await session.SaveChangesAsync(cancellationToken);
+
+        return true;
     }
 
     internal static string GetImportContentItemId(DataRow dataRow, int indexOfKeyColumn)
@@ -563,6 +577,81 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         await session.SaveAsync(entry, false, collection: null, cancellationToken);
         await session.SaveChangesAsync(cancellationToken);
     }
+
+    /// <summary>
+    /// Records why an import stopped, in a scope of its own. A transient database failure, such as a timeout on a
+    /// busy database, keeps the entry in Processing so the next run resumes it from its last saved row; any other
+    /// failure marks it as failed with the reason, and the user can resume it once the cause is fixed. The entry
+    /// is loaded again rather than reused, so the rows of the failed batch are not recorded as done.
+    /// </summary>
+    private static async Task RecordImportFailureAsync(
+        IServiceProvider serviceProvider,
+        string entryId,
+        Exception exception,
+        IStringLocalizer localizer,
+        CancellationToken cancellationToken)
+    {
+        var logger = serviceProvider.GetRequiredService<ILogger<ImportFilesBackgroundTask>>();
+        var isTransient = IsTransient(exception);
+
+        if (isTransient && logger.IsEnabled(LogLevel.Warning))
+        {
+            logger.LogWarning(
+                exception,
+                "The import of entry '{EntryId}' stopped because the database did not respond in time. It will resume from its last saved row on the next run.",
+                entryId);
+        }
+        else if (!isTransient && logger.IsEnabled(LogLevel.Error))
+        {
+            logger.LogError(exception, "The import of entry '{EntryId}' failed and was marked as failed.", entryId);
+        }
+
+        try
+        {
+            await using var scope = serviceProvider.CreateAsyncScope();
+            var session = scope.ServiceProvider.GetRequiredService<ISession>();
+            var clock = scope.ServiceProvider.GetRequiredService<IClock>();
+            var entry = await session.Query<ContentTransferEntry, ContentTransferEntryIndex>(x => x.EntryId == entryId).FirstOrDefaultAsync(cancellationToken);
+
+            if (entry == null || entry.Status.ShouldStopImport())
+            {
+                return;
+            }
+
+            if (isTransient)
+            {
+                entry.Error = localizer["The database did not respond in time. The import will resume automatically: {0}", exception.Message];
+                entry.ProcessSaveUtc = clock.UtcNow;
+
+                await session.SaveAsync(entry, false, collection: null, cancellationToken);
+                await session.SaveChangesAsync(cancellationToken);
+
+                return;
+            }
+
+            await SaveEntryWithErrorAsync(session, clock, entry, localizer["Error processing file: {0}", exception.Message], cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // The database may still be unavailable. The entry then stays in Processing and the next run resumes it.
+            if (logger.IsEnabled(LogLevel.Warning))
+            {
+                logger.LogWarning(ex, "Could not record why the import of entry '{EntryId}' stopped.", entryId);
+            }
+        }
+    }
+
+    internal static bool IsTransient(Exception exception)
+        => exception switch
+        {
+            null => false,
+            TimeoutException => true,
+
+            // A command timeout surfaces as a database exception wrapping the wait timeout (native error 258).
+            DbException { IsTransient: true } => true,
+            Win32Exception { NativeErrorCode: 258 } => true,
+            _ => IsTransient(exception.InnerException),
+        };
 
     internal static string GetImportLockKey(string entryId)
         => $"ContentsTransfer_Import_{entryId}";

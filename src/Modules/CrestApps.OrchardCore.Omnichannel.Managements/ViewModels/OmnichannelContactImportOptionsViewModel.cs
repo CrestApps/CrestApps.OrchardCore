@@ -34,9 +34,9 @@ public class OmnichannelContactImportOptionsViewModel
     public bool SkipNumbersOfOpenLeads { get; set; } = true;
 
     /// <summary>
-    /// Gets or sets the lead source stamped on the leads of the file.
+    /// Gets or sets the content item identifier of the lead source stamped on the leads of the file.
     /// </summary>
-    public string LeadSource { get; set; }
+    public string LeadSourceId { get; set; }
 
     /// <summary>
     /// Gets or sets the list name stamped on the leads of the file.
@@ -70,6 +70,12 @@ public class OmnichannelContactImportOptionsViewModel
     /// </summary>
     [BindNever]
     public IEnumerable<SelectListItem> LeadStatuses { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the lead sources to choose from.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> LeadSources { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the available countries for phone-number normalization.

@@ -1,5 +1,11 @@
 namespace CrestApps.OrchardCore.Omnichannel.Core
 {
+    public static class CrmFieldExtensions
+    {
+        public static string GetFirstContentItemId(this OrchardCore.ContentFields.Fields.ContentPickerField field) { }
+        public static string GetFirstUserId(this OrchardCore.ContentFields.Fields.UserPickerField field) { }
+        public static string GetTrimmedText(this OrchardCore.ContentFields.Fields.TextField field) { }
+    }
     public interface IOmnichannelEventHandler
     {
         System.Threading.Tasks.Task HandleAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelEvent omnichannelEvent, System.Threading.CancellationToken cancellationToken = default);
@@ -44,6 +50,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core
         {
             public const string Account = "Account";
             public const string EmailAddress = "EmailAddress";
+            public const string LeadSource = "LeadSource";
             public const string PhoneNumber = "PhoneNumber";
         }
         public static class Events
@@ -145,7 +152,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Indexes
         public string OwnerId { get; set; }
         public bool Published { get; set; }
         public string Rating { get; set; }
-        public string Source { get; set; }
+        public string SourceId { get; set; }
         public string StatusId { get; set; }
     }
     public sealed class NotInServiceNumberIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
@@ -251,7 +258,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Indexes
         public string PrimaryContactItemId { get; set; }
         public int? Probability { get; set; }
         public bool Published { get; set; }
-        public string Source { get; set; }
+        public string SourceId { get; set; }
         public string StageId { get; set; }
     }
 }
@@ -559,7 +566,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string OwnerId { get; set; }
         public string[] Ratings { get; set; }
         public bool SkipLeadsThatAreContacts { get; set; }
-        public string Source { get; set; }
+        public string SourceId { get; set; }
         public string[] StatusIds { get; set; }
     }
     public enum LeadConversionAccountMode
@@ -613,7 +620,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
     public sealed class LeadPart : OrchardCore.ContentManagement.ContentPart
     {
         public LeadPart() { }
-        public string Company { get; set; }
+        public OrchardCore.ContentFields.Fields.TextField Company { get; set; }
         public string ConvertedAccountItemId { get; set; }
         public string ConvertedById { get; set; }
         public string ConvertedByUsername { get; set; }
@@ -624,10 +631,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public bool IsClosed { get; set; }
         public bool IsConverted { get; set; }
         public System.DateTime? LastScrubbedUtc { get; set; }
-        public string ListName { get; set; }
-        public string OwnerId { get; set; }
-        public string Rating { get; set; }
-        public string Source { get; set; }
+        public OrchardCore.ContentFields.Fields.TextField ListName { get; set; }
+        public OrchardCore.ContentFields.Fields.UserPickerField Owner { get; set; }
+        public OrchardCore.ContentFields.Fields.TextField Rating { get; set; }
+        public OrchardCore.ContentFields.Fields.ContentPickerField Source { get; set; }
         public string StatusId { get; set; }
     }
     public sealed class LeadPartSettings
@@ -642,7 +649,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public const string Hot = "Hot";
         public const string Warm = "Warm";
         public static System.Collections.Generic.IReadOnlyList<string> All { get; }
-        public static string Normalize(string value) { }
     }
     public sealed class LeadStatus : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.LeadStatus>, System.ICloneable
     {
@@ -1081,16 +1087,16 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
     public sealed class OpportunityPart : OrchardCore.ContentManagement.ContentPart
     {
         public OpportunityPart() { }
-        public decimal? Amount { get; set; }
+        public OrchardCore.ContentFields.Fields.NumericField Amount { get; set; }
         public string CampaignId { get; set; }
-        public System.DateTime? CloseDate { get; set; }
+        public OrchardCore.ContentFields.Fields.DateField CloseDate { get; set; }
         public string ConvertedFromLeadItemId { get; set; }
         public bool IsClosed { get; set; }
         public bool IsWon { get; set; }
-        public string OwnerId { get; set; }
-        public string PrimaryContactItemId { get; set; }
+        public OrchardCore.ContentFields.Fields.UserPickerField Owner { get; set; }
+        public OrchardCore.ContentFields.Fields.ContentPickerField PrimaryContact { get; set; }
         public int? Probability { get; set; }
-        public string Source { get; set; }
+        public OrchardCore.ContentFields.Fields.ContentPickerField Source { get; set; }
         public string StageId { get; set; }
     }
     public sealed class OpportunityPartSettings

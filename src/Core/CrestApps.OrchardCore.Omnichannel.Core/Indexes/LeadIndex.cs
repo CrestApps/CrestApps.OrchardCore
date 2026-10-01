@@ -43,9 +43,9 @@ public sealed class LeadIndex : MapIndex
     public bool IsConverted { get; set; }
 
     /// <summary>
-    /// Gets or sets the lead source.
+    /// Gets or sets the content item identifier of the lead source.
     /// </summary>
-    public string Source { get; set; }
+    public string SourceId { get; set; }
 
     /// <summary>
     /// Gets or sets the list the lead arrived in.

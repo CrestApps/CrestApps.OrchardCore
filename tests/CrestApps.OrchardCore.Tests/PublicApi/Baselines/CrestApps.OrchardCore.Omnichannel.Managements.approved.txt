@@ -27,6 +27,7 @@
     " pulling in the full Omnichannel management screens.", EnabledByDependencyOnly=true, Id="CrestApps.OrchardCore.Omnichannel.ChannelEndpoints", Name="Omnichannel Channel Endpoints")]
 [assembly: OrchardCore.Modules.Manifest.Feature(Category="Contact Center", Dependencies=new string[] {
         "CrestApps.OrchardCore.Omnichannel.Managements",
+        "OrchardCore.ContentFields",
         "OrchardCore.Lists",
         "OrchardCore.Title"}, Description="Adds leads, accounts and opportunities to the omnichannel CRM: lead records that " +
     "are called and texted like contacts but kept apart until they are converted, acc" +
@@ -590,7 +591,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers
     }
     public sealed class OmnichannelContactImportOptionsDisplayDriver : OrchardCore.DisplayManagement.Handlers.DisplayDriver<CrestApps.OrchardCore.ContentTransfer.Models.ImportContent>
     {
-        public OmnichannelContactImportOptionsDisplayDriver(OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager, CrestApps.OrchardCore.PhoneNumbers.IPhoneNumberService phoneNumberService, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Drivers.OmnichannelContactImportOptionsDisplayDriver> stringLocalizer, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelContactTypeProvider contactTypeProvider, CrestApps.Core.Services.INamedCatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.LeadStatus> leadStatuses, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCrmOptions> crmOptions) { }
+        public OmnichannelContactImportOptionsDisplayDriver(OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager, CrestApps.OrchardCore.PhoneNumbers.IPhoneNumberService phoneNumberService, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Drivers.OmnichannelContactImportOptionsDisplayDriver> stringLocalizer, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelContactTypeProvider contactTypeProvider, CrestApps.Core.Services.INamedCatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.LeadStatus> leadStatuses, CrestApps.OrchardCore.Omnichannel.Managements.Services.LeadSourceProvider leadSources, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCrmOptions> crmOptions) { }
         public override System.Threading.Tasks.Task<OrchardCore.DisplayManagement.Views.IDisplayResult> EditAsync(CrestApps.OrchardCore.ContentTransfer.Models.ImportContent model, OrchardCore.DisplayManagement.Handlers.BuildEditorContext context) { }
         public override System.Threading.Tasks.Task<OrchardCore.DisplayManagement.Views.IDisplayResult> UpdateAsync(CrestApps.OrchardCore.ContentTransfer.Models.ImportContent model, OrchardCore.DisplayManagement.Handlers.UpdateEditorContext context) { }
     }
@@ -633,7 +634,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers
     }
     public sealed class LeadPartContentImportHandler : CrestApps.OrchardCore.ContentTransfer.Handlers.ContentImportHandlerBase, CrestApps.OrchardCore.ContentTransfer.IContentPartImportHandler
     {
-        public LeadPartContentImportHandler(CrestApps.Core.Services.INamedCatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.LeadStatus> statuses, Microsoft.AspNetCore.Identity.UserManager<OrchardCore.Users.IUser> userManager, CrestApps.OrchardCore.Omnichannel.Managements.Services.ImportRowDoNotCallFlags doNotCallFlags, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Handlers.LeadPartContentImportHandler> stringLocalizer) { }
+        public LeadPartContentImportHandler(CrestApps.Core.Services.INamedCatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.LeadStatus> statuses, CrestApps.OrchardCore.Omnichannel.Managements.Services.LeadSourceProvider sources, CrestApps.OrchardCore.Omnichannel.Managements.Services.LeadRatingProvider ratings, Microsoft.AspNetCore.Identity.UserManager<OrchardCore.Users.IUser> userManager, CrestApps.OrchardCore.Omnichannel.Managements.Services.ImportRowDoNotCallFlags doNotCallFlags, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Handlers.LeadPartContentImportHandler> stringLocalizer) { }
         public System.Threading.Tasks.Task ExportAsync(CrestApps.OrchardCore.ContentTransfer.ContentPartExportMapContext context) { }
         public System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContentTransfer.ImportColumn> GetColumns(CrestApps.OrchardCore.ContentTransfer.ImportContentPartContext context) { }
         public System.Threading.Tasks.Task ImportAsync(CrestApps.OrchardCore.ContentTransfer.ContentPartImportMapContext context) { }
@@ -683,6 +684,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations
     {
         public CrmMigrations(OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager, YesSql.IStore store, OrchardCore.Data.IDbConnectionAccessor dbConnectionAccessor, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Migrations.CrmMigrations> logger) { }
         public System.Threading.Tasks.Task<int> CreateAsync() { }
+        public System.Threading.Tasks.Task<int> UpdateFrom1Async() { }
+        public System.Threading.Tasks.Task<int> UpdateFrom2Async() { }
     }
     public sealed class OmnichannelContactsMigrations : CrestApps.OrchardCore.Omnichannel.Managements.Migrations.OmnichannelIndexMigration
     {
@@ -708,6 +711,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations
         protected YesSql.IStore Store { get; }
         protected System.Threading.Tasks.Task ApplyIsolatedSchemaChangeAsync(System.Func<YesSql.Sql.ISchemaBuilder, System.Threading.Tasks.Task> schemaChange, string operation) { }
         protected System.Threading.Tasks.Task EnsureColumnExistsAsync<TIndex>(string collection, string columnName, System.Action<YesSql.Sql.Schema.IAlterTableCommand> addColumn, string operation) { }
+        protected System.Threading.Tasks.Task<bool> IndexTableExistsAsync<TIndex>(string collection) { }
         protected System.Threading.Tasks.Task<System.Exception> TryApplyIsolatedAsync(System.Func<YesSql.Sql.ISchemaBuilder, System.Threading.Tasks.Task> work) { }
     }
 }
@@ -739,7 +743,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Models
         public bool IgnoreDuplicateByPhoneNumber { get; set; }
         public string LeadListName { get; set; }
         public string LeadOwnerId { get; set; }
-        public string LeadSource { get; set; }
+        public string LeadSourceId { get; set; }
         public string LeadStatusId { get; set; }
         public bool MarkRegistryNumbersDoNotCall { get; set; }
         public string SelectedCountryCode { get; set; }
@@ -855,7 +859,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports
     }
     public sealed class LeadConversionReportProvider : CrestApps.OrchardCore.Omnichannel.Managements.Reports.OmnichannelReportBase, CrestApps.OrchardCore.Reports.IReportFilterMetadata
     {
-        public LeadConversionReportProvider(YesSql.ISession session, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Reports.LeadConversionReportProvider> stringLocalizer) { }
+        public LeadConversionReportProvider(YesSql.ISession session, CrestApps.OrchardCore.Omnichannel.Managements.Services.LeadSourceProvider sources, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Reports.LeadConversionReportProvider> stringLocalizer) { }
         public override Microsoft.Extensions.Localization.LocalizedString Description { get; }
         public override Microsoft.Extensions.Localization.LocalizedString DisplayName { get; }
         public System.Collections.Generic.IReadOnlyCollection<string> FilterNames { get; }
@@ -958,6 +962,21 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
         public LeadMatchFinder(YesSql.ISession session, OrchardCore.ContentManagement.IContentManager contentManager, CrestApps.OrchardCore.Omnichannel.Managements.Services.OmnichannelContentTypeProvider contentTypeProvider) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<OrchardCore.ContentManagement.ContentItem>> FindAccountsAsync(string company) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<OrchardCore.ContentManagement.ContentItem>> FindContactsAsync(OrchardCore.ContentManagement.ContentItem lead) { }
+    }
+    public sealed class LeadRatingProvider
+    {
+        public LeadRatingProvider(OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<OrchardCore.ContentFields.Settings.ListValueOption>> GetOptionsAsync() { }
+        public System.Threading.Tasks.Task<string> NormalizeAsync(string value) { }
+    }
+    public sealed class LeadSourceProvider
+    {
+        public LeadSourceProvider(YesSql.ISession session) { }
+        public System.Threading.Tasks.Task<string> FindIdAsync(string nameOrId) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<OrchardCore.ContentManagement.ContentItem>> GetAllAsync() { }
+        public System.Threading.Tasks.Task<string> GetNameAsync(string sourceId) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyDictionary<string, string>> GetNamesAsync() { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>> GetOptionsAsync(string selectedId) { }
     }
     public sealed class LeadStatusFlagService
     {
@@ -1282,7 +1301,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         public bool Rendered { get; set; }
         public string[] SelectedRatings { get; set; }
         public bool SkipLeadsThatAreContacts { get; set; }
-        public string Source { get; set; }
+        public string SourceId { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Sources { get; set; }
         public string[] StatusIds { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Statuses { get; set; }
@@ -1308,6 +1329,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
     public class LeadPartViewModel
     {
         public LeadPartViewModel() { }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public string Company { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public OrchardCore.ContentManagement.ContentItem ContentItem { get; set; }
@@ -1315,14 +1337,14 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         public OrchardCore.ContentManagement.ContentItem ConvertedContact { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public bool IsConverted { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public string ListName { get; set; }
-        public string OwnerId { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public CrestApps.OrchardCore.Omnichannel.Core.Models.LeadPart Part { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public string Rating { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
-        public System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Ratings { get; set; }
-        public string Source { get; set; }
+        public string SourceName { get; set; }
         public string StatusId { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Statuses { get; set; }
@@ -1644,7 +1666,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         public bool IsLeadType { get; set; }
         public string LeadListName { get; set; }
         public string LeadOwnerId { get; set; }
-        public string LeadSource { get; set; }
+        public string LeadSourceId { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> LeadSources { get; set; }
         public string LeadStatusId { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> LeadStatuses { get; set; }
@@ -1776,22 +1800,17 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
     {
         public OpportunityPartViewModel() { }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
-        public string AccountContentItemId { get; set; }
         public decimal? Amount { get; set; }
         public string CampaignId { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Campaigns { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public System.DateTime? CloseDate { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public bool IsClosed { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public bool IsWon { get; set; }
-        public string OwnerId { get; set; }
-        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
-        public string PrimaryContactDisplayText { get; set; }
-        public string PrimaryContactItemId { get; set; }
         public int? Probability { get; set; }
-        public string Source { get; set; }
         public string StageId { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public string StageName { get; set; }
