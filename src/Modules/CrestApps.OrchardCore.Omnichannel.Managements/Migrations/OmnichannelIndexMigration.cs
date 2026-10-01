@@ -176,6 +176,60 @@ public abstract class OmnichannelIndexMigration : DataMigration
         }
     }
 
+    /// <summary>
+    /// Determines whether the map index table for <typeparamref name="TIndex"/> exists in the specified collection.
+    /// A migration uses it to recreate a table that is missing although its migration version was recorded, which
+    /// otherwise fails every content save that maps to the index with an "invalid object name" error.
+    /// </summary>
+    /// <typeparam name="TIndex">The map index type whose table is looked up.</typeparam>
+    /// <param name="collection">The collection the index table belongs to.</param>
+    /// <returns><see langword="true"/> when the table exists; otherwise, <see langword="false"/>.</returns>
+    protected async Task<bool> IndexTableExistsAsync<TIndex>(string collection)
+    {
+        var tableName = Store.Configuration.TableNameConvention.GetIndexTable(typeof(TIndex), collection);
+        var physicalTable = $"{Store.Configuration.TablePrefix}{tableName}";
+        var hostTransaction = GetSavepointCapableHostTransaction();
+
+        if (hostTransaction is not null)
+        {
+            // Probing on the host transaction also sees a table an earlier step of the same run created.
+            return await TableExistsAsync(hostTransaction, physicalTable);
+        }
+
+        await using var connection = DbConnectionAccessor.CreateConnection();
+        await connection.OpenAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+
+        var exists = await TableExistsAsync(transaction, physicalTable);
+        await transaction.CommitAsync();
+
+        return exists;
+    }
+
+    private async Task<bool> TableExistsAsync(DbTransaction transaction, string tableName)
+    {
+        var connection = transaction.Connection;
+
+        if (string.Equals(Store.Configuration.SqlDialect.Name, "Sqlite", StringComparison.OrdinalIgnoreCase))
+        {
+            return await connection.ExecuteScalarAsync<int>(
+                "SELECT COUNT(1) FROM sqlite_master WHERE type = 'table' AND name = @TableName",
+                new { TableName = tableName },
+                transaction) > 0;
+        }
+
+        var schema = Store.Configuration.Schema;
+        var sql = string.IsNullOrEmpty(schema)
+            ? "SELECT COUNT(1) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = @TableName"
+            : "SELECT COUNT(1) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = @Schema AND TABLE_NAME = @TableName";
+
+        return await connection.ExecuteScalarAsync<int>(sql, new
+        {
+            Schema = schema,
+            TableName = tableName,
+        }, transaction) > 0;
+    }
+
     // A builder is created on the transaction rather than reusing the host's so a failed statement always throws:
     // a builder that swallowed the failure would release the savepoint over a change that never happened.
     private SchemaBuilder CreateSchemaBuilder(DbTransaction transaction)

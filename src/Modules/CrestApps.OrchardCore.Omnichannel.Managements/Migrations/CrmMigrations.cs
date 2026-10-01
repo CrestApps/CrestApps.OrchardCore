@@ -115,7 +115,7 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
             .GetRequiredService<CrmCatalogSeeder>()
             .SeedAsync());
 
-        return 2;
+        return 3;
     }
 
     /// <summary>
@@ -131,6 +131,10 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
         await AddLeadFieldsAsync();
         await AddOpportunityFieldsAsync();
 
+        // A tenant can be recorded at version 1 without the index tables; adding a column to a missing table would
+        // fail the migration, so the tables are created first.
+        await EnsureIndexTablesAsync();
+
         await EnsureColumnExistsAsync<LeadIndex>(
             null,
             "SourceId",
@@ -145,7 +149,53 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
 
         ShellScope.AddDeferredTask(MoveValuesIntoFieldsAsync);
 
-        return 2;
+        return 3;
+    }
+
+    /// <summary>
+    /// Recreates the lead and opportunity index tables on tenants whose migration was recorded without them. A
+    /// missing table fails every content save that maps to it, and with it any bulk import into the tenant.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom2Async()
+    {
+        await EnsureIndexTablesAsync();
+
+        return 3;
+    }
+
+    // Creates whichever index table is missing. Items saved while it was missing have no index row, so they are
+    // saved again once it exists; moving their values into fields is safe to repeat and saves every one of them.
+    private async Task EnsureIndexTablesAsync()
+    {
+        var created = false;
+
+        if (!await IndexTableExistsAsync<LeadIndex>(null))
+        {
+            await CreateLeadIndexAsync(SchemaBuilder);
+            created = true;
+
+            if (Logger.IsEnabled(LogLevel.Warning))
+            {
+                Logger.LogWarning("Created the missing lead index table; existing leads will be indexed again.");
+            }
+        }
+
+        if (!await IndexTableExistsAsync<OpportunityIndex>(null))
+        {
+            await CreateOpportunityIndexAsync(SchemaBuilder);
+            created = true;
+
+            if (Logger.IsEnabled(LogLevel.Warning))
+            {
+                Logger.LogWarning("Created the missing opportunity index table; existing opportunities will be indexed again.");
+            }
+        }
+
+        if (created)
+        {
+            ShellScope.AddDeferredTask(MoveValuesIntoFieldsAsync);
+        }
     }
 
     // Leads and opportunities saved before the parts had fields hold plain values under the names the fields now use,
