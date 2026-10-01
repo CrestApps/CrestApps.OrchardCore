@@ -36,7 +36,6 @@
     "gulp-plumber": "1.2.1",
     "gulp-postcss": "^10.0.0",
     "gulp-rename": "2.1.0",
-    "gulp-sourcemaps": "^3.0.0",
     "gulp-terser": "2.1.0",
     "gulp-typescript": "^5.0.1",
     "merge-stream": "2.0.0",
@@ -66,9 +65,6 @@
     },
     "gulp-typescript": {
       "minimatch": "^10.0.1"
-    },
-    "@gulp-sourcemaps/identity-map": {
-      "postcss": "^8.5.15"
     },
     "yaml": "^2.8.3"
   },
