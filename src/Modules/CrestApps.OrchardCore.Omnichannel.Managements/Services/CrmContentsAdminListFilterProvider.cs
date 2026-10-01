@@ -13,17 +13,25 @@ using YesSql.Filters.Query;
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 
 /// <summary>
-/// Adds the lead and opportunity terms to the content list search box: <c>status:</c>, <c>source:</c>,
+/// Adds the lead and opportunity terms to the content list search box: <c>lead-status:</c>, <c>source:</c>,
 /// <c>list:</c>, <c>owner:</c>, <c>rating:</c> and <c>converted:</c> for leads, and <c>stage:</c>, <c>closed:</c>,
 /// <c>won:</c> and <c>account:</c> for opportunities. A term joins the lead or opportunity index, so it narrows the
 /// list to leads or opportunities.
 /// </summary>
+/// <remarks>
+/// A term must not reuse a name Orchard Core already registers on the content list (<c>status</c>, <c>sort</c>,
+/// <c>type</c>, <c>stereotype</c>, <c>culture</c>), because the last provider to register a name replaces the earlier
+/// one. Replacing <c>status</c> drops the term that always limits the list to the latest version of each item, so
+/// every content list would then show every archived version as well.
+/// </remarks>
 internal sealed class CrmContentsAdminListFilterProvider : IContentsAdminListFilterProvider
 {
+    public const string LeadStatusTermName = "lead-status";
+
     public void Build(QueryEngineBuilder<ContentItem> builder)
     {
         builder
-            .WithNamedTerm("status", term => term
+            .WithNamedTerm(LeadStatusTermName, term => term
                 .OneCondition(async (value, query, context) =>
                 {
                     var statusId = await ResolveCatalogIdAsync<LeadStatus>(value, context);
