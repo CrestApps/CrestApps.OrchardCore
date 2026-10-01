@@ -686,11 +686,9 @@ public sealed class AdminController : Controller, IUpdateModel
             return NotFound();
         }
 
-        var entry = await _session.Query<ContentTransferEntry, ContentTransferEntryIndex>(x =>
-                x.EntryId == entryId
-                && x.Direction == ContentTransferDirection.Import
-                && x.Owner == CurrentUserId())
-            .FirstOrDefaultAsync();
+        // Any import the list shows can be paused or resumed by someone allowed to import its content type, as it
+        // can be deleted. Matching only the uploader's own imports returned 404 for an import another user started.
+        var entry = await FindImportEntryAsync(entryId);
 
         if (entry == null)
         {
@@ -725,11 +723,9 @@ public sealed class AdminController : Controller, IUpdateModel
             return NotFound();
         }
 
-        var entry = await _session.Query<ContentTransferEntry, ContentTransferEntryIndex>(x =>
-                x.EntryId == entryId
-                && x.Direction == ContentTransferDirection.Import
-                && x.Owner == CurrentUserId())
-            .FirstOrDefaultAsync();
+        // Any import the list shows can be paused or resumed by someone allowed to import its content type, as it
+        // can be deleted. Matching only the uploader's own imports returned 404 for an import another user started.
+        var entry = await FindImportEntryAsync(entryId);
 
         if (entry == null)
         {
@@ -809,20 +805,16 @@ public sealed class AdminController : Controller, IUpdateModel
             return NotFound();
         }
 
-        if (!await _authorizationService.AuthorizeAsync(HttpContext.User, ContentTransferPermissions.ImportContentFromFile))
-        {
-            return Forbid();
-        }
-
-        var entry = await _session.Query<ContentTransferEntry, ContentTransferEntryIndex>(x =>
-            x.EntryId == entryId
-            && x.Direction == ContentTransferDirection.Import
-            && x.Owner == CurrentUserId())
-            .FirstOrDefaultAsync();
+        var entry = await FindImportEntryAsync(entryId);
 
         if (entry == null)
         {
             return NotFound();
+        }
+
+        if (!await _authorizationService.AuthorizeAsync(User, ContentTransferPermissions.ImportContentFromFile, (object)entry.ContentType))
+        {
+            return Forbid();
         }
 
         if (!entry.TryGet<ImportFileProcessStatsPart>(out var statsPart)
@@ -1286,6 +1278,12 @@ public sealed class AdminController : Controller, IUpdateModel
 
         return query.OrderBy(x => x.CreatedUtc);
     }
+
+    private Task<ContentTransferEntry> FindImportEntryAsync(string entryId)
+        => _session.Query<ContentTransferEntry, ContentTransferEntryIndex>(x =>
+                x.EntryId == entryId
+                && x.Direction == ContentTransferDirection.Import)
+            .FirstOrDefaultAsync();
 
     private string CurrentUserId()
         => User.FindFirstValue(ClaimTypes.NameIdentifier);
