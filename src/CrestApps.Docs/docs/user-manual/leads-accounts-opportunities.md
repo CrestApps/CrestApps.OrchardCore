@@ -61,7 +61,7 @@ Use these search terms on the Leads list:
 
 | Term | Matches | Example |
 | --- | --- | --- |
-| `status:` | a lead status by name | `status:Nurturing` |
+| `lead-status:` | a lead status by name | `lead-status:Nurturing` |
 | `converted:` | converted or open leads | `converted:true` |
 | `source:` | a lead source by name | `source:"Trade show"` |
 | `list:` | a list name | `list:"Spring Import"` |

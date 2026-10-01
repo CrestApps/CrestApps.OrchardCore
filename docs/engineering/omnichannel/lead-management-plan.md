@@ -450,7 +450,8 @@ kind, the way Contacts works today:
 - `OmnichannelContactListScope` keeps engaging name-or-phone search on both lists, because lead types still carry
   the contact part.
 - New `IContentsAdminListFilterProvider` terms on lead-scoped lists:
-  - `status:`, `source:`, `list:`, `owner:` and `rating:`;
+  - `lead-status:`, `source:`, `list:`, `owner:` and `rating:` (not `status:`, which is Orchard Core's term that
+    keeps the content list to the latest version of each item);
   - `converted:true|false`. The Leads menu link defaults to `converted:false`, which is Salesforce's "converted leads
     disappear from views".
 - The same terms appear as cards in the Filters popover, following the pattern of the existing Phone card.
