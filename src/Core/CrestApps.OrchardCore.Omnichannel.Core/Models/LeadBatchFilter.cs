@@ -7,14 +7,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 public sealed class LeadBatchFilter
 {
     /// <summary>
-    /// Gets or sets the statuses to load. When empty, every open status is loaded.
+    /// Gets or sets the statuses to load. When empty, every open status is loaded; a closed status is loaded only when
+    /// it is listed.
     /// </summary>
     public string[] StatusIds { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets whether leads in a closed status are loaded too.
-    /// </summary>
-    public bool IncludeClosedLeads { get; set; }
 
     /// <summary>
     /// Gets or sets the list to load, such as a purchased list imported earlier.

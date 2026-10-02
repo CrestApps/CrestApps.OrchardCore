@@ -19,11 +19,6 @@ public class LeadBatchFilterViewModel
     public string[] StatusIds { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets whether closed leads are loaded too.
-    /// </summary>
-    public bool IncludeClosedLeads { get; set; }
-
-    /// <summary>
     /// Gets or sets the list to load.
     /// </summary>
     public string ListName { get; set; }
@@ -53,6 +48,12 @@ public class LeadBatchFilterViewModel
     /// </summary>
     [BindNever]
     public IList<SelectListItem> Statuses { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the lists to choose from.
+    /// </summary>
+    [BindNever]
+    public IList<SelectListItem> Lists { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the lead sources to choose from.

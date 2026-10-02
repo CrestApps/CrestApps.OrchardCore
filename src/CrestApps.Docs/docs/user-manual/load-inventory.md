@@ -59,7 +59,7 @@ Dialer loads always use the phone channel and create manual (agent-handled) acti
 | **Users** | Manual loads: who gets the work. |
 | **Urgency** / **Instructions** | Copied onto every activity. Instructions are notes the agent reads first. |
 | **Prevent duplicate activity with the same subject** | Skips records that already have an open activity for this subject, on any campaign or channel. An open activity for a different subject does not stop a record from loading. |
-| **Record type** | The contact or lead type to load. Required. A lead type adds a **Lead filters** panel; see [Leads, Accounts and Opportunities](leads-accounts-opportunities.md#call-and-text-leads). |
+| **Record type** | The contact or lead type to load. Required. A lead type adds a **Lead filters** panel right under it; see [Leads, Accounts and Opportunities](leads-accounts-opportunities.md#call-and-text-leads). |
 | **Created from / to** | Only records created in this range. |
 | **Only published records** | Skips drafts. |
 | **Include records marked Do not call / Do not SMS / Do not email** | By default, records that opted out of the channel are skipped, including any record that shares their number. Tick to include them. |

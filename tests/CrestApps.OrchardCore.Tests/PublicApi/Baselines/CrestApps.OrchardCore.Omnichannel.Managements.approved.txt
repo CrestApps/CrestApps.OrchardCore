@@ -957,6 +957,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
         public void Mark(System.Data.DataRow row) { }
         public void MarkScreened(System.Data.DataRow row) { }
     }
+    public sealed class LeadListProvider
+    {
+        public LeadListProvider(YesSql.ISession session) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string>> GetNamesAsync() { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>> GetOptionsAsync(string selectedName) { }
+    }
     public sealed class LeadMatchFinder
     {
         public LeadMatchFinder(YesSql.ISession session, OrchardCore.ContentManagement.IContentManager contentManager, CrestApps.OrchardCore.Omnichannel.Managements.Services.OmnichannelContentTypeProvider contentTypeProvider) { }
@@ -1291,10 +1297,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
     public class LeadBatchFilterViewModel
     {
         public LeadBatchFilterViewModel() { }
-        public bool IncludeClosedLeads { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public string[] LeadContentTypes { get; set; }
         public string ListName { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Lists { get; set; }
         public string OwnerId { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Ratings { get; set; }
@@ -1542,6 +1549,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> PhoneNumberMatchTypes { get; set; }
         public bool PreventDuplicates { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public OrchardCore.DisplayManagement.IShape RecordFilters { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public bool RequiresUserAssignment { get; set; }
         public int ResponseDelayJitterSeconds { get; set; }

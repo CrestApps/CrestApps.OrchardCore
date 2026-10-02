@@ -306,6 +306,11 @@
             </div>
         </div>
 
+        @if (Model.RecordFilters is not null)
+        {
+            @await DisplayAsync(Model.RecordFilters)
+        }
+
         <div class="ocat-wrapper">
             <label asp-for="LeadCreatedFrom" class="ocat-label">@T["Created from"]</label>
             <div class="ocat-end">

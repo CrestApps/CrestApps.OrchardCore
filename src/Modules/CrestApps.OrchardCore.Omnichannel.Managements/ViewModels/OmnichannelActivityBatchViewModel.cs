@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 
@@ -311,4 +312,10 @@ public class OmnichannelActivityBatchViewModel
     /// </summary>
     [BindNever]
     public IEnumerable<SelectListItem> BusinessHoursCalendars { get; set; }
+
+    /// <summary>
+    /// Gets or sets the filters other drivers add for one kind of record, shown inside the record filters card.
+    /// </summary>
+    [BindNever]
+    public IShape RecordFilters { get; set; }
 }

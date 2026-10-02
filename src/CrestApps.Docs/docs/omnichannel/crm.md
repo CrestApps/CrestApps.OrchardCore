@@ -139,7 +139,7 @@ A lead status is exactly one of three types, stored as the `IsClosed` and `IsCon
 | Type | Flags | Notes |
 | --- | --- | --- |
 | Open | neither | Only an open status can be the default (`IsDefault`). |
-| Closed | `IsClosed` | Inventory loads skip it unless a load includes closed leads. |
+| Closed | `IsClosed` | Inventory loads skip it unless a load picks this status. |
 | Converted | `IsClosed` and `IsConverted` | Set only by conversion. Marking another status converted takes the type from the old one, which becomes Closed. |
 
 A status saved with `IsDefault` and either closed flag is rejected, so a recipe cannot make new leads start out closed.

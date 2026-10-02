@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
+using CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
@@ -785,11 +786,15 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
         }
     }
 
-    private static async Task LoadAsync(IStore store, string connectionString, OmnichannelActivityBatch batch)
+    private static async Task LoadAsync(
+        IStore store,
+        string connectionString,
+        OmnichannelActivityBatch batch,
+        IReadOnlyCollection<string> leadContentTypes = null)
     {
         await using var session = store.CreateSession();
 
-        var loader = CreateLoader(session, store, connectionString, batch.Source);
+        var loader = CreateLoader(session, store, connectionString, batch.Source, leadContentTypes);
         var context = new ActivityBatchLoadContext(batch, LoaderId, LoaderUserName);
 
         await loader.LoadAsync(context, TestContext.Current.CancellationToken);
@@ -799,7 +804,8 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
         ISession session,
         IStore store,
         string connectionString,
-        string source)
+        string source,
+        IReadOnlyCollection<string> leadContentTypes = null)
     {
         var sourceOptions = new ActivityBatchSourceOptions();
 
@@ -825,7 +831,27 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
             Options.Create(sourceOptions),
             new ContactOptOutResolver(session),
             new NoNotInServiceNumbers(),
-            NullLogger<DefaultContactActivityBatchLoader>.Instance);
+            NullLogger<DefaultContactActivityBatchLoader>.Instance,
+            leadContentTypes is null ? null : [CreateContactTypeProvider(leadContentTypes)]);
+    }
+
+    /// <summary>
+    /// Declares which record types are lead types. Without one the loader treats every type as a contact type and
+    /// never reads the lead filters, which is how the tests that are not about leads run.
+    /// </summary>
+    private static IOmnichannelContactTypeProvider CreateContactTypeProvider(IReadOnlyCollection<string> leadContentTypes)
+    {
+        var provider = new Mock<IOmnichannelContactTypeProvider>();
+
+        provider
+            .Setup(x => x.GetContactContentTypesAsync(It.IsAny<CancellationToken>()))
+            .Returns(() => ValueTask.FromResult<IReadOnlyCollection<string>>([ContactContentType]));
+
+        provider
+            .Setup(x => x.GetLeadContentTypesAsync(It.IsAny<CancellationToken>()))
+            .Returns(() => ValueTask.FromResult(leadContentTypes));
+
+        return provider.Object;
     }
 
     /// <summary>
@@ -910,7 +936,8 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
         string timeZoneId = null,
         bool doNotCall = false,
         bool doNotSms = false,
-        bool doNotEmail = false)
+        bool doNotEmail = false,
+        Action<LeadPart> lead = null)
     {
         var contact = new ContentItem
         {
@@ -932,6 +959,11 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
             part.SetDoNotSms(doNotSms, _now);
             part.SetDoNotEmail(doNotEmail, _now);
         });
+
+        if (lead is not null)
+        {
+            contact.Alter(lead);
+        }
 
         var contactMethods = contact.GetOrCreate<BagPart>(OmnichannelConstants.NamedParts.ContactMethods);
         contactMethods.ContentItems ??= [];
@@ -1044,6 +1076,7 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
             new ContentItemIndexProvider(),
             CreateContactIndexProvider(),
             new OmnichannelActivityIndexProvider(),
+            new LeadIndexProvider(),
         ]);
 
         await store.InitializeAsync(TestContext.Current.CancellationToken);
@@ -1111,6 +1144,8 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
             .Column<bool>("AiEscalated")
             .Column<string>("TerminalReasonCode", column => column.Nullable().WithLength(64)),
             collection: OmnichannelConstants.CollectionName);
+
+        await CrmMigrations.CreateLeadIndexAsync(schemaBuilder);
 
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 
