@@ -561,7 +561,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
     public sealed class LeadBatchFilter
     {
         public LeadBatchFilter() { }
-        public bool IncludeClosedLeads { get; set; }
         public string ListName { get; set; }
         public string OwnerId { get; set; }
         public string[] Ratings { get; set; }

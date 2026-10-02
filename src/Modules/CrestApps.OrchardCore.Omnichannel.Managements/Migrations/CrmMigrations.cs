@@ -497,7 +497,7 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
                 })));
     }
 
-    private static async Task CreateLeadIndexAsync(ISchemaBuilder schemaBuilder)
+    internal static async Task CreateLeadIndexAsync(ISchemaBuilder schemaBuilder)
     {
         await schemaBuilder.CreateMapIndexTableAsync<LeadIndex>(table => table
             .Column<string>("ContentItemId", column => column.WithLength(26))

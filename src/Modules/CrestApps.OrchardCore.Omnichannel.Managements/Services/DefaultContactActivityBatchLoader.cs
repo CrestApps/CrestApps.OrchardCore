@@ -217,7 +217,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         var hasTimeZoneFilter = batch.TimeZoneIds is { Length: > 0 };
         var hasLastActivityFilter = !string.IsNullOrEmpty(batch.LastActivitySubjectContentType);
 
-        // A load of leads narrows the list by the lead filters, and always keeps closed leads out unless asked.
+        // A load of leads narrows the list by the lead filters, and keeps closed leads out unless their status is picked.
         var leadTypes = _contactTypeProvider is null
             ? []
             : (await _contactTypeProvider.GetLeadContentTypesAsync(cancellationToken)).ToHashSet(StringComparer.Ordinal);
@@ -729,16 +729,16 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
             ? session.QueryIndex<LeadIndex>(index => index.Published && index.ContentType == batch.ContactContentType)
             : session.QueryIndex<LeadIndex>(index => index.Latest && index.ContentType == batch.ContactContentType);
 
-        if (!filter.IncludeClosedLeads)
-        {
-            query = query.Where(index => !index.IsClosed || index.IsConverted);
-        }
-
+        // The picked statuses are loaded as they are, closed ones included. With none picked, every open status is.
         if (filter.StatusIds is { Length: > 0 })
         {
             var statusIds = filter.StatusIds;
 
             query = query.Where(index => index.StatusId.IsIn(statusIds) || index.IsConverted);
+        }
+        else
+        {
+            query = query.Where(index => !index.IsClosed || index.IsConverted);
         }
 
         if (!string.IsNullOrWhiteSpace(filter.ListName))

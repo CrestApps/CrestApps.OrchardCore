@@ -12,8 +12,10 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.DisplayManagement.Zones;
 using OrchardCore.Modules;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Users.Indexes;
@@ -25,6 +27,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 
 internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<OmnichannelActivityBatch>
 {
+    /// <summary>
+    /// The editor zone shown inside the record filters card. Filters that apply to one kind of record, such as the
+    /// lead filters, are placed here so they sit beside the record type that turns them on.
+    /// </summary>
+    internal const string RecordFiltersZone = "RecordFilters";
+
     private readonly IDisplayNameProvider _displayNameProvider;
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly OmnichannelContentTypeProvider _contentTypeProvider;
@@ -356,8 +364,25 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             model.ChannelEndpoints = channelEndpointItems;
 
             model.SelectedUsers ??= [];
-        }).Location("Content:1");
+        }).Location("Content:1")
+        .Processing<OmnichannelActivityBatchViewModel>(model =>
+        {
+            // Read when the editor renders rather than when it is built, so every driver has placed its shapes by then.
+            model.RecordFilters = FindRecordFilters(context.Shape);
+
+            return Task.CompletedTask;
+        });
     }
+
+    /// <summary>
+    /// Returns the editor's <see cref="RecordFiltersZone"/> once a driver has placed a shape in it, or
+    /// <see langword="null"/> while it is empty, so the card shows nothing extra when no record filters apply.
+    /// </summary>
+    /// <param name="editor">The editor shape the drivers place their shapes on.</param>
+    internal static IShape FindRecordFilters(IShape editor)
+        => editor is IZoneHolding zones && zones.Zones[RecordFiltersZone] is { } zone and not ZoneOnDemand
+            ? zone
+            : null;
 
     public override async Task<IDisplayResult> UpdateAsync(OmnichannelActivityBatch batch, UpdateEditorContext context)
     {

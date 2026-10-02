@@ -32,8 +32,8 @@ public sealed class LeadStatus : CatalogItem, INameAwareModel, IModifiedUtcAware
     public bool IsDefault { get; set; }
 
     /// <summary>
-    /// Gets or sets whether a lead in this status is closed. Closed leads are not loaded into activities by
-    /// default.
+    /// Gets or sets whether a lead in this status is closed. Closed leads are loaded into activities only by an
+    /// inventory load that picks this status.
     /// </summary>
     public bool IsClosed { get; set; }
 
