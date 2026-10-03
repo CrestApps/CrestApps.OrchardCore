@@ -64,6 +64,18 @@ internal sealed class OmnichannelChannelEndpointStep : NamedRecipeStepHandler
                 {
                     entry.ItemId = id;
                 }
+
+                // A recipe exported before addresses had capabilities lists a number once per channel. The second
+                // record joins the address the first created instead of being refused as a duplicate.
+                var existing = await FindSameAddressAsync(entry);
+
+                if (existing is not null)
+                {
+                    OmnichannelAddressConsolidator.Absorb(existing, entry);
+                    await _manager.UpdateAsync(existing);
+
+                    continue;
+                }
             }
 
             var validationResult = await _manager.ValidateAsync(entry);
@@ -83,6 +95,20 @@ internal sealed class OmnichannelChannelEndpointStep : NamedRecipeStepHandler
                 await _manager.CreateAsync(entry);
             }
         }
+    }
+
+    private async Task<OmnichannelChannelEndpoint> FindSameAddressAsync(OmnichannelChannelEndpoint entry)
+    {
+        if (string.IsNullOrWhiteSpace(entry.Value))
+        {
+            return null;
+        }
+
+        var addressType = entry.GetAddressType();
+
+        return (await _manager.GetAllAsync()).FirstOrDefault(address =>
+            string.Equals(address.GetAddressType(), addressType, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(address.Value, entry.Value, StringComparison.OrdinalIgnoreCase));
     }
 
     private sealed class OmnichannelChannelEndpointStepModel

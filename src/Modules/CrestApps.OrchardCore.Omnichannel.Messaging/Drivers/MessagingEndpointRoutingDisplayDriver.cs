@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Environment.Shell;
@@ -33,6 +34,7 @@ public sealed class MessagingEndpointRoutingDisplayDriver : DisplayDriver<Omnich
     private readonly IActivityQueueManager _queueManager;
     private readonly IShellFeaturesManager _shellFeaturesManager;
     private readonly IClock _clock;
+    private readonly OmnichannelAddressOptions _addressOptions;
 
     internal readonly IStringLocalizer S;
 
@@ -42,6 +44,7 @@ public sealed class MessagingEndpointRoutingDisplayDriver : DisplayDriver<Omnich
         IEnumerable<IActivityQueueManager> queueManagers,
         IShellFeaturesManager shellFeaturesManager,
         IClock clock,
+        IOptions<OmnichannelAddressOptions> addressOptions,
         IStringLocalizer<MessagingEndpointRoutingDisplayDriver> stringLocalizer)
     {
         _channelResolver = channelResolver;
@@ -50,6 +53,7 @@ public sealed class MessagingEndpointRoutingDisplayDriver : DisplayDriver<Omnich
         _queueManager = queueManagers.FirstOrDefault();
         _shellFeaturesManager = shellFeaturesManager;
         _clock = clock;
+        _addressOptions = addressOptions.Value;
         S = stringLocalizer;
     }
 
@@ -67,6 +71,7 @@ public sealed class MessagingEndpointRoutingDisplayDriver : DisplayDriver<Omnich
             var routedDistributionEnabled = await IsRoutedDistributionEnabledAsync();
 
             model.TargetType = routing.TargetType;
+            model.ServedCapabilities = string.Join(",", GetMessagingCapabilities(endpoint));
             model.AutoReplyMessage = routing.AutoReplyMessage;
 
             // A stored "Routed" mode on a tenant that no longer runs push distribution behaves as a shared pool
@@ -106,7 +111,7 @@ public sealed class MessagingEndpointRoutingDisplayDriver : DisplayDriver<Omnich
                 [
                     new SelectListItem(S["Shared pool (claim to own)"], nameof(ConversationDistributionMode.SharedPool)),
                 ];
-        }).Location("Content:1%Inbound routing;2");
+        }).Location("Content:2%Text messages;3");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(OmnichannelChannelEndpoint endpoint, UpdateEditorContext context)
@@ -180,6 +185,20 @@ public sealed class MessagingEndpointRoutingDisplayDriver : DisplayDriver<Omnich
         return profile.ItemId;
     }
 
+    // The routing applies to an address that can be used on a messaging channel: one with a messaging capability, or
+    // of a type a messaging channel is offered for, so ticking SMS on a new number shows the routing straight away.
     private bool IsMessagingEndpoint(OmnichannelChannelEndpoint endpoint)
-        => _channelResolver.Get(endpoint.Channel) is not null;
+        => GetMessagingCapabilities(endpoint).Count > 0;
+
+    private List<string> GetMessagingCapabilities(OmnichannelChannelEndpoint endpoint)
+    {
+        var addressType = endpoint.GetAddressType();
+
+        return _channelResolver.GetAll()
+            .Select(channel => channel.Name)
+            .Where(name => endpoint.HasCapability(name) ||
+                (_addressOptions.Capabilities.TryGetValue(name, out var capability) &&
+                    string.Equals(capability.AddressType, addressType, StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+    }
 }

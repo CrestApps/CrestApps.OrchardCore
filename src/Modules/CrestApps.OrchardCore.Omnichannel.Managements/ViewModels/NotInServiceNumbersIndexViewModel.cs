@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
@@ -8,9 +9,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 public class NotInServiceNumbersIndexViewModel
 {
     /// <summary>
-    /// Gets or sets the digits the listed numbers must contain.
+    /// Gets or sets the search and the bulk actions of the list.
     /// </summary>
-    public string Search { get; set; }
+    public CatalogEntryOptions<NotInServiceNumberBulkAction> Options { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the numbers on this page.
@@ -42,4 +43,21 @@ public class NotInServiceNumberEntry
     /// Gets or sets the name of the campaign whose attempt found the number out of service, when there was one.
     /// </summary>
     public string CampaignName { get; set; }
+}
+
+/// <summary>
+/// What can be done to the numbers selected in the list of numbers known not to be in service.
+/// </summary>
+public enum NotInServiceNumberBulkAction
+{
+    /// <summary>
+    /// Nothing.
+    /// </summary>
+    None,
+
+    /// <summary>
+    /// Removes the not-in-service mark from each selected number, so campaigns can load and dial it again. Nothing is
+    /// dialed by doing so.
+    /// </summary>
+    AllowDialing,
 }

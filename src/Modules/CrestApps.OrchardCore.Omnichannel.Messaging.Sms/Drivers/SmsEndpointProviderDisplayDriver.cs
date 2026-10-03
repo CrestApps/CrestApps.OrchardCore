@@ -38,7 +38,7 @@ public sealed class SmsEndpointProviderDisplayDriver : DisplayDriver<Omnichannel
                 .Select(entry => new SelectListItem(entry.Key, entry.Key))
                 .OrderBy(item => item.Text)
                 .ToArray();
-        }).Location("Content:2%General;1");
+        }).Location("Content:1%Text messages;3");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(OmnichannelChannelEndpoint endpoint, UpdateEditorContext context)
@@ -57,6 +57,8 @@ public sealed class SmsEndpointProviderDisplayDriver : DisplayDriver<Omnichannel
         return Edit(endpoint, context);
     }
 
+    // Shown on every phone number and kept visible by the editor only while the number is used for texts, so ticking
+    // SMS on a new number shows it straight away.
     private static bool IsSms(OmnichannelChannelEndpoint endpoint)
-        => string.Equals(endpoint.Channel, OmnichannelConstants.Channels.Sms, StringComparison.OrdinalIgnoreCase);
+        => string.Equals(endpoint.GetAddressType(), OmnichannelAddressTypes.PhoneNumber, StringComparison.OrdinalIgnoreCase);
 }

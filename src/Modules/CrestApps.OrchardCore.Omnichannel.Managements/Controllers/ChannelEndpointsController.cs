@@ -34,7 +34,7 @@ public sealed class ChannelEndpointsController : Controller
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<OmnichannelChannelEndpoint> _displayDriver;
     private readonly INotifier _notifier;
-    private readonly ChannelEndpointSourceOptions _sourceOptions;
+    private readonly OmnichannelAddressOptions _addressOptions;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -47,7 +47,7 @@ public sealed class ChannelEndpointsController : Controller
     /// <param name="updateModelAccessor">The update model accessor.</param>
     /// <param name="displayManager">The display manager.</param>
     /// <param name="notifier">The notifier.</param>
-    /// <param name="sourceOptions">The registered channel-endpoint sources.</param>
+    /// <param name="addressOptions">The address types and capabilities the enabled features registered.</param>
     /// <param name="htmlLocalizer">The html localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ChannelEndpointsController(
@@ -56,7 +56,7 @@ public sealed class ChannelEndpointsController : Controller
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<OmnichannelChannelEndpoint> displayManager,
         INotifier notifier,
-        IOptions<ChannelEndpointSourceOptions> sourceOptions,
+        IOptions<OmnichannelAddressOptions> addressOptions,
         IHtmlLocalizer<ChannelEndpointsController> htmlLocalizer,
         IStringLocalizer<ChannelEndpointsController> stringLocalizer)
     {
@@ -65,7 +65,7 @@ public sealed class ChannelEndpointsController : Controller
         _updateModelAccessor = updateModelAccessor;
         _displayDriver = displayManager;
         _notifier = notifier;
-        _sourceOptions = sourceOptions.Value;
+        _addressOptions = addressOptions.Value;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -109,7 +109,7 @@ public sealed class ChannelEndpointsController : Controller
             Models = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
-            Sources = _sourceOptions.Sources.Keys.Order(),
+            Sources = _addressOptions.GetCreatableTypes().Select(type => type.Name).Order(),
         };
 
         foreach (var model in result.Entries)
@@ -148,9 +148,9 @@ public sealed class ChannelEndpointsController : Controller
     }
 
     /// <summary>
-    /// Displays the form for creating a new endpoint on the given channel source.
+    /// Displays the form for adding an address of the given type.
     /// </summary>
-    /// <param name="source">The channel the endpoint is being created for (the source key).</param>
+    /// <param name="source">The address type being added, such as a phone number.</param>
     [Admin("omnichannel/channel-endpoints/create/{source}", "OmnichannelChannelEndpointsCreate")]
     public async Task<ActionResult> Create(string source)
     {
@@ -159,17 +159,16 @@ public sealed class ChannelEndpointsController : Controller
             return Forbid();
         }
 
-        if (!_sourceOptions.Sources.TryGetValue(source, out var channelSource))
+        if (!TryGetCreatableType(source, out var addressType))
         {
             return NotFound();
         }
 
-        var model = await _manager.NewAsync();
-        model.Channel = source;
+        var model = await NewAddressAsync(addressType);
 
         var viewModel = new EditCatalogEntryViewModel
         {
-            DisplayName = channelSource.DisplayName,
+            DisplayName = addressType.DisplayName?.Value ?? addressType.Name,
             Editor = await _displayDriver.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
@@ -177,9 +176,9 @@ public sealed class ChannelEndpointsController : Controller
     }
 
     /// <summary>
-    /// Creates a new endpoint on the given channel source.
+    /// Adds an address of the given type.
     /// </summary>
-    /// <param name="source">The channel the endpoint is being created for (the source key).</param>
+    /// <param name="source">The address type being added, such as a phone number.</param>
     [HttpPost]
     [ActionName(nameof(Create))]
     [Admin("omnichannel/channel-endpoints/create/{source}", "OmnichannelChannelEndpointsCreate")]
@@ -190,17 +189,16 @@ public sealed class ChannelEndpointsController : Controller
             return Forbid();
         }
 
-        if (!_sourceOptions.Sources.TryGetValue(source, out var channelSource))
+        if (!TryGetCreatableType(source, out var addressType))
         {
             return NotFound();
         }
 
-        var model = await _manager.NewAsync();
-        model.Channel = source;
+        var model = await NewAddressAsync(addressType);
 
         var viewModel = new EditCatalogEntryViewModel
         {
-            DisplayName = channelSource.DisplayName,
+            DisplayName = addressType.DisplayName?.Value ?? addressType.Name,
             Editor = await _displayDriver.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
@@ -210,7 +208,7 @@ public sealed class ChannelEndpointsController : Controller
         {
             await _manager.CreateAsync(model);
 
-            await _notifier.SuccessAsync(H["A new Channel Endpoint has been created successfully."]);
+            await _notifier.SuccessAsync(H["The address has been added."]);
 
             return RedirectToAction(nameof(Index));
         }
@@ -279,11 +277,36 @@ public sealed class ChannelEndpointsController : Controller
         {
             await _manager.UpdateAsync(model);
 
-            await _notifier.SuccessAsync(H["The Channel Endpoint has been updated successfully."]);
+            await _notifier.SuccessAsync(H["The address has been updated."]);
 
             return RedirectToAction(nameof(Index));
         }
 
         return View(viewModel);
+    }
+
+    private bool TryGetCreatableType(string addressType, out OmnichannelAddressType type)
+    {
+        type = null;
+
+        return !string.IsNullOrEmpty(addressType) &&
+            _addressOptions.AddressTypes.TryGetValue(addressType, out type) &&
+            _addressOptions.GetCapabilities(type.Name).Any();
+    }
+
+    private async Task<OmnichannelChannelEndpoint> NewAddressAsync(OmnichannelAddressType type)
+    {
+        var model = await _manager.NewAsync();
+        model.AddressType = type.Name;
+
+        // With a single capability on offer there is nothing to choose, so it starts ticked.
+        var capabilities = _addressOptions.GetCapabilities(type.Name).ToArray();
+
+        if (capabilities.Length == 1)
+        {
+            model.Capabilities = [capabilities[0].Name];
+        }
+
+        return model;
     }
 }

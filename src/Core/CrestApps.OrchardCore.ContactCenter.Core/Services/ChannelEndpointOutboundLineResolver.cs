@@ -97,9 +97,9 @@ public sealed class ChannelEndpointOutboundLineResolver : IOutboundLineResolver
     /// Gets a value indicating whether a channel endpoint is a phone number that can be dialed out from.
     /// </summary>
     /// <param name="endpoint">The channel endpoint.</param>
-    /// <returns><see langword="true"/> for a phone endpoint with a number.</returns>
+    /// <returns><see langword="true"/> for a phone number used for calls.</returns>
     public static bool IsLine(OmnichannelChannelEndpoint endpoint)
         => endpoint is not null &&
-            string.Equals(endpoint.Channel, OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase) &&
+            endpoint.HasCapability(OmnichannelConstants.Channels.Phone) &&
             !string.IsNullOrWhiteSpace(endpoint.Value);
 }
