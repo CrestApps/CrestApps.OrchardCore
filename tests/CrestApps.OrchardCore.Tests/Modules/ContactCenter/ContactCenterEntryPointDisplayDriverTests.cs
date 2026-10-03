@@ -3,7 +3,10 @@ using CrestApps.OrchardCore.ContactCenter.Drivers;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Tests.Doubles;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using Microsoft.Extensions.Options;
+using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -35,7 +38,7 @@ public sealed class ContactCenterEntryPointDisplayDriverTests
         };
 
         // Act
-        await CreateDriver().UpdateAsync(entryPoint, PostedFormUpdateModel.CreateContext(posted));
+        await UpdateAsync(entryPoint, posted);
 
         // Assert
         Assert.Equal("Main line", entryPoint.Name);
@@ -65,7 +68,7 @@ public sealed class ContactCenterEntryPointDisplayDriverTests
         };
 
         // Act
-        await CreateDriver().UpdateAsync(entryPoint, PostedFormUpdateModel.CreateContext(posted));
+        await UpdateAsync(entryPoint, posted);
 
         // Assert
         Assert.Equal(EntryPointVoicemailDestination.AgentInbox, entryPoint.VoicemailDestination);
@@ -91,7 +94,7 @@ public sealed class ContactCenterEntryPointDisplayDriverTests
         };
 
         // Act
-        await CreateDriver().UpdateAsync(entryPoint, PostedFormUpdateModel.CreateContext(posted));
+        await UpdateAsync(entryPoint, posted);
 
         // Assert
         Assert.Equal(EntryPointTargetType.Agent, entryPoint.TargetType);
@@ -103,7 +106,27 @@ public sealed class ContactCenterEntryPointDisplayDriverTests
         Assert.Equal(InteractionPriority.Lowest, entryPoint.Priority);
     }
 
+    // The shared cards and a call entry point's own cards come from two drivers that bind the same posted form.
+    private static async Task UpdateAsync(ContactCenterEntryPoint entryPoint, EntryPointViewModel posted)
+    {
+        await CreateDriver().UpdateAsync(entryPoint, PostedFormUpdateModel.CreateContext(posted));
+        await CreateVoiceDriver().UpdateAsync(entryPoint, PostedFormUpdateModel.CreateContext(posted));
+    }
+
     private static ContactCenterEntryPointDisplayDriver CreateDriver()
+    {
+        var addresses = new Mock<IOmnichannelChannelEndpointManager>();
+        addresses
+            .Setup(manager => manager.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        return new(
+            AdminFormOptionsProviderFactory.Create(),
+            addresses.Object,
+            Options.Create(new EntryPointChannelOptions()));
+    }
+
+    private static ContactCenterEntryPointVoiceDisplayDriver CreateVoiceDriver()
         => new(
             AdminFormOptionsProviderFactory.Create(),
             SiteServiceFactory.Create(new ContactCenterExternalTransferSettings()));

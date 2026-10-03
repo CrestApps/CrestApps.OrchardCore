@@ -26,8 +26,11 @@ public sealed class OmnichannelChannelEndpointRecipeStep : IRecipeStep
                         .Type(SchemaValueType.Object)
                         .Properties(
                             ("ItemId", CatalogRecipeStepSchemas.ItemId("channel endpoint")),
-                            ("DisplayText", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Human-readable name of the channel endpoint.")),
-                            ("Channel", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Communication channel this endpoint belongs to, for example 'SMS', 'Chat', or 'Email'.")),
+                            ("DisplayText", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Human-readable name of the address.")),
+                            ("AddressType", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Kind of address: 'PhoneNumber' or 'EmailAddress'. When empty, it is taken from 'Channel'.")),
+                            ("Capabilities", new JsonSchemaBuilder().Type(SchemaValueType.Array | SchemaValueType.Null).Items(new JsonSchemaBuilder().Type(SchemaValueType.String)).Description("What the address is used for, named by channel, for example ['Phone', 'SMS'] for a number used for calls and texts.")),
+                            ("MergedItemIds", new JsonSchemaBuilder().Type(SchemaValueType.Array | SchemaValueType.Null).Items(new JsonSchemaBuilder().Type(SchemaValueType.String)).Description("Identifiers of records merged into this address; history that names them finds this address.")),
+                            ("Channel", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Single channel of an address exported before addresses had capabilities, for example 'SMS' or 'Phone'. Read only when 'AddressType' and 'Capabilities' are absent.")),
                             ("Value", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Address of the endpoint on the channel, for example a phone number or email address.")),
                             ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Administrative description of the channel endpoint.")),
                             ("ProviderName", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Technical name of the messaging or telephony provider that owns this address (for example 'Twilio', 'Telnyx' or 'AzureCommunicationServices'). When empty, the tenant-default provider is used.")),

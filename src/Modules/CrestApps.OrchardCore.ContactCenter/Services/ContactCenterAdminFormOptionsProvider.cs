@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Users;
@@ -205,10 +206,17 @@ public sealed class ContactCenterAdminFormOptionsProvider
 
     internal async Task<IList<SelectListItem>> GetInboundChannelEndpointOptionsAsync(string selectedEndpointId)
     {
-        var selected = CreateSelectedSet([selectedEndpointId], StringComparer.Ordinal);
         var endpoints = await _channelEndpointManager.GetAllAsync();
 
+        // A queue saved before a number's records were merged names the record that was merged away; it is shown as the
+        // address it became, so the picker keeps it selected and saving writes the current id.
+        selectedEndpointId = endpoints.FirstOrDefault(endpoint => endpoint.IsKnownAs(selectedEndpointId))?.ItemId ?? selectedEndpointId;
+
+        var selected = CreateSelectedSet([selectedEndpointId], StringComparer.Ordinal);
+
+        // Only a number used for calls can receive one.
         var options = endpoints
+            .Where(endpoint => endpoint.HasCapability(OmnichannelConstants.Channels.Phone))
             .OrderBy(endpoint => endpoint.DisplayText, StringComparer.CurrentCultureIgnoreCase)
             .Select(endpoint => new SelectListItem(GetEndpointText(endpoint), endpoint.ItemId, selected.Contains(endpoint.ItemId)))
             .ToList();
@@ -420,9 +428,9 @@ public sealed class ContactCenterAdminFormOptionsProvider
             ? endpoint.ItemId
             : endpoint.DisplayText;
 
-        if (!string.IsNullOrWhiteSpace(endpoint.Channel) && !string.IsNullOrWhiteSpace(endpoint.Value))
+        if (!string.IsNullOrWhiteSpace(endpoint.Value))
         {
-            return $"{displayText} ({endpoint.Channel}: {endpoint.Value})";
+            return $"{displayText} ({endpoint.Value})";
         }
 
         return displayText;

@@ -87,7 +87,7 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
         var cadenceCatalog = serviceProvider.GetRequiredService<ICatalog<Cadence>>();
         var contentManager = serviceProvider.GetRequiredService<IContentManager>();
         var optOutResolver = serviceProvider.GetRequiredService<IContactOptOutResolver>();
-        var smsService = serviceProvider.GetRequiredService<ISmsService>();
+        var smsService = serviceProvider.GetRequiredService<ISmsProviderRouter>();
         var omnichannelActivityStore = serviceProvider.GetRequiredService<IOmnichannelActivityStore>();
         var subjectFlowSettingsService = serviceProvider.GetRequiredService<ISubjectFlowSettingsService>();
         var localLock = serviceProvider.GetRequiredService<ILocalLock>();
@@ -174,7 +174,7 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
         ICatalog<Cadence> cadenceCatalog,
         IContentManager contentManager,
         IContactOptOutResolver optOutResolver,
-        ISmsService smsService,
+        ISmsProviderRouter smsService,
         IOmnichannelActivityStore omnichannelActivityStore,
         ISubjectFlowSettingsService subjectFlowSettingsService,
         ILocalLock localLock,
@@ -388,6 +388,7 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
                 return;
             }
 
+            // The nudge leaves through the provider that owns the endpoint's number, as the conversation's replies do.
             var result = await smsService.SendAsync(new SmsMessage
             {
                 To = currentActivity.PreferredDestination,

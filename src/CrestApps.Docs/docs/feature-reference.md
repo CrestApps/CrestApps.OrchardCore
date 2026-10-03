@@ -110,6 +110,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.ContactCenter.Dialer.Paced` | Contact Center Paced Dialing | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
 | `CrestApps.OrchardCore.ContactCenter.Voice` | Contact Center Voice (dependency only) | [Voice routing](./contact-center/voice-routing) |
 | `CrestApps.OrchardCore.ContactCenter.Voice.Media` | Contact Center Voice Media | [Voice routing](./contact-center/voice-routing) |
+| `CrestApps.OrchardCore.ContactCenter.EntryPoints` | Contact Center Inbound Entry Points | [Entry points](./user-manual/entry-points-and-ivr) |
 | `CrestApps.OrchardCore.ContactCenter.InboundVoice` | Contact Center Inbound Voice | [Voice routing](./contact-center/voice-routing) |
 | `CrestApps.OrchardCore.ContactCenter.Recording` | Contact Center Call Recording | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
 | `CrestApps.OrchardCore.ContactCenter.SecureCapture` | Contact Center Secure Data Capture | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |

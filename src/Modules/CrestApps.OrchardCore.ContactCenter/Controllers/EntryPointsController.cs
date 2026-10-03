@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
@@ -22,7 +23,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 /// Provides administration of Contact Center inbound entry points.
 /// </summary>
 [Admin]
-[Feature(ContactCenterConstants.Feature.InboundVoice)]
+[Feature(ContactCenterConstants.Feature.EntryPoints)]
 public sealed class EntryPointsController : ContactCenterCatalogController<ContactCenterEntryPoint>
 {
     /// <summary>
@@ -50,6 +51,36 @@ public sealed class EntryPointsController : ContactCenterCatalogController<Conta
     /// <inheritdoc/>
     protected override Permission ManagePermission
         => ContactCenterPermissions.ManageQueues;
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// An entry point answers one channel, chosen when it is added (<c>?channel=Phone</c>) and fixed afterwards. With one
+    /// channel on offer, it is that one.
+    /// </remarks>
+    protected override Task<bool> InitializeNewAsync(ContactCenterEntryPoint model)
+    {
+        var channels = HttpContext.RequestServices.GetRequiredService<IOptions<EntryPointChannelOptions>>().Value.Channels;
+        var requested = Request.Query["channel"].ToString();
+
+        if (string.IsNullOrWhiteSpace(requested))
+        {
+            if (channels.Count != 1)
+            {
+                return Task.FromResult(channels.Count == 0);
+            }
+
+            requested = channels.Keys.First();
+        }
+
+        if (!channels.TryGetValue(requested, out var channel))
+        {
+            return Task.FromResult(false);
+        }
+
+        model.Channel = channel.Name;
+
+        return Task.FromResult(true);
+    }
 
     /// <inheritdoc/>
     protected override LocalizedString CreateDisplayName

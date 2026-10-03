@@ -2,10 +2,15 @@ using System.Data.Common;
 using System.Globalization;
 using System.Reflection;
 using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Tests.Modules.ContactCenter.RollingUpgrade;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Data.Migration;
 using OrchardCore.Modules;
@@ -674,6 +679,31 @@ public sealed class ContactCenterRollingUpgradeTests
                     else if (parameter.ParameterType == typeof(IClock))
                     {
                         arguments.Add(new StubClock());
+                    }
+                    else if (parameter.ParameterType == typeof(IContactCenterEntryPointManager))
+                    {
+                        // The data migrations that move numbers onto entry points read these; an empty tenant has none.
+                        var entryPoints = new Mock<IContactCenterEntryPointManager>();
+                        entryPoints.Setup(manager => manager.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
+                        arguments.Add(entryPoints.Object);
+                    }
+                    else if (parameter.ParameterType == typeof(IOmnichannelChannelEndpointManager))
+                    {
+                        var addresses = new Mock<IOmnichannelChannelEndpointManager>();
+                        addresses.Setup(manager => manager.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
+                        arguments.Add(addresses.Object);
+                    }
+                    else if (parameter.ParameterType == typeof(IEnumerable<IActivityQueueManager>))
+                    {
+                        arguments.Add(Array.Empty<IActivityQueueManager>());
+                    }
+                    else if (parameter.ParameterType == typeof(IPhoneNumberService))
+                    {
+                        arguments.Add(new Mock<IPhoneNumberService>().Object);
+                    }
+                    else if (parameter.ParameterType.IsGenericType && parameter.ParameterType.GetGenericTypeDefinition() == typeof(ILogger<>))
+                    {
+                        arguments.Add(Activator.CreateInstance(typeof(NullLogger<>).MakeGenericType(parameter.ParameterType.GetGenericArguments())));
                     }
                     else
                     {

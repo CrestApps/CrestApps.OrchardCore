@@ -307,14 +307,27 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
     }
 
     /// <inheritdoc/>
-    public async Task<OmnichannelActivity> GetAsync(string channel, string channelEndpointId, string preferredDestination, ActivityInteractionType interactionType, CancellationToken cancellationToken = default)
+    public Task<OmnichannelActivity> GetAsync(string channel, string channelEndpointId, string preferredDestination, ActivityInteractionType interactionType, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(channelEndpointId);
+
+        return GetAsync(channel, [channelEndpointId], preferredDestination, interactionType, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<OmnichannelActivity> GetAsync(string channel, IReadOnlyCollection<string> channelEndpointIds, string preferredDestination, ActivityInteractionType interactionType, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(channel);
-        ArgumentException.ThrowIfNullOrEmpty(channelEndpointId);
+        ArgumentNullException.ThrowIfNull(channelEndpointIds);
         ArgumentException.ThrowIfNullOrEmpty(preferredDestination);
 
+        if (channelEndpointIds.Count == 0)
+        {
+            return null;
+        }
+
         return await Session.Query<OmnichannelActivity, OmnichannelActivityIndex>(index => index.Channel == channel &&
-            index.ChannelEndpointId == channelEndpointId &&
+            index.ChannelEndpointId.IsIn(channelEndpointIds) &&
             index.PreferredDestination == preferredDestination &&
             index.InteractionType == interactionType, collection: OmnichannelConstants.CollectionName)
             .OrderByDescending(x => x.ScheduledUtc)

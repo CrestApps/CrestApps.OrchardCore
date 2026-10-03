@@ -28,10 +28,27 @@ public sealed class OmnichannelChannelEndpointStore : Catalog<OmnichannelChannel
 
         var document = await DocumentManager.GetOrCreateImmutableAsync();
 
-        // Channel is a well-known token ("Phone", "SMS"); match it case-insensitively so an endpoint persisted with
-        // a different casing (for example legacy data written when the constant was "Sms") still routes its inbound
-        // traffic. The value is canonicalized to E.164 by the manager before this call, so it is matched exactly.
-        return document.Records.Values.FirstOrDefault(x =>
-            string.Equals(x.Channel, channel, StringComparison.OrdinalIgnoreCase) && x.Value == serviceAddress);
+        // The address answers on a channel when it has that capability. Capabilities are channel names matched
+        // case-insensitively, so a record written when the constant was "Sms" still routes its inbound traffic. The
+        // value is canonicalized to E.164 by the manager before this call, so it is matched exactly.
+        return document.Records.Values.FirstOrDefault(x => x.Value == serviceAddress && x.HasCapability(channel));
+    }
+
+    /// <inheritdoc/>
+    public override async ValueTask<OmnichannelChannelEndpoint> FindByIdAsync(string id, CancellationToken cancellationToken = default)
+    {
+        var endpoint = await base.FindByIdAsync(id, cancellationToken);
+
+        if (endpoint is not null)
+        {
+            return endpoint;
+        }
+
+        // A number listed once per channel was merged into one address, and activities and history still name the
+        // record that was merged away. They find the address it became.
+        var document = await DocumentManager.GetOrCreateImmutableAsync();
+        var merged = document.Records.Values.FirstOrDefault(record => record.IsKnownAs(id));
+
+        return merged is null ? null : await base.FindByIdAsync(merged.ItemId, cancellationToken);
     }
 }

@@ -1,6 +1,7 @@
 @using CrestApps.OrchardCore.Omnichannel.Core
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
 @using CrestApps.OrchardCore.PhoneNumbers
+@using Microsoft.AspNetCore.Mvc.Localization
 
 @model NotInServiceNumbersIndexViewModel
 
@@ -23,11 +24,14 @@
 </zone>
 
 <p class="text-muted">
-    @T["These numbers are skipped when contacts are loaded into a campaign, and the dialer and automated calls never dial them. A number is added when a call finds it not in service, a number lookup reports it disconnected or invalid, or an agent uses a disposition that marks it. Clear a number if it has been given to somebody new."]
+    @T["These numbers are skipped when contacts are loaded into a campaign, and the dialer and automated calls never dial them. A number is added when a call finds it not in service, a number lookup reports it disconnected or invalid, or an agent uses a disposition that marks it. Use <strong>Allow dialing</strong> when a number has been given to somebody new: it removes the mark so campaigns can load and dial the number again. Nothing is dialed when you do."]
 </p>
 
-<form asp-action="Index" method="post" class="no-multisubmit">
+@* The form is necessary to generate an antiforgery token for the allow dialing and bulk actions. *@
+<form asp-action="Index" method="post" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-client-side-search="false">
     <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+    <input asp-for="Options.BulkAction" type="hidden" />
+    <input type="submit" name="submit.BulkAction" class="visually-hidden" />
 
     <div class="card text-bg-theme mb-3 position-sticky action-bar">
         <div class="card-body">
@@ -35,83 +39,165 @@
                 <div class="col">
                     <div class="has-search">
                         <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
-                        <input id="search-box" name="search" value="@Model.Search" class="form-control" placeholder="@T["Search by number"]" type="search" autocomplete="off" />
+                        <input id="search-box" asp-for="Options.Search" class="form-control" placeholder="@T["Search by number"]" type="search" autofocus autocomplete="off" />
                     </div>
+                </div>
+                <div class="col-auto">
+                    <button type="button" class="btn btn-secondary create" data-bs-toggle="modal" data-bs-target="#modalMarkNotInService">@T["Mark as not in service"]</button>
                 </div>
             </div>
         </div>
     </div>
-</form>
 
-<form asp-action="Mark" method="post" class="no-multisubmit mb-3">
-    <div class="row gx-1 align-items-center">
-        <div class="col-md-4">
-            <label for="mark-phone-number" class="visually-hidden">@T["Phone number"]</label>
-            <input id="mark-phone-number" name="phoneNumber" class="form-control" type="tel" placeholder="+17025550123" required />
-        </div>
-        <div class="col-auto">
-            <button type="submit" class="btn btn-secondary">@T["Mark as not in service"]</button>
-        </div>
-    </div>
-</form>
-
-@if (Model.Entries.Count == 0)
-{
-    <div class="alert alert-info text-center" role="status">
-        @if (string.IsNullOrWhiteSpace(Model.Search))
+    <ul class="list-group with-checkbox">
+        @if (Model.Entries.Count > 0)
         {
-            @T["<strong>Nothing here!</strong> No number is marked as not in service."]
+            var pager = (dynamic)Model.Pager;
+            int startIndex = (pager.Page - 1) * pager.PageSize + 1;
+            int endIndex = startIndex + Model.Entries.Count - 1;
+
+            <li class="list-group-item text-bg-theme ignore-elements">
+                <div class="row gx-3">
+                    <div class="col">
+                        <div class="form-check my-1">
+                            <input type="checkbox" class="form-check-input" id="select-all">
+                            <label class="form-check-label" for="select-all" id="select-all-label" title="@T["Select All"]"></label>
+                            <label id="items" for="select-all">
+                                @T.Plural(Model.Entries.Count, "1 item", "{0} items")
+                                <span class="text-muted" title="@T["Items {0} to {1}", startIndex, endIndex]">
+                                    @T.Plural((int)pager.TotalItemCount, " / {0} item in total", " / {0} items in total")
+                                </span>
+                            </label>
+                            <label id="selected-items" class="text-muted" for="select-all"></label>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <div class="dropdown d-none" id="actions">
+                            <button class="btn btn-sm btn-light dropdown-toggle" type="button" id="bulk-action-menu-button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                @T["Actions"]
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="bulk-action-menu-button">
+                                @foreach (var item in Model.Options.BulkActions)
+                                {
+                                    var message = item.Value == nameof(NotInServiceNumberBulkAction.AllowDialing)
+                                        ? T["Remove the not-in-service mark from the selected numbers, so campaigns can load and dial them again? Nothing is dialed now."]
+                                        : T["Are you sure you want to {0} these items?", item.Text.ToLower()];
+
+                                    <li>
+                                        <a class="dropdown-item" href="javascript:void(0)" data-action="@item.Value" data-title="@item.Text" data-message="@message" data-ok-text="@item.Text" data-cancel-text="@T["Cancel"]">@item.Text</a>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </li>
+            @foreach (var entry in Model.Entries)
+            {
+                var number = entry.Number;
+                var displayNumber = PhoneNumberService.FormatForDisplay(number.PhoneNumber);
+
+                <li class="list-group-item item d-flex justify-content-between align-items-center" data-filter-value="@number.PhoneNumber">
+                    <div class="d-flex flex-row">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" value="@number.PhoneNumber" name="itemIds" id="itemIds-@number.ItemId">
+                            <label class="form-check-label" for="itemIds-@number.ItemId">&nbsp;</label>
+                        </div>
+                    </div>
+
+                    <div class="flex-grow-1">
+                        <div class="row g-0">
+                            <div class="col-lg col-12 title d-flex align-items-center">
+                                <div class="summary">
+                                    <div class="d-flex flex-column flex-md-row">
+                                        <div class="me-2">
+                                            <h5 class="mb-0">@displayNumber</h5>
+                                        </div>
+                                        <div class="metadata me-1">
+                                            <span class="badge ta-badge" title="@T["Found by"]">
+                                                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><span class="visually-hidden">@T["Found by"]</span>
+                                                @DescribeSource(number.Source)
+                                                @if (!string.IsNullOrEmpty(number.MarkedByUsername))
+                                                {
+                                                    @T["({0})", number.MarkedByUsername]
+                                                }
+                                            </span>
+                                            @if (!string.IsNullOrEmpty(number.Reason))
+                                            {
+                                                <span class="badge ta-badge" title="@T["Reason"]">
+                                                    <i class="fa-solid fa-circle-info" aria-hidden="true"></i><span class="visually-hidden">@T["Reason"]</span> @number.Reason
+                                                </span>
+                                            }
+                                            @if (!string.IsNullOrEmpty(entry.CampaignName))
+                                            {
+                                                <span class="badge ta-badge" title="@T["Campaign"]">
+                                                    <i class="fa-solid fa-bullhorn" aria-hidden="true"></i><span class="visually-hidden">@T["Campaign"]</span> @entry.CampaignName
+                                                </span>
+                                            }
+                                            <span class="badge ta-badge" title="@T["Last found"]">
+                                                <i class="fa-regular fa-clock" aria-hidden="true"></i><span class="visually-hidden">@T["Last found"]</span>
+                                                @await DisplayAsync(await New.DateTime(Utc: number.LastDetectedUtc, Format: "g"))
+                                            </span>
+                                            <span class="badge ta-badge" title="@T["Times found"]">
+                                                <i class="fa-solid fa-rotate" aria-hidden="true"></i><span class="visually-hidden">@T["Times found"]</span>
+                                                @T.Plural(number.DetectionCount, "Found once", "Found {0} times")
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-auto col-12 d-flex justify-content-end align-items-center">
+                                <div class="actions">
+                                    <a asp-action="AllowDialing" asp-route-phoneNumber="@number.PhoneNumber" asp-route-returnUrl="@FullRequestPath" class="btn btn-primary btn-sm" title="@T["Remove the not-in-service mark so campaigns can load and dial this number again. Nothing is dialed now."]" data-title="@T["Allow dialing"]" data-message="@T["Remove the not-in-service mark from {0}, so campaigns can load and dial it again? Nothing is dialed now.", displayNumber]" data-ok-text="@T["Allow dialing"]" data-cancel-text="@T["Cancel"]" itemprop="RemoveUrl UnsafeUrl">@T["Allow dialing"]</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </li>
+            }
         }
         else
         {
-            @T["No marked number matches your search."]
-        }
-    </div>
-}
-else
-{
-    <div class="table-responsive">
-        <table class="table table-sm align-middle">
-            <thead>
-                <tr>
-                    <th scope="col">@T["Number"]</th>
-                    <th scope="col">@T["Found by"]</th>
-                    <th scope="col">@T["Reason"]</th>
-                    <th scope="col">@T["Campaign"]</th>
-                    <th scope="col">@T["Last found"]</th>
-                    <th scope="col" class="text-end">@T["Times"]</th>
-                    <th scope="col"><span class="visually-hidden">@T["Actions"]</span></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var entry in Model.Entries)
+            <li class="list-group-item list-group-item-info text-center ignore-elements">
+                @if (string.IsNullOrWhiteSpace(Model.Options.Search))
                 {
-                    var number = entry.Number;
-
-                    <tr>
-                        <td class="text-nowrap">@PhoneNumberService.FormatForDisplay(number.PhoneNumber)</td>
-                        <td>
-                            @DescribeSource(number.Source)
-                            @if (!string.IsNullOrEmpty(number.MarkedByUsername))
-                            {
-                                <span class="text-muted">@T["({0})", number.MarkedByUsername]</span>
-                            }
-                        </td>
-                        <td>@number.Reason</td>
-                        <td>@entry.CampaignName</td>
-                        <td class="text-nowrap">@await DisplayAsync(await New.DateTime(Utc: number.LastDetectedUtc, Format: "g"))</td>
-                        <td class="text-end">@number.DetectionCount</td>
-                        <td class="text-end">
-                            <form asp-action="Clear" method="post" class="d-inline">
-                                <input type="hidden" name="phoneNumber" value="@number.PhoneNumber" />
-                                <button type="submit" class="btn btn-sm btn-primary" title="@T["Dial this number again"]">@T["Clear"]</button>
-                            </form>
-                        </td>
-                    </tr>
+                    @T["<strong>Nothing here!</strong> No number is marked as not in service."]
                 }
-            </tbody>
-        </table>
-    </div>
+                else
+                {
+                    @T["No marked number matches your search."]
+                }
+            </li>
+        }
+    </ul>
+</form>
 
-    @await DisplayAsync(Model.Pager)
-}
+@await DisplayAsync(Model.Pager)
+
+<div class="modal fade" id="modalMarkNotInService" tabindex="-1" role="dialog" aria-labelledby="mark-not-in-service-title" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <form asp-action="Mark" method="post" class="no-multisubmit">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="mark-not-in-service-title">@T["Mark as not in service"]</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Close"]"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="ocat-wrapper">
+                        <label for="mark-phone-number" class="ocat-label">@T["Phone number"]</label>
+                        <div class="ocat-end">
+                            <input id="mark-phone-number" name="phoneNumber" class="form-control" type="tel" placeholder="+17025550123" required />
+                            <span class="hint">@T["Enter the number with its country code. Campaigns will not load or dial it until you allow dialing again."]</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">@T["Mark as not in service"]</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Cancel"]</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script asp-name="list-management-ui" at="Foot"></script>

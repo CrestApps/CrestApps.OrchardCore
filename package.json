@@ -45,7 +45,7 @@
     "rtlcss": "4.3.0",
     "source-map": "^0.8.0",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.11"
+    "vitest": "^5.0.3"
   },
   "dependencies": {
     "@microsoft/signalr": "10.0.11",

@@ -33,33 +33,39 @@ For step-by-step task guides with screencasts, see the user manual: [Contacts](.
 
 ## Core concepts
 
-### Channel endpoint
-A **Channel endpoint** is an addressable point on a channel — most commonly an SMS or phone number — that the platform sends from and receives on. Each endpoint carries its channel, its normalized value (numbers are stored as international `+<country code><number>`), and its **provider**, and channel-specific settings can be attached to it (for example the [Messaging Workspace](messaging-workspace) stores its inbound routing on the SMS endpoint).
+### Omnichannel address
+An **omnichannel address** (stored as `OmnichannelChannelEndpoint`) is an address the business owns, most commonly a phone number, that the platform sends from and receives on. Each address has an **address type** (`OmnichannelAddressTypes.PhoneNumber` today), its normalized value (numbers are stored as international `+<country code><number>`), and a list of **capabilities**: what the address is used for, named by channel (`Phone` for calls, `SMS` for texts). A number used for calls and texts is one address with both capabilities. Capability settings are attached to the address, for example the SMS provider, the [Messaging Workspace](messaging-workspace) inbound routing and the agents who dial out from the number.
 
-Channel endpoints are administered under **Interaction Center > Management > Channel Endpoints** (requires the **Manage channel endpoints** permission). This administration is provided by a small **dependency-only** feature:
+Addresses are administered under **Interaction Center > Management > Omnichannel Addresses** (requires the **Manage omnichannel addresses** permission). This administration is provided by a small **dependency-only** feature:
 
 | | |
 | --- | --- |
 | **Feature Name** | Omnichannel Channel Endpoints |
 | **Feature ID** | `CrestApps.OrchardCore.Omnichannel.ChannelEndpoints` |
 
-The feature is `EnabledByDependencyOnly` — you do not enable it directly. It depends only on the headless **Omnichannel Activities** feature, so a module that just needs channel endpoints (such as the [Messaging Workspace](messaging-workspace)) can depend on it and reuse the endpoint administration and services **without** pulling in the full Omnichannel Management CRM screens. Enabling **Omnichannel Management** enables it automatically.
+The feature is `EnabledByDependencyOnly`: you do not enable it directly. It depends only on the headless **Omnichannel Activities** feature, so a module that just needs addresses (such as the [Messaging Workspace](messaging-workspace)) can depend on it and reuse the address administration and services **without** pulling in the full Omnichannel Management CRM screens. Enabling **Omnichannel Management** enables it automatically.
 
-#### Channels are sources (extensible)
+#### Capabilities are contributed by features (extensible)
 
-Each **channel** is a registered **source**. The **Add Channel Endpoint** button opens a picker that lists the channels wired up on the tenant, and choosing one builds the right editor from display drivers that target that channel — so an SMS endpoint shows the SMS provider and routing, while a Phone endpoint shows only what voice needs. The channel is fixed when the endpoint is created and is not shown in the editor afterwards.
+**Add Address** opens a picker of the address types that have at least one capability on the tenant. The editor shows the type's capabilities as a **Used for** checkbox list, and the settings a feature keeps on an address appear while its capability is ticked. The address type is fixed when the address is created.
 
-A feature contributes a channel by registering a source from its own startup:
+A feature contributes a capability from its own startup:
 
 ```csharp
-services.AddChannelEndpointSource("SMS", source =>
+services.AddOmnichannelAddressCapability(OmnichannelAddressTypes.PhoneNumber, "SMS", capability =>
 {
-    source.DisplayName = S["SMS"];
-    source.Description = S["A number that sends and receives text messages."];
+    capability.DisplayName = S["Text messages (SMS)"];
+    capability.Description = S["Texts sent and received on this number."];
 });
 ```
 
-Because the source is registered by the owning feature, a channel only appears in the picker when its feature is enabled. The **Phone** source is registered by the Contact Center **Inbound Voice** feature; the **SMS** source is registered by the **SMS Messaging Channel** of the [Messaging Workspace](messaging-workspace), which also adds the **provider dropdown** (the enabled SMS providers); the workspace adds the inbound-routing editor to the endpoints of every messaging channel. To capture channel-specific fields, add a `DisplayDriver<OmnichannelChannelEndpoint>` that returns `null` unless the endpoint's `Channel` matches your source. Phone and SMS endpoint values are canonicalized to E.164 and validated by the endpoint handler itself, and email values are trimmed and validated (no Email source is registered in the UI); for any other channel, register an `IChannelEndpointAddressPolicy` (in `CrestApps.OrchardCore.Omnichannel.Core`) to say how its addresses are normalized and validated, so the stored value matches inbound traffic. The [Messaging Workspace](messaging-workspace) registers one that covers every messaging channel.
+Because the capability is registered by the owning feature, it is only offered while that feature is enabled. A capability whose feature is later disabled stays on the address and comes back with the feature. **Voice calls** (`Phone`) is registered by the Contact Center **Inbound Voice** and **Outbound Lines** features; **Text messages** (`SMS`) is registered by the **SMS Messaging Channel** of the [Messaging Workspace](messaging-workspace), which also adds the **provider dropdown**. A new address type is registered with `AddOmnichannelAddressType`.
+
+To capture capability settings, add a `DisplayDriver<OmnichannelChannelEndpoint>` that returns a shape for addresses of your type and marks the shape's root element with `data-address-capability="<capability>"`, so the editor shows it only while that capability is ticked. Runtime code checks `endpoint.HasCapability("SMS")`; lookups by number (`IOmnichannelChannelEndpointManager.GetByServiceAddressAsync(channel, address)`) only return an address that has the capability for that channel.
+
+Phone numbers are canonicalized to E.164 and validated by the address handler itself, and a value can be listed only once per address type. For any other address type, register an `IChannelEndpointAddressPolicy` (in `CrestApps.OrchardCore.Omnichannel.Core`) to say how its addresses are normalized and validated, so the stored value matches inbound traffic. The [Messaging Workspace](messaging-workspace) registers one that covers every messaging channel.
+
+Addresses saved before capabilities existed carried a single `Channel`. The upgrade gives each one its address type and capability, and merges records that listed the same number once per channel into one address. The merged-away identifiers are kept on the address (`MergedItemIds`), so activities and history that name them still find it, and recipes exported before the change import into one address per number.
 
 ### Contact
 A **Contact** is any content item that has `OmnichannelContactPart` attached.
@@ -201,8 +207,8 @@ To load automated SMS activities:
 
 1. Enable the **SMS Omnichannel Automation** feature so the SMS channel processor is available.
 2. Create an **AI profile** (type **Chat**) with **Start the conversation automatically** enabled and an opening message written for your outreach. The **Text messaging** starting points in the **New AI Profile** picker create one ready to adjust; see [Text messaging and phone call starting points](../ai/profile-templates.md#text-messaging-and-phone-call-starting-points).
-3. In **Interaction Center > Management > Channel Endpoints**, add an **SMS** endpoint for the number you send from.
-4. In **Load Activities**, click **Add Activity Load → Automatic**, then select the subject, the AI profile, the **SMS** channel, the SMS channel endpoint, and the contact type.
+3. In **Interaction Center > Management > Omnichannel Addresses**, add the number you send from with **Text messages (SMS)** ticked.
+4. In **Load Activities**, click **Add Activity Load → Automatic**, then select the subject, the AI profile, the **SMS** channel, the address to send from, and the contact type.
 5. Save the load, then open its **Actions → Load batch** menu to generate the activities in the background.
 
 The screencast below creates an automatic SMS activity load for the *New Customer - Welcome* subject powered by the *SMS Outreach Assistant* profile, then loads the batch to generate the automated activities.

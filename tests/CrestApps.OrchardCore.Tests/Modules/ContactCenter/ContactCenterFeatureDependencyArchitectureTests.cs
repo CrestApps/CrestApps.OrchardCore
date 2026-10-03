@@ -474,13 +474,23 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         // Assert
         Assert.Equal(
             [
+                "CrestApps.OrchardCore.ContactCenter.EntryPoints",
                 "CrestApps.OrchardCore.ContactCenter.Queues",
                 "CrestApps.OrchardCore.ContactCenter.Voice",
             ],
             dependencies);
         Assert.Equal("CrestApps.OrchardCore.ContactCenter.InboundVoice", resolverOwner.FeatureId);
         Assert.Equal("CrestApps.OrchardCore.ContactCenter.InboundVoice", ingressOwner.FeatureId);
-        Assert.Equal("CrestApps.OrchardCore.ContactCenter.InboundVoice", navigationOwner.FeatureId);
+
+        // The entry point administration belongs to the channel-neutral Inbound Entry Points feature, which carries no
+        // voice dependency, so a tenant that only texts can route its numbers too.
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.EntryPoints", navigationOwner.FeatureId);
+        Assert.Equal(
+            [
+                "CrestApps.OrchardCore.ContactCenter.Queues",
+                "CrestApps.OrchardCore.Omnichannel.ChannelEndpoints",
+            ],
+            features["CrestApps.OrchardCore.ContactCenter.EntryPoints"].Dependencies.Order(StringComparer.Ordinal));
         Assert.Empty(navigationOwner.RequiredFeatureIds);
         Assert.Equal("CrestApps.OrchardCore.ContactCenter.Voice", inboundServiceOwner.FeatureId);
     }

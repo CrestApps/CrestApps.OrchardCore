@@ -17,7 +17,7 @@ The **Messaging workspace** is a shared inbox for text conversations with custom
 
 1. Enable **SMS Messaging Channel**. It turns on the workspace and its dependencies.
 2. Set up the SMS provider under **Settings > Communication > SMS** (see [Phone and SMS setup](telephony-settings.md)).
-3. Add each SMS number under **Interaction Center > Management > Channel Endpoints**, and use its **Inbound routing** section to send it to an agent or a queue. See [Channel endpoints](channel-endpoints.md#inbound-routing-for-messaging).
+3. Add each SMS number under **Interaction Center > Management > Omnichannel Addresses**, and use its **Inbound routing** section to send it to an agent or a queue. See [Channel endpoints](channel-endpoints.md#inbound-routing-for-messaging).
 
 ## Work the inbox
 
@@ -120,7 +120,7 @@ The list shows each broadcast's status and how many messages were sent and faile
 | **HELP** | INFO | The customer gets the help reply. |
 
 :::note Where replies come from
-With Twilio, inbound texts reach the workspace through the Twilio webhook, which is provided by the **SMS Omnichannel Automation** feature. Enable it even if you do not use AI replies. Telnyx inbound texts use the Telnyx SMS webhook.
+With Twilio, inbound texts reach the workspace through the Twilio webhook, `/api/twilio/webhook/sms`, which comes with the SMS channel. You do not need SMS Omnichannel Automation for it. Telnyx inbound texts use the Telnyx SMS webhook.
 :::
 
 :::note About the screencasts

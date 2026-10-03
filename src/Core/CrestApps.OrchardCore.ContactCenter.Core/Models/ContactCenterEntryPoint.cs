@@ -5,8 +5,9 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 
 /// <summary>
-/// Represents an inbound entry point: it maps one or more dialed numbers (DIDs) to a target queue,
-/// gates the call by a business-hours calendar, and defines what happens while the entry point is closed.
+/// Represents an inbound entry point: it answers what arrives on one channel at one or more of the business's
+/// addresses, routes it to a queue or an agent, gates it by a business-hours calendar, and defines what happens while
+/// the entry point is closed.
 /// </summary>
 public sealed class ContactCenterEntryPoint : CatalogItem, INameAwareModel, IModifiedUtcAwareModel
 {
@@ -21,9 +22,29 @@ public sealed class ContactCenterEntryPoint : CatalogItem, INameAwareModel, IMod
     public string Description { get; set; }
 
     /// <summary>
-    /// Gets or sets the dialed numbers (DIDs) served by this entry point.
+    /// Gets or sets the channel the entry point answers, named as the address capability it serves (<c>Phone</c> for
+    /// calls). An entry point saved before entry points had a channel answers calls.
+    /// </summary>
+    public string Channel { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifiers of the omnichannel addresses whose traffic on <see cref="Channel"/> this entry point
+    /// answers. An address belongs to at most one enabled entry point per channel.
+    /// </summary>
+    public IList<string> AddressIds { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the numbers typed on an entry point before entry points picked their numbers from the address
+    /// list. The upgrade turns them into <see cref="AddressIds"/>; until then, and for a recipe exported before the
+    /// change, they still route their calls.
     /// </summary>
     public IList<string> DialedNumbers { get; set; } = [];
+
+    /// <summary>
+    /// Gets the channel the entry point answers, which is calls for one saved before entry points had a channel.
+    /// </summary>
+    public string GetChannel()
+        => string.IsNullOrWhiteSpace(Channel) ? "Phone" : Channel;
 
     /// <summary>
     /// Gets or sets what the entry point routes calls to: a queue (default) or a specific agent.

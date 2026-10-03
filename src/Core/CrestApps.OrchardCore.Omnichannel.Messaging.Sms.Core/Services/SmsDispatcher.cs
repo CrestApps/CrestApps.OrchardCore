@@ -11,7 +11,6 @@ using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.Infrastructure;
 using OrchardCore.Modules;
-using OrchardCore.Settings;
 using OrchardCore.Sms;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services;
@@ -22,9 +21,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services;
 /// </summary>
 public sealed class SmsDispatcher : ISmsDispatcher
 {
-    private readonly IOmnichannelChannelEndpointManager _endpointManager;
-    private readonly ISmsProviderResolver _providerResolver;
-    private readonly ISiteService _siteService;
+    private readonly ISmsProviderRouter _providerRouter;
     private readonly IMessagingContactResolver _contactResolver;
     private readonly IContentManager _contentManager;
     private readonly IClock _clock;
@@ -35,9 +32,7 @@ public sealed class SmsDispatcher : ISmsDispatcher
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsDispatcher"/> class.
     /// </summary>
-    /// <param name="endpointManager">The channel endpoint manager used to look up the number's pinned provider.</param>
-    /// <param name="providerResolver">The SMS provider resolver used to obtain a provider by technical name.</param>
-    /// <param name="siteService">The site service used to read the built-in SMS settings.</param>
+    /// <param name="providerRouter">The router that picks the provider owning the sending number, shared with automated SMS.</param>
     /// <param name="contactResolver">The resolver that finds the contact a refused recipient number belongs to.</param>
     /// <param name="contentManager">The content manager used to record a contact's SMS opt-out.</param>
     /// <param name="clock">The clock the opt-out is stamped with.</param>
@@ -45,9 +40,7 @@ public sealed class SmsDispatcher : ISmsDispatcher
     /// <param name="mediaSenders">The picture-message senders for providers whose own implementation carries text only.</param>
     /// <param name="logger">The logger instance.</param>
     public SmsDispatcher(
-        IOmnichannelChannelEndpointManager endpointManager,
-        ISmsProviderResolver providerResolver,
-        ISiteService siteService,
+        ISmsProviderRouter providerRouter,
         IMessagingContactResolver contactResolver,
         IContentManager contentManager,
         IClock clock,
@@ -55,9 +48,7 @@ public sealed class SmsDispatcher : ISmsDispatcher
         IEnumerable<ISmsMediaSender> mediaSenders,
         ILogger<SmsDispatcher> logger)
     {
-        _endpointManager = endpointManager;
-        _providerResolver = providerResolver;
-        _siteService = siteService;
+        _providerRouter = providerRouter;
         _contactResolver = contactResolver;
         _contentManager = contentManager;
         _clock = clock;
@@ -89,12 +80,11 @@ public sealed class SmsDispatcher : ISmsDispatcher
             return MessageDispatchResult.Failed("No SMS provider could be resolved for the sending number or the tenant default.");
         }
 
-        var provider = await _providerResolver.GetAsync(providerName);
+        // The router logs the warning when the provider is missing.
+        var provider = await _providerRouter.GetProviderAsync(providerName, cancellationToken);
 
         if (provider is null)
         {
-            _logger.LogWarning("The resolved SMS provider '{ProviderName}' is not registered or enabled.", providerName);
-
             return MessageDispatchResult.Failed($"The SMS provider '{providerName}' is not registered or enabled.");
         }
 
@@ -199,26 +189,9 @@ public sealed class SmsDispatcher : ISmsDispatcher
     }
 
     /// <inheritdoc/>
-    public async ValueTask<string> ResolveProviderNameAsync(string fromNumber, CancellationToken cancellationToken = default)
-    {
-        if (!string.IsNullOrEmpty(fromNumber))
-        {
-            var endpoint = await _endpointManager.GetByServiceAddressAsync(
-                OmnichannelConstants.Channels.Sms,
-                fromNumber.GetCleanedPhoneNumber(),
-                cancellationToken);
-
-            if (endpoint is not null && !string.IsNullOrEmpty(endpoint.ProviderName))
-            {
-                return endpoint.ProviderName;
-            }
-        }
-
-        // Fall back to OrchardCore's tenant-default SMS provider (Configuration -> Settings -> SMS).
-        var smsSettings = await _siteService.GetSettingsAsync<SmsSettings>();
-
-        return smsSettings.DefaultProviderName;
-    }
+    public ValueTask<string> ResolveProviderNameAsync(string fromNumber, CancellationToken cancellationToken = default)
+        // Automated SMS resolves through the same router, so a number sends through one provider whoever sends.
+        => _providerRouter.ResolveProviderNameAsync(fromNumber, cancellationToken);
 
     private static Result Failed(string message)
         => Result.Failed(new LocalizedString(message, message));

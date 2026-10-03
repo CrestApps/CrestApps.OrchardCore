@@ -74,6 +74,12 @@ public static partial class ContactCenterConstants
         public const string InboundVoice = "CrestApps.OrchardCore.ContactCenter.InboundVoice";
 
         /// <summary>
+        /// The identifier of the inbound entry points feature: the one place inbound work is routed from, for every
+        /// channel. It carries no voice dependency, so a tenant that only texts can route its numbers too.
+        /// </summary>
+        public const string EntryPoints = "CrestApps.OrchardCore.ContactCenter.EntryPoints";
+
+        /// <summary>
         /// The identifier of the shared Contact Center recording governance core. It carries the recording-access
         /// governance and audit services that both the full call-recording feature and voicemail playback need,
         /// so voicemail (a Voice capability) can be played and audited without enabling full call recording. It is

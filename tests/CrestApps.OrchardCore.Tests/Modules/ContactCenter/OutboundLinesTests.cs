@@ -161,18 +161,24 @@ public sealed class OutboundLinesTests
         Assert.Equal(["user-1", "user-2"], ChannelEndpointOutboundLineResolver.GetUserIds(endpoint));
     }
 
+    // A number used only for texts still gets the editor: the address editor shows it as soon as Voice calls is
+    // ticked, so it has to be on the page. An address that is not a phone number never gets it.
     [Fact]
-    public void Editor_IsNotShownOnATextingNumber()
+    public void Editor_IsShownOnATextingNumberAndNotOnAnEmailAddress()
     {
         // Arrange
         var sms = Line("sms", "Texting", SalesLine);
         sms.Channel = OmnichannelConstants.Channels.Sms;
+        var email = Line("email", "Support mailbox", "support@example.com");
+        email.Channel = OmnichannelConstants.Channels.Email;
 
         // Act
-        var result = new OutboundLineEndpointDisplayDriver().Edit(sms, context: null!);
+        var smsResult = new OutboundLineEndpointDisplayDriver().Edit(sms, context: null!);
+        var emailResult = new OutboundLineEndpointDisplayDriver().Edit(email, context: null!);
 
         // Assert
-        Assert.Null(result);
+        Assert.NotNull(smsResult);
+        Assert.Null(emailResult);
     }
 
     [Fact]

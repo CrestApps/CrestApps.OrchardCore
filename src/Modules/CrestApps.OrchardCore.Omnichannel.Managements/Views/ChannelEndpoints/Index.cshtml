@@ -7,7 +7,7 @@
 @model ListSourceCatalogEntryViewModel<OmnichannelChannelEndpoint>
 
 <zone Name="Title">
-    <breadcrumb name="OmnichannelChannelEndpoints" title="@T["Channel Endpoints"]" />
+    <breadcrumb name="OmnichannelChannelEndpoints" title="@T["Omnichannel Addresses"]" />
 </zone>
 
 @* The form is necessary to generate an antiforgery token for the delete and toggle actions. *@
@@ -26,7 +26,7 @@
                     </div>
                 </div>
                 <div class="col-auto">
-                    <button type="button" class="btn btn-secondary create" role="button" data-bs-toggle="modal" data-bs-target="#modalAddChannelEndpoint">@T["Add Channel Endpoint"]</button>
+                    <button type="button" class="btn btn-secondary create" role="button" data-bs-toggle="modal" data-bs-target="#modalAddChannelEndpoint">@T["Add Address"]</button>
                 </div>
             </div>
         </div>
@@ -90,7 +90,7 @@
         else
         {
             <li class="list-group-item list-group-item-info text-center ignore-elements">
-                @T["<strong>Nothing here!</strong> There are no Channel Endpoints at the moment."]
+                @T["<strong>Nothing here!</strong> There are no addresses at the moment."]
             </li>
         }
     </ul>
@@ -106,13 +106,13 @@
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="available-channel-endpoint-sources-title">@T["Available Channels"]</h5>
+                <h5 class="modal-title" id="available-channel-endpoint-sources-title">@T["What kind of address?"]</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 @if (!Model.Sources.Any())
                 {
-                    <p class="p-3 mb-2 bg-warning text-white">@T["You need to enable a feature which provides a channel."]</p>
+                    <p class="p-3 mb-2 bg-warning text-white">@T["Enable a feature that uses addresses, such as Contact Center Voice or SMS Messaging Channel."]</p>
                 }
                 else
                 {

@@ -353,12 +353,15 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
 
             var channelEndpointItems = new List<SelectListItem>
             {
-                new(S["No endpoint"], ""),
+                new(S["No address"], ""),
             };
 
-            foreach (var endpoint in (await _channelEndpointsCatalog.GetAllAsync()).OrderBy(endpoint => endpoint.DisplayText))
+            // Only addresses used for calls or texts can reach contacts on a load's channel.
+            foreach (var endpoint in (await _channelEndpointsCatalog.GetAllAsync())
+                .Where(endpoint => endpoint.HasCapability(OmnichannelConstants.Channels.Phone) || endpoint.HasCapability(OmnichannelConstants.Channels.Sms))
+                .OrderBy(endpoint => endpoint.DisplayText))
             {
-                channelEndpointItems.Add(new SelectListItem(endpoint.DisplayText, endpoint.ItemId));
+                channelEndpointItems.Add(new SelectListItem($"{endpoint.DisplayText} ({endpoint.Value})", endpoint.ItemId));
             }
 
             model.ChannelEndpoints = channelEndpointItems;
@@ -446,10 +449,19 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.Channel), S["The selected channel is invalid."]);
             }
 
-            if (!string.IsNullOrWhiteSpace(model.ChannelEndpointId) &&
-                await _channelEndpointsCatalog.FindByIdAsync(model.ChannelEndpointId) is null)
+            if (!string.IsNullOrWhiteSpace(model.ChannelEndpointId))
             {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.ChannelEndpointId), S["The selected channel endpoint is invalid."]);
+                var endpoint = await _channelEndpointsCatalog.FindByIdAsync(model.ChannelEndpointId);
+
+                if (endpoint is null)
+                {
+                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.ChannelEndpointId), S["The selected address is invalid."]);
+                }
+                else if (!string.IsNullOrWhiteSpace(model.Channel) && !endpoint.HasCapability(model.Channel))
+                {
+                    // A load sends from its address on its channel, which only works if the address is used for that.
+                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.ChannelEndpointId), S["{0} is not used for {1}. Tick it on the address first, or choose another address.", endpoint.DisplayText, model.Channel]);
+                }
             }
         }
 

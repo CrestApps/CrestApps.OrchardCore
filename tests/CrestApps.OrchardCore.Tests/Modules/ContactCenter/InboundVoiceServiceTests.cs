@@ -1431,6 +1431,8 @@ public sealed partial class InboundVoiceServiceTests
                 ScopeExecutor,
                 workManager,
                 AuditRecorder,
+                new InboundPriorityResolver([], NullLogger<InboundPriorityResolver>.Instance),
+                new Mock<global::YesSql.ISession> { DefaultValue = DefaultValue.Mock }.Object,
                 clock.Object,
                 Options.Create(new ContactCenterCoordinationOptions()),
                 NullLogger<InboundVoiceCallProcessor>.Instance);

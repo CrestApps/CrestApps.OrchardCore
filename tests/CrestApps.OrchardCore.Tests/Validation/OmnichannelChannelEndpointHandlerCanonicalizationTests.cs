@@ -140,6 +140,7 @@ public class OmnichannelChannelEndpointHandlerCanonicalizationTests
             phoneNumberService.Object,
             new Mock<IEmailAddressValidator>().Object,
             policies,
+            EmptyStore(),
             new PassThroughStringLocalizer<OmnichannelCampaignHandler>());
     }
 
@@ -168,6 +169,7 @@ public class OmnichannelChannelEndpointHandlerCanonicalizationTests
             new Mock<IPhoneNumberService>().Object,
             new Mock<IEmailAddressValidator>().Object,
             [],
+            EmptyStore(),
             [rule.Object],
             new PassThroughStringLocalizer<OmnichannelCampaignHandler>());
         var context = new ValidatingContext<OmnichannelChannelEndpoint>(endpoint);
@@ -177,6 +179,16 @@ public class OmnichannelChannelEndpointHandlerCanonicalizationTests
 
         // Assert
         Assert.Contains(context.Result.Errors, error => error.ErrorMessage == "Refused by the rule.");
+    }
+
+    private static IOmnichannelChannelEndpointStore EmptyStore()
+    {
+        var store = new Mock<IOmnichannelChannelEndpointStore>();
+        store
+            .Setup(value => value.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        return store.Object;
     }
 
     private delegate bool TryFormatToE164Callback(string rawNumber, string regionCode, out string e164Number);

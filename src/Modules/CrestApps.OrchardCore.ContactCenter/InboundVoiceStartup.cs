@@ -45,20 +45,24 @@ public sealed class InboundVoiceStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        // A phone number channel endpoint only has an inbound handler when inbound voice is enabled (it maps a
-        // dialed number to a subject flow), so the Phone channel is offered in the channel-endpoint create picker
-        // only with this feature. When the channel-endpoint administration is also enabled, Phone appears there.
         services.TryAddScoped<IIvrProvider, NoIvrProvider>();
 
-        services.AddChannelEndpointSource(OmnichannelConstants.Channels.Phone, source =>
+        // Calls are something a phone number does, so taking them is a capability this feature offers on the phone
+        // numbers in the address list. Outbound Lines offers the same capability for dialing out.
+        services.AddOmnichannelAddressCapability(OmnichannelAddressTypes.PhoneNumber, OmnichannelConstants.Channels.Phone, capability =>
         {
-            source.DisplayName = S["Phone"];
-            source.Description = S["A phone number for inbound voice. Routes a dialed number to a subject flow."];
+            capability.DisplayName = S["Voice calls"];
+            capability.Description = S["Calls to and from this number."];
+        });
+
+        // Calls are a channel entry points answer, so adding an entry point offers a call one with this feature.
+        services.AddEntryPointChannel(OmnichannelConstants.Channels.Phone, channel =>
+        {
+            channel.DisplayName = S["Voice calls"];
+            channel.Description = S["Answers calls to its numbers: routes them to a queue or an agent, with opening hours, a welcome message, a phone menu and voicemail."];
         });
 
         services
-            .AddScoped<IContactCenterEntryPointStore, ContactCenterEntryPointStore>()
-            .AddScoped<IContactCenterEntryPointManager, ContactCenterEntryPointManager>()
             // The numbers customers dial in on are the contact center's own, so no transfer is ever sent back to one.
             .AddScoped<IContactCenterOwnNumberSource, EntryPointOwnNumberSource>()
             // Entry-point phone menus. They belong here because the menu lives on the entry point: the
@@ -72,20 +76,14 @@ public sealed class InboundVoiceStartup : StartupBase
             .AddScoped<IExternalTransferOutcomeSink, IvrExternalTransferOutcomeSink>()
             // A waiting caller's answer to the queue's callback offer arrives on the same key-press path as a menu.
             .AddScoped<IQueueCallbackOfferResponder, QueueCallbackOfferResponder>()
-            // A phone number can name its entry point on its own screen; that choice is asked before the numbers typed on entry points.
-            .AddScoped<IEntryPointResolver, ChannelEndpointEntryPointResolver>()
             .AddScoped<IEntryPointResolver, EntryPointResolver>()
             .AddScoped<IPendingIncomingCallOfferService, PendingIncomingCallOfferService>()
             .AddScoped<QueuedVoiceWorkOfferScopeContext>()
-            .AddScoped<IContactCenterEventHandler, OfferQueuedVoiceWorkOnAvailabilityHandler>()
-            .AddScoped<ICatalogEntryHandler<ContactCenterEntryPoint>, ContactCenterEntryPointHandler>()
-            .AddScoped<ICatalogEntryHandler<ContactCenterEntryPoint>, ContactCenterConfigurationCacheInvalidationHandler<ContactCenterEntryPoint>>()
-            .AddIndexProvider<ContactCenterEntryPointIndexProvider>()
-            .AddDataMigration<ContactCenterEntryPointIndexMigrations>();
+            .AddScoped<IContactCenterEventHandler, OfferQueuedVoiceWorkOnAvailabilityHandler>();
 
         // Caller-based priority: the entry point says what the number is worth, the contributors notice what
-        // this particular caller is worth, and the strongest of the two decides where they land in line.
-        services.AddScoped<IInboundPriorityResolver, InboundPriorityResolver>();
+        // this particular caller is worth, and the strongest of the two decides where they land in line. The
+        // resolver itself is registered by the Voice feature, because the inbound processor that asks it lives there.
         services.AddScoped<IInboundPriorityContributor, ReturningCallbackPriorityContributor>();
         services.AddScoped<IInboundPriorityContributor, RepeatCallerPriorityContributor>();
 
@@ -93,11 +91,9 @@ public sealed class InboundVoiceStartup : StartupBase
         // feature registers for tenants without it.
         services.Replace(ServiceDescriptor.Scoped<IQueuedVoiceWorkOfferService, QueuedVoiceWorkOfferService>());
 
-        // Inbound entry-point administration screens.
-        services.AddDisplayDriver<ContactCenterEntryPoint, ContactCenterEntryPointDisplayDriver>();
-        services.AddDisplayDriver<OmnichannelChannelEndpoint, PhoneEndpointRoutingDisplayDriver>();
-        services.AddScoped<IChannelEndpointRule, PhoneEndpointRoutingRule>();
-        services.AddNavigationProvider<ContactCenterEntryPointsAdminMenu>();
+        // The settings only a call entry point has: the welcome message, the phone menu, voicemail and how long an
+        // agent's line rings. The entry point administration itself belongs to the Inbound Entry Points feature.
+        services.AddDisplayDriver<ContactCenterEntryPoint, ContactCenterEntryPointVoiceDisplayDriver>();
         services.AddResourceConfiguration<ContactCenterIvrMenuEditorResourceConfiguration>();
 
         // Queue shared voicemail boxes. They belong here because only an inbound queue line delivers to one: the entry
@@ -118,33 +114,5 @@ public sealed class InboundVoiceStartup : StartupBase
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes.AddVoiceIngressEndpoint();
-    }
-}
-
-/// <summary>
-/// Registers the deployment steps that export the entry points owned by the entry points feature.
-/// </summary>
-[Feature(ContactCenterConstants.Feature.InboundVoice)]
-[RequireFeatures("OrchardCore.Deployment")]
-public sealed class EntryPointsDeploymentStartup : StartupBase
-{
-    /// <inheritdoc/>
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddDeployment<ContactCenterEntryPointDeploymentSource, ContactCenterEntryPointDeploymentStep>();
-    }
-}
-
-/// <summary>
-/// Registers the recipe steps that import the entry points owned by the entry points feature.
-/// </summary>
-[Feature(ContactCenterConstants.Feature.InboundVoice)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
-public sealed class EntryPointsRecipesStartup : StartupBase
-{
-    /// <inheritdoc/>
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddRecipeExecutionStep<ContactCenterEntryPointStep>();
     }
 }

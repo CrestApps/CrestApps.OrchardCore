@@ -29,9 +29,34 @@ public class EntryPointViewModel
     public string Description { get; set; }
 
     /// <summary>
-    /// Gets or sets the dialed numbers, one per line.
+    /// Gets or sets the channel the entry point answers. Shown read-only; set when the entry point is created.
     /// </summary>
-    public string DialedNumbersText { get; set; }
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public string Channel { get; set; }
+
+    /// <summary>
+    /// Gets or sets the localized name of the channel.
+    /// </summary>
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public string ChannelDisplayName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifiers of the addresses whose traffic the entry point answers.
+    /// </summary>
+    public string[] AddressIds { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the addresses that can be picked: those used for the entry point's channel.
+    /// </summary>
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public IList<SelectListItem> AddressOptions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the numbers still typed on the entry point, from a recipe exported before entry points picked their
+    /// numbers. They keep routing until the address for each is picked.
+    /// </summary>
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public IList<string> LegacyDialedNumbers { get; set; } = [];
 
     /// <summary>
     /// Gets or sets what the entry point routes calls to: a queue or a specific agent.

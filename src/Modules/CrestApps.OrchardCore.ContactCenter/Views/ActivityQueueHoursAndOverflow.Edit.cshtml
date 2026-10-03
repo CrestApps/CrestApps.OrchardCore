@@ -10,16 +10,28 @@
     var noQueueTitle = T["Select a queue"].Value;
 }
 
-<div class="ocat-wrapper" asp-validation-class-for="InboundChannelEndpointId">
-    <label asp-for="InboundChannelEndpointId" class="ocat-label">@T["Inbound channel endpoint"]</label>
-    <div class="ocat-end">
-        <select asp-for="InboundChannelEndpointId" asp-items="Model.InboundChannelEndpointOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select an endpoint"]" data-width="100%" title="@T["Default inbound queue"]">
-            <option value="">@T["Default inbound queue"]</option>
-        </select>
-        <span asp-validation-for="InboundChannelEndpointId" class="text-danger"></span>
-        <span class="hint">@T["Calls received on this Omnichannel endpoint route to this queue. Leave empty for a default inbound queue."]</span>
+@if (Model.RoutesFromEntryPoints)
+{
+    <div class="ocat-wrapper">
+        <span class="ocat-label">@T["Inbound numbers"]</span>
+        <div class="ocat-end">
+            <span class="hint">@T["Numbers are routed to this queue from their"] <a asp-route="ContactCenterEntryPointsIndex">@T["inbound entry points"]</a>.</span>
+        </div>
     </div>
-</div>
+}
+else
+{
+    <div class="ocat-wrapper" asp-validation-class-for="InboundChannelEndpointId">
+        <label asp-for="InboundChannelEndpointId" class="ocat-label">@T["Inbound phone number"]</label>
+        <div class="ocat-end">
+            <select asp-for="InboundChannelEndpointId" asp-items="Model.InboundChannelEndpointOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select an endpoint"]" data-width="100%" title="@T["Default inbound queue"]">
+                <option value="">@T["Default inbound queue"]</option>
+            </select>
+            <span asp-validation-for="InboundChannelEndpointId" class="text-danger"></span>
+            <span class="hint">@T["Calls received on this number route to this queue. Leave empty for a default inbound queue."]</span>
+        </div>
+    </div>
+}
 
 <div class="ocat-wrapper" asp-validation-class-for="BusinessHoursCalendarId">
     <label asp-for="BusinessHoursCalendarId" class="ocat-label">@T["Business hours calendar"]</label>

@@ -260,7 +260,7 @@ When the agent accepts the offer, the [unified call command](#unified-call-comma
 
 ### Routing the dialed number to a queue
 
-Each queue has an optional **inbound channel endpoint** (`InboundChannelEndpointId`). Calls received on that endpoint are queued there. When no queue maps the endpoint and exactly one enabled queue has no endpoint mapping, that queue is used as the default inbound queue, so a single-queue tenant works without extra configuration.
+A dialed number is routed by the call entry point that picks its omnichannel address (`ContactCenterEntryPoint.AddressIds`, feature **Contact Center Inbound Entry Points**). Entry points that still list typed numbers (`DialedNumbers`, from older recipes) match them in E.164 form. When no entry point answers the number, a tenant without inbound entry points can still map it on the queue (`InboundChannelEndpointId`); otherwise, when exactly one enabled queue has no number mapped, that queue is used as the default inbound queue, so a single-queue tenant works without extra configuration.
 
 ### Matched customers in the modal
 

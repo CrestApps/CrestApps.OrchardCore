@@ -2,6 +2,10 @@ using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.PhoneNumbers;
 using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
@@ -213,7 +217,7 @@ public sealed class EntryPointResolverTests
         var businessHours = new Mock<IBusinessHoursService>();
         businessHours.Setup(b => b.IsOpenAsync("cal1", It.IsAny<CancellationToken>())).ReturnsAsync(true);
 
-        var resolver = new EntryPointResolver(manager.Object, businessHours.Object);
+        var resolver = CreateResolver(manager.Object, businessHours.Object);
 
         // Act
         var plan = await resolver.ResolveAsync("+15551234567", TestContext.Current.CancellationToken);
@@ -231,7 +235,7 @@ public sealed class EntryPointResolverTests
         var manager = new Mock<IContactCenterEntryPointManager>();
         manager.Setup(m => m.GetEnabledAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
 
-        var resolver = new EntryPointResolver(manager.Object, new Mock<IBusinessHoursService>().Object);
+        var resolver = CreateResolver(manager.Object, new Mock<IBusinessHoursService>().Object);
 
         // Act
         var plan = await resolver.ResolveAsync("+15550000000", TestContext.Current.CancellationToken);
@@ -239,4 +243,77 @@ public sealed class EntryPointResolverTests
         // Assert
         Assert.Null(plan);
     }
+
+    // The number a call was dialed to is an address; the call entry point that picked it answers, whatever its typed
+    // numbers say, and an SMS entry point that picked the same number does not.
+    [Fact]
+    public async Task FindByDialedNumberAsync_ReturnsTheCallEntryPointThatPickedTheAddress()
+    {
+        // Arrange
+        var address = new OmnichannelChannelEndpoint
+        {
+            ItemId = "line",
+            AddressType = OmnichannelAddressTypes.PhoneNumber,
+            Capabilities = [OmnichannelConstants.Channels.Phone, OmnichannelConstants.Channels.Sms],
+            Value = "+15551234567",
+        };
+        var texts = new ContactCenterEntryPoint { ItemId = "texts", Channel = OmnichannelConstants.Channels.Sms, AddressIds = ["line"], Enabled = true };
+        var calls = new ContactCenterEntryPoint { ItemId = "calls", Channel = OmnichannelConstants.Channels.Phone, AddressIds = ["line"], Enabled = true };
+
+        var manager = new Mock<IContactCenterEntryPointManager>();
+        manager.Setup(m => m.GetEnabledAsync(It.IsAny<CancellationToken>())).ReturnsAsync([texts, calls]);
+
+        var resolver = CreateResolver(manager.Object, new Mock<IBusinessHoursService>().Object, address);
+
+        // Act
+        var entryPoint = await resolver.FindByDialedNumberAsync("+15551234567", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("calls", entryPoint?.ItemId);
+    }
+
+    // Typed numbers were compared as exact text, so a number typed in national format never matched its calls.
+    [Fact]
+    public async Task FindByDialedNumberAsync_MatchesATypedNumberWrittenInAnotherForm()
+    {
+        // Arrange
+        var entryPoint = new ContactCenterEntryPoint { ItemId = "legacy", DialedNumbers = ["(555) 123-4567"], Enabled = true };
+
+        var manager = new Mock<IContactCenterEntryPointManager>();
+        manager.Setup(m => m.GetEnabledAsync(It.IsAny<CancellationToken>())).ReturnsAsync([entryPoint]);
+
+        var resolver = CreateResolver(manager.Object, new Mock<IBusinessHoursService>().Object);
+
+        // Act
+        var resolved = await resolver.FindByDialedNumberAsync("+15551234567", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("legacy", resolved?.ItemId);
+    }
+
+    private static EntryPointResolver CreateResolver(
+        IContactCenterEntryPointManager manager,
+        IBusinessHoursService businessHours,
+        params OmnichannelChannelEndpoint[] addresses)
+    {
+        var addressManager = new Mock<IOmnichannelChannelEndpointManager>();
+        addressManager
+            .Setup(m => m.GetByServiceAddressAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns((string channel, string value, CancellationToken _) =>
+                ValueTask.FromResult(addresses.FirstOrDefault(address => address.Value == value && address.HasCapability(channel))));
+
+        var phoneNumbers = new Mock<IPhoneNumberService>();
+        phoneNumbers
+            .Setup(service => service.TryFormatToE164(It.IsAny<string>(), It.IsAny<string>(), out It.Ref<string>.IsAny))
+            .Returns(new TryFormatToE164Callback((string raw, string region, out string e164) =>
+            {
+                e164 = raw == "(555) 123-4567" ? "+15551234567" : raw;
+
+                return raw.StartsWith('+') || raw == "(555) 123-4567";
+            }));
+
+        return new EntryPointResolver(manager, addressManager.Object, phoneNumbers.Object, businessHours);
+    }
+
+    private delegate bool TryFormatToE164Callback(string rawNumber, string regionCode, out string e164Number);
 }

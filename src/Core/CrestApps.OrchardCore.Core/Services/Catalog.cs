@@ -53,7 +53,7 @@ public class Catalog<T> : ICatalog<T>
     }
 
     /// <inheritdoc />
-    public async ValueTask<T> FindByIdAsync(string id, CancellationToken cancellationToken = default)
+    public virtual async ValueTask<T> FindByIdAsync(string id, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(id);
 

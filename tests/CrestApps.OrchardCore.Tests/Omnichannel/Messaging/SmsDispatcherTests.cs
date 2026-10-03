@@ -218,10 +218,16 @@ public class SmsDispatcherTests
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(DateTime.UtcNow);
 
-        return new SmsDispatcher(
+        // The real router, so these tests keep proving the number-pin -> tenant-default resolution the dispatcher
+        // now shares with automated SMS.
+        var providerRouter = new SmsProviderRouter(
             endpointManager.Object,
             providerResolver.Object,
             siteService.Object,
+            NullLogger<SmsProviderRouter>.Instance);
+
+        return new SmsDispatcher(
+            providerRouter,
             contactResolver.Object,
             (contentManager ?? new Mock<IContentManager>()).Object,
             clock.Object,

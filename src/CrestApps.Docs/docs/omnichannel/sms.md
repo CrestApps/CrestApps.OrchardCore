@@ -23,7 +23,7 @@ You describe what you want the AI to do (tone, rules, goals), and the AI carries
 ## What this module provides
 
 - An SMS channel processor and inbound event handler for Omnichannel automated activities. Messages are sent through the Orchard Core SMS provider (for example [Telnyx SMS](../telephony/telnyx#telnyx-sms) or Twilio).
-- The Twilio inbound SMS webhook, `POST ~/api/twilio/webhook/sms`. Telnyx SMS maps its own webhook (`api/telnyx/webhook/sms`).
+- The Twilio inbound SMS webhook, `POST ~/api/twilio/webhook/sms`, when Orchard Core's Twilio SMS feature is on. The [SMS Messaging Channel](messaging-workspace#setting-up-sms) maps the same webhook, so it works with either one on, and is mapped once with both. Telnyx SMS maps its own webhook (`api/telnyx/webhook/sms`).
 - AI chat session orchestration for "automated activities".
 - Re-engagement follow-ups through [Cadences](cadences), gated by business-hours calendars.
 - A background task that recovers owed replies: when a contact's latest message (from the last 30 minutes) never got an answer, for example because the site restarted mid-reply, the reply is generated and sent.

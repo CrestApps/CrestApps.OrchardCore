@@ -49,15 +49,16 @@ When a call finds a dead number, the platform uses the subject's disposition wit
 
 With [phone number verification](../modules/phone-number-verifications.md) turned on, each contact's preferred number is checked by a lookup provider. A number the lookup reports as invalid, or as an inactive line, is added to the list before anybody dials it. A number reported as *unreachable* (switched off, or out of coverage) is not added.
 
-If a later lookup finds the same number active again, the mark the earlier lookup made is removed, because the number has been given to somebody new. A mark made by a real call stays until you clear it.
+If a later lookup finds the same number active again, the mark the earlier lookup made is removed, because the number has been given to somebody new. A mark made by a real call stays until you use **Allow dialing** on it.
 
 ## Manage the list
 
-Open **Interaction Center > Management > Numbers Not In Service**. For each number, the list shows what found it (dialer call, automated call, agent disposition, number lookup or marked by hand), what the carrier or lookup said, the campaign, when it was last found, and how many times.
+Open **Interaction Center > Management > Numbers Not In Service**. The numbers are listed like the other admin lists: the header shows how many numbers there are and has a checkbox to select them all, and each number has its own checkbox. Under each number you see what found it (dialer call, automated call, agent disposition, number lookup or marked by hand), what the carrier or lookup said, the campaign, when it was last found, and how many times.
 
-- **Search by number** filters the list by digits.
+- **Search by number** filters the list by digits. Press Enter to search.
 - **Mark as not in service** adds a number by hand. Enter it with its country code, for example +17025550123.
-- **Clear** removes a number from the list, so it can be loaded and dialed again. Use this when you learn the number is back in service.
+- **Allow dialing** removes the not-in-service mark from a number, so campaigns can load and dial it again. Use it when you learn the number is back in service or has been given to somebody new. It does not call the number. The number is dialed only when the dialer or an automated call later reaches an activity for it. Activities that were already cancelled because of the mark stay cancelled.
+- To allow dialing for several numbers at once, select them, then pick **Actions > Allow dialing**.
 
 ## Report on it
 

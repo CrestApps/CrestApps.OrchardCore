@@ -44,10 +44,10 @@
     </div>
 
     <div class="ocat-wrapper subject-inbound-automated-only@(Model.Direction == SubjectDirection.Inbound && Model.InteractionType == ActivityInteractionType.Automated ? string.Empty : " d-none")" asp-validation-class-for="ChannelEndpointId">
-        <label asp-for="ChannelEndpointId" class="ocat-label">@T["Channel endpoint"]</label>
+        <label asp-for="ChannelEndpointId" class="ocat-label">@T["Address"]</label>
         <div class="ocat-end">
             <select asp-for="ChannelEndpointId" asp-items="Model.ChannelEndpoints" class="form-select">
-                <option value="">@T["Select an endpoint"]</option>
+                <option value="">@T["Select an address"]</option>
             </select>
             <span asp-validation-for="ChannelEndpointId" class="text-danger"></span>
             <span class="hint">@T["Specifies the endpoint to use when sending a response to the incoming message."]</span>

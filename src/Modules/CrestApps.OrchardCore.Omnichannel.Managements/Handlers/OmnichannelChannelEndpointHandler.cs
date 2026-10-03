@@ -22,6 +22,7 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
     private readonly IPhoneNumberService _phoneNumberService;
     private readonly IEmailAddressValidator _emailAddressValidator;
     private readonly IEnumerable<IChannelEndpointAddressPolicy> _addressPolicies;
+    private readonly IOmnichannelChannelEndpointStore _store;
     private readonly IEnumerable<IChannelEndpointRule> _rules = [];
 
     internal readonly IStringLocalizer S;
@@ -34,6 +35,7 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
     /// <param name="phoneNumberService">The phone number service for E.164 formatting.</param>
     /// <param name="emailAddressValidator">The email address validator.</param>
     /// <param name="addressPolicies">The address rules other features contribute for the channels they add.</param>
+    /// <param name="store">The address store, read directly because the catalog manager runs this handler.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelChannelEndpointHandler(
         IHttpContextAccessor httpContextAccessor,
@@ -41,6 +43,7 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
         IPhoneNumberService phoneNumberService,
         IEmailAddressValidator emailAddressValidator,
         IEnumerable<IChannelEndpointAddressPolicy> addressPolicies,
+        IOmnichannelChannelEndpointStore store,
         IStringLocalizer<OmnichannelCampaignHandler> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
@@ -48,6 +51,7 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
         _phoneNumberService = phoneNumberService;
         _emailAddressValidator = emailAddressValidator;
         _addressPolicies = addressPolicies;
+        _store = store;
         S = stringLocalizer;
     }
 
@@ -60,6 +64,7 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
     /// <param name="phoneNumberService">The phone number service for E.164 formatting.</param>
     /// <param name="emailAddressValidator">The email address validator.</param>
     /// <param name="addressPolicies">The address rules other features contribute for the channels they add.</param>
+    /// <param name="store">The address store, read directly because the catalog manager runs this handler.</param>
     /// <param name="rules">The endpoint rules other features contribute.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelChannelEndpointHandler(
@@ -68,9 +73,10 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
         IPhoneNumberService phoneNumberService,
         IEmailAddressValidator emailAddressValidator,
         IEnumerable<IChannelEndpointAddressPolicy> addressPolicies,
+        IOmnichannelChannelEndpointStore store,
         IEnumerable<IChannelEndpointRule> rules,
         IStringLocalizer<OmnichannelCampaignHandler> stringLocalizer)
-        : this(httpContextAccessor, clock, phoneNumberService, emailAddressValidator, addressPolicies, stringLocalizer)
+        : this(httpContextAccessor, clock, phoneNumberService, emailAddressValidator, addressPolicies, store, stringLocalizer)
     {
         _rules = rules;
     }
@@ -103,9 +109,11 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
 
     private void Canonicalize(OmnichannelChannelEndpoint endpoint)
     {
-        // A phone endpoint is matched against inbound traffic by its value, so the value a caller is recognised by
-        // has to be the same however it was written. Canonicalizing only in the editor left a recipe or an import
-        // storing whatever it was given, and an endpoint that never matched anything.
+        BringForward(endpoint);
+
+        // An address is matched against inbound traffic by its value, so the value a caller is recognised by has to be
+        // the same however it was written. Canonicalizing only in the editor left a recipe or an import storing
+        // whatever it was given, and an address that never matched anything.
         if (string.IsNullOrWhiteSpace(endpoint.Value))
         {
             return;
@@ -113,31 +121,59 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
 
         endpoint.Value = endpoint.Value.Trim();
 
-        if (endpoint.Channel != OmnichannelConstants.Channels.Phone &&
-            endpoint.Channel != OmnichannelConstants.Channels.Sms)
+        if (endpoint.AddressType == OmnichannelAddressTypes.PhoneNumber)
         {
-            // A channel another feature contributes (a messaging channel such as WhatsApp) says how its addresses are
-            // stored, so its endpoints match their inbound traffic the way phone endpoints do.
-            var policy = _addressPolicies.FirstOrDefault(candidate => candidate.AppliesTo(endpoint.Channel));
-
-            if (policy is not null)
+            if (_phoneNumberService.TryParse(endpoint.Value, null, out var canonicalNumber))
             {
-                var normalized = policy.Normalize(endpoint.Channel, endpoint.Value);
-
-                if (!string.IsNullOrEmpty(normalized))
-                {
-                    endpoint.Value = normalized;
-                }
+                endpoint.Value = canonicalNumber.Value;
             }
 
             return;
         }
 
-        if (_phoneNumberService.TryParse(endpoint.Value, null, out var canonicalNumber))
+        if (endpoint.AddressType == OmnichannelAddressTypes.EmailAddress)
         {
-            endpoint.Value = canonicalNumber.Value;
+            return;
+        }
+
+        // An address type another feature contributes (a messaging channel such as WhatsApp) says how its addresses
+        // are stored, so its addresses match their inbound traffic the way phone numbers do.
+        var policy = FindPolicy(endpoint);
+
+        if (policy is not null)
+        {
+            var normalized = policy.Normalize(PolicyChannel(endpoint, policy), endpoint.Value);
+
+            if (!string.IsNullOrEmpty(normalized))
+            {
+                endpoint.Value = normalized;
+            }
         }
     }
+
+    // A record saved, imported or exported before addresses had a type and capabilities carries a single channel. It is
+    // given the type and the capability that channel meant, so it reads the same as an address saved today.
+    private static void BringForward(OmnichannelChannelEndpoint endpoint)
+    {
+        if (string.IsNullOrEmpty(endpoint.AddressType))
+        {
+            endpoint.AddressType = endpoint.GetAddressType();
+        }
+
+        if (endpoint.Capabilities is not { Count: > 0 })
+        {
+            endpoint.Capabilities = [.. endpoint.GetCapabilities()];
+        }
+    }
+
+    private IChannelEndpointAddressPolicy FindPolicy(OmnichannelChannelEndpoint endpoint)
+        => _addressPolicies.FirstOrDefault(candidate =>
+            candidate.AppliesTo(endpoint.AddressType) || endpoint.GetCapabilities().Any(candidate.AppliesTo));
+
+    private static string PolicyChannel(OmnichannelChannelEndpoint endpoint, IChannelEndpointAddressPolicy policy)
+        => policy.AppliesTo(endpoint.AddressType)
+            ? endpoint.AddressType
+            : endpoint.GetCapabilities().First(policy.AppliesTo);
 
     public override async Task ValidatingAsync(ValidatingContext<OmnichannelChannelEndpoint> context, CancellationToken cancellationToken = default)
     {
@@ -153,30 +189,64 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
             context.Result.Fail(new ValidationResult(S["Endpoint Value is required."], [nameof(OmnichannelChannelEndpoint.Value)]));
         }
 
-        if (string.IsNullOrWhiteSpace(context.Model.Channel))
+        BringForward(context.Model);
+
+        if (string.IsNullOrWhiteSpace(context.Model.AddressType))
         {
-            context.Result.Fail(new ValidationResult(S["Channel is required."], [nameof(OmnichannelChannelEndpoint.Channel)]));
+            context.Result.Fail(new ValidationResult(S["Choose the kind of address."], [nameof(OmnichannelChannelEndpoint.AddressType)]));
         }
         else if (hasValue)
         {
-            if (context.Model.Channel == OmnichannelConstants.Channels.Phone || context.Model.Channel == OmnichannelConstants.Channels.Sms)
+            if (context.Model.AddressType == OmnichannelAddressTypes.PhoneNumber)
             {
                 if (!_phoneNumberService.TryParse(context.Model.Value, null, out _))
                 {
                     context.Result.Fail(new ValidationResult(S["Invalid phone number. Please enter a valid international number in the format: +<CountryCode><Number> (e.g., +14155552671)."], [nameof(OmnichannelChannelEndpoint.Value)]));
                 }
             }
-            else if (context.Model.Channel == OmnichannelConstants.Channels.Email)
+            else if (context.Model.AddressType == OmnichannelAddressTypes.EmailAddress)
             {
                 if (!_emailAddressValidator.Validate(context.Model.Value))
                 {
                     context.Result.Fail(new ValidationResult(S["Invalid email address."], [nameof(OmnichannelChannelEndpoint.Value)]));
                 }
             }
-            else if (_addressPolicies.FirstOrDefault(candidate => candidate.AppliesTo(context.Model.Channel)) is { } policy &&
-                policy.Validate(context.Model.Channel, context.Model.Value) is { } error)
+            else if (FindPolicy(context.Model) is { } policy &&
+                policy.Validate(PolicyChannel(context.Model, policy), context.Model.Value) is { } error)
             {
                 context.Result.Fail(new ValidationResult(error, [nameof(OmnichannelChannelEndpoint.Value)]));
+            }
+        }
+
+        if (context.Model.GetCapabilities().Count == 0)
+        {
+            context.Result.Fail(new ValidationResult(S["Choose what this address is used for."], [nameof(OmnichannelChannelEndpoint.Capabilities)]));
+        }
+
+        // An address is listed once, with every capability it has. Two records for one number made inbound traffic
+        // match whichever was found first, and its settings depended on luck.
+        if (hasValue && !string.IsNullOrWhiteSpace(context.Model.AddressType))
+        {
+            // A new address is validated before it is canonicalized on create, so the comparison canonicalizes it too.
+            var value = context.Model.Value.Trim();
+
+            if (context.Model.AddressType == OmnichannelAddressTypes.PhoneNumber &&
+                _phoneNumberService.TryParse(value, null, out var canonicalNumber))
+            {
+                value = canonicalNumber.Value;
+            }
+
+            var addresses = await _store.GetAllAsync(cancellationToken);
+            var duplicate = addresses.FirstOrDefault(other =>
+                !string.Equals(other.ItemId, context.Model.ItemId, StringComparison.Ordinal) &&
+                string.Equals(other.GetAddressType(), context.Model.AddressType, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(other.Value, value, StringComparison.OrdinalIgnoreCase));
+
+            if (duplicate is not null)
+            {
+                context.Result.Fail(new ValidationResult(
+                    S["{0} is already in the address list as '{1}'. Tick the extra capability on that address instead.", context.Model.Value, duplicate.DisplayText],
+                    [nameof(OmnichannelChannelEndpoint.Value)]));
             }
         }
 
@@ -227,11 +297,13 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
             enabpoint.Channel = channelText;
         }
 
+        BringForward(enabpoint);
+
         var valueText = data[nameof(OmnichannelChannelEndpoint.Value)]?.GetValue<string>()?.Trim();
 
         if (!string.IsNullOrEmpty(valueText))
         {
-            enabpoint.Value = NormalizePhoneValue(enabpoint.Channel, valueText);
+            enabpoint.Value = NormalizePhoneValue(enabpoint.AddressType, valueText);
         }
 
         var properties = data[nameof(OmnichannelCampaign.Properties)]?.AsObject();
@@ -248,9 +320,9 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
         return Task.CompletedTask;
     }
 
-    private string NormalizePhoneValue(string channel, string value)
+    private string NormalizePhoneValue(string addressType, string value)
     {
-        if ((channel != OmnichannelConstants.Channels.Phone && channel != OmnichannelConstants.Channels.Sms) ||
+        if (addressType != OmnichannelAddressTypes.PhoneNumber ||
             !_phoneNumberService.TryParse(value, null, out var canonicalNumber))
         {
             return value;

@@ -313,7 +313,7 @@ Supervisors prepare the environment and monitor operations. The configuration sc
 **Prerequisites:** the `ManageContactCenterQueues` permission and the **Work Distribution** (Queues) feature enabled. Define any required **Skills** and **Business hours** first.
 
 1. Go to **Interaction Center → Management → Queues** and click **Add** (create).
-2. Give the queue a **name**. For inbound voice, pick the dialed number's channel endpoint in **Inbound channel endpoint** on the **Hours and overflow** card.
+2. Give the queue a **name**. For inbound voice, point an [inbound entry point](../user-manual/entry-points-and-ivr.md) at the queue and pick the number there.
 3. Choose the **routing strategy** (longest-idle, round-robin, or least-busy) and, optionally, a sticky-agent preference.
 4. Set the **SLA threshold** and the **reservation timeout**.
 5. Add any **required skills** so routing only offers work to agents who have them.
