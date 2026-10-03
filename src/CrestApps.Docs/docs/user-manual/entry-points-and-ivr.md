@@ -5,7 +5,7 @@ title: Inbound Entry Points and IVR Menus
 description: Decide what happens when someone dials one of your numbers - which queue or person it rings, what happens after hours, where voicemail goes, and which keypad menu callers hear first.
 ---
 
-An **inbound entry point** is the front door for one or more phone numbers. It decides:
+An **inbound entry point** is the front door for one or more of your numbers, and the one place a number's inbound traffic is routed from. Each entry point answers one channel, such as **Voice calls**. It decides:
 
 - **where** the call goes: a queue, or one specific agent (a personal line);
 - **what callers hear first**: an optional keypad (IVR) menu;
@@ -16,7 +16,7 @@ An **inbound entry point** is the front door for one or more phone numbers. It d
 | --- | --- |
 | **Menu** | Interaction Center > Management > Inbound entry points |
 | **Permission** | Manage Contact Center queues |
-| **Feature** | Contact Center Inbound Voice (`CrestApps.OrchardCore.ContactCenter.InboundVoice`) |
+| **Feature** | Contact Center Inbound Entry Points (`CrestApps.OrchardCore.ContactCenter.EntryPoints`), with Contact Center Inbound Voice (`CrestApps.OrchardCore.ContactCenter.InboundVoice`) for call entry points |
 
 <video controls preload="metadata" width="100%" aria-label="Screencast of creating an inbound entry point that routes a dialed number to a queue with business hours and voicemail settings">
   <source src="/img/docs/um-entry-point.mp4" type="video/mp4" />
@@ -24,17 +24,21 @@ An **inbound entry point** is the front door for one or more phone numbers. It d
 
 ## Create an entry point
 
-1. Open **Interaction Center > Management > Inbound entry points** and click **Add inbound entry point**.
-2. Fill in the five cards described below.
-3. Click **Save**. Calls to the dialed numbers follow the new rules straight away.
+1. Add the numbers first, under **Interaction Center > Management > [Omnichannel Addresses](channel-endpoints.md)**, with **Voice calls** ticked.
+2. Open **Interaction Center > Management > Inbound entry points** and click **Add inbound entry point**. When more than one channel is available, pick the channel from the button's menu.
+3. Fill in the cards described below. A call entry point has five; the phone menu and voicemail cards are for calls only.
+4. Click **Save**. Calls to its numbers follow the new rules straight away.
 
 ### General
 
 | Field | What it does |
 | --- | --- |
 | **Name** / **Description** | How the entry point is listed. Name is required. |
-| **Dialed numbers** | One phone number (DID) per line, in international format such as `+17025550100`. Every call to one of these numbers uses this entry point, unless the number's own [channel endpoint](channel-endpoints.md#inbound-routing-for-phone-numbers) picks a different entry point. |
-| **Enabled** | Disabled entry points receive no calls. |
+| **Answers** | The channel, chosen when the entry point is added. It cannot be changed. |
+| **Numbers** | The numbers this entry point answers, picked from your [Omnichannel Addresses](channel-endpoints.md). Only numbers ticked for the entry point's channel are offered, and a number can be answered by one enabled entry point per channel. |
+| **Enabled** | Disabled entry points answer nothing. |
+
+Numbers that were typed on an entry point before entry points picked them from the address list were moved onto the address list when the site was upgraded, along with the entry point a phone number picked on its own screen and the number a queue mapped. An entry point imported from an older recipe can still list typed numbers; they keep routing, and the General card lists them so you can pick their addresses.
 
 ### Routing
 

@@ -5,6 +5,8 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Deployments;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
 
@@ -13,6 +15,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Handlers;
 internal sealed class ContactCenterEntryPointHandler : CatalogEntryHandlerBase<ContactCenterEntryPoint>
 {
     private readonly IClock _clock;
+    private readonly IOmnichannelChannelEndpointStore _addressStore;
+    private readonly IContactCenterEntryPointStore _entryPointStore;
 
     internal readonly IStringLocalizer S;
 
@@ -20,12 +24,18 @@ internal sealed class ContactCenterEntryPointHandler : CatalogEntryHandlerBase<C
     /// Initializes a new instance of the <see cref="ContactCenterEntryPointHandler"/> class.
     /// </summary>
     /// <param name="clock">The clock used to stamp audit times.</param>
+    /// <param name="addressStore">The address list entry points pick their numbers from.</param>
+    /// <param name="entryPointStore">The entry points, read directly because the catalog manager runs this handler.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ContactCenterEntryPointHandler(
         IClock clock,
+        IOmnichannelChannelEndpointStore addressStore,
+        IContactCenterEntryPointStore entryPointStore,
         IStringLocalizer<ContactCenterEntryPointHandler> stringLocalizer)
     {
         _clock = clock;
+        _addressStore = addressStore;
+        _entryPointStore = entryPointStore;
         S = stringLocalizer;
     }
 
@@ -56,7 +66,7 @@ internal sealed class ContactCenterEntryPointHandler : CatalogEntryHandlerBase<C
     }
 
     /// <inheritdoc/>
-    public override Task ValidatingAsync(ValidatingContext<ContactCenterEntryPoint> context, CancellationToken cancellationToken = default)
+    public override async Task ValidatingAsync(ValidatingContext<ContactCenterEntryPoint> context, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(context.Model.Name))
         {
@@ -85,7 +95,68 @@ internal sealed class ContactCenterEntryPointHandler : CatalogEntryHandlerBase<C
             }
         }
 
-        return Task.CompletedTask;
+        await ValidateAddressesAsync(context, cancellationToken);
+    }
+
+    // A number is answered from one place on each channel. Each picked address must exist and be used for the entry
+    // point's channel, and no other enabled entry point may answer it on that channel; otherwise which one took the
+    // traffic would depend on the order they happened to be read in.
+    private async Task ValidateAddressesAsync(ValidatingContext<ContactCenterEntryPoint> context, CancellationToken cancellationToken)
+    {
+        var entryPoint = context.Model;
+        var addressIds = entryPoint.AddressIds ?? [];
+
+        if (addressIds.Count == 0)
+        {
+            return;
+        }
+
+        var channel = entryPoint.GetChannel();
+        var addresses = await _addressStore.GetAllAsync(cancellationToken);
+        var picked = new List<OmnichannelChannelEndpoint>();
+
+        foreach (var addressId in addressIds)
+        {
+            var address = addresses.FirstOrDefault(candidate => candidate.IsKnownAs(addressId));
+
+            if (address is null)
+            {
+                context.Result.Fail(new ValidationResult(S["One of the selected numbers no longer exists."], [nameof(ContactCenterEntryPoint.AddressIds)]));
+
+                continue;
+            }
+
+            if (!address.HasCapability(channel))
+            {
+                context.Result.Fail(new ValidationResult(
+                    S["{0} is not used for {1}. Tick it on the address first.", address.DisplayText ?? address.Value, channel],
+                    [nameof(ContactCenterEntryPoint.AddressIds)]));
+
+                continue;
+            }
+
+            picked.Add(address);
+        }
+
+        if (!entryPoint.Enabled || picked.Count == 0)
+        {
+            return;
+        }
+
+        var others = (await _entryPointStore.GetAllAsync(cancellationToken))
+            .Where(other => other.Enabled &&
+                !string.Equals(other.ItemId, entryPoint.ItemId, StringComparison.Ordinal) &&
+                string.Equals(other.GetChannel(), channel, StringComparison.OrdinalIgnoreCase));
+
+        foreach (var other in others)
+        {
+            foreach (var address in picked.Where(address => (other.AddressIds ?? []).Any(address.IsKnownAs)))
+            {
+                context.Result.Fail(new ValidationResult(
+                    S["{0} is already answered by the entry point '{1}'. Remove it there first.", address.DisplayText ?? address.Value, other.Name],
+                    [nameof(ContactCenterEntryPoint.AddressIds)]));
+            }
+        }
     }
 
     private string Describe(IvrFlowValidationError error)

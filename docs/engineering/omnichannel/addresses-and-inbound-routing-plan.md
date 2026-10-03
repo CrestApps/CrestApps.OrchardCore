@@ -93,7 +93,7 @@ instead of listing every record.
 - Bugs fixed here: duplicates allowed; pickers listing every endpoint whatever its channel; every phone record counted
   as an own number whether or not it was used.
 
-### Phase 2 — Channel-neutral entry points, and voice routing in one place
+### Phase 2 — Channel-neutral entry points, and voice routing in one place (built)
 
 - New feature, **Inbound Entry Points**, depending only on queues and addresses. It owns the entry point catalog,
   store, manager, index, recipes, deployment and the General, Routing and Hours cards.
@@ -103,8 +103,10 @@ instead of listing every record.
 - Migration: typed `DialedNumbers` become `AddressIds` (D-6); a phone address's chosen entry point becomes that entry
   point's number; a queue's `InboundChannelEndpointId` becomes a Voice entry point targeting that queue when no entry
   point already serves the number.
-- Removed: the phone address Inbound routing card (#741), the queue's Inbound channel endpoint field and its fallback,
-  the typed Dialed numbers field.
+- Removed: the phone address Inbound routing card (#741) and the typed Dialed numbers field. The queue's Inbound
+  channel endpoint field is hidden while inbound entry points are enabled; a tenant running Voice without them keeps it,
+  because it is that tenant's only per-number routing.
+- Kept for older recipes: entry points that still list typed numbers route them, compared in E.164 form.
 
 ### Phase 3 — SMS entry points
 

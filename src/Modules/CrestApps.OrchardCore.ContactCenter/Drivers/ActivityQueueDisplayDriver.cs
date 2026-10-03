@@ -12,18 +12,25 @@ internal sealed class ActivityQueueDisplayDriver : DisplayDriver<ActivityQueue>
 {
     private readonly ContactCenterAdminFormOptionsProvider _optionsProvider;
     private readonly IActivityQueueGroupManager _queueGroupManager;
+    private readonly bool _routesFromEntryPoints;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ActivityQueueDisplayDriver"/> class.
     /// </summary>
     /// <param name="optionsProvider">The admin form options provider.</param>
     /// <param name="queueGroupManager">The queue-group manager.</param>
+    /// <param name="entryPointManagers">The entry point catalog, present only while inbound entry points are enabled.</param>
     public ActivityQueueDisplayDriver(
         ContactCenterAdminFormOptionsProvider optionsProvider,
-        IActivityQueueGroupManager queueGroupManager)
+        IActivityQueueGroupManager queueGroupManager,
+        IEnumerable<IContactCenterEntryPointManager> entryPointManagers)
     {
         _optionsProvider = optionsProvider;
         _queueGroupManager = queueGroupManager;
+
+        // With inbound entry points, a number is routed from its entry point; the queue's own number would be a second
+        // place to route it from, so it is not offered.
+        _routesFromEntryPoints = entryPointManagers.Any();
     }
 
     /// <inheritdoc/>
@@ -51,6 +58,7 @@ internal sealed class ActivityQueueDisplayDriver : DisplayDriver<ActivityQueue>
     public override async Task<IDisplayResult> EditAsync(ActivityQueue queue, BuildEditorContext context)
     {
         var viewModel = CreateViewModel(queue);
+        viewModel.RoutesFromEntryPoints = _routesFromEntryPoints;
 
         await _optionsProvider.PopulateQueueEditorAsync(viewModel);
 
@@ -75,6 +83,7 @@ internal sealed class ActivityQueueDisplayDriver : DisplayDriver<ActivityQueue>
             model.SkillOptions = viewModel.SkillOptions;
             model.InboundChannelEndpointId = viewModel.InboundChannelEndpointId;
             model.InboundChannelEndpointOptions = viewModel.InboundChannelEndpointOptions;
+            model.RoutesFromEntryPoints = viewModel.RoutesFromEntryPoints;
             model.BusinessHoursCalendarId = viewModel.BusinessHoursCalendarId;
             model.BusinessHoursCalendarOptions = viewModel.BusinessHoursCalendarOptions;
             model.AfterHoursAction = viewModel.AfterHoursAction;
@@ -124,9 +133,12 @@ internal sealed class ActivityQueueDisplayDriver : DisplayDriver<ActivityQueue>
         queue.UnansweredOfferAction = model.UnansweredOfferAction;
         queue.RequiredSkills = SkillTag.NormalizeAll(model.RequiredSkills);
         queue.SkillRequirements = ReadSkillRequirements(model.SkillRequirements);
-        queue.InboundChannelEndpointId = string.IsNullOrWhiteSpace(model.InboundChannelEndpointId)
-            ? null
-            : model.InboundChannelEndpointId.Trim();
+        if (!_routesFromEntryPoints)
+        {
+            queue.InboundChannelEndpointId = string.IsNullOrWhiteSpace(model.InboundChannelEndpointId)
+                ? null
+                : model.InboundChannelEndpointId.Trim();
+        }
         queue.BusinessHoursCalendarId = string.IsNullOrWhiteSpace(model.BusinessHoursCalendarId)
             ? null
             : model.BusinessHoursCalendarId.Trim();
