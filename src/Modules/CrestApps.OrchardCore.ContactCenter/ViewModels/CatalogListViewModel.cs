@@ -27,10 +27,15 @@ public class CatalogListViewModel
     public IHtmlContent CreateLabel { get; set; }
 
     /// <summary>
-    /// Gets or sets the kinds of entry that can be added, when there is more than one. Each becomes an item of the
-    /// create button's menu; with one or none, the button adds an entry directly.
+    /// Gets or sets the kinds of entry that can be added, when there is more than one. The create button then opens a
+    /// dialog with a card per kind, as the address list does; with one or none, the button adds an entry directly.
     /// </summary>
     public IList<CatalogCreateOption> CreateOptions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the localized title of the dialog that asks which kind of entry to add.
+    /// </summary>
+    public IHtmlContent CreateDialogTitle { get; set; }
 
     /// <summary>
     /// Gets or sets the identifier applied to the list element.
@@ -67,6 +72,11 @@ public class CatalogCreateOption
     /// Gets or sets the label shown for the kind.
     /// </summary>
     public string Label { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the kind is for, shown on its card.
+    /// </summary>
+    public string Description { get; set; }
 
     /// <summary>
     /// Gets or sets the route values the create action is called with.

@@ -630,6 +630,19 @@ public sealed partial class TelnyxApiClient
                     continue;
                 }
 
+                // Why Telnyx refused the command. Only the status was logged, so a call whose answer, menu and hold music
+                // were all refused with 422 left no trace of the reason (a call already answered elsewhere, a leg on
+                // another connection, a call that had ended).
+                if (_logger.IsEnabled(LogLevel.Warning))
+                {
+                    _logger.LogWarning(
+                        "Telnyx refused {Method} {Path} with {StatusCode}: {Errors}",
+                        method,
+                        path,
+                        (int)response.StatusCode,
+                        DescribeErrors(content));
+                }
+
                 return (TelnyxApiResult.Failure(response.StatusCode, content), null);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -666,6 +679,37 @@ public sealed partial class TelnyxApiClient
         {
             // A body that cannot be read does not change whether the command succeeded.
             return string.Empty;
+        }
+    }
+
+    // Telnyx explains a refusal as {"errors":[{"code":"90018","title":"...","detail":"..."}]}. Only those fields are kept,
+    // so nothing else the response might carry reaches the log.
+    private static string DescribeErrors(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return "(no body)";
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(content);
+
+            if (!document.RootElement.TryGetProperty("errors", out var errors) || errors.ValueKind != JsonValueKind.Array)
+            {
+                return "(no errors listed)";
+            }
+
+            static string Read(JsonElement error, string name)
+                => error.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+
+            return string.Join("; ", errors.EnumerateArray()
+                .Where(error => error.ValueKind == JsonValueKind.Object)
+                .Select(error => $"{Read(error, "code")} {Read(error, "title")}: {Read(error, "detail")}".Trim()));
+        }
+        catch (JsonException)
+        {
+            return "(unreadable body)";
         }
     }
 
