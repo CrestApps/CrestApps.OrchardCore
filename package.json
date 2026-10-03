@@ -15,8 +15,8 @@
     "cleanup": "node .scripts/cleanup.js"
   },
   "devDependencies": {
-    "@babel/core": "^8.0.5",
-    "@babel/preset-env": "^8.0.5",
+    "@babel/core": "^8.0.6",
+    "@babel/preset-env": "^8.0.6",
     "@babel/preset-flow": "8.0.1",
     "child_process": "^1.0.2",
     "es6-promise": "4.2.8",
@@ -48,8 +48,8 @@
     "vitest": "^4.1.11"
   },
   "dependencies": {
-    "@microsoft/signalr": "10.0.0",
-    "@telnyx/webrtc": "2.27.9",
+    "@microsoft/signalr": "10.0.11",
+    "@telnyx/webrtc": "2.27.10",
     "chart.js": "^4.5.1",
     "extendable-media-recorder": "^9.2.40",
     "sip.js": "0.21.2"
