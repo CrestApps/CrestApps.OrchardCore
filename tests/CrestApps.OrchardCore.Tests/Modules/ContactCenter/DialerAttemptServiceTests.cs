@@ -12,6 +12,7 @@ using CrestApps.OrchardCore.Telephony.Services;
 using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.Extensions.Logging;
 using Moq;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -692,7 +693,7 @@ public sealed class DialerAttemptServiceTests
         scopeExecutor ??= new Mock<IContactCenterScopeExecutor>(MockBehavior.Strict);
         providerCommandStateService ??= new Mock<IProviderCommandStateService>(MockBehavior.Strict);
         agentManager ??= CreateAgentManager();
-        compensationService ??= new DialerAttemptCompensationService(reservationService.Object);
+        compensationService ??= new DialerAttemptCompensationService(reservationService.Object, Mock.Of<IQueueItemManager>(), Mock.Of<IClock>());
 
         return new DialerAttemptService(
             eligibilityService.Object,

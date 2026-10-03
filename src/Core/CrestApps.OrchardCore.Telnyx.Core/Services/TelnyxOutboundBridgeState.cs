@@ -277,6 +277,13 @@ public sealed class TelnyxOutboundBridgeState
     public bool? Redelivered { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the agent's leg is hearing a last message, such as "the number you
+    /// dialed is not in service", and is hung up when it ends. The number's leg is already gone by then.
+    /// </summary>
+    [JsonPropertyName("nis")]
+    public bool? HangUpAfterNotice { get; set; }
+
+    /// <summary>
     /// Gets a value indicating whether this is the agent leg of a number dialed from the soft phone and connected on
     /// the server, once the number's leg exists: <see cref="PeerCallControlId"/> is then the remote party.
     /// </summary>
@@ -323,6 +330,17 @@ public sealed class TelnyxOutboundBridgeState
     {
         var copy = (TelnyxOutboundBridgeState)MemberwiseClone();
         copy.Redelivered = true;
+
+        return copy;
+    }
+
+    /// <summary>
+    /// Returns a copy of this state marked <see cref="HangUpAfterNotice"/>, for an agent leg hearing a last message.
+    /// </summary>
+    public TelnyxOutboundBridgeState AsHangUpAfterNotice()
+    {
+        var copy = (TelnyxOutboundBridgeState)MemberwiseClone();
+        copy.HangUpAfterNotice = true;
 
         return copy;
     }

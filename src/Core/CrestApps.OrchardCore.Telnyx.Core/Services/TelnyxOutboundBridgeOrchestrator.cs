@@ -108,6 +108,11 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
             {
                 await AgentLegEndedAsync(callEvent.CallControlId, state, cancellationToken);
             }
+            else if (state.HangUpAfterNotice == true && IsSpeakEnded(callEvent))
+            {
+                // The agent heard why the number could not be reached; the call is over.
+                await HangupLegAsync(callEvent.CallControlId, cancellationToken);
+            }
 
             return TelnyxOutboundBridgeLeg.AgentLeg;
         }
@@ -285,6 +290,14 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
             {
                 // The number a consult dialed hung up: the consult is over, and the call goes back to the agent, held.
                 await ConsultTargetLeftAsync(state.PeerCallControlId, state.TransferOfCallControlId, cancellationToken);
+            }
+            else if (state.Detached != true &&
+                TelnyxNotInServiceCauses.IsNotInService(callEvent) &&
+                await AnnounceNotInServiceAsync(state.PeerCallControlId, callEvent, cancellationToken))
+            {
+                // The number is not in service. The agent's leg was answered before the number was dialed, so the
+                // carrier's own announcement never reached it and the agent heard nothing. It is told instead, and
+                // hung up when the message ends.
             }
             else if (state.Detached != true)
             {

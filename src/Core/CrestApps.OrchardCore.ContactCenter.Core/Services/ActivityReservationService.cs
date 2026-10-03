@@ -499,10 +499,25 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
             (string.Equals(agent.ActiveReservationId, reservation.ItemId, StringComparison.Ordinal) ||
                 string.IsNullOrWhiteSpace(agent.ActiveReservationId));
 
+        // An agent whose own reservation this is cannot hold newer work: a reservation is only made for an agent who
+        // has none. Any other active reservation is then a leftover whose call ended without settling it, and letting
+        // it block the release stranded the agent in Reserved for good: every suppressed power-dial attempt after a
+        // missed hang-up left the agent unroutable, while their phone still read Available.
+        var ownsThisReservation = string.Equals(agent?.ActiveReservationId, reservation.ItemId, StringComparison.Ordinal);
+
         if (agent is not null &&
-            !hasNewerAgentWork &&
+            (ownsThisReservation || !hasNewerAgentWork) &&
             (ownsPendingReservation || ownsAcceptedReservation))
         {
+            if (hasNewerAgentWork && _logger.IsEnabled(LogLevel.Warning))
+            {
+                _logger.LogWarning(
+                    "Released agent '{AgentId}' from compensated reservation '{ReservationId}' although they still hold {Count} other active reservation(s), which are leftovers whose calls ended without settling them.",
+                    reservation.AgentId.SanitizeLogValue(),
+                    reservation.ItemId.SanitizeLogValue(),
+                    activeAgentReservations.Count - 1);
+            }
+
             await ReleaseAgentStateAsync(
                 agent,
                 reservation,

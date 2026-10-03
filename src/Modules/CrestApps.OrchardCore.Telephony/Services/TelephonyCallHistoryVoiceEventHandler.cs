@@ -203,6 +203,13 @@ public sealed class TelephonyCallHistoryVoiceEventHandler : INormalizedVoiceEven
             metadata["participantCount"] = providerEvent.ParticipantCount.Value;
         }
 
+        // Why the call ended, so the soft phone can tell the agent a number is not in service instead of the call
+        // simply disappearing.
+        if (providerEvent.HangupCause is { } hangupCause)
+        {
+            metadata["hangupCause"] = hangupCause.ToString();
+        }
+
         return new TelephonyCall
         {
             CallId = interaction.CallId,

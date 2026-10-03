@@ -1,11 +1,42 @@
 @using System.Globalization
 @using CrestApps.OrchardCore.Omnichannel.Core.Models
 @using OrchardCore.DisplayManagement.Views
+@using Microsoft.Extensions.Options
+
+@inject IOptions<ChannelEndpointSourceOptions> SourceOptions
 
 @model ShapeViewModel<OmnichannelChannelEndpoint>
 
 @{
     var modifiedAt = Model.Value.ModifiedUtc ?? Model.Value.CreatedUtc;
+    var channel = Model.Value.Channel;
+    var sourceName = !string.IsNullOrEmpty(channel) && SourceOptions.Value.Sources.TryGetValue(channel, out var source) && source.DisplayName != null
+        ? source.DisplayName.Value
+        : channel;
+    var sourceIcon = string.Equals(channel, "SMS", StringComparison.OrdinalIgnoreCase)
+        ? "fa-comment-sms"
+        : string.Equals(channel, "Phone", StringComparison.OrdinalIgnoreCase) ? "fa-phone" : "fa-tag";
+}
+
+@if (!string.IsNullOrEmpty(sourceName))
+{
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Source"]">
+        <i class="fa-solid @sourceIcon text-secondary me-1" aria-hidden="true"></i>@sourceName
+    </span>
+}
+
+@if (!string.IsNullOrEmpty(Model.Value.Value))
+{
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Address"]">
+        <i class="fa-solid fa-hashtag text-secondary me-1" aria-hidden="true"></i>@Model.Value.Value
+    </span>
+}
+
+@if (!string.IsNullOrEmpty(Model.Value.ProviderName))
+{
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Provider"]">
+        <i class="fa-solid fa-plug text-secondary me-1" aria-hidden="true"></i>@Model.Value.ProviderName
+    </span>
 }
 
 <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@await DisplayAsync(await New.DateTime(Utc: modifiedAt, Format: "g"))">

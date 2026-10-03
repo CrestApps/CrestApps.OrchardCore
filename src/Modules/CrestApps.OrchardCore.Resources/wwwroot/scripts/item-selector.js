@@ -292,9 +292,13 @@ window.itemSelector = (() => {
       requestSearch();
     }, configuration.searchDelay);
     cacheItems(configuration.initialItems ?? []);
+
+    // Initial items are the saved values, so they count as selected unless a caller says otherwise. Reading
+    // the raw flag matters: normalizeItem turns a missing flag into false, which once dropped every saved
+    // value whose caller left it out, and re-saving the form then cleared it.
     (configuration.initialItems ?? []).forEach(item => {
       const normalized = normalizeItem(item);
-      if (normalized && normalized.selected !== false && !isSelected(normalized.value)) {
+      if (normalized && item.selected !== false && !isSelected(normalized.value)) {
         selectedValues.push(normalized.value);
       }
     });

@@ -33,7 +33,7 @@ An **inbound entry point** is the front door for one or more phone numbers. It d
 | Field | What it does |
 | --- | --- |
 | **Name** / **Description** | How the entry point is listed. Name is required. |
-| **Dialed numbers** | One phone number (DID) per line, in international format such as `+17025550100`. Every call to one of these numbers uses this entry point. |
+| **Dialed numbers** | One phone number (DID) per line, in international format such as `+17025550100`. Every call to one of these numbers uses this entry point, unless the number's own [channel endpoint](channel-endpoints.md#inbound-routing-for-phone-numbers) picks a different entry point. |
 | **Enabled** | Disabled entry points receive no calls. |
 
 ### Routing
