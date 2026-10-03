@@ -98,9 +98,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services
         public System.Threading.Tasks.Task HandleAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelEvent omnichannelEvent, System.Threading.CancellationToken cancellationToken = default) { }
     }
 }
-namespace CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Twilio
+namespace CrestApps.OrchardCore.Omnichannel.Messaging.Sms.ViewModels
 {
-    public sealed class TwilioSmsWebhookSettingsViewModel
+    public class TwilioSmsWebhookSettingsViewModel
     {
         public TwilioSmsWebhookSettingsViewModel() { }
         public string WebhookUrl { get; set; }
