@@ -1,4 +1,5 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Omnichannel.Messaging.Sms")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Omnichannel.Sms")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Tests")]
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Models
 {
@@ -95,5 +96,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services
     {
         public SmsReceivedMessagingEventHandler(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingInboundProcessor inboundProcessor) { }
         public System.Threading.Tasks.Task HandleAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelEvent omnichannelEvent, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+}
+namespace CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Twilio
+{
+    public sealed class TwilioSmsWebhookSettingsViewModel
+    {
+        public TwilioSmsWebhookSettingsViewModel() { }
+        public string WebhookUrl { get; set; }
     }
 }

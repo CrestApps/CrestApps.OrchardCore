@@ -237,10 +237,6 @@ public static class OmnichannelConstants
         public const string Managements = "CrestApps.OrchardCore.Omnichannel.Managements";
 
         public const string Crm = "CrestApps.OrchardCore.Omnichannel.Crm";
-
-        // The Twilio inbound-SMS webhook. A dependency-only feature of its own, so the automated SMS feature and the
-        // messaging workspace's SMS channel can each receive Twilio texts without either depending on the other.
-        public const string TwilioSms = "CrestApps.OrchardCore.Omnichannel.Sms.Twilio";
     }
 
     /// <summary>

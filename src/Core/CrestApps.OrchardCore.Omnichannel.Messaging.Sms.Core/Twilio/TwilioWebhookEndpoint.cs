@@ -2,7 +2,6 @@ using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using CrestApps.OrchardCore.Omnichannel.Sms.Twillio;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
@@ -17,7 +16,7 @@ using OrchardCore.Sms.Models;
 using OrchardCore.Sms.Services;
 using YesSqlSession = YesSql.ISession;
 
-namespace CrestApps.OrchardCore.Omnichannel.Sms.Endpoints;
+namespace CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Twilio;
 
 /// <summary>
 /// The Twilio inbound-SMS webhook. Twilio POSTs an <c>application/x-www-form-urlencoded</c> body signed with an
@@ -48,9 +47,18 @@ internal static class TwilioWebhookEndpoint
         IDataProtectionProvider dataProtectionProvider,
         IShellHost shellHost,
         ShellSettings shellSettings,
-        ILogger<Startup> logger)
+        ILogger<TwilioSmsWebhook> logger)
     {
         var settings = await siteService.GetSettingsAsync<TwilioSettings>();
+
+        // Twilio is a provider of Orchard Core's SMS feature, switched on in the SMS settings rather than enabled as a
+        // feature, so the route exists on every tenant with SMS; it answers only while the provider is on.
+        if (!settings.IsEnabled)
+        {
+            logger.LogWarning("A Twilio inbound-SMS webhook arrived while the Twilio SMS provider is disabled; it was refused.");
+
+            return TypedResults.NotFound();
+        }
 
         var protector = dataProtectionProvider.CreateProtector(TwilioSmsProvider.ProtectorName);
 
@@ -141,7 +149,7 @@ internal static class TwilioWebhookEndpoint
         {
             var scopedSession = scope.ServiceProvider.GetRequiredService<YesSqlSession>();
             var scopedHandlers = scope.ServiceProvider.GetServices<IOmnichannelEventHandler>();
-            var scopedLogger = scope.ServiceProvider.GetRequiredService<ILogger<Startup>>();
+            var scopedLogger = scope.ServiceProvider.GetRequiredService<ILogger<TwilioSmsWebhook>>();
 
             // Tag every log line produced while this inbound message is processed with its identifiers, so a single
             // customer's exchange can be followed end to end even when many conversations are interleaved in the log.

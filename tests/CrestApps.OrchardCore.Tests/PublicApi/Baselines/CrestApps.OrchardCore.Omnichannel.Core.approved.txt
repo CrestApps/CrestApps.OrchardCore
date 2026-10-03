@@ -65,7 +65,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Core
             public const string ChannelEndpoints = "CrestApps.OrchardCore.Omnichannel.ChannelEndpoints";
             public const string Crm = "CrestApps.OrchardCore.Omnichannel.Crm";
             public const string Managements = "CrestApps.OrchardCore.Omnichannel.Managements";
-            public const string TwilioSms = "CrestApps.OrchardCore.Omnichannel.Sms.Twilio";
         }
         public static class NamedParts
         {

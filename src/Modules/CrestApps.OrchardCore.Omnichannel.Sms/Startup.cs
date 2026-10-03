@@ -1,9 +1,8 @@
 ﻿using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Twilio;
 using CrestApps.OrchardCore.Omnichannel.Sms.BackgroundTasks;
-using CrestApps.OrchardCore.Omnichannel.Sms.Drivers;
-using CrestApps.OrchardCore.Omnichannel.Sms.Endpoints;
 using CrestApps.OrchardCore.Omnichannel.Sms.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Sms.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Sms.Migrations;
@@ -61,28 +60,14 @@ public sealed class Startup : StartupBase
 }
 
 /// <summary>
-/// Registers the Twilio inbound-SMS webhook. It is its own feature, enabled by both SMS Omnichannel Automation and the
-/// SMS Messaging Channel, so a tenant receives Twilio texts with either one on, and the route is mapped once with both.
+/// Receives Twilio texts for the automated conversations. The SMS Messaging Channel registers the
+/// same webhook for the workspace; whichever registers first owns it, so the route is mapped once with both on.
 /// </summary>
-[Feature(OmnichannelConstants.Features.TwilioSms)]
 public sealed class TwilioSmsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
-    {
-        // Twilio says why it refused a message, and its provider throws that away. Recorded, so a text that fails
-        // for credentials, region or a trial restriction says which in the log, and a refusal for an opted-out
-        // recipient reaches the SMS dispatcher, which records the opt-out.
-        services.AddTransient<TwilioErrorLoggingHandler>();
-        services.AddHttpClient(TwilioSmsProvider.TechnicalName)
-            .AddHttpMessageHandler<TwilioErrorLoggingHandler>();
-
-        // Shows the inbound-SMS webhook address under Orchard Core's Twilio settings, beside the endpoint it names.
-        services.AddDisplayDriver<ISite, TwilioSmsWebhookSettingsDisplayDriver>();
-    }
+        => TwilioSmsWebhook.AddServices(services);
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
-    {
-        routes
-            .AddTwilioWebhookEndpoint();
-    }
+        => TwilioSmsWebhook.MapEndpoint(routes, serviceProvider);
 }

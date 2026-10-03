@@ -30,6 +30,7 @@
     <PackageReference Include="CrestApps.Core.Support" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.Omnichannel.Core/CrestApps.OrchardCore.Omnichannel.Core.csproj" />
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Core/CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Core.csproj" />
   </ItemGroup>
 
 </Project>

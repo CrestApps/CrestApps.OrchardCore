@@ -1,18 +1,16 @@
-using CrestApps.OrchardCore.Omnichannel.Sms.Endpoints;
-using CrestApps.OrchardCore.Omnichannel.Sms.ViewModels;
 using Microsoft.AspNetCore.Http;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Settings;
 
-namespace CrestApps.OrchardCore.Omnichannel.Sms.Drivers;
+namespace CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Twilio;
 
 /// <summary>
 /// Shows the inbound-SMS webhook address inside Orchard Core's Twilio tab on the SMS settings screen, so the operator
 /// can copy it into the Twilio console. It only displays; Orchard Core's own Twilio driver owns and saves the settings,
 /// which is why this is not a driver of the Twilio settings section.
 /// </summary>
-public sealed class TwilioSmsWebhookSettingsDisplayDriver : DisplayDriver<ISite>
+internal sealed class TwilioSmsWebhookSettingsDisplayDriver : DisplayDriver<ISite>
 {
     // Matches Orchard Core's SMS settings group, so the address shows under /Admin/Settings/sms.
     private const string SmsSettingsGroupId = "sms";
