@@ -8,9 +8,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels;
 public class MessagingLineEndpointViewModel
 {
     /// <summary>
-    /// Gets or sets the users who send from the number.
+    /// Gets or sets the users who send from the number. Named apart from the voice card's agents, which post under the same prefix.
     /// </summary>
-    public string[] UserIds { get; set; } = [];
+    public string[] TextingUserIds { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the messaging channels the number can be used for, which decide when the card shows.

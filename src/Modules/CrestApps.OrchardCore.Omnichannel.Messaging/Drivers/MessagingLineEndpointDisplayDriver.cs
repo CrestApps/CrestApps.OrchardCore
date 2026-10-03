@@ -44,7 +44,7 @@ internal sealed class MessagingLineEndpointDisplayDriver : DisplayDriver<Omnicha
 
         return Initialize<MessagingLineEndpointViewModel>("MessagingLineEndpoint_Edit", model =>
         {
-            model.UserIds = [.. MessagingLines.GetUserIds(endpoint)];
+            model.TextingUserIds = [.. MessagingLines.GetUserIds(endpoint)];
             model.ServedCapabilities = string.Join(",", channels);
         }).Location("Content:2%Text messages;3");
     }
@@ -65,7 +65,7 @@ internal sealed class MessagingLineEndpointDisplayDriver : DisplayDriver<Omnicha
         // to it too.
         endpoint.Put(new MessagingLineSettings
         {
-            UserIds = (model.UserIds ?? [])
+            UserIds = (model.TextingUserIds ?? [])
                 .Where(userId => !string.IsNullOrWhiteSpace(userId))
                 .Select(userId => userId.Trim())
                 .Distinct(StringComparer.Ordinal)

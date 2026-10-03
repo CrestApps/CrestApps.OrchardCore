@@ -81,7 +81,7 @@ internal sealed class MessagingLineEndpointRule : IChannelEndpointRule
                 {
                     context.Result.Fail(new ValidationResult(
                         S["{0} already texts from {1}. Remove them from that number's list first.", await GetUserNameAsync(userId), GetLineName(otherLine)],
-                        [nameof(MessagingLineSettings.UserIds)]));
+                        ["TextingUserIds"]));
 
                     break;
                 }
