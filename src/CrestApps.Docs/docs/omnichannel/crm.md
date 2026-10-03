@@ -122,7 +122,7 @@ With Orchard Core **Workflows** on, the feature adds a **Lead Converted** event 
 
 ## AI conversion
 
-An automatic inventory load of a lead type can let the AI convert the leads it qualifies. The option is stored on the load as `LeadAIConversionSettings`, copied onto each automated activity it loads and onto retries, and has four settings: `Enabled`, `CreateOpportunity`, `OpportunityContentType` and `QualificationGuidance`.
+An automatic activity load of a lead type can let the AI convert the leads it qualifies. The option is stored on the load as `LeadAIConversionSettings`, copied onto each automated activity it loads and onto retries, and has four settings: `Enabled`, `CreateOpportunity`, `OpportunityContentType` and `QualificationGuidance`.
 
 - When an automated SMS conversation or AI call concludes and the activity's record is still an open lead, the conclusion prompt tells the model it is talking to a lead and asks for `ConvertLead`.
   - The model is given what qualified means: the load's `QualificationGuidance`, or else the subject goal.
@@ -139,7 +139,7 @@ A lead status is exactly one of three types, stored as the `IsClosed` and `IsCon
 | Type | Flags | Notes |
 | --- | --- | --- |
 | Open | neither | Only an open status can be the default (`IsDefault`). |
-| Closed | `IsClosed` | Inventory loads skip it unless a load picks this status. |
+| Closed | `IsClosed` | Activity loads skip it unless a load picks this status. |
 | Converted | `IsClosed` and `IsConverted` | Set only by conversion. Marking another status converted takes the type from the old one, which becomes Closed. |
 
 A status saved with `IsDefault` and either closed flag is rejected, so a recipe cannot make new leads start out closed.

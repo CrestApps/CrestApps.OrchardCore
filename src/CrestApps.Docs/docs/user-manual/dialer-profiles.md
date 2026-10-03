@@ -5,7 +5,7 @@ title: Dialer Profiles - Preview, Power and Progressive Dialing
 description: Choose how outbound calls are placed for a campaign, what the customer sees as caller ID, and the compliance rules every call must pass.
 ---
 
-A **dialer profile** decides **how** outbound calls are placed: whether an agent reviews each record before the call (preview), or the system dials for available agents (power and progressive). It also carries the caller ID and the compliance rules. You pick the profile when you [load dialer inventory](load-inventory.md#dialer-loads); the campaign you pick there is what agents sign in to.
+A **dialer profile** decides **how** outbound calls are placed: whether an agent reviews each record before the call (preview), or the system dials for available agents (power and progressive). It also carries the caller ID and the compliance rules. You pick the profile when you [load dialer activities](load-inventory.md#dialer-loads); the campaign you pick there is what agents sign in to.
 
 | | |
 | --- | --- |
@@ -91,5 +91,5 @@ Queue callbacks use a built-in preview profile that skips the do-not-call and ca
 
 ## Next steps
 
-- [Load dialer inventory](load-inventory.md#dialer-loads) with this profile and a campaign.
+- [Load dialer activities](load-inventory.md#dialer-loads) with this profile and a campaign.
 - Give agents the campaign on their [entitlements](skills-and-entitlements.md), then have them [sign in to it](agent-workspace.md).

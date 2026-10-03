@@ -27,9 +27,9 @@ The split exists so that a headless consumer of the activity model, such as the 
 
 The `CrestApps.OrchardCore.Omnichannel.Managements` module is a lightweight **Customer Relationship Management (CRM)** experience built on Orchard Core.
 
-It provides the admin tools you need to manage **contacts**, define **subject-level flows**, group work under **campaigns**, and run activity-driven processes (manual or automated) across channels. Inventory loads offer the **Phone** and **SMS** channels.
+It provides the admin tools you need to manage **contacts**, define **subject-level flows**, group work under **campaigns**, and run activity-driven processes (manual or automated) across channels. Activity loads offer the **Phone** and **SMS** channels.
 
-For step-by-step task guides with screencasts, see the user manual: [Contacts](../user-manual/contacts.md), [Subjects](../user-manual/subjects.md), [Dispositions](../user-manual/dispositions.md), [Subject flows](../user-manual/subject-flows.md), [Campaigns](../user-manual/campaigns.md), [Channel endpoints](../user-manual/channel-endpoints.md), [Cadences](../user-manual/cadences.md), [Load inventory](../user-manual/load-inventory.md), [Automated AI](../user-manual/automated-ai.md), [Activities](../user-manual/activities.md), and [Bulk activities](../user-manual/bulk-activities.md).
+For step-by-step task guides with screencasts, see the user manual: [Contacts](../user-manual/contacts.md), [Subjects](../user-manual/subjects.md), [Dispositions](../user-manual/dispositions.md), [Subject flows](../user-manual/subject-flows.md), [Campaigns](../user-manual/campaigns.md), [Channel endpoints](../user-manual/channel-endpoints.md), [Cadences](../user-manual/cadences.md), [Load activities](../user-manual/load-inventory.md), [Automated AI](../user-manual/automated-ai.md), [Activities](../user-manual/activities.md), and [Bulk activities](../user-manual/bulk-activities.md).
 
 ## Core concepts
 
@@ -85,7 +85,7 @@ Dispositions are a key building block for controlling what happens next via subj
 ### Campaign
 A **Campaign** is used for **reporting, grouping, and business outcome tracking**.
 
-Campaigns do not define the interaction type, channel, channel endpoint, or disposition-driven flow logic. Those settings live on the subject flow and the inventory load, so different subjects inside the same campaign can behave differently. Campaigns cannot be deleted once created.
+Campaigns do not define the interaction type, channel, channel endpoint, or disposition-driven flow logic. Those settings live on the subject flow and the activity load, so different subjects inside the same campaign can behave differently. Campaigns cannot be deleted once created.
 
 ### Subject Flow
 A **Subject Flow** defines how a content type with `OmnichannelSubjectPart` behaves. The stable configuration of a subject lives in the **content-type part settings** of `OmnichannelSubjectPart`, edited from the standard Orchard Core content type editor (the same place you attach the part), following the pattern used by parts such as `TitlePart`. There is no separate configure screen; volatile per-run values (campaign, channel, channel endpoint, and interaction type) are chosen when an activity batch is loaded.
@@ -117,7 +117,7 @@ The editor progressively discloses these fields so only the relevant ones are vi
 
 | Subject configuration | AI settings shown |
 |-----------------------|-------------------|
-| Outbound | The **AI configuration** card is hidden, because outbound AI configuration is part of the inventory-load process and is controlled by the **Automatic** source rather than the subject. The **Live agent handoff** card is shown. |
+| Outbound | The **AI configuration** card is hidden, because outbound AI configuration is part of the activity-load process and is controlled by the **Automatic** source rather than the subject. The **Live agent handoff** card is shown. |
 | Inbound + Manual | None — both the AI configuration card and the Live agent handoff card are hidden because an inbound manual subject is always handled by an agent |
 | Inbound + Automated + Phone | AI profile, subject goal, AI permissions, voice call automation, and the Live agent handoff card |
 | Inbound + Automated + SMS | AI profile, subject goal, AI permissions, SMS automation, and the Live agent handoff card |
@@ -126,7 +126,7 @@ The **AI configuration** card's visibility is applied when the editor loads and 
 
 The **Live agent handoff** card holds **Allow the AI to hand off to a live agent**, the **Handoff queue** that receives escalated conversations (handoff only happens when it is set), and the **Escalate when** conditions: **The customer asks for a human**, **The customer is a qualified, ready lead**, and **The customer is frustrated or the AI cannot help**. Select at least one condition, or handoff is never triggered.
 
-Activity batches carry only the AI profile per run for outbound automated work loaded through the **Automatic** source; the profile selector appears in the **Inventory load settings** card directly under the campaign. Speech-to-text, text-to-speech, and voice fall back to the subject flow and then the global AI site settings.
+Activity batches carry only the AI profile per run for outbound automated work loaded through the **Automatic** source; the profile selector appears in the **Activity load settings** card directly under the campaign. Speech-to-text, text-to-speech, and voice fall back to the subject flow and then the global AI site settings.
 
 ### Subject Action
 A **Subject Action** links a disposition to an action type and defines what happens when an activity is completed with that disposition for a given subject type.
@@ -190,30 +190,30 @@ Sometimes an inbound caller is not in the system yet. The screencast below shows
   <source src="/img/docs/um-inbound-new-contact.mp4" type="video/mp4" />
 </video>
 
-### Load Inventory
-A **Load Inventory** definition stores filters to find contacts and then **loads activities in the background**.
+### Load Activities
+A **Load Activities** definition stores filters to find contacts and then **loads activities in the background**.
 
-The loader runs as a background process to avoid overloading the system and to allow loading large inventory sets safely.
+The loader runs as a background process to avoid overloading the system and to allow large loads to run safely.
 
-The **Load Inventory** list is ordered by creation date with the newest inventory loads first, so a load you just created appears at the top. The list is paged and supports the standard admin bulk-selection controls (the header checkbox selects every row on the page).
+The **Load Activities** list is ordered by creation date with the newest activity loads first, so a load you just created appears at the top. The list is paged and supports the standard admin bulk-selection controls (the header checkbox selects every row on the page).
 
-Dialer profile selection is an optional integration supplied through the Omnichannel-owned `IActivityDialerContributor` contract. Omnichannel Management remains independently activatable when Contact Center Outbound Dialer is disabled; in that configuration, dialer profile choices are unavailable and non-dialer inventory management continues to work normally.
+Dialer profile selection is an optional integration supplied through the Omnichannel-owned `IActivityDialerContributor` contract. Omnichannel Management remains independently activatable when Contact Center Outbound Dialer is disabled; in that configuration, dialer profile choices are unavailable and non-dialer activity loading continues to work normally.
 
 #### Loading Automated SMS Activities with an AI Profile
 
-When you choose the **Automatic** source for an inventory load, the batch can dispatch work through a channel processor (such as SMS) and drive each conversation with an AI profile. The **AI profile** selector on the inventory-load form lists only **Chat** profiles that have **Start the conversation automatically** enabled, because the opening message is what starts the automated conversation.
+When you choose the **Automatic** source for an activity load, the batch can dispatch work through a channel processor (such as SMS) and drive each conversation with an AI profile. The **AI profile** selector on the activity-load form lists only **Chat** profiles that have **Start the conversation automatically** enabled, because the opening message is what starts the automated conversation.
 
 To load automated SMS activities:
 
 1. Enable the **SMS Omnichannel Automation** feature so the SMS channel processor is available.
 2. Create an **AI profile** (type **Chat**) with **Start the conversation automatically** enabled and an opening message written for your outreach. The **Text messaging** starting points in the **New AI Profile** picker create one ready to adjust; see [Text messaging and phone call starting points](../ai/profile-templates.md#text-messaging-and-phone-call-starting-points).
 3. In **Interaction Center > Management > Omnichannel Addresses**, add the number you send from with **Text messages (SMS)** ticked.
-4. In **Load Inventory**, click **Add Inventory Load → Automatic**, then select the subject, the AI profile, the **SMS** channel, the SMS channel endpoint, and the contact type.
+4. In **Load Activities**, click **Add Activity Load → Automatic**, then select the subject, the AI profile, the **SMS** channel, the address to send from, and the contact type.
 5. Save the load, then open its **Actions → Load batch** menu to generate the activities in the background.
 
-The screencast below creates an automatic SMS inventory load for the *New Customer - Welcome* subject powered by the *SMS Outreach Assistant* profile, then loads the batch to generate the automated activities.
+The screencast below creates an automatic SMS activity load for the *New Customer - Welcome* subject powered by the *SMS Outreach Assistant* profile, then loads the batch to generate the automated activities.
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating an automatic SMS inventory load driven by an AI profile and loading it to generate automated activities">
+<video controls preload="metadata" width="100%" aria-label="Screencast of creating an automatic SMS activity load driven by an AI profile and loading it to generate automated activities">
   <source src="/img/docs/omni-load-automated-sms.mp4" type="video/mp4" />
 </video>
 
@@ -354,7 +354,7 @@ Subject flow configuration lives on the `OmnichannelSubjectPart` content-type pa
 1. Go to `Interaction Center` → `Management` → `Subject Flows` and review the content types that attach `OmnichannelSubjectPart`. Each subject shows a badge for its configured direction (**Outbound** or **Inbound**). Automated subjects additionally show an **Automated** badge and the channel being used.
 2. To change the configuration, click **Edit Content Type** (shown when you have permission to edit content type definitions). This opens the Orchard Core content type editor for the subject. Alternatively, click **Edit Settings** to jump straight to the `OmnichannelSubjectPart` settings editor. On that part settings screen the Azure AI Search and Elasticsearch index settings that Orchard Core injects into every part editor are hidden, because indexing for omnichannel subjects is managed automatically.
 3. In the `OmnichannelSubjectPart` settings, select the direction. New subjects default to **Outbound**.
-4. For **Inbound** subjects, select the interaction type and channel; automated inbound subjects also require a channel endpoint. For **Outbound** subjects these fields are hidden because they are resolved when inventory is loaded.
+4. For **Inbound** subjects, select the interaction type and channel; automated inbound subjects also require a channel endpoint. For **Outbound** subjects these fields are hidden because they are resolved when activities are loaded.
 5. Optionally set the default campaign, which is applied to activities created outside an activity batch and used as the batch fallback. Leave **Require a disposition** enabled unless the subject is a fire-and-forget notification with no outcome to record.
 6. If the AI feature is enabled, the AI settings editor exposes the AI profile, subject goal, update permissions, speech-to-text deployment, text-to-speech deployment, voice, no-response timeout, response delay, and opt-out keyword fields. Only the fields that apply to the selected direction, interaction type, and channel are shown. Leaving a speech selection empty uses the global AI site setting when the automated conversation starts.
 7. Save the content type.
@@ -387,41 +387,41 @@ The screencast below walks through a complete lead-generation flow. It assigns t
   <source src="/img/docs/omni-subject-flow.mp4" type="video/mp4" />
 </video>
 
-### 8) Create and Load Inventory
+### 8) Create and Load Activities
 
-1. Go to `Interaction Center` → `Management` → `Load Inventory`.
-2. Click **Add Inventory Load** and choose a source:
+1. Go to `Interaction Center` → `Management` → `Load Activities`.
+2. Click **Add Activity Load** and choose a source:
    - **Manual** loads activities assigned to the selected users.
    - **Automatic** loads unassigned activities so the background AI automation processes them.
-   - **Dialer** loads unassigned activities for outbound dialing and requires a dialer profile when the inventory load is created.
-3. Create the inventory load:
+   - **Dialer** loads unassigned activities for outbound dialing and requires a dialer profile when the activity load is created.
+3. Create the activity load:
    - Select contact type
    - Select subject type
    - Select the campaign to use for the loaded activities. The subject's part settings provide the defaults when a value is not chosen.
    - For **Automatic** loads, optionally select the AI profile just under the campaign. Leaving it empty uses the subject flow profile. The channel endpoint, the reply delay, and the **Re-engagement** cadence are also shown only for the automatic source, and **Business hours** appears there when at least one business-hours calendar exists (see [Cadences](cadences)).
    - Select the channel to use for the loaded activities (**Phone** or **SMS**). The channel is hidden for the dialer source because dialer loads always use the phone channel.
-   - For **Dialer** inventory loads, select the required dialer profile. The profile supplies the dialing mode and pacing settings; it does not choose the campaign, which always comes from this load.
+   - For **Dialer** activity loads, select the required dialer profile. The profile supplies the dialing mode and pacing settings; it does not choose the campaign, which always comes from this load.
    - Assign users when the selected source requires assignment.
    - Optionally set the created range, phone number, time zone and last activity filters, and, for a lead type, the lead filters
 4. Click **Save**. The load does not start on save: open its **Actions** menu and choose **Load batch** to generate the activities in the background.
 
 A Manual load starts only when you run **Actions > Load batch**; it then creates and assigns the activities in the background like every other source.
 
-The screencast below creates a **Manual** inventory load for the *Test Drive Follow-up* subject on the phone channel, shares the activities between two agents, targets the `Customer` contact type, loads the batch, and then finds the new activities on **Manage Activities**.
+The screencast below creates a **Manual** activity load for the *Test Drive Follow-up* subject on the phone channel, shares the activities between two agents, targets the `Customer` contact type, loads the batch, and then finds the new activities on **Manage Activities**.
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating a manual inventory load for two agents, loading it, and finding the new activities on Manage Activities">
+<video controls preload="metadata" width="100%" aria-label="Screencast of creating a manual activity load for two agents, loading it, and finding the new activities on Manage Activities">
   <source src="/img/docs/um-load-manual.mp4" type="video/mp4" />
 </video>
 
-The inventory load runs in the background and loads activities incrementally. Each created activity resolves its campaign, channel, channel endpoint, and interaction type from the batch selections, falling back to the subject's part settings. The interaction type is derived from the source: the **Automatic** source creates **Automated** activities, while other sources create **Manual** activities. Manual inventory loads assign each created activity to a selected user. Dialer inventory loads use the phone channel, leave activities unassigned with assignment status `Available`, and apply the selected dialer profile so the created activities inherit the profile's dialing mode before dialers reserve them later. The campaign on a dialer-loaded activity comes from the load, falling back to the subject flow's default campaign; the dialer profile never sets it.
+The activity load runs in the background and loads activities incrementally. Each created activity resolves its campaign, channel, channel endpoint, and interaction type from the batch selections, falling back to the subject's part settings. The interaction type is derived from the source: the **Automatic** source creates **Automated** activities, while other sources create **Manual** activities. Manual activity loads assign each created activity to a selected user. Dialer activity loads use the phone channel, leave activities unassigned with assignment status `Available`, and apply the selected dialer profile so the created activities inherit the profile's dialing mode before dialers reserve them later. The campaign on a dialer-loaded activity comes from the load, falling back to the subject flow's default campaign; the dialer profile never sets it.
 
 When an automated AI conversation completes, the activity stores the AI session identifier, appends the generated call summary as disposition notes, and applies the AI-selected disposition through the same subject-action lifecycle used by agents. Authorized administrators can open **Review AI conversation** from the activity actions to inspect the full transcript.
 
 An automated voice call whose live (speech-to-speech) session is lost partway through is not concluded as the model reads the cut-off transcript. The platform first opens a new session that is given the conversation so far, up to two times. When that does not work, the caller is handed to a live agent if the subject allows handoff. Otherwise the caller hears a short apology and the call ends. The activity then takes the disposition the subject's **Try again** action is wired to, so the contact is called again, and its notes say the conversation was cut short. A subject with no **Try again** action keeps the reviewed disposition. The activity's terminal reason is `ai_session_lost`.
 
-### Extending inventory load sources
+### Extending activity load sources
 
-Inventory loading is extensible. Each inventory load has a **source**, and the source controls how it resolves and loads activities. There are two layers of extensibility:
+Activity loading is extensible. Each activity load has a **source**, and the source controls how it resolves and loads activities. There are two layers of extensibility:
 
 1. **Registering a source** — register sources through `ActivityBatchSourceOptions` in a feature `Startup`. Each `ActivityBatchSourceEntry` provides the display name, description, whether the source requires user assignment, and whether it should appear in the creation picker. Display drivers can add source-specific editor sections.
 
@@ -431,7 +431,7 @@ Inventory loading is extensible. Each inventory load has a **source**, and the s
    services.AddScoped<IActivityBatchLoader, MyCustomActivityBatchLoader>();
    ```
 
-When an inventory load is started, the `IActivityBatchLoadCoordinator` transitions it to the loading state, resolves the loader whose `Source` matches the selected source, and delegates to it. Sources **without** a dedicated loader fall back to the built-in `DefaultContactActivityBatchLoader`, which pages over contacts of the inventory load's contact content type, applies the standard lead filters (created range, phone number, time zone, last completed activity), and creates activities from the subject flow settings. The default loader is not sealed, so a custom loader can inherit from it to reuse the contact-paging pipeline while overriding individual stages. If a loader throws, the coordinator logs the error and returns the inventory load to the `New` state so it can be retried.
+When an activity load is started, the `IActivityBatchLoadCoordinator` transitions it to the loading state, resolves the loader whose `Source` matches the selected source, and delegates to it. Sources **without** a dedicated loader fall back to the built-in `DefaultContactActivityBatchLoader`, which pages over contacts of the activity load's contact content type, applies the standard lead filters (created range, phone number, time zone, last completed activity), and creates activities from the subject flow settings. The default loader is not sealed, so a custom loader can inherit from it to reuse the contact-paging pipeline while overriding individual stages. If a loader throws, the coordinator logs the error and returns the activity load to the `New` state so it can be retried.
 
 ### 9) Complete Activities
 
@@ -464,14 +464,14 @@ The contact content types are read from the cached provider that tracks which ty
 
 ### Phone number search
 
-Phone filters in **Load Inventory**, **Manage Activities**, and Content Admin search the primary **Cell** and **Home** contact methods.
+Phone filters in **Load Activities**, **Manage Activities**, and Content Admin search the primary **Cell** and **Home** contact methods.
 
 - Input that does not begin with `+` is reduced to digits and matched against the national number, so values such as `702499`, `(702) 499`, or `702-499` are accepted.
 - Input whose trimmed value begins with `+` is matched against the E.164 value. The plus sign is a literal format indicator, not a wildcard.
-- **Contains** is the default match mode. **Exact match**, **Begins with**, and **Ends with** are also available in Load Inventory and Manage Activities.
-- In Load Inventory and Content Admin, **Exact match** looks for the number in every shape it may have been stored in. A national entry is also compared with the E.164 value: a ten-digit entry is read as a North American (`+1`) number, and a longer entry as one that already carries its country code, so `5555550123`, `15555550123` and `+15555550123` find the same contact. A number imported without a country, whose E.164 value is empty, is found by its stored digits with or without the leading `1`. Both screens share one definition of the phone match.
+- **Contains** is the default match mode. **Exact match**, **Begins with**, and **Ends with** are also available in Load Activities and Manage Activities.
+- In Load Activities and Content Admin, **Exact match** looks for the number in every shape it may have been stored in. A national entry is also compared with the E.164 value: a ten-digit entry is read as a North American (`+1`) number, and a longer entry as one that already carries its country code, so `5555550123`, `15555550123` and `+15555550123` find the same contact. A number imported without a country, whose E.164 value is empty, is found by its stored digits with or without the leading `1`. Both screens share one definition of the phone match.
 
-Content Admin evaluates the displayed content version. Load Inventory uses published or latest contact values according to **Only published leads**, while Manage Activities uses the latest saved contact values.
+Content Admin evaluates the displayed content version. Load Activities uses published or latest contact values according to **Only published leads**, while Manage Activities uses the latest saved contact values.
 
 The shared contact index stores primary Cell and Home numbers as national digits for national searches, while the corresponding normalized values remain in E.164 format.
 
@@ -522,8 +522,8 @@ The filter card is collapsible and does not stick to the top of the page, which 
 |--------|------|-------------|
 | Attempts | Select | Filter by the current attempt number. Values `0` and `1` both mean no attempt, and `2` means the second attempt. |
 | Subject type | Select | Filter by subject content type |
-| Channel | Select | Filter by communication channel |
-| Source | Select | Filter by activity source: Manual, Automatic, Dialer, Preview dial, Power dial, Progressive dial, Predictive dial, Callback, Inbound, Workflow, or API |
+| Channel | Select | Filter by the channels registered in `ActivityChannelOptions`: **Phone** and **SMS** |
+| Source | Select | Filter by the activity sources the enabled features register in `ActivitySourceOptions` (see below) |
 | Interaction type | Select | Filter by manual versus automated activities |
 | Status | Select | Filter by active editable statuses |
 | Assignment status | Select | Filter by unassigned, available, reserved, assigned, in-progress, or released work |
@@ -535,6 +535,24 @@ The filter card is collapsible and does not stick to the top of the page, which 
 | Limit | Number | Limit the number of records to retrieve |
 
 The assigned-user filter is displayed on its own row to make multi-user searches easier to manage, and it searches across all users instead of only agent-role users.
+
+#### Source and channel options
+
+The **Source** and **Channel** lists of Manage Activities, the contact activity list, and the Omnichannel and Contact Center report filters are built from two option registries, so they only offer values an activity can actually carry. A feature that writes a source or channel onto activities registers it with `services.Configure<ActivitySourceOptions>(...)` or `services.Configure<ActivityChannelOptions>(...)`.
+
+| Source | Matches the stored values | Registered by |
+| --- | --- | --- |
+| **Manual** | `Manual` | Omnichannel Activities |
+| **Automatic** | `Automatic` | Omnichannel Activities |
+| **Inbound** | `Inbound` | Omnichannel Activities (agent-logged inbound activities; Inbound Voice calls store the same value) |
+| **Dialer** | `Dialer`, `PreviewDial`, and with Paced Dialing also `PowerDial`, `ProgressiveDial`, `PredictiveDial` | Contact Center Outbound Dialer, extended by Contact Center Paced Dialing |
+| **Callback** | `Callback` | Contact Center Outbound Dialer |
+
+One option can match several stored values: a dialer load writes the dialer profile's mode onto each activity, so choosing **Dialer** filters on all of the modes at once. The `Workflow` and `Api` constants remain readable on older activities but are not offered, because nothing creates them. A selected value that is not registered, for example from a saved report filter, stays in the list with its raw value as the label and matches only itself.
+
+Channels: **Phone** and **SMS** are registered by Omnichannel Activities, because subject flows and activity loads offer both whenever activities are enabled. Contact Center report channel filters always offer **Voice** (interactions are only ever voice calls) and add **SMS** only on reports that also count CRM activities.
+
+The **Change Source** bulk action only offers, and the server only accepts, sources registered with `CanBeSetManually` (**Manual** and **Automatic**). Dialer sources are set through **Change Dialer Profile**.
 
 Activity rows display an urgency icon so managers can identify priority visually at a glance.
 
@@ -562,10 +580,10 @@ The page also includes a **Page size** selector so managers can review more than
 | **Set Urgency Level** | Update the urgency level for all selected activities. |
 | **Change Subject** | Change the subject content type for all selected activities. |
 | **Clear Assignment** | Remove the current assignee and clear reservation state so the activity can be re-routed or dialed again. |
-| **Change Source** | Change the activity source and optionally clear assignment and reservation state. This is useful when reclassifying inventory between manual, automatic, and dialer-style workflows. |
+| **Change Source** | Change the activity source to **Manual** or **Automatic** and optionally clear assignment and reservation state. Dialer sources are not offered; use **Change Dialer Profile** for those. |
 | **Change Dialer Profile** | When the Contact Center dialer feature is available, set the activity's dialer source to match a selected dialer profile. The activity keeps its own campaign, is switched to the **Manual** interaction type, and has any AI session cleared. This can also clear assignment and reservation state so the dialer can pick the activity up again. |
 
-Use **Change Source** and **Clear Assignment** together when you need to convert assigned manual work back into dialer-ready inventory. Use **Change Dialer Profile** when you want selected outbound inventory dialed in a different mode without recreating the activities.
+Use **Change Dialer Profile** with the clear-assignment option to convert assigned manual work back into dialer-ready activities, or to have selected outbound activities dialed in a different mode without recreating them.
 
 ## Reports
 

@@ -168,6 +168,85 @@ public sealed class BulkManageActivityFilterHandlerSqlTests
     }
 
     [Fact]
+    public async Task FilteringAsync_WhenASourceStandsForSeveralStoredValues_BindsEachOneInAnInList()
+    {
+        // Arrange
+        // The Dialer option stands for every dialer mode, because a dialer load stores the profile's mode on each
+        // activity. Matching only the option's own value found none of them.
+        const string Injection = "'; DROP TABLE \"Document\"; --";
+        var filter = new BulkManageActivityFilter
+        {
+            Source = ActivitySources.Dialer,
+            SourceValues = [ActivitySources.Dialer, ActivitySources.PreviewDial, $"PowerDial{Injection}"],
+        };
+        var context = CreateContext(filter, new SqliteDialect());
+        var handler = new BulkManageActivityFilterHandler();
+
+        // Act
+        await handler.FilteringAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        var sql = context.SqlBuilder.ToSqlString();
+
+        Assert.Contains("IN (@Source0, @Source1, @Source2)", sql, StringComparison.Ordinal);
+        Assert.DoesNotContain("@Source)", sql, StringComparison.Ordinal);
+        Assert.DoesNotContain(Injection, sql, StringComparison.Ordinal);
+        Assert.Equal(ActivitySources.Dialer, context.Parameters["@Source0"]);
+        Assert.Equal(ActivitySources.PreviewDial, context.Parameters["@Source1"]);
+        Assert.Equal($"PowerDial{Injection}", context.Parameters["@Source2"]);
+    }
+
+    [Fact]
+    public async Task PageBulkManageableAsync_WhenTheDialerSourceIsChosen_ReturnsEveryDialerModeAndNothingElse()
+    {
+        // Arrange
+        var databasePath = DatabasePath("dialer-source");
+        var connectionString = $"Data Source={databasePath};Pooling=False";
+        var store = await CreateStoreAsync(connectionString);
+
+        try
+        {
+            var dialerItemIds = new List<string>();
+
+            await using (var seedSession = store.CreateSession())
+            {
+                dialerItemIds.Add(await SaveActivityAsync(seedSession, IdGenerator.GenerateId(), ActivitySources.PreviewDial));
+                dialerItemIds.Add(await SaveActivityAsync(seedSession, IdGenerator.GenerateId(), ActivitySources.ProgressiveDial));
+                dialerItemIds.Add(await SaveActivityAsync(seedSession, IdGenerator.GenerateId(), ActivitySources.Dialer));
+                await SaveActivityAsync(seedSession, IdGenerator.GenerateId(), ActivitySources.Manual);
+                await SaveActivityAsync(seedSession, IdGenerator.GenerateId(), ActivitySources.Callback);
+                await seedSession.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            await using var querySession = store.CreateSession();
+            var activityStore = CreateActivityStore(querySession, store, connectionString);
+            var sourceOptions = new ActivitySourceOptions();
+            sourceOptions.AddSource(ActivitySources.Dialer, entry => entry.Matches(ActivitySources.PreviewDial, ActivitySources.PowerDial, ActivitySources.ProgressiveDial));
+
+            // Act
+            var result = await activityStore.PageBulkManageableAsync(
+                1,
+                10,
+                new BulkManageActivityFilter
+                {
+                    Source = ActivitySources.Dialer,
+                    SourceValues = sourceOptions.GetStoredValues(ActivitySources.Dialer),
+                },
+                TestContext.Current.CancellationToken);
+
+            // Assert
+            Assert.Equal(3, result.Count);
+            Assert.Equal(
+                dialerItemIds.Order(StringComparer.Ordinal),
+                result.Entries.Select(activity => activity.ItemId).Order(StringComparer.Ordinal));
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
+    [Fact]
     public async Task FilteringAsync_WhenDateRangesAreChosen_BindsEveryBoundAsAParameter()
     {
         // Arrange
@@ -801,7 +880,10 @@ public sealed class BulkManageActivityFilterHandlerSqlTests
         return itemId;
     }
 
-    private static async Task<string> SaveActivityAsync(ISession session, string contactContentItemId)
+    private static Task<string> SaveActivityAsync(ISession session, string contactContentItemId)
+        => SaveActivityAsync(session, contactContentItemId, ActivitySources.Manual);
+
+    private static async Task<string> SaveActivityAsync(ISession session, string contactContentItemId, string source)
     {
         var itemId = IdGenerator.GenerateId();
 
@@ -809,6 +891,7 @@ public sealed class BulkManageActivityFilterHandlerSqlTests
             new OmnichannelActivity
             {
                 ItemId = itemId,
+                Source = source,
                 Channel = OmnichannelConstants.Channels.Phone,
                 ChannelEndpointId = "endpoint",
                 ContactContentItemId = contactContentItemId,

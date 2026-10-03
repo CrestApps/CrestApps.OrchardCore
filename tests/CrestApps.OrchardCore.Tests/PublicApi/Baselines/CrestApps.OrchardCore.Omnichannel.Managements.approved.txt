@@ -242,7 +242,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/manage-activities", "ManageOmnichannelActivities")]
         [OrchardCore.Routing.FormValueRequired("submit.BulkAction")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> ManageActivitiesBulkActionPost(CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.BulkManageActivitiesViewModel viewModel, OrchardCore.Navigation.PagerParameters pagerParameters, [Microsoft.AspNetCore.Mvc.FromServices] OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Omnichannel.Core.Models.BulkManageActivityFilter> filterDisplayManager) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> ManageActivitiesBulkActionPost(CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.BulkManageActivitiesViewModel viewModel, OrchardCore.Navigation.PagerParameters pagerParameters, [Microsoft.AspNetCore.Mvc.FromServices] OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Omnichannel.Core.Models.BulkManageActivityFilter> filterDisplayManager, [Microsoft.AspNetCore.Mvc.FromServices] Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivitySourceOptions> activitySourceOptions) { }
         [Microsoft.AspNetCore.Mvc.ActionName("ManageActivities")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/manage-activities", "ManageOmnichannelActivities")]
@@ -603,7 +603,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers
     public sealed class OmnichannelReportFilterDisplayDriver : OrchardCore.DisplayManagement.Handlers.DisplayDriver<CrestApps.OrchardCore.Reports.Models.ReportFilter>
     {
         public const string FilterName = "OmnichannelActivity";
-        public OmnichannelReportFilterDisplayDriver(CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaignManager, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaignGroup> campaignGroupManager, CrestApps.OrchardCore.Reports.Services.IReportManager reportManager, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Drivers.OmnichannelReportFilterDisplayDriver> stringLocalizer) { }
+        public OmnichannelReportFilterDisplayDriver(CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaignManager, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaignGroup> campaignGroupManager, CrestApps.OrchardCore.Reports.Services.IReportManager reportManager, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivitySourceOptions> activitySourceOptions, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityChannelOptions> activityChannelOptions, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Drivers.OmnichannelReportFilterDisplayDriver> stringLocalizer) { }
         public override OrchardCore.DisplayManagement.Views.IDisplayResult Edit(CrestApps.OrchardCore.Reports.Models.ReportFilter filter, OrchardCore.DisplayManagement.Handlers.BuildEditorContext context) { }
         public override System.Threading.Tasks.Task<OrchardCore.DisplayManagement.Views.IDisplayResult> UpdateAsync(CrestApps.OrchardCore.Reports.Models.ReportFilter filter, OrchardCore.DisplayManagement.Handlers.UpdateEditorContext context) { }
     }
@@ -814,7 +814,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports
 {
     public sealed class ActivitySummaryReportProvider : CrestApps.OrchardCore.Omnichannel.Managements.Reports.OmnichannelReportBase
     {
-        public ActivitySummaryReportProvider(YesSql.ISession session, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaignManager, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Reports.ActivitySummaryReportProvider> stringLocalizer) { }
+        public ActivitySummaryReportProvider(YesSql.ISession session, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaignManager, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivitySourceOptions> activitySourceOptions, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Reports.ActivitySummaryReportProvider> stringLocalizer) { }
         public override string Category { get; }
         public override Microsoft.Extensions.Localization.LocalizedString Description { get; }
         public override Microsoft.Extensions.Localization.LocalizedString DisplayName { get; }
@@ -823,7 +823,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports
     }
     public sealed class CampaignPerformanceReportProvider : CrestApps.OrchardCore.Omnichannel.Managements.Reports.OmnichannelReportBase
     {
-        public CampaignPerformanceReportProvider(YesSql.ISession session, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaignManager, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaignGroup> campaignGroupManager, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Reports.CampaignPerformanceReportProvider> stringLocalizer) { }
+        public CampaignPerformanceReportProvider(YesSql.ISession session, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaignManager, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaignGroup> campaignGroupManager, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivitySourceOptions> activitySourceOptions, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Reports.CampaignPerformanceReportProvider> stringLocalizer) { }
         public override Microsoft.Extensions.Localization.LocalizedString Description { get; }
         public override Microsoft.Extensions.Localization.LocalizedString DisplayName { get; }
         public override string Name { get; }
@@ -831,7 +831,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports
     }
     public sealed class DispositionBreakdownReportProvider : CrestApps.OrchardCore.Omnichannel.Managements.Reports.OmnichannelReportBase
     {
-        public DispositionBreakdownReportProvider(YesSql.ISession session, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaignManager, CrestApps.Core.Services.INamedCatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> dispositionManager, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Reports.DispositionBreakdownReportProvider> stringLocalizer) { }
+        public DispositionBreakdownReportProvider(YesSql.ISession session, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaignManager, CrestApps.Core.Services.INamedCatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> dispositionManager, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivitySourceOptions> activitySourceOptions, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Reports.DispositionBreakdownReportProvider> stringLocalizer) { }
         public override string Category { get; }
         public override Microsoft.Extensions.Localization.LocalizedString Description { get; }
         public override Microsoft.Extensions.Localization.LocalizedString DisplayName { get; }
@@ -925,7 +925,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
     }
     public sealed class BulkActivityAdminFormOptionsProvider
     {
-        public BulkActivityAdminFormOptionsProvider(CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaignManager, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Services.IActivityDialerContributor> dialerContributors, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Services.BulkActivityAdminFormOptionsProvider> stringLocalizer) { }
+        public BulkActivityAdminFormOptionsProvider(CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaignManager, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Services.IActivityDialerContributor> dialerContributors, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivitySourceOptions> activitySourceOptions, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityChannelOptions> activityChannelOptions, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Services.BulkActivityAdminFormOptionsProvider> stringLocalizer) { }
     }
     public sealed class DefaultActivityBatchLoadCoordinator : CrestApps.OrchardCore.Omnichannel.Managements.Services.IActivityBatchLoadCoordinator
     {

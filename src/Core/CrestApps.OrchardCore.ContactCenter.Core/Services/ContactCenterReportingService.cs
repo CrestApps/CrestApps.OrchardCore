@@ -15,7 +15,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// Provides the default implementation of <see cref="IContactCenterReportingService"/> by aggregating the
 /// interaction history and the CRM activity inventory over a reporting period.
 /// </summary>
-public sealed class ContactCenterReportingService : IContactCenterReportingService
+public sealed partial class ContactCenterReportingService : IContactCenterReportingService
 {
     private readonly ISession _session;
     private readonly IActivityQueueGroupManager _queueGroupManager;
@@ -25,6 +25,7 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
     private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
     private readonly ICatalogManager<OmnichannelCampaignGroup> _campaignGroupManager;
     private readonly IInteractionEventStore _eventStore;
+    private readonly ActivitySourceOptions _activitySourceOptions;
     private readonly TimeSpan _maximumReportRange;
 
     /// <summary>
@@ -39,6 +40,7 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
     /// <param name="campaignGroupManager">The campaign group manager used to aggregate campaign reports.</param>
     /// <param name="reportingOptions">The reporting options that bound the requested range.</param>
     /// <param name="eventStore">The event log whose abandons and voicemails decide each interaction's outcome.</param>
+    /// <param name="activitySourceOptions">The activity sources whose stored values a source filter matches.</param>
     public ContactCenterReportingService(
         ISession session,
         IActivityQueueGroupManager queueGroupManager,
@@ -48,8 +50,10 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
         ICatalogManager<OmnichannelCampaign> campaignManager,
         ICatalogManager<OmnichannelCampaignGroup> campaignGroupManager,
         IOptions<ContactCenterReportingOptions> reportingOptions,
-        IInteractionEventStore eventStore)
+        IInteractionEventStore eventStore,
+        IOptions<ActivitySourceOptions> activitySourceOptions)
     {
+        _activitySourceOptions = activitySourceOptions.Value;
         _session = session;
         _queueGroupManager = queueGroupManager;
         _queueManager = queueManager;
@@ -200,6 +204,7 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
         }
 
         ApplyCurrentCampaignGroupCriteria(criteria, campaigns);
+        ApplyActivitySourceCriteria(criteria, _activitySourceOptions);
 
         return BuildCampaignSummary(
             fromUtc,
@@ -232,6 +237,7 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
             : await _campaignManager.GetAllAsync(cancellationToken);
 
         ApplyCurrentCampaignGroupCriteria(criteria, campaigns);
+        ApplyActivitySourceCriteria(criteria, _activitySourceOptions);
 
         return BuildSubjectInventory(fromUtc, toUtc, FilterActivities(activities, criteria));
     }
@@ -261,26 +267,6 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
     }
 
     /// <summary>
-    /// Resolves a selected queue group to queue identifiers using the queues' current catalog membership.
-    /// </summary>
-    /// <param name="criteria">The optional report criteria to update.</param>
-    /// <param name="queues">The current queue catalog.</param>
-    public static void ApplyCurrentQueueGroupCriteria(
-        ContactCenterReportCriteria criteria,
-        IReadOnlyList<ActivityQueue> queues)
-    {
-        if (string.IsNullOrEmpty(criteria?.QueueGroupId))
-        {
-            return;
-        }
-
-        criteria.QueueIds = queues
-            .Where(queue => string.Equals(queue.QueueGroupId, criteria.QueueGroupId, StringComparison.Ordinal))
-            .Select(queue => queue.ItemId)
-            .ToHashSet(StringComparer.Ordinal);
-    }
-
-    /// <summary>
     /// Applies the supplied report criteria to a CRM activity population.
     /// </summary>
     /// <param name="activities">The activity indexes to filter.</param>
@@ -307,25 +293,12 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
         return activities
             .Where(activity => string.IsNullOrEmpty(criteria.CampaignId) || activity.CampaignId == criteria.CampaignId)
             .Where(activity => criteria.CampaignIds is null || criteria.CampaignIds.Contains(activity.CampaignId ?? string.Empty))
-            .Where(activity => string.IsNullOrEmpty(criteria.ActivitySource) || activity.Source == criteria.ActivitySource)
+            .Where(activity => criteria.ActivitySources is not null
+                ? criteria.ActivitySources.Contains(activity.Source ?? string.Empty)
+                : string.IsNullOrEmpty(criteria.ActivitySource) || activity.Source == criteria.ActivitySource)
             .Where(activity => string.IsNullOrEmpty(channel) || string.Equals(activity.Channel, channel, StringComparison.OrdinalIgnoreCase))
             .Where(activity => !criteria.ActivityStatus.HasValue || activity.Status == criteria.ActivityStatus.Value)
             .ToArray();
-    }
-
-    internal static void ApplyCurrentCampaignGroupCriteria(
-        ContactCenterReportCriteria criteria,
-        IEnumerable<OmnichannelCampaign> campaigns)
-    {
-        if (string.IsNullOrEmpty(criteria?.CampaignGroupId))
-        {
-            return;
-        }
-
-        criteria.CampaignIds = campaigns
-            .Where(campaign => campaign.CampaignGroupId == criteria.CampaignGroupId)
-            .Select(campaign => campaign.ItemId)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
     private static IReadOnlyList<ActivityQueue> FilterQueues(
@@ -647,6 +620,8 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
             .Where(agent => !string.IsNullOrEmpty(agent.UserId))
             .Select(agent => agent.UserId)
             .ToHashSet(StringComparer.Ordinal);
+
+        ApplyActivitySourceCriteria(criteria, _activitySourceOptions);
 
         foreach (var activity in FilterActivities(completed.ToArray(), criteria))
         {

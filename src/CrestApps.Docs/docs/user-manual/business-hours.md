@@ -10,7 +10,7 @@ A **business hours calendar** says when you are open. The same calendar can be u
 - a **queue**, to hold or overflow callers while closed;
 - an **inbound entry point**, to pick the closed action (voicemail, overflow, reject);
 - a **dialer profile**, as the outbound calling window, checked in the contact's time zone;
-- an **automatic inventory load**, so AI follow-up messages are only sent while open.
+- an **automatic activity load**, so AI follow-up messages are only sent while open.
 
 | | |
 | --- | --- |

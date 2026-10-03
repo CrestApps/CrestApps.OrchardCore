@@ -195,7 +195,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
 
                 await _catalog.UpdateAsync(batch, cancellationToken);
 
-                _logger.LogWarning("The dialer batch with ID '{BatchId}' was not loaded because it has no campaign and its subject '{SubjectContentType}' has no default campaign, so its activities could not be queued for dialing. Choose a campaign on the inventory load or set a default campaign on the subject.", batch.ItemId, batch.SubjectContentType);
+                _logger.LogWarning("The dialer batch with ID '{BatchId}' was not loaded because it has no campaign and its subject '{SubjectContentType}' has no default campaign, so its activities could not be queued for dialing. Choose a campaign on the activity load or set a default campaign on the subject.", batch.ItemId, batch.SubjectContentType);
                 return;
             }
         }

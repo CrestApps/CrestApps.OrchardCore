@@ -46,7 +46,23 @@ public sealed class BulkManageActivityFilterHandler : IBulkManageActivityFilterH
             builder.WhereAnd($"{col} = @Channel");
         }
 
-        if (!string.IsNullOrEmpty(filter.Source))
+        if (filter.SourceValues is { Length: > 0 })
+        {
+            // One filter option can stand for several stored values, such as every dialer mode for the Dialer
+            // source, so the stored values are matched as a set.
+            var col = $"{dialect.QuoteForAliasName(actAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.Source))}";
+            var placeholders = new string[filter.SourceValues.Length];
+
+            for (var i = 0; i < filter.SourceValues.Length; i++)
+            {
+                var paramName = $"@Source{i}";
+                placeholders[i] = paramName;
+                builder.Parameters[paramName] = filter.SourceValues[i];
+            }
+
+            builder.WhereAnd($"{col} IN ({string.Join(", ", placeholders)})");
+        }
+        else if (!string.IsNullOrEmpty(filter.Source))
         {
             var col = $"{dialect.QuoteForAliasName(actAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.Source))}";
             builder.Parameters["@Source"] = filter.Source;

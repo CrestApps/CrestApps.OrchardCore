@@ -113,13 +113,7 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
                 new(S["Very high"], nameof(ActivityUrgencyLevel.VeryHigh)),
             ];
 
-            model.Channels =
-            [
-                new(S["Any channel"], ""),
-                new(S["Phone"], OmnichannelConstants.Channels.Phone),
-                new(S["SMS"], OmnichannelConstants.Channels.Sms),
-                new(S["Email"], OmnichannelConstants.Channels.Email),
-            ];
+            model.Channels = _optionsProvider.GetChannelOptions(filter.Channel, "Any channel");
 
             model.AttemptFilters =
             [
@@ -204,6 +198,7 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
         filter.SubjectContentType = model.SubjectContentType;
         filter.Channel = model.Channel;
         filter.Source = model.Source;
+        filter.SourceValues = _optionsProvider.GetStoredSourceValues(model.Source);
         filter.AttemptFilter = model.AttemptFilter;
         filter.CampaignId = model.CampaignId;
         filter.AssignedToUserIds = model.AssignedToUserIds;

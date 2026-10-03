@@ -31,6 +31,6 @@ The number of steps is the most follow-ups a customer will ever get. After the l
 
 ## Use a cadence
 
-On an **Automatic** [inventory load](automated-ai.md#ai-options-on-an-automatic-load), pick the cadence under **Re-engagement**. With *No follow-up cadence*, nobody is followed up. Pick a **Business hours** calendar on the same load to send follow-ups only while you are open, in the customer's time zone.
+On an **Automatic** [activity load](automated-ai.md#ai-options-on-an-automatic-load), pick the cadence under **Re-engagement**. With *No follow-up cadence*, nobody is followed up. Pick a **Business hours** calendar on the same load to send follow-ups only while you are open, in the customer's time zone.
 
 The cadence is copied onto each activity when the load runs, so later edits do not change conversations already in progress. A customer who replies, or texts STOP, is never nudged.

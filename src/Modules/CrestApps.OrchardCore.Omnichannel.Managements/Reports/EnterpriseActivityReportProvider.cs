@@ -22,6 +22,7 @@ internal sealed class EnterpriseActivityReportProvider : IReport
 {
     private readonly ISession _session;
     private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
+    private readonly ActivitySourceOptions _activitySourceOptions;
     private readonly ICatalogManager<OmnichannelCampaignGroup> _campaignGroupManager;
     private readonly INamedCatalogManager<OmnichannelDisposition> _dispositionManager;
     private readonly IOmnichannelChannelEndpointStore _addressStore;
@@ -33,12 +34,14 @@ internal sealed class EnterpriseActivityReportProvider : IReport
         ICatalogManager<OmnichannelCampaign> campaignManager,
         ICatalogManager<OmnichannelCampaignGroup> campaignGroupManager,
         INamedCatalogManager<OmnichannelDisposition> dispositionManager,
+        ActivitySourceOptions activitySourceOptions,
         IOmnichannelChannelEndpointStore addressStore,
         EnterpriseActivityReportDefinition definition,
         IStringLocalizer stringLocalizer)
     {
         _session = session;
         _campaignManager = campaignManager;
+        _activitySourceOptions = activitySourceOptions;
         _campaignGroupManager = campaignGroupManager;
         _dispositionManager = dispositionManager;
         _addressStore = addressStore;
@@ -76,7 +79,7 @@ internal sealed class EnterpriseActivityReportProvider : IReport
             .ToArray();
         var filteredActivities = OmnichannelReportQuery.Filter(
             activities,
-            await OmnichannelReportFilter.GetCriteriaAsync(context.Filter, _campaignManager, cancellationToken));
+            await OmnichannelReportFilter.GetCriteriaAsync(context.Filter, _campaignManager, _activitySourceOptions, cancellationToken));
         var campaigns = IsCampaignReport()
             ? await _campaignManager.GetAllAsync(cancellationToken)
             : null;

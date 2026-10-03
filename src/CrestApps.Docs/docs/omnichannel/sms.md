@@ -46,7 +46,7 @@ The Twilio webhook verifies Twilio's `X-Twilio-Signature` header with the auth t
 3. Create a chat AI profile with **Start the conversation automatically** enabled. The profile's opening message is sent as the first outbound SMS message that starts the conversation. The **Qualify leads by text** and **Customer care by text** starting points under **Artificial Intelligence > Profiles > Add Profile** create such a profile with the opening message already filled in. See [Text messaging and phone call starting points](../ai/profile-templates.md#text-messaging-and-phone-call-starting-points).
 4. If the AI feature is enabled, select that initial-prompt chat profile on the subject flow, then configure the subject goal, update permissions, no-response timeout, response delay, and opt-out keywords.
 5. Configure your SMS provider webhook to deliver inbound SMS messages to Orchard Core.
-6. Load activities via **Load Inventory** using the **Automatic** source.
+6. Load activities via **Load Activities** using the **Automatic** source.
 7. The Automated Activities Processor will run in the background and let AI handle the assigned SMS interactions.
 
 ## Automated SMS behavior
@@ -58,7 +58,7 @@ Inbound SMS replies are added to the same AI chat session, the selected profile 
 Use the subject-flow SMS automation settings to control:
 
 - **No-response timeout**: fails an automated SMS activity when the contact stops responding.
-- **Response delay**: the minimum wait before each AI SMS reply; replies are paced naturally on top of it. A reply delay chosen on the inventory load is saved on each activity when it is loaded and takes precedence; the subject flow's value applies only when the load set none.
+- **Response delay**: the minimum wait before each AI SMS reply; replies are paced naturally on top of it. A reply delay chosen on the activity load is saved on each activity when it is loaded and takes precedence; the subject flow's value applies only when the load set none.
 - **Opt-out keywords**: customizes the keywords that stop the SMS conversation and update the contact preference.
 
 ## Handing off to a live agent

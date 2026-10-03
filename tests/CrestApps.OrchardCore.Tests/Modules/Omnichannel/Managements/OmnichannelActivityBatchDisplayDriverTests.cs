@@ -30,7 +30,7 @@ public sealed class OmnichannelActivityBatchDisplayDriverTests
     private const string ContactContentType = "Lead";
     private const string DialerProfileId = "dialer-profile-1";
     private const string CampaignId = "campaign-1";
-    private const string CampaignError = "A campaign is required for dialer inventory loads because the selected subject has no default campaign.";
+    private const string CampaignError = "A campaign is required for dialer activity loads because the selected subject has no default campaign.";
 
     // The bug: a dialer load with no campaign, for a subject with no default campaign, saved cleanly.
     [Fact]
@@ -120,6 +120,8 @@ public sealed class OmnichannelActivityBatchDisplayDriverTests
         var optionsProvider = new BulkActivityAdminFormOptionsProvider(
             Mock.Of<ICatalogManager<OmnichannelCampaign>>(),
             [new StubDialerContributor()],
+            Options.Create(new ActivitySourceOptions()),
+            Options.Create(new ActivityChannelOptions()),
             new PassThroughStringLocalizer<BulkActivityAdminFormOptionsProvider>());
 
         return new OmnichannelActivityBatchDisplayDriver(

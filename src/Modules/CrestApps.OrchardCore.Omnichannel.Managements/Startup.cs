@@ -240,6 +240,7 @@ public sealed class ReportsStartup : StartupBase
             serviceProvider.GetRequiredService<ICatalogManager<OmnichannelCampaign>>(),
             serviceProvider.GetRequiredService<ICatalogManager<OmnichannelCampaignGroup>>(),
             serviceProvider.GetRequiredService<INamedCatalogManager<OmnichannelDisposition>>(),
+            serviceProvider.GetRequiredService<IOptions<ActivitySourceOptions>>().Value,
             serviceProvider.GetRequiredService<IOmnichannelChannelEndpointStore>(),
             definition,
             serviceProvider.GetRequiredService<IStringLocalizer<EnterpriseActivityReportProvider>>()));

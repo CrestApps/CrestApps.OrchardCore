@@ -293,6 +293,51 @@ public sealed class ContactCenterReportingServiceTests
     }
 
     [Fact]
+    public void FilterActivities_WhenTheDialerSourceIsSelected_MatchesEveryDialerModeItStandsFor()
+    {
+        // Arrange
+        // A dialer load stores each activity's dialing mode, never "Dialer", so the campaign and subject reports
+        // found no activities at all when filtered on the Dialer source.
+        var sourceOptions = new ActivitySourceOptions();
+        sourceOptions.AddSource(ActivitySources.Dialer, entry => entry.Matches(ActivitySources.PreviewDial, ActivitySources.PowerDial));
+
+        var preview = ActivityIndex("campaign-1", ActivityStatus.Completed);
+        preview.Source = ActivitySources.PreviewDial;
+        var power = ActivityIndex("campaign-1", ActivityStatus.Completed);
+        power.Source = ActivitySources.PowerDial;
+        var manual = ActivityIndex("campaign-1", ActivityStatus.Completed);
+        manual.Source = ActivitySources.Manual;
+
+        var criteria = new ContactCenterReportCriteria
+        {
+            ActivitySource = ActivitySources.Dialer,
+        };
+
+        // Act
+        ContactCenterReportingService.ApplyActivitySourceCriteria(criteria, sourceOptions);
+        var filtered = ContactCenterReportingService.FilterActivities([preview, power, manual], criteria);
+
+        // Assert
+        Assert.Equal([preview, power], filtered);
+    }
+
+    [Fact]
+    public void ApplyActivitySourceCriteria_WhenNoSourceIsSelected_LeavesTheCriteriaUnfiltered()
+    {
+        // Arrange
+        var sourceOptions = new ActivitySourceOptions();
+        sourceOptions.AddSource(ActivitySources.Manual);
+        var criteria = new ContactCenterReportCriteria();
+
+        // Act
+        ContactCenterReportingService.ApplyActivitySourceCriteria(criteria, sourceOptions);
+        ContactCenterReportingService.ApplyActivitySourceCriteria(null, sourceOptions);
+
+        // Assert
+        Assert.Null(criteria.ActivitySources);
+    }
+
+    [Fact]
     public void BuildAgentProductivity_AggregatesHandledAndCompleted()
     {
         // Arrange

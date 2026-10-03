@@ -339,7 +339,8 @@ public sealed class UnansweredCallOutcomeReportTests
             new Mock<ICatalogManager<OmnichannelCampaign>>().Object,
             new Mock<ICatalogManager<OmnichannelCampaignGroup>>().Object,
             Options.Create(new ContactCenterReportingOptions()),
-            CreateEventStore(session));
+            CreateEventStore(session),
+            Options.Create(new ActivitySourceOptions()));
     }
 
     private static InteractionEventStore CreateEventStore(ISession session)

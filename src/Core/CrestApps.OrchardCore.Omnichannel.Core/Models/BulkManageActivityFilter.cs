@@ -39,6 +39,14 @@ public sealed class BulkManageActivityFilter : Entity
     public string Source { get; set; }
 
     /// <summary>
+    /// Gets or sets the stored source values the selected <see cref="Source"/> matches, resolved from
+    /// <see cref="ActivitySourceOptions"/>. For example, the Dialer source matches every dialer mode. When empty,
+    /// <see cref="Source"/> is matched as is.
+    /// </summary>
+    [BindNever]
+    public string[] SourceValues { get; set; }
+
+    /// <summary>
     /// Gets or sets the interaction type to filter by.
     /// </summary>
     public ActivityInteractionType? InteractionType { get; set; }

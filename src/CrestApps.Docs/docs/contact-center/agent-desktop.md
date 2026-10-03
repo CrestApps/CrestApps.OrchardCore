@@ -13,7 +13,7 @@ This guide covers the two day-to-day Contact Center surfaces:
 Both build on the [real-time SignalR layer](index.md#real-time-experience) and the [Telephony](../telephony/index.md) soft phone. The CRM still owns the work (activities, contacts, subjects, dispositions), the Contact Center orchestrates it, and Telephony executes the media.
 
 :::tip Looking for step-by-step instructions?
-This page explains how the surfaces work. For a task-by-task how-to (sign in, accept a call, request a break, create a queue, load inventory, monitor/whisper/barge) with screencasts, see the [User Manual](../user-manual/index.md).
+This page explains how the surfaces work. For a task-by-task how-to (sign in, accept a call, request a break, create a queue, load activities, monitor/whisper/barge) with screencasts, see the [User Manual](../user-manual/index.md).
 :::
 
 ## Choosing the agent experience
@@ -56,7 +56,7 @@ Agents can only receive work once the routing environment exists. Configure thes
 5. **Agent state reason codes** (*Interaction Center → Management → Agent states*) - define the not-ready presence reasons agents can choose (for example `Lunch`, `Coaching`, `Admin`). These appear in the agent presence menu.
 6. **Agent entitlements** (*Interaction Center → Management → Agent entitlements*, optional Agent Entitlements feature; without it any agent may sign in to any queue or campaign) - select an Orchard user and grant the queues and campaigns that user may join. The soft phone lists only these choices, sign-in rejects requests with no authorized membership, routing ignores stale or imported live memberships that are not also entitled, and removing an entitlement immediately prunes the corresponding live session membership, removes connected clients from revoked queue groups, and refreshes their membership snapshot.
 7. **Campaigns and dispositions** - campaigns and dispositions live in the [Omnichannel](../omnichannel/index.md) **Interaction Center**. Every activity carries a **Subject** whose **Subject Flow** is the single decision controller: it defines the dispositions an agent can choose and the follow-up actions each disposition triggers. See [Subject Flow is the single decision controller](index.md#subject-flow-is-the-single-decision-controller).
-8. **Dialer profiles** (*Interaction Center → Management → Dialer Profiles*, Dialer feature) - for outbound work, define a reusable dialing mode (preview, power, or progressive), pacing, and compliance rules. The campaign is picked when inventory is loaded, not on the profile. See [Dialer](agents-queues-dialer.md#dialer).
+8. **Dialer profiles** (*Interaction Center → Management → Dialer Profiles*, Dialer feature) - for outbound work, define a reusable dialing mode (preview, power, or progressive), pacing, and compliance rules. The campaign is picked when activities are loaded, not on the profile. See [Dialer](agents-queues-dialer.md#dialer).
 9. **Callbacks** - use the callback service or workflow bridge to schedule callback requests against a contact, destination, due window, and optional queue. Due callbacks are promoted into outbound callback activities and, when a queue is set, enter the same routing path as other work.
 
 Grant agents the `ContactCenterSignIntoQueues` permission (or a role that includes it), and grant supervisors the built-in **Supervisor** role (or the `MonitorContactCenter` permission).
@@ -140,8 +140,8 @@ The menu plays only while the entry point is open; a closed entry point applies 
 Use CRM campaigns and activities as the source of outbound work; the dialer profile only controls execution.
 
 1. Create the campaign and Subject Flow in Omnichannel. Configure dispositions and subject actions first so every outcome has a business result.
-2. Load activities through **Load Inventory**. Choose a dialer source for dialer inventory so activities are loaded unassigned and available for reservation.
-3. Create a dialer profile with the voice provider, dialing mode, pacing, and compliance settings, and pick it together with the campaign on the dialer inventory load.
+2. Load activities through **Load Activities**. Choose the **Dialer** source so activities are loaded unassigned and available for reservation.
+3. Create a dialer profile with the voice provider, dialing mode, pacing, and compliance settings, and pick it together with the campaign on the dialer activity load.
 4. Confirm do-not-call, retry delay, calling window, and national registry settings before enabling an automated mode.
 5. For callbacks, schedule a callback request with the destination, due time, queue, and notes. The callback dispatcher promotes due callbacks into outbound callback activities and enqueues them when a queue is set.
 6. Agents receive preview work, or automated power/progressive work, from the campaigns they are signed in to, then complete it with the same disposition flow used for inbound work.
@@ -191,7 +191,7 @@ When routing selects you for a piece of work, a **ringing offer card** appears w
 
 If you do not respond before the countdown ends, the offer is revoked and routed elsewhere.
 
-Dialer work is distinguished from inbound queue offers by its activity source. When Preview, Power, Progressive, or generic dialer inventory is assigned to you, the browser opens the assigned activity's shared **Complete activity** page automatically. Inbound work continues to show the ringing offer instead, so it is never redirected before you choose **Accept** or **Decline**.
+Dialer work is distinguished from inbound queue offers by its activity source. When a Preview, Power, Progressive, or generic dialer activity is assigned to you, the browser opens the assigned activity's shared **Complete activity** page automatically. Inbound work continues to show the ringing offer instead, so it is never redirected before you choose **Accept** or **Decline**.
 
 ### 3. Handle the active interaction
 

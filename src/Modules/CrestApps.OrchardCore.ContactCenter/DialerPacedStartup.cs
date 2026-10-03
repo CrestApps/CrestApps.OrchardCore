@@ -54,5 +54,16 @@ public sealed class DialerPacedStartup : StartupBase
                 entry.ShowInCreationPicker = false;
             });
         });
+
+        // The paced modes are stored on the activities of a dialer load whose profile uses them, so the Dialer
+        // source filter matches them too. Predictive profiles cannot be saved today; the value is matched only so
+        // an activity that carries it is never left out of a Dialer filter.
+        services.Configure<ActivitySourceOptions>(options =>
+        {
+            options.AddSource(ActivitySources.Dialer, entry =>
+            {
+                entry.Matches(ActivitySources.PowerDial, ActivitySources.ProgressiveDial, ActivitySources.PredictiveDial);
+            });
+        });
     }
 }

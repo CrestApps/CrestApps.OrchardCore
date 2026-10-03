@@ -1306,6 +1306,9 @@ public sealed class ActivitiesController : Controller
     /// Processes a bulk action on selected activities.
     /// </summary>
     /// <param name="viewModel">The view model containing action and selection data.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
+    /// <param name="filterDisplayManager">The filter display manager.</param>
+    /// <param name="activitySourceOptions">The activity sources registered by the enabled features.</param>
     [HttpPost]
     [ActionName(nameof(ManageActivities))]
     [FormValueRequired("submit.BulkAction")]
@@ -1313,7 +1316,8 @@ public sealed class ActivitiesController : Controller
     public async Task<ActionResult> ManageActivitiesBulkActionPost(
         BulkManageActivitiesViewModel viewModel,
         PagerParameters pagerParameters,
-        [FromServices] IDisplayManager<BulkManageActivityFilter> filterDisplayManager)
+        [FromServices] IDisplayManager<BulkManageActivityFilter> filterDisplayManager,
+        [FromServices] IOptions<ActivitySourceOptions> activitySourceOptions)
     {
         var requiredPermission = viewModel.BulkAction == BulkActivityAction.Purge
             ? OmnichannelConstants.Permissions.PurgeActivity
@@ -1343,6 +1347,18 @@ public sealed class ActivitiesController : Controller
         if (viewModel.BulkAction == BulkActivityAction.None)
         {
             await _notifier.WarningAsync(H["No action was selected."]);
+
+            return RedirectToAction(nameof(ManageActivities), filter.RouteValues);
+        }
+
+        ActivitySourceEntry newSourceEntry = null;
+
+        // Only the sources no other feature owns may be set by hand. A dialer mode is set through the dialer
+        // profile, and a value that is not registered at all would leave activities no screen can find again.
+        if (viewModel.BulkAction == BulkActivityAction.ChangeSource &&
+            !activitySourceOptions.Value.TryGetManuallyAssignableSource(viewModel.NewSource, out newSourceEntry))
+        {
+            await _notifier.WarningAsync(H["The selected source cannot be set by hand. Choose one of the listed sources."]);
 
             return RedirectToAction(nameof(ManageActivities), filter.RouteValues);
         }
@@ -1416,7 +1432,7 @@ public sealed class ActivitiesController : Controller
                 break;
 
             case BulkActivityAction.ChangeSource:
-                processedCount = await BulkChangeSourceAsync(activities, viewModel.NewSource, viewModel.NewInteractionType, viewModel.ClearCurrentAssignment);
+                processedCount = await BulkChangeSourceAsync(activities, newSourceEntry.Source, viewModel.NewInteractionType, viewModel.ClearCurrentAssignment);
                 break;
 
             case BulkActivityAction.ChangeDialerProfile:

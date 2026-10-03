@@ -2,14 +2,14 @@
 sidebar_label: Automated AI SMS & Voice
 sidebar_position: 18
 title: Automated AI SMS and Voice Campaigns
-description: Set up an AI profile and an automatic inventory load so the AI texts or calls your contacts, follows up, picks the disposition, and hands off to a person when needed.
+description: Set up an AI profile and an automatic activity load so the AI texts or calls your contacts, follows up, picks the disposition, and hands off to a person when needed.
 ---
 
-An **automatic** inventory load creates activities that an **AI profile** works by itself: it sends the opening text (or places the call), holds the conversation, and completes the activity with a disposition and a summary. If the subject allows it, the AI hands the customer to a live agent.
+An **automatic** activity load creates activities that an **AI profile** works by itself: it sends the opening text (or places the call), holds the conversation, and completes the activity with a disposition and a summary. If the subject allows it, the AI hands the customer to a live agent.
 
 | | |
 | --- | --- |
-| **Menu** | Interaction Center > Management > Load Inventory > Add Inventory Load > Automatic |
+| **Menu** | Interaction Center > Management > Load Activities > Add Activity Load > Automatic |
 | **Permission** | Manage activity batches |
 | **Features** | **SMS Omnichannel Automation** (`CrestApps.OrchardCore.Omnichannel.Sms`) for SMS; **Telnyx AI Voice Agent** (`CrestApps.OrchardCore.Telnyx.AiVoice`) for voice calls; the AI features and a configured AI provider |
 
@@ -22,11 +22,11 @@ An **automatic** inventory load creates activities that an **AI profile** works 
 
 ## Load automated SMS activities
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating an automatic SMS inventory load driven by an AI profile and loading it to generate automated activities">
+<video controls preload="metadata" width="100%" aria-label="Screencast of creating an automatic SMS activity load driven by an AI profile and loading it to generate automated activities">
   <source src="/img/docs/um-load-ai-sms.mp4" type="video/mp4" />
 </video>
 
-1. Open **Interaction Center > Management > Load Inventory**, click **Add Inventory Load** and choose **Automatic**.
+1. Open **Interaction Center > Management > Load Activities**, click **Add Activity Load** and choose **Automatic**.
 2. Enter a **Title**, pick the **Subject content type** and the **Campaign**.
 3. Pick the **AI profile** (or leave it to use the subject's profile).
 4. Pick **SMS** as the **Channel** and the SMS **Channel endpoint**.
@@ -37,7 +37,7 @@ A background task picks up due automated activities every five minutes and sends
 
 ## Load automated voice calls
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating an automatic voice inventory load with an AI profile, background office sound and reply delay">
+<video controls preload="metadata" width="100%" aria-label="Screencast of creating an automatic voice activity load with an AI profile, background office sound and reply delay">
   <source src="/img/docs/um-load-ai-voice.mp4" type="video/mp4" />
 </video>
 

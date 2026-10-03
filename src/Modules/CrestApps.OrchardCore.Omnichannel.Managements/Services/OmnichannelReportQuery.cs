@@ -114,8 +114,18 @@ internal static class OmnichannelReportQuery
             .Where(activity => string.IsNullOrEmpty(criteria.CampaignId) || activity.CampaignId == criteria.CampaignId)
             .Where(activity => criteria.CampaignIds is null || criteria.CampaignIds.Contains(activity.CampaignId ?? string.Empty))
             .Where(activity => string.IsNullOrEmpty(criteria.Channel) || string.Equals(activity.Channel, criteria.Channel, StringComparison.OrdinalIgnoreCase))
-            .Where(activity => string.IsNullOrEmpty(criteria.Source) || activity.Source == criteria.Source)
+            .Where(activity => MatchesSource(activity, criteria))
             .Where(activity => !criteria.Status.HasValue || activity.Status == criteria.Status.Value)
             .ToArray();
+    }
+
+    private static bool MatchesSource(OmnichannelActivityIndex activity, OmnichannelReportCriteria criteria)
+    {
+        if (criteria.Sources is not null)
+        {
+            return criteria.Sources.Contains(activity.Source ?? string.Empty);
+        }
+
+        return string.IsNullOrEmpty(criteria.Source) || activity.Source == criteria.Source;
     }
 }

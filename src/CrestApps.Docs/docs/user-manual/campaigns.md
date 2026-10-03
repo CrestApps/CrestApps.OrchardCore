@@ -32,7 +32,7 @@ Campaigns and campaign groups cannot be deleted, because activities and reports 
 
 ## Where the campaign is used
 
-- On an [inventory load](load-inventory.md), to stamp the campaign on every activity it creates. Without one, the subject's **Default campaign** is used.
+- On an [activity load](load-inventory.md), to stamp the campaign on every activity it creates. Without one, the subject's **Default campaign** is used.
 - On a **dialer** load, the campaign is required (unless the subject has a default campaign): it is the line of work agents sign in to. See [Dialer profiles](dialer-profiles.md).
 - On an agent's [entitlements](skills-and-entitlements.md), under **Allowed campaigns**.
 - In [reports](reports.md), as the **Campaign** and **Campaign group** filters.

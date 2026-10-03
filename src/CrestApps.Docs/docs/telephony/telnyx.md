@@ -608,7 +608,7 @@ The **Telnyx AI Voice Agent** feature (`CrestApps.OrchardCore.Telnyx.AiVoice`) i
 to [SMS Automation](../omnichannel/sms): instead of a human agent or a text conversation, an **AI agent**
 places an outbound call over Telnyx and talks to the contact. It registers the **Phone**-channel omnichannel
 processor, so it is driven entirely by the [Omnichannel Management](../omnichannel/management) automated
-activity pipeline — the same **subject flow → campaign → load inventory** model used by automated SMS.
+activity pipeline — the same **subject flow → campaign → load activities** model used by automated SMS.
 
 How a call runs:
 
