@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Drivers;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Twilio;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Workflows;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
@@ -19,6 +20,7 @@ using OrchardCore.DisplayManagement.Descriptors;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
+using OrchardCore.Workflows.Helpers;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Sms;
 
@@ -106,4 +108,14 @@ public sealed class TwilioSmsStartup : StartupBase
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
         => TwilioSmsWebhook.MapEndpoint(routes, serviceProvider);
+}
+
+/// <summary>
+/// Registers the workflow task that sends a text from a chosen number, into the customer's conversation.
+/// </summary>
+[RequireFeatures("OrchardCore.Workflows")]
+public sealed class WorkflowsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddActivity<SendTextMessageTask, SendTextMessageTaskDisplayDriver>();
 }

@@ -19,8 +19,10 @@ An **omnichannel address** is an address the business owns, such as a phone numb
 2. Pick the kind of address, such as **Phone number**.
 3. Enter a **Name** people will recognize and the **Phone number** in international format, such as `+17025550100`.
 4. Under **Used for**, tick **Voice calls**, **Text messages (SMS)**, or both. The settings for each appear while it is ticked:
-   - **Text messages**: the SMS **Provider** that owns the number. Which entry point answers its texts is set on the entry point.
-   - **Voice calls**: the agents who dial out from the number. Which entry point answers its calls is set on the entry point.
+   - **Text messages**: the SMS **Provider** that owns the number, and the **Agents who text from this number**. New conversations these agents start in the messaging workspace are sent from it. Each agent texts from one number. Which entry point answers its texts is set on the entry point.
+   - **Voice calls**: the **Agents who dial from this number**. Each agent dials from one number. Which entry point answers its calls is set on the entry point.
+
+Agents on no number's list use the default numbers chosen under **Settings > Contact Center > [Default numbers](contact-center-settings.md#default-numbers)**.
 5. Click **Save**.
 
 A number is listed once. To use a number for calls and texts, tick both on the same address rather than adding it twice. The kind of address cannot be changed after it is created, and addresses cannot be deleted.

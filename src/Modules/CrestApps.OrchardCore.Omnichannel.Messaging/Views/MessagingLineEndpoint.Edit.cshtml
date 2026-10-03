@@ -1,0 +1,21 @@
+@model MessagingLineEndpointViewModel
+
+<div data-address-capability="@Model.ServedCapabilities">
+    <div class="ocat-wrapper" asp-validation-class-for="UserIds">
+        <label asp-for="UserIds" class="ocat-label">@T["Agents who text from this number"]</label>
+        <div class="ocat-end">
+            @await Component.InvokeAsync("UserPicker", new
+            {
+                name = Html.NameFor(m => m.UserIds).ToString(),
+                selectedValues = Model.UserIds,
+                valueType = "userId",
+                multiple = true,
+                buttonText = T["Select agents"].Value,
+                searchPlaceholder = T["Search agents"].Value,
+                smallButton = false,
+            })
+            <span asp-validation-for="UserIds" class="text-danger"></span>
+            <span class="hint">@T["New conversations these agents start in the messaging workspace are sent from this number, and the Find Agent Numbers workflow task returns it for them. Each agent texts from one number; agents on no number's list use the default SMS number from Settings > Contact Center."]</span>
+        </div>
+    </div>
+</div>

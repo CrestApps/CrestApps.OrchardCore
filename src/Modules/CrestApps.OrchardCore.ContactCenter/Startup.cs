@@ -15,6 +15,7 @@ using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Drivers;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Models;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Services;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using Microsoft.AspNetCore.Builder;
@@ -323,6 +324,33 @@ public sealed class ContactCenterWorkflowsStartup : StartupBase
         // Omnichannel Activities feature this one already depends on. Registering it here rather than under the
         // Dialer keeps an SMS-only tenant from having to enable outbound voice to send a message from a workflow.
         services.AddActivity<StartOmnichannelActivityTask, StartOmnichannelActivityTaskDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Registers what an agent's numbers are found from: the default phone and SMS numbers on the Contact Center settings
+/// screen, the resolver of the numbers an agent calls and texts from, and the workflow task that writes them to the
+/// workflow. They need the address list the numbers are picked from.
+/// </summary>
+[RequireFeatures(OmnichannelConstants.Features.ChannelEndpoints)]
+public sealed class ContactCenterAgentNumbersStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IAgentAddressResolver, AgentAddressResolver>();
+        services.AddSiteDisplayDriver<ContactCenterDefaultAddressSettingsDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Registers the workflow task that finds the numbers an agent calls and texts from.
+/// </summary>
+[RequireFeatures("OrchardCore.Workflows", OmnichannelConstants.Features.ChannelEndpoints)]
+public sealed class ContactCenterAgentNumbersWorkflowsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddActivity<FindAgentNumbersTask, FindAgentNumbersTaskDisplayDriver>();
     }
 }
 

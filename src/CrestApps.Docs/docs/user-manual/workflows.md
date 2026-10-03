@@ -63,6 +63,16 @@ Two events carry what a follow-up needs, such as a text message to a customer th
 
 Every Power, Progressive or Preview call that rings out now sends the text. Use `"Busy"` or `"AnsweringMachine"` in the condition to text on those outcomes instead. For automated (AI) calls, use **Activity disposition applied** with `input("Data").Outcome == "NoAnswer"`.
 
+### Example: text a customer from the agent's own number after a call
+
+**Find Agent Numbers** looks up the numbers an agent calls and texts from and writes them to the workflow: `{{ Workflow.Output.AgentPhoneNumber }}` and `{{ Workflow.Output.AgentSmsNumber }}`. They come from the Omnichannel Address whose **Agents who dial from this number** or **Agents who text from this number** lists the agent, or else from the [default numbers](contact-center-settings.md#default-numbers). The **User name** field takes Liquid, and a user identifier or email works too. Leave it empty to get the default numbers. The task ends in **NotFound** only when it finds neither number.
+
+1. Start the workflow from the **Contact Center Event** that follows the call, for example **Activity disposition applied**.
+2. Add **Find Agent Numbers** with **User name** set to the user who handled the call: `{{ Workflow.Input.Data.CompletedById }}`.
+3. Add **Send Text Message** with **From** `{{ Workflow.Output.AgentSmsNumber }}`, **To** `{{ Workflow.Input.Data.PhoneNumber }}`, your **Message**, and **Agent** `{{ Workflow.Input.Data.CompletedById }}`, and connect the **Done** outcome of Find Agent Numbers to it.
+
+The text is sent by the provider that owns the number and lands in the customer's conversation in the messaging workspace, owned by the agent, so the customer's reply reaches them.
+
 The **Event type** list is grouped: Interaction, Activity, Routing & queues, Agent, Offer, Dialer, Callback, Call, Recording, Supervision, Secure capture and Shared voicemail.
 
 ## Contact Center activities
@@ -72,6 +82,8 @@ The **Event type** list is grouped: Interaction, Activity, Routing & queues, Age
 | **Contact Center Event** (event) | Event type | Matched, Ignored | Contact Center |
 | **Place Call or Send Message** | Activity | Done, Already Started, Failed | Contact Center |
 | **Set Agent Presence** | User, Status, Reason | Done, Failed | Contact Center Agents |
+| **Find Agent Numbers** | User name | Done, NotFound | Contact Center, Omnichannel Addresses |
+| **Send Text Message** | From, To, Message, Agent | Done, Failed | SMS Messaging Channel |
 | **Enqueue Activity** | Activity, Queue | Done, Failed | Contact Center Work Distribution |
 | **Hand Off to Live Agent** | Activity, Queue, Reason, Summary | Connected, Waiting In Queue, Callback Scheduled, Failed | Contact Center Work Distribution |
 | **Schedule Callback** | Destination, Delay (minutes), Campaign, Queue, Contact | Done, Failed | Contact Center Outbound Dialer |

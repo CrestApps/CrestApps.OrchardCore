@@ -33,6 +33,15 @@ Needs the **Contact Center Call Recording** feature.
 | **Maximum secure-pause window (seconds)** | A paused recording resumes on its own after this long. 0 means no limit. |
 | **Require a reason to pause** | The agent must type a reason before pausing. |
 
+## Default numbers
+
+The numbers used for an agent who has none of their own.
+
+| Field | What it does |
+| --- | --- |
+| **Default phone number** | Returned for an agent who is on no number's **Agents who dial from this number** list, for example by the **Find Agent Numbers** workflow task. Picked from the Omnichannel Addresses used for voice calls. Calls themselves still fall back to the provider's default caller ID. |
+| **Default SMS number** | The number an agent who is on no number's **Agents who text from this number** list texts from: the messaging composer starts new conversations from it, and the **Find Agent Numbers** workflow task returns it. Picked from the Omnichannel Addresses used for text messages. |
+
 ## External transfer destinations
 
 The outside numbers agents and IVR menus may transfer calls to.

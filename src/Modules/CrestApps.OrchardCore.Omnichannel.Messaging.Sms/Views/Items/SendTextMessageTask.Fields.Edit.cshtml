@@ -1,0 +1,39 @@
+@using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.ViewModels
+
+@model SendTextMessageTaskViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="From">
+    <label class="ocat-label" asp-for="From">@T["From"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="From" />
+        <span asp-validation-for="From"></span>
+        <span class="hint">@T["A Liquid expression resolving one of your SMS numbers, for example <code>{{ Workflow.Output.AgentSmsNumber }}</code> from a Find Agent Numbers task. The text is sent by the provider that owns the number."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="To">
+    <label class="ocat-label" asp-for="To">@T["To"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="To" />
+        <span asp-validation-for="To"></span>
+        <span class="hint">@T["A Liquid expression resolving the customer's number, for example <code>{{ Workflow.Input.Data.PhoneNumber }}</code>."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Body">
+    <label class="ocat-label" asp-for="Body">@T["Message"]</label>
+    <div class="ocat-end">
+        <textarea class="form-control" asp-for="Body" rows="3"></textarea>
+        <span asp-validation-for="Body"></span>
+        <span class="hint">@T["The text to send. Liquid is supported."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="UserName">
+    <label class="ocat-label" asp-for="UserName">@T["Agent"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="UserName" />
+        <span asp-validation-for="UserName"></span>
+        <span class="hint">@T["Optional. A Liquid expression resolving the user name or identifier of the agent a new conversation belongs to, so the customer's reply reaches them. Leave it empty for a system text."]</span>
+    </div>
+</div>
