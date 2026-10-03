@@ -1,0 +1,16 @@
+@model EntryPointAIAgentViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+@* Shown for an AI voice agent target only: the entry point's routing card shows the fields marked for AI agents when it routes to one. *@
+<div class="ocat-wrapper" asp-validation-class-for="TargetAIProfileId" data-entry-point-ai-field>
+    <label asp-for="TargetAIProfileId" class="ocat-label">@T["AI agent"]</label>
+    <div class="ocat-end">
+        <select asp-for="TargetAIProfileId" asp-items="Model.ProfileOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select an AI profile"]" data-width="100%" title="@T["No AI agent"]">
+            <option value="">@T["No AI agent"]</option>
+        </select>
+        <span asp-validation-for="TargetAIProfileId" class="text-danger"></span>
+        <span class="hint">@T["The AI chat profile that answers the calls, such as one made from the \"Answer calls at the front desk\" template. It greets callers with its initial prompt and can hand them to a person when its subject flow allows a hand-off. The welcome message and phone menu are not used while an AI agent answers."]</span>
+    </div>
+</div>

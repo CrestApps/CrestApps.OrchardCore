@@ -9,9 +9,15 @@
         <select asp-for="TargetType" class="form-select" data-entry-point-target-type>
             <option value="@EntryPointTargetType.Queue">@T["Queue"]</option>
             <option value="@EntryPointTargetType.Agent">@T["Specific agent"]</option>
+            @if (Model.AIAgentAvailable)
+            {
+                <option value="@EntryPointTargetType.AIAgent">@T["AI voice agent"]</option>
+            }
         </select>
         <span asp-validation-for="TargetType" class="text-danger"></span>
-        <span class="hint">@T["Route to a queue, or directly to a specific agent (a personal line). A specific agent gets it directly, with no queue fallback."]</span>
+        <span class="hint">@(Model.AIAgentAvailable
+            ? T["Route to a queue, directly to a specific agent (a personal line), or to an AI voice agent that answers the call and can hand the caller to a person. A specific agent gets it directly, with no queue fallback."]
+            : T["Route to a queue, or directly to a specific agent (a personal line). A specific agent gets it directly, with no queue fallback."])</span>
     </div>
 </div>
 
@@ -43,6 +49,8 @@
         // The agent's ring settings come from the call entry point's own shape, so they are looked up across the form.
         var agentFields = document.querySelectorAll('[data-entry-point-agent-field]');
         var queueFields = document.querySelectorAll('[data-entry-point-queue-field]');
+        // The AI voice agent's card comes from the provider's AI voice feature, so it is looked up across the form too.
+        var aiFields = document.querySelectorAll('[data-entry-point-ai-field]');
         var voicemailToggle = document.querySelector('[data-entry-point-voicemail-toggle]');
         var ringWindowField = document.querySelector('[data-entry-point-ringwindow-field]');
 
@@ -55,8 +63,10 @@
         // when routing to an agent AND voicemail is enabled.
         function apply() {
             var isAgent = typeSelect.value === '@EntryPointTargetType.Agent';
+            var isAI = typeSelect.value === '@EntryPointTargetType.AIAgent';
             agentFields.forEach(function (field) { field.style.display = isAgent ? '' : 'none'; });
-            queueFields.forEach(function (field) { field.style.display = isAgent ? 'none' : ''; });
+            queueFields.forEach(function (field) { field.style.display = isAgent || isAI ? 'none' : ''; });
+            aiFields.forEach(function (field) { field.style.display = isAI ? '' : 'none'; });
 
             if (ringWindowField) {
                 var voicemailOn = !voicemailToggle || voicemailToggle.checked;

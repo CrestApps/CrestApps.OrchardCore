@@ -7,7 +7,7 @@ description: Decide what happens when someone dials one of your numbers - which 
 
 An **inbound entry point** is the front door for one or more of your numbers, and the one place a number's inbound traffic is routed from. Each entry point answers one channel: **Voice calls** or **Text messages**. A number used for both has one entry point for its calls and one for its texts. A call entry point decides:
 
-- **where** the call goes: a queue, or one specific agent (a personal line);
+- **where** the call goes: a queue, one specific agent (a personal line), or an AI voice agent;
 - **what callers hear first**: an optional keypad (IVR) menu;
 - **what happens when you are closed**: hold, voicemail, overflow or reject;
 - **where voicemail goes**: an agent's inbox or the queue's shared voicemail box.
@@ -46,7 +46,8 @@ Numbers that were typed on an entry point before entry points picked them from t
 
 | Field | What it does |
 | --- | --- |
-| **Route to** | **Queue** (the default) or **Specific agent**. A specific-agent line rings one person and never falls back to a queue. |
+| **Route to** | **Queue** (the default), **Specific agent**, or **AI voice agent** (calls only). A specific-agent line rings one person and never falls back to a queue. **AI voice agent** is offered when the Telnyx AI Voice Agent feature is on. |
+| **AI agent** | The AI chat profile that answers the calls (AI voice agent routing). See [AI voice agent](#ai-voice-agent). |
 | **Target queue** | The queue that receives the calls (queue routing). |
 | **Priority** | Calls only. Lowest to Highest. Calls from this number jump ahead of lower-priority work in the queue. |
 | **Target agent** | The person to ring (specific-agent routing). |
@@ -77,6 +78,18 @@ To speak the welcome, the call is answered. On a line with no menu the caller th
 | **Default voicemail greeting** | Spoken when the person receiving the voicemail has not recorded [their own greeting](voicemail.md#record-your-voicemail-greeting). Empty uses the system default. |
 | **Deliver voicemail to** | Queue lines only: **An agent's inbox** (the default) or **The queue's shared voicemail box**, which any entitled supervisor or agent can pick up from [Shared voicemail](voicemail.md#shared-voicemail). |
 | **Voicemail inbox** | The agent whose inbox receives the voicemail. Hidden when the shared box is chosen. |
+
+## AI voice agent
+
+A call entry point can hand its calls to an AI voice agent: an AI chat profile, such as one made from the **Answer calls at the front desk** template.
+
+1. Make the profile under **Artificial Intelligence > Profiles**, with an initial prompt (what it says when it picks up) and the business details its prompt asks for.
+2. On the entry point's **Routing** card, set **Route to** to **AI voice agent** and pick the profile under **AI agent**.
+3. To let the AI pass callers to a person, set up the hand-off on the [subject flow](subjects.md) for the number.
+
+While the entry point is open, the AI answers each call itself, greets the caller with its initial prompt and holds the conversation. The welcome message and phone menu are not used. The call becomes an automated activity with the AI's transcript, and it reaches an agent's queue only if the AI hands the caller over. While the entry point is closed, callers go to voicemail, or are refused when the closed action is **Reject**.
+
+The AI voice agent needs the **Telnyx AI Voice Agent** feature. A realtime-capable chat deployment holds a live conversation; others take turns, speaking and then listening. If the feature is turned off after an entry point is set up, its calls are refused until you pick another target.
 
 ## Text entry points
 

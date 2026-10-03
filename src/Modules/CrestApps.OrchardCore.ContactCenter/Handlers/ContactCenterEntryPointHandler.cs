@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Deployments;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.Localization;
@@ -83,6 +84,20 @@ internal sealed class ContactCenterEntryPointHandler : CatalogEntryHandlerBase<C
         if (context.Model.TargetType == EntryPointTargetType.Queue && string.IsNullOrWhiteSpace(context.Model.TargetQueueId))
         {
             context.Result.Fail(new ValidationResult(S["Select the queue this entry point routes to."], [nameof(ContactCenterEntryPoint.TargetQueueId)]));
+        }
+
+        if (context.Model.TargetType == EntryPointTargetType.AIAgent)
+        {
+            // Only calls are answered by an AI voice agent here; texts reach their automated conversations another way.
+            if (!string.Equals(context.Model.GetChannel(), OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase))
+            {
+                context.Result.Fail(new ValidationResult(S["Only an entry point that answers calls can route to an AI voice agent."], [nameof(ContactCenterEntryPoint.TargetType)]));
+            }
+
+            if (string.IsNullOrWhiteSpace(context.Model.TargetAIProfileId))
+            {
+                context.Result.Fail(new ValidationResult(S["Select the AI agent that answers this entry point's calls."], [nameof(ContactCenterEntryPoint.TargetAIProfileId)]));
+            }
         }
 
         // A menu that cannot be run is refused here rather than discovered by a caller: the state machine copes

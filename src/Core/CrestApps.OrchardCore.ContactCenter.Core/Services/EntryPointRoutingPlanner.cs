@@ -32,6 +32,31 @@ public static class EntryPointRoutingPlanner
         var isAgentTarget = entryPoint.TargetType == EntryPointTargetType.Agent &&
             !string.IsNullOrEmpty(entryPoint.TargetAgentId);
 
+        var isAIAgentTarget = entryPoint.TargetType == EntryPointTargetType.AIAgent &&
+            !string.IsNullOrEmpty(entryPoint.TargetAIProfileId);
+
+        if (isAIAgentTarget)
+        {
+            // An AI voice agent answers the call itself, so there is no queue to wait in. While closed it has no queue
+            // to hold or overflow into either, so a closed call goes to voicemail unless closed calls are rejected.
+            plan.TargetQueueId = null;
+
+            if (isOpen)
+            {
+                plan.RouteToAIAgent = true;
+                plan.TargetAIProfileId = entryPoint.TargetAIProfileId;
+
+                return plan;
+            }
+
+            plan.ShouldQueue = false;
+            plan.ClosedAction = entryPoint.ClosedAction == EntryPointClosedAction.Reject
+                ? EntryPointClosedAction.Reject
+                : EntryPointClosedAction.Voicemail;
+
+            return plan;
+        }
+
         if (isOpen)
         {
             plan.ShouldQueue = true;

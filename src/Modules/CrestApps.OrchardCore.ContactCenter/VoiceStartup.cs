@@ -172,6 +172,8 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped<IVoiceQueueOfferService, VoiceQueueOfferService>()
             .AddScoped<IDirectHoldTimeoutService, DirectHoldTimeoutService>()
             .AddScoped<IInboundVoiceCallProcessor, InboundVoiceCallProcessor>()
+            // Answers a call an entry point hands to an AI voice agent, once the routing has committed.
+            .AddScoped<IInboundAIVoiceAnswererDispatcher, InboundAIVoiceAnswererDispatcher>()
             // The processor asks this for the priority a caller is queued at. With no contributors it returns the
             // configured priority unchanged; Inbound Voice adds the caller-based contributors that can raise it.
             .AddScoped<IInboundPriorityResolver, InboundPriorityResolver>()

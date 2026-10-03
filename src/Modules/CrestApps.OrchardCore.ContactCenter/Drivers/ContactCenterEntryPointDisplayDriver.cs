@@ -1,4 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -20,6 +23,7 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
     private readonly ContactCenterAdminFormOptionsProvider _optionsProvider;
     private readonly IOmnichannelChannelEndpointManager _addressManager;
     private readonly EntryPointChannelOptions _channelOptions;
+    private readonly bool _aiVoiceAnswererRegistered;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterEntryPointDisplayDriver"/> class.
@@ -27,11 +31,14 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
     /// <param name="optionsProvider">The admin form options provider.</param>
     /// <param name="addressManager">The address list the entry point picks its numbers from.</param>
     /// <param name="channelOptions">The channels entry points can answer.</param>
+    /// <param name="aiVoiceAnswerers">The providers' AI voice answerers, which make an AI voice agent a call target.</param>
     public ContactCenterEntryPointDisplayDriver(
         ContactCenterAdminFormOptionsProvider optionsProvider,
         IOmnichannelChannelEndpointManager addressManager,
-        IOptions<EntryPointChannelOptions> channelOptions)
+        IOptions<EntryPointChannelOptions> channelOptions,
+        IEnumerable<IInboundAIVoiceAnswerer> aiVoiceAnswerers)
     {
+        _aiVoiceAnswererRegistered = aiVoiceAnswerers.Any();
         _optionsProvider = optionsProvider;
         _addressManager = addressManager;
         _channelOptions = channelOptions.Value;
@@ -81,6 +88,8 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
                 .ToList(),
             LegacyDialedNumbers = [.. (entryPoint.DialedNumbers ?? []).Where(number => !string.IsNullOrWhiteSpace(number))],
             TargetType = entryPoint.TargetType,
+            AIAgentAvailable = string.Equals(channel, OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase) &&
+                (_aiVoiceAnswererRegistered || entryPoint.TargetType == EntryPointTargetType.AIAgent),
             TargetAgentId = entryPoint.TargetAgentId,
             TargetQueueId = entryPoint.TargetQueueId,
             BusinessHoursCalendarId = entryPoint.BusinessHoursCalendarId,
@@ -102,6 +111,7 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
             model.AddressOptions = viewModel.AddressOptions;
             model.LegacyDialedNumbers = viewModel.LegacyDialedNumbers;
             model.TargetType = viewModel.TargetType;
+            model.AIAgentAvailable = viewModel.AIAgentAvailable;
             model.TargetAgentId = viewModel.TargetAgentId;
             model.TargetAgentOptions = viewModel.TargetAgentOptions;
             model.TargetQueueId = viewModel.TargetQueueId;
@@ -124,7 +134,8 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var isAgentTarget = model.TargetType == CrestApps.OrchardCore.ContactCenter.Models.EntryPointTargetType.Agent;
+        var isAgentTarget = model.TargetType == EntryPointTargetType.Agent;
+        var isQueueTarget = model.TargetType == EntryPointTargetType.Queue;
 
         entryPoint.Name = model.Name?.Trim();
         entryPoint.Description = model.Description?.Trim();
@@ -145,9 +156,15 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
         entryPoint.TargetAgentId = isAgentTarget && !string.IsNullOrWhiteSpace(model.TargetAgentId)
             ? model.TargetAgentId.Trim()
             : null;
-        entryPoint.TargetQueueId = !isAgentTarget && !string.IsNullOrWhiteSpace(model.TargetQueueId)
+        entryPoint.TargetQueueId = isQueueTarget && !string.IsNullOrWhiteSpace(model.TargetQueueId)
             ? model.TargetQueueId.Trim()
             : null;
+
+        // The AI profile is picked on the AI voice agent's own card, which the provider's AI voice feature adds.
+        if (model.TargetType != EntryPointTargetType.AIAgent)
+        {
+            entryPoint.TargetAIProfileId = null;
+        }
 
         // The rule that a routed-to target is required for the selected routing kind is enforced by
         // ContactCenterEntryPointHandler, so a recipe import and this editor reject the same entries. What happens to a

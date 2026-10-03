@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.ModelBinders;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.ContactCenter.ViewModels;
@@ -59,9 +60,16 @@ public class EntryPointViewModel
     public IList<string> LegacyDialedNumbers { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets what the entry point routes calls to: a queue or a specific agent.
+    /// Gets or sets what the entry point routes calls to: a queue, a specific agent or an AI voice agent.
     /// </summary>
     public EntryPointTargetType TargetType { get; set; } = EntryPointTargetType.Queue;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether an AI voice agent is offered as a target: a call entry point on a tenant
+    /// whose voice provider can hand a call to one, or one already routed to one.
+    /// </summary>
+    [BindNever]
+    public bool AIAgentAvailable { get; set; }
 
     /// <summary>
     /// Gets or sets the target agent identifier used when <see cref="TargetType"/> is
