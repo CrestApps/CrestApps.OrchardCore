@@ -8,6 +8,8 @@ using CrestApps.OrchardCore.ContactCenter.Handlers;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
 using CrestApps.OrchardCore.ContactCenter.Services;
+using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Core.Services;
@@ -17,6 +19,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.BackgroundTasks;
@@ -36,14 +39,17 @@ namespace CrestApps.OrchardCore.ContactCenter;
 public sealed class VoiceStartup : StartupBase
 {
     private readonly IShellConfiguration _shellConfiguration;
+    private readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="VoiceStartup"/> class.
     /// </summary>
     /// <param name="shellConfiguration">The shell configuration used to bind voice ingress options.</param>
-    public VoiceStartup(IShellConfiguration shellConfiguration)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public VoiceStartup(IShellConfiguration shellConfiguration, IStringLocalizer<VoiceStartup> stringLocalizer)
     {
         _shellConfiguration = shellConfiguration;
+        S = stringLocalizer;
     }
 
     public override void ConfigureServices(IServiceCollection services)
@@ -71,6 +77,24 @@ public sealed class VoiceStartup : StartupBase
             .ValidateOnStart();
 
         services.AddScoped<IModularTenantEvents, BaseVoiceVerificationStartupCheck>();
+
+        // Calls are something a phone number does, so voice offers that capability on the phone numbers in the
+        // address list for every tenant that has voice, whichever of the voice features it enabled.
+        services.AddOmnichannelAddressCapability(OmnichannelAddressTypes.PhoneNumber, OmnichannelConstants.Channels.Phone, capability =>
+        {
+            capability.DisplayName = S["Voice calls"];
+            capability.Description = S["Calls to and from this number."];
+        });
+
+        // A phone number can carry a line of agents who dial out from it. The soft phone and the dialer present that
+        // number as the caller ID of the calls those agents place; this replaces the Telephony default that gives
+        // nobody a line.
+        services.Replace(ServiceDescriptor.Scoped<IOutboundLineResolver, ChannelEndpointOutboundLineResolver>());
+
+        // The numbers agents dial out from belong to the tenant, so no transfer is ever sent back to one.
+        services.AddScoped<IContactCenterOwnNumberSource, OutboundLineOwnNumberSource>();
+        services.AddDisplayDriver<OmnichannelChannelEndpoint, OutboundLineEndpointDisplayDriver>();
+        services.AddScoped<IChannelEndpointRule, OutboundLineEndpointRule>();
 
         services
             .AddScoped<IInboundContactLookup, InboundContactLookup>()

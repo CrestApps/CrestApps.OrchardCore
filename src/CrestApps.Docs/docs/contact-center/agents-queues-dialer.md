@@ -17,14 +17,13 @@ This phase adds the operational core of the Contact Center: agent presence, work
 | Contact Center Work Distribution | `CrestApps.OrchardCore.ContactCenter.Queues` | Managed skills, work queues, queue items, and reservations, plus policy-based routing strategies and availability-based activity assignment over Contact Center queues. |
 | Contact Center Outbound Dialer | `CrestApps.OrchardCore.ContactCenter.Dialer` | Outbound profiles, callbacks, Preview inventory loads routed through Contact Center Voice, and mandatory eligibility, suppression, retry, do-not-call, and calling-window enforcement. |
 | Contact Center Paced Dialing | `CrestApps.OrchardCore.ContactCenter.Dialer.Paced` | Compliance-gated Power and Progressive strategies, paced batch source, and scheduled pacing. Its base Dialer dependency includes the Dialer Profiles UI. |
-| Contact Center Outbound Lines | `CrestApps.OrchardCore.ContactCenter.OutboundLines` | Optional. Turns the tenant's phone numbers into lines agents dial out from, so each agent's calls show the number assigned to them. See [Outbound lines](#outbound-lines). |
 | Contact Center Inbound Voice | `CrestApps.OrchardCore.ContactCenter.InboundVoice` | Inbound voice entry-point administration, business-hours qualification, closed actions, and queue ingress. |
 | Contact Center Call Recording | `CrestApps.OrchardCore.ContactCenter.Recording` | Optional recording orchestration and recording-state events over Contact Center Voice. |
 | Contact Center Voice Media | `CrestApps.OrchardCore.ContactCenter.Voice.Media` | Dependency-only, non-GA executable media resolution foundation; transport certification is deferred to R9. |
 | Contact Center Real-Time | `CrestApps.OrchardCore.ContactCenter.RealTime` | Shared SignalR hub and real-time presence, offer, and queue projections over the workforce availability state. Enabled by dependency only (auto-enabled by Contact Center Voice and Supervision). |
 | Contact Center Supervision & Live Dashboard | `CrestApps.OrchardCore.ContactCenter.Supervision` | Live supervisor dashboard, queue and agent monitoring state, and provider-capability-gated monitoring actions. |
 
-> The server-side voice orchestration (`CrestApps.OrchardCore.ContactCenter.Voice`) is enabled automatically as a dependency of Inbound Voice, the Dialer, Recording, and Supervision, so it is not a separately selectable feature. It in turn pulls in Contact Center Real-Time.
+> The server-side voice orchestration (`CrestApps.OrchardCore.ContactCenter.Voice`) is enabled automatically as a dependency of Inbound Voice, the Dialer, Recording, and Supervision, so it is not a separately selectable feature. It in turn pulls in Contact Center Real-Time and the phone-number administration, which is where [outbound lines](#outbound-lines) are set up.
 
 > The **enterprise report catalog** (executive, interaction, queue/SLA, agent, transfer, recording, campaign, and subject reports plus CSV exports) is not a separately selectable feature. It activates automatically under the shared Reports area whenever both Contact Center Work Distribution (`CrestApps.OrchardCore.ContactCenter.Queues`) and the Reports framework (`CrestApps.OrchardCore.Reports`) are enabled.
 
@@ -207,11 +206,10 @@ Use callbacks when an agent schedules a later follow-up, an inbound entry point 
 
 ## Outbound lines
 
-A tenant with more than one phone number often wants different agents to call from different numbers: the sales team from the sales number and support from the support number, so a customer who calls back reaches the right people. The **Contact Center Outbound Lines** feature does this with the phone numbers you already manage.
+A tenant with more than one phone number often wants different agents to call from different numbers: the sales team from the sales number and support from the support number, so a customer who calls back reaches the right people. Outbound lines do this with the phone numbers you already manage. There is no feature to enable: they are part of Contact Center Voice, which Inbound Voice, the Dialer, Recording and Supervision turn on for you.
 
-1. Enable **Contact Center Outbound Lines**. It adds the **Phone** channel to **Channel endpoints** if Inbound Voice has not already.
-2. Open **Channel endpoints** and add each number the tenant dials from as a **Phone** endpoint.
-3. On each number, open **Outbound line** and pick the **Agents who dial from this number**.
+1. Open **Channel endpoints** and add each number the tenant dials from as a **Phone** endpoint.
+2. On each number, open **Outbound line** and pick the **Agents who dial from this number**.
 
 Each agent dials from one number. Saving a number that lists an agent who is already on another number's line is refused with a message naming that line, and a recipe import is held to the same rule. Agents who are not on any line keep showing the provider's default caller ID, so you only need to assign the agents who should call from a different number.
 

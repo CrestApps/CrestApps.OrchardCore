@@ -100,7 +100,7 @@ implemented as `TelnyxContactCenterVoiceMediaProvider` / `TelnyxContactCenterVoi
 
 ### 2. ✅ Per‑agent outbound caller id
 
-**Status:** done, as the **Contact Center Outbound Lines** feature. A Phone channel endpoint lists the agents who dial from it (`OutboundLineSettings`), and `IOutboundLineResolver` resolves a user's line. The soft‑phone hub stamps it as the dial's `From` (discarding any client value), the Telnyx registration config presents it on browser‑originated calls, and `DialerAttemptService` uses it before the dialer profile's caller ID unless the profile sets `AlwaysUseCallerId`. The unused `AgentProfile.OutboundCallerId` field was removed.
+**Status:** done, as outbound lines in Contact Center Voice (originally a separate Outbound Lines feature, folded into Voice so nobody has to enable it). A Phone channel endpoint lists the agents who dial from it (`OutboundLineSettings`), and `IOutboundLineResolver` resolves a user's line. The soft‑phone hub stamps it as the dial's `From` (discarding any client value), the Telnyx registration config presents it on browser‑originated calls, and `DialerAttemptService` uses it before the dialer profile's caller ID unless the profile sets `AlwaysUseCallerId`. The unused `AgentProfile.OutboundCallerId` field was removed.
 
 ### 3. Automated tests
 

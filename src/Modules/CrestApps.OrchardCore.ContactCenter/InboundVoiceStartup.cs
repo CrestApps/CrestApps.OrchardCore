@@ -18,7 +18,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Localization;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Deployment;
@@ -36,24 +35,9 @@ namespace CrestApps.OrchardCore.ContactCenter;
 [Feature(ContactCenterConstants.Feature.InboundVoice)]
 public sealed class InboundVoiceStartup : StartupBase
 {
-    private readonly IStringLocalizer S;
-
-    public InboundVoiceStartup(IStringLocalizer<InboundVoiceStartup> stringLocalizer)
-    {
-        S = stringLocalizer;
-    }
-
     public override void ConfigureServices(IServiceCollection services)
     {
         services.TryAddScoped<IIvrProvider, NoIvrProvider>();
-
-        // Calls are something a phone number does, so taking them is a capability this feature offers on the phone
-        // numbers in the address list. Outbound Lines offers the same capability for dialing out.
-        services.AddOmnichannelAddressCapability(OmnichannelAddressTypes.PhoneNumber, OmnichannelConstants.Channels.Phone, capability =>
-        {
-            capability.DisplayName = S["Voice calls"];
-            capability.Description = S["Calls to and from this number."];
-        });
 
         services
             .AddScoped<IContactCenterEntryPointStore, ContactCenterEntryPointStore>()
