@@ -237,7 +237,6 @@ public static class OmnichannelConstants
         public const string Managements = "CrestApps.OrchardCore.Omnichannel.Managements";
 
         public const string Crm = "CrestApps.OrchardCore.Omnichannel.Crm";
-
     }
 
     /// <summary>

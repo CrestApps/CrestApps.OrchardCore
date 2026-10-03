@@ -1468,6 +1468,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         void RequestHandoff(string reason);
         void Reset();
     }
+    public interface ISmsProviderRouter
+    {
+        System.Threading.Tasks.Task<OrchardCore.Sms.ISmsProvider> GetProviderAsync(string providerName, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.ValueTask<string> ResolveProviderNameAsync(string fromNumber, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<OrchardCore.Infrastructure.Result> SendAsync(OrchardCore.Sms.SmsMessage message, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface ISubjectActionExecutor
     {
         System.Threading.Tasks.Task ExecuteAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectActionExecutionContext context, System.Threading.CancellationToken cancellationToken = default);
@@ -1646,6 +1652,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         public void Dispose() { }
         public static CrestApps.OrchardCore.Omnichannel.Core.Services.SmsProviderRefusalScope Begin() { }
         public static void Report(string errorCode) { }
+    }
+    public sealed class SmsProviderRouter : CrestApps.OrchardCore.Omnichannel.Core.Services.ISmsProviderRouter
+    {
+        public SmsProviderRouter(CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointManager endpointManager, OrchardCore.Sms.ISmsProviderResolver providerResolver, OrchardCore.Settings.ISiteService siteService, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Core.Services.SmsProviderRouter> logger) { }
+        public System.Threading.Tasks.Task<OrchardCore.Sms.ISmsProvider> GetProviderAsync(string providerName, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.ValueTask<string> ResolveProviderNameAsync(string fromNumber, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<OrchardCore.Infrastructure.Result> SendAsync(OrchardCore.Sms.SmsMessage message, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public static class SubjectDispositionGuidance
     {

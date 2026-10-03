@@ -30,7 +30,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
     private readonly ICatalog<OmnichannelCampaign> _campaignCatalog;
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
     private readonly ICatalog<OmnichannelChannelEndpoint> _channelEndpointCatalog;
-    private readonly ISmsService _smsService;
+    private readonly ISmsProviderRouter _smsProviderRouter;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IContentManager _contentManager;
     private readonly IContactOptOutResolver _optOutResolver;
@@ -47,7 +47,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
     /// <param name="campaignCatalog">The campaign catalog.</param>
     /// <param name="subjectFlowSettingsService">The subject flow settings service.</param>
     /// <param name="channelEndpointCatalog">The channel endpoint catalog.</param>
-    /// <param name="smsService">The sms service.</param>
+    /// <param name="smsProviderRouter">The router that sends through the provider owning the sending number.</param>
     /// <param name="liquidTemplateManager">The liquid template manager.</param>
     /// <param name="contentManager">The content manager.</param>
     /// <param name="clock">The clock.</param>
@@ -59,7 +59,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
         ICatalog<OmnichannelCampaign> campaignCatalog,
         ISubjectFlowSettingsService subjectFlowSettingsService,
         ICatalog<OmnichannelChannelEndpoint> channelEndpointCatalog,
-        ISmsService smsService,
+        ISmsProviderRouter smsProviderRouter,
         ILiquidTemplateManager liquidTemplateManager,
         IContentManager contentManager,
         IContactOptOutResolver optOutResolver,
@@ -72,7 +72,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
         _campaignCatalog = campaignCatalog;
         _subjectFlowSettingsService = subjectFlowSettingsService;
         _channelEndpointCatalog = channelEndpointCatalog;
-        _smsService = smsService;
+        _smsProviderRouter = smsProviderRouter;
         _liquidTemplateManager = liquidTemplateManager;
         _contentManager = contentManager;
         _optOutResolver = optOutResolver;
@@ -195,7 +195,9 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
             return;
         }
 
-        var smsResult = await _smsService.SendAsync(message, cancellationToken);
+        // Sent through the provider that owns the activity's number, not the tenant default, so a number on a second
+        // carrier opens the conversation from the number the customer will reply to.
+        var smsResult = await _smsProviderRouter.SendAsync(message, cancellationToken);
 
         if (smsResult.Succeeded)
         {

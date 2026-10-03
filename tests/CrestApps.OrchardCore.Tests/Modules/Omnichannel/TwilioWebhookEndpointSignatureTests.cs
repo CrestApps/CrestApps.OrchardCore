@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
-using CrestApps.OrchardCore.Omnichannel.Sms.Endpoints;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Twilio;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Primitives;

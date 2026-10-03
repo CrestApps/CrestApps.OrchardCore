@@ -2,7 +2,7 @@ using System.Net;
 using System.Text;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using CrestApps.OrchardCore.Omnichannel.Sms.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Twilio;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Sms;

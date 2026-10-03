@@ -82,8 +82,8 @@ public sealed class InboundVoiceStartup : StartupBase
             .AddScoped<IContactCenterEventHandler, OfferQueuedVoiceWorkOnAvailabilityHandler>();
 
         // Caller-based priority: the entry point says what the number is worth, the contributors notice what
-        // this particular caller is worth, and the strongest of the two decides where they land in line.
-        services.AddScoped<IInboundPriorityResolver, InboundPriorityResolver>();
+        // this particular caller is worth, and the strongest of the two decides where they land in line. The
+        // resolver itself is registered by the Voice feature, because the inbound processor that asks it lives there.
         services.AddScoped<IInboundPriorityContributor, ReturningCallbackPriorityContributor>();
         services.AddScoped<IInboundPriorityContributor, RepeatCallerPriorityContributor>();
 

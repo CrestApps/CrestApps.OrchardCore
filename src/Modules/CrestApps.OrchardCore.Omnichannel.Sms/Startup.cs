@@ -1,9 +1,8 @@
 ﻿using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Twilio;
 using CrestApps.OrchardCore.Omnichannel.Sms.BackgroundTasks;
-using CrestApps.OrchardCore.Omnichannel.Sms.Drivers;
-using CrestApps.OrchardCore.Omnichannel.Sms.Endpoints;
 using CrestApps.OrchardCore.Omnichannel.Sms.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Sms.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Sms.Migrations;
@@ -37,6 +36,10 @@ public sealed class Startup : StartupBase
         // Asked before any text goes out, so a stop said on any record that holds the number is honoured here too.
         services.TryAddScoped<IContactOptOutResolver, ContactOptOutResolver>();
 
+        // Automated texts leave through the provider that owns the sending number, picked exactly as the messaging
+        // workspace picks it. The SMS Messaging Channel registers the same router, so TryAdd keeps one registration.
+        services.TryAddScoped<ISmsProviderRouter, SmsProviderRouter>();
+
         // Re-drives automated SMS conversations whose in-memory reply generation was lost (for example on a restart),
         // so an owed reply is not left stranded and the no-response timeout does not wrongly fail the conversation.
         services.AddSingleton<IBackgroundTask, SmsOwedReplyRecoveryBackgroundTask>();
@@ -47,23 +50,24 @@ public sealed class Startup : StartupBase
 
         services.AddRedaction(builder => builder.SetRedactor<ErasingRedactor>(LogDataClassifications.AddressSet));
 
-        // Twilio says why it refused a message, and its provider throws that away. Recorded, so a text that fails
-        // for credentials, region or a trial restriction says which in the log.
-        services.AddTransient<TwilioErrorLoggingHandler>();
-        services.AddHttpClient(TwilioSmsProvider.TechnicalName)
-            .AddHttpMessageHandler<TwilioErrorLoggingHandler>();
-
-        // Shows the inbound-SMS webhook address under Orchard Core's Twilio settings, beside the endpoint it names.
-        services.AddDisplayDriver<ISite, TwilioSmsWebhookSettingsDisplayDriver>();
+        // The Twilio webhook, its settings address and the refusal logging live in the Omnichannel Twilio SMS
+        // feature this one depends on, because the messaging workspace's SMS channel needs them without automation.
 
         services
             .AddDataMigration<OminchannelActivityAIChatSessionIndexMigrations>()
             .AddIndexProvider<OminchannelActivityAIChatSessionIndexProvider>();
     }
+}
+
+/// <summary>
+/// Receives Twilio texts for the automated conversations. The SMS Messaging Channel registers the
+/// same webhook for the workspace; whichever registers first owns it, so the route is mapped once with both on.
+/// </summary>
+public sealed class TwilioSmsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+        => TwilioSmsWebhook.AddServices(services);
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
-    {
-        routes
-            .AddTwilioWebhookEndpoint();
-    }
+        => TwilioSmsWebhook.MapEndpoint(routes, serviceProvider);
 }

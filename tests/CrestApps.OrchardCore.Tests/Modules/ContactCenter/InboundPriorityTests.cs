@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -19,7 +20,7 @@ public sealed class InboundPriorityTests
     {
         // Arrange
         // A tenant that has configured nothing must see exactly the behaviour it had before this existed.
-        var resolver = new InboundPriorityResolver([]);
+        var resolver = new InboundPriorityResolver([], NullLogger<InboundPriorityResolver>.Instance);
 
         // Act
         var priority = await resolver.ResolveAsync(Context(InteractionPriority.Normal), TestContext.Current.CancellationToken);
@@ -32,7 +33,7 @@ public sealed class InboundPriorityTests
     public async Task AContributorCanRaiseThePriority()
     {
         // Arrange
-        var resolver = new InboundPriorityResolver([new FixedContributor(InteractionPriority.Highest)]);
+        var resolver = new InboundPriorityResolver([new FixedContributor(InteractionPriority.Highest)], NullLogger<InboundPriorityResolver>.Instance);
 
         // Act
         var priority = await resolver.ResolveAsync(Context(InteractionPriority.Normal), TestContext.Current.CancellationToken);
@@ -53,7 +54,7 @@ public sealed class InboundPriorityTests
             new FixedContributor(InteractionPriority.High),
             new FixedContributor(InteractionPriority.Highest),
             new FixedContributor(InteractionPriority.Low),
-        ]);
+        ], NullLogger<InboundPriorityResolver>.Instance);
 
         // Act
         var priority = await resolver.ResolveAsync(Context(InteractionPriority.Normal), TestContext.Current.CancellationToken);
@@ -68,7 +69,7 @@ public sealed class InboundPriorityTests
         // Arrange
         // The entry point is an explicit operator decision about this number. A contributor exists to notice
         // something about the caller, not to overrule what the tenant configured.
-        var resolver = new InboundPriorityResolver([new FixedContributor(InteractionPriority.Low)]);
+        var resolver = new InboundPriorityResolver([new FixedContributor(InteractionPriority.Low)], NullLogger<InboundPriorityResolver>.Instance);
 
         // Act
         var priority = await resolver.ResolveAsync(Context(InteractionPriority.High), TestContext.Current.CancellationToken);
@@ -81,7 +82,7 @@ public sealed class InboundPriorityTests
     public async Task AContributorThatDeclinesToDecide_ChangesNothing()
     {
         // Arrange
-        var resolver = new InboundPriorityResolver([new FixedContributor(null)]);
+        var resolver = new InboundPriorityResolver([new FixedContributor(null)], NullLogger<InboundPriorityResolver>.Instance);
 
         // Act
         var priority = await resolver.ResolveAsync(Context(InteractionPriority.Normal), TestContext.Current.CancellationToken);
@@ -97,7 +98,7 @@ public sealed class InboundPriorityTests
         // A contributor reads the CRM. A caller must not be dropped because a lookup failed: landing at the
         // configured priority is a worse outcome than the VIP treatment they were owed, and a far better one
         // than not reaching anybody.
-        var resolver = new InboundPriorityResolver([new ThrowingContributor(), new FixedContributor(InteractionPriority.High)]);
+        var resolver = new InboundPriorityResolver([new ThrowingContributor(), new FixedContributor(InteractionPriority.High)], NullLogger<InboundPriorityResolver>.Instance);
 
         // Act
         var priority = await resolver.ResolveAsync(Context(InteractionPriority.Normal), TestContext.Current.CancellationToken);

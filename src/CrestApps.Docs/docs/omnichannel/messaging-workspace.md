@@ -90,7 +90,7 @@ The workspace does **not** require Contact Center Voice, Work Distribution or th
    - **Distribution mode**: **Shared pool** (agents claim conversations) or **Routed** (pushed to an agent by the routed-distribution feature).
    - **Auto-reply**: an optional acknowledgement, sent at most once a day per conversation.
 4. **Grant the permissions** below to the roles that staff the inbox.
-5. **Point the provider webhook at Orchard Core** so inbound messages and delivery receipts arrive. Telnyx SMS maps `api/telnyx/webhook/sms` (see the [Telnyx SMS webhook](../telephony/telnyx#telnyx-sms)). The Twilio inbound webhook, `api/twilio/webhook/sms`, is mapped by the [SMS Omnichannel Automation](sms) feature, which depends on the AI features; enable it to receive Twilio texts in the workspace.
+5. **Point the provider webhook at Orchard Core** so inbound messages and delivery receipts arrive. Telnyx SMS maps `api/telnyx/webhook/sms` (see the [Telnyx SMS webhook](../telephony/telnyx#telnyx-sms)). The Twilio inbound webhook, `api/twilio/webhook/sms`, is mapped by this channel whenever Orchard Core's Twilio SMS feature is on, so the workspace receives Twilio texts without the AI features. Its address shows on the Twilio tab of the SMS settings screen.
 6. Open **Messaging → Inbox**.
 
 A **Send SMS** button appears beside phone-number fields on admin pages. It opens the customer's existing SMS conversation, or the composer when there is none.
