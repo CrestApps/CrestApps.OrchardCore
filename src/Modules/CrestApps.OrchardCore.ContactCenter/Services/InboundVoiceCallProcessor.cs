@@ -51,6 +51,7 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
     private readonly IContactCenterFeatureWorkManager _workManager;
     private readonly IContactCenterAuditRecorder _auditRecorder;
     private readonly IInboundPriorityResolver _priorityResolver;
+    private readonly IEnumerable<IInboundAIVoiceAnswerer> _aiVoiceAnswerers;
     private readonly YesSqlSession _session;
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -105,6 +106,7 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
         IContactCenterFeatureWorkManager workManager,
         IContactCenterAuditRecorder auditRecorder,
         IInboundPriorityResolver priorityResolver,
+        IEnumerable<IInboundAIVoiceAnswerer> aiVoiceAnswerers,
         YesSqlSession session,
         IClock clock,
         IOptions<ContactCenterCoordinationOptions> coordinationOptions,
@@ -130,6 +132,7 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
         _workManager = workManager;
         _auditRecorder = auditRecorder;
         _priorityResolver = priorityResolver;
+        _aiVoiceAnswerers = aiVoiceAnswerers;
         _session = session;
         _clock = clock;
         _logger = logger;
@@ -246,6 +249,14 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
         // The chain asks every registered resolver rather than only the first, so a feature that adds its own
         // entry-point source is actually consulted.
         var plan = await _entryPointResolver.ResolveAsync(serviceAddress, cancellationToken);
+
+        // An open entry point that routes to an AI voice agent hands the call over before anything a person answers
+        // applies: the AI greets the caller itself, so there is no welcome message, menu or queue.
+        if (plan is { RouteToAIAgent: true })
+        {
+            return await RouteToAIAgentAsync(inboundEvent, plan, endpoint, flow, fromAddress, serviceAddress, contactItemIds, now, result, cancellationToken);
+        }
+
         ActivityQueue queue = null;
         string unavailableQueueReasonCode = null;
 
@@ -644,70 +655,6 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
             .Distinct(StringComparer.Ordinal)
             .Order(StringComparer.Ordinal)
             .ToArray();
-    }
-
-    private async Task<OmnichannelActivity> CreateActivityAsync(
-        OmnichannelChannelEndpoint endpoint,
-        SubjectFlowSettings flow,
-        string fromAddress,
-        IReadOnlyList<string> contactItemIds,
-        DateTime now)
-    {
-        var activity = await _activityManager.NewAsync();
-        activity.Kind = ActivityKind.Call;
-        activity.Source = ActivitySources.Inbound;
-        activity.Channel = OmnichannelConstants.Channels.Phone;
-        activity.ChannelEndpointId = endpoint?.ItemId;
-        activity.InteractionType = ActivityInteractionType.Manual;
-        activity.PreferredDestination = fromAddress;
-        activity.CampaignId = flow?.CampaignId;
-        activity.SubjectContentType = flow?.SubjectContentType;
-        activity.Status = ActivityStatus.AwaitingAgentResponse;
-        activity.ScheduledUtc = now;
-        activity.CreatedUtc = now;
-        activity.ContactResolutionCandidates = contactItemIds.ToList();
-        activity.ContactResolutionStatus = contactItemIds.Count switch
-        {
-            0 => ContactResolutionStatus.Unresolved,
-            1 => ContactResolutionStatus.Resolved,
-            _ => ContactResolutionStatus.Ambiguous,
-        };
-
-        if (activity.ContactResolutionStatus == ContactResolutionStatus.Resolved)
-        {
-            var contact = await _contentManager.GetAsync(contactItemIds[0]);
-
-            if (contact is not null)
-            {
-                activity.ContactContentItemId = contact.ContentItemId;
-                activity.ContactContentType = contact.ContentType;
-                activity.ContactResolvedUtc = now;
-            }
-            else
-            {
-                activity.ContactResolutionStatus = ContactResolutionStatus.Unresolved;
-            }
-        }
-
-        if (!string.IsNullOrEmpty(activity.SubjectContentType))
-        {
-            activity.Subject = await _contentManager.NewAsync(activity.SubjectContentType);
-        }
-
-        // Routing state is created before the activity is persisted so the activity's read model is already
-        // reconciled on its first write, instead of costing a second write to converge.
-        var workState = await _workStateService.MutateAsync(
-            activity.ItemId,
-            state => state.TransitionTo(ActivityAssignmentStatus.Available));
-
-        if (workState is not null)
-        {
-            ContactCenterWorkStateProjector.Apply(activity, workState);
-        }
-
-        await _activityManager.CreateAsync(activity);
-
-        return activity;
     }
 
     private async Task<Core.Models.Interaction> CreateInteractionAsync(

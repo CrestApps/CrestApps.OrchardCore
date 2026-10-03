@@ -42,6 +42,16 @@ public sealed class EntryPointRoutingPlan
     public string TargetAgentId { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether an AI voice agent answers the call.
+    /// </summary>
+    public bool RouteToAIAgent { get; set; }
+
+    /// <summary>
+    /// Gets or sets the AI profile that answers the call when <see cref="RouteToAIAgent"/> is set.
+    /// </summary>
+    public string TargetAIProfileId { get; set; }
+
+    /// <summary>
     /// Gets or sets the priority to assign to the queued call.
     /// </summary>
     public InteractionPriority Priority { get; set; } = InteractionPriority.Normal;

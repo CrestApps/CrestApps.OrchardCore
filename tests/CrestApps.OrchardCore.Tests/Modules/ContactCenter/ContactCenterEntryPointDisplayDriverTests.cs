@@ -123,7 +123,8 @@ public sealed class ContactCenterEntryPointDisplayDriverTests
         return new(
             AdminFormOptionsProviderFactory.Create(),
             addresses.Object,
-            Options.Create(new EntryPointChannelOptions()));
+            Options.Create(new EntryPointChannelOptions()),
+            []);
     }
 
     private static ContactCenterEntryPointVoiceDisplayDriver CreateVoiceDriver()

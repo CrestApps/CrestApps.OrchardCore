@@ -132,8 +132,15 @@ instead of listing every record.
   addresses used for voice calls (`GetCallerIdOptionsAsync`), still storing the number, so no migration is needed; a
   stored number that is not an address stays selected. Asterisk's outbound caller id stays free text, because Asterisk
   accepts caller identifiers that are not phone numbers.
-- Inbound AI voice: an entry point that hands the call to an AI profile ("Answer calls at the front desk" has no
-  inbound path today).
+- Inbound AI voice (built): call entry points gain the `AIAgent` target and `TargetAIProfileId`. The planner sets
+  `RouteToAIAgent` while open; while closed an AI line goes to voicemail, or rejects. `InboundVoiceCallProcessor`
+  hands an open AI entry point's call over before any welcome message, menu or queue: it creates an `Automated`
+  activity with the profile, in `AwaitingCustomerAnswer`, with no work state and no Contact Center interaction. After
+  commit, `IInboundAIVoiceAnswererDispatcher` asks the provider's `IInboundAIVoiceAnswerer` to answer. Telnyx answers
+  with the `ai-voice` client state, so later events reach `VoiceAgentConversationLoop` exactly as an outbound AI call's
+  do, and the hand-off creates the interaction if the AI escalates. An answer that is refused fails the activity; an
+  entry point whose provider has no answerer rejects the call. A menu key that routes to the AI is not built yet.
+  Live call still to be checked.
 - Removed the unused `OmnichannelCampaign.ChannelEndpointId` (built). Older recipes that carry it still import; the
   value is ignored.
 
