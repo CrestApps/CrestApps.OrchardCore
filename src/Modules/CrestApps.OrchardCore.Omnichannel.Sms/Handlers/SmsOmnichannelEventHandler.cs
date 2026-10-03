@@ -189,7 +189,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         }
 
         var activity = await _omnichannelActivityStore.GetAsync(omnichannelEvent.Message.Channel,
-        endpoint.ItemId,
+        endpoint.GetKnownIds(),
         omnichannelEvent.Message.CustomerAddress,
         ActivityInteractionType.Automated,
         cancellationToken);

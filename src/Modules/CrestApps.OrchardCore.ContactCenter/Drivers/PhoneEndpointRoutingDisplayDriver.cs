@@ -63,7 +63,7 @@ public sealed class PhoneEndpointRoutingDisplayDriver : DisplayDriver<Omnichanne
                     .Select(entryPoint => entryPoint.Name)
                     .ToList();
             }
-        }).Location("Content:1%Inbound routing;2");
+        }).Location("Content:1%Voice calls;2");
     }
 
     /// <inheritdoc/>
@@ -88,5 +88,5 @@ public sealed class PhoneEndpointRoutingDisplayDriver : DisplayDriver<Omnichanne
     }
 
     private static bool IsPhoneEndpoint(OmnichannelChannelEndpoint endpoint)
-        => string.Equals(endpoint?.Channel, OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase);
+        => string.Equals(endpoint?.GetAddressType(), OmnichannelAddressTypes.PhoneNumber, StringComparison.OrdinalIgnoreCase);
 }

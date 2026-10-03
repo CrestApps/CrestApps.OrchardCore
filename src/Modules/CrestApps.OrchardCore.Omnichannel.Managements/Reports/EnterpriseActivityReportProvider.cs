@@ -3,6 +3,7 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
@@ -23,6 +24,7 @@ internal sealed class EnterpriseActivityReportProvider : IReport
     private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
     private readonly ICatalogManager<OmnichannelCampaignGroup> _campaignGroupManager;
     private readonly INamedCatalogManager<OmnichannelDisposition> _dispositionManager;
+    private readonly IOmnichannelChannelEndpointStore _addressStore;
     private readonly EnterpriseActivityReportDefinition _definition;
     private readonly IStringLocalizer _stringLocalizer;
 
@@ -31,6 +33,7 @@ internal sealed class EnterpriseActivityReportProvider : IReport
         ICatalogManager<OmnichannelCampaign> campaignManager,
         ICatalogManager<OmnichannelCampaignGroup> campaignGroupManager,
         INamedCatalogManager<OmnichannelDisposition> dispositionManager,
+        IOmnichannelChannelEndpointStore addressStore,
         EnterpriseActivityReportDefinition definition,
         IStringLocalizer stringLocalizer)
     {
@@ -38,6 +41,7 @@ internal sealed class EnterpriseActivityReportProvider : IReport
         _campaignManager = campaignManager;
         _campaignGroupManager = campaignGroupManager;
         _dispositionManager = dispositionManager;
+        _addressStore = addressStore;
         _definition = definition;
         _stringLocalizer = stringLocalizer;
     }
@@ -92,6 +96,12 @@ internal sealed class EnterpriseActivityReportProvider : IReport
         var userNames = IsUserReport()
             ? await ResolveUserNamesAsync(filteredActivities, cancellationToken)
             : null;
+        // Activities name the address they used, by the id it had then. A number once listed per channel is now one
+        // address, so the ids merged into it are counted as that address, under its name rather than a raw id.
+        var addressesById = _definition.Kind == EnterpriseActivityReportKind.ChannelEndpointUsage
+            ? await ResolveAddressesAsync(cancellationToken)
+            : null;
+
         var contactNames = IsContactReport()
             ? await ResolveContactNamesAsync(filteredActivities, cancellationToken)
             : null;
@@ -165,7 +175,11 @@ internal sealed class EnterpriseActivityReportProvider : IReport
                 S["Assigned user"].Value,
                 activity => activity.AssignedToId,
                 activity => ResolveUser(activity.AssignedToId, userNames)),
-            EnterpriseActivityReportKind.ChannelEndpointUsage => BuildProgress(filteredActivities, S["Channel endpoint"].Value, activity => Display(activity.ChannelEndpointId)),
+            EnterpriseActivityReportKind.ChannelEndpointUsage => BuildProgress(
+                filteredActivities,
+                S["Address"].Value,
+                activity => ResolveAddress(activity.ChannelEndpointId, addressesById)?.ItemId ?? activity.ChannelEndpointId ?? string.Empty,
+                activity => ResolveAddressName(activity.ChannelEndpointId, addressesById)),
             EnterpriseActivityReportKind.CustomerWorkload => BuildProgress(
                 filteredActivities,
                 S["Customer"].Value,
@@ -587,6 +601,38 @@ internal sealed class EnterpriseActivityReportProvider : IReport
 
         return new ReportDocument()
             .Add(ReportSection.ForTable(S["Scheduled completion performance"].Value, columns, rows));
+    }
+
+    private async Task<IReadOnlyDictionary<string, OmnichannelChannelEndpoint>> ResolveAddressesAsync(CancellationToken cancellationToken)
+    {
+        var byId = new Dictionary<string, OmnichannelChannelEndpoint>(StringComparer.Ordinal);
+
+        foreach (var address in await _addressStore.GetAllAsync(cancellationToken))
+        {
+            foreach (var id in address.GetKnownIds())
+            {
+                byId[id] = address;
+            }
+        }
+
+        return byId;
+    }
+
+    private static OmnichannelChannelEndpoint ResolveAddress(string id, IReadOnlyDictionary<string, OmnichannelChannelEndpoint> addressesById)
+        => !string.IsNullOrEmpty(id) && addressesById is not null && addressesById.TryGetValue(id, out var address) ? address : null;
+
+    private string ResolveAddressName(string id, IReadOnlyDictionary<string, OmnichannelChannelEndpoint> addressesById)
+    {
+        if (string.IsNullOrEmpty(id))
+        {
+            return S["(Not set)"].Value;
+        }
+
+        var address = ResolveAddress(id, addressesById);
+
+        return address is null
+            ? S["(Unknown address)"].Value
+            : string.IsNullOrWhiteSpace(address.DisplayText) ? address.Value : $"{address.DisplayText} ({address.Value})";
     }
 
     private string Display(string value)

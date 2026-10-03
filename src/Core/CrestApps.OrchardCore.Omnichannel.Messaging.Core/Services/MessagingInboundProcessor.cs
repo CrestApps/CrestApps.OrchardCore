@@ -161,7 +161,7 @@ public sealed class MessagingInboundProcessor : IMessagingInboundProcessor
         // (the handoff concludes it), messages flow into the human thread from here again.
         var automatedActivity = await _activityStore.GetAsync(
             channel.Name,
-            endpoint.ItemId,
+            endpoint.GetKnownIds(),
             message.CustomerAddress,
             ActivityInteractionType.Automated,
             cancellationToken);

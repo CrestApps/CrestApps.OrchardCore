@@ -72,4 +72,15 @@ public interface IOmnichannelActivityStore : ICatalog<OmnichannelActivity>
     /// <param name="interactionType">The interaction type to match.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     Task<OmnichannelActivity> GetAsync(string channel, string channelEndpoint, string preferredDestination, ActivityInteractionType interactionType, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the latest activity on any of an address's identifiers: its own, and those of the records merged into it,
+    /// which activities created before the merge still carry.
+    /// </summary>
+    /// <param name="channel">The channel name.</param>
+    /// <param name="channelEndpointIds">The address's identifiers.</param>
+    /// <param name="preferredDestination">The preferred destination to match.</param>
+    /// <param name="interactionType">The interaction type to match.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<OmnichannelActivity> GetAsync(string channel, IReadOnlyCollection<string> channelEndpointIds, string preferredDestination, ActivityInteractionType interactionType, CancellationToken cancellationToken = default);
 }

@@ -67,7 +67,7 @@
                     <option value="">@T["Select a subject content type"]</option>
                 </select>
                 <span asp-validation-for="SubjectContentType" class="text-danger"></span>
-                <span class="hint">@T["The subject determines the flow and disposition-driven actions. The channel, endpoint, and campaign used for this load are selected below."]</span>
+                <span class="hint">@T["The subject determines the flow and disposition-driven actions. The channel, address, and campaign used for this load are selected below."]</span>
             </div>
         </div>
 
@@ -194,11 +194,11 @@
         @if (string.Equals(Model.Source, ActivitySources.Automatic, StringComparison.OrdinalIgnoreCase))
         {
             <div class="ocat-wrapper">
-                <label asp-for="ChannelEndpointId" class="ocat-label">@T["Channel endpoint"]</label>
+                <label asp-for="ChannelEndpointId" class="ocat-label">@T["Address"]</label>
                 <div class="ocat-end">
                     <select asp-for="ChannelEndpointId" asp-items="Model.ChannelEndpoints" class="form-select"></select>
                     <span asp-validation-for="ChannelEndpointId" class="text-danger"></span>
-                    <span class="hint">@T["Optional. The endpoint (such as a phone number or SMS number) used to reach contacts."]</span>
+                    <span class="hint">@T["Optional. The phone number used to reach contacts. It must be used for the load's channel."]</span>
                 </div>
             </div>
         }

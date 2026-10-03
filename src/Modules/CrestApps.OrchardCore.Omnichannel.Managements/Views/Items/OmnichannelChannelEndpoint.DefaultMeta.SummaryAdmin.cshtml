@@ -3,25 +3,37 @@
 @using OrchardCore.DisplayManagement.Views
 @using Microsoft.Extensions.Options
 
-@inject IOptions<ChannelEndpointSourceOptions> SourceOptions
+@inject IOptions<OmnichannelAddressOptions> AddressOptions
 
 @model ShapeViewModel<OmnichannelChannelEndpoint>
 
 @{
     var modifiedAt = Model.Value.ModifiedUtc ?? Model.Value.CreatedUtc;
-    var channel = Model.Value.Channel;
-    var sourceName = !string.IsNullOrEmpty(channel) && SourceOptions.Value.Sources.TryGetValue(channel, out var source) && source.DisplayName != null
-        ? source.DisplayName.Value
-        : channel;
-    var sourceIcon = string.Equals(channel, "SMS", StringComparison.OrdinalIgnoreCase)
-        ? "fa-comment-sms"
-        : string.Equals(channel, "Phone", StringComparison.OrdinalIgnoreCase) ? "fa-phone" : "fa-tag";
+    var addressType = Model.Value.GetAddressType();
+    var addressTypeName = !string.IsNullOrEmpty(addressType) && AddressOptions.Value.AddressTypes.TryGetValue(addressType, out var type) && type.DisplayName != null
+        ? type.DisplayName.Value
+        : addressType;
+    var addressTypeIcon = string.Equals(addressType, "EmailAddress", StringComparison.OrdinalIgnoreCase) ? "fa-envelope" : "fa-phone";
 }
 
-@if (!string.IsNullOrEmpty(sourceName))
+@if (!string.IsNullOrEmpty(addressTypeName))
 {
-    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Source"]">
-        <i class="fa-solid @sourceIcon text-secondary me-1" aria-hidden="true"></i>@sourceName
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Address type"]">
+        <i class="fa-solid @addressTypeIcon text-secondary me-1" aria-hidden="true"></i>@addressTypeName
+    </span>
+}
+
+@foreach (var capability in Model.Value.GetCapabilities())
+{
+    var capabilityName = AddressOptions.Value.Capabilities.TryGetValue(capability, out var registered) && registered.DisplayName != null
+        ? registered.DisplayName.Value
+        : capability;
+    var capabilityIcon = string.Equals(capability, "SMS", StringComparison.OrdinalIgnoreCase)
+        ? "fa-comment-sms"
+        : string.Equals(capability, "Phone", StringComparison.OrdinalIgnoreCase) ? "fa-headset" : "fa-tag";
+
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Used for"]">
+        <i class="fa-solid @capabilityIcon text-secondary me-1" aria-hidden="true"></i>@capabilityName
     </span>
 }
 
@@ -34,7 +46,7 @@
 
 @if (!string.IsNullOrEmpty(Model.Value.ProviderName))
 {
-    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Provider"]">
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["SMS provider"]">
         <i class="fa-solid fa-plug text-secondary me-1" aria-hidden="true"></i>@Model.Value.ProviderName
     </span>
 }

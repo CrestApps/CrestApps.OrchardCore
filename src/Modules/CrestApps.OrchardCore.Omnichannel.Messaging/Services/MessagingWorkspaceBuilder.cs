@@ -524,7 +524,7 @@ public sealed class MessagingWorkspaceBuilder
             var group = new SelectListGroup { Name = channel.DisplayName.Value };
             var isPreferred = string.Equals(channel.Name, preferredChannel, StringComparison.OrdinalIgnoreCase);
 
-            foreach (var endpoint in endpoints.Where(endpoint => string.Equals(endpoint.Channel, channel.Name, StringComparison.OrdinalIgnoreCase)))
+            foreach (var endpoint in endpoints.Where(endpoint => endpoint.HasCapability(channel.Name) && !endpointChannels.ContainsKey(endpoint.ItemId)))
             {
                 var address = channel.FormatAddress(endpoint.Value);
 

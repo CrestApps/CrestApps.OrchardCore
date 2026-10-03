@@ -630,7 +630,7 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
 
         return flows.FirstOrDefault(flow =>
             string.Equals(flow.Channel, OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(flow.ChannelEndpointId, endpoint.ItemId, StringComparison.OrdinalIgnoreCase));
+            endpoint.IsKnownAs(flow.ChannelEndpointId));
     }
 
     private async Task<IReadOnlyList<string>> ResolveContactsAsync(
@@ -781,8 +781,8 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
 
         if (endpoint is not null)
         {
-            var mapped = queues.FirstOrDefault(queue =>
-                string.Equals(queue.InboundChannelEndpointId, endpoint.ItemId, StringComparison.OrdinalIgnoreCase));
+            // A queue may still name the record a merged address absorbed, so it is matched by any id the address has.
+            var mapped = queues.FirstOrDefault(queue => endpoint.IsKnownAs(queue.InboundChannelEndpointId));
 
             if (mapped is not null)
             {

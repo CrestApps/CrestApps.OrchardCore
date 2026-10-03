@@ -1,28 +1,39 @@
 @using CrestApps.OrchardCore.Omnichannel.Core.Models
 @using Microsoft.Extensions.Options
 
-@inject IOptions<ChannelEndpointSourceOptions> SourceOptions
+@inject IOptions<OmnichannelAddressOptions> AddressOptions
 
 @{
-    string sourceName = Model.Source;
+    string addressTypeName = Model.Source;
 
-    if (!SourceOptions.Value.Sources.TryGetValue(sourceName, out var source))
+    if (!AddressOptions.Value.AddressTypes.TryGetValue(addressTypeName, out var addressType))
     {
         return;
     }
+
+    var capabilities = AddressOptions.Value.GetCapabilities(addressTypeName).ToArray();
 }
 
 <div class="col">
     <div class="card h-100">
         <div class="card-body">
-            <h4>@(source.DisplayName)</h4>
-            <p class="hint">@(source.Description)</p>
+            <h4>@(addressType.DisplayName)</h4>
+            <p class="hint">@(addressType.Description)</p>
+            @if (capabilities.Length > 0)
+            {
+                <p class="mb-0">
+                    @foreach (var capability in capabilities)
+                    {
+                        <span class="badge ta-badge font-weight-normal me-1">@capability.DisplayName</span>
+                    }
+                </p>
+            }
         </div>
         <div class="card-footer text-muted text-sm-end">
             <a class="btn btn-primary btn-sm"
                asp-route-action="Create"
                asp-route-controller="ChannelEndpoints"
-               asp-route-source="@sourceName">@T["Add"]</a>
+               asp-route-source="@addressTypeName">@T["Add"]</a>
         </div>
     </div>
 </div>
