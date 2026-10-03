@@ -11,7 +11,7 @@ An **omnichannel address** is an address the business owns, such as a phone numb
 | --- | --- |
 | **Menu** | Interaction Center > Management > Omnichannel Addresses |
 | **Permission** | Manage omnichannel addresses |
-| **Feature** | Omnichannel Management. **Voice calls** comes with Contact Center Inbound Voice or Contact Center Outbound Lines; **Text messages (SMS)** comes with SMS Messaging Channel. |
+| **Feature** | Omnichannel Management. **Voice calls** comes with Contact Center Voice, which the voice features turn on; **Text messages (SMS)** comes with SMS Messaging Channel. |
 
 ## Add an address
 
@@ -20,7 +20,7 @@ An **omnichannel address** is an address the business owns, such as a phone numb
 3. Enter a **Name** people will recognize and the **Phone number** in international format, such as `+17025550100`.
 4. Under **Used for**, tick **Voice calls**, **Text messages (SMS)**, or both. The settings for each appear while it is ticked:
    - **Text messages**: the SMS **Provider** that owns the number, and the inbound routing for texts.
-   - **Voice calls**: the agents who dial out from the number (with Contact Center Outbound Lines). Which entry point answers its calls is set on the entry point.
+   - **Voice calls**: the agents who dial out from the number. Which entry point answers its calls is set on the entry point.
 5. Click **Save**.
 
 A number is listed once. To use a number for calls and texts, tick both on the same address rather than adding it twice. The kind of address cannot be changed after it is created, and addresses cannot be deleted.

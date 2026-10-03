@@ -528,8 +528,8 @@ To give an agent a dedicated inbound line, create an entry point with the agent'
 **Specific agent**, pick the agent, and set a **Target queue** as the fallback.
 
 :::tip
-To have an agent call out from their own number, enable **Contact Center Outbound Lines**, add the number as a
-**Phone** channel endpoint, and list the agent under the number's **Outbound line**. Their keypad dials, extension
+To have an agent call out from their own number, add the number as a **Phone** channel
+endpoint (needs Contact Center Voice), and list the agent under the number's **Outbound line**. Their keypad dials, extension
 calls and dialer attempts then show that number, and a customer who calls it back reaches the agent through the
 entry point above. See [Outbound lines](../contact-center/agents-queues-dialer.md#outbound-lines).
 :::

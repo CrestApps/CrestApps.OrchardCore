@@ -47,14 +47,6 @@ public sealed class InboundVoiceStartup : StartupBase
     {
         services.TryAddScoped<IIvrProvider, NoIvrProvider>();
 
-        // Calls are something a phone number does, so taking them is a capability this feature offers on the phone
-        // numbers in the address list. Outbound Lines offers the same capability for dialing out.
-        services.AddOmnichannelAddressCapability(OmnichannelAddressTypes.PhoneNumber, OmnichannelConstants.Channels.Phone, capability =>
-        {
-            capability.DisplayName = S["Voice calls"];
-            capability.Description = S["Calls to and from this number."];
-        });
-
         // Calls are a channel entry points answer, so adding an entry point offers a call one with this feature.
         services.AddEntryPointChannel(OmnichannelConstants.Channels.Phone, channel =>
         {

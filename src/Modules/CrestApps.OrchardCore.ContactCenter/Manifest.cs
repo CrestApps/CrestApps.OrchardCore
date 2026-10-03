@@ -114,7 +114,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = ContactCenterConstants.Feature.Voice,
     Name = "Contact Center Voice",
-    Description = "Routes inbound and outbound voice calls through the Voice Contact Center Call Router while Telephony providers execute media operations.",
+    Description = "Routes inbound and outbound voice calls through the Voice Contact Center Call Router while Telephony providers execute media operations, and lets each of the tenant's phone numbers carry the agents who dial out from it.",
     Category = "Contact Center",
     EnabledByDependencyOnly = true,
     Dependencies =
@@ -123,6 +123,7 @@ using OrchardCore.Modules.Manifest;
         ContactCenterConstants.Feature.RealTime,
         ContactCenterConstants.Feature.RecordingCore,
         ContactCenterConstants.Feature.ProviderInbox,
+        OmnichannelConstants.Features.ChannelEndpoints,
         TelephonyConstants.Feature.Area,
     ]
 )]
@@ -149,18 +150,6 @@ using OrchardCore.Modules.Manifest;
         ContactCenterConstants.Feature.Voice,
         ContactCenterConstants.Feature.Queues,
         ContactCenterConstants.Feature.EntryPoints,
-    ]
-)]
-
-[assembly: Feature(
-    Id = ContactCenterConstants.Feature.OutboundLines,
-    Name = "Contact Center Outbound Lines",
-    Description = "Turns the tenant's phone numbers into lines agents dial out from. Assign agents to a phone number's line and the calls they place from the soft phone or the dialer show that number; agents without a line keep the provider's default caller ID.",
-    Category = "Contact Center",
-    Dependencies =
-    [
-        ContactCenterConstants.Feature.Voice,
-        OmnichannelConstants.Features.ChannelEndpoints,
     ]
 )]
 

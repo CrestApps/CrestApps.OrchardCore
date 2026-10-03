@@ -84,6 +84,8 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
                 "CrestApps.OrchardCore.ContactCenter.Queues",
                 "CrestApps.OrchardCore.ContactCenter.RealTime",
                 "CrestApps.OrchardCore.ContactCenter.Recording.Core",
+                // Outbound lines live on the phone numbers, so Voice brings the number administration with it.
+                "CrestApps.OrchardCore.Omnichannel.ChannelEndpoints",
                 "CrestApps.OrchardCore.Telephony",
             ],
             voiceDependencies);
@@ -101,6 +103,31 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
                 "CrestApps.OrchardCore.Telephony.SoftPhone.Core",
             ],
             softPhoneRequiredFeatures);
+    }
+
+    [Fact]
+    public void OutboundLines_AreOwnedByVoice_NotASeparatelyEnabledFeature()
+    {
+        // Arrange
+        var repositoryRoot = FindRepositoryRoot();
+        var features = ParseManifestFeatures(repositoryRoot, ContactCenterManifestPath)
+            .ToDictionary(feature => feature.Id, StringComparer.Ordinal);
+        var startupClasses = ParseStartupClassesInDirectory(
+            repositoryRoot,
+            ContactCenterModulePath,
+            ContactCenterConstantsFeatureArea(repositoryRoot));
+
+        // Act
+        var lineResolverOwner = startupClasses.Single(startup =>
+            startup.Body.Contains("ChannelEndpointOutboundLineResolver", StringComparison.Ordinal));
+
+        // Assert
+        // Every voice tenant dials out, so giving an agent a line is not something an operator should have to know to
+        // switch on. The behavior rides on Voice, which the voice features enable on their own.
+        Assert.False(
+            features.ContainsKey("CrestApps.OrchardCore.ContactCenter.OutboundLines"),
+            "Outbound lines are part of Voice and must not be declared as a selectable feature.");
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Voice", lineResolverOwner.FeatureId);
     }
 
     [Fact]
