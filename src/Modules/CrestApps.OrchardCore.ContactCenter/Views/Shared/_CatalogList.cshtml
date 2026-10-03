@@ -18,7 +18,26 @@
                     </div>
                 </div>
                 <div class="col-auto">
-                    <a class="btn btn-secondary create" role="button" asp-action="Create">@Model.CreateLabel</a>
+                    @if (Model.CreateOptions is { Count: > 1 })
+                    {
+                        <div class="dropdown">
+                            <button class="btn btn-secondary create dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">@Model.CreateLabel</button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                @foreach (var option in Model.CreateOptions)
+                                {
+                                    <li><a class="dropdown-item" asp-action="Create" asp-all-route-data="option.RouteValues">@option.Label</a></li>
+                                }
+                            </ul>
+                        </div>
+                    }
+                    else if (Model.CreateOptions is { Count: 1 })
+                    {
+                        <a class="btn btn-secondary create" role="button" asp-action="Create" asp-all-route-data="Model.CreateOptions[0].RouteValues">@Model.CreateLabel</a>
+                    }
+                    else
+                    {
+                        <a class="btn btn-secondary create" role="button" asp-action="Create">@Model.CreateLabel</a>
+                    }
                 </div>
             </div>
         </div>

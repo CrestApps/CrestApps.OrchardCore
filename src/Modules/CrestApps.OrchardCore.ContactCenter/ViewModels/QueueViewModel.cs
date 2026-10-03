@@ -86,5 +86,12 @@ public class QueueViewModel
 
     public IList<SelectListItem> InboundChannelEndpointOptions { get; set; } = [];
 
+    /// <summary>
+    /// Gets or sets a value indicating whether inbound entry points route the tenant's numbers, in which case the queue
+    /// names no number of its own.
+    /// </summary>
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public bool RoutesFromEntryPoints { get; set; }
+
     public bool Enabled { get; set; } = true;
 }

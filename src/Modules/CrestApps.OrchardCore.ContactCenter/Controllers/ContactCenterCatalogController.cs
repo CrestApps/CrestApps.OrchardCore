@@ -167,6 +167,14 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
     }
 
     /// <summary>
+    /// Sets up a new entry from the request before its editor is built, for a catalog whose entries come in kinds.
+    /// </summary>
+    /// <param name="model">The new entry.</param>
+    /// <returns><see langword="false"/> when the request asks for a kind that cannot be added.</returns>
+    protected virtual Task<bool> InitializeNewAsync(TModel model)
+        => Task.FromResult(true);
+
+    /// <summary>
     /// Displays the create form.
     /// </summary>
     /// <returns>The create view.</returns>
@@ -178,6 +186,12 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
         }
 
         var model = await _manager.NewAsync();
+
+        if (!await InitializeNewAsync(model))
+        {
+            return NotFound();
+        }
+
         var viewModel = new EditCatalogEntryViewModel
         {
             DisplayName = CreateDisplayName,
@@ -199,6 +213,12 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
         }
 
         var model = await _manager.NewAsync();
+
+        if (!await InitializeNewAsync(model))
+        {
+            return NotFound();
+        }
+
         var viewModel = new EditCatalogEntryViewModel
         {
             DisplayName = NewDisplayName,

@@ -30,7 +30,7 @@ Queue groups only organize queues for administration and reports, for example *S
 2. Fill in the cards described below. Only **Name** is required; every other value has a sensible default.
 3. Click **Save**.
 
-To send phone calls to the queue, point an [inbound entry point](entry-points-and-ivr.md) at it, or pick the phone number in the queue's **Inbound channel endpoint** field. Agents take work from the queue once they [sign in to it](agent-workspace.md).
+To send phone calls to the queue, point an [inbound entry point](entry-points-and-ivr.md) at it. Agents take work from the queue once they [sign in to it](agent-workspace.md).
 
 ### General
 
@@ -72,7 +72,7 @@ Agents get their skills on the [agent entitlements](skills-and-entitlements.md) 
 
 | Field | What it does |
 | --- | --- |
-| **Inbound channel endpoint** | The phone number whose calls route to this queue. Leave empty to use the *default inbound queue*, which only works when exactly one queue has no number. |
+| **Inbound phone number** | Only on tenants without Contact Center Inbound Entry Points: the phone number whose calls route to this queue. With inbound entry points, the card points to them instead, because numbers are routed from their entry point. |
 | **Business hours calendar** | The [calendar](business-hours.md) that says when the queue is open. Empty means *Always open*. Routing pauses while the queue is closed. |
 | **After-hours action** | **Hold in queue** (the default) or **Overflow** to another queue while closed. |
 | **Overflow queue** / **Overflow after (seconds)** | A single overflow hop: after this many seconds of waiting, move the caller to the overflow queue. 0 means no time-based overflow. |

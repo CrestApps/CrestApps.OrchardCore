@@ -77,5 +77,5 @@ public sealed class ActivityQueueDisplayDriverTests
     }
 
     private static ActivityQueueDisplayDriver CreateDriver()
-        => new(AdminFormOptionsProviderFactory.Create(), Mock.Of<IActivityQueueGroupManager>());
+        => new(AdminFormOptionsProviderFactory.Create(), Mock.Of<IActivityQueueGroupManager>(), []);
 }

@@ -27,6 +27,12 @@ public class CatalogListViewModel
     public IHtmlContent CreateLabel { get; set; }
 
     /// <summary>
+    /// Gets or sets the kinds of entry that can be added, when there is more than one. Each becomes an item of the
+    /// create button's menu; with one or none, the button adds an entry directly.
+    /// </summary>
+    public IList<CatalogCreateOption> CreateOptions { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the identifier applied to the list element.
     /// </summary>
     public string ListId { get; set; }
@@ -50,4 +56,20 @@ public class CatalogListViewModel
     /// Gets or sets the pager shape rendered beneath the list.
     /// </summary>
     public object Pager { get; set; }
+}
+
+/// <summary>
+/// A kind of entry a catalog list can add.
+/// </summary>
+public class CatalogCreateOption
+{
+    /// <summary>
+    /// Gets or sets the label shown for the kind.
+    /// </summary>
+    public string Label { get; set; }
+
+    /// <summary>
+    /// Gets or sets the route values the create action is called with.
+    /// </summary>
+    public IDictionary<string, string> RouteValues { get; set; } = new Dictionary<string, string>();
 }
