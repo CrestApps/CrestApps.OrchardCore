@@ -120,9 +120,10 @@ internal static class TwilioWebhookEndpoint
 
         // Twilio's MessageSid travels with the message, so a redelivery is recognisable downstream: the inbound
         // processor's per-thread lock and the unique index on the number pair mean a retry appends to the one
-        // thread rather than creating a second. Routing this endpoint through the durable provider webhook inbox
-        // (as the Telnyx SMS webhook does) additionally suppresses reprocessing entirely, but that inbox contract
-        // lives in Contact Center, and this module is deliberately free of a Contact Center reference.
+        // thread rather than creating a second, and the messaging workspace skips a MessageSid it already recorded.
+        // Routing this endpoint through the durable provider webhook inbox (as the Telnyx SMS webhook does) would
+        // additionally retry processing that fails part-way, but that inbox contract lives in Contact Center, and
+        // this module is deliberately free of a Contact Center reference.
         omnichannelMessage.ProviderMessageId = messageSid;
 
         // Generating the automated reply — a humanized settle pause, the AI completion and a "typing" delay — takes
@@ -156,9 +157,16 @@ internal static class TwilioWebhookEndpoint
                 // MessageSid can arrive more than once. Claim it exactly once here — before the message is stored
                 // or any handler runs — so a redelivery is neither recorded a second time nor answered again. The
                 // gate is the single-active-reply owner for the conversation, which is the right place for this.
-                var conversationGate = scope.ServiceProvider.GetRequiredService<IAutomatedConversationGate>();
+                // The gate ships with SMS automation. A tenant that only runs the messaging workspace has none, and
+                // there the workspace's inbound pipeline recognises a redelivered MessageSid and records it once.
+                var conversationGate = scope.ServiceProvider.GetService<IAutomatedConversationGate>();
 
-                if (!conversationGate.TryClaimInboundMessage(messageSid))
+                if (conversationGate is null && scopedLogger.IsEnabled(LogLevel.Debug))
+                {
+                    scopedLogger.LogDebug("No automated conversation gate is registered, so the inbound Twilio SMS {MessageSid} is handed to the event handlers without a redelivery claim.", messageSid.SanitizeLogValue());
+                }
+
+                if (conversationGate is not null && !conversationGate.TryClaimInboundMessage(messageSid))
                 {
                     if (scopedLogger.IsEnabled(LogLevel.Information))
                     {
@@ -169,6 +177,13 @@ internal static class TwilioWebhookEndpoint
                 }
 
                 await scopedSession.SaveAsync(omnichannelMessage, collection: OmnichannelConstants.CollectionName);
+
+                // Which features receive the text decides where it shows up (the workspace, automation or both), so
+                // the handler count separates "the webhook never fired" from "nothing was enabled to take it".
+                if (scopedLogger.IsEnabled(LogLevel.Debug))
+                {
+                    scopedLogger.LogDebug("Handing the inbound Twilio SMS {MessageSid} to {HandlerCount} Omnichannel event handler(s).", messageSid.SanitizeLogValue(), scopedHandlers.Count());
+                }
 
                 await scopedHandlers.InvokeAsync((handler, evt) => handler.HandleAsync(evt), omnichannelEvent, scopedLogger);
             }

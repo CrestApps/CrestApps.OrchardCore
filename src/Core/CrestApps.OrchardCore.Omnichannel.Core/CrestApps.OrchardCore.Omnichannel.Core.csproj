@@ -11,6 +11,7 @@
     <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
     <PackageReference Include="OrchardCore.ContentFields" />
     <PackageReference Include="OrchardCore.Flows.Core" />
+    <PackageReference Include="OrchardCore.Sms.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>

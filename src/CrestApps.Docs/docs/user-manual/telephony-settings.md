@@ -41,4 +41,4 @@ On the **Soft Phone** tab of the same page, pick the **Default telephony provide
 3. Save.
 4. Add each SMS number under [Channel endpoints](channel-endpoints.md).
 
-Twilio inbound texts use the webhook `/api/twilio/webhook/sms`, which is provided by the **SMS Omnichannel Automation** feature.
+Twilio inbound texts use the webhook `/api/twilio/webhook/sms`. It is available whenever **SMS Omnichannel Automation** or the **SMS Messaging Channel** is on.

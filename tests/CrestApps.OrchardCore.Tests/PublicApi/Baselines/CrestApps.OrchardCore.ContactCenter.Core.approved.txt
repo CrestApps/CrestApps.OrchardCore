@@ -4701,7 +4701,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public sealed class InboundPriorityResolver : CrestApps.OrchardCore.ContactCenter.Core.Services.IInboundPriorityResolver
     {
-        public InboundPriorityResolver(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Services.IInboundPriorityContributor> contributors) { }
+        public InboundPriorityResolver(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Services.IInboundPriorityContributor> contributors, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.InboundPriorityResolver> logger) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.InteractionPriority> ResolveAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.InboundPriorityContext context, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class InboundVoiceDigitsSink : CrestApps.OrchardCore.ContactCenter.Services.IInboundVoiceDigitsSink

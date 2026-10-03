@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Messaging;
 using OrchardCore.Modules.Manifest;
 
@@ -22,5 +23,9 @@ using OrchardCore.Modules.Manifest;
         MessagingConstants.Feature.Workspace,
         ContactCenterConstants.Feature.ProviderInbox,
         "OrchardCore.Sms",
+
+        // Orchard Core's Twilio provider only sends; the webhook that receives Twilio texts is its own feature, so
+        // the workspace hears from Twilio numbers without SMS Omnichannel Automation being on.
+        OmnichannelConstants.Features.TwilioSms,
     ]
 )]

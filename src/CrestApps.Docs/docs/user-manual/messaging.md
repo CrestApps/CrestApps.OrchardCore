@@ -120,7 +120,7 @@ The list shows each broadcast's status and how many messages were sent and faile
 | **HELP** | INFO | The customer gets the help reply. |
 
 :::note Where replies come from
-With Twilio, inbound texts reach the workspace through the Twilio webhook, which is provided by the **SMS Omnichannel Automation** feature. Enable it even if you do not use AI replies. Telnyx inbound texts use the Telnyx SMS webhook.
+With Twilio, inbound texts reach the workspace through the Twilio webhook, `/api/twilio/webhook/sms`, which comes with the SMS channel. You do not need SMS Omnichannel Automation for it. Telnyx inbound texts use the Telnyx SMS webhook.
 :::
 
 :::note About the screencasts

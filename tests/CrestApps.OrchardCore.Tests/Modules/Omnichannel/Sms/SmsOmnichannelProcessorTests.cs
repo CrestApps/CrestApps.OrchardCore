@@ -644,11 +644,17 @@ public sealed class SmsOmnichannelProcessorTests
     /// <summary>
     /// An SMS service that keeps what it was handed instead of talking to a carrier, and can be told to reject.
     /// </summary>
-    private sealed class RecordingSmsService : ISmsService
+    private sealed class RecordingSmsService : ISmsProviderRouter
     {
         public List<SmsMessage> Sent { get; } = [];
 
         public bool ProviderAccepts { get; set; } = true;
+
+        public ValueTask<string> ResolveProviderNameAsync(string fromNumber, CancellationToken cancellationToken = default)
+            => ValueTask.FromResult("Recording");
+
+        public Task<ISmsProvider> GetProviderAsync(string providerName)
+            => Task.FromResult<ISmsProvider>(null);
 
         public Task<Result> SendAsync(SmsMessage message, CancellationToken cancellationToken = default)
         {

@@ -703,7 +703,7 @@ public sealed class SmsReEngagementBackgroundTaskTests
         services.AddSingleton<IClock>(new StubClock(_now));
         services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
 
-        services.AddSingleton<ISmsService>(scenario.Sms);
+        services.AddSingleton<ISmsProviderRouter>(scenario.Sms);
         services.AddSingleton<IContactOptOutResolver>(scenario.OptOutResolver);
         services.AddSingleton<IBusinessHoursGate>(scenario.BusinessHours);
         services.AddSingleton<IAutomatedConversationGate>(scenario.ConversationGate);
@@ -1086,9 +1086,15 @@ public sealed class SmsReEngagementBackgroundTaskTests
     /// <summary>
     /// An SMS service that records what would have gone to the carrier instead of sending it.
     /// </summary>
-    private sealed class RecordingSmsService : ISmsService
+    private sealed class RecordingSmsService : ISmsProviderRouter
     {
         public List<SmsMessage> Sent { get; } = [];
+
+        public ValueTask<string> ResolveProviderNameAsync(string fromNumber, CancellationToken cancellationToken = default)
+            => ValueTask.FromResult("Recording");
+
+        public Task<ISmsProvider> GetProviderAsync(string providerName)
+            => Task.FromResult<ISmsProvider>(null);
 
         public Task<Result> SendAsync(SmsMessage message, CancellationToken cancellationToken = default)
         {

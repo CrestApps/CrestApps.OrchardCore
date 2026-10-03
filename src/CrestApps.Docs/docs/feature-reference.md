@@ -98,6 +98,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Omnichannel.Activities` | Omnichannel Activities | [Management (CRM)](./omnichannel/management) |
 | `CrestApps.OrchardCore.Omnichannel.Managements` | Omnichannel Management | [Management (CRM)](./omnichannel/management) |
 | `CrestApps.OrchardCore.Omnichannel.Sms` | SMS Omnichannel Automation | [SMS Automation](./omnichannel/sms) |
+| `CrestApps.OrchardCore.Omnichannel.Sms.Twilio` | Omnichannel Twilio SMS (dependency only) | [Messaging Workspace](./omnichannel/messaging-workspace#setting-up-sms) |
 | `CrestApps.OrchardCore.Omnichannel.ChannelEndpoints` | Omnichannel Channel Endpoints (dependency only) | [Management (CRM)](./omnichannel/management#channel-endpoint) |
 | `CrestApps.OrchardCore.Omnichannel.Messaging` | Omnichannel Messaging Workspace | [Messaging Workspace](./omnichannel/messaging-workspace) |
 | `CrestApps.OrchardCore.Omnichannel.Messaging.Sms` | SMS Messaging Channel | [Messaging Workspace](./omnichannel/messaging-workspace#setting-up-sms) |
