@@ -81,7 +81,7 @@ public sealed class SmsDispatcher : ISmsDispatcher
         }
 
         // The router logs the warning when the provider is missing.
-        var provider = await _providerRouter.GetProviderAsync(providerName);
+        var provider = await _providerRouter.GetProviderAsync(providerName, cancellationToken);
 
         if (provider is null)
         {

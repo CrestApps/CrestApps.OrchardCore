@@ -75,12 +75,15 @@ public sealed class SmsProviderRouter : ISmsProviderRouter
     }
 
     /// <inheritdoc/>
-    public async Task<ISmsProvider> GetProviderAsync(string providerName)
+    public async Task<ISmsProvider> GetProviderAsync(string providerName, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(providerName))
         {
             return null;
         }
+
+        // Orchard Core's provider resolver takes no token, so a send that was already cancelled stops here instead.
+        cancellationToken.ThrowIfCancellationRequested();
 
         var provider = await _providerResolver.GetAsync(providerName);
 
@@ -108,7 +111,7 @@ public sealed class SmsProviderRouter : ISmsProviderRouter
             return Failed("No SMS provider could be resolved for the sending number or the tenant default.");
         }
 
-        var provider = await GetProviderAsync(providerName);
+        var provider = await GetProviderAsync(providerName, cancellationToken);
 
         if (provider is null)
         {

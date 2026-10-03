@@ -26,8 +26,9 @@ public interface ISmsProviderRouter
     /// Gets the provider registered under the specified technical name.
     /// </summary>
     /// <param name="providerName">The provider technical name, usually from <see cref="ResolveProviderNameAsync"/>.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The provider, or <see langword="null"/> when no enabled provider is registered under that name.</returns>
-    Task<ISmsProvider> GetProviderAsync(string providerName);
+    Task<ISmsProvider> GetProviderAsync(string providerName, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Sends the message through the provider that owns its <see cref="SmsMessage.From"/> number.

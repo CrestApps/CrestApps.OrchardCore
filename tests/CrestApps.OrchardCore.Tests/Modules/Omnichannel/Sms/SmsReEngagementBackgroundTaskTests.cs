@@ -1093,7 +1093,7 @@ public sealed class SmsReEngagementBackgroundTaskTests
         public ValueTask<string> ResolveProviderNameAsync(string fromNumber, CancellationToken cancellationToken = default)
             => ValueTask.FromResult("Recording");
 
-        public Task<ISmsProvider> GetProviderAsync(string providerName)
+        public Task<ISmsProvider> GetProviderAsync(string providerName, CancellationToken cancellationToken = default)
             => Task.FromResult<ISmsProvider>(null);
 
         public Task<Result> SendAsync(SmsMessage message, CancellationToken cancellationToken = default)
