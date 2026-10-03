@@ -119,11 +119,14 @@ instead of listing every record.
 
 ### Phase 4 — Follow-ups
 
-- Caller ID pickers: dialer profile Caller ID and the provider default caller IDs pick from addresses with Voice
-  instead of free text.
+- Caller ID pickers (built): the dialer profile Caller ID and the Telnyx default outbound caller ID pick from the
+  addresses used for voice calls (`GetCallerIdOptionsAsync`), still storing the number, so no migration is needed; a
+  stored number that is not an address stays selected. Asterisk's outbound caller id stays free text, because Asterisk
+  accepts caller identifiers that are not phone numbers.
 - Inbound AI voice: an entry point that hands the call to an AI profile ("Answer calls at the front desk" has no
   inbound path today).
-- Remove the unused `OmnichannelCampaign.ChannelEndpointId`.
+- Removed the unused `OmnichannelCampaign.ChannelEndpointId` (built). Older recipes that carry it still import; the
+  value is ignored.
 
 ## Testing
 

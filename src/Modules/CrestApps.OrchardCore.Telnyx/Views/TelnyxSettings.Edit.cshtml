@@ -77,8 +77,10 @@
 
         <div class="mb-3">
             <label asp-for="DefaultOutboundCallerId">@T["Default outbound caller id"]</label>
-            <input type="text" class="form-control" asp-for="DefaultOutboundCallerId" placeholder="+15551234567" />
-            <span class="hint">@T["The E.164 number presented on outbound calls (a Telnyx-owned number). Connect suggests one from your account; change it here anytime. A dialer profile's Caller ID replaces it for the calls that profile places, and a caller sent on from a phone menu to an outside number is shown as the number they dialled."]</span>
+            <select class="form-select" asp-for="DefaultOutboundCallerId" asp-items="Model.CallerIdOptions">
+                <option value="">@T["None"]</option>
+            </select>
+            <span class="hint">@T["The number presented on outbound calls (a Telnyx-owned number), picked from the Omnichannel Addresses used for voice calls. Connect suggests one from your account; change it here anytime. A dialer profile's Caller ID replaces it for the calls that profile places, and a caller sent on from a phone menu to an outside number is shown as the number they dialled."]</span>
         </div>
 
         <div class="mb-3">

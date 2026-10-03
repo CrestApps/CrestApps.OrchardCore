@@ -36,11 +36,6 @@ public sealed class OmnichannelCampaign : CatalogItem, IDisplayTextAwareModel, I
     public string Channel { get; set; }
 
     /// <summary>
-    /// Gets or sets the channel endpoint id.
-    /// </summary>
-    public string ChannelEndpointId { get; set; }
-
-    /// <summary>
     /// When the campaign in automated, this will be the initial message to start the converation with the customer.
     /// </summary>
     public string InitialOutboundPromptPattern { get; set; }
@@ -144,7 +139,6 @@ public sealed class OmnichannelCampaign : CatalogItem, IDisplayTextAwareModel, I
             CampaignGroupId = CampaignGroupId,
             InteractionType = InteractionType,
             Channel = Channel,
-            ChannelEndpointId = ChannelEndpointId,
             InitialOutboundPromptPattern = InitialOutboundPromptPattern,
             CampaignGoal = CampaignGoal,
             ProviderName = ProviderName,

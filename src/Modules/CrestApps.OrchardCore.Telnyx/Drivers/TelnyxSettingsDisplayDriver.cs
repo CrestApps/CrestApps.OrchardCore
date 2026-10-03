@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telnyx.Models;
 using CrestApps.OrchardCore.Telnyx.Services;
@@ -6,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
@@ -28,6 +31,7 @@ public sealed class TelnyxSettingsDisplayDriver : SiteDisplayDriver<TelnyxSettin
     private readonly IAuthorizationService _authorizationService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly INotifier _notifier;
+    private readonly IOmnichannelChannelEndpointManager _addressManager;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -44,6 +48,7 @@ public sealed class TelnyxSettingsDisplayDriver : SiteDisplayDriver<TelnyxSettin
         IAuthorizationService authorizationService,
         IDataProtectionProvider dataProtectionProvider,
         INotifier notifier,
+        IEnumerable<IOmnichannelChannelEndpointManager> addressManagers,
         IHtmlLocalizer<TelnyxSettingsDisplayDriver> htmlLocalizer,
         IStringLocalizer<TelnyxSettingsDisplayDriver> stringLocalizer)
     {
@@ -52,6 +57,8 @@ public sealed class TelnyxSettingsDisplayDriver : SiteDisplayDriver<TelnyxSettin
         _authorizationService = authorizationService;
         _dataProtectionProvider = dataProtectionProvider;
         _notifier = notifier;
+        // The address list is a feature of its own; without it the caller ID lists only the stored number.
+        _addressManager = addressManagers.FirstOrDefault();
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -61,7 +68,7 @@ public sealed class TelnyxSettingsDisplayDriver : SiteDisplayDriver<TelnyxSettin
         Task<bool> CanManageAsync()
             => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TelephonyPermissions.ManageTelephonySettings);
 
-        return Initialize<TelnyxSettingsViewModel>("TelnyxSettings_Edit", model =>
+        return Initialize<TelnyxSettingsViewModel>("TelnyxSettings_Edit", async model =>
         {
             model.IsEnabled = settings.IsEnabled;
             model.IsConnected = !string.IsNullOrWhiteSpace(settings.ConnectionId) && !string.IsNullOrWhiteSpace(settings.SipConnectionId);
@@ -69,6 +76,9 @@ public sealed class TelnyxSettingsDisplayDriver : SiteDisplayDriver<TelnyxSettin
             model.SipConnectionId = settings.SipConnectionId;
             model.OutboundVoiceProfileId = settings.OutboundVoiceProfileId;
             model.DefaultOutboundCallerId = settings.DefaultOutboundCallerId;
+            model.CallerIdOptions = _addressManager is null
+                ? string.IsNullOrWhiteSpace(settings.DefaultOutboundCallerId) ? [] : [new SelectListItem(settings.DefaultOutboundCallerId, settings.DefaultOutboundCallerId, true)]
+                : await _addressManager.GetCallerIdOptionsAsync(settings.DefaultOutboundCallerId);
             model.CredentialLifetimeMinutes = settings.CredentialLifetimeMinutes > 0 ? settings.CredentialLifetimeMinutes : 180;
             model.SipWebSocketUrl = settings.SipWebSocketUrl;
             model.SipDomain = settings.SipDomain;

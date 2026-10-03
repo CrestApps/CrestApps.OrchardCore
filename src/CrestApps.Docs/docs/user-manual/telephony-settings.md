@@ -22,7 +22,7 @@ Calls and texts go through a provider account. This page covers the settings an 
 1. Open **Settings > Communication > Telephony** and choose the **Telnyx** tab.
 2. Tick **Enable Telnyx provider**, paste your Telnyx **API key**, and save.
 3. Click **Connect Telnyx**. The site creates the Telnyx resources it needs and shows a green *Connected* panel with their ids.
-4. Enter the **Default outbound caller id**, the Telnyx number customers see.
+4. Pick the **Default outbound caller id**, the Telnyx number customers see, from your [Omnichannel Addresses](channel-endpoints.md) used for **Voice calls**.
 5. Paste the **Webhook public key** from the Telnyx portal. Until it is set, every call event from Telnyx is rejected.
 6. Save.
 
