@@ -18,6 +18,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Localization;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Deployment;
@@ -35,6 +36,13 @@ namespace CrestApps.OrchardCore.ContactCenter;
 [Feature(ContactCenterConstants.Feature.InboundVoice)]
 public sealed class InboundVoiceStartup : StartupBase
 {
+    private readonly IStringLocalizer S;
+
+    public InboundVoiceStartup(IStringLocalizer<InboundVoiceStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
         services.TryAddScoped<IIvrProvider, NoIvrProvider>();
