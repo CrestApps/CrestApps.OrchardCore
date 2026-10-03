@@ -10,6 +10,7 @@
         BreadcrumbName = "ContactCenterEntryPoints",
         Title = T["Inbound entry points"],
         CreateLabel = T["Add inbound entry point"],
+        CreateDialogTitle = T["What does the entry point answer?"],
         ListId = "entry-points-list",
         EmptyMessage = T["<strong>Nothing here!</strong> There are no inbound entry points at the moment."],
         // One kind of entry point per channel a feature answers.
@@ -17,6 +18,7 @@
             .Select(channel => new CatalogCreateOption
             {
                 Label = channel.DisplayName?.Value ?? channel.Name,
+                Description = channel.Description?.Value,
                 RouteValues = new Dictionary<string, string> { ["channel"] = channel.Name },
             })
             .ToList(),

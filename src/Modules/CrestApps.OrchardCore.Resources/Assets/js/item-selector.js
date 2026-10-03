@@ -87,6 +87,11 @@ window.itemSelector = (() => {
 
         const knownItems = new Map();
         const selectedValues = [];
+
+        // The values the last search returned. Every item ever loaded stays known, so a selection keeps its label, but
+        // only these (and the selected ones) are listed; listing every known item showed earlier results after a search
+        // had narrowed them. Null until the first search returns, when the initial items are all there is to show.
+        let visibleValues = null;
         let initialLoadCompleted = false;
         let isLoading = false;
         let lastRequestedQuery = null;
@@ -195,6 +200,7 @@ window.itemSelector = (() => {
 
         const getSortedItems = () => {
             return Array.from(knownItems.values())
+                .filter((item) => visibleValues === null || visibleValues.has(item.value) || isSelected(item.value))
                 .sort((left, right) => {
                     const leftSelected = isSelected(left.value);
                     const rightSelected = isSelected(right.value);
@@ -339,6 +345,7 @@ window.itemSelector = (() => {
                 }
 
                 cacheItems(items);
+                visibleValues = new Set(items.map(normalizeItem).filter(Boolean).map((item) => item.value));
                 initialLoadCompleted = true;
                 lastRequestedQuery = normalizedQuery;
                 setStatus(
