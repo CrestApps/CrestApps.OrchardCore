@@ -49,7 +49,7 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "~/CrestApps.OrchardCore.Resources/vendors/easymde/js/easymde.min.js",
                 "~/CrestApps.OrchardCore.Resources/vendors/easymde/js/easymde.js"
                 )
-            .SetVersion("2.18.0");
+            .SetVersion("2.21.0");
 
         _manifest
             .DefineStyle("easymde")
@@ -57,7 +57,7 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "~/CrestApps.OrchardCore.Resources/vendors/easymde/css/easymde.min.css",
                 "~/CrestApps.OrchardCore.Resources/vendors/easymde/css/easymde.css"
                 )
-            .SetVersion("2.18.0");
+            .SetVersion("2.21.0");
 
         _manifest
             .DefineScript("chart.js")
@@ -94,12 +94,12 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "~/CrestApps.OrchardCore.Resources/scripts/marked.min.js",
                 "~/CrestApps.OrchardCore.Resources/scripts/marked.js")
             .SetCdn(
-                "https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.6/marked.min.js",
-                "https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.6/marked.js")
+                "https://cdn.jsdelivr.net/npm/marked@18.0.14/lib/marked.umd.min.js",
+                "https://cdn.jsdelivr.net/npm/marked@18.0.14/lib/marked.umd.js")
             .SetCdnIntegrity(
-                "sha512-rvRITpPeEKe4hV9M8XntuXX6nuohzqdR5O3W6nhjTLwkrx0ZgBQuaK4fv5DdOWzs2IaXsGt5h0+nyp9pEuoTXg==",
-                "sha512-rvRITpPeEKe4hV9M8XntuXX6nuohzqdR5O3W6nhjTLwkrx0ZgBQuaK4fv5DdOWzs2IaXsGt5h0+nyp9pEuoTXg==")
-            .SetVersion("15.0.6");
+                "sha384-1KNqLSVIIDocc7NKjWP/vfNnoRSAenAfiLA3OnW7YOebcl46U/07fZMCkfzuBa+a",
+                "sha384-2vpGtuKqJvFlwJqYnf/wUMuzUfhUnYBt9oay0e2yaFcq0Dh6/aEbQ8YAOeKGzlYo")
+            .SetVersion("18.0.14");
 
         _manifest
             .DefineScript("flatpickr")
@@ -155,19 +155,22 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "~/CrestApps.OrchardCore.Resources/vendors/dompurify/purify.min.js",
                 "~/CrestApps.OrchardCore.Resources/vendors/dompurify/purify.js")
             .SetCdn(
-                "https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.3.1/purify.min.js",
-                "https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.3.1/purify.js")
-            .SetVersion("3.3.1");
+                "https://cdn.jsdelivr.net/npm/dompurify@3.4.16/dist/purify.min.js",
+                "https://cdn.jsdelivr.net/npm/dompurify@3.4.16/dist/purify.js")
+            .SetCdnIntegrity(
+                "sha384-a7SzOxErzJ3ZpQz0zJ32d67dSitNzPcbfybc/ykU9KJhMgZkwqfSxlhhdJRS+XGL",
+                "sha384-5ljoOT1W/4gxqpYTLxnNi16VfKAgIDUQeOR8s/vRrSDtBVQmySEejDXexFM6L2+R")
+            .SetVersion("3.4.16");
 
         _manifest
             .DefineScript("highlightjs")
             .SetCdn(
-                "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js",
-                "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js")
+                "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/highlight.min.js",
+                "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/highlight.min.js")
             .SetCdnIntegrity(
-                "sha384-RH2xi4eIQ/gjtbs9fUXM68sLSi99C7ZWBRX1vDrVv6GQXRibxXLbwO2NGZB74MbU",
-                "sha384-RH2xi4eIQ/gjtbs9fUXM68sLSi99C7ZWBRX1vDrVv6GQXRibxXLbwO2NGZB74MbU")
-            .SetVersion("11.11.1");
+                "sha384-wjfDDhOPPdjtva8vWBhWeVprSpmxisEu5aYT3q1JyACqXpdKpo3PWZTMVq24MBix",
+                "sha384-wjfDDhOPPdjtva8vWBhWeVprSpmxisEu5aYT3q1JyACqXpdKpo3PWZTMVq24MBix")
+            .SetVersion("11.12.0");
 
         _manifest
             .DefineStyle("highlightjs")
@@ -175,12 +178,12 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "~/CrestApps.OrchardCore.Resources/vendors/highlightjs/css/highlightjs.min.css",
                 "~/CrestApps.OrchardCore.Resources/vendors/highlightjs/css/highlightjs.css")
             .SetCdn(
-                "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css",
-                "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.css")
+                "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/styles/github.min.css",
+                "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/styles/github.css")
             .SetCdnIntegrity(
                 "sha384-eFTL69TLRZTkNfYZOLM+G04821K1qZao/4QLJbet1pP4tcF+fdXq/9CdqAbWRl/L",
                 "sha384-Uhn9VRzdRxBVYRT2aPFl8ECva7znqyZwWiqpE3v4GTBe8y2XrpwTWZtU1U5vujcN")
-            .SetVersion("11.11.1");
+            .SetVersion("11.12.0");
 
         _manifest
             .DefineScript("technical-name-generator")
@@ -263,12 +266,12 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "~/CrestApps.OrchardCore.Resources/vendors/intl-tel-input/css/intlTelInput.min.css",
                 "~/CrestApps.OrchardCore.Resources/vendors/intl-tel-input/css/intlTelInput.css")
             .SetCdn(
-                "https://cdn.jsdelivr.net/npm/intl-tel-input@25.12.4/build/css/intlTelInput.min.css",
-                "https://cdn.jsdelivr.net/npm/intl-tel-input@25.12.4/build/css/intlTelInput.css")
+                "https://cdn.jsdelivr.net/npm/intl-tel-input@29.5.3/dist/css/intlTelInput.min.css",
+                "https://cdn.jsdelivr.net/npm/intl-tel-input@29.5.3/dist/css/intlTelInput.css")
             .SetCdnIntegrity(
-                "sha384-WNF7dtZ0UZJjHFk7vUp7qTzY3PQnxFBo6/lqKHvZmCYwIUHqDDsyFL6zfeG83jKf",
-                "sha384-KgNFOuU4mTPtXZmFu6WaY2/jxbJEA+INAC2SFk+B0vTR9iuuKE+5qujIZY8Mnmzt")
-            .SetVersion("25.12.4");
+                "sha384-khdvUrzJNN6Jw9yHboN6430RRijNf+nAlKcZv0a5IrkTjwZpwgJ9fzD3kjbqhOyZ",
+                "sha384-BPZgbBF5WUPWbgU/jIcv1eaHN6oD4pp2sywLufUYtHS90m6MqJnH687yeNPC/W/l")
+            .SetVersion("29.5.3");
 
         _manifest
             .DefineScript("intl-tel-input")
@@ -276,12 +279,12 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "~/CrestApps.OrchardCore.Resources/vendors/intl-tel-input/js/intlTelInputWithUtils.min.js",
                 "~/CrestApps.OrchardCore.Resources/vendors/intl-tel-input/js/intlTelInputWithUtils.js")
             .SetCdn(
-                "https://cdn.jsdelivr.net/npm/intl-tel-input@25.12.4/build/js/intlTelInputWithUtils.min.js",
-                "https://cdn.jsdelivr.net/npm/intl-tel-input@25.12.4/build/js/intlTelInputWithUtils.js")
+                "https://cdn.jsdelivr.net/npm/intl-tel-input@29.5.3/dist/js/intlTelInputWithUtils.min.js",
+                "https://cdn.jsdelivr.net/npm/intl-tel-input@29.5.3/dist/js/intlTelInputWithUtils.js")
             .SetCdnIntegrity(
-                "sha384-zmSxq8xjduh+c9LYQCwKvFI7Q3Glzkdm2t62FEZ0T+aPhd1443w9QLqX4YFq6yRF",
-                "sha384-FdYuaXg9bZPa49HOFPWlxiUurpAlJZFOLCVAV/d8BUFdIjEh98n1FtwpIje1FGQK")
-            .SetVersion("25.12.4");
+                "sha384-BaDPu1JPrKMlyt17EqDudDB7+Kii733b0P665729w1WD1izDFe9luGQ+afj/2Tpm",
+                "sha384-N83jF0rz0F/vFCbfB2Xsk8rEusD+lnnKdj/PlkThBnO117YTpYeHF5wdoNQOczzB")
+            .SetVersion("29.5.3");
 
         // SIP.js is distributed as ES modules only from 0.16+; this is a browser IIFE bundle
         // (esbuild, --global-name=SIP) of sip.js@0.21.2 exposing window.SIP for the soft phone's
