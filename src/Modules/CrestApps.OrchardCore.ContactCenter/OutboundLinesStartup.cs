@@ -34,12 +34,12 @@ public sealed class OutboundLinesStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
-        // A line is a phone number, so the Phone channel is offered in the channel-endpoint create picker even
-        // without inbound voice. Inbound Voice registers the same source when it is enabled.
-        services.AddChannelEndpointSource(OmnichannelConstants.Channels.Phone, source =>
+        // A line is a phone number agents call from, so this feature offers the voice capability on phone numbers even
+        // without inbound voice. Inbound Voice registers the same capability when it is enabled.
+        services.AddOmnichannelAddressCapability(OmnichannelAddressTypes.PhoneNumber, OmnichannelConstants.Channels.Phone, capability =>
         {
-            source.DisplayName = S["Phone"];
-            source.Description = S["A phone number the contact center owns. Agents can dial out from it, and with Inbound Voice it routes the calls it receives."];
+            capability.DisplayName = S["Voice calls"];
+            capability.Description = S["Calls to and from this number."];
         });
 
         // Replaces the Telephony default that gives nobody a line.

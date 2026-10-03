@@ -45,15 +45,14 @@ public sealed class InboundVoiceStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        // A phone number channel endpoint only has an inbound handler when inbound voice is enabled (it maps a
-        // dialed number to a subject flow), so the Phone channel is offered in the channel-endpoint create picker
-        // only with this feature. When the channel-endpoint administration is also enabled, Phone appears there.
         services.TryAddScoped<IIvrProvider, NoIvrProvider>();
 
-        services.AddChannelEndpointSource(OmnichannelConstants.Channels.Phone, source =>
+        // Calls are something a phone number does, so taking them is a capability this feature offers on the phone
+        // numbers in the address list. Outbound Lines offers the same capability for dialing out.
+        services.AddOmnichannelAddressCapability(OmnichannelAddressTypes.PhoneNumber, OmnichannelConstants.Channels.Phone, capability =>
         {
-            source.DisplayName = S["Phone"];
-            source.Description = S["A phone number for inbound voice. Routes a dialed number to a subject flow."];
+            capability.DisplayName = S["Voice calls"];
+            capability.Description = S["Calls to and from this number."];
         });
 
         services

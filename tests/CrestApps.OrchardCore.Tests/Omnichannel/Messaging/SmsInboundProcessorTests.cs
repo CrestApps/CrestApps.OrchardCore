@@ -330,7 +330,7 @@ public class SmsInboundProcessorTests
                 .ReturnsAsync(endpoint);
 
             var activityStore = new Mock<IOmnichannelActivityStore>();
-            activityStore.Setup(s => s.GetAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ActivityInteractionType>(), It.IsAny<CancellationToken>()))
+            activityStore.Setup(s => s.GetAsync(It.IsAny<string>(), It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<string>(), It.IsAny<ActivityInteractionType>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(() => AutomatedActivity);
 
             var conversationStore = ConversationStore;

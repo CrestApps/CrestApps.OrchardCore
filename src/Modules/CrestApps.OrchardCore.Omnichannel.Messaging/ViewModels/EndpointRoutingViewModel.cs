@@ -51,4 +51,10 @@ public class EndpointRoutingViewModel
     /// </summary>
     [BindNever]
     public IEnumerable<SelectListItem> DistributionModes { get; set; }
+
+    /// <summary>
+    /// Gets or sets the messaging capabilities the routing serves, so the address editor shows it while one is ticked.
+    /// </summary>
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public string ServedCapabilities { get; set; }
 }

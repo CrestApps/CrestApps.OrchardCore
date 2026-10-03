@@ -99,7 +99,8 @@ public sealed class BroadcastsController : Controller
         }
 
         var endpoint = string.IsNullOrEmpty(model.EndpointId) ? null : await _endpointManager.FindByIdAsync(model.EndpointId);
-        var channel = _channelResolver.Get(endpoint?.Channel);
+        // An address can be used on several channels; the composer sends on the first messaging channel it has.
+        var channel = endpoint is null ? null : _channelResolver.GetAll().FirstOrDefault(candidate => endpoint.HasCapability(candidate.Name));
 
         var recipients = ParseRecipients(model.RecipientsText)
             .Concat(model.ContactAddresses ?? [])

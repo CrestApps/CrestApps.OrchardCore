@@ -26,7 +26,7 @@ public sealed class OutboundLineEndpointDisplayDriver : DisplayDriver<Omnichanne
         return Initialize<OutboundLineEndpointViewModel>("OutboundLineEndpoint_Edit", model =>
         {
             model.UserIds = [.. ChannelEndpointOutboundLineResolver.GetUserIds(endpoint)];
-        }).Location("Content:1%Outbound line;3");
+        }).Location("Content:2%Voice calls;2");
     }
 
     /// <inheritdoc/>
@@ -53,6 +53,8 @@ public sealed class OutboundLineEndpointDisplayDriver : DisplayDriver<Omnichanne
         return Edit(endpoint, context);
     }
 
+    // Shown on every phone number and kept visible by the editor only while the number is used for calls, so ticking
+    // Voice calls on a new number shows it straight away.
     private static bool IsPhoneEndpoint(OmnichannelChannelEndpoint endpoint)
-        => string.Equals(endpoint?.Channel, OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase);
+        => string.Equals(endpoint?.GetAddressType(), OmnichannelAddressTypes.PhoneNumber, StringComparison.OrdinalIgnoreCase);
 }
