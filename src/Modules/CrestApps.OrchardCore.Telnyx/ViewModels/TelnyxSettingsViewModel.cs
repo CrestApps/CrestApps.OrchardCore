@@ -1,4 +1,7 @@
 using CrestApps.OrchardCore.Telnyx.Models;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Mvc.Rendering;
+
 namespace CrestApps.OrchardCore.Telnyx.ViewModels;
 
 /// <summary>
@@ -47,6 +50,12 @@ public class TelnyxSettingsViewModel
     /// Gets or sets the default outbound caller id.
     /// </summary>
     public string DefaultOutboundCallerId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the numbers used for calls, offered as the default caller ID.
+    /// </summary>
+    [BindNever]
+    public IList<SelectListItem> CallerIdOptions { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the Telnyx webhook Ed25519 public key. Left blank on load; enter a value only to

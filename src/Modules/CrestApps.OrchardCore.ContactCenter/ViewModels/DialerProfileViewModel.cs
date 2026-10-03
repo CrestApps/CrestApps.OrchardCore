@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.ContactCenter.ViewModels;
@@ -95,6 +96,12 @@ public class DialerProfileViewModel
     /// Gets or sets the country options presented for <see cref="DefaultRegionCode"/>.
     /// </summary>
     public IList<SelectListItem> DefaultRegionOptions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the numbers used for calls, offered as the caller ID.
+    /// </summary>
+    [BindNever]
+    public IList<SelectListItem> CallerIdOptions { get; set; } = [];
 
     /// <summary>
     /// Gets or sets a value indicating whether do-not-call and communication preferences are honored.

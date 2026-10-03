@@ -182,6 +182,7 @@ public sealed class TelnyxSettingsDropdownTests
             authorizationService.Object,
             new EphemeralDataProtectionProvider(),
             Mock.Of<INotifier>(),
+            [],
             Mock.Of<IHtmlLocalizer<TelnyxSettingsDisplayDriver>>(),
             new PassThroughStringLocalizer<TelnyxSettingsDisplayDriver>());
     }

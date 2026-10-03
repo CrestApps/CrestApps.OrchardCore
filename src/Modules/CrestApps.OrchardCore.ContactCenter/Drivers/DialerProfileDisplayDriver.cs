@@ -101,6 +101,7 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             model.AlwaysUseCallerId = viewModel.AlwaysUseCallerId;
             model.DefaultRegionCode = viewModel.DefaultRegionCode;
             model.DefaultRegionOptions = viewModel.DefaultRegionOptions;
+            model.CallerIdOptions = viewModel.CallerIdOptions;
             model.RespectDoNotCall = viewModel.RespectDoNotCall;
             model.EnforceCallingWindow = viewModel.EnforceCallingWindow;
             model.CallingCalendarId = viewModel.CallingCalendarId;

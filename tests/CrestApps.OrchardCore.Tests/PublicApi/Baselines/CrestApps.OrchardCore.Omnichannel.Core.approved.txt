@@ -21,6 +21,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Core
         public const string PhoneNumber = "PhoneNumber";
         public static string FromChannel(string channel) { }
     }
+    public static class OmnichannelCallerIdOptionsExtensions
+    {
+        public static System.Threading.Tasks.Task<System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>> GetCallerIdOptionsAsync(this CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointManager addressManager, string selectedNumber, System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public static class OmnichannelConstants
     {
         public const string AgentRole = "Agent";
@@ -934,7 +938,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string CampaignGoal { get; set; }
         public string CampaignGroupId { get; set; }
         public string Channel { get; set; }
-        public string ChannelEndpointId { get; set; }
         public string ConnectionName { get; set; }
         public System.DateTime CreatedUtc { get; set; }
         public string DeploymentName { get; set; }

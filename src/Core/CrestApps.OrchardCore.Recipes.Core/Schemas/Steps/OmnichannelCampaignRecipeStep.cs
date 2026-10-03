@@ -34,7 +34,6 @@ public sealed class OmnichannelCampaignRecipeStep : IRecipeStep
                                 .Enum("Manual", "Automated")
                                 .Description("Whether the campaign is handled manually by an agent or automated by AI.")),
                             ("Channel", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Communication channel used by the campaign, for example 'SMS', 'Chat', or 'Email'.")),
-                            ("ChannelEndpointId", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Identifier of the channel endpoint used to reach out to the contact.")),
                             ("InitialOutboundPromptPattern", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("For automated campaigns, the initial message used to start the conversation with the customer.")),
                             ("CampaignGoal", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Description of what success looks like, used by the AI to decide when the conversation can end.")),
                             ("ProviderName", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Name of the AI provider used for automation.")),

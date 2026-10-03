@@ -305,8 +305,9 @@ public sealed class ContactCenterAdminFormOptionsProvider
     internal async Task PopulateDialerProfileEditorAsync(DialerProfileViewModel model)
     {
         // A dialer profile is reusable dialing settings; it no longer selects a campaign or queue (those are
-        // chosen when inventory is loaded), so the editor only needs the provider, calendar, and region pickers.
+        // chosen when inventory is loaded), so the editor only needs the provider, calendar, caller ID and region pickers.
         model.CallingCalendarOptions = await GetBusinessHoursCalendarOptionsAsync(model.CallingCalendarId);
+        model.CallerIdOptions = await _channelEndpointManager.GetCallerIdOptionsAsync(model.CallerId);
         model.ProviderOptions = GetVoiceProviderOptions(model.ProviderName);
         model.DefaultRegionOptions = GetRegionOptions(model.DefaultRegionCode);
     }

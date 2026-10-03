@@ -6,9 +6,11 @@
 <div class="ocat-wrapper" asp-validation-class-for="CallerId">
     <label asp-for="CallerId" class="ocat-label">@T["Caller ID"]</label>
     <div class="ocat-end">
-        <input asp-for="CallerId" class="form-control" />
+        <select asp-for="CallerId" asp-items="Model.CallerIdOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a number"]" data-width="100%" title="@T["Provider default"]">
+            <option value="">@T["Provider default"]</option>
+        </select>
         <span asp-validation-for="CallerId" class="text-danger"></span>
-        <span class="hint">@T["The phone number shown to the person being called, when the provider supports setting it. Agents who have their own outbound line call from it instead. Leave blank to use the provider default."]</span>
+        <span class="hint">@T["The number shown to the person being called, when the provider supports setting it. The numbers are the Omnichannel Addresses used for voice calls. Agents who have their own outbound line call from it instead. Leave it on Provider default to use the provider's caller ID."]</span>
     </div>
 </div>
 
