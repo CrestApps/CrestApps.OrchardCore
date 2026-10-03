@@ -11,7 +11,7 @@ An **omnichannel address** is an address the business owns, such as a phone numb
 | --- | --- |
 | **Menu** | Interaction Center > Management > Omnichannel Addresses |
 | **Permission** | Manage omnichannel addresses |
-| **Feature** | Omnichannel Management. **Voice calls** comes with Contact Center Inbound Voice or Contact Center Outbound Lines; **Text messages (SMS)** comes with SMS Messaging Channel. |
+| **Feature** | Omnichannel Management. **Voice calls** comes with Contact Center Voice, which the voice features turn on; **Text messages (SMS)** comes with SMS Messaging Channel. |
 
 ## Add an address
 

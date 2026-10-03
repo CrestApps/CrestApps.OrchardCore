@@ -59,7 +59,7 @@ services.AddOmnichannelAddressCapability(OmnichannelAddressTypes.PhoneNumber, "S
 });
 ```
 
-Because the capability is registered by the owning feature, it is only offered while that feature is enabled. A capability whose feature is later disabled stays on the address and comes back with the feature. **Voice calls** (`Phone`) is registered by the Contact Center **Inbound Voice** and **Outbound Lines** features; **Text messages** (`SMS`) is registered by the **SMS Messaging Channel** of the [Messaging Workspace](messaging-workspace), which also adds the **provider dropdown**. A new address type is registered with `AddOmnichannelAddressType`.
+Because the capability is registered by the owning feature, it is only offered while that feature is enabled. A capability whose feature is later disabled stays on the address and comes back with the feature. **Voice calls** (`Phone`) is registered by Contact Center **Voice**; **Text messages** (`SMS`) is registered by the **SMS Messaging Channel** of the [Messaging Workspace](messaging-workspace), which also adds the **provider dropdown**. A new address type is registered with `AddOmnichannelAddressType`.
 
 To capture capability settings, add a `DisplayDriver<OmnichannelChannelEndpoint>` that returns a shape for addresses of your type and marks the shape's root element with `data-address-capability="<capability>"`, so the editor shows it only while that capability is ticked. Runtime code checks `endpoint.HasCapability("SMS")`; lookups by number (`IOmnichannelChannelEndpointManager.GetByServiceAddressAsync(channel, address)`) only return an address that has the capability for that channel.
 
