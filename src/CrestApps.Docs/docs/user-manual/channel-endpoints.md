@@ -27,6 +27,18 @@ A **channel endpoint** is one address you own on a channel: a phone number for c
 
 Phone and SMS values must be valid international numbers. The channel cannot be changed after the endpoint is created, and endpoints cannot be deleted.
 
+The endpoint list shows each endpoint's source (**Phone** or **SMS**), its number and its provider as badges under its name.
+
+## Inbound routing for phone numbers
+
+When Contact Center Inbound Voice is enabled, Phone endpoints show an **Inbound routing** section:
+
+| Field | What it does |
+| --- | --- |
+| **Entry point** | The [entry point](entry-points-and-ivr.md) that answers calls to this number. The entry point decides the queue or agent, the opening hours, the phone menu and voicemail. |
+
+Leave it on **None** to keep routing the number as before: by the entry point that lists it under **Dialed numbers**, or else by the queue mapped to this endpoint. When an entry point is chosen here, it wins over an entry point that lists the number. The section names the entry points that also list the number, so you can tidy them up.
+
 ## Inbound routing for messaging
 
 When the Messaging workspace is enabled, SMS endpoints show an **Inbound routing** section:

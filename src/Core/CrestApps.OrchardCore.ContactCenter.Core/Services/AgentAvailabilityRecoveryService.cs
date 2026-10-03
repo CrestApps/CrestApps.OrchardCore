@@ -55,7 +55,92 @@ public sealed class AgentAvailabilityRecoveryService : IAgentAvailabilityRecover
 
     /// <inheritdoc/>
     public async Task<int> RecoverAsync(CancellationToken cancellationToken = default)
-        => await RecoverWrapUpAsync(cancellationToken) + await RecoverOrphanedBusyAsync(cancellationToken);
+        => await RecoverWrapUpAsync(cancellationToken) +
+            await RecoverOrphanedBusyAsync(cancellationToken) +
+            await RecoverStrandedReservedAsync(cancellationToken);
+
+    // Reserved says an offer is ringing for the agent, and the offer settling is what moves them on. An offer settled
+    // without releasing them -- a power-dial attempt suppressed while a leftover accepted reservation was on file did
+    // exactly that -- leaves an agent nobody routes to again: routing wants Available, the phone still reads
+    // Available, and only the agent changing their own state used to clear it. Once no offer is left ringing for
+    // them, nothing is live, and the grace period has passed, they are returned to the state they were ready in.
+    private async Task<int> RecoverStrandedReservedAsync(CancellationToken cancellationToken)
+    {
+        if (_reservationManager is null)
+        {
+            return 0;
+        }
+
+        var agents = await _agentManager.GetByPresenceAsync(AgentPresenceStatus.Reserved, cancellationToken) ?? [];
+        var now = _clock.UtcNow;
+        var recovered = 0;
+
+        foreach (var agent in agents)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if ((agent.PresenceChangedUtc ?? DateTime.MinValue) + _options.OrphanedBusyGracePeriod > now)
+            {
+                continue;
+            }
+
+            if (!string.IsNullOrEmpty(agent.ActiveReservationId))
+            {
+                var reservation = await _reservationManager.FindByIdAsync(agent.ActiveReservationId, cancellationToken);
+
+                if (reservation is not null &&
+                    (reservation.Status is ReservationStatus.Pending or ReservationStatus.Accepted ||
+                        (reservation.ModifiedUtc ?? reservation.CreatedUtc) + _options.OrphanedBusyGracePeriod > now))
+                {
+                    continue;
+                }
+            }
+
+            if (await _reservationManager.FindPendingByAgentAsync(agent.ItemId, cancellationToken) is not null ||
+                await _interactionManager.CountActiveByAgentAsync(agent.ItemId, cancellationToken) > 0)
+            {
+                continue;
+            }
+
+            var settledReservationId = agent.ActiveReservationId;
+            var target = agent.RequestedPresenceStatus ?? AgentPresenceUtilities.ResolveDefaultReadyState(agent);
+
+            try
+            {
+                if (!string.IsNullOrEmpty(settledReservationId))
+                {
+                    // The presence manager applies a state at once only to an agent with no reservation on file.
+                    agent.ActiveReservationId = null;
+                    await _agentManager.UpdateAsync(agent, cancellationToken: cancellationToken);
+                }
+
+                await _presenceManager.SetPresenceAsync(agent.UserId, target, reason: null, new AgentStateChangeContext
+                {
+                    Source = AgentStateChangeSources.Reconciled,
+                    ReservationId = settledReservationId,
+                }, cancellationToken);
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Skipped reserved-state recovery for contended Contact Center agent '{AgentId}'.",
+                    agent.ItemId.SanitizeLogValue());
+
+                continue;
+            }
+
+            _logger.LogWarning(
+                "Returned Contact Center agent '{AgentId}' to {State}: they were still Reserved with no offer ringing for them (settled reservation '{ReservationId}').",
+                agent.ItemId.SanitizeLogValue(),
+                target,
+                settledReservationId.SanitizeLogValue());
+
+            recovered++;
+        }
+
+        return recovered;
+    }
 
     // An agent is Busy from the moment they accept an offer, answer a colleague's consult or take a call over, until the
     // call's end releases them. When that release is missed -- live, a callback whose agent leg failed left the agent

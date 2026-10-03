@@ -101,8 +101,18 @@ public sealed partial class AgentPresenceManagerService
 
         var previousQueueIds = profile.QueueIds.ToList();
         var previousCampaignIds = profile.CampaignIds.ToList();
-        var prunedQueueIds = AgentEntitlementUtilities.FilterEntitled(profile.QueueIds, profile.AllowedQueueIds);
         var prunedCampaignIds = AgentEntitlementUtilities.FilterEntitled(profile.CampaignIds, profile.AllowedCampaignIds);
+
+        // A campaign's queue is never stored, so the entitlements editor never lists it among the allowed queues.
+        // Pruning the signed-in queues against that list took every campaign queue away while the campaigns stayed
+        // signed in: the agent looked signed into the campaign and was never offered its calls. The queues of the
+        // campaigns still signed in are folded back in, as signing in does.
+        var prunedQueueIds = ApplyCampaignRouting(
+            profile,
+            AgentEntitlementUtilities.FilterEntitled(
+                profile.QueueIds.Where(queueId => !ContactCenterConstants.IsCampaignQueue(queueId)),
+                profile.AllowedQueueIds),
+            prunedCampaignIds);
 
         var membershipChanged = !prunedQueueIds.SequenceEqual(profile.QueueIds, StringComparer.OrdinalIgnoreCase) ||
             !prunedCampaignIds.SequenceEqual(profile.CampaignIds, StringComparer.OrdinalIgnoreCase);

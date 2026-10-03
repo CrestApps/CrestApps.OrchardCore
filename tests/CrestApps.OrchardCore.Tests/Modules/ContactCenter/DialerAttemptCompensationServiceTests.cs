@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Moq;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -42,7 +43,7 @@ public sealed class DialerAttemptCompensationServiceTests
         // Arrange
         var reservation = new ActivityReservation { ItemId = "r1", QueueItemId = "qi1" };
         var reservationService = new Mock<IActivityReservationService>();
-        var service = new DialerAttemptCompensationService(reservationService.Object);
+        var service = new DialerAttemptCompensationService(reservationService.Object, Mock.Of<IQueueItemManager>(), Mock.Of<IClock>());
 
         // Act
         await service.CompensateAsync(reservation, removeFromQueue: true, TestContext.Current.CancellationToken);
@@ -62,7 +63,7 @@ public sealed class DialerAttemptCompensationServiceTests
         // Arrange
         var reservation = new ActivityReservation { ItemId = "r1", QueueItemId = "qi1" };
         var reservationService = new Mock<IActivityReservationService>();
-        var service = new DialerAttemptCompensationService(reservationService.Object);
+        var service = new DialerAttemptCompensationService(reservationService.Object, Mock.Of<IQueueItemManager>(), Mock.Of<IClock>());
 
         // Act
         await service.CompensateAsync(reservation, removeFromQueue: false, TestContext.Current.CancellationToken);

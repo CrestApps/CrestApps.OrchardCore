@@ -12,6 +12,7 @@ using CrestApps.OrchardCore.ContactCenter.Migrations;
 using CrestApps.OrchardCore.ContactCenter.Recipes;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -71,6 +72,8 @@ public sealed class InboundVoiceStartup : StartupBase
             .AddScoped<IExternalTransferOutcomeSink, IvrExternalTransferOutcomeSink>()
             // A waiting caller's answer to the queue's callback offer arrives on the same key-press path as a menu.
             .AddScoped<IQueueCallbackOfferResponder, QueueCallbackOfferResponder>()
+            // A phone number can name its entry point on its own screen; that choice is asked before the numbers typed on entry points.
+            .AddScoped<IEntryPointResolver, ChannelEndpointEntryPointResolver>()
             .AddScoped<IEntryPointResolver, EntryPointResolver>()
             .AddScoped<IPendingIncomingCallOfferService, PendingIncomingCallOfferService>()
             .AddScoped<QueuedVoiceWorkOfferScopeContext>()
@@ -92,6 +95,8 @@ public sealed class InboundVoiceStartup : StartupBase
 
         // Inbound entry-point administration screens.
         services.AddDisplayDriver<ContactCenterEntryPoint, ContactCenterEntryPointDisplayDriver>();
+        services.AddDisplayDriver<OmnichannelChannelEndpoint, PhoneEndpointRoutingDisplayDriver>();
+        services.AddScoped<IChannelEndpointRule, PhoneEndpointRoutingRule>();
         services.AddNavigationProvider<ContactCenterEntryPointsAdminMenu>();
         services.AddResourceConfiguration<ContactCenterIvrMenuEditorResourceConfiguration>();
 

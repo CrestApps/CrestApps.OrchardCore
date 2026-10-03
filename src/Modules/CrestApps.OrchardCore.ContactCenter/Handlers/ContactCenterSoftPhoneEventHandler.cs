@@ -357,6 +357,13 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
             metadata["recordingReference"] = session?.RecordingReference ?? interaction.RecordingReference;
         }
 
+        // Why the call ended, so the soft phone can tell the agent a number is not in service instead of the call
+        // simply disappearing.
+        if (session?.HangupCause is { } hangupCause)
+        {
+            metadata["hangupCause"] = hangupCause.ToString();
+        }
+
         return metadata;
     }
 

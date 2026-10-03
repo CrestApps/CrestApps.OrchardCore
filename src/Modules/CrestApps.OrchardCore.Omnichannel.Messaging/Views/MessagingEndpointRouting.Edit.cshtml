@@ -9,7 +9,7 @@
     var queueEndpoint = Url.Content("~/Admin/api/crestapps/contact-center/queues/search");
     var queueInitialJson = string.IsNullOrEmpty(Model.QueueId)
         ? "[]"
-        : System.Text.Json.JsonSerializer.Serialize(new[] { new { value = Model.QueueId, text = string.IsNullOrWhiteSpace(Model.QueueName) ? Model.QueueId : Model.QueueName } });
+        : System.Text.Json.JsonSerializer.Serialize(new[] { new { value = Model.QueueId, text = string.IsNullOrWhiteSpace(Model.QueueName) ? Model.QueueId : Model.QueueName, selected = true } });
 }
 
 <div data-messaging-routing>

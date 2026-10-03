@@ -15702,6 +15702,12 @@
           render();
           notifyBrowserAudio(call);
 
+          // A dead number otherwise ends with the call simply disappearing, which the agent cannot tell
+          // from a dropped line. Campaign calls in particular never reach the agent's ear at all.
+          if (call && call.metadata && call.metadata.hangupCause === 'NotInService') {
+            showError(strings.numberNotInService || 'The number you dialed is not in service.');
+          }
+
           // A call that just ended updates the recent calls and may have been sent to voicemail, so refresh
           // the unread badge and reload whichever list tab is open (Recent or Voicemail) so the new entry
           // appears without a manual refresh. The projection that creates the entry can land a moment after

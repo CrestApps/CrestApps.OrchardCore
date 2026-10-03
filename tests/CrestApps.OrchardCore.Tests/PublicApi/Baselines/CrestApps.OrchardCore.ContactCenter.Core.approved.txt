@@ -1965,6 +1965,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string SupervisorUserId { get; set; }
         public bool TookOver { get; set; }
     }
+    public sealed class PhoneEndpointRoutingSettings
+    {
+        public PhoneEndpointRoutingSettings() { }
+        public string EntryPointId { get; set; }
+    }
     public sealed class ProviderAnswerCommandRequest
     {
         public ProviderAnswerCommandRequest() { }
@@ -3125,6 +3130,13 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public int Order { get; }
         public System.Threading.Tasks.ValueTask ApplyAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityRoutingContext context, System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public sealed class ChannelEndpointEntryPointResolver : CrestApps.OrchardCore.ContactCenter.Core.Services.IEntryPointResolver, CrestApps.OrchardCore.ContactCenter.Core.Services.IOrderedEntryPointResolver
+    {
+        public ChannelEndpointEntryPointResolver(CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointManager endpointManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEntryPointManager entryPointManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IBusinessHoursService businessHours) { }
+        public int Order { get; }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint> FindByDialedNumberAsync(string dialedNumber, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.EntryPointRoutingPlan> ResolveAsync(string dialedNumber, System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public sealed class ChannelEndpointOutboundLineResolver : CrestApps.OrchardCore.Telephony.Services.IOutboundLineResolver
     {
         public ChannelEndpointOutboundLineResolver(CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointManager endpointManager) { }
@@ -3586,7 +3598,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public sealed class DialerAttemptCompensationService : CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerAttemptCompensationService
     {
-        public DialerAttemptCompensationService(CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityReservationService reservationService) { }
+        public DialerAttemptCompensationService(CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityReservationService reservationService, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemManager queueItemManager, OrchardCore.Modules.IClock clock) { }
         public System.Threading.Tasks.Task CompensateAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation reservation, bool removeFromQueue, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class DialerAttemptService : CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerAttemptService
