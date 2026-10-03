@@ -1,0 +1,10 @@
+@model MessagingEntryPointViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="ClosedAutoReplyMessage">
+    <label asp-for="ClosedAutoReplyMessage" class="ocat-label">@T["Closed auto-reply"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="ClosedAutoReplyMessage" class="form-control" rows="2"></textarea>
+        <span asp-validation-for="ClosedAutoReplyMessage" class="text-danger"></span>
+        <span class="hint">@T["Sent in place of the auto-reply to a contact who writes while the entry point is closed. Their messages still reach the queue or agent, to answer when you open. Leave it empty to send the ordinary auto-reply at any time."]</span>
+    </div>
+</div>

@@ -37,9 +37,9 @@ function optionValues(view, name) {
 }
 
 describe.each([
-    ['EntryPointClosedAction', 'ContactCenterEntryPointHours.Edit.cshtml'],
+    ['EntryPointClosedAction', 'ContactCenterEntryPointClosedCalls.Edit.cshtml'],
     ['EntryPointTargetType', 'ContactCenterEntryPointRouting.Edit.cshtml'],
-    ['InteractionPriority', 'ContactCenterEntryPointRouting.Edit.cshtml'],
+    ['InteractionPriority', 'ContactCenterEntryPointPriority.Edit.cshtml'],
     ['EntryPointVoicemailDestination', 'ContactCenterEntryPointVoicemail.Edit.cshtml'],
 ])('the %s dropdown in %s', (name, view) => {
     it('offers every member of the enum', () => {

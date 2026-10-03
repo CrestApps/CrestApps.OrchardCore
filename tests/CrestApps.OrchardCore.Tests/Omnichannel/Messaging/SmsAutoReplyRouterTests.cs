@@ -17,7 +17,7 @@ using OrchardCore.Sms;
 namespace CrestApps.OrchardCore.Tests.Omnichannel.Messaging;
 
 /// <summary>
-/// <c>MessagingEndpointRoutingSettings.AutoReplyMessage</c> was stored by the editor and sent by nothing: an operator
+/// The number's auto-reply was stored by the editor and sent by nothing: an operator
 /// could configure an acknowledgement, see it saved, and watch every contact get silence. These pin that it is
 /// sent, and sent once, because an auto-reply on every inbound message is a loop the contact cannot escape.
 /// </summary>
@@ -178,6 +178,7 @@ public sealed class SmsAutoReplyRouterTests
         private readonly SmsKeywordInboundHandler _keywordHandler;
         private readonly IMessagingChannel _channel;
         private readonly OmnichannelChannelEndpoint _endpoint;
+        private readonly MessagingInboundRouting _routing;
         private readonly Dictionary<string, ContentItem> _contacts = new(StringComparer.Ordinal);
 
         public Mock<ISmsDispatcher> Dispatcher { get; } = new();
@@ -193,12 +194,12 @@ public sealed class SmsAutoReplyRouterTests
                 Value = "+16502530000",
             };
 
-            _endpoint.Put(new MessagingEndpointRoutingSettings
+            _routing = new MessagingInboundRouting
             {
                 TargetType = ConversationRouteTargetType.Queue,
                 TargetId = "queue-1",
                 AutoReplyMessage = autoReply,
-            });
+            };
 
             Dispatcher
                 .Setup(dispatcher => dispatcher.SendAsync(It.IsAny<SmsMessage>(), It.IsAny<CancellationToken>()))
@@ -250,6 +251,7 @@ public sealed class SmsAutoReplyRouterTests
                     Channel = _channel,
                     Message = message,
                     Endpoint = _endpoint,
+                    Routing = _routing,
                     Conversation = conversation,
                     IsNewConversation = true,
                     SuppressAutomatedReplies = inbound.SuppressAutomatedReplies,

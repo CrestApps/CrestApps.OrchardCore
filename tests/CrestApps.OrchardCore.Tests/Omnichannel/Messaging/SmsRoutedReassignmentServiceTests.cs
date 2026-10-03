@@ -152,6 +152,7 @@ public class SmsRoutedReassignmentServiceTests
             var router = new MessagingConversationRouter(
                 [new ReassignmentRouter(Strategy.Object, clock.Object)],
                 MessagingTestChannels.Resolver(MessagingTestChannels.AcceptingDispatcher().Object),
+                MessagingTestChannels.RoutingResolver(),
                 NullLogger<MessagingConversationRouter>.Instance);
 
             Service = new MessagingRoutedReassignmentService(

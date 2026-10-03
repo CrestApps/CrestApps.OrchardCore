@@ -1,0 +1,20 @@
+@model MessagingEntryPointViewModel
+
+@* Shown for a queue target only: the entry point's routing card hides the fields marked for queues when it routes to an agent. *@
+<div class="ocat-wrapper" asp-validation-class-for="DistributionMode" data-entry-point-queue-field>
+    <label asp-for="DistributionMode" class="ocat-label">@T["Queue distribution"]</label>
+    <div class="ocat-end">
+        <select asp-for="DistributionMode" class="form-select" asp-items="Model.DistributionModes"></select>
+        <span asp-validation-for="DistributionMode" class="text-danger"></span>
+        <span class="hint">@T["Shared pool: every agent in the queue sees the conversation and one claims it. Routed: it is given to one available agent."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="AutoReplyMessage">
+    <label asp-for="AutoReplyMessage" class="ocat-label">@T["Auto-reply"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="AutoReplyMessage" class="form-control" rows="2"></textarea>
+        <span asp-validation-for="AutoReplyMessage" class="text-danger"></span>
+        <span class="hint">@T["Optional message sent to a contact who writes to these numbers, at most once every 24 hours per conversation. Contacts who have opted out never receive it."]</span>
+    </div>
+</div>

@@ -29,7 +29,7 @@ public class SmsInboundProcessorTests
     [Fact]
     public async Task NewInbound_WithAgentRoute_CreatesAssignedConversation()
     {
-        var routing = new MessagingEndpointRoutingSettings { TargetType = ConversationRouteTargetType.Agent, TargetId = "agent-3" };
+        var routing = new MessagingInboundRouting { TargetType = ConversationRouteTargetType.Agent, TargetId = "agent-3" };
         var harness = new Harness(routing: routing);
 
         var message = Harness.InboundMessage("Hi there");
@@ -311,7 +311,7 @@ public class SmsInboundProcessorTests
         public Mock<ISmsDispatcher> Dispatcher { get; } = new();
 
         public Harness(
-            MessagingEndpointRoutingSettings routing,
+            MessagingInboundRouting routing,
             MessagingConversation existing = null,
             bool lockAcquired = true,
             MessagingConversation createConflictsWith = null,
@@ -319,11 +319,6 @@ public class SmsInboundProcessorTests
             bool contactOptedOut = false)
         {
             var endpoint = new OmnichannelChannelEndpoint { ItemId = "endpoint-1", Channel = "SMS", Value = "+15553334444" };
-
-            if (routing is not null)
-            {
-                endpoint.Put(routing);
-            }
 
             var endpointManager = new Mock<IOmnichannelChannelEndpointManager>();
             endpointManager.Setup(m => m.GetByServiceAddressAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -405,7 +400,7 @@ public class SmsInboundProcessorTests
                 conversationStore.Object,
                 contactResolver.Object,
                 Notifier.Object,
-                new MessagingConversationRouter(routers, channels, NullLogger<MessagingConversationRouter>.Instance),
+                new MessagingConversationRouter(routers, channels, MessagingTestChannels.RoutingResolver(routing), NullLogger<MessagingConversationRouter>.Instance),
                 new NoOpSmsFirstResponseSlaService(),
                 [
                     new SmsKeywordInboundHandler(

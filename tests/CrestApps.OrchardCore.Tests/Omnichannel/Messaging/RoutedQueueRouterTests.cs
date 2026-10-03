@@ -99,15 +99,15 @@ public class RoutedQueueRouterTests
             bool isNew = true)
         {
             var endpoint = new OmnichannelChannelEndpoint { ItemId = "ep1", Channel = "SMS", Value = "+15553334444" };
-            endpoint.Put(new MessagingEndpointRoutingSettings
-            {
-                TargetType = targetType,
-                DistributionMode = mode,
-                TargetId = targetId,
-            });
 
             return new MessagingRoutingContext
             {
+                Routing = new MessagingInboundRouting
+                {
+                    TargetType = targetType,
+                    DistributionMode = mode,
+                    TargetId = targetId,
+                },
                 Message = new OmnichannelMessage { Channel = "SMS", CustomerAddress = "+15551112222", ServiceAddress = "+15553334444" },
                 Endpoint = endpoint,
                 Conversation = new MessagingConversation { Channel = "SMS", ItemId = "conv1", ServiceAddress = "+15553334444", ContactAddress = "+15551112222" },

@@ -64,6 +64,10 @@ internal static class LegacySmsPortalImport
             }
 
             await ImportEndpointRoutingAsync(serviceProvider, logger);
+
+            // The routing just copied onto the numbers belongs on entry points, and the migration that moves it has
+            // already run on this tenant.
+            await MessagingEntryPointMigrations.MoveRoutingToEntryPointsAsync(serviceProvider);
             await ImportRolePermissionsAsync(serviceProvider, logger);
         }
         catch (Exception ex)

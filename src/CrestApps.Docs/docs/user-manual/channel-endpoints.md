@@ -19,7 +19,7 @@ An **omnichannel address** is an address the business owns, such as a phone numb
 2. Pick the kind of address, such as **Phone number**.
 3. Enter a **Name** people will recognize and the **Phone number** in international format, such as `+17025550100`.
 4. Under **Used for**, tick **Voice calls**, **Text messages (SMS)**, or both. The settings for each appear while it is ticked:
-   - **Text messages**: the SMS **Provider** that owns the number, and the inbound routing for texts.
+   - **Text messages**: the SMS **Provider** that owns the number. Which entry point answers its texts is set on the entry point.
    - **Voice calls**: the agents who dial out from the number. Which entry point answers its calls is set on the entry point.
 5. Click **Save**.
 
@@ -35,14 +35,4 @@ Calls to a number are routed by the [inbound entry point](entry-points-and-ivr.m
 
 ## Inbound routing for texts
 
-When the Messaging workspace is enabled, addresses used for **Text messages** show these settings:
-
-| Field | What it does |
-| --- | --- |
-| **Routes to** | **Agent** (a personal number: texts go to one person) or **Queue** (a department number). |
-| **Agent** | The person who owns the personal number. |
-| **Queue (department)** | The queue whose shared inbox receives the texts. |
-| **Queue distribution** | **Shared pool (claim to own)**: any agent in the queue can claim a conversation. **Routed (assign via routing strategy)**: each new conversation is assigned to an available agent. Routed needs the *Omnichannel Messaging Routed Distribution* feature. |
-| **Auto-reply** | A message sent back automatically, at most once a day per customer. |
-
-See [Messaging workspace](messaging.md).
+Texts to a number are routed by the [text entry point](entry-points-and-ivr.md#text-entry-points) that picks it under **Numbers**. The entry point decides the queue or agent, how a queue hands the conversations out, the opening hours and the auto-replies. See [Messaging workspace](messaging.md).

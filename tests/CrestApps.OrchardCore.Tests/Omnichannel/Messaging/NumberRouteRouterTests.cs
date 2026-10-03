@@ -12,7 +12,7 @@ public class NumberRouteRouterTests
     [Fact]
     public async Task AgentTarget_AssignsConversationToTheAgentPersonally()
     {
-        var routing = new MessagingEndpointRoutingSettings { TargetType = ConversationRouteTargetType.Agent, TargetId = "agent-1" };
+        var routing = new MessagingInboundRouting { TargetType = ConversationRouteTargetType.Agent, TargetId = "agent-1" };
         var context = CreateContext(routing, isNew: true);
 
         var handled = await new EndpointRouteRouter().TryRouteAsync(context, TestContext.Current.CancellationToken);
@@ -27,7 +27,7 @@ public class NumberRouteRouterTests
     [Fact]
     public async Task QueueTarget_PlacesConversationInTheQueueSharedPool()
     {
-        var routing = new MessagingEndpointRoutingSettings
+        var routing = new MessagingInboundRouting
         {
             TargetType = ConversationRouteTargetType.Queue,
             TargetId = "queue-1",
@@ -57,7 +57,7 @@ public class NumberRouteRouterTests
     [Fact]
     public async Task ExistingConversation_IsIgnored()
     {
-        var routing = new MessagingEndpointRoutingSettings { TargetType = ConversationRouteTargetType.Agent, TargetId = "agent-1" };
+        var routing = new MessagingInboundRouting { TargetType = ConversationRouteTargetType.Agent, TargetId = "agent-1" };
         var context = CreateContext(routing, isNew: false);
 
         var handled = await new EndpointRouteRouter().TryRouteAsync(context, TestContext.Current.CancellationToken);
@@ -65,17 +65,13 @@ public class NumberRouteRouterTests
         Assert.False(handled);
     }
 
-    private static MessagingRoutingContext CreateContext(MessagingEndpointRoutingSettings routing, bool isNew)
+    private static MessagingRoutingContext CreateContext(MessagingInboundRouting routing, bool isNew)
     {
         var endpoint = new OmnichannelChannelEndpoint { Channel = "SMS", Value = "+15553334444" };
 
-        if (routing is not null)
-        {
-            endpoint.Put(routing);
-        }
-
         return new MessagingRoutingContext
         {
+            Routing = routing,
             Message = new OmnichannelMessage { ServiceAddress = "+15553334444", CustomerAddress = "+15551112222" },
             Endpoint = endpoint,
             Conversation = new MessagingConversation { Channel = "SMS", ServiceAddress = "+15553334444", ContactAddress = "+15551112222" },

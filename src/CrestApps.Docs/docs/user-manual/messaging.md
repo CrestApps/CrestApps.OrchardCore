@@ -17,7 +17,7 @@ The **Messaging workspace** is a shared inbox for text conversations with custom
 
 1. Enable **SMS Messaging Channel**. It turns on the workspace and its dependencies.
 2. Set up the SMS provider under **Settings > Communication > SMS** (see [Phone and SMS setup](telephony-settings.md)).
-3. Add each SMS number under **Interaction Center > Management > Omnichannel Addresses**, and use its **Inbound routing** section to send it to an agent or a queue. See [Channel endpoints](channel-endpoints.md#inbound-routing-for-messaging).
+3. Add each SMS number under **Interaction Center > Management > Omnichannel Addresses** with **Text messages (SMS)** ticked, then add a **Text messages** entry point under **Interaction Center > Management > Inbound entry points** that sends its texts to an agent or a queue. See [Text entry points](entry-points-and-ivr.md#text-entry-points).
 
 ## Work the inbox
 

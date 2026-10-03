@@ -70,12 +70,19 @@ public sealed class Startup : StartupBase
         services.AddScoped<IMessagingInboundHandler, SmsKeywordInboundHandler>();
 
         // Texting is something a phone number does, so it is a capability this feature offers on the phone numbers in
-        // the address list, with the provider picker that pins a number's texts to the provider owning it. The
-        // workspace's routing editor applies to these numbers because SMS is a registered messaging channel.
+        // the address list, with the provider picker that pins a number's texts to the provider owning it.
         services.AddOmnichannelAddressCapability(OmnichannelAddressTypes.PhoneNumber, OmnichannelConstants.Channels.Sms, capability =>
         {
             capability.DisplayName = S["Text messages (SMS)"];
             capability.Description = S["Texts sent and received on this number in the messaging workspace."];
+        });
+
+        // Texts are a channel entry points answer: an SMS entry point says where texts to its numbers go, with the
+        // workspace's distribution and auto-reply settings.
+        services.AddEntryPointChannel(OmnichannelConstants.Channels.Sms, channel =>
+        {
+            channel.DisplayName = S["Text messages"];
+            channel.Description = S["Answers texts to its numbers: routes the conversations to a queue or an agent, with opening hours and auto-replies."];
         });
 
         services.AddDisplayDriver<OmnichannelChannelEndpoint, SmsEndpointProviderDisplayDriver>();

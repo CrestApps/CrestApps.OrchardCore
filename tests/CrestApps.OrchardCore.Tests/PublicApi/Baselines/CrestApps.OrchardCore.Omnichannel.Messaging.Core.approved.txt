@@ -315,6 +315,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models
         public string TargetId { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Messaging.Models.ConversationRouteTargetType TargetType { get; set; }
     }
+    public sealed class MessagingEntryPointSettings
+    {
+        public MessagingEntryPointSettings() { }
+        public string AutoReplyMessage { get; set; }
+        public string ClosedAutoReplyMessage { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Messaging.Models.ConversationDistributionMode DistributionMode { get; set; }
+    }
     public sealed class MessagingFavorite
     {
         public MessagingFavorite() { }
@@ -331,6 +338,16 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models
         public const int MaxFavorites = 100;
         public MessagingFavorites() { }
         public System.Collections.Generic.IList<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingFavorite> Items { get; set; }
+    }
+    public sealed class MessagingInboundRouting
+    {
+        public MessagingInboundRouting() { }
+        public string AutoReplyMessage { get; init; }
+        public CrestApps.OrchardCore.Omnichannel.Messaging.Models.ConversationDistributionMode DistributionMode { get; init; }
+        public string EntryPointId { get; init; }
+        public bool IsOpen { get; init; }
+        public string TargetId { get; init; }
+        public CrestApps.OrchardCore.Omnichannel.Messaging.Models.ConversationRouteTargetType TargetType { get; init; }
     }
     public sealed class MessagingInboxQuery
     {
@@ -495,6 +512,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services
         int Order { get; }
         System.Threading.Tasks.Task<bool> TryRouteAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingRoutingContext context, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface IMessagingInboundRoutingResolver
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingInboundRouting> ResolveAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint address, string channel, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IMessagingOutbox
     {
         System.Threading.Tasks.Task<int> DispatchDueAsync(System.Threading.CancellationToken cancellationToken = default);
@@ -583,7 +604,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services
     }
     public sealed class MessagingConversationRouter : CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingConversationRouter
     {
-        public MessagingConversationRouter(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingInboundRouter> routers, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.IMessagingChannelResolver channelResolver, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingConversationRouter> logger) { }
+        public MessagingConversationRouter(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingInboundRouter> routers, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.IMessagingChannelResolver channelResolver, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingInboundRoutingResolver routingResolver, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingConversationRouter> logger) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingRoutingContext> RouteAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingRoutingContext context, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class MessagingConversationService : CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingConversationService
@@ -656,6 +677,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services
                     Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingInboundProcessor> logger) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation> ProcessAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage message, System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public sealed class MessagingInboundRoutingResolver : CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingInboundRoutingResolver
+    {
+        public MessagingInboundRoutingResolver(CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEntryPointManager entryPointManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IBusinessHoursService businessHours) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingInboundRouting> ResolveAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint address, string channel, System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public sealed class MessagingLeadConversionRepointer : CrestApps.OrchardCore.Omnichannel.Core.Services.ILeadConversionRepointer
     {
         public MessagingLeadConversionRepointer(YesSql.ISession session, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingLeadConversionRepointer> logger) { }
@@ -689,6 +715,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services
         public bool IsNewConversation { get; init; }
         public int MaxReassignmentAttempts { get; init; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage Message { get; init; }
+        public CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingInboundRouting Routing { get; set; }
         public bool SuppressAutomatedReplies { get; init; }
         public string TargetQueueId { get; init; }
         public CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingRoutingTrigger Trigger { get; init; }

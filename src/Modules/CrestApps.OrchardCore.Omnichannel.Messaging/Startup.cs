@@ -1,4 +1,5 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -118,8 +119,10 @@ public sealed class Startup : StartupBase
             .AddScoped<IMessagingInboundRouter, EndpointRouteRouter>()
             .AddScoped<IMessagingInboundRouter, FallbackRouter>();
 
-        // The one entry point every ownership decision goes through, whatever triggered it.
+        // The one entry point every ownership decision goes through, whatever triggered it, and where it learns which
+        // inbound entry point answers the conversation's number.
         services.AddScoped<IMessagingConversationRouter, MessagingConversationRouter>();
+        services.AddScoped<IMessagingInboundRoutingResolver, MessagingInboundRoutingResolver>();
 
         // The first-response clock and the pass that announces the threads that missed it.
         // A tenant with no Work Distribution has no queues, so the null reader reports every lookup as not
@@ -211,17 +214,20 @@ public sealed class Startup : StartupBase
         services.AddIndexProvider<MessagingBroadcastIndexProvider>();
         services.AddDataMigration<MessagingMigrations>();
 
+        // Where a number's messages go used to be saved on the number; it moves onto an entry point for its channel.
+        services.AddDataMigration<MessagingEntryPointMigrations>();
+
         // Background fan-out for queued broadcasts, and the retry pass for outbound messages a provider refused.
         services.AddScoped<IMessagingOutbox, MessagingOutbox>();
         services.AddSingleton<IBackgroundTask, MessagingBroadcastBackgroundTask>();
         services.AddSingleton<IBackgroundTask, MessagingOutboxBackgroundTask>();
 
-        // Admin surfaces. Inbound routing is edited on the channel-endpoint screen of every messaging channel's
-        // endpoints (no separate routing catalog).
+        // Admin surfaces. Where a number's messages go is set on the inbound entry point that answers it, which this
+        // adds the messaging settings to.
         // Endpoints of every messaging channel are stored in their channel's normalized form, so inbound traffic matches them.
         // The channel-endpoint handler of the Omnichannel feature applies it; the workspace only says how.
         services.AddScoped<IChannelEndpointAddressPolicy, MessagingChannelEndpointAddressPolicy>();
-        services.AddDisplayDriver<OmnichannelChannelEndpoint, MessagingEndpointRoutingDisplayDriver>();
+        services.AddDisplayDriver<ContactCenterEntryPoint, MessagingEntryPointDisplayDriver>();
         services.AddDisplayDriver<MessagingConversation, MessagingConversationDisplayDriver>();
         services.AddDisplayDriver<MessageTemplate, MessageTemplateDisplayDriver>();
         services.AddNavigationProvider<MessagingAdminMenu>();

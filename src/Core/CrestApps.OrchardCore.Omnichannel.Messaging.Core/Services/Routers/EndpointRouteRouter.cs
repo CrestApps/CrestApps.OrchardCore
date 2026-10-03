@@ -5,9 +5,8 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.Routers;
 
 /// <summary>
-/// Routes a new conversation to the target configured on its DID's channel endpoint (Agent or Queue). This is
-/// the DID-is-the-routing-key step of the pipeline; the routing lives on the <c>OmnichannelChannelEndpoint</c>
-/// itself rather than in a separate catalog.
+/// Routes a new conversation to the target of the inbound entry point that answers its number (Agent or Queue). This
+/// is the number-is-the-routing-key step of the pipeline.
 /// </summary>
 public sealed class EndpointRouteRouter : IMessagingInboundRouter
 {
@@ -22,9 +21,9 @@ public sealed class EndpointRouteRouter : IMessagingInboundRouter
             return Task.FromResult(false);
         }
 
-        if (!context.Endpoint.TryGet<MessagingEndpointRoutingSettings>(out var routing) ||
-            routing is null ||
-            string.IsNullOrEmpty(routing.TargetId))
+        var routing = context.Routing;
+
+        if (routing is null || string.IsNullOrEmpty(routing.TargetId))
         {
             return Task.FromResult(false);
         }

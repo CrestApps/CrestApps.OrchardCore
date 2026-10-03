@@ -39,8 +39,9 @@ public sealed class RoutedQueueRouter : IMessagingInboundRouter
             return false;
         }
 
-        if (!context.Endpoint.TryGet<MessagingEndpointRoutingSettings>(out var routing) ||
-            routing is null ||
+        var routing = context.Routing;
+
+        if (routing is null ||
             routing.TargetType != ConversationRouteTargetType.Queue ||
             routing.DistributionMode != ConversationDistributionMode.Routed ||
             string.IsNullOrEmpty(routing.TargetId))

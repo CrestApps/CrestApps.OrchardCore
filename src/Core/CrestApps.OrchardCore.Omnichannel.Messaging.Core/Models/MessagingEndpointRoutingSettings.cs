@@ -3,9 +3,9 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 
 /// <summary>
-/// The inbound-routing configuration attached to an <c>OmnichannelChannelEndpoint</c> of a messaging channel. Stored in
-/// the endpoint's extensible properties by the messaging workspace feature, so a single channel-endpoint screen manages
-/// the endpoint, its provider, and where its inbound messages route — no separate routing catalog.
+/// Where a messaging number's inbound messages went before inbound entry points answered messaging channels, stored in
+/// the address's properties. Only the upgrade reads it now: it becomes an entry point for the channel, with
+/// <see cref="MessagingEntryPointSettings"/>, and is removed from the address.
 /// </summary>
 public sealed class MessagingEndpointRoutingSettings
 {
