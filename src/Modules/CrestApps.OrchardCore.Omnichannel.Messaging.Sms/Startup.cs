@@ -62,13 +62,13 @@ public sealed class Startup : StartupBase
         services.Configure<SmsKeywordReplySettings>(_shellConfiguration.GetSection("CrestApps:Omnichannel:Messaging:Sms:KeywordReplies"));
         services.AddScoped<IMessagingInboundHandler, SmsKeywordInboundHandler>();
 
-        // SMS numbers are channel endpoints. Register the SMS source for the endpoint screen and the provider picker
-        // that pins a number to the provider owning it. The workspace's routing editor applies to these endpoints
-        // because SMS is a registered messaging channel.
-        services.AddChannelEndpointSource(OmnichannelConstants.Channels.Sms, source =>
+        // Texting is something a phone number does, so it is a capability this feature offers on the phone numbers in
+        // the address list, with the provider picker that pins a number's texts to the provider owning it. The
+        // workspace's routing editor applies to these numbers because SMS is a registered messaging channel.
+        services.AddOmnichannelAddressCapability(OmnichannelAddressTypes.PhoneNumber, OmnichannelConstants.Channels.Sms, capability =>
         {
-            source.DisplayName = S["SMS"];
-            source.Description = S["A number that sends and receives text messages in the messaging workspace."];
+            capability.DisplayName = S["Text messages (SMS)"];
+            capability.Description = S["Texts sent and received on this number in the messaging workspace."];
         });
 
         services.AddDisplayDriver<OmnichannelChannelEndpoint, SmsEndpointProviderDisplayDriver>();

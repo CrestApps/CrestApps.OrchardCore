@@ -79,9 +79,24 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
             .AddScoped<IOmnichannelActivityManager, OmnichannelActivityManager>()
             .AddScoped<IOmnichannelChannelEndpointStore, OmnichannelChannelEndpointStore>()
             .AddScoped<IOmnichannelChannelEndpointManager, OmnichannelChannelEndpointManager>()
+            .AddDataMigration<OmnichannelAddressMigrations>()
             .AddScoped<ICatalogEntryHandler<OmnichannelActivityBatch>, OmnichannelActivityBatchHandler>()
             .AddIndexProvider<OmnichannelActivityBatchIndexProvider>()
             .AddDataMigration<OmnichannelActivityBatchIndexMigrations>();
+
+        // The kinds of address the business can own. A type is offered in the address list once a feature registers a
+        // capability for it, so email addresses stay hidden until an email channel exists.
+        services.AddOmnichannelAddressType(OmnichannelAddressTypes.PhoneNumber, type =>
+        {
+            type.DisplayName = S["Phone number"];
+            type.Description = S["A phone number the business owns, for calls, texts or both."];
+        });
+
+        services.AddOmnichannelAddressType(OmnichannelAddressTypes.EmailAddress, type =>
+        {
+            type.DisplayName = S["Email address"];
+            type.Description = S["An email address the business owns."];
+        });
 
         // Reusable re-engagement cadences selected on automated loading campaigns.
         services

@@ -29,7 +29,7 @@ internal sealed class ChannelEndpointsAdminMenu : AdminNavigationProvider
                 .Add(S["Management"], S["Management"].PrefixPosition(), management => management
                     .AddClass("interaction-center-management")
                     .Id("interactionCenterManagement")
-                    .Add(S["Channel Endpoints"], S["Channel Endpoints"].PrefixPosition(), endpoints => endpoints
+                    .Add(S["Omnichannel Addresses"], S["Omnichannel Addresses"].PrefixPosition(), endpoints => endpoints
                         .AddClass("channel-endpoints")
                         .Id("channelEndpoints")
                         .Action("Index", "ChannelEndpoints", "CrestApps.OrchardCore.Omnichannel.Managements")

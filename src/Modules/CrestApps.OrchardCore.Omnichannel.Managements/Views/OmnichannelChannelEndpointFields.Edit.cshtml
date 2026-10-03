@@ -2,6 +2,17 @@
 
 @model OmnichannelChannelEndpointViewModel
 
+@{
+    var valueLabel = Model.AddressType switch
+    {
+        "PhoneNumber" => T["Phone number"],
+        "EmailAddress" => T["Email address"],
+        _ => T["Address"],
+    };
+    var capabilitiesName = Html.NameFor(m => m.Capabilities).ToString();
+    var capabilitiesId = Html.IdFor(m => m.Capabilities).ToString();
+}
+
 <div class="ocat-wrapper">
     <label asp-for="DisplayText" class="ocat-label">@T["Name"]</label>
     <div class="ocat-end">
@@ -11,10 +22,39 @@
 </div>
 
 <div class="ocat-wrapper">
-    <label asp-for="Value" class="ocat-label">@T["Endpoint value"]</label>
+    <label asp-for="Value" class="ocat-label">@valueLabel</label>
     <div class="ocat-end">
         <input asp-for="Value" class="form-control" />
         <span asp-validation-for="Value" class="text-danger"></span>
+        @if (Model.AddressType == "PhoneNumber")
+        {
+            <span class="hint">@T["In international format, for example +14155552671."]</span>
+        }
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Capabilities">
+    <span class="ocat-label">@T["Used for"]</span>
+    <div class="ocat-end" data-address-capabilities>
+        @if (Model.AvailableCapabilities.Count == 0)
+        {
+            <span class="hint">@T["Enable a feature that uses this kind of address, such as Contact Center Voice or SMS Messaging Channel."]</span>
+        }
+        @for (var i = 0; i < Model.AvailableCapabilities.Count; i++)
+        {
+            var capability = Model.AvailableCapabilities[i];
+            var id = $"{capabilitiesId}_{i}";
+
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="@id" name="@capabilitiesName" value="@capability.Name" checked="@capability.Selected" data-address-capability-checkbox />
+                <label class="form-check-label" for="@id">@capability.DisplayName</label>
+                @if (!string.IsNullOrEmpty(capability.Description))
+                {
+                    <span class="hint dashed">@capability.Description</span>
+                }
+            </div>
+        }
+        <span asp-validation-for="Capabilities" class="text-danger"></span>
     </div>
 </div>
 
@@ -25,3 +65,32 @@
         <span asp-validation-for="Description" class="text-danger"></span>
     </div>
 </div>
+
+<script at="Foot">
+    (function () {
+        // The settings a feature keeps on an address are shown only while its capability is ticked. Each one marks
+        // itself with data-address-capability, naming the capabilities it serves, and its card goes with it.
+        const checkboxes = Array.from(document.querySelectorAll('[data-address-capability-checkbox]'));
+
+        const apply = () => {
+            const ticked = new Set(checkboxes.filter(box => box.checked).map(box => box.value.toLowerCase()));
+            const marked = Array.from(document.querySelectorAll('[data-address-capability]'));
+
+            marked.forEach(element => {
+                const serves = element.getAttribute('data-address-capability').toLowerCase().split(',').map(name => name.trim());
+                element.hidden = !serves.some(name => ticked.has(name));
+            });
+
+            marked.forEach(element => {
+                const card = element.closest('.card');
+
+                if (card) {
+                    card.hidden = Array.from(card.querySelectorAll('[data-address-capability]')).every(child => child.hidden);
+                }
+            });
+        };
+
+        checkboxes.forEach(box => box.addEventListener('change', apply));
+        apply();
+    })();
+</script>

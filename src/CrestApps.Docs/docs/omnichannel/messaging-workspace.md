@@ -84,7 +84,7 @@ The workspace does **not** require Contact Center Voice, Work Distribution or th
 ## Setting up SMS
 
 1. **Configure an SMS provider.** Enable at least one, for example [Telnyx SMS](../telephony/telnyx#telnyx-sms) or Twilio, and pick the tenant **default provider** at **Settings > Communication > SMS**.
-2. **Add your numbers as SMS channel endpoints** in **Interaction Center > Management > Channel Endpoints** (see [Channel endpoints](../user-manual/channel-endpoints.md)). Each SMS endpoint can pin the **provider** that owns the number; leave it empty to use the tenant default.
+2. **Add your numbers as SMS channel endpoints** in **Interaction Center > Management > Omnichannel Addresses** (see [Channel endpoints](../user-manual/channel-endpoints.md)). Each SMS endpoint can pin the **provider** that owns the number; leave it empty to use the tenant default.
 3. **Set the inbound routing** on the endpoint:
    - **Target**: an **agent** (personal number) or a **queue** (department number).
    - **Distribution mode**: **Shared pool** (agents claim conversations) or **Routed** (pushed to an agent by the routed-distribution feature).
@@ -145,7 +145,7 @@ While an automated (AI) activity is handling a contact on an endpoint, the works
 | `SendMessagesDuringQuietHours` | Changes the quiet-hours banner to a plain notice without the unsociable-hour warning. Sending is never blocked, with or without it. |
 | `ManageMessaging` | Manage templates (**Messaging > Templates**). |
 
-Permissions apply to every channel; there is no per-channel permission. An endpoint's inbound routing is edited on the endpoint itself, under **Interaction Center > Management > Channel Endpoints**, which requires the **Manage channel endpoints** (`ManageChannelEndpoints`) permission.
+Permissions apply to every channel; there is no per-channel permission. An endpoint's inbound routing is edited on the endpoint itself, under **Interaction Center > Management > Omnichannel Addresses**, which requires the **Manage channel endpoints** (`ManageChannelEndpoints`) permission.
 
 ## Broadcasts and templates
 
@@ -205,10 +205,10 @@ public sealed class Startup : StartupBase
     {
         services.AddMessagingChannel<WhatsAppMessagingChannel>();
 
-        // Let tenants add WhatsApp numbers as channel endpoints.
-        services.AddChannelEndpointSource("WhatsApp", source =>
+        // Let tenants tick WhatsApp on the phone numbers they own.
+        services.AddOmnichannelAddressCapability(OmnichannelAddressTypes.PhoneNumber, "WhatsApp", capability =>
         {
-            source.DisplayName = S["WhatsApp"];
+            capability.DisplayName = S["WhatsApp"];
         });
     }
 }

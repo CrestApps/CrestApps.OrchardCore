@@ -38,7 +38,7 @@ internal sealed class PhoneEndpointRoutingRule : IChannelEndpointRule
     {
         var endpoint = context.Model;
 
-        if (!string.Equals(endpoint?.Channel, OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase))
+        if (endpoint is null || !endpoint.HasCapability(OmnichannelConstants.Channels.Phone))
         {
             return;
         }
