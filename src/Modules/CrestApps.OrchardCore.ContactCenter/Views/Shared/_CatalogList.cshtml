@@ -20,15 +20,7 @@
                 <div class="col-auto">
                     @if (Model.CreateOptions is { Count: > 1 })
                     {
-                        <div class="dropdown">
-                            <button class="btn btn-secondary create dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">@Model.CreateLabel</button>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                                @foreach (var option in Model.CreateOptions)
-                                {
-                                    <li><a class="dropdown-item" asp-action="Create" asp-all-route-data="option.RouteValues">@option.Label</a></li>
-                                }
-                            </ul>
-                        </div>
+                        <button type="button" class="btn btn-secondary create" data-bs-toggle="modal" data-bs-target="#@(Model.ListId)-create-dialog">@Model.CreateLabel</button>
                     }
                     else if (Model.CreateOptions is { Count: 1 })
                     {
@@ -73,3 +65,43 @@
 </form>
 
 @await DisplayAsync(Model.Pager)
+
+@if (Model.CreateOptions is { Count: > 1 })
+{
+    @* The same dialog the address list asks its kind of address in: a card per kind, each with what it is for. *@
+    <div class="modal fade" id="@(Model.ListId)-create-dialog" tabindex="-1" role="dialog" aria-labelledby="@(Model.ListId)-create-dialog-title" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="@(Model.ListId)-create-dialog-title">@(Model.CreateDialogTitle ?? Model.CreateLabel)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Close"]"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row row-cols-1 row-cols-md-3 g-2">
+                        @foreach (var option in Model.CreateOptions)
+                        {
+                            <div class="col">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h4>@option.Label</h4>
+                                        @if (!string.IsNullOrWhiteSpace(option.Description))
+                                        {
+                                            <p class="hint mb-0">@option.Description</p>
+                                        }
+                                    </div>
+                                    <div class="card-footer text-muted text-sm-end">
+                                        <a class="btn btn-primary btn-sm" asp-action="Create" asp-all-route-data="option.RouteValues">@T["Add"]</a>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Cancel"]</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+

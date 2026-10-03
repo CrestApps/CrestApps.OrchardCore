@@ -851,6 +851,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
     {
         Queue = 0,
         Agent = 1,
+        AIAgent = 2,
     }
     public enum EntryPointVoicemailDestination
     {

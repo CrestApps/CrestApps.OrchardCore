@@ -595,6 +595,121 @@ public sealed partial class InboundVoiceServiceTests
             Times.Never);
     }
 
+    [Fact]
+    public async Task HandleInboundAsync_WhenEntryPointRoutesToAnAIAgent_HandsTheCallToTheAIWithoutAnInteraction()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.SetupNoContext();
+        var activity = new OmnichannelActivity { ItemId = "act1" };
+        var answerer = new Mock<IInboundAIVoiceAnswerer>();
+        answerer.SetupGet(candidate => candidate.ProviderName).Returns("TestProvider");
+        harness.AIVoiceAnswerers.Add(answerer.Object);
+
+        harness.ActivityManager
+            .Setup(manager => manager.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(activity);
+        harness.EntryPointResolver
+            .Setup(resolver => resolver.ResolveAsync("+15553334444", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EntryPointRoutingPlan
+            {
+                EntryPoint = new ContactCenterEntryPoint { ItemId = "front-desk", WelcomeMessage = "Hello" },
+                IsOpen = true,
+                RouteToAIAgent = true,
+                TargetAIProfileId = "front-desk-profile",
+            });
+
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.HandleInboundAsync(
+            new InboundVoiceEvent
+            {
+                ProviderName = "TestProvider",
+                ProviderCallId = "call-1",
+                FromAddress = "+15551112222",
+                ToAddress = "+15553334444",
+            },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Routed);
+        Assert.False(result.Queued);
+        Assert.Equal("ai_agent", result.ReasonCode);
+        Assert.Equal("act1", result.ActivityItemId);
+        Assert.Null(result.InteractionId);
+
+        // The activity is the AI's: automated, with the entry point's profile, waiting for the answer it starts on.
+        Assert.Equal(ActivityInteractionType.Automated, activity.InteractionType);
+        Assert.Equal("front-desk-profile", activity.AIProfileId);
+        Assert.Equal(ActivityStatus.AwaitingCustomerAnswer, activity.Status);
+        Assert.Equal("+15551112222", activity.PreferredDestination);
+
+        // Nobody's work until the AI hands the caller over: no interaction, no queue, no welcome message.
+        harness.InteractionManager.Verify(manager => manager.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()), Times.Never);
+        harness.QueueService.Verify(
+            queueService => queueService.EnqueueAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<InteractionPriority?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        harness.IvrRouter.Verify(router => router.AnnounceAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+
+        // The call is answered only once the routing has committed, so the activity exists when the answer is reported.
+        harness.AIVoiceDispatcher.Verify(dispatcher => dispatcher.AnswerAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        Assert.NotNull(harness.ScopeExecutor.ScheduledOperation);
+        await harness.ScopeExecutor.ScheduledOperation();
+        harness.AIVoiceDispatcher.Verify(dispatcher => dispatcher.AnswerAsync("TestProvider", "call-1", "act1", CancellationToken.None), Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleInboundAsync_WhenNoAIAgentCanAnswerTheProvidersCalls_RefusesTheCall()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.SetupNoContext();
+        var activity = new OmnichannelActivity { ItemId = "act1" };
+        var interaction = new Interaction { ItemId = "int1" };
+
+        harness.ActivityManager
+            .Setup(manager => manager.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(activity);
+        harness.InteractionManager
+            .Setup(manager => manager.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+        harness.EntryPointResolver
+            .Setup(resolver => resolver.ResolveAsync("+15553334444", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EntryPointRoutingPlan
+            {
+                EntryPoint = new ContactCenterEntryPoint { ItemId = "front-desk" },
+                IsOpen = true,
+                RouteToAIAgent = true,
+                TargetAIProfileId = "front-desk-profile",
+            });
+
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.HandleInboundAsync(
+            new InboundVoiceEvent
+            {
+                ProviderName = "TestProvider",
+                ProviderCallId = "call-1",
+                FromAddress = "+15551112222",
+                ToAddress = "+15553334444",
+            },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Routed);
+        Assert.Equal("ai_agent_unavailable", result.ReasonCode);
+        Assert.Equal(ActivityStatus.Failed, activity.Status);
+        Assert.Equal(ActivityInteractionType.Manual, activity.InteractionType);
+        harness.ProviderCommandStateService.Verify(
+            commands => commands.RegisterAsync(
+                It.Is<ProviderCommandRegistration>(registration => registration.CommandType == ProviderCommandType.Reject),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        harness.AIVoiceDispatcher.Verify(dispatcher => dispatcher.AnswerAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     [Theory]
     [InlineData(EntryPointClosedAction.Voicemail, ActivityStatus.Completed, ProviderCommandType.SendToVoicemail, "entry_point_closed_voicemail")]
     [InlineData(EntryPointClosedAction.Reject, ActivityStatus.Cancelled, ProviderCommandType.Reject, "entry_point_closed_reject")]
@@ -1335,11 +1450,16 @@ public sealed partial class InboundVoiceServiceTests
 
         public TestContactCenterScopeExecutor ScopeExecutor { get; }
 
+        public List<IInboundAIVoiceAnswerer> AIVoiceAnswerers { get; } = [];
+
+        public Mock<IInboundAIVoiceAnswererDispatcher> AIVoiceDispatcher { get; } = new();
+
         public Harness()
         {
             var services = new ServiceCollection();
             services.AddSingleton(ProviderCommandProcessor.Object);
             services.AddSingleton(IvrRouter.Object);
+            services.AddSingleton(AIVoiceDispatcher.Object);
             ScopeExecutor = new TestContactCenterScopeExecutor(services.BuildServiceProvider())
             {
                 ScheduleAfterCommitResult = true,
@@ -1432,6 +1552,7 @@ public sealed partial class InboundVoiceServiceTests
                 workManager,
                 AuditRecorder,
                 new InboundPriorityResolver([], NullLogger<InboundPriorityResolver>.Instance),
+                AIVoiceAnswerers,
                 new Mock<global::YesSql.ISession> { DefaultValue = DefaultValue.Mock }.Object,
                 clock.Object,
                 Options.Create(new ContactCenterCoordinationOptions()),

@@ -1292,6 +1292,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string OverflowQueueId { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Models.InteractionPriority Priority { get; set; }
         public int RingTimeoutSeconds { get; set; }
+        public string TargetAIProfileId { get; set; }
         public string TargetAgentId { get; set; }
         public string TargetQueueId { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Models.EntryPointTargetType TargetType { get; set; }
@@ -1628,8 +1629,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public bool IsOpen { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Models.InteractionPriority Priority { get; set; }
         public int RingTimeoutSeconds { get; set; }
+        public bool RouteToAIAgent { get; set; }
         public bool RouteToAgent { get; set; }
         public bool ShouldQueue { get; set; }
+        public string TargetAIProfileId { get; set; }
         public string TargetAgentId { get; set; }
         public string TargetQueueId { get; set; }
         public string VoicemailGreetingText { get; set; }
@@ -4341,6 +4344,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint> FindByDialedNumberAsync(string dialedNumber, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.EntryPointRoutingPlan> ResolveAsync(string dialedNumber, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IInboundAIVoiceAnswerer
+    {
+        string ProviderName { get; }
+        System.Threading.Tasks.Task<bool> AnswerAsync(string providerCallId, string activityId, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IInboundContactLookup
     {

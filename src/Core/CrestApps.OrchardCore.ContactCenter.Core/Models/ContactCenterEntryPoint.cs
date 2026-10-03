@@ -60,6 +60,12 @@ public sealed class ContactCenterEntryPoint : CatalogItem, INameAwareModel, IMod
     public string TargetAgentId { get; set; }
 
     /// <summary>
+    /// Gets or sets the AI profile that answers the call when <see cref="TargetType"/> is
+    /// <see cref="EntryPointTargetType.AIAgent"/>.
+    /// </summary>
+    public string TargetAIProfileId { get; set; }
+
+    /// <summary>
     /// Gets or sets the identifier of the queue calls route to while the entry point is open, when
     /// <see cref="TargetType"/> is <see cref="EntryPointTargetType.Queue"/>. It is not used for an
     /// agent-target entry point.
