@@ -454,17 +454,22 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
     [OrchardCore.Admin.Admin(null, null)]
     public sealed class NotInServiceNumbersController : Microsoft.AspNetCore.Mvc.Controller
     {
-        public NotInServiceNumbersController(CrestApps.OrchardCore.Omnichannel.Core.Services.INotInServiceNumberService notInServiceNumbers, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaignCatalog, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, OrchardCore.DisplayManagement.Notify.INotifier notifier, Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.NotInServiceNumbersController> htmlLocalizer) { }
+        public NotInServiceNumbersController(CrestApps.OrchardCore.Omnichannel.Core.Services.INotInServiceNumberService notInServiceNumbers, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaignCatalog, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, OrchardCore.DisplayManagement.Notify.INotifier notifier, Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.NotInServiceNumbersController> htmlLocalizer, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.NotInServiceNumbersController> stringLocalizer) { }
         [Microsoft.AspNetCore.Mvc.HttpPost]
-        [OrchardCore.Admin.Admin("omnichannel/numbers-not-in-service/clear", "OmnichannelNotInServiceNumbersClear")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Clear(string phoneNumber, string returnUrl) { }
+        [OrchardCore.Admin.Admin("omnichannel/numbers-not-in-service/allow-dialing", "OmnichannelNotInServiceNumbersAllowDialing")]
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> AllowDialing(string phoneNumber, string returnUrl) { }
         [OrchardCore.Admin.Admin("omnichannel/numbers-not-in-service", "OmnichannelNotInServiceNumbersIndex")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Index(string search, OrchardCore.Navigation.PagerParameters pagerParameters, [Microsoft.AspNetCore.Mvc.FromServices] Microsoft.Extensions.Options.IOptions<OrchardCore.Navigation.PagerOptions> pagerOptions, [Microsoft.AspNetCore.Mvc.FromServices] OrchardCore.DisplayManagement.IShapeFactory shapeFactory) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Index(CrestApps.OrchardCore.Core.Models.CatalogEntryOptions<CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.NotInServiceNumberBulkAction> options, OrchardCore.Navigation.PagerParameters pagerParameters, [Microsoft.AspNetCore.Mvc.FromServices] Microsoft.Extensions.Options.IOptions<OrchardCore.Navigation.PagerOptions> pagerOptions, [Microsoft.AspNetCore.Mvc.FromServices] OrchardCore.DisplayManagement.IShapeFactory shapeFactory) { }
         [Microsoft.AspNetCore.Mvc.ActionName("Index")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/numbers-not-in-service", "OmnichannelNotInServiceNumbersIndex")]
         [OrchardCore.Routing.FormValueRequired("submit.Filter")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> IndexFilterPost(string search) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> IndexFilterPost(CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.NotInServiceNumbersIndexViewModel model) { }
+        [Microsoft.AspNetCore.Mvc.ActionName("Index")]
+        [Microsoft.AspNetCore.Mvc.HttpPost]
+        [OrchardCore.Admin.Admin("omnichannel/numbers-not-in-service", "OmnichannelNotInServiceNumbersIndex")]
+        [OrchardCore.Routing.FormValueRequired("submit.BulkAction")]
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> IndexPost(CrestApps.OrchardCore.Core.Models.CatalogEntryOptions<CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.NotInServiceNumberBulkAction> options, System.Collections.Generic.IEnumerable<string> itemIds) { }
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/numbers-not-in-service/mark", "OmnichannelNotInServiceNumbersMark")]
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Mark(string phoneNumber) { }
@@ -1484,6 +1489,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> SubjectContentTypes { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityUrgencyLevel? UrgencyLevel { get; set; }
     }
+    public enum NotInServiceNumberBulkAction
+    {
+        None = 0,
+        AllowDialing = 1,
+    }
     public class NotInServiceNumberEntry
     {
         public NotInServiceNumberEntry() { }
@@ -1494,8 +1504,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
     {
         public NotInServiceNumbersIndexViewModel() { }
         public System.Collections.Generic.IList<CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.NotInServiceNumberEntry> Entries { get; set; }
+        public CrestApps.OrchardCore.Core.Models.CatalogEntryOptions<CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.NotInServiceNumberBulkAction> Options { get; set; }
         public object Pager { get; set; }
-        public string Search { get; set; }
         public int TotalCount { get; set; }
     }
     public class OmnichannelActivityBatchViewModel
