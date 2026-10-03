@@ -1,7 +1,28 @@
 @using CrestApps.OrchardCore.ContactCenter.Core.Models
+@using CrestApps.OrchardCore.Omnichannel.Core.Services
+@using Microsoft.Extensions.Options
 @using OrchardCore.DisplayManagement.Views
 
 @model ShapeViewModel<ContactCenterEntryPoint>
+
+@inject IOmnichannelChannelEndpointManager AddressManager
+@inject IOptions<EntryPointChannelOptions> ChannelOptions
+
+@{
+    var channel = Model.Value.GetChannel();
+    var channelName = ChannelOptions.Value.Channels.TryGetValue(channel, out var registered) && registered.DisplayName != null
+        ? registered.DisplayName.Value
+        : channel;
+    var addresses = await AddressManager.GetAllAsync();
+    var numbers = (Model.Value.AddressIds ?? [])
+        .Select(id => addresses.FirstOrDefault(address => address.IsKnownAs(id)))
+        .Where(address => address is not null)
+        .Select(address => address.Value)
+        .Concat(Model.Value.DialedNumbers ?? [])
+        .Where(number => !string.IsNullOrWhiteSpace(number))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToList();
+}
 
 <h5>@Model.Value.Name</h5>
 
@@ -10,14 +31,22 @@
     <div class="text-muted">@Model.Value.Description</div>
 }
 
-@if (Model.Value.DialedNumbers is { Count: > 0 })
-{
-    <div class="text-muted small">@T["Numbers: {0}", string.Join(", ", Model.Value.DialedNumbers)]</div>
-}
-
-@if (!Model.Value.Enabled)
-{
-    <div class="mt-1">
+<div class="mt-1">
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Answers"]">
+        <i class="fa-solid @(channel == "SMS" ? "fa-comment-sms" : "fa-headset") text-secondary me-1" aria-hidden="true"></i>@channelName
+    </span>
+    @foreach (var number in numbers)
+    {
+        <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Number"]">
+            <i class="fa-solid fa-hashtag text-secondary me-1" aria-hidden="true"></i>@number
+        </span>
+    }
+    @if (numbers.Count == 0)
+    {
+        <span class="badge text-bg-warning">@T["No numbers"]</span>
+    }
+    @if (!Model.Value.Enabled)
+    {
         <span class="badge text-bg-warning">@T["Disabled"]</span>
-    </div>
-}
+    }
+</div>

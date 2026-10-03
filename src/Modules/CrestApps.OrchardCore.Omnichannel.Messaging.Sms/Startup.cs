@@ -1,13 +1,18 @@
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Drivers;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Twilio;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Descriptors;
@@ -39,7 +44,9 @@ public sealed class Startup : StartupBase
         services.AddMessagingChannel<SmsMessagingChannel>();
 
         // The built-in SMS service sends through one tenant-default provider only, so a tenant whose numbers span
-        // carriers needs the send routed to the provider that owns the sending number.
+        // carriers needs the send routed to the provider that owns the sending number. The router that picks it is
+        // shared with SMS Omnichannel Automation, which registers it too, so TryAdd keeps one registration.
+        services.TryAddScoped<ISmsProviderRouter, SmsProviderRouter>();
         services.AddScoped<ISmsDispatcher, SmsDispatcher>();
         services.AddScoped(sp => new Lazy<ISmsDispatcher>(sp.GetRequiredService<ISmsDispatcher>));
 
@@ -78,4 +85,18 @@ public sealed class Startup : StartupBase
         // table, so only pages that actually show a phone field pay for it.
         services.AddShapeTableProvider<SmsPhoneFieldButtonShapeTableProvider>();
     }
+}
+
+/// <summary>
+/// Receives Twilio texts for the workspace, so a tenant without SMS Omnichannel Automation still
+/// hears from its Twilio numbers. SMS Omnichannel Automation registers the same webhook; whichever registers first owns
+/// it, so the route is mapped once with both on.
+/// </summary>
+public sealed class TwilioSmsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+        => TwilioSmsWebhook.AddServices(services);
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+        => TwilioSmsWebhook.MapEndpoint(routes, serviceProvider);
 }

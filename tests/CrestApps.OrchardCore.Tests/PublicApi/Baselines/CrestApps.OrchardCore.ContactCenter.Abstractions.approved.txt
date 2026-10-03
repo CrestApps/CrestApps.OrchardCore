@@ -177,6 +177,7 @@ namespace CrestApps.OrchardCore.ContactCenter
             public const string BusinessHours = "CrestApps.OrchardCore.ContactCenter.BusinessHours";
             public const string Dialer = "CrestApps.OrchardCore.ContactCenter.Dialer";
             public const string DialerPaced = "CrestApps.OrchardCore.ContactCenter.Dialer.Paced";
+            public const string EntryPoints = "CrestApps.OrchardCore.ContactCenter.EntryPoints";
             public const string InboundVoice = "CrestApps.OrchardCore.ContactCenter.InboundVoice";
             public const string ProviderInbox = "CrestApps.OrchardCore.ContactCenter.ProviderInbox";
             public const string Queues = "CrestApps.OrchardCore.ContactCenter.Queues";

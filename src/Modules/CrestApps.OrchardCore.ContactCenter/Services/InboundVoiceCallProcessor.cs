@@ -11,6 +11,7 @@ using OrchardCore;
 using OrchardCore.ContentManagement;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using YesSqlSession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;
 
@@ -49,6 +50,8 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IContactCenterFeatureWorkManager _workManager;
     private readonly IContactCenterAuditRecorder _auditRecorder;
+    private readonly IInboundPriorityResolver _priorityResolver;
+    private readonly YesSqlSession _session;
     private readonly IClock _clock;
     private readonly ILogger _logger;
     private readonly TimeSpan _inboundLockTimeout;
@@ -76,6 +79,8 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
     /// <param name="scopeExecutor">The executor used to release inbound routing locks after commit.</param>
     /// <param name="workManager">The feature work manager used to reject routing while Voice is quiescing.</param>
     /// <param name="auditRecorder">The recorder that writes each inbound call's interaction to the audit log.</param>
+    /// <param name="priorityResolver">The resolver that raises a caller above the configured priority from what is known about them.</param>
+    /// <param name="session">The session used to read the caller's earlier calls and callbacks for the priority contributors.</param>
     /// <param name="clock">The clock used to stamp times.</param>
     /// <param name="coordinationOptions">The distributed-lock timings this deployment coordinates inbound routing with.</param>
     /// <param name="logger">The logger.</param>
@@ -99,6 +104,8 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
         IContactCenterScopeExecutor scopeExecutor,
         IContactCenterFeatureWorkManager workManager,
         IContactCenterAuditRecorder auditRecorder,
+        IInboundPriorityResolver priorityResolver,
+        YesSqlSession session,
         IClock clock,
         IOptions<ContactCenterCoordinationOptions> coordinationOptions,
         ILogger<InboundVoiceCallProcessor> logger)
@@ -122,6 +129,8 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
         _scopeExecutor = scopeExecutor;
         _workManager = workManager;
         _auditRecorder = auditRecorder;
+        _priorityResolver = priorityResolver;
+        _session = session;
         _clock = clock;
         _logger = logger;
         _inboundLockTimeout = coordinationOptions.Value.InboundLockTimeout;
@@ -400,7 +409,18 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
 
         result.QueueId = effectiveQueueId;
 
-        var priority = plan is not null ? plan.Priority : (InteractionPriority?)null;
+        // The strongest of the entry point's priority and what the caller-based contributors notice about this
+        // caller (a returning callback, a repeat call) decides where they land in line.
+        var priority = await ResolveQueuePriorityAsync(
+            plan,
+            queue,
+            effectiveQueueId,
+            activity,
+            interaction,
+            fromAddress,
+            serviceAddress,
+            now,
+            cancellationToken);
 
         await _queueService.EnqueueAsync(activity.ItemId, effectiveQueueId, priority, cancellationToken);
         result.Queued = true;

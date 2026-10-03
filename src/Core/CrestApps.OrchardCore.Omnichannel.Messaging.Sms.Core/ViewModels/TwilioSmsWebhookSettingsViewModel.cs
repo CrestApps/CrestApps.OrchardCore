@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Omnichannel.Sms.ViewModels;
+namespace CrestApps.OrchardCore.Omnichannel.Messaging.Sms.ViewModels;
 
 public class TwilioSmsWebhookSettingsViewModel
 {

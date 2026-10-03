@@ -20,7 +20,7 @@ An **omnichannel address** is an address the business owns, such as a phone numb
 3. Enter a **Name** people will recognize and the **Phone number** in international format, such as `+17025550100`.
 4. Under **Used for**, tick **Voice calls**, **Text messages (SMS)**, or both. The settings for each appear while it is ticked:
    - **Text messages**: the SMS **Provider** that owns the number, and the inbound routing for texts.
-   - **Voice calls**: the entry point that answers calls, and the agents who dial out from the number.
+   - **Voice calls**: the agents who dial out from the number. Which entry point answers its calls is set on the entry point.
 5. Click **Save**.
 
 A number is listed once. To use a number for calls and texts, tick both on the same address rather than adding it twice. The kind of address cannot be changed after it is created, and addresses cannot be deleted.
@@ -31,13 +31,7 @@ Numbers that were listed once per channel before addresses had capabilities were
 
 ## Inbound routing for calls
 
-When Contact Center Inbound Voice is enabled, addresses used for **Voice calls** show this setting:
-
-| Field | What it does |
-| --- | --- |
-| **Entry point** | The [entry point](entry-points-and-ivr.md) that answers calls to this number. The entry point decides the queue or agent, the opening hours, the phone menu and voicemail. |
-
-Leave it on **None** to route the number by the entry point that lists it under **Dialed numbers**, or else by the queue mapped to this number. When an entry point is chosen here, it wins over an entry point that lists the number. The section names the entry points that also list the number, so you can tidy them up.
+Calls to a number are routed by the [inbound entry point](entry-points-and-ivr.md) that picks it under **Numbers**. The entry point decides the queue or agent, the opening hours, the phone menu and voicemail.
 
 ## Inbound routing for texts
 

@@ -28,10 +28,15 @@ public sealed class ContactCenterEntryPointRecipeStep : IRecipeStep
                             ("ItemId", CatalogRecipeStepSchemas.ItemId("entry point")),
                             ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Unique name of the entry point.")),
                             ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Description of the entry point.")),
+                            ("Channel", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Channel the entry point answers, named as the address capability: 'Phone' for calls. Empty means calls.")),
+                            ("AddressIds", new JsonSchemaBuilder()
+                                .Type(SchemaValueType.Array | SchemaValueType.Null)
+                                .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))
+                                .Description("Identifiers of the omnichannel addresses whose traffic on the channel this entry point answers. Import the addresses first.")),
                             ("DialedNumbers", new JsonSchemaBuilder()
-                                .Type(SchemaValueType.Array)
-                                .Items(new JsonSchemaBuilder().Type(SchemaValueType.String).Description("A dialed number (DID) served by this entry point."))
-                                .Description("The dialed numbers (DIDs) served by this entry point.")),
+                                .Type(SchemaValueType.Array | SchemaValueType.Null)
+                                .Items(new JsonSchemaBuilder().Type(SchemaValueType.String).Description("A typed number."))
+                                .Description("Numbers typed on an entry point exported before entry points picked their numbers from the address list. They still route calls; prefer 'AddressIds'.")),
                             ("TargetType", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Queue", "Agent").Description("Whether calls route to a queue ('TargetQueueId') or ring one agent directly ('TargetAgentId').")),
                             ("TargetAgentId", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Identifier of the agent profile calls ring directly when 'TargetType' is 'Agent'. There is no queue fallback.")),
                             ("VoicemailEnabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether an unanswered direct-to-agent call is sent to the agent's voicemail. When disabled the caller keeps ringing until answered or they hang up. Applies only when 'TargetType' is 'Agent'.")),

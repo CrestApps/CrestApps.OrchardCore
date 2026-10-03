@@ -53,7 +53,7 @@ feature that owns the provider:
 | Feature | Endpoint |
 | --- | --- |
 | [Omnichannel - Azure Event Grid](event-grid) | `POST ~/api/azure/webhook/eventgrid` |
-| [SMS Omnichannel Automation](sms) (Twilio inbound SMS) | `POST ~/api/twilio/webhook/sms` |
+| [SMS Omnichannel Automation](sms) or the [SMS Messaging Channel](messaging-workspace#setting-up-sms), with Orchard Core's Twilio SMS feature (Twilio inbound SMS) | `POST ~/api/twilio/webhook/sms` |
 | [Telnyx SMS](../telephony/telnyx.md#telnyx-sms) (Telnyx inbound SMS) | `POST ~/api/telnyx/webhook/sms` |
 
 Enable the channel feature that matches how your provider delivers events, and configure its

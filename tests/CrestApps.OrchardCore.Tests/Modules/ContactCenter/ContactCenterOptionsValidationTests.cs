@@ -49,6 +49,8 @@ public sealed class ContactCenterOptionsValidationTests
             "A registry of the providers each feature registered in code. It is never bound from configuration, so there is no operator input to reject.",
         ["TelephonyProviderTypeOptions"] =
             "An entry in the provider registry, populated in code alongside TelephonyProviderOptions.",
+        ["EntryPointChannelOptions"] =
+            "A registry of the channels each feature registered in code for entry points to answer. It is never bound from configuration.",
         ["ContactCenterProcessLivenessOptions"] =
             "Supplied by the host at pipeline construction, before any tenant exists, and validated by ContactCenterProcessLivenessPathValidator at that point.",
     };

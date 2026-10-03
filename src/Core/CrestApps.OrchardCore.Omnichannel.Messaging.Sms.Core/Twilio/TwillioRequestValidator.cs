@@ -2,7 +2,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace CrestApps.OrchardCore.Omnichannel.Sms.Twillio;
+namespace CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Twilio;
 
 internal sealed class TwillioRequestValidator
 {

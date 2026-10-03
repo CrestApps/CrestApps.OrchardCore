@@ -16,6 +16,7 @@
   <ItemGroup>
     <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
     <InternalsVisibleTo Include="CrestApps.OrchardCore.Omnichannel.Messaging.Sms" />
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Omnichannel.Sms" />
   </ItemGroup>
 
   <ItemGroup>
@@ -23,6 +24,9 @@
     <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
     <PackageReference Include="OrchardCore.Sms.Abstractions" />
     <PackageReference Include="OrchardCore.Sms.Core" />
+    <PackageReference Include="OrchardCore.DisplayManagement" />
+    <PackageReference Include="OrchardCore.Settings.Core" />
+    <PackageReference Include="CrestApps.Core.Support" />
     <PackageReference Include="OrchardCore.Flows.Core" />
     <PackageReference Include="YesSql.Abstractions" />
   </ItemGroup>

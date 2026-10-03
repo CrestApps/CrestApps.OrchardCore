@@ -81,7 +81,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
     private readonly IClock _clock;
     private readonly ISession _session;
 
-    private readonly ISmsService _smsService;
+    private readonly ISmsProviderRouter _smsProviderRouter;
 
     private readonly IOmnichannelActivityStore _omnichannelActivityStore;
     private readonly IEnumerable<IOmnichannelHandoffService> _handoffServices;
@@ -107,7 +107,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
     /// <param name="contentManager">The content manager.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="session">The session.</param>
-    /// <param name="smsService">The sms service.</param>
+    /// <param name="smsProviderRouter">The router that sends through the provider owning the sending number.</param>
     /// <param name="omnichannelActivityStore">The omnichannel activity store.</param>
     /// <param name="jsonSerializerOptions">The json serializer options.</param>
     /// <param name="redactorProvider">The redactor provider used to redact sensitive values before logging.</param>
@@ -129,7 +129,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         IContentManager contentManager,
         IClock clock,
         ISession session,
-        ISmsService smsService,
+        ISmsProviderRouter smsProviderRouter,
         IOmnichannelActivityStore omnichannelActivityStore,
         IEnumerable<IOmnichannelHandoffService> handoffServices,
         ILocalLock localLock,
@@ -153,7 +153,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         _contentManager = contentManager;
         _clock = clock;
         _session = session;
-        _smsService = smsService;
+        _smsProviderRouter = smsProviderRouter;
         _omnichannelActivityStore = omnichannelActivityStore;
         _handoffServices = handoffServices;
         _localLock = localLock;
@@ -532,7 +532,9 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
                     try
                     {
-                        var result = await _smsService.SendAsync(new SmsMessage
+                        // The reply leaves through the provider that owns the endpoint's number, which is the one
+                        // the customer texted; the tenant default may be a different carrier.
+                        var result = await _smsProviderRouter.SendAsync(new SmsMessage
                         {
                             To = activity.PreferredDestination,
                             From = endpoint.Value,

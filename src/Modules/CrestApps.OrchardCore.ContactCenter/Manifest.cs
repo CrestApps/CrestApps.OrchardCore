@@ -129,14 +129,27 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = ContactCenterConstants.Feature.EntryPoints,
+    Name = "Contact Center Inbound Entry Points",
+    Description = "Adds inbound entry points: the one place the numbers the business owns are routed from, for each channel. An entry point picks its numbers from the omnichannel addresses and routes what arrives on them to a queue or an agent, with opening hours. Voice and messaging features add their own settings.",
+    Category = "Contact Center",
+    Dependencies =
+    [
+        ContactCenterConstants.Feature.Queues,
+        OmnichannelConstants.Features.ChannelEndpoints,
+    ]
+)]
+
+[assembly: Feature(
     Id = ContactCenterConstants.Feature.InboundVoice,
     Name = "Contact Center Inbound Voice",
-    Description = "Adds inbound voice front doors that map dialed numbers to queues, qualify callers, apply business-hours decisions, set priority, and handle closed-hours calls.",
+    Description = "Answers inbound calls through the entry points that serve the dialed number: qualifies callers, applies business-hours decisions, sets priority, plays welcome messages and phone menus, and handles closed-hours calls and voicemail.",
     Category = "Contact Center",
     Dependencies =
     [
         ContactCenterConstants.Feature.Voice,
         ContactCenterConstants.Feature.Queues,
+        ContactCenterConstants.Feature.EntryPoints,
     ]
 )]
 

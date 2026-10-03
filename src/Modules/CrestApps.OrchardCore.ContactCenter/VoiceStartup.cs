@@ -172,6 +172,9 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped<IVoiceQueueOfferService, VoiceQueueOfferService>()
             .AddScoped<IDirectHoldTimeoutService, DirectHoldTimeoutService>()
             .AddScoped<IInboundVoiceCallProcessor, InboundVoiceCallProcessor>()
+            // The processor asks this for the priority a caller is queued at. With no contributors it returns the
+            // configured priority unchanged; Inbound Voice adds the caller-based contributors that can raise it.
+            .AddScoped<IInboundPriorityResolver, InboundPriorityResolver>()
             // Voice has a live call to move, so it replaces the declining sink the queues feature registers
             // for a queue's maximum-wait voicemail action.
             .Replace(ServiceDescriptor.Scoped<IWaitingCallVoicemailSink, InboundVoiceWaitingCallVoicemailSink>())
