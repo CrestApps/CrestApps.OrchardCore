@@ -325,7 +325,7 @@
     /** The singleton instance of the {@link @microsoft/signalr.NullLogger}. */
     NullLogger.instance = new NullLogger();
     ; // ./src/pkg-version.ts
-    const VERSION = '10.0.0';
+    const VERSION = '10.0.11';
     ; // ./src/Utils.ts
     // Licensed to the .NET Foundation under one or more agreements.
     // The .NET Foundation licenses this file to you under the MIT license.
