@@ -15,7 +15,7 @@ The **Contact Center** module set turns the CRM into a full contact center that 
 Enable `CrestApps.OrchardCore.ContactCenter` for the interaction lifecycle, durable event log, baseline permissions, settings, and administration menu.
 
 :::tip Operating the Contact Center day to day
-If you just need to *do* something — sign in to a queue, accept a call, request a break, create a queue, load dialer inventory, or monitor and whisper to an agent — go to the task-by-task [User Manual](../user-manual/index.md), where each task has its own how-to and screencast. The older [Agent & Supervisor User Manual](user-manual.md) covers the same ground in one page.
+If you just need to *do* something — sign in to a queue, accept a call, request a break, create a queue, load dialer activities, or monitor and whisper to an agent — go to the task-by-task [User Manual](../user-manual/index.md), where each task has its own how-to and screencast. The older [Agent & Supervisor User Manual](user-manual.md) covers the same ground in one page.
 :::
 
 ## Feature and administration model
@@ -38,7 +38,7 @@ Enable the outcome you need and let Orchard resolve its dependencies. For paced 
 :::
 
 :::note
-Contact Center depends on the headless **Omnichannel Activities** feature (`CrestApps.OrchardCore.Omnichannel.Activities`), not the full **Omnichannel Management** CRM. That gives it the contact/subject model, the activity and channel-endpoint services, and the message store it needs — without forcing the campaign, subject-flow, disposition, and load-inventory admin. If you want the CRM experience (campaign catalog, subject flows, CRM reports), enable **Omnichannel Management** (`CrestApps.OrchardCore.Omnichannel.Managements`) explicitly.
+Contact Center depends on the headless **Omnichannel Activities** feature (`CrestApps.OrchardCore.Omnichannel.Activities`), not the full **Omnichannel Management** CRM. That gives it the contact/subject model, the activity and channel-endpoint services, and the message store it needs — without forcing the campaign, subject-flow, disposition, and load-activities admin. If you want the CRM experience (campaign catalog, subject flows, CRM reports), enable **Omnichannel Management** (`CrestApps.OrchardCore.Omnichannel.Managements`) explicitly.
 :::
 
 The commercial release is not yet approved. See [Production support](production-support.md) for the finite candidate GA profiles, initial capacity tier, and explicitly unsupported combinations.
@@ -73,7 +73,7 @@ Contact Center extends `OmnichannelActivity` with metadata needed by queues and 
 - Nullable ownership so preview, power, progressive, and predictive dialing can create activities before an agent is selected.
 - Activity kind and extensible source metadata so the same Activity model can represent calls, SMS, email, meetings, tasks, callbacks, inbound work, workflow-created work, API-created work, and dialer inventory.
 - Assignment and reservation metadata so multiple dialer or routing instances do not claim the same record concurrently.
-- Load Inventory can load either user-assigned manual work or unassigned dialer work. The creation dialog selects a source first, and a dialer inventory load picks both a campaign and a dialer profile, so the loaded activities take their campaign from the load and their dialing mode from the profile.
+- Load Activities can load either user-assigned manual work or unassigned dialer work. The creation dialog selects a source first, and a dialer activity load picks both a campaign and a dialer profile, so the loaded activities take their campaign from the load and their dialing mode from the profile.
 
 Dispositions are applied to Activities, not Interactions. Agent, provider, AI, workflow, and system outcomes converge through the activity disposition service before Subject Actions or workflow automation runs.
 
@@ -107,7 +107,7 @@ Contact Center administration is intentionally split into focused menu entries u
 | **Inbound entry points** | Inbound front doors for voice work. They map dialed numbers to queues, apply business-hours behavior, set priority, and define closed-hours handling. | Calls to the support DID route to Tier 1 during business hours and overflow to voicemail after hours. |
 | **Queues** | Waiting rooms for activities. A queue owns priority, SLA threshold, reservation timeout, routing strategy, required skills, business-hours behavior, and overflow. | `Billing Voice` requires the Billing skill, uses longest-idle routing, and overflows to General Support after 10 minutes. |
 | **Skills** | Routeable capabilities assigned by supervisors/administrators. Queues can require skills, and routing filters out agents who do not have them. | A Spanish-language queue requires both `Spanish` and `Billing`. |
-| **Dialer profiles** | Reusable outbound dialing settings: dialing mode, pacing, voice provider, retry, and compliance rules. A profile does not select a queue or campaign; the campaign is chosen when inventory is loaded, and for outbound work the campaign itself is the routing queue. | A power dialer profile dials renewal activities for the agents signed in to the campaign, within the allowed calling window. |
+| **Dialer profiles** | Reusable outbound dialing settings: dialing mode, pacing, voice provider, retry, and compliance rules. A profile does not select a queue or campaign; the campaign is chosen when activities are loaded, and for outbound work the campaign itself is the routing queue. | A power dialer profile dials renewal activities for the agents signed in to the campaign, within the allowed calling window. |
 | **My workspace** | The agent desktop where agents receive offers, accept or decline work, see active customer context, and complete the activity with a disposition. | An agent accepts an inbound support offer, handles the call, selects `Resolved`, and completes the activity. |
 | **Live dashboard** | Supervisor wallboard for queue depth, SLA health, and live agent presence. | A supervisor sees Billing Voice breaching SLA and asks another skilled agent to sign in. |
 | **Voice Media** | The library of uploaded audio used for hold music and phone-menu prompts. | The `Main menu` prompt plays when callers reach the support line. |

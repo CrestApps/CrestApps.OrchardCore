@@ -49,6 +49,13 @@ public sealed class ContactCenterReportCriteria
     public string ActivitySource { get; set; }
 
     /// <summary>
+    /// Gets or sets the stored activity source values resolved from <see cref="ActivitySource"/>. One selected
+    /// source can stand for several stored values, such as every dialer mode for the Dialer source. When
+    /// <see langword="null"/>, <see cref="ActivitySource"/> is matched as is.
+    /// </summary>
+    public IReadOnlySet<string> ActivitySources { get; set; }
+
+    /// <summary>
     /// Gets or sets the channel used to filter interactions and CRM activities.
     /// </summary>
     public InteractionChannel? Channel { get; set; }

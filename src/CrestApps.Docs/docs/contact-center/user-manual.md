@@ -267,7 +267,7 @@ See [Placing and Handling Calls](../user-manual/calls.md).
 
 ## What to expect in power and progressive (automated) dialing
 
-**Prerequisites:** an administrator has enabled **Contact Center Paced Dialing** and loaded inventory for your campaign with a Power or Progressive dialer profile, and you are signed in to that campaign. Automated pacing is compliance-gated.
+**Prerequisites:** an administrator has enabled **Contact Center Paced Dialing** and loaded activities for your campaign with a Power or Progressive dialer profile, and you are signed in to that campaign. Automated pacing is compliance-gated.
 
 In automated modes you do **not** press dial. When the pacer connects a customer and reserves you:
 
@@ -327,7 +327,7 @@ See [Queues and Queue Groups](../user-manual/queues.md).
 
 **Prerequisites:** the `ManageContactCenterDialer` permission and the **Outbound Dialer** feature. Power/Progressive modes also require **Paced Dialing**.
 
-A dialer profile is a reusable set of dialing settings. It does not name a campaign or a queue: you pick the campaign together with the profile when you [load dialer inventory](#how-to-load-dialer-inventory), and agents get the calls by signing in to that campaign.
+A dialer profile is a reusable set of dialing settings. It does not name a campaign or a queue: you pick the campaign together with the profile when you [load dialer activities](#how-to-load-dialer-activities), and agents get the calls by signing in to that campaign.
 
 1. Go to **Interaction Center → Management → Dialer Profiles** and click **Add**.
 2. Choose the **dialing mode**: Preview, Power, or Progressive.
@@ -338,12 +338,12 @@ A dialer profile is a reusable set of dialing settings. It does not name a campa
 
 See [Dialer Profiles](../user-manual/dialer-profiles.md).
 
-## How to load dialer inventory
+## How to load dialer activities
 
-**Prerequisites:** the `ManageActivityBatches` permission. Dialer inventory loads require an existing **dialer profile**.
+**Prerequisites:** the `ManageActivityBatches` permission. Dialer activity loads require an existing **dialer profile**.
 
-1. Go to **Interaction Center → Management → Load Inventory**.
-2. Click **Add Inventory Load** and, in the creation dialog, **select the source first**:
+1. Go to **Interaction Center → Management → Load Activities**.
+2. Click **Add Activity Load** and, in the creation dialog, **select the source first**:
    - **Manual** — activities assigned to the agents you pick.
    - **Automatic** — unassigned automated activities an AI profile works on its own.
    - **Dialer** — unassigned phone activities queued for the outbound dialer.
@@ -351,7 +351,7 @@ See [Dialer Profiles](../user-manual/dialer-profiles.md).
 4. Fill in the record filters and **Save**, then choose **Actions > Load batch** to run the load in the background.
 5. The loaded activities become available to dialing according to the selected profile.
 
-See [Load Inventory](../user-manual/load-inventory.md).
+See [Load Activities](../user-manual/load-inventory.md).
 
 ## How to monitor the live dashboard (workload, queues, and productivity)
 

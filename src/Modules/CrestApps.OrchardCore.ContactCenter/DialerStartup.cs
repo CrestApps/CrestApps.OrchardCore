@@ -103,6 +103,23 @@ public sealed class DialerStartup : StartupBase
 
         });
 
+        // A dialer activity load never stores "Dialer" on its activities: each one gets the dialer profile's mode,
+        // which is Preview unless Paced Dialing adds its modes. "Dialer" is still matched for activities saved
+        // before the per-mode values existed. Callbacks are scheduled by the callback service registered above.
+        services.Configure<ActivitySourceOptions>(options =>
+        {
+            options.AddSource(ActivitySources.Dialer, entry =>
+            {
+                entry.DisplayName = S["Dialer"];
+                entry.Matches(ActivitySources.PreviewDial);
+            });
+
+            options.AddSource(ActivitySources.Callback, entry =>
+            {
+                entry.DisplayName = S["Callback"];
+            });
+        });
+
         // Outbound dialer administration screens.
         services.AddDisplayDriver<DialerProfile, DialerProfileDisplayDriver>();
         services.AddNavigationProvider<ContactCenterDialerAdminMenu>();

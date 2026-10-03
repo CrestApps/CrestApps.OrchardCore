@@ -1,11 +1,11 @@
 ---
-sidebar_label: Load Inventory
+sidebar_label: Load Activities
 sidebar_position: 17
-title: Load Inventory
+title: Load Activities
 description: Turn a filtered list of contacts into activities - assigned to agents, handled by the AI, or queued for the outbound dialer.
 ---
 
-**Load inventory** creates activities in bulk. You describe which contacts to pick (their type, when they were created, phone number, time zone, last outcome...) and what kind of work to create, and the load runs in the background.
+**Load activities** creates activities in bulk. You describe which contacts to pick (their type, when they were created, phone number, time zone, last outcome...) and what kind of work to create, and the load runs in the background.
 
 There are three sources:
 
@@ -17,17 +17,17 @@ There are three sources:
 
 | | |
 | --- | --- |
-| **Menu** | Interaction Center > Management > Load Inventory |
+| **Menu** | Interaction Center > Management > Load Activities |
 | **Permission** | Manage activity batches |
 | **Feature** | Omnichannel Management |
 
 ## Manual loads
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating a manual inventory load for two agents, loading it, and finding the new activities on Manage Activities">
+<video controls preload="metadata" width="100%" aria-label="Screencast of creating a manual activity load for two agents, loading it, and finding the new activities on Manage Activities">
   <source src="/img/docs/um-load-manual.mp4" type="video/mp4" />
 </video>
 
-1. Open **Interaction Center > Management > Load Inventory**, click **Add Inventory Load** and choose **Manual**.
+1. Open **Interaction Center > Management > Load Activities**, click **Add Activity Load** and choose **Manual**.
 2. Fill in the load (fields below). A manual load needs a **Channel** and at least one user in **User(s) to assign activities to**; the activities are shared between the users you pick. Click **Save**.
 3. In the list, open the load's **Actions** menu, choose **Load batch** and confirm with **Ok**. The load runs in the background: the status moves through *Started* and *Loading* to *Loaded*, and the row then shows how many activities it created, how many contacts matched the filters, and why any matching contact was skipped (see [What a load reports](#what-a-load-reports)).
 
@@ -35,11 +35,11 @@ Once a load has started it can no longer be edited or deleted.
 
 ## Dialer loads
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating a dialer inventory load with a dialer profile and a campaign">
+<video controls preload="metadata" width="100%" aria-label="Screencast of creating a dialer activity load with a dialer profile and a campaign">
   <source src="/img/docs/um-load-dialer.mp4" type="video/mp4" />
 </video>
 
-1. Click **Add Inventory Load** and choose **Dialer**.
+1. Click **Add Activity Load** and choose **Dialer**.
 2. Pick the **Dialer profile** (it decides preview, power or progressive) and the **Campaign**. Agents sign in to this campaign to get the calls, so a dialer load will not save without one unless the subject has a default campaign.
 3. Fill in the record filters, save, and choose **Actions > Load batch**.
 

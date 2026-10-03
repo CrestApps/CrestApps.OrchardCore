@@ -34,7 +34,7 @@ Almost everything lives under **Interaction Center** in the admin menu.
 | **Interaction Center > Live dashboard** | The supervisor's real-time view of queues and agents. |
 | **Interaction Center > Shared voicemail** | Voicemail left for a queue rather than one person. |
 | **Interaction Center > My voicemail greeting** | The greeting callers hear when you miss a call. |
-| **Interaction Center > Management** | The manager's setup screens: subject flows, dispositions, campaigns, load inventory, bulk activity management, queues, skills, business hours, agent states, entry points, voice media, dialer profiles, extensions and channel endpoints. |
+| **Interaction Center > Management** | The manager's setup screens: subject flows, dispositions, campaigns, load activities, bulk activity management, queues, skills, business hours, agent states, entry points, voice media, dialer profiles, extensions and channel endpoints. |
 | **Messaging** | The shared SMS inbox, broadcasts and message templates. |
 | **Reports** | Every report, grouped by category. |
 | **Settings > Contact Center** | Recording rules, approved transfer numbers and secure data capture. |
@@ -55,7 +55,7 @@ Almost everything lives under **Interaction Center** in the admin menu.
 
 **Loading and managing work**
 
-- [Load inventory](load-inventory.md): create activities for agents, for the AI, or for the dialer.
+- [Load activities](load-inventory.md): create activities for agents, for the AI, or for the dialer.
 - [Automated AI SMS and voice](automated-ai.md): let an AI profile text or call your contacts.
 - [Activities](activities.md): how an agent works, logs and completes activities.
 - [Managing activities in bulk](bulk-activities.md): reassign, reschedule and change many activities at once.

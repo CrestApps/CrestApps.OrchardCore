@@ -428,7 +428,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         {
             if (string.IsNullOrWhiteSpace(model.DialerProfileId))
             {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.DialerProfileId), S["Dialer profile is required for dialer inventory loads."]);
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.DialerProfileId), S["Dialer profile is required for dialer activity loads."]);
             }
             else if (!await _optionsProvider.DialerProfileExistsAsync(model.DialerProfileId))
             {
@@ -444,11 +444,6 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             else if (!IsKnownChannel(model.Channel))
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.Channel), S["The selected channel is invalid."]);
-            }
-            else if (string.Equals(model.Source, ActivitySources.Automatic, StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(model.Channel, OmnichannelConstants.Channels.Email, StringComparison.OrdinalIgnoreCase))
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.Channel), S["Automatic inventory loads support only the Phone or SMS channel."]);
             }
 
             if (!string.IsNullOrWhiteSpace(model.ChannelEndpointId) &&
@@ -473,7 +468,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
 
             if (subjectFlowSettings is not null && string.IsNullOrWhiteSpace(subjectFlowSettings.CampaignId))
             {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.CampaignId), S["A campaign is required for dialer inventory loads because the selected subject has no default campaign."]);
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.CampaignId), S["A campaign is required for dialer activity loads because the selected subject has no default campaign."]);
             }
         }
 
@@ -490,7 +485,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
 
             if (string.IsNullOrWhiteSpace(selectedProfileId))
             {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.AIProfileId), S["AI profile is required for automatic inventory loads."]);
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.AIProfileId), S["AI profile is required for automatic activity loads."]);
             }
             else
             {
@@ -612,10 +607,10 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         return entry;
     }
 
+    // The editor offers only Phone and SMS, and no feature loads email activities, so any other value is refused.
     private static bool IsKnownChannel(string channel)
     {
         return string.Equals(channel, OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(channel, OmnichannelConstants.Channels.Sms, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(channel, OmnichannelConstants.Channels.Email, StringComparison.OrdinalIgnoreCase);
+            string.Equals(channel, OmnichannelConstants.Channels.Sms, StringComparison.OrdinalIgnoreCase);
     }
 }

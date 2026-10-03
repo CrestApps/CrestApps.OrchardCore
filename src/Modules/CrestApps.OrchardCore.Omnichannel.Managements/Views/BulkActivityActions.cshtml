@@ -140,6 +140,13 @@
                             <option value="@source.Value">@source.Text</option>
                         }
                     </select>
+                    <div class="form-text">
+                        @T["Only sources that are not owned by another feature can be set by hand."]
+                        @if (Model.DialerProfileOptions.Count() > 1)
+                        {
+                            @T["To move activities to the dialer, use Change Dialer Profile instead."]
+                        }
+                    </div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">@T["Interaction type"]</label>

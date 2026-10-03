@@ -159,6 +159,44 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
             });
         });
 
+        // The sources this feature writes onto activities: manual work (the default, manual activity loads and
+        // activities created by hand), automatic activity loads, and inbound activities logged by an agent. Other
+        // features add the sources they produce, such as the dialer modes and callbacks.
+        services.Configure<ActivitySourceOptions>(options =>
+        {
+            options.AddSource(ActivitySources.Manual, entry =>
+            {
+                entry.DisplayName = S["Manual"];
+                entry.CanBeSetManually = true;
+            });
+
+            options.AddSource(ActivitySources.Automatic, entry =>
+            {
+                entry.DisplayName = S["Automatic"];
+                entry.CanBeSetManually = true;
+            });
+
+            options.AddSource(ActivitySources.Inbound, entry =>
+            {
+                entry.DisplayName = S["Inbound"];
+            });
+        });
+
+        // Subject flows and activity loads offer Phone and SMS whenever activities are enabled, so both channels can
+        // occur on activities without any other feature. No feature creates email or chat activities.
+        services.Configure<ActivityChannelOptions>(options =>
+        {
+            options.AddChannel(OmnichannelConstants.Channels.Phone, entry =>
+            {
+                entry.DisplayName = S["Phone"];
+            });
+
+            options.AddChannel(OmnichannelConstants.Channels.Sms, entry =>
+            {
+                entry.DisplayName = S["SMS"];
+            });
+        });
+
         // Permissions and their authorization handler belong here rather than with the screens: an API-only
         // deployment still has to authorize the requests it serves, and a permission that only exists when the
         // administration feature is on would fail closed for every headless caller.

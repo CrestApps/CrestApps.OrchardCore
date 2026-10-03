@@ -7,7 +7,7 @@ description: Create a subject for each kind of conversation, choose whether it i
 
 A **subject** is what a call or message is about: *Lead generation*, *Support request*, *Welcome call*. It is a content type with the **Omnichannel Subject** part, and its fields are what the agent fills in during the interaction. Each subject has a direction:
 
-- **Outbound** subjects are for work you start: calling or texting a contact. The channel is chosen when you [load inventory](load-inventory.md).
+- **Outbound** subjects are for work you start: calling or texting a contact. The channel is chosen when you [load activities](load-inventory.md).
 - **Inbound** subjects are for work the contact starts: they called or texted you. An inbound subject can be **manual** (an agent logs it) or **automated** (an AI answers on a channel endpoint).
 
 | | |
@@ -45,14 +45,14 @@ Later, click **Edit Settings** next to the subject on the Subject Flows list to 
 | **Interaction type** | Inbound | **Manual** (an agent logs it) or **Automated** (an AI profile handles it). |
 | **Channel** | Inbound | **Phone** or **SMS**. |
 | **Channel endpoint** | Inbound automated | The number the AI answers on. |
-| **Default campaign** | all | The campaign used when an activity is created outside an inventory load, and the fallback for loads. |
+| **Default campaign** | all | The campaign used when an activity is created outside an activity load, and the fallback for loads. |
 | **Require a disposition** | all | The agent must pick an outcome to complete the activity. Leave it on unless the subject has no outcome to record. |
 
 When the AI features are enabled, more settings appear:
 
 | Setting | Applies to | What it does |
 | --- | --- | --- |
-| **AI profile** | Inbound automated | The chat profile that runs the conversation. Only profiles with an opening message are listed. Automatic inventory loads can pick a different profile. |
+| **AI profile** | Inbound automated | The chat profile that runs the conversation. Only profiles with an opening message are listed. Automatic activity loads can pick a different profile. |
 | **Subject goal** | Inbound automated | What the AI is trying to achieve, in plain words. |
 | **Speech-to-text**, **Text-to-speech**, **Voice** | Inbound automated phone | The speech models and voice. Empty uses the site's AI defaults. |
 | **Allow AI to update contact** / **subject** | Inbound automated | Lets the AI write what it learns back to the records. |

@@ -78,7 +78,7 @@ internal sealed class AdminMenu : AdminNavigationProvider
                         .Action("ManageActivities", "Activities", "CrestApps.OrchardCore.Omnichannel.Managements")
                         .Permission(OmnichannelConstants.Permissions.ManageActivities)
                         .LocalNav())
-                    .Add(S["Load Inventory"], S["Load Inventory"].PrefixPosition(), inventory => inventory
+                    .Add(S["Load Activities"], S["Load Activities"].PrefixPosition(), inventory => inventory
                         .AddClass("activity-batches")
                         .Id("activityBatches")
                         .Action("Index", "ActivityBatches", "CrestApps.OrchardCore.Omnichannel.Managements")

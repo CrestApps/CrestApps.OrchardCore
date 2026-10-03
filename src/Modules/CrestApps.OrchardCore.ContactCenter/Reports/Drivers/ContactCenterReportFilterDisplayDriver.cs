@@ -4,7 +4,9 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Reports.Services;
 using CrestApps.OrchardCore.ContactCenter.Reports.ViewModels;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Reports.Services;
@@ -12,6 +14,7 @@ using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Users;
@@ -31,6 +34,8 @@ public sealed class ContactCenterReportFilterDisplayDriver : DisplayDriver<Repor
     private readonly ICatalogManager<OmnichannelCampaignGroup> _campaignGroupManager;
     private readonly UserManager<IUser> _userManager;
     private readonly IDisplayNameProvider _displayNameProvider;
+    private readonly ActivitySourceOptions _activitySourceOptions;
+    private readonly ActivityChannelOptions _activityChannelOptions;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterReportFilterDisplayDriver"/> class.
@@ -43,6 +48,8 @@ public sealed class ContactCenterReportFilterDisplayDriver : DisplayDriver<Repor
     /// <param name="campaignGroupManager">The campaign group manager.</param>
     /// <param name="userManager">The user manager.</param>
     /// <param name="displayNameProvider">The user display name provider.</param>
+    /// <param name="activitySourceOptions">The activity sources registered by the enabled features.</param>
+    /// <param name="activityChannelOptions">The activity channels registered by the enabled features.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ContactCenterReportFilterDisplayDriver(
         IReportManager reportManager,
@@ -53,8 +60,12 @@ public sealed class ContactCenterReportFilterDisplayDriver : DisplayDriver<Repor
         ICatalogManager<OmnichannelCampaignGroup> campaignGroupManager,
         UserManager<IUser> userManager,
         IDisplayNameProvider displayNameProvider,
+        IOptions<ActivitySourceOptions> activitySourceOptions,
+        IOptions<ActivityChannelOptions> activityChannelOptions,
         IStringLocalizer<ContactCenterReportFilterDisplayDriver> stringLocalizer)
     {
+        _activitySourceOptions = activitySourceOptions.Value;
+        _activityChannelOptions = activityChannelOptions.Value;
         _reportManager = reportManager;
         _queueGroupManager = queueGroupManager;
         _queueManager = queueManager;
@@ -191,13 +202,22 @@ public sealed class ContactCenterReportFilterDisplayDriver : DisplayDriver<Repor
 
         if (model.ShowChannelFilter)
         {
-            model.Channels =
-            [
-                new SelectListItem(S["Voice"], InteractionChannel.Voice.ToString()),
-                new SelectListItem(S["SMS"], InteractionChannel.Sms.ToString()),
-                new SelectListItem(S["Email"], InteractionChannel.Email.ToString()),
-                new SelectListItem(S["Chat"], InteractionChannel.Chat.ToString()),
-            ];
+            // Contact Center interactions are only ever voice calls. A report that also counts CRM activities (it
+            // offers an activity source or status filter) can narrow them to SMS when activities can use SMS. No
+            // feature creates email or chat work, so neither is offered; a value saved before stays listed.
+            var channels = new List<SelectListItem>
+            {
+                new(S["Voice"], InteractionChannel.Voice.ToString()),
+            };
+
+            if ((model.ShowActivitySourceFilter || model.ShowActivityStatusFilter) &&
+                _activityChannelOptions.Channels.TryGetValue(OmnichannelConstants.Channels.Sms, out var smsChannel))
+            {
+                channels.Add(new SelectListItem(smsChannel.DisplayName?.Value ?? S["SMS"].Value, InteractionChannel.Sms.ToString()));
+            }
+
+            ActivityFilterSelectListBuilder.KeepSelectedValue(channels, model.Channel);
+            model.Channels = channels;
         }
 
         if (model.ShowDirectionFilter)
@@ -211,20 +231,8 @@ public sealed class ContactCenterReportFilterDisplayDriver : DisplayDriver<Repor
 
         if (model.ShowActivitySourceFilter)
         {
-            model.ActivitySources =
-            [
-                new SelectListItem(S["Manual"], ActivitySources.Manual),
-                new SelectListItem(S["Automatic"], ActivitySources.Automatic),
-                new SelectListItem(S["Dialer"], ActivitySources.Dialer),
-                new SelectListItem(S["Preview dial"], ActivitySources.PreviewDial),
-                new SelectListItem(S["Power dial"], ActivitySources.PowerDial),
-                new SelectListItem(S["Progressive dial"], ActivitySources.ProgressiveDial),
-                new SelectListItem(S["Predictive dial"], ActivitySources.PredictiveDial),
-                new SelectListItem(S["Callback"], ActivitySources.Callback),
-                new SelectListItem(S["Inbound"], ActivitySources.Inbound),
-                new SelectListItem(S["Workflow"], ActivitySources.Workflow),
-                new SelectListItem(S["API"], ActivitySources.Api),
-            ];
+            // Only the sources the enabled features put on activities are offered.
+            model.ActivitySources = ActivityFilterSelectListBuilder.BuildSourceItems(_activitySourceOptions, model.ActivitySource);
         }
 
         if (model.ShowActivityStatusFilter)

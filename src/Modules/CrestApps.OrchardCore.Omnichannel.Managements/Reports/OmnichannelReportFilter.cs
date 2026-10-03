@@ -16,6 +16,7 @@ internal static class OmnichannelReportFilter
     public static async Task<OmnichannelReportCriteria> GetCriteriaAsync(
         ReportFilter filter,
         ICatalogManager<OmnichannelCampaign> campaignManager,
+        ActivitySourceOptions sourceOptions,
         CancellationToken cancellationToken = default)
     {
         var criteria = new OmnichannelReportCriteria
@@ -26,6 +27,12 @@ internal static class OmnichannelReportFilter
             Source = filter.GetOrDefault<string>(Source),
             Status = filter.TryGet<ActivityStatus>(Status, out var status) ? status : null,
         };
+
+        if (!string.IsNullOrEmpty(criteria.Source))
+        {
+            // One source can stand for several stored values, such as every dialer mode for the Dialer source.
+            criteria.Sources = sourceOptions.GetStoredValues(criteria.Source).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
 
         if (!string.IsNullOrEmpty(criteria.CampaignGroupId))
         {
@@ -50,6 +57,8 @@ internal sealed class OmnichannelReportCriteria
     public string Channel { get; set; }
 
     public string Source { get; set; }
+
+    public IReadOnlySet<string> Sources { get; set; }
 
     public ActivityStatus? Status { get; set; }
 }

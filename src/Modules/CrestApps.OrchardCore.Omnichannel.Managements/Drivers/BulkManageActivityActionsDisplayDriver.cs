@@ -62,7 +62,7 @@ internal sealed class BulkManageActivityActionsDisplayDriver : DisplayDriver<Bul
             }
 
             vm.SubjectContentTypes = subjectContentTypes.OrderBy(x => x.Text);
-            vm.SourceOptions = _optionsProvider.GetSourceOptions(string.Empty, "Select a source");
+            vm.SourceOptions = _optionsProvider.GetManuallyAssignableSourceOptions("Select a source");
             vm.InteractionTypeOptions = _optionsProvider.GetInteractionTypeOptions(string.Empty, "Keep current interaction type");
             vm.DialerProfileOptions = await _optionsProvider.GetDialerProfileOptionsAsync(string.Empty, "Select a dialer profile");
             vm.UserSearchEndpoint = _linkGenerator.GetPathByName("CrestApps.Users.Search", new { valueType = "userId" });

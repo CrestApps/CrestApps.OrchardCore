@@ -177,7 +177,7 @@ public sealed class ActivityBatchesController : Controller
 
         if (!TryGetActivityBatchSource(source, out var sourceEntry))
         {
-            await _notifier.ErrorAsync(H["Unable to find an inventory load source with the name '{0}'.", source]);
+            await _notifier.ErrorAsync(H["Unable to find an activity load source with the name '{0}'.", source]);
 
             return RedirectToAction(nameof(Index));
         }
@@ -209,7 +209,7 @@ public sealed class ActivityBatchesController : Controller
 
         if (!TryGetActivityBatchSource(source, out var sourceEntry))
         {
-            await _notifier.ErrorAsync(H["Unable to find an inventory load source with the name '{0}'.", source]);
+            await _notifier.ErrorAsync(H["Unable to find an activity load source with the name '{0}'.", source]);
 
             return RedirectToAction(nameof(Index));
         }
@@ -227,7 +227,7 @@ public sealed class ActivityBatchesController : Controller
         {
             await _manager.CreateAsync(model);
 
-            await _notifier.SuccessAsync(H["A new inventory load has been created successfully."]);
+            await _notifier.SuccessAsync(H["A new activity load has been created successfully."]);
 
             return RedirectToAction(nameof(Index));
         }
@@ -310,7 +310,7 @@ public sealed class ActivityBatchesController : Controller
         {
             await _manager.UpdateAsync(model);
 
-            await _notifier.SuccessAsync(H["The inventory load has been updated successfully."]);
+            await _notifier.SuccessAsync(H["The activity load has been updated successfully."]);
 
             return RedirectToAction(nameof(Index));
         }
@@ -356,11 +356,11 @@ public sealed class ActivityBatchesController : Controller
 
         if (await _manager.DeleteAsync(model))
         {
-            await _notifier.SuccessAsync(H["The inventory load has been deleted successfully."]);
+            await _notifier.SuccessAsync(H["The activity load has been deleted successfully."]);
         }
         else
         {
-            await _notifier.ErrorAsync(H["Unable to remove the inventory load."]);
+            await _notifier.ErrorAsync(H["Unable to remove the activity load."]);
         }
 
         return RedirectToAction(nameof(Index));
@@ -419,7 +419,7 @@ public sealed class ActivityBatchesController : Controller
             });
         });
 
-        await _notifier.SuccessAsync(H["The inventory load has started loading in the background. When it finishes, the list shows how many matching records were loaded and why any were skipped."]);
+        await _notifier.SuccessAsync(H["The activity load has started loading in the background. When it finishes, the list shows how many matching records were loaded and why any were skipped."]);
 
         return RedirectToAction(nameof(Index));
     }
@@ -464,11 +464,11 @@ public sealed class ActivityBatchesController : Controller
                     }
                     if (counter == 0)
                     {
-                        await _notifier.WarningAsync(H["No inventory loads were removed."]);
+                        await _notifier.WarningAsync(H["No activity loads were removed."]);
                     }
                     else
                     {
-                        await _notifier.SuccessAsync(H.Plural(counter, "1 inventory load has been removed successfully.", "{0} inventory loads have been removed successfully."));
+                        await _notifier.SuccessAsync(H.Plural(counter, "1 activity load has been removed successfully.", "{0} activity loads have been removed successfully."));
                     }
                     break;
                 default:

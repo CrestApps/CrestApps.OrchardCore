@@ -5,7 +5,7 @@ title: Leads, Accounts and Opportunities
 description: Keep raw prospects apart from your contacts as leads, call and text them like contacts, convert the ones that qualify, and group contacts and deals under accounts.
 ---
 
-A **lead** is a prospect you have not qualified yet, such as a row from a purchased list, a trade-show scan or a web form. You can call it, text it, load it into inventory and retry it through a subject flow, exactly like a contact. It is kept apart from your contacts, though, so your contact list holds only real customers.
+A **lead** is a prospect you have not qualified yet, such as a row from a purchased list, a trade-show scan or a web form. You can call it, text it, load it as activities and retry it through a subject flow, exactly like a contact. It is kept apart from your contacts, though, so your contact list holds only real customers.
 
 When a lead qualifies, you **convert** it. Conversion creates a contact, or merges the lead into a contact who already has its phone number or email. Its history moves with it. It can also put the contact in an **account**, the company or household the person belongs to, and open an **opportunity**, the deal you are working on.
 
@@ -74,14 +74,14 @@ The `phone:` terms from [Contacts](contacts.md) work here too.
 
 Everything you do with a contact works on a lead: **Add Activity**, **List Activities**, calls, texts and automated AI conversations.
 
-- **Inventory loads.** Pick the lead type as the **Record type** and a **Lead filters** panel appears right under it, inside **Record filters**. You can filter by status, list, source, rating and owner.
+- **Activity loads.** Pick the lead type as the **Record type** and a **Lead filters** panel appears right under it, inside **Record filters**. You can filter by status, list, source, rating and owner.
   - A lead is loaded only when it matches every filter you set, including the other record filters such as the dates, phone number and time zones. Where you tick several statuses or ratings, any one of them matches.
   - **List** picks from the lists your leads carry, such as the list name given to an import. Type in the box to search them.
   - **Lead owner** loads only the leads one user owns.
   - With no **Lead status** ticked, every open status is loaded. Tick a closed status, such as *Closed - Not Converted*, to load its leads too.
   - **Skip leads that are already contacts** is on by default, so a customer is not called again as a stranger.
   - Converted leads are never loaded.
-  - The load report says how many leads were skipped for each reason. See [Load inventory](load-inventory.md).
+  - The load report says how many leads were skipped for each reason. See [Load activities](load-inventory.md).
 - **Inbound calls and texts.** When a number belongs to both a contact and a lead, the contact wins. A converted lead never matches.
 
 ## Convert a lead
@@ -106,7 +106,7 @@ You cannot convert a lead while a call or message with it is in progress.
 
 ### Let the AI convert leads
 
-An **Automatic** inventory load of a lead type shows an **AI lead conversion** card. Tick **Allow AI to convert the lead**, and when an automated text or call ends, the AI decides from the conversation whether the lead qualified. If it did, the lead is converted before the disposition's follow-up actions run, so those work on the new contact.
+An **Automatic** activity load of a lead type shows an **AI lead conversion** card. Tick **Allow AI to convert the lead**, and when an automated text or call ends, the AI decides from the conversation whether the lead qualified. If it did, the lead is converted before the disposition's follow-up actions run, so those work on the new contact.
 
 | Option | What it does |
 | --- | --- |
@@ -149,7 +149,7 @@ Use `stage:`, `closed:`, `won:` and `account:` on the Opportunities list, for ex
 
 Lead sources are ordinary content items of the **Lead Source** type. Open **Interaction Center > Management > Lead Sources** to add, rename or remove one. You need the usual content permissions for the **Lead Source** type.
 
-The **Lead source** fields of leads and opportunities are content pickers of this type. Inventory loads and imports pick from the published lead sources too. Unpublishing or deleting a source removes it from the list, and leads that already have it show *(Unknown source)* in the conversion report.
+The **Lead source** fields of leads and opportunities are content pickers of this type. Activity loads and imports pick from the published lead sources too. Unpublishing or deleting a source removes it from the list, and leads that already have it show *(Unknown source)* in the conversion report.
 
 ## Lead statuses and opportunity stages
 
@@ -157,7 +157,7 @@ Manage both lists under **Interaction Center > Management**. Unlike lead sources
 
 - **Lead Statuses** (permission **Manage lead statuses**): each status has a name, a description, an order and a **Type**:
   - **Open**: leads in it are still worked and loaded. Only an open status can be the one **a new lead starts in**.
-  - **Closed**: leads in it are finished without being converted, and inventory loads skip them unless a load asks for them.
+  - **Closed**: leads in it are finished without being converted, and activity loads skip them unless a load asks for them.
   - **Converted**: the status conversion gives a lead. Only one status has this type, and you cannot pick it by hand.
 - **Opportunity Stages** (permission **Manage opportunity stages**): each stage has a name, a description, an order, a **probability** from 0 to 100, and whether it is **closed** and **won**. A stage can only be won if it is closed.
 

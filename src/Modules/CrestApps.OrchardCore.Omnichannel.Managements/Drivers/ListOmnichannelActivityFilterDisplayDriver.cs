@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Modules;
@@ -16,6 +17,7 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
     private readonly IClock _clock;
     private readonly ITimeZoneSelectListProvider _timeZoneSelectListProvider;
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
+    private readonly ActivityChannelOptions _activityChannelOptions;
 
     internal readonly IStringLocalizer S;
 
@@ -23,17 +25,21 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
     /// Initializes a new instance of the <see cref="ListOmnichannelActivityFilterDisplayDriver"/> class.
     /// </summary>
     /// <param name="subjectFlowSettingsService">The subject flow settings service.</param>
+    /// <param name="timeZoneSelectListProvider">The time zone select list provider.</param>
     /// <param name="clock">The clock.</param>
+    /// <param name="activityChannelOptions">The activity channels registered by the enabled features.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ListOmnichannelActivityFilterDisplayDriver(
         ISubjectFlowSettingsService subjectFlowSettingsService,
         ITimeZoneSelectListProvider timeZoneSelectListProvider,
         IClock clock,
+        IOptions<ActivityChannelOptions> activityChannelOptions,
         IStringLocalizer<ListOmnichannelActivityFilterDisplayDriver> stringLocalizer)
     {
         _subjectFlowSettingsService = subjectFlowSettingsService;
         _timeZoneSelectListProvider = timeZoneSelectListProvider;
         _clock = clock;
+        _activityChannelOptions = activityChannelOptions.Value;
         S = stringLocalizer;
     }
 
@@ -66,13 +72,9 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
                 new(S["Very high"], nameof(ActivityUrgencyLevel.VeryHigh)),
             ];
 
-            model.Channels =
-            [
-                new(S["Any channel"], ""),
-                new(S["Phone"], OmnichannelConstants.Channels.Phone),
-                new(S["SMS"], OmnichannelConstants.Channels.Sms),
-                new(S["Email"], OmnichannelConstants.Channels.Email),
-            ];
+            var channels = ActivityFilterSelectListBuilder.BuildChannelItems(_activityChannelOptions, filter.Channel);
+            channels.Insert(0, new SelectListItem(S["Any channel"], string.Empty, string.IsNullOrEmpty(filter.Channel)));
+            model.Channels = channels;
 
             model.TimeZones = await GetTimeZoneOptionsAsync(S["Any time zone"], model.TimeZoneId);
 

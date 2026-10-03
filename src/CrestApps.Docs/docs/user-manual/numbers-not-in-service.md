@@ -40,7 +40,7 @@ When a call finds a dead number, the platform uses the subject's disposition wit
 
 | Where | What happens to a number on the list |
 | --- | --- |
-| [Loading inventory](load-inventory.md) | The contact's next number is used instead, in the usual order (cell, home, office, work, other). A contact whose numbers are all on the list is skipped and counted as *has only numbers that are not in service*. |
+| [Loading activities](load-inventory.md) | The contact's next number is used instead, in the usual order (cell, home, office, work, other). A contact whose numbers are all on the list is skipped and counted as *has only numbers that are not in service*. |
 | [Dialer](dialer-profiles.md#what-happens-to-each-record) | A record whose number was added after it was loaded is **cancelled** before it is dialed. |
 | [Automatic loads](automated-ai.md) | The activity is cancelled instead of called or texted. |
 | Contact card | The number shows a red **Not in service** badge. Hover over it to see why. |

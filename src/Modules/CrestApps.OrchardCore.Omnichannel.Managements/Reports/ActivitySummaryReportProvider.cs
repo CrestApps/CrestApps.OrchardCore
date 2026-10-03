@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
 using ISession = YesSql.ISession;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports;
 
@@ -17,21 +18,25 @@ public sealed class ActivitySummaryReportProvider : OmnichannelReportBase
 {
     private readonly ISession _session;
     private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
+    private readonly ActivitySourceOptions _activitySourceOptions;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ActivitySummaryReportProvider"/> class.
     /// </summary>
     /// <param name="session">The YesSql session.</param>
     /// <param name="campaignManager">The campaign manager.</param>
+    /// <param name="activitySourceOptions">The activity sources registered by the enabled features.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ActivitySummaryReportProvider(
         ISession session,
         ICatalogManager<OmnichannelCampaign> campaignManager,
+        IOptions<ActivitySourceOptions> activitySourceOptions,
         IStringLocalizer<ActivitySummaryReportProvider> stringLocalizer)
         : base(stringLocalizer)
     {
         _session = session;
         _campaignManager = campaignManager;
+        _activitySourceOptions = activitySourceOptions.Value;
     }
 
     /// <inheritdoc/>
@@ -54,7 +59,7 @@ public sealed class ActivitySummaryReportProvider : OmnichannelReportBase
             _session,
             range.FromUtc.GetValueOrDefault(),
             range.ToUtc.GetValueOrDefault(),
-            await OmnichannelReportFilter.GetCriteriaAsync(context.Filter, _campaignManager, cancellationToken),
+            await OmnichannelReportFilter.GetCriteriaAsync(context.Filter, _campaignManager, _activitySourceOptions, cancellationToken),
             cancellationToken);
         var data = OmnichannelReportAggregator.BuildActivitySummary(activities);
 

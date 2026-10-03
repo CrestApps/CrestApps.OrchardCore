@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
 using ISession = YesSql.ISession;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports;
 
@@ -15,6 +16,7 @@ public sealed class CampaignPerformanceReportProvider : OmnichannelReportBase
 {
     private readonly ISession _session;
     private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
+    private readonly ActivitySourceOptions _activitySourceOptions;
     private readonly ICatalogManager<OmnichannelCampaignGroup> _campaignGroupManager;
 
     /// <summary>
@@ -23,16 +25,19 @@ public sealed class CampaignPerformanceReportProvider : OmnichannelReportBase
     /// <param name="session">The YesSql session.</param>
     /// <param name="campaignManager">The campaign manager used to resolve campaign names.</param>
     /// <param name="campaignGroupManager">The campaign group manager used to aggregate campaigns.</param>
+    /// <param name="activitySourceOptions">The activity sources registered by the enabled features.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public CampaignPerformanceReportProvider(
         ISession session,
         ICatalogManager<OmnichannelCampaign> campaignManager,
         ICatalogManager<OmnichannelCampaignGroup> campaignGroupManager,
+        IOptions<ActivitySourceOptions> activitySourceOptions,
         IStringLocalizer<CampaignPerformanceReportProvider> stringLocalizer)
         : base(stringLocalizer)
     {
         _session = session;
         _campaignManager = campaignManager;
+        _activitySourceOptions = activitySourceOptions.Value;
         _campaignGroupManager = campaignGroupManager;
     }
 
@@ -53,7 +58,7 @@ public sealed class CampaignPerformanceReportProvider : OmnichannelReportBase
             _session,
             range.FromUtc.GetValueOrDefault(),
             range.ToUtc.GetValueOrDefault(),
-            await OmnichannelReportFilter.GetCriteriaAsync(context.Filter, _campaignManager, cancellationToken),
+            await OmnichannelReportFilter.GetCriteriaAsync(context.Filter, _campaignManager, _activitySourceOptions, cancellationToken),
             cancellationToken);
         var data = OmnichannelReportAggregator.BuildCampaignPerformance(activities);
         var campaigns = await _campaignManager.GetAllAsync(cancellationToken);

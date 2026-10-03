@@ -110,7 +110,7 @@ After creating one:
 
 - Fill in the **About the business** section at the end of the system prompt. Until you do, the assistant treats anything still in square brackets as unknown and offers to have the team follow up instead of guessing.
 - Add your business name to the **Opening message**. It starts out generic so that nothing unfinished is ever sent to a customer. It can use Liquid, for example `{{ Contact.DisplayText }}`, and the appointment starting point is the place to add the appointment's date and time when your subject stores them.
-- Choose the profile on the subject flow or the automatic inventory load. See [Automated AI SMS and Voice](../user-manual/automated-ai.md).
+- Choose the profile on the subject flow or the automatic activity load. See [Automated AI SMS and Voice](../user-manual/automated-ai.md).
 
 The prompts leave two things to the platform. Whether the assistant may hand the conversation to a person, and when, comes from the subject's **live agent handoff** settings, and the platform tells the assistant how to do it only when an agent can actually take the conversation. The platform also tells the assistant how to end a call, and a `STOP` text opts the contact out before the assistant ever sees it.
 
