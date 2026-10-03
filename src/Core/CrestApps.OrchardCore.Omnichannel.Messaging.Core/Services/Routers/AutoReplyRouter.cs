@@ -7,7 +7,8 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.Routers;
 
 /// <summary>
-/// Sends the endpoint's configured auto-reply, on whatever channel the conversation runs on. The setting was
+/// Sends the auto-reply of the entry point that answers the endpoint, on whatever channel the conversation runs on,
+/// and its closed auto-reply instead while the entry point is closed. The setting was
 /// stored by the editor and sent by nothing, so an operator could configure an acknowledgement, see it saved, and
 /// watch every contact get silence.
 /// <para>
@@ -56,9 +57,9 @@ public sealed class AutoReplyRouter : IMessagingInboundRouter
             return false;
         }
 
-        if (!context.Endpoint.TryGet<MessagingEndpointRoutingSettings>(out var routing) ||
-            routing is null ||
-            string.IsNullOrWhiteSpace(routing.AutoReplyMessage))
+        var routing = context.Routing;
+
+        if (routing is null || string.IsNullOrWhiteSpace(routing.AutoReplyMessage))
         {
             return false;
         }
@@ -86,7 +87,7 @@ public sealed class AutoReplyRouter : IMessagingInboundRouter
             {
                 ContactAddress = conversation.ContactAddress,
                 ServiceAddress = conversation.ServiceAddress,
-                Body = routing.AutoReplyMessage.Trim(),
+                Body = routing.AutoReplyMessage,
             },
             cancellationToken);
 

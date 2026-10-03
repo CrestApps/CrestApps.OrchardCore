@@ -16,7 +16,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = MessagingConstants.Feature.Sms,
     Name = "SMS Messaging Channel",
-    Description = "Adds SMS as a channel of the Omnichannel Messaging workspace: SMS numbers as channel endpoints with a per-number provider, the per-number provider dispatcher, two-way send and receive through every SMS provider that raises inbound messages, the carrier keywords (STOP, START, HELP), and a Send SMS button beside phone-number fields.",
+    Description = "Adds SMS as a channel of the Omnichannel Messaging workspace: SMS numbers as omnichannel addresses with a per-number provider, SMS inbound entry points that route each number's texts, the per-number provider dispatcher, two-way send and receive through every SMS provider that raises inbound messages, the carrier keywords (STOP, START, HELP), and a Send SMS button beside phone-number fields.",
     Category = "Contact Center",
     Dependencies =
     [

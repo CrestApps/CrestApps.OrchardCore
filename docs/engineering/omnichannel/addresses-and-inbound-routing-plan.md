@@ -108,14 +108,23 @@ instead of listing every record.
   because it is that tenant's only per-number routing.
 - Kept for older recipes: entry points that still list typed numbers route them, compared in E.164 form.
 
-### Phase 3 — SMS entry points
+### Phase 3 — SMS entry points (built)
 
-- SMS entry points carry the target (agent or queue), the distribution (shared pool or routed) and the auto-reply,
-  plus business hours and a closed auto-reply, which SMS does not have today.
-- The messaging routers read the SMS entry point for the number in place of the address's routing settings.
-- Migration: each SMS address's routing settings become an SMS entry point named after the address.
-- The Messaging workspace depends on Inbound Entry Points, not on Contact Center Voice.
-- Removed: the SMS address Inbound routing card.
+- SMS Messaging Channel registers **Text messages** as an entry point channel. The workspace adds its settings to an
+  entry point whose channel is a messaging channel, stored as `MessagingEntryPointSettings` in the entry point's
+  properties: queue distribution (shared pool or routed), auto-reply, and a closed auto-reply sent in its place outside
+  business hours. Messages still route while closed, so they wait for the agents.
+- The call-only settings moved off the shared cards onto the call entry point's own: queue priority, closed action,
+  overflow queue and closed message.
+- `IMessagingInboundRoutingResolver` finds the enabled entry point that answers the number on the conversation's
+  channel. `MessagingConversationRouter` resolves it once per pass into `MessagingRoutingContext.Routing`, and the
+  auto-reply, routed-queue, number and hand-off routers read it there in place of the address's routing settings.
+- Migration (`MessagingEntryPointMigrations`): each number's `MessagingEndpointRoutingSettings` becomes an enabled text
+  entry point named after the number (with " (SMS)" when the name is taken), unless another enabled text entry point
+  already answers it; a number with no target gets none. The settings are removed from the number either way. The SMS
+  portal import runs the same move after it copies the portal's routing onto the numbers.
+- The Messaging workspace depends on Inbound Entry Points, so it brings Work Distribution's queues and the agents.
+- Removed: the address Inbound routing card for texts (`MessagingEndpointRoutingDisplayDriver`).
 
 ### Phase 4 — Follow-ups
 

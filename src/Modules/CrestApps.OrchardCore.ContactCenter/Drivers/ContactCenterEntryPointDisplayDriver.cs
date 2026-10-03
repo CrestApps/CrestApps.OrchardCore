@@ -83,11 +83,7 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
             TargetType = entryPoint.TargetType,
             TargetAgentId = entryPoint.TargetAgentId,
             TargetQueueId = entryPoint.TargetQueueId,
-            Priority = entryPoint.Priority,
             BusinessHoursCalendarId = entryPoint.BusinessHoursCalendarId,
-            ClosedAction = entryPoint.ClosedAction,
-            OverflowQueueId = entryPoint.OverflowQueueId,
-            ClosedMessage = entryPoint.ClosedMessage,
             Enabled = entryPoint.Enabled,
         };
 
@@ -110,13 +106,8 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
             model.TargetAgentOptions = viewModel.TargetAgentOptions;
             model.TargetQueueId = viewModel.TargetQueueId;
             model.TargetQueueOptions = viewModel.TargetQueueOptions;
-            model.Priority = viewModel.Priority;
             model.BusinessHoursCalendarId = viewModel.BusinessHoursCalendarId;
             model.BusinessHoursCalendarOptions = viewModel.BusinessHoursCalendarOptions;
-            model.ClosedAction = viewModel.ClosedAction;
-            model.OverflowQueueId = viewModel.OverflowQueueId;
-            model.OverflowQueueOptions = viewModel.OverflowQueueOptions;
-            model.ClosedMessage = viewModel.ClosedMessage;
             model.Enabled = viewModel.Enabled;
         }
 
@@ -159,12 +150,9 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
             : null;
 
         // The rule that a routed-to target is required for the selected routing kind is enforced by
-        // ContactCenterEntryPointHandler, so a recipe import and this editor reject the same entries.
-        entryPoint.Priority = model.Priority;
+        // ContactCenterEntryPointHandler, so a recipe import and this editor reject the same entries. What happens to a
+        // call while closed, and a call's queue priority, are on the call entry point's own cards.
         entryPoint.BusinessHoursCalendarId = string.IsNullOrWhiteSpace(model.BusinessHoursCalendarId) ? null : model.BusinessHoursCalendarId.Trim();
-        entryPoint.ClosedAction = model.ClosedAction;
-        entryPoint.OverflowQueueId = string.IsNullOrWhiteSpace(model.OverflowQueueId) ? null : model.OverflowQueueId.Trim();
-        entryPoint.ClosedMessage = model.ClosedMessage?.Trim();
         entryPoint.Enabled = model.Enabled;
 
         return await EditAsync(entryPoint, context);

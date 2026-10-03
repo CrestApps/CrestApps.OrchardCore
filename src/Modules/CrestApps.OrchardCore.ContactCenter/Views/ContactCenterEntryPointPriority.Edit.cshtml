@@ -1,0 +1,15 @@
+@model EntryPointViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Priority">
+    <label asp-for="Priority" class="ocat-label">@T["Priority"]</label>
+    <div class="ocat-end">
+        <select asp-for="Priority" class="form-select">
+            <option value="@InteractionPriority.Lowest">@T["Lowest"]</option>
+            <option value="@InteractionPriority.Low">@T["Low"]</option>
+            <option value="@InteractionPriority.Normal">@T["Normal"]</option>
+            <option value="@InteractionPriority.High">@T["High"]</option>
+            <option value="@InteractionPriority.Highest">@T["Highest"]</option>
+        </select>
+        <span asp-validation-for="Priority" class="text-danger"></span>
+    </div>
+</div>

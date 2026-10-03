@@ -170,10 +170,10 @@ public sealed class MessagingFeatureActivationTests
     }
 
     [Fact]
-    public async Task FreshTenant_WorkspaceAlone_ResolvesTransfer_ToPeopleOnly()
+    public async Task FreshTenant_WorkspaceAlone_ResolvesTransfer_ToPeopleAndTeams()
     {
-        // Transferring to a person needs only the workspace; sending a conversation back to a team needs the queues
-        // of Work Distribution, which this tenant does not have.
+        // The workspace routes each number through an inbound entry point, which routes to a queue or a person, so the
+        // workspace alone brings Work Distribution's queues, and a conversation can be sent back to a team.
         await using var host = await ContactCenterFeatureActivationHost.StartAsync();
         var tenant = await host.CreateTenantAsync(new ContactCenterTenantProfile
         {
@@ -189,7 +189,7 @@ public sealed class MessagingFeatureActivationTests
                 services.GetRequiredService<MessagingTransferTargets>().SupportsQueues)));
 
         Assert.NotNull(transfer);
-        Assert.False(supportsQueues);
+        Assert.True(supportsQueues);
     }
 
     [Fact]

@@ -13,6 +13,7 @@ public sealed class MessagingConversationRouter : IMessagingConversationRouter
 {
     private readonly IMessagingInboundRouter[] _routers;
     private readonly IMessagingChannelResolver _channelResolver;
+    private readonly IMessagingInboundRoutingResolver _routingResolver;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -20,14 +21,17 @@ public sealed class MessagingConversationRouter : IMessagingConversationRouter
     /// </summary>
     /// <param name="routers">The routing chain.</param>
     /// <param name="channelResolver">The resolver of the enabled channels.</param>
+    /// <param name="routingResolver">The resolver of where an endpoint's messages go.</param>
     /// <param name="logger">The logger.</param>
     public MessagingConversationRouter(
         IEnumerable<IMessagingInboundRouter> routers,
         IMessagingChannelResolver channelResolver,
+        IMessagingInboundRoutingResolver routingResolver,
         ILogger<MessagingConversationRouter> logger)
     {
         _routers = routers.OrderBy(router => router.Order).ToArray();
         _channelResolver = channelResolver;
+        _routingResolver = routingResolver;
         _logger = logger;
     }
 
@@ -37,6 +41,9 @@ public sealed class MessagingConversationRouter : IMessagingConversationRouter
         ArgumentNullException.ThrowIfNull(context);
 
         context.Channel ??= _channelResolver.Get(context.Conversation.Channel);
+
+        // Read once for the whole chain, so every router sees the same entry point and the same open or closed answer.
+        context.Routing ??= await _routingResolver.ResolveAsync(context.Endpoint, context.Conversation.Channel, cancellationToken);
 
         foreach (var router in _routers)
         {

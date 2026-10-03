@@ -365,12 +365,12 @@ public class SmsAgentHandoffServiceTests
                 Value = "+16502530000",
             };
 
-            endpoint.Put(new MessagingEndpointRoutingSettings
+            var routing = new MessagingInboundRouting
             {
                 TargetType = ConversationRouteTargetType.Queue,
                 TargetId = "queue-1",
                 DistributionMode = distributionMode,
-            });
+            };
 
             var endpointManager = new Mock<IOmnichannelChannelEndpointManager>();
             endpointManager
@@ -384,6 +384,7 @@ public class SmsAgentHandoffServiceTests
             var router = new MessagingConversationRouter(
                 [new HandoffQueueRouter(RoutingStrategy.Object, clock.Object)],
                 MessagingTestChannels.Resolver(MessagingTestChannels.AcceptingDispatcher().Object),
+                MessagingTestChannels.RoutingResolver(routing),
                 NullLogger<MessagingConversationRouter>.Instance);
 
             Service = new MessagingAgentHandoffService(

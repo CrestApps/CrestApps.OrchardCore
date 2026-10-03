@@ -77,12 +77,12 @@ internal sealed class ContactCenterEntryPointHandler : CatalogEntryHandlerBase<C
         // kind of routing selected, and this rule lives here so a recipe import and an editor enforce the same set.
         if (context.Model.TargetType == EntryPointTargetType.Agent && string.IsNullOrWhiteSpace(context.Model.TargetAgentId))
         {
-            context.Result.Fail(new ValidationResult(S["Select the agent this entry point routes calls to."], [nameof(ContactCenterEntryPoint.TargetAgentId)]));
+            context.Result.Fail(new ValidationResult(S["Select the agent this entry point routes to."], [nameof(ContactCenterEntryPoint.TargetAgentId)]));
         }
 
         if (context.Model.TargetType == EntryPointTargetType.Queue && string.IsNullOrWhiteSpace(context.Model.TargetQueueId))
         {
-            context.Result.Fail(new ValidationResult(S["Select the queue this entry point routes calls to."], [nameof(ContactCenterEntryPoint.TargetQueueId)]));
+            context.Result.Fail(new ValidationResult(S["Select the queue this entry point routes to."], [nameof(ContactCenterEntryPoint.TargetQueueId)]));
         }
 
         // A menu that cannot be run is refused here rather than discovered by a caller: the state machine copes

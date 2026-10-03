@@ -13,8 +13,8 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.ContactCenter.Drivers;
 
 /// <summary>
-/// Adds what only an entry point that answers calls has: how long an agent's line rings before voicemail, the welcome
-/// message and phone menu, and where voicemails go.
+/// Adds what only an entry point that answers calls has: a call's queue priority, how long an agent's line rings before
+/// voicemail, what happens to a call while closed, the welcome message and phone menu, and where voicemails go.
 /// </summary>
 internal sealed class ContactCenterEntryPointVoiceDisplayDriver : DisplayDriver<ContactCenterEntryPoint>
 {
@@ -52,6 +52,10 @@ internal sealed class ContactCenterEntryPointVoiceDisplayDriver : DisplayDriver<
             Id = entryPoint.ItemId,
             TargetType = entryPoint.TargetType,
             TargetAgentId = entryPoint.TargetAgentId,
+            Priority = entryPoint.Priority,
+            ClosedAction = entryPoint.ClosedAction,
+            OverflowQueueId = entryPoint.OverflowQueueId,
+            ClosedMessage = entryPoint.ClosedMessage,
             VoicemailEnabled = entryPoint.VoicemailEnabled,
             RingTimeoutSeconds = entryPoint.RingTimeoutSeconds,
             WelcomeMessage = entryPoint.WelcomeMessage,
@@ -76,6 +80,11 @@ internal sealed class ContactCenterEntryPointVoiceDisplayDriver : DisplayDriver<
         {
             model.Id = viewModel.Id;
             model.TargetType = viewModel.TargetType;
+            model.Priority = viewModel.Priority;
+            model.ClosedAction = viewModel.ClosedAction;
+            model.OverflowQueueId = viewModel.OverflowQueueId;
+            model.OverflowQueueOptions = viewModel.OverflowQueueOptions;
+            model.ClosedMessage = viewModel.ClosedMessage;
             model.VoicemailEnabled = viewModel.VoicemailEnabled;
             model.RingTimeoutSeconds = viewModel.RingTimeoutSeconds;
             model.WelcomeMessage = viewModel.WelcomeMessage;
@@ -92,6 +101,8 @@ internal sealed class ContactCenterEntryPointVoiceDisplayDriver : DisplayDriver<
 
         return Combine(
             Initialize<EntryPointViewModel>("ContactCenterEntryPointAgentRing_Edit", Populate).Location("Content:2%Routing;2"),
+            Initialize<EntryPointViewModel>("ContactCenterEntryPointPriority_Edit", Populate).Location("Content:3%Routing;2"),
+            Initialize<EntryPointViewModel>("ContactCenterEntryPointClosedCalls_Edit", Populate).Location("Content:2%Hours;3"),
             Initialize<EntryPointViewModel>("ContactCenterEntryPointMenu_Edit", Populate).Location("Content:1%Welcome and IVR menu;4"),
             Initialize<EntryPointViewModel>("ContactCenterEntryPointVoicemail_Edit", Populate).Location("Content:1%Voicemail;5"));
     }
@@ -120,6 +131,10 @@ internal sealed class ContactCenterEntryPointVoiceDisplayDriver : DisplayDriver<
                 ContactCenterConstants.DirectRouting.MinimumRingTimeoutSeconds,
                 ContactCenterConstants.DirectRouting.MaximumRingTimeoutSeconds);
 
+        entryPoint.Priority = model.Priority;
+        entryPoint.ClosedAction = model.ClosedAction;
+        entryPoint.OverflowQueueId = string.IsNullOrWhiteSpace(model.OverflowQueueId) ? null : model.OverflowQueueId.Trim();
+        entryPoint.ClosedMessage = model.ClosedMessage?.Trim();
         entryPoint.WelcomeMessage = model.WelcomeMessage?.Trim();
         entryPoint.VoicemailGreetingText = string.IsNullOrWhiteSpace(model.VoicemailGreetingText) ? null : model.VoicemailGreetingText.Trim();
 

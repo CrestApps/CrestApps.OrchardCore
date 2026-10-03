@@ -40,6 +40,13 @@ public sealed class MessagingRoutingContext
     public OmnichannelChannelEndpoint Endpoint { get; init; }
 
     /// <summary>
+    /// Gets or sets where messages to the endpoint go, from the inbound entry point that answers it on the conversation's
+    /// channel. The router fills it in when the caller did not; it stays <see langword="null"/> when no entry point
+    /// answers the endpoint.
+    /// </summary>
+    public MessagingInboundRouting Routing { get; set; }
+
+    /// <summary>
     /// Gets or sets the conversation being routed (found or created before the chain runs).
     /// </summary>
     public required MessagingConversation Conversation { get; set; }

@@ -491,6 +491,7 @@ public sealed class SmsHandoffTranscriptTests
                     new FallbackRouter(),
                 ],
                 Channels,
+                MessagingTestChannels.RoutingResolver(),
                 NullLogger<MessagingConversationRouter>.Instance);
 
         private static IClock CreateClock()

@@ -73,22 +73,23 @@ Enabling the workspace on its own gives you the inbox with nothing to send or re
 
 | Dependency | Why |
 | --- | --- |
-| **Omnichannel Channel Endpoints** | Every address you send from (an SMS number today; a mailbox or WhatsApp number later) is a [channel endpoint](management#channel-endpoint). It carries the provider and the inbound routing. |
+| **Omnichannel Channel Endpoints** | Every address you send from (an SMS number today; a mailbox or WhatsApp number later) is a [channel endpoint](management#channel-endpoint). It carries the provider. |
+| **Contact Center Inbound Entry Points** | Where each number's messages go is set on the [inbound entry point](../user-manual/entry-points-and-ivr.md#text-entry-points) that answers it for the channel, with opening hours and auto-replies. Entry points route to a queue or an agent, so this brings Contact Center Work Distribution's queues and the agents with it. |
 | **Contact Center Agent Services** (dependency-only) | Operators are Contact Center **agent profiles**. A bare profile is created automatically the first time a permitted user opens the workspace, so no Contact Center administration is required. |
 | **Orchard Core SignalR** | The workspace's own real-time hub. |
 | **Contact Center Provider Webhook Inbox** *(SMS channel only)* | The durable inbox that inbound provider deliveries are committed to before they are processed, so a retried delivery is de-duplicated and none is lost. |
 | **Orchard Core SMS** *(SMS channel only)* | The SMS provider abstraction and the tenant default provider. |
 
-The workspace does **not** require Contact Center Voice, Work Distribution or the Agents administration, and it does not pull in the Omnichannel Management CRM.
+The workspace does **not** require Contact Center Voice, and it does not pull in the Omnichannel Management CRM.
 
 ## Setting up SMS
 
 1. **Configure an SMS provider.** Enable at least one, for example [Telnyx SMS](../telephony/telnyx#telnyx-sms) or Twilio, and pick the tenant **default provider** at **Settings > Communication > SMS**.
 2. **Add your numbers as SMS channel endpoints** in **Interaction Center > Management > Omnichannel Addresses** (see [Channel endpoints](../user-manual/channel-endpoints.md)). Each SMS endpoint can pin the **provider** that owns the number; leave it empty to use the tenant default.
-3. **Set the inbound routing** on the endpoint:
-   - **Target**: an **agent** (personal number) or a **queue** (department number).
-   - **Distribution mode**: **Shared pool** (agents claim conversations) or **Routed** (pushed to an agent by the routed-distribution feature).
-   - **Auto-reply**: an optional acknowledgement, sent at most once a day per conversation.
+3. **Add a Text messages entry point** for the numbers under **Interaction Center > Management > Inbound entry points** (see [Text entry points](../user-manual/entry-points-and-ivr.md#text-entry-points)):
+   - **Route to**: an **agent** (personal number) or a **queue** (department number).
+   - **Queue distribution**: **Shared pool** (agents claim conversations) or **Routed** (pushed to an agent by the routed-distribution feature).
+   - **Auto-reply**: an optional acknowledgement, sent at most once a day per conversation, and a **Closed auto-reply** sent instead outside the entry point's business hours.
 4. **Grant the permissions** below to the roles that staff the inbox.
 5. **Point the provider webhook at Orchard Core** so inbound messages and delivery receipts arrive. Telnyx SMS maps `api/telnyx/webhook/sms` (see the [Telnyx SMS webhook](../telephony/telnyx#telnyx-sms)). The Twilio inbound webhook, `api/twilio/webhook/sms`, is mapped by this channel whenever Orchard Core's Twilio SMS feature is on, so the workspace receives Twilio texts without the AI features. Its address shows on the Twilio tab of the SMS settings screen.
 6. Open **Messaging → Inbox**.
@@ -105,7 +106,7 @@ The SMS channel applies the carrier keywords, whatever the workspace is doing:
 | **START** | UNSTOP, YES | Reverses an opt-out and confirms. It is ignored when the contact is not opted out, so an ordinary "Yes" stays part of the conversation. | *You have been resubscribed and will receive messages again. Reply STOP to unsubscribe.* |
 | **HELP** | INFO | Answers with the help reply. | *Reply STOP to unsubscribe. Message and data rates may apply.* |
 
-A keyword silences the endpoint's auto-reply for that message. Replies can be customised under the `CrestApps:Omnichannel:Messaging:Sms:KeywordReplies` configuration section (`StopMessage`, `HelpMessage`, `StartMessage`).
+A keyword silences the entry point's auto-reply for that message. Replies can be customised under the `CrestApps:Omnichannel:Messaging:Sms:KeywordReplies` configuration section (`StopMessage`, `HelpMessage`, `StartMessage`).
 
 SMS also observes **quiet hours**: outside the destination queue's business hours, in the contact's local time, the conversation shows a banner above the composer. The banner is a warning only; it never blocks sending. The `SendMessagesDuringQuietHours` permission only changes how the banner looks: without it, the banner adds that sending now may reach the contact at an unsociable hour.
 
@@ -145,7 +146,7 @@ While an automated (AI) activity is handling a contact on an endpoint, the works
 | `SendMessagesDuringQuietHours` | Changes the quiet-hours banner to a plain notice without the unsociable-hour warning. Sending is never blocked, with or without it. |
 | `ManageMessaging` | Manage templates (**Messaging > Templates**). |
 
-Permissions apply to every channel; there is no per-channel permission. An endpoint's inbound routing is edited on the endpoint itself, under **Interaction Center > Management > Omnichannel Addresses**, which requires the **Manage channel endpoints** (`ManageChannelEndpoints`) permission.
+Permissions apply to every channel; there is no per-channel permission. Where a number's messages go is edited on its entry point, under **Interaction Center > Management > Inbound entry points**, which requires the **Manage Contact Center queues** permission.
 
 ## Broadcasts and templates
 
@@ -184,7 +185,7 @@ Templates travel between environments through the **Messaging Templates** deploy
 }
 ```
 
-Conversations and broadcasts do not travel: they are the workspace's record of what was said and sent, and replaying a broadcast would message its recipients again. An endpoint's inbound routing travels with the endpoint through the **Omnichannel Channel Endpoints** step.
+Conversations and broadcasts do not travel: they are the workspace's record of what was said and sent, and replaying a broadcast would message its recipients again. Where a number's messages go travels with its entry point through the `ContactCenterEntryPoint` deployment step.
 
 ## Configuration
 
@@ -237,6 +238,6 @@ A step-by-step build guide for AI agents and developers — contracts, wiring an
 The SMS-only **SMS Portal** feature (`CrestApps.OrchardCore.Omnichannel.Sms.Portal`) has been replaced by the workspace and the SMS channel. To move a tenant across:
 
 1. Enable **SMS Messaging Channel**. The old feature no longer exists, so it drops off the tenant on its own.
-2. The first time the workspace is enabled, its migration imports what the portal stored: conversations (with their message history, which already lives in the shared message store), templates, broadcasts, the inbound routing of each SMS endpoint, and the portal permissions granted to roles (each role gets the workspace permission that replaces it).
+2. The first time the workspace is enabled, its migration imports what the portal stored: conversations (with their message history, which already lives in the shared message store), templates, broadcasts, the inbound routing of each SMS endpoint (which then becomes a text entry point), and the portal permissions granted to roles (each role gets the workspace permission that replaces it).
 3. Update any appsettings entries: `CrestApps:Sms:Workspace` is now `CrestApps:Omnichannel:Messaging`, `CrestApps:Sms:RoutedDistribution` is now `CrestApps:Omnichannel:Messaging:RoutedDistribution`, and `CrestApps:Sms:Portal:KeywordReplies` is now `CrestApps:Omnichannel:Messaging:Sms:KeywordReplies`.
 4. Agents turn their **Available** toggle back on. The routed-assignment availability was stored under the portal's name and is not carried over.

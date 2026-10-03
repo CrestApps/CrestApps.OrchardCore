@@ -1,4 +1,7 @@
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services;
@@ -15,6 +18,20 @@ namespace CrestApps.OrchardCore.Tests.Omnichannel.Messaging;
 /// </summary>
 internal static class MessagingTestChannels
 {
+    /// <summary>
+    /// Answers every address with the same routing, as the entry point that answers it would.
+    /// </summary>
+    public static IMessagingInboundRoutingResolver RoutingResolver(MessagingInboundRouting routing = null)
+    {
+        var resolver = new Mock<IMessagingInboundRoutingResolver>();
+
+        resolver
+            .Setup(r => r.ResolveAsync(It.IsAny<OmnichannelChannelEndpoint>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((OmnichannelChannelEndpoint address, string _, CancellationToken _) => address is null ? null : routing);
+
+        return resolver.Object;
+    }
+
     /// <summary>
     /// A dispatcher that accepts every message.
     /// </summary>

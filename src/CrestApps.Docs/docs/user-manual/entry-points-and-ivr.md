@@ -5,18 +5,20 @@ title: Inbound Entry Points and IVR Menus
 description: Decide what happens when someone dials one of your numbers - which queue or person it rings, what happens after hours, where voicemail goes, and which keypad menu callers hear first.
 ---
 
-An **inbound entry point** is the front door for one or more of your numbers, and the one place a number's inbound traffic is routed from. Each entry point answers one channel, such as **Voice calls**. It decides:
+An **inbound entry point** is the front door for one or more of your numbers, and the one place a number's inbound traffic is routed from. Each entry point answers one channel: **Voice calls** or **Text messages**. A number used for both has one entry point for its calls and one for its texts. A call entry point decides:
 
 - **where** the call goes: a queue, or one specific agent (a personal line);
 - **what callers hear first**: an optional keypad (IVR) menu;
 - **what happens when you are closed**: hold, voicemail, overflow or reject;
 - **where voicemail goes**: an agent's inbox or the queue's shared voicemail box.
 
+A text entry point decides where the conversations go, how a queue hands them out, and the automatic replies, including one for when you are closed. See [Text entry points](#text-entry-points).
+
 | | |
 | --- | --- |
 | **Menu** | Interaction Center > Management > Inbound entry points |
 | **Permission** | Manage Contact Center queues |
-| **Feature** | Contact Center Inbound Entry Points (`CrestApps.OrchardCore.ContactCenter.EntryPoints`), with Contact Center Inbound Voice (`CrestApps.OrchardCore.ContactCenter.InboundVoice`) for call entry points |
+| **Feature** | Contact Center Inbound Entry Points (`CrestApps.OrchardCore.ContactCenter.EntryPoints`), with Contact Center Inbound Voice (`CrestApps.OrchardCore.ContactCenter.InboundVoice`) for call entry points and SMS Messaging Channel (`CrestApps.OrchardCore.Omnichannel.Messaging.Sms`) for text entry points |
 
 <video controls preload="metadata" width="100%" aria-label="Screencast of creating an inbound entry point that routes a dialed number to a queue with business hours and voicemail settings">
   <source src="/img/docs/um-entry-point.mp4" type="video/mp4" />
@@ -24,10 +26,10 @@ An **inbound entry point** is the front door for one or more of your numbers, an
 
 ## Create an entry point
 
-1. Add the numbers first, under **Interaction Center > Management > [Omnichannel Addresses](channel-endpoints.md)**, with **Voice calls** ticked.
-2. Open **Interaction Center > Management > Inbound entry points** and click **Add inbound entry point**. When more than one channel is available, pick the channel from the button's menu.
-3. Fill in the cards described below. A call entry point has five; the phone menu and voicemail cards are for calls only.
-4. Click **Save**. Calls to its numbers follow the new rules straight away.
+1. Add the numbers first, under **Interaction Center > Management > [Omnichannel Addresses](channel-endpoints.md)**, with **Voice calls** or **Text messages (SMS)** ticked.
+2. Open **Interaction Center > Management > Inbound entry points** and click **Add inbound entry point**. When more than one channel is available, pick **Voice calls** or **Text messages** from the button's menu.
+3. Fill in the cards described below. A call entry point has five; the priority, closed-call, phone menu and voicemail settings are for calls only.
+4. Click **Save**. Calls or texts to its numbers follow the new rules straight away.
 
 ### General
 
@@ -46,7 +48,7 @@ Numbers that were typed on an entry point before entry points picked them from t
 | --- | --- |
 | **Route to** | **Queue** (the default) or **Specific agent**. A specific-agent line rings one person and never falls back to a queue. |
 | **Target queue** | The queue that receives the calls (queue routing). |
-| **Priority** | Lowest to Highest. Calls from this number jump ahead of lower-priority work in the queue. |
+| **Priority** | Calls only. Lowest to Highest. Calls from this number jump ahead of lower-priority work in the queue. |
 | **Target agent** | The person to ring (specific-agent routing). |
 | **Send unanswered calls to voicemail** | Specific-agent lines only. When off, the caller keeps ringing until the agent answers or the caller hangs up. |
 | **Ring window (seconds)** | How long to ring the agent before voicemail. 5 to 300, default 30. |
@@ -56,7 +58,7 @@ Numbers that were typed on an entry point before entry points picked them from t
 | Field | What it does |
 | --- | --- |
 | **Business hours calendar** | When the entry point is open. Empty means *Always open*. See [Business hours](business-hours.md). |
-| **Closed action** | What to do with calls while closed: **Hold in queue** (the default), **Voicemail**, **Overflow** (to the overflow queue below), or **Reject**. On a specific-agent line every choice except Reject becomes Voicemail. |
+| **Closed action** | Calls only. What to do with calls while closed: **Hold in queue** (the default), **Voicemail**, **Overflow** (to the overflow queue below), or **Reject**. On a specific-agent line every choice except Reject becomes Voicemail. |
 | **Overflow queue** | The queue that takes after-hours calls when the closed action is Overflow. |
 | **Closed message** | Spoken to a caller who rings while the entry point is closed, before the closed action. Once it has been said the caller is held in the queue, moved to the overflow queue or sent to voicemail; with **Reject** the call ends after the message. Empty applies the closed action straight away, with no message. |
 
@@ -75,6 +77,20 @@ To speak the welcome, the call is answered. On a line with no menu the caller th
 | **Default voicemail greeting** | Spoken when the person receiving the voicemail has not recorded [their own greeting](voicemail.md#record-your-voicemail-greeting). Empty uses the system default. |
 | **Deliver voicemail to** | Queue lines only: **An agent's inbox** (the default) or **The queue's shared voicemail box**, which any entitled supervisor or agent can pick up from [Shared voicemail](voicemail.md#shared-voicemail). |
 | **Voicemail inbox** | The agent whose inbox receives the voicemail. Hidden when the shared box is chosen. |
+
+## Text entry points
+
+A text entry point has the **General**, **Routing** and **Hours** cards, with these settings added for texts:
+
+| Field | Card | What it does |
+| --- | --- | --- |
+| **Queue distribution** | Routing | Queue targets only. **Shared pool (claim to own)**: every agent in the queue sees the conversation and one claims it. **Routed (assign to an available agent)**: each new conversation is given to one available agent. Routed needs the *Omnichannel Messaging Routed Distribution* feature. |
+| **Auto-reply** | Routing | A message sent back automatically to a contact who texts these numbers, at most once a day per conversation. Contacts who have opted out never receive it. |
+| **Closed auto-reply** | Hours | Sent in place of the auto-reply to a contact who texts while the entry point is closed. Their texts still reach the queue or agent, to answer when you open. Empty sends the ordinary auto-reply at any time. |
+
+A number with no enabled text entry point still receives texts; they land in the unassigned inbox.
+
+Before text entry points, where a number's texts went was set on the number itself. When the site was upgraded, each number's settings became a text entry point named after the number (with " (SMS)" added when the name was taken, usually by the number's call entry point), with the same target, distribution and auto-reply. A number whose texts went nowhere got no entry point.
 
 ## Build an IVR menu
 

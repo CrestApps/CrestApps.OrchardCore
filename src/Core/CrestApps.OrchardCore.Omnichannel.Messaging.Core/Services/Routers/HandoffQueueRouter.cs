@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.Routers;
 
 /// <summary>
 /// Places a thread an automated conversation escalated. The queue comes from the escalation request rather than
-/// the endpoint, but the distribution decision is the endpoint's: on a routed queue the thread is push-assigned
+/// the endpoint, but the distribution decision is that of the entry point answering the endpoint: on a routed queue the thread is push-assigned
 /// to one agent exactly as a fresh inbound message would be, and anywhere else it is pooled. Escalations used to
 /// pool unconditionally, so a routed department behaved like a shared one for the threads that most needed an
 /// owner.
@@ -69,9 +69,7 @@ public sealed class HandoffQueueRouter : IMessagingInboundRouter
     }
 
     private static bool IsRoutedQueueEndpoint(MessagingRoutingContext context)
-        => context.Endpoint is not null
-            && context.Endpoint.TryGet<MessagingEndpointRoutingSettings>(out var routing)
-            && routing is not null
+        => context.Routing is { } routing
             && routing.TargetType == ConversationRouteTargetType.Queue
             && routing.DistributionMode == ConversationDistributionMode.Routed;
 }

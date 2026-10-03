@@ -71,7 +71,7 @@ public sealed class SmsConversationRouterTests
     }
 
     private static MessagingConversationRouter CreateRouter(params IMessagingInboundRouter[] routers)
-        => new(routers, MessagingTestChannels.Resolver(MessagingTestChannels.AcceptingDispatcher().Object), NullLogger<MessagingConversationRouter>.Instance);
+        => new(routers, MessagingTestChannels.Resolver(MessagingTestChannels.AcceptingDispatcher().Object), MessagingTestChannels.RoutingResolver(), NullLogger<MessagingConversationRouter>.Instance);
 
     private static MessagingRoutingContext CreateContext(MessagingRoutingTrigger trigger)
     {
