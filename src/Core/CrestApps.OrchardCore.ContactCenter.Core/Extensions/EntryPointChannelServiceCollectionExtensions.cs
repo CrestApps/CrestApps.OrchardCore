@@ -28,4 +28,19 @@ public static class EntryPointChannelServiceCollectionExtensions
 
         return services;
     }
+
+    /// <summary>
+    /// Lets entry points on a channel route their traffic to an AI agent. Call it from the feature that answers that
+    /// channel's traffic with an AI, so the choice is offered only while that feature is enabled.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="channel">The channel an AI agent can answer (for example "SMS").</param>
+    public static IServiceCollection AddEntryPointAIAgentChannel(this IServiceCollection services, string channel)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(channel);
+
+        services.Configure<EntryPointAIAgentOptions>(options => options.Channels.Add(channel));
+
+        return services;
+    }
 }

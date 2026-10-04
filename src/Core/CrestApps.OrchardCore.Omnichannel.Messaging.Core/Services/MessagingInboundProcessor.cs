@@ -38,6 +38,7 @@ public sealed class MessagingInboundProcessor : IMessagingInboundProcessor
     private readonly IMessagingFirstResponseSlaService _slaService;
     private readonly IEnumerable<IMessagingInboundHandler> _inboundHandlers;
     private readonly IMessagingInboundMediaIngestor _mediaIngestor;
+    private readonly IEnumerable<IMessagingAIConversationStarter> _aiConversationStarters;
     private readonly IDistributedLock _distributedLock;
     private readonly MessagingWorkspaceOptions _options;
     private readonly ISession _session;
@@ -59,6 +60,7 @@ public sealed class MessagingInboundProcessor : IMessagingInboundProcessor
         IMessagingFirstResponseSlaService slaService,
         IEnumerable<IMessagingInboundHandler> inboundHandlers,
         IMessagingInboundMediaIngestor mediaIngestor,
+        IEnumerable<IMessagingAIConversationStarter> aiConversationStarters,
         IDistributedLock distributedLock,
         IOptions<MessagingWorkspaceOptions> options,
         ISession session,
@@ -76,6 +78,7 @@ public sealed class MessagingInboundProcessor : IMessagingInboundProcessor
         _slaService = slaService;
         _inboundHandlers = inboundHandlers.OrderBy(handler => handler.Order).ToArray();
         _mediaIngestor = mediaIngestor;
+        _aiConversationStarters = aiConversationStarters;
         _distributedLock = distributedLock;
         _options = options.Value;
         _session = session;
@@ -169,6 +172,16 @@ public sealed class MessagingInboundProcessor : IMessagingInboundProcessor
         if (automatedActivity is not null && !automatedActivity.Status.IsTerminal())
         {
             return null;
+        }
+
+        // A number whose entry point routes to an AI agent has the AI take the customer's first message. The starter
+        // is shared with the automated handler, so whichever handles the message first starts the conversation once.
+        foreach (var starter in _aiConversationStarters)
+        {
+            if (await starter.TryStartAsync(message, endpoint, cancellationToken))
+            {
+                return null;
+            }
         }
 
         var conversation = await _conversationStore.FindByAddressesAsync(channel.Name, serviceAddress, contactAddress, cancellationToken);

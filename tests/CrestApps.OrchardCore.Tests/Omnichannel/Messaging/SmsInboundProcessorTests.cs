@@ -103,6 +103,46 @@ public class SmsInboundProcessorTests
         Assert.Null(harness.CreatedConversation);
     }
 
+    // A number whose text entry point routes to an AI agent: the AI takes the customer's first text, so the workspace
+    // records nothing, routes nothing and announces nothing, exactly as for a conversation the AI started itself.
+    [Fact]
+    public async Task NewInbound_ToANumberRoutedToAnAIAgent_YieldsToTheAI()
+    {
+        var starter = new Mock<IMessagingAIConversationStarter>();
+        starter
+            .Setup(s => s.TryStartAsync(It.IsAny<OmnichannelMessage>(), It.IsAny<OmnichannelChannelEndpoint>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var harness = new Harness(routing: null, aiConversationStarter: starter.Object);
+        var message = Harness.InboundMessage("Is the blue sedan still available?");
+
+        var conversation = await harness.Processor.ProcessAsync(message, TestContext.Current.CancellationToken);
+
+        Assert.Null(conversation);
+        Assert.Null(harness.CreatedConversation);
+        Assert.Null(message.ConversationId);
+        harness.Notifier.Verify(n => n.NewInboundMessageAsync(It.IsAny<MessagingInboundNotification>(), It.IsAny<CancellationToken>()), Times.Never);
+        starter.Verify(s => s.TryStartAsync(message, It.Is<OmnichannelChannelEndpoint>(endpoint => endpoint.ItemId == "endpoint-1"), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // The starter declines a number that is not routed to an AI agent, or a customer a person is already talking to;
+    // the text then reaches people as it always did.
+    [Fact]
+    public async Task NewInbound_WhenNoAIConversationStarts_LandsInTheInbox()
+    {
+        var starter = new Mock<IMessagingAIConversationStarter>();
+        starter
+            .Setup(s => s.TryStartAsync(It.IsAny<OmnichannelMessage>(), It.IsAny<OmnichannelChannelEndpoint>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var harness = new Harness(routing: null, aiConversationStarter: starter.Object);
+
+        var conversation = await harness.Processor.ProcessAsync(Harness.InboundMessage("hello"), TestContext.Current.CancellationToken);
+
+        Assert.NotNull(conversation);
+        Assert.Same(conversation, harness.CreatedConversation);
+    }
+
     [Fact]
     public async Task ExistingConversation_WhileAutomatedActivityActive_YieldsToTheAiPath()
     {
@@ -316,7 +356,8 @@ public class SmsInboundProcessorTests
             bool lockAcquired = true,
             MessagingConversation createConflictsWith = null,
             string contactContentItemId = null,
-            bool contactOptedOut = false)
+            bool contactOptedOut = false,
+            IMessagingAIConversationStarter aiConversationStarter = null)
         {
             var endpoint = new OmnichannelChannelEndpoint { ItemId = "endpoint-1", Channel = "SMS", Value = "+15553334444" };
 
@@ -410,6 +451,7 @@ public class SmsInboundProcessorTests
                         clock.Object),
                 ],
                 new FakeInboundMediaIngestor(),
+                aiConversationStarter is null ? [] : [aiConversationStarter],
                 distributedLock,
                 new OptionsWrapper<MessagingWorkspaceOptions>(new MessagingWorkspaceOptions()),
                 session.Object,

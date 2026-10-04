@@ -51,6 +51,8 @@ public sealed class ContactCenterOptionsValidationTests
             "An entry in the provider registry, populated in code alongside TelephonyProviderOptions.",
         ["EntryPointChannelOptions"] =
             "A registry of the channels each feature registered in code for entry points to answer. It is never bound from configuration.",
+        ["EntryPointAIAgentOptions"] =
+            "A registry of the channels each feature registered in code for an AI agent to answer. It is never bound from configuration.",
         ["ContactCenterProcessLivenessOptions"] =
             "Supplied by the host at pipeline construction, before any tenant exists, and validated by ContactCenterProcessLivenessPathValidator at that point.",
     };

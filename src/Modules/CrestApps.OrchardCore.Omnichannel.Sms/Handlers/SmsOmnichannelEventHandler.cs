@@ -18,6 +18,7 @@ using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Compliance.Redaction;
@@ -86,6 +87,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
     private readonly IOmnichannelActivityStore _omnichannelActivityStore;
     private readonly IEnumerable<IOmnichannelHandoffService> _handoffServices;
     private readonly ILocalLock _localLock;
+    private readonly IEnumerable<IMessagingAIConversationStarter> _aiConversationStarters;
     private readonly DocumentJsonSerializerOptions _jsonSerializerOptions;
     private readonly Redactor _addressRedactor;
     private readonly ILogger _logger;
@@ -110,6 +112,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
     /// <param name="smsProviderRouter">The router that sends through the provider owning the sending number.</param>
     /// <param name="omnichannelActivityStore">The omnichannel activity store.</param>
     /// <param name="jsonSerializerOptions">The json serializer options.</param>
+    /// <param name="aiConversationStarters">Start an AI conversation for a text to a number routed to an AI agent.</param>
     /// <param name="redactorProvider">The redactor provider used to redact sensitive values before logging.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
@@ -133,6 +136,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         IOmnichannelActivityStore omnichannelActivityStore,
         IEnumerable<IOmnichannelHandoffService> handoffServices,
         ILocalLock localLock,
+        IEnumerable<IMessagingAIConversationStarter> aiConversationStarters,
         IOptions<DocumentJsonSerializerOptions> jsonSerializerOptions,
         IRedactorProvider redactorProvider,
         ILogger<SmsOmnichannelEventHandler> logger,
@@ -157,6 +161,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         _omnichannelActivityStore = omnichannelActivityStore;
         _handoffServices = handoffServices;
         _localLock = localLock;
+        _aiConversationStarters = aiConversationStarters;
 
         _jsonSerializerOptions = jsonSerializerOptions.Value;
         _addressRedactor = redactorProvider.GetRedactor(LogDataClassifications.AddressSet);
@@ -193,6 +198,19 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         omnichannelEvent.Message.CustomerAddress,
         ActivityInteractionType.Automated,
         cancellationToken);
+
+        // A number whose text entry point routes to an AI agent has the AI take the customer's first message. The
+        // starter is shared with the messaging workspace, so whichever handles the text first starts the conversation,
+        // and it is read back here as the starter committed it.
+        if ((activity is null || activity.Status.IsTerminal()) &&
+            await StartAIConversationAsync(omnichannelEvent.Message, endpoint, cancellationToken))
+        {
+            activity = await _omnichannelActivityStore.GetAsync(omnichannelEvent.Message.Channel,
+                endpoint.GetKnownIds(),
+                omnichannelEvent.Message.CustomerAddress,
+                ActivityInteractionType.Automated,
+                cancellationToken);
+        }
 
         if (activity is null)
         {
@@ -235,9 +253,16 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
         if (flowSettings is null)
         {
-            _logger.LogWarning("The subject flow settings for subject '{SubjectContentType}' associated with Activity {ActivityId} were not found. Cannot process incoming SMS message.", activity.SubjectContentType, activity.ItemId.SanitizeLogValue());
+            if (!string.IsNullOrWhiteSpace(activity.SubjectContentType))
+            {
+                _logger.LogWarning("The subject flow settings for subject '{SubjectContentType}' associated with Activity {ActivityId} were not found. Cannot process incoming SMS message.", activity.SubjectContentType, activity.ItemId.SanitizeLogValue());
 
-            return;
+                return;
+            }
+
+            // An entry point's AI agent answering a number with no inbound SMS subject: the AI converses on its profile
+            // alone, with no dispositions to choose from and no hand-off.
+            flowSettings = new SubjectFlowSettings();
         }
 
         var profileId = string.IsNullOrWhiteSpace(activity.AIProfileId)
@@ -696,7 +721,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
                         if (activity.TryGet<LeadAIConversionSettings>(out var storedLeadConversion) && storedLeadConversion.Enabled)
                         {
-                            contact ??= await contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
+                            contact ??= await GetContactAsync(contentManager, activity);
 
                             if (!LeadAIConversion.TryGetSettings(activity, contact, out leadConversion))
                             {
@@ -723,7 +748,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
                         if (subjectTextFields.Count > 0)
                         {
-                            subject ??= activity.Subject ?? await contentManager.NewAsync(activity.SubjectContentType);
+                            subject ??= await GetSubjectAsync(contentManager, activity);
 
                             userPrompt +=
                                 $"""
@@ -734,7 +759,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
                         if (activity.AllowAIToUpdateContact)
                         {
-                            contact ??= await contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
+                            contact ??= await GetContactAsync(contentManager, activity);
 
                             userPrompt +=
                                 $"""
@@ -822,8 +847,8 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
                                     await store.UpdateAsync(omnichannelActivity);
 
-                                    subject ??= activity.Subject ?? await contentManager.NewAsync(activity.SubjectContentType);
-                                    contact ??= await contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
+                                    subject ??= await GetSubjectAsync(contentManager, activity);
+                                    contact ??= await GetContactAsync(contentManager, activity);
 
                                     // The AI judged the lead qualified and the load allows it to convert: the lead
                                     // becomes a contact before the disposition's actions run, so follow-ups land on the
@@ -1086,11 +1111,35 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         return await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(subjectContentType, cancellationToken);
     }
 
+    // A conversation an entry point's AI agent started can have no subject, and a text from an unknown number no contact.
+    private static async Task<ContentItem> GetSubjectAsync(IContentManager contentManager, OmnichannelActivity activity)
+        => activity.Subject ?? (string.IsNullOrWhiteSpace(activity.SubjectContentType)
+            ? null
+            : await contentManager.NewAsync(activity.SubjectContentType));
+
+    private static async Task<ContentItem> GetContactAsync(IContentManager contentManager, OmnichannelActivity activity)
+        => string.IsNullOrWhiteSpace(activity.ContactContentItemId)
+            ? null
+            : await contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
+
+    private async Task<bool> StartAIConversationAsync(OmnichannelMessage message, OmnichannelChannelEndpoint endpoint, CancellationToken cancellationToken)
+    {
+        foreach (var starter in _aiConversationStarters)
+        {
+            if (await starter.TryStartAsync(message, endpoint, cancellationToken))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private async Task ApplySmsOptOutAsync(
         OmnichannelActivity activity,
         CancellationToken cancellationToken)
     {
-        var contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
+        var contact = await GetContactAsync(_contentManager, activity);
 
         if (contact is null)
         {

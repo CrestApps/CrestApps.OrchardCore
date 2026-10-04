@@ -46,7 +46,7 @@ Numbers that were typed on an entry point before entry points picked them from t
 
 | Field | What it does |
 | --- | --- |
-| **Route to** | **Queue** (the default), **Specific agent**, or **AI voice agent** (calls only). A specific-agent line rings one person and never falls back to a queue. **AI voice agent** is offered when the Telnyx AI Voice Agent feature is on. |
+| **Route to** | **Queue** (the default), **Specific agent**, or an AI: **AI voice agent** for calls, offered when the Telnyx AI Voice Agent feature is on, and **AI agent** for texts, offered when SMS Omnichannel Automation is on. A specific-agent line rings one person and never falls back to a queue. |
 | **AI agent** | The AI chat profile that answers the calls (AI voice agent routing). See [AI voice agent](#ai-voice-agent). |
 | **Target queue** | The queue that receives the calls (queue routing). |
 | **Priority** | Calls only. Lowest to Highest. Calls from this number jump ahead of lower-priority work in the queue. |
@@ -85,7 +85,7 @@ To start an entry point from an existing one, open its **Actions** menu in the e
 
 ## AI voice agent
 
-A call entry point can hand its calls to an AI voice agent: an AI chat profile, such as one made from the **Answer calls at the front desk** template. This is the only place an AI is set to answer calls. Queues have no AI setting.
+A call entry point can hand its calls to an AI voice agent: an AI chat profile, such as one made from the **Answer calls at the front desk** template. This is the only place an AI is set to answer calls; texts are set the same way on a [text entry point](automated-ai.md#let-the-ai-answer-incoming-texts). Queues have no AI setting.
 
 1. Make the profile under **Artificial Intelligence > Profiles**, with an initial prompt (what it says when it picks up) and the business details its prompt asks for.
 2. On the entry point's **Routing** card, set **Route to** to **AI voice agent** and pick the profile under **AI agent**.
@@ -105,6 +105,7 @@ A text entry point has the **General**, **Routing** and **Hours** cards, with th
 
 | Field | Card | What it does |
 | --- | --- | --- |
+| **Route to: AI agent** | Routing | The AI chat profile under **AI agent** answers the texts itself, starting with the customer's first text. Offered when SMS Omnichannel Automation is on. See [Let the AI answer incoming texts](automated-ai.md#let-the-ai-answer-incoming-texts). |
 | **Queue distribution** | Routing | Queue targets only. **Shared pool (claim to own)**: every agent in the queue sees the conversation and one claims it. **Routed (assign to an available agent)**: each new conversation is given to one available agent. Routed needs the *Omnichannel Messaging Routed Distribution* feature. |
 | **Auto-reply** | Routing | A message sent back automatically to a contact who texts these numbers, at most once a day per conversation. Contacts who have opted out never receive it. |
 | **Closed auto-reply** | Hours | Sent in place of the auto-reply to a contact who texts while the entry point is closed. Their texts still reach the queue or agent, to answer when you open. Empty sends the ordinary auto-reply at any time. |

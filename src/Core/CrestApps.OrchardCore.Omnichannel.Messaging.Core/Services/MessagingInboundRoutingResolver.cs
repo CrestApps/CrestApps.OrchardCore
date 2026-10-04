@@ -55,12 +55,15 @@ public sealed class MessagingInboundRoutingResolver : IMessagingInboundRoutingRe
             await _businessHours.IsOpenAsync(entryPoint.BusinessHoursCalendarId, cancellationToken);
 
         var isAgent = entryPoint.TargetType == EntryPointTargetType.Agent;
+        var isAIAgent = entryPoint.TargetType == EntryPointTargetType.AIAgent;
 
         return new MessagingInboundRouting
         {
             EntryPointId = entryPoint.ItemId,
             TargetType = isAgent ? ConversationRouteTargetType.Agent : ConversationRouteTargetType.Queue,
-            TargetId = isAgent ? entryPoint.TargetAgentId : entryPoint.TargetQueueId,
+            // An AI agent names no person or queue, so whatever it does not answer lands in the shared inbox.
+            TargetId = isAgent ? entryPoint.TargetAgentId : isAIAgent ? null : entryPoint.TargetQueueId,
+            AIProfileId = isAIAgent && isOpen ? entryPoint.TargetAIProfileId : null,
             DistributionMode = settings.DistributionMode,
             IsOpen = isOpen,
             AutoReplyMessage = !isOpen && !string.IsNullOrWhiteSpace(settings.ClosedAutoReplyMessage)

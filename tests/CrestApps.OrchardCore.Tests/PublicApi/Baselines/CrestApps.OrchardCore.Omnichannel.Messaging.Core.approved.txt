@@ -342,6 +342,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models
     public sealed class MessagingInboundRouting
     {
         public MessagingInboundRouting() { }
+        public string AIProfileId { get; init; }
         public string AutoReplyMessage { get; init; }
         public CrestApps.OrchardCore.Omnichannel.Messaging.Models.ConversationDistributionMode DistributionMode { get; init; }
         public string EntryPointId { get; init; }
@@ -421,6 +422,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services
     }
     public interface IMessageTemplateManager : CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessageTemplate>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessageTemplate> { }
     public interface IMessageTemplateStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessageTemplate>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessageTemplate> { }
+    public interface IMessagingAIConversationStarter
+    {
+        System.Threading.Tasks.Task<bool> TryStartAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage message, CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint address, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IMessagingAgentNameProvider
     {
         System.Threading.Tasks.Task<string> GetDisplayNameAsync(string agentId, System.Threading.CancellationToken cancellationToken = default);
@@ -669,6 +674,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services
                     CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingFirstResponseSlaService slaService,
                     System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.IMessagingInboundHandler> inboundHandlers,
                     CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.IMessagingInboundMediaIngestor mediaIngestor,
+                    System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingAIConversationStarter> aiConversationStarters,
                     OrchardCore.Locking.Distributed.IDistributedLock distributedLock,
                     Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingWorkspaceOptions> options,
                     YesSql.ISession session,

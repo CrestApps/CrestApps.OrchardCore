@@ -69,6 +69,70 @@ public sealed class MessagingEntryPointRoutingTests
         Assert.Equal("agent-1", routing.TargetId);
     }
 
+    // An open entry point that routes to an AI agent names the profile that answers. It names no person or queue, so a
+    // text the AI does not take lands in the shared inbox rather than with whoever the entry point used to route to.
+    [Fact]
+    public async Task Resolve_NamesTheAIProfileOfAnOpenAIAgentEntryPoint()
+    {
+        // Arrange
+        var line = Address("line", OmnichannelConstants.Channels.Sms);
+        var texts = EntryPoint("texts", OmnichannelConstants.Channels.Sms, "line");
+        texts.TargetType = EntryPointTargetType.AIAgent;
+        texts.TargetAIProfileId = "front-desk";
+
+        var resolver = CreateResolver([texts], isOpen: true);
+
+        // Act
+        var routing = await resolver.ResolveAsync(line, OmnichannelConstants.Channels.Sms, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("front-desk", routing.AIProfileId);
+        Assert.Null(routing.TargetId);
+    }
+
+    // A closed AI entry point leaves its texts to people, with its closed reply, as a closed voice entry point sends
+    // its calls to voicemail rather than to the AI.
+    [Fact]
+    public async Task Resolve_NamesNoAIProfileWhileTheAIAgentEntryPointIsClosed()
+    {
+        // Arrange
+        var line = Address("line", OmnichannelConstants.Channels.Sms);
+        var texts = EntryPoint("texts", OmnichannelConstants.Channels.Sms, "line");
+        texts.TargetType = EntryPointTargetType.AIAgent;
+        texts.TargetAIProfileId = "front-desk";
+        texts.BusinessHoursCalendarId = "office";
+        texts.Put(new MessagingEntryPointSettings { ClosedAutoReplyMessage = "We are closed." });
+
+        var resolver = CreateResolver([texts], isOpen: false);
+
+        // Act
+        var routing = await resolver.ResolveAsync(line, OmnichannelConstants.Channels.Sms, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(routing.AIProfileId);
+        Assert.Null(routing.TargetId);
+        Assert.Equal("We are closed.", routing.AutoReplyMessage);
+    }
+
+    // A queue or agent entry point never names an AI profile, even one left behind from when it routed to an AI.
+    [Fact]
+    public async Task Resolve_NamesNoAIProfileForAQueueEntryPoint()
+    {
+        // Arrange
+        var line = Address("line", OmnichannelConstants.Channels.Sms);
+        var texts = EntryPoint("texts", OmnichannelConstants.Channels.Sms, "line");
+        texts.TargetAIProfileId = "front-desk";
+
+        var resolver = CreateResolver([texts], isOpen: true);
+
+        // Act
+        var routing = await resolver.ResolveAsync(line, OmnichannelConstants.Channels.Sms, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(routing.AIProfileId);
+        Assert.Equal("queue", routing.TargetId);
+    }
+
     [Fact]
     public async Task Resolve_ReturnsNothingWhenNoEntryPointAnswersTheNumberForTexts()
     {
