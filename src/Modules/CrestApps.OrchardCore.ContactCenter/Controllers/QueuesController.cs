@@ -71,6 +71,10 @@ public sealed class QueuesController : ContactCenterCatalogController<ActivityQu
     protected override LocalizedHtmlString DeletedNotification
         => H["The queue has been deleted successfully."];
 
+    /// <inheritdoc/>
+    protected override void InitializeClone(ActivityQueue clone, ActivityQueue source)
+        => clone.Name = S["Copy of {0}", source.Name];
+
     /// <summary>
     /// Lists the queues.
     /// </summary>
@@ -102,20 +106,22 @@ public sealed class QueuesController : ContactCenterCatalogController<ActivityQu
     /// <summary>
     /// Displays the queue create form.
     /// </summary>
+    /// <param name="cloneId">The identifier of the queue to copy, when cloning one.</param>
     /// <returns>The create view.</returns>
     [Admin("contact-center/queues/create", "ContactCenterQueuesCreate")]
-    public Task<IActionResult> Create()
-        => CreateAsync();
+    public Task<IActionResult> Create([FromQuery] string cloneId)
+        => CreateAsync(cloneId);
 
     /// <summary>
     /// Persists a new queue.
     /// </summary>
+    /// <param name="cloneId">The identifier of the queue being copied, when cloning one.</param>
     /// <returns>A redirect to the list or the form when invalid.</returns>
     [HttpPost]
     [ActionName(nameof(Create))]
     [Admin("contact-center/queues/create", "ContactCenterQueuesCreate")]
-    public Task<IActionResult> CreatePost()
-        => CreatePostAsync();
+    public Task<IActionResult> CreatePost([FromQuery] string cloneId)
+        => CreatePostAsync(cloneId);
 
     /// <summary>
     /// Displays the queue edit form.

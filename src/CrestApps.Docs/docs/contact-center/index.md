@@ -14,7 +14,7 @@ The **Contact Center** module set turns the CRM into a full contact center that 
 
 Enable `CrestApps.OrchardCore.ContactCenter` for the interaction lifecycle, durable event log, baseline permissions, settings, and administration menu.
 
-:::tip Operating the Contact Center day to day
+:::tip[Operating the Contact Center day to day]
 If you just need to *do* something — sign in to a queue, accept a call, request a break, create a queue, load dialer activities, or monitor and whisper to an agent — go to the task-by-task [User Manual](../user-manual/index.md), where each task has its own how-to and screencast. The older [Agent & Supervisor User Manual](user-manual.md) covers the same ground in one page.
 :::
 

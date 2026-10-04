@@ -240,7 +240,7 @@ How a call is supervised, command by command:
    **Listen** joins as an ordinary participant with `mute: true` (heard by nobody); **Whisper** joins with
    `supervisor_role: whisper` and `whisper_call_control_ids: [agent leg]` (heard by the agent only); **Barge** with
    `supervisor_role: barge` (heard by both).
-   :::warning Listen does not use `supervisor_role: monitor`
+   :::warning[Listen does not use `supervisor_role: monitor`]
    Live, joining a supervisor with `monitor` left the caller and the agent unable to hear each other for as long as the
    supervisor listened (the agent's received audio dropped to silence while its packets kept arriving), and changing the
    role afterwards did not bring it back. A muted participant hears everything and is heard by nobody.
@@ -293,7 +293,7 @@ Transfer and Record are the interaction's, so a phone call offers neither. A cal
 server could not bridge it) has no leg the platform controls, and still shows **Cannot be monitored**. Supervisors still
 on a phone call are let go when it ends.
 
-:::note Recordings
+:::note[Recordings]
 With a supervisor barging, the barge audio is part of what the caller's leg hears, so a call recording running on that
 leg includes it; a monitoring or whispering supervisor is not heard by the caller and is not in the caller's recording.
 :::

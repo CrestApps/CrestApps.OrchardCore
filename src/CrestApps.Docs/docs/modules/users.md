@@ -12,7 +12,7 @@ description: Enhanced user management with display name customization and avatar
 
 Extends the Orchard Core Users module by adding functionality to cache users.
 
-:::note Note
+:::note[Note]
 This feature is enabled by dependency only.
 :::
 

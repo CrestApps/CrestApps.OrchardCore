@@ -1,6 +1,7 @@
 using CrestApps.Core;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Deployments;
 using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Core.Validation;
 using Microsoft.AspNetCore.Authorization;
@@ -175,19 +176,30 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
         => Task.FromResult(true);
 
     /// <summary>
+    /// Adjusts a copy of an existing entry before its editor is built, so it can be told apart from its source and
+    /// does not claim anything only one entry may hold.
+    /// </summary>
+    /// <param name="clone">The new, unsaved entry carrying the configuration of <paramref name="source"/>.</param>
+    /// <param name="source">The entry being cloned.</param>
+    protected virtual void InitializeClone(TModel clone, TModel source)
+    {
+    }
+
+    /// <summary>
     /// Displays the create form.
     /// </summary>
+    /// <param name="cloneId">The identifier of an entry whose configuration the new entry starts from, if any.</param>
     /// <returns>The create view.</returns>
-    protected async Task<IActionResult> CreateAsync()
+    protected async Task<IActionResult> CreateAsync(string cloneId = null)
     {
         if (!await _authorizationService.AuthorizeAsync(User, ManagePermission))
         {
             return Forbid();
         }
 
-        var model = await _manager.NewAsync();
+        var model = await NewModelAsync(cloneId);
 
-        if (!await InitializeNewAsync(model))
+        if (model is null)
         {
             return NotFound();
         }
@@ -204,17 +216,18 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
     /// <summary>
     /// Persists a new entry.
     /// </summary>
+    /// <param name="cloneId">The identifier of an entry whose configuration the new entry starts from, if any.</param>
     /// <returns>A redirect to the list or the form when invalid.</returns>
-    protected async Task<IActionResult> CreatePostAsync()
+    protected async Task<IActionResult> CreatePostAsync(string cloneId = null)
     {
         if (!await _authorizationService.AuthorizeAsync(User, ManagePermission))
         {
             return Forbid();
         }
 
-        var model = await _manager.NewAsync();
+        var model = await NewModelAsync(cloneId);
 
-        if (!await InitializeNewAsync(model))
+        if (model is null)
         {
             return NotFound();
         }
@@ -325,5 +338,31 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
         }
 
         return RedirectToAction(_indexAction);
+    }
+
+    // A clone is built the way a deployment plan would recreate its source: every configured member is carried and
+    // none of the record's identity or history, so it is a new entry with the same settings. The post rebuilds it the
+    // same way before binding the form, which keeps the settings the editor does not show.
+    private async Task<TModel> NewModelAsync(string cloneId)
+    {
+        if (string.IsNullOrEmpty(cloneId))
+        {
+            var model = await _manager.NewAsync();
+
+            return await InitializeNewAsync(model) ? model : null;
+        }
+
+        var source = await _manager.FindByIdAsync(cloneId);
+
+        if (source is null)
+        {
+            return null;
+        }
+
+        var clone = await _manager.NewAsync(ContactCenterDeploymentSerializer.Export(source));
+
+        InitializeClone(clone, source);
+
+        return clone;
     }
 }

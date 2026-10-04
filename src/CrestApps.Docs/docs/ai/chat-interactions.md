@@ -155,7 +155,7 @@ Chat Interaction memory is:
 
 For document upload and retrieval-augmented generation (RAG) support, see the [Documents feature documentation](documents/).
 
-:::note Note
+:::note[Note]
 The `AI Documents` feature is provided on demand and is only enabled when another feature that requires it is enabled (for example one of the document indexing provider features). To configure document indexing you must enable either the `AI Documents (Azure AI Search)` feature or the `AI Documents (Elasticsearch)` feature in Orchard Core admin.
 :::
 

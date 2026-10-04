@@ -37,10 +37,10 @@ A disabled skill stays on the agents and queues that already use it, but it can 
 
 The list shows how many queues and campaigns each agent is allowed. Entitlement records cannot be deleted; remove the queues and campaigns instead.
 
-:::info Supervisors need entitlements too
+:::info[Supervisors need entitlements too]
 The [live dashboard](live-dashboard.md) and [shared voicemail](voicemail.md#shared-voicemail) show a supervisor only the queues and campaigns on **their own** entitlement record. Give each supervisor an entitlement record with the queues they supervise, or their dashboard is empty.
 :::
 
-:::note When the entitlements feature is off
+:::note[When the entitlements feature is off]
 Without the Agent Entitlements feature, any agent may sign in to any queue or campaign, and there is no screen to give agents skills. Turn the feature on as soon as queues need skills or you have more than one team.
 :::

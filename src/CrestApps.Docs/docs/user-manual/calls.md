@@ -82,6 +82,6 @@ Transferring to an outside number needs the *Transfer calls externally* permissi
 
 A queue or campaign call puts you in **Wrap-up** until you complete the activity. See [Agent workspace](agent-workspace.md#after-the-call-wrap-up).
 
-:::note About the screencast
+:::note[About the screencast]
 The first screencast shows the keypad and the extension search and stops before a call is placed; the others are live calls. Completing a transfer and conferencing use the buttons described above.
 :::

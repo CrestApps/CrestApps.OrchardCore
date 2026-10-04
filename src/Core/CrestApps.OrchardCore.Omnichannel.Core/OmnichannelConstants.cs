@@ -306,6 +306,11 @@ public static class OmnichannelConstants
         public readonly static Permission ManageActivityBatches = new("ManageActivityBatches", "Manage activity batches");
 
         /// <summary>
+        /// Gets the permission to delete an activity batch that has finished loading. The activities it created are kept.
+        /// </summary>
+        public readonly static Permission DeleteLoadedActivityBatches = new("DeleteLoadedActivityBatches", "Delete loaded activity batches");
+
+        /// <summary>
         /// Gets the permission to manage channel endpoints.
         /// </summary>
         public readonly static Permission ManageChannelEndpoints = new("ManageChannelEndpoints", "Manage omnichannel addresses");

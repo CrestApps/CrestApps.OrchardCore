@@ -5,7 +5,7 @@ title: Contact Center Agent and Supervisor User Manual
 description: A task-oriented, searchable how-to manual for every day-to-day Contact Center action an agent or supervisor performs, with step-by-step instructions.
 ---
 
-:::info New task-by-task manual
+:::info[New task-by-task manual]
 The [User Manual](../user-manual/index.md) covers the same tasks one page at a time, with a screencast for each. Each task below links to its page there.
 :::
 
@@ -16,7 +16,7 @@ This is the task-oriented user manual for the two people who operate the Contact
 
 Each task below is written as an independent, searchable **how-to** with its own heading, prerequisites, and numbered steps, so you can jump straight to the one action you need. For the concepts and architecture behind these tasks, see [Agents, Queues & Dialer](agents-queues-dialer.md) and [Agent Desktop & Dashboard](agent-desktop.md).
 
-:::info Where the audio lives
+:::info[Where the audio lives]
 The [Telephony soft phone](../telephony/index.md) is where call audio and the device controls (dial pad, hold, mute, transfer, hang up) live. The **Agent Workspace** (*Interaction Center → My workspace*) adds the CRM context, work offers, and wrap-up. Keep both open during a shift.
 :::
 
@@ -182,7 +182,7 @@ In every case the call leaves your phone at once and you go into wrap-up, or str
 
 If the person you consulted hangs up or does not answer within 30 seconds, the caller comes straight back to you and the panel says so. If the caller hangs up during the consult, the consult ends and the person you consulted is released. A queue cannot be consulted; send the call to a queue with a blind transfer.
 
-:::caution Provider differences
+:::caution[Provider differences]
 Transfer support is provider-dependent. The bundled **Asterisk** provider supports **blind transfer** and a **two-call conference** but rejects warm (consultative) transfer. **Telnyx** supports every Contact Center transfer above, including the consult. Only the actions the active provider supports are shown.
 
 On **Telnyx**, a number you dial from the keypad is connected by the phone system: your phone rings its own line for a moment and answers it by itself, and the number is dialed from there. Such a call can be transferred -- blind or warm, to a number or an extension -- and merged like any other. If the phone system cannot connect the call that way -- for example your phone is still registering -- the phone dials the number itself, and that call cannot be transferred or merged: the transfer panel says so instead of offering a target, and its line in **Active calls** shows a disabled checkbox.

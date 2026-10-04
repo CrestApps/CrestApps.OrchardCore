@@ -18,7 +18,7 @@ There are three sources:
 | | |
 | --- | --- |
 | **Menu** | Interaction Center > Management > Load Activities |
-| **Permission** | Manage activity batches |
+| **Permission** | Manage activity batches. Deleting a finished load also needs **Delete loaded activity batches**. |
 | **Feature** | Omnichannel Management |
 
 ## Manual loads
@@ -31,7 +31,11 @@ There are three sources:
 2. Fill in the load (fields below). A manual load needs a **Channel** and at least one user in **User(s) to assign activities to**; the activities are shared between the users you pick. Click **Save**.
 3. In the list, open the load's **Actions** menu, choose **Load batch** and confirm with **Ok**. The load runs in the background: the status moves through *Started* and *Loading* to *Loaded*, and the row then shows how many activities it created, how many contacts matched the filters, and why any matching contact was skipped (see [What a load reports](#what-a-load-reports)).
 
-Once a load has started it can no longer be edited or deleted.
+Once a load has started it can no longer be edited. While it is *Started* or *Loading* it cannot be deleted either.
+
+### Delete a finished load
+
+A load whose status is *Loaded* can be deleted by users with the **Delete loaded activity batches** permission. Click **Delete** on its row and confirm. Only the load and its report are removed. The activities it created are kept, with their assignments and schedules. To withdraw those activities, cancel or purge them under **Manage Activities**.
 
 ## Dialer loads
 

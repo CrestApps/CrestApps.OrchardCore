@@ -79,9 +79,13 @@ To speak the welcome, the call is answered. On a line with no menu the caller th
 | **Deliver voicemail to** | Queue lines only: **An agent's inbox** (the default) or **The queue's shared voicemail box**, which any entitled supervisor or agent can pick up from [Shared voicemail](voicemail.md#shared-voicemail). |
 | **Voicemail inbox** | The agent whose inbox receives the voicemail. Hidden when the shared box is chosen. |
 
+## Clone an entry point
+
+To start an entry point from an existing one, open its **Actions** menu in the entry point list and choose **Clone**. The form opens with every setting of the original, including its routing, hours, phone menu and voicemail, and the name **Copy of** the original's name. **Numbers** starts empty, because each number is answered by one entry point on each channel. Pick the new entry point's numbers and click **Save**.
+
 ## AI voice agent
 
-A call entry point can hand its calls to an AI voice agent: an AI chat profile, such as one made from the **Answer calls at the front desk** template.
+A call entry point can hand its calls to an AI voice agent: an AI chat profile, such as one made from the **Answer calls at the front desk** template. This is the only place an AI is set to answer calls. Queues have no AI setting.
 
 1. Make the profile under **Artificial Intelligence > Profiles**, with an initial prompt (what it says when it picks up) and the business details its prompt asks for.
 2. On the entry point's **Routing** card, set **Route to** to **AI voice agent** and pick the profile under **AI agent**.

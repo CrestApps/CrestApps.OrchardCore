@@ -370,11 +370,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
     {
         public ChannelEndpointsController(CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint> manager, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor updateModelAccessor, OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint> displayManager, OrchardCore.DisplayManagement.Notify.INotifier notifier, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelAddressOptions> addressOptions, Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.ChannelEndpointsController> htmlLocalizer, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.ChannelEndpointsController> stringLocalizer) { }
         [OrchardCore.Admin.Admin("omnichannel/channel-endpoints/create/{source}", "OmnichannelChannelEndpointsCreate")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> Create(string source) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> Create(string source, [Microsoft.AspNetCore.Mvc.FromQuery] string cloneId) { }
         [Microsoft.AspNetCore.Mvc.ActionName("Create")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/channel-endpoints/create/{source}", "OmnichannelChannelEndpointsCreate")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> CreatePost(string source) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> CreatePost(string source, [Microsoft.AspNetCore.Mvc.FromQuery] string cloneId) { }
         [OrchardCore.Admin.Admin("omnichannel/channel-endpoints/edit/{id}", "OmnichannelChannelEndpointsEdit")]
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> Edit(string id) { }
         [Microsoft.AspNetCore.Mvc.ActionName("Edit")]

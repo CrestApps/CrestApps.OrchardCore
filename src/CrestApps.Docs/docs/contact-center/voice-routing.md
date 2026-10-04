@@ -529,7 +529,7 @@ The current voice flow stays consistent because it combines these protections:
 
 ## Current limitations and important notes
 
-:::danger Not an emergency-calling service
+:::danger[Not an emergency-calling service]
 Contact Center is **not** an emergency (E911/112/999) calling service and must never be relied on for life-safety communication. It performs no location determination, no routing to a Public Safety Answering Point, and no registered-address provisioning; no emergency-service origination code path exists anywhere in the platform.
 
 The emergency-number denial is enforced by `IDialDestinationPolicy`, which every dial and transfer path consults: the Contact Center server-side paths (outbound first-dial through `DialProviderCommandTypeExecutor`, external-transfer resolution through `TransferDestinationResolver`, and the approved-destination settings screen) **and** the Telephony soft-phone keypad, transfer field and extension field, which all reach `DefaultTelephonyService` and are refused there before any provider is called. The policy refuses a broad set of emergency short codes (`911`, `112`, `999`, `000`, `110`, `119`, `100`, `102`, `108`, `113`, `117`, `118`, `122`, `133`, `190`, `191`, `192`, `193`, `194`, `997`, `998`) matched as the whole dialed string after an optional trunk prefix is stripped, and the tenant allow-list of ordinary short codes can never open an emergency code.

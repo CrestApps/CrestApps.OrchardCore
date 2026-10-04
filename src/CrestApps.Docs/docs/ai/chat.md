@@ -213,7 +213,7 @@ Navigate to **Settings** → **Artificial Intelligence** → **Admin Widget** to
 - **Max Sessions**: Set the maximum number of previous chat sessions displayed in the history panel (1–50).
 - **Primary Color**: Customize the widget's primary color (header, toggle button). Defaults to `#41b670` (Orchard Core green).
 
-- :::tip Pro Tip
+:::tip[Pro Tip]
 It's best to enable **Orchard Core AI Agent** (i.e., `CrestApps.OrchardCore.AI.Agent`). Then when creating a profile, select all available capabilities to allow the profile to perform tasks on your website.
 :::
 
@@ -298,7 +298,7 @@ When a visitor is throttled while starting a new chat, the message shown to them
 
 The two tier fields accept one tier per line in the form `limit, window`, where the window is a .NET `TimeSpan` such as `00:00:30`, `01:00:00`, or `1.00:00:00` for a day. A request is throttled when it would exceed **any** configured tier, which lets a short burst tier sit alongside longer sustained tiers. Blank lines are ignored, and clearing the field falls back to the single-window limits above. Tiers apply to anonymous callers only — authenticated callers are always governed by **Maximum messages per window** and **Message rate-limit window**.
 
-:::caution Tiers take precedence over the single-window values
+:::caution[Tiers take precedence over the single-window values]
 The single-window settings are **fallbacks used only when the matching tier field is empty**. Because the shipped defaults populate both tier fields, lowering **Maximum anonymous sessions per window** on its own has **no effect**.
 
 For example, setting **Maximum anonymous sessions per window** to `5` while the default `10, 00:05:00` tier is still present throttles anonymous visitors at **10**, not `5`. To make the single-window value authoritative, clear the tier field; to tighten the limit while keeping tiers, lower the relevant tier instead. The same applies to **Maximum messages per window** for anonymous callers.
