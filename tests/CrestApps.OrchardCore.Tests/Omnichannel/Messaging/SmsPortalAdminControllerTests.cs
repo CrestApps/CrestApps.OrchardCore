@@ -595,6 +595,8 @@ public sealed class SmsPortalAdminControllerTests
                 Mock.Of<IMessagingAttachmentStore>(),
                 NullLogger<MessagingAttachmentUploads>.Instance,
                 new NullStringLocalizer<MessagingAttachmentUploads>()),
+            Mock.Of<CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentAddressResolver>(resolver =>
+                resolver.ResolveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()) == Task.FromResult(new CrestApps.OrchardCore.ContactCenter.Core.Models.AgentAddresses())),
             authorizationService,
             Mock.Of<INotifier>(),
             NullLogger<AdminController>.Instance,

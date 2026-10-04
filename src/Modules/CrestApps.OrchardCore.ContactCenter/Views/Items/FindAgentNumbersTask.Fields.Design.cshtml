@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.ContactCenter.Workflows.Models
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<FindAgentNumbersTask>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-phone" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Find Agent Numbers"])
+    </h4>
+</header>

@@ -556,6 +556,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string SelectedAgentId { get; set; }
         public bool Succeeded { get; set; }
     }
+    public sealed class AgentAddresses
+    {
+        public AgentAddresses() { }
+        public bool IsDefaultPhone { get; init; }
+        public bool IsDefaultSms { get; init; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint PhoneAddress { get; init; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint SmsAddress { get; init; }
+    }
     public sealed class AgentAvailability
     {
         public AgentAvailability() { }
@@ -1251,6 +1259,12 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         Personal = 1,
         SensitivePersonal = 2,
     }
+    public sealed class ContactCenterDefaultAddressSettings
+    {
+        public ContactCenterDefaultAddressSettings() { }
+        public string DefaultPhoneAddressId { get; set; }
+        public string DefaultSmsAddressId { get; set; }
+    }
     public sealed class ContactCenterEntityRetentionResult
     {
         public ContactCenterEntityRetentionResult() { }
@@ -1906,6 +1920,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string DefaultRegionCode { get; set; }
         public bool EnforceCallingWindow { get; set; }
         public bool RespectDoNotCall { get; set; }
+    }
+    public sealed class MessagingLineSettings
+    {
+        public MessagingLineSettings() { }
+        public System.Collections.Generic.IList<string> UserIds { get; set; }
     }
     public sealed class MonitorSession
     {
@@ -2858,6 +2877,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         public ActivityRoutingService(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityRoutingStrategy> strategies) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityRoutingDecision> SelectAgentAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue, CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem queueItem, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentAvailability> availability, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class AgentAddressResolver : CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentAddressResolver
+    {
+        public AgentAddressResolver(CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointManager addressManager, OrchardCore.Settings.ISiteService siteService) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentAddresses> ResolveAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class AgentAvailabilityRecoveryService : CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentAvailabilityRecoveryService
     {
@@ -3832,6 +3856,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         int Order { get; }
         System.Threading.Tasks.ValueTask ApplyAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityRoutingContext context, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IAgentAddressResolver
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentAddresses> ResolveAsync(string userId, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IAgentAvailabilityRecoveryService
     {
@@ -4887,6 +4915,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         public MaskingSecureCaptureTokenSink() { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.SecureCaptureTokenResult> TokenizeAsync(CrestApps.OrchardCore.ContactCenter.Models.SecureCaptureField field, string rawValue, string idempotencyKey, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public static class MessagingLines
+    {
+        public static CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint FindAssignedLine(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint> addresses, string userId, string channel, string excludeAddressId = null) { }
+        public static System.Collections.Generic.IReadOnlyList<string> GetUserIds(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint address) { }
     }
     public sealed class NoAgentWorkStateHealingService : CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentWorkStateHealingService
     {

@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<SendTextMessageTask>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-comment-sms" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Send Text Message"])
+    </h4>
+</header>

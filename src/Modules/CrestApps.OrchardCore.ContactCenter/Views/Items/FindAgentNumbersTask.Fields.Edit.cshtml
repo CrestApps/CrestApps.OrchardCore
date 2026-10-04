@@ -1,0 +1,21 @@
+@using CrestApps.OrchardCore.ContactCenter.Workflows.ViewModels
+
+@model FindAgentNumbersTaskViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="UserName">
+    <label class="ocat-label" asp-for="UserName">@T["User name"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="UserName" />
+        <span asp-validation-for="UserName"></span>
+        <span class="hint">@T["A Liquid expression resolving the agent's user name, for example the user who placed the call. A user identifier or an email address works too. Leave it empty to get the default numbers."]</span>
+    </div>
+</div>
+
+<div class="alert alert-info mb-0">
+    <p class="mb-1">@T["Writes two outputs:"]</p>
+    <ul class="mb-1">
+        <li>@T["<code>{{ Workflow.Output.AgentPhoneNumber }}</code>: the number the agent calls from, from the Omnichannel Address whose \"Agents who dial from this number\" lists them."]</li>
+        <li>@T["<code>{{ Workflow.Output.AgentSmsNumber }}</code>: the number the agent texts from, from the address whose \"Agents who text from this number\" lists them."]</li>
+    </ul>
+    <p class="mb-0">@T["An agent with no number of their own gets the default numbers chosen under Settings > Contact Center. The task ends in Not found when there is neither."]</p>
+</div>

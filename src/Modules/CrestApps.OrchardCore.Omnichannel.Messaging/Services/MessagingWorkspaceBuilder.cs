@@ -545,9 +545,10 @@ public sealed class MessagingWorkspaceBuilder
             }
         }
 
-        var selected = !string.IsNullOrEmpty(selectedEndpointId)
-            ? items.FirstOrDefault(item => item.Value == selectedEndpointId)
-            : preferred ?? items.FirstOrDefault();
+        // A requested endpoint that is not offered (removed, or no longer used for messaging) falls back like none was.
+        var selected = (string.IsNullOrEmpty(selectedEndpointId) ? null : items.FirstOrDefault(item => item.Value == selectedEndpointId))
+            ?? preferred
+            ?? items.FirstOrDefault();
 
         if (selected is not null)
         {

@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<SendTextMessageTask>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-comment-sms" aria-hidden="true"></i>
+    @T["Send Text Message"]
+</h4>
+<p>@T["Sends a text from one of your SMS numbers, into the customer's conversation."]</p>

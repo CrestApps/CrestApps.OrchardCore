@@ -228,6 +228,10 @@ public sealed class Startup : StartupBase
         // The channel-endpoint handler of the Omnichannel feature applies it; the workspace only says how.
         services.AddScoped<IChannelEndpointAddressPolicy, MessagingChannelEndpointAddressPolicy>();
         services.AddDisplayDriver<ContactCenterEntryPoint, MessagingEntryPointDisplayDriver>();
+
+        // The agents who text from a number, on the number's messaging card, held to one number per agent per channel.
+        services.AddDisplayDriver<OmnichannelChannelEndpoint, MessagingLineEndpointDisplayDriver>();
+        services.AddScoped<IChannelEndpointRule, MessagingLineEndpointRule>();
         services.AddDisplayDriver<MessagingConversation, MessagingConversationDisplayDriver>();
         services.AddDisplayDriver<MessageTemplate, MessageTemplateDisplayDriver>();
         services.AddNavigationProvider<MessagingAdminMenu>();
