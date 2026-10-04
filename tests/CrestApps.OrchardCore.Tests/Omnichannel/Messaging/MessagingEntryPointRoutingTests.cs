@@ -179,6 +179,27 @@ public sealed class MessagingEntryPointRoutingTests
     }
 
     [Fact]
+    public async Task Migration_MovesRoutingTheSmsPortalStoredUnderItsOwnName()
+    {
+        // Arrange
+        var line = Address("line", OmnichannelConstants.Channels.Sms);
+        line.Properties = new Dictionary<string, object>
+        {
+            ["SmsEndpointRoutingSettings"] = System.Text.Json.JsonSerializer.SerializeToElement(new { TargetType = "Queue", TargetId = "support", DistributionMode = "SharedPool" }),
+        };
+        var harness = new MigrationHarness([line], []);
+
+        // Act
+        await harness.RunAsync();
+
+        // Assert
+        var texts = Assert.Single(harness.EntryPoints);
+        Assert.Equal(EntryPointTargetType.Queue, texts.TargetType);
+        Assert.Equal("support", texts.TargetQueueId);
+        Assert.False(line.Properties.ContainsKey("SmsEndpointRoutingSettings"));
+    }
+
+    [Fact]
     public async Task Migration_MovesAnAgentRoute()
     {
         // Arrange

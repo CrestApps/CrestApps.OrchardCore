@@ -364,7 +364,10 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
                     (!isDialerLoad && endpoint.HasCapability(OmnichannelConstants.Channels.Sms)))
                 .OrderBy(endpoint => endpoint.DisplayText))
             {
-                channelEndpointItems.Add(new SelectListItem($"{endpoint.DisplayText} ({endpoint.Value})", endpoint.ItemId, endpoint.ItemId == model.ChannelEndpointId));
+                var text = string.IsNullOrWhiteSpace(endpoint.DisplayText) || endpoint.DisplayText == endpoint.Value
+                    ? endpoint.Value
+                    : $"{endpoint.DisplayText} ({endpoint.Value})";
+                channelEndpointItems.Add(new SelectListItem(text, endpoint.ItemId, endpoint.ItemId == model.ChannelEndpointId));
                 model.ChannelEndpointCapabilities[endpoint.ItemId] = string.Join(",", endpoint.GetCapabilities());
             }
 

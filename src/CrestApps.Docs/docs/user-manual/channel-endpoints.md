@@ -2,7 +2,7 @@
 sidebar_label: Omnichannel Addresses
 sidebar_position: 15
 title: Omnichannel Addresses
-description: List the phone numbers you own, tick what each is used for (calls, texts or both), choose the SMS provider, and set how inbound calls and texts are routed.
+description: List the phone numbers you own, tick what each is used for (calls, texts or both), choose the SMS provider, and pick the agents who call and text from each number.
 ---
 
 An **omnichannel address** is an address the business owns, such as a phone number. Each address is listed once, with a checkbox for each thing it is used for: **Voice calls**, **Text messages (SMS)**, or both. Addresses are what agents dial out from, what automatic SMS loads and the Messaging workspace send from, what automated inbound subjects answer on, and where incoming calls and texts are matched.
@@ -12,6 +12,10 @@ An **omnichannel address** is an address the business owns, such as a phone numb
 | **Menu** | Interaction Center > Management > Omnichannel Addresses |
 | **Permission** | Manage omnichannel addresses |
 | **Feature** | Omnichannel Management. **Voice calls** comes with Contact Center Voice, which the voice features turn on; **Text messages (SMS)** comes with SMS Messaging Channel. |
+
+<video controls preload="metadata" width="100%" aria-label="Screencast of adding a phone number used for calls and texts, with the agents who dial and text from it">
+  <source src="/img/docs/um-channel-endpoints.mp4" type="video/mp4" />
+</video>
 
 ## Add an address
 

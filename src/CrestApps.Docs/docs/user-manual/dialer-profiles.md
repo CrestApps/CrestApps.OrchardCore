@@ -57,7 +57,7 @@ With a Power profile the agent only signs in and stays **Available**. Within a m
    | **Retry delay (minutes)** | Power, Progressive | How long to wait after an attempt before dialing the record again. Default 60. |
    | **Screen out answering machines** | Power, Progressive | **Off** (default), **Standard detection** or **Premium detection**. When on, the agent is connected only after the provider hears a person. A call answered by a voicemail or fax machine is hung up, the agent goes straight back to Ready without wrap-up, and the record is dialed again after the retry delay (it counts as an attempt). The person who answers hears a few seconds of silence while the call is screened. Telnyx only. |
 
-4. On **Caller ID**, pick the **Caller ID** number customers see from your [Omnichannel Addresses](channel-endpoints.md) used for **Voice calls** (**Provider default** uses the provider's caller ID), and pick the **Default calling region** used for numbers written without a country code. A number typed before caller IDs were picked stays selected until you change it.
+4. On **Caller ID**, pick the **Caller ID** number customers see from your [Omnichannel Addresses](channel-endpoints.md) used for **Voice calls** (**Provider default** uses the provider's caller ID). A **Dial from** number picked when activities are loaded is shown instead for that load's calls, unless **Always show this caller ID** is ticked, and pick the **Default calling region** used for numbers written without a country code. A number typed before caller IDs were picked stays selected until you change it.
 5. On **Compliance**:
 
    | Field | What it does |
