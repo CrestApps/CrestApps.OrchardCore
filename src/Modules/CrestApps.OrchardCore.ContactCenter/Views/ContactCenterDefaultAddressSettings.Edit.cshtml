@@ -6,7 +6,7 @@
 <div class="ocat-wrapper" asp-validation-class-for="DefaultPhoneAddressId">
     <label asp-for="DefaultPhoneAddressId" class="ocat-label">@T["Default phone number"]</label>
     <div class="ocat-end">
-        <select asp-for="DefaultPhoneAddressId" asp-items="Model.PhoneAddressOptions" class="selectpicker show-tick" data-style="btn-light" data-live-search="true" data-header="@T["Select a number"]" title="@T["None"]">
+        <select asp-for="DefaultPhoneAddressId" asp-items="Model.PhoneAddressOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a number"]" title="@T["None"]">
             <option value="">@T["None"]</option>
         </select>
         <span asp-validation-for="DefaultPhoneAddressId" class="text-danger"></span>
@@ -17,7 +17,7 @@
 <div class="ocat-wrapper" asp-validation-class-for="DefaultSmsAddressId">
     <label asp-for="DefaultSmsAddressId" class="ocat-label">@T["Default SMS number"]</label>
     <div class="ocat-end">
-        <select asp-for="DefaultSmsAddressId" asp-items="Model.SmsAddressOptions" class="selectpicker show-tick" data-style="btn-light" data-live-search="true" data-header="@T["Select a number"]" title="@T["None"]">
+        <select asp-for="DefaultSmsAddressId" asp-items="Model.SmsAddressOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a number"]" title="@T["None"]">
             <option value="">@T["None"]</option>
         </select>
         <span asp-validation-for="DefaultSmsAddressId" class="text-danger"></span>

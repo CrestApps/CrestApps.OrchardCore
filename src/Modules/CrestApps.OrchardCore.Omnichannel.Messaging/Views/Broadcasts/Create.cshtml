@@ -22,14 +22,14 @@
 
     <div class="mb-3">
         <label asp-for="EndpointId" class="form-label">@T["Send from"]</label>
-        <select asp-for="EndpointId" asp-items="Model.Endpoints" id="endpoint-select" class="selectpicker show-tick" data-style="btn-light" data-live-search="true" title="@T["Select the channel and address to send from"]"></select>
+        <select asp-for="EndpointId" asp-items="Model.Endpoints" id="endpoint-select" class="selectpicker show-tick" data-live-search="true" title="@T["Select the channel and address to send from"]"></select>
         <span class="hint">@T["The address you pick decides the channel the broadcast is sent on."]</span>
         <span asp-validation-for="EndpointId" class="text-danger"></span>
     </div>
 
     <div class="mb-3">
         <label asp-for="ContactAddresses" class="form-label">@T["Recipients (contacts)"]</label>
-        <select asp-for="ContactAddresses" id="recipient-select" class="selectpicker show-tick" data-style="btn-light" multiple data-live-search="true" title="@T["Search contacts by name or address…"]"
+        <select asp-for="ContactAddresses" id="recipient-select" class="selectpicker show-tick" multiple data-live-search="true" title="@T["Search contacts by name or address…"]"
                 data-messaging-contact-picker
                 data-search-url="@Url.RouteUrl("MessagingSearchContacts")"
                 data-endpoint-select="#endpoint-select"

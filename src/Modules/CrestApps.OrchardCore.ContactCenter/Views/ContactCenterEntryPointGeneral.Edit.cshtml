@@ -29,7 +29,7 @@
 <div class="ocat-wrapper" asp-validation-class-for="AddressIds">
     <label asp-for="AddressIds" class="ocat-label">@T["Numbers"]</label>
     <div class="ocat-end">
-        <select asp-for="AddressIds" asp-items="Model.AddressOptions" multiple class="selectpicker show-tick" data-style="btn-light" data-live-search="true" data-actions-box="true" data-header="@T["Select numbers"]" title="@T["No numbers"]"></select>
+        <select asp-for="AddressIds" asp-items="Model.AddressOptions" multiple class="selectpicker show-tick" data-live-search="true" data-actions-box="true" data-header="@T["Select numbers"]" title="@T["No numbers"]"></select>
         <span asp-validation-for="AddressIds" class="text-danger"></span>
         <span class="hint">@T["What arrives on these numbers is answered by this entry point. Numbers come from Interaction Center > Management > Omnichannel Addresses, where they must be ticked as used for this channel."]</span>
         @if (Model.LegacyDialedNumbers.Count > 0)

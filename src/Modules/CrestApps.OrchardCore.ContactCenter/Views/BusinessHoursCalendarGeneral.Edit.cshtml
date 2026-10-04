@@ -23,7 +23,7 @@
 <div class="ocat-wrapper" asp-validation-class-for="TimeZoneId">
     <label asp-for="TimeZoneId" class="ocat-label">@T["Time zone"]</label>
     <div class="ocat-end">
-        <select asp-for="TimeZoneId" asp-items="Model.TimeZoneOptions" class="selectpicker show-tick" data-style="btn-light" data-live-search="true" data-header="@T["Select a time zone"]" title="@T["UTC"]">
+        <select asp-for="TimeZoneId" asp-items="Model.TimeZoneOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a time zone"]" title="@T["UTC"]">
             <option value="">@T["UTC"]</option>
         </select>
         <span asp-validation-for="TimeZoneId" class="text-danger"></span>
