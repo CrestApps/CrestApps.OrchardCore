@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony.Core.Services;
@@ -514,6 +515,58 @@ public sealed class DialerAttemptServiceTests
         Assert.Equal("+15550000001", request.CallerId);
     }
 
+    [Fact]
+    public async Task TryDialAsync_WhenTheLoadPickedANumber_PresentsItInsteadOfTheAgentLineAndTheProfileCallerId()
+    {
+        // Arrange
+        var profile = CreateProfile();
+        profile.CallerId = "+15550000001";
+
+        // Act
+        var request = await DialAndCaptureRequestAsync(profile, LineResolver("user-a1", "+15550000002").Object, LoadAddress("+15550000003", OmnichannelConstants.Channels.Phone));
+
+        // Assert
+        Assert.Equal("+15550000003", request.CallerId);
+    }
+
+    [Fact]
+    public async Task TryDialAsync_WhenTheProfileAlwaysUsesItsCallerId_PresentsItOverTheLoadsNumber()
+    {
+        // Arrange
+        var profile = CreateProfile();
+        profile.CallerId = "+15550000001";
+        profile.AlwaysUseCallerId = true;
+
+        // Act
+        var request = await DialAndCaptureRequestAsync(profile, new NoOutboundLineResolver(), LoadAddress("+15550000003", OmnichannelConstants.Channels.Phone));
+
+        // Assert
+        Assert.Equal("+15550000001", request.CallerId);
+    }
+
+    [Fact]
+    public async Task TryDialAsync_WhenTheLoadsNumberIsNoLongerUsedForCalls_FallsBackToTheAgentLine()
+    {
+        // Arrange
+        var profile = CreateProfile();
+        profile.CallerId = "+15550000001";
+
+        // Act
+        var request = await DialAndCaptureRequestAsync(profile, LineResolver("user-a1", "+15550000002").Object, LoadAddress("+15550000003", OmnichannelConstants.Channels.Sms));
+
+        // Assert
+        Assert.Equal("+15550000002", request.CallerId);
+    }
+
+    private static OmnichannelChannelEndpoint LoadAddress(string number, string capability)
+        => new()
+        {
+            ItemId = "load-address",
+            Value = number,
+            AddressType = OmnichannelAddressTypes.PhoneNumber,
+            Capabilities = [capability],
+        };
+
     private static Mock<IOutboundLineResolver> LineResolver(string userId, string number)
     {
         var resolver = new Mock<IOutboundLineResolver>(MockBehavior.Strict);
@@ -525,10 +578,19 @@ public sealed class DialerAttemptServiceTests
     }
 
     // Runs one successful attempt and returns the dial request it registered for the provider.
-    private static async Task<ContactCenterDialRequest> DialAndCaptureRequestAsync(DialerProfile profile, IOutboundLineResolver resolver)
+    private static async Task<ContactCenterDialRequest> DialAndCaptureRequestAsync(DialerProfile profile, IOutboundLineResolver resolver, OmnichannelChannelEndpoint? loadAddress = null)
     {
         var reservation = Reservation();
         var activity = CreateActivity();
+        var addressManager = new Mock<IOmnichannelChannelEndpointManager>();
+
+        if (loadAddress is not null)
+        {
+            activity.ChannelEndpointId = loadAddress.ItemId;
+            addressManager
+                .Setup(manager => manager.FindByIdAsync(loadAddress.ItemId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(loadAddress);
+        }
         var interaction = CreateInteraction();
         ProviderCommandRegistration? capturedRegistration = null;
 
@@ -572,7 +634,8 @@ public sealed class DialerAttemptServiceTests
             publisher,
             scopeExecutor,
             providerCommandStateService,
-            outboundLineResolver: resolver);
+            outboundLineResolver: resolver,
+            addressManager: addressManager.Object);
 
         Assert.True(await service.TryDialAsync(profile, reservation, TestContext.Current.CancellationToken));
 
@@ -687,7 +750,8 @@ public sealed class DialerAttemptServiceTests
         Mock<IProviderCommandStateService>? providerCommandStateService = null,
         Mock<IAgentProfileManager>? agentManager = null,
         IDialerAttemptCompensationService? compensationService = null,
-        IOutboundLineResolver? outboundLineResolver = null)
+        IOutboundLineResolver? outboundLineResolver = null,
+        IOmnichannelChannelEndpointManager? addressManager = null)
     {
         publisher ??= new Mock<IContactCenterEventPublisher>(MockBehavior.Strict);
         scopeExecutor ??= new Mock<IContactCenterScopeExecutor>(MockBehavior.Strict);
@@ -710,6 +774,7 @@ public sealed class DialerAttemptServiceTests
             scopeExecutor.Object,
             providerCommandStateService.Object,
             outboundLineResolver ?? new NoOutboundLineResolver(),
+            [addressManager ?? Mock.Of<IOmnichannelChannelEndpointManager>()],
             new Mock<ILogger<DialerAttemptService>>().Object);
     }
 

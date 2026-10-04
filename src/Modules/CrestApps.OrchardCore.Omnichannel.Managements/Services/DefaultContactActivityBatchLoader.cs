@@ -518,7 +518,11 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 var activity = await _activityManager.NewAsync(cancellationToken: cancellationToken);
                 var activitySource = sourceEntry.Source;
                 var channel = string.IsNullOrWhiteSpace(batch.Channel) ? flowSettings.Channel : batch.Channel;
-                var channelEndpointId = string.IsNullOrWhiteSpace(batch.ChannelEndpointId) ? flowSettings.ChannelEndpointId : batch.ChannelEndpointId;
+                // A dialer load's address is the number its calls show, so it is the one picked on the load or none: the
+                // subject flow's address is the number an automated subject answers on, not one to call customers from.
+                var channelEndpointId = dialerProfile is not null
+                    ? batch.ChannelEndpointId
+                    : string.IsNullOrWhiteSpace(batch.ChannelEndpointId) ? flowSettings.ChannelEndpointId : batch.ChannelEndpointId;
                 var campaignId = string.IsNullOrWhiteSpace(batch.CampaignId) ? flowSettings.CampaignId : batch.CampaignId;
                 var interactionType = string.Equals(sourceEntry.Source, ActivitySources.Automatic, StringComparison.OrdinalIgnoreCase)
                     ? ActivityInteractionType.Automated
