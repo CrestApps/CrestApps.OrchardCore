@@ -7,7 +7,7 @@
 <div class="ocat-wrapper" asp-validation-class-for="TargetAIProfileId" data-entry-point-ai-field>
     <label asp-for="TargetAIProfileId" class="ocat-label">@T["AI agent"]</label>
     <div class="ocat-end">
-        <select asp-for="TargetAIProfileId" asp-items="Model.ProfileOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select an AI profile"]" data-width="100%" title="@T["No AI agent"]">
+        <select asp-for="TargetAIProfileId" asp-items="Model.ProfileOptions" class="selectpicker show-tick" data-style="btn-light" data-live-search="true" data-header="@T["Select an AI profile"]" title="@T["No AI agent"]">
             <option value="">@T["No AI agent"]</option>
         </select>
         <span asp-validation-for="TargetAIProfileId" class="text-danger"></span>

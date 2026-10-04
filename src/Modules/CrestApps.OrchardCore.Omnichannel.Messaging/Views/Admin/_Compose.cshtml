@@ -26,14 +26,14 @@
     <div class="messaging-compose-line">
         <label asp-for="EndpointId" class="messaging-compose-label">@T["From"]</label>
         <div class="flex-grow-1" style="min-width: 0;">
-            <select asp-for="EndpointId" asp-items="Model.Endpoints" id="endpoint-select" class="selectpicker show-tick" data-live-search="true" data-width="100%" data-style="btn-light border-0 bg-transparent px-0" title="@T["Choose the channel and address to send from"]"></select>
+            <select asp-for="EndpointId" asp-items="Model.Endpoints" id="endpoint-select" class="selectpicker show-tick" data-live-search="true" data-style="btn-light border-0 bg-transparent px-0" title="@T["Choose the channel and address to send from"]"></select>
         </div>
     </div>
 
     <div class="messaging-compose-line">
         <label asp-for="ContactAddresses" class="messaging-compose-label">@T["To"]</label>
         <div class="flex-grow-1" style="min-width: 0;">
-            <select asp-for="ContactAddresses" id="recipient-select" class="selectpicker show-tick" multiple data-live-search="true" data-width="100%" data-style="btn-light border-0 bg-transparent px-0"
+            <select asp-for="ContactAddresses" id="recipient-select" class="selectpicker show-tick" multiple data-live-search="true" data-style="btn-light border-0 bg-transparent px-0"
                     title="@T["Search contacts by name or address…"]"
                     data-messaging-contact-picker
                     data-search-url="@Url.RouteUrl("MessagingSearchContacts")"

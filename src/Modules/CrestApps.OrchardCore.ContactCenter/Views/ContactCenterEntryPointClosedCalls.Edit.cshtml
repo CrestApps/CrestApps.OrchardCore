@@ -20,7 +20,7 @@
 <div class="ocat-wrapper" asp-validation-class-for="OverflowQueueId">
     <label asp-for="OverflowQueueId" class="ocat-label">@T["Overflow queue"]</label>
     <div class="ocat-end">
-        <select asp-for="OverflowQueueId" asp-items="Model.OverflowQueueOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a queue"]" data-width="100%" title="@T["No overflow"]">
+        <select asp-for="OverflowQueueId" asp-items="Model.OverflowQueueOptions" class="selectpicker show-tick" data-style="btn-light" data-live-search="true" data-header="@T["Select a queue"]" title="@T["No overflow"]">
             <option value="">@T["No overflow"]</option>
         </select>
         <span asp-validation-for="OverflowQueueId" class="text-danger"></span>

@@ -28,7 +28,7 @@
     <div class="ocat-wrapper" asp-validation-class-for="VoicemailRecipientAgentId" data-entry-point-voicemail-inbox-field>
         <label asp-for="VoicemailRecipientAgentId" class="ocat-label">@T["Voicemail inbox"]</label>
         <div class="ocat-end">
-            <select asp-for="VoicemailRecipientAgentId" asp-items="Model.VoicemailRecipientAgentOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select an agent"]" data-width="100%" title="@T["No inbox"]">
+            <select asp-for="VoicemailRecipientAgentId" asp-items="Model.VoicemailRecipientAgentOptions" class="selectpicker show-tick" data-style="btn-light" data-live-search="true" data-header="@T["Select an agent"]" title="@T["No inbox"]">
                 <option value="">@T["No inbox"]</option>
             </select>
             <span asp-validation-for="VoicemailRecipientAgentId" class="text-danger"></span>

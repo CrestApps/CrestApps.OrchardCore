@@ -26,7 +26,7 @@
 <div class="ocat-wrapper" asp-validation-class-for="CallingCalendarId">
     <label asp-for="CallingCalendarId" class="ocat-label">@T["Outbound calling calendar"]</label>
     <div class="ocat-end">
-        <select asp-for="CallingCalendarId" asp-items="Model.CallingCalendarOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select an outbound calling calendar"]" data-width="100%" title="@T["Select an outbound calling calendar"]">
+        <select asp-for="CallingCalendarId" asp-items="Model.CallingCalendarOptions" class="selectpicker show-tick" data-style="btn-light" data-live-search="true" data-header="@T["Select an outbound calling calendar"]" title="@T["Select an outbound calling calendar"]">
             <option value="">@T["Select an outbound calling calendar"]</option>
         </select>
         <span asp-validation-for="CallingCalendarId" class="text-danger"></span>

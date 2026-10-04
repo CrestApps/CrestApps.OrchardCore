@@ -6,7 +6,7 @@
 <div class="ocat-wrapper" asp-validation-class-for="CallerId">
     <label asp-for="CallerId" class="ocat-label">@T["Caller ID"]</label>
     <div class="ocat-end">
-        <select asp-for="CallerId" asp-items="Model.CallerIdOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a number"]" data-width="100%" title="@T["Provider default"]">
+        <select asp-for="CallerId" asp-items="Model.CallerIdOptions" class="selectpicker show-tick" data-style="btn-light" data-live-search="true" data-header="@T["Select a number"]" title="@T["Provider default"]">
             <option value="">@T["Provider default"]</option>
         </select>
         <span asp-validation-for="CallerId" class="text-danger"></span>
@@ -27,7 +27,7 @@
 <div class="ocat-wrapper" asp-validation-class-for="DefaultRegionCode">
     <label asp-for="DefaultRegionCode" class="ocat-label">@T["Default calling region"]</label>
     <div class="ocat-end">
-        <select asp-for="DefaultRegionCode" asp-items="Model.DefaultRegionOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a country"]" data-width="100%" title="@T["Auto-detect from the number"]">
+        <select asp-for="DefaultRegionCode" asp-items="Model.DefaultRegionOptions" class="selectpicker show-tick" data-style="btn-light" data-live-search="true" data-header="@T["Select a country"]" title="@T["Auto-detect from the number"]">
             <option value="">@T["Auto-detect from the number"]</option>
         </select>
         <span asp-validation-for="DefaultRegionCode" class="text-danger"></span>

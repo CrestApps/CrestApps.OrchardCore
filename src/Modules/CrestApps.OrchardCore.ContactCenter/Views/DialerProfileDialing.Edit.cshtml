@@ -14,7 +14,7 @@
 <div class="ocat-wrapper" asp-validation-class-for="Mode">
     <label asp-for="Mode" class="ocat-label">@T["Mode"]</label>
     <div class="ocat-end">
-        <select asp-for="Mode" class="selectpicker show-tick" data-width="100%" title="@T["Select a dialing mode"]" data-dialer-mode-select>
+        <select asp-for="Mode" class="selectpicker show-tick" data-style="btn-light" title="@T["Select a dialing mode"]" data-dialer-mode-select>
             <option value="@DialerMode.Preview">@T["Preview"]</option>
             @if (Model.AutomatedDialerEnabled || Model.Mode == DialerMode.Power)
             {
@@ -38,7 +38,7 @@
 <div class="ocat-wrapper" asp-validation-class-for="ProviderName">
     <label asp-for="ProviderName" class="ocat-label">@T["Voice call provider"]</label>
     <div class="ocat-end">
-        <select asp-for="ProviderName" asp-items="Model.ProviderOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a voice call provider"]" data-width="100%" title="@T["Default provider"]">
+        <select asp-for="ProviderName" asp-items="Model.ProviderOptions" class="selectpicker show-tick" data-style="btn-light" data-live-search="true" data-header="@T["Select a voice call provider"]" title="@T["Default provider"]">
             <option value="">@T["Default provider"]</option>
         </select>
         <span asp-validation-for="ProviderName" class="text-danger"></span>

@@ -16,7 +16,7 @@
 <div class="ocat-wrapper" asp-validation-class-for="Treatment.HoldMusicMediaId">
     <label asp-for="Treatment.HoldMusicMediaId" class="ocat-label">@T["Hold music"]</label>
     <div class="ocat-end">
-        <select asp-for="Treatment.HoldMusicMediaId" asp-items="Model.HoldMusicMediaOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a recording"]" data-width="100%" title="@T["The provider's default"]">
+        <select asp-for="Treatment.HoldMusicMediaId" asp-items="Model.HoldMusicMediaOptions" class="selectpicker show-tick" data-style="btn-light" data-live-search="true" data-header="@T["Select a recording"]" title="@T["The provider's default"]">
             <option value="">@T["The provider's default"]</option>
         </select>
         <span asp-validation-for="Treatment.HoldMusicMediaId" class="text-danger"></span>
