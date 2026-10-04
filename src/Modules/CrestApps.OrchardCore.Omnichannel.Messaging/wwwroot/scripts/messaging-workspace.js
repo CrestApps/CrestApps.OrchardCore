@@ -1186,8 +1186,10 @@
     });
     showTransferTarget();
     transferForm.addEventListener('submit', function (event) {
+      // The picker posts its selection under the field's name: a select today, hidden inputs before it was built
+      // on bootstrap-select. Looking only for a hidden input refused every transfer once the picker changed.
       var inputName = messaging.transferTargetInputName(transferType());
-      var chosen = transferForm.querySelector('input[type="hidden"][name="' + inputName + '"]');
+      var chosen = transferForm.querySelector('[name="' + inputName + '"]');
       if (!chosen || !chosen.value) {
         event.preventDefault();
         if (transferRequired) {
