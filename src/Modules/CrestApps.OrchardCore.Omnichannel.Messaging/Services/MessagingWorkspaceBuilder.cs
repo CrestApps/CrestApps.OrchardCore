@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
@@ -43,7 +44,7 @@ public sealed class MessagingWorkspaceBuilder
     private readonly IMessagingAvailabilityService _availabilityService;
     private readonly IMessagingAgentNameProvider _agentNames;
     private readonly IMessagingFavoritesService _favoritesService;
-    private readonly bool _supportsQueues;
+    private readonly IActivityQueueManager _queueManager;
     private readonly IContentManager _contentManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly MessagingQuietHoursGuard _quietHoursGuard;
@@ -85,7 +86,7 @@ public sealed class MessagingWorkspaceBuilder
         _agentNames = agentNames;
         _favoritesService = favoritesService;
         // Queues are a feature of their own; without it a conversation can only be transferred to a person.
-        _supportsQueues = queueManagers.Any();
+        _queueManager = queueManagers.FirstOrDefault();
         _contentManager = contentManager;
         _authorizationService = authorizationService;
         _quietHoursGuard = quietHoursGuard;
@@ -383,6 +384,22 @@ public sealed class MessagingWorkspaceBuilder
         return mine + await _conversationStore.CountAsync(BuildQuery(MessagingInboxFilter.Unassigned), cancellationToken);
     }
 
+    // The queue a conversation belongs to, by name, so the header can say whose shared inbox it is in.
+    private async Task<string> GetOwnerQueueNameAsync(MessagingConversation conversation, CancellationToken cancellationToken)
+    {
+        if (_queueManager is null ||
+            conversation.OwnerType != ConversationOwnerType.Queue ||
+            string.IsNullOrEmpty(conversation.OwnerId) ||
+            ContactCenterConstants.IsDirectRoutingQueue(conversation.OwnerId))
+        {
+            return null;
+        }
+
+        var queue = await _queueManager.FindByIdAsync(conversation.OwnerId, cancellationToken);
+
+        return string.IsNullOrWhiteSpace(queue?.Name) ? null : queue.Name;
+    }
+
     /// <summary>
     /// Builds the open conversation, its channel tabs and its composer.
     /// </summary>
@@ -414,6 +431,7 @@ public sealed class MessagingWorkspaceBuilder
 
         var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
         var viewer = string.IsNullOrEmpty(userId) ? null : await _agentProfileManager.FindByUserIdAsync(userId, cancellationToken);
+        var holderId = conversation.GetHolderAgentId();
 
         return new ThreadViewModel
         {
@@ -445,7 +463,10 @@ public sealed class MessagingWorkspaceBuilder
             CanClaim = await AuthorizeAsync(user, conversation, ConversationOperation.Claim),
             CanChangeStatus = await AuthorizeAsync(user, conversation, ConversationOperation.Close),
             CanTransfer = canTransfer,
-            CanTransferToQueue = canTransfer && _supportsQueues,
+            CanTransferToQueue = canTransfer && _queueManager is not null,
+            HolderName = holderId is null ? null : await _agentNames.GetDisplayNameAsync(holderId, cancellationToken),
+            IsHeldByViewer = holderId is not null && string.Equals(holderId, viewer?.ItemId, StringComparison.OrdinalIgnoreCase),
+            OwnerQueueName = await GetOwnerQueueNameAsync(conversation, cancellationToken),
             CanSend = channel is not null && await AuthorizeAsync(user, conversation, ConversationOperation.Send),
             IsQuietHours = quietHours.IsQuietHours,
             QuietHoursReason = quietHours.Reason,

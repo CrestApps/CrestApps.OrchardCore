@@ -26,15 +26,15 @@ public sealed class MessagingTransferTargetsTests
             .Agent("agent-b", "Bea Recipient")
             .Build();
 
-        var options = await targets.SearchAgentsAsync(HeldBy("agent-a"), query: null, actingUserId: null, TestContext.Current.CancellationToken);
+        var options = await targets.SearchAgentsAsync(HeldBy("agent-a"), query: null, TestContext.Current.CancellationToken);
 
         Assert.Equal(["Bea Recipient", "Cal Colleague"], options.Select(option => option.Text));
         Assert.Equal(["agent-b", "agent-c"], options.Select(option => option.Value));
     }
 
-    // Live, a supervisor transferring a conversation someone else held saw their own name in the list.
+    // A supervisor takes over a conversation someone else holds by transferring it to themselves.
     [Fact]
-    public async Task SearchAgentsAsync_LeavesOutThePersonTransferring()
+    public async Task SearchAgentsAsync_ListsThePersonTransferring_WhenSomeoneElseHoldsIt()
     {
         var targets = new Builder()
             .Agent("agent-a", "Ann Holder")
@@ -42,9 +42,9 @@ public sealed class MessagingTransferTargetsTests
             .Agent("agent-b", "Bea Recipient")
             .Build();
 
-        var options = await targets.SearchAgentsAsync(HeldBy("agent-a"), query: null, actingUserId: "user-agent-s", TestContext.Current.CancellationToken);
+        var options = await targets.SearchAgentsAsync(HeldBy("agent-a"), query: null, TestContext.Current.CancellationToken);
 
-        Assert.Equal(["agent-b"], options.Select(option => option.Value));
+        Assert.Equal(["agent-b", "agent-s"], options.Select(option => option.Value));
     }
 
     [Fact]
@@ -56,7 +56,7 @@ public sealed class MessagingTransferTargetsTests
             .Agent("agent-x", "No User", hasUser: false)
             .Build();
 
-        var options = await targets.SearchAgentsAsync(HeldBy("agent-a"), query: null, actingUserId: null, TestContext.Current.CancellationToken);
+        var options = await targets.SearchAgentsAsync(HeldBy("agent-a"), query: null, TestContext.Current.CancellationToken);
 
         Assert.Equal(["Bea Recipient"], options.Select(option => option.Text));
     }
@@ -69,7 +69,7 @@ public sealed class MessagingTransferTargetsTests
             .Agent("agent-c", "Cal Colleague")
             .Build();
 
-        var options = await targets.SearchAgentsAsync(HeldBy("agent-a"), query: "  recip ", actingUserId: null, TestContext.Current.CancellationToken);
+        var options = await targets.SearchAgentsAsync(HeldBy("agent-a"), query: "  recip ", TestContext.Current.CancellationToken);
 
         Assert.Equal(["agent-b"], options.Select(option => option.Value));
     }
@@ -164,7 +164,7 @@ public sealed class MessagingTransferTargetsTests
             builder.Agent($"agent-{index:D2}", $"Agent {index:D2}");
         }
 
-        var options = await builder.Build().SearchAgentsAsync(HeldBy("agent-holder"), query: null, actingUserId: null, TestContext.Current.CancellationToken);
+        var options = await builder.Build().SearchAgentsAsync(HeldBy("agent-holder"), query: null, TestContext.Current.CancellationToken);
 
         Assert.Equal(
             Enumerable.Range(0, MessagingTransferTargets.MaxResults).Select(index => $"Agent {index:D2}"),

@@ -146,27 +146,42 @@ public sealed class MessagingConversationTransferServiceTests
         context.Notifier.Verify(notifier => notifier.ConversationAssignedAsync(It.IsAny<MessagingAssignmentNotification>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    // Live, the transfer picker listed the person transferring, and choosing themselves "transferred" the conversation
+    // Live, the transfer picker listed the person holding the conversation, and choosing themselves "transferred" it
     // back to its sender.
     [Fact]
-    public async Task TransferAsync_ToTheActingAgent_IsRefusedAndNothingChanges()
+    public async Task TransferAsync_ToTheActingAgent_WhoAlreadyHoldsIt_IsRefusedAndNothingChanges()
+    {
+        var conversation = CreateQueueConversation(assignedAgentId: SenderId);
+        var context = new TestContextBuilder(conversation);
+
+        var result = await context.Service.TransferAsync(ToAgent(SenderId), TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal("The conversation is already yours.", result.Error);
+        Assert.Equal(SenderId, conversation.AssignedAgentId);
+        Assert.Empty(conversation.History);
+        context.Store.Verify(store => store.UpdateAsync(It.IsAny<MessagingConversation>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    // Live, a supervisor could not take over a conversation another agent held: their own name was never offered.
+    [Fact]
+    public async Task TransferAsync_ToTheActingAgent_WhenSomeoneElseHoldsIt_HandsItToThem()
     {
         var conversation = CreateQueueConversation(assignedAgentId: RecipientId);
         var context = new TestContextBuilder(conversation);
 
         var result = await context.Service.TransferAsync(ToAgent(SenderId), TestContext.Current.CancellationToken);
 
-        Assert.False(result.Succeeded);
-        Assert.Equal("You cannot transfer a conversation to yourself.", result.Error);
-        Assert.Equal(RecipientId, conversation.AssignedAgentId);
-        Assert.Empty(conversation.History);
-        context.Store.Verify(store => store.UpdateAsync(It.IsAny<MessagingConversation>(), It.IsAny<CancellationToken>()), Times.Never);
+        Assert.True(result.Succeeded, result.Error);
+        Assert.Equal(SenderId, conversation.AssignedAgentId);
+        Assert.Equal(ConversationAssignmentStatus.Assigned, conversation.AssignmentStatus);
+        Assert.Single(conversation.History);
     }
 
     [Fact]
-    public async Task TransferAsync_ToTheSignedInUsersOwnProfile_IsRefusedEvenWithoutAnActingAgent()
+    public async Task TransferAsync_ToTheSignedInUsersOwnProfile_WhoAlreadyHoldsIt_IsRefusedEvenWithoutAnActingAgent()
     {
-        var conversation = CreateQueueConversation(assignedAgentId: RecipientId);
+        var conversation = CreateQueueConversation(assignedAgentId: SenderId);
         var context = new TestContextBuilder(conversation);
 
         var request = ToAgent(SenderId);
@@ -176,18 +191,19 @@ public sealed class MessagingConversationTransferServiceTests
         var result = await context.Service.TransferAsync(request, TestContext.Current.CancellationToken);
 
         Assert.False(result.Succeeded);
-        Assert.Equal(RecipientId, conversation.AssignedAgentId);
+        Assert.Equal("The conversation is already yours.", result.Error);
+        Assert.Equal(SenderId, conversation.AssignedAgentId);
     }
 
     [Fact]
-    public async Task TransferAsync_ToTheActingAgent_LogsWhyItWasRefused()
+    public async Task TransferAsync_ToTheActingAgent_WhoAlreadyHoldsIt_LogsWhyItWasRefused()
     {
         var logger = new RecordingLogger<MessagingConversationTransferService>();
-        var context = new TestContextBuilder(CreateQueueConversation(assignedAgentId: RecipientId), logger: logger);
+        var context = new TestContextBuilder(CreateQueueConversation(assignedAgentId: SenderId), logger: logger);
 
         await context.Service.TransferAsync(ToAgent(SenderId), TestContext.Current.CancellationToken);
 
-        Assert.Contains(logger.Entries, entry => entry.Level == LogLevel.Warning && entry.Message.Contains("that is the person transferring it", StringComparison.Ordinal));
+        Assert.Contains(logger.Entries, entry => entry.Level == LogLevel.Warning && entry.Message.Contains("already hold it", StringComparison.Ordinal));
     }
 
     [Fact]

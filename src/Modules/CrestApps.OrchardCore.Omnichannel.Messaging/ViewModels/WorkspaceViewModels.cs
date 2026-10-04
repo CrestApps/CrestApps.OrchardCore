@@ -326,6 +326,21 @@ public class ThreadViewModel
     /// </summary>
     public bool CanTransferToQueue { get; set; }
 
+    /// <summary>
+    /// Gets or sets the name of the person who holds the conversation, or <see langword="null"/> when nobody does.
+    /// </summary>
+    public string HolderName { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the person viewing the conversation is the one who holds it.
+    /// </summary>
+    public bool IsHeldByViewer { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the queue the conversation belongs to, or <see langword="null"/> when it is personal.
+    /// </summary>
+    public string OwnerQueueName { get; set; }
+
     public bool CanSend { get; set; }
 
     public bool IsQuietHours { get; set; }

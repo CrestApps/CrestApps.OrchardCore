@@ -608,7 +608,7 @@ public sealed class AdminController : Controller
             return refusal;
         }
 
-        return Json(await _transferTargets.SearchAgentsAsync(conversation, query, User.FindFirstValue(ClaimTypes.NameIdentifier), HttpContext.RequestAborted));
+        return Json(await _transferTargets.SearchAgentsAsync(conversation, query, HttpContext.RequestAborted));
     }
 
     // The queues whose shared pool the open conversation can be sent back to, for the same picker.
