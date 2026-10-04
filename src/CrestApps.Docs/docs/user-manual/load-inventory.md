@@ -35,7 +35,7 @@ Once a load has started it can no longer be edited or deleted.
 
 ## Dialer loads
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating a dialer activity load with a dialer profile and a campaign">
+<video controls preload="metadata" width="100%" aria-label="Screencast of creating a dialer activity load with a dialer profile, a campaign and the number its calls are dialed from">
   <source src="/img/docs/um-load-dialer.mp4" type="video/mp4" />
 </video>
 
@@ -53,7 +53,8 @@ Dialer loads always use the phone channel and create manual (agent-handled) acti
 | **Subject content type** | The subject of every activity. Required. |
 | **Campaign** | Stamped on every activity; falls back to the subject's default campaign. |
 | **Channel** | **Phone** or **SMS**. Hidden for dialer loads. |
-| **Channel endpoint** | Automatic loads: the number to send from or call from. |
+| **Address** | Automatic loads: the number to send from or call from. Only the [Omnichannel Addresses](channel-endpoints.md) used for the **Channel** picked are listed: numbers used for text messages for SMS, numbers used for voice calls for Phone. |
+| **Dial from** | Dialer loads: the number the customers called from this load see, picked from the addresses used for voice calls. It is shown instead of the agent's own number and the dialer profile's **Caller ID**, unless the profile is set to **Always show this caller ID**. Leave it on **Default caller ID** to keep those. |
 | **Dialer profile** | Dialer loads: required. |
 | **Schedule at** | When the activities become due. |
 | **Users** | Manual loads: who gets the work. |

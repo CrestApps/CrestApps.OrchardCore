@@ -32,6 +32,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IProviderCommandStateService _providerCommandStateService;
     private readonly IOutboundLineResolver _outboundLineResolver;
+    private readonly IOmnichannelChannelEndpointManager _addressManager;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -50,6 +51,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
     /// <param name="auditRecorder">The recorder that writes each interaction a dial creates to the audit log.</param>
     /// <param name="scopeExecutor">The executor used for compensation and post-commit command wake-up.</param>
     /// <param name="providerCommandStateService">The service used to persist provider command intent.</param>
+    /// <param name="addressManagers">The address list, which holds the number a load dials from, when the feature is on.</param>
     /// <param name="logger">The logger instance.</param>
     public DialerAttemptService(
         IDialerEligibilityService eligibilityService,
@@ -65,6 +67,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
         IContactCenterAuditRecorder auditRecorder,
         IContactCenterScopeExecutor scopeExecutor,
         IProviderCommandStateService providerCommandStateService,
+        IEnumerable<IOmnichannelChannelEndpointManager> addressManagers,
         ILogger<DialerAttemptService> logger)
     {
         _eligibilityService = eligibilityService;
@@ -80,6 +83,8 @@ public sealed class DialerAttemptService : IDialerAttemptService
         _auditRecorder = auditRecorder;
         _scopeExecutor = scopeExecutor;
         _providerCommandStateService = providerCommandStateService;
+        // The address list is a feature of its own; without it a load cannot have picked a number.
+        _addressManager = addressManagers.FirstOrDefault();
         _logger = logger;
     }
 
@@ -101,6 +106,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
     /// <param name="scopeExecutor">The executor used for compensation and post-commit command wake-up.</param>
     /// <param name="providerCommandStateService">The service used to persist provider command intent.</param>
     /// <param name="outboundLineResolver">The resolver of the line each agent dials out from.</param>
+    /// <param name="addressManagers">The address list, which holds the number a load dials from, when the feature is on.</param>
     /// <param name="logger">The logger instance.</param>
     public DialerAttemptService(
         IDialerEligibilityService eligibilityService,
@@ -117,6 +123,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
         IContactCenterScopeExecutor scopeExecutor,
         IProviderCommandStateService providerCommandStateService,
         IOutboundLineResolver outboundLineResolver,
+        IEnumerable<IOmnichannelChannelEndpointManager> addressManagers,
         ILogger<DialerAttemptService> logger)
         : this(
             eligibilityService,
@@ -132,6 +139,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
             auditRecorder,
             scopeExecutor,
             providerCommandStateService,
+            addressManagers,
             logger)
     {
         _outboundLineResolver = outboundLineResolver;
@@ -204,7 +212,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
             QueueId = reservation.QueueId,
             CampaignId = activity.CampaignId,
             Destination = activity.PreferredDestination,
-            CallerId = await ResolveCallerIdAsync(profile, agent, cancellationToken),
+            CallerId = await ResolveCallerIdAsync(profile, agent, activity, cancellationToken),
             Metadata = new Dictionary<string, string>
             {
                 [ContactCenterConstants.CommandMetadata.CommandId] = interaction.ItemId,
@@ -262,14 +270,22 @@ public sealed class DialerAttemptService : IDialerAttemptService
         return true;
     }
 
-    // The number the customer sees. The agent's own line comes first, so a customer who calls back reaches the agent
-    // who called them, unless the profile insists on its own caller ID. Otherwise the profile's caller ID applies, and
-    // with neither the provider presents its default. A line that cannot be read never stops the attempt.
-    private async Task<string> ResolveCallerIdAsync(DialerProfile profile, AgentProfile agent, CancellationToken cancellationToken)
+    // The number the customer sees. A profile that insists on its own caller ID wins. Next comes the number picked when
+    // the activities were loaded, which is a choice made for exactly these calls. Then the agent's own line, so a
+    // customer who calls back reaches the agent who called them; then the profile's caller ID; and with none of them
+    // the provider presents its default. A number that cannot be read never stops the attempt.
+    private async Task<string> ResolveCallerIdAsync(DialerProfile profile, AgentProfile agent, OmnichannelActivity activity, CancellationToken cancellationToken)
     {
         if (profile.AlwaysUseCallerId && !string.IsNullOrWhiteSpace(profile.CallerId))
         {
             return profile.CallerId;
+        }
+
+        var loadNumber = await ResolveLoadNumberAsync(activity, cancellationToken);
+
+        if (!string.IsNullOrWhiteSpace(loadNumber))
+        {
+            return loadNumber;
         }
 
         if (_outboundLineResolver is null)
@@ -306,6 +322,28 @@ public sealed class DialerAttemptService : IDialerAttemptService
         }
 
         return profile.CallerId;
+    }
+
+    private async Task<string> ResolveLoadNumberAsync(OmnichannelActivity activity, CancellationToken cancellationToken)
+    {
+        if (_addressManager is null || string.IsNullOrWhiteSpace(activity.ChannelEndpointId))
+        {
+            return null;
+        }
+
+        try
+        {
+            var address = await _addressManager.FindByIdAsync(activity.ChannelEndpointId, cancellationToken);
+
+            // A number no longer used for calls is not presented; the call falls back as if none had been picked.
+            return address is not null && address.HasCapability(OmnichannelConstants.Channels.Phone) ? address.Value : null;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "The number picked for activity '{ActivityItemId}' could not be read; the call falls back to the agent's line or the profile caller ID.", activity.ItemId.SanitizeLogValue());
+
+            return null;
+        }
     }
 
     private async Task SuppressAsync(

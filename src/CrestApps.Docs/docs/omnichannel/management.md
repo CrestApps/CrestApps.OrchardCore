@@ -211,10 +211,10 @@ To load automated SMS activities:
 4. In **Load Activities**, click **Add Activity Load → Automatic**, then select the subject, the AI profile, the **SMS** channel, the address to send from, and the contact type.
 5. Save the load, then open its **Actions → Load batch** menu to generate the activities in the background.
 
-The screencast below creates an automatic SMS activity load for the *New Customer - Welcome* subject powered by the *SMS Outreach Assistant* profile, then loads the batch to generate the automated activities.
+The screencast below creates an automatic SMS activity load driven by an AI text-messaging profile. Once **SMS** is picked as the channel, only the addresses used for text messages are offered to send from.
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating an automatic SMS activity load driven by an AI profile and loading it to generate automated activities">
-  <source src="/img/docs/omni-load-automated-sms.mp4" type="video/mp4" />
+<video controls preload="metadata" width="100%" aria-label="Screencast of creating an automatic SMS activity load driven by an AI profile, sending from an address used for text messages">
+  <source src="/img/docs/um-load-ai-sms.mp4" type="video/mp4" />
 </video>
 
 ## Getting started (recommended order)

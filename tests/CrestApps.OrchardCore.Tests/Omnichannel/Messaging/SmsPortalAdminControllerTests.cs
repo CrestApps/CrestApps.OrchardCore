@@ -323,10 +323,9 @@ public sealed class SmsPortalAdminControllerTests
         Assert.Equal(nameof(AdminController.Conversation), redirect.ActionName);
     }
 
-    // Live, a supervisor saw their own name in the transfer picker. The picker is told who the signed-in user is, so it
-    // leaves them out.
+    // Live, a supervisor could not take over a conversation another agent held: their own name was never offered.
     [Fact]
-    public async Task TransferAgents_ReturnsThePeopleItCanGoTo_LeavingOutTheSignedInUser()
+    public async Task TransferAgents_ReturnsThePeopleItCanGoTo_IncludingTheSignedInUser()
     {
         var conversation = CreateForeignConversation();
         var controller = CreateController(
@@ -343,7 +342,7 @@ public sealed class SmsPortalAdminControllerTests
 
         var json = Assert.IsType<JsonResult>(result);
         var targets = Assert.IsAssignableFrom<IEnumerable<MessagingTransferTarget>>(json.Value);
-        Assert.Equal(["agent-2"], targets.Select(target => target.Value));
+        Assert.Equal(["agent-2", "agent-1"], targets.Select(target => target.Value));
     }
 
     [Fact]
