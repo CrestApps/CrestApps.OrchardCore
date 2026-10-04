@@ -38,4 +38,10 @@ public sealed class MessagingInboundRouting
     /// one. Empty when there is none.
     /// </summary>
     public string AutoReplyMessage { get; init; }
+
+    /// <summary>
+    /// Gets the AI profile that answers the messages itself, when the entry point routes to an AI agent and is open.
+    /// Empty otherwise: a closed AI entry point leaves its messages to people, with its closed reply.
+    /// </summary>
+    public string AIProfileId { get; init; }
 }

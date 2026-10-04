@@ -25,7 +25,7 @@ Queue groups only organize queues for administration and reports, for example *S
 2. Enter a **Name** and, optionally, a **Description**, then **Save**.
 
 :::note[AI answering]
-A queue holds callers for people; it has no AI setting. To have an AI profile answer a number's calls, set **Route to** to **AI voice agent** on the number's [inbound entry point](entry-points-and-ivr.md#ai-voice-agent). See [Let the AI answer incoming calls](automated-ai.md#let-the-ai-answer-incoming-calls).
+A queue holds callers and texts for people; it has no AI setting. To have an AI profile answer a number's calls or texts, set **Route to** to **AI voice agent** or **AI agent** on the number's [inbound entry point](entry-points-and-ivr.md). See [Let the AI answer incoming calls](automated-ai.md#let-the-ai-answer-incoming-calls) and [Let the AI answer incoming texts](automated-ai.md#let-the-ai-answer-incoming-texts).
 :::
 
 ## Clone a queue

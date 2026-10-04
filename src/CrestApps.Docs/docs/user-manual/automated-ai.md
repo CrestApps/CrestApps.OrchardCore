@@ -5,7 +5,7 @@ title: Automated AI SMS and Voice Campaigns
 description: Set up an AI profile and an automatic activity load so the AI texts or calls your contacts, follows up, picks the disposition, and hands off to a person when needed.
 ---
 
-This page is about conversations the AI starts. To have the AI answer the calls customers make to your numbers, see [Let the AI answer incoming calls](#let-the-ai-answer-incoming-calls).
+This page is about conversations the AI starts. To have the AI answer the calls and texts customers send to your numbers, see [Let the AI answer incoming calls](#let-the-ai-answer-incoming-calls) and [Let the AI answer incoming texts](#let-the-ai-answer-incoming-texts).
 
 An **automatic** activity load creates activities that an **AI profile** works by itself: it sends the opening text (or places the call), holds the conversation, and completes the activity with a disposition and a summary. If the subject allows it, the AI hands the customer to a live agent.
 
@@ -58,9 +58,25 @@ While the entry point is open, the AI picks up every call to the number, greets 
 
 This needs the **Telnyx AI Voice Agent** feature, which adds **AI voice agent** to the **Route to** list.
 
-## Incoming texts
+## Let the AI answer incoming texts
 
-The AI replies to texts only in conversations it started from an automatic load: each reply from the customer is answered by the activity's AI profile until the conversation ends. A new text that is not part of such a conversation goes to people, through the number's [text entry point](entry-points-and-ivr.md#text-entry-points). Text entry points have no AI option.
+Texts work the same way as calls. Set the AI profile on the number's **text entry point**, and the AI takes the customer's first text itself.
+
+1. Make the profile under **Artificial Intelligence > AI Profiles**. **Add Profile** with the **Customer care by text** starting point fills in the instructions. Every **Chat** profile can be picked. The AI replies to the customer, so its opening message is not used.
+2. Open **Interaction Center > Management > Inbound entry points** and edit (or add) the **Text messages** entry point that picks the number under **Numbers**.
+3. On the **Routing** card, set **Route to** to **AI agent** and choose the profile under **AI agent**. Click **Save**.
+4. Optionally, give the number an inbound **SMS** [subject](subjects.md) whose channel endpoint is that number. Its subject, campaign and [subject flow](subject-flows.md) are used for the conversation: the dispositions the AI picks from, the no-response timeout, and whether it may hand the customer to a person. Without one, the AI still answers, but it has no dispositions to choose from and cannot hand the conversation over.
+
+While the entry point is open, the first text from a customer starts an automated conversation. The AI replies after its usual pause and answers each later text until the conversation ends. The entry point's auto-reply is not sent. The conversation does not appear in the messaging workspace unless the AI hands it to a person.
+
+A text goes to people instead, in the shared inbox and with the entry point's auto-reply, when:
+
+- the entry point is closed (its closed auto-reply is sent);
+- a person already has an open conversation with the customer on that number;
+- the customer's last AI conversation on that number ended less than an hour ago, so a "thanks" after the goodbye does not start a new one;
+- the chosen AI profile was deleted.
+
+This needs the **SMS Omnichannel Automation** and **SMS Messaging Channel** features, which add **AI agent** to the **Route to** list of text entry points.
 
 ## AI options on an automatic load
 

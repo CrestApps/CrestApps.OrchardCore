@@ -1609,6 +1609,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string DispositionId { get; set; }
         public string Rationale { get; set; }
     }
+    public sealed class EntryPointAIAgentOptions
+    {
+        public EntryPointAIAgentOptions() { }
+        public System.Collections.Generic.HashSet<string> Channels { get; }
+    }
     public sealed class EntryPointChannel
     {
         public EntryPointChannel() { }

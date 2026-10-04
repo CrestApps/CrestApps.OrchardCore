@@ -1,4 +1,10 @@
+@using CrestApps.OrchardCore.Omnichannel.Core
 @model EntryPointViewModel
+
+@{
+    // Calls are answered by an AI voice agent; texts and any other channel by an AI agent that writes back.
+    var answersCalls = string.Equals(Model.Channel, OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase);
+}
 
 <style asp-name="bootstrap-select"></style>
 <script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
@@ -11,13 +17,15 @@
             <option value="@EntryPointTargetType.Agent">@T["Specific agent"]</option>
             @if (Model.AIAgentAvailable)
             {
-                <option value="@EntryPointTargetType.AIAgent">@T["AI voice agent"]</option>
+                <option value="@EntryPointTargetType.AIAgent">@(answersCalls ? T["AI voice agent"] : T["AI agent"])</option>
             }
         </select>
         <span asp-validation-for="TargetType" class="text-danger"></span>
-        <span class="hint">@(Model.AIAgentAvailable
-            ? T["Route to a queue, directly to a specific agent (a personal line), or to an AI voice agent that answers the call and can hand the caller to a person. A specific agent gets it directly, with no queue fallback."]
-            : T["Route to a queue, or directly to a specific agent (a personal line). A specific agent gets it directly, with no queue fallback."])</span>
+        <span class="hint">@(!Model.AIAgentAvailable
+            ? T["Route to a queue, or directly to a specific agent (a personal line). A specific agent gets it directly, with no queue fallback."]
+            : answersCalls
+                ? T["Route to a queue, directly to a specific agent (a personal line), or to an AI voice agent that answers the call and can hand the caller to a person. A specific agent gets it directly, with no queue fallback."]
+                : T["Route to a queue, directly to a specific agent (a personal line), or to an AI agent that answers the texts itself and can hand the conversation to a person. A specific agent gets it directly, with no queue fallback."])</span>
     </div>
 </div>
 

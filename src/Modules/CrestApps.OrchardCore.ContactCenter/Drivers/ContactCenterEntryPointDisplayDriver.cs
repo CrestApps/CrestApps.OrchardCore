@@ -24,6 +24,7 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
     private readonly IOmnichannelChannelEndpointManager _addressManager;
     private readonly EntryPointChannelOptions _channelOptions;
     private readonly bool _aiVoiceAnswererRegistered;
+    private readonly EntryPointAIAgentOptions _aiAgentOptions;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterEntryPointDisplayDriver"/> class.
@@ -32,12 +33,15 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
     /// <param name="addressManager">The address list the entry point picks its numbers from.</param>
     /// <param name="channelOptions">The channels entry points can answer.</param>
     /// <param name="aiVoiceAnswerers">The providers' AI voice answerers, which make an AI voice agent a call target.</param>
+    /// <param name="aiAgentOptions">The other channels whose traffic an AI agent can answer.</param>
     public ContactCenterEntryPointDisplayDriver(
         ContactCenterAdminFormOptionsProvider optionsProvider,
         IOmnichannelChannelEndpointManager addressManager,
         IOptions<EntryPointChannelOptions> channelOptions,
-        IEnumerable<IInboundAIVoiceAnswerer> aiVoiceAnswerers)
+        IEnumerable<IInboundAIVoiceAnswerer> aiVoiceAnswerers,
+        IOptions<EntryPointAIAgentOptions> aiAgentOptions)
     {
+        _aiAgentOptions = aiAgentOptions.Value;
         _aiVoiceAnswererRegistered = aiVoiceAnswerers.Any();
         _optionsProvider = optionsProvider;
         _addressManager = addressManager;
@@ -90,8 +94,7 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
                 .ToList(),
             LegacyDialedNumbers = [.. (entryPoint.DialedNumbers ?? []).Where(number => !string.IsNullOrWhiteSpace(number))],
             TargetType = entryPoint.TargetType,
-            AIAgentAvailable = string.Equals(channel, OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase) &&
-                (_aiVoiceAnswererRegistered || entryPoint.TargetType == EntryPointTargetType.AIAgent),
+            AIAgentAvailable = IsAIAgentAvailable(channel) || entryPoint.TargetType == EntryPointTargetType.AIAgent,
             TargetAgentId = entryPoint.TargetAgentId,
             TargetQueueId = entryPoint.TargetQueueId,
             BusinessHoursCalendarId = entryPoint.BusinessHoursCalendarId,
@@ -176,4 +179,10 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
 
         return await EditAsync(entryPoint, context);
     }
+
+    // Calls are answered by a provider's AI voice agent; any other channel by the feature that registered it.
+    private bool IsAIAgentAvailable(string channel)
+        => string.Equals(channel, OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase)
+            ? _aiVoiceAnswererRegistered
+            : _aiAgentOptions.Channels.Contains(channel);
 }

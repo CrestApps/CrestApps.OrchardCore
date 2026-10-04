@@ -441,6 +441,7 @@ public sealed class SmsHandoffTranscriptTests
                 new NoOpSmsFirstResponseSlaService(),
                 [],
                 new FakeInboundMediaIngestor(),
+                [],
                 _distributedLock,
                 new OptionsWrapper<MessagingWorkspaceOptions>(new MessagingWorkspaceOptions()),
                 session,

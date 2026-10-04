@@ -199,6 +199,7 @@ public sealed class EntryPointAddressTests
             new Mock<IClock>().Object,
             addressStore.Object,
             entryPointStore.Object,
+            Microsoft.Extensions.Options.Options.Create(new EntryPointAIAgentOptions()),
             new PassThroughStringLocalizer<ContactCenterEntryPointHandler>());
     }
 

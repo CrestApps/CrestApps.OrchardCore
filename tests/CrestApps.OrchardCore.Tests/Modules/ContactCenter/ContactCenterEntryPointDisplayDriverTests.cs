@@ -124,7 +124,8 @@ public sealed class ContactCenterEntryPointDisplayDriverTests
             AdminFormOptionsProviderFactory.Create(),
             addresses.Object,
             Options.Create(new EntryPointChannelOptions()),
-            []);
+            [],
+            Options.Create(new EntryPointAIAgentOptions()));
     }
 
     private static ContactCenterEntryPointVoiceDisplayDriver CreateVoiceDriver()

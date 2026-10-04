@@ -74,7 +74,7 @@ public sealed class AIVoiceEntryPointTests
     }
 
     [Fact]
-    public async Task Validating_RefusesAnAIAgentForTexts()
+    public async Task Validating_RefusesAnAIAgentForTextsWhenNoFeatureAnswersThem()
     {
         // Arrange
         var entryPoint = AIEntryPoint();
@@ -86,6 +86,41 @@ public sealed class AIVoiceEntryPointTests
 
         // Assert
         Assert.Contains(context.Result.Errors, error => error.MemberNames.Contains(nameof(ContactCenterEntryPoint.TargetType)));
+    }
+
+    // SMS Omnichannel Automation registers texts as a channel an AI agent answers, so a text entry point may then route
+    // to one; the profile is still required.
+    [Fact]
+    public async Task Validating_AcceptsAnAIAgentForTextsWhenAFeatureAnswersThem()
+    {
+        // Arrange
+        var entryPoint = AIEntryPoint();
+        entryPoint.Channel = OmnichannelConstants.Channels.Sms;
+        var context = new ValidatingContext<ContactCenterEntryPoint>(entryPoint);
+
+        // Act
+        await CreateHandler(OmnichannelConstants.Channels.Sms).ValidatingAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(context.Result.Succeeded);
+    }
+
+    [Fact]
+    public async Task Validating_RequiresTheAIProfileForTexts()
+    {
+        // Arrange
+        var entryPoint = AIEntryPoint();
+        entryPoint.Channel = OmnichannelConstants.Channels.Sms;
+        entryPoint.TargetAIProfileId = null;
+        var context = new ValidatingContext<ContactCenterEntryPoint>(entryPoint);
+
+        // Act
+        await CreateHandler(OmnichannelConstants.Channels.Sms).ValidatingAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        var error = Assert.Single(context.Result.Errors);
+        Assert.Contains(nameof(ContactCenterEntryPoint.TargetAIProfileId), error.MemberNames);
+        Assert.Equal("Select the AI agent that answers this entry point's texts.", error.ErrorMessage);
     }
 
     [Fact]
@@ -166,8 +201,15 @@ public sealed class AIVoiceEntryPointTests
         return answerer;
     }
 
-    private static ContactCenterEntryPointHandler CreateHandler()
+    private static ContactCenterEntryPointHandler CreateHandler(params string[] aiAgentChannels)
     {
+        var aiAgentOptions = new EntryPointAIAgentOptions();
+
+        foreach (var channel in aiAgentChannels)
+        {
+            aiAgentOptions.Channels.Add(channel);
+        }
+
         var addressStore = new Mock<IOmnichannelChannelEndpointStore>();
         addressStore.Setup(store => store.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
 
@@ -178,6 +220,7 @@ public sealed class AIVoiceEntryPointTests
             new Mock<IClock>().Object,
             addressStore.Object,
             entryPointStore.Object,
+            Microsoft.Extensions.Options.Options.Create(aiAgentOptions),
             new PassThroughStringLocalizer<ContactCenterEntryPointHandler>());
     }
 

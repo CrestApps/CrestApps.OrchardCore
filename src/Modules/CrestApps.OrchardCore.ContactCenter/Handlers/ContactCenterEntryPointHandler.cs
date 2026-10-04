@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Handlers;
@@ -18,6 +19,7 @@ internal sealed class ContactCenterEntryPointHandler : CatalogEntryHandlerBase<C
     private readonly IClock _clock;
     private readonly IOmnichannelChannelEndpointStore _addressStore;
     private readonly IContactCenterEntryPointStore _entryPointStore;
+    private readonly EntryPointAIAgentOptions _aiAgentOptions;
 
     internal readonly IStringLocalizer S;
 
@@ -27,16 +29,19 @@ internal sealed class ContactCenterEntryPointHandler : CatalogEntryHandlerBase<C
     /// <param name="clock">The clock used to stamp audit times.</param>
     /// <param name="addressStore">The address list entry points pick their numbers from.</param>
     /// <param name="entryPointStore">The entry points, read directly because the catalog manager runs this handler.</param>
+    /// <param name="aiAgentOptions">The channels other than calls whose traffic an AI agent can answer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ContactCenterEntryPointHandler(
         IClock clock,
         IOmnichannelChannelEndpointStore addressStore,
         IContactCenterEntryPointStore entryPointStore,
+        IOptions<EntryPointAIAgentOptions> aiAgentOptions,
         IStringLocalizer<ContactCenterEntryPointHandler> stringLocalizer)
     {
         _clock = clock;
         _addressStore = addressStore;
         _entryPointStore = entryPointStore;
+        _aiAgentOptions = aiAgentOptions.Value;
         S = stringLocalizer;
     }
 
@@ -88,15 +93,20 @@ internal sealed class ContactCenterEntryPointHandler : CatalogEntryHandlerBase<C
 
         if (context.Model.TargetType == EntryPointTargetType.AIAgent)
         {
-            // Only calls are answered by an AI voice agent here; texts reach their automated conversations another way.
-            if (!string.Equals(context.Model.GetChannel(), OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase))
+            // Calls are answered by an AI voice agent; another channel only when a feature lets an AI answer it.
+            var channel = context.Model.GetChannel();
+            var answersCalls = string.Equals(channel, OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase);
+
+            if (!answersCalls && !_aiAgentOptions.Channels.Contains(channel))
             {
-                context.Result.Fail(new ValidationResult(S["Only an entry point that answers calls can route to an AI voice agent."], [nameof(ContactCenterEntryPoint.TargetType)]));
+                context.Result.Fail(new ValidationResult(S["An AI agent cannot answer this entry point's channel. Turn on the feature that lets an AI answer it, or route to a queue or an agent."], [nameof(ContactCenterEntryPoint.TargetType)]));
             }
 
             if (string.IsNullOrWhiteSpace(context.Model.TargetAIProfileId))
             {
-                context.Result.Fail(new ValidationResult(S["Select the AI agent that answers this entry point's calls."], [nameof(ContactCenterEntryPoint.TargetAIProfileId)]));
+                context.Result.Fail(new ValidationResult(answersCalls
+                    ? S["Select the AI agent that answers this entry point's calls."]
+                    : S["Select the AI agent that answers this entry point's texts."], [nameof(ContactCenterEntryPoint.TargetAIProfileId)]));
             }
         }
 

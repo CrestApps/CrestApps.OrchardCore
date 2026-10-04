@@ -1,8 +1,12 @@
-﻿using CrestApps.OrchardCore.Diagnostics;
+﻿using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Twilio;
 using CrestApps.OrchardCore.Omnichannel.Sms.BackgroundTasks;
+using CrestApps.OrchardCore.Omnichannel.Sms.Drivers;
 using CrestApps.OrchardCore.Omnichannel.Sms.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Sms.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Sms.Migrations;
@@ -63,6 +67,23 @@ public sealed class Startup : StartupBase
 /// Receives Twilio texts for the automated conversations. The SMS Messaging Channel registers the
 /// same webhook for the workspace; whichever registers first owns it, so the route is mapped once with both on.
 /// </summary>
+/// <summary>
+/// Lets a text entry point route its texts to an AI agent, which takes the customer's first text itself.
+/// </summary>
+[RequireFeatures(MessagingConstants.Feature.Sms)]
+public sealed class EntryPointAIAgentStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddEntryPointAIAgentChannel(OmnichannelConstants.Channels.Sms);
+        services.AddDisplayDriver<ContactCenterEntryPoint, SmsEntryPointAIAgentDisplayDriver>();
+
+        // Asked by both the automated handler and the messaging workspace, so it is scoped: the one instance remembers
+        // what it decided for a text, and the second handler of the same text reads that answer.
+        services.AddScoped<IMessagingAIConversationStarter, SmsEntryPointAIConversationStarter>();
+    }
+}
+
 public sealed class TwilioSmsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
