@@ -36,7 +36,9 @@ internal sealed class OmnichannelChannelEndpointDisplayDriver : DisplayDriver<Om
             View("OmnichannelChannelEndpoint_Buttons_SummaryAdmin", endpoint)
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:5"),
             View("OmnichannelChannelEndpoint_DefaultMeta_SummaryAdmin", endpoint)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5"),
+            View("OmnichannelChannelEndpoint_CloneActionsMenu_SummaryAdmin", endpoint)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "ActionsMenu:5")
         );
     }
 

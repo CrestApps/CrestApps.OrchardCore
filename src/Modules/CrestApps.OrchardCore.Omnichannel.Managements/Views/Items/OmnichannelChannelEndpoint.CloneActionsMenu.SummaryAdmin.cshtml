@@ -1,0 +1,11 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<OmnichannelChannelEndpoint>
+
+<li>
+    <a asp-action="Create"
+       asp-route-source="@Model.Value.GetAddressType()"
+       asp-route-cloneId="@Model.Value.ItemId"
+       class="dropdown-item">@T["Clone"]</a>
+</li>

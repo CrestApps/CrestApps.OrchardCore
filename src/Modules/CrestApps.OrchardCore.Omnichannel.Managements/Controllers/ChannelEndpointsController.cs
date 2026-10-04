@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Core.Validation;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Managements.Deployments;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -151,8 +152,9 @@ public sealed class ChannelEndpointsController : Controller
     /// Displays the form for adding an address of the given type.
     /// </summary>
     /// <param name="source">The address type being added, such as a phone number.</param>
+    /// <param name="cloneId">The identifier of the address to copy, when cloning one.</param>
     [Admin("omnichannel/channel-endpoints/create/{source}", "OmnichannelChannelEndpointsCreate")]
-    public async Task<ActionResult> Create(string source)
+    public async Task<ActionResult> Create(string source, [FromQuery] string cloneId)
     {
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageChannelEndpoints))
         {
@@ -164,7 +166,12 @@ public sealed class ChannelEndpointsController : Controller
             return NotFound();
         }
 
-        var model = await NewAddressAsync(addressType);
+        var model = await NewAddressAsync(addressType, cloneId);
+
+        if (model is null)
+        {
+            return NotFound();
+        }
 
         var viewModel = new EditCatalogEntryViewModel
         {
@@ -179,10 +186,11 @@ public sealed class ChannelEndpointsController : Controller
     /// Adds an address of the given type.
     /// </summary>
     /// <param name="source">The address type being added, such as a phone number.</param>
+    /// <param name="cloneId">The identifier of the address being copied, when cloning one.</param>
     [HttpPost]
     [ActionName(nameof(Create))]
     [Admin("omnichannel/channel-endpoints/create/{source}", "OmnichannelChannelEndpointsCreate")]
-    public async Task<ActionResult> CreatePost(string source)
+    public async Task<ActionResult> CreatePost(string source, [FromQuery] string cloneId)
     {
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageChannelEndpoints))
         {
@@ -194,7 +202,12 @@ public sealed class ChannelEndpointsController : Controller
             return NotFound();
         }
 
-        var model = await NewAddressAsync(addressType);
+        var model = await NewAddressAsync(addressType, cloneId);
+
+        if (model is null)
+        {
+            return NotFound();
+        }
 
         var viewModel = new EditCatalogEntryViewModel
         {
@@ -294,8 +307,13 @@ public sealed class ChannelEndpointsController : Controller
             _addressOptions.GetCapabilities(type.Name).Any();
     }
 
-    private async Task<OmnichannelChannelEndpoint> NewAddressAsync(OmnichannelAddressType type)
+    private async Task<OmnichannelChannelEndpoint> NewAddressAsync(OmnichannelAddressType type, string cloneId)
     {
+        if (!string.IsNullOrEmpty(cloneId))
+        {
+            return await CloneAddressAsync(type, cloneId);
+        }
+
         var model = await _manager.NewAsync();
         model.AddressType = type.Name;
 
@@ -308,5 +326,31 @@ public sealed class ChannelEndpointsController : Controller
         }
 
         return model;
+    }
+
+    // A clone is built the way a deployment plan would recreate its source, so it carries the address's configuration
+    // and none of its identity or history; the post rebuilds it the same way before binding the form. What only one
+    // address may hold is left behind: the value itself, the ids of the records merged into it, and the agents who
+    // dial or text from it, since an agent has one number per channel and keeping them would refuse the save.
+    private async Task<OmnichannelChannelEndpoint> CloneAddressAsync(OmnichannelAddressType type, string cloneId)
+    {
+        var source = await _manager.FindByIdAsync(cloneId);
+
+        if (source is null || !string.Equals(source.GetAddressType(), type.Name, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var data = OmnichannelDeploymentSerializer.Export(source);
+
+        data.Remove(nameof(OmnichannelChannelEndpoint.Properties));
+
+        var clone = await _manager.NewAsync(data);
+
+        clone.DisplayText = S["Copy of {0}", source.DisplayText];
+        clone.Value = null;
+        clone.MergedItemIds = [];
+
+        return clone;
     }
 }

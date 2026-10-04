@@ -29,6 +29,8 @@ An **omnichannel address** is an address the business owns, such as a phone numb
 Agents on no number's list use the default numbers chosen under **Settings > Contact Center > [Default numbers](contact-center-settings.md#default-numbers)**.
 5. Click **Save**.
 
+To add a number set up like an existing one, open the existing address's **Actions** menu and choose **Clone**. The form opens with its kind, what it is used for, its description and its SMS provider. Enter the new number and a name, pick its agents, and click **Save**. The number and the agents who dial or text from it are not copied, because each agent dials and texts from one number.
+
 A number is listed once. To use a number for calls and texts, tick both on the same address rather than adding it twice. The kind of address cannot be changed after it is created, and addresses cannot be deleted.
 
 The address list shows each address's kind, what it is used for, its number and its SMS provider as badges under its name.

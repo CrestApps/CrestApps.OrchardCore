@@ -53,7 +53,9 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
             View("ContactCenterEntryPoint_Buttons_SummaryAdmin", entryPoint)
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:5"),
             View("ContactCenterEntryPoint_DefaultMeta_SummaryAdmin", entryPoint)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5"),
+            View("ContactCenterEntryPoint_CloneActionsMenu_SummaryAdmin", entryPoint)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "ActionsMenu:5")
         );
     }
 

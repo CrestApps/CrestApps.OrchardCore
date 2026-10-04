@@ -93,6 +93,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core
             public static readonly OrchardCore.Security.Permissions.Permission CompleteActivity;
             public static readonly OrchardCore.Security.Permissions.Permission CompleteOwnActivity;
             public static readonly OrchardCore.Security.Permissions.Permission ConvertLead;
+            public static readonly OrchardCore.Security.Permissions.Permission DeleteLoadedActivityBatches;
             public static readonly OrchardCore.Security.Permissions.Permission EditActivity;
             public static readonly OrchardCore.Security.Permissions.Permission EditConvertedLead;
             public static readonly OrchardCore.Security.Permissions.Permission ListActivities;

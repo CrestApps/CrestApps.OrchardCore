@@ -340,23 +340,20 @@ public sealed class ActivityBatchesController : Controller
             return NotFound();
         }
 
-        if (model.Status == OmnichannelActivityBatchStatus.Loaded)
-        {
-            await _notifier.ErrorAsync(H["This batch was already loaded and can't be removed."]);
+        var refusal = await GetDeleteRefusalAsync(model);
 
-            return RedirectToAction(nameof(Index));
-        }
-
-        if (model.Status == OmnichannelActivityBatchStatus.Started || model.Status == OmnichannelActivityBatchStatus.Loading)
+        if (refusal is not null)
         {
-            await _notifier.ErrorAsync(H["This batch is being loaded and can't be removed."]);
+            await _notifier.ErrorAsync(refusal);
 
             return RedirectToAction(nameof(Index));
         }
 
         if (await _manager.DeleteAsync(model))
         {
-            await _notifier.SuccessAsync(H["The activity load has been deleted successfully."]);
+            await _notifier.SuccessAsync(model.Status == OmnichannelActivityBatchStatus.Loaded
+                ? H["The activity load has been deleted. The activities it loaded were kept."]
+                : H["The activity load has been deleted successfully."]);
         }
         else
         {
@@ -448,6 +445,7 @@ public sealed class ActivityBatchesController : Controller
                     break;
                 case CatalogEntryAction.Remove:
                     var counter = 0;
+                    var refused = 0;
                     foreach (var id in itemIds)
                     {
                         var instance = await _manager.FindByIdAsync(id);
@@ -457,10 +455,23 @@ public sealed class ActivityBatchesController : Controller
                             continue;
                         }
 
+                        // The bulk path is held to the same rules as a single delete, so a batch being loaded is
+                        // never removed from under its load.
+                        if (await GetDeleteRefusalAsync(instance) is not null)
+                        {
+                            refused++;
+
+                            continue;
+                        }
+
                         if (await _manager.DeleteAsync(instance))
                         {
                             counter++;
                         }
+                    }
+                    if (refused > 0)
+                    {
+                        await _notifier.WarningAsync(H.Plural(refused, "1 activity load was not removed because it is being loaded or you may not remove a loaded batch.", "{0} activity loads were not removed because they are being loaded or you may not remove a loaded batch."));
                     }
                     if (counter == 0)
                     {
@@ -477,6 +488,26 @@ public sealed class ActivityBatchesController : Controller
         }
 
         return RedirectToAction(nameof(Index));
+    }
+
+    // A batch is never removed while it is being loaded: the load reads it again as it commits, and would store it a
+    // second time. A loaded batch is only the record of a finished load. Nothing refers to it afterwards -- the
+    // activities it created carry no reference back to it and stay exactly as they are -- so it may be removed, but
+    // only by someone allowed to remove that record.
+    private async Task<LocalizedHtmlString> GetDeleteRefusalAsync(OmnichannelActivityBatch batch)
+    {
+        if (batch.Status == OmnichannelActivityBatchStatus.Started || batch.Status == OmnichannelActivityBatchStatus.Loading)
+        {
+            return H["This batch is being loaded and can't be removed."];
+        }
+
+        if (batch.Status == OmnichannelActivityBatchStatus.Loaded &&
+            !await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.DeleteLoadedActivityBatches))
+        {
+            return H["This batch was already loaded, and you are not allowed to remove a loaded batch."];
+        }
+
+        return null;
     }
 
     private bool TryGetActivityBatchSource(string source, out ActivityBatchSourceEntry sourceEntry)

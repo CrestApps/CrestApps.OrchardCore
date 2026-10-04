@@ -50,7 +50,9 @@ internal sealed class ActivityQueueDisplayDriver : DisplayDriver<ActivityQueue>
             View("ActivityQueue_Buttons_SummaryAdmin", queue)
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:5"),
             View("ActivityQueue_DefaultMeta_SummaryAdmin", queue)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5"),
+            View("ActivityQueue_CloneActionsMenu_SummaryAdmin", queue)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "ActionsMenu:5")
         );
     }
 

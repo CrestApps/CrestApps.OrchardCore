@@ -102,6 +102,18 @@ public sealed class EntryPointsController : ContactCenterCatalogController<Conta
     protected override LocalizedHtmlString DeletedNotification
         => H["The inbound entry point has been deleted successfully."];
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// A number is answered by one enabled entry point on each channel, so the copy starts without the source's numbers;
+    /// keeping them would refuse the save until every one was removed by hand.
+    /// </remarks>
+    protected override void InitializeClone(ContactCenterEntryPoint clone, ContactCenterEntryPoint source)
+    {
+        clone.Name = S["Copy of {0}", source.Name];
+        clone.AddressIds = [];
+        clone.DialedNumbers = [];
+    }
+
     /// <summary>
     /// Lists the entry points.
     /// </summary>
@@ -133,20 +145,22 @@ public sealed class EntryPointsController : ContactCenterCatalogController<Conta
     /// <summary>
     /// Displays the entry point create form.
     /// </summary>
+    /// <param name="cloneId">The identifier of the entry point to copy, when cloning one.</param>
     /// <returns>The create view.</returns>
     [Admin("contact-center/entry-points/create", "ContactCenterEntryPointsCreate")]
-    public Task<IActionResult> Create()
-        => CreateAsync();
+    public Task<IActionResult> Create([FromQuery] string cloneId)
+        => CreateAsync(cloneId);
 
     /// <summary>
     /// Persists a new entry point.
     /// </summary>
+    /// <param name="cloneId">The identifier of the entry point being copied, when cloning one.</param>
     /// <returns>A redirect to the list or the form when invalid.</returns>
     [HttpPost]
     [ActionName(nameof(Create))]
     [Admin("contact-center/entry-points/create", "ContactCenterEntryPointsCreate")]
-    public Task<IActionResult> CreatePost()
-        => CreatePostAsync();
+    public Task<IActionResult> CreatePost([FromQuery] string cloneId)
+        => CreatePostAsync(cloneId);
 
     /// <summary>
     /// Displays the entry point edit form.
