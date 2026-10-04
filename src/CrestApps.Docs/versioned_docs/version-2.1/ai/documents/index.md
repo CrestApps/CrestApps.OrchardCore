@@ -132,7 +132,7 @@ Only embeddable file extensions are supported for AI Profile documents. The set 
 | Word | .docx | `CrestApps.OrchardCore.AI.Documents.OpenXml` |
 | PowerPoint | .pptx | `CrestApps.OrchardCore.AI.Documents.OpenXml` |
 
-:::note Note
+:::note[Note]
 Tabular file types (`.csv`, `.tsv`, `.xlsx`, `.xls`) are registered as non-embeddable and are not available for AI Profile document upload, since they are intended for tabular data analysis rather than text-based retrieval-augmented generation (RAG).
 :::
 

@@ -12,7 +12,7 @@ This guide covers the two day-to-day Contact Center surfaces:
 
 Both build on the [real-time SignalR layer](index.md#real-time-experience) and the [Telephony](../telephony/index.md) soft phone. The CRM still owns the work (activities, contacts, subjects, dispositions), the Contact Center orchestrates it, and Telephony executes the media.
 
-:::tip Looking for step-by-step instructions?
+:::tip[Looking for step-by-step instructions?]
 This page explains how the surfaces work. For a task-by-task how-to (sign in, accept a call, request a break, create a queue, load activities, monitor/whisper/barge) with screencasts, see the [User Manual](../user-manual/index.md).
 :::
 

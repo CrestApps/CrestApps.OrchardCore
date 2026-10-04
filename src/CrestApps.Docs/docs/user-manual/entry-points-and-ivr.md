@@ -85,7 +85,7 @@ To start an entry point from an existing one, open its **Actions** menu in the e
 
 ## AI voice agent
 
-A call entry point can hand its calls to an AI voice agent: an AI chat profile, such as one made from the **Answer calls at the front desk** template.
+A call entry point can hand its calls to an AI voice agent: an AI chat profile, such as one made from the **Answer calls at the front desk** template. This is the only place an AI is set to answer calls. Queues have no AI setting.
 
 1. Make the profile under **Artificial Intelligence > Profiles**, with an initial prompt (what it says when it picks up) and the business details its prompt asks for.
 2. On the entry point's **Routing** card, set **Route to** to **AI voice agent** and pick the profile under **AI agent**.

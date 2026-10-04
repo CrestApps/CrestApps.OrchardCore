@@ -24,6 +24,10 @@ Queue groups only organize queues for administration and reports, for example *S
 1. Open **Interaction Center > Management > Queue groups** and click **Add queue group**.
 2. Enter a **Name** and, optionally, a **Description**, then **Save**.
 
+:::note[AI answering]
+A queue holds callers for people; it has no AI setting. To have an AI profile answer a number's calls, set **Route to** to **AI voice agent** on the number's [inbound entry point](entry-points-and-ivr.md#ai-voice-agent). See [Let the AI answer incoming calls](automated-ai.md#let-the-ai-answer-incoming-calls).
+:::
+
 ## Clone a queue
 
 To start a queue from an existing one, open its **Actions** menu in the queue list and choose **Clone**. The form opens with every setting of the original and the name **Copy of** the original's name. Change what you need and click **Save**. The agents who work the original queue are not added to the copy.

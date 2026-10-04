@@ -49,6 +49,6 @@ Incoming calls raise a Windows notification and a call window with the caller, t
 
 **Settings** has a **General** tab (site domain, start when I sign in, play ringtone, always on top, developer tools, reload phone) and a **Diagnostics** tab with **Run connection test** and a live connection indicator. IT departments can push and lock the domain and other settings through Group Policy or Intune; see the app's enterprise deployment guide in its repository.
 
-:::note Kill switch
+:::note[Kill switch]
 The **Enable the soft phone** setting hides the in-page phone only. The apps keep working while the Soft Phone Extension feature is enabled; disable that feature to stop them.
 :::

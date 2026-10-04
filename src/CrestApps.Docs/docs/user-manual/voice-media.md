@@ -26,7 +26,7 @@ The **voice media** library holds the audio your phone system plays: hold music 
 
 Uploading a new file to an existing clip replaces the old audio and removes the old file from the provider. The **Audio** field is disabled when no enabled phone provider can host media.
 
-:::note About the screencast
+:::note[About the screencast]
 The demo site is not connected to a phone provider, so the screencast shows the form without uploading a file.
 :::
 
@@ -35,6 +35,6 @@ The demo site is not connected to a phone provider, so the screencast shows the 
 - On a queue, pick it as **Hold music** on the *While callers wait* card. See [Queues](queues.md#while-callers-wait).
 - In an IVR menu, pick it as a menu's **Recorded prompt**. See [IVR menus](entry-points-and-ivr.md#build-an-ivr-menu).
 
-:::note Moving to another site
+:::note[Moving to another site]
 Voice media is not included in deployment plans. After importing queues or IVR menus into another site, upload the clips there and pick them again.
 :::

@@ -17,7 +17,7 @@ The **live dashboard** is the supervisor's real-time view of the contact center:
   <source src="/img/docs/um-live-dashboard.mp4" type="video/mp4" />
 </video>
 
-:::info You see your own queues
+:::info[You see your own queues]
 The dashboard shows the queues and campaigns on **your own** [agent entitlement](skills-and-entitlements.md) record. A supervisor without an entitlement record sees an empty dashboard, even with the Administrator role.
 :::
 
@@ -52,6 +52,6 @@ The buttons on an agent's card depend on your permissions and on what the phone 
 
 While you listen, whisper or barge, a banner in your soft phone lets you **switch mode** or **Stop**. Listening is blocked while the agent has paused the recording for card details. Every action is recorded in the audit trail.
 
-:::note About the screencast
+:::note[About the screencast]
 The demo site has no live calls, so the screencast shows the dashboard and the agent board. The intervention buttons appear on an agent's card while that agent is on a call.
 :::

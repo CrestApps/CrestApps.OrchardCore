@@ -119,10 +119,10 @@ The list shows each broadcast's status and how many messages were sent and faile
 | **START** | UNSTOP, YES | The customer is opted back in. |
 | **HELP** | INFO | The customer gets the help reply. |
 
-:::note Where replies come from
+:::note[Where replies come from]
 With Twilio, inbound texts reach the workspace through the Twilio webhook, `/api/twilio/webhook/sms`, which comes with the SMS channel. You do not need SMS Omnichannel Automation for it. Telnyx inbound texts use the Telnyx SMS webhook.
 :::
 
-:::note About the screencasts
+:::note[About the screencasts]
 The inbox and broadcast screencasts fill in replies and broadcasts without sending them; the new-conversation screencast sends a real text.
 :::

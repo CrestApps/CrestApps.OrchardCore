@@ -87,7 +87,7 @@ At minimum, your provider should:
 
 Use `TelephonyCall.Metadata` only for contextual data that should travel with the call without polluting the shared contract with provider-specific fields.
 
-:::note Technical names are unique and case-insensitive
+:::note[Technical names are unique and case-insensitive]
 Provider technical names registered with `TelephonyProviderOptions` are compared case-insensitively and trimmed of surrounding whitespace, so `"Asterisk"` and `"asterisk"` resolve to the same provider. Re-registering the identical provider type under an existing name is a harmless no-op, but registering a **different** provider type under a name another module already claimed throws at startup instead of being silently discarded — pick a distinct technical name, or use `ReplaceProvider` when an override is intentional.
 :::
 

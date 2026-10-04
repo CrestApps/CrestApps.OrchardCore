@@ -103,7 +103,7 @@ zeros it never measured.
 - **Audio tokens** — and the realtime session's own text and cached-input tokens — have fields on every summary but
   stay empty for now.
 
-:::note Requires CrestApps.Core
+:::note[Requires CrestApps.Core]
 A realtime (speech-to-speech) session's token usage is reported by the provider at the end of every response, but
 the CrestApps.Core realtime conversation does not yet pass it on. Realtime audio and text tokens will appear in
 this report once a CrestApps.Core release surfaces that usage on the realtime conversation events.

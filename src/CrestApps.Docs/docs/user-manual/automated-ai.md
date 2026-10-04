@@ -5,6 +5,8 @@ title: Automated AI SMS and Voice Campaigns
 description: Set up an AI profile and an automatic activity load so the AI texts or calls your contacts, follows up, picks the disposition, and hands off to a person when needed.
 ---
 
+This page is about conversations the AI starts. To have the AI answer the calls customers make to your numbers, see [Let the AI answer incoming calls](#let-the-ai-answer-incoming-calls).
+
 An **automatic** activity load creates activities that an **AI profile** works by itself: it sends the opening text (or places the call), holds the conversation, and completes the activity with a disposition and a summary. If the subject allows it, the AI hands the customer to a live agent.
 
 | | |
@@ -42,6 +44,23 @@ A background task picks up due automated activities every five minutes and sends
 </video>
 
 Follow the same steps with **Phone** as the channel and a phone endpoint. The AI places each call, talks with the person who answers, and hangs up when the conversation is done. Before every call the contact is checked against opt-outs, national do-not-call registries, and the calling window, which needs the **Contact Center Outbound Dialer** feature.
+
+## Let the AI answer incoming calls
+
+An automatic load is for conversations the AI starts. To have an AI profile **answer** the calls customers make to one of your numbers, set it on the number's **inbound entry point**, not on a queue. A queue only holds callers for people.
+
+1. Make the profile under **Artificial Intelligence > AI Profiles**. **Add Profile** with the **Answer calls at the front desk** starting point fills in the greeting and the instructions. Every **Chat** profile can be picked.
+2. Open **Interaction Center > Management > Inbound entry points** and edit (or add) the **Voice calls** entry point that picks the number under **Numbers**.
+3. On the **Routing** card, set **Route to** to **AI voice agent** and choose the profile under **AI agent**. Click **Save**.
+4. Optionally, give the number an inbound **Phone** [subject](subjects.md) whose channel endpoint is that number. Its subject, campaign and [subject flow](subject-flows.md) are used for the call: the dispositions the AI picks from, and whether it may hand the caller to a person.
+
+While the entry point is open, the AI picks up every call to the number, greets the caller with the profile's opening message and holds the conversation. The welcome message, phone menu and queue are not used. While the entry point is closed, callers go to voicemail, or are refused when its closed action is **Reject**. Each call is an automated activity with the AI's transcript. It reaches an agent only if the AI hands the caller over. See [AI voice agent](entry-points-and-ivr.md#ai-voice-agent).
+
+This needs the **Telnyx AI Voice Agent** feature, which adds **AI voice agent** to the **Route to** list.
+
+## Incoming texts
+
+The AI replies to texts only in conversations it started from an automatic load: each reply from the customer is answered by the activity's AI profile until the conversation ends. A new text that is not part of such a conversation goes to people, through the number's [text entry point](entry-points-and-ivr.md#text-entry-points). Text entry points have no AI option.
 
 ## AI options on an automatic load
 

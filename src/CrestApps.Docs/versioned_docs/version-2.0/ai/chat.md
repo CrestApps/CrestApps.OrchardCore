@@ -209,7 +209,7 @@ Navigate to **Settings** → **Artificial Intelligence** → **Admin Widget** to
 - **Max Sessions**: Set the maximum number of previous chat sessions displayed in the history panel (1–50).
 - **Primary Color**: Customize the widget's primary color (header, toggle button). Defaults to `#41b670` (Orchard Core green).
 
-- :::tip Pro Tip
+:::tip[Pro Tip]
 It's best to enable **Orchard Core AI Agent** (i.e., `CrestApps.OrchardCore.AI.Agent`). Then when creating a profile, select all available capabilities to allow the profile to perform tasks on your website.
 :::
 
