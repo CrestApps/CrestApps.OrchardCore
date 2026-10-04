@@ -219,11 +219,12 @@ The assigned number is used wherever an agent places a call:
 | --- | --- |
 | Soft phone keypad dial, including a call the browser places itself | The agent's line, otherwise the provider default. |
 | Extension call to a colleague | The agent's line, otherwise the provider default. |
-| Dialer attempt (Preview, Power, Progressive) and queued callback | The agent's line, then the dialer profile's **Caller ID**, then the provider default. |
+| Dialer attempt (Preview, Power, Progressive) | The **Dial from** number picked when the activities were loaded, then the agent's line, then the dialer profile's **Caller ID**, then the provider default. |
+| Queued callback | The agent's line, then the dialer profile's **Caller ID**, then the provider default. |
 
 The server always decides the number. A caller ID the browser sends with a dial is ignored, so an agent cannot show a number that was not assigned to them.
 
-A dialer profile that must always show its own number, whoever makes the call, can tick **Always show this caller ID** under **Caller ID**. Transfers, consult calls and supervisor legs still show the provider default.
+A dialer profile that must always show its own number, whoever makes the call and whatever number the load picked, can tick **Always show this caller ID** under **Caller ID**. Transfers, consult calls and supervisor legs still show the provider default.
 
 The number has to be one your provider lets you show, which for Telnyx means a number on the account or a verified number. To send callbacks to the agent who called, point an inbound entry point for that number at the agent or their queue.
 

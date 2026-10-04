@@ -26,6 +26,16 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Migrations;
 /// </remarks>
 internal sealed class MessagingEntryPointMigrations : DataMigration
 {
+    // The name the SMS portal stored a number's routing under, before the messaging workspace replaced it.
+    private const string LegacyRoutingSettingsKey = "SmsEndpointRoutingSettings";
+
+    // The portal wrote its enums by name.
+    private static readonly System.Text.Json.JsonSerializerOptions _legacyOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() },
+    };
+
     private readonly IContactCenterEntryPointManager _entryPointManager;
     private readonly IOmnichannelChannelEndpointManager _addressManager;
     private readonly ILogger _logger;
@@ -54,7 +64,19 @@ internal sealed class MessagingEntryPointMigrations : DataMigration
     {
         await MoveRoutingToEntryPointsAsync(_entryPointManager, _addressManager, _logger);
 
-        return 1;
+        return 2;
+    }
+
+    /// <summary>
+    /// Moves the routing the first pass left behind: a number whose routing was still stored under the SMS portal's
+    /// name, because the portal import never ran on its tenant.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await MoveRoutingToEntryPointsAsync(_entryPointManager, _addressManager, _logger);
+
+        return 2;
     }
 
     /// <summary>
@@ -76,7 +98,7 @@ internal sealed class MessagingEntryPointMigrations : DataMigration
     {
         var key = nameof(MessagingEndpointRoutingSettings);
         var addresses = (await addressManager.GetAllAsync())
-            .Where(address => address.Properties?.ContainsKey(key) == true)
+            .Where(address => address.Properties?.ContainsKey(key) == true || address.Properties?.ContainsKey(LegacyRoutingSettingsKey) == true)
             .ToList();
 
         if (addresses.Count == 0)
@@ -89,7 +111,14 @@ internal sealed class MessagingEntryPointMigrations : DataMigration
 
         foreach (var address in addresses)
         {
+            // The SMS portal stored the same settings under its own name; a tenant whose portal import never ran still has
+            // them there, and the workspace's name wins when both are present.
             address.TryGet<MessagingEndpointRoutingSettings>(out var routing);
+
+            if (routing is null && address.Properties.TryGetValue(LegacyRoutingSettingsKey, out var legacy))
+            {
+                routing = ReadLegacy(legacy);
+            }
 
             if (routing is null || string.IsNullOrWhiteSpace(routing.TargetId))
             {
@@ -147,6 +176,7 @@ internal sealed class MessagingEntryPointMigrations : DataMigration
             }
 
             address.Properties.Remove(key);
+            address.Properties.Remove(LegacyRoutingSettingsKey);
             await addressManager.UpdateAsync(address);
         }
 
@@ -156,6 +186,20 @@ internal sealed class MessagingEntryPointMigrations : DataMigration
                 "Moved the routing of {Count} messaging number(s) onto {Created} new inbound entry point(s).",
                 addresses.Count,
                 created);
+        }
+    }
+
+    private static MessagingEndpointRoutingSettings ReadLegacy(object value)
+    {
+        try
+        {
+            var json = value is System.Text.Json.JsonElement element ? element.GetRawText() : System.Text.Json.JsonSerializer.Serialize(value);
+
+            return System.Text.Json.JsonSerializer.Deserialize<MessagingEndpointRoutingSettings>(json, _legacyOptions);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return null;
         }
     }
 

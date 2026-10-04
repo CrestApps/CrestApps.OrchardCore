@@ -351,17 +351,24 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
                 new(S["SMS"], OmnichannelConstants.Channels.Sms),
             ];
 
+            var isDialerLoad = string.Equals(model.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase);
             var channelEndpointItems = new List<SelectListItem>
             {
-                new(S["No address"], ""),
+                new(isDialerLoad ? S["Default caller ID"] : S["No address"], ""),
             };
 
-            // Only addresses used for calls or texts can reach contacts on a load's channel.
+            // Only addresses used for calls or texts can reach contacts on a load's channel, and a dialer load only calls.
+            // Each address says what it is used for, so the editor offers only those used for the channel picked.
             foreach (var endpoint in (await _channelEndpointsCatalog.GetAllAsync())
-                .Where(endpoint => endpoint.HasCapability(OmnichannelConstants.Channels.Phone) || endpoint.HasCapability(OmnichannelConstants.Channels.Sms))
+                .Where(endpoint => endpoint.HasCapability(OmnichannelConstants.Channels.Phone) ||
+                    (!isDialerLoad && endpoint.HasCapability(OmnichannelConstants.Channels.Sms)))
                 .OrderBy(endpoint => endpoint.DisplayText))
             {
-                channelEndpointItems.Add(new SelectListItem($"{endpoint.DisplayText} ({endpoint.Value})", endpoint.ItemId));
+                var text = string.IsNullOrWhiteSpace(endpoint.DisplayText) || endpoint.DisplayText == endpoint.Value
+                    ? endpoint.Value
+                    : $"{endpoint.DisplayText} ({endpoint.Value})";
+                channelEndpointItems.Add(new SelectListItem(text, endpoint.ItemId, endpoint.ItemId == model.ChannelEndpointId));
+                model.ChannelEndpointCapabilities[endpoint.ItemId] = string.Join(",", endpoint.GetCapabilities());
             }
 
             model.ChannelEndpoints = channelEndpointItems;
@@ -432,6 +439,17 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             if (string.IsNullOrWhiteSpace(model.DialerProfileId))
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.DialerProfileId), S["Dialer profile is required for dialer activity loads."]);
+            }
+
+            if (!string.IsNullOrWhiteSpace(model.ChannelEndpointId))
+            {
+                var endpoint = await _channelEndpointsCatalog.FindByIdAsync(model.ChannelEndpointId);
+
+                // The calls show the number, which only works for one the business uses for calls.
+                if (endpoint is null || !endpoint.HasCapability(OmnichannelConstants.Channels.Phone))
+                {
+                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.ChannelEndpointId), S["Pick a number used for voice calls to dial from."]);
+                }
             }
             else if (!await _optionsProvider.DialerProfileExistsAsync(model.DialerProfileId))
             {
@@ -558,7 +576,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         batch.ContactContentType = model.ContactContentType;
         batch.CampaignId = string.IsNullOrWhiteSpace(model.CampaignId) ? null : model.CampaignId.Trim();
         batch.Channel = isDialer || string.IsNullOrWhiteSpace(model.Channel) ? null : model.Channel.Trim();
-        batch.ChannelEndpointId = isDialer || string.IsNullOrWhiteSpace(model.ChannelEndpointId) ? null : model.ChannelEndpointId.Trim();
+        batch.ChannelEndpointId = string.IsNullOrWhiteSpace(model.ChannelEndpointId) ? null : model.ChannelEndpointId.Trim();
         batch.DialerProfileId = isDialer
             ? model.DialerProfileId?.Trim()
             : null;

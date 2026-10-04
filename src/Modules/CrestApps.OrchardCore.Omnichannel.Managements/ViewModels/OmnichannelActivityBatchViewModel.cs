@@ -65,6 +65,12 @@ public class OmnichannelActivityBatchViewModel
     public string ChannelEndpointId { get; set; }
 
     /// <summary>
+    /// Gets or sets what each offered address is used for, so the editor lists only those used for the channel picked.
+    /// </summary>
+    [BindNever]
+    public IDictionary<string, string> ChannelEndpointCapabilities { get; set; } = new Dictionary<string, string>(StringComparer.Ordinal);
+
+    /// <summary>
     /// Gets or sets the AI profile identifier used by automated activities loaded from this batch.
     /// </summary>
     public string AIProfileId { get; set; }

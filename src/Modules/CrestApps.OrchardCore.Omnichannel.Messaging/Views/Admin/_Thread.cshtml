@@ -47,6 +47,27 @@
                 {
                     <i class="fa-solid fa-star text-warning" title="@T["One of your favorites"]" aria-label="@T["One of your favorites"]"></i>
                 }
+                @* Who works the conversation now, so nobody has to find it in the list to know whose it is. *@
+                @if (!string.IsNullOrEmpty(Model.HolderName))
+                {
+                    <span class="badge text-bg-light border text-truncate" title="@T["Who owns this conversation"]" data-conversation-owner>
+                        <i class="fa-solid fa-user me-1" aria-hidden="true"></i>@(Model.IsHeldByViewer ? T["Assigned to you"] : T["Assigned to {0}", Model.HolderName])
+                        @if (!string.IsNullOrEmpty(Model.OwnerQueueName))
+                        {
+                            <span class="text-muted fw-normal"> &middot; @Model.OwnerQueueName</span>
+                        }
+                    </span>
+                }
+                else if (!string.IsNullOrEmpty(Model.OwnerQueueName))
+                {
+                    <span class="badge text-bg-light border text-truncate" title="@T["Nobody owns it yet: any member of the queue can claim it."]" data-conversation-owner>
+                        <i class="fa-solid fa-users me-1" aria-hidden="true"></i>@T["In the {0} shared inbox", Model.OwnerQueueName]
+                    </span>
+                }
+                else
+                {
+                    <span class="badge text-bg-warning" title="@T["Nobody owns this conversation yet."]" data-conversation-owner>@T["Unassigned"]</span>
+                }
             </div>
             <div class="d-flex flex-wrap gap-2">
                 @if (Model.CanFavorite)

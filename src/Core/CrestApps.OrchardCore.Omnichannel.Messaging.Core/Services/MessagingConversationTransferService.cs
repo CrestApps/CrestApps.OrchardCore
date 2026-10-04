@@ -126,18 +126,21 @@ public sealed class MessagingConversationTransferService : IMessagingConversatio
                 return MessagingTransferResult.Failed("The person was not found.");
             }
 
-            if (IsActingAgent(request, target))
-            {
-                _logger.LogWarning(
-                    "Refused to transfer messaging conversation {ConversationId} to agent {AgentId}: that is the person transferring it.",
-                    conversation.ItemId.SanitizeLogValue(),
-                    target.ItemId.SanitizeLogValue());
-
-                return MessagingTransferResult.Failed("You cannot transfer a conversation to yourself.");
-            }
-
+            // Taking over a conversation someone else holds is a transfer to yourself, and is allowed. Only handing a
+            // conversation to whoever already holds it is refused, which once "transferred" a conversation back to the
+            // person sending it.
             if (string.Equals(previousAgentId, target.ItemId, StringComparison.OrdinalIgnoreCase))
             {
+                if (IsActingAgent(request, target))
+                {
+                    _logger.LogWarning(
+                        "Refused to transfer messaging conversation {ConversationId} to agent {AgentId}: they are transferring it and already hold it.",
+                        conversation.ItemId.SanitizeLogValue(),
+                        target.ItemId.SanitizeLogValue());
+
+                    return MessagingTransferResult.Failed("The conversation is already yours.");
+                }
+
                 return MessagingTransferResult.Failed("The conversation is already with that person.");
             }
 

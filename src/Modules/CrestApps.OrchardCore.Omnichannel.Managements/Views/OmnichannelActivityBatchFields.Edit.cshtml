@@ -196,11 +196,45 @@
             <div class="ocat-wrapper">
                 <label asp-for="ChannelEndpointId" class="ocat-label">@T["Address"]</label>
                 <div class="ocat-end">
-                    <select asp-for="ChannelEndpointId" asp-items="Model.ChannelEndpoints" class="form-select"></select>
+                    <select asp-for="ChannelEndpointId" class="form-select" data-load-address>
+                        @foreach (var option in Model.ChannelEndpoints)
+                        {
+                            Model.ChannelEndpointCapabilities.TryGetValue(option.Value ?? string.Empty, out var capabilities);
+                            <option value="@option.Value" selected="@option.Selected" data-capabilities="@capabilities">@option.Text</option>
+                        }
+                    </select>
                     <span asp-validation-for="ChannelEndpointId" class="text-danger"></span>
-                    <span class="hint">@T["Optional. The phone number used to reach contacts. It must be used for the load's channel."]</span>
+                    <span class="hint">@T["Optional. The number used to reach contacts. Only the addresses used for the channel picked above are listed."]</span>
                 </div>
             </div>
+
+            <script at="Foot">
+                (function () {
+                    var channel = document.querySelector('select[name$=".Channel"]');
+                    var address = document.querySelector('[data-load-address]');
+
+                    if (!channel || !address) {
+                        return;
+                    }
+
+                    // An address reaches contacts only on a channel it is used for, so the others are hidden, and a picked
+                    // one that no longer fits is cleared rather than posted to be refused.
+                    var apply = function () {
+                        Array.prototype.forEach.call(address.options, function (option) {
+                            var capabilities = (option.getAttribute('data-capabilities') || '').split(',');
+                            var fits = !option.value || !channel.value || capabilities.indexOf(channel.value) !== -1;
+                            option.hidden = !fits;
+
+                            if (!fits && option.selected) {
+                                address.value = '';
+                            }
+                        });
+                    };
+
+                    channel.addEventListener('change', apply);
+                    apply();
+                })();
+            </script>
         }
 
         @if (string.Equals(Model.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase))
@@ -212,6 +246,15 @@
                     </select>
                     <span asp-validation-for="DialerProfileId" class="text-danger"></span>
                     <span class="hint">@T["Required. The dialer profile chooses how the loaded activities are dialed: the dialing mode (preview, power, or progressive) and its pacing. The campaign comes from the Campaign field above, or from the subject's default campaign."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper">
+                <label asp-for="ChannelEndpointId" class="ocat-label">@T["Dial from"]</label>
+                <div class="ocat-end">
+                    <select asp-for="ChannelEndpointId" asp-items="Model.ChannelEndpoints" class="form-select"></select>
+                    <span asp-validation-for="ChannelEndpointId" class="text-danger"></span>
+                    <span class="hint">@T["Optional. The number the customers called from this load see, picked from the Omnichannel Addresses used for voice calls. It is shown instead of the agent's own number and the dialer profile's caller ID, unless the profile is set to always show its caller ID. Leave it on Default caller ID to show the agent's number, the profile's caller ID or the provider default."]</span>
                 </div>
             </div>
         }

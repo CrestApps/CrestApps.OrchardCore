@@ -20,14 +20,14 @@ A text entry point decides where the conversations go, how a queue hands them ou
 | **Permission** | Manage Contact Center queues |
 | **Feature** | Contact Center Inbound Entry Points (`CrestApps.OrchardCore.ContactCenter.EntryPoints`), with Contact Center Inbound Voice (`CrestApps.OrchardCore.ContactCenter.InboundVoice`) for call entry points and SMS Messaging Channel (`CrestApps.OrchardCore.Omnichannel.Messaging.Sms`) for text entry points |
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating an inbound entry point that routes a dialed number to a queue with business hours and voicemail settings">
+<video controls preload="metadata" width="100%" aria-label="Screencast of adding a voice calls entry point that picks a number from the address list and routes its calls to a queue, with business hours and voicemail settings">
   <source src="/img/docs/um-entry-point.mp4" type="video/mp4" />
 </video>
 
 ## Create an entry point
 
 1. Add the numbers first, under **Interaction Center > Management > [Omnichannel Addresses](channel-endpoints.md)**, with **Voice calls** or **Text messages (SMS)** ticked.
-2. Open **Interaction Center > Management > Inbound entry points** and click **Add inbound entry point**. When more than one channel is available, pick **Voice calls** or **Text messages** from the button's menu.
+2. Open **Interaction Center > Management > Inbound entry points** and click **Add inbound entry point**. When more than one channel is available, a dialog asks what the entry point answers: click **Add** on the **Voice calls** or **Text messages** card.
 3. Fill in the cards described below. A call entry point has five; the priority, closed-call, phone menu and voicemail settings are for calls only.
 4. Click **Save**. Calls or texts to its numbers follow the new rules straight away.
 
@@ -92,6 +92,10 @@ While the entry point is open, the AI answers each call itself, greets the calle
 The AI voice agent needs the **Telnyx AI Voice Agent** feature. A realtime-capable chat deployment holds a live conversation; others take turns, speaking and then listening. If the feature is turned off after an entry point is set up, its calls are refused until you pick another target.
 
 ## Text entry points
+
+<video controls preload="metadata" width="100%" aria-label="Screencast of adding a text messages entry point that routes a number's texts to a queue, with an auto-reply and a closed auto-reply">
+  <source src="/img/docs/um-entry-point-texts.mp4" type="video/mp4" />
+</video>
 
 A text entry point has the **General**, **Routing** and **Hours** cards, with these settings added for texts:
 
