@@ -1,5 +1,5 @@
-using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
+using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Telnyx.Deployments.Steps;
 
@@ -14,15 +14,6 @@ public sealed class TelnyxSmsSettingsDeploymentStep : DeploymentStep
     public TelnyxSmsSettingsDeploymentStep()
     {
         Name = TelnyxDeploymentSteps.SmsSettings;
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="TelnyxSmsSettingsDeploymentStep"/> class.
-    /// </summary>
-    /// <param name="stringLocalizer">The string localizer.</param>
-    public TelnyxSmsSettingsDeploymentStep(IStringLocalizer<TelnyxSmsSettingsDeploymentStep> stringLocalizer)
-        : this()
-    {
-        Category = stringLocalizer["Telephony"];
+        Category = LocalizationSource.Create<TelnyxSmsSettingsDeploymentStep>("Telephony");
     }
 }

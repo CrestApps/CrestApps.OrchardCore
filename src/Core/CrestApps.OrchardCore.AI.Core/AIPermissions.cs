@@ -127,7 +127,7 @@ public static class AIPermissions
 
         return new Permission(
             string.Format(_queryAIProfileTemplate.Name, profileName),
-        string.Format(_queryAIProfileTemplate.Description, profileName),
+        string.Format(_queryAIProfileTemplate.Description?.Value, profileName),
         _queryAIProfileTemplate.ImpliedBy ?? []
         );
     }
@@ -141,7 +141,7 @@ public static class AIPermissions
 
         return new Permission(
             string.Format(_accessAIToolTemplate.Name, toolName),
-        string.Format(_accessAIToolTemplate.Description, toolName),
+        string.Format(_accessAIToolTemplate.Description?.Value, toolName),
         _accessAIToolTemplate.ImpliedBy ?? []
         );
     }

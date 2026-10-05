@@ -23,7 +23,7 @@
 <div class="ocat-wrapper" asp-validation-class-for="QueueGroupId">
     <label asp-for="QueueGroupId" class="ocat-label">@T["Queue group"]</label>
     <div class="ocat-end">
-        <select asp-for="QueueGroupId" asp-items="Model.QueueGroupOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a queue group"]" data-width="100%" title="@T["No queue group"]">
+        <select asp-for="QueueGroupId" asp-items="Model.QueueGroupOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a queue group"]" title="@T["No queue group"]">
             <option value="">@T["No queue group"]</option>
         </select>
         <span asp-validation-for="QueueGroupId" class="text-danger"></span>

@@ -6,17 +6,17 @@
 
 <select id="@Model.Id"
         name="@Model.InputName"
-        class="selectpicker show-tick"
+        class="selectpicker show-tick@(Model.SmallButton ? " btn-group-sm" : string.Empty)"
         multiple="@Model.Multiple"
         data-item-selector
         data-item-selector-config="@Model.ConfigurationJson"
         data-live-search="@(Model.SearchPlaceholder is null ? "false" : "true")"
+        data-show-selected-tags="@(Model.Multiple && Model.SearchPlaceholder is not null ? "true" : "false")"
         data-live-search-placeholder="@Model.SearchPlaceholder"
         data-none-results-text="@Model.EmptyResultsText"
         data-header="@Model.MenuHeader"
         data-actions-box="@(Model.ActionsBox ? "true" : "false")"
         data-selected-text-format="count > 3"
-        data-style="@(Model.SmallButton ? "btn-sm btn-outline-secondary" : "btn-outline-secondary")"
         data-width="@(Model.SmallButton ? "auto" : "100%")"
         title="@Model.ButtonText">
     @if (!Model.Multiple)

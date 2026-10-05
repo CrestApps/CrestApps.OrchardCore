@@ -1,5 +1,5 @@
-using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
+using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Steps;
 
@@ -14,15 +14,6 @@ public sealed class CadenceDeploymentStep : DeploymentStep
     public CadenceDeploymentStep()
     {
         Name = OmnichannelDeploymentSteps.Cadence;
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="CadenceDeploymentStep"/> class.
-    /// </summary>
-    /// <param name="stringLocalizer">The string localizer.</param>
-    public CadenceDeploymentStep(IStringLocalizer<CadenceDeploymentStep> stringLocalizer)
-        : this()
-    {
-        Category = stringLocalizer["Omnichannel"];
+        Category = LocalizationSource.Create<CadenceDeploymentStep>("Omnichannel");
     }
 }

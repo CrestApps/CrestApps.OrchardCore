@@ -14,7 +14,7 @@
 <div class="ocat-wrapper" asp-validation-class-for="RequiredSkills">
     <label asp-for="RequiredSkills" class="ocat-label">@T["Required skills"]</label>
     <div class="ocat-end">
-        <select asp-for="RequiredSkills" asp-items="Model.SkillOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-header="@T["Select skills"]" data-width="100%" data-selected-text-format="count > 2" data-count-selected-text="{0} skills selected" title="@T["No required skills"]"></select>
+        <select asp-for="RequiredSkills" asp-items="Model.SkillOptions" class="selectpicker show-tick" multiple data-live-search="true" data-show-selected-tags="true" data-actions-box="true" data-header="@T["Select skills"]" data-selected-text-format="count > 2" data-count-selected-text="{0} skills selected" title="@T["No required skills"]"></select>
         <span asp-validation-for="RequiredSkills" class="text-danger"></span>
         <span class="hint">@T["Agents must have every selected skill, at the default proficiency, to receive work from this queue. Use the requirements below to ask for a specific proficiency, make a skill preferred rather than required, or relax it after a wait."]</span>
     </div>

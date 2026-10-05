@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.AI.Mcp.Recipes;
-using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
+using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Deployments.Steps;
 
@@ -15,16 +15,7 @@ public sealed class McpPromptDeploymentStep : DeploymentStep
     public McpPromptDeploymentStep()
     {
         Name = McpPromptStep.StepKey;
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="McpPromptDeploymentStep"/> class.
-    /// </summary>
-    /// <param name="S">The string localizer.</param>
-    public McpPromptDeploymentStep(IStringLocalizer<McpPromptDeploymentStep> S)
-        : this()
-    {
-        Category = S["Artificial Intelligence"];
+        Category = LocalizationSource.Create<McpPromptDeploymentStep>("Artificial Intelligence");
     }
 
     /// <summary>

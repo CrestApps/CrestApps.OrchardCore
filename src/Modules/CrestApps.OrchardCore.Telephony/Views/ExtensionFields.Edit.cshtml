@@ -28,7 +28,7 @@
 <div class="ocat-wrapper">
     <label asp-for="UserId" class="ocat-label ocat-label-required">@T["User"]</label>
     <div class="ocat-end">
-        <select asp-for="UserId" asp-items="Model.Users" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a user"]" data-width="100%" title="@T["Select a user"]">
+        <select asp-for="UserId" asp-items="Model.Users" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a user"]" title="@T["Select a user"]">
         </select>
         <span asp-validation-for="UserId" class="text-danger"></span>
         <span class="hint">@T["The user this extension rings. Type to search."]</span>

@@ -6,7 +6,7 @@
 <div class="ocat-wrapper" asp-validation-class-for="BusinessHoursCalendarId">
     <label asp-for="BusinessHoursCalendarId" class="ocat-label">@T["Business hours calendar"]</label>
     <div class="ocat-end">
-        <select asp-for="BusinessHoursCalendarId" asp-items="Model.BusinessHoursCalendarOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a calendar"]" data-width="100%" title="@T["Always open"]">
+        <select asp-for="BusinessHoursCalendarId" asp-items="Model.BusinessHoursCalendarOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a calendar"]" title="@T["Always open"]">
             <option value="">@T["Always open"]</option>
         </select>
         <span asp-validation-for="BusinessHoursCalendarId" class="text-danger"></span>

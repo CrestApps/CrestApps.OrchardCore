@@ -1,5 +1,5 @@
-using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
+using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.ContactCenter.Deployments.Steps;
 
@@ -14,15 +14,6 @@ public sealed class AgentStateReasonCodeDeploymentStep : DeploymentStep
     public AgentStateReasonCodeDeploymentStep()
     {
         Name = ContactCenterDeploymentSteps.AgentStateReasonCode;
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AgentStateReasonCodeDeploymentStep"/> class.
-    /// </summary>
-    /// <param name="stringLocalizer">The string localizer.</param>
-    public AgentStateReasonCodeDeploymentStep(IStringLocalizer<AgentStateReasonCodeDeploymentStep> stringLocalizer)
-        : this()
-    {
-        Category = stringLocalizer["Contact Center"];
+        Category = LocalizationSource.Create<AgentStateReasonCodeDeploymentStep>("Contact Center");
     }
 }
