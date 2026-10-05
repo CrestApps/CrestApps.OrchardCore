@@ -1,5 +1,5 @@
-using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
+using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Asterisk.Deployments.Steps;
 
@@ -14,15 +14,6 @@ public sealed class AsteriskSettingsDeploymentStep : DeploymentStep
     public AsteriskSettingsDeploymentStep()
     {
         Name = AsteriskDeploymentSteps.Settings;
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AsteriskSettingsDeploymentStep"/> class.
-    /// </summary>
-    /// <param name="stringLocalizer">The string localizer.</param>
-    public AsteriskSettingsDeploymentStep(IStringLocalizer<AsteriskSettingsDeploymentStep> stringLocalizer)
-        : this()
-    {
-        Category = stringLocalizer["Telephony"];
+        Category = LocalizationSource.Create<AsteriskSettingsDeploymentStep>("Telephony");
     }
 }

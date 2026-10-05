@@ -151,7 +151,6 @@ namespace CrestApps.OrchardCore.Telephony.Deployments.Steps
     public sealed class TelephonyExtensionDeploymentStep : OrchardCore.Deployment.DeploymentStep
     {
         public TelephonyExtensionDeploymentStep() { }
-        public TelephonyExtensionDeploymentStep(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Telephony.Deployments.Steps.TelephonyExtensionDeploymentStep> stringLocalizer) { }
     }
 }
 namespace CrestApps.OrchardCore.Telephony.Deployments

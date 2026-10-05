@@ -28,7 +28,7 @@ public sealed class ContentTransferPermissions
 
         permission = new Permission(
             string.Format(template.Name, contentType),
-            string.Format(template.Description, contentType),
+            string.Format(template.Description?.Value, contentType),
             (template.ImpliedBy ?? []).Select(t => CreateDynamicPermission(t, contentType)
             )
         );

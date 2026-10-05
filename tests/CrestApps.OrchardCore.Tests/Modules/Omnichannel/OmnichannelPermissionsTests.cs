@@ -11,7 +11,7 @@ public sealed class OmnichannelPermissionsTests
     {
         // Assert
         Assert.Equal("PurgeActivity", OmnichannelConstants.Permissions.PurgeActivity.Name);
-        Assert.Equal("Purge activity", OmnichannelConstants.Permissions.PurgeActivity.Description);
+        Assert.Equal("Purge activity", OmnichannelConstants.Permissions.PurgeActivity.Description.Value);
     }
 
     [Fact]
@@ -79,7 +79,7 @@ public sealed class OmnichannelPermissionsTests
     {
         // Assert
         Assert.Equal("EditActivity", OmnichannelConstants.Permissions.EditActivity.Name);
-        Assert.Equal("Create and edit activities", OmnichannelConstants.Permissions.EditActivity.Description);
+        Assert.Equal("Create and edit activities", OmnichannelConstants.Permissions.EditActivity.Description.Value);
         Assert.NotNull(OmnichannelConstants.Permissions.EditActivity.ImpliedBy);
         Assert.All(OmnichannelConstants.Permissions.EditActivity.ImpliedBy, Assert.NotNull);
         Assert.Contains(

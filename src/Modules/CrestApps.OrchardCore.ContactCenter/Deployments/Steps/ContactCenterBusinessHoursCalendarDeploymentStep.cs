@@ -1,5 +1,5 @@
-using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
+using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.ContactCenter.Deployments.Steps;
 
@@ -14,15 +14,6 @@ public sealed class ContactCenterBusinessHoursCalendarDeploymentStep : Deploymen
     public ContactCenterBusinessHoursCalendarDeploymentStep()
     {
         Name = ContactCenterDeploymentSteps.BusinessHoursCalendar;
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ContactCenterBusinessHoursCalendarDeploymentStep"/> class.
-    /// </summary>
-    /// <param name="stringLocalizer">The string localizer.</param>
-    public ContactCenterBusinessHoursCalendarDeploymentStep(IStringLocalizer<ContactCenterBusinessHoursCalendarDeploymentStep> stringLocalizer)
-        : this()
-    {
-        Category = stringLocalizer["Contact Center"];
+        Category = LocalizationSource.Create<ContactCenterBusinessHoursCalendarDeploymentStep>("Contact Center");
     }
 }

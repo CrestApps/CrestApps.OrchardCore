@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.AI.Recipes;
-using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
+using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.AI.Deployments.Steps;
 
@@ -15,16 +15,7 @@ public sealed class AIDeploymentDeploymentStep : DeploymentStep
     public AIDeploymentDeploymentStep()
     {
         Name = AIDeploymentStep.StepKey;
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AIDeploymentDeploymentStep"/> class.
-    /// </summary>
-    /// <param name="S">The string localizer.</param>
-    public AIDeploymentDeploymentStep(IStringLocalizer<AIDeploymentDeploymentStep> S)
-        : this()
-    {
-        Category = S["Artificial Intelligence"];
+        Category = LocalizationSource.Create<AIDeploymentDeploymentStep>("Artificial Intelligence");
     }
 
     /// <summary>

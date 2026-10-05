@@ -542,42 +542,34 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Steps
     public sealed class CadenceDeploymentStep : OrchardCore.Deployment.DeploymentStep
     {
         public CadenceDeploymentStep() { }
-        public CadenceDeploymentStep(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Steps.CadenceDeploymentStep> stringLocalizer) { }
     }
     public sealed class LeadStatusDeploymentStep : OrchardCore.Deployment.DeploymentStep
     {
         public LeadStatusDeploymentStep() { }
-        public LeadStatusDeploymentStep(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Steps.LeadStatusDeploymentStep> stringLocalizer) { }
     }
     public sealed class OmnichannelCampaignDeploymentStep : OrchardCore.Deployment.DeploymentStep
     {
         public OmnichannelCampaignDeploymentStep() { }
-        public OmnichannelCampaignDeploymentStep(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Steps.OmnichannelCampaignDeploymentStep> stringLocalizer) { }
     }
     public sealed class OmnichannelCampaignGroupDeploymentStep : OrchardCore.Deployment.DeploymentStep
     {
         public OmnichannelCampaignGroupDeploymentStep() { }
-        public OmnichannelCampaignGroupDeploymentStep(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Steps.OmnichannelCampaignGroupDeploymentStep> stringLocalizer) { }
     }
     public sealed class OmnichannelChannelEndpointDeploymentStep : OrchardCore.Deployment.DeploymentStep
     {
         public OmnichannelChannelEndpointDeploymentStep() { }
-        public OmnichannelChannelEndpointDeploymentStep(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Steps.OmnichannelChannelEndpointDeploymentStep> stringLocalizer) { }
     }
     public sealed class OmnichannelDispositionDeploymentStep : OrchardCore.Deployment.DeploymentStep
     {
         public OmnichannelDispositionDeploymentStep() { }
-        public OmnichannelDispositionDeploymentStep(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Steps.OmnichannelDispositionDeploymentStep> stringLocalizer) { }
     }
     public sealed class OmnichannelSubjectActionDeploymentStep : OrchardCore.Deployment.DeploymentStep
     {
         public OmnichannelSubjectActionDeploymentStep() { }
-        public OmnichannelSubjectActionDeploymentStep(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Steps.OmnichannelSubjectActionDeploymentStep> stringLocalizer) { }
     }
     public sealed class OpportunityStageDeploymentStep : OrchardCore.Deployment.DeploymentStep
     {
         public OpportunityStageDeploymentStep() { }
-        public OpportunityStageDeploymentStep(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Steps.OpportunityStageDeploymentStep> stringLocalizer) { }
     }
 }
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers

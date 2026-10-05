@@ -1,5 +1,5 @@
-using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
+using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Telephony.Deployments.Steps;
 
@@ -14,15 +14,6 @@ public sealed class TelephonyExtensionDeploymentStep : DeploymentStep
     public TelephonyExtensionDeploymentStep()
     {
         Name = TelephonyDeploymentSteps.Extension;
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="TelephonyExtensionDeploymentStep"/> class.
-    /// </summary>
-    /// <param name="stringLocalizer">The string localizer.</param>
-    public TelephonyExtensionDeploymentStep(IStringLocalizer<TelephonyExtensionDeploymentStep> stringLocalizer)
-        : this()
-    {
-        Category = stringLocalizer["Telephony"];
+        Category = LocalizationSource.Create<TelephonyExtensionDeploymentStep>("Telephony");
     }
 }

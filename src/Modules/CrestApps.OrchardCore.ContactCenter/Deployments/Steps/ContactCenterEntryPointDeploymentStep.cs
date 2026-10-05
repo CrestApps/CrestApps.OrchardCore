@@ -1,5 +1,5 @@
-using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
+using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.ContactCenter.Deployments.Steps;
 
@@ -14,15 +14,6 @@ public sealed class ContactCenterEntryPointDeploymentStep : DeploymentStep
     public ContactCenterEntryPointDeploymentStep()
     {
         Name = ContactCenterDeploymentSteps.EntryPoint;
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ContactCenterEntryPointDeploymentStep"/> class.
-    /// </summary>
-    /// <param name="stringLocalizer">The string localizer.</param>
-    public ContactCenterEntryPointDeploymentStep(IStringLocalizer<ContactCenterEntryPointDeploymentStep> stringLocalizer)
-        : this()
-    {
-        Category = stringLocalizer["Contact Center"];
+        Category = LocalizationSource.Create<ContactCenterEntryPointDeploymentStep>("Contact Center");
     }
 }

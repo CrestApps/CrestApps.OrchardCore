@@ -1,5 +1,5 @@
-using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
+using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.ContactCenter.Deployments.Steps;
 
@@ -14,15 +14,6 @@ public sealed class ContactCenterVoiceMediaDeploymentStep : DeploymentStep
     public ContactCenterVoiceMediaDeploymentStep()
     {
         Name = ContactCenterDeploymentSteps.VoiceMedia;
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ContactCenterVoiceMediaDeploymentStep"/> class.
-    /// </summary>
-    /// <param name="stringLocalizer">The string localizer.</param>
-    public ContactCenterVoiceMediaDeploymentStep(IStringLocalizer<ContactCenterVoiceMediaDeploymentStep> stringLocalizer)
-        : this()
-    {
-        Category = stringLocalizer["Contact Center"];
+        Category = LocalizationSource.Create<ContactCenterVoiceMediaDeploymentStep>("Contact Center");
     }
 }
