@@ -110,6 +110,7 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
         services
             .AddScoped<INotInServiceNumberService, NotInServiceNumberService>()
             .AddScoped<INotInServiceActivityCompleter, NotInServiceActivityCompleter>()
+            .AddScoped<IActivityOutcomeCompleter, ActivityOutcomeCompleter>()
             .AddIndexProvider<NotInServiceNumberIndexProvider>()
             .AddDataMigration<NotInServiceNumberIndexMigrations>();
 
