@@ -3,6 +3,8 @@ sidebar_label: AI Memory Azure AI
 sidebar_position: 9
 title: AI Memory with Azure AI Search
 description: Azure AI Search indexing and vector search support for the Orchard Core AI Memory feature.
+user_manual:
+  - user-manual/ai/memory
 ---
 
 | | |

@@ -3,6 +3,8 @@ sidebar_label: Content Fields
 sidebar_position: 2
 title: Content Fields
 description: Adds custom Orchard Core content fields maintained by CrestApps.
+user_manual:
+  - user-manual/administration/content-fields
 ---
 
 | | |
@@ -16,11 +18,11 @@ Provides custom Orchard Core content fields maintained by CrestApps.
 
 This module adds custom content fields for Orchard Core that extend the built-in field library with additional functionality. Each field ships with its own display driver, settings, edit and display views.
 
-The screencast below enables the **Content Fields** feature, adds the Phone Field to the **Page** content type, and shows the country-aware phone input with its flag dropdown when editing a content item.
+The feature depends on `CrestApps.OrchardCore.Resources`, `CrestApps.OrchardCore.PhoneNumbers`, `OrchardCore.ContentFields`
+and `OrchardCore.ContentTypes`.
 
-<video controls preload="metadata" width="100%" aria-label="Screen cast of enabling Content Fields, adding the Phone Field, and using the country-aware phone input">
-  <source src="/img/docs/content-fields.mp4" type="video/mp4" />
-</video>
+How administrators add a phone field to a content type, what each setting does, and what editors see is described
+in the User Manual: [Content Fields](../user-manual/administration/content-fields.md).
 
 ## Included fields
 
@@ -42,10 +44,10 @@ The field uses the [intl-tel-input](https://intl-tel-input.com/) library (provid
 
 | Setting | Type | Default | Description |
 | --- | --- | --- | --- |
-| `Hint` | `string` | `null` | Help text displayed below the field. |
+| `Hint` | `string` | `null` | Help text displayed below the field (admin label **Hint**). |
 | `Required` | `bool` | `false` | Whether the field is required. |
-| `InitialCountryMode` | `InitialCountryMode` | `Globe` | Controls which country flag is pre-selected when the field is empty. See [Initial country modes](#initial-country-modes). |
-| `SpecificCountryCode` | `string` | `null` | ISO country code used when `InitialCountryMode` is `Specific` (e.g. `US`). |
+| `InitialCountryMode` | `InitialCountryMode` | `Globe` (admin label **Initial country**) | Controls which country flag is pre-selected when the field is empty. See [Initial country modes](#initial-country-modes). |
+| `SpecificCountryCode` | `string` | `null` | Admin label **Country**. ISO country code used when `InitialCountryMode` is `Specific` (e.g. `US`). |
 
 #### Initial country modes
 

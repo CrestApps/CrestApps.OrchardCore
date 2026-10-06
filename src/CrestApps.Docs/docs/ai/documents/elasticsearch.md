@@ -3,6 +3,8 @@ sidebar_label: Elasticsearch
 sidebar_position: 5
 title: AI Documents (Elasticsearch)
 description: Elasticsearch integration as an embedding and search provider for the AI Documents feature.
+user_manual:
+  - user-manual/ai/knowledge
 ---
 
 | | |
@@ -23,4 +25,4 @@ This module integrates Elasticsearch as an embedding and search provider for the
 
 1. Enable the `AI Documents indexing using Elasticsearch` feature in Orchard Core admin.
 2. Configure an Elasticsearch connection and create an index via **Search > Indexing**.
-3. Select the index in **Settings > Chat Interaction**.
+3. Select the index as the **Index profile** in the **Documents** section of **Settings > Artificial Intelligence** (see [Knowledge](../../user-manual/ai/knowledge.md#before-you-start)).

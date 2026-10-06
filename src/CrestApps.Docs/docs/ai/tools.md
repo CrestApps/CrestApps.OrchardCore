@@ -1,6 +1,8 @@
 ---
 title: AI Tools
 description: Shared tool registration and orchestration concepts are documented in CrestApps.Core.
+user_manual:
+  - user-manual/ai/tools-and-agents
 ---
 
 # AI Tools

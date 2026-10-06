@@ -3,6 +3,9 @@ sidebar_label: Voice Media
 sidebar_position: 25
 title: Voice Media (Hold Music and Prompts)
 description: Upload hold music and recorded prompts once and reuse them on queues and IVR menus.
+technical_manual:
+  - contact-center/voice-routing
+  - contact-center/configuration-deployment
 ---
 
 The **voice media** library holds the audio your phone system plays: hold music for queues and recorded prompts for IVR menus. Each clip is uploaded to your phone provider so it can be played on live calls.
@@ -10,8 +13,10 @@ The **voice media** library holds the audio your phone system plays: hold music 
 | | |
 | --- | --- |
 | **Menu** | Interaction Center > Management > Voice Media |
-| **Permission** | Manage the voice media library |
-| **Feature** | Contact Center (`CrestApps.OrchardCore.ContactCenter`) with a phone provider that can host media, such as Telnyx |
+| **Permission** | Manage the Contact Center voice media library |
+| **Feature** | Contact Center, with a phone provider that can host media, such as Telnyx |
+
+<AskYourAdmin />
 
 <video controls preload="metadata" width="100%" aria-label="Screencast of the voice media library and the upload form">
   <source src="/img/docs/um-voice-media.mp4" type="video/mp4" />

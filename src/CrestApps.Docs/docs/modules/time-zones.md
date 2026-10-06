@@ -3,6 +3,8 @@ sidebar_label: Time Zones
 sidebar_position: 7
 title: Time Zones Feature
 description: Friendly named time zone maps and grouped time zone selection for Orchard Core.
+user_manual:
+  - user-manual/administration/time-zones
 ---
 
 | | |
@@ -33,15 +35,18 @@ Each map stores:
 
 ## Admin management
 
-Enable the feature, then open **Tools -> Time Zones**.
+The **Tools** -> **Time Zones** screen requires the `ManageTimeZoneMaps` permission (*Manage time zone maps*), granted
+to the **Administrator** role by default. Names are unique and immutable after creation, and each `TimeZoneId` can be
+mapped only once. The admin list shows the mapped `TimeZoneId`, the author display name, and the latest created or
+modified timestamp as badges.
 
-Create one map entry for each friendly label you want to expose. Names are unique and immutable after creation. The admin list shows the mapped `TimeZoneId`, the author display name, and the latest created or modified timestamp as badges so editors can scan changes quickly.
+Once the feature is enabled, `ITimeZoneSelectListProvider` returns only the mapped entries, ordered by name. Every
+menu built from it, including the Orchard Core site **Default Time Zone** setting and the **User Time Zone**
+profile setting, therefore offers only mapped zones; an unmapped `TimeZoneId` cannot be selected until a map is added.
+The Omnichannel contact and activity screens use the same provider.
 
-The screencast below walks through enabling the feature, adding a `Mexico City Time` map for `America/Mexico_City`, and confirming that the friendly name is what Orchard Core now renders in **Settings -> General -> Default Time Zone**.
-
-<video controls preload="metadata" width="100%" aria-label="Screen cast of creating a time zone map and selecting it as the site default">
-  <source src="/img/docs/time-zones.mp4" type="video/mp4" />
-</video>
+How administrators add maps and set the site and user time zones is described in the User Manual:
+[Time Zones](../user-manual/administration/time-zones.md).
 
 ## Recipe support
 
@@ -79,8 +84,11 @@ The deployment-plan editor groups the **TimeZoneMaps** export step under the **I
 
 The initial migration runs an embedded partial recipe through Orchard Core's recipe executor and creates a starter set of common worldwide mappings. The seed recipe sets `OwnerId` from `parameters('AdminUserId')`, `Author` from `parameters('AdminUsername')`, and shares a single `utcNow()` value through recipe variables so all seeded entries keep consistent audit metadata. The starter mappings include:
 
-- Pacific, Mountain, Central, Eastern, and Atlantic North American zones
-- UTC, Western European, Central European, and Eastern European zones
-- India, China, Japan, Gulf, Australia Eastern, and New Zealand zones
+- North America: Alaska, Hawaii, Pacific, Mountain, Central and Eastern Time (US & Canada), and Atlantic Time (Canada)
+- South America: Brasilia Time
+- Coordinated Universal Time (UTC)
+- Europe: Western, Central and Eastern European Time, and Moscow Standard Time
+- Middle East and Asia: Jerusalem, Gulf Standard, India Standard, China Standard, Singapore and Japan Standard Time
+- Oceania: Australian Eastern Time and New Zealand Time
 
 You can edit or delete these entries after the feature is enabled.

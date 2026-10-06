@@ -3,6 +3,8 @@ sidebar_label: Roles
 sidebar_position: 3
 title: Enhanced Roles
 description: Extends the Orchard Core Roles module with additional reusable components like RolePickerPart.
+user_manual:
+  - user-manual/administration/roles
 ---
 
 | | |
@@ -14,13 +16,25 @@ Provides a way to enhance the role management experience.
 
 ## RolePickerPart
 
-The screencast below enables **Enhanced Roles**, adds the **Role Picker** part to the *Page* content type, and then picks roles with the Role Picker while creating a page.
+`RolePickerPart` (display name **Role Picker**) is an attachable, reusable content part that stores a list of
+role names on a content item (`RolePickerPart.RoleNames`). The editor uses an enhanced dropdown (bootstrap-select)
+with live search and, when multiple selection is enabled, select-all and deselect-all actions. The
+[Content Access Control](content-access-control.md) feature builds on it to restrict who can view an item.
 
-<video controls preload="metadata" width="100%" aria-label="Screen cast of enabling Enhanced Roles, adding the Role Picker part, and selecting roles on a content item">
-  <source src="/img/docs/roles.mp4" type="video/mp4" />
-</video>
+How administrators attach the part and how editors pick roles is described in the User Manual:
+[Roles and Permissions](../user-manual/administration/roles.md#let-editors-pick-roles-on-a-content-item).
+That page also explains roles and permissions in plain words for the people who manage access.
 
-This adds a role-picker to any content type. The editor uses an enhanced dropdown (bootstrap-select) that lets editors search roles, and, when multiple selection is enabled, select or deselect all roles at once for a friendlier experience. You can use the Orchard Core content types UI to add it to any content type, or you can do it via code using a migration. For example:
+### Settings
+
+| `RolePickerPartSettings` property | Admin label | Description |
+| --- | --- | --- |
+| `ExcludedRoles` | **Exclude roles** | Roles removed from the picker. Excluded roles are also stripped from the saved value. |
+| `Required` | **Required?** | At least one role must be selected. |
+| `AllowSelectMultiple` | **Allow multiple?** | Allows more than one role. When off, saving more than one role fails validation. |
+| `Hint` | **Hint** | Help text shown under the picker. |
+
+You can attach the part with the Orchard Core content types UI or with a migration. For example:
 
 ```csharp
 internal sealed class CustomContentTypeMigrations : DataMigration

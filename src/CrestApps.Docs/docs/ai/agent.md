@@ -3,6 +3,8 @@ sidebar_label: AI Agents
 sidebar_position: 8
 title: AI Agents
 description: Orchard Core module guidance for agent profiles and agent-enabled AI experiences.
+user_manual:
+  - user-manual/ai/tools-and-agents
 ---
 
 # AI Agents
@@ -14,11 +16,7 @@ description: Orchard Core module guidance for agent profiles and agent-enabled A
 
 The Orchard agent module surfaces agent profiles inside Orchard Core so they can participate in module-driven AI experiences such as profile-based chat, A2A hosting, and other Orchard-managed orchestration flows.
 
-The screencast below enables the feature, creates an Agent-type AI profile on the `gpt-4.1-mini` deployment, and grants it Orchard-aware tool categories from the profile's Capabilities tab.
-
-<video controls preload="metadata" width="100%" aria-label="Screen cast of enabling AI Agents and creating an agent profile with Orchard-aware tools">
-  <source src="/img/docs/ai-agent.mp4" type="video/mp4" />
-</video>
+Creating agent profiles and giving profiles tools in the admin, with a screencast, is described in the User Manual under [Tools and agents](../user-manual/ai/tools-and-agents.md).
 
 ## What this module adds in Orchard Core
 
@@ -28,11 +26,7 @@ The screencast below enables the feature, creates an Agent-type AI profile on th
 
 ## How to use it in Orchard
 
-1. Enable **Orchard Core AI Agent** (listed under **Artificial Intelligence** in **Tools → Features**)
-   together with the base AI features.
-2. Go to **Artificial Intelligence -> Profiles**.
-3. Create or edit the AI profile that should participate in agent scenarios.
-4. Enable the related Orchard features if you want additional tool categories to appear.
+Enable **Orchard Core AI Agent** (listed under **Artificial Intelligence** in **Tools → Features**) together with the base AI features. Its tools then appear, grouped by category, in the **Tools** section of the **Capabilities** tab of AI profiles, profile templates and chat interactions. The **Agent** profile type itself (with its **Description** and **Availability** fields) comes from the base AI module. Enable the related Orchard features if you want additional tool categories to appear.
 
 The exact tool set available to agents depends on which Orchard modules are enabled. For example, tenant-management tools only light up when Orchard tenants support is enabled, and recipe tools depend on Orchard recipes support.
 

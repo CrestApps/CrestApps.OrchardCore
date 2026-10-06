@@ -3,6 +3,10 @@ sidebar_label: "Cadences (re-engagement)"
 sidebar_position: 5
 title: Cadences — automated re-engagement follow-ups
 description: Reusable, business-hours-aware follow-up cadences that re-engage automated conversation contacts who go quiet.
+user_manual:
+  - user-manual/cadences
+  - user-manual/automated-ai
+  - user-manual/business-hours
 ---
 
 | | |
@@ -12,7 +16,7 @@ description: Reusable, business-hours-aware follow-up cadences that re-engage au
 
 A **cadence** is a reusable, named series of follow-up messages that re-engages a contact who has gone quiet in an **automated** conversation. You define a cadence once, then select it in the **Re-engagement** field of any **Automatic** activity load. A load with no cadence selected never sends follow-ups, so re-engagement is off by default.
 
-Cadences are administered from **Interaction Center > Management > Cadences** (requires the **Manage cadences** permission), alongside campaigns and dispositions. Cadences can be created, edited, and deleted; unlike campaigns, which cannot be deleted. For a step-by-step walkthrough, see [Cadences](../user-manual/cadences.md) in the user manual.
+Cadences are administered from **Interaction Center > Management > Cadences** (requires the **Manage cadences** permission, `ManageCadences`), alongside campaigns and dispositions. Cadences can be created, edited, and deleted; unlike campaigns, which cannot be deleted. For a step-by-step walkthrough, see [Cadences](../user-manual/cadences.md) in the user manual.
 
 ## What a cadence contains
 
@@ -29,7 +33,7 @@ The number of steps is the cap on how many follow-ups are ever sent. When the la
 
 ## Selecting a cadence on an activity load
 
-On an **Automatic** activity load (**Interaction Center > Management > Load Activities**), the AI settings include a **Re-engagement** picker. Choose a cadence to enable follow-ups for every conversation loaded from that activity load, or leave it as **No follow-up cadence** to never follow up. The chosen cadence is snapshotted onto each activity when the activities are loaded, so editing or deleting a cadence later does not disturb conversations already in flight. See [Load activities](../user-manual/load-inventory.md) in the user manual.
+An **Automatic** activity load selects its cadence in the **Re-engagement** field; **No follow-up cadence** never follows up. The chosen cadence is snapshotted onto each activity when the activities are loaded, so editing or deleting a cadence later does not disturb conversations already in flight. The screens are described in [Cadences](../user-manual/cadences.md#use-a-cadence) and [Load activities](../user-manual/load-inventory.md) in the User Manual.
 
 The same activity load also has a **Business hours** field (see below), which every follow-up respects. It is shown only when at least one business-hours calendar exists.
 

@@ -3,6 +3,9 @@ sidebar_label: Extension Dialing
 sidebar_position: 5
 title: Internal Extension Dialing
 description: Call another on-platform user by extension, and add an extension into a call as a conference participant, through the provider-agnostic capability model.
+user_manual:
+  - user-manual/extensions
+  - user-manual/calls
 ---
 
 # Internal Extension Dialing
@@ -22,24 +25,17 @@ the system of record: providers translate the resolved user into their own live 
 extension keeps working if you switch providers.
 
 Manage extensions under **Interaction Center > Management > Extensions** (requires the **Manage telephony
-extensions** permission). For a step-by-step walkthrough, see [Extensions](../user-manual/extensions.md) in the
-user manual. Each extension has:
-
-| Field | Description |
-| --- | --- |
-| **Extension number** | Required. The number an agent dials, unique per tenant (for example `1001`). |
-| **User** | Required. The Orchard user the extension rings, picked from a searchable list of enabled users. |
-| **Display name** | A name for the extension itself (for example `Front desk`). When left empty it defaults to the user name, which shows the user's own display name. |
+extensions** permission, key `ManageTelephonyExtensions`). The screen and its fields (**Extension number**, unique per
+tenant; **User**, picked from the enabled users; and an optional **Display name**) are described step by step in
+[Extensions](../user-manual/extensions.md) in the user manual.
 
 The entry's name is generated from the extension number and the display name, so the list search matches either.
 Every saved extension is dialable; there is no enabled or disabled state. To stop an extension ringing, delete it.
 
-In the list, each entry shows its extension number as a grey badge with a `#` icon, then the display name, then the
-user name as a separate badge with a person icon, so the number never reads as part of the name.
-
 ## Who an extension rings, by name
 
-Wherever the soft phone shows an extension it also shows who it rings: the transfer panel offers
+Wherever the soft phone shows an extension it also shows who it rings (the agent's view is in
+[How people see an extension](../user-manual/extensions.md#how-people-see-an-extension)): the transfer panel offers
 **Transfer to extension 2 · Jane Doe**, the keypad names the person while an extension is typed, a call to an
 extension is shown as **Jane Doe · ext 2**, and so are extension calls in **Recent**. A colleague whose extension
 you ring sees your name on their ringing call.
@@ -73,16 +69,13 @@ the Contact Center refuses a transfer to the agent already on the call.
 
 ## Placing an extension call
 
-On the soft phone, toggle **Dial extension**, enter the extension, and dial. The dialed value is sent
+On the soft phone, the agent toggles **Dial extension** and enters the extension or searches by name (see
+[Call an extension](../user-manual/calls.md#call-an-extension) in the user manual). The dialed value is sent
 verbatim (it is not canonicalized to E.164) and **skips outbound compliance screening**, because an internal
-extension is not consumer outreach.
+extension is not consumer outreach. In extension mode the keypad's field is a plain search box over the extension
+directory; the agent's own extensions are never listed, and **Recent** calls an extension call back as that extension.
 
-In extension mode the keypad's field is a plain search box, like the transfer panel's: type part of a colleague's
-name and the extensions of the people it matches are listed under the field; pick one to call it, or press **Enter**
-when the name narrows the list to one person. Digits still call the extension they are. Your own extension is never
-listed. **Recent** calls an extension call back as that extension.
-
-An extension call to you always rings with **Answer** and **Decline**. The phone answers a leg without ringing only
+An extension call to you always rings in the incoming-call modal. The phone answers a leg without ringing only
 for a call it placed itself or an offer the agent just accepted, and only that one leg: a leg the platform rings at
 you as somebody's destination never is.
 

@@ -3,6 +3,8 @@ sidebar_label: Users
 sidebar_position: 1
 title: Users
 description: Enhanced user management with display name customization and avatar support for Orchard Core.
+user_manual:
+  - user-manual/administration/users
 ---
 
 | | |
@@ -56,21 +58,25 @@ For example, the [Messaging Workspace](../omnichannel/messaging-workspace) uses 
 | **Feature Name** | User Display Name |
 | **Feature ID** | `CrestApps.OrchardCore.Users.DisplayName` |
 
-Provides a way to display a user's display name.
+Provides a way to display a user's display name, built from a display name, first, middle and last name
+stored on the user (`UserFullNamePart`), according to the site setting under **Settings** -> **User Display Name**
+(`DisplayNameSettings`). The setting page requires the `ManageDisplaySettings` permission (*Manage the user display
+name settings*), which is granted to the **Administrator** role by default. The name boxes on the user editor are
+shown only to users who hold `EditUsers` for that user.
 
-To set the display name format, navigate to **Settings** → **User Display Name**.
+How administrators choose the format, require name parts and set a person's name is described in the User Manual:
+[Users, Display Names and Avatars](../user-manual/administration/users.md).
 
-The screencast below enables **User Display Name**, selects the *First Middle Last name* format with required first and last names, and shows the matching name fields appearing on the user editor.
+| Format (`DisplayNameSettings.Type`) | Result |
+| --- | --- |
+| `Username` (default) | The user name. |
+| `DisplayName` | `UserFullNamePart.DisplayName`, or the user name when it is empty. |
+| `FirstThenLast` | First, middle (when used) and last name, or the user name when all are empty. |
+| `LastThenFirst` | `Last, First Middle`, or the user name when all are empty. |
+| `Other` | A Liquid template with `User`, `FirstName`, `MiddleName`, `LastName`, `DisplayName` and `UserName` in scope. |
 
-<video controls preload="metadata" width="100%" aria-label="Screen cast of enabling User Display Name, choosing a format, and editing a user">
-  <source src="/img/docs/users.mp4" type="video/mp4" />
-</video>
-
-The next screencast shows the full effect end to end. It configures the *First Middle Last name* format with **First name** and **Last name** set to **Required**, edits the current user's own profile to set those names, then opens the **Content Items** list where the author badge that previously showed only the username now shows the user's full name.
-
-<video controls preload="metadata" width="100%" aria-label="Screen cast of configuring the display name, setting a profile, and the content item author badge showing the full name">
-  <source src="/img/docs/users-display-name.mp4" type="video/mp4" />
-</video>
+Each name part (`DisplayName`, `FirstName`, `MiddleName`, `LastName` on `DisplayNameSettings`) is `None`,
+`Optional` or `Required`, which controls whether the user editor shows the box and whether it is validated.
 
 If you want to display the user display name in your project via code, you may do so by using the `IDisplayNameProvider` interface.
 
@@ -115,4 +121,8 @@ The `includeDisabledUsers` parameter within the `indexUsers` step is optional an
 
 Provides a way to display a user's avatar.
 
-To change the default settings, navigate to **Settings** → **User Avatars**.
+Avatar settings live under **Settings** -> **User Avatars** (`UserAvatarOptions`: `Required`, `UseDefaultStyle`) and
+require the `ManageAvatarSettings` permission (*Manage the avatar settings*), granted to the **Administrator** role by
+default. The avatar box on the user editor accepts only image extensions allowed by the media options and is shown
+only to users who hold the Orchard Core `ManageMedia` permission. See the
+[User Manual](../user-manual/administration/users.md#avatars) for the administrator steps.

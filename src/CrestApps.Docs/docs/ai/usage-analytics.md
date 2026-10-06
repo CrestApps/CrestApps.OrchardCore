@@ -3,6 +3,8 @@ sidebar_label: AI Usage Analytics
 sidebar_position: 4
 title: AI Usage Analytics
 description: Report provider token usage by user, model, deployment, profile and connection, and the talk time, silence and outcomes of automated AI voice calls.
+user_manual:
+  - user-manual/ai/analytics
 ---
 
 | | |
@@ -22,6 +24,10 @@ The AI Usage Analytics page reports what AI cost a tenant, in two halves:
 Both halves are captured only while **Enable AI usage tracking** is on, under **Settings → Artificial
 Intelligence**. The page shows a warning while it is off; nothing recorded before it was turned on can be
 reported.
+
+Running the report and reading its figures is described in the User Manual under
+[AI Usage Analytics](../user-manual/ai/analytics.md#ai-usage-analytics). This page covers what is recorded
+and how each figure is measured.
 
 ## Filters
 

@@ -14,7 +14,7 @@ description: Send transient notification system messages (typing indicators, tra
 
 The **Chat Notification** system lets server-side C# code send transient UI notifications (system messages) to the chat interface in real time via SignalR. Notifications are separate from chat history — they provide visual feedback about system state changes such as:
 
-- **Typing indicators** ("Mike is typing…")
+- **Typing indicators** ("John is typing…")
 - **Transfer status** with estimated wait times and a cancel button
 - **Conversation / session ended** indicators
 - **Custom notifications** with arbitrary content, icons, and action buttons
@@ -73,10 +73,10 @@ public sealed class MyWebhookHandler
 
     public async Task OnAgentTyping(string sessionId)
     {
-        // Show a "Mike is typing..." system message.
+        // Show a "John is typing..." system message.
         await _notifications.SendAsync(sessionId, ChatContextType.AIChatSession, new ChatNotification(ChatNotificationTypes.Typing)
         {
-            Content = T["{0} is typing", "Mike"].Value,
+            Content = T["{0} is typing", "John"].Value,
             Icon = "fa-solid fa-ellipsis",
         });
     }

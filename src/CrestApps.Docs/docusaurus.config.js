@@ -5,7 +5,7 @@ import {themes as prismThemes} from 'prism-react-renderer';
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'CrestApps Orchard Core',
-  tagline: 'Open-source modules to enhance Orchard Core CMS',
+  tagline: 'User Manual and Technical Manual for the CrestApps Orchard Core modules',
   favicon: 'img/favicon.ico',
   titleDelimiter: '|',
 
@@ -19,7 +19,15 @@ const config = {
   organizationName: 'CrestApps',
   projectName: 'CrestApps.OrchardCore',
 
-  onBrokenLinks: 'warn',
+  // The User Manual and the Technical Manual link to each other everywhere, so a broken link or anchor fails the build.
+  onBrokenLinks: 'throw',
+  onBrokenAnchors: 'throw',
+
+  markdown: {
+    hooks: {
+      onBrokenMarkdownLinks: 'throw',
+    },
+  },
 
   i18n: {
     defaultLocale: 'en',
@@ -35,6 +43,32 @@ const config = {
         language: ['en'],
         highlightSearchTermsOnTargetPage: true,
         explicitSearchResultPath: true,
+        // The User Manual gets its own search index so people who use the app can search only it.
+        // The search box on a User Manual page searches the User Manual; everywhere else it searches
+        // the whole site. The search page has a filter to switch between the two.
+        searchContextByPaths: [
+          {
+            label: 'User Manual',
+            path: 'docs/user-manual',
+          },
+        ],
+        useAllContextsWithNoSearchContext: true,
+      }),
+    ],
+  ],
+
+  plugins: [
+    [
+      '@docusaurus/plugin-client-redirects',
+      /** @type {import('@docusaurus/plugin-client-redirects').Options} */
+      ({
+        redirects: [
+          {
+            // The single-page agent and supervisor manual became the task-by-task User Manual.
+            from: '/docs/contact-center/user-manual',
+            to: '/docs/user-manual',
+          },
+        ],
       }),
     ],
   ],
@@ -93,9 +127,15 @@ const config = {
         items: [
           {
             type: 'docSidebar',
-            sidebarId: 'docsSidebar',
+            sidebarId: 'userManualSidebar',
             position: 'left',
-            label: 'Docs',
+            label: 'User Manual',
+          },
+          {
+            type: 'docSidebar',
+            sidebarId: 'technicalSidebar',
+            position: 'left',
+            label: 'Technical Manual',
           },
           {
             type: 'docsVersionDropdown',
@@ -113,23 +153,44 @@ const config = {
         style: 'dark',
         links: [
           {
-            title: 'Documentation',
+            title: 'User Manual',
             items: [
+              {
+                label: 'Start here',
+                to: '/docs/user-manual',
+              },
+              {
+                label: 'Training paths',
+                to: '/docs/user-manual/getting-started/training-paths',
+              },
+              {
+                label: 'Use cases',
+                to: '/docs/user-manual/use-cases',
+              },
+              {
+                label: 'Glossary',
+                to: '/docs/user-manual/glossary',
+              },
+            ],
+          },
+          {
+            title: 'Technical Manual',
+            items: [
+              {
+                label: 'Overview',
+                to: '/docs/intro',
+              },
               {
                 label: 'Getting Started',
                 to: '/docs/getting-started',
               },
               {
-                label: 'AI Suite',
-                to: '/docs/ai',
+                label: 'Configuration',
+                to: '/docs/configuration',
               },
               {
-                label: 'AI Providers',
-                to: '/docs/ai/providers',
-              },
-              {
-                label: 'Consuming AI Services',
-                to: '/docs/ai/consuming-ai-services',
+                label: 'Feature IDs',
+                to: '/docs/feature-reference',
               },
             ],
           },

@@ -3,6 +3,8 @@ sidebar_label: AI Memory Elasticsearch
 sidebar_position: 10
 title: AI Memory with Elasticsearch
 description: Elasticsearch indexing and vector search support for the Orchard Core AI Memory feature.
+user_manual:
+  - user-manual/ai/memory
 ---
 
 | | |

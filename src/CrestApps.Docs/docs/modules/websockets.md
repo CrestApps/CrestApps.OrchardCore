@@ -24,7 +24,7 @@ Because it is **enabled by dependency only**, it never appears as a standalone t
 ## What the feature provides
 
 - **WebSocket middleware.** Adds `app.UseWebSockets(...)` to the tenant pipeline, configured from tenant configuration.
-- **`IWebSocketConnectionRegistry`.** A rendezvous registry that correlates a provider-initiated WebSocket callback with the request that started it. The starter registers a `WebSocketRendezvous` under an unguessable key, embeds that key in the callback URL, and awaits the socket; the hosting endpoint claims the rendezvous by key when the socket arrives and hands it over. The default implementation is a **per-node in-memory** registry.
+- **`IWebSocketConnectionRegistry`.** A rendezvous registry that correlates a provider-initiated WebSocket callback with the request that started it. The starter registers a `WebSocketRendezvous` under an unguessable key, embeds that key in the callback URL, and awaits the socket; the hosting endpoint claims the rendezvous by key when the socket arrives and hands it over. The default implementation is a **per-node in-memory** registry; when `OrchardCore.Redis` is enabled, a distributed registry that records key ownership in Redis replaces it (see [Multi-node deployments](#multi-node-deployments)).
 
 ## Configuration
 
@@ -43,6 +43,18 @@ The feature binds the tenant configuration section `CrestApps:WebSockets` direct
   }
 }
 ```
+
+The same keys as environment variables:
+
+```text
+OrchardCore__CrestApps__WebSockets__KeepAliveInterval=00:00:30
+OrchardCore__CrestApps__WebSockets__KeepAliveTimeout=00:00:10
+OrchardCore__CrestApps__WebSockets__AllowedOrigins__0=https://app.example.com
+```
+
+A tenant that sets its own values in `App_Data/Sites/{TenantName}/appsettings.json` writes the same keys without the
+`OrchardCore` wrapper, starting at `CrestApps`. See [Configuration](../configuration.md#websockets) and
+[Per-tenant configuration](../configuration.md#per-tenant-configuration).
 
 ### Settings reference
 
@@ -78,16 +90,25 @@ The contracts (`IWebSocketConnectionRegistry`, `WebSocketRendezvous`) live in `C
 
 ## Multi-node deployments
 
-The default `IWebSocketConnectionRegistry` is a **per-node in-memory** registry: a key is only resolvable on the node that registered it. A live WebSocket is a connection terminated at a single node and cannot be moved between nodes, so a callback-agnostic load balancer that routes a provider's callback to a node that did not start the exchange will not find the key, and the open attempt fails.
+A live WebSocket is a connection terminated at a single node and cannot be moved between nodes. The rendezvous
+for a key therefore always lives on the node that registered it, and a provider callback must reach that node.
 
-Two deployment patterns work today:
+Two registry implementations ship with the feature:
 
-- **Single node** — the default, correct out of the box.
-- **Host affinity** — route each callback back to the node that started it (each node advertising its own public base URL). The socket then lands where the awaiting request is, and the in-memory registry resolves it.
+| Registry | When it is used | Behavior |
+| --- | --- | --- |
+| In-memory (default) | Always, unless replaced | A key is only known on the node that registered it. A callback that lands on another node finds no rendezvous, which looks the same as an unknown or expired key. |
+| Distributed | When the Orchard Core `OrchardCore.Redis` feature is enabled for the tenant | The rendezvous still lives on the registering node, but the node records its ownership of the key in Redis (a 10-minute record, released when the socket is claimed). A callback that lands on the wrong node is still refused, but the log names the node that holds the key, and the rendezvous is left intact for the provider's retry. If Redis is unreachable, registration falls back to node-local behavior instead of failing. |
 
-Because `IWebSocketConnectionRegistry` is an abstraction, a distributed implementation (for example one gated on the `OrchardCore.Redis` feature) can replace the default without changing any consumer, for a callback-agnostic multi-node deployment.
+Neither registry can hand a socket to another node, so the routing rule is the same:
+
+- **Single node**: the default, correct out of the box.
+- **Host affinity**: route each callback back to the node that started it (each node advertising its own public base URL). The socket then lands where the awaiting request is. Enable `OrchardCore.Redis` as well so that a misrouted callback is reported in the log as a routing problem.
+
+Because `IWebSocketConnectionRegistry` is an abstraction, you can register another implementation without changing any consumer.
 
 ## Related documentation
 
 - [Standard Modules overview](index.md)
+- [Configuration](../configuration.md#websockets)
 - [Voice Routing Architecture](../contact-center/voice-routing.md)

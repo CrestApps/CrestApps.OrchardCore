@@ -3,6 +3,8 @@ sidebar_label: AI File Sources
 sidebar_position: 20
 title: AI File Sources
 description: Ingest a folder of files on a schedule into a File AI data source, with local file system, FTP, and SFTP connectors.
+user_manual:
+  - user-manual/ai/knowledge
 ---
 
 # AI File Sources
@@ -36,24 +38,25 @@ under **Artificial Intelligence → File Sources**.
 
 ## Create a file source
 
-1. Create a **File** data source under **Artificial Intelligence → Data Sources**. A file source has to
-   target one, and the editor says so when none exists.
-2. Go to **Artificial Intelligence → File Sources** and add a source. Every connector shares these fields:
+A file source targets a **File** data source, created under **Artificial Intelligence → Data Sources**; the
+editor says so when none exists. **Add File Source** under **Artificial Intelligence → File Sources** opens the
+list of connectors registered by the enabled features (**File system**, **FTP / FTPS**, **SFTP**). The admin
+steps are in the User Manual under [File sources](../user-manual/ai/knowledge.md#file-sources).
 
-   | Field | Purpose |
-   | --- | --- |
-   | **Name** | The display name of the source. |
-   | **Data source** | The File AI data source that receives the ingested knowledge. |
-   | **Enabled** | Whether the scheduled run picks this source up. |
-   | **Re-index interval (minutes)** | How often the source is re-read. Empty uses the host default (`DefaultRunIntervalMinutes`). |
-   | **Figure mode** | `Auto` describes a figure when it looks worth describing, `All` describes every figure that is kept, and `Off` ignores figures entirely. |
-   | **Vision deployment** | The deployment that describes figures. Empty uses whatever fills the site's `vision` slot. |
-   | **Utility deployment** | The deployment that answers the utility prompts ingestion runs. Empty uses the site's `utility` slot. |
-   | **Max figure descriptions per document** | Ceiling on how many figures one document may have described (default `25`). |
-   | **Max items per run** | The most files one run may read. Empty uses the host default. |
-   | **Language** | The BCP-47 language tag the corpus is written in, when it is known and uniform. |
+Every connector shares these fields:
 
-3. Fill in the connector section, then save.
+| Field | Purpose |
+| --- | --- |
+| **Name** | The display name of the source. |
+| **Target File data source** | The File AI data source that receives the ingested knowledge. |
+| **Enabled** | Whether the scheduled run picks this source up. |
+| **Re-read interval (minutes)** | How often the source is re-read. Empty uses the host default (`DefaultRunIntervalMinutes`). |
+| **Figures** | `Auto` describes a figure when it looks worth describing, `All` describes every figure that is kept, and `Off` ignores figures entirely. |
+| **Figures described per document** | Ceiling on how many figures one document may have described (default `25`). |
+| **Vision deployment** | The deployment that describes figures. Empty uses whatever fills the site's `vision` slot. |
+| **Utility deployment** | The deployment that answers the utility prompts ingestion runs. Empty uses the site's `utility` slot. |
+| **Items per run** | The most files one run may read. Empty uses the host default. |
+| **Language** | The BCP-47 language tag the corpus is written in, when it is known and uniform. |
 
 :::note
 Figures are only described when a deployment that declares the `imageInput` capability fills the **vision**
@@ -75,9 +78,9 @@ from a request, so a tenant administrator cannot widen their own reach by editin
 
 | Field | Purpose |
 | --- | --- |
-| **Root path** | The folder to read, **relative to the tenant's `file-sources` folder**. Empty means that folder itself. |
-| **Recursive** | Whether sub-folders are read too (default on). |
-| **Max items** | The most files one listing will take on. Empty uses the host default. |
+| **Folder** | The folder to read, **relative to the tenant's `file-sources` folder**. Empty means that folder itself. |
+| **Include sub-folders** | Whether sub-folders are read too (default on). |
+| **Files per listing** | The most files one listing will take on. Empty uses the host default. |
 
 Containment is decided on canonical, fully-resolved paths, so a relative path that climbs out of the tenant
 folder is rejected rather than followed.
@@ -92,9 +95,9 @@ Both connectors share the remote folder fields:
 
 | Field | Default | Purpose |
 | --- | --- | --- |
-| **Remote root path** | `/` | The folder on the server to read. |
-| **Remote recursive** | on | Whether sub-folders are read too. |
-| **Remote max items** | host default | The most files one listing will take on. |
+| **Folder** | `/` | The folder on the server to read. |
+| **Include sub-folders** | on | Whether sub-folders are read too. |
+| **Files per listing** | host default | The most files one listing will take on. |
 
 **FTP** adds the host, port (21 when empty), username, password, encryption mode, data connection type, an
 *accept any certificate* switch, connect and read timeouts in milliseconds, and a retry count.
@@ -116,8 +119,8 @@ tenant that owns it.
 Because the task fires hourly, a re-index interval shorter than 60 minutes does not make a source run more
 often than once an hour.
 
-You can also run a source immediately from its entry on the **File Sources** list, which ignores the
-interval.
+You can also run a source immediately with **Read now** in its **Actions** menu on the **File Sources** list,
+which ignores the interval. The list shows each source's last run status and counts.
 
 ## Configuration
 

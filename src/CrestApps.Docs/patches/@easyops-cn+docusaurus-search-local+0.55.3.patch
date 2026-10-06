@@ -1,0 +1,32 @@
+diff --git a/node_modules/@easyops-cn/docusaurus-search-local/dist/client/client/theme/SearchBar/SearchBar.jsx b/node_modules/@easyops-cn/docusaurus-search-local/dist/client/client/theme/SearchBar/SearchBar.jsx
+index 10ef222..1b87d40 100644
+--- a/node_modules/@easyops-cn/docusaurus-search-local/dist/client/client/theme/SearchBar/SearchBar.jsx
++++ b/node_modules/@easyops-cn/docusaurus-search-local/dist/client/client/theme/SearchBar/SearchBar.jsx
+@@ -48,7 +48,7 @@ async function fetchOpenAskAI() {
+     }
+ }
+ const SEARCH_PARAM_HIGHLIGHT = "_highlight";
+-export default function SearchBar({ handleSearchBarToggle, }) {
++export default function SearchBar({ handleSearchBarToggle, searchContextOverride, }) {
+     const isBrowser = useIsBrowser();
+     const { siteConfig: { baseUrl }, i18n: { currentLocale }, } = useDocusaurusContext();
+     // It returns undefined for non-docs pages
+@@ -97,13 +97,17 @@ export default function SearchBar({ handleSearchBarToggle, }) {
+                 nextSearchContext = matchedPath;
+             }
+         }
++        // A wrapper can pin the search context (for example a "User Manual only" checkbox).
++        if (typeof searchContextOverride === "string") {
++            nextSearchContext = searchContextOverride;
++        }
+         if (prevSearchContext.current !== nextSearchContext) {
+             // Reset index state map once search context is changed.
+             indexStateMap.current.delete(nextSearchContext);
+             prevSearchContext.current = nextSearchContext;
+         }
+         setSearchContext(nextSearchContext);
+-    }, [location.pathname, versionUrl]);
++    }, [location.pathname, versionUrl, searchContextOverride]);
+     const hidden = !!hideSearchBarWithNoSearchContext &&
+         Array.isArray(searchContextByPaths) &&
+         searchContext === "";
