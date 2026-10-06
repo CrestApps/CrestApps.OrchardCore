@@ -8,6 +8,9 @@
  *
  * On the call recordings list, a [data-cc-list-play] button plays that recording in a player opened under its row;
  * one recording plays at a time, and pressing the button again closes the player.
+ *
+ * A call is recorded with each party on a channel of its own. Played as it is, headphones would put the agent in one
+ * ear and the customer in the other, so every player is mixed down to mono when it first plays.
  */
 (function (window, document) {
     'use strict';
@@ -160,6 +163,44 @@
         if (player) {
             player.addEventListener('timeupdate', highlight);
             player.addEventListener('seeked', highlight);
+            player.addEventListener('play', function () { playMixedDown(player); });
+        }
+    }
+
+    // Routes a player through the page's audio engine, mixed down to one channel. A media element can be attached to
+    // the engine only once, so it is marked; where the engine is not available the player simply plays as it is.
+    var mixContext = null;
+
+    function playMixedDown(audio) {
+        if (!audio || audio.getAttribute('data-cc-mixed') === 'true') {
+            return;
+        }
+
+        var AudioCtx = window.AudioContext || window.webkitAudioContext;
+
+        if (!AudioCtx) {
+            return;
+        }
+
+        try {
+            mixContext = mixContext || new AudioCtx();
+
+            var source = mixContext.createMediaElementSource(audio);
+            var mono = mixContext.createGain();
+
+            mono.channelCount = 1;
+            mono.channelCountMode = 'explicit';
+            mono.channelInterpretation = 'speakers';
+
+            source.connect(mono);
+            mono.connect(mixContext.destination);
+            audio.setAttribute('data-cc-mixed', 'true');
+
+            if (mixContext.state === 'suspended' && typeof mixContext.resume === 'function') {
+                mixContext.resume();
+            }
+        } catch (error) {
+            // Already attached, or refused: the recording still plays, in stereo.
         }
     }
 
@@ -231,6 +272,7 @@
             audio.preload = 'auto';
             audio.className = 'w-100';
             audio.src = mediaUrl;
+            audio.addEventListener('play', function () { playMixedDown(audio); });
 
             holder.appendChild(audio);
             row.appendChild(holder);

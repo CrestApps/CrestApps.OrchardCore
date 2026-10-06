@@ -105,7 +105,7 @@ public sealed partial class TelnyxContactCenterVoiceProvider
         var startBody = new Dictionary<string, object>
         {
             ["format"] = TelnyxConstants.Recording.Format,
-            ["channels"] = "single",
+            ["channels"] = TelnyxConstants.Recording.CallChannels,
         };
 
         return await PostRecordingActionAsync(callControlId, "record_start", startBody, cancellationToken);
