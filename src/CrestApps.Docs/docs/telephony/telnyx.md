@@ -105,6 +105,7 @@ Telnyx** button. The rest appear after you connect:
 | **Default outbound caller id** | After connecting | The E.164 number presented on outbound calls when the call does not carry its own caller id (a dialer profile's **Caller ID**, or the number a caller dialled when a phone menu sends them on to an outside number). Connect suggests one; pick another from the Omnichannel Addresses used for voice calls. Must be a Telnyx-owned number for STIR/SHAKEN attestation. |
 | **Webhook public key** | After connecting | The Telnyx account **Ed25519 public key** (from the portal) used to verify signed webhooks. Stored encrypted. Inbound webhooks are rejected when empty. |
 | **Webhook endpoint** | After connecting | The webhook URL Connect set on your Call Control application, shown read-only for reference. |
+| **Noise suppression** | After connecting | The Telnyx engine that cleans background sound out of an agent's calls, and which voices it cleans. Off by default — see [Background noise suppression](#background-noise-suppression). |
 | **Advanced — browser WebRTC (optional)** | After connecting | A collapsed section holding credential lifetime, the audio test destination, orphaned-call handling, answering machine detection, text-to-speech voice and language, SIP signaling, codecs, region, and ICE (STUN/TURN) settings — see [Browser WebRTC settings](#browser-webrtc-settings) for each field. Defaults work out of the box. |
 
 When you enable Telnyx and no default provider is set yet, Telnyx becomes the default automatically. When
@@ -188,6 +189,53 @@ default ICE servers — including Telnyx's TURN relays**. Because of that:
 
 Unlike the Asterisk provider, Telnyx does **not** mint ephemeral coturn credentials; it uses the SDK's default
 relays or the static TURN username/credential you supply.
+
+## Background noise suppression
+
+On a busy floor, callers can hear the colleagues talking around an agent. **Noise suppression** asks Telnyx to clean
+that sound out of the call audio on its own side, before the other person hears it, so it works the same whatever
+headset or browser the agent uses.
+
+Pick an engine under **Noise suppression** in the Telnyx settings:
+
+| Engine | Best for |
+| --- | --- |
+| **Off** (default) | No suppression. |
+| **Krisp** | Removing other people talking nearby as well as steady noise. The engine to pick for a call center floor. |
+| **DeepFilterNet** | An open-source engine tuned for telephone and WebRTC audio. |
+| **Denoiser** | General background noise such as fans, keyboards and traffic. |
+| **ai-coustics** | Preparing speech for speech recognition rather than for a listener. |
+
+Then choose what it cleans:
+
+- **Clean the agent's voice (what callers hear)** — on by default. Removes the noise around the agent before it
+  reaches the caller. This is the one that stops callers hearing the room.
+- **Clean the caller's voice (what the agent hears)** — off by default. Removes the noise around the caller before
+  it reaches the agent.
+
+Suppression is started on the agent's leg as soon as the agent is connected to the caller: a routed Contact Center
+call, a dialer call, a number dialed from the soft phone's keypad, a call a colleague is handed through a transfer or
+a consult, and a supervisor taking a call over. It belongs to that leg, so it keeps working through hold, transfers
+and conferences for the rest of the call. On a call between two colleagues, each leg cleans only the voice of the
+agent it reaches, so neither voice is cleaned twice. A supervisor listening to, coaching or joining a call is not
+cleaned; one who takes the call over is.
+
+A change to the setting applies to the next call that connects; calls already up keep what they started with.
+
+:::note[Billing and availability]
+Noise suppression is a Telnyx beta feature. Telnyx bills it separately for **each** voice it cleans, so cleaning
+both voices costs twice as much as cleaning one. If Telnyx refuses it, the call carries on without it.
+:::
+
+To confirm it is working, look in the application log for a line such as:
+
+```text
+Telnyx noise suppression Krisp started on Agent leg v3:abc123 (outbound)
+```
+
+`outbound` means the agent's voice is cleaned, `inbound` the caller's voice, and `both` both of them. Telnyx names
+the direction from its own side of the leg, so on the agent's leg the agent's voice is `outbound`. When Telnyx
+refuses the command, the log carries a warning with the status code and Telnyx's reason instead.
 
 ## Outbound calls and caller id
 
@@ -585,6 +633,9 @@ The Telnyx voice settings travel through the **Telnyx Settings** deployment step
         "CredentialLifetimeMinutes": 180,
         "OrphanedCallHandling": "Report",
         "AnsweringMachineDetection": "Premium",
+        "NoiseSuppressionEngine": "Krisp",
+        "NoiseSuppressionAgentVoice": true,
+        "NoiseSuppressionCallerVoice": false,
         "TtsVoice": "AWS.Polly.Joanna-Neural",
         "TtsLanguage": "en-US"
       }
@@ -600,7 +651,7 @@ The Telnyx voice settings travel through the **Telnyx Settings** deployment step
 }
 ```
 
-The connection identifiers belong to one Telnyx account. Replaying a plan into an environment that uses a different account needs **Connect Telnyx** to be run there afterwards, which provisions that account's own connections. An import applies the same rules as saving the settings screen: the signaling region is normalized, enabling the provider makes it the default when no default is set, and the provider options are refreshed without restarting the tenant. Members the step does not carry keep their stored values.
+The connection identifiers belong to one Telnyx account. Replaying a plan into an environment that uses a different account needs **Connect Telnyx** to be run there afterwards, which provisions that account's own connections. An import applies the same rules as saving the settings screen: the signaling region is normalized, a noise suppression engine the platform does not know is read as off, enabling the provider makes it the default when no default is set, and the provider options are refreshed without restarting the tenant. Members the step does not carry keep their stored values.
 
 ## Telnyx AI Voice Agent
 

@@ -26,6 +26,8 @@ Calls and texts go through a provider account. This page covers the settings an 
 5. Paste the **Webhook public key** from the Telnyx portal. Until it is set, every call event from Telnyx is rejected.
 6. Save.
 
+**Noise suppression** asks Telnyx to clean background sound, such as colleagues talking nearby, out of your agents' calls. Pick **Krisp** for a busy floor, then tick whether to clean the agent's voice (what callers hear, on by default), the caller's voice (what the agent hears), or both. It is a Telnyx beta feature billed for each voice cleaned; see [Background noise suppression](../telephony/telnyx.md#background-noise-suppression).
+
 The **Advanced - browser WebRTC (optional)** section holds settings you rarely change: credential lifetime, an audio test destination, what to do with calls that have no local record after a restart, answering machine detection, the text-to-speech voice and language, SIP and ICE (STUN/TURN) settings, codecs, the soft phone region, and an API base URL override. The [Telnyx reference](../telephony/telnyx.md) explains each one.
 
 **Disconnect** removes the resources Connect created.

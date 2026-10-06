@@ -114,6 +114,22 @@ public sealed class TelnyxOptions
     public TelnyxAnsweringMachineDetection AnsweringMachineDetection { get; set; }
 
     /// <summary>
+    /// Gets or sets the Telnyx noise suppression engine started on an agent's leg once it is connected.
+    /// <see cref="TelnyxNoiseSuppressionEngine.Off"/> starts none.
+    /// </summary>
+    public TelnyxNoiseSuppressionEngine NoiseSuppressionEngine { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether noise suppression cleans the agent's voice, which is what the caller hears.
+    /// </summary>
+    public bool NoiseSuppressionAgentVoice { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether noise suppression cleans the caller's voice, which is what the agent hears.
+    /// </summary>
+    public bool NoiseSuppressionCallerVoice { get; set; }
+
+    /// <summary>
     /// Gets or sets the text-to-speech voice every spoken prompt uses. Never empty: Telnyx refuses speech without one.
     /// </summary>
     public string TtsVoice { get; set; } = TelnyxConstants.Speech.DefaultVoice;
