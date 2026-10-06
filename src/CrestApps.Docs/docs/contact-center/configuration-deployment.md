@@ -3,6 +3,9 @@ sidebar_label: Configuration deployment
 sidebar_position: 6
 title: Contact Center Configuration Deployment
 description: Export a Contact Center tenant's configuration as a deployment plan, review it in source control, and replay it into another environment.
+user_manual:
+  - user-manual/administration/import-and-export
+  - user-manual/voice-media
 ---
 
 # Contact Center Configuration Deployment

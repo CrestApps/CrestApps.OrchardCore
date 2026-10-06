@@ -3,6 +3,8 @@ sidebar_label: Overview
 sidebar_position: 0
 title: AI Providers
 description: Overview of AI provider modules and how to implement custom providers for Orchard Core.
+user_manual:
+  - user-manual/ai/connections
 ---
 
 # AI Providers

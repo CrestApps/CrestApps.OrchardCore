@@ -3,6 +3,8 @@ sidebar_label: Azure OpenAI
 sidebar_position: 2
 title: Azure OpenAI Integration
 description: Azure OpenAI integration for AI chat profiles, deployments, and connections in Orchard Core.
+user_manual:
+  - user-manual/ai/connections
 ---
 
 | | |
@@ -12,11 +14,7 @@ description: Azure OpenAI integration for AI chat profiles, deployments, and con
 
 Provides AI services using Azure OpenAI models.
 
-The screencast below shows the Azure OpenAI provider connection and the chat, utility, and embedding deployments it exposes in the admin dashboard.
-
-<video controls preload="metadata" width="100%" aria-label="Screen cast of the Azure OpenAI provider connection and its chat, utility, and embedding deployments">
-  <source src="/img/docs/ai-provider-azure-openai.mp4" type="video/mp4" />
-</video>
+Adding the connection and its deployments in the admin is described, with a screencast of an Azure OpenAI connection and its chat, utility, and embedding deployments, in the User Manual under [Connect an AI provider](../../user-manual/ai/connections.md). The connection editor offers **Endpoint**, **Authentication type** (**Default authentication**, **Managed identity**, **API key**), **API key** and **Identity client ID**.
 
 ## Overview
 
@@ -197,12 +195,14 @@ This is useful when:
 ### How to create an Azure Speech deployment
 
 1. Navigate to **Artificial Intelligence** -> **Deployments** in the admin dashboard.
-2. Click **Add Deployment** and select **Azure Speech** as the provider.
-3. Enter a deployment name.
-4. On the **Model capabilities** card, enable the **Speech to text** feature.
-5. Provide the endpoint URL of your Azure Speech Service resource.
-6. Select the authentication type: `Default`, `ManagedIdentity`, or `ApiKey`.
+2. Click **Add Deployment** and select **Azure AI Services** as the provider.
+3. Enter the **Model name** (the **Technical name** follows it).
+4. On the **Model capabilities** card, enable the **Speech to text (transcription)** feature.
+5. Provide the **Endpoint** URL of your Azure Speech Service resource.
+6. Select the **Authentication type**: **Default authentication**, **Managed identity**, or **API key** (stored as `Default`, `ManagedIdentity` or `ApiKey`).
 7. Save the deployment.
+
+The deployment editor is described in the User Manual under [Add a deployment](../../user-manual/ai/connections.md#add-a-deployment).
 
 :::tip
 You can find your Speech Service endpoint and API key in the [Azure AI Foundry portal](https://ai.azure.com/) or the Azure Portal under your Speech Service resource's **Keys and Endpoint** section.

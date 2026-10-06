@@ -1,26 +1,45 @@
 ---
-sidebar_label: Overview
+sidebar_label: Welcome
 sidebar_position: 1
 title: User Manual
-description: A task-by-task guide, with a screencast for every feature, for the people who run and work in the Omnichannel CRM, the Contact Center, and the Messaging workspace.
+description: Step-by-step instructions, screencasts, use cases and training paths for the people who use the app every day, from agents to administrators. No code required.
+technical_manual:
+  - intro
 ---
 
-This manual is for the people who use the application every day. It shows, one screen at a time, how a **manager** sets up the contact center and how an **agent** and a **supervisor** work in it. Every page has at least one short screencast recorded against a fully configured demo site, so you can watch the clicks before you try them.
+This manual is for the people who **use the app every day**: agents who take calls and answer messages, supervisors who watch the floor, managers who set up the work, and administrators who manage the site from its admin screens. It explains what each screen is for, when you would use it, and how to use it, one task at a time. Most pages have a short screencast, recorded on a demo site, so you can watch the clicks before you try them.
 
-The other sections of this site explain how the modules are built and how to install them. Start here if you want to know **what a screen does and how to use it**.
+You don't need to write code or edit files to follow anything here. When a task needs an IT person or a developer, the page says so and links to the [Technical Manual](../intro.md).
+
+<ManualSearch />
+
+## New here? Start with these
+
+| Read this | To learn |
+| --- | --- |
+| [Find your way around](getting-started/finding-your-way.md) | How to sign in, what the admin menu holds, and how to set up your own profile. |
+| [Roles and permissions](getting-started/roles-and-permissions.md) | Why your menu may look different from a colleague's, and how to ask for access. |
+| [Training paths](getting-started/training-paths.md) | The pages and screencasts to work through for your role, in order. |
+| [Use cases](use-cases/index.md) | End-to-end walkthroughs of real jobs, like running a calling campaign or putting an AI assistant on your website. |
+| [Glossary](glossary.md) | Plain-language meanings of the words used in the app. |
 
 ## Who does what
 
 | You are... | You usually... | Start with |
 | --- | --- | --- |
-| **Administrator** | Enable features, connect the phone and SMS providers, grant roles. | [Phone and SMS setup](telephony-settings.md) |
+| **Agent** | Sign in to queues and campaigns, take and place calls, work activities, and answer messages. | [Agent workspace](agent-workspace.md) |
+| **Supervisor** | Watch the live dashboard, help on live calls, handle shared voicemail, and read reports. | [Live dashboard](live-dashboard.md) |
 | **Manager** | Build contacts, subjects, subject flows, campaigns, queues, entry points, IVR menus and dialer profiles, then load work. | [Contacts](contacts.md) |
-| **Agent** | Signs in to queues and campaigns, takes and places calls, works activities, and answers messages. | [Agent workspace](agent-workspace.md) |
-| **Supervisor** | Watches the live dashboard, helps on live calls, handles shared voicemail, and reads reports. | [Live dashboard](live-dashboard.md) |
+| **AI content manager** | Set up AI profiles, give the AI your company's knowledge, and put an AI assistant on your website. | [AI features at a glance](ai/index.md) |
+| **Administrator** | Turn on features, connect the phone, SMS and AI providers, manage users and roles, and change site settings. | [Features and settings](getting-started/features-and-settings.md) |
+
+The [training paths](getting-started/training-paths.md) list everything each role should learn, in order.
+
+:::tip[You may not see everything described here]
+What you see in the app depends on your role. Most people are not administrators, so some menus, buttons and settings in this manual may be missing for you. Every feature page lists the permission and the feature it needs. If something is missing, ask your administrator. [Roles and permissions](getting-started/roles-and-permissions.md) has a message you can send them.
+:::
 
 ## Where things are in the menu
-
-Almost everything lives under **Interaction Center** in the admin menu.
 
 <video controls preload="metadata" width="100%" aria-label="Screencast touring the Interaction Center, Management, Messaging and Reports menus">
   <source src="/img/docs/um-tour.mp4" type="video/mp4" />
@@ -35,61 +54,38 @@ Almost everything lives under **Interaction Center** in the admin menu.
 | **Interaction Center > Shared voicemail** | Voicemail left for a queue rather than one person. |
 | **Interaction Center > My voicemail greeting** | The greeting callers hear when you miss a call. |
 | **Interaction Center > Call recordings** | Recorded calls to search and play back, with the transcript of AI calls. |
-| **Interaction Center > Management** | The manager's setup screens: subject flows, dispositions, campaigns, load activities, bulk activity management, queues, skills, business hours, agent states, entry points, voice media, dialer profiles, extensions and channel endpoints. |
+| **Interaction Center > Management** | The manager's setup screens: subject flows, dispositions, campaigns, load activities, bulk activity management, queues, skills, business hours, agent states, entry points, voice media, dialer profiles, extensions and omnichannel addresses. |
 | **Messaging** | The shared SMS inbox, broadcasts and message templates. |
+| **Artificial Intelligence** | AI profiles, templates, provider connections, deployments and tool instances. |
 | **Reports** | Every report, grouped by category. |
-| **Settings > Contact Center** | Recording rules, approved transfer numbers and secure data capture. |
-| **Settings > Communication** | The phone provider and the SMS provider. |
+| **Settings** | Site-wide settings, such as **Contact Center** and **Communication** (the phone and SMS providers). Usually only administrators see this menu. |
 
-## The pages in this manual
+## What's in this manual
 
-**Building the CRM**
+- **[Getting Started](getting-started/finding-your-way.md)**: finding your way, roles and permissions, training paths, and turning features on.
+- **[Use Cases](use-cases/index.md)**: complete jobs from start to finish, each linking to the pages you need.
+- **[AI Assistant](ai/index.md)**: AI chat, AI profiles, website chat, knowledge from your documents, tools and agents, and analytics.
+- **Building the CRM**: [contacts](contacts.md), [leads, accounts and opportunities](leads-accounts-opportunities.md), [subjects](subjects.md), [dispositions](dispositions.md), [subject flows](subject-flows.md), [campaigns](campaigns.md), [omnichannel addresses](channel-endpoints.md) and [cadences](cadences.md).
+- **Loading and Managing Work**: [load activities](load-inventory.md), [automated AI SMS and voice](automated-ai.md), [activities](activities.md), [bulk activities](bulk-activities.md) and [numbers not in service](numbers-not-in-service.md).
+- **Setting Up the Contact Center**: [queues](queues.md), [skills and entitlements](skills-and-entitlements.md), [agent states](agent-states.md), [business hours](business-hours.md), [entry points and IVR menus](entry-points-and-ivr.md), [voice media](voice-media.md), [dialer profiles](dialer-profiles.md), [extensions](extensions.md) and [Contact Center settings](contact-center-settings.md).
+- **Working in the Contact Center**: the [agent workspace](agent-workspace.md), [calls](calls.md), [voicemail](voicemail.md), [call recordings](call-recordings.md), the [messaging workspace](messaging.md), the [live dashboard](live-dashboard.md), [reports](reports.md) and [workflows](workflows.md).
+- **Phone Tools**: [phone and SMS setup](telephony-settings.md), the [soft phone](soft-phone.md), and the [browser extension and Windows app](phone-apps.md).
+- **Site Administration**: [users](administration/users.md), [roles](administration/roles.md), [content access](administration/content-access-control.md), [content fields](administration/content-fields.md), [import and export](administration/import-and-export.md), [Do Not Call lists](administration/do-not-call-lists.md), [phone number verification](administration/phone-number-verification.md) and [time zones](administration/time-zones.md).
+- **[Troubleshooting](troubleshooting.md)**: what to do when something doesn't work as expected.
 
-- [Contacts](contacts.md): create contacts, find them by phone number, import and export them.
-- [Leads, Accounts and Opportunities](leads-accounts-opportunities.md): keep prospects apart as leads, convert the ones that qualify, and group contacts and deals under accounts.
-- [Subjects](subjects.md): define what a call or message is about, inbound and outbound.
-- [Dispositions](dispositions.md): the outcomes an agent can pick when work is done.
-- [Subject flows](subject-flows.md): what happens next for each outcome.
-- [Campaigns](campaigns.md): group work for dialing and reporting.
-- [Channel endpoints](channel-endpoints.md): the phone numbers and SMS numbers you own.
-- [Cadences](cadences.md): automatic follow-up messages when a customer goes quiet.
+## Searching only the User Manual
 
-**Loading and managing work**
-
-- [Load activities](load-inventory.md): create activities for agents, for the AI, or for the dialer.
-- [Automated AI SMS and voice](automated-ai.md): let an AI profile text or call your contacts.
-- [Activities](activities.md): how an agent works, logs and completes activities.
-- [Managing activities in bulk](bulk-activities.md): reassign, reschedule and change many activities at once.
-
-**Setting up the contact center**
-
-- [Queues](queues.md): where waiting calls and messages line up, and how agents are picked.
-- [Skills and agent entitlements](skills-and-entitlements.md): who may work which queue.
-- [Agent states](agent-states.md): the reasons agents give when they are not ready.
-- [Business hours](business-hours.md): opening hours and holidays.
-- [Inbound entry points and IVR menus](entry-points-and-ivr.md): what happens when someone dials your number.
-- [Voice media](voice-media.md): hold music and recorded prompts.
-- [Dialer profiles](dialer-profiles.md): preview, power and progressive dialing.
-- [Extensions](extensions.md): internal extension numbers for people.
-- [Contact Center settings](contact-center-settings.md): recording, transfers and secure data capture.
-
-**Working in the contact center**
-
-- [Agent workspace](agent-workspace.md): sign in, set your presence and take work.
-- [Placing and handling calls](calls.md): dial manually, transfer, conference and wrap up.
-- [Voicemail](voicemail.md): your greeting, your voicemail and shared voicemail.
-- [Call recordings](call-recordings.md): search recorded calls, play them back and read AI call transcripts.
-- [Messaging workspace](messaging.md): answer SMS conversations, transfer them and send broadcasts.
-- [Live dashboard](live-dashboard.md): monitor queues and agents, and step into calls.
-- [Reports](reports.md): read and export performance reports.
-- [Contact Center workflows](workflows.md): automate what happens on contact center events.
-
-**Phone tools**
-
-- [Phone and SMS setup](telephony-settings.md): connect the providers.
-- [Soft phone](soft-phone.md): the phone agents use to make and take calls.
-- [Browser extension and Windows app](phone-apps.md): install the phone and keep it running while you work.
+The search box at the top of every User Manual page searches only this manual. To search the whole site, including the Technical Manual, choose **See all results** at the bottom of the search box, then switch the filter next to the search field from **User Manual** to **Everywhere**.
 
 ## About the screencasts
 
 The screencasts are recorded on a demo site with sample data, at 1600×1000, and play in the page. They show real screens from the current version. The demo site is not connected to a live phone line or SMS provider, so tasks that need a call or a text in progress (answering from a queue, transferring, conferencing, supervisor listen and barge, sending messages) are described in text, and those pages say where the screencast stops.
+
+## Training your team
+
+Companies can use this manual to train their staff:
+
+1. Give each person the [training path](getting-started/training-paths.md) for their role.
+2. Have them watch each page's screencast, then repeat the task on a test record.
+3. Send them to the [use cases](use-cases/index.md) to see how the pieces fit together.
+4. Keep the [glossary](glossary.md) and [troubleshooting](troubleshooting.md) pages handy for the first weeks.

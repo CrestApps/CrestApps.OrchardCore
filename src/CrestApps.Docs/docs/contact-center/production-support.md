@@ -3,6 +3,9 @@ sidebar_label: Production support
 sidebar_position: 20
 title: Contact Center production support
 description: Finite production support matrix, initial capacity tier, and prohibited Contact Center deployment combinations.
+user_manual:
+  - user-manual/contact-center-settings
+  - user-manual/live-dashboard
 ---
 
 The Contact Center commercial release remains blocked until remediation phases R0 through R8 and their release evidence pass. The supported combinations are defined by the shipped topology profiles (`ContactCenterTopologyProfiles`) and the GA-Core tenant profiles described below; unlisted combinations are unsupported.
@@ -33,7 +36,7 @@ Configure the tenant drain timeout under `CrestApps:ContactCenter:FeatureLifecyc
 
 - PostgreSQL 16.x is the only initial production database target.
 - SQLite is for local development, demonstrations, and tests only.
-- The supported production topology is `single-node-distributed`: one region, exactly one application node, a shared relational database, the `CrestApps.OrchardCore.SignalR.Redis` feature, and the `OrchardCore.Redis.Lock` feature. The node count is one, but the distributed contract is mandatory rather than optional, because a single node already meets the distributed failure modes: a rolling restart overlaps two instances, and an Orchard shell reload tears down and rebuilds the shell in-process on every feature toggle.
+- The supported production topology is `single-node-distributed`: one region, exactly one application node, a shared relational database, Orchard Core's `OrchardCore.SignalR.Redis` backplane (switched on through the `CrestApps.OrchardCore.SignalR.Redis` feature, see below), and the `OrchardCore.Redis.Lock` feature. The node count is one, but the distributed contract is mandatory rather than optional, because a single node already meets the distributed failure modes: a rolling restart overlaps two instances, and an Orchard shell reload tears down and rebuilds the shell in-process on every feature toggle.
 - Multi-node operation is **not** production-supported in this release. Two to four nodes remain the architectural direction and the code path is backplane- and lock-agnostic, but multi-node capacity certification has not been earned, so `single-region-multi-node` is declared non-production. Scaling out later is configuration and certification, not a rewrite.
 - Production without the backplane or Redis distributed locking, and multi-region active-active operation, are unsupported.
 
@@ -43,17 +46,21 @@ The supported topology above is not advisory. Each tenant declares the topology 
 
 ```json
 {
-  "CrestApps": {
-    "ContactCenter": {
-      "Topology": {
-        "ProfileId": "single-node-distributed"
+  "OrchardCore": {
+    "CrestApps": {
+      "ContactCenter": {
+        "Topology": {
+          "ProfileId": "single-node-distributed"
+        }
       }
     }
   }
 }
 ```
 
-- When the declared profile is `single-node-distributed`, activation verifies the tenant is on the `Postgres` database provider and that the `OrchardCore.Redis`, `OrchardCore.Redis.Lock`, and `CrestApps.OrchardCore.SignalR.Redis` features are enabled. It also verifies that the distributed lock the container actually resolves is not the process-local implementation, because a feature can be enabled while the container still hands out the local lock, and the lock that is injected is the one that decides whether two overlapping processes can enter the same critical section. The **number of running application nodes itself is not verified at runtime** — nothing performs a node census — so the single-active-process constraint is only *mitigated* by the distributed lock serializing the critical sections that take it (it does not make multi-node operation safe, which remains uncertified above), and running exactly one active background-processing node remains an operator responsibility.
+These examples show the host `appsettings.json` shape, with the `OrchardCore` wrapper. In a tenant's own `App_Data/Sites/{TenantName}/appsettings.json`, leave the wrapper out; for environment variables, see [Configuration](../configuration.md#how-configuration-reaches-the-modules).
+
+- When the declared profile is `single-node-distributed`, activation verifies the tenant is on the `Postgres` database provider and that the `OrchardCore.Redis`, `OrchardCore.Redis.Lock`, and `CrestApps.OrchardCore.SignalR.Redis` features are enabled. `CrestApps.OrchardCore.SignalR.Redis` is the **SignalR Redis Backplane (Deprecated)** feature of the CrestApps SignalR module: it has no code of its own and only turns on Orchard Core's `OrchardCore.SignalR.Redis`, but it is the feature ID the topology check looks for, so enable it (not just `OrchardCore.SignalR.Redis`) on a tenant that declares this profile. It also verifies that the distributed lock the container actually resolves is not the process-local implementation, because a feature can be enabled while the container still hands out the local lock, and the lock that is injected is the one that decides whether two overlapping processes can enter the same critical section. The **number of running application nodes itself is not verified at runtime** — nothing performs a node census — so the single-active-process constraint is only *mitigated* by the distributed lock serializing the critical sections that take it (it does not make multi-node operation safe, which remains uncertified above), and running exactly one active background-processing node remains an operator responsibility.
 - Every unmet requirement is reported at once. Fixing one requirement per deployment would make each intermediate deployment another unsupported production release.
 - An unrecognized profile identifier is a validation failure rather than a fallback to the development profile, so a typo cannot silently downgrade a production deployment to the profile that requires nothing.
 - Omitting `ProfileId` is the default and runs the tenant as a single node with no infrastructure requirements, in every host environment, `Production` included. A production host logs a one-time warning at activation naming the profile to declare, so the checks above are one setting away. Declare `single-node-distributed` to have them enforced.
@@ -198,12 +205,14 @@ Enable it only when your load balancer fails open once too few targets remain he
 
 ```json
 {
-  "CrestApps": {
-    "ContactCenter": {
-      "HealthChecks": {
-        "EnableNodeServingGate": true,
-        "ConsecutiveFailuresBeforeUnready": 3,
-        "ConsecutiveSuccessesBeforeReady": 2
+  "OrchardCore": {
+    "CrestApps": {
+      "ContactCenter": {
+        "HealthChecks": {
+          "EnableNodeServingGate": true,
+          "ConsecutiveFailuresBeforeUnready": 3,
+          "ConsecutiveSuccessesBeforeReady": 2
+        }
       }
     }
   }
@@ -243,8 +252,10 @@ Because documentation cannot stop a deployment chart from wiring that route, the
 
 ```json
 {
-  "OrchardCore_HealthChecks": {
-    "Url": "/health/aggregate"
+  "OrchardCore": {
+    "OrchardCore_HealthChecks": {
+      "Url": "/health/aggregate"
+    }
   }
 }
 ```
@@ -253,10 +264,12 @@ If you have deliberately accepted the aggregate-on-liveness-route behavior, ackn
 
 ```json
 {
-  "CrestApps": {
-    "ContactCenter": {
-      "HealthChecks": {
-        "AllowUnsafeSharedEndpointRoute": true
+  "OrchardCore": {
+    "CrestApps": {
+      "ContactCenter": {
+        "HealthChecks": {
+          "AllowUnsafeSharedEndpointRoute": true
+        }
       }
     }
   }
@@ -268,13 +281,15 @@ Thresholds are configured under `CrestApps:ContactCenter:HealthChecks` and are n
 
 ```json
 {
-  "CrestApps": {
-    "ContactCenter": {
-      "HealthChecks": {
-        "DeadLetterDegradedThreshold": 1,
-        "DeadLetterUnhealthyThreshold": 25,
-        "OverdueBacklogDegradedThreshold": 50,
-        "OverdueBacklogUnhealthyThreshold": 500
+  "OrchardCore": {
+    "CrestApps": {
+      "ContactCenter": {
+        "HealthChecks": {
+          "DeadLetterDegradedThreshold": 1,
+          "DeadLetterUnhealthyThreshold": 25,
+          "OverdueBacklogDegradedThreshold": 50,
+          "OverdueBacklogUnhealthyThreshold": 500
+        }
       }
     }
   }
@@ -351,11 +366,13 @@ Declare the result once the run passes:
 
 ```json
 {
-  "CrestApps": {
-    "ContactCenter": {
-      "BaseVoiceVerification": {
-        "AudioVerificationAcknowledged": true,
-        "AudioVerificationEvidenceReference": "https://…/base-voice-proof/prod-eu-west-2026-07"
+  "OrchardCore": {
+    "CrestApps": {
+      "ContactCenter": {
+        "BaseVoiceVerification": {
+          "AudioVerificationAcknowledged": true,
+          "AudioVerificationEvidenceReference": "https://…/base-voice-proof/prod-eu-west-2026-07"
+        }
       }
     }
   }
@@ -382,7 +399,7 @@ The Contact Center real-time hub is backplane-agnostic. It is hosted through `Si
 
 The supported production real-time topology is:
 
-- Enable `CrestApps.OrchardCore.SignalR.Redis` on every tenant that must exchange real-time messages. It wires the SignalR Redis backplane (`AddStackExchangeRedis`) using the `OrchardCore_Redis` connection settings and a dedicated SignalR connection, and it namespaces the backplane channel with both `InstancePrefix` and the immutable shell name so two nodes serving one tenant share a channel while different tenants never do. See [SignalR module](../modules/signalr.md) for configuration.
+- Enable Orchard Core's `OrchardCore.SignalR.Redis` feature on every tenant that must exchange real-time messages. On a tenant that declares the `single-node-distributed` topology, enable it through the deprecated `CrestApps.OrchardCore.SignalR.Redis` feature, which turns it on and is the ID the [topology check](#the-declared-topology-is-enforced-at-startup) requires. `OrchardCore.SignalR.Redis` wires the SignalR Redis backplane (`AddStackExchangeRedis`) using the `OrchardCore_Redis` connection settings and a dedicated SignalR connection, and it namespaces the backplane channel with both `InstancePrefix` and the immutable shell name so two nodes serving one tenant share a channel while different tenants never do. See [SignalR module](../modules/signalr.md) for configuration.
 - Enable `OrchardCore.Redis.Lock` as well. The SignalR backplane distributes real-time messages, but Contact Center routing, provider webhook inbox acceptance, and other distributed critical sections require the Redis distributed lock independently of the backplane. A backplane without distributed locking is an unsupported configuration.
 - Use a deployment-unique `InstancePrefix` (application, environment, region) whenever Redis infrastructure is shared, so tenants with the same shell name in different deployments cannot merge backplane channels.
 
@@ -406,12 +423,20 @@ Validated settings:
 | `CrestApps:ContactCenter:Availability` | `HeartbeatTimeout` and `MaximumWrapUpDuration` are both greater than zero. |
 | `CrestApps:ContactCenter:WebhookIngress` | Concurrency, rate, period, delivery-age, and future-skew values are within their supported ranges. |
 | `CrestApps:Omnichannel:Automation` | The lease, batch size, per-invocation ceiling, attempt limit and retry delay are all greater than zero, and one batch cannot exceed the ceiling meant to keep a pass inside its lease. A zero batch would drain nothing while every run reported success. |
-| `CrestApps:Sms:Portal` | Conversation lock timeout and expiry, the inbox page size, the outbox batch size and the per-endpoint send budget are positive, and the lock expiry exceeds its acquisition timeout. |
-| `CrestApps:Sms:Portal:KeywordReplies` | Optional. Overrides the shipped STOP, HELP and START replies. Leaving a value unset keeps the default, because a tenant that configures nothing still owes a contact who texts STOP an answer. |
 | `CrestApps_Telephony:Commands` | The command timeout is between one second and two minutes. |
 | `CrestApps_Telephony:Coordination` | Lock waits and the new-interaction grace period are positive, and the lease expiry exceeds its acquisition timeout. |
 | `CrestApps:Asterisk:Default` | Numeric settings are sane whenever the configuration-backed provider is enabled. |
 | `CrestApps:Asterisk:Coordination` | Lock and HTTP timings are positive, the lease expiry exceeds its acquisition timeout, the per-channel binding create-lock timeout is positive, the total request budget exceeds a single attempt, the real-time buffer capacity is positive and no larger than 100000, and the real-time backpressure timeout is positive. |
+
+The messaging workspace sections are read when the tenant starts but are not validated on activation, so check them before you deploy:
+
+| Section | What to check |
+| --- | --- |
+| `CrestApps:Omnichannel:Messaging` | `InboxPageSize`, `OutboxBatchSize`, `MaxMessagesPerPassPerEndpoint`, `MaxInboundAttachmentBytes`, `MaxInboundAttachments` and `AttachmentLinkLifetimeHours` are used as given, so keep them positive. `ConversationLockTimeoutSeconds` and `ConversationLockExpirationSeconds` are raised to at least one second when read; keep the expiry above the timeout. |
+| `CrestApps:Omnichannel:Messaging:RoutedDistribution` | `PickupGraceMinutes`, `MaxReassignmentAttempts` and `VoiceCapacityWeight` for routed (push) distribution. |
+| `CrestApps:Omnichannel:Messaging:Sms:KeywordReplies` | Optional. `StopMessage`, `HelpMessage` and `StartMessage` override the shipped STOP, HELP and START replies. A value left unset keeps the default, because a tenant that configures nothing still owes a contact who texts STOP an answer. |
+
+See [Configuration](../configuration.md#omnichannel-and-sms) for the keys and their defaults.
 
 Each lease expiry must exceed its acquisition timeout because otherwise the lease can lapse while a peer is still waiting to take it, and two nodes then act on the same call, credential or reconciliation sweep at once.
 

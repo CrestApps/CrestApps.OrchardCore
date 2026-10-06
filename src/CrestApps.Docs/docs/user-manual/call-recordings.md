@@ -3,6 +3,9 @@ sidebar_label: Call Recordings
 sidebar_position: 32.5
 title: Call Recordings - Search, Listen and Read the Transcript
 description: Find a recorded call, play it back, jump to any line of an AI call's transcript, and erase a recording when you have to.
+technical_manual:
+  - contact-center/index
+  - contact-center/agent-desktop
 ---
 
 Every recorded call is listed on one page, whatever kind of call it was. You can search the calls, play one back and, when an AI voice agent talked on the call, read its transcript line by line.
@@ -11,6 +14,8 @@ Every recorded call is listed on one page, whatever kind of call it was. You can
 | --- | --- |
 | **Menu** | Interaction Center > Call recordings |
 | **Permissions** | *Listen to own call recordings* (your own calls only) or *Listen to anyone's call recordings* (every user's calls). The *Agent* role has the first, the *Supervisor* role the second. |
+
+<AskYourAdmin />
 
 ## Who sees which calls
 

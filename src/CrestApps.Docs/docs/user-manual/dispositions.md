@@ -3,6 +3,9 @@ sidebar_label: Dispositions
 sidebar_position: 12
 title: Dispositions
 description: Create the outcomes agents and the AI pick when an activity is done, such as No answer, Call back, Sold or Do not call.
+technical_manual:
+  - omnichannel/management
+  - contact-center/agents-queues-dialer
 ---
 
 A **disposition** is the outcome of an activity: *No answer*, *Call back*, *Lead won*, *Do not call*. Agents pick one when they complete an activity, and an AI conversation picks one when it ends. The [subject flow](subject-flows.md) decides what each disposition does next.
@@ -13,6 +16,8 @@ A **disposition** is the outcome of an activity: *No answer*, *Call back*, *Lead
 | **Permission** | Manage dispositions |
 | **Feature** | Omnichannel Management |
 
+<AskYourAdmin />
+
 <video controls preload="metadata" width="100%" aria-label="Screencast of creating three dispositions with descriptions">
   <source src="/img/docs/um-dispositions.mp4" type="video/mp4" />
 </video>
@@ -22,6 +27,8 @@ A **disposition** is the outcome of an activity: *No answer*, *Call back*, *Lead
 1. Open **Interaction Center > Management > Dispositions** and click **Add Disposition**.
 2. Enter a **Name** and an optional **Description**.
 3. Pick an **Outcome** if the disposition has a special meaning (see below), then **Save**. Names must be unique.
+
+For example, a test-drive campaign might use *Test Drive Booked*, *Call Back Later* and *Not Interested*. A clear description helps agents, and the AI, tell the outcomes apart.
 
 After it is saved, a disposition's name cannot be changed; only its description can. Deleting a disposition does not check whether a subject flow still uses it, so remove it from the flows first.
 

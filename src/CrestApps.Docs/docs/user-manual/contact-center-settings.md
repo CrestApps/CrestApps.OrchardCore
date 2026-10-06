@@ -3,6 +3,10 @@ sidebar_label: Contact Center Settings
 sidebar_position: 28
 title: Contact Center Settings
 description: Site-wide rules for call recording and consent, the outside numbers agents and IVR menus may transfer to, and secure data capture.
+technical_manual:
+  - contact-center/index
+  - contact-center/agent-desktop
+  - contact-center/production-support
 ---
 
 The **Contact Center** settings page holds the rules that apply to every queue and every agent.
@@ -11,12 +15,15 @@ The **Contact Center** settings page holds the rules that apply to every queue a
 | --- | --- |
 | **Menu** | Settings > Contact Center |
 | **Permission** | Manage the Contact Center |
+| **Feature** | Contact Center; each tab below names the feature it needs |
+
+<AskYourAdmin />
 
 <video controls preload="metadata" width="100%" aria-label="Screencast of the Contact Center settings tabs: recording governance, external transfer destinations and secure data capture">
   <source src="/img/docs/um-cc-settings.mp4" type="video/mp4" />
 </video>
 
-The page has three tabs. A tab only appears when its feature is enabled.
+The page has up to four tabs. A tab only appears when its feature is enabled.
 
 ## Recording governance
 
@@ -36,7 +43,7 @@ Needs the **Contact Center Call Recording** feature.
 
 ## Default numbers
 
-The numbers used for an agent who has none of their own.
+Needs the **Omnichannel Channel Endpoints** feature, which adds the **Omnichannel Addresses** list the numbers are picked from. These are the numbers used for an agent who has none of their own.
 
 | Field | What it does |
 | --- | --- |
@@ -49,7 +56,7 @@ The outside numbers agents and IVR menus may transfer calls to.
 
 1. Add a row for each destination with a **Display name** (for example *After-hours answering service*) and its **E.164 address** (for example `+17025550199`).
 2. Untick **Enabled** to keep a row but stop offering it.
-3. Tick **Let agents transfer to numbers that are not on this list** only if agents may type any number. Agents also need the *Transfer calls externally* permission.
+3. Tick **Let agents transfer to numbers that are not on this list** only if agents may type any number. Agents also need the *Transfer Contact Center calls externally* permission.
 
 Emergency and premium-rate numbers are always refused.
 

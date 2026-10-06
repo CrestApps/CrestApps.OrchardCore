@@ -3,6 +3,8 @@ sidebar_label: AI Memory
 sidebar_position: 8
 title: AI Memory Module
 description: Persistent, user-scoped AI memory for AI Profiles and Chat Interactions.
+user_manual:
+  - user-manual/ai/memory
 ---
 
 | | |
@@ -11,6 +13,8 @@ description: Persistent, user-scoped AI memory for AI Profiles and Chat Interact
 | **Feature ID** | `CrestApps.OrchardCore.AI.Memory` |
 
 Provides persistent, user-scoped AI memory so the AI can remember durable, non-sensitive preferences and background details for authenticated users across multiple conversations.
+
+What memory means for users, how to turn it on for a profile and how to clear it are described in the User Manual under [Memory](../user-manual/ai/memory.md).
 
 Provider-specific indexing support is split into separate modules:
 
@@ -79,7 +83,7 @@ Each saved memory should also include a short description explaining what the va
 
 - `name`: `preferred_name`
 - `description`: `The user's preferred name.`
-- `content`: `Mike Alhayek`
+- `content`: `John Smith`
 
 The system uses the memory name together with the description for semantic search embeddings because the raw content alone may not be meaningful enough for retrieval.
 
@@ -109,12 +113,12 @@ The selected embedding deployment is only configurable when the memory index pro
 
 ### 3. Configure global memory settings
 
-Navigate to **Settings → Artificial Intelligence → Memory** and configure:
+In the **Memory** section of **Settings → Artificial Intelligence**, configure:
 
 - **Index profile** — the master memory index used for storing memories
-- **Default top N** — the default number of matching memories returned by searches
+- **Default top N** — the default number of matching memories returned by searches (1–20)
 
-Preemptive memory retrieval itself is controlled separately under **Settings → Artificial Intelligence → General** through **Enable Preemptive Memory Retrieval**. This lets you keep user memory tools enabled while turning off the upfront memory injection step for the tenant.
+Preemptive memory retrieval itself is controlled separately in the **General** section of **Settings → Artificial Intelligence** through **Enable preemptive memory retrieval**. This lets you keep user memory tools enabled while turning off the upfront memory injection step for the tenant.
 
 :::warning
 After you start storing production memory data, avoid changing the configured master index unless you plan a full re-index.
@@ -124,7 +128,7 @@ After you start storing production memory data, avoid changing the configured ma
 
 #### AI Profiles
 
-AI Profiles expose **Enable User Memory** in the **Interactions** card of the profile editor.
+AI Profiles expose **Enable user memory** on the **Knowledge** tab of the profile editor.
 
 - Default: **disabled**
 - Scope: per profile
@@ -133,7 +137,7 @@ This lets you opt in only on the profiles where cross-session personalization is
 
 #### AI Profile Templates
 
-Profile-source AI Templates also expose **Enable User Memory** in the **Interactions** card.
+Profile-source AI Templates also expose **Enable user memory** on the **Knowledge** tab.
 
 - Default: **disabled**
 - Scope: persisted with the template and applied to new profiles created from it
@@ -142,9 +146,9 @@ This makes it easy to preconfigure memory behavior when you create reusable chat
 
 #### Chat Interactions
 
-Chat Interactions add a site setting under **Settings → Artificial Intelligence → Chat Interactions**:
+Chat Interactions add a site setting to the **Memory** section of **Settings → Artificial Intelligence** (permission `ManageChatInteractionSettings`):
 
-- **Enable User Memory**
+- **Enable user memory**
 - Default: **enabled**
 
 This enables private memory for authenticated Chat Interaction users. Memory retrieval and indexing only become active after a valid memory index profile is configured.
@@ -173,11 +177,11 @@ The authorization handler receives the target `userId` as a resource and checks:
 
 This ensures the same authorization logic is applied uniformly throughout the system.
 
-- The **Danger zone** warning with the **Clear saved AI memory** button appears on the user profile editor when the current viewer has the appropriate permission
-- When editing your own profile, the messaging addresses "your account"
-- When an administrator edits another user's profile, the messaging indicates the action is being performed on behalf of that user
+- The **AI Memory** section is added to the Orchard user editor by a `User` display driver. Its **Danger zone** warning and **Clear saved AI memory** button only render when the viewer is authorized for the target user and the user has saved memories
 - Clicking the button uses Orchard Core's standard admin confirmation dialog before memory is removed
 - Clearing memory removes the user's stored memory records and deletes their indexed memory documents from the configured master memory index
+
+The steps are in the User Manual under [Clear your saved memory](../user-manual/ai/memory.md#clear-your-saved-memory).
 
 ## Related Features
 

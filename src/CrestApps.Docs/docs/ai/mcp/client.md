@@ -3,6 +3,8 @@ sidebar_label: MCP Client Integration
 sidebar_position: 2
 title: MCP Client Integration
 description: Connect to remote and local MCP servers using SSE or Stdio transports.
+user_manual:
+  - user-manual/ai/tools-and-agents
 ---
 
 # MCP Client Integration
@@ -31,15 +33,7 @@ The Orchard Core module composes the shared `CrestApps.Core.AI.Mcp` client regis
 
 ### Connect to a Remote MCP Server
 
-1. Open your Orchard Core project.
-2. Navigate to **Artificial Intelligence** → **Model Context Protocol** → **MCP Hosts**.
-3. Click the **Add Connection** button.
-4. Under the **Server Sent Events (SSE)** source, click **Add**.
-5. Enter the following connection details:
-   - **Display Text**: A descriptive name for the connection.
-   - **Endpoint**: The MCP server endpoint URL (e.g., `https://localhost:1234/`).
-   - **Authentication**: Select the authentication method (see below).
-6. Save the connection.
+Connections are managed under **Artificial Intelligence** → **Model Context Protocol** → **MCP Hosts** (permission `ManageMcpConnections`). **Add Connection** lists the registered transports; the **Server-Sent Events** connection has a **Title**, an **Endpoint** (the MCP server endpoint URL, e.g. `https://localhost:1234/`) and an **Authentication** method (see below). The admin steps are in the User Manual under [MCP connections](../../user-manual/ai/tools-and-agents.md#mcp-connections).
 
 ### Authentication Types
 
@@ -171,11 +165,11 @@ Download and install [Docker Desktop](https://www.docker.com/products/docker-des
 1. Open your Orchard Core project.
 2. Navigate to **Artificial Intelligence** → **Model Context Protocol** → **MCP Hosts**.
 3. Click the **Add Connection** button.
-4. Under the **Standard Input/Output (Stdio)** source, click **Add**.
+4. Under the **Standard Input/Output** source, click **Add**.
 5. Enter the following connection details:
-   - **Display Text**: `Global Time Capabilities`
+   - **Title**: `Global Time Capabilities`
    - **Command**: `docker`
-   - **Command Arguments**:
+   - **Command arguments**:
      ```json
      ["run", "-i", "--rm", "mcp/time"]
      ```
@@ -216,6 +210,4 @@ Prefer configuration through code? Here's how to define the same connection usin
 
 ## Create an AI Profile
 
-After adding an MCP connection (SSE or Stdio), create an AI profile that uses it:
-
-👉 [Learn how to create an AI Profile](../overview#creating-ai-profiles)
+After adding an MCP connection (SSE or Stdio), select it under **MCP Connections** on the **Capabilities** tab of an AI profile (the chat interaction editor labels the section **Connections**). See [Create a profile](../../user-manual/ai/profiles.md#create-a-profile) and [AI Services](../overview#creating-ai-profiles).

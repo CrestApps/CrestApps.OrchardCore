@@ -1,0 +1,19 @@
+.manualItem :global(.breadcrumbs__link) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 600;
+}
+
+.manualItem_user :global(.breadcrumbs__link) {
+  color: var(--crestapps-manual-user-text);
+}
+
+.manualItem_technical :global(.breadcrumbs__link) {
+  color: var(--crestapps-manual-technical-text);
+}
+
+.manualIcon {
+  width: 0.95rem;
+  height: 0.95rem;
+}

@@ -3,6 +3,8 @@ sidebar_label: Azure AI Inference
 sidebar_position: 3
 title: Azure AI Inference Chat Feature
 description: Azure AI Inference integration for GitHub models using Azure AI provider in Orchard Core.
+user_manual:
+  - user-manual/ai/connections
 ---
 
 | | |

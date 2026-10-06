@@ -3,6 +3,8 @@ sidebar_label: OpenXml Support
 sidebar_position: 3
 title: AI Documents (OpenXml) Support
 description: Microsoft Office document support (Word, Excel, PowerPoint) for the AI Documents feature.
+user_manual:
+  - user-manual/ai/knowledge
 ---
 
 | | |

@@ -368,11 +368,22 @@ runtime MCP skills shipped by the `CrestApps.OrchardCore.AI.Mcp` module (which c
 
 ### Documentation Workflow
 
-Whenever code is modified, you MUST update the documentation project located at `src/CrestApps.Docs`:
+Whenever code is modified, you MUST update the documentation project located at `src/CrestApps.Docs`. **Read [`src/CrestApps.Docs/README.md`](src/CrestApps.Docs/README.md) before you touch any page**: it is the contributor guide for the docs site and the rules there are enforced in CI.
 
-1. **Update feature documentation first** – find the relevant page under `src/CrestApps.Docs/docs/` and keep it accurate with the latest behavior.
+The site holds two manuals:
+
+- The **User Manual** (`src/CrestApps.Docs/docs/user-manual/**`) is for people who use the app in the browser: agents, supervisors, managers and the administrators who work in the admin screens. It explains what each screen is for and how to use it, step by step, with no code, configuration files or feature IDs. Most readers are not administrators, so every feature page lists the menu, permission and feature it needs, followed by `<AskYourAdmin />`.
+- The **Technical Manual** (every other page under `src/CrestApps.Docs/docs/`) is for developers and IT: feature IDs, `appsettings.json` and environment variables, recipes, architecture, extension points and operations.
+
+The dividing rule: if it can be done in the browser, it belongs in the User Manual; if it needs code, a configuration file, an environment variable, recipe JSON, a server or a deployment, it belongs in the Technical Manual. Most features need a page in each, linked through `technical_manual` / `user_manual` front matter.
+
+1. **Update feature documentation first** – find the relevant pages and keep them accurate with the latest behavior:
+   - A change to a screen, label, menu, button, setting or permission name → the User Manual page for that screen. Labels in the docs must match the screen exactly.
+   - A change to configuration → the feature's Technical Manual page **and** `docs/configuration.md`, showing both the `appsettings.json` and the environment-variable form.
+   - A change to feature IDs, recipes, events, APIs or extension points → the Technical Manual page (and `docs/feature-reference.md` for feature IDs).
+   - A new feature → a page in each manual, both sidebars in `sidebars.js`, and the training paths or use cases it belongs in.
 2. **Documentation changes are NOT optional** – code changes without documentation updates are considered incomplete.
-3. **Validate the docs build** – after updating documentation, verify the Docusaurus site builds successfully and all internal links resolve correctly. The CI pipeline runs link-checking; failing to validate locally will cause workflow failures.
+3. **Validate the docs** – run `npm run check:manuals` and `npm run build` in `src/CrestApps.Docs`. The build fails on any broken link or anchor, and CI runs both checks; failing to validate locally will cause workflow failures.
 
 ### Documentation Screencasts
 
@@ -570,11 +581,9 @@ Every module MUST have a README.md file with:
 - Dependencies on other modules
 
 ### Documentation Project
-The Docusaurus documentation site is located at `src/CrestApps.Docs`. It contains:
-- Feature documentation under `docs/`
-- Module-specific guides under `docs/modules/`, `docs/ai/`, `docs/omnichannel/`, `docs/providers/`
-- A changelog under `docs/changelog/`
-- Getting started guide and samples
+The Docusaurus documentation site is located at `src/CrestApps.Docs`; its [`README.md`](src/CrestApps.Docs/README.md) explains how to contribute. It contains two manuals:
+- The **User Manual** under `docs/user-manual/`: getting started, training paths, use cases, feature pages by product area, a glossary and troubleshooting.
+- The **Technical Manual** under the rest of `docs/`: getting started for developers, the configuration reference (`docs/configuration.md`), the feature ID reference, module guides under `docs/ai/`, `docs/omnichannel/`, `docs/telephony/`, `docs/contact-center/` and `docs/modules/`, samples, and the changelog under `docs/changelog/`.
 
 ### Code Documentation
 - XML documentation comments for public APIs
@@ -645,7 +654,7 @@ npm run watch
 1. **Build Validation**: Ensure both .NET and asset builds succeed
 2. **Test Coverage**: Add tests for new features and bug fixes
 3. **Code Quality**: Follow coding standards and conventions
-4. **Documentation**: Update README files, code comments, and the Docusaurus docs in `src/CrestApps.Docs`
+4. **Documentation**: Update README files, code comments, and the Docusaurus docs in `src/CrestApps.Docs` (both manuals where the change affects them; see `src/CrestApps.Docs/README.md`)
 5. **Commit Messages**: Write clear, descriptive commit messages
 6. **Branch Naming**: Use descriptive branch names (e.g., `feature/ai-chat-improvements`, `fix/user-avatar-bug`)
 

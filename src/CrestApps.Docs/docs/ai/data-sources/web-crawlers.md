@@ -3,6 +3,8 @@ sidebar_label: Web Crawlers
 sidebar_position: 5
 title: AI Web Crawlers
 description: A Web AI data source populated by strategy-based web crawlers that scrape public websites and index each page into the AI Knowledge Base for RAG.
+user_manual:
+  - user-manual/ai/knowledge
 ---
 
 | | |
@@ -32,7 +34,7 @@ Each scraped page becomes one knowledge-base document keyed by its URL, and the 
 
 ## Managing Web Crawlers
 
-The **Web Crawlers** admin screen mirrors the other source-based catalogs (AI Templates, Data Sources): a searchable list, an **Add Web Crawler** button that opens a modal of available strategies, and an **Actions** menu per crawler.
+The **Web Crawlers** admin screen mirrors the other source-based catalogs (AI Templates, Data Sources): a searchable list, an **Add Web Crawler** button that opens a modal of available strategies, and an **Actions** menu per crawler (**Synchronize now**, **Delete**). The admin steps are in the User Manual under [Web crawlers](../../user-manual/ai/knowledge.md#web-crawlers).
 
 ### Shared fields
 

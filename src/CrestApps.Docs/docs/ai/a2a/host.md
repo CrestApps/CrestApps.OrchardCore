@@ -3,6 +3,8 @@ sidebar_label: A2A Host
 sidebar_position: 3
 title: A2A Host
 description: Expose Orchard Core Agent AI Profiles to external clients via the Agent-to-Agent protocol.
+user_manual:
+  - user-manual/ai/tools-and-agents
 ---
 
 # A2A Host
