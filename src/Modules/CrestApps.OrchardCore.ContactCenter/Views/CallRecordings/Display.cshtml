@@ -1,0 +1,174 @@
+@using System.Globalization
+@using System.Text.Json
+@using CrestApps.OrchardCore.ContactCenter.Core
+
+@model CallRecordingDisplayViewModel
+
+@functions {
+    private static string Clock(double seconds)
+        => TimeSpan.FromSeconds(Math.Max(0, Math.Floor(seconds))).ToString("hh\\:mm\\:ss", CultureInfo.InvariantCulture);
+
+    private static string Seconds(double seconds)
+        => seconds.ToString("0.#", CultureInfo.InvariantCulture) + "s";
+}
+
+@{
+    var recording = Model.Recording;
+    var transcript = Model.Transcript;
+    var mediaUrl = Url.Action("Media", "CallRecordings", new { area = "CrestApps.OrchardCore.ContactCenter", id = recording.ItemId });
+    var config = JsonSerializer.Serialize(new
+    {
+        strings = new
+        {
+            copied = T["Copied"].Value,
+            copyFailed = T["Could not copy"].Value,
+        },
+    });
+}
+
+<zone Name="Title">
+    <breadcrumb name="ContactCenterCallRecordingsDisplay" title="@T["Call recording"]">
+        <breadcrumb-item id="ContactCenterCallRecordings" action="Index" controller="CallRecordings" area="CrestApps.OrchardCore.ContactCenter" permission="@ContactCenterPermissions.ListenToOwnCallRecordings.Name">@T["Call recordings"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div data-cc-call-recording data-config="@config">
+    <div class="card mb-3">
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-3 col-lg-2">@T["Started"]</dt>
+                <dd class="col-sm-9 col-lg-4">@await DisplayAsync(await New.DateTime(Utc: recording.StartedUtc, Format: "F"))</dd>
+
+                <dt class="col-sm-3 col-lg-2">@T["Length"]</dt>
+                <dd class="col-sm-9 col-lg-4 font-monospace">@CallRecordingFormat.Duration(recording.DurationSeconds)</dd>
+
+                <dt class="col-sm-3 col-lg-2">@T["Agent"]</dt>
+                <dd class="col-sm-9 col-lg-4">@(Model.AgentName ?? (recording.Source == CallRecordingSource.AiAgent ? T["AI voice agent"].Value : T["Nobody"].Value))</dd>
+
+                <dt class="col-sm-3 col-lg-2">@T["Customer"]</dt>
+                <dd class="col-sm-9 col-lg-4">
+                    @if (string.IsNullOrEmpty(Model.CustomerNumber))
+                    {
+                        @T["Unknown caller"]
+                    }
+                    else
+                    {
+                        @* The tel: href keeps the exact stored number; the text is grouped so it can be read back. *@
+                        <a href="tel:@recording.CustomerAddress">@Model.CustomerNumber</a>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.ContactContentItemId))
+                    {
+                        <a class="ms-2" href="@Url.Action("List", "Activities", new { area = "CrestApps.OrchardCore.Omnichannel.Managements", contentItemId = Model.ContactContentItemId })">@T["Contact activities"]</a>
+                    }
+                </dd>
+
+                <dt class="col-sm-3 col-lg-2">@T["Call"]</dt>
+                <dd class="col-sm-9 col-lg-4 mb-0">
+                    <partial name="_CallRecordingBadges" model="recording" />
+                </dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header fw-semibold">@T["Recording"]</div>
+        <div class="card-body">
+            <audio controls preload="metadata" class="w-100" src="@mediaUrl" data-cc-recording-player>
+                @T["Your browser cannot play this recording."]
+            </audio>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header d-flex flex-wrap align-items-center gap-2">
+            <span class="fw-semibold">@T["Transcript"]</span>
+            @if (transcript is not null)
+            {
+                <span class="badge rounded-pill text-bg-secondary" title="@T["Total silence between the lines of the call"]">@T["{0} silent", Seconds(transcript.TotalSilenceSeconds)]</span>
+            }
+        </div>
+        @if (transcript is null)
+        {
+            <div class="card-body text-muted">
+                @T["This call has no transcript. Calls an AI voice agent talked on are transcribed; calls between people are not."]
+            </div>
+        }
+        else
+        {
+            <div class="list-group list-group-flush">
+                @foreach (var phrase in transcript.Phrases)
+                {
+                    var speaker = phrase.Speaker switch
+                    {
+                        CallRecordingTranscriptSpeaker.Ai => T["AI"].Value,
+                        CallRecordingTranscriptSpeaker.Agent => T["Agent"].Value,
+                        _ => T["Customer"].Value,
+                    };
+                    var time = phrase.OffsetSeconds is { } offset ? Clock(offset) : "--:--:--";
+
+                    <div class="list-group-item d-flex flex-wrap flex-sm-nowrap align-items-start gap-2"
+                         data-cc-phrase
+                         data-offset="@(phrase.OffsetSeconds?.ToString(CultureInfo.InvariantCulture))">
+                        <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                            @if (phrase.OffsetSeconds.HasValue)
+                            {
+                                <a href="#" class="font-monospace text-decoration-none" data-cc-seek title="@T["Play from {0}", time]">@time</a>
+                            }
+                            else
+                            {
+                                <span class="font-monospace text-muted" title="@T["Said outside this recording"]">@time</span>
+                            }
+                            <button type="button"
+                                    class="btn btn-link btn-sm text-secondary p-0"
+                                    data-cc-copy="@($"{time} {speaker.ToUpperInvariant()} {phrase.Text}")"
+                                    title="@T["Copy"]"
+                                    aria-label="@T["Copy"]">
+                                <i class="fa-regular fa-copy" aria-hidden="true"></i>
+                            </button>
+                            @if (phrase.OffsetSeconds.HasValue)
+                            {
+                                <button type="button"
+                                        class="btn btn-primary btn-sm rounded-circle d-inline-flex align-items-center justify-content-center p-0"
+                                        style="width: 1.75rem; height: 1.75rem;"
+                                        data-cc-play
+                                        title="@T["Play from {0}", time]"
+                                        aria-label="@T["Play from {0}", time]">
+                                    <i class="fa-solid fa-play" aria-hidden="true" style="font-size: .7rem;"></i>
+                                </button>
+                                <span class="badge rounded-pill text-bg-light border" title="@T["Silence before this line"]">@Seconds(phrase.SilenceBeforeSeconds ?? 0)</span>
+                            }
+                            <strong class="text-uppercase small">@speaker</strong>
+                        </div>
+                        <div class="flex-grow-1">@phrase.Text</div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    @if (Model.CanErase)
+    {
+        <div class="card mb-3 border-danger-subtle">
+            <div class="card-header fw-semibold">@T["Erase recording"]</div>
+            <div class="card-body">
+                @if (Model.IsUnderLegalHold)
+                {
+                    <p class="mb-0 text-muted">@T["This recording is under legal hold and cannot be erased."]</p>
+                }
+                else
+                {
+                    <form asp-action="Erase" asp-route-id="@recording.ItemId" method="post" class="no-multisubmit">
+                        <label for="reason" class="form-label">@T["Why is it being erased?"]</label>
+                        <div class="input-group" style="max-width: 40rem;">
+                            <input type="text" id="reason" name="reason" class="form-control" maxlength="500" required placeholder="@T["For example, the customer asked for their data to be deleted"]" />
+                            <button type="submit" class="btn btn-danger">@T["Erase"]</button>
+                        </div>
+                        <span class="hint">@T["The recording is deleted for good and no longer listed. The reason is kept on the audit trail."]</span>
+                    </form>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+<script asp-name="contact-center-call-recording" at="Foot"></script>

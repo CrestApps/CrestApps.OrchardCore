@@ -8,9 +8,9 @@ namespace CrestApps.OrchardCore.ContactCenter.ViewModels;
 public class ContactCenterRecordingSettingsViewModel
 {
     /// <summary>
-    /// Gets or sets a value indicating whether recording is permitted for this tenant.
+    /// Gets or sets a value indicating whether every voice call is recorded automatically once it connects.
     /// </summary>
-    public bool RecordingEnabled { get; set; }
+    public bool RecordAllCalls { get; set; }
 
     /// <summary>
     /// Gets or sets the consent model that governs whether a call may be recorded.

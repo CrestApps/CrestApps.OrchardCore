@@ -73,6 +73,9 @@ public sealed class DependencyInjectionArchitectureTests
             "RecordingMediaDeletionHandler",
             "An event handler that injected the event publisher would close a publisher-to-handler construction cycle."),
         new DependencyInjectionException(
+            "AutomaticCallRecordingHandler",
+            "Starting a recording records an event through the publisher, whose outbox constructs every event handler, so an injected recording service would close a publisher-to-handler construction cycle."),
+        new DependencyInjectionException(
             "SharedVoicemailProjectionHandler",
             "Filing a message records an event through the publisher, whose outbox constructs every event handler, so an injected filing service would close a publisher-to-handler construction cycle."),
         new DependencyInjectionException(

@@ -64,6 +64,10 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator
             }
 
             await MarkPeerAnsweredAsync(agentLegCallControlId, cancellationToken);
+
+            // Two colleagues: each leg cleans the voice of the agent it reaches, so neither voice is cleaned twice.
+            await ApplyNoiseSuppressionAsync(agentLegCallControlId, TelnyxNoiseSuppressionLeg.InternalAgent, cancellationToken);
+            await ApplyNoiseSuppressionAsync(destinationLegCallControlId, TelnyxNoiseSuppressionLeg.InternalAgent, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

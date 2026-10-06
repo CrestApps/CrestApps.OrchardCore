@@ -53,6 +53,33 @@
     }
 
     /*
+     * Adds the boost stage -- gain, then the limiter -- to a graph that is being built, after `input`. Returns the
+     * node the rest of the graph continues from and the nodes it created (for disposal), or null when the boost is
+     * off and nothing was added. Shared by the plain boost below and the voice isolation chain
+     * (voice-isolation.js), so there is one gain/limiter definition whichever path the capture takes.
+     */
+    function connectBoostStage(context, input, boostDb) {
+        var db = clampBoostDb(boostDb);
+
+        if (db === 0) {
+            return null;
+        }
+
+        var gain = context.createGain();
+        gain.gain.value = boostGainFor(db);
+        var limiter = context.createDynamicsCompressor();
+        limiter.threshold.value = LIMITER_THRESHOLD_DB;
+        limiter.knee.value = LIMITER_KNEE_DB;
+        limiter.ratio.value = LIMITER_RATIO;
+        limiter.attack.value = LIMITER_ATTACK_S;
+        limiter.release.value = LIMITER_RELEASE_S;
+        input.connect(gain);
+        gain.connect(limiter);
+
+        return { output: limiter, nodes: [gain, limiter] };
+    }
+
+    /*
      * Builds the send stream for a captured microphone stream.
      *
      * With no boost, the source stream is returned as the send stream and there is nothing to dispose. With a
@@ -74,25 +101,15 @@
 
         var context;
         var source;
-        var gain;
-        var limiter;
+        var stage;
         var destination;
 
         try {
             context = new AudioCtx();
             source = context.createMediaStreamSource(sourceStream);
-            gain = context.createGain();
-            gain.gain.value = boostGainFor(db);
-            limiter = context.createDynamicsCompressor();
-            limiter.threshold.value = LIMITER_THRESHOLD_DB;
-            limiter.knee.value = LIMITER_KNEE_DB;
-            limiter.ratio.value = LIMITER_RATIO;
-            limiter.attack.value = LIMITER_ATTACK_S;
-            limiter.release.value = LIMITER_RELEASE_S;
+            stage = connectBoostStage(context, source, db);
             destination = context.createMediaStreamDestination();
-            source.connect(gain);
-            gain.connect(limiter);
-            limiter.connect(destination);
+            stage.output.connect(destination);
 
             // A context created outside a user gesture starts suspended and a suspended graph is silence; the
             // switch that builds this runs from a settings change or a call, so the request is normally granted.
@@ -126,8 +143,9 @@
 
                 try {
                     source.disconnect();
-                    gain.disconnect();
-                    limiter.disconnect();
+                    stage.nodes.forEach(function (node) {
+                        node.disconnect();
+                    });
                 } catch (error) { /* best effort */ }
 
                 try {
@@ -143,5 +161,6 @@
     softPhone.clampBoostDb = clampBoostDb;
     softPhone.boostGainFor = boostGainFor;
     softPhone.describeBoost = describeBoost;
+    softPhone.connectBoostStage = connectBoostStage;
     softPhone.createBoostPipeline = createBoostPipeline;
 }(typeof globalThis !== 'undefined' ? globalThis : window));

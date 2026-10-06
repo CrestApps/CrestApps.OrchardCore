@@ -26,6 +26,10 @@ public sealed class AiVoiceStartup : StartupBase
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IOmnichannelProcessor, VoiceOmnichannelProcessor>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ITelnyxAiVoiceEventHandler, TelnyxAiVoiceConversationHandler>());
 
+        // Records the call from its answer when the tenant records every call (a no-op without the Call Recording feature).
+        services.TryAddScoped<ITelnyxAutomaticCallRecorder, TelnyxAutomaticCallRecorder>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ITelnyxAiVoiceEventHandler, TelnyxAiVoiceRecordingHandler>());
+
         // An inbound call an entry point routes to an AI voice agent is answered with the AI voice leg's state, so its
         // events reach the same conversation a call the AI places does. The picker for the agent is on the entry point.
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IInboundAIVoiceAnswerer, TelnyxInboundAIVoiceAnswerer>());

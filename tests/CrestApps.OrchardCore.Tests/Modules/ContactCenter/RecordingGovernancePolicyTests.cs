@@ -10,28 +10,13 @@ namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 public sealed class RecordingGovernancePolicyTests
 {
     [Fact]
-    public void RecordingSettings_ShipRecordingDisabledByDefault()
+    public void RecordingSettings_RecordEveryCallByDefault()
     {
-        // Recording is a compliance-sensitive capability whose media path is only proven for a deployment by the
-        // base-voice audio verification step, so a fresh tenant must not have it on before that proof passes.
+        // Enabling the Call Recording feature is the decision to record; there is no second tenant switch that could
+        // leave recording silently off. Every call is recorded automatically unless the tenant turns it off.
         var settings = new ContactCenterRecordingSettings();
 
-        Assert.False(settings.RecordingEnabled);
-    }
-
-    [Fact]
-    public async Task EvaluateStartAsync_WhenRecordingDisabled_DeniesClosed()
-    {
-        // Arrange
-        var settings = new ContactCenterRecordingSettings { RecordingEnabled = false };
-        var policy = CreatePolicy(settings, DateTime.UtcNow);
-
-        // Act
-        var decision = await policy.EvaluateStartAsync(new Interaction(), TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.False(decision.Allowed);
-        Assert.Equal(ContactCenterConstants.RecordingGovernanceDenyReason.RecordingDisabled, decision.DenyReasonCode);
+        Assert.True(settings.RecordAllCalls);
     }
 
     [Fact]
@@ -40,7 +25,6 @@ public sealed class RecordingGovernancePolicyTests
         // Arrange
         var settings = new ContactCenterRecordingSettings
         {
-            RecordingEnabled = true,
             ConsentModel = RecordingConsentModel.AllParties,
             RequireExplicitConsent = true,
         };
@@ -60,7 +44,6 @@ public sealed class RecordingGovernancePolicyTests
         // Arrange
         var settings = new ContactCenterRecordingSettings
         {
-            RecordingEnabled = true,
             ConsentModel = RecordingConsentModel.AllParties,
             RequireExplicitConsent = true,
         };
@@ -80,7 +63,6 @@ public sealed class RecordingGovernancePolicyTests
         // Arrange
         var settings = new ContactCenterRecordingSettings
         {
-            RecordingEnabled = true,
             ConsentModel = RecordingConsentModel.SingleParty,
             RequireExplicitConsent = true,
         };
@@ -99,7 +81,6 @@ public sealed class RecordingGovernancePolicyTests
         // Arrange
         var settings = new ContactCenterRecordingSettings
         {
-            RecordingEnabled = true,
             ConsentModel = (RecordingConsentModel)999,
             RequireExplicitConsent = true,
         };
@@ -120,7 +101,6 @@ public sealed class RecordingGovernancePolicyTests
         var now = new DateTime(2030, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         var settings = new ContactCenterRecordingSettings
         {
-            RecordingEnabled = true,
             RetentionDays = int.MaxValue,
         };
         var policy = CreatePolicy(settings, now);
@@ -140,7 +120,6 @@ public sealed class RecordingGovernancePolicyTests
         var now = new DateTime(2030, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         var settings = new ContactCenterRecordingSettings
         {
-            RecordingEnabled = true,
             RetentionDays = 30,
             LegalHoldByDefault = true,
         };
@@ -161,7 +140,6 @@ public sealed class RecordingGovernancePolicyTests
         // Arrange
         var settings = new ContactCenterRecordingSettings
         {
-            RecordingEnabled = true,
             RetentionDays = 0,
         };
         var policy = CreatePolicy(settings, DateTime.UtcNow);

@@ -27,11 +27,11 @@ The page has up to four tabs. A tab only appears when its feature is enabled.
 
 ## Recording governance
 
-Needs the **Contact Center Call Recording** feature.
+Needs the **Contact Center Call Recording** feature. Enabling the feature is what allows calls to be recorded; disable it to stop all recording.
 
 | Field | What it does |
 | --- | --- |
-| **Recording enabled** | Master switch for call recording. |
+| **Record every call automatically** | Starts recording every queue and dialer call when it connects to an agent, every AI voice agent call when it is answered, and every number dialed on the soft phone keypad when it is answered. Extension calls are not recorded. On by default; when off, a call is recorded only when a workflow or a supervisor starts it. Recorded calls are listed on the [Call recordings](call-recordings.md) page. |
 | **Consent model** | **All parties must consent** (the default) or **Single party consent is sufficient**. |
 | **Require explicit consent capture** | With all-party consent, recording waits until consent has been captured. |
 | **Retention (days)** | How long recordings are kept before they may be erased. 0 keeps them forever. |

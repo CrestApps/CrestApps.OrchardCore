@@ -318,7 +318,45 @@ The factory receives `credentials`, `localStream`, `remoteAudioElement`, `setRem
 
 When the soft phone uses browser audio, a **headset** icon (titled **Settings**) appears in the widget header. It opens a **Settings** panel where the agent can choose which **microphone** and **speaker** the soft phone uses, instead of relying on the operating-system default. The choice is saved per agent in the browser's `localStorage` and applied to microphone capture (`getUserMedia`) and speaker output (`setSinkId`, where the browser supports it); the device lists refresh automatically when devices are plugged in or removed.
 
-The same panel holds the rest of the agent's audio settings: the browser's microphone processing (**Echo cancellation**, **Noise suppression**, **Automatic gain control**, each on by default and applied to the live track immediately), **Microphone boost** (a gain stage with a limiter, up to +12 dB), **Audio delay** (how long incoming audio is held before it plays, applied to the current call), and the connection **Region** (Automatic follows the team's setting and then the provider's own choice; changing it re-registers the phone, so it waits until the current call ends). Each setting, its options, and troubleshooting tips for quiet, delayed, or one-way audio are in the user manual under [Audio settings](../user-manual/soft-phone.md#audio-settings). Some limits no setting removes: a call to an ordinary phone number travels over the telephone network at narrowband quality, and a browser call bridged to the telephone network always has a little more delay than a direct phone-to-phone call.
+The same panel holds the rest of the agent's audio settings: **Voice isolation** (on by default, with an **Isolation strength** and an **Isolation model**; see [Voice isolation](#voice-isolation)), the browser's microphone processing (**Echo cancellation**, **Noise suppression**, **Automatic gain control**, applied to the live track immediately; noise suppression and automatic gain control are hidden and off while voice isolation is checked, and shown when it is unchecked), **Microphone boost** (a gain stage with a limiter, up to +12 dB), **Audio delay** (how long incoming audio is held before it plays, applied to the current call), and the connection **Region** (Automatic follows the team's setting and then the provider's own choice; changing it re-registers the phone, so it waits until the current call ends). Each setting, its options, and troubleshooting tips for quiet, delayed, or one-way audio are in the user manual under [Audio settings](../user-manual/soft-phone.md#audio-settings). Some limits no setting removes: a call to an ordinary phone number travels over the telephone network at narrowband quality, and a browser call bridged to the telephone network always has a little more delay than a direct phone-to-phone call.
+
+#### Voice isolation
+
+The browser's own noise suppression removes steady noise such as fans and hum, but it lets the voices of
+people nearby straight through, and automatic gain control makes the room louder every time the agent pauses.
+**Voice isolation** runs the agent's microphone through a speech-enhancement model and then a noise gate,
+inside the browser, before anything is sent:
+
+- The model removes what it recognizes as not the agent's speech, including much of the chatter around them.
+  **Enhanced** uses the GTCRN model, which handles nearby voices best. **Light** uses RNNoise, which needs
+  less processing. If the Enhanced model cannot load, the phone switches to Light by itself.
+- The gate turns the room down while the agent is not speaking. A headset microphone hears its wearer far
+  louder than anyone else in the room, so the gate opens on the agent's voice and closes in the pauses.
+  **Isolation strength** sets how firmly it does this: use **High** on a loud floor, and **Low** if callers
+  say the start or end of the agent's words is cut off.
+- **Microphone boost**, when set, is applied after voice isolation.
+
+Changing any of these applies at once, including on a call in progress. Voice isolation works best with a
+headset microphone close to the mouth; a laptop or webcam microphone hears the room almost as loudly as the
+agent, and no gate can separate the two.
+
+:::note[When voice isolation cannot run]
+Voice isolation needs a browser with AudioWorklet and WebAssembly (current Chrome, Edge and Firefox). Where it
+cannot run, the phone keeps working with the browser's own noise suppression and automatic gain control, which
+it turns on by itself, and the status line under **Voice isolation** says so; the two checkboxes stay hidden
+while voice isolation is checked. Browsers also hold back audio processing until the agent has clicked somewhere on
+the page, so right after the page loads the phone may use the browser's processing until the first click,
+then switch over by itself.
+:::
+
+The [Diagnostics](#diagnostics) tab shows what is running on the **capture** line: `vi=gtcrn+gate` or
+`vi=rnnoise+gate` when voice isolation is on, `vi=pending` while it waits for a click, `vi=failed` when it
+cannot run here, and `vi=off` when the agent turned it off. The same value is recorded with each call's quality
+report, and the server log records `voice-isolation-started`, `voice-isolation-pending`,
+`voice-isolation-fallback` and `voice-isolation-unavailable` client diagnostics.
+
+For noise the agent's browser cannot remove, Telnyx can also clean up the audio on its side of the call. See
+[Background noise suppression](telnyx.md#background-noise-suppression).
 
 This matters because a browser's *default* input device is not always the agent's real microphone — a common cause of "the other side can't hear me" is a virtual audio device (for example VB-Audio Virtual Cable) being the system default. The picker lists only real, unambiguous devices so the agent can select their actual microphone; the [Diagnostics](#diagnostics) tab's microphone meter shows which device is live and whether it is producing audio.
 

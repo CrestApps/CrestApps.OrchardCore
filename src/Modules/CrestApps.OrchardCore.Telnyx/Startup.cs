@@ -85,6 +85,8 @@ public sealed class Startup : StartupBase
             .AddScoped<ITelnyxVoicemailRecordingStarter, TelnyxVoicemailRecordingStarter>()
             .AddScoped<IVoiceMediaProvisioner, TelnyxVoiceMediaProvisioner>()
             .AddScoped<ITelnyxOutboundBridgeOrchestrator, TelnyxOutboundBridgeOrchestrator>()
+            // Started on an agent's leg wherever one is connected to a caller; off unless the settings choose an engine.
+            .AddScoped<ITelnyxNoiseSuppressionService, TelnyxNoiseSuppressionService>()
             .AddScoped<ITelnyxAgentCredentialStore, TelnyxAgentCredentialStore>()
             // Every path that dials an agent resolves the endpoint here, so none of them can pick a credential
             // the browser is not registered on.
@@ -176,6 +178,9 @@ public sealed class DialerStartup : StartupBase
             .AddScoped<ITelnyxRecordingIngestJobStore, TelnyxRecordingIngestJobStore>()
             .AddScoped<ITelnyxRecordingIngestService, TelnyxRecordingIngestService>()
             .AddScoped<ITelnyxRecordingSavedHandler, TelnyxRecordingIngestEnqueuer>();
+
+        // Records the numbers agents dial on the soft phone when the tenant records every call.
+        services.TryAddScoped<ITelnyxAutomaticCallRecorder, TelnyxAutomaticCallRecorder>();
 
         services.AddIndexProvider<TelnyxRecordingIngestJobIndexProvider>();
         services.AddDataMigration<TelnyxRecordingIngestJobMigrations>();

@@ -110,4 +110,21 @@ public static class ContactCenterPermissions
     /// they also hold that queue in their agent entitlements, unless they hold <see cref="ManageContactCenter"/>.
     /// </summary>
     public static readonly Permission AccessSharedVoicemail = new("AccessContactCenterSharedVoicemail", "Access shared queue voicemail for entitled queues", [ManageSharedVoicemail, ManageContactCenter]);
+
+    /// <summary>
+    /// Grants searching, listing and listening to every user's call recordings, and reading their transcripts.
+    /// </summary>
+    public static readonly Permission ListenToAllCallRecordings = new("ListenToAllCallRecordings", "Listen to anyone's call recordings", [ManageContactCenter]);
+
+    /// <summary>
+    /// Grants searching, listing and listening to the recordings of one's own calls, and reading their transcripts. A
+    /// user who holds only this sees no other user's calls.
+    /// </summary>
+    public static readonly Permission ListenToOwnCallRecordings = new("ListenToOwnCallRecordings", "Listen to own call recordings", [ListenToAllCallRecordings, ManageContactCenter]);
+
+    /// <summary>
+    /// Grants erasing a call recording the user may listen to. Deliberately implied by no other permission, managing
+    /// the contact center included: deleting a recording cannot be undone, so it is granted on its own.
+    /// </summary>
+    public static readonly Permission DeleteCallRecordings = new("DeleteCallRecordings", "Delete call recordings");
 }

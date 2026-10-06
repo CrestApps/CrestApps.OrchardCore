@@ -284,6 +284,13 @@ public sealed class TelnyxOutboundBridgeState
     public bool? HangUpAfterNotice { get; set; }
 
     /// <summary>
+    /// Gets or sets, on the legs of a number dialed from the soft phone, the user who dialed it, so the call can be
+    /// recorded as theirs once the number answers.
+    /// </summary>
+    [JsonPropertyName("db")]
+    public string DialedByUserId { get; set; }
+
+    /// <summary>
     /// Gets a value indicating whether this is the agent leg of a number dialed from the soft phone and connected on
     /// the server, once the number's leg exists: <see cref="PeerCallControlId"/> is then the remote party.
     /// </summary>

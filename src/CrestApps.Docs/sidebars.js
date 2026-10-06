@@ -117,6 +117,7 @@ const sidebars = {
                 'user-manual/agent-workspace',
                 'user-manual/calls',
                 'user-manual/voicemail',
+                'user-manual/call-recordings',
                 'user-manual/messaging',
                 'user-manual/live-dashboard',
                 'user-manual/reports',

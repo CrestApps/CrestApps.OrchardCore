@@ -31,6 +31,8 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
     private readonly ITelnyxAgentEndpointResolver _agentEndpointResolver;
     private readonly ISupervisorLegEventSink[] _supervisorLegEventSinks;
     private readonly TelnyxSupervisedConference _supervisedConference;
+    private readonly ITelnyxNoiseSuppressionService _noiseSuppression;
+    private readonly ITelnyxAutomaticCallRecorder _automaticCallRecorder;
 
     public TelnyxOutboundBridgeOrchestrator(
         TelnyxApiClient apiClient,
@@ -44,8 +46,11 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
         ITelephonyInteractionStore interactionStore = null,
         IClock clock = null,
         ITelnyxAgentEndpointResolver agentEndpointResolver = null,
-        IEnumerable<ISupervisorLegEventSink> supervisorLegEventSinks = null)
+        IEnumerable<ISupervisorLegEventSink> supervisorLegEventSinks = null,
+        ITelnyxNoiseSuppressionService noiseSuppression = null,
+        ITelnyxAutomaticCallRecorder automaticCallRecorder = null)
     {
+        _automaticCallRecorder = automaticCallRecorder;
         _apiClient = apiClient;
         _logger = logger;
         _options = telnyxOptions.CurrentValue;
@@ -54,7 +59,8 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
         _preDialCoordinator = preDialCoordinators?.FirstOrDefault();
         _interactionProbe = interactionProbes?.FirstOrDefault();
         _consultLegEventSink = consultLegEventSinks?.FirstOrDefault();
-        _transfers = new TelnyxTransferCommands(apiClient, _options, interactionStore, clock, logger);
+        _noiseSuppression = noiseSuppression;
+        _transfers = new TelnyxTransferCommands(apiClient, _options, interactionStore, clock, logger, noiseSuppression);
         _agentEndpointResolver = agentEndpointResolver;
         _supervisorLegEventSinks = supervisorLegEventSinks?.Where(sink => sink is not null).ToArray() ?? [];
         _supervisedConference = new TelnyxSupervisedConference(apiClient, logger);
@@ -124,8 +130,10 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
             // None) rather than treating it as an internal leg to hide.
             if (isAnswered && !string.IsNullOrWhiteSpace(state.PeerCallControlId))
             {
-                if (_options.IsConfigured &&
-                    await BridgeAsync(callControlId: callEvent.CallControlId, otherCallControlId: state.PeerCallControlId, cancellationToken, parkAfterUnbridge: true))
+                var bridged = _options.IsConfigured &&
+                    await BridgeAsync(callControlId: callEvent.CallControlId, otherCallControlId: state.PeerCallControlId, cancellationToken, parkAfterUnbridge: true);
+
+                if (bridged)
                 {
                     // The caller has been listening to the queue while the agent was reached. Now that they are
                     // joined the music stops -- not before, which left the caller in dead air for the second or
@@ -143,6 +151,12 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
                     peerProviderCallId: state.PeerCallControlId,
                     agentLegProviderCallId: callEvent.CallControlId,
                     cancellationToken);
+
+                if (bridged)
+                {
+                    // Last, so the caller is joined and the answer recorded without waiting on it.
+                    await ApplyNoiseSuppressionAsync(callEvent.CallControlId, TelnyxNoiseSuppressionLeg.Agent, cancellationToken);
+                }
             }
             else if (IsHangup(callEvent))
             {
@@ -240,7 +254,20 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
                 {
                     // The number answered: the call can now be merged.
                     await MarkPeerAnsweredAsync(state.PeerCallControlId, cancellationToken);
+
+                    // Recorded on the number's leg, which a transfer hands on, so the whole conversation is captured.
+                    if (_automaticCallRecorder is not null)
+                    {
+                        await _automaticCallRecorder.RecordSoftPhoneCallAsync(
+                            callControlId: callEvent.CallControlId,
+                            agentUserId: state.DialedByUserId,
+                            telephonyCallId: state.PeerCallControlId,
+                            dialedNumber: callEvent.To,
+                            cancellationToken);
+                    }
                 }
+
+                await ApplyNoiseSuppressionAsync(state.PeerCallControlId, TelnyxNoiseSuppressionLeg.Agent, cancellationToken);
             }
 
             return TelnyxOutboundBridgeLeg.DestinationLeg;
@@ -502,7 +529,12 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
                     conferenceName.SanitizeLogValue(),
                     joinResult.StatusCode,
                     joinResult.ErrorBody.SanitizeLogValue());
+
+                return;
             }
+
+            // A colleague's soft phone joined a call that can have a customer in it.
+            await ApplyNoiseSuppressionAsync(answeredLegCallControlId, TelnyxNoiseSuppressionLeg.Agent, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -555,6 +587,7 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
                 Intent = TelnyxOutboundBridgeState.DestinationLegIntent,
                 PeerCallControlId = agentLegCallControlId,
                 VoicemailRecipientUserId = agentState.VoicemailRecipientUserId,
+                DialedByUserId = agentState.DialedByUserId,
                 // A consult's number names the call being consulted about, so its answer and its hang-up are read as
                 // the consult's.
                 TransferOfCallControlId = agentState.ConsultOfCallControlId,
@@ -694,6 +727,10 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
             _logger.LogWarning(ex, "An error occurred while stopping the caller's hold music after an agent bridge.");
         }
     }
+
+    // Best effort, and nothing at all unless the settings choose an engine (see TelnyxNoiseSuppressionService).
+    private Task ApplyNoiseSuppressionAsync(string callControlId, TelnyxNoiseSuppressionLeg leg, CancellationToken cancellationToken)
+        => _noiseSuppression?.ApplyAsync(callControlId, leg, cancellationToken) ?? Task.CompletedTask;
 
     // The bridge is issued on callControlId, so park_after_unbridge applies to that leg.
     private async Task<bool> BridgeAsync(string callControlId, string otherCallControlId, CancellationToken cancellationToken, bool parkAfterUnbridge = false)

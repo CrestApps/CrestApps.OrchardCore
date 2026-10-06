@@ -20,7 +20,7 @@ public sealed class ContactCenterRecordingSettingsSchema : SiteSettingsSchemaBas
             .Type(SchemaValueType.Object)
             .Description("Recording governance policy every Contact Center voice interaction must satisfy.")
             .Properties(
-                ("RecordingEnabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether recording is permitted for the tenant. When false the governance policy fails closed and no interaction may start recording.")),
+                ("RecordAllCalls", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether every call is recorded automatically while the Call Recording feature is enabled: a Contact Center call when it connects to an agent, an AI voice agent's call when it is answered, and a number dialed on the soft phone keypad when it is answered.")),
                 ("ConsentModel", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("AllParties", "SingleParty").Description("Consent model that governs whether a call may be recorded: every party must consent, or the recording organization's consent is sufficient.")),
                 ("RequireExplicitConsent", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether explicit, recorded consent must be captured on the interaction before recording may start.")),
                 ("RetentionDays", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Minimum(0).Maximum(36500).Description("Days a recording is retained before it becomes eligible for erasure. Zero retains recordings indefinitely.")),

@@ -54,7 +54,7 @@ public sealed class ContactCenterRecordingSettingsDisplayDriver
             "ContactCenterRecordingSettings_Edit",
             model =>
             {
-                model.RecordingEnabled = settings.RecordingEnabled;
+                model.RecordAllCalls = settings.RecordAllCalls;
                 model.ConsentModel = settings.ConsentModel;
                 model.RequireExplicitConsent = settings.RequireExplicitConsent;
                 model.RetentionDays = settings.RetentionDays;
@@ -96,7 +96,7 @@ public sealed class ContactCenterRecordingSettingsDisplayDriver
 
         if (context.Updater.ModelState.IsValid)
         {
-            settings.RecordingEnabled = model.RecordingEnabled;
+            settings.RecordAllCalls = model.RecordAllCalls;
             settings.ConsentModel = model.ConsentModel;
             settings.RequireExplicitConsent = model.RequireExplicitConsent;
             settings.RetentionDays = Math.Clamp(model.RetentionDays, 0, ContactCenterRecordingSettings.MaxRetentionDays);
