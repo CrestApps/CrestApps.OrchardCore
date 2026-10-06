@@ -59,6 +59,55 @@
   {
     "copy": true,
     "inputs": [
+      "node_modules/@sapphi-red/web-noise-suppressor/dist/gtcrn/workletProcessor.js"
+    ],
+    "output": "wwwroot/vendors/web-noise-suppressor/gtcrn/workletProcessor.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@sapphi-red/web-noise-suppressor/dist/rnnoise/workletProcessor.js"
+    ],
+    "output": "wwwroot/vendors/web-noise-suppressor/rnnoise/workletProcessor.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@sapphi-red/web-noise-suppressor/dist/noiseGate/workletProcessor.js"
+    ],
+    "output": "wwwroot/vendors/web-noise-suppressor/noiseGate/workletProcessor.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@sapphi-red/web-noise-suppressor/dist/gtcrn.wasm"
+    ],
+    "output": "wwwroot/vendors/web-noise-suppressor/gtcrn.wasm"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@sapphi-red/web-noise-suppressor/dist/rnnoise.wasm"
+    ],
+    "output": "wwwroot/vendors/web-noise-suppressor/rnnoise.wasm"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@sapphi-red/web-noise-suppressor/dist/rnnoise_simd.wasm"
+    ],
+    "output": "wwwroot/vendors/web-noise-suppressor/rnnoise_simd.wasm"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@sapphi-red/web-noise-suppressor/LICENSE"
+    ],
+    "output": "wwwroot/vendors/web-noise-suppressor/LICENSE"
+  },
+  {
+    "copy": true,
+    "inputs": [
       "node_modules/chart.js/dist/chart.umd.js.map"
     ],
     "output": "wwwroot/vendors/chartjs/chart.umd.js.map"
