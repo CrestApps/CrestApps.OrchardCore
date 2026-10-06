@@ -177,6 +177,9 @@ public sealed class DialerStartup : StartupBase
             .AddScoped<ITelnyxRecordingIngestService, TelnyxRecordingIngestService>()
             .AddScoped<ITelnyxRecordingSavedHandler, TelnyxRecordingIngestEnqueuer>();
 
+        // Records the numbers agents dial on the soft phone when the tenant records every call.
+        services.TryAddScoped<ITelnyxAutomaticCallRecorder, TelnyxAutomaticCallRecorder>();
+
         services.AddIndexProvider<TelnyxRecordingIngestJobIndexProvider>();
         services.AddDataMigration<TelnyxRecordingIngestJobMigrations>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, TelnyxRecordingIngestBackgroundTask>());

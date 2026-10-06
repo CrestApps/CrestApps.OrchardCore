@@ -15,4 +15,13 @@ public interface IRecordingGovernancePolicy
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A decision describing whether recording is permitted and, when permitted, the retention and legal-hold metadata to apply.</returns>
     Task<RecordingGovernanceDecision> EvaluateStartAsync(Interaction interaction, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Evaluates whether a call may start recording on its own, without anyone asking: recording must be permitted
+    /// and set to record every call. Consent can never have been captured on a call this is asked about, so a tenant
+    /// that requires explicit consent from every party is refused.
+    /// </summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A decision describing whether the call may be recorded automatically.</returns>
+    Task<RecordingGovernanceDecision> EvaluateAutomaticStartAsync(CancellationToken cancellationToken = default);
 }

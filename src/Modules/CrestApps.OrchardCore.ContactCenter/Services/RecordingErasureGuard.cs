@@ -44,4 +44,23 @@ public sealed class RecordingErasureGuard : IRecordingErasureGuard
 
         return erased;
     }
+
+    /// <inheritdoc/>
+    public async Task<bool> IsCallRecordingErasedAsync(string providerRecordingId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(providerRecordingId))
+        {
+            return true;
+        }
+
+        // Read from committed state for the same reason as an interaction's erasure above.
+        var erased = true;
+
+        await _scopeExecutor.ExecuteAsync<ICallRecordingCatalog>(async catalog =>
+        {
+            erased = await catalog.IsErasedAsync(providerRecordingId, cancellationToken);
+        });
+
+        return erased;
+    }
 }

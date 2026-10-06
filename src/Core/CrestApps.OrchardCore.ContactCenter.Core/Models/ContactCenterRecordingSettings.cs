@@ -31,6 +31,18 @@ public sealed class ContactCenterRecordingSettings
     public bool RecordingEnabled { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether every voice call starts recording on its own the moment it connects:
+    /// a routed or dialed call once it is bridged to an agent, and an automated voice agent's call once it is
+    /// answered. Only applies while <see cref="RecordingEnabled"/> is on; when off, recording starts only when a
+    /// workflow or a supervisor asks for it.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to <see langword="true"/> because <see cref="RecordingEnabled"/> alone only permits recording, and
+    /// a tenant that turns recording on expects its calls to be recorded without also building a workflow.
+    /// </remarks>
+    public bool RecordAllCalls { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets the consent model that governs whether a call may be recorded for this tenant.
     /// </summary>
     public RecordingConsentModel ConsentModel { get; set; } = RecordingConsentModel.AllParties;

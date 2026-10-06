@@ -9,7 +9,15 @@
     <div class="form-check">
         <input type="checkbox" asp-for="RecordingEnabled" class="form-check-input" />
         <label asp-for="RecordingEnabled" class="form-check-label">@T["Recording enabled"]</label>
-        <span class="hint dashed">@T["When disabled, no interaction may start recording for this tenant regardless of provider capability."]</span>
+        <span class="hint dashed">@T["Allows calls to be recorded. When disabled, no call is recorded for this tenant regardless of provider capability."]</span>
+    </div>
+</div>
+
+<div class="mb-3">
+    <div class="form-check">
+        <input type="checkbox" asp-for="RecordAllCalls" class="form-check-input" />
+        <label asp-for="RecordAllCalls" class="form-check-label">@T["Record every call automatically"]</label>
+        <span class="hint dashed">@T["Starts recording as soon as a call connects to an agent, or as soon as an AI agent's call is answered. When unchecked, a call is recorded only when a workflow or a supervisor starts it."]</span>
     </div>
 </div>
 

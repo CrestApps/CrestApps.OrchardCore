@@ -56,4 +56,34 @@ public sealed class RecordingGovernancePolicy : IRecordingGovernancePolicy
 
         return RecordingGovernanceDecision.Allow(retainUntilUtc, settings.LegalHoldByDefault);
     }
+
+    /// <inheritdoc/>
+    public async Task<RecordingGovernanceDecision> EvaluateAutomaticStartAsync(CancellationToken cancellationToken = default)
+    {
+        var site = await _siteService.GetSiteSettingsAsync();
+        var settings = site.GetOrCreate<ContactCenterRecordingSettings>();
+
+        if (!settings.RecordingEnabled)
+        {
+            return RecordingGovernanceDecision.Deny(ContactCenterConstants.RecordingGovernanceDenyReason.RecordingDisabled);
+        }
+
+        if (!settings.RecordAllCalls)
+        {
+            return RecordingGovernanceDecision.Deny(ContactCenterConstants.RecordingGovernanceDenyReason.AutomaticRecordingOff);
+        }
+
+        if (settings.RequireExplicitConsent && settings.ConsentModel != RecordingConsentModel.SingleParty)
+        {
+            return RecordingGovernanceDecision.Deny(ContactCenterConstants.RecordingGovernanceDenyReason.ConsentRequired);
+        }
+
+        var retentionDays = Math.Clamp(settings.RetentionDays, 0, ContactCenterRecordingSettings.MaxRetentionDays);
+
+        var retainUntilUtc = retentionDays > 0
+            ? _clock.UtcNow.AddDays(retentionDays)
+            : (DateTime?)null;
+
+        return RecordingGovernanceDecision.Allow(retainUntilUtc, settings.LegalHoldByDefault);
+    }
 }

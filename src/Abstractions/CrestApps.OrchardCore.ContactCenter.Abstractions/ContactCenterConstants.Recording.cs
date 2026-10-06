@@ -50,6 +50,11 @@ public static partial class ContactCenterConstants
         /// Recording requires explicit party consent that has not been captured on the interaction.
         /// </summary>
         public const string ConsentRequired = "consentRequired";
+
+        /// <summary>
+        /// Recording is permitted, but calls are not recorded automatically.
+        /// </summary>
+        public const string AutomaticRecordingOff = "automaticRecordingOff";
     }
 
     /// <summary>

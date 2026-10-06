@@ -1,0 +1,49 @@
+using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Models;
+using OrchardCore.Data.Migration;
+using YesSql.Sql;
+
+namespace CrestApps.OrchardCore.ContactCenter.Migrations;
+
+/// <summary>
+/// Creates the schema for the <see cref="CallRecordingIndex"/>.
+/// </summary>
+internal sealed class CallRecordingIndexMigrations : DataMigration
+{
+    /// <summary>
+    /// Creates the call recording index table and its supporting indexes.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> CreateAsync()
+    {
+        await SchemaBuilder.CreateMapIndexTableAsync<CallRecordingIndex>(table => table
+            .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<CallRecordingSource>("Source")
+            .Column<string>("ProviderRecordingId", column => column.WithLength(128))
+            .Column<string>("InteractionId", column => column.WithLength(26))
+            .Column<string>("ActivityItemId", column => column.WithLength(26))
+            .Column<string>("AgentUserId", column => column.WithLength(26))
+            .Column<string>("CustomerAddress", column => column.WithLength(64))
+            .Column<InteractionDirection>("Direction")
+            .Column<DateTime>("StartedUtc")
+            .Column<double>("DurationSeconds")
+            .Column<bool>("IsStored")
+            .Column<bool>("IsErased"),
+            collection: ContactCenterStorage.CollectionName
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<CallRecordingIndex>(table => table
+            .CreateIndex("IDX_CallRecordingIndex_DocumentId", "DocumentId", "ItemId", "ProviderRecordingId", "InteractionId"),
+            collection: ContactCenterStorage.CollectionName
+        );
+
+        // The page lists the playable recordings newest first, usually one agent's.
+        await SchemaBuilder.AlterIndexTableAsync<CallRecordingIndex>(table => table
+            .CreateIndex("IDX_CallRecordingIndex_Agent", "IsStored", "IsErased", "AgentUserId", "StartedUtc", "DocumentId"),
+            collection: ContactCenterStorage.CollectionName
+        );
+
+        return 1;
+    }
+}

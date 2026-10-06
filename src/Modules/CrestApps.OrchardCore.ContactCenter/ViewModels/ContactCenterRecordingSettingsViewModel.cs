@@ -13,6 +13,11 @@ public class ContactCenterRecordingSettingsViewModel
     public bool RecordingEnabled { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether every voice call is recorded automatically once it connects.
+    /// </summary>
+    public bool RecordAllCalls { get; set; }
+
+    /// <summary>
     /// Gets or sets the consent model that governs whether a call may be recorded.
     /// </summary>
     public RecordingConsentModel ConsentModel { get; set; } = RecordingConsentModel.AllParties;
