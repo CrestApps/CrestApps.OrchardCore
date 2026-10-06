@@ -54,7 +54,11 @@ Click the **headset** button. Your choices are saved in this browser, so they st
 | Group | Setting | What it does |
 | --- | --- | --- |
 | **Audio devices** | **Microphone** / **Speaker** | The devices the phone uses, instead of your computer's default. The lists update when you plug a headset in or out, and you can switch during a call. |
-| **Microphone processing** | **Echo cancellation**, **Noise suppression**, **Automatic gain control** | The browser's clean-up of your voice. All three are on by default and changes apply at once, even during a call. If the other person says you sound hollow, distant or distorted, turn one off at a time. |
+| **Microphone processing** | **Voice isolation** | On by default. Removes background noise and the voices of people around you before the caller hears you. Works best with a headset microphone close to your mouth. |
+| | **Isolation strength** | **Low**, **Medium** (default) or **High**. How firmly the room is cut while you are not speaking. Use **High** on a loud floor, and **Low** if callers say the start or end of your words is cut off. |
+| | **Isolation model** | **Enhanced** (default) removes more background voices. Choose **Light** if callers hear your voice crackle or break up, which can happen on an older computer. |
+| | **Echo cancellation** | The browser's echo cancellation, on by default. Shown whether or not voice isolation is on. |
+| | **Noise suppression**, **Automatic gain control** | The browser's own clean-up of your voice. Shown only when **Voice isolation** is off, and then on by default; voice isolation replaces them while it is on. Changes apply at once, even during a call. If the other person says you sound hollow, distant or distorted, turn one off at a time. |
 | | **Microphone boost** | **Off**, **+3 dB**, **+6 dB**, **+9 dB** or **+12 dB**. Makes your voice louder before it is sent, with a limiter so loud words do not distort. Use it when people say you are quiet. |
 | **Incoming audio** | **Audio delay** | **Automatic**, **120 ms**, **80 ms**, **40 ms** or **20 ms**. How long incoming audio is held before it plays. A shorter delay shortens the pause before you hear the other person, but too short makes their voice break up. Applies to the call you are on. |
 | **Connection** | **Region** | **Automatic**, or the provider location nearest you: **US West**, **US Central**, **US East**, **Canada Central**, **Europe**, **Asia Pacific** or **South Asia**. **Automatic** follows your team's setting and then the provider's own choice. Changing it reconnects the phone, so it waits until your current call ends. |
@@ -62,6 +66,7 @@ Click the **headset** button. Your choices are saved in this browser, so they st
 ### Fix common audio problems
 
 - **The other person cannot hear you.** Check that the **Microphone** is your real headset or microphone. A common cause is a virtual audio device (software that pretends to be a microphone) set as the computer's default; the phone warns you when it sees one. The microphone meter on the **Diagnostics** tab shows which device is live.
+- **The other person hears people talking around you.** Make sure **Voice isolation** is on, and try **Isolation strength** **High**. Keep your headset microphone close to your mouth.
 - **You sound quiet.** Try **Microphone boost**, and watch the microphone level on the **Diagnostics** tab while you speak. A level that moves around the middle is healthy; one pinned at the top means the boost is too high and loud words are clipped.
 - **There is a pause before you hear a reply.** Shorten **Audio delay** one step at a time, and stop if the other person's voice starts to break up. A **Region** closer to you can also help; compare the round-trip time on the **Diagnostics** tab before and after.
 

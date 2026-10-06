@@ -52,6 +52,7 @@ public sealed class TelnyxTransferCommands
     private readonly ITelephonyInteractionStore _interactionStore;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly ITelnyxNoiseSuppressionService _noiseSuppression;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TelnyxTransferCommands"/> class.
@@ -61,18 +62,21 @@ public sealed class TelnyxTransferCommands
     /// <param name="interactionStore">The call history a colleague's transfer leg is recorded in, when there is one.</param>
     /// <param name="clock">The clock, when there is one.</param>
     /// <param name="logger">The logger.</param>
+    /// <param name="noiseSuppression">Starts noise suppression on a colleague's leg handed a call, when there is one.</param>
     public TelnyxTransferCommands(
         TelnyxApiClient apiClient,
         TelnyxOptions options,
         ITelephonyInteractionStore interactionStore,
         IClock clock,
-        ILogger logger)
+        ILogger logger,
+        ITelnyxNoiseSuppressionService noiseSuppression = null)
     {
         _apiClient = apiClient;
         _options = options;
         _interactionStore = interactionStore;
         _clock = clock;
         _logger = logger;
+        _noiseSuppression = noiseSuppression;
     }
 
     /// <summary>
@@ -226,6 +230,13 @@ public sealed class TelnyxTransferCommands
         }
 
         await ReleaseAgentLegAsync(agentLegId, partyLegId, cancellationToken);
+
+        // The colleague now talks to the party, so their leg is cleaned as the agent's leg was. Last, so the hand-over
+        // never waits on it.
+        if (targetIsBrowser && _noiseSuppression is not null)
+        {
+            await _noiseSuppression.ApplyAsync(targetLegId, TelnyxNoiseSuppressionLeg.Agent, cancellationToken);
+        }
 
         return true;
     }

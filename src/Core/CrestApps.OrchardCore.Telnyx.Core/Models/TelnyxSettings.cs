@@ -132,6 +132,25 @@ public sealed class TelnyxSettings
     public TelnyxAnsweringMachineDetection AnsweringMachineDetection { get; set; }
 
     /// <summary>
+    /// Gets or sets the Telnyx noise suppression engine started on an agent's leg once it is connected, which cleans
+    /// background sound such as colleagues talking nearby out of the call audio. Defaults to
+    /// <see cref="TelnyxNoiseSuppressionEngine.Off"/>: Telnyx bills it for each direction it cleans.
+    /// </summary>
+    public TelnyxNoiseSuppressionEngine NoiseSuppressionEngine { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether noise suppression cleans the agent's voice, which is what the caller
+    /// hears. Applies only when <see cref="NoiseSuppressionEngine"/> is set. Defaults to <see langword="true"/>.
+    /// </summary>
+    public bool NoiseSuppressionAgentVoice { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether noise suppression cleans the caller's voice, which is what the agent
+    /// hears. Applies only when <see cref="NoiseSuppressionEngine"/> is set. Defaults to <see langword="false"/>.
+    /// </summary>
+    public bool NoiseSuppressionCallerVoice { get; set; }
+
+    /// <summary>
     /// Gets or sets the text-to-speech voice the platform's spoken prompts use: phone menus, the voicemail greeting,
     /// and a queue's callback offer. Either a legacy value (<c>female</c>, <c>male</c>) or a
     /// <c>Provider.Model.VoiceId</c> name such as <c>AWS.Polly.Joanna-Neural</c>. Empty uses
