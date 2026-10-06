@@ -3,7 +3,7 @@ import clsx from 'clsx';
 import Link from '@docusaurus/Link';
 import Head from '@docusaurus/Head';
 import {useDoc} from '@docusaurus/plugin-content-docs/client';
-import Icon from '@site/src/components/Icon';
+import Icon from '@site/src/components/SiteIcon';
 import {MANUALS, manualOfDoc, useCounterpartDocs} from './manuals';
 import styles from './styles.module.css';
 

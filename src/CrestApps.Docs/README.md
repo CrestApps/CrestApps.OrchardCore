@@ -160,7 +160,7 @@ When a task touches the docs site, in addition to everything above:
 | Audience strip above each title, and the card at the end of each page that links to the other manual | `src/components/Manual/ManualBar.js`, `ManualCrossLinks.js`, placed by `src/theme/DocItem/` |
 | `<AskYourAdmin />` note and `<ManualSearch />` box, usable in any page without an import | `src/components/Manual/`, registered in `src/theme/MDXComponents.js` |
 | The manual's crumb in the breadcrumbs (Home > User Manual > ...) | `src/theme/DocBreadcrumbs/Items/Home/` |
-| Icons (`<Icon name="..." />` in React, `icon('...')` in `sidebars.js`) | `src/components/Icon/`, `static/img/icons/` (Lucide, ISC license) |
+| Icons (`<Icon name="..." />` in React, `icon('...')` in `sidebars.js`) | `src/components/SiteIcon/`, `static/img/icons/` (Lucide, ISC license) |
 | Colors for each manual, the sidebar and the tables | `src/css/custom.css` |
 | The manual rules | `scripts/check-manuals.mjs` |
 

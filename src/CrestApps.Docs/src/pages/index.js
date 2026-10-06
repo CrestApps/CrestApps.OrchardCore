@@ -4,7 +4,7 @@ import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
 import Heading from '@theme/Heading';
 import ManualSearch from '@site/src/components/Manual/ManualSearch';
-import Icon from '@site/src/components/Icon';
+import Icon from '@site/src/components/SiteIcon';
 import styles from './index.module.css';
 
 const MANUALS = [
