@@ -29,11 +29,13 @@ When a workflow starts, the triggering event is available on the workflow input,
 
 ### Event payloads used for follow-ups
 
-Two events carry a `Data` payload that follow-up workflows read as `Workflow.Input.Data.<Property>`:
+These events carry a `Data` payload that follow-up workflows read as `Workflow.Input.Data.<Property>`:
 
 | Event | Payload type | Properties |
 | --- | --- | --- |
 | **Dialer attempt completed** (`DialerAttemptCompleted`) | `CallLifecycleEventData` | `Outcome` (one of `DialerAttemptOutcomes`: `Answered`, `NoAnswer`, `Busy`, `AnsweringMachine`, `NotInService`, `Rejected`, `Failed`), `PhoneNumber`, `ActivityItemId`, `CampaignId`, `HangupCause`, `ProviderHangupCause`, `SipHangupCause`, plus the other call-lifecycle properties. Raised after every dialer attempt, answered or not. |
+| **Dialer call answered by a person** (`DialerLiveAnswered`) | `CallLifecycleEventData` | `InteractionId`, `ActivityItemId`, `ProviderCallId`, `AgentId`, `QueueId`, and `Details` with `dialerProfileId` and `attemptNumber`. Raised once per Power, Progressive or Predictive call a person (not a machine) answers. `AggregateType` is `DialerProfile` and `AggregateId` the profile. |
+| **Dialer call abandoned** (`DialerCallAbandoned`) | `CallLifecycleEventData` | `Reason` (`agent_leg_failed`, `agent_connect_failed`, `agent_unavailable`, `agent_connected_late` or `customer_hung_up_waiting`), `DurationSeconds` (seconds from the answer), and `Details` with `dialerProfileId` and `messagePlayed`. Raised once per answered automated call no agent reached within two seconds. `AggregateType` is `DialerProfile` and `AggregateId` the profile. |
 | **Activity disposition applied** (`ActivityDispositionApplied`) | `ActivityDispositionEventData` | `ActivityItemId`, `DispositionId`, `DispositionName`, `Outcome` (`NotInService`, `NoAnswer`, `Busy`, `AnsweringMachine` or `None`), `Source` (`Agent`, `AI`, `Provider`, `Workflow` or `System`), `TerminalReasonCode`, `Channel`, `CampaignId`, `SubjectContentType`, `ContactContentItemId`, `PhoneNumber`, `Attempts`, `CompletedById`. Published by `ActivityDispositionAppliedPublisher` whenever an activity is completed with a disposition, whoever applied it. |
 
 ## Task activities
