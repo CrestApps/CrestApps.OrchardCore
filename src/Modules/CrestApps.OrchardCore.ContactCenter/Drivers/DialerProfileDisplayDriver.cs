@@ -1,8 +1,10 @@
 ﻿using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -15,6 +17,8 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
 {
     private readonly ContactCenterAdminFormOptionsProvider _optionsProvider;
     private readonly IShellFeaturesManager _shellFeaturesManager;
+    private readonly IEnumerable<IDialerAbandonmentStatisticsProvider> _statisticsProviders;
+    private readonly ContactCenterComplianceOptions _complianceOptions;
 
     internal readonly IStringLocalizer S;
 
@@ -23,14 +27,20 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
     /// </summary>
     /// <param name="optionsProvider">The admin form options provider.</param>
     /// <param name="shellFeaturesManager">The shell features manager used to detect the Paced Dialing feature.</param>
+    /// <param name="statisticsProviders">The providers of the measured abandonment shown on the editor.</param>
+    /// <param name="complianceOptions">The compliance options, for the rolling window the abandonment cap is measured over.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public DialerProfileDisplayDriver(
         ContactCenterAdminFormOptionsProvider optionsProvider,
         IShellFeaturesManager shellFeaturesManager,
+        IEnumerable<IDialerAbandonmentStatisticsProvider> statisticsProviders,
+        IOptions<ContactCenterComplianceOptions> complianceOptions,
         IStringLocalizer<DialerProfileDisplayDriver> stringLocalizer)
     {
         _optionsProvider = optionsProvider;
         _shellFeaturesManager = shellFeaturesManager;
+        _statisticsProviders = statisticsProviders;
+        _complianceOptions = complianceOptions.Value;
         S = stringLocalizer;
     }
 
@@ -64,6 +74,7 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             MaxAttempts = profile.MaxAttempts,
             RetryDelayMinutes = profile.RetryDelayMinutes,
             AnsweringMachineDetection = profile.AnsweringMachineDetection,
+            RingTimeoutSeconds = profile.RingTimeoutSeconds > 0 ? profile.RingTimeoutSeconds : DialerAbandonment.DefaultRingTimeoutSeconds,
             CallerId = profile.CallerId,
             AlwaysUseCallerId = profile.AlwaysUseCallerId,
             DefaultRegionCode = profile.DefaultRegionCode,
@@ -76,9 +87,18 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             SafeHarborEnabled = profile.SafeHarborEnabled,
             SafeHarborMessage = profile.SafeHarborMessage,
             Enabled = profile.Enabled,
+            AbandonmentWindowMinutes = _complianceOptions.AbandonmentRollingWindowMinutes,
         };
 
         await _optionsProvider.PopulateDialerProfileEditorAsync(viewModel);
+
+        // What the profile has actually measured, so whoever sets the cap sees the rate it is held to. A new profile
+        // has nothing to measure.
+        if (!string.IsNullOrEmpty(profile.ItemId) && profile.Mode.IsAutomated())
+        {
+            viewModel.RollingAbandonment = await GetStatisticsAsync(profile.ItemId, TimeSpan.FromMinutes(_complianceOptions.AbandonmentRollingWindowMinutes));
+            viewModel.MonthlyAbandonment = await GetStatisticsAsync(profile.ItemId, TimeSpan.FromDays(30));
+        }
 
         var automatedDialerEnabled = await _shellFeaturesManager.IsFeatureEnabledAsync(ContactCenterConstants.Feature.DialerPaced);
 
@@ -97,6 +117,7 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             model.MaxAttempts = viewModel.MaxAttempts;
             model.RetryDelayMinutes = viewModel.RetryDelayMinutes;
             model.AnsweringMachineDetection = viewModel.AnsweringMachineDetection;
+            model.RingTimeoutSeconds = viewModel.RingTimeoutSeconds;
             model.CallerId = viewModel.CallerId;
             model.AlwaysUseCallerId = viewModel.AlwaysUseCallerId;
             model.DefaultRegionCode = viewModel.DefaultRegionCode;
@@ -111,6 +132,9 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             model.AbandonmentSampleFloor = viewModel.AbandonmentSampleFloor;
             model.SafeHarborEnabled = viewModel.SafeHarborEnabled;
             model.SafeHarborMessage = viewModel.SafeHarborMessage;
+            model.RollingAbandonment = viewModel.RollingAbandonment;
+            model.AbandonmentWindowMinutes = viewModel.AbandonmentWindowMinutes;
+            model.MonthlyAbandonment = viewModel.MonthlyAbandonment;
             model.Enabled = viewModel.Enabled;
         }
 
@@ -119,7 +143,7 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             Initialize<DialerProfileViewModel>("DialerProfileDialing_Edit", Populate).Location("Content:1%Dialing;2"),
             Initialize<DialerProfileViewModel>("DialerProfileCallerId_Edit", Populate).Location("Content:1%Caller ID;3"),
             Initialize<DialerProfileViewModel>("DialerProfileCompliance_Edit", Populate).Location("Content:1%Compliance;4"),
-            Initialize<DialerProfileViewModel>("DialerProfileAbandonment_Edit", Populate).Location("Content:1%Abandonment and safe harbor;5"));
+            Initialize<DialerProfileViewModel>("DialerProfileAbandonment_Edit", Populate).Location("Content:1%Abandoned calls;5"));
     }
 
     /// <inheritdoc/>
@@ -142,6 +166,7 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
         profile.MaxAttempts = model.MaxAttempts;
         profile.RetryDelayMinutes = model.RetryDelayMinutes;
         profile.AnsweringMachineDetection = model.AnsweringMachineDetection;
+        profile.RingTimeoutSeconds = model.RingTimeoutSeconds;
         profile.CallerId = model.CallerId?.Trim();
         profile.AlwaysUseCallerId = model.AlwaysUseCallerId;
         profile.DefaultRegionCode = model.DefaultRegionCode?.Trim().ToUpperInvariant();
@@ -160,5 +185,20 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
         profile.Enabled = model.Enabled;
 
         return await EditAsync(profile, context);
+    }
+
+    private async Task<DialerAbandonmentStatistics> GetStatisticsAsync(string profileId, TimeSpan window)
+    {
+        foreach (var provider in _statisticsProviders)
+        {
+            var statistics = await provider.GetStatisticsAsync(profileId, window);
+
+            if (statistics is not null)
+            {
+                return statistics;
+            }
+        }
+
+        return null;
     }
 }

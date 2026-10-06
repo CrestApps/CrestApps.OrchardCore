@@ -116,14 +116,23 @@ internal sealed class DialerProfileHandler : CatalogEntryHandlerBase<DialerProfi
             context.Result.Fail(new ValidationResult(S["The abandonment sample floor cannot be negative."], [nameof(DialerProfile.AbandonmentSampleFloor)]));
         }
 
+        // An unanswered automated call rings for at least the fifteen seconds the common abandoned-call rules expect. The
+        // dialer never rings for less whatever is stored, but a profile that asks for less is refused rather than
+        // silently overruled. Zero, as a recipe may write it, means the default.
+        if (profile.Mode.IsAutomated() &&
+            profile.RingTimeoutSeconds is not 0 and (< DialerAbandonment.MinimumRingTimeoutSeconds or > DialerAbandonment.MaximumRingTimeoutSeconds))
+        {
+            context.Result.Fail(new ValidationResult(S["The ring time must be between {0} and {1} seconds. An unanswered automated call rings for at least {0} seconds.", DialerAbandonment.MinimumRingTimeoutSeconds, DialerAbandonment.MaximumRingTimeoutSeconds], [nameof(DialerProfile.RingTimeoutSeconds)]));
+        }
+
         if (profile.EnforceAbandonmentCap && profile.Mode.IsAutomated() && !profile.SafeHarborEnabled)
         {
-            context.Result.Fail(new ValidationResult(S["Enable safe-harbor messaging when an automated dialing mode enforces an abandonment cap."], [nameof(DialerProfile.SafeHarborEnabled)]));
+            context.Result.Fail(new ValidationResult(S["Enable the abandoned-call message when an automated dialing mode enforces an abandonment cap."], [nameof(DialerProfile.SafeHarborEnabled)]));
         }
 
         if (profile.SafeHarborEnabled && string.IsNullOrWhiteSpace(profile.SafeHarborMessage))
         {
-            context.Result.Fail(new ValidationResult(S["Provide a safe-harbor announcement when safe-harbor messaging is enabled."], [nameof(DialerProfile.SafeHarborMessage)]));
+            context.Result.Fail(new ValidationResult(S["Provide the abandoned-call message when it is enabled."], [nameof(DialerProfile.SafeHarborMessage)]));
         }
     }
 }

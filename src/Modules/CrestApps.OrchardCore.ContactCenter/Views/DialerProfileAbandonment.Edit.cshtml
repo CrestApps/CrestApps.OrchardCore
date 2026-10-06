@@ -1,11 +1,44 @@
 @model DialerProfileViewModel
 
+@{
+    static string Rate(DialerAbandonmentStatistics statistics)
+        => statistics is null || statistics.LiveAnswers == 0
+            ? "0"
+            : ((double)statistics.AbandonedCalls / statistics.LiveAnswers * 100).ToString("0.##", System.Globalization.CultureInfo.CurrentCulture);
+}
+
+<div class="ocat-wrapper" data-dialer-modes="Power Progressive Predictive">
+    <div class="ocat-end-offset">
+        <div class="alert alert-info" role="alert">
+            @T["A call is abandoned when a person answers and no agent is connected to them within two seconds. These settings support the common abandoned-call rules for automated dialing; confirm which rules apply to your calls."]
+        </div>
+    </div>
+</div>
+
+@if (Model.RollingAbandonment is not null)
+{
+    <div class="ocat-wrapper" data-dialer-modes="Power Progressive Predictive">
+        <label class="ocat-label">@T["Measured abandonment"]</label>
+        <div class="ocat-end">
+            <p class="form-control-plaintext mb-0" data-abandonment-rate>
+                @T["{0}% over the last {1} minutes ({2} abandoned of {3} answered by a person).", Rate(Model.RollingAbandonment), Model.AbandonmentWindowMinutes, Model.RollingAbandonment.AbandonedCalls, Model.RollingAbandonment.LiveAnswers]
+                @if (Model.MonthlyAbandonment is not null)
+                {
+                    <br />
+                    @T["{0}% over the last 30 days ({1} abandoned of {2} answered by a person).", Rate(Model.MonthlyAbandonment), Model.MonthlyAbandonment.AbandonedCalls, Model.MonthlyAbandonment.LiveAnswers]
+                }
+            </p>
+            <span class="hint">@T["Counted for this profile from calls a person answered: machine, busy, unanswered and out-of-service calls are left out. An abandoned call is one where the agent was not connected, was connected more than two seconds after the answer, or the person hung up while waiting."]</span>
+        </div>
+    </div>
+}
+
 <div class="ocat-wrapper" asp-validation-class-for="EnforceAbandonmentCap" data-dialer-modes="Power Progressive Predictive">
     <div class="ocat-end-offset">
         <div class="form-check">
             <input asp-for="EnforceAbandonmentCap" class="form-check-input" />
             <label asp-for="EnforceAbandonmentCap" class="form-check-label">@T["Enforce an abandonment-rate cap"]</label>
-            <span class="hint dashed">@T["When enabled, automated pacing modes are suppressed once the rolling abandonment rate reaches the cap or the compliance statistics cannot be proven. Manual and preview dialing are unaffected because an agent is bound to every call."]</span>
+            <span class="hint dashed">@T["When enabled, automated dialing stops placing calls once the rolling abandonment rate reaches the cap, and resumes when it falls back. Requires the abandoned-call message. Preview dialing is unaffected because an agent is on every call."]</span>
         </div>
     </div>
 </div>
@@ -18,7 +51,7 @@
             <span class="input-group-text">@T["%"]</span>
         </div>
         <span asp-validation-for="MaxAbandonmentRatePercent" class="text-danger"></span>
-        <span class="hint">@T["The highest rolling share of live-answered calls that may be abandoned before automated pacing is throttled. The U.S. TCPA safe-harbor limit is 3%."]</span>
+        <span class="hint">@T["The highest share of calls answered by a person that may be abandoned over the rolling window ({0} minutes) before automated dialing pauses. A common limit is 3%.", Model.AbandonmentWindowMinutes]</span>
     </div>
 </div>
 
@@ -27,7 +60,7 @@
     <div class="ocat-end">
         <input asp-for="AbandonmentSampleFloor" type="number" min="0" class="form-control" />
         <span asp-validation-for="AbandonmentSampleFloor" class="text-danger"></span>
-        <span class="hint">@T["The minimum number of live-answered calls in the rolling window before the abandonment rate is enforced, so the cap is not triggered by a small, noisy sample."]</span>
+        <span class="hint">@T["The minimum number of calls answered by a person in the rolling window before the cap applies, so a few early calls cannot pause dialing on their own."]</span>
     </div>
 </div>
 
@@ -35,17 +68,23 @@
     <div class="ocat-end-offset">
         <div class="form-check">
             <input asp-for="SafeHarborEnabled" class="form-check-input" />
-            <label asp-for="SafeHarborEnabled" class="form-check-label">@T["Play a safe-harbor announcement when abandoned"]</label>
-            <span class="hint dashed">@T["When enabled, an abandoned automated call plays a recorded announcement that identifies the caller instead of dropping the party silently."]</span>
+            <label asp-for="SafeHarborEnabled" class="form-check-label">@T["Play a message when a call is abandoned"]</label>
+            <span class="hint dashed">@T["When enabled, a person who answers and cannot be connected to an agent hears the abandoned-call message, and the call then ends. When disabled, the call is hung up without a word."]</span>
         </div>
+        @if (!Model.SafeHarborEnabled)
+        {
+            <div class="alert alert-warning mt-2 mb-0" role="alert">
+                @T["No abandoned-call message is played for this profile. The common abandoned-call rules expect a short recorded message that says who called and gives a number to call back."]
+            </div>
+        }
     </div>
 </div>
 
 <div class="ocat-wrapper" asp-validation-class-for="SafeHarborMessage" data-dialer-modes="Power Progressive Predictive">
-    <label asp-for="SafeHarborMessage" class="ocat-label">@T["Safe-harbor announcement"]</label>
+    <label asp-for="SafeHarborMessage" class="ocat-label">@T["Abandoned call message"]</label>
     <div class="ocat-end">
-        <textarea asp-for="SafeHarborMessage" class="form-control"></textarea>
+        <textarea asp-for="SafeHarborMessage" class="form-control" rows="3" placeholder="@Model.DefaultSafeHarborMessage"></textarea>
         <span asp-validation-for="SafeHarborMessage" class="text-danger"></span>
-        <span class="hint">@T["The announcement read to a live person when no agent is available and the call would otherwise be abandoned. Required when safe-harbor messaging is enabled."]</span>
+        <span class="hint">@T["Spoken to the person, so keep it short: say who is calling and give a number they can call to reach you or to ask not to be called again. {0} is replaced with the site name and {1} with the number the call came from. Required when the message is enabled.", DialerAbandonment.CompanyToken, DialerAbandonment.NumberToken]</span>
     </div>
 </div>

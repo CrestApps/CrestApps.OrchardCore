@@ -78,6 +78,12 @@ public class DialerProfileViewModel
     public DialerAnsweringMachineDetection AnsweringMachineDetection { get; set; }
 
     /// <summary>
+    /// Gets or sets how many seconds an automated call rings before it is given up as unanswered. Validated by the
+    /// profile handler, and only for the automated modes the field is shown for.
+    /// </summary>
+    public int RingTimeoutSeconds { get; set; } = DialerAbandonment.DefaultRingTimeoutSeconds;
+
+    /// <summary>
     /// Gets or sets the caller identifier.
     /// </summary>
     public string CallerId { get; set; }
@@ -141,14 +147,40 @@ public class DialerProfileViewModel
     public int AbandonmentSampleFloor { get; set; } = 30;
 
     /// <summary>
-    /// Gets or sets a value indicating whether an abandoned automated call plays a safe-harbor announcement.
+    /// Gets or sets a value indicating whether an abandoned automated call plays the abandoned-call message.
     /// </summary>
     public bool SafeHarborEnabled { get; set; }
 
     /// <summary>
-    /// Gets or sets the safe-harbor announcement played to a live party when no agent connects in time.
+    /// Gets or sets the abandoned-call message spoken to a person who answered when no agent can be connected.
     /// </summary>
     public string SafeHarborMessage { get; set; }
+
+    /// <summary>
+    /// Gets or sets the message suggested when none has been written yet.
+    /// </summary>
+    [BindNever]
+    public string DefaultSafeHarborMessage { get; set; } = DialerAbandonment.DefaultMessage;
+
+    /// <summary>
+    /// Gets or sets the profile's measured abandonment over the rolling window the cap is enforced on, or
+    /// <see langword="null"/> when it is not measured (a new profile, or no statistics provider).
+    /// </summary>
+    [BindNever]
+    public DialerAbandonmentStatistics RollingAbandonment { get; set; }
+
+    /// <summary>
+    /// Gets or sets the length, in minutes, of the rolling window <see cref="RollingAbandonment"/> covers.
+    /// </summary>
+    [BindNever]
+    public int AbandonmentWindowMinutes { get; set; }
+
+    /// <summary>
+    /// Gets or sets the profile's measured abandonment over the last thirty days, the period the common abandoned-call
+    /// rules measure over, or <see langword="null"/> when it is not measured.
+    /// </summary>
+    [BindNever]
+    public DialerAbandonmentStatistics MonthlyAbandonment { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the dialer profile is enabled.
