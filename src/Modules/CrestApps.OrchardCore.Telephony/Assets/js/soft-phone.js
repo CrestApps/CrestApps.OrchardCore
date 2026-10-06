@@ -3918,12 +3918,19 @@
             // waiting for a click), the capture falls back to the browser's own two so the agent is never sent
             // with no noise handling at all.
             var isolationFallback = voiceIsolationSettings.enabled && !isVoiceIsolationExpected();
+
+            // While voice isolation is on, the browser's two are decided by isolation alone: off while the model
+            // runs, on only as the fallback. The agent cannot see or change them then (the overlay hides them), so
+            // a stored "on" from before isolation was turned on must not stack a second noise suppressor and a
+            // second gain stage under the model -- live, that left the agent sounding muffled and pumping.
+            var browserNoiseSuppression = voiceIsolationSettings.enabled ? isolationFallback : processingSettings.noiseSuppression;
+            var browserGainControl = voiceIsolationSettings.enabled ? isolationFallback : processingSettings.autoGainControl;
             var audio = {
                 // Each can be switched off in the settings overlay, live, when a caller reports the agent sounding
                 // hollow or processed -- these three are the usual suspects.
                 echoCancellation: processingSettings.echoCancellation,
-                noiseSuppression: processingSettings.noiseSuppression || isolationFallback,
-                autoGainControl: processingSettings.autoGainControl || isolationFallback,
+                noiseSuppression: browserNoiseSuppression,
+                autoGainControl: browserGainControl,
                 // Ask for a single channel. A call is mono end to end, so stereo capture buys nothing and can
                 // cost a great deal: headset microphones routed through a shared audio codec are often
                 // presented as a stereo pair carrying the microphone on one side and silence on the other, and
