@@ -42,7 +42,7 @@ The agent is signed in to the campaign in the soft phone (right). The record is 
   <source src="/img/docs/um-power-dial.mp4" type="video/mp4" />
 </video>
 
-With a Power profile the agent only signs in and stays **Available**. Within a minute the dialer places the call, and the record opens on its own as the call rings.
+With a Power profile the agent only signs in and stays **Available**. Within a minute the dialer places the call. Nothing appears on the agent's screen while the call rings: the record opens on its own once the customer answers and the agent is connected. A call that does not reach the agent is never shown to them (see [What happens to each record](#what-happens-to-each-record)).
 
 ## Create a profile
 
@@ -53,9 +53,9 @@ With a Power profile the agent only signs in and stays **Available**. Within a m
    | Field | Modes | What it does |
    | --- | --- | --- |
    | **Calls per agent** | Power | Calls started per pacing cycle for the campaign, 1 to 3. Each call reserves its own agent, so it never dials more calls than there are available agents. |
-   | **Max attempts** | Power, Progressive | How many times one record may be dialed. Default 3. |
-   | **Retry delay (minutes)** | Power, Progressive | How long to wait after an attempt before dialing the record again. Default 60. |
-   | **Screen out answering machines** | Power, Progressive | **Off** (default), **Standard detection** or **Premium detection**. When on, the agent is connected only after the provider hears a person. A call answered by a voicemail or fax machine is hung up, the agent goes straight back to Ready without wrap-up, and the record is dialed again after the retry delay (it counts as an attempt). The person who answers hears a few seconds of silence while the call is screened. Telnyx only. |
+   | **Max attempts** | Power, Progressive | How many attempts one contact may get, counting the first call and every follow-up activity created to try again. Default 3. |
+   | **Retry delay (minutes)** | Power, Progressive | The shortest wait after an attempt before the next attempt is dialed. Default 60. |
+   | **Screen out answering machines** | Power, Progressive | **Off** (default), **Standard detection** or **Premium detection**. When on, the agent is connected only after the provider hears a person. A call answered by a voicemail or fax machine is hung up, the agent goes straight back to Ready without wrap-up or a pop, and the dialer completes the activity with the *Answering machine* disposition. The person who answers hears a few seconds of silence while the call is screened. Telnyx only. |
 
 4. On **Caller ID**, pick the **Caller ID** number customers see from your [Omnichannel Addresses](channel-endpoints.md) used for **Voice calls** (**Provider default** uses the provider's caller ID). A **Dial from** number picked when activities are loaded is shown instead for that load's calls, unless **Always show this caller ID** is ticked, and pick the **Default calling region** used for numbers written without a country code. A number typed before caller IDs were picked stays selected until you change it.
 5. On **Compliance**:
@@ -79,13 +79,29 @@ With a Power profile the agent only signs in and stays **Available**. Within a m
 
 ## What happens to each record
 
-Before every call the dialer checks, in order: the number is valid, the number is not [known to be out of service](numbers-not-in-service.md), the record has attempts left, the retry delay has passed, the contact has not opted out, the calling window is open, the abandonment cap allows dialing, and the number is not on a do-not-call registry.
+Before an agent is reserved for a record, the dialer checks that the record is due: its scheduled time and the retry delay after its last call have passed, and it has attempts left. A record that is not due yet waits at the back of the queue, and no agent sees it. Before every call the dialer then checks, in order: the number is valid, the number is not [known to be out of service](numbers-not-in-service.md), the record has attempts left, the retry delay has passed, the contact has not opted out, the calling window is open, the abandonment cap allows dialing, and the number is not on a do-not-call registry.
 
-- A record with no valid number, or with no attempts left, becomes **Failed**.
+- A record with no valid number becomes **Failed**.
+- A record with no attempts left is **Completed** by the dialer with the disposition for how its last call ended, and the terminal reason `dialer_max_attempts`.
 - A record on a do-not-call list becomes **Cancelled**.
 - A record whose number is known not to be in service becomes **Cancelled**, and is never dialed.
-- A call the carrier rejects as not in service (unallocated, SIP 404/410/484/604) is **Completed** with the not-in-service disposition, without an agent. The number is not dialed again. See [Numbers Not In Service](numbers-not-in-service.md).
 - Anything else (closed calling window, cap reached, registry unreachable) is simply tried again in a later cycle.
+
+The agent receives a call only when it is something they can act on: a customer answered and the agent was connected. Every call that ends before that is dispositioned by the dialer itself, as the system, with the disposition whose [outcome](dispositions.md#outcomes) matches, and the agent goes straight back to Ready with no pop, no call card and no wrap-up:
+
+| How the call ended | Disposition outcome | Terminal reason |
+| --- | --- | --- |
+| Rang out, or was given up on, with nobody answering | *No answer* | `dialer_no_answer` |
+| The line was busy | *Busy* | `dialer_busy` |
+| A machine answered and answering-machine screening is on | *Answering machine* | `dialer_answering_machine` |
+| The called party or the network rejected it | *Rejected* | `dialer_rejected` |
+| The network failed it, or the provider refused to place it | *Call failed* | `dialer_failed` |
+| A customer answered but hung up before the agent was connected | *Disconnected* | `dialer_disconnected` |
+| The carrier reported the number not in service (unallocated, SIP 404/410/484/604) | *Number not in service* | `number_not_in_service` |
+
+A number not in service is also added to [Numbers Not In Service](numbers-not-in-service.md) and never dialed again. With answering-machine screening off, a call a voicemail answers is connected to the agent like any answered call, and is theirs to disposition. In Preview mode the agent clicks **Dial**, so they see the call ring; if it ends before they are connected, the dialer dispositions it the same way and the agent goes back to Ready.
+
+The disposition decides what happens next. Wire **Try Again** to it in the [subject flow](subject-flows.md) to call the contact again: the next attempt is a new activity, put back in the same campaign with the same dialer profile, due no sooner than the retry delay, and it is not created once **Max attempts** is used. A workflow can make the same decision with the **Schedule Dialer Retry** task; see [Workflows](workflows.md#call-a-contact-again).
 
 Queue callbacks use a built-in preview profile that skips the do-not-call and calling-window checks, because the customer asked to be called.
 
