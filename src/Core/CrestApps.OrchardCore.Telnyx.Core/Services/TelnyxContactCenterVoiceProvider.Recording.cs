@@ -99,13 +99,13 @@ public sealed partial class TelnyxContactCenterVoiceProvider
                 interactionId.SanitizeLogValue());
         }
 
-        // The recording carries the interaction as client_state so the call.recording.saved webhook can be
-        // correlated back to the interaction that owns it and its media ingested into the encrypted store.
+        // No client_state: Telnyx would stamp it on every later event of the customer's leg, replacing the state the
+        // leg carries. The call.recording.saved webhook names the leg, which is the interaction's provider call, so the
+        // recording is traced back to its interaction through that instead.
         var startBody = new Dictionary<string, object>
         {
             ["format"] = TelnyxConstants.Recording.Format,
             ["channels"] = "single",
-            ["client_state"] = TelnyxRecordingClientState.ForInteraction(interactionId).ToClientState(),
         };
 
         return await PostRecordingActionAsync(callControlId, "record_start", startBody, cancellationToken);

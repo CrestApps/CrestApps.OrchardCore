@@ -100,16 +100,11 @@ public sealed partial class TelnyxWebhookService : ITelnyxWebhookService
         // an outbound call, which is the side the agent's soft phone cannot measure.
         await ObserveCallQualityAsync(callEvent, cancellationToken);
 
-        var bridgeLeg = await _outboundBridgeOrchestrator.AdvanceAsync(callEvent, cancellationToken);
-
-        if (bridgeLeg == TelnyxOutboundBridgeLeg.DestinationLeg)
-        {
-            return TelnyxWebhookResult.Updated;
-        }
-
         // A finished recording is not a call-state transition, so it is dispatched to the recording handlers
         // before state mapping. When Contact Center Voice is enabled a handler ingests the recording into the
-        // encrypted media store; otherwise there are no handlers and the event is ignored below.
+        // encrypted media store; otherwise there are no handlers and the event is ignored below. It is dispatched
+        // before the bridge legs are advanced: a number dialed from the soft phone is recorded on its hidden
+        // destination leg, and an automated voice agent's call on its own hidden leg, whose events return early below.
         if (string.Equals(callEvent.EventType?.Trim(), TelnyxConstants.Recording.SavedEventType, StringComparison.OrdinalIgnoreCase))
         {
             var recordingHandled = false;
@@ -120,6 +115,13 @@ public sealed partial class TelnyxWebhookService : ITelnyxWebhookService
             }
 
             return recordingHandled ? TelnyxWebhookResult.Updated : TelnyxWebhookResult.Ignored;
+        }
+
+        var bridgeLeg = await _outboundBridgeOrchestrator.AdvanceAsync(callEvent, cancellationToken);
+
+        if (bridgeLeg == TelnyxOutboundBridgeLeg.DestinationLeg)
+        {
+            return TelnyxWebhookResult.Updated;
         }
 
         // A key press on an entry-point menu. It is not a call-state transition either, and it carries no state token,
