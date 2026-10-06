@@ -18,8 +18,6 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// </summary>
 public sealed class ActivityAssignmentService : IActivityAssignmentService
 {
-    private const int MaxWithdrawalsPerPass = 50;
-
     private readonly IQueueItemManager _queueItemManager;
     private readonly IAgentAvailabilityService _availabilityService;
     private readonly IActivityQueueManager _queueManager;
@@ -387,49 +385,15 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
     /// record that may not be dialed yet -- scheduled for later, cooling down after its last attempt, or out of
     /// attempts -- is held back here too, before any agent is reserved for it.
     /// </summary>
-    private async Task<QueueItem> NextRoutableItemAsync(ActivityQueue queue, DateTime now, CancellationToken cancellationToken)
-    {
-        HashSet<string> heldBack = null;
-
-        for (var withdrawn = 0; withdrawn < MaxWithdrawalsPerPass; withdrawn++)
-        {
-            var item = await _queueItemManager.FindNextWaitingAsync(queue, now, cancellationToken);
-
-            if (item is null || await _withdrawalService.TryWithdrawUnroutableAsync(item, cancellationToken))
-            {
-                if (item is null)
-                {
-                    return null;
-                }
-
-                continue;
-            }
-
-            if (_dialerWorkGate is null)
-            {
-                return item;
-            }
-
-            // A record held back goes to the back of the queue. Reaching one again in the same pass means every
-            // waiting record has been looked at and none is due.
-            heldBack ??= new HashSet<string>(StringComparer.Ordinal);
-
-            if (heldBack.Contains(item.ItemId))
-            {
-                return null;
-            }
-
-            if (!await _dialerWorkGate.TryHoldBackAsync(item, now, cancellationToken))
-            {
-                return item;
-            }
-
-            heldBack.Add(item.ItemId);
-        }
-
-        // A backlog of dead items longer than one pass is withdrawn over the following passes.
-        return null;
-    }
+    private Task<QueueItem> NextRoutableItemAsync(ActivityQueue queue, DateTime now, CancellationToken cancellationToken)
+        => RoutableQueueHead.NextAsync(
+            _queueItemManager,
+            _withdrawalService,
+            _dialerWorkGate,
+            queue,
+            now,
+            new HashSet<string>(StringComparer.Ordinal),
+            cancellationToken);
 
     private Task PublishRoutingDecisionAsync(ActivityRoutingDecision decision, CancellationToken cancellationToken)
     {
