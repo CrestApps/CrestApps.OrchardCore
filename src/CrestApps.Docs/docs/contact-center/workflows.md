@@ -3,15 +3,20 @@ sidebar_label: Workflows automation
 sidebar_position: 4
 title: Contact Center Workflows Automation
 description: React to Contact Center domain events and drive presence, queueing, callbacks, and recording from Orchard Core Workflows without writing code.
+user_manual:
+  - user-manual/workflows
+  - user-manual/leads-accounts-opportunities
 ---
 
 The **Workflows** bridge exposes the Contact Center to the Orchard Core [Workflows](https://docs.orchardcore.net/en/latest/reference/modules/Workflows/) module. It contributes one event activity that starts or resumes a workflow whenever a domain event is published, and a set of task activities that let a no-code author act on the contact center in response.
 
 The bridge is not a separate feature. Simply enable `OrchardCore.Workflows` alongside Contact Center and the event activity becomes available automatically. The task activities are additionally gated on the capability that owns the underlying service, so an activity only appears in the editor when its capability is enabled and its service is guaranteed to be resolvable.
 
+How to build a workflow in the designer, with worked examples (recording connected calls, texting a customer the dialer could not reach, texting from the agent's own number), is in [Contact Center Workflows](../user-manual/workflows.md) in the User Manual. The Omnichannel CRM feature adds a **Lead Converted** event and a **Convert Lead** task; see [Workflows](../omnichannel/crm.md#workflows) on the CRM page.
+
 ## Contact Center Event
 
-The **Contact Center Event** activity (category *Contact Center*) starts or resumes a workflow when a domain event is published. Its **Event type** field is a grouped picker of every canonical event - interactions, activities, routing and queues, agents, offers, dialer, callbacks, calls, recording, and supervision. Leave it set to **Any event type** to react to every event, or pick a single type such as *Call ended* or *Interaction created*.
+The **Contact Center Event** activity (category *Contact Center*) starts or resumes a workflow when a domain event is published. Its **Event type** field is a grouped picker of every canonical event - interactions, activities, routing and queues, agents, offers, dialer, callbacks, calls, recording, supervision, secure capture, and shared voicemail. Leave it set to **Any event type** to react to every event, or pick a single type such as *Call ended* or *Interaction created*.
 
 The activity offers two outcomes:
 
@@ -21,6 +26,15 @@ The activity offers two outcomes:
 When a workflow starts, the triggering event is available on the workflow input, including `EventType`, `InteractionId`, `AggregateType`, `AggregateId`, `ActorId`, `ActorType`, `AgentId`, `AgentUserId`, and `SourceComponent`. Task activities read these values through Liquid expressions such as `{{ Workflow.Input.InteractionId }}`.
 
 `ActorId` and `ActorType` say who made the change: the agent, a supervisor, a workflow, the telephony provider, or the platform (`system`). `AgentId` (the agent profile) and `AgentUserId` (the agent's user) say which agent the change is about, whoever made it. A workflow that acts on the agent, such as **Set Agent Presence**, reads `{{ Workflow.Input.AgentUserId }}`: when the platform reserves an agent or starts their wrap-up, the actor is the platform, not the agent.
+
+### Event payloads used for follow-ups
+
+Two events carry a `Data` payload that follow-up workflows read as `Workflow.Input.Data.<Property>`:
+
+| Event | Payload type | Properties |
+| --- | --- | --- |
+| **Dialer attempt completed** (`DialerAttemptCompleted`) | `CallLifecycleEventData` | `Outcome` (one of `DialerAttemptOutcomes`: `Answered`, `NoAnswer`, `Busy`, `AnsweringMachine`, `NotInService`, `Rejected`, `Failed`), `PhoneNumber`, `ActivityItemId`, `CampaignId`, `HangupCause`, `ProviderHangupCause`, `SipHangupCause`, plus the other call-lifecycle properties. Raised after every dialer attempt, answered or not. |
+| **Activity disposition applied** (`ActivityDispositionApplied`) | `ActivityDispositionEventData` | `ActivityItemId`, `DispositionId`, `DispositionName`, `Outcome` (`NotInService`, `NoAnswer`, `Busy`, `AnsweringMachine` or `None`), `Source` (`Agent`, `AI`, `Provider`, `Workflow` or `System`), `TerminalReasonCode`, `Channel`, `CampaignId`, `SubjectContentType`, `ContactContentItemId`, `PhoneNumber`, `Attempts`, `CompletedById`. Published by `ActivityDispositionAppliedPublisher` whenever an activity is completed with a disposition, whoever applied it. |
 
 ## Task activities
 
@@ -34,7 +48,9 @@ Each task exposes its identifier fields as Liquid expressions so they can bind t
 | **Start Call Recording** | `CrestApps.OrchardCore.ContactCenter.Recording` | Starts recording for a resolved interaction. |
 | **Stop Call Recording** | `CrestApps.OrchardCore.ContactCenter.Recording` | Stops recording for a resolved interaction. |
 | **Place Call or Send Message** | `CrestApps.OrchardCore.ContactCenter` | Starts an automated omnichannel activity immediately, instead of waiting for the periodic automated-activities pass to pick it up. The activity's own channel selects the processor, so the same task places the outbound call for a Phone activity and sends the opening message for an SMS activity. |
-| **Hand Off to Live Agent** | `CrestApps.OrchardCore.ContactCenter.Queues` | Moves an **automated** conversation out of the AI lane and into the human lane: a live call is seated in a queue and offered to an agent, and a text conversation becomes a queue-owned thread in the SMS workspace. Optionally names the queue, a reason, and a summary; when no queue is named, the subject flow's configured handoff queue is used. |
+| **Hand Off to Live Agent** | `CrestApps.OrchardCore.ContactCenter.Queues` | Moves an **automated** conversation out of the AI lane and into the human lane: a live call is seated in a queue and offered to an agent, and a text conversation becomes a queue-owned thread in the messaging workspace. Optionally names the queue, a reason, and a summary; when no queue is named, the subject flow's configured handoff queue is used. |
+| **Find Agent Numbers** | `CrestApps.OrchardCore.ContactCenter` and `CrestApps.OrchardCore.Omnichannel.ChannelEndpoints` | Resolves the numbers an agent calls and texts from (the omnichannel address that lists the agent, or else the Contact Center default numbers) and writes them to `Workflow.Output.AgentPhoneNumber` and `Workflow.Output.AgentSmsNumber`. An empty user name returns the default numbers. Takes **NotFound** only when neither number exists. |
+| **Send Text Message** | `CrestApps.OrchardCore.Omnichannel.Messaging.Sms` | Sends a text from one of the tenant's SMS numbers through the provider that owns it. The text goes through the messaging workspace (`IMessagingConversationService.SendDirectAsync`), so it appears in the customer's conversation. A new conversation it starts belongs to the agent named in **Agent**, so the reply reaches them; without one it is a system text. |
 
 ### Inputs and outcomes
 
@@ -49,6 +65,8 @@ Text inputs accept Liquid that resolves the identifier or value, so they can bin
 | **Start Call Recording** / **Stop Call Recording** | **Interaction** | Done, Indeterminate, Failed |
 | **Place Call or Send Message** | **Activity** | Done, Already Started, Failed |
 | **Hand Off to Live Agent** | **Activity**, **Queue**, **Reason**, **Summary** (the last three optional) | Connected, Waiting In Queue, Callback Scheduled, Failed |
+| **Find Agent Numbers** | **User name** (optional) | Done, NotFound |
+| **Send Text Message** | **From**, **To**, **Message**, **Agent** (optional) | Done, Failed |
 
 ### Outcomes beyond Done and Failed
 

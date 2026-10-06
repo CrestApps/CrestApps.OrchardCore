@@ -3,6 +3,8 @@ sidebar_label: Phone Number Verifications
 sidebar_position: 8
 title: Phone Number Verifications
 description: A provider-agnostic framework for verifying contact phone numbers, with pluggable providers, content-part storage, SQL indexing, background revalidation, and shared Reports-module integration.
+user_manual:
+  - user-manual/administration/phone-number-verification
 ---
 
 | | |
@@ -14,7 +16,24 @@ The **Phone Number Verifications** module provides a provider-agnostic framework
 
 The core feature does not depend on any external verification provider. Providers ship as separate features (for example, **AbstractAPI Phone Number Verification**, **Veriphone Phone Number Verification**, and **Twilio Phone Number Verification**) and are discovered dynamically, so adding a provider never requires changes to the core feature.
 
-The core feature is enabled on demand. It is activated automatically when a dependent feature (such as a provider feature) is enabled, or you can enable it directly under **Configuration** -> **Features**.
+The core feature is enabled by dependency only. It is activated automatically when a provider feature is enabled.
+
+:::tip[Using the verification screens]
+The step-by-step instructions for administrators (setting up a provider, reading the status icons, working the
+verification queue and reading the report) are in the User Manual:
+[Phone Number Verification](../user-manual/administration/phone-number-verification.md). This page covers the
+architecture, data model, background processing, permissions and extension points.
+:::
+
+## Permissions
+
+| Permission | Key | Grants |
+| --- | --- | --- |
+| Manage phone number verification settings | `ManagePhoneNumberVerificationSettings` | **Settings** -> **Phone Number Verifications** and the provider tabs. |
+| Run 'Phone Number Verifications' Report | `RunPhoneNumberVerificationsReport` | **Tools** -> **Phone Verifications Queue** and the report under **Reports**. |
+| Verify phone numbers | `VerifyPhoneNumbers` | Re-queuing records from the queue (**Retry now**, **Retry selected**, **Retry all failed**). |
+
+All three are granted to the **Administrator** role by default.
 
 ## Architecture
 
@@ -123,14 +142,7 @@ Failed records are retried automatically by the background task until `FailedAtt
 
 ## Phone Verifications Queue
 
-A **Phone Verifications Queue** dashboard is available under **Tools** for users who have the `RunPhoneNumberVerificationsReport` permission. It lists every content item carrying verification data and lets administrators:
-
-- see clickable status tiles (All, Verified, Invalid, Failed, Pending, and Needs attention) that show per-status counts and filter the list when selected. The status buckets are mutually exclusive and always sum to the total: **Pending** counts records awaiting verification (unverified status, including records just re-queued), **Failed** counts records whose last request failed but can still be retried automatically, and **Needs attention** counts records that have reached the maximum failed attempts,
-- search records by raw or normalized phone number,
-- sort records by most or least recently attempted, or newest or oldest created,
-- review each record's phone number, status, provider, line status, minimum age, total and failed attempt counts, and last attempt timestamp as compact tags, with the most recent provider error rendered as a red code-style message,
-- page through large result sets,
-- re-queue a single record with **Retry now**, re-queue the selected records with **Retry selected** (use the **Select all on this page** checkbox to select every row on the current page), or re-queue every failed or needs-attention record across **all pages** that matches the current search with **Retry all failed** (requires the `VerifyPhoneNumbers` permission).
+A **Phone Verifications Queue** dashboard is available under **Tools** for users who have the `RunPhoneNumberVerificationsReport` permission. It lists every content item carrying verification data, with status tiles (**All**, **Verified**, **Invalid**, **Failed**, **Pending**, **Needs attention**), search by raw or normalized phone number, sorting, paging, and per-record details including the most recent provider error. The status buckets are mutually exclusive and always sum to the total: **Pending** counts records awaiting verification (unverified status, including records just re-queued), **Failed** counts records whose last request failed but can still be retried automatically, and **Needs attention** counts records that have reached the maximum failed attempts. Re-queuing (**Retry now**, **Retry selected**, **Retry all failed**, which spans all pages that match the current search) requires the `VerifyPhoneNumbers` permission. The operator walkthrough is in the [User Manual](../user-manual/administration/phone-number-verification.md#work-the-verification-queue).
 
 All retry actions are **queued, not synchronous**: they reset the affected records' failure counters and mark them **Pending** immediately, then deferred verification work runs after the pending state is saved. The scheduled background task remains a safety net for any records still due later. This keeps the page responsive even when re-queuing many records and lets the throttle space out provider calls to avoid rate limits (HTTP 429).
 
@@ -160,13 +172,13 @@ External verification APIs are paid services, so the framework minimizes provide
 
 ## Reporting
 
-Enable **Reports** (`CrestApps.OrchardCore.Reports`) alongside **Phone Number Verifications** to surface the report directly under **Reports** for users who have the `RunPhoneNumberVerificationsReport` permission. The report uses the shared Reports module renderer and export pipeline, and it surfaces operational metrics such as total contacts, verified and unverified numbers, invalid numbers, mobile/landline/VoIP counts, numbers pending verification, numbers requiring revalidation, verification success rate, verification failures, and provider usage counts. The reporting infrastructure is built on the SQL index and is extensible for future dashboard widgets.
+Enable **Reports** (`CrestApps.OrchardCore.Reports`) alongside **Phone Number Verifications** to surface the report under **Reports** -> **General** -> **Phone Number Verifications** for users who have the `RunPhoneNumberVerificationsReport` permission. The report declares no category, so the Reports menu places it in the **General** group. The report uses the shared Reports module renderer and export pipeline, and it surfaces operational metrics such as total contacts, verified and unverified numbers, invalid numbers, mobile/landline/VoIP counts, numbers pending verification, numbers requiring revalidation, verification success rate, verification failures, and provider usage counts. The reporting infrastructure is built on the SQL index and is extensible for future dashboard widgets.
 
 ![Phone number verifications report dashboard](/img/docs/phone-number-verifications-report.png)
 
 ## Configuration
 
-Configure the module under **Settings** -> **Phone Number Verifications**.
+Configure the module under **Settings** -> **Phone Number Verifications** (requires `ManagePhoneNumberVerificationSettings`). The settings are described for administrators in the [User Manual](../user-manual/administration/phone-number-verification.md#set-up-a-provider); the defaults are:
 
 | Setting | Default | Purpose |
 | --- | --- | --- |

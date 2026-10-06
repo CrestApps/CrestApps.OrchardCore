@@ -3,6 +3,9 @@ sidebar_label: Campaigns
 sidebar_position: 14
 title: Campaigns and Campaign Groups
 description: Create campaigns to group work for reporting and for the outbound dialer, and campaign groups to roll related campaigns up in reports.
+technical_manual:
+  - omnichannel/management
+  - contact-center/agents-queues-dialer
 ---
 
 A **campaign** is a named push of work, such as *Spring lead drive*. Every activity carries a campaign, and reports can be filtered by it. For the outbound dialer the campaign matters even more: **agents sign in to a campaign** to receive its dialer calls. A **campaign group** rolls related campaigns up in reports.
@@ -12,6 +15,8 @@ A **campaign** is a named push of work, such as *Spring lead drive*. Every activ
 | **Menu** | Interaction Center > Management > Campaigns, and Campaign Groups |
 | **Permission** | Manage campaigns; Manage campaign groups |
 | **Feature** | Omnichannel Management |
+
+<AskYourAdmin />
 
 <video controls preload="metadata" width="100%" aria-label="Screencast of creating a campaign group and a campaign">
   <source src="/img/docs/um-campaigns.mp4" type="video/mp4" />
@@ -29,6 +34,8 @@ A **campaign** is a named push of work, such as *Spring lead drive*. Every activ
 3. Click **Save**.
 
 Campaigns and campaign groups cannot be deleted, because activities and reports keep pointing at them. Moving a campaign to another group changes how its past activities are grouped in reports too.
+
+A campaign only groups and reports work. It does not decide the channel, the number used, or what happens after each disposition: those come from the [subject](subjects.md), its [subject flow](subject-flows.md) and the [activity load](load-inventory.md). So two subjects in the same campaign can behave differently.
 
 ## Where the campaign is used
 

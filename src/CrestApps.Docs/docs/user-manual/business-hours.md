@@ -3,6 +3,9 @@ sidebar_label: Business Hours
 sidebar_position: 23
 title: Business Hours Calendars
 description: Define opening hours and holidays once, then use the calendar on queues, entry points, the dialer's calling window, and automated SMS follow-ups.
+technical_manual:
+  - contact-center/agents-queues-dialer
+  - contact-center/voice-routing
 ---
 
 A **business hours calendar** says when you are open. The same calendar can be used by:
@@ -16,7 +19,9 @@ A **business hours calendar** says when you are open. The same calendar can be u
 | --- | --- |
 | **Menu** | Interaction Center > Management > Business hours |
 | **Permission** | Manage Contact Center business hours |
-| **Feature** | Contact Center Business Hours (`CrestApps.OrchardCore.ContactCenter.BusinessHours`), enabled automatically by the features that use it |
+| **Feature** | Contact Center Business Hours, enabled automatically by the features that use it |
+
+<AskYourAdmin />
 
 <video controls preload="metadata" width="100%" aria-label="Screencast of creating a business hours calendar with a weekly schedule and holidays">
   <source src="/img/docs/um-business-hours.mp4" type="video/mp4" />

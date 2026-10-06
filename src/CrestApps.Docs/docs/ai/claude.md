@@ -3,6 +3,9 @@ sidebar_label: Claude
 sidebar_position: 7
 title: Claude Integration
 description: Orchard Core module guidance for the Claude-based orchestrator.
+user_manual:
+  - user-manual/ai/profiles
+  - user-manual/ai/chat-interactions
 ---
 
 # Claude Integration
@@ -84,7 +87,7 @@ Tenant site settings override the shell configuration for values such as the bas
 
 ## How Orchard users work with Claude
 
-Once the feature is configured:
+Once the feature is configured, selecting the Claude orchestrator in the **Orchestrator** field of a profile (see [AI profiles](../user-manual/ai/profiles.md#general)) or a chat interaction shows a **Claude configuration** block:
 
 - AI profile editors can select Claude models and an **Effort level**
 - AI profile template editors can store Claude model and **Effort level** defaults

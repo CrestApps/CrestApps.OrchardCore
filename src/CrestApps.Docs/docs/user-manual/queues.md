@@ -3,6 +3,9 @@ sidebar_label: Queues
 sidebar_position: 20
 title: Queues and Queue Groups
 description: Create queues, choose how the next agent is picked, and decide what callers hear and what happens when nobody answers, the queue is full, or you are closed.
+technical_manual:
+  - contact-center/agents-queues-dialer
+  - contact-center/voice-routing
 ---
 
 A **queue** is where waiting work lines up until an agent takes it: an inbound call, a callback, or a message sent to a department. The queue decides **which agent** gets the next item, **how long** an offer rings, **what callers hear** while they wait, and **where they go** when you are closed or too busy.
@@ -11,7 +14,9 @@ A **queue** is where waiting work lines up until an agent takes it: an inbound c
 | --- | --- |
 | **Menu** | Interaction Center > Management > Queues (and Queue groups) |
 | **Permission** | Manage Contact Center queues (queue groups also accept Manage Contact Center queue groups) |
-| **Feature** | Contact Center Work Distribution (`CrestApps.OrchardCore.ContactCenter.Queues`) |
+| **Feature** | Contact Center Work Distribution |
+
+<AskYourAdmin />
 
 <video controls preload="metadata" width="100%" aria-label="Screencast of creating a queue group and a queue with routing, service level, hours and caller treatment settings">
   <source src="/img/docs/um-queues.mp4" type="video/mp4" />

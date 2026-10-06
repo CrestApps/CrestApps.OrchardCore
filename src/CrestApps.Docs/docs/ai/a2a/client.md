@@ -3,6 +3,8 @@ sidebar_label: A2A Client (Agent Connections)
 sidebar_position: 2
 title: A2A Client Integration
 description: Connect to remote A2A hosts to discover and use external AI agents.
+user_manual:
+  - user-manual/ai/tools-and-agents
 ---
 
 # A2A Client Integration
@@ -20,13 +22,7 @@ The A2A Client feature allows your Orchard Core application to connect to extern
 
 ### Add a Connection
 
-1. Navigate to **Artificial Intelligence** → **Agent to Agent Hosts**.
-2. Click the **Add Connection** button.
-3. Enter the following details:
-   - **Display Text**: A descriptive name for the connection (e.g., "Production Agent Hub").
-   - **Endpoint**: The base URL of the A2A host (e.g., `https://agents.example.com`). The agent card is automatically resolved at `/.well-known/agent-card.json`.
-   - **Authentication**: Select the appropriate authentication method for the remote host.
-4. Save the connection.
+Connections are managed under **Artificial Intelligence** → **Agent to Agent Hosts** (permission `ManageA2AConnections`). Each connection has a **Title**, an **Endpoint** (the base URL of the A2A host, e.g. `https://agents.example.com`; the agent card is automatically resolved at `/.well-known/agent-card.json`), and an **Authentication** method. The admin steps are in the User Manual under [A2A connections](../../user-manual/ai/tools-and-agents.md#a2a-connections).
 
 Each connection represents a single A2A host that may expose multiple agents through its agent card. A2A 1.0-style cards advertise protocol endpoints through `supportedInterfaces`; older cards that still expose a top-level URL are handled by the shared A2A client support.
 
@@ -52,28 +48,7 @@ For the OAuth-based options, **Token Endpoint**, **Client ID**, and **Scopes** a
 
 ## Assigning Agent Connections to AI Profiles
 
-Once connections are created, you can assign them to specific AI profiles, templates, or chat interactions:
-
-### On AI Profiles
-
-1. Navigate to the AI profile editor.
-2. Go to the **Capabilities** tab.
-3. Under **Agent Connections**, check the connections you want this profile to use.
-4. Save the profile.
-
-### On AI Profile Templates (Profile Sources)
-
-1. Navigate to the AI profile template editor.
-2. Go to the **Capabilities** tab.
-3. Under **Agent Connections**, check the connections you want templates using this source to include.
-4. Save the template.
-
-### On Chat Interactions
-
-1. Navigate to the chat interaction editor.
-2. Go to the **Parameters** tab under **Capabilities**.
-3. Under **Agent Connections**, check the connections to include for this interaction.
-4. Save the interaction.
+Once connections are created, you can assign them to specific AI profiles, profile templates (Profile source), chat interactions, and the **AI Completion using Direct Config** workflow task: each of these editors has an **A2A Connections** section on its **Capabilities** tab. The section only renders when at least one connection exists.
 
 ---
 

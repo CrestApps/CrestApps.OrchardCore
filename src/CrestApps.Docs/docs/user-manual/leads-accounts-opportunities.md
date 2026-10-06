@@ -3,6 +3,8 @@ sidebar_label: Leads, Accounts and Opportunities
 sidebar_position: 11
 title: Leads, Accounts and Opportunities
 description: Keep raw prospects apart from your contacts as leads, call and text them like contacts, convert the ones that qualify, and group contacts and deals under accounts.
+technical_manual:
+  - omnichannel/crm
 ---
 
 A **lead** is a prospect you have not qualified yet, such as a row from a purchased list, a trade-show scan or a web form. You can call it, text it, load it as activities and retry it through a subject flow, exactly like a contact. It is kept apart from your contacts, though, so your contact list holds only real customers.
@@ -11,9 +13,11 @@ When a lead qualifies, you **convert** it. Conversion creates a contact, or merg
 
 | | |
 | --- | --- |
-| **Menu** | Interaction Center > Leads, Accounts and Opportunities |
-| **Permission** | List and edit permissions for each type. **Convert leads** to convert (anyone who can manage activities can). **Edit converted leads** to change a lead after conversion. |
-| **Feature** | Omnichannel CRM (`CrestApps.OrchardCore.Omnichannel.Crm`) |
+| **Menu** | Interaction Center > Leads, Accounts and Opportunities; Interaction Center > Management > Lead Statuses, Lead Sources and Opportunity Stages |
+| **Permissions** | List content items, plus the content permissions of each lead, account and opportunity type; Convert leads (anyone with Manage activities can convert too); Edit converted leads; Manage lead statuses; Manage opportunity stages |
+| **Feature** | Omnichannel CRM |
+
+<AskYourAdmin />
 
 If you never turn the feature on, or never use accounts, contacts work exactly as before.
 
@@ -87,12 +91,13 @@ Everything you do with a contact works on a lead: **Add Activity**, **List Activ
 ## Convert a lead
 
 1. Open the lead and click **Convert Lead**.
-2. Choose the **contact**:
+2. Choose the **Contact**:
    - If a contact already has the lead's phone number or email, **Merge into** is picked for you. The contact keeps its own values and only gains the lead's phone numbers, email addresses and fields it does not have yet.
    - Otherwise pick **Create a new contact** and its type.
-3. Choose the **account**: an existing account, a new one (named after the lead's company unless you change it), or none. A contact you merge into keeps the account it already has.
-4. Tick **Create an opportunity** to record the deal. Pick its type and optionally enter a name, amount and close date.
-5. Click **Convert**.
+3. Choose the **Account**: **No account**, **Create a new account** (its name starts from the lead's company; left empty, it is named after the company and today's date), or **Add the contact to an existing account**. A contact you merge into keeps the account it already has.
+4. Tick **Create an opportunity** to record the deal. Pick its **Opportunity type** and optionally enter a **Name**, **Amount** and **Close date**. The contact becomes its primary contact.
+5. Under **Activities**, choose **Move the open activities to the contact** or **Cancel the open activities**. Finished activities always move.
+6. Click **Convert**.
 
 What conversion does:
 
@@ -115,7 +120,9 @@ An **Automatic** activity load of a lead type shows an **AI lead conversion** ca
 | **Opportunity type** | The type of that opportunity. *The lead type's default* uses the opportunity type set on the lead type; if the lead type has none, pick one here. |
 | **When a lead is qualified** | Tells the AI what qualified means for this load, for example *has a budget and wants to buy within three months*. Empty uses the subject goal. |
 
-The AI never converts a lead who declined, was undecided, only asked for information, or asked not to be contacted. It merges into an existing contact only when exactly one shares the lead's phone number or email; otherwise it creates a new contact. The account is the one named after the lead's company, created if needed. A retried activity keeps the option.
+The AI never converts a lead who declined, was undecided, only asked for information, or asked not to be contacted, and never converts on a call nobody spoke on or whose AI session was lost. It merges into an existing contact only when exactly one shares the lead's phone number or email; otherwise it creates a new contact. The account is the one named after the lead's company, created if needed. Open activities move to the contact. If a conversion fails, the lead stays as it was. A retried activity keeps the option.
+
+If you tick **Also create an opportunity**, the load can only be saved when it or the lead type names an opportunity type.
 
 ### Convert from a disposition
 
@@ -155,11 +162,13 @@ The **Lead source** fields of leads and opportunities are content pickers of thi
 
 Manage both lists under **Interaction Center > Management**. Unlike lead sources, these lists are part of the CRM itself, because their settings decide how leads and opportunities behave.
 
-- **Lead Statuses** (permission **Manage lead statuses**): each status has a name, a description, an order and a **Type**:
-  - **Open**: leads in it are still worked and loaded. Only an open status can be the one **a new lead starts in**.
+- **Lead Statuses** (permission **Manage lead statuses**): each status has a **Name**, a **Description**, an **Order** (lists show the lowest first) and a **Type**:
+  - **Open**: leads in it are still worked and loaded. Only an open status can be the one where **A new lead starts in this status**, and only one status can be that default.
   - **Closed**: leads in it are finished without being converted, and activity loads skip them unless a load asks for them.
-  - **Converted**: the status conversion gives a lead. Only one status has this type, and you cannot pick it by hand.
-- **Opportunity Stages** (permission **Manage opportunity stages**): each stage has a name, a description, an order, a **probability** from 0 to 100, and whether it is **closed** and **won**. A stage can only be won if it is closed.
+  - **Converted**: the status conversion gives a lead. You cannot set it on a lead by hand. Only one status has this type: giving it to another status turns the old one into a closed status. The converted status cannot be deleted.
+- **Opportunity Stages** (permission **Manage opportunity stages**): each stage has a **Name**, a **Description**, an **Order**, a **Probability** from 0 to 100 (the weighted pipeline uses it), and whether opportunities in it are **closed** and **won**. A stage can only be won if it is closed, and closed opportunities are left out of the open pipeline.
+
+The name of a status or stage cannot be changed after you create it.
 
 ## Import and export leads
 
@@ -182,20 +191,20 @@ With the Do-not-call registry option on, you can also choose what happens to a n
 
 When an import checks the Do-not-call registries, each lead it imports records when its numbers were checked.
 
-When you export a lead type, **Leave out converted leads** is on by default, because a converted lead lives on as its contact. The export includes `IsConverted`, `ConvertedUtc`, `ConvertedContactItemId` and `LastScrubbedUtc` (when the numbers were last checked against a registry).
+When you export a lead type, **Leave out converted leads** is on by default, because a converted lead lives on as its contact. The export also says whether each lead was converted, when, into which contact, and when its numbers were last checked against a registry.
 
 ## Automate with workflows
 
-With the Orchard Core **Workflows** feature on, the CRM adds two activities under **Omnichannel CRM**:
+With the **Workflows** feature on, the CRM adds two activities under **Omnichannel CRM** in the workflow editor (see [Contact Center Workflows](workflows.md) for how to build a workflow):
 
 | Activity | What it does |
 | --- | --- |
-| **Lead Converted** (event) | Starts a workflow whenever a lead is converted, from the Convert screen, a subject action or a workflow. The workflow's content item is the contact, so content tasks such as sending an email act on the customer. `Workflow.Input` also carries `LeadContentItemId`, `ContactContentItemId`, `AccountContentItemId`, `OpportunityContentItemId` and `ContactCreated`. |
-| **Convert Lead** (task) | Converts a lead, for example when a web form or an outside system says it qualified. By default it converts the workflow's content item. Choose the account handling, whether to create an opportunity, and what happens to open activities. It merges into an existing contact only when exactly one shares the lead's number or email. Its outcomes are **Converted**, with the contact's id as the result, and **Failed**. |
+| **Lead Converted** (event) | Starts a workflow whenever a lead is converted, from the Convert screen, a subject action, the AI or a workflow. The workflow's content item is the contact, so content tasks such as sending an email act on the customer. In Liquid fields you can also use `{{ Workflow.Input.LeadContentItemId }}`, and `ContactContentItemId`, `AccountContentItemId`, `OpportunityContentItemId` and `ContactCreated` the same way. |
+| **Convert Lead** (task) | Converts a lead, for example when a web form or an outside system says it qualified. By default it converts the workflow's content item. Choose the account handling, whether to create an opportunity, and what happens to open activities. It merges into an existing contact only when exactly one shares the lead's number or email. Its outcomes are **Converted**, with the contact's id as the result, and **Failed**. A lead that was already converted counts as **Converted** and does not start **Lead Converted** again. |
 
 ## Reports
 
-Three reports appear under **Reports** in the CRM and campaigns category. Each one is filtered by date range.
+Three reports appear under **Reports > CRM & Campaigns**. Each one is filtered by date range only, and needs the **View Omnichannel reports** permission. See [Reports](reports.md) for how to run and export a report.
 
 | Report | Shows |
 | --- | --- |

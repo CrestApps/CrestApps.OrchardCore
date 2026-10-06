@@ -3,6 +3,9 @@ sidebar_label: Enterprise report catalog
 sidebar_position: 5
 title: Enterprise Contact Center Report Catalog
 description: Definitions, formulas, filters, drill paths, exports, permissions, and limitations for the built-in Contact Center and CRM reports.
+user_manual:
+  - user-manual/reports
+  - user-manual/leads-accounts-opportunities
 ---
 
 # Enterprise Contact Center Report Catalog
@@ -89,14 +92,13 @@ Each report uses the shared date/time filter, export, permission, scheduling, an
 
 ## Running and filtering a report
 
-1. Enable **Reports** and the feature that contributes the report. There is no separate Contact Center reports feature: the Contact Center reports switch on when **Contact Center Work Distribution** (`CrestApps.OrchardCore.ContactCenter.Queues`) and **Reports** are both enabled. The CRM reports come with **Omnichannel Management**.
-2. Open **Reports** in the admin menu and select a report.
-3. Set **From** and **To** in the tenant's local time zone. The default is today, from the start to the end of the current tenant-local day. A Contact Center report refuses a range wider than 400 days (`CrestApps:ContactCenter:Reporting:MaximumReportRange`).
-4. Narrow the population with the displayed dimensions. Interaction reports offer queue group, queue, agent, channel, and direction (queue usage has no agent filter); workforce, call-quality and call-handling reports offer agent, and the last two also queue; campaign, subject and CRM reports offer campaign group, campaign, channel, source, and status. The enterprise interaction reports have no grouping choice: each has the fixed layout described below.
-5. Select **Show**. Every metric, table row, total, percentage, and duration is recalculated from the filtered raw population.
-6. Open **Export** and choose **Export CSV** or, when **Reports (OpenXml)** is enabled, **Export Excel (.xlsx)**. With only CSV available the toolbar shows a single **Export CSV** button. Export actions submit the same filter form, so downloaded data matches the visible report.
+How to pick a report, set the date range and filters, and export it is described step by step in [Reports](../user-manual/reports.md) in the User Manual. The technical rules behind those screens:
 
-An empty dimension means **All**. If **From** is later than **To**, the report swaps the resolved UTC boundaries before querying. Filters combine with logical AND; for example, selecting Queue A, Agent B, Voice, and Inbound returns only interactions matching all four dimensions.
+- **Features.** Enable **Reports** (`CrestApps.OrchardCore.Reports`) and the feature that contributes the report. There is no separate Contact Center reports feature: the Contact Center reports switch on when **Contact Center Work Distribution** (`CrestApps.OrchardCore.ContactCenter.Queues`) and **Reports** are both enabled. The CRM reports come with **Omnichannel Management** (`CrestApps.OrchardCore.Omnichannel.Managements`), and the lead and opportunity reports with **Omnichannel CRM** (`CrestApps.OrchardCore.Omnichannel.Crm`). Excel export needs **Reports (OpenXml)** (`CrestApps.OrchardCore.Reports.OpenXml`).
+- **Range.** **From** and **To** are entered in the tenant's local time zone and converted to UTC. The default is today, from the start to the end of the current tenant-local day. A Contact Center report refuses a range wider than 400 days; raise or lower it with `CrestApps:ContactCenter:Reporting:MaximumReportRange` (a `TimeSpan`, default `400.00:00:00`). If **From** is later than **To**, the report swaps the resolved UTC boundaries before querying.
+- **Dimensions.** Interaction reports offer queue group, queue, agent, channel, and direction (queue usage has no agent filter); workforce, call-quality and call-handling reports offer agent, and the last two also queue; campaign, subject and CRM reports offer campaign group, campaign, channel, source, and status. The enterprise interaction reports have no grouping choice: each has the fixed layout described below. An empty dimension means **All**, and filters combine with logical AND; for example, selecting Queue A, Agent B, Voice, and Inbound returns only interactions matching all four dimensions.
+- **Recalculation.** Every metric, table row, total, percentage, and duration is recalculated from the filtered raw population.
+- **Export.** With only CSV available the toolbar shows a single **Export CSV** button; with Excel too, an **Export** dropdown. Export actions submit the same filter form, so downloaded data matches the visible report.
 
 ### Executive and operational reports
 

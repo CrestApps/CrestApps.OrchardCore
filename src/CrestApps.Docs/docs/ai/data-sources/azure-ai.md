@@ -3,6 +3,8 @@ sidebar_label: Azure AI Search
 sidebar_position: 3
 title: AI Data Sources - Azure AI Search
 description: Azure AI Search support for AI data source knowledge base indexes with vector search and RAG capabilities.
+user_manual:
+  - user-manual/ai/knowledge
 ---
 
 | | |
@@ -30,6 +32,8 @@ When AI profiles are configured with data sources, the system needs to search an
 ## Getting Started
 
 1. Enable the **AI Data Sources - Azure AI Search** feature in the Orchard Core admin dashboard.
-2. Create an Azure AI Search knowledge base index via **Search > Indexes** using the "AI Knowledge Base Index" type.
+2. Create an Azure AI Search knowledge base index via **Search > Indexing** using the **AI Knowledge Base Index (Azure AI Search)** type.
 3. Configure an AI data source under **Artificial Intelligence > Data Sources**, selecting either an Orchard-managed Azure AI Search source index profile or the **Azure AI Search** external source type and the knowledge base index.
 4. The module will automatically sync documents from the source index to the knowledge base index with embeddings.
+
+The data source editor is described in the User Manual under [Data sources](../../user-manual/ai/knowledge.md#data-sources).

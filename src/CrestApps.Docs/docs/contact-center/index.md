@@ -3,6 +3,12 @@ sidebar_label: Contact Center
 sidebar_position: 0
 title: Contact Center
 description: Provider-agnostic contact center orchestration for Orchard Core - interactions, queues, routing, presence, and outbound dialing on top of the Telephony and Omnichannel modules.
+user_manual:
+  - user-manual/agent-workspace
+  - user-manual/calls
+  - user-manual/queues
+  - user-manual/live-dashboard
+  - user-manual/contact-center-settings
 ---
 
 | | |
@@ -15,7 +21,7 @@ The **Contact Center** module set turns the CRM into a full contact center that 
 Enable `CrestApps.OrchardCore.ContactCenter` for the interaction lifecycle, durable event log, baseline permissions, settings, and administration menu.
 
 :::tip[Operating the Contact Center day to day]
-If you just need to *do* something — sign in to a queue, accept a call, request a break, create a queue, load dialer activities, or monitor and whisper to an agent — go to the task-by-task [User Manual](../user-manual/index.md), where each task has its own how-to and screencast. The older [Agent & Supervisor User Manual](user-manual.md) covers the same ground in one page.
+If you just need to *do* something — sign in to a queue, accept a call, request a break, create a queue, load dialer activities, or monitor and whisper to an agent — go to the task-by-task [User Manual](../user-manual/index.md), where each task has its own how-to and screencast. Agents start with [Agent Workspace](../user-manual/agent-workspace.md), and supervisors with [Live Dashboard](../user-manual/live-dashboard.md).
 :::
 
 ## Feature and administration model

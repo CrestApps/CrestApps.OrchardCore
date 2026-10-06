@@ -3,6 +3,10 @@ sidebar_label: Messaging Workspace
 sidebar_position: 4
 title: Omnichannel Messaging Workspace
 description: A human-operated, channel-agnostic messaging inbox for Orchard Core. SMS is the first channel; email, WhatsApp, Messenger and others plug in as further channel features.
+user_manual:
+  - user-manual/messaging
+  - user-manual/entry-points-and-ivr
+  - user-manual/channel-endpoints
 ---
 
 | | |
@@ -23,39 +27,31 @@ The workspace itself carries **no channel**. Each channel is a separate feature 
 | SMS | **SMS Messaging Channel** (`CrestApps.OrchardCore.Omnichannel.Messaging.Sms`) | Available |
 | Email, WhatsApp, Facebook Messenger, Telegram, … | Future channel features | Build one with the channel contract below |
 
-It is the human counterpart to [SMS Automation](sms), which lets an **AI agent** carry an SMS conversation on its own. Both can run on the same numbers. An automated activity handles a conversation until it hands off, and from then on the workspace owns the thread.
+It is the human counterpart to [SMS Automation](sms.md), which lets an **AI agent** carry an SMS conversation on its own. Both can run on the same numbers. An automated activity handles a conversation until it hands off, and from then on the workspace owns the thread.
 
-For the agent's step-by-step guide with screencasts, see [Messaging](../user-manual/messaging.md) in the user manual.
+For the agent's step-by-step guide with screencasts (claiming, transferring, attachments, favorites, templates, broadcasts and the carrier keywords), see [Messaging](../user-manual/messaging.md) in the User Manual. This page covers how the workspace is built, set up, configured and extended.
 
 ## The workspace
 
-- **Customer list.** Every customer with a conversation, most recent first. A customer who wrote on several channels appears **once**, with the unread messages of all their channels added together and an icon for each channel they used. Filter by *All*, *Mine* or *Unassigned*, and by channel when more than one is enabled.
-- **Channel tabs.** Above the open conversation, one icon per enabled channel:
-  - the channel on screen is highlighted;
-  - a channel with unread messages carries a **red badge** with the count, updated live;
-  - the channel on screen also counts the customer's new messages that arrive while you are scrolled up reading
-    history or looking at another browser tab, and clears once you are back at the bottom of the conversation;
-  - a channel where the customer has an address but no conversation yet opens the composer on that channel;
-  - a channel where the customer cannot be reached is greyed out.
-- **Conversation.** The thread, the composer (canned-response templates, Enter to send), and the customer card with every contact record that matches the address.
-- **Attachments.** Each channel says which files it carries, and the composer follows it: drag files onto the conversation, paste them into the message box, or pick them with the attach button beside the channel name (a picture icon on a channel that carries pictures only, a paperclip on one that carries other files too). The button's tooltip lists what the channel accepts, and anything else is refused. Attached files show above the message and can be removed before sending; a message can be only attachments. SMS carries pictures (see [Pictures (MMS)](#pictures-mms)); a channel such as email can list documents as well. In the thread, pictures show as thumbnails that open the full picture in a new tab, and any other file shows as a download with its name and size.
-- **Favorites.** Mark the customers you message most as favorites, and keep them one click away:
-  - **Add to favorites** is a button at the top of every conversation, beside **Transfer**, and on the **Customer** card. Once a customer is a favorite, the button reads **Favorite** and clicking it again removes them.
-  - The **star button** beside the filter above the customer list opens your favorites; **Favorites** in the filter menu does the same and shows how many you have. Each favorite shows their latest conversation, or *No conversation yet: click to write*, which opens the composer to them.
-  - Your favorites also sit in a row above the customer list, and starred customers carry a star in it. The list's search narrows both.
-  - Favorites are your own: each agent keeps a separate list of up to 100 customers, and starring someone changes nothing for anyone else.
-- **New message.** The compose button opens a mail-style composer in the conversation pane, beside the customer list: pick the address to send **From** (which decides the channel), search contacts reachable on that channel for **To**, add other addresses, and write the message. One recipient starts a conversation; several get a private conversation each.
-- **Claim, transfer, close, spam, reopen.** The same on every channel. Replying to a conversation nobody holds claims it for you, under the same rules as **Claim**; replying never takes a conversation from the agent who already holds it.
-- **Transfer.** **Transfer** in the conversation header hands the conversation to another person, searched by name, or, when Contact Center Work Distribution is enabled, sends it **back to a queue**'s shared inbox for any member to claim. It stays the same conversation, so its whole history goes with it, and the customer is not told. An optional note for the recipient is kept in the conversation's history and never sent to the customer.
-  - Whoever holds the conversation may transfer it, and so may a supervisor with `ViewAllMessagingConversations`. A conversation nobody holds is claimed first; a supervisor can assign it directly.
-  - Only people who can use the messaging workspace are offered, never the person who already holds it, and never the person asking for the transfer.
+The screens are described in the [User Manual](../user-manual/messaging.md). What matters behind them:
+
+- **Customer-centric list.** The inbox lists customers, not conversations. A customer who wrote on several channels appears once, with the unread counts of all their channels summed and an icon per channel. The list filters by *All*, *Mine* or *Unassigned*, and by channel when more than one channel feature is enabled.
+- **Channel tabs.** One tab per enabled channel above the open conversation. Switching tabs keeps the view and only changes which channel messages are read from and sent to. A tab's unread badge also counts the customer's new messages that arrive while the agent is scrolled up or on another browser tab, and clears once the agent is back at the bottom of the conversation. A channel where the customer has an address but no conversation opens the composer on that channel; a channel where the customer cannot be reached is disabled.
+- **Attachments follow the channel.** The composer offers exactly the formats in the channel's `Capabilities.Attachments` and the server refuses anything else (see [Adding a channel](#adding-a-channel) and [Pictures (MMS)](#pictures-mms)).
+- **Favorites** are stored per agent, up to 100 customers each (`MessagingFavorites.MaxFavorites`); starring a customer changes nothing for anyone else.
+- **New message.** One recipient starts a conversation. Several recipients need `SendGroupMessages` and are queued as a group message, sent in the background as individual 1:1 conversations; a channel without broadcast support refuses more than one recipient.
+- **Ownership.** Claim, transfer, close, spam and reopen behave the same on every channel. Replying to a conversation nobody holds claims it, under the same rules as **Claim**; replying never takes a conversation from the agent who holds it.
+- **Transfer rules.** A transfer keeps the same conversation and history and does not notify the customer; the optional note (up to 500 characters) is recorded in the history only.
+  - The holder may transfer it, and so may a supervisor with `ViewAllMessagingConversations`. A conversation nobody holds is claimed first; a supervisor can assign it directly.
+  - **Back to a queue** is offered only when Contact Center Work Distribution is enabled.
+  - Only users with `UseMessagingWorkspace` are offered as recipients, never the current holder and never the requester.
   - A queue's conversation handed to one of its members stays the queue's; handed to someone outside the queue, it becomes that person's own conversation, since they could not open it otherwise.
-  - The recipient's list picks the conversation up at once, with a notice saying who sent it, on whichever admin page they are on; the sender's list drops it. The thread shows *Transferred from A to B* at the point it happened.
-- **Broadcasts.** One message to many recipients as individual 1:1 threads (not a group chat), on any channel that supports them. See [Broadcasts and templates](#broadcasts-and-templates).
-- **Available toggle.** An agent with an agent profile has an **Available** switch (*Accept routed conversations to your inbox*) above the customer list. When a queue's endpoint uses **Routed** distribution, conversations are pushed only to agents who are available with their inbox open.
+  - The recipient's list picks the conversation up at once and the sender's list drops it. The thread records *Transferred from A to B*.
+- **Broadcasts.** One message to many recipients as individual 1:1 threads (not a group chat), on any channel whose capabilities support broadcasts. See [Broadcasts and templates](#broadcasts-and-templates).
+- **Available toggle.** An agent with an agent profile has an **Available** switch above the customer list. When a queue's entry point uses **Routed** distribution, conversations are pushed only to agents who are available with their inbox open.
 - **Real time.** New messages, delivery receipts and assignment changes are pushed over the workspace's own SignalR hub. A new message for the open conversation is appended, one for the same customer on another channel badges that channel's tab, and any new message moves its customer to the top of the list with its unread count. If a push is missed (a dropped connection), the open conversation catches up within seconds and the customer list within half a minute on its own.
-- **Notifications on every admin page.** Agents do not have to keep the inbox open to hear about new work. On any other admin page, a notice pops up at the bottom right when a customer writes on a conversation they can see (*New message from* the customer's address, with the start of the message), when a conversation is transferred to them, and when one is sent back to a queue they serve. Clicking the notice opens the conversation. Each notice closes on its own after a few seconds.
-- **Menu count.** The **Messaging > Inbox** item of the admin menu shows how many conversations are waiting for you: the unread open conversations assigned to you, plus the unread open conversations nobody has taken yet in the queues you serve (in every queue, for a supervisor with `ViewAllMessagingConversations`). The parent **Messaging** item carries no number; its icon turns red while the count is above zero, so a collapsed menu still shows that something is waiting. The count updates as messages arrive and drops as soon as you open the conversation.
+- **Notifications on every admin page.** On any admin page other than the inbox, a notice appears when a customer writes on a conversation the user can see, when a conversation is transferred to them, and when one is sent back to a queue they serve.
+- **Menu count.** **Messaging > Inbox** shows the unread open conversations assigned to the user, plus the unread open conversations nobody has taken yet in the queues they serve (in every queue, for a supervisor with `ViewAllMessagingConversations`). The parent **Messaging** item carries no number; its icon turns red while the count is above zero.
 
 Only users with `UseMessagingWorkspace` get the notices and the count. Unless they can view all conversations, that starts once they have opened the workspace for the first time: that visit creates their agent profile, which is what ties them to their queues. Listening from another admin page never counts as being at the workspace: routed distribution only pushes conversations to agents whose **Inbox** is open, so an agent who is merely browsing other pages is not handed new work. The standalone soft phone page shows no notices.
 
@@ -73,7 +69,7 @@ Enabling the workspace on its own gives you the inbox with nothing to send or re
 
 | Dependency | Why |
 | --- | --- |
-| **Omnichannel Channel Endpoints** | Every address you send from (an SMS number today; a mailbox or WhatsApp number later) is a [channel endpoint](management#channel-endpoint). It carries the provider. |
+| **Omnichannel Channel Endpoints** | Every address you send from (an SMS number today; a mailbox or WhatsApp number later) is a [channel endpoint](management.md#omnichannel-address). It carries the provider. |
 | **Contact Center Inbound Entry Points** | Where each number's messages go is set on the [inbound entry point](../user-manual/entry-points-and-ivr.md#text-entry-points) that answers it for the channel, with opening hours and auto-replies. Entry points route to a queue or an agent, so this brings Contact Center Work Distribution's queues and the agents with it. |
 | **Contact Center Agent Services** (dependency-only) | Operators are Contact Center **agent profiles**. A bare profile is created automatically the first time a permitted user opens the workspace, so no Contact Center administration is required. |
 | **Orchard Core SignalR** | The workspace's own real-time hub. |
@@ -84,14 +80,11 @@ The workspace does **not** require Contact Center Voice, and it does not pull in
 
 ## Setting up SMS
 
-1. **Configure an SMS provider.** Enable at least one, for example [Telnyx SMS](../telephony/telnyx#telnyx-sms) or Twilio, and pick the tenant **default provider** at **Settings > Communication > SMS**.
-2. **Add your numbers as SMS channel endpoints** in **Interaction Center > Management > Omnichannel Addresses** (see [Channel endpoints](../user-manual/channel-endpoints.md)). Each SMS endpoint can pin the **provider** that owns the number; leave it empty to use the tenant default.
-3. **Add a Text messages entry point** for the numbers under **Interaction Center > Management > Inbound entry points** (see [Text entry points](../user-manual/entry-points-and-ivr.md#text-entry-points)):
-   - **Route to**: an **agent** (personal number) or a **queue** (department number).
-   - **Queue distribution**: **Shared pool** (agents claim conversations) or **Routed** (pushed to an agent by the routed-distribution feature).
-   - **Auto-reply**: an optional acknowledgement, sent at most once a day per conversation, and a **Closed auto-reply** sent instead outside the entry point's business hours.
+1. **Configure an SMS provider.** Enable at least one, for example [Telnyx SMS](../telephony/telnyx.md#telnyx-sms) or Twilio, and pick the tenant **default provider** at **Settings > Communication > SMS**.
+2. **Add your numbers as SMS channel endpoints** in **Interaction Center > Management > Omnichannel Addresses** (see [Omnichannel Addresses](../user-manual/channel-endpoints.md)). Each SMS endpoint can pin the **provider** that owns the number; leave it empty to use the tenant default.
+3. **Add a Text messages entry point** for the numbers under **Interaction Center > Management > Inbound entry points**. It routes to an agent (personal number) or a queue (department number), chooses **Shared pool** or **Routed** queue distribution, and can send an auto-reply (at most once a day per conversation) and a closed auto-reply. The fields are described in [Text entry points](../user-manual/entry-points-and-ivr.md#text-entry-points).
 4. **Grant the permissions** below to the roles that staff the inbox.
-5. **Point the provider webhook at Orchard Core** so inbound messages and delivery receipts arrive. Telnyx SMS maps `api/telnyx/webhook/sms` (see the [Telnyx SMS webhook](../telephony/telnyx#telnyx-sms)). The Twilio inbound webhook, `api/twilio/webhook/sms`, is mapped by this channel whenever Orchard Core's Twilio SMS feature is on, so the workspace receives Twilio texts without the AI features. Its address shows on the Twilio tab of the SMS settings screen.
+5. **Point the provider webhook at Orchard Core** so inbound messages and delivery receipts arrive. Telnyx SMS maps `api/telnyx/webhook/sms` (see the [Telnyx SMS webhook](../telephony/telnyx.md#telnyx-sms)). The Twilio inbound webhook, `api/twilio/webhook/sms`, is mapped by this channel whenever Orchard Core's Twilio SMS feature is on, so the workspace receives Twilio texts without the AI features. Its full address shows as **Webhook URL** on the Twilio tab of **Settings > Communication > SMS**.
 6. Open **Messaging → Inbox**.
 
 A **Send SMS** button appears beside phone-number fields on admin pages. It opens the customer's existing SMS conversation, or the composer when there is none.
@@ -123,7 +116,7 @@ The SMS channel carries pictures in both directions: JPEG, PNG, GIF and WebP, up
 **Sending.** Carriers refuse picture messages much over 1 MB, so the composer shrinks larger photos to fit before sending: each picture gets its share of that budget, and a still picture is redrawn smaller as a JPEG until it fits. An animated GIF is never redrawn, because that would lose the animation, so a GIF over its share is refused. A picture message is sent through a provider that can carry pictures:
 
 - **Telnyx** sends the pictures with the message.
-- **Twilio** numbers send pictures through the workspace's own Twilio sender, which uses the account in **Settings > SMS** (OrchardCore's Twilio provider sends text only).
+- **Twilio** numbers send pictures through the workspace's own Twilio sender, which uses the account in **Settings > Communication > SMS** (OrchardCore's Twilio provider sends text only).
 - Any other provider refuses a message with pictures rather than delivering the text alone, and the message is marked failed without retries.
 
 The provider downloads each picture from the site, so the site must be reachable from the internet. The link is built from the **Base URL** in **Settings > General**, or from the address of the current request when no base URL is set. Messages retried later in the background, and messages sent from a site reached only by a local or internal address, need the base URL set to the public address. The links are signed, name nothing but the picture, and expire after `AttachmentLinkLifetimeHours` (72 by default); a retried message gets fresh ones. The information-level log line *Built a public picture link on (host)* shows which address the provider was given.
@@ -138,13 +131,13 @@ While an automated (AI) activity is handling a contact on an endpoint, the works
 
 ## Permissions
 
-| Permission | Grants |
-| --- | --- |
-| `UseMessagingWorkspace` | Use the workspace on the endpoints you own or serve. |
-| `ViewAllMessagingConversations` | See every conversation (supervisors), and transfer any of them. The holder of a conversation can transfer it without this. |
-| `SendGroupMessages` | Send broadcasts and multi-recipient messages. |
-| `SendMessagesDuringQuietHours` | Changes the quiet-hours banner to a plain notice without the unsociable-hour warning. Sending is never blocked, with or without it. |
-| `ManageMessaging` | Manage templates (**Messaging > Templates**). |
+| Permission | Display name | Grants |
+| --- | --- | --- |
+| `UseMessagingWorkspace` | Use the messaging workspace | Use the workspace on the endpoints you own or serve. |
+| `ViewAllMessagingConversations` | View all messaging conversations | See every conversation (supervisors), and transfer any of them. The holder of a conversation can transfer it without this. |
+| `SendGroupMessages` | Send group messages | Send broadcasts and multi-recipient messages. |
+| `SendMessagesDuringQuietHours` | Send messages outside business hours | Changes the quiet-hours banner to a plain notice without the unsociable-hour warning. Sending is never blocked, with or without it. |
+| `ManageMessaging` | Manage the messaging workspace | Manage templates (**Messaging > Templates**). |
 
 Permissions apply to every channel; there is no per-channel permission. Where a number's messages go is edited on its entry point, under **Interaction Center > Management > Inbound entry points**, which requires the **Manage Contact Center queues** permission.
 
@@ -152,17 +145,7 @@ Permissions apply to every channel; there is no per-channel permission. Where a 
 
 **Messaging > Templates** (requires `ManageMessaging`) lists the canned responses agents insert from the composer. Each template has a **Name** and a **Body**.
 
-**Messaging > Broadcasts** (requires `SendGroupMessages`) lists sent broadcasts with their channel, sending address, status, recipient, sent and failed counts. **New broadcast** asks for:
-
-| Field | Description |
-| --- | --- |
-| **Name** | A label for the broadcast. |
-| **Send from** | The channel endpoint to send from. The address you pick decides the channel. |
-| **Recipients (contacts)** | Contacts reachable on the selected channel, searched by name or address. |
-| **Additional addresses** | Other addresses, one per line or comma-separated. |
-| **Message** | The text sent to every recipient. |
-
-**Queue broadcast** sends it in the background; each recipient gets their own 1:1 thread and cannot see the others. A queued broadcast cannot be cancelled.
+**Messaging > Broadcasts** (requires `SendGroupMessages`) lists sent broadcasts with their channel, sending address, status, recipient, sent and failed counts. A new broadcast names a sending channel endpoint (which decides the channel), contacts reachable on that channel and any additional addresses, and the message. It is queued and sent in the background; each recipient gets their own 1:1 thread and cannot see the others, and a queued broadcast cannot be cancelled. The step-by-step guide is in [Templates](../user-manual/messaging.md#templates) and [Broadcasts](../user-manual/messaging.md#broadcasts) in the User Manual.
 
 ### Exporting and importing templates
 

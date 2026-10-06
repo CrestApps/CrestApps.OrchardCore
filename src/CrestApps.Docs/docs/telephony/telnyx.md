@@ -3,6 +3,11 @@ sidebar_label: Telnyx
 sidebar_position: 2
 title: Telnyx Voice Provider
 description: Integrate the Telnyx platform as a browser WebRTC telephony provider and Contact Center voice provider.
+user_manual:
+  - user-manual/telephony-settings
+  - user-manual/calls
+  - user-manual/live-dashboard
+  - user-manual/automated-ai
 ---
 
 | | |
@@ -11,7 +16,7 @@ description: Integrate the Telnyx platform as a browser WebRTC telephony provide
 | **Feature ID** | `CrestApps.OrchardCore.Telnyx` |
 
 The **Telnyx** module integrates the [Telnyx](https://telnyx.com/) voice platform as a provider for the
-[Telephony](./) soft phone and the [Contact Center](../contact-center/index.md). Telnyx exposes a
+[Telephony](./index.md) soft phone and the [Contact Center](../contact-center/index.md). Telnyx exposes a
 SIP-over-WebSocket registrar and a server-side Call Control API, so — unlike a click-to-call provider —
 the browser soft phone **carries the call audio itself** (WebRTC) and the Contact Center can **bridge live
 calls to agents server-side** (`ServerSideAcd`), which is what makes true power dialing possible.
@@ -21,7 +26,7 @@ calls to agents server-side** (`ServerSideAcd`), which is what makes true power 
 | Feature | Feature ID | Purpose |
 | --- | --- | --- |
 | **Telnyx** | `CrestApps.OrchardCore.Telnyx` | Provides the Telnyx telephony provider, the browser WebRTC soft phone, and signed call-event webhooks. Depends on Telephony. When Contact Center Voice is also enabled, the Telnyx contact center voice adapter (outbound contact center calls, bridging live calls to agents via `ServerSideAcd`, and their real-time call events) activates automatically — it is integration glue, not a separately selectable feature. |
-| **Telnyx SMS** | `CrestApps.OrchardCore.Telnyx.Sms` | Adds the Telnyx SMS/MMS provider and its signed inbound and delivery-receipt messaging webhook, so Telnyx numbers can send and receive text through the [Messaging Workspace](../omnichannel/messaging-workspace) or [SMS Automation](../omnichannel/sms). Category **Communication**. Depends on **Telnyx** and `OrchardCore.Sms`, so enabling it also enables the Telnyx voice provider. See [Telnyx SMS](#telnyx-sms). |
+| **Telnyx SMS** | `CrestApps.OrchardCore.Telnyx.Sms` | Adds the Telnyx SMS/MMS provider and its signed inbound and delivery-receipt messaging webhook, so Telnyx numbers can send and receive text through the [Messaging Workspace](../omnichannel/messaging-workspace.md) or [SMS Automation](../omnichannel/sms.md). Category **Communication**. Depends on **Telnyx** and `OrchardCore.Sms`, so enabling it also enables the Telnyx voice provider. See [Telnyx SMS](#telnyx-sms). |
 | **Telnyx AI Voice Agent** | `CrestApps.OrchardCore.Telnyx.AiVoice` | Adds an automated outbound AI voice agent: the **Phone** omnichannel processor dials a contact over Telnyx, converses using Telnyx text-to-speech and real-time transcription driven by an AI chat profile, and settles the omnichannel activity with a summary and disposition. Category **Contact Center**. Depends on **Telnyx**, the **AI** and **AI Chat** features, and **Omnichannel Management**. See [Telnyx AI Voice Agent](#telnyx-ai-voice-agent). |
 
 ## Dependencies
@@ -50,7 +55,9 @@ short-lived SIP credential minted on demand.
 ## Getting your Telnyx credentials
 
 You only need an **API key**. The **Connect Telnyx** button then uses it to create and wire up everything
-else automatically — a Telnyx API key carries full account access.
+else automatically — a Telnyx API key carries full account access. The settings screen is also walked through for
+administrators in [Phone and SMS provider setup](../user-manual/telephony-settings.md#connect-telnyx-for-calls); the
+steps below add what Connect does behind the scenes.
 
 1. **Create an API key** — in the [Telnyx Mission Control portal](https://portal.telnyx.com/), go to
    **Account → Keys & Credentials → API Keys** and click **Create API key** (a V2 key). Paste it into
@@ -91,7 +98,8 @@ Telnyx** again.
 ## Configuration
 
 Configure Telnyx on the **Telnyx** tab under **Settings → Communication → Telephony**. You need the
-`Manage telephony settings` permission.
+`Manage telephony settings` permission (key `ManageTelephonySettings`). The user manual describes the screen for
+administrators in [Phone and SMS provider setup](../user-manual/telephony-settings.md); this table is the reference.
 
 Before connecting, the screen shows only the fields you need — **Enable**, **API key**, and the **Connect
 Telnyx** button. The rest appear after you connect:
@@ -317,8 +325,8 @@ since none of them can follow the call where it goes. While a sensitive-data cap
 can start, change or take over an engagement, and supervisors already listening are released.
 
 The live dashboard lists the other interventions too — **End call**, **Transfer** (to a queue, an agent or a number),
-**Record** on or off, the agent's state, and a **Message** to the agent's phone; see the
-[Agent & Supervisor User Manual](../contact-center/user-manual.md).
+**Record** on or off, the agent's state, and a **Message** to the agent's phone; see
+[Live dashboard](../user-manual/live-dashboard.md) in the user manual.
 
 ### An agent's own phone calls
 
@@ -350,7 +358,8 @@ leg includes it; a monitoring or whispering supervisor is not heard by the calle
 
 A Contact Center call on Telnyx is transferred by the Contact Center, not by Telnyx's own `transfer` action,
 because an agent or a queue is not something Telnyx can dial. The soft phone's transfer panel calls the
-Contact Center's transfer endpoints (see [How to transfer a call](../contact-center/user-manual.md)).
+Contact Center's transfer endpoints (the agent's view is [Transferring a Contact Center call](../user-manual/calls.md#transferring-a-contact-center-call)
+in the user manual).
 
 - **Blind to an agent or a queue** — the caller is first taken out of the agent's bridge and parked: a conference
   of their own is created from the caller's leg (`POST /v2/conferences`, name `cc-park-…`), which parks the agent's
@@ -401,7 +410,8 @@ again only when it has ended.
 
 ### Numbers dialed from the keypad
 
-A call the browser dials through its own Telnyx SDK goes out on the credential connection, which reports no Call
+What the agent sees is described under [Dial a phone number](../user-manual/calls.md#dial-a-phone-number) in the user
+manual. A call the browser dials through its own Telnyx SDK goes out on the credential connection, which reports no Call
 Control events, so the platform would have no `call_control_id` for it. Telnyx therefore advertises `BridgedDial`, and
 the soft phone asks the platform to place a keypad dial instead, naming the credential it is registered on:
 
@@ -474,7 +484,8 @@ as on an extension call.
 ### Leaving a conference and ending it for everyone
 
 The soft phone's **Hang up** in a conference leaves it, and the others stay connected (see
-[the soft phone's conference controls](index.md#keypad-recent-calls-and-extension-tabs)). For each of the agent's calls
+[the soft phone's conference controls](index.md#keypad-recent-calls-and-extension-tabs), and
+[Leave or end a conference](../user-manual/calls.md#leave-or-end-a-conference) for the agent's view). For each of the agent's calls
 in the conference, the hang-up is flagged `conferenceLeave`, and the provider handles it in three steps:
 
 1. It reads the agent's leg (`GET /v2/calls/{agent leg}`).
@@ -509,7 +520,8 @@ hangs up, the last one stays until they hang up too.
 
 ### Transferring a keypad call
 
-A transfer used to hand the dialed party straight to the destination with `actions/transfer`. The colleague it reached got
+The agent's view of these transfers is [Transferring a keypad call on Telnyx](../user-manual/calls.md#transferring-a-keypad-call-on-telnyx)
+in the user manual. A transfer used to hand the dialed party straight to the destination with `actions/transfer`. The colleague it reached got
 a leg the platform had not placed -- no client state naming the party, nothing in their call history -- so their phone
 treated it as a call it had dialed itself and could not transfer it again, and a destination that did not answer left the
 party alone on a parked line. A warm transfer was refused. Now the soft phone holds the call (its usual hold tone, sent on
@@ -564,16 +576,19 @@ way, and a call dialed from the browser still says in the transfer panel that it
 
 ## DID → agent routing
 
-Inbound calls route by their dialed number through **entry points** (**Contact Center → Entry points**). An
-entry point maps one or more DIDs and now chooses a **Route to** target:
+Inbound calls route by their dialed number through **entry points** (**Interaction Center > Management > Inbound
+entry points**). An entry point maps one or more DIDs and chooses a **Route to** target (see
+[Inbound entry points](../user-manual/entry-points-and-ivr.md) in the user manual):
 
 - **Queue** (default) — the call is enqueued and offered to an available agent by the queue's routing
   strategy.
-- **Specific agent** — the call is offered **directly** to the named agent (a personal line). When that
-  agent is unavailable, the call falls back to the entry point's target queue for normal routing.
+- **Specific agent** — the call is offered **directly** to the named agent (a personal line), through the
+  reservation and offer pipeline under a synthetic direct-routing queue, so no other agent is ever offered it.
+  There is no target queue and no queue fallback: an unanswered call goes to the agent's voicemail when the entry
+  point's voicemail is on, and a closed entry point sends the caller to voicemail unless it is set to reject.
 
 To give an agent a dedicated inbound line, create an entry point with the agent's DID, set **Route to** to
-**Specific agent**, pick the agent, and set a **Target queue** as the fallback.
+**Specific agent**, and pick the agent.
 
 :::tip
 To have an agent call out from their own number, add the number as a **Phone** channel
@@ -656,9 +671,9 @@ The connection identifiers belong to one Telnyx account. Replaying a plan into a
 ## Telnyx AI Voice Agent
 
 The **Telnyx AI Voice Agent** feature (`CrestApps.OrchardCore.Telnyx.AiVoice`) is the **voice** counterpart
-to [SMS Automation](../omnichannel/sms): instead of a human agent or a text conversation, an **AI agent**
+to [SMS Automation](../omnichannel/sms.md): instead of a human agent or a text conversation, an **AI agent**
 places an outbound call over Telnyx and talks to the contact. It registers the **Phone**-channel omnichannel
-processor, so it is driven entirely by the [Omnichannel Management](../omnichannel/management) automated
+processor, so it is driven entirely by the [Omnichannel Management](../omnichannel/management.md) automated
 activity pipeline — the same **subject flow → campaign → load activities** model used by automated SMS.
 
 How a call runs:
@@ -689,7 +704,7 @@ acts on next:
 The AI profile, speech-to-text deployment, text-to-speech deployment, voice, update permissions, and reply
 delay are the **automated voice settings** configured on the subject flow (and overridable per activity
 batch), resolved in order **activity batch → subject flow → global AI site settings**. See
-[Subject Flow](../omnichannel/management#subject-flow) for where these fields live and how they cascade. The
+[Subject Flow](../omnichannel/management.md#subject-flow) for where these fields live and how they cascade. The
 **Phone calls** starting points in the **New AI Profile** picker (**Answer calls at the front desk**, **Qualify
 leads by phone**, **Confirm appointments by phone**) create a profile ready for these calls; see
 [Text messaging and phone call starting points](../ai/profile-templates.md#text-messaging-and-phone-call-starting-points).
@@ -703,7 +718,7 @@ public base URL, because Telnyx dials it after the streaming command starts.
 
 The **Telnyx SMS** feature (`CrestApps.OrchardCore.Telnyx.Sms`) adds Telnyx as an Orchard Core **SMS
 provider**, so Telnyx numbers can send and receive text messages through the
-[Messaging Workspace](../omnichannel/messaging-workspace) (human two-way) and [SMS Automation](../omnichannel/sms)
+[Messaging Workspace](../omnichannel/messaging-workspace.md) (human two-way) and [SMS Automation](../omnichannel/sms.md)
 (AI-driven). It is categorized under **Communication**, not Telephony. It depends on both **Telnyx** and
 `OrchardCore.Sms`, so enabling Telnyx SMS also enables the Telnyx voice provider on the tenant.
 
@@ -718,26 +733,38 @@ manual restart.
 ### Configuration from appsettings
 
 Configure the provider under the `OrchardCore_Sms_Telnyx` section (mirroring Orchard Core's
-`OrchardCore_Sms_Twilio` convention):
+`OrchardCore_Sms_Twilio` convention). In the startup project's `appsettings.json` the section sits under the
+`OrchardCore` key:
 
 ```json
 {
-  "OrchardCore_Sms_Telnyx": {
-    "IsEnabled": true,
-    "ApiKey": "KEY0123...",
-    "MessagingProfileId": "40017...",
-    "WebhookPublicKey": "base64-ed25519-public-key"
+  "OrchardCore": {
+    "OrchardCore_Sms_Telnyx": {
+      "ApiKey": "KEY0123...",
+      "MessagingProfileId": "40017...",
+      "WebhookPublicKey": "base64-ed25519-public-key",
+      "ApiBaseUrl": "https://api.telnyx.com/v2/"
+    }
   }
 }
 ```
 
-The provider is enabled only when it is configured with an API key.
+In a tenant's own `App_Data/Sites/{TenantName}/appsettings.json`, leave the `OrchardCore` wrapper out and start at
+`OrchardCore_Sms_Telnyx`. As environment variables, write
+`OrchardCore__OrchardCore_Sms_Telnyx__ApiKey` and so on. See [Configuration](../configuration.md#telnyx-sms).
+
+| Key | Purpose |
+| --- | --- |
+| `ApiKey` | The Telnyx API key. The provider is enabled whenever this has a value; there is no separate enable flag in configuration. |
+| `MessagingProfileId` | Optional. The Telnyx messaging profile used to send. |
+| `WebhookPublicKey` | The Ed25519 public key used to verify inbound webhooks. |
+| `ApiBaseUrl` | Optional. Overrides the Telnyx API base URL. Empty uses `https://api.telnyx.com/v2/`; a trailing `/` is added when missing. |
 
 ### Configuration from the UI
 
-Alternatively, go to **Settings > Communication > SMS** (`/Admin/Settings/sms`), open the **Telnyx** settings,
-tick **Enable the Telnyx SMS provider**, and enter the API key, messaging profile id, and webhook public key. Secrets are protected at
-rest with the data-protection provider. Values entered in the UI take precedence over appsettings.
+Alternatively, configure it on the **Telnyx** tab of **Settings > Communication > SMS** (`/Admin/Settings/sms`); the
+fields are described for administrators in [Set up SMS](../user-manual/telephony-settings.md#set-up-sms). Secrets are
+protected at rest with the data-protection provider. Values entered in the UI take precedence over appsettings.
 
 Set the tenant **default provider** on the same SMS settings screen if Telnyx should be the default sender.
 

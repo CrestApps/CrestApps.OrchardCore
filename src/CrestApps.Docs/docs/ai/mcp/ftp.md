@@ -3,6 +3,8 @@ sidebar_label: FTP Resources
 sidebar_position: 2
 title: MCP FTP/FTPS Resource Handler
 description: FTP and FTPS resource support for the MCP Server, allowing remote files on FTP servers to be exposed as MCP resources.
+user_manual:
+  - user-manual/ai/tools-and-agents
 ---
 
 | | |
@@ -48,7 +50,7 @@ When creating an FTP resource in the admin UI, you can configure:
 
 ### Creating an FTP Resource via Admin UI
 
-1. Navigate to **Artificial Intelligence** → **MCP Resources**
+1. Navigate to **Artificial Intelligence** → **Model Context Protocol** → **Resources**
 2. Click **Add Resource**
 3. Select **FTP/FTPS** as the resource type
 4. Fill in the connection details:

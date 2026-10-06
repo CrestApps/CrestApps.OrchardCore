@@ -3,6 +3,8 @@ sidebar_label: Skills & Entitlements
 sidebar_position: 21
 title: Skills and Agent Entitlements
 description: Define routable skills, then decide which queues and campaigns each agent may sign in to and how skilled they are.
+technical_manual:
+  - contact-center/agents-queues-dialer
 ---
 
 **Skills** describe what an agent can do, such as *Spanish*, *Billing* or *Tier 2 support*. Queues can require or prefer skills. **Agent entitlements** decide which queues and campaigns an agent may sign in to, in what order the agent is offered work, and which skills the agent holds.
@@ -11,7 +13,9 @@ description: Define routable skills, then decide which queues and campaigns each
 | --- | --- |
 | **Menu** | Interaction Center > Management > Skills, and Interaction Center > Management > Agent entitlements |
 | **Permission** | Manage Contact Center skills; Manage Contact Center agents |
-| **Features** | Skills come with Contact Center Work Distribution. Entitlements are the optional **Contact Center Agent Entitlements** feature (`CrestApps.OrchardCore.ContactCenter.AgentEntitlements`). |
+| **Features** | Skills come with Contact Center Work Distribution. Entitlements are the optional **Contact Center Agent Entitlements** feature. |
+
+<AskYourAdmin />
 
 <video controls preload="metadata" width="100%" aria-label="Screencast of creating a skill and granting an agent queues, campaigns and skills on the agent entitlements screen">
   <source src="/img/docs/um-skills-entitlements.mp4" type="video/mp4" />
