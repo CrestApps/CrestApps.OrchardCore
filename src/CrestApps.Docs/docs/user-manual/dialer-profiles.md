@@ -59,6 +59,7 @@ With a Power profile the agent only signs in and stays **Available**. Within a m
    | **Calls per agent** | Power | Calls started per pacing cycle for the campaign, 1 to 3. Each call reserves its own agent, so it never dials more calls than there are available agents. |
    | **Max attempts** | Power, Progressive | How many attempts one contact may get, counting the first call and every follow-up activity created to try again. Default 3. |
    | **Retry delay (minutes)** | Power, Progressive | The shortest wait after an attempt before the next attempt is dialed. Default 60. |
+   | **Ring time (seconds)** | Power, Progressive | How long a call rings before it is given up as unanswered, from 15 to 120. Default 30. A call never rings for less than 15 seconds. |
    | **Screen out answering machines** | Power, Progressive | **Off** (default), **Standard detection** or **Premium detection**. When on, the agent is connected only after the provider hears a person. A call answered by a voicemail or fax machine is hung up, the agent goes straight back to Ready without wrap-up or a pop, and the dialer completes the activity with the *Answering machine* disposition. The person who answers hears a few seconds of silence while the call is screened. Telnyx only. |
 
 4. On **Caller ID**, pick the **Caller ID** number customers see from your [Omnichannel Addresses](channel-endpoints.md) used for **Voice calls** (**Provider default** uses the provider's caller ID). A **Dial from** number picked when activities are loaded is shown instead for that load's calls, unless **Always show this caller ID** is ticked, and pick the **Default calling region** used for numbers written without a country code. A number typed before caller IDs were picked stays selected until you change it.
@@ -70,16 +71,59 @@ With a Power profile the agent only signs in and stays **Available**. Within a m
    | **Enforce a calling window** | Dials only while the chosen calendar is open, checked in the **contact's** time zone. |
    | **Outbound calling calendar** | The [business hours calendar](business-hours.md) for the calling window. Required when the window is enforced. |
 
-6. On **Abandonment and safe harbor** (Power and Progressive only):
+6. On **Abandoned calls** (Power and Progressive only):
 
    | Field | What it does |
    | --- | --- |
-   | **Enforce an abandonment-rate cap** | Stops automated dialing when too many answered calls find no agent. Needs safe harbor on. |
+   | **Measured abandonment** | Shown once the profile has placed calls: the abandonment rate over the rolling window and over the last 30 days, with the counts behind it. |
+   | **Enforce an abandonment-rate cap** | Pauses automated dialing while too many answered calls find no agent. Needs the abandoned-call message on. |
    | **Maximum abandonment rate** | The cap, as a share of calls a person answered. Default 3. |
-   | **Abandonment sample floor** | How many answered calls are needed before the cap applies. Default 30. |
-   | **Play a safe-harbor announcement when abandoned** / **Safe-harbor announcement** | The message played instead of silence when no agent is free. |
+   | **Abandonment sample floor** | How many answered calls are needed in the window before the cap applies. Default 30. |
+   | **Play a message when a call is abandoned** | Plays the abandoned-call message instead of hanging up in silence. A warning shows while it is off. |
+   | **Abandoned call message** | What the person hears. Required when the message is on. See [Abandoned calls](#abandoned-calls). |
 
 7. Click **Save**.
+
+## Abandoned calls
+
+With Power and Progressive dialing, the customer is dialed first and the reserved agent is connected once a person answers. A call is **abandoned** when a person answers and no agent is connected to them within two seconds. That happens when the agent's phone does not pick up (the browser was closed, the phone is not registered, the network dropped), when the agent cannot be connected at all, when the agent is connected later than two seconds after the answer, or when the person hangs up after waiting more than two seconds.
+
+These settings support the common abandoned-call rules for automated dialing. Confirm which rules apply to your calls; the settings do not make a campaign compliant on their own.
+
+### The abandoned-call message
+
+When the agent cannot be connected, the person hears the profile's **Abandoned call message** straight away, and the call ends when the message has been spoken. If the message is not on, the call is hung up without a word.
+
+Keep the message short and say who is calling and a number the person can call to reach you or to ask not to be called again. Two placeholders are filled in for each call:
+
+| Placeholder | Replaced with |
+| --- | --- |
+| `{company}` | The site name (**Configuration > Settings > General**). |
+| `{number}` | The number the call came from (the caller ID the person saw), read digit by digit. |
+
+The editor suggests this message when the field is empty: `Sorry we missed you. This call was from {company}. To be removed from our list or to reach us, please call {number}. Goodbye.`
+
+:::note[Telnyx]
+The message is read out by the voice provider's text-to-speech, in the voice and language set for the provider.
+:::
+
+### How the abandonment rate is measured
+
+The rate is measured for each dialer profile:
+
+- **Answered by a person** counts every Power or Progressive call a person picked up. With answering-machine screening on, the call counts from the moment the provider says a person answered. Calls answered by a machine or fax, busy, unanswered, failed and out-of-service calls are not counted.
+- **Abandoned** counts the answered calls no agent reached within two seconds, for any of the reasons above.
+- The **rate** is abandoned calls divided by calls answered by a person, over the rolling window your administrator sets (30 minutes unless changed). The editor also shows the last 30 days.
+
+When **Enforce an abandonment-rate cap** is on and the rate over the window is above the **Maximum abandonment rate**, the dialer places no new calls for the profile until the rate falls back. The cap waits until the window holds at least **Abandonment sample floor** answered calls.
+
+:::note[One profile per campaign]
+The rate is measured per profile, not per campaign. If one profile dials several campaigns, their calls are measured together. Use a profile for each campaign when each campaign's rate must be kept on its own.
+:::
+
+### Ring time
+
+An unanswered call rings for the profile's **Ring time** before it is given up, and never for less than 15 seconds, which is what the common abandoned-call rules expect.
 
 ## What happens to each record
 

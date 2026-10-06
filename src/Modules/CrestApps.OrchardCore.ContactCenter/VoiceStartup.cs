@@ -102,6 +102,9 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped<IInboundVoiceInteractionProbe, InboundVoiceInteractionProbe>()
             .AddScoped<IContactCenterVoiceProviderResolver, ContactCenterVoiceProviderResolver>()
             .AddScoped<IContactCenterAgentLegFailureService, ContactCenterAgentLegFailureService>()
+            // Records when a person answers an automated dialer call and whether an agent reached them in time, and
+            // plays the abandoned-call message when none can. A no-op for every other call.
+            .AddScoped<IDialerAbandonmentTracker, DialerAbandonmentTracker>()
             .AddScoped<IContactCenterCallCommandService, ContactCenterCallCommandService>()
             // Rings the agent's device while a voice offer is still ringing, and joins or hangs up that leg.
             .AddScoped<IAgentPreDialLegStore, DistributedCacheAgentPreDialLegStore>()

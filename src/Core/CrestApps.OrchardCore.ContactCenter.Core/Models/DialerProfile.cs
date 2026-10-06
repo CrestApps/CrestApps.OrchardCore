@@ -54,6 +54,13 @@ public sealed class DialerProfile : CatalogItem, INameAwareModel, IModifiedUtcAw
     public DialerAnsweringMachineDetection AnsweringMachineDetection { get; set; }
 
     /// <summary>
+    /// Gets or sets how many seconds an automated call rings before it is given up as unanswered. Automated dialing
+    /// never rings for less than <see cref="DialerAbandonment.MinimumRingTimeoutSeconds"/>, whatever is stored here,
+    /// because the common abandoned-call rules expect an unanswered call to ring for at least fifteen seconds.
+    /// </summary>
+    public int RingTimeoutSeconds { get; set; } = DialerAbandonment.DefaultRingTimeoutSeconds;
+
+    /// <summary>
     /// Gets or sets the seconds added to a preview offer when the agent asks for more time.
     /// </summary>
     /// <remarks>
@@ -122,13 +129,15 @@ public sealed class DialerProfile : CatalogItem, INameAwareModel, IModifiedUtcAw
     public int AbandonmentSampleFloor { get; set; } = 30;
 
     /// <summary>
-    /// Gets or sets a value indicating whether an abandoned automated call plays a safe-harbor announcement
+    /// Gets or sets a value indicating whether an abandoned automated call plays the abandoned-call message
     /// that identifies the caller instead of being dropped silently.
     /// </summary>
     public bool SafeHarborEnabled { get; set; }
 
     /// <summary>
-    /// Gets or sets the safe-harbor announcement played to a live party when no agent connects in time.
+    /// Gets or sets the abandoned-call message spoken to a person who answered when no agent can be connected.
+    /// <see cref="DialerAbandonment.CompanyToken"/> and <see cref="DialerAbandonment.NumberToken"/> are replaced
+    /// with the site name and the number the call was placed from.
     /// </summary>
     public string SafeHarborMessage { get; set; }
 

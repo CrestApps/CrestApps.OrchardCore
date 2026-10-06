@@ -3,6 +3,8 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telnyx;
 using CrestApps.OrchardCore.Telnyx.Services;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -82,6 +84,7 @@ internal static class TelnyxContactCenterProviderFactory
             apiClient,
             new Mock<IVoiceMediaItemManager>().Object,
             monitor.Object,
+            new TelnyxHangUpAfterSpeechRegistry(new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()))),
             NullLogger<TelnyxQueueTreatmentProvider>.Instance);
     }
 }

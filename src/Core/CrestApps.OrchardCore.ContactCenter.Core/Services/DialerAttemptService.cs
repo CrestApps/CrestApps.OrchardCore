@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
@@ -225,6 +226,14 @@ public sealed class DialerAttemptService : IDialerAttemptService
         {
             request.Metadata[TelephonyConstants.RequestMetadata.AnsweringMachineDetection] =
                 profile.AnsweringMachineDetection == DialerAnsweringMachineDetection.Premium ? "premium" : "standard";
+        }
+
+        // A paced call rings for the profile's ring time, never less than the fifteen seconds the abandoned-call rules
+        // expect, whatever an imported profile says. A preview call is the agent's, who hangs up when they choose.
+        if (profile.Mode.IsAutomated())
+        {
+            request.Metadata[TelephonyConstants.RequestMetadata.RingTimeoutSeconds] =
+                DialerAbandonment.ResolveRingTimeoutSeconds(profile).ToString(CultureInfo.InvariantCulture);
         }
 
         try

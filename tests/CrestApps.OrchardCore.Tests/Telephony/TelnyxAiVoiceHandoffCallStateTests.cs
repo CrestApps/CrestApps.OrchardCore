@@ -9,13 +9,15 @@ using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telnyx;
 using CrestApps.OrchardCore.Telnyx.Services;
 using CrestApps.OrchardCore.Tests.Modules.ContactCenter;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;
-using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -205,7 +207,8 @@ public sealed class TelnyxAiVoiceHandoffCallStateTests
                 new Mock<ISession>().Object,
                 ingressGate,
                 clock.Object,
-                NullLogger<ProviderVoiceEventService>.Instance);
+                NullLogger<ProviderVoiceEventService>.Instance,
+                Mock.Of<IDialerAbandonmentTracker>());
 
             var ingestor = new NormalizedVoiceEventIngestor(
                 [new ContactCenterVoiceProjection(new ProviderVoiceEventSink(voiceEvents), NullLogger<ContactCenterVoiceProjection>.Instance)],
@@ -242,6 +245,7 @@ public sealed class TelnyxAiVoiceHandoffCallStateTests
                     new TestOptionsMonitor<TelnyxOptions>(new TelnyxOptions { ApiBaseUrl = "https://api.telnyx.test/v2/", ApiKey = "KEY" }),
                     new TelnyxApiRetryPolicy(TimeSpan.Zero),
                     NullLogger<TelnyxApiClient>.Instance),
+                new TelnyxHangUpAfterSpeechRegistry(new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()))),
                 clock.Object,
                 NullLogger<TelnyxWebhookService>.Instance);
 

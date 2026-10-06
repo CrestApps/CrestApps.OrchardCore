@@ -147,6 +147,8 @@ public sealed class DialerStartup : StartupBase
 
         services
             .AddScoped<IDialerAbandonmentPolicyService, DefaultDialerAbandonmentPolicyService>()
+            // The live answers and abandoned calls the cap is measured against, counted from the event log.
+            .AddScoped<IDialerAbandonmentStatisticsProvider, InteractionEventDialerAbandonmentStatisticsProvider>()
             .AddScoped<IDialerEligibilityService, DefaultDialerEligibilityService>()
             .AddScoped<IProviderCommandDispatchValidator, DialerProviderCommandDispatchValidator>()
             .AddScoped<IDialerAttemptCompensationService, DialerAttemptCompensationService>()

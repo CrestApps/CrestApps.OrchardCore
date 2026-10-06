@@ -125,6 +125,12 @@ public static class TelephonyConstants
         public const string AnsweringMachineDetection = "answeringMachineDetection";
 
         /// <summary>
+        /// The seconds an outbound call may ring before the provider gives up on it, as a whole number. A provider
+        /// without a configurable ring time ignores it and rings for its own default.
+        /// </summary>
+        public const string RingTimeoutSeconds = "ringTimeoutSeconds";
+
+        /// <summary>
         /// Marks a hang-up the soft phone sends from one participant's row of a conference: it ends that participant
         /// alone. A provider whose call is also the agent's own way into the conference hangs up only the participant's
         /// leg, and answers with the call still up and <see cref="CallMetadata.ParticipantLeft"/> set.

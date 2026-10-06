@@ -34,6 +34,7 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
     private readonly IVoiceIngressGate _ingressGate;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly IDialerAbandonmentTracker _abandonmentTracker;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProviderVoiceEventService"/> class.
@@ -53,6 +54,7 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
     /// <param name="ingressGate">The provider-neutral gate that serializes each provider call stream.</param>
     /// <param name="clock">The clock used to stamp times.</param>
     /// <param name="logger">The logger instance.</param>
+    /// <param name="abandonmentTracker">The tracker that records when a person answers a dialer call and whether an agent reached them in time.</param>
     public ProviderVoiceEventService(
         IInteractionManager interactionManager,
         ICallSessionManager callSessionManager,
@@ -68,7 +70,8 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
         ISession session,
         IVoiceIngressGate ingressGate,
         IClock clock,
-        ILogger<ProviderVoiceEventService> logger)
+        ILogger<ProviderVoiceEventService> logger,
+        IDialerAbandonmentTracker abandonmentTracker)
     {
         _interactionManager = interactionManager;
         _callSessionManager = callSessionManager;
@@ -85,6 +88,7 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
         _ingressGate = ingressGate;
         _clock = clock;
         _logger = logger;
+        _abandonmentTracker = abandonmentTracker;
     }
 
     /// <inheritdoc/>
@@ -303,6 +307,13 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
         // the agent was being joined -- was never the agent's call, so it neither parks them in wrap-up nor asks them
         // for a disposition: the dialer dispositions it on its own and routing releases the agent.
         var endedWithoutAgent = IsTerminalState(providerEvent.State) && RecordDialerAttemptEnd(session, interaction, now);
+
+        // A person who answered and gave up waiting for an agent was abandoned once they had waited past the threshold.
+        if (endedWithoutAgent)
+        {
+            await _abandonmentTracker.RecordEndedWithoutAgentAsync(interaction, now, cancellationToken);
+        }
+
         var handledCallEnded = IsTerminalState(providerEvent.State) &&
             !endedWithoutAgent &&
             !string.IsNullOrEmpty(session.AgentId) &&
@@ -346,7 +357,7 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
 
         if (providerEvent.State == VoiceCallState.Connected)
         {
-            await StageAnsweredOutboundBridgeAsync(session, interaction, cancellationToken);
+            await StageAnsweredOutboundBridgeAsync(session, interaction, now, cancellationToken);
         }
 
         await _session.SaveChangesAsync(cancellationToken);

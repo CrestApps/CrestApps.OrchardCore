@@ -73,6 +73,15 @@
     </div>
 </div>
 
+<div class="ocat-wrapper" asp-validation-class-for="RingTimeoutSeconds" data-dialer-modes="Power Progressive Predictive">
+    <label asp-for="RingTimeoutSeconds" class="ocat-label">@T["Ring time (seconds)"]</label>
+    <div class="ocat-end">
+        <input asp-for="RingTimeoutSeconds" type="number" min="@DialerAbandonment.MinimumRingTimeoutSeconds" max="@DialerAbandonment.MaximumRingTimeoutSeconds" class="form-control" />
+        <span asp-validation-for="RingTimeoutSeconds" class="text-danger"></span>
+        <span class="hint">@T["How long a call rings before it is given up as unanswered, from {0} to {1} seconds. The common abandoned-call rules expect an unanswered call to ring for at least {0} seconds, so a shorter time is never used.", DialerAbandonment.MinimumRingTimeoutSeconds, DialerAbandonment.MaximumRingTimeoutSeconds]</span>
+    </div>
+</div>
+
 <div class="ocat-wrapper" asp-validation-class-for="AnsweringMachineDetection" data-dialer-modes="Power Progressive">
     <label asp-for="AnsweringMachineDetection" class="ocat-label">@T["Screen out answering machines"]</label>
     <div class="ocat-end">
@@ -105,7 +114,7 @@
                 group.style.display = modes.indexOf(mode) === -1 ? 'none' : '';
             });
 
-            // A card whose every setting is for other modes (abandonment and safe harbor for an agent-driven mode) is
+            // A card whose every setting is for other modes (abandoned calls for an agent-driven mode) is
             // hidden too, rather than shown empty.
             document.querySelectorAll('.card').forEach(function (card) {
                 if (!card.querySelector('[data-dialer-modes]')) {
