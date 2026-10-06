@@ -34,6 +34,7 @@ Almost everything lives under **Interaction Center** in the admin menu.
 | **Interaction Center > Live dashboard** | The supervisor's real-time view of queues and agents. |
 | **Interaction Center > Shared voicemail** | Voicemail left for a queue rather than one person. |
 | **Interaction Center > My voicemail greeting** | The greeting callers hear when you miss a call. |
+| **Interaction Center > Call recordings** | Recorded calls to search and play back, with the transcript of AI calls. |
 | **Interaction Center > Management** | The manager's setup screens: subject flows, dispositions, campaigns, load activities, bulk activity management, queues, skills, business hours, agent states, entry points, voice media, dialer profiles, extensions and channel endpoints. |
 | **Messaging** | The shared SMS inbox, broadcasts and message templates. |
 | **Reports** | Every report, grouped by category. |
@@ -77,6 +78,7 @@ Almost everything lives under **Interaction Center** in the admin menu.
 - [Agent workspace](agent-workspace.md): sign in, set your presence and take work.
 - [Placing and handling calls](calls.md): dial manually, transfer, conference and wrap up.
 - [Voicemail](voicemail.md): your greeting, your voicemail and shared voicemail.
+- [Call recordings](call-recordings.md): search recorded calls, play them back and read AI call transcripts.
 - [Messaging workspace](messaging.md): answer SMS conversations, transfer them and send broadcasts.
 - [Live dashboard](live-dashboard.md): monitor queues and agents, and step into calls.
 - [Reports](reports.md): read and export performance reports.
