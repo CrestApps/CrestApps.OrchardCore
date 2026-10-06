@@ -1,6 +1,7 @@
 # True predictive dialing - design and plan
 
-Status: B1 (foundation) implemented. B2 (over-dial core) and B3 (latency and compliance hardening) open.
+Status: B1 (foundation) and B2 (over-dial core) implemented; B3 (latency and compliance hardening) open. B2's
+differences from the plan are under [B2 as built](#as-built).
 
 This is the engineering plan for placing calls without a reserved agent ("over-dialing") on Predictive dialer profiles.
 It was first written against the dialer auto-disposition work and before the abandoned-call message work (PR #773)
@@ -101,7 +102,8 @@ Missing abandonment statistics keep the existing full suppression.
 value already is OverDial, so the editor never silently rewrites an imported value). A profile carrying OverDial is
 validated against the over-dial safeguards and dialed by the reserve-then-dial loop, with
 `PredictiveDialerStrategy` logging a warning each cycle. That was chosen over refusing OverDial on save so a recipe
-written for B2 imports on B1 and behaves safely, and over hiding it so operators see what is coming.
+written for B2 imports on B1 and behaves safely, and over hiding it so operators see what is coming. B2 removed the
+warning and made "Over-dial" a normal choice.
 
 ## Pacing algorithm (`PredictiveOverDialCalculator`)
 
@@ -133,7 +135,52 @@ Fail closed: an exception, a lock not acquired or a concurrency conflict places 
 the average call plus a whole average wrap-up. An agent past the average, or a phase without a measured average, gets
 no credit.
 
-## B2 - over-dial core (open)
+## B2 - over-dial core (implemented)
+
+### As built
+
+What B2 shipped, and where it differs from the plan below:
+
+- **No feature of its own.** Everything is registered by `DialerPacedStartup` (see the B1 fold). The safety gate is the
+  profile: `OverDial` requires the enforced cap, the abandoned-call message and a target below the cap. B1's OverDial
+  warning is gone and the editor offers "Over-dial".
+- **System dial authorization** is a contract, `IPredictiveSystemDialAuthorizer`, injected into
+  `DialProviderCommandTypeExecutor` as a collection: a dial naming no agent is refused unless one authorizer vouches for
+  it. `PredictiveSystemDialAuthorizer` requires an enabled Predictive `OverDial` profile, a campaign queue, no reservation
+  on the command, and an unsettled interaction of the same activity marked `dialer_pacing_model = overdial` with no agent.
+  A cycle that lost its commit therefore cannot place a call: its interaction does not exist.
+- **The claim connects in the same transaction.** `ClaimConnectedCallAsync` takes a `beforeCommit` callback; the
+  connector uses it to set the call session's agent and register the Answer command (`AnsweredCallBridge`, extracted from
+  `StageAnsweredOutboundBridgeAsync`) with the reservation id, so the claim and the connect commit together. The
+  reservation is created Pending then Accepted in memory; `dialer_agent_claimed_utc` marks the interaction.
+- **Connect retries and the sweep.** There is no separate `PredictiveConnectDeadlineHandler`: with a connect wait the
+  connector re-arms `predictive-connect:{interactionId}` itself every 200 ms until the wait runs out. Every pacing run
+  first calls `ServiceWaitingAsync(queueId)`, which connects or abandons any answered, unclaimed, unabandoned over-dialed
+  call (the per-call lock and the markers make it safe to race the after-commit connect), and the minute
+  `DialerPacingBackgroundTask` requests pacing for every queue with agentless calls in flight. That is the minimal
+  safety net for a node that stopped between an answer and its connect; it does not use
+  `AnsweredUnconnectedSweepAfter`. B3 owns a dedicated sweep if one is wanted.
+- **Cadence.** `PredictivePacingScheduler` merges requests per queue (a pending run is not pushed back) and remembers for a
+  minute that a queue is not over-dialed. `DialerPacingBackgroundTask` no longer paces over-dial queues inline: it requests
+  them, so a cycle that loses a race cannot spend the session its run shares with other queues. A held pacing lock is
+  not retried after 1 s; the holder's own cycle or the next event paces the queue.
+- **Abandoned retry.** `AbandonedRetryRequiresAgent` is enforced for a later call of the same activity: when the
+  activity's latest interaction is abandoned, the pacer reserves the free agent idle longest and dials it the reserved
+  way, and only before it has staged any agentless call in that cycle (a reservation commits on its own). A follow-up
+  activity created by a disposition is a new activity and is not detected; B3.
+- **Compliance windows.** The rolling rate is read over `ContactCenterComplianceOptions.AbandonmentRollingWindowMinutes`
+  (the cap's own window), the long-run rate over `ComplianceWindowDays`, both from `IDialerAbandonmentStatisticsProvider`.
+  A window with no live answers has no rate, which falls back.
+- **Events.** `DialerAgentConnectClaimed` and `DialerPacingModeChanged` (data `PredictivePacingModeChangedEventData`) are
+  filed under the profile.
+- **Agent leg failure** needed no change: after the claim the call has an agent, and
+  `ContactCenterAgentLegFailureService` already abandons it with the message (`agent_leg_failed`) and returns the agent to
+  work.
+
+Tests: `PredictiveOverDialIntegrationTests` (harness `predictive: true`), `PredictiveSystemDialAuthorizerTests`,
+`PredictivePacingTriggerTests` and the system-dial cases in `DialProviderCommandTypeExecutorTests`.
+
+### Plan
 
 Components (ContactCenter.Core/Services unless noted):
 

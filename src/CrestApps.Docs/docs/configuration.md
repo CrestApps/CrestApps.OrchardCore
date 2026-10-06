@@ -1336,9 +1336,14 @@ Every value is validated on start, and an invalid one stops the tenant with the 
 | `StatisticsCacheDuration` | `00:00:05` | Greater than zero. |
 | `MaxTimingSamples` | `2000` | Greater than zero. |
 
-Predictive profiles reserve an agent for every call, so today only `StatisticsCacheDuration` and `MaxTimingSamples`
-are read, when a Predictive profile's measured answer rate is shown. The rest govern over-dialing, which is not
-available yet.
+They govern over-dialing (Predictive profiles on the **Over-dial** pacing model): `PacingDebounce` delays a pacing run
+after the event that asked for it, `PacingInterval` is how soon a queue that is placing calls is paced again,
+`PacingLockExpiration` bounds the per-queue pacing lock, `MaxDialsPerCycle` caps the calls one cycle places,
+`ConnectLockWait` is how long the claim of an agent at answer waits for the agent's lock before trying the next agent,
+`ComplianceWindowDays` is the long-run abandonment window that must stay under the cap, and `DefaultRingHorizon` is the
+ring time assumed for agents about to free up until it is measured. `StatisticsCacheDuration` and `MaxTimingSamples`
+govern the measurement shown on the profile and used for pacing. `AnsweredUnconnectedSweepAfter` is reserved for a
+dedicated sweep of answered calls left unconnected; today every pacing run connects or abandons such calls first.
 
 ```json
 {

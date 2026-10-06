@@ -89,18 +89,28 @@ With a Power profile the agent only signs in and stays **Available**. Within a m
 
 Predictive dialing is part of the **Contact Center Paced Dialing** feature, like Power and Progressive. Without it the **Predictive** mode is not offered and a Predictive profile cannot be saved.
 
-Today a Predictive profile dials like Power: each call reserves its own available agent before it is placed, so a person who answers always has an agent waiting. As the abandonment rate climbs toward the **Maximum abandonment rate**, fewer calls are placed each cycle, down to one per agent at the cap.
+A Predictive profile paces its calls one of two ways, chosen in **Pacing** on the **Predictive pacing** card:
 
-:::note[Over-dialing comes later]
-Over-dialing, which places more calls than there are free agents and sizes the extra calls from the measured answer rate, is not available yet. The **Pacing** list shows it but you cannot choose it. A profile set to over-dial by an import is dialed with one call per reserved agent until it is available.
+- **One call per reserved agent** (the default) dials like Power: each call reserves its own available agent before it is placed, so a person who answers always has an agent waiting. As the abandonment rate climbs toward the **Maximum abandonment rate**, fewer calls are placed each cycle, down to one per agent at the cap.
+- **Over-dial** places more calls than there are free agents, because most calls are not answered. How many is worked out from the measured answer rate so that the share of answered calls with no agent free stays near the **Target abandonment rate**. No agent is reserved while the calls ring: when a person answers, the free agent who has waited longest is connected to them. When nobody is free at that moment, the person hears the abandoned-call message straight away and the call counts as abandoned.
+
+Over-dialing needs **Enforce an abandonment-rate cap**, the **Abandoned call message** and a **Target abandonment rate** below the **Maximum abandonment rate**; a profile without them cannot be saved with **Over-dial**. An over-dialing profile does not over-dial until it can trust its measurements. It dials one call per reserved agent instead while:
+
+- fewer calls than the **Answer rate sample floor** have an outcome, or fewer people than the **Abandonment sample floor** have answered in the rolling window,
+- the abandonment rate over the rolling window or over the last 30 days is at or above the **Maximum abandonment rate**, or the rolling rate is so close to it that no extra call is allowed.
+
+It stops dialing altogether when the abandonment rate cannot be measured at all. Watch the abandonment rate during the first days of a new over-dialing campaign, and start with **Lines per agent** at 1.5 and a **Target abandonment rate** of 1%.
+
+:::tip[Agents on an over-dialing campaign]
+Agents on an over-dialing campaign do not see an offer before a call: the call is theirs as soon as they are connected. Keep their phone ready to answer automatically, and if they also take inbound calls, an inbound call that reaches them first takes them out of the campaign until it ends.
 :::
 
-The **Predictive pacing** card holds the settings over-dialing will use. They are saved with the profile now so it is ready:
+The settings on the **Predictive pacing** card:
 
 | Field | What it does |
 | --- | --- |
 | **Measured answer rate** | Shown once a Predictive profile has placed calls: the share of recent calls with an outcome that a person answered, how long people take to answer, and how long agents take to be connected. A call still ringing is left out until it has an outcome. |
-| **Pacing** | **One call per reserved agent** (the default, and the only choice for now) or **Over-dial**. Over-dialing will need **Enforce an abandonment-rate cap** and the abandoned-call message on. |
+| **Pacing** | **One call per reserved agent** (the default) or **Over-dial**. Over-dialing needs **Enforce an abandonment-rate cap**, the abandoned-call message and a target below the cap. |
 | **Target abandonment rate** | The rate over-dialing steers toward. Default 2%. For over-dialing it must be lower than the **Maximum abandonment rate**, which stays the hard limit. |
 | **Lines per agent** | The most calls ringing for each free agent, from 1 to 5. Default 2. |
 | **Calls in flight** | The most calls ringing at once for one campaign, from 1 to 1000. Default 100. |
@@ -109,7 +119,7 @@ The **Predictive pacing** card holds the settings over-dialing will use. They ar
 | **Count agents about to free up** | Also counts agents expected to finish their call and wrap-up before a new call is answered. Off by default. |
 | **Share of agents about to free up** | How many of those agents are counted, from 0 to 100%. Default 50%. |
 | **Connect wait (milliseconds)** | How long a person who answered may wait for an agent to free up before the abandoned-call message plays, from 0 to 1500. Default 0, which is recommended: a call not connected within two seconds counts as abandoned. |
-| **Retry abandoned calls only with an agent reserved** | A person whose call was abandoned is called again only with an agent already reserved for them. On by default. |
+| **Retry abandoned calls only with an agent reserved** | When the same activity is dialed again after its call was abandoned, an agent is reserved for it first, so the person is not abandoned twice. On by default. |
 
 ## Abandoned calls
 

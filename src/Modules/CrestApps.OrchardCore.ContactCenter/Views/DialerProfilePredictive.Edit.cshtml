@@ -10,14 +10,12 @@
         => value is { } actual
             ? actual.TotalSeconds.ToString("0.#", System.Globalization.CultureInfo.CurrentCulture)
             : null;
-
-    var overDialSelected = Model.PredictivePacingModel == PredictivePacingModel.OverDial;
 }
 
 <div class="ocat-wrapper" data-dialer-modes="Predictive">
     <div class="ocat-end-offset">
         <div class="alert alert-info" role="alert">
-            @T["Predictive dialing reserves an agent for every call it places, so a person who answers always has an agent waiting. Over-dialing, which places more calls than there are free agents and sizes the extra calls from the measured answer rate, will be available in a later release. The settings below are kept with the profile for when it is."]
+            @T["One call per reserved agent places a call only for an agent who is waiting for it, so a person who answers always has an agent. Over-dialing places more calls than there are free agents, sized from the measured answer rate, and picks the free agent when a person answers; when nobody is free, the person hears the abandoned-call message. Whenever the answer rate or the abandonment rate cannot be trusted, or the abandonment rate nears the cap, an over-dialing profile dials one call per reserved agent until it can."]
         </div>
     </div>
 </div>
@@ -57,23 +55,10 @@
     <div class="ocat-end">
         <select asp-for="PredictivePacingModel" class="form-select">
             <option value="@PredictivePacingModel.ReservedPerCall">@T["One call per reserved agent"]</option>
-            @if (overDialSelected)
-            {
-                <option value="@PredictivePacingModel.OverDial">@T["Over-dial (available in a later release)"]</option>
-            }
-            else
-            {
-                <option value="@PredictivePacingModel.OverDial" disabled>@T["Over-dial (available in a later release)"]</option>
-            }
+            <option value="@PredictivePacingModel.OverDial">@T["Over-dial"]</option>
         </select>
         <span asp-validation-for="PredictivePacingModel" class="text-danger"></span>
-        <span class="hint">@T["One call per reserved agent cannot abandon a call. Over-dialing places more calls than there are free agents and plays the abandoned-call message when nobody is free to take one; it requires the abandonment cap and the abandoned-call message."]</span>
-        @if (overDialSelected)
-        {
-            <div class="alert alert-warning mt-2 mb-0" role="alert">
-                @T["Over-dialing is not available yet. This profile is dialed with one call per reserved agent until it is."]
-            </div>
-        }
+        <span class="hint">@T["One call per reserved agent cannot abandon a call. Over-dialing places more calls than there are free agents and plays the abandoned-call message when nobody is free to take one; it requires the abandonment cap, the abandoned-call message and a target abandonment rate below the cap."]</span>
     </div>
 </div>
 
