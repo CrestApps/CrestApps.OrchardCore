@@ -3,6 +3,9 @@ sidebar_label: Azure Communication Services
 sidebar_position: 2
 title: CrestApps Omnichannel (Azure Communication Services)
 description: Azure Communication Services channel support for the Orchard Core Omnichannel stack.
+user_manual:
+  - user-manual/channel-endpoints
+  - user-manual/messaging
 ---
 
 | | |
@@ -10,7 +13,7 @@ description: Azure Communication Services channel support for the Orchard Core O
 | **Feature Name** | Omnichannel - Azure Communication Services |
 | **Feature ID** | `CrestApps.OrchardCore.Omnichannel.AzureCommunicationServices` |
 
-Enables Orchard Core's Azure Communication Services email and SMS providers alongside the base [Omnichannel](./) feature.
+Enables Orchard Core's Azure Communication Services email and SMS providers alongside the base [Omnichannel](./index.md) feature.
 
 ## When to enable this feature
 
@@ -36,24 +39,24 @@ After enabling the feature:
 
 1. Open **Settings > Communication > Email** and select/configure the Azure email provider.
 2. Open **Settings > Communication > SMS** and select/configure the Azure SMS provider.
-3. Enable the Omnichannel channel feature that consumes the service when required by the application: **SMS Omnichannel Automation** for AI-driven SMS, or the **SMS Messaging Channel** of the [Messaging Workspace](./messaging-workspace), which can pin the Azure SMS provider on an SMS channel endpoint for outbound messages.
+3. Enable the Omnichannel channel feature that consumes the service when required by the application: **SMS Omnichannel Automation** for AI-driven SMS, or the **SMS Messaging Channel** of the [Messaging Workspace](./messaging-workspace.md), which can pin the Azure SMS provider on an SMS channel endpoint for outbound messages.
 
 Provider selection remains tenant-specific. Enabling this feature registers the ACS providers but does not silently change an existing tenant's selected email or SMS provider.
 
 ## Inbound events
 
-Azure Communication Services delivers inbound-message and delivery events through Azure Event Grid. To receive ACS texts, enable [Omnichannel - Azure Event Grid](./event-grid), configure its authenticated webhook, and subscribe it to the ACS resource's SMS events.
+Azure Communication Services delivers inbound-message and delivery events through Azure Event Grid. To receive ACS texts, enable [Omnichannel - Azure Event Grid](./event-grid.md), configure its authenticated webhook, and subscribe it to the ACS resource's SMS events.
 
 | ACS event | What happens |
 | --- | --- |
-| `Microsoft.Communication.SMSReceived` | Routed as an inbound text on the `SMS` channel. It reaches [SMS Automation](./sms) and the SMS channel of the [Messaging Workspace](./messaging-workspace) in the same shape as a Twilio or Telnyx inbound text. |
+| `Microsoft.Communication.SMSReceived` | Routed as an inbound text on the `SMS` channel. It reaches [SMS Automation](./sms.md) and the SMS channel of the [Messaging Workspace](./messaging-workspace.md) in the same shape as a Twilio or Telnyx inbound text. |
 | `Microsoft.Communication.SMSDeliveryReportReceived` | Stored, not routed. The delivery status of the sent message is not updated in the Messaging Workspace. |
 
-The ACS number that receives the text is matched to a channel endpoint by its address, so the number must be set up as an SMS channel endpoint, as it is for any other provider. See [Azure Event Grid](./event-grid#inbound-texts) for how the event fields map onto the inbound message.
+The ACS number that receives the text is matched to a channel endpoint by its address, so the number must be set up as an SMS channel endpoint, as it is for any other provider. See [Azure Event Grid](./event-grid.md#inbound-texts) for how the event fields map onto the inbound message.
 
 ## How it fits with the other Omnichannel docs
 
-- Use [Omnichannel Communications](./) for the shared base concepts and the inbound webhook map.
-- Use [Management (CRM)](./management) for campaigns, subject flows, activities, contact management, and bulk operations.
-- Use [SMS Automation](./sms) when you need AI-driven SMS activity handling.
-- Use [Azure Event Grid](./event-grid) when inbound events are delivered through Event Grid instead of direct provider delivery.
+- Use [Omnichannel Communications](./index.md) for the shared base concepts and the inbound webhook map.
+- Use [Management (CRM)](./management.md) for campaigns, subject flows, activities, contact management, and bulk operations.
+- Use [SMS Automation](./sms.md) when you need AI-driven SMS activity handling.
+- Use [Azure Event Grid](./event-grid.md) when inbound events are delivered through Event Grid instead of direct provider delivery.

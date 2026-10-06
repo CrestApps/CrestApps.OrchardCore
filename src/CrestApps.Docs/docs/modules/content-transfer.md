@@ -3,6 +3,8 @@ sidebar_label: Content Transfer
 sidebar_position: 2
 title: Content Transfer
 description: Bulk import and export of Orchard Core content by using pluggable file formats.
+user_manual:
+  - user-manual/administration/import-and-export
 ---
 
 | | |
@@ -13,20 +15,36 @@ description: Bulk import and export of Orchard Core content by using pluggable f
 
 Bulk import and export Orchard Core content by using the enabled transfer file formats.
 
+:::tip[Using the import and export screens]
+The step-by-step instructions for administrators and content managers (uploading a file, following an
+import, downloading rejected rows, exporting with filters and downloading a queued export) are in the User
+Manual: [Bulk Import and Export](../user-manual/administration/import-and-export.md). This page covers the
+features, permissions, configuration, hosting limits and extension points.
+:::
+
 ## Getting started
 
-1. Enable **Content Transfer** under **Tools** -> **Features**.
-2. Enable **Content Transfer (OpenXml)** when you also want Excel workbook (`.xlsx`) support.
-3. Edit the content type only if you want to opt-out of transfer for that type. **Allow Bulk Import** and **Allow Bulk Export** are enabled by default.
-4. Open **Content** -> **Import** or **Content** -> **Export**.
+1. Enable `CrestApps.OrchardCore.ContentTransfer` (**Content Transfer**). It provides CSV support.
+2. Enable `CrestApps.OrchardCore.ContentTransfer.OpenXml` (**Content Transfer (OpenXml)**) when you also want Excel workbook (`.xlsx`) support.
+3. Grant the [permissions](#permissions) to the roles that import or export.
+4. The admin menu gains **Content** -> **Import** (the **Bulk Import** list) and **Content** -> **Export** (the **Bulk Export** list).
 
-By default, content types appear in the import and export screens automatically. Set **Allow Bulk Import** or **Allow Bulk Export** to `false` on a content type when that type should opt out.
+Every content type takes part by default. The content type settings `AllowBulkImport` and `AllowBulkExport`
+(**Allow bulk import** / **Allow bulk export** in the content type editor) default to `true`; set one to
+`false` to keep a type off that screen.
 
-The screencast below enables **Content Transfer** and the optional **OpenXml** format, configures a bulk export for the Blog Post type as an Excel workbook, and opens the bulk import screen with its upload form, template downloads, and column requirements.
+## Permissions
 
-<video controls preload="metadata" width="100%" aria-label="Screen cast of enabling Content Transfer, exporting a content type, and starting a bulk import">
-  <source src="/img/docs/content-transfer.mp4" type="video/mp4" />
-</video>
+| Permission | Key | Grants |
+| --- | --- | --- |
+| List content transfer entries | `ListContentTransferEntries` | The **Content** -> **Import** menu and the **Bulk Import** list. |
+| Delete content transfer entries | `DeleteContentTransferEntries` | Deleting entries. Implies `ListContentTransferEntries`. |
+| Import content items from file | `ImportContentFromFile` | Importing any content type, downloading templates and error files, pausing and resuming imports. |
+| Import *type* content items from file | `ImportContentFromFile_{ContentType}` | The same for one content type. Implied by `ImportContentFromFile`. |
+| Export content items from file | `ExportContentFromFile` | The **Content** -> **Export** menu and exporting any content type. |
+| Export *type* content items from file | `ExportContentFromFile_{ContentType}` | The same for one content type. Implied by `ExportContentFromFile`. |
+
+The four permissions that are not per content type are granted to the **Administrator** role by default.
 
 ## Supported file formats
 
@@ -39,33 +57,31 @@ Enable **Content Transfer (OpenXml)** feature to add Excel workbook support (`.x
 - large imports and exports can stream in batches regardless of the enabled transfer format
 - older `.xls` files are not supported
 
-## Bulk import
+## Import processing
 
-Use **Content** -> **Import** to upload a transfer file for a content type.
-
-1. Select a content type.
-2. Download the template if you need the expected column layout.
-3. Upload one of the enabled file formats shown in the UI.
-4. Choose whether the imported items should stay as the latest draft or be published immediately.
-5. The import is queued with a **Pending** status and processed in the background.
+An upload is stored through the content transfer file store and saved as a `ContentTransferEntry` with the
+**Pending** status, and processing is triggered right away. The **Imported Files Processor** background task
+(every 10 minutes) is the safety net that picks up pending entries and resumes stalled ones.
 
 Large files are supported. When a file exceeds the configured chunk size it is uploaded to the server in chunks, and the import UI reports a clear, specific message when an upload is rejected (for example when a file exceeds the maximum allowed size). See [Large file uploads](#large-file-uploads) to tune the limits.
 
 Validation runs through `IContentManager.ValidateAsync()`. Failed rows are tracked, and rejected rows can be downloaded again in the same file format as the original import as long as that format feature is still enabled.
 
-Queued imports now follow the same background-job pattern used by the local DNC list importer. The admin list updates the status inline before work starts or stops, so entries can move through **Pending**, **Processing**, **Paused**, **Deleting**, **Completed**, **Completed with errors**, and **Failed** states without briefly showing stale values. While an import is running, the action menu offers **Pause import**. Paused, failed, pending, and stalled imports show **Resume import** so the background job can continue from the last saved batch.
+Queued imports follow the same background-job pattern used by the local DNC list importer. The admin list updates the status inline before work starts or stops, so entries can move through **Pending**, **Processing**, **Paused**, **Deleting**, **Completed**, **Completed with errors**, and **Failed** states without briefly showing stale values. A **Processing** entry that has saved no progress for 10 minutes is treated as stalled, and **Resume import** continues paused, failed, pending, and stalled imports from the last saved batch. Deleting an entry removes the entry and its stored file in the background; it never deletes imported content items.
 
-For Omnichannel contacts, the import UI can also expose duplicate-phone filtering, a lead-country selector for phone normalization, and national do-not-call registry checks. Duplicate-phone filtering is enabled by default, skipped duplicate rows are recorded in the error export with the reason, and duplicate detection checks both the current import batch and existing contact phone numbers already stored in Orchard before the batch commits. When a row includes an existing `ContentItemId`, duplicate detection now treats matching phone numbers on that same content item as an update instead of a conflict. The database lookup also falls back to older stored phone values that predate the normalized-phone index columns, so re-importing the same contact list is still rejected while older tenants finish reindexing. See [DNC Registry](./dnc-registry) for registry configuration and global enforcement.
+Imports save drafts by default. When **Publish imported content** is checked, items are published after create or update. When a row includes an existing `ContentItemId`, the import updates a new latest version of that item and then either keeps that version as a draft or publishes it based on the checkbox. For versionable content types, exports still include `ContentItemVersionId` for reference, but imports ignore that value entirely.
 
-Bulk imports now default to saving drafts only. Enable **Publish imported content** when the imported items should be published immediately after create or update. When a row includes an existing `ContentItemId`, the import updates a new latest version of that item and then either keeps that version as a draft or publishes it based on the checkbox. For versionable content types, exports still include `ContentItemVersionId` for reference, but imports now ignore that value entirely.
+### Omnichannel contact imports
 
-For content types that attach `OmnichannelContactPart`, each import file should contain leads from a single country unless every phone number in the file already uses E.164. Selecting that lead country in the import UI is now required so non-E.164 values are normalized before duplicate checks, before DNC registry providers receive the lookup values, and before contact-method storage runs. The picker shows the same `Country (+calling code)` labels used by the Local DNC import UI.
+For Omnichannel contacts, the import UI can also expose duplicate-phone filtering, a lead-country selector for phone normalization, and national do-not-call registry checks (the options are contributed by **Omnichannel Management** through `IDisplayDriver<ImportContent>`). Duplicate-phone filtering is enabled by default, skipped duplicate rows are recorded in the error export with the reason, and duplicate detection checks both the current import batch and existing contact phone numbers already stored in Orchard before the batch commits. When a row includes an existing `ContentItemId`, duplicate detection treats matching phone numbers on that same content item as an update instead of a conflict. The database lookup also falls back to older stored phone values that predate the normalized-phone index columns, so re-importing the same contact list is still rejected while older tenants finish reindexing. See [DNC Registry](./dnc-registry) for registry configuration and global enforcement.
 
-The Omnichannel contact columns `DoNotCall`, `DoNotSms`, and `DoNotEmail` now advertise `true` and `false` as the expected values in the import metadata so spreadsheet templates make the required boolean values clear.
+For content types that attach `OmnichannelContactPart`, each import file should contain leads from a single country unless every phone number in the file already uses E.164. Selecting that lead country in the import UI is required so non-E.164 values are normalized before duplicate checks, before DNC registry providers receive the lookup values, and before contact-method storage runs. The picker shows the same `Country (+calling code)` labels used by the Local DNC import UI.
 
-## Bulk export
+The Omnichannel contact columns `DoNotCall`, `DoNotSms`, and `DoNotEmail` advertise `true` and `false` as the expected values in the import metadata so spreadsheet templates make the required boolean values clear.
 
-Use **Content** -> **Export** to export content items by using one of the enabled transfer formats.
+The User Manual describes these options for operators on the [Contacts](../user-manual/contacts.md) and [Leads, Accounts and Opportunities](../user-manual/leads-accounts-opportunities.md) pages.
+
+## Export processing
 
 Export supports:
 
@@ -76,11 +92,11 @@ Export supports:
 - queued background processing for larger exports
 - extra options contributed by other modules for the selected content type (see [Contributing export options](#contributing-export-options))
 
-When notifications are enabled, users receive an in-app notification when a queued export is ready.
+An export whose item count exceeds `ExportQueueThreshold` (default `500`), or whose contributed options set `ExportRequest.RequiresQueue`, is saved as a queued entry and processed in the background by the **Export Files Processor** task (every 5 minutes, and also triggered immediately). Smaller exports stream straight to the response. When notifications are enabled, users receive an in-app notification when a queued export is ready.
 
 Modules can add their own options to the export form for specific content types. For example, when the Omnichannel management feature is enabled and you export a contact content type, the form shows a **CRM last activity** section that appends each contact's most recent completed activity to the export. See [Omnichannel management](../omnichannel/management#export-contacts-with-their-last-activity) for that feature, and [Contributing export options](#contributing-export-options) to add your own.
 
-The export pipeline now initializes missing parts on the parent content item before part handlers run, so Open XML (`.xlsx`) exports do not fail with a JSON node cycle when a type includes a part that is not yet materialized on a specific content item.
+The export pipeline initializes missing parts on the parent content item before part handlers run, so Open XML (`.xlsx`) exports do not fail with a JSON node cycle when a type includes a part that is not yet materialized on a specific content item.
 
 ## Configuration
 
@@ -189,17 +205,17 @@ file size, not the chunk size, is what `MaxUploadFileSize` limits.
 }
 ```
 
-**Override the limit for a single tenant.** Add the same section to that tenant's configuration file at
-`App_Data/Sites/{TenantName}/appsettings.json` (use `Default` for the default tenant). Tenant settings
-take precedence over the application root settings:
+**Override the limit for a single tenant.** Add the setting to that tenant's configuration file at
+`App_Data/Sites/{TenantName}/appsettings.json` (use `Default` for the default tenant). That file is already
+scoped to the tenant, so its JSON starts at `CrestApps`, **without** the `OrchardCore` wrapper; a value nested
+under `OrchardCore` there is never read. Tenant settings take precedence over the application root settings
+(see [Per-tenant configuration](../configuration.md#per-tenant-configuration)):
 
 ```json
 {
-  "OrchardCore": {
-    "CrestApps": {
-      "ContentTransfer": {
-        "MaxUploadFileSize": 2147483648
-      }
+  "CrestApps": {
+    "ContentTransfer": {
+      "MaxUploadFileSize": 2147483648
     }
   }
 }

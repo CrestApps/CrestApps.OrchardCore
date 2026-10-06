@@ -1,0 +1,139 @@
+/* Audience strip above a doc's title. */
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.5rem 0.75rem;
+  border-left: 4px solid var(--manual-accent);
+  border-radius: 0 6px 6px 0;
+  background: var(--manual-accent-soft);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.bar_user {
+  --manual-accent: var(--crestapps-manual-user);
+  --manual-accent-soft: var(--crestapps-manual-user-soft);
+}
+
+.bar_technical {
+  --manual-accent: var(--crestapps-manual-technical);
+  --manual-accent-soft: var(--crestapps-manual-technical-soft);
+}
+
+.barLinks {
+  flex: 1 1 18rem;
+  min-width: 0;
+}
+
+/* Links to the other manual take that manual's color. */
+.link {
+  font-weight: 600;
+}
+
+.link_user {
+  color: var(--crestapps-manual-user-text);
+}
+
+.link_technical {
+  color: var(--crestapps-manual-technical-text);
+}
+
+.separator {
+  color: var(--ifm-color-emphasis-600);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.badge_user {
+  background: var(--crestapps-manual-user);
+  color: var(--crestapps-manual-user-on);
+}
+
+.badge_technical {
+  background: var(--crestapps-manual-technical);
+  color: var(--crestapps-manual-technical-on);
+}
+
+/* Card at the end of a doc that points to the other manual. */
+.crossLinks {
+  margin-top: 2rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-top: 4px solid var(--manual-accent);
+  border-radius: 8px;
+  background: var(--ifm-card-background-color, var(--ifm-background-surface-color));
+}
+
+.crossLinks_user {
+  --manual-accent: var(--crestapps-manual-user);
+}
+
+.crossLinks_technical {
+  --manual-accent: var(--crestapps-manual-technical);
+}
+
+.crossLinksHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.crossLinksText {
+  margin: 0.5rem 0;
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.9rem;
+}
+
+.crossLinksList {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.crossLinksList li {
+  margin: 0.25rem 0;
+}
+
+.crossLinksDescription {
+  display: block;
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.85rem;
+}
+
+/* User Manual search box. */
+.search {
+  display: flex;
+  gap: 0.5rem;
+  max-width: 40rem;
+  margin: 1rem 0 1.5rem;
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--ifm-color-emphasis-400);
+  border-radius: 6px;
+  background: var(--ifm-background-surface-color);
+  color: var(--ifm-font-color-base);
+  font-size: 1rem;
+}
+
+.searchInput:focus {
+  outline: 2px solid var(--crestapps-manual-user);
+  outline-offset: 1px;
+}

@@ -3,6 +3,8 @@ sidebar_label: Overview
 sidebar_position: 1
 title: Model Context Protocol (MCP)
 description: Overview of MCP client and server support for integrating LLM applications with external tools and data sources.
+user_manual:
+  - user-manual/ai/tools-and-agents
 ---
 
 # Model Context Protocol (MCP)
@@ -22,9 +24,11 @@ CrestApps provides both **client** and **server** MCP support:
 
 When the relevant features are enabled, Orchard adds these MCP screens under **Artificial Intelligence**:
 
-- **Model Context Protocol -> MCP Hosts**
-- **MCP Prompts**
-- **MCP Resources**
+- **Model Context Protocol -> MCP Hosts** (MCP Client feature)
+- **Model Context Protocol -> Prompts** (MCP Server feature)
+- **Model Context Protocol -> Resources** (MCP Server feature)
+
+Using these screens is described in the User Manual under [Tools and agents](../../user-manual/ai/tools-and-agents.md).
 
 ## Supported Capabilities
 

@@ -3,6 +3,10 @@ sidebar_label: "CRM: leads, accounts, opportunities"
 sidebar_position: 5
 title: Omnichannel CRM — leads, accounts and opportunities
 description: How the Omnichannel CRM feature models leads, accounts and opportunities with parts on ordinary content types, how conversion works, and the extension points for modules.
+user_manual:
+  - user-manual/leads-accounts-opportunities
+  - user-manual/contacts
+  - user-manual/load-inventory
 ---
 
 | | |
@@ -11,7 +15,7 @@ description: How the Omnichannel CRM feature models leads, accounts and opportun
 | **Feature ID** | `CrestApps.OrchardCore.Omnichannel.Crm` |
 | **Depends on** | Omnichannel Management, `OrchardCore.Lists`, `OrchardCore.Title` |
 
-The Omnichannel CRM feature adds Salesforce-style **leads**, **accounts** and **opportunities** to the Omnichannel CRM. None of them is a new storage model. Each is an ordinary content type, recognised by the parts it carries. For a step-by-step walkthrough, see [Leads, Accounts and Opportunities](../user-manual/leads-accounts-opportunities.md) in the user manual.
+The Omnichannel CRM feature adds Salesforce-style **leads**, **accounts** and **opportunities** to the Omnichannel CRM. None of them is a new storage model. Each is an ordinary content type, recognised by the parts it carries. The admin screens (lead lists and search terms, the Convert screen, AI lead conversion on a load, the Convert Lead subject action, lead statuses, lead sources, opportunity stages, imports and exports) are described step by step in [Leads, Accounts and Opportunities](../user-manual/leads-accounts-opportunities.md) in the User Manual.
 
 With the feature off, nothing changes: every type with `OmnichannelContactPart` is a contact, as before.
 
@@ -144,6 +148,23 @@ A lead status is exactly one of three types, stored as the `IsClosed` and `IsCon
 
 A status saved with `IsDefault` and either closed flag is rejected, so a recipe cannot make new leads start out closed.
 
+## Import and export columns
+
+Leads are imported and exported through Content Transfer (Bulk Import and Bulk Export), like contacts. `LeadPartContentImportHandler` adds these columns to a lead type's file (all of them are exported):
+
+| Column | Also accepted as | Import |
+| --- | --- | --- |
+| `LeadStatus` | Status, Lead Status | By status name. |
+| `LeadSource` | Source, Lead Source | By lead source name; a name that matches no lead source is ignored. |
+| `LeadList` | List, List Name, ListName | The list or import the lead arrived in. |
+| `Company` | Company Name, CompanyName, Organization | Free text. |
+| `Rating` | Lead Rating | One of the choices of the lead's Rating field, such as Hot, Warm or Cold. |
+| `LeadOwner` | Owner, Lead Owner | By user name. |
+| `IsConverted`, `ConvertedUtc`, `ConvertedContactItemId` | | Export only. A converted lead in an import file is left unchanged. |
+| `LastScrubbedUtc` | | Export only: when the lead's numbers were last checked against a do-not-call registry. An import that checks the registries sets it. |
+
+The import screen's lead options (skip numbers that belong to a contact or an open lead, and the list name, source, status and owner stamped on rows without their own) and the export's **Leave out converted leads** option are described in [Import and export leads](../user-manual/leads-accounts-opportunities.md#import-and-export-leads).
+
 ## Recipes and deployment
 
 Both catalogs have a recipe step and a deployment step, matched by name on import:
@@ -169,15 +190,15 @@ Both catalogs have a recipe step and a deployment step, matched by name on impor
 
 ## Permissions
 
-| Permission | Allows |
-| --- | --- |
-| **Convert leads** | Converting a lead. Implied by **Manage activities**. |
-| **Edit converted leads** | Changing a lead after it was converted. Without it, a converted lead is read-only. |
-| **Manage lead statuses** | Editing the Lead Status catalog. |
-| **Manage opportunity stages** | Editing the Opportunity Stage catalog. |
+| Permission | Display name | Allows |
+| --- | --- | --- |
+| `ConvertLead` | Convert leads | Converting a lead. Implied by **Manage activities** (`ManageActivities`). |
+| `EditConvertedLead` | Edit converted leads | Changing a lead after it was converted. Without it, a converted lead is read-only. |
+| `ManageLeadStatuses` | Manage lead statuses | Editing the Lead Status catalog. |
+| `ManageOpportunityStages` | Manage opportunity stages | Editing the Opportunity Stage catalog. |
 
-Listing and editing leads, accounts and opportunities uses the ordinary content permissions of each type.
+Listing and editing leads, accounts and opportunities uses the ordinary content permissions of each type; the **Leads**, **Accounts**, **Opportunities** and **Lead Sources** menu items need `ListContent`.
 
 ## Reports
 
-The feature adds **Lead funnel**, **Lead conversion by source and list** and **Opportunity pipeline** to the Reports area. They read the lead and opportunity indexes and are filtered by date range only.
+The feature adds **Lead funnel**, **Lead conversion by source and list** and **Opportunity pipeline** to the Reports area, in the **CRM & Campaigns** category. They read the lead and opportunity indexes, are filtered by date range only, and require **View Omnichannel reports** (`ViewOmnichannelReports`). See the [report catalog](../contact-center/report-catalog.md) for the other CRM reports.

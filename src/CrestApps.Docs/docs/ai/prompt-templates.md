@@ -3,6 +3,8 @@ sidebar_label: Prompt Templates
 sidebar_position: 10
 title: AI Prompt Templates
 description: Orchard Core module guidance for reusable AI prompt templates.
+user_manual:
+  - user-manual/ai/prompt-templates
 ---
 
 # AI Prompt Templates
@@ -41,17 +43,13 @@ Feature-aware discovery means a template is only available when the owning featu
 
 ## How Orchard users work with prompt templates
 
-In Orchard editors, prompt templates appear through a picker in the relevant AI editor. Use them to:
+In Orchard editors, prompt templates appear through the **Prompt templates** picker (**Add prompt template**) in the relevant AI editor: the **Instructions** card of AI profiles and profile templates, the **Settings** tab of chat interactions, and the **AI Completion using Direct Config** workflow task. Selected templates are rendered in order before the custom system instructions, and each can carry JSON **Template parameters**. Use them to:
 
 - standardize system prompts across profiles
 - compose reusable instructions for chat interactions
 - keep profile templates consistent across environments
 
-The screencast below enables the feature, opens an AI profile editor, and uses the prompt-template picker to attach reusable fragments — **Use Markdown Syntax** and **Chat Session Summarizer** — discovered from enabled modules.
-
-<video controls preload="metadata" width="100%" aria-label="Screen cast of attaching reusable prompt templates to an AI profile">
-  <source src="/img/docs/ai-prompt-templates.mp4" type="video/mp4" />
-</video>
+The picker lists **System Prompt** templates created under **Artificial Intelligence -> Templates** plus the file-based templates discovered from enabled modules. Using the picker is described, with a screencast, in the User Manual under [Reuse pieces of instructions](../user-manual/ai/prompt-templates.md#reuse-pieces-of-instructions).
 
 ## Core documentation
 

@@ -3,6 +3,10 @@ sidebar_label: AI Services
 sidebar_position: 1
 title: AI Services
 description: Orchard Core foundational AI features, module composition, and admin setup guidance.
+user_manual:
+  - user-manual/ai/index
+  - user-manual/ai/connections
+  - user-manual/ai/profiles
 ---
 
 # AI Services
@@ -23,6 +27,8 @@ description: Orchard Core foundational AI features, module composition, and admi
 - Orchard-aware configuration and startup registration
 
 For the reusable framework pieces underneath those features, see **[CrestApps.Core AI documentation](https://core.crestapps.com/docs/core/ai-core)**.
+
+This page is the Technical Manual overview: features, configuration sources and module composition. For day-to-day work in the admin screens, see the User Manual, starting at [AI features at a glance](../user-manual/ai/index.md).
 
 ## Enable the core AI features
 
@@ -46,17 +52,16 @@ In a typical Orchard setup:
 
 Once enabled, the main AI screens are available under **Artificial Intelligence**:
 
-- **Artificial Intelligence -> Profiles**
-- **Artificial Intelligence -> Provider Connections**
-- **Artificial Intelligence -> Templates**
+| Admin screen | Permission | User Manual |
+| --- | --- | --- |
+| **Artificial Intelligence -> Provider Connections** | `ManageProviderConnections` | [Connections and deployments](../user-manual/ai/connections.md) |
+| **Artificial Intelligence -> Deployments** | `ManageAIDeployments` | [Connections and deployments](../user-manual/ai/connections.md) |
+| **Artificial Intelligence -> Profiles** | `ManageAIProfiles` | [AI profiles](../user-manual/ai/profiles.md) |
+| **Artificial Intelligence -> Templates** | `ManageAIProfileTemplates` | [Templates](../user-manual/ai/prompt-templates.md) |
+| **Artificial Intelligence -> Tool Instances** | `ManageAIToolInstances` | [Tools and agents](../user-manual/ai/tools-and-agents.md) |
+| **Settings -> Artificial Intelligence** | `ManageAIProfiles` | [Connections and deployments](../user-manual/ai/connections.md#choose-the-default-models) |
 
-Site-wide settings are available under **Settings -> Artificial Intelligence**.
-
-The screencast below tours those admin surfaces in order — provider connections, the deployments they expose, and the AI profiles built on top of them.
-
-<video controls preload="metadata" width="100%" aria-label="Screen cast touring the AI provider connections, deployments, and profiles admin screens">
-  <source src="/img/docs/ai-overview.mp4" type="video/mp4" />
-</video>
+The [AI features at a glance](../user-manual/ai/index.md) page in the User Manual has a screencast that tours these screens.
 
 ## Common module combinations
 
@@ -114,6 +119,8 @@ Use **Settings -> Artificial Intelligence** for tenant-managed options such as:
 - orchestrator defaults
 - distributed caching and OpenTelemetry overrides
 
+The page is made of cards contributed by the enabled features. The **General** card holds **Enable AI usage tracking**, **Enable preemptive memory retrieval**, **Maximum iterations per request** (capped by the host), **Enable distributed caching** and **Enable OpenTelemetry**. The other cards are **Default Deployments**, **Prompt Security**, **Visitor Identity**, **Default Orchestrator**, **Data Sources**, **Chat Interactions**, **Documents**, **Memory**, **Admin Widget**, **Copilot**, **Claude** and **MCP Server**; each is described on the page of the feature that adds it. The User Manual explains the ones administrators change in the browser, starting at [Choose the default models](../user-manual/ai/connections.md#choose-the-default-models).
+
 ## Creating AI profiles
 
 Once at least one provider is configured, create AI profiles from **Artificial Intelligence -> Profiles** and attach the capabilities you need for that profile, such as:
@@ -128,6 +135,8 @@ Once at least one provider is configured, create AI profiles from **Artificial I
 - deployment and model selection
 
 AI profile templates and related display drivers extend the profile editor automatically when their corresponding features are enabled.
+
+The editor's cards, tabs and fields are described in the User Manual under [AI profiles](../user-manual/ai/profiles.md).
 
 ## Recipes, deployment, and workflows
 

@@ -3,6 +3,8 @@ sidebar_label: AI Chat Interactions
 sidebar_position: 3
 title: AI Chat Interactions Module
 description: Ad-hoc AI chat interactions with configurable parameters, tool integration, and document support.
+user_manual:
+  - user-manual/ai/chat-interactions
 ---
 
 | | |
@@ -12,11 +14,7 @@ description: Ad-hoc AI chat interactions with configurable parameters, tool inte
 
 Provides ad-hoc AI chat interactions with configurable parameters without predefined profiles.
 
-The screencast below enables the feature, starts a new ad-hoc chat, picks the `gpt-4.1-mini` chat deployment, and gets a real answer from the model.
-
-<video controls preload="metadata" width="100%" aria-label="Screen cast of starting a new AI chat interaction and chatting with the model">
-  <source src="/img/docs/ai-chat-interactions.mp4" type="video/mp4" />
-</video>
+How to start, configure and use chat interactions in the admin, with screencasts, is described in the User Manual under [Chat interactions](../user-manual/ai/chat-interactions.md).
 
 ## Overview
 
@@ -41,10 +39,7 @@ This module provides ad-hoc AI chat interactions with configurable parameters, e
 
 ## Getting Started
 
-1. Enable the `AI Chat Interactions` feature in Orchard Core admin
-2. Navigate to **Artificial Intelligence > Chat Interactions**
-3. Click **+ New Chat**, then select your chat and utility deployments
-4. Configure your chat settings and start chatting
+Enable the **AI Chat Interactions** feature (`CrestApps.OrchardCore.AI.Chat.Interactions`). It adds **Artificial Intelligence > Chat Interactions**, which requires `ListChatInteractions` (`ListChatInteractionsForOthers` to see other users' interactions). **New Chat** creates and saves an interaction immediately, and settings changes are saved over SignalR through the `IChatInteractionSettingsHandler` pipeline. The screen is described in [Chat interactions](../user-manual/ai/chat-interactions.md).
 
 :::tip
 Deployment dropdowns are grouped by connection, making it easy to find the right model. If you don't select a deployment, the system uses the fallback chain: connection default → global default (configured in **Settings > Artificial Intelligence > Default Deployments**). For chat interactions, the global fallback is **Default Chat Deployment**.
@@ -54,7 +49,7 @@ When a response cites uploaded or indexed content, the interaction UI renders `[
 
 The admin **Chat Interactions** list includes integrated search, multi-select, and bulk actions through the shared list management resource used across CrestApps admin catalogs.
 
-When the **AI Documents** feature is enabled, the **Knowledge** tab shows the current supported upload formats directly under the file picker. The visible extensions now follow the site-level **Allow document uploads** and **Allow image uploads** settings, and image formats only appear when a vision deployment is configured.
+When the **AI Documents** feature is enabled, the **Knowledge** tab shows the current supported upload formats directly under the file picker. The visible extensions follow the site-level **Allow document uploads in chat interactions** and **Allow image uploads in chat interactions** settings, and image formats only appear when a vision deployment is configured.
 
 ### Chatting with an Uploaded PDF
 
@@ -67,11 +62,7 @@ To enable this experience:
 3. In **Settings > Artificial Intelligence**, select that index profile under the document settings, choose a **Document retrieval mode**, and enable **Allow document uploads in chat interactions**.
 4. Start a new chat interaction, open the **Knowledge** tab, and upload your file.
 
-The screencast below uploads a short story PDF, waits for it to be indexed, then asks a question that can only be answered from the file. The assistant replies strictly from the document and renders the source file as a numbered citation.
-
-<video controls preload="metadata" width="100%" aria-label="Screencast of uploading a PDF to a chat interaction and receiving a grounded answer that cites the file">
-  <source src="/img/docs/ai-chat-attachments-pdf.mp4" type="video/mp4" />
-</video>
+The User Manual page [Chat interactions](../user-manual/ai/chat-interactions.md#knowledge-tab) shows this flow in a screencast.
 
 ## Orchestration
 
@@ -105,16 +96,11 @@ Chat Interactions supports configurable chat modes that control how users intera
 
 ### Configuring Chat Mode
 
-1. Navigate to **Settings → Artificial Intelligence → Chat Interactions**.
-2. Select the desired option from the **Chat Mode** dropdown. The dropdown only appears when the required default deployments are configured.
-3. Save the settings.
+The chat mode is a site setting: **Chat mode** in the **Chat Interactions** section of **Settings → Artificial Intelligence** (options **Text input**, **Audio input**, **Conversation**; the voice options only appear when the required default deployments are configured). Changing it requires the `EditChatInteractions` permission. See [Site settings for chat interactions](../user-manual/ai/chat-interactions.md#site-settings-for-chat-interactions-administrators).
 
 The selected chat mode applies to all Chat Interaction UIs. An interaction has no chat mode of its own, so naming a **Conversation deployment** on the interaction is how that interaction asks to speak while the site is in Conversation mode. The **Voice** picker beside it is per-interaction and lists the voices of whichever model resolves; leaving it empty uses the default voice configured in site settings (or the provider's default).
 
-Once configured:
-
-- **Audio Input**: A microphone button (🎤) appears in the chat interaction interface. Click the microphone to start recording and speak your prompt. Audio is streamed to the server in real-time via SignalR, and transcript text is sent back as it becomes available — you see words appear while still speaking. Click the stop button when finished, then review or edit the transcribed text before sending.
-- **Conversation**: A soundwave button appears beside the message box in the Chat Interaction editor. Click it to start a voice session — the message box and send button give way to the voice settings for the duration, and the dictation microphone is hidden because the session already owns the microphone. Speak naturally and your transcribed prompt appears as a user message and is automatically sent. The AI responds with streamed text **and** spoken audio simultaneously. If you speak while the AI is responding, the current response is interrupted to process your new prompt. Click the button again to end the session; the message box comes straight back and typing continues the same interaction. Sending a typed message ends any live session first, so the two kinds of turn take turns rather than overlapping.
+Audio input and conversation behave exactly as they do in AI Chat: audio is streamed to the server over SignalR and transcribed as it arrives, and a conversation keeps the stream open, sends each recognized utterance automatically and can be interrupted. See [AI Chat runtime behavior](chat.md#runtime-behavior) and, for what users see, [Talk instead of type](../user-manual/ai/chat.md#talk-instead-of-type).
 
 :::info
 If the speech-to-text service encounters an error during transcription, the error is reported immediately and the recording stops automatically.
@@ -128,15 +114,9 @@ Text-to-speech synthesis occurs after the full response text has been received �
 
 You can enable on-demand text-to-speech playback independently of the Conversation chat mode. When enabled, a playback button (🔊) appears on each AI-generated message, allowing users to click and listen to the response.
 
-To enable TTS playback for Chat Interactions:
+TTS playback for Chat Interactions is the **Enable text-to-speech playback** site setting in the **Chat Interactions** section of **Settings → Artificial Intelligence**. A **Default Text-to-Speech Deployment** must be configured in **Settings → Artificial Intelligence → Default Deployments** for the playback button to appear.
 
-1. Navigate to **Settings → Artificial Intelligence → Chat Interactions**.
-2. Check **Enable text-to-speech playback**.
-3. Save the settings.
-
-A **Default Text-to-Speech Deployment** must be configured in **Settings → Artificial Intelligence → Default Deployments** for the playback button to appear.
-
-When playback is enabled, the message action buttons are anchored at the bottom-right of each response, the playback icon switches between play and pause while audio is active, and starting playback on a different message automatically stops the current one. In Conversation mode, the per-message playback button is hidden so the live voice flow remains uninterrupted.
+Playback behaves as in AI Chat: starting playback on a different message stops the current one, and in Conversation mode the per-message playback button is hidden so the live voice flow remains uninterrupted.
 
 ## Related Features
 
@@ -144,7 +124,7 @@ When playback is enabled, the message action buttons are anchored at the bottom-
 
 For persistent private memory across chat interactions, see the [AI Memory documentation](memory).
 
-Chat Interaction memory is:
+Chat Interaction memory is controlled by **Enable user memory** in the **Memory** section of **Settings → Artificial Intelligence** (permission `ManageChatInteractionSettings`). It is:
 
 - **enabled by default**
 - **available only to authenticated users**

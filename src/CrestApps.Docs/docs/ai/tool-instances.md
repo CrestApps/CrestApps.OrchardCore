@@ -1,6 +1,8 @@
 ---
 title: AI Tool Instances
 description: Configure reusable AI tool instances from registered sources and expose each one to the AI model as its own function.
+user_manual:
+  - user-manual/ai/tools-and-agents
 ---
 
 # AI Tool Instances
@@ -19,20 +21,9 @@ This is the difference between a tool and a tool instance:
 
 Enable the **AI Tool Instances** feature (`CrestApps.OrchardCore.AI.ToolInstances`). It depends on the **AI Services** feature and adds the **Artificial Intelligence → Tool Instances** admin menu entry.
 
-The screencast below enables the feature, then creates an HTTP API Request tool instance named **Order Lookup API** — the function name the AI model calls is derived automatically from that name.
-
-<video controls preload="metadata" width="100%" aria-label="Screen cast of enabling AI Tool Instances and creating an HTTP API Request instance">
-  <source src="/img/docs/ai-tool-instances.mp4" type="video/mp4" />
-</video>
-
 ## Managing tool instances
 
-Navigate to **Artificial Intelligence → Tool Instances**.
-
-1. Select **Add Tool Instance**. A modal lists every registered source.
-2. Pick a source. The editor renders the fields the source contributes.
-3. Provide a **Name** and a **Description**. These two fields are always rendered first and are required for every source.
-4. Fill in the source-specific fields and save.
+**Artificial Intelligence → Tool Instances** lists the instances. **Add Tool Instance** opens a modal of every registered source; the editor then renders the shared **Name** and **Description** fields first, followed by the fields the source contributes. Creating instances in the admin, with a screencast, is described in the User Manual under [Tool instances](../user-manual/ai/tools-and-agents.md#tool-instances).
 
 The **Name** must be unique across all tool instances and cannot be changed after the instance is created, because it is used to derive the function name that the AI model calls. Function names are prefixed and sanitized automatically, so `Order Lookup API` becomes something like `tool_instance_order_lookup_api`.
 
@@ -61,7 +52,7 @@ Pick the source that matches how the site publishes its content:
 | --- | --- | --- |
 | **Documentation search (sitemap)** (`sitemap-documentation`) | Any site that publishes a `sitemap.xml`, such as Docusaurus, MkDocs, and most static sites. | Crawls pages, strips the HTML, and ranks passages locally with keyword scoring. |
 | **Documentation search (search index)** (`search-index-documentation`) | MkDocs Material and other sites that publish a fetchable `search_index.json`. | Downloads the prebuilt index once and ranks its entries locally. |
-| **Documentation search (Algolia)** (`algolia-documentation`) | Docusaurus sites (and others) wired to hosted Algolia DocSearch. | Forwards the query to Algolia, which performs the ranking. |
+| **Documentation search (Algolia DocSearch)** (`algolia-documentation`) | Docusaurus sites (and others) wired to hosted Algolia DocSearch. | Forwards the query to Algolia, which performs the ranking. |
 | **Website search (live API)** (`website-search`) | WordPress sites and any site that exposes its own search API. | Calls the site's own search API live on each request — no crawling, no local corpus, and no cold-start indexing delay. The site performs the ranking. |
 
 All four sources carry the **Knowledgebase** category. Each source captures its own fields:
@@ -101,13 +92,15 @@ This source and the data source attached directly to an AI profile share one ret
 
 ## Assigning instances to a profile
 
-Open an **AI Profile** (or an **AI Profile Template** of the *Profile* source) and go to the **Capabilities** tab. The **Tool Instances** section lists every instance the current user is allowed to access. Selected instances are passed to the AI model alongside the profile's regular tools.
+The **Tool Instances** section of the **Capabilities** tab on an **AI Profile** (or an **AI Profile Template** of the *Profile* source) lists every instance the current user is allowed to access. Selected instances are stored in `AIToolInstanceMetadata` and passed to the AI model alongside the profile's regular tools.
 
 Because AI profile templates copy their properties onto the profiles created from them, instances selected on a template are inherited by every profile created from that template.
 
 ## Assigning instances to a chat interaction
 
-Open a **Chat Interaction** and go to the **Capabilities** tab. The **Tool Instances** section works exactly like the profile editor and lists every instance the current user is allowed to access. Cloning an interaction carries the selected instances over to the copy.
+The **Capabilities** tab of a **Chat Interaction** has the same **Tool Instances** section. Cloning an interaction (**Chat with Preset Settings**) carries the selected instances over to the copy.
+
+See [Use a tool instance](../user-manual/ai/tools-and-agents.md#use-a-tool-instance) in the User Manual.
 
 ## Using instances during post-session processing
 

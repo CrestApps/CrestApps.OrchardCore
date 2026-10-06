@@ -3,6 +3,8 @@ sidebar_label: Agent States
 sidebar_position: 22
 title: Agent States (Reason Codes)
 description: Create the reasons agents choose when they step away, such as lunch, a team meeting or training, and control where they appear in the presence menu.
+technical_manual:
+  - contact-center/agents-queues-dialer
 ---
 
 When agents are not taking work, they pick a reason from their presence menu: *Lunch*, *Team meeting*, *Training* and so on. Each reason code maps to one of the built-in presence states, and reports and the live dashboard show both the state and the reason.
@@ -11,7 +13,9 @@ When agents are not taking work, they pick a reason from their presence menu: *L
 | --- | --- |
 | **Menu** | Interaction Center > Management > Agent states |
 | **Permission** | Manage Contact Center agents |
-| **Feature** | Contact Center Agents (`CrestApps.OrchardCore.ContactCenter.Agents`) |
+| **Feature** | Contact Center Agents |
+
+<AskYourAdmin />
 
 <video controls preload="metadata" width="100%" aria-label="Screencast of creating an agent state reason code and seeing it in the presence menu">
   <source src="/img/docs/um-agent-states.mp4" type="video/mp4" />

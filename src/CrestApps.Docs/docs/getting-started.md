@@ -3,9 +3,15 @@ sidebar_label: Getting Started
 sidebar_position: 2
 title: Getting Started
 description: Install, build, and run the Orchard Core modules in this repository or consume the published packages in your own Orchard solution.
+user_manual:
+  - user-manual/getting-started/finding-your-way
 ---
 
 # Getting Started
+
+:::note[Technical Manual]
+This is the Technical Manual, for developers and IT staff who install, configure, deploy and extend the modules. If you use the app in the browser, go to the [User Manual](user-manual/index.md) instead.
+:::
 
 Use this repository when you want the Orchard Core host applications, Orchard-specific modules, or the Orchard documentation site. For shared framework guidance, see **[core.crestapps.com](https://core.crestapps.com)**.
 
@@ -35,6 +41,8 @@ dotnet add package CrestApps.OrchardCore.OpenAI
 ```
 
 After installing packages, enable the required features in **Tools -> Features** inside the Orchard admin.
+
+Modules that need connection strings, API keys or tuning values read them from `appsettings.json`, environment variables or a secret store. The [Configuration Reference](configuration.md) lists every section, the environment-variable form of each key, and which source wins when a value is set in more than one place.
 
 ## Release notes
 
@@ -109,7 +117,7 @@ OrchardCore__CrestApps__Elasticsearch__Password
 OrchardCore__OrchardCore_Elasticsearch__*
 ```
 
-The `CrestApps` sections are the global connections described in [AI Data Sources - PostgreSQL](./ai/data-sources/postgresql.md) and [AI Data Sources - Elasticsearch](./ai/data-sources/elasticsearch.md). The `OrchardCore_Elasticsearch` section configures the Orchard Core Elasticsearch feature that owns the Orchard-managed indexes.
+The `CrestApps` sections are the global connections described in [AI Data Sources - PostgreSQL](./ai/data-sources/postgresql.md) and [AI Data Sources - Elasticsearch](./ai/data-sources/elasticsearch.md). For everything else the app host sets, see [Local development with Aspire](configuration.md#local-development-with-aspire). The `OrchardCore_Elasticsearch` section configures the Orchard Core Elasticsearch feature that owns the Orchard-managed indexes.
 
 #### Share the local stores
 
@@ -126,10 +134,11 @@ docker exec -e PGPASSWORD=postgres <container> pg_dump --username postgres --dbn
 docker cp <container>:/tmp/vectordb.dump .\vectordb.dump
 ```
 
-To work against shared servers instead of copies, host them somewhere both developers can reach and set the connections per developer rather than in source control:
+To work against shared servers instead of copies, host them somewhere both developers can reach and set the connections per developer rather than in source control. The CMS project does not declare a user secrets ID, so run `dotnet user-secrets init` once first. User secrets are only read when `ASPNETCORE_ENVIRONMENT` is `Development`:
 
 ```powershell
 cd .\src\Startup\CrestApps.OrchardCore.Cms.Web
+dotnet user-secrets init
 dotnet user-secrets set OrchardCore:CrestApps:PostgreSQL:ConnectionString "<connection string>"
 dotnet user-secrets set OrchardCore:CrestApps:Elasticsearch:Url "<url>"
 ```

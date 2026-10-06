@@ -1,120 +1,418 @@
 /**
- * CrestApps custom theme colors.
- * Derived from the CrestApps logo:
- *   #191718 near-black, #d9d9d9 silver, #eaa429 amber, #d88500 dark amber.
- * Primary uses the logo's near-black (#181618) per brand guidelines.
+ * CrestApps docs theme.
+ *
+ * - Amber (#eaa429, from the CrestApps logo) marks the User Manual. Its links use a deeper amber (#b45309)
+ *   so text keeps a 5:1 contrast on white.
+ * - Steel blue (#2a81bb, deep #144c71) marks the Technical Manual. Links use #2575ad for the same reason.
+ * - Slate grays and silver (#21323c, #6d7384, #bec3c8, #d0dbe3, #edf4fa) are the neutrals, and navy
+ *   (#081b26) is the hero and footer.
  * Font: Inter (matching crestapps.com).
  */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 :root {
-    --ifm-color-primary: #181618;
-    --ifm-color-primary-dark: #111011;
-    --ifm-color-primary-darker: #0d0c0d;
-    --ifm-color-primary-darkest: #000000;
-    --ifm-color-primary-light: #2c292c;
-    --ifm-color-primary-lighter: #3a373a;
-    --ifm-color-primary-lightest: #504d50;
-    --ifm-code-font-size: 95%;
-    --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
-    --ifm-navbar-background-color: #ffffff;
-    --ifm-background-color: #f4f4f4;
-    --ifm-font-family-base: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif;
+    /* Default accent (home page, search page and the User Manual): deep amber. */
+    --ifm-color-primary: #b45309;
+    --ifm-color-primary-dark: #a24b08;
+    --ifm-color-primary-darker: #994607;
+    --ifm-color-primary-darkest: #7e3a06;
+    --ifm-color-primary-light: #c65b0a;
+    --ifm-color-primary-lighter: #cf5f0a;
+    --ifm-color-primary-lightest: #ea6c0c;
+
+    --crestapps-navy: #081b26;
+    --crestapps-ink: #21323c;
+    --crestapps-slate: #6d7384;
+    --crestapps-silver: #bec3c8;
+    --crestapps-silver-light: #d0dbe3;
+    --crestapps-mist: #edf4fa;
     --crestapps-amber: #eaa429;
     --crestapps-dark-amber: #d88500;
+    --crestapps-steel: #2a81bb;
+    --crestapps-steel-dark: #144c71;
+
+    --ifm-font-family-base: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif;
+    --ifm-font-color-base: #3d4753;
+    --ifm-font-color-secondary: var(--crestapps-slate);
+    --ifm-heading-color: var(--crestapps-ink);
+    --ifm-heading-font-weight: 700;
+    --ifm-background-color: #fafbfc;
+    --ifm-background-surface-color: #ffffff;
+    --ifm-navbar-background-color: rgba(255, 255, 255, 0.92);
+    --ifm-code-font-size: 92%;
+    --ifm-code-background: var(--crestapps-mist);
+    --ifm-toc-border-color: var(--crestapps-silver-light);
+    --ifm-hr-background-color: var(--crestapps-silver-light);
+    --ifm-table-head-background: var(--crestapps-mist);
+    --ifm-table-stripe-background: rgba(237, 244, 250, 0.45);
+    --ifm-table-border-color: var(--crestapps-silver-light);
+    --ifm-link-hover-decoration: none;
+    --docusaurus-highlighted-code-line-bg: rgba(42, 129, 187, 0.12);
+
+    /* Sidebar menu. */
+    --ifm-menu-color: #4a5563;
+    --ifm-menu-color-active: var(--ifm-color-primary);
+    --ifm-menu-color-background-active: rgba(234, 164, 41, 0.14);
+    --ifm-menu-color-background-hover: rgba(33, 50, 60, 0.05);
+    --ifm-menu-link-padding-vertical: 0.45rem;
+    --ifm-menu-link-padding-horizontal: 0.8rem;
+
+    /* The two manuals. */
+    --crestapps-manual-user: var(--crestapps-amber);
+    --crestapps-manual-user-on: var(--crestapps-navy);
+    --crestapps-manual-user-soft: rgba(234, 164, 41, 0.12);
+    --crestapps-manual-user-text: #b45309;
+    --crestapps-manual-technical: #2575ad;
+    --crestapps-manual-technical-on: #ffffff;
+    --crestapps-manual-technical-soft: var(--crestapps-mist);
+    --crestapps-manual-technical-text: #2575ad;
 }
 
 [data-theme='dark'] {
-    --ifm-color-primary: #d9d9d9;
-    --ifm-color-primary-dark: #c3c3c3;
-    --ifm-color-primary-darker: #b8b8b8;
-    --ifm-color-primary-darkest: #979797;
-    --ifm-color-primary-light: #e2e2e2;
-    --ifm-color-primary-lighter: #e8e8e8;
-    --ifm-color-primary-lightest: #f5f5f5;
+    --ifm-color-primary: #f5b544;
+    --ifm-color-primary-dark: #f3a923;
+    --ifm-color-primary-darker: #f2a312;
+    --ifm-color-primary-darkest: #d28a0b;
+    --ifm-color-primary-light: #f7c165;
+    --ifm-color-primary-lighter: #f8c776;
+    --ifm-color-primary-lightest: #fad9a0;
+
+    --ifm-font-color-base: #d6dee5;
+    --ifm-font-color-secondary: #9aa6b2;
+    --ifm-heading-color: #ffffff;
+    --ifm-background-color: #0b1821;
+    --ifm-background-surface-color: #10222d;
+    --ifm-navbar-background-color: rgba(11, 24, 33, 0.9);
+    --ifm-code-background: rgba(127, 179, 214, 0.12);
+    --ifm-toc-border-color: rgba(208, 219, 227, 0.12);
+    --ifm-hr-background-color: rgba(208, 219, 227, 0.12);
+    --ifm-table-head-background: #132a37;
+    --ifm-table-stripe-background: rgba(208, 219, 227, 0.03);
+    --ifm-table-border-color: rgba(208, 219, 227, 0.14);
     --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
-    --ifm-navbar-background-color: #181618;
-    --ifm-background-color: #1e1e1e;
+
+    --ifm-menu-color: #b9c6d0;
+    --ifm-menu-color-background-active: rgba(245, 181, 68, 0.14);
+    --ifm-menu-color-background-hover: rgba(208, 219, 227, 0.06);
+
+    --crestapps-manual-user-soft: rgba(234, 164, 41, 0.12);
+    --crestapps-manual-user-text: #f5b544;
+    --crestapps-manual-technical: #5aa4ef;
+    --crestapps-manual-technical-on: var(--crestapps-navy);
+    --crestapps-manual-technical-soft: rgba(90, 164, 239, 0.1);
+    --crestapps-manual-technical-text: #7fb3d6;
 }
+
+/* In the Technical Manual, links and active states take the Technical Manual's steel blue. */
+html[data-manual='technical'] {
+    --ifm-color-primary: #2575ad;
+    --ifm-color-primary-dark: #226796;
+    --ifm-color-primary-darker: #1d5a84;
+    --ifm-color-primary-darkest: #144c71;
+    --ifm-color-primary-light: #2a81bb;
+    --ifm-color-primary-lighter: #3d8fc6;
+    --ifm-color-primary-lightest: #5aa4ef;
+    --ifm-menu-color-background-active: var(--crestapps-mist);
+}
+
+[data-theme='dark'][data-manual='technical'] {
+    --ifm-color-primary: #7fb3d6;
+    --ifm-color-primary-dark: #6aa6cf;
+    --ifm-color-primary-darker: #5f9fcb;
+    --ifm-color-primary-darkest: #3f8bbf;
+    --ifm-color-primary-light: #94c0dd;
+    --ifm-color-primary-lighter: #99c2de;
+    --ifm-color-primary-lightest: #bfd9eb;
+    --ifm-menu-color-background-active: rgba(90, 164, 239, 0.14);
+}
+
+/* ---------- Navbar ---------- */
 
 .navbar {
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.1);
+    border-bottom: 1px solid var(--crestapps-silver-light);
+    box-shadow: none;
+    backdrop-filter: saturate(180%) blur(10px);
 }
+
+[data-theme='dark'] .navbar {
+    border-bottom-color: rgba(208, 219, 227, 0.1);
+}
+
+.navbar__title {
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.navbar__item {
+    padding-right: 0.85rem;
+    padding-left: 0.85rem;
+}
+
+.navbar__link {
+    font-size: 0.925rem;
+    font-weight: 500;
+}
+
+/* The active manual's tab carries that manual's color. */
+html[data-manual='user'] .navbar__link--active {
+    color: var(--crestapps-manual-user-text);
+    box-shadow: inset 0 -3px 0 var(--crestapps-manual-user);
+}
+
+html[data-manual='technical'] .navbar__link--active {
+    color: var(--crestapps-manual-technical-text);
+    box-shadow: inset 0 -3px 0 var(--crestapps-manual-technical);
+}
+
+/* ---------- Hero and footer ---------- */
 
 .hero--primary {
-    background-color: #181618;
-    color: #d9d9d9;
+    background:
+        radial-gradient(60rem 30rem at 8% -20%, rgba(234, 164, 41, 0.28), transparent 60%),
+        radial-gradient(55rem 32rem at 95% 120%, rgba(42, 129, 187, 0.45), transparent 60%),
+        var(--crestapps-navy);
+    color: var(--crestapps-silver-light);
 }
 
-    .hero--primary .hero__title {
-        color: #ffffff;
-    }
-
-    .hero--primary .button--secondary {
-        background-color: #eaa429;
-        border-color: #eaa429;
-        color: #181618;
-    }
-
-        .hero--primary .button--secondary:hover {
-            background-color: #d88500;
-            border-color: #d88500;
-            color: #ffffff;
-        }
-
-    .hero--primary .button--outline.button--secondary {
-        background-color: transparent;
-        border-color: #d9d9d9;
-        color: #d9d9d9;
-    }
-
-        .hero--primary .button--outline.button--secondary:hover {
-            background-color: #eaa429;
-            border-color: #eaa429;
-            color: #181618;
-        }
+.hero--primary .hero__title {
+    color: #ffffff;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+}
 
 .footer--dark {
-    background-color: #181618;
+    position: relative;
+    background-color: var(--crestapps-navy);
 }
 
-    .footer--dark a:hover {
-        color: #eaa52c;
-    }
+.footer--dark::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--crestapps-amber), var(--crestapps-steel));
+}
 
+.footer--dark .footer__link-item {
+    color: var(--crestapps-silver);
+}
+
+.footer--dark a:hover {
+    color: var(--crestapps-amber);
+}
+
+/* ---------- Content ---------- */
+
+.markdown h1:first-child,
+.markdown > header > h1 {
+    font-weight: 800;
+    letter-spacing: -0.025em;
+}
+
+.markdown h2 {
+    letter-spacing: -0.015em;
+}
+
+.markdown table {
+    /* Infima makes tables display: block so wide ones scroll; size the box to the table so the border hugs it. */
+    width: fit-content;
+    max-width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    overflow: hidden;
+    border: 1px solid var(--ifm-table-border-color);
+    border-radius: 8px;
+}
+
+.markdown table th,
+.markdown table td {
+    border-width: 0 0 1px 0;
+    font-size: 0.925rem;
+}
+
+.markdown table tr:last-child td {
+    border-bottom: 0;
+}
+
+.markdown table th {
+    color: var(--crestapps-ink);
+    font-weight: 600;
+}
+
+[data-theme='dark'] .markdown table th {
+    color: #ffffff;
+}
+
+/* Key/value tables written with an empty header row (| | |) don't show that empty row. */
+.markdown table thead:not(:has(th:not(:empty))) {
+    display: none;
+}
+
+.markdown code {
+    border: 0;
+    border-radius: 4px;
+}
+
+.markdown video,
+.markdown img {
+    border: 1px solid var(--ifm-table-border-color);
+    border-radius: 8px;
+}
+
+/* Center every crumb, its separator and the manual's icon crumb on one line. */
+.breadcrumbs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    row-gap: 0.25rem;
+}
+
+.breadcrumbs__item {
+    display: inline-flex;
+    align-items: center;
+}
+
+.breadcrumbs__link {
+    display: inline-flex;
+    align-items: center;
+    line-height: 1.4;
+}
+
+.breadcrumbs__item--active .breadcrumbs__link {
+    background: var(--ifm-menu-color-background-active);
+    color: var(--ifm-color-primary);
+    font-weight: 500;
+}
+
+.pagination-nav__link {
+    border-color: var(--crestapps-silver-light);
+    border-radius: 8px;
+    transition: border-color 0.15s ease;
+}
+
+.pagination-nav__link:hover {
+    border-color: var(--ifm-color-primary);
+}
+
+/* The version picker in the navbar already shows the version, so the badge above each title is not needed. */
+.theme-doc-version-badge {
+    display: none;
+}
+
+/* ---------- Sidebar menu ---------- */
+
+.theme-doc-sidebar-menu {
+    font-size: 0.875rem;
+}
+
+.theme-doc-sidebar-menu .menu__link {
+    border-radius: 6px;
+    line-height: 1.35;
+}
+
+/* Top-level categories read as section headings. */
+.theme-doc-sidebar-item-category-level-1 > .menu__list-item-collapsible > .menu__link {
+    color: var(--ifm-heading-color);
+    font-weight: 600;
+}
+
+.theme-doc-sidebar-menu .menu__link--active:not(.menu__link--sublist) {
+    font-weight: 600;
+}
+
+/* Smaller chevrons. Infima draws them 2rem wide inside a 1.25rem box. */
+.theme-doc-sidebar-menu .menu__link--sublist-caret::after,
+.theme-doc-sidebar-menu .menu__caret::before {
+    width: 1rem;
+    min-width: 1rem;
+    height: 1rem;
+    background-size: 1.1rem 1.1rem;
+    opacity: 0.55;
+}
+
+.theme-doc-sidebar-menu .menu__caret {
+    padding: 0 0.5rem;
+}
+
+/* Nested lists hang off a thin guide line instead of stacked grey boxes. */
 .theme-doc-sidebar-menu .menu__list .menu__list {
-    margin-top: 0.35rem;
-    margin-left: 0.5rem;
-    padding: 0.4rem 0.45rem 0.45rem;
-    border-left: 1px solid rgba(24, 22, 24, 0.12);
-    border-radius: 0.5rem;
-}
-
-.theme-doc-sidebar-item-category-level-1 > .menu__list {
-    background-color: rgba(24, 22, 24, 0.04);
-}
-
-.theme-doc-sidebar-item-category-level-2 > .menu__list {
-    background-color: rgba(24, 22, 24, 0.08);
-}
-
-.theme-doc-sidebar-item-category-level-3 > .menu__list {
-    background-color: rgba(24, 22, 24, 0.12);
+    margin: 0.2rem 0 0.4rem 1.35rem;
+    padding-left: 0.4rem;
+    border-left: 1px solid var(--crestapps-silver-light);
 }
 
 [data-theme='dark'] .theme-doc-sidebar-menu .menu__list .menu__list {
-    border-left-color: rgba(217, 217, 217, 0.16);
+    border-left-color: rgba(208, 219, 227, 0.12);
 }
 
-[data-theme='dark'] .theme-doc-sidebar-item-category-level-1 > .menu__list {
-    background-color: rgba(217, 217, 217, 0.04);
+.theme-doc-sidebar-menu .menu__list-item:not(:first-child) {
+    margin-top: 0.2rem;
 }
 
-[data-theme='dark'] .theme-doc-sidebar-item-category-level-2 > .menu__list {
-    background-color: rgba(217, 217, 217, 0.08);
+/* Icons on top-level entries. The class comes from icon() in sidebars.js; the SVGs are Lucide icons in static/img/icons. */
+.sidebar-icon > .menu__link,
+.sidebar-icon > .menu__list-item-collapsible > .menu__link {
+    justify-content: flex-start;
+    gap: 0.6rem;
 }
 
-[data-theme='dark'] .theme-doc-sidebar-item-category-level-3 > .menu__list {
-    background-color: rgba(217, 217, 217, 0.12);
+.sidebar-icon > .menu__link::before,
+.sidebar-icon > .menu__list-item-collapsible > .menu__link::before {
+    content: '';
+    flex-shrink: 0;
+    width: 1.05rem;
+    height: 1.05rem;
+    background-color: currentColor;
+    opacity: 0.8;
+    -webkit-mask: var(--sidebar-icon) center / contain no-repeat;
+    mask: var(--sidebar-icon) center / contain no-repeat;
+}
+
+.sidebar-icon > .menu__list-item-collapsible > .menu__link--sublist-caret::after {
+    margin-left: auto;
+}
+
+.sidebar-icon--book-a { --sidebar-icon: url('/img/icons/book-a.svg'); }
+.sidebar-icon--boxes { --sidebar-icon: url('/img/icons/boxes.svg'); }
+.sidebar-icon--code-xml { --sidebar-icon: url('/img/icons/code-xml.svg'); }
+.sidebar-icon--compass { --sidebar-icon: url('/img/icons/compass.svg'); }
+.sidebar-icon--contact { --sidebar-icon: url('/img/icons/contact.svg'); }
+.sidebar-icon--door-open { --sidebar-icon: url('/img/icons/door-open.svg'); }
+.sidebar-icon--file-cog { --sidebar-icon: url('/img/icons/file-cog.svg'); }
+.sidebar-icon--headset { --sidebar-icon: url('/img/icons/headset.svg'); }
+.sidebar-icon--history { --sidebar-icon: url('/img/icons/history.svg'); }
+.sidebar-icon--life-buoy { --sidebar-icon: url('/img/icons/life-buoy.svg'); }
+.sidebar-icon--lightbulb { --sidebar-icon: url('/img/icons/lightbulb.svg'); }
+.sidebar-icon--list-checks { --sidebar-icon: url('/img/icons/list-checks.svg'); }
+.sidebar-icon--messages-square { --sidebar-icon: url('/img/icons/messages-square.svg'); }
+.sidebar-icon--phone { --sidebar-icon: url('/img/icons/phone.svg'); }
+.sidebar-icon--rocket { --sidebar-icon: url('/img/icons/rocket.svg'); }
+.sidebar-icon--shield-check { --sidebar-icon: url('/img/icons/shield-check.svg'); }
+.sidebar-icon--sliders-horizontal { --sidebar-icon: url('/img/icons/sliders-horizontal.svg'); }
+.sidebar-icon--hexagon-nodes { --sidebar-icon: url('/img/icons/hexagon-nodes.svg'); }
+.sidebar-icon--tags { --sidebar-icon: url('/img/icons/tags.svg'); }
+
+/* ---------- Table of contents ---------- */
+
+.table-of-contents {
+    font-size: 0.8rem;
+}
+
+.table-of-contents__link {
+    color: var(--ifm-font-color-secondary);
+}
+
+.table-of-contents__link--active {
+    color: var(--ifm-color-primary);
+    font-weight: 600;
+}
+
+/* Links are already colored, so they carry no underline, including inside notes and tips. */
+.theme-admonition a,
+.alert a {
+    font-weight: 600;
+    text-decoration: none;
 }

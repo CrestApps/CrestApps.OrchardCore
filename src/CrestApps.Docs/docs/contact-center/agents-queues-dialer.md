@@ -3,6 +3,13 @@ sidebar_label: Agents, Queues & Dialer
 sidebar_position: 1
 title: Agents, Queues, Routing, and Dialer
 description: Contact Center agent presence, queues, skill-aware routing, reservations, availability-based assignment, and voice-routed outbound dialing.
+user_manual:
+  - user-manual/queues
+  - user-manual/skills-and-entitlements
+  - user-manual/agent-states
+  - user-manual/dialer-profiles
+  - user-manual/business-hours
+  - user-manual/agent-workspace
 ---
 
 This phase adds the operational core of the Contact Center: agent presence, work queues, reservations, skill-aware routing, availability-based assignment, and an outbound dialer that routes voice calls through Contact Center Voice providers. Each capability is a separate, feature-gated module so tenants enable only what they need.

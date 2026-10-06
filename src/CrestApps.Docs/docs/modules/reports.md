@@ -3,6 +3,8 @@ sidebar_label: Reports
 sidebar_position: 7
 title: Reports
 description: A reusable reporting framework for OrchardCore with a shared admin Reports area, extensible filters, a uniform report renderer, and pluggable exports.
+user_manual:
+  - user-manual/reports
 ---
 
 | | |
@@ -34,6 +36,8 @@ The implementation is split into three layers:
 - **`IReportExportFormat`** — an export format. CSV ships in the box; the optional **Reports (OpenXml)** add-on adds Excel (`.xlsx`); and any module can add more formats by registering another implementation.
 
 ## Reports area
+
+How people find a report, set its date range and filters, and export it is described in the User Manual: [Reports](../user-manual/reports.md). The Contact Center reports are listed in the [Report Catalog](../contact-center/report-catalog.md).
 
 Enabling the feature adds a top-level **Reports** item to the admin menu. Reports are alphabetized within consistently ordered role-based groups: **Executive**, **Operations**, **Queue & Routing**, **Agent Performance**, **Workforce & Payroll**, **Billing & Usage**, **CRM & Campaigns**, **Compliance & Audit**, **Technical & IT**, and **General**. Each entry is gated by the report's own permission, so a user only sees the reports they are allowed to run. Selecting a report opens a page with the filter form, the rendered document, and export actions for the current filter. A single enabled exporter renders as a normal button, while multiple enabled exporters render as an **Export** dropdown that can download CSV and, when the add-on is enabled, Excel (`.xlsx`).
 
