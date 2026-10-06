@@ -150,6 +150,12 @@ public class TelnyxSettingsViewModel
     public bool NoiseSuppressionCallerVoice { get; set; }
 
     /// <summary>
+    /// Gets or sets the name of how hard noise suppression works on each voice. Kept as text so a value the platform
+    /// does not know reads as balanced rather than failing the save.
+    /// </summary>
+    public string NoiseSuppressionStrength { get; set; }
+
+    /// <summary>
     /// Gets or sets the text-to-speech voice spoken prompts use.
     /// </summary>
     public string TtsVoice { get; set; }

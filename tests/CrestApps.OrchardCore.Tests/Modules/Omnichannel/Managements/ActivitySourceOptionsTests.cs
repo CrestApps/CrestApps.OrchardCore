@@ -320,7 +320,9 @@ public sealed class ActivitySourceOptionsTests
 
         if (includePacedDialing)
         {
-            new DialerPacedStartup(new PassThroughStringLocalizer<DialerPacedStartup>()).ConfigureServices(services);
+            new DialerPacedStartup(
+                new PassThroughStringLocalizer<DialerPacedStartup>(),
+                new TestShellConfiguration(new ConfigurationBuilder().Build())).ConfigureServices(services);
         }
 
         return services.BuildServiceProvider().GetRequiredService<IOptions<ActivitySourceOptions>>().Value;

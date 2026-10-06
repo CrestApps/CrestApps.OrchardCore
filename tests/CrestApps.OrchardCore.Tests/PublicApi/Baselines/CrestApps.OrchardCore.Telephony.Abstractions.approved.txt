@@ -322,6 +322,7 @@ namespace CrestApps.OrchardCore.Telephony
             public const string ConferenceParticipant = "conferenceParticipant";
             public const string FenceToken = "commandFenceToken";
             public const string IdempotencyKey = "idempotencyKey";
+            public const string RingTimeoutSeconds = "ringTimeoutSeconds";
             public const string SoftPhoneConnectionId = "softPhoneConnectionId";
             public const string SoftPhoneCredentialId = "softPhoneCredentialId";
             public const string SoftPhoneUserDisplayName = "softPhoneUserDisplayName";
@@ -419,6 +420,7 @@ namespace CrestApps.OrchardCore.Telephony.Models
     public sealed class CallQualityReport
     {
         public CallQualityReport() { }
+        public double? AutoLevelGainDb { get; set; }
         public double AvgMos { get; set; }
         public long BytesReceived { get; set; }
         public long BytesSent { get; set; }

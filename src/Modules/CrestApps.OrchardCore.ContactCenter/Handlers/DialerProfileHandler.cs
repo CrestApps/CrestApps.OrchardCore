@@ -75,14 +75,15 @@ internal sealed class DialerProfileHandler : CatalogEntryHandlerBase<DialerProfi
             context.Result.Fail(new ValidationResult(S["Name is required."], [nameof(DialerProfile.Name)]));
         }
 
-        if (profile.Mode == DialerMode.Predictive)
-        {
-            context.Result.Fail(new ValidationResult(S["Predictive dialing is not available yet. Choose Preview, Power, or Progressive."], [nameof(DialerProfile.Mode)]));
-        }
-        else if (profile.Mode.RequiresPacedDialerFeature() &&
+        if (profile.Mode.RequiresPacedDialerFeature() &&
             !await _shellFeaturesManager.IsFeatureEnabledAsync(ContactCenterConstants.Feature.DialerPaced))
         {
-            context.Result.Fail(new ValidationResult(S["Enable the Contact Center Paced Dialing feature before using Power or Progressive dialing."], [nameof(DialerProfile.Mode)]));
+            context.Result.Fail(new ValidationResult(S["Enable the Contact Center Paced Dialing feature before using Power, Progressive or Predictive dialing."], [nameof(DialerProfile.Mode)]));
+        }
+
+        if (profile.Mode == DialerMode.Predictive)
+        {
+            ValidatePredictivePacing(context, profile);
         }
 
         // The caller id becomes the outbound "from" the voice provider dials with, and a provider rejects a
@@ -116,14 +117,94 @@ internal sealed class DialerProfileHandler : CatalogEntryHandlerBase<DialerProfi
             context.Result.Fail(new ValidationResult(S["The abandonment sample floor cannot be negative."], [nameof(DialerProfile.AbandonmentSampleFloor)]));
         }
 
+        // An unanswered automated call rings for at least the fifteen seconds the common abandoned-call rules expect. The
+        // dialer never rings for less whatever is stored, but a profile that asks for less is refused rather than
+        // silently overruled. Zero, as a recipe may write it, means the default.
+        if (profile.Mode.IsAutomated() &&
+            profile.RingTimeoutSeconds is not 0 and (< DialerAbandonment.MinimumRingTimeoutSeconds or > DialerAbandonment.MaximumRingTimeoutSeconds))
+        {
+            context.Result.Fail(new ValidationResult(S["The ring time must be between {0} and {1} seconds. An unanswered automated call rings for at least {0} seconds.", DialerAbandonment.MinimumRingTimeoutSeconds, DialerAbandonment.MaximumRingTimeoutSeconds], [nameof(DialerProfile.RingTimeoutSeconds)]));
+        }
+
         if (profile.EnforceAbandonmentCap && profile.Mode.IsAutomated() && !profile.SafeHarborEnabled)
         {
-            context.Result.Fail(new ValidationResult(S["Enable safe-harbor messaging when an automated dialing mode enforces an abandonment cap."], [nameof(DialerProfile.SafeHarborEnabled)]));
+            context.Result.Fail(new ValidationResult(S["Enable the abandoned-call message when an automated dialing mode enforces an abandonment cap."], [nameof(DialerProfile.SafeHarborEnabled)]));
         }
 
         if (profile.SafeHarborEnabled && string.IsNullOrWhiteSpace(profile.SafeHarborMessage))
         {
-            context.Result.Fail(new ValidationResult(S["Provide a safe-harbor announcement when safe-harbor messaging is enabled."], [nameof(DialerProfile.SafeHarborMessage)]));
+            context.Result.Fail(new ValidationResult(S["Provide the abandoned-call message when it is enabled."], [nameof(DialerProfile.SafeHarborMessage)]));
+        }
+    }
+
+    // The predictive settings only govern Predictive profiles, so only they are held to them: a Power profile imported with
+    // a stray value is not refused for a setting it never uses.
+    private void ValidatePredictivePacing(ValidatingContext<DialerProfile> context, DialerProfile profile)
+    {
+        if (!Enum.IsDefined(profile.PredictivePacingModel))
+        {
+            context.Result.Fail(new ValidationResult(S["Select a valid pacing model."], [nameof(DialerProfile.PredictivePacingModel)]));
+        }
+
+        if (profile.TargetAbandonmentRatePercent is <= 0 or > 100 || double.IsNaN(profile.TargetAbandonmentRatePercent))
+        {
+            context.Result.Fail(new ValidationResult(S["The target abandonment rate must be greater than 0 and at most 100 percent."], [nameof(DialerProfile.TargetAbandonmentRatePercent)]));
+        }
+
+        if (profile.MaxLinesPerAgent is < PredictiveDialingDefaults.MinLinesPerAgent or > PredictiveDialingDefaults.MaxLinesPerAgent || double.IsNaN(profile.MaxLinesPerAgent))
+        {
+            context.Result.Fail(new ValidationResult(S["The lines per agent must be between {0} and {1}.", PredictiveDialingDefaults.MinLinesPerAgent, PredictiveDialingDefaults.MaxLinesPerAgent], [nameof(DialerProfile.MaxLinesPerAgent)]));
+        }
+
+        if (profile.MaxCallsInFlight is < 1 or > PredictiveDialingDefaults.MaxCallsInFlight)
+        {
+            context.Result.Fail(new ValidationResult(S["The calls in flight must be between 1 and {0}.", PredictiveDialingDefaults.MaxCallsInFlight], [nameof(DialerProfile.MaxCallsInFlight)]));
+        }
+
+        if (profile.AnswerRateSampleFloor is < PredictiveDialingDefaults.MinAnswerRateSampleFloor or > PredictiveDialingDefaults.MaxAnswerRateSampleFloor)
+        {
+            context.Result.Fail(new ValidationResult(S["The answer rate sample floor must be between {0} and {1} calls.", PredictiveDialingDefaults.MinAnswerRateSampleFloor, PredictiveDialingDefaults.MaxAnswerRateSampleFloor], [nameof(DialerProfile.AnswerRateSampleFloor)]));
+        }
+
+        if (profile.AnswerRateWindowMinutes is < PredictiveDialingDefaults.MinAnswerRateWindowMinutes or > PredictiveDialingDefaults.MaxAnswerRateWindowMinutes)
+        {
+            context.Result.Fail(new ValidationResult(S["The answer rate window must be between {0} and {1} minutes.", PredictiveDialingDefaults.MinAnswerRateWindowMinutes, PredictiveDialingDefaults.MaxAnswerRateWindowMinutes], [nameof(DialerProfile.AnswerRateWindowMinutes)]));
+        }
+
+        if (profile.FreeUpCreditPercent is < 0 or > 100)
+        {
+            context.Result.Fail(new ValidationResult(S["The share of agents freeing up that is counted must be between 0 and 100 percent."], [nameof(DialerProfile.FreeUpCreditPercent)]));
+        }
+
+        if (profile.ConnectWaitMilliseconds is < 0 or > PredictiveDialingDefaults.MaxConnectWaitMilliseconds)
+        {
+            context.Result.Fail(new ValidationResult(S["The connect wait must be between 0 and {0} milliseconds.", PredictiveDialingDefaults.MaxConnectWaitMilliseconds], [nameof(DialerProfile.ConnectWaitMilliseconds)]));
+        }
+
+        if (profile.PredictivePacingModel != PredictivePacingModel.OverDial)
+        {
+            return;
+        }
+
+        // Over-dialing is the one pacing that abandons calls by design, so it is only allowed with every safeguard on: a cap
+        // it is held to, a target below that cap for it to steer by, and the message a person hears when no agent is free.
+        if (!profile.EnforceAbandonmentCap)
+        {
+            context.Result.Fail(new ValidationResult(S["Over-dialing requires an enforced abandonment-rate cap."], [nameof(DialerProfile.EnforceAbandonmentCap)]));
+
+            if (!profile.SafeHarborEnabled)
+            {
+                context.Result.Fail(new ValidationResult(S["Over-dialing requires the abandoned-call message."], [nameof(DialerProfile.SafeHarborEnabled)]));
+            }
+        }
+
+        if (profile.MaxAbandonmentRatePercent <= 0)
+        {
+            context.Result.Fail(new ValidationResult(S["Over-dialing requires a maximum abandonment rate greater than 0 percent."], [nameof(DialerProfile.MaxAbandonmentRatePercent)]));
+        }
+        else if (profile.TargetAbandonmentRatePercent >= profile.MaxAbandonmentRatePercent)
+        {
+            context.Result.Fail(new ValidationResult(S["The target abandonment rate must be lower than the maximum abandonment rate."], [nameof(DialerProfile.TargetAbandonmentRatePercent)]));
         }
     }
 }

@@ -2622,7 +2622,8 @@ public sealed class ProviderVoiceEventServiceTests
             session,
             new VoiceIngressGate(distributedLock),
             clock,
-            logger);
+            logger,
+            Mock.Of<IDialerAbandonmentTracker>());
     }
 
     private static IAgentProfileManager CreateAgentManager()

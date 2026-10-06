@@ -53,6 +53,7 @@
     var describeVoiceIsolation = softPhoneModules.describeVoiceIsolation;
     var isVoiceIsolationSupported = softPhoneModules.isVoiceIsolationSupported;
     var createVoiceIsolationPipeline = softPhoneModules.createVoiceIsolationPipeline;
+    var clampAutoLevelGainDb = softPhoneModules.clampAutoLevelGainDb;
     var RAW_CAPTURE_SILENT_LEVEL = softPhoneModules.RAW_CAPTURE_SILENT_LEVEL;
     var clampPlayoutDelay = softPhoneModules.clampPlayoutDelay;
     var describePlayoutDelay = softPhoneModules.describePlayoutDelay;
@@ -1366,7 +1367,23 @@
                 // counters, not the instantaneous audioLevel: a single reading every eight seconds landed in a
                 // pause between words often enough to log Mic=0.000 for an agent the far end could hear.
                 var micLevel = windowedMicrophoneLevel(mediaSource, qualityState.lastMediaSource);
+
+                // The raw microphone's peak level since the last sample, where voice isolation meters it ahead of
+                // its processing (-1 otherwise). The browser reports no capture statistics for the processed track
+                // isolation sends, so every isolated call logged Mic=-1 and nothing showed how loud the agent was
+                // before the chain -- the one number that tells a quiet microphone from a chain that lost level.
+                // It stands in for the browser's figure when that is missing. It is a peak RMS on the scale of
+                // the outgoing level beside it, so the two read directly as "in" and "out" of the chain.
+                var rawCapturePeak = typeof context.readRawCapturePeak === 'function' ? context.readRawCapturePeak() : -1;
+
+                if (micLevel < 0 && rawCapturePeak >= 0) {
+                    micLevel = rawCapturePeak;
+                }
+
                 var captureReported = micLevel >= 0;
+
+                // The gain the automatic voice level applies now (null when it is not running).
+                var autoLevelGainDb = typeof context.readAutoLevelGainDb === 'function' ? context.readAutoLevelGainDb() : null;
                 var audioEnergy = mediaSource && typeof mediaSource.totalAudioEnergy === 'number' ? mediaSource.totalAudioEnergy : 0;
                 var energyDelta = audioEnergy - qualityState.lastAudioEnergy;
                 var bytesSent = parsed.outbound && parsed.outbound.bytesSent ? parsed.outbound.bytesSent : 0;
@@ -1451,8 +1468,7 @@
                 // With voice isolation on, the send track is gated: it is meant to be near-silent whenever the
                 // agent is listening, so judging the microphone by it would call a working headset dead after the
                 // caller had talked for half a minute. The isolation chain meters the raw capture ahead of its
-                // processing instead, and that reading -- digital silence or not -- decides.
-                var rawCapturePeak = typeof context.readRawCapturePeak === 'function' ? context.readRawCapturePeak() : -1;
+                // processing instead, and that reading (taken above) -- digital silence or not -- decides.
                 var captureSilent = rawCapturePeak >= 0
                     ? rawCapturePeak <= RAW_CAPTURE_SILENT_LEVEL
                     : captureReported
@@ -1485,6 +1501,7 @@
                     bytesReceived: bytesReceived,
                     micLevel: micLevel,
                     captureReported: captureReported,
+                    autoLevelGainDb: typeof autoLevelGainDb === 'number' && isFinite(autoLevelGainDb) ? autoLevelGainDb : null,
                     bytesSent: bytesSent,
                     packetsSent: packetsSent,
                     jitterBufferMs: jitterBufferMs,
@@ -1562,6 +1579,10 @@
                 // means the browser exposed no capture stats: unknown, not silent.
                 microphoneLevel: sample.micLevel,
                 captureReported: !!sample.captureReported,
+                // The automatic voice level's gain in dB at this sample, or null when it is not running. Read
+                // beside the microphone and outgoing levels it says whether a quiet call was a quiet microphone
+                // the level could not lift (at its ceiling), or one it never saw speech from (still at unity).
+                autoLevelGainDb: sample.autoLevelGainDb,
                 bytesSent: sample.bytesSent,
                 packetsSent: sample.packetsSent,
                 // Whether audio stopped leaving this call for a stretch while it was connected, unmuted and not held.
@@ -2749,6 +2770,8 @@
             voiceIsolationEngine: rootElement.querySelector('[data-telephony-voice-isolation-engine]'),
             voiceIsolationStrength: rootElement.querySelector('[data-telephony-voice-isolation-strength]'),
             voiceIsolationStatus: rootElement.querySelector('[data-telephony-voice-isolation-status]'),
+            voiceIsolationAutoLevel: rootElement.querySelector('[data-telephony-voice-isolation-auto-level]'),
+            voiceIsolationOnlyRows: Array.prototype.slice.call(rootElement.querySelectorAll('[data-telephony-voice-isolation-only]')),
             browserProcessingRows: Array.prototype.slice.call(rootElement.querySelectorAll('[data-telephony-browser-processing]')),
             playoutDelay: rootElement.querySelector('[data-telephony-playout-delay]'),
             signalingRegion: rootElement.querySelector('[data-telephony-signaling-region]'),
@@ -3598,12 +3621,13 @@
         }
 
         // The soft phone's own processing after the browser's: voice isolation (always named, so "off" is as
-        // readable as "on") and the boost when one is set. "vi=gtcrn+gate boost+6".
+        // readable as "on"), the automatic voice level with the gain it applies now, and the boost when one is
+        // set. "vi=gtcrn+gate+level(+9dB) boost+6".
         function captureChainLabel() {
             var parts = [];
 
             if (typeof describeVoiceIsolation === 'function') {
-                parts.push(describeVoiceIsolation(voiceIsolationState, voiceIsolationEngine));
+                parts.push(describeVoiceIsolation(voiceIsolationState, voiceIsolationEngine, currentAutoLevelGainDb()));
             }
 
             var boost = describeBoost(micBoostDb);
@@ -3894,12 +3918,19 @@
             // waiting for a click), the capture falls back to the browser's own two so the agent is never sent
             // with no noise handling at all.
             var isolationFallback = voiceIsolationSettings.enabled && !isVoiceIsolationExpected();
+
+            // While voice isolation is on, the browser's two are decided by isolation alone: off while the model
+            // runs, on only as the fallback. The agent cannot see or change them then (the overlay hides them), so
+            // a stored "on" from before isolation was turned on must not stack a second noise suppressor and a
+            // second gain stage under the model -- live, that left the agent sounding muffled and pumping.
+            var browserNoiseSuppression = voiceIsolationSettings.enabled ? isolationFallback : processingSettings.noiseSuppression;
+            var browserGainControl = voiceIsolationSettings.enabled ? isolationFallback : processingSettings.autoGainControl;
             var audio = {
                 // Each can be switched off in the settings overlay, live, when a caller reports the agent sounding
                 // hollow or processed -- these three are the usual suspects.
                 echoCancellation: processingSettings.echoCancellation,
-                noiseSuppression: processingSettings.noiseSuppression || isolationFallback,
-                autoGainControl: processingSettings.autoGainControl || isolationFallback,
+                noiseSuppression: browserNoiseSuppression,
+                autoGainControl: browserGainControl,
                 // Ask for a single channel. A call is mono end to end, so stereo capture buys nothing and can
                 // cost a great deal: headset microphones routed through a shared audio codec are often
                 // presented as a stereo pair carrying the microphone on one side and silence on the other, and
@@ -4024,9 +4055,14 @@
                 return Promise.resolve(createBoostPipeline(stream, micBoostDb));
             }
 
+            // The chain being replaced is still the live one: keep what its level learned before it goes.
+            rememberAutoLevelGain();
+
             return createVoiceIsolationPipeline(stream, {
                 engine: voiceIsolationSettings.engine,
                 strength: voiceIsolationSettings.strength,
+                autoLevel: voiceIsolationSettings.autoLevel,
+                autoLevelInitialDb: autoLevelGains[captureDeviceKey(stream)],
                 boostDb: micBoostDb,
                 assetBaseUrl: config.voiceIsolationAssetsUrl
             }).then(function (pipeline) {
@@ -4059,6 +4095,43 @@
 
                 return createBoostPipeline(stream, micBoostDb);
             });
+        }
+
+        // Which microphone a capture is on, as the key the learned auto-level gain is kept under.
+        function captureDeviceKey(stream) {
+            var track = stream && typeof stream.getAudioTracks === 'function' ? stream.getAudioTracks()[0] : null;
+            var settings = null;
+
+            try {
+                settings = track && typeof track.getSettings === 'function' ? track.getSettings() : null;
+            } catch (error) {
+                settings = null;
+            }
+
+            return (settings && settings.deviceId) || (track && track.label) || 'default';
+        }
+
+        // The gain the automatic voice level applies now, or null when it is not running.
+        function currentAutoLevelGainDb() {
+            var gain = sendPipeline && typeof sendPipeline.readAutoLevelGainDb === 'function'
+                ? sendPipeline.readAutoLevelGainDb()
+                : null;
+
+            return typeof gain === 'number' && isFinite(gain) ? gain : null;
+        }
+
+        // Keeps the live level's gain for its microphone, in memory and with the layout.
+        function rememberAutoLevelGain() {
+            var gain = currentAutoLevelGainDb();
+
+            if (gain === null || !sourceAudioStream) {
+                return;
+            }
+
+            autoLevelGains[captureDeviceKey(sourceAudioStream)] = typeof clampAutoLevelGainDb === 'function'
+                ? Math.round(clampAutoLevelGainDb(gain) * 10) / 10
+                : 0;
+            saveLayout({ autoLevelGains: autoLevelGains });
         }
 
         // Isolation could not run. The agent keeps a working capture (without it), the browser's own noise
@@ -4373,8 +4446,14 @@
 
         // Voice isolation: a speech-enhancement model and a noise gate between the microphone and the call, for an
         // agent on a floor full of other people talking. On by default; see voice-isolation.js. The engine is the
-        // model ('gtcrn' or the lighter 'rnnoise'); the strength sets the gate.
-        var voiceIsolationSettings = { enabled: true, engine: 'gtcrn', strength: 'medium' };
+        // model ('gtcrn' or the lighter 'rnnoise'); the strength sets the gate. autoLevel is the automatic voice
+        // level that stands in for the browser's gain control, which isolation turns off (see auto-level.js).
+        var voiceIsolationSettings = { enabled: true, engine: 'gtcrn', strength: 'medium', autoLevel: true };
+
+        // The gain the automatic voice level had reached, per microphone, so a rebuilt chain -- a settings change,
+        // a device switch, a fresh capture for the next call, a reload -- starts where the agent's voice already
+        // was instead of climbing from unity through the first words of the call. Persisted with the layout.
+        var autoLevelGains = {};
 
         // What the chain is actually doing, for the readout and the status line: 'off', 'active', 'pending' (the
         // audio engine waits for a click on the page) or 'failed' (it cannot run here). A failure sticks until the
@@ -4470,8 +4549,10 @@
             voiceIsolationSettings = {
                 enabled: isolate,
                 engine: typeof clampVoiceIsolationEngine === 'function' ? clampVoiceIsolationEngine(layout.voiceIsolationEngine) : 'gtcrn',
-                strength: typeof clampVoiceIsolationStrength === 'function' ? clampVoiceIsolationStrength(layout.voiceIsolationStrength) : 'medium'
+                strength: typeof clampVoiceIsolationStrength === 'function' ? clampVoiceIsolationStrength(layout.voiceIsolationStrength) : 'medium',
+                autoLevel: readProcessingFlag(layout.voiceIsolationAutoLevel, true)
             };
+            autoLevelGains = layout.autoLevelGains && typeof layout.autoLevelGains === 'object' ? layout.autoLevelGains : {};
             processingSettings = {
                 echoCancellation: readProcessingFlag(layout.echoCancellation, true),
                 noiseSuppression: isolationStored ? readProcessingFlag(layout.noiseSuppression, !isolate) : !isolate,
@@ -4495,6 +4576,7 @@
                 voiceIsolation: voiceIsolationSettings.enabled,
                 voiceIsolationEngine: voiceIsolationSettings.engine,
                 voiceIsolationStrength: voiceIsolationSettings.strength,
+                voiceIsolationAutoLevel: voiceIsolationSettings.autoLevel,
                 micBoostDb: micBoostDb,
                 playoutDelaySeconds: playoutDelaySeconds,
                 signalingRegion: signalingRegion
@@ -4578,7 +4660,8 @@
             voiceIsolationSettings = {
                 enabled: enabled,
                 engine: clampVoiceIsolationEngine(dom.voiceIsolationEngine ? dom.voiceIsolationEngine.value : voiceIsolationSettings.engine),
-                strength: clampVoiceIsolationStrength(dom.voiceIsolationStrength ? dom.voiceIsolationStrength.value : voiceIsolationSettings.strength)
+                strength: clampVoiceIsolationStrength(dom.voiceIsolationStrength ? dom.voiceIsolationStrength.value : voiceIsolationSettings.strength),
+                autoLevel: dom.voiceIsolationAutoLevel ? dom.voiceIsolationAutoLevel.checked : voiceIsolationSettings.autoLevel
             };
 
             if (toggled) {
@@ -4625,6 +4708,16 @@
                 dom.voiceIsolationStrength.value = voiceIsolationSettings.strength;
                 dom.voiceIsolationStrength.disabled = !voiceIsolationSettings.enabled;
             }
+
+            if (dom.voiceIsolationAutoLevel) {
+                dom.voiceIsolationAutoLevel.checked = voiceIsolationSettings.autoLevel;
+            }
+
+            // The automatic voice level belongs to the isolation chain, so it is offered only while isolation is
+            // checked -- the mirror image of the browser's own controls below.
+            (dom.voiceIsolationOnlyRows || []).forEach(function (row) {
+                row.style.display = voiceIsolationSettings.enabled ? '' : 'none';
+            });
 
             // The browser's noise suppression and gain control are not the agent's to set while voice isolation is
             // checked: off while it runs, and turned on by the phone itself while it waits for a click or cannot run
@@ -5185,6 +5278,8 @@
                                 ? sendPipeline.readSourcePeak()
                                 : -1;
                         },
+                        // The automatic voice level's current gain, for the call quality report.
+                        readAutoLevelGainDb: currentAutoLevelGainDb,
                         readPlayoutDelay: function () { return playoutDelaySeconds; },
                         // This agent's signaling-edge choice. The adapter resolves it against the tenant setting
                         // it receives in the registration config.
@@ -6093,6 +6188,11 @@
                 'mic ' + (sample.captureReported && sample.microphoneLevel != null
                     ? sample.microphoneLevel.toFixed(3)
                     : 'n/a'),
+                // The automatic voice level's gain: with "mic" (the raw microphone, under voice isolation) and
+                // "out" (what is sent), this shows where between the two the agent's level was made up.
+                'level ' + (typeof sample.autoLevelGainDb === 'number'
+                    ? (sample.autoLevelGainDb >= 0 ? '+' : '') + sample.autoLevelGainDb.toFixed(1) + 'dB'
+                    : 'off'),
                 'bytesSent ' + (sample.bytesSent != null ? sample.bytesSent : '-'),
                 'bytesRecv ' + (sample.bytesReceived != null ? sample.bytesReceived : '-'),
                 'codec ' + (sample.codec || '-'),
@@ -10919,7 +11019,7 @@
                 dom.micBoost.addEventListener('change', onBoostChange);
             }
 
-            [dom.voiceIsolation, dom.voiceIsolationEngine, dom.voiceIsolationStrength].forEach(function (control) {
+            [dom.voiceIsolation, dom.voiceIsolationEngine, dom.voiceIsolationStrength, dom.voiceIsolationAutoLevel].forEach(function (control) {
                 if (control) {
                     control.addEventListener('change', onVoiceIsolationChange);
                 }
@@ -11137,6 +11237,8 @@
                 pageUnloading = true;
                 ringtone.stop();
                 hostDelegation.reset();
+                // Before the capture is released: the next page picks the agent's voice level up from here.
+                rememberAutoLevelGain();
                 releaseBrowserAudio();
             });
             window.addEventListener('resize', function () {

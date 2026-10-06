@@ -4,9 +4,10 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 /// Whose leg of a call noise suppression is started on, which decides the Telnyx direction that cleans each voice.
 /// </summary>
 /// <remarks>
-/// Telnyx names the direction from its own side of the leg: <c>outbound</c> cleans the audio Telnyx receives from the
-/// party the leg reaches, and <c>inbound</c> cleans the audio Telnyx plays to that party. On the agent's leg the agent's
-/// own voice is therefore <c>outbound</c>; on the customer's leg it is the other way round.
+/// Telnyx names the direction from its own side of the leg: <c>inbound</c> cleans the audio Telnyx receives from the
+/// party the leg reaches, and <c>outbound</c> cleans the audio Telnyx plays to that party. On the agent's leg the agent's
+/// own voice is therefore <c>inbound</c>; on the customer's leg it is the other way round. A live call confirmed it:
+/// <c>outbound</c> on the agent's leg cleaned the caller's voice the agent heard, not the agent's.
 /// </remarks>
 public enum TelnyxNoiseSuppressionLeg
 {

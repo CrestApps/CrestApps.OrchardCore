@@ -300,7 +300,8 @@ public sealed class ProviderVoiceEventServiceAuditTests
                 new Mock<ISession>().Object,
                 new VoiceIngressGate(distributedLock.Object),
                 clock.Object,
-                NullLogger<ProviderVoiceEventService>.Instance);
+                NullLogger<ProviderVoiceEventService>.Instance,
+                Mock.Of<IDialerAbandonmentTracker>());
         }
 
         public Interaction Interaction { get; }

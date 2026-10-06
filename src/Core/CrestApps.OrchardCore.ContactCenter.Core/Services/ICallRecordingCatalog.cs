@@ -10,7 +10,26 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 public interface ICallRecordingCatalog
 {
     /// <summary>
-    /// Lists a recording a provider just saved. Registering the same provider recording again changes nothing.
+    /// Lists a recording the platform just started on a call leg, before the provider has saved it. The provider's
+    /// "recording saved" notification names the leg, and <see cref="RegisterAsync"/> completes this entry from it, so
+    /// nothing about the call has to travel with the recording itself. Written on the ambient session.
+    /// </summary>
+    /// <param name="registration">What the platform knows about the call; <see cref="CallRecordingRegistration.ProviderCallId"/> is required.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The catalog entry.</returns>
+    Task<CallRecording> BeginAsync(CallRecordingRegistration registration, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Finds the entry listed for a recording still running on a call leg, when the platform started one there.
+    /// </summary>
+    /// <param name="providerCallId">The provider's identifier of the recorded call leg.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The entry, or <see langword="null"/>.</returns>
+    Task<CallRecording> FindRunningAsync(string providerCallId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists a recording a provider just saved. Registering the same provider recording again changes nothing,
+    /// and a recording begun with <see cref="BeginAsync"/> on the same call leg is completed rather than listed twice.
     /// Written on the ambient session, so it commits with the caller's unit of work.
     /// </summary>
     /// <param name="registration">What the provider knows about the recording.</param>

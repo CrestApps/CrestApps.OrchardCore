@@ -151,6 +151,12 @@ public sealed class TelnyxSettings
     public bool NoiseSuppressionCallerVoice { get; set; }
 
     /// <summary>
+    /// Gets or sets how hard the noise suppression engine works on each voice it cleans. Applies only when
+    /// <see cref="NoiseSuppressionEngine"/> is set. Defaults to <see cref="TelnyxNoiseSuppressionStrength.Balanced"/>.
+    /// </summary>
+    public TelnyxNoiseSuppressionStrength NoiseSuppressionStrength { get; set; }
+
+    /// <summary>
     /// Gets or sets the text-to-speech voice the platform's spoken prompts use: phone menus, the voicemail greeting,
     /// and a queue's callback offer. Either a legacy value (<c>female</c>, <c>male</c>) or a
     /// <c>Provider.Model.VoiceId</c> name such as <c>AWS.Polly.Joanna-Neural</c>. Empty uses

@@ -4,13 +4,14 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
 /// <summary>
-/// The dialer profile editor was split into cards (General, Dialing, Caller ID, Compliance, Abandonment and safe harbor)
+/// The dialer profile editor was split into cards (General, Dialing, Caller ID, Compliance, Abandoned calls)
 /// that post one form, confirmed live. These pin what the driver stores from that post.
 /// </summary>
 public sealed class DialerProfileDisplayDriverTests
@@ -58,5 +59,8 @@ public sealed class DialerProfileDisplayDriverTests
         => new(
             AdminFormOptionsProviderFactory.Create(),
             Mock.Of<IShellFeaturesManager>(),
+            [],
+            [],
+            Options.Create(new ContactCenterComplianceOptions()),
             new PassThroughStringLocalizer<DialerProfileDisplayDriver>());
 }

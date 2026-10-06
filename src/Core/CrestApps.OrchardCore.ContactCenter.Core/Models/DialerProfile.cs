@@ -54,6 +54,13 @@ public sealed class DialerProfile : CatalogItem, INameAwareModel, IModifiedUtcAw
     public DialerAnsweringMachineDetection AnsweringMachineDetection { get; set; }
 
     /// <summary>
+    /// Gets or sets how many seconds an automated call rings before it is given up as unanswered. Automated dialing
+    /// never rings for less than <see cref="DialerAbandonment.MinimumRingTimeoutSeconds"/>, whatever is stored here,
+    /// because the common abandoned-call rules expect an unanswered call to ring for at least fifteen seconds.
+    /// </summary>
+    public int RingTimeoutSeconds { get; set; } = DialerAbandonment.DefaultRingTimeoutSeconds;
+
+    /// <summary>
     /// Gets or sets the seconds added to a preview offer when the agent asks for more time.
     /// </summary>
     /// <remarks>
@@ -122,15 +129,78 @@ public sealed class DialerProfile : CatalogItem, INameAwareModel, IModifiedUtcAw
     public int AbandonmentSampleFloor { get; set; } = 30;
 
     /// <summary>
-    /// Gets or sets a value indicating whether an abandoned automated call plays a safe-harbor announcement
+    /// Gets or sets a value indicating whether an abandoned automated call plays the abandoned-call message
     /// that identifies the caller instead of being dropped silently.
     /// </summary>
     public bool SafeHarborEnabled { get; set; }
 
     /// <summary>
-    /// Gets or sets the safe-harbor announcement played to a live party when no agent connects in time.
+    /// Gets or sets the abandoned-call message spoken to a person who answered when no agent can be connected.
+    /// <see cref="DialerAbandonment.CompanyToken"/> and <see cref="DialerAbandonment.NumberToken"/> are replaced
+    /// with the site name and the number the call was placed from.
     /// </summary>
     public string SafeHarborMessage { get; set; }
+
+    /// <summary>
+    /// Gets or sets how a Predictive profile paces its calls. Ignored by every other mode.
+    /// </summary>
+    public PredictivePacingModel PredictivePacingModel { get; set; } = PredictivePacingModel.ReservedPerCall;
+
+    /// <summary>
+    /// Gets or sets the abandonment rate, as a percentage of calls a person answered, that over-dialing steers toward.
+    /// It must stay below <see cref="MaxAbandonmentRatePercent"/>, which is the hard limit: the target leaves room for
+    /// the difference between what was predicted and what happened.
+    /// </summary>
+    public double TargetAbandonmentRatePercent { get; set; } = PredictiveDialingDefaults.TargetAbandonmentRatePercent;
+
+    /// <summary>
+    /// Gets or sets the most calls over-dialing may have ringing for each available agent, between
+    /// <see cref="PredictiveDialingDefaults.MinLinesPerAgent"/> and <see cref="PredictiveDialingDefaults.MaxLinesPerAgent"/>,
+    /// whatever the measured answer rate suggests.
+    /// </summary>
+    public double MaxLinesPerAgent { get; set; } = PredictiveDialingDefaults.LinesPerAgent;
+
+    /// <summary>
+    /// Gets or sets the most calls a Predictive profile may have in flight for one campaign at once, however many agents
+    /// are free.
+    /// </summary>
+    public int MaxCallsInFlight { get; set; } = PredictiveDialingDefaults.CallsInFlight;
+
+    /// <summary>
+    /// Gets or sets the fewest settled calls the answer rate must be measured over before over-dialing trusts it; until
+    /// then the profile dials one call per reserved agent.
+    /// </summary>
+    public int AnswerRateSampleFloor { get; set; } = PredictiveDialingDefaults.AnswerRateSampleFloor;
+
+    /// <summary>
+    /// Gets or sets the length, in minutes, of the rolling window the answer rate is measured over.
+    /// </summary>
+    public int AnswerRateWindowMinutes { get; set; } = PredictiveDialingDefaults.AnswerRateWindowMinutes;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether over-dialing counts agents who are expected to finish their current call
+    /// or wrap-up before a new call is answered, as well as agents who are free now.
+    /// </summary>
+    public bool CreditAgentsFreeingUp { get; set; }
+
+    /// <summary>
+    /// Gets or sets the percentage of the agents expected to free up that over-dialing counts when
+    /// <see cref="CreditAgentsFreeingUp"/> is enabled, from 0 to 100.
+    /// </summary>
+    public int FreeUpCreditPercent { get; set; } = PredictiveDialingDefaults.FreeUpCreditPercent;
+
+    /// <summary>
+    /// Gets or sets how long, in milliseconds, a person who answered an over-dialed call may wait for an agent to free up
+    /// before the abandoned-call message is played, from 0 to <see cref="PredictiveDialingDefaults.MaxConnectWaitMilliseconds"/>.
+    /// Zero plays the message as soon as no agent is free.
+    /// </summary>
+    public int ConnectWaitMilliseconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether a call that was abandoned is tried again only with an agent reserved for
+    /// it, so the same person is never abandoned twice.
+    /// </summary>
+    public bool AbandonedRetryRequiresAgent { get; set; } = true;
 
     /// <summary>
     /// Gets or sets the default business-hours calendar used to evaluate outbound calls.

@@ -155,6 +155,19 @@ public static partial class ContactCenterConstants
         public const string DialerAttemptCompleted = "DialerAttemptCompleted";
 
         /// <summary>
+        /// Raised when a person, not a machine, answers a call an automated dialer profile placed. Filed under the
+        /// dialer profile, it is the denominator of the profile's abandonment rate.
+        /// </summary>
+        public const string DialerLiveAnswered = "DialerLiveAnswered";
+
+        /// <summary>
+        /// Raised when a call a person answered for an automated dialer profile was abandoned: no agent was connected
+        /// within two seconds of the answer. Filed under the dialer profile, it is the numerator of the profile's
+        /// abandonment rate, and says whether the abandoned-call message was played.
+        /// </summary>
+        public const string DialerCallAbandoned = "DialerCallAbandoned";
+
+        /// <summary>
         /// Raised when the outbound compliance gate suppresses a dialing attempt.
         /// </summary>
         public const string DialSuppressed = "DialSuppressed";

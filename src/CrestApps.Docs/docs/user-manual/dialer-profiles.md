@@ -1,19 +1,19 @@
 ---
 sidebar_label: Dialer Profiles
 sidebar_position: 26
-title: Dialer Profiles - Preview, Power and Progressive Dialing
+title: Dialer Profiles - Preview, Power, Progressive and Predictive Dialing
 description: Choose how outbound calls are placed for a campaign, what the customer sees as caller ID, and the compliance rules every call must pass.
 technical_manual:
   - contact-center/agents-queues-dialer
 ---
 
-A **dialer profile** decides **how** outbound calls are placed: whether an agent reviews each record before the call (preview), or the system dials for available agents (power and progressive). It also carries the caller ID and the compliance rules. You pick the profile when you [load dialer activities](load-inventory.md#dialer-loads); the campaign you pick there is what agents sign in to. A profile names no campaign or queue, so one profile can serve many loads.
+A **dialer profile** decides **how** outbound calls are placed: whether an agent reviews each record before the call (preview), or the system dials for available agents (power, progressive and predictive). It also carries the caller ID and the compliance rules. You pick the profile when you [load dialer activities](load-inventory.md#dialer-loads); the campaign you pick there is what agents sign in to. A profile names no campaign or queue, so one profile can serve many loads.
 
 | | |
 | --- | --- |
 | **Menu** | Interaction Center > Management > Dialer Profiles |
 | **Permission** | Manage the Contact Center dialer |
-| **Features** | Contact Center Outbound Dialer for Preview. Contact Center Paced Dialing adds Power and Progressive. |
+| **Features** | Contact Center Outbound Dialer for Preview. Contact Center Paced Dialing adds Power, Progressive and Predictive. |
 
 <AskYourAdmin />
 
@@ -28,7 +28,7 @@ A **dialer profile** decides **how** outbound calls are placed: whether an agent
 | **Preview** | The agent. The record is offered to an agent signed in to the campaign; the agent reviews it and clicks **Dial** (or **Skip**). The server then places the call after the compliance checks. | The record opens, then the call starts when they choose Dial. |
 | **Power** | The system. Every minute the dialer reserves available agents in the campaign and places up to **Calls per agent** calls for the campaign, each with its own reserved agent. | The record pops up when the call starts; there is nothing to press. |
 | **Progressive** | The system, like Power, reserving one agent per call, with up to 100 calls per pacing cycle. | Same as Power. |
-| **Predictive** | Not available. The editor does not offer it and refuses to save it. | - |
+| **Predictive** | The system, like Power: every call reserves its own available agent before it is placed, and fewer calls are placed per cycle as the abandonment rate approaches the cap. See [Predictive dialing](#predictive-dialing). | Same as Power. |
 
 Older profiles saved as *Manual* are shown and saved as **Preview**.
 
@@ -52,14 +52,15 @@ With a Power profile the agent only signs in and stays **Available**. Within a m
 
 1. Open **Interaction Center > Management > Dialer Profiles** and click **Add Dialer Profile**.
 2. On **General**, enter a **Name**, an optional **Description**, and leave **Enabled** ticked. A disabled profile places no calls.
-3. On **Dialing**, pick the **Mode** and the **Voice call provider** (or *Default provider*). Power and Progressive show extra fields:
+3. On **Dialing**, pick the **Mode** and the **Voice call provider** (or *Default provider*). Power, Progressive and Predictive show extra fields:
 
    | Field | Modes | What it does |
    | --- | --- | --- |
-   | **Calls per agent** | Power | Calls started per pacing cycle for the campaign, 1 to 3. Each call reserves its own agent, so it never dials more calls than there are available agents. |
-   | **Max attempts** | Power, Progressive | How many attempts one contact may get, counting the first call and every follow-up activity created to try again. Default 3. |
-   | **Retry delay (minutes)** | Power, Progressive | The shortest wait after an attempt before the next attempt is dialed. Default 60. |
-   | **Screen out answering machines** | Power, Progressive | **Off** (default), **Standard detection** or **Premium detection**. When on, the agent is connected only after the provider hears a person. A call answered by a voicemail or fax machine is hung up, the agent goes straight back to Ready without wrap-up or a pop, and the dialer completes the activity with the *Answering machine* disposition. The person who answers hears a few seconds of silence while the call is screened. Telnyx only. |
+   | **Calls per agent** | Power, Predictive | Calls started per pacing cycle for the campaign, 1 to 3. Each call reserves its own agent, so it never dials more calls than there are available agents. |
+   | **Max attempts** | Power, Progressive, Predictive | How many attempts one contact may get, counting the first call and every follow-up activity created to try again. Default 3. |
+   | **Retry delay (minutes)** | Power, Progressive, Predictive | The shortest wait after an attempt before the next attempt is dialed. Default 60. |
+   | **Ring time (seconds)** | Power, Progressive, Predictive | How long a call rings before it is given up as unanswered, from 15 to 120. Default 30. A call never rings for less than 15 seconds. |
+   | **Screen out answering machines** | Power, Progressive, Predictive | **Off** (default), **Standard detection** or **Premium detection**. When on, the agent is connected only after the provider hears a person. A call answered by a voicemail or fax machine is hung up, the agent goes straight back to Ready without wrap-up or a pop, and the dialer completes the activity with the *Answering machine* disposition. The person who answers hears a few seconds of silence while the call is screened. Telnyx only. |
 
 4. On **Caller ID**, pick the **Caller ID** number customers see from your [Omnichannel Addresses](channel-endpoints.md) used for **Voice calls** (**Provider default** uses the provider's caller ID). A **Dial from** number picked when activities are loaded is shown instead for that load's calls, unless **Always show this caller ID** is ticked, and pick the **Default calling region** used for numbers written without a country code. A number typed before caller IDs were picked stays selected until you change it.
 5. On **Compliance**:
@@ -70,16 +71,86 @@ With a Power profile the agent only signs in and stays **Available**. Within a m
    | **Enforce a calling window** | Dials only while the chosen calendar is open, checked in the **contact's** time zone. |
    | **Outbound calling calendar** | The [business hours calendar](business-hours.md) for the calling window. Required when the window is enforced. |
 
-6. On **Abandonment and safe harbor** (Power and Progressive only):
+6. On **Abandoned calls** (Power, Progressive and Predictive):
 
    | Field | What it does |
    | --- | --- |
-   | **Enforce an abandonment-rate cap** | Stops automated dialing when too many answered calls find no agent. Needs safe harbor on. |
+   | **Measured abandonment** | Shown once the profile has placed calls: the abandonment rate over the rolling window and over the last 30 days, with the counts behind it. |
+   | **Enforce an abandonment-rate cap** | Pauses automated dialing while too many answered calls find no agent. Needs the abandoned-call message on. |
    | **Maximum abandonment rate** | The cap, as a share of calls a person answered. Default 3. |
-   | **Abandonment sample floor** | How many answered calls are needed before the cap applies. Default 30. |
-   | **Play a safe-harbor announcement when abandoned** / **Safe-harbor announcement** | The message played instead of silence when no agent is free. |
+   | **Abandonment sample floor** | How many answered calls are needed in the window before the cap applies. Default 30. |
+   | **Play a message when a call is abandoned** | Plays the abandoned-call message instead of hanging up in silence. A warning shows while it is off. |
+   | **Abandoned call message** | What the person hears. Required when the message is on. See [Abandoned calls](#abandoned-calls). |
 
-7. Click **Save**.
+7. On **Predictive pacing** (Predictive only), see [Predictive dialing](#predictive-dialing).
+8. Click **Save**.
+
+## Predictive dialing
+
+Predictive dialing is part of the **Contact Center Paced Dialing** feature, like Power and Progressive. Without it the **Predictive** mode is not offered and a Predictive profile cannot be saved.
+
+Today a Predictive profile dials like Power: each call reserves its own available agent before it is placed, so a person who answers always has an agent waiting. As the abandonment rate climbs toward the **Maximum abandonment rate**, fewer calls are placed each cycle, down to one per agent at the cap.
+
+:::note[Over-dialing comes later]
+Over-dialing, which places more calls than there are free agents and sizes the extra calls from the measured answer rate, is not available yet. The **Pacing** list shows it but you cannot choose it. A profile set to over-dial by an import is dialed with one call per reserved agent until it is available.
+:::
+
+The **Predictive pacing** card holds the settings over-dialing will use. They are saved with the profile now so it is ready:
+
+| Field | What it does |
+| --- | --- |
+| **Measured answer rate** | Shown once a Predictive profile has placed calls: the share of recent calls with an outcome that a person answered, how long people take to answer, and how long agents take to be connected. A call still ringing is left out until it has an outcome. |
+| **Pacing** | **One call per reserved agent** (the default, and the only choice for now) or **Over-dial**. Over-dialing will need **Enforce an abandonment-rate cap** and the abandoned-call message on. |
+| **Target abandonment rate** | The rate over-dialing steers toward. Default 2%. For over-dialing it must be lower than the **Maximum abandonment rate**, which stays the hard limit. |
+| **Lines per agent** | The most calls ringing for each free agent, from 1 to 5. Default 2. |
+| **Calls in flight** | The most calls ringing at once for one campaign, from 1 to 1000. Default 100. |
+| **Answer rate sample floor** | How many calls with an outcome are needed before the answer rate is trusted, from 10 to 10000. Default 50. Until then the profile reserves an agent for every call. |
+| **Answer rate window (minutes)** | How far back the answer rate is measured, from 5 to 240. Default 15. |
+| **Count agents about to free up** | Also counts agents expected to finish their call and wrap-up before a new call is answered. Off by default. |
+| **Share of agents about to free up** | How many of those agents are counted, from 0 to 100%. Default 50%. |
+| **Connect wait (milliseconds)** | How long a person who answered may wait for an agent to free up before the abandoned-call message plays, from 0 to 1500. Default 0, which is recommended: a call not connected within two seconds counts as abandoned. |
+| **Retry abandoned calls only with an agent reserved** | A person whose call was abandoned is called again only with an agent already reserved for them. On by default. |
+
+## Abandoned calls
+
+With Power, Progressive and Predictive dialing, the customer is dialed first and the reserved agent is connected once a person answers. A call is **abandoned** when a person answers and no agent is connected to them within two seconds. That happens when the agent's phone does not pick up (the browser was closed, the phone is not registered, the network dropped), when the agent cannot be connected at all, when the agent is connected later than two seconds after the answer, or when the person hangs up after waiting more than two seconds.
+
+These settings support the common abandoned-call rules for automated dialing. Confirm which rules apply to your calls; the settings do not make a campaign compliant on their own.
+
+### The abandoned-call message
+
+When the agent cannot be connected, the person hears the profile's **Abandoned call message** straight away, and the call ends when the message has been spoken. If the message is not on, the call is hung up without a word.
+
+Keep the message short and say who is calling and a number the person can call to reach you or to ask not to be called again. Two placeholders are filled in for each call:
+
+| Placeholder | Replaced with |
+| --- | --- |
+| `{company}` | The site name (**Configuration > Settings > General**). |
+| `{number}` | The number the call came from (the caller ID the person saw), read digit by digit. |
+
+The editor suggests this message when the field is empty: `Sorry we missed you. This call was from {company}. To be removed from our list or to reach us, please call {number}. Goodbye.`
+
+:::note[Telnyx]
+The message is read out by the voice provider's text-to-speech, in the voice and language set for the provider.
+:::
+
+### How the abandonment rate is measured
+
+The rate is measured for each dialer profile:
+
+- **Answered by a person** counts every Power, Progressive or Predictive call a person picked up. With answering-machine screening on, the call counts from the moment the provider says a person answered. Calls answered by a machine or fax, busy, unanswered, failed and out-of-service calls are not counted.
+- **Abandoned** counts the answered calls no agent reached within two seconds, for any of the reasons above.
+- The **rate** is abandoned calls divided by calls answered by a person, over the rolling window your administrator sets (30 minutes unless changed). The editor also shows the last 30 days.
+
+When **Enforce an abandonment-rate cap** is on and the rate over the window is above the **Maximum abandonment rate**, the dialer places no new calls for the profile until the rate falls back. The cap waits until the window holds at least **Abandonment sample floor** answered calls.
+
+:::note[One profile per campaign]
+The rate is measured per profile, not per campaign. If one profile dials several campaigns, their calls are measured together. Use a profile for each campaign when each campaign's rate must be kept on its own.
+:::
+
+### Ring time
+
+An unanswered call rings for the profile's **Ring time** before it is given up, and never for less than 15 seconds, which is what the common abandoned-call rules expect.
 
 ## What happens to each record
 

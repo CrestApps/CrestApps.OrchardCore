@@ -42,6 +42,17 @@ public static class DialerCallMetadata
     public const string OutcomeKey = "dialer_attempt_outcome";
 
     /// <summary>
+    /// The key of the instant the dialer learned a person, not a machine, answered the call: the answer itself, or the
+    /// provider's verdict when answering machines are screened. The abandonment rule is measured from it.
+    /// </summary>
+    public const string LiveAnsweredUtcKey = "dialer_live_answered_utc";
+
+    /// <summary>
+    /// The key of why the call was abandoned, one of <see cref="DialerAbandonment.Reasons"/>, when it was.
+    /// </summary>
+    public const string AbandonedReasonKey = "dialer_abandoned_reason";
+
+    /// <summary>
     /// Records the profile and the attempt on the interaction of a call the dialer is about to place.
     /// </summary>
     /// <param name="interaction">The interaction of the call.</param>
@@ -123,6 +134,63 @@ public static class DialerCallMetadata
         => !string.IsNullOrEmpty(Read(interaction, AgentJoinedUtcKey));
 
     /// <summary>
+    /// When an agent was first connected to the call, or <see langword="null"/> while none has been.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    public static DateTime? GetAgentJoinedUtc(Interaction interaction)
+        => ReadUtc(interaction, AgentJoinedUtcKey);
+
+    /// <summary>
+    /// Records that a person, not a machine, answered the call, keeping the first instant it happened.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    /// <param name="answeredUtc">When the dialer learned a person answered.</param>
+    /// <returns><see langword="true"/> when this is the first time it is recorded.</returns>
+    public static bool MarkLiveAnswered(Interaction interaction, DateTime answeredUtc)
+    {
+        if (interaction is null || !string.IsNullOrEmpty(Read(interaction, LiveAnsweredUtcKey)))
+        {
+            return false;
+        }
+
+        interaction.TechnicalMetadata[LiveAnsweredUtcKey] = answeredUtc.ToString("O", CultureInfo.InvariantCulture);
+
+        return true;
+    }
+
+    /// <summary>
+    /// When the dialer learned a person answered the call, or <see langword="null"/> when none has.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    public static DateTime? GetLiveAnsweredUtc(Interaction interaction)
+        => ReadUtc(interaction, LiveAnsweredUtcKey);
+
+    /// <summary>
+    /// Records that the call was abandoned, keeping the first reason given.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    /// <param name="reason">One of <see cref="DialerAbandonment.Reasons"/>.</param>
+    /// <returns><see langword="true"/> when this is the first time it is recorded.</returns>
+    public static bool MarkAbandoned(Interaction interaction, string reason)
+    {
+        if (interaction is null || string.IsNullOrEmpty(reason) || IsAbandoned(interaction))
+        {
+            return false;
+        }
+
+        interaction.TechnicalMetadata[AbandonedReasonKey] = reason;
+
+        return true;
+    }
+
+    /// <summary>
+    /// Whether the call was recorded as abandoned.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    public static bool IsAbandoned(Interaction interaction)
+        => !string.IsNullOrEmpty(Read(interaction, AbandonedReasonKey));
+
+    /// <summary>
     /// Whether the call is a campaign dial that no agent has been connected to: the customer is still being dialed, a
     /// machine answered, or the customer hung up before the agent joined. Such a call is never the agent's work.
     /// </summary>
@@ -164,6 +232,11 @@ public static class DialerCallMetadata
             interaction.TechnicalMetadata.TryGetValue(key, out var value) &&
             value?.ToString() is { Length: > 0 } text
             ? text
+            : null;
+
+    private static DateTime? ReadUtc(Interaction interaction, string key)
+        => DateTime.TryParse(Read(interaction, key), CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var value)
+            ? DateTime.SpecifyKind(value, DateTimeKind.Utc)
             : null;
 
     private static int? ReadInt(Interaction interaction, string key)

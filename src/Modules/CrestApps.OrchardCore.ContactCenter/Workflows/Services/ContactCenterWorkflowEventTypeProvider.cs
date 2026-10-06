@@ -77,6 +77,8 @@ public sealed class ContactCenterWorkflowEventTypeProvider : IContactCenterWorkf
             new SelectListItem(S["Dialer attempt scheduled"].Value, ContactCenterConstants.Events.DialerAttemptScheduled) { Group = dialer },
             new SelectListItem(S["Dialer attempt started"].Value, ContactCenterConstants.Events.DialerAttemptStarted) { Group = dialer },
             new SelectListItem(S["Dialer attempt completed"].Value, ContactCenterConstants.Events.DialerAttemptCompleted) { Group = dialer },
+            new SelectListItem(S["Dialer call answered by a person"].Value, ContactCenterConstants.Events.DialerLiveAnswered) { Group = dialer },
+            new SelectListItem(S["Dialer call abandoned"].Value, ContactCenterConstants.Events.DialerCallAbandoned) { Group = dialer },
             new SelectListItem(S["Dial suppressed"].Value, ContactCenterConstants.Events.DialSuppressed) { Group = dialer },
             new SelectListItem(S["Manual dial suppressed"].Value, ContactCenterConstants.Events.ManualDialSuppressed) { Group = dialer },
 

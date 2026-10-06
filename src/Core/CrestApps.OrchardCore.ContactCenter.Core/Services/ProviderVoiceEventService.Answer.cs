@@ -57,6 +57,7 @@ public sealed partial class ProviderVoiceEventService
     private async Task StageAnsweredOutboundBridgeAsync(
         CallSession session,
         Interaction interaction,
+        DateTime now,
         CancellationToken cancellationToken)
     {
         if (session.Direction != InteractionDirection.Outbound || string.IsNullOrEmpty(session.AgentId))
@@ -64,11 +65,17 @@ public sealed partial class ProviderVoiceEventService
             return;
         }
 
+        // The moment a person is known to be on the line: the answer itself, or the verdict when the call is screened.
+        // The two seconds an agent has to reach them before the call counts as abandoned run from here.
+        var liveAnsweredUtc = session.AnsweredUtc ?? now;
+
         // A call screened for answering machines connects its agent only once the provider has said who answered: a
         // few seconds of silence for the person, and no agent ever sitting through a voicemail greeting. The verdict
         // arrives as a second connected delivery, which comes back through here.
         if (session.Metadata.ContainsKey(ContactCenterConstants.TelephonyMetadata.AnswerDetectionRequested))
         {
+            liveAnsweredUtc = now;
+
             if (!session.Metadata.TryGetValue(ContactCenterConstants.TelephonyMetadata.AnswerClassification, out var classification))
             {
                 if (_logger.IsEnabled(LogLevel.Information))
@@ -99,6 +106,13 @@ public sealed partial class ProviderVoiceEventService
             }
         }
 
+        // A person answered an automated dialer call: it now counts toward the profile's abandonment rate, whatever
+        // happens next.
+        if (await _abandonmentTracker.RecordLiveAnswerAsync(interaction, liveAnsweredUtc, cancellationToken))
+        {
+            await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
+        }
+
         if (!ProviderJoinsAgentAfterAnswer(session))
         {
             // A provider that does not join the agent through a leg of its own puts the agent on the call as it is
@@ -125,6 +139,20 @@ public sealed partial class ProviderVoiceEventService
                 session.ProviderCallId.SanitizeLogValue(),
                 interaction.ItemId.SanitizeLogValue(),
                 session.AgentId.SanitizeLogValue());
+
+            // Nobody can be connected to the person who answered. An automated dialer call tells them who called
+            // and ends, rather than leaving them on a silent line.
+            if (DialerCallMetadata.IsCampaignDial(interaction))
+            {
+                var messageStarted = await _abandonmentTracker.AbandonAsync(interaction, session.ProviderName, session.ProviderCallId, DialerAbandonment.Reasons.AgentUnavailable, cancellationToken);
+
+                await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
+
+                if (!messageStarted)
+                {
+                    ScheduleHangup(session, interaction, "no agent could be connected to it");
+                }
+            }
 
             return;
         }
@@ -165,27 +193,35 @@ public sealed partial class ProviderVoiceEventService
     // ready rather than into wrap-up, and the activity is put back for a later attempt.
     private void ScheduleMachineHangup(CallSession session, Interaction interaction, string classification)
     {
-        var providerName = session.ProviderName;
-        var providerCallId = session.ProviderCallId;
-        var interactionId = interaction.ItemId;
-
         if (_logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation(
                 "Outbound call '{ProviderCallId}' (interaction '{InteractionId}', activity '{ActivityId}') was answered by {AnswerClassification}; hanging up without connecting the agent.",
-                providerCallId.SanitizeLogValue(),
-                interactionId.SanitizeLogValue(),
+                session.ProviderCallId.SanitizeLogValue(),
+                interaction.ItemId.SanitizeLogValue(),
                 interaction.ActivityItemId.SanitizeLogValue(),
                 classification.SanitizeLogValue());
         }
+
+        ScheduleHangup(session, interaction, "it was answered by a machine");
+    }
+
+    // Hangs up the answered call once this delivery commits, so what caused the hangup is on record before the hangup
+    // comes back as the call's own end.
+    private void ScheduleHangup(CallSession session, Interaction interaction, string why)
+    {
+        var providerName = session.ProviderName;
+        var providerCallId = session.ProviderCallId;
+        var interactionId = interaction.ItemId;
 
         _scopeExecutor.ScheduleAfterCommit<ITelephonyProviderResolver>(async resolver =>
         {
             if (await resolver.GetAsync(providerName) is not ITelephonyCallControlProvider callControl)
             {
                 _logger.LogWarning(
-                    "Could not hang up machine-answered call '{ProviderCallId}' because provider '{ProviderName}' cannot control calls.",
+                    "Could not hang up call '{ProviderCallId}' after {Why} because provider '{ProviderName}' cannot control calls.",
                     providerCallId.SanitizeLogValue(),
+                    why,
                     providerName.SanitizeLogValue());
 
                 return;
@@ -196,9 +232,10 @@ public sealed partial class ProviderVoiceEventService
             if (!result.Succeeded)
             {
                 _logger.LogWarning(
-                    "The provider did not confirm hanging up machine-answered call '{ProviderCallId}' (interaction '{InteractionId}'): {Error}.",
+                    "The provider did not confirm hanging up call '{ProviderCallId}' (interaction '{InteractionId}') after {Why}: {Error}.",
                     providerCallId.SanitizeLogValue(),
                     interactionId.SanitizeLogValue(),
+                    why,
                     result.Error.SanitizeLogValue());
             }
         });

@@ -19,10 +19,15 @@ public sealed partial class ContactCenterAgentLegFailureService : IContactCenter
     private readonly IAgentPresenceManager _presenceManager;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly IDialerAbandonmentTracker _abandonmentTracker;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterAgentLegFailureService"/> class.
     /// </summary>
+    /// <remarks>
+    /// The abandonment tracker plays an automated dialer profile's abandoned-call message to a person whose agent never
+    /// connected, and records an agent who connected too late.
+    /// </remarks>
     public ContactCenterAgentLegFailureService(
         IInteractionManager interactionManager,
         ICallSessionManager callSessionManager,
@@ -31,9 +36,11 @@ public sealed partial class ContactCenterAgentLegFailureService : IContactCenter
         IProviderVoiceEventService providerVoiceEventService,
         IClock clock,
         ILogger<ContactCenterAgentLegFailureService> logger,
-        IAgentPresenceManager presenceManager)
+        IAgentPresenceManager presenceManager,
+        IDialerAbandonmentTracker abandonmentTracker)
     {
         _presenceManager = presenceManager;
+        _abandonmentTracker = abandonmentTracker;
         _interactionManager = interactionManager;
         _callSessionManager = callSessionManager;
         _clock = clock;
@@ -66,6 +73,11 @@ public sealed partial class ContactCenterAgentLegFailureService : IContactCenter
         {
             return false;
         }
+
+        // A person who answered an automated dialer call is listening to silence while the agent never arrives. The
+        // abandoned-call message starts first, before anything is written, and the provider ends the call once it has
+        // been spoken; the failure is then recorded as before.
+        var messageStarted = await _abandonmentTracker.AbandonAsync(interaction, providerName, peerProviderCallId, DialerAbandonment.Reasons.AgentLegFailed, cancellationToken);
 
         var now = _clock.UtcNow;
         var session = await _callSessionManager.FindByInteractionIdAsync(interaction.ItemId, cancellationToken);
@@ -124,7 +136,18 @@ public sealed partial class ContactCenterAgentLegFailureService : IContactCenter
         }
 
         // Release the customer. They answered and are connected to an agent who was never reached, so leaving
-        // the leg up holds them on dead air and keeps billing the call.
+        // the leg up holds them on dead air and keeps billing the call. A customer hearing the abandoned-call message
+        // is released by the provider when the message ends.
+        if (messageStarted)
+        {
+            _logger.LogWarning(
+                "The agent leg of call '{ProviderCallId}' failed with cause {HangupCause}; the call was settled as failed and the customer hears the abandoned-call message before it ends.",
+                peerProviderCallId.SanitizeLogValue(),
+                hangupCause);
+
+            return true;
+        }
+
         try
         {
             await _telephonyService.HangupAsync(new CallReference
@@ -203,9 +226,11 @@ public sealed partial class ContactCenterAgentLegFailureService : IContactCenter
 
         await _callSessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
 
-        // The agent is on the call: from here a campaign call is the agent's to work and wrap up.
+        // The agent is on the call: from here a campaign call is the agent's to work and wrap up. An agent who reached
+        // the person who answered later than the abandonment threshold still abandoned the call.
         if (DialerCallMetadata.MarkAgentJoined(interaction, now))
         {
+            await _abandonmentTracker.RecordAgentConnectedAsync(interaction, now, cancellationToken);
             await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
         }
 

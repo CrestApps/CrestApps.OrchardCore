@@ -38,6 +38,20 @@ public sealed class CallRecordingStore : DocumentCatalog<CallRecording, CallReco
     }
 
     /// <inheritdoc/>
+    public async Task<CallRecording> FindRunningByProviderCallIdAsync(string providerCallId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(providerCallId);
+
+        var recording = await Session.Query<CallRecording, CallRecordingIndex>(
+            index => index.ProviderCallId == providerCallId && index.ProviderRecordingId == null,
+            collection: ContactCenterStorage.CollectionName)
+            .OrderByDescending(index => index.StartedUtc)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return await LoadedAsync(recording);
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyList<CallRecording>> ListByInteractionIdAsync(string interactionId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(interactionId);

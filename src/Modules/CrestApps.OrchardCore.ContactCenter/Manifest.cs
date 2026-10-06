@@ -91,7 +91,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = ContactCenterConstants.Feature.DialerPaced,
     Name = "Contact Center Paced Dialing",
-    Description = "Adds Power and Progressive paced dialing that automatically dials for available agents, layering scheduled pacing on top of the Outbound Dialer, which already provides mandatory compliance screening and the dialing-profile administration.",
+    Description = "Adds Power, Progressive and Predictive paced dialing that automatically dials for available agents, layering scheduled pacing on top of the Outbound Dialer, which already provides mandatory compliance screening and the dialing-profile administration.",
     Category = "Contact Center",
     Dependencies =
     [

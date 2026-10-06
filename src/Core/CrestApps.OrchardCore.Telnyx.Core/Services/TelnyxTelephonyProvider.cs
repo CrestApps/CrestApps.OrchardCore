@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -36,6 +37,10 @@ public sealed partial class TelnyxTelephonyProvider :
     ITelephonySoftPhoneCredentialsProvider,
     ITelephonyCallStateProvider
 {
+    // The ring times Telnyx accepts for timeout_secs on a dial.
+    private const int TelnyxMinimumRingTimeoutSeconds = 5;
+    private const int TelnyxMaximumRingTimeoutSeconds = 600;
+
     private readonly TelnyxApiClient _apiClient;
     private readonly ITelnyxAgentCredentialStore _credentialStore;
     private readonly ITelnyxAgentEndpointResolver _agentEndpointResolver;
@@ -188,6 +193,12 @@ public sealed partial class TelnyxTelephonyProvider :
             body["answering_machine_detection"] = detection;
         }
 
+        // A dialer call says how long it rings before it is given up; without it Telnyx rings for its own default.
+        if (RingTimeoutSeconds(request.Metadata) is { } ringTimeoutSeconds)
+        {
+            body["timeout_secs"] = ringTimeoutSeconds;
+        }
+
         // Telnyx de-duplicates a repeated command by its command_id, so an idempotency key supplied by the
         // caller becomes the command id: a retried outbound POST after a lost response is then rejected as a
         // duplicate instead of placing a second call.
@@ -273,6 +284,20 @@ public sealed partial class TelnyxTelephonyProvider :
             "standard" => "detect",
             _ => null,
         };
+
+    /// <summary>
+    /// The seconds a dial request asks the call to ring, within what Telnyx accepts, or <see langword="null"/> when it
+    /// asks for no particular ring time.
+    /// </summary>
+    /// <param name="metadata">The dial request metadata.</param>
+    public static int? RingTimeoutSeconds(IDictionary<string, string> metadata)
+        => int.TryParse(
+            TryGetMetadataValue(metadata, TelephonyConstants.RequestMetadata.RingTimeoutSeconds),
+            NumberStyles.Integer,
+            CultureInfo.InvariantCulture,
+            out var seconds) && seconds > 0
+            ? Math.Clamp(seconds, TelnyxMinimumRingTimeoutSeconds, TelnyxMaximumRingTimeoutSeconds)
+            : null;
 
     private async Task<string> ResolveBrowserAgentEndpointAsync(DialRequest request, CancellationToken cancellationToken)
     {

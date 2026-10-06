@@ -1,5 +1,7 @@
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -57,7 +59,13 @@ public sealed class TelnyxAutomaticCallRecorder : ITelnyxAutomaticCallRecorder
 
         return RecordAsync(
             callControlId,
-            TelnyxRecordingClientState.ForAiCall(activityId, customerNumber, isInbound),
+            new CallRecordingRegistration
+            {
+                Source = CallRecordingSource.AiAgent,
+                ActivityItemId = activityId,
+                CustomerAddress = customerNumber,
+                Direction = isInbound ? InteractionDirection.Inbound : InteractionDirection.Outbound,
+            },
             "automated voice agent",
             cancellationToken);
     }
@@ -77,14 +85,21 @@ public sealed class TelnyxAutomaticCallRecorder : ITelnyxAutomaticCallRecorder
 
         return RecordAsync(
             callControlId,
-            TelnyxRecordingClientState.ForSoftPhoneCall(agentUserId, telephonyCallId, dialedNumber),
+            new CallRecordingRegistration
+            {
+                Source = CallRecordingSource.SoftPhone,
+                AgentUserId = agentUserId,
+                TelephonyCallId = telephonyCallId,
+                CustomerAddress = dialedNumber,
+                Direction = InteractionDirection.Outbound,
+            },
             "soft phone",
             cancellationToken);
     }
 
     private async Task<bool> RecordAsync(
         string callControlId,
-        TelnyxRecordingClientState clientState,
+        CallRecordingRegistration registration,
         string callKind,
         CancellationToken cancellationToken)
     {
@@ -94,8 +109,9 @@ public sealed class TelnyxAutomaticCallRecorder : ITelnyxAutomaticCallRecorder
         }
 
         var governancePolicy = _serviceProvider.GetService<IRecordingGovernancePolicy>();
+        var catalog = _serviceProvider.GetService<ICallRecordingCatalog>();
 
-        if (governancePolicy is null)
+        if (governancePolicy is null || catalog is null)
         {
             return false;
         }
@@ -118,11 +134,14 @@ public sealed class TelnyxAutomaticCallRecorder : ITelnyxAutomaticCallRecorder
                 return false;
             }
 
+            // No client_state: Telnyx would stamp it on every later event of the leg, replacing the state the leg was
+            // dialed with -- which is how a keypad call knows to hang up the agent when the number hangs up, and how an
+            // AI call's events reach its conversation. The recording is listed against the leg instead (below), and
+            // matched to it when Telnyx reports it saved.
             var result = await _apiClient.PostCallActionAsync(callControlId, "record_start", new Dictionary<string, object>
             {
                 ["format"] = TelnyxConstants.Recording.Format,
-                ["channels"] = "single",
-                ["client_state"] = clientState.ToClientState(),
+                ["channels"] = TelnyxConstants.Recording.CallChannels,
                 // Telnyx redelivers webhooks; the command id makes the redelivered answer's start a no-op.
                 ["command_id"] = $"auto-record-{callControlId}",
             }, cancellationToken);
@@ -137,6 +156,16 @@ public sealed class TelnyxAutomaticCallRecorder : ITelnyxAutomaticCallRecorder
                     result.ErrorBody.SanitizeLogValue());
 
                 return false;
+            }
+
+            // A redelivered answer starts nothing new, and must not list the recording twice.
+            if (await catalog.FindRunningAsync(callControlId, cancellationToken) is null)
+            {
+                registration.ProviderName = TelnyxConstants.ProviderTechnicalName;
+                registration.ProviderCallId = callControlId;
+                registration.Format = TelnyxConstants.Recording.Format;
+
+                await catalog.BeginAsync(registration, cancellationToken);
             }
 
             if (_logger.IsEnabled(LogLevel.Information))

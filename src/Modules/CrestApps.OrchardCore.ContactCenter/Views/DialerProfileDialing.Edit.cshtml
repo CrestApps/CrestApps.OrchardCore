@@ -24,14 +24,17 @@
             {
                 <option value="@DialerMode.Progressive">@T["Progressive"]</option>
             }
+            @if (Model.AutomatedDialerEnabled || Model.Mode == DialerMode.Predictive)
+            {
+                <option value="@DialerMode.Predictive">@T["Predictive"]</option>
+            }
         </select>
         <span asp-validation-for="Mode" class="text-danger"></span>
-        <span class="hint">@T["How calls are paced: Preview is agent-initiated (the agent reviews each record, then dials); Power and Progressive are system-paced (the dialer reserves agents and places calls automatically)."]</span>
+        <span class="hint">@T["How calls are paced: Preview is agent-initiated (the agent reviews each record, then dials); Power, Progressive and Predictive are system-paced (the dialer reserves agents and places calls automatically)."]</span>
         @if (!Model.AutomatedDialerEnabled)
         {
-            <span class="hint">@T["Enable the Contact Center Paced Dialing feature to offer the Power and Progressive automated pacing modes."]</span>
+            <span class="hint">@T["Enable the Contact Center Paced Dialing feature to offer the Power, Progressive and Predictive automated pacing modes."]</span>
         }
-        <span class="hint">@T["Predictive dialing is disabled until answer-rate forecasting is available."]</span>
     </div>
 </div>
 
@@ -46,12 +49,12 @@
     </div>
 </div>
 
-<div class="ocat-wrapper" asp-validation-class-for="CallsPerAgent" data-dialer-modes="Power">
+<div class="ocat-wrapper" asp-validation-class-for="CallsPerAgent" data-dialer-modes="Power Predictive">
     <label asp-for="CallsPerAgent" class="ocat-label">@T["Calls per agent"]</label>
     <div class="ocat-end">
         <input asp-for="CallsPerAgent" type="number" min="1" max="@Model.MaxCallsPerAgent" class="form-control" />
         <span asp-validation-for="CallsPerAgent" class="text-danger"></span>
-        <span class="hint">@T["How many calls Power dialing places per available agent each pacing cycle. Capped at {0} until predictive pacing is available.", Model.MaxCallsPerAgent]</span>
+        <span class="hint">@T["How many calls Power dialing places per available agent each pacing cycle. Predictive dialing uses it too while it reserves an agent for every call. Capped at {0}.", Model.MaxCallsPerAgent]</span>
     </div>
 </div>
 
@@ -73,7 +76,16 @@
     </div>
 </div>
 
-<div class="ocat-wrapper" asp-validation-class-for="AnsweringMachineDetection" data-dialer-modes="Power Progressive">
+<div class="ocat-wrapper" asp-validation-class-for="RingTimeoutSeconds" data-dialer-modes="Power Progressive Predictive">
+    <label asp-for="RingTimeoutSeconds" class="ocat-label">@T["Ring time (seconds)"]</label>
+    <div class="ocat-end">
+        <input asp-for="RingTimeoutSeconds" type="number" min="@DialerAbandonment.MinimumRingTimeoutSeconds" max="@DialerAbandonment.MaximumRingTimeoutSeconds" class="form-control" />
+        <span asp-validation-for="RingTimeoutSeconds" class="text-danger"></span>
+        <span class="hint">@T["How long a call rings before it is given up as unanswered, from {0} to {1} seconds. The common abandoned-call rules expect an unanswered call to ring for at least {0} seconds, so a shorter time is never used.", DialerAbandonment.MinimumRingTimeoutSeconds, DialerAbandonment.MaximumRingTimeoutSeconds]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="AnsweringMachineDetection" data-dialer-modes="Power Progressive Predictive">
     <label asp-for="AnsweringMachineDetection" class="ocat-label">@T["Screen out answering machines"]</label>
     <div class="ocat-end">
         <select asp-for="AnsweringMachineDetection" class="form-select">
@@ -105,7 +117,7 @@
                 group.style.display = modes.indexOf(mode) === -1 ? 'none' : '';
             });
 
-            // A card whose every setting is for other modes (abandonment and safe harbor for an agent-driven mode) is
+            // A card whose every setting is for other modes (abandoned calls for an agent-driven mode) is
             // hidden too, rather than shown empty.
             document.querySelectorAll('.card').forEach(function (card) {
                 if (!card.querySelector('[data-dialer-modes]')) {

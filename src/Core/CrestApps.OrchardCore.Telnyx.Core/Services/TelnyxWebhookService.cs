@@ -23,6 +23,7 @@ public sealed partial class TelnyxWebhookService : ITelnyxWebhookService
     private readonly IEnumerable<ICallQualityObserver> _callQualityObservers;
     private readonly IExternalTransferOutcomeSink _transferOutcomeSink;
     private readonly TelnyxApiClient _apiClient;
+    private readonly TelnyxHangUpAfterSpeechRegistry _hangUpAfterSpeech;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -38,6 +39,7 @@ public sealed partial class TelnyxWebhookService : ITelnyxWebhookService
     /// </param>
     /// <param name="transferOutcomeSink">Where the outcome of an external transfer's destination leg is reported.</param>
     /// <param name="apiClient">The typed Telnyx client, for the hang-up after a last message.</param>
+    /// <param name="hangUpAfterSpeech">The legs to hang up once their last message ends.</param>
     /// <param name="clock">The clock used to stamp event times.</param>
     /// <param name="logger">The logger.</param>
     public TelnyxWebhookService(
@@ -49,9 +51,11 @@ public sealed partial class TelnyxWebhookService : ITelnyxWebhookService
         IEnumerable<ICallQualityObserver> callQualityObservers,
         IExternalTransferOutcomeSink transferOutcomeSink,
         TelnyxApiClient apiClient,
+        TelnyxHangUpAfterSpeechRegistry hangUpAfterSpeech,
         IClock clock,
         ILogger<TelnyxWebhookService> logger)
     {
+        _hangUpAfterSpeech = hangUpAfterSpeech;
         _normalizedVoiceEventIngestor = normalizedVoiceEventIngestor;
         _inboundCallRouter = inboundCallRouter;
         _digitsSink = digitsSink;
@@ -96,16 +100,11 @@ public sealed partial class TelnyxWebhookService : ITelnyxWebhookService
         // an outbound call, which is the side the agent's soft phone cannot measure.
         await ObserveCallQualityAsync(callEvent, cancellationToken);
 
-        var bridgeLeg = await _outboundBridgeOrchestrator.AdvanceAsync(callEvent, cancellationToken);
-
-        if (bridgeLeg == TelnyxOutboundBridgeLeg.DestinationLeg)
-        {
-            return TelnyxWebhookResult.Updated;
-        }
-
         // A finished recording is not a call-state transition, so it is dispatched to the recording handlers
         // before state mapping. When Contact Center Voice is enabled a handler ingests the recording into the
-        // encrypted media store; otherwise there are no handlers and the event is ignored below.
+        // encrypted media store; otherwise there are no handlers and the event is ignored below. It is dispatched
+        // before the bridge legs are advanced: a number dialed from the soft phone is recorded on its hidden
+        // destination leg, and an automated voice agent's call on its own hidden leg, whose events return early below.
         if (string.Equals(callEvent.EventType?.Trim(), TelnyxConstants.Recording.SavedEventType, StringComparison.OrdinalIgnoreCase))
         {
             var recordingHandled = false;
@@ -116,6 +115,13 @@ public sealed partial class TelnyxWebhookService : ITelnyxWebhookService
             }
 
             return recordingHandled ? TelnyxWebhookResult.Updated : TelnyxWebhookResult.Ignored;
+        }
+
+        var bridgeLeg = await _outboundBridgeOrchestrator.AdvanceAsync(callEvent, cancellationToken);
+
+        if (bridgeLeg == TelnyxOutboundBridgeLeg.DestinationLeg)
+        {
+            return TelnyxWebhookResult.Updated;
         }
 
         // A key press on an entry-point menu. It is not a call-state transition either, and it carries no state token,

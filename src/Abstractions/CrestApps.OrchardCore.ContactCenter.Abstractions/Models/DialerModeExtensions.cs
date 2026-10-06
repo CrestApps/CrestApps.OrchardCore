@@ -19,13 +19,13 @@ public static class DialerModeExtensions
 
     /// <summary>
     /// Gets a value indicating whether the mode requires the Contact Center Paced Dialing feature to be
-    /// enabled before a profile may use it. Predictive is excluded because it is disabled entirely regardless
-    /// of the feature state.
+    /// enabled before a profile may use it. That feature offers all three system-paced modes; what a Predictive
+    /// profile may do beyond one call per reserved agent is governed by the profile's own pacing model and safeguards.
     /// </summary>
     /// <param name="mode">The dialer mode to classify.</param>
-    /// <returns><see langword="true"/> for Power and Progressive; otherwise <see langword="false"/>.</returns>
+    /// <returns><see langword="true"/> for Power, Progressive, and Predictive; otherwise <see langword="false"/>.</returns>
     public static bool RequiresPacedDialerFeature(this DialerMode mode)
     {
-        return mode is DialerMode.Power or DialerMode.Progressive;
+        return mode is DialerMode.Power or DialerMode.Progressive or DialerMode.Predictive;
     }
 }
