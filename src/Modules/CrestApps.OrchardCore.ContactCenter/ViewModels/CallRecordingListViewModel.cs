@@ -73,6 +73,11 @@ public class CallRecordingListViewModel
     public IList<SelectListItem> SourceOptions { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the Contact Center agents the list can be narrowed to, for a viewer who may hear everyone's calls.
+    /// </summary>
+    public IList<SelectListItem> AgentOptions { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the recordings on this page.
     /// </summary>
     public IList<CallRecordingListItemViewModel> Items { get; set; } = [];

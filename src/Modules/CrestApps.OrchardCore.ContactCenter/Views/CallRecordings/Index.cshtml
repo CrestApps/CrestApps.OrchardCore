@@ -43,16 +43,9 @@
                 {
                     <div class="col-sm-auto">
                         <span class="form-label small mb-1 d-block">@T["Agent"]</span>
-                        @await Component.InvokeAsync("UserPicker", new
-                        {
-                            name = "AgentUserId",
-                            selectedValues = string.IsNullOrEmpty(Model.Filter.AgentUserId) ? Array.Empty<string>() : new[] { Model.Filter.AgentUserId },
-                            valueType = "userId",
-                            multiple = false,
-                            buttonText = T["Any agent"].Value,
-                            searchPlaceholder = T["Search agents"].Value,
-                            smallButton = false,
-                        })
+                        <select name="AgentUserId" asp-items="Model.AgentOptions" class="selectpicker" data-live-search="true" data-width="auto" title="@T["Any agent"]" data-live-search-placeholder="@T["Search agents"]">
+                            <option value="">@T["Any agent"]</option>
+                        </select>
                     </div>
                 }
                 <div class="col-sm-auto">
@@ -71,7 +64,7 @@
     </div>
 </form>
 
-<ul class="list-group">
+<ul class="list-group" data-cc-call-recording-list>
     @if (Model.Items.Count > 0)
     {
         @foreach (var item in Model.Items)
@@ -108,9 +101,13 @@
                     </div>
                     <div class="col-lg-auto col-12 d-flex justify-content-end align-items-center">
                         <div class="actions">
-                            <a asp-action="Display" asp-route-id="@recording.ItemId" class="btn btn-primary btn-sm">
+                            <button type="button" class="btn btn-primary btn-sm" aria-pressed="false" data-cc-list-play="@Url.Action("Media", new { id = recording.ItemId })">
                                 <i class="fa-solid fa-play" aria-hidden="true"></i>
                                 @T["Play"]
+                            </button>
+                            <a asp-action="Display" asp-route-id="@recording.ItemId" class="btn btn-secondary btn-sm">
+                                <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                                @T["View"]
                             </a>
                         </div>
                     </div>
@@ -127,3 +124,7 @@
 </ul>
 
 @await DisplayAsync(Model.Pager)
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+<script asp-name="contact-center-call-recording" at="Foot"></script>

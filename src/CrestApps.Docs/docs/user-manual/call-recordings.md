@@ -39,15 +39,18 @@ A call shows up on the page once its recording has been saved, which can take a 
 
 Use the bar at the top of the page:
 
-- **From** and **To**: the days to search, in your own time zone.
+- **Started**: the date range to search, such as *Today*, *Last 7 days* or a custom range, in your own time zone.
 - **Phone number**: all or part of the customer's number.
 - **Direction**: inbound or outbound.
 - **Call type**: *Contact Center call*, *AI voice agent* or *Soft phone keypad*.
-- **Agent**: whose calls to list. Only shown to users who may hear everyone's calls.
+- **Agent**: whose calls to list, picked from the Contact Center agents. Only shown to users who may hear everyone's calls.
 
-Click **Search**, or **Clear** to start again. Each row shows when the call started, the agent, the customer's number, the direction, the call type and the length. Click **Play** to open the call.
+Click **Search**, or **Clear** to start again. Each row shows the customer's number, the direction, the call type, when the call started, the agent and the length.
 
-## Play a call
+- **Play** plays the recording right in the list. Click it again to close the player. One recording plays at a time.
+- **View** opens the call page.
+
+## View a call
 
 The call page shows who was on the call and when, a player for the recording and, below it, the transcript.
 
@@ -74,7 +77,7 @@ A transcript keeps one time for each line. The silence between lines is worked o
 
 ## Erase a recording
 
-Users who may manage interactions see **Erase recording** at the bottom of the call page.
+Only users with the *Delete call recordings* permission see **Erase recording** at the bottom of the call page. No role has it by default except *Administrator*; managing the contact center does not include it.
 
 1. Type why the recording is being erased, for example because the customer asked for their data to be deleted.
 2. Click **Erase**.

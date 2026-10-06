@@ -10,6 +10,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core
     public static class ContactCenterPermissions
     {
         public static readonly OrchardCore.Security.Permissions.Permission AccessSharedVoicemail;
+        public static readonly OrchardCore.Security.Permissions.Permission DeleteCallRecordings;
         public static readonly OrchardCore.Security.Permissions.Permission InitiateSecureCapture;
         public static readonly OrchardCore.Security.Permissions.Permission InterveneInCalls;
         public static readonly OrchardCore.Security.Permissions.Permission ListenToAllCallRecordings;

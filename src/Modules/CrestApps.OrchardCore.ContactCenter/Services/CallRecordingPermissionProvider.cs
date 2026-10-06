@@ -13,6 +13,7 @@ internal sealed class CallRecordingPermissionProvider : IPermissionProvider
     [
         ContactCenterPermissions.ListenToOwnCallRecordings,
         ContactCenterPermissions.ListenToAllCallRecordings,
+        ContactCenterPermissions.DeleteCallRecordings,
     ];
 
     /// <inheritdoc/>

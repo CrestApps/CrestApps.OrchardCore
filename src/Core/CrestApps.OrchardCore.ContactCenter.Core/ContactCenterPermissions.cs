@@ -121,4 +121,10 @@ public static class ContactCenterPermissions
     /// user who holds only this sees no other user's calls.
     /// </summary>
     public static readonly Permission ListenToOwnCallRecordings = new("ListenToOwnCallRecordings", "Listen to own call recordings", [ListenToAllCallRecordings, ManageContactCenter]);
+
+    /// <summary>
+    /// Grants erasing a call recording the user may listen to. Deliberately implied by no other permission, managing
+    /// the contact center included: deleting a recording cannot be undone, so it is granted on its own.
+    /// </summary>
+    public static readonly Permission DeleteCallRecordings = new("DeleteCallRecordings", "Delete call recordings");
 }

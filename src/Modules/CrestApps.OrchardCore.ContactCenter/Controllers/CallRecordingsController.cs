@@ -61,6 +61,7 @@ public sealed class CallRecordingsController : Controller
     private readonly ISession _session;
     private readonly IDisplayNameProvider _displayNameProvider;
     private readonly IPhoneNumberService _phoneNumberService;
+    private readonly IAgentProfileManager _agentProfileManager;
     private readonly ISiteService _siteService;
     private readonly ILocalClock _localClock;
     private readonly IClock _clock;
@@ -83,6 +84,7 @@ public sealed class CallRecordingsController : Controller
     /// <param name="session">The YesSql session, used to name the agents on a page of calls in one query.</param>
     /// <param name="displayNameProviders">The site's display name provider, when there is one.</param>
     /// <param name="phoneNumberService">The phone number service, which formats the customer's number for reading.</param>
+    /// <param name="agentProfileManagers">The agent profile manager, when agents are enabled, listing the agents the page can be narrowed to.</param>
     /// <param name="siteService">The site service, read for the region phone numbers are shown in.</param>
     /// <param name="localClock">The viewer's local clock, which the date filters are in.</param>
     /// <param name="clock">The clock.</param>
@@ -101,6 +103,7 @@ public sealed class CallRecordingsController : Controller
         ISession session,
         IEnumerable<IDisplayNameProvider> displayNameProviders,
         IPhoneNumberService phoneNumberService,
+        IEnumerable<IAgentProfileManager> agentProfileManagers,
         ISiteService siteService,
         ILocalClock localClock,
         IClock clock,
@@ -119,6 +122,7 @@ public sealed class CallRecordingsController : Controller
         _session = session;
         _displayNameProvider = displayNameProviders.LastOrDefault();
         _phoneNumberService = phoneNumberService;
+        _agentProfileManager = agentProfileManagers.FirstOrDefault();
         _siteService = siteService;
         _localClock = localClock;
         _clock = clock;
@@ -205,6 +209,11 @@ public sealed class CallRecordingsController : Controller
             Pager = await shapeFactory.PagerAsync(pager, page.Count, routeData),
         };
 
+        if (access.CanListEveryone)
+        {
+            model.AgentOptions = await GetAgentOptionsAsync(filter.AgentUserId);
+        }
+
         foreach (var recording in page.Entries)
         {
             model.Items.Add(new CallRecordingListItemViewModel
@@ -240,8 +249,9 @@ public sealed class CallRecordingsController : Controller
             return NotFound();
         }
 
-        // Audited once per visit to the page, not per request the player makes while it seeks.
-        await AuditAccessAsync(recording, access, "call-recordings-playback");
+        // Opening the page shows the transcript, which is the recording's content too. Listening is audited by the
+        // media endpoint when playback starts.
+        await AuditAccessAsync(recording, access, "call-recordings-view");
 
         var names = await GetUserNamesAsync([recording.AgentUserId]);
         var interaction = string.IsNullOrEmpty(recording.InteractionId)
@@ -259,7 +269,7 @@ public sealed class CallRecordingsController : Controller
             Transcript = await GetTranscriptAsync(recording),
             ContactContentItemId = activity?.ContactContentItemId,
             IsUnderLegalHold = interaction?.RecordingLegalHold == true,
-            CanErase = await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.ManageInteractions),
+            CanErase = await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.DeleteCallRecordings),
         });
     }
 
@@ -283,6 +293,13 @@ public sealed class CallRecordingsController : Controller
         if (recording is null || _mediaStore is null)
         {
             return NotFound();
+        }
+
+        // A player asks for the start of the recording when it begins playing and for later ranges as it seeks, so
+        // only a request from the start is audited: once per playback, from the list or the call page alike.
+        if (IsPlaybackStart(Request.Headers.Range.ToString()))
+        {
+            await AuditAccessAsync(recording, access, "call-recordings-playback");
         }
 
         var source = await _mediaStore.OpenReadAsync(recording.StorageReference, HttpContext.RequestAborted);
@@ -321,7 +338,7 @@ public sealed class CallRecordingsController : Controller
     {
         var access = await GetAccessAsync();
 
-        if (!access.CanListOwn || !await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.ManageInteractions))
+        if (!access.CanListOwn || !await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.DeleteCallRecordings))
         {
             return Forbid();
         }
@@ -393,6 +410,10 @@ public sealed class CallRecordingsController : Controller
 
         return RedirectToRoute(IndexRouteName);
     }
+
+    private static bool IsPlaybackStart(string range)
+        => string.IsNullOrWhiteSpace(range) ||
+            range.Trim().StartsWith("bytes=0-", StringComparison.OrdinalIgnoreCase);
 
     private async Task<CallRecordingAccess> GetAccessAsync()
     {
@@ -509,6 +530,31 @@ public sealed class CallRecordingsController : Controller
 
     private string FormatNumber(string number, string region)
         => string.IsNullOrWhiteSpace(number) ? null : _phoneNumberService.FormatForDisplay(number.Trim(), region);
+
+    // The agents the list can be narrowed to: every Contact Center agent, named as the site names its users.
+    private async Task<List<SelectListItem>> GetAgentOptionsAsync(string selectedUserId)
+    {
+        if (_agentProfileManager is null)
+        {
+            return [];
+        }
+
+        var agents = (await _agentProfileManager.GetAllAsync())
+            .Where(agent => !string.IsNullOrWhiteSpace(agent.UserId))
+            .ToArray();
+        var names = await GetUserNamesAsync(agents.Select(agent => agent.UserId));
+
+        return agents
+            .Select(agent => new SelectListItem(
+                names.TryGetValue(agent.UserId, out var name)
+                    ? name
+                    : agent.DisplayName ?? agent.UserName ?? agent.UserId,
+                agent.UserId,
+                string.Equals(agent.UserId, selectedUserId, StringComparison.Ordinal)))
+            .DistinctBy(option => option.Value, StringComparer.Ordinal)
+            .OrderBy(option => option.Text, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+    }
 
     private async Task<Dictionary<string, string>> GetUserNamesAsync(IEnumerable<string> userIds)
     {
