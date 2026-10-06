@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Claims;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core;
@@ -7,7 +8,9 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,6 +25,7 @@ using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using OrchardCore.Settings;
 using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
 using YesSql;
@@ -44,6 +48,9 @@ public sealed class CallRecordingsController : Controller
     private const string IndexRouteName = "ContactCenterCallRecordingsIndex";
     private const string DisplayRouteName = "ContactCenterCallRecordingsDisplay";
 
+    // The machine format the date range picker reads and writes.
+    private const string DateRangeRouteFormat = "yyyy-MM-ddTHH:mm";
+
     private readonly ICallRecordingStore _store;
     private readonly IAuthorizationService _authorizationService;
     private readonly IEnumerable<ICallRecordingTranscriptProvider> _transcriptProviders;
@@ -53,6 +60,8 @@ public sealed class CallRecordingsController : Controller
     private readonly IRecordingMediaStore _mediaStore;
     private readonly ISession _session;
     private readonly IDisplayNameProvider _displayNameProvider;
+    private readonly IPhoneNumberService _phoneNumberService;
+    private readonly ISiteService _siteService;
     private readonly ILocalClock _localClock;
     private readonly IClock _clock;
     private readonly INotifier _notifier;
@@ -73,6 +82,8 @@ public sealed class CallRecordingsController : Controller
     /// <param name="mediaStores">The encrypted recording media store, when telephony registered one.</param>
     /// <param name="session">The YesSql session, used to name the agents on a page of calls in one query.</param>
     /// <param name="displayNameProviders">The site's display name provider, when there is one.</param>
+    /// <param name="phoneNumberService">The phone number service, which formats the customer's number for reading.</param>
+    /// <param name="siteService">The site service, read for the region phone numbers are shown in.</param>
     /// <param name="localClock">The viewer's local clock, which the date filters are in.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="notifier">The admin notifier.</param>
@@ -89,6 +100,8 @@ public sealed class CallRecordingsController : Controller
         IEnumerable<IRecordingMediaStore> mediaStores,
         ISession session,
         IEnumerable<IDisplayNameProvider> displayNameProviders,
+        IPhoneNumberService phoneNumberService,
+        ISiteService siteService,
         ILocalClock localClock,
         IClock clock,
         INotifier notifier,
@@ -105,6 +118,8 @@ public sealed class CallRecordingsController : Controller
         _mediaStore = mediaStores.LastOrDefault();
         _session = session;
         _displayNameProvider = displayNameProviders.LastOrDefault();
+        _phoneNumberService = phoneNumberService;
+        _siteService = siteService;
         _localClock = localClock;
         _clock = clock;
         _notifier = notifier;
@@ -150,18 +165,22 @@ public sealed class CallRecordingsController : Controller
             CustomerAddress = NullIfEmpty(filter.Number),
             Direction = filter.Direction,
             Source = filter.Source,
-            FromUtc = filter.From is { } from ? await ToUtcAsync(from) : null,
-            ToUtc = filter.To is { } to ? await ToUtcAsync(to.AddDays(1)) : null,
+            FromUtc = filter.From is { } from ? await ToUtcAsync(TruncateToMinute(from)) : null,
+
+            // The picker's upper bound is inclusive to the minute; the query's is exclusive.
+            ToUtc = filter.To is { } to ? await ToUtcAsync(TruncateToMinute(to).AddMinutes(1)) : null,
             Page = pager.Page,
             PageSize = pager.PageSize,
         };
 
         var page = await _store.QueryAsync(query, HttpContext.RequestAborted);
         var names = await GetUserNamesAsync(page.Entries.Select(recording => recording.AgentUserId));
+        var region = await GetPhoneRegionAsync();
 
         var routeData = new RouteData();
-        AddRouteValue(routeData, nameof(filter.From), filter.From?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture));
-        AddRouteValue(routeData, nameof(filter.To), filter.To?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture));
+        AddRouteValue(routeData, nameof(filter.From), filter.From?.ToString(DateRangeRouteFormat, CultureInfo.InvariantCulture));
+        AddRouteValue(routeData, nameof(filter.To), filter.To?.ToString(DateRangeRouteFormat, CultureInfo.InvariantCulture));
+        AddRouteValue(routeData, nameof(filter.Range), filter.Range);
         AddRouteValue(routeData, nameof(filter.Number), filter.Number);
         AddRouteValue(routeData, nameof(filter.Direction), filter.Direction?.ToString());
         AddRouteValue(routeData, nameof(filter.Source), filter.Source?.ToString());
@@ -192,6 +211,7 @@ public sealed class CallRecordingsController : Controller
             {
                 Recording = recording,
                 AgentName = NameOf(recording.AgentUserId, names),
+                CustomerNumber = FormatNumber(recording.CustomerAddress, region),
             });
         }
 
@@ -235,6 +255,7 @@ public sealed class CallRecordingsController : Controller
         {
             Recording = recording,
             AgentName = NameOf(recording.AgentUserId, names),
+            CustomerNumber = FormatNumber(recording.CustomerAddress, await GetPhoneRegionAsync()),
             Transcript = await GetTranscriptAsync(recording),
             ContactContentItemId = activity?.ContactContentItemId,
             IsUnderLegalHold = interaction?.RecordingLegalHold == true,
@@ -459,8 +480,35 @@ public sealed class CallRecordingsController : Controller
         return null;
     }
 
-    private async Task<DateTime> ToUtcAsync(DateOnly localDate)
-        => DateTime.SpecifyKind(await _localClock.ConvertToUtcAsync(localDate.ToDateTime(TimeOnly.MinValue)), DateTimeKind.Utc);
+    private async Task<DateTime> ToUtcAsync(DateTime localTime)
+        => DateTime.SpecifyKind(await _localClock.ConvertToUtcAsync(DateTime.SpecifyKind(localTime, DateTimeKind.Unspecified)), DateTimeKind.Utc);
+
+    private static DateTime TruncateToMinute(DateTime value)
+        => new(value.Year, value.Month, value.Day, value.Hour, value.Minute, 0, DateTimeKind.Unspecified);
+
+    // The region the soft phone dials in is the tenant's home region for phone numbers: a number from there is shown
+    // the way it is said locally, and one from anywhere else keeps its country code.
+    private async Task<string> GetPhoneRegionAsync()
+    {
+        var settings = await _siteService.GetSettingsAsync<SoftPhoneWidgetSettings>();
+
+        if (!string.IsNullOrWhiteSpace(settings?.DefaultCountryCode))
+        {
+            return settings.DefaultCountryCode.Trim().ToUpperInvariant();
+        }
+
+        try
+        {
+            return new RegionInfo(CultureInfo.CurrentCulture.Name).TwoLetterISORegionName;
+        }
+        catch (ArgumentException)
+        {
+            return null;
+        }
+    }
+
+    private string FormatNumber(string number, string region)
+        => string.IsNullOrWhiteSpace(number) ? null : _phoneNumberService.FormatForDisplay(number.Trim(), region);
 
     private async Task<Dictionary<string, string>> GetUserNamesAsync(IEnumerable<string> userIds)
     {

@@ -10,14 +10,21 @@ namespace CrestApps.OrchardCore.ContactCenter.ViewModels;
 public class CallRecordingFilterViewModel
 {
     /// <summary>
-    /// Gets or sets the first day, in the viewer's time zone, to list calls from.
+    /// Gets or sets the inclusive lower bound, in the viewer's time zone, of when the listed calls started.
     /// </summary>
-    public DateOnly? From { get; set; }
+    public DateTime? From { get; set; }
 
     /// <summary>
-    /// Gets or sets the last day, in the viewer's time zone, to list calls from.
+    /// Gets or sets the inclusive upper bound, in the viewer's time zone and to the minute, of when the listed calls
+    /// started.
     /// </summary>
-    public DateOnly? To { get; set; }
+    public DateTime? To { get; set; }
+
+    /// <summary>
+    /// Gets or sets the date range preset the picker was left on (for example <c>today</c> or <c>custom</c>), so the
+    /// same option is shown again when the page reloads.
+    /// </summary>
+    public string Range { get; set; }
 
     /// <summary>
     /// Gets or sets part of the customer's phone number.
@@ -95,6 +102,11 @@ public class CallRecordingListItemViewModel
     /// Gets or sets the name of the agent on the call, or <see langword="null"/> when no person took part.
     /// </summary>
     public string AgentName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the customer's number formatted for reading, or <see langword="null"/> when it is not known.
+    /// </summary>
+    public string CustomerNumber { get; set; }
 }
 
 /// <summary>
@@ -111,6 +123,11 @@ public class CallRecordingDisplayViewModel
     /// Gets or sets the name of the agent on the call, or <see langword="null"/> when no person took part.
     /// </summary>
     public string AgentName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the customer's number formatted for reading, or <see langword="null"/> when it is not known.
+    /// </summary>
+    public string CustomerNumber { get; set; }
 
     /// <summary>
     /// Gets or sets the transcript, or <see langword="null"/> when the call has none.

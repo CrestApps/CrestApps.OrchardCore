@@ -1,0 +1,34 @@
+@model CallRecording
+
+@* The direction and kind of a recorded call, shown alike on the list and on the recording's own page. *@
+@if (Model.Direction == InteractionDirection.Inbound)
+{
+    <span class="badge ta-badge" title="@T["Direction"]">
+        <i class="fa-solid fa-arrow-right-to-bracket" aria-hidden="true"></i><span class="visually-hidden">@T["Direction"]</span> @T["Inbound"]
+    </span>
+}
+else
+{
+    <span class="badge ta-badge" title="@T["Direction"]">
+        <i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i><span class="visually-hidden">@T["Direction"]</span> @T["Outbound"]
+    </span>
+}
+
+@switch (Model.Source)
+{
+    case CallRecordingSource.AiAgent:
+        <span class="badge ta-badge" title="@T["Call type"]">
+            <i class="fa-solid fa-robot" aria-hidden="true"></i><span class="visually-hidden">@T["Call type"]</span> @T["AI voice agent"]
+        </span>
+        break;
+    case CallRecordingSource.SoftPhone:
+        <span class="badge ta-badge" title="@T["Call type"]">
+            <i class="fa-solid fa-phone" aria-hidden="true"></i><span class="visually-hidden">@T["Call type"]</span> @T["Soft phone keypad"]
+        </span>
+        break;
+    default:
+        <span class="badge ta-badge" title="@T["Call type"]">
+            <i class="fa-solid fa-headset" aria-hidden="true"></i><span class="visually-hidden">@T["Call type"]</span> @T["Contact Center call"]
+        </span>
+        break;
+}

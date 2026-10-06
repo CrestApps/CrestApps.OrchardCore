@@ -40,37 +40,31 @@
                 <dd class="col-sm-9 col-lg-4">@await DisplayAsync(await New.DateTime(Utc: recording.StartedUtc, Format: "F"))</dd>
 
                 <dt class="col-sm-3 col-lg-2">@T["Length"]</dt>
-                <dd class="col-sm-9 col-lg-4 font-monospace">@(recording.DurationSeconds > 0 ? Clock(recording.DurationSeconds) : "-")</dd>
+                <dd class="col-sm-9 col-lg-4 font-monospace">@CallRecordingFormat.Duration(recording.DurationSeconds)</dd>
 
                 <dt class="col-sm-3 col-lg-2">@T["Agent"]</dt>
                 <dd class="col-sm-9 col-lg-4">@(Model.AgentName ?? (recording.Source == CallRecordingSource.AiAgent ? T["AI voice agent"].Value : T["Nobody"].Value))</dd>
 
                 <dt class="col-sm-3 col-lg-2">@T["Customer"]</dt>
                 <dd class="col-sm-9 col-lg-4">
-                    @(string.IsNullOrWhiteSpace(recording.CustomerAddress) ? T["Unknown"].Value : recording.CustomerAddress)
+                    @if (string.IsNullOrEmpty(Model.CustomerNumber))
+                    {
+                        @T["Unknown caller"]
+                    }
+                    else
+                    {
+                        @* The tel: href keeps the exact stored number; the text is grouped so it can be read back. *@
+                        <a href="tel:@recording.CustomerAddress">@Model.CustomerNumber</a>
+                    }
                     @if (!string.IsNullOrEmpty(Model.ContactContentItemId))
                     {
                         <a class="ms-2" href="@Url.Action("List", "Activities", new { area = "CrestApps.OrchardCore.Omnichannel.Managements", contentItemId = Model.ContactContentItemId })">@T["Contact activities"]</a>
                     }
                 </dd>
 
-                <dt class="col-sm-3 col-lg-2">@T["Direction"]</dt>
-                <dd class="col-sm-9 col-lg-4">@(recording.Direction == InteractionDirection.Inbound ? T["Inbound"] : T["Outbound"])</dd>
-
-                <dt class="col-sm-3 col-lg-2">@T["Type"]</dt>
+                <dt class="col-sm-3 col-lg-2">@T["Call"]</dt>
                 <dd class="col-sm-9 col-lg-4 mb-0">
-                    @switch (recording.Source)
-                    {
-                        case CallRecordingSource.AiAgent:
-                            <text>@T["AI voice agent"]</text>
-                            break;
-                        case CallRecordingSource.SoftPhone:
-                            <text>@T["Soft phone keypad"]</text>
-                            break;
-                        default:
-                            <text>@T["Contact Center call"]</text>
-                            break;
-                    }
+                    <partial name="_CallRecordingBadges" model="recording" />
                 </dd>
             </dl>
         </div>

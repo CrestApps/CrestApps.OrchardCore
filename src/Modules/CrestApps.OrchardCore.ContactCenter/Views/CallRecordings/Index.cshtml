@@ -2,15 +2,6 @@
 
 @model CallRecordingListViewModel
 
-@functions {
-    private static string FormatSeconds(double seconds)
-    {
-        var span = TimeSpan.FromSeconds(Math.Max(0, Math.Round(seconds)));
-
-        return span.ToString(span.TotalHours >= 1 ? "h\\:mm\\:ss" : "m\\:ss", CultureInfo.InvariantCulture);
-    }
-}
-
 <zone Name="Title">
     <breadcrumb name="ContactCenterCallRecordings" title="@T["Call recordings"]" />
 </zone>
@@ -19,14 +10,19 @@
     <div class="card text-bg-theme mb-3 position-sticky action-bar">
         <div class="card-body">
             <div class="row gx-3 gy-2 align-items-end">
-                <div class="col-sm-auto">
-                    <label for="From" class="form-label small mb-1">@T["From"]</label>
-                    <input type="date" id="From" name="From" class="form-control" value="@Model.Filter.From?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" />
-                </div>
-                <div class="col-sm-auto">
-                    <label for="To" class="form-label small mb-1">@T["To"]</label>
-                    <input type="date" id="To" name="To" class="form-control" value="@Model.Filter.To?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" />
-                </div>
+                @await Component.InvokeAsync("DateRangePicker", new
+                {
+                    fromName = "From",
+                    toName = "To",
+                    from = Model.Filter.From,
+                    to = Model.Filter.To,
+                    selectedRangeName = "Range",
+                    selectedRange = Model.Filter.Range,
+                    label = T["Started"].Value,
+                    labelCssClass = "form-label small mb-1",
+                    placeholder = T["Any date"].Value,
+                    wrapperCssClass = "col-sm-auto",
+                })
                 <div class="col-sm-auto">
                     <label for="Number" class="form-label small mb-1">@T["Phone number"]</label>
                     <input type="search" id="Number" name="Number" class="form-control" value="@Model.Filter.Number" placeholder="@T["Any number"]" />
@@ -75,67 +71,59 @@
     </div>
 </form>
 
-@if (Model.Items.Count > 0)
-{
-    <div class="table-responsive">
-        <table class="table table-hover align-middle">
-            <thead>
-                <tr>
-                    <th scope="col">@T["Started"]</th>
-                    <th scope="col">@T["Agent"]</th>
-                    <th scope="col">@T["Customer"]</th>
-                    <th scope="col">@T["Direction"]</th>
-                    <th scope="col">@T["Type"]</th>
-                    <th scope="col" class="text-end">@T["Length"]</th>
-                    <th scope="col" class="text-end"><span class="visually-hidden">@T["Actions"]</span></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var item in Model.Items)
-                {
-                    var recording = item.Recording;
+<ul class="list-group">
+    @if (Model.Items.Count > 0)
+    {
+        @foreach (var item in Model.Items)
+        {
+            var recording = item.Recording;
 
-                    <tr>
-                        <td>
-                            <time datetime="@recording.StartedUtc.ToString(DateTimeFormatConstants.HtmlDateTimeOffset, CultureInfo.InvariantCulture)">@await DisplayAsync(await New.DateTime(Utc: recording.StartedUtc, Format: "g"))</time>
-                        </td>
-                        <td>@(item.AgentName ?? (recording.Source == CallRecordingSource.AiAgent ? T["AI voice agent"].Value : T["Nobody"].Value))</td>
-                        <td>@(string.IsNullOrWhiteSpace(recording.CustomerAddress) ? T["Unknown"].Value : recording.CustomerAddress)</td>
-                        <td>@(recording.Direction == InteractionDirection.Inbound ? T["Inbound"] : T["Outbound"])</td>
-                        <td>
-                            @switch (recording.Source)
-                            {
-                                case CallRecordingSource.AiAgent:
-                                    <span class="badge text-bg-info">@T["AI voice agent"]</span>
-                                    break;
-                                case CallRecordingSource.SoftPhone:
-                                    <span class="badge text-bg-secondary">@T["Soft phone keypad"]</span>
-                                    break;
-                                default:
-                                    <span class="badge text-bg-primary">@T["Contact Center call"]</span>
-                                    break;
-                            }
-                        </td>
-                        <td class="text-end font-monospace">@(recording.DurationSeconds > 0 ? FormatSeconds(recording.DurationSeconds) : "-")</td>
-                        <td class="text-end">
+            <li class="list-group-item">
+                <div class="row g-0">
+                    <div class="col-lg col-12 title d-flex align-items-center">
+                        <div class="summary">
+                            <div class="d-flex flex-column flex-md-row">
+                                <div class="me-2">
+                                    <h5 class="mb-0">@(item.CustomerNumber ?? T["Unknown caller"].Value)</h5>
+                                </div>
+                                <div class="metadata me-1">
+                                    <partial name="_CallRecordingBadges" model="recording" />
+                                </div>
+                            </div>
+                            <div class="text-muted small mt-1">
+                                <span class="me-3" title="@T["Started"]">
+                                    <i class="fa-regular fa-calendar" aria-hidden="true"></i><span class="visually-hidden">@T["Started"]</span>
+                                    <time datetime="@recording.StartedUtc.ToString(DateTimeFormatConstants.HtmlDateTimeOffset, CultureInfo.InvariantCulture)">@await DisplayAsync(await New.DateTime(Utc: recording.StartedUtc, Format: "g"))</time>
+                                </span>
+                                <span class="me-3" title="@T["Agent"]">
+                                    <i class="fa-solid fa-headset" aria-hidden="true"></i><span class="visually-hidden">@T["Agent"]</span>
+                                    @(item.AgentName ?? (recording.Source == CallRecordingSource.AiAgent ? T["AI voice agent"].Value : T["Nobody"].Value))
+                                </span>
+                                <span title="@T["Length"]">
+                                    <i class="fa-regular fa-clock" aria-hidden="true"></i><span class="visually-hidden">@T["Length"]</span>
+                                    <span class="font-monospace">@CallRecordingFormat.Duration(recording.DurationSeconds)</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-auto col-12 d-flex justify-content-end align-items-center">
+                        <div class="actions">
                             <a asp-action="Display" asp-route-id="@recording.ItemId" class="btn btn-primary btn-sm">
                                 <i class="fa-solid fa-play" aria-hidden="true"></i>
                                 @T["Play"]
                             </a>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-}
-else
-{
-    <ul class="list-group">
+                        </div>
+                    </div>
+                </div>
+            </li>
+        }
+    }
+    else
+    {
         <li class="list-group-item list-group-item-info text-center">
             @T["No recorded call matches. Calls are listed here once their recording has been saved."]
         </li>
-    </ul>
-}
+    }
+</ul>
 
 @await DisplayAsync(Model.Pager)
