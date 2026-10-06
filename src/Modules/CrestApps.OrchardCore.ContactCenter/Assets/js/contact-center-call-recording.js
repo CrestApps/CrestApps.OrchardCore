@@ -183,6 +183,18 @@
         button.setAttribute('aria-pressed', 'false');
     }
 
+    // The media address is built here from the recording's identifier, never read whole from the page: an
+    // identifier is letters and digits, and anything else is refused rather than loaded into the player.
+    function mediaUrlOf(recordingId) {
+        if (!/^[A-Za-z0-9]{1,64}$/.test(recordingId || '')) {
+            return null;
+        }
+
+        var base = window.location.pathname.replace(/\/+$/, '');
+
+        return base + '/' + encodeURIComponent(recordingId) + '/media';
+    }
+
     function initializeList(list) {
         list.addEventListener('click', function (event) {
             var button = event.target.closest('[data-cc-list-play]');
@@ -203,8 +215,9 @@
             }
 
             var row = button.closest('li');
+            var mediaUrl = mediaUrlOf(button.getAttribute('data-cc-list-play'));
 
-            if (!row) {
+            if (!row || !mediaUrl) {
                 return;
             }
 
@@ -217,7 +230,7 @@
             audio.autoplay = true;
             audio.preload = 'auto';
             audio.className = 'w-100';
-            audio.src = button.getAttribute('data-cc-list-play');
+            audio.src = mediaUrl;
 
             holder.appendChild(audio);
             row.appendChild(holder);
