@@ -169,6 +169,8 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped<IContactCenterEventHandler, ReofferVoiceWorkHandler>()
             // A dialed number the network reports not in service is completed and marked without an agent.
             .AddScoped<IContactCenterEventHandler, DialerNotInServiceHandler>()
+            // Every other dialer attempt that ended before an agent was connected is dispositioned without an agent.
+            .AddScoped<IContactCenterEventHandler, DialerAttemptOutcomeHandler>()
             .AddScoped<IVoiceQueueOfferService, VoiceQueueOfferService>()
             .AddScoped<IDirectHoldTimeoutService, DirectHoldTimeoutService>()
             .AddScoped<IInboundVoiceCallProcessor, InboundVoiceCallProcessor>()

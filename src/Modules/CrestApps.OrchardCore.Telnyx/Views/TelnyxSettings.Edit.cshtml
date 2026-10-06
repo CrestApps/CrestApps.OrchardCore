@@ -96,6 +96,31 @@
             <span class="hint">@T["Connect set this on your Call Control application automatically. Shown for reference."]</span>
         </div>
 
+        <div class="mb-3">
+            <label asp-for="NoiseSuppressionEngine">@T["Noise suppression"]</label>
+            <select class="form-select" asp-for="NoiseSuppressionEngine">
+                <option value="@TelnyxNoiseSuppressionEngine.Off">@T["Off"]</option>
+                <option value="@TelnyxNoiseSuppressionEngine.Krisp">@T["Krisp - also removes other people talking nearby"]</option>
+                <option value="@TelnyxNoiseSuppressionEngine.DeepFilterNet">@T["DeepFilterNet - tuned for phone calls"]</option>
+                <option value="@TelnyxNoiseSuppressionEngine.Denoiser">@T["Denoiser - general background noise"]</option>
+                <option value="@TelnyxNoiseSuppressionEngine.AiCoustics">@T["ai-coustics - tuned for speech recognition"]</option>
+            </select>
+            <span class="hint">@T["Telnyx cleans background sound out of the call audio before the other person hears it. Choose Krisp when callers can hear colleagues talking near your agents. This is a Telnyx beta feature, billed by Telnyx for each voice you clean."]</span>
+        </div>
+
+        <div class="mb-3">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="NoiseSuppressionAgentVoice" />
+                <label class="form-check-label" asp-for="NoiseSuppressionAgentVoice">@T["Clean the agent's voice (what callers hear)"]</label>
+                <span class="hint dashed">@T["Removes the noise around the agent before it reaches the caller."]</span>
+            </div>
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="NoiseSuppressionCallerVoice" />
+                <label class="form-check-label" asp-for="NoiseSuppressionCallerVoice">@T["Clean the caller's voice (what the agent hears)"]</label>
+                <span class="hint dashed">@T["Removes the noise around the caller before it reaches the agent. Billed separately."]</span>
+            </div>
+        </div>
+
         <details class="mb-3 mt-2">
             <summary class="h6 mb-2" style="cursor: pointer;">@T["Advanced — browser WebRTC (optional)"]</summary>
             <p class="hint">@T["These already have working defaults. Change them only if Telnyx support tells you to, or your network needs a TURN relay."]</p>

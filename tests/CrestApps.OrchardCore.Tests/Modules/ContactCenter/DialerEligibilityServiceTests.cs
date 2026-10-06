@@ -37,11 +37,12 @@ public sealed class DialerEligibilityServiceTests
     public async Task EvaluateAsync_WhenMaxAttemptsReached_SuppressesMaxAttempts()
     {
         // Arrange
+        // The record's third attempt was already dialed, so the next call would be a fourth.
         var harness = new Harness();
         var activity = new OmnichannelActivity { ItemId = "act1", PreferredDestination = "+14255551212", Attempts = 3 };
 
         // Act
-        var result = await harness.EvaluateAsync(Profile(maxAttempts: 3), activity);
+        var result = await harness.EvaluateAsync(Profile(maxAttempts: 3), activity, dialCount: 1);
 
         // Assert
         Assert.False(result.IsEligible);
@@ -434,16 +435,22 @@ public sealed class DialerEligibilityServiceTests
                 .ReturnsAsync(DialerAbandonmentEvaluation.Permitted(true, 0, 0, "Not enforced."));
         }
 
-        public Task<DialerEligibilityResult> EvaluateAsync(
+        public async Task<DialerEligibilityResult> EvaluateAsync(
             DialerProfile profile,
             OmnichannelActivity activity,
-            bool attemptAlreadyCounted = false)
+            bool attemptAlreadyCounted = false,
+            int dialCount = 0)
         {
             var clock = new Mock<IClock>();
             clock.SetupGet(c => c.UtcNow).Returns(_now);
 
             var workStateService = new FakeContactCenterWorkStateService();
             workStateService.SeedFrom(activity);
+
+            if (dialCount > 0)
+            {
+                await workStateService.MutateAsync(activity.ItemId, workState => workState.DialCount = dialCount);
+            }
 
             var service = new DefaultDialerEligibilityService(
                 InteractionManager.Object,
@@ -457,7 +464,7 @@ public sealed class DialerEligibilityServiceTests
                 clock.Object,
                 NullLogger<DefaultDialerEligibilityService>.Instance);
 
-            return service.EvaluateAsync(new DialerEligibilityContext
+            return await service.EvaluateAsync(new DialerEligibilityContext
             {
                 Profile = profile,
                 Activity = activity,

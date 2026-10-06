@@ -64,6 +64,10 @@
     // value is empty, so the client falls back to its path derivation exactly as before.
     var registrationConfigUrl = Url.RouteUrl("ContactCenterAgentSoftPhoneRegistrationConfig");
 
+    // Where the voice isolation models and noise gate are served from (vendored by the Resources module). Resolved
+    // here rather than assumed by the script so a tenant prefix or a virtual directory is honoured.
+    var voiceIsolationAssetsUrl = Url.Content("~/CrestApps.OrchardCore.Resources/vendors/web-noise-suppressor/");
+
     // The Contact Center's transfer endpoints, resolved by route name like the voicemail ones: when the module is not
     // enabled nothing resolves, and every call is transferred through the provider as before.
     var transferService = new Dictionary<string, string>
@@ -79,6 +83,7 @@
     {
         ["hubUrl"] = hubUrl,
         ["registrationConfigUrl"] = registrationConfigUrl ?? string.Empty,
+        ["voiceIsolationAssetsUrl"] = voiceIsolationAssetsUrl ?? string.Empty,
         ["transferService"] = transferService,
         ["voicemailPlaybackEnabled"] = !string.IsNullOrEmpty(voicemailMediaUrlTemplate),
         ["voicemailMediaUrlTemplate"] = voicemailMediaUrlTemplate ?? string.Empty,
@@ -299,6 +304,9 @@
             ["virtualSpeaker"] = T["Your speaker is set to a virtual audio device, so you will not hear the caller. Choose your headset or speakers in the phone settings."].Value,
             ["microphoneChangeOnNextCall"] = T["The microphone could not be switched on this call. It will be used on your next call."].Value,
             ["processingSwitchFailed"] = T["The microphone processing change could not be applied on this call."].Value,
+            ["voiceIsolationActive"] = T["Voice isolation is on."].Value,
+            ["voiceIsolationPending"] = T["Voice isolation starts after your first click on the page."].Value,
+            ["voiceIsolationUnavailable"] = T["Voice isolation is not available in this browser, so the browser's noise suppression is used instead."].Value,
             ["signalingRegionOnNextCall"] = T["The connection region will be used the next time you register, once this call ends."].Value,
             ["signalingRegionRegisterFailed"] = T["The phone could not re-register on the selected connection region."].Value,
             ["signalingRegionConnected"] = T["Connected via {0}."].Value,
@@ -405,15 +413,42 @@
                 <div class="telephony-soft-phone__settings-group-title">@T["Microphone processing"]</div>
                 <p class="telephony-soft-phone__settings-hint">@T["Changes apply immediately, including on a call in progress. Turn one off at a time if the other party hears you hollow, distant, or with artifacts."]</p>
                 <label class="telephony-soft-phone__setting telephony-soft-phone__setting--check">
+                    <input type="checkbox" class="form-check-input" data-telephony-voice-isolation checked>
+                    <span class="telephony-soft-phone__setting-label">@T["Voice isolation"]</span>
+                </label>
+                <small class="telephony-soft-phone__settings-hint">@T["Removes background noise and the voices of people around you before the caller hears you. Works best with a headset microphone close to your mouth. The browser's own noise suppression and automatic gain control are offered when it is off."]</small>
+                <small class="telephony-soft-phone__settings-hint" data-telephony-voice-isolation-status></small>
+                <label class="telephony-soft-phone__setting">
+                    <span class="telephony-soft-phone__setting-label">
+                        <i class="fa-solid fa-sliders" aria-hidden="true"></i> @T["Isolation strength"]
+                    </span>
+                    <select class="form-select form-select-sm" data-telephony-voice-isolation-strength aria-label="@T["Isolation strength"]">
+                        <option value="low">@T["Low"]</option>
+                        <option value="medium">@T["Medium"]</option>
+                        <option value="high">@T["High"]</option>
+                    </select>
+                    <small class="telephony-soft-phone__settings-hint">@T["How firmly the room is cut while you are not speaking. Use High on a loud floor. Use Low if the caller says the start or end of your words is cut off."]</small>
+                </label>
+                <label class="telephony-soft-phone__setting">
+                    <span class="telephony-soft-phone__setting-label">
+                        <i class="fa-solid fa-microchip" aria-hidden="true"></i> @T["Isolation model"]
+                    </span>
+                    <select class="form-select form-select-sm" data-telephony-voice-isolation-engine aria-label="@T["Isolation model"]">
+                        <option value="gtcrn">@T["Enhanced"]</option>
+                        <option value="rnnoise">@T["Light"]</option>
+                    </select>
+                    <small class="telephony-soft-phone__settings-hint">@T["Enhanced removes more background voices. Choose Light if the caller hears your voice crackle or break up, which can happen on an older computer."]</small>
+                </label>
+                <label class="telephony-soft-phone__setting telephony-soft-phone__setting--check">
                     <input type="checkbox" class="form-check-input" data-telephony-processing-ec checked>
                     <span class="telephony-soft-phone__setting-label">@T["Echo cancellation"]</span>
                 </label>
-                <label class="telephony-soft-phone__setting telephony-soft-phone__setting--check">
-                    <input type="checkbox" class="form-check-input" data-telephony-processing-ns checked>
+                <label class="telephony-soft-phone__setting telephony-soft-phone__setting--check" data-telephony-browser-processing>
+                    <input type="checkbox" class="form-check-input" data-telephony-processing-ns>
                     <span class="telephony-soft-phone__setting-label">@T["Noise suppression"]</span>
                 </label>
-                <label class="telephony-soft-phone__setting telephony-soft-phone__setting--check">
-                    <input type="checkbox" class="form-check-input" data-telephony-processing-agc checked>
+                <label class="telephony-soft-phone__setting telephony-soft-phone__setting--check" data-telephony-browser-processing>
+                    <input type="checkbox" class="form-check-input" data-telephony-processing-agc>
                     <span class="telephony-soft-phone__setting-label">@T["Automatic gain control"]</span>
                 </label>
                 <label class="telephony-soft-phone__setting">

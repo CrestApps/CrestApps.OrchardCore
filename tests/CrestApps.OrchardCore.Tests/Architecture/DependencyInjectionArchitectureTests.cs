@@ -82,6 +82,12 @@ public sealed class DependencyInjectionArchitectureTests
             "DialerNotInServiceHandler",
             "Completing a dead number's activity runs the disposition handlers, the agent presence manager and the queue service, which all record through the event publisher whose outbox constructs every event handler, so injecting them would close a publisher-to-handler construction cycle."),
         new DependencyInjectionException(
+            "DialerAttemptOutcomeHandler",
+            "Like DialerNotInServiceHandler, dispositioning an unconnected dialer attempt runs the disposition handlers, the agent presence manager and the queue service, which all record through the event publisher whose outbox constructs every event handler, so injecting them would close a publisher-to-handler construction cycle."),
+        new DependencyInjectionException(
+            "DialerAttemptFinalizer",
+            "It runs from event handlers and the recovery sweep, and what it completes with belongs to features it cannot depend on: the disposition completers of activity management and the call reconciliation of Voice. Those, and the queue services, also record through the event publisher whose outbox constructs every event handler."),
+        new DependencyInjectionException(
             "ContactActivityExportHandler",
             "An import handler that injected the import manager would close a manager-to-handler construction cycle."),
         new DependencyInjectionException(

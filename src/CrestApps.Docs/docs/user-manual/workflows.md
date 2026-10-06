@@ -54,26 +54,44 @@ To act on the agent, for example with **Set Agent Presence**, use `{{ Workflow.I
 
 Two events carry what a follow-up needs, such as a text message to a customer the dialer could not reach.
 
-**Dialer attempt completed** fires after every call the dialer places, answered or not. The dialer does not disposition a call nobody answered (it dials the record again later), so this is the event to use for "we called and they did not answer".
+**Dialer attempt completed** fires after every call the dialer places, answered or not. A call that ended before an agent was connected is also dispositioned by the dialer, so **Activity disposition applied** fires for it right after.
 
 | Value | What it holds |
 | --- | --- |
-| `Data.Outcome` | `Answered`, `NoAnswer`, `Busy`, `AnsweringMachine`, `NotInService`, `Rejected` or `Failed`. |
+| `Data.Outcome` | `Answered`, `NoAnswer`, `Busy`, `AnsweringMachine`, `NotInService`, `Rejected`, `Failed` or `Disconnected` (a customer answered but hung up before the agent was connected). |
+| `Data.Details.attemptNumber`, `Data.Details.maxAttempts`, `Data.Details.dialerProfileId` | Which attempt the call was, how many the dialer profile allows, and the profile. |
 | `Data.PhoneNumber` | The number that was called. |
 | `Data.ActivityItemId` | The activity the call was for. |
 | `Data.CampaignId` | The activity's campaign. |
 | `Data.HangupCause`, `Data.ProviderHangupCause`, `Data.SipHangupCause` | How the call ended, in the platform's terms and the provider's. |
 
-**Activity disposition applied** fires whenever an activity is completed with a disposition: by an agent, by the dialer when it finds a number not in service, or by an automated (AI) call, including one nobody answered.
+**Activity disposition applied** fires whenever an activity is completed with a disposition: by an agent, by the dialer for a call that ended before an agent was connected, or by an automated (AI) call, including one nobody answered.
 
 | Value | What it holds |
 | --- | --- |
 | `Data.DispositionName` | The disposition's name. |
-| `Data.Outcome` | The disposition's [outcome](dispositions.md#outcomes): `NotInService`, `NoAnswer`, `Busy`, `AnsweringMachine` or `None`. |
+| `Data.Outcome` | The disposition's [outcome](dispositions.md#outcomes): `NotInService`, `NoAnswer`, `Busy`, `AnsweringMachine`, `Rejected`, `Failed`, `Disconnected` or `None`. |
+| `Data.DialerOutcome` | For a call the dialer placed: how it ended, as in **Dialer attempt completed**. |
+| `Data.AttemptNumber`, `Data.MaxAttempts`, `Data.RemainingAttempts` | For a call the dialer placed: which attempt it was, how many the dialer profile allows, and how many are left. |
+| `Data.DialerProfileId`, `Data.InteractionId`, `Data.TerminalReasonCode` | The dialer profile, the call, and why the activity ended (for example `dialer_no_answer`). |
 | `Data.Source` | What applied it: `Agent`, `AI`, `Provider`, `Workflow` or `System`. |
 | `Data.PhoneNumber` | The number the activity was reaching. |
 | `Data.CompletedById` | The user who completed the activity, when a person did. |
 | `Data.ActivityItemId`, `Data.ContactContentItemId`, `Data.CampaignId`, `Data.SubjectContentType`, `Data.Channel`, `Data.Attempts` | The activity, its contact, campaign, subject, channel and attempt count. |
+
+### Call a contact again
+
+When the dialer dispositions a call, what happens next is up to the disposition. There are two ways to have the dialer call the contact again:
+
+- **In the subject flow (no workflow).** Wire **Try Again** to the disposition, for example *No answer*. The next attempt is created as a new activity and put back in the same campaign with the same dialer profile, due no sooner than the profile's retry delay. No attempt is created past the profile's **Max attempts**.
+- **In a workflow.** Use the **Schedule Dialer Retry** task. It does the same, but the workflow decides when: set **Delay in minutes** (empty uses the profile's retry delay, and a shorter delay is raised to it). It ends with **Scheduled** (the next activity is in `{{ Workflow.Output.NextActivityItemId }}`), **Exhausted** when no attempt is left, or **Failed**.
+
+Use one or the other for the same disposition, or the contact gets two follow-up activities.
+
+1. Create a workflow and add the **Contact Center Event** event with the event type **Activity disposition applied**.
+2. Add an **If/Else** task with the condition `input("Data").DialerOutcome == "Busy" && input("Data").RemainingAttempts > 0`, and connect the event's **Matched** outcome to it.
+3. Add a **Schedule Dialer Retry** task. Leave **Activity** as `{{ Workflow.Input.Data.ActivityItemId }}` and set **Delay in minutes** to `15`, then connect the **If/Else** task's **True** outcome to it.
+4. Save the workflow.
 
 ### Example: text a customer the dialer could not reach
 
@@ -82,7 +100,7 @@ Two events carry what a follow-up needs, such as a text message to a customer th
 3. Add a **Send SMS** task. Set **Phone Number** to `{{ Workflow.Input.Data.PhoneNumber }}` and write the **Body**, then connect the **If/Else** task's **True** outcome to it.
 4. Save the workflow.
 
-Every Power, Progressive or Preview call that rings out now sends the text. Use `"Busy"` or `"AnsweringMachine"` in the condition to text on those outcomes instead. For automated (AI) calls, use **Activity disposition applied** with `input("Data").Outcome == "NoAnswer"`.
+Every Power, Progressive or Preview call that rings out now sends the text. Use `"Busy"`, `"AnsweringMachine"` or `"Disconnected"` in the condition to text on those outcomes instead. For automated (AI) calls, use **Activity disposition applied** with `input("Data").Outcome == "NoAnswer"`.
 
 ### Example: text a customer from the agent's own number after a call
 

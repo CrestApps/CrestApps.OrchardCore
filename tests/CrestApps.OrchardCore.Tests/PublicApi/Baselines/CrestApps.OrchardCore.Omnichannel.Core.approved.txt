@@ -377,6 +377,17 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         Sms = 3,
         Meeting = 4,
     }
+    public sealed class ActivityOutcomeCompletionRequest
+    {
+        public ActivityOutcomeCompletionRequest() { }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity Activity { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.DispositionOutcome FallbackOutcome { get; set; }
+        public string Notes { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.DispositionOutcome Outcome { get; set; }
+        public bool PreferRetriedDisposition { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDispositionSource Source { get; set; }
+        public string TerminalReasonCode { get; set; }
+    }
     public sealed class ActivitySourceEntry
     {
         public ActivitySourceEntry(string source) { }
@@ -562,6 +573,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         NoAnswer = 2,
         Busy = 3,
         AnsweringMachine = 4,
+        Rejected = 5,
+        Failed = 6,
+        Disconnected = 7,
     }
     public sealed class DispositionOutcomeJsonConverter : System.Text.Json.Serialization.JsonConverter<CrestApps.OrchardCore.Omnichannel.Core.Models.DispositionOutcome>
     {
@@ -573,6 +587,16 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
     {
         public EmailInfoPart() { }
         public OrchardCore.ContentFields.Fields.TextField Email { get; set; }
+    }
+    public sealed class FollowUpActivityContext
+    {
+        public FollowUpActivityContext() { }
+        public bool Cancel { get; set; }
+        public string CancelReason { get; set; }
+        public string CreatedBy { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity FollowUpActivity { get; set; }
+        public bool HasNamedOwner { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity PreviousActivity { get; set; }
     }
     public enum HandoffDisposition
     {
@@ -1383,6 +1407,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDispositionResult> ApplyAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDispositionRequest request, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface IActivityOutcomeCompleter
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDispositionResult> CompleteAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityOutcomeCompletionRequest request, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IAutomatedActivityCompletionService
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDispositionResult> CompleteAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.AutomatedActivityCompletionRequest request, System.Threading.CancellationToken cancellationToken = default);
@@ -1428,6 +1456,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     public interface IContactOptOutResolver
     {
         System.Threading.Tasks.Task<bool> HasOptedOutAsync(OrchardCore.ContentManagement.ContentItem contact, string channel, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IFollowUpActivityHandler
+    {
+        System.Threading.Tasks.Task CreatingAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.FollowUpActivityContext context, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IHandoffQueueOptionsProvider
     {
@@ -1579,6 +1611,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.NotInServiceNumber> MarkAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.NotInServiceMark mark, System.Threading.CancellationToken cancellationToken = default) { }
         public string Normalize(string phoneNumber) { }
         public System.Threading.Tasks.Task<CrestApps.Core.Models.PageResult<CrestApps.OrchardCore.Omnichannel.Core.Models.NotInServiceNumber>> PageAsync(int page, int pageSize, string search, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public static class OmnichannelActivityFollowUps
+    {
+        public static CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity CreateNextAttempt(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity, System.DateTime nowUtc) { }
     }
     public sealed class OmnichannelActivityManager : CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity>, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity>, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityManager
     {

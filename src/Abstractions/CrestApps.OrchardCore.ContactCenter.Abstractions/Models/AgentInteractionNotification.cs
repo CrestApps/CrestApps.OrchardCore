@@ -42,6 +42,18 @@ public sealed class AgentInteractionNotification
     public string Direction { get; set; }
 
     /// <summary>
+    /// Gets or sets the identifier of the CRM activity the interaction is for, when it has one.
+    /// </summary>
+    public string ActivityItemId { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the agent's screens should open the activity's record now. It is set when
+    /// the agent is connected to a call the dialer placed for them: until then the call was the dialer's, and nothing
+    /// pops on the agent's screen.
+    /// </summary>
+    public bool AutoOpenActivity { get; set; }
+
+    /// <summary>
     /// Gets or sets the UTC time the change was broadcast.
     /// </summary>
     public DateTime ServerTimeUtc { get; set; }

@@ -594,8 +594,22 @@
         return false;
       }
       lastPoppedActivityId = activityId;
+
+      // Already on the record (a second push for the same call): reloading it would throw away what the agent
+      // has typed so far.
+      if (isCurrentPage(target)) {
+        return false;
+      }
       window.location.assign(target);
       return true;
+    }
+    function isCurrentPage(target) {
+      try {
+        var url = new URL(target, window.location.href);
+        return url.pathname === window.location.pathname && url.search === window.location.search;
+      } catch (e) {
+        return false;
+      }
     }
     function render(data) {
       state = data;
@@ -884,8 +898,9 @@
     }
 
     // An offer arrived for this agent. Preview and inbound offers wait for the agent to act (they are rendered
-    // by the state refresh with dial/skip or accept/decline). An auto-paced dial is answered by the dialer, so
-    // it only pops the record. A preview also pops the record so the agent can review before dialing.
+    // by the state refresh with dial/skip or accept/decline). A preview also pops the record so the agent can
+    // review before dialing. An auto-paced dial is the dialer's until a customer is connected to the agent, so
+    // its offer opens nothing: the record pops from the interaction push that says the agent joined the call.
     function onOfferReceived(notification) {
       if (!notification) {
         refresh();
@@ -899,9 +914,8 @@
       var beepFor = notification.kind === 'InboundCall' && isNew ? notification.reservationId : null;
       var shouldPop = notification.autoOpenActivity && notification.activityItemId && notification.activityItemId !== lastPoppedActivityId;
       if (shouldPop) {
-        // Auto-paced dials pop unconditionally (the call is already connected); a preview pop yields to a
-        // dirty form so the agent does not lose work while reviewing.
-        popActivity(notification.activityItemId, notification.kind === 'AutoDial');
+        // A preview pop yields to a dirty form so the agent does not lose work while reviewing.
+        popActivity(notification.activityItemId, false);
       }
       refresh().then(function () {
         if (beepFor && state && state.offer && state.offer.reservationId === beepFor) {
@@ -911,9 +925,10 @@
     }
 
     // The offer was taken. When the agent accepted it, pop the activity so they land on the record for the call
-    // they just took (pop-on-answer). Other revoke reasons (expired, released) just refresh.
+    // they just took (pop-on-answer). An automatic dial is accepted by the dialer before it is placed, so its
+    // record waits until the agent is connected. Other revoke reasons (expired, released) just refresh.
     function onOfferRevoked(notification) {
-      if (notification && notification.reason === 'Accepted' && notification.activityItemId) {
+      if (notification && notification.reason === 'Accepted' && notification.kind !== 'AutoDial' && notification.activityItemId) {
         popActivity(notification.activityItemId, false);
       }
       lastOfferReservationId = null;
@@ -949,6 +964,12 @@
             direction: notification.direction,
             status: notification.status
           } : {});
+
+          // The agent was just connected to a call the dialer placed: that, not the dial, is when its record
+          // opens.
+          if (notification && notification.autoOpenActivity && notification.activityItemId && notification.activityItemId !== lastPoppedActivityId) {
+            popActivity(notification.activityItemId, true);
+          }
           refresh();
         }
       });

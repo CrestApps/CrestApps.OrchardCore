@@ -130,7 +130,13 @@ public sealed class QueuesStartup : StartupBase
             .AddScoped<IActivityRoutingStrategy, LeastBusyRoutingStrategy>()
             .AddScoped<IActivityAssignmentService, ActivityAssignmentService>()
             .AddScoped<IQueuedWorkWithdrawalService, QueuedWorkWithdrawalService>()
-            .AddScoped<IOrphanedActivityRecoveryService, OrphanedActivityRecoveryService>();
+            .AddScoped<IOrphanedActivityRecoveryService, OrphanedActivityRecoveryService>()
+            // A dialer attempt that never reached an agent is completed by the dialer with the disposition for how it
+            // ended, from wherever the ending is found: the call's own end, a refused dial, the recovery sweep.
+            .AddScoped<IDialerAttemptFinalizer, DialerAttemptFinalizer>()
+            // A campaign record still cooling down after its last attempt, or scheduled for later, waits at the back
+            // of its queue instead of having an agent reserved for it.
+            .AddScoped<IQueuedDialerWorkGate, QueuedDialerWorkGate>();
 
         // An activity that leaves the routable set through the CRM (purged, cancelled, completed, deleted) takes its
         // queued work out of the queue, so routing never offers an agent an activity that is already finished.

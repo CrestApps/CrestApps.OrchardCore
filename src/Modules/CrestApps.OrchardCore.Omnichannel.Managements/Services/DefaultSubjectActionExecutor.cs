@@ -25,6 +25,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
     private readonly ILocalClock _localClock;
     private readonly ILogger _logger;
     private readonly IEnumerable<ISubjectActionHandler> _handlers;
+    private readonly IEnumerable<IFollowUpActivityHandler> _followUpHandlers;
 
     public DefaultSubjectActionExecutor(
         ISourceCatalog<SubjectAction> actionCatalog,
@@ -35,7 +36,8 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         IClock clock,
         ILocalClock localClock,
         ILogger<DefaultSubjectActionExecutor> logger,
-        IEnumerable<ISubjectActionHandler> handlers = null)
+        IEnumerable<ISubjectActionHandler> handlers = null,
+        IEnumerable<IFollowUpActivityHandler> followUpHandlers = null)
     {
         _actionCatalog = actionCatalog;
         _subjectFlowSettingsService = subjectFlowSettingsService;
@@ -46,6 +48,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         _localClock = localClock;
         _logger = logger;
         _handlers = handlers ?? [];
+        _followUpHandlers = followUpHandlers ?? [];
     }
 
     public async Task ExecuteAsync(SubjectActionExecutionContext context, CancellationToken cancellationToken = default)
@@ -136,57 +139,9 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         }
 
         var now = _clock.UtcNow;
-
-        // The retry is the same work tried again, so it is carried out the same way. Leaving the kind, source and
-        // automation settings behind turned a call that rang out into a manual task with no AI profile, which the
-        // automated processor picked up with nothing to place the call and the contact was never tried again. The
-        // AI session and re-engagement count are not copied: the retry is a new conversation.
-        var nextAttempt = new OmnichannelActivity
-        {
-            ItemId = IdGenerator.GenerateId(),
-            Kind = activity.Kind,
-            Source = activity.Source,
-            Channel = activity.Channel,
-            ChannelEndpointId = activity.ChannelEndpointId,
-            InteractionType = activity.InteractionType,
-            AIProfileId = activity.AIProfileId,
-            SpeechToTextDeploymentName = activity.SpeechToTextDeploymentName,
-            TextToSpeechDeploymentName = activity.TextToSpeechDeploymentName,
-            TextToSpeechVoiceId = activity.TextToSpeechVoiceId,
-            UseCallAmbience = activity.UseCallAmbience,
-            AllowAIToUpdateContact = activity.AllowAIToUpdateContact,
-            AllowAIToUpdateSubject = activity.AllowAIToUpdateSubject,
-            ResponseDelayMode = activity.ResponseDelayMode,
-            ResponseDelaySeconds = activity.ResponseDelaySeconds,
-            ResponseDelayJitterSeconds = activity.ResponseDelayJitterSeconds,
-            BusinessHoursCalendarId = activity.BusinessHoursCalendarId,
-            CadenceId = activity.CadenceId,
-            PreferredDestination = activity.PreferredDestination,
-            ContactContentItemId = activity.ContactContentItemId,
-            ContactContentType = activity.ContactContentType,
-            ContactResolutionStatus = activity.ContactResolutionStatus,
-            ContactResolutionCandidates = activity.ContactResolutionCandidates.ToList(),
-            ContactResolvedUtc = activity.ContactResolvedUtc,
-            ContactResolvedById = activity.ContactResolvedById,
-            ContactResolvedByUsername = activity.ContactResolvedByUsername,
-            CampaignId = activity.CampaignId,
-            Instructions = ResolvePreparationNotes(action, context, activity.Instructions),
-            Attempts = activity.Attempts + 1,
-            CreatedById = activity.CompletedById,
-            CreatedByUsername = activity.CompletedByUsername,
-            CreatedUtc = now,
-            SubjectContentType = activity.SubjectContentType,
-            Subject = activity.Subject,
-            UrgencyLevel = metadata.UrgencyLevel ?? activity.UrgencyLevel,
-            Status = ActivityStatus.NotStated,
-        };
-
-        // Whether the AI may convert the lead is one of the automation settings the retry keeps.
-        if (activity.TryGet<LeadAIConversionSettings>(out var leadAIConversion))
-        {
-            nextAttempt.Put(leadAIConversion);
-        }
-
+        var nextAttempt = OmnichannelActivityFollowUps.CreateNextAttempt(activity, now);
+        nextAttempt.Instructions = ResolvePreparationNotes(action, context, activity.Instructions);
+        nextAttempt.UrgencyLevel = metadata.UrgencyLevel ?? activity.UrgencyLevel;
         nextAttempt.ScheduledUtc = await ResolveScheduleDateAsync(action, context, metadata.DefaultScheduleHours);
 
         if (!await TryAssignOwnerAsync(
@@ -197,6 +152,34 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
             activity,
             now))
         {
+            return;
+        }
+
+        // Whatever carried the first attempt takes the next one in too -- a dialer campaign queues it again -- or
+        // refuses it when no attempt is left.
+        var followUp = new FollowUpActivityContext
+        {
+            PreviousActivity = activity,
+            FollowUpActivity = nextAttempt,
+            CreatedBy = OmnichannelConstants.ActionTypes.TryAgain,
+            HasNamedOwner = SubjectActionOwnerAssignmentTypeResolver.Resolve(metadata.AssignmentType, metadata.NormalizedUserName) != SubjectActionOwnerAssignmentType.SameOwner,
+        };
+
+        foreach (var handler in _followUpHandlers)
+        {
+            await handler.CreatingAsync(followUp);
+        }
+
+        if (followUp.Cancel)
+        {
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Did not create the next attempt of activity {ActivityId}: {Reason}",
+                    activity.ItemId,
+                    followUp.CancelReason);
+            }
+
             return;
         }
 

@@ -134,6 +134,22 @@ public class TelnyxSettingsViewModel
     public TelnyxAnsweringMachineDetection AnsweringMachineDetection { get; set; }
 
     /// <summary>
+    /// Gets or sets the name of the noise suppression engine started on an agent's calls. Kept as text so a value the
+    /// platform does not know reads as off rather than failing the save.
+    /// </summary>
+    public string NoiseSuppressionEngine { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether noise suppression cleans the agent's voice, which is what the caller hears.
+    /// </summary>
+    public bool NoiseSuppressionAgentVoice { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether noise suppression cleans the caller's voice, which is what the agent hears.
+    /// </summary>
+    public bool NoiseSuppressionCallerVoice { get; set; }
+
+    /// <summary>
     /// Gets or sets the text-to-speech voice spoken prompts use.
     /// </summary>
     public string TtsVoice { get; set; }

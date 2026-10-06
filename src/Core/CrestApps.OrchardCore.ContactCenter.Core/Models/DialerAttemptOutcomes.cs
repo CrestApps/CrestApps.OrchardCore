@@ -6,14 +6,15 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 /// How a dialer attempt ended, as the <c>DialerAttemptCompleted</c> event reports it to workflows and reports.
 /// </summary>
 /// <remarks>
-/// The dialer does not disposition an attempt nobody answered: it tries the record again. So the outcome of each
-/// attempt is reported on its own, and a workflow that should act on an attempt -- text a customer the dialer could not
-/// reach, for example -- reacts to that rather than to a disposition that never comes.
+/// Every attempt that did not reach an agent is dispositioned by the dialer itself with the disposition whose outcome
+/// matches (see <c>DialerAttemptOutcomeHandler</c>), so the agent never receives it; the disposition's subject actions
+/// and the <c>ActivityDispositionApplied</c> event then decide whether and when to try again. This outcome is also
+/// reported on its own, for a workflow that reacts to the attempt rather than to the disposition.
 /// </remarks>
 public static class DialerAttemptOutcomes
 {
     /// <summary>
-    /// A person answered.
+    /// A person answered and an agent was connected to them.
     /// </summary>
     public const string Answered = "Answered";
 
@@ -48,19 +49,33 @@ public static class DialerAttemptOutcomes
     public const string Failed = "Failed";
 
     /// <summary>
-    /// The outcome of an ended attempt, from how the call ended and whether it was answered.
+    /// The customer answered, but the call ended before an agent was connected to it.
+    /// </summary>
+    public const string Disconnected = "Disconnected";
+
+    /// <summary>
+    /// The outcome of an ended attempt, from how the call ended, whether it was answered and whether an agent joined it.
     /// </summary>
     /// <param name="hangupCause">The call's normalized hangup cause.</param>
     /// <param name="answered">Whether the call was answered.</param>
-    public static string Resolve(HangupCause? hangupCause, bool answered)
+    /// <param name="agentJoined">Whether an agent was connected to the answered call.</param>
+    public static string Resolve(HangupCause? hangupCause, bool answered, bool agentJoined = true)
         => hangupCause switch
         {
             HangupCause.AnsweringMachine => AnsweringMachine,
             HangupCause.NotInService => NotInService,
             HangupCause.Busy => Busy,
-            _ when answered => Answered,
+            _ when answered => agentJoined ? Answered : Disconnected,
             HangupCause.Rejected => Rejected,
             HangupCause.Failed or HangupCause.Congestion => Failed,
             _ => NoAnswer,
         };
+
+    /// <summary>
+    /// Whether the outcome is an attempt that never reached an agent, which the dialer dispositions on its own.
+    /// </summary>
+    /// <param name="outcome">One of the outcomes above.</param>
+    public static bool IsPreConnect(string outcome)
+        => !string.IsNullOrEmpty(outcome) &&
+            !string.Equals(outcome, Answered, StringComparison.Ordinal);
 }

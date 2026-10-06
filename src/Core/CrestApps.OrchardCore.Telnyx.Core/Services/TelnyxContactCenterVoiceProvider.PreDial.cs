@@ -161,6 +161,7 @@ public sealed partial class TelnyxContactCenterVoiceProvider
 
             // The caller heard the queue until this moment; now that the agent is on the line it stops.
             await StopCallerPlaybackAsync(callerCallControlId, cancellationToken);
+            await ApplyNoiseSuppressionAsync(agentCallControlId, TelnyxNoiseSuppressionLeg.Agent, cancellationToken);
 
             return new ContactCenterVoiceProviderResult
             {
@@ -260,4 +261,8 @@ public sealed partial class TelnyxContactCenterVoiceProvider
             _logger.LogWarning(ex, "An error occurred while stopping the caller's hold music after joining the agent.");
         }
     }
+
+    // Best effort, and nothing at all unless the settings choose an engine (see TelnyxNoiseSuppressionService).
+    private Task ApplyNoiseSuppressionAsync(string callControlId, TelnyxNoiseSuppressionLeg leg, CancellationToken cancellationToken)
+        => _noiseSuppression?.ApplyAsync(callControlId, leg, cancellationToken) ?? Task.CompletedTask;
 }

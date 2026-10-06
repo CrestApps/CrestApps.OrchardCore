@@ -117,10 +117,22 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
         }
 
         var interaction = await _interactionManager.FindByActivityIdAsync(reservation.ActivityItemId, cancellationToken);
+        var activity = interaction is null || interaction.Status is InteractionStatus.Ended or InteractionStatus.Failed
+            ? await _activityManager.FindByIdAsync(reservation.ActivityItemId, cancellationToken)
+            : null;
+
+        // A preview record is offered again after an earlier call of it ended: that call is the previous
+        // attempt, not this offer's, and finding it ended used to refuse the offer as no longer available, so the
+        // record could never be dialed again.
+        if (interaction is not null &&
+            activity is not null &&
+            string.Equals(activity.Source, ActivitySources.PreviewDial, StringComparison.OrdinalIgnoreCase))
+        {
+            interaction = null;
+        }
 
         if (interaction is null)
         {
-            var activity = await _activityManager.FindByIdAsync(reservation.ActivityItemId, cancellationToken);
 
             // A queued callback is dialed like a preview dial, with the platform's own callback profile: it is not
             // campaign work and has no stored profile of its own.

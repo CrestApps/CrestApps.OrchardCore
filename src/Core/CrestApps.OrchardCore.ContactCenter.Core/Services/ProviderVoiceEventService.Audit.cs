@@ -90,20 +90,21 @@ public sealed partial class ProviderVoiceEventService
                 cancellationToken);
         }
 
-        // Every attempt the dialer places ends with an outcome a workflow can act on, answered or not: an attempt
-        // nobody answered is not dispositioned (the dialer tries the record again), so this is the only event that says
-        // it happened -- and the one a workflow texting a customer the dialer could not reach listens for.
+        // Every attempt the dialer places ends with an outcome a workflow can act on, answered or not. An attempt that
+        // never reached an agent is dispositioned by the dialer from this event (DialerAttemptOutcomeHandler), and a
+        // workflow texting a customer the dialer could not reach can listen for it too.
         if (eventType == ContactCenterConstants.Events.CallEnded &&
             session.Direction == InteractionDirection.Outbound &&
             !string.IsNullOrEmpty(interaction.ActivityItemId))
         {
             var attempt = CreateStateEventData(eventType, session, interaction, providerEvent, previousState, occurredUtc);
-            attempt.Outcome = DialerAttemptOutcomes.Resolve(
+            attempt.Outcome = DialerCallMetadata.GetOutcome(interaction) ?? DialerAttemptOutcomes.Resolve(
                 session.HangupCause,
                 session.AnsweredUtc.HasValue || interaction.AnsweredUtc.HasValue);
             attempt.PhoneNumber = string.IsNullOrWhiteSpace(interaction.CustomerAddress)
                 ? session.ToAddress
                 : interaction.CustomerAddress;
+            AddDialerAttemptDetails(attempt, interaction);
 
             await AuditRecorder.RecordCallAsync(
                 ContactCenterConstants.Events.DialerAttemptCompleted,

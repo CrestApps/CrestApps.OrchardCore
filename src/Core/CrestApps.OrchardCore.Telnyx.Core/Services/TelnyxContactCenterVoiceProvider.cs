@@ -33,6 +33,7 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
     private readonly IClock _clock;
     private readonly ILogger<TelnyxContactCenterVoiceProvider> _logger;
     private readonly TelnyxOptions _options;
+    private readonly ITelnyxNoiseSuppressionService _noiseSuppression;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TelnyxContactCenterVoiceProvider"/> class.
@@ -46,7 +47,8 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
         IClock clock,
         ILogger<TelnyxContactCenterVoiceProvider> logger,
         IOptionsMonitor<TelnyxOptions> telnyxOptions,
-        IStringLocalizer<TelnyxContactCenterVoiceProvider> stringLocalizer)
+        IStringLocalizer<TelnyxContactCenterVoiceProvider> stringLocalizer,
+        ITelnyxNoiseSuppressionService noiseSuppression = null)
     {
         _telephonyResolver = telephonyResolver;
         _workManager = workManager;
@@ -56,6 +58,7 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
         _clock = clock;
         _logger = logger;
         _options = telnyxOptions.CurrentValue;
+        _noiseSuppression = noiseSuppression;
         Name = stringLocalizer["Telnyx"];
     }
 

@@ -36,4 +36,10 @@ public sealed class AgentOfferRevokedNotification
     /// Gets or sets the reason the offer was revoked.
     /// </summary>
     public AgentOfferRevokedReason Reason { get; set; }
+
+    /// <summary>
+    /// Gets or sets what kind of work the offer was. An automatic dial is accepted by the dialer itself before the call
+    /// is placed, so its acceptance does not open the record; the record opens once the agent is connected.
+    /// </summary>
+    public AgentOfferKind Kind { get; set; }
 }

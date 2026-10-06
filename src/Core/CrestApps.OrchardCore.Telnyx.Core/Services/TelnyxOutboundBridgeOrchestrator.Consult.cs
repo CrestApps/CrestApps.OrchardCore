@@ -26,7 +26,7 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator
         {
             // The destination picked up: put them in the conference where the agent is waiting and the customer is
             // held, then tell the Contact Center the transfer can be completed.
-            await JoinConsultConferenceAsync(callEvent.CallControlId, state, cancellationToken);
+            await JoinConsultConferenceAsync(callEvent.CallControlId, state, IsColleagueLeg(callEvent), cancellationToken);
 
             if (_consultLegEventSink is not null)
             {
@@ -76,7 +76,11 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator
         return TelnyxOutboundBridgeLeg.DestinationLeg;
     }
 
-    private async Task JoinConsultConferenceAsync(string consultLegId, TelnyxOutboundBridgeState state, CancellationToken cancellationToken)
+    // A consult rung at a colleague's soft phone reaches a SIP address; an outside number does not.
+    private static bool IsColleagueLeg(TelnyxCallEvent callEvent)
+        => callEvent.To?.Trim().StartsWith("sip:", StringComparison.OrdinalIgnoreCase) == true;
+
+    private async Task JoinConsultConferenceAsync(string consultLegId, TelnyxOutboundBridgeState state, bool colleague, CancellationToken cancellationToken)
     {
         if (!_options.IsConfigured)
         {
@@ -112,6 +116,15 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator
                 conferenceName.SanitizeLogValue(),
                 join.StatusCode,
                 join.ErrorBody.SanitizeLogValue());
+
+            return;
+        }
+
+        // A colleague who is handed the call stays in this conference with the customer, so their leg is cleaned as an
+        // agent's leg from the start.
+        if (colleague)
+        {
+            await ApplyNoiseSuppressionAsync(consultLegId, TelnyxNoiseSuppressionLeg.Agent, cancellationToken);
         }
     }
 }

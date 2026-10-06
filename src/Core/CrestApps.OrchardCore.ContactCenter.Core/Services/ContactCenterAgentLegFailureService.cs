@@ -203,6 +203,12 @@ public sealed partial class ContactCenterAgentLegFailureService : IContactCenter
 
         await _callSessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
 
+        // The agent is on the call: from here a campaign call is the agent's to work and wrap up.
+        if (DialerCallMetadata.MarkAgentJoined(interaction, now))
+        {
+            await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
+        }
+
         var data = ContactCenterCallAudit.ForSession(session, interaction);
         data.ProviderLegId = agentLegProviderCallId;
         data.LegRole = nameof(CallPartyRole.Agent);

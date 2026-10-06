@@ -35,7 +35,25 @@ public enum DispositionOutcome
     Busy = 3,
 
     /// <summary>
-    /// A voicemail or answering machine picked up. Automated calls apply it to a call that reached voicemail.
+    /// A voicemail or answering machine picked up. Automated calls apply it to a call that reached voicemail, and the
+    /// dialer applies it to a call its answering-machine detection screened out.
     /// </summary>
     AnsweringMachine = 4,
+
+    /// <summary>
+    /// The called party or the network declined the call. The dialer applies it to an attempt the network rejected.
+    /// </summary>
+    Rejected = 5,
+
+    /// <summary>
+    /// The call could not be completed: the provider refused to place it, or the network failed it for another reason
+    /// such as congestion. The dialer applies it to an attempt that failed that way.
+    /// </summary>
+    Failed = 6,
+
+    /// <summary>
+    /// The customer answered but the call ended before an agent was connected to it. The dialer applies it to an
+    /// attempt the customer hung up on while it was being connected.
+    /// </summary>
+    Disconnected = 7,
 }

@@ -90,6 +90,9 @@ public sealed class TelnyxSettingsDisplayDriver : SiteDisplayDriver<TelnyxSettin
             model.EchoTestDestination = settings.EchoTestDestination;
             model.OrphanedCallHandling = settings.OrphanedCallHandling;
             model.AnsweringMachineDetection = settings.AnsweringMachineDetection;
+            model.NoiseSuppressionEngine = TelnyxNoiseSuppressionService.NormalizeEngine(settings.NoiseSuppressionEngine).ToString();
+            model.NoiseSuppressionAgentVoice = settings.NoiseSuppressionAgentVoice;
+            model.NoiseSuppressionCallerVoice = settings.NoiseSuppressionCallerVoice;
             model.TtsVoice = settings.TtsVoice;
             model.TtsLanguage = settings.TtsLanguage;
             model.ApiBaseUrl = settings.ApiBaseUrl;
@@ -135,6 +138,9 @@ public sealed class TelnyxSettingsDisplayDriver : SiteDisplayDriver<TelnyxSettin
         {
             settings.IsEnabled = true;
 
+            // An engine this platform does not know is saved as off rather than refused.
+            var noiseSuppressionEngine = TelnyxNoiseSuppressionService.NormalizeEngine(model.NoiseSuppressionEngine);
+
             // The connection ids (Call Control, SIP, outbound voice profile) are managed by the Connect
             // flow, not this form, so they are never read back from the model here — that keeps a plain Save
             // from wiping the provisioned ids.
@@ -149,6 +155,9 @@ public sealed class TelnyxSettingsDisplayDriver : SiteDisplayDriver<TelnyxSettin
             hasChanges |= settings.EchoTestDestination != Trim(model.EchoTestDestination);
             hasChanges |= settings.OrphanedCallHandling != model.OrphanedCallHandling;
             hasChanges |= settings.AnsweringMachineDetection != model.AnsweringMachineDetection;
+            hasChanges |= settings.NoiseSuppressionEngine != noiseSuppressionEngine;
+            hasChanges |= settings.NoiseSuppressionAgentVoice != model.NoiseSuppressionAgentVoice;
+            hasChanges |= settings.NoiseSuppressionCallerVoice != model.NoiseSuppressionCallerVoice;
             hasChanges |= settings.TtsVoice != Trim(model.TtsVoice);
             hasChanges |= settings.TtsLanguage != Trim(model.TtsLanguage);
             hasChanges |= settings.ApiBaseUrl != Trim(model.ApiBaseUrl);
@@ -165,6 +174,9 @@ public sealed class TelnyxSettingsDisplayDriver : SiteDisplayDriver<TelnyxSettin
             settings.EchoTestDestination = Trim(model.EchoTestDestination);
             settings.OrphanedCallHandling = model.OrphanedCallHandling;
             settings.AnsweringMachineDetection = model.AnsweringMachineDetection;
+            settings.NoiseSuppressionEngine = noiseSuppressionEngine;
+            settings.NoiseSuppressionAgentVoice = model.NoiseSuppressionAgentVoice;
+            settings.NoiseSuppressionCallerVoice = model.NoiseSuppressionCallerVoice;
             settings.TtsVoice = Trim(model.TtsVoice);
             settings.TtsLanguage = Trim(model.TtsLanguage);
             settings.ApiBaseUrl = Trim(model.ApiBaseUrl);

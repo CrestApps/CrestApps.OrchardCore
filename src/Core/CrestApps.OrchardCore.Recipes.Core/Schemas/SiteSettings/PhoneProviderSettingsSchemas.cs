@@ -43,6 +43,9 @@ internal static class PhoneProviderSettingsSchemas
                 ("EchoTestDestination", NullableString("Optional echo destination (a number or SIP URI that echoes audio back) used by the audio test and the health canary.")),
                 ("OrphanedCallHandling", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Report", "EndCall").Description("What to do about a call the connection has up that the platform has no record of: record it and leave it connected, or tell the caller and hang up.")),
                 ("AnsweringMachineDetection", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Premium", "Standard", "Disabled").Description("How an automated call asks the provider whether a person or a machine answered it.")),
+                ("NoiseSuppressionEngine", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Off", "Krisp", "DeepFilterNet", "Denoiser", "AiCoustics").Description("The Telnyx noise suppression engine started on an agent's leg once it is connected, or 'Off'.")),
+                ("NoiseSuppressionAgentVoice", Boolean("Whether noise suppression cleans the agent's voice, which is what the caller hears.")),
+                ("NoiseSuppressionCallerVoice", Boolean("Whether noise suppression cleans the caller's voice, which is what the agent hears.")),
                 ("TtsVoice", NullableString("Text-to-speech voice used by spoken prompts, either 'female', 'male' or a 'Provider.Model.VoiceId' name such as 'AWS.Polly.Joanna-Neural'.")),
                 ("TtsLanguage", NullableString("Language spoken prompts are said in, for example 'en-US'.")))
             .AdditionalProperties(false);

@@ -569,9 +569,14 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
                 takeOverLegId.SanitizeLogValue(),
                 bridged.StatusCode,
                 bridged.ErrorBody.SanitizeLogValue());
+
+            return false;
         }
 
-        return bridged.Succeeded;
+        // The supervisor is now the one the customer talks to.
+        await ApplyNoiseSuppressionAsync(takeOverLegId, TelnyxNoiseSuppressionLeg.Agent, cancellationToken);
+
+        return true;
     }
 
     /// <inheritdoc/>

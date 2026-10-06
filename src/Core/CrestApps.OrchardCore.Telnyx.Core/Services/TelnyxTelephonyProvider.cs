@@ -56,6 +56,7 @@ public sealed partial class TelnyxTelephonyProvider :
     /// <param name="stringLocalizer">The string localizer.</param>
     /// <param name="telnyxOptions">The active Telnyx settings resolved for the tenant shell.</param>
     /// <param name="interactionStore">The call history a colleague handed a call is recorded in.</param>
+    /// <param name="noiseSuppression">Starts noise suppression on a colleague's leg handed a call.</param>
     public TelnyxTelephonyProvider(
         TelnyxApiClient apiClient,
         ITelnyxAgentCredentialStore credentialStore,
@@ -64,7 +65,8 @@ public sealed partial class TelnyxTelephonyProvider :
         ILogger<TelnyxTelephonyProvider> logger,
         IStringLocalizer<TelnyxTelephonyProvider> stringLocalizer,
         IOptionsMonitor<TelnyxOptions> telnyxOptions,
-        ITelephonyInteractionStore interactionStore = null)
+        ITelephonyInteractionStore interactionStore = null,
+        ITelnyxNoiseSuppressionService noiseSuppression = null)
     {
         _apiClient = apiClient;
         _credentialStore = credentialStore;
@@ -72,7 +74,7 @@ public sealed partial class TelnyxTelephonyProvider :
         _clock = clock;
         _logger = logger;
         _options = telnyxOptions.CurrentValue;
-        _transfers = new TelnyxTransferCommands(apiClient, _options, interactionStore, clock, logger);
+        _transfers = new TelnyxTransferCommands(apiClient, _options, interactionStore, clock, logger, noiseSuppression);
         S = stringLocalizer;
     }
 

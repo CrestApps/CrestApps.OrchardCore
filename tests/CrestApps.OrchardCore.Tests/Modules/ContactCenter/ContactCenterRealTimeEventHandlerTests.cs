@@ -138,7 +138,9 @@ public sealed class ContactCenterRealTimeEventHandlerTests
     }
 
     [Theory]
-    [InlineData(ActivitySources.PowerDial, true)]
+    // A preview opens its record for review; an automatic dial opens it only once the agent is connected.
+    [InlineData(ActivitySources.PreviewDial, true)]
+    [InlineData(ActivitySources.PowerDial, false)]
     [InlineData(ActivitySources.Inbound, false)]
     public async Task HandleAsync_AgentReserved_BroadcastsOfferAndQueueStats(
         string activitySource,
