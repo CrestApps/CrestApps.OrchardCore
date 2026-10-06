@@ -60,6 +60,7 @@ public sealed class DialerProfileDisplayDriverTests
             AdminFormOptionsProviderFactory.Create(),
             Mock.Of<IShellFeaturesManager>(),
             [],
+            [],
             Options.Create(new ContactCenterComplianceOptions()),
             new PassThroughStringLocalizer<DialerProfileDisplayDriver>());
 }

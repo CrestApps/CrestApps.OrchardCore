@@ -1313,6 +1313,54 @@ OrchardCore__CrestApps__ContactCenter__Compliance__ManualDialing__RespectDoNotCa
 See [Outbound compliance gate](contact-center/agents-queues-dialer.md#outbound-compliance-gate) and
 [Manual soft-phone screening](contact-center/agents-queues-dialer.md#manual-soft-phone-screening).
 
+### Predictive dialing
+
+| | |
+| --- | --- |
+| **Section** | `CrestApps:ContactCenter:PredictiveDialing` |
+| **Feature** | Contact Center Paced Dialing |
+| **Controls** | The timings and limits of predictive pacing, and how its statistics are measured |
+
+Every value is validated on start, and an invalid one stops the tenant with the key named.
+
+| Key | Default | Rule |
+| --- | --- | --- |
+| `PacingInterval` | `00:00:02` | Greater than zero. |
+| `PacingDebounce` | `00:00:00.250` | Greater than zero and shorter than `PacingInterval`. |
+| `PacingLockExpiration` | `00:00:15` | Longer than `PacingInterval`. |
+| `MaxDialsPerCycle` | `25` | `1` to `500`. |
+| `ConnectLockWait` | `00:00:00.150` | Greater than zero and shorter than 2 seconds. |
+| `ComplianceWindowDays` | `30` | `1` to `90`. |
+| `DefaultRingHorizon` | `00:00:12` | Greater than zero. |
+| `AnsweredUnconnectedSweepAfter` | `00:00:05` | Longer than 2 seconds. |
+| `StatisticsCacheDuration` | `00:00:05` | Greater than zero. |
+| `MaxTimingSamples` | `2000` | Greater than zero. |
+
+Predictive profiles reserve an agent for every call, so today only `StatisticsCacheDuration` and `MaxTimingSamples`
+are read, when a Predictive profile's measured answer rate is shown. The rest govern over-dialing, which is not
+available yet.
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "ContactCenter": {
+        "PredictiveDialing": {
+          "StatisticsCacheDuration": "00:00:10",
+          "MaxTimingSamples": 1000
+        }
+      }
+    }
+  }
+}
+```
+
+```text
+OrchardCore__CrestApps__ContactCenter__PredictiveDialing__MaxTimingSamples=1000
+```
+
+See [Predictive dialing](contact-center/agents-queues-dialer.md#predictive-dialing).
+
 ### Reporting
 
 | | |

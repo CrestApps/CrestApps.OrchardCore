@@ -23,7 +23,7 @@ This phase adds the operational core of the Contact Center: agent presence, work
 | Contact Center Business Hours | `CrestApps.OrchardCore.ContactCenter.BusinessHours` | Business-hours calendars, their administration screen, and the evaluation service used by queues, entry points, and automated sends. Enabled on its own or pulled in by Work Distribution. |
 | Contact Center Work Distribution | `CrestApps.OrchardCore.ContactCenter.Queues` | Managed skills, work queues, queue items, and reservations, plus policy-based routing strategies and availability-based activity assignment over Contact Center queues. |
 | Contact Center Outbound Dialer | `CrestApps.OrchardCore.ContactCenter.Dialer` | Outbound profiles, callbacks, Preview activity loads routed through Contact Center Voice, and mandatory eligibility, suppression, retry, do-not-call, and calling-window enforcement. |
-| Contact Center Paced Dialing | `CrestApps.OrchardCore.ContactCenter.Dialer.Paced` | Compliance-gated Power and Progressive strategies, paced batch source, and scheduled pacing. Its base Dialer dependency includes the Dialer Profiles UI. |
+| Contact Center Paced Dialing | `CrestApps.OrchardCore.ContactCenter.Dialer.Paced` | Compliance-gated Power, Progressive and Predictive strategies, the Predictive pacing statistics and tenant options, paced batch source, and scheduled pacing. Its base Dialer dependency includes the Dialer Profiles UI. |
 | Contact Center Inbound Voice | `CrestApps.OrchardCore.ContactCenter.InboundVoice` | Inbound voice entry-point administration, business-hours qualification, closed actions, and queue ingress. |
 | Contact Center Call Recording | `CrestApps.OrchardCore.ContactCenter.Recording` | Optional recording orchestration and recording-state events over Contact Center Voice. |
 | Contact Center Voice Media | `CrestApps.OrchardCore.ContactCenter.Voice.Media` | Dependency-only, non-GA executable media resolution foundation; transport certification is deferred to R9. |
@@ -160,11 +160,58 @@ Each automated mode is implemented as a dedicated `IDialerStrategy`, so unsuppor
 | `Preview` | The agent reviews the activity, then accepts or skips. Accepting the offer starts the outbound attempt through the configured Contact Center voice provider; no automated cycle runs. |
 | `Power` | Each pacing cycle starts up to **Calls per agent** calls for the campaign, each reserving its own available agent. **Calls per agent** is capped at 3 (`PowerDialerStrategy.MaxCallsPerAgent`). Requires the **Contact Center Paced Dialing** feature. |
 | `Progressive` | Places one call per available agent as agents become available, bounded at 100 calls per pacing cycle. Requires the **Contact Center Paced Dialing** feature. |
-| `Predictive` | **Not available.** The editor hides it and saving it is rejected until answer-rate forecasting exists. |
+| `Predictive` | Requires the **Contact Center Paced Dialing** feature. Runs the Power loop (one reserved agent per call, up to **Calls per agent** per cycle), with the over-dial ratio throttled by the measured abandonment rate. Placing calls without a reserved agent (`PredictivePacingModel.OverDial`) is not available yet. See [Predictive dialing](#predictive-dialing). |
 
 Manual is not a dialer-profile mode: agents dial freely from the soft phone under the separate manual-dialing screening described below. A profile saved as Manual by an earlier version opens and re-saves as Preview.
 
-The Power and Progressive automated pacing modes, their strategies, scheduled pacing task, and automated batch source live in the **Contact Center Paced Dialing** feature, which depends on the base **Contact Center Outbound Dialer**. The base Dialer owns the dialer-profile editor and mandatory compliance services together with its runtime services, so enabling Paced Dialing exposes a complete configuration and execution surface while Orchard resolves the rest of the dependency graph. When that feature is disabled, the dialer-profile editor only offers Preview, and saving a Power or Progressive profile is rejected so a profile can never silently fail to pace. Preview remains on the base **Contact Center Outbound Dialer** feature.
+The Power, Progressive and Predictive automated pacing modes, their strategies, scheduled pacing task, and automated batch source live in the **Contact Center Paced Dialing** feature, which depends on the base **Contact Center Outbound Dialer**. The base Dialer owns the dialer-profile editor and mandatory compliance services together with its runtime services, so enabling Paced Dialing exposes a complete configuration and execution surface while Orchard resolves the rest of the dependency graph. When that feature is disabled, the dialer-profile editor only offers Preview, and saving a Power, Progressive or Predictive profile is rejected so a profile can never silently fail to pace; a stored one resolves to no strategy and the pacing cycle skips it with a warning. Preview remains on the base **Contact Center Outbound Dialer** feature.
+
+### Predictive dialing
+
+**Contact Center Paced Dialing** (`DialerPacedStartup`) registers `PredictiveDialerStrategy` with the Power and Progressive strategies, binds `ContactCenterPredictiveDialingOptions` (see [Predictive dialing options](../configuration.md#predictive-dialing)) and registers `IDialerPacingStatisticsProvider`. There is no separate Predictive feature: what a Predictive profile may do beyond one call per reserved agent is decided by its pacing model, whose safeguards are validated on every save, import and deployment.
+
+**Pacing models.** `DialerProfile.PredictivePacingModel` selects how a Predictive profile paces:
+
+| Model | Behavior |
+| --- | --- |
+| `ReservedPerCall` (default) | The Power reserve-then-dial loop: each call reserves its own available agent before it is placed, so a live answer always has an agent waiting. `PredictiveDialerPacing` scales the per-cycle count between **Calls per agent** and one as the measured abandonment rate approaches the cap. |
+| `OverDial` | Places more calls than there are free agents and picks an agent when a person answers. **Not available yet**: the editor shows it disabled, and a profile that carries it (for example from a recipe) is dialed as `ReservedPerCall` with a warning logged on every cycle. Validation already holds it to its safeguards, so such a profile is ready when over-dialing ships. |
+
+**Profile settings.** Stored on the profile document, so no migration is needed, and validated by `DialerProfileHandler` for Predictive profiles only (a Power profile is never refused for a setting it does not use):
+
+| Property | Default | Range | Purpose |
+| --- | --- | --- | --- |
+| `TargetAbandonmentRatePercent` | 2 | > 0 to 100; below `MaxAbandonmentRatePercent` for `OverDial` | The rate over-dialing steers toward; the cap stays the hard limit. |
+| `MaxLinesPerAgent` | 2 | 1 to 5 | Most calls in flight per free agent. |
+| `MaxCallsInFlight` | 100 | 1 to 1000 | Most calls in flight per campaign. |
+| `AnswerRateSampleFloor` | 50 | 10 to 10000 | Settled calls the answer rate needs before over-dialing trusts it. |
+| `AnswerRateWindowMinutes` | 15 | 5 to 240 | Rolling window of the answer rate. |
+| `CreditAgentsFreeingUp` | `false` | | Count agents predicted to free up within the ring horizon. |
+| `FreeUpCreditPercent` | 50 | 0 to 100 | Share of those agents counted. |
+| `ConnectWaitMilliseconds` | 0 | 0 to 1500 | How long an answered over-dialed call may wait for an agent before the abandoned-call message. |
+| `AbandonedRetryRequiresAgent` | `true` | | Retry an abandoned call only with a reserved agent. |
+
+`OverDial` additionally requires **Enforce an abandonment-rate cap**, the abandoned-call message, a cap above 0 and a target below the cap. The constants live in `PredictiveDialingDefaults`. The recipe step and deployment carry every property.
+
+**Statistics.** `InteractionEventDialerPacingStatisticsProvider` measures a profile over a rolling window from the event log the platform already writes, with no new index and no new writes on the call path:
+
+- **Calls placed** count `DialerAttemptStarted` events, filed by `DialerAttemptService` under `AggregateType = DialerProfile`, with one seek on the aggregate index.
+- **Answered by a person** and **abandoned** come from `IDialerAbandonmentStatisticsProvider`, so pacing steers by exactly the counts the abandonment cap enforces.
+- **Answer rate and timings** come from `DialerPacingQueries.BuildCallTimingsSql`: the newest `MaxTimingSamples` attempts in the window, each with correlated sub-selects for its first `DialerLiveAnswered` and `AgentLegAnswered` events (event index `InteractionId` key) and the interaction's `EndedUtc`, `WrapUpStartedUtc` and `WrapUpCompletedUtc` (interaction index `ItemId` key). A call that has neither a live answer, an agent nor an end is still ringing and is left out of the answer rate, which would otherwise read low and over-dial; a call an agent was connected to counts as answered even without a recorded live answer (calls placed before live answers were recorded). Ring-to-answer (median and 75th percentile), connect latency (median and 95th percentile), average talk time and average wrap-up are derived in memory.
+- A measurement is cached for `StatisticsCacheDuration` in the tenant-wide `DialerPacingStatisticsCache`. When the abandonment counts cannot be read the provider returns `null`, which callers treat as a reason not to over-dial.
+
+The editor shows the measured answer rate, ring time and connect time on the **Predictive pacing** card of a saved Predictive profile.
+
+**Calculation.** `PredictiveOverDialCalculator.Calculate(PredictivePacingInput)` is a pure function that returns a `PredictivePacingDecision` (`Mode`, `Reason`, `DialCount`, `TargetCalls` and the figures behind them). Over-dialing will call it every cycle; nothing calls it yet. In order:
+
+1. The abandonment policy does not permit dialing: `Suppressed`.
+2. Invalid limits (no cap, target not below the cap, lines per agent below 1), a missing or out-of-range answer rate, rolling rate or long-run (`ComplianceWindowDays`) rate, a sample below its floor, or either rate at or above the cap: `ReservedFallback`, so the campaign keeps the reserve-then-dial loop that cannot abandon.
+3. Throttle `g`: 1 while the rolling rate is at most half the target, falling in a straight line to 0 at the cap; the over-dial is sized against `target × g`.
+4. Agents `E` = available agents plus `FreeUpCreditPercent` of the agents `AgentFreeUpPredictor` expects to free up (only with `CreditAgentsFreeingUp`). Fewer than one: no calls.
+5. The answer rate `r` is bounded to 0.05 to 1. With `X ~ Binomial(N, r)`, the expected abandoned calls are the sum over `k > E` of `(k − E)·P(X = k)`, computed exactly in log space. The calculator picks the largest `N` from `⌊E⌋` whose expected abandoned calls over `N·r` stay within the throttled target. Calls already ringing are treated as freshly placed, which overstates the answers to come and so errs toward fewer calls.
+6. `N` is capped at `⌊MaxLinesPerAgent (at most 5) × available agents⌋ + ⌊credited agents⌋` and at `MaxCallsInFlight`; the calls to place are `N` minus the calls in flight, between 0 and `MaxDialsPerCycle`.
+
+`AgentFreeUpPredictor` counts busy agents expected to be free within a horizon: a wrapping agent after the rest of the average wrap-up, a talking agent after the rest of the average call plus a whole average wrap-up. An agent already past the average, or a phase with no measured average, gets no credit.
 
 ### Outbound compliance gate
 
@@ -175,7 +222,7 @@ Before every attempt, `IDialerEligibilityService` runs and records an auditable 
 - **Retry cool-down** - a previous attempt must be older than `RetryDelayMinutes`.
 - **Do-not-call / communication preferences** - the contact's `DoNotCall` opt-out (when *Respect do-not-call and communication preferences* is enabled).
 - **Calling window** - when *Enforce a calling window* is enabled, the destination is only dialed while its business-hours calendar reports open. The profile selects a default **calling calendar** and optional per-region calendar overrides keyed by the destination's ISO 3166-1 alpha-2 region code; the calendar is evaluated in the contact's own time zone. A missing or disabled required calendar fails closed rather than silently allowing calls.
-- **Abandonment cap** - when *Enforce an abandonment cap* is enabled for an automated pacing mode (Power/Progressive), the profile's rolling live-answer/abandon statistics must stay at or below `MaxAbandonmentRatePercent`. The cap is only evaluated once the rolling window has accumulated at least `AbandonmentSampleFloor` live answers, and it **fails closed**: an automated profile that enforces the cap but cannot prove its current rate is suppressed. Preview binds an agent per call and is always permitted.
+- **Abandonment cap** - when *Enforce an abandonment cap* is enabled for an automated pacing mode (Power/Progressive/Predictive), the profile's rolling live-answer/abandon statistics must stay at or below `MaxAbandonmentRatePercent`. The cap is only evaluated once the rolling window has accumulated at least `AbandonmentSampleFloor` live answers, and it **fails closed**: an automated profile that enforces the cap but cannot prove its current rate is suppressed. Preview binds an agent per call and is always permitted.
 - **National do-not-call registries** - any registered `INationalDoNotCallRegistry` (for example the USA FTC or Canada DNCL registries) is scrubbed when *Respect do-not-call* is enabled. Registries receive the canonical number, never a raw or partially normalized one, so a registry cannot be asked about a different number than the one being dialed. Registry screening **fails closed**: a registry that is unreachable or rejecting requests has reported nothing rather than reported the number as unlisted, and the attempt is suppressed with `ComplianceScreeningUnavailable`. That suppression is deliberately **not terminal** - the destination was never shown to be off limits, only unverified, so the activity stays available for a later cycle instead of being cancelled because a registry had a bad minute. A registry that has no credentials configured is simply not participating and does not suppress anything.
 
 When an automated profile enforces the abandonment cap, the **abandoned-call message** (`SafeHarborEnabled` / `SafeHarborMessage`) must be enabled so a live party that no agent reaches hears a caller-identifying message instead of a silent drop. `CrestApps:ContactCenter:Compliance:AbandonmentRollingWindowMinutes` (default 30, range 1-1440) sets the rolling measurement window and is validated on start.

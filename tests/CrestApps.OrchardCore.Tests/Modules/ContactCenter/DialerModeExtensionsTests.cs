@@ -24,7 +24,7 @@ public sealed class DialerModeExtensionsTests
     [InlineData(DialerMode.Preview, false)]
     [InlineData(DialerMode.Power, true)]
     [InlineData(DialerMode.Progressive, true)]
-    [InlineData(DialerMode.Predictive, false)]
+    [InlineData(DialerMode.Predictive, true)]
     public void RequiresPacedDialerFeature_IdentifiesGatedModes(DialerMode mode, bool expected)
     {
         // Act

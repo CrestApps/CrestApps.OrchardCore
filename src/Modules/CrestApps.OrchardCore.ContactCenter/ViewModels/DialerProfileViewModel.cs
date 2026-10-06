@@ -35,7 +35,7 @@ public class DialerProfileViewModel
 
     /// <summary>
     /// Gets or sets a value indicating whether the Contact Center Paced Dialing feature is enabled, which
-    /// determines whether the Power and Progressive automated pacing modes are offered in the editor.
+    /// determines whether the Power, Progressive and Predictive automated pacing modes are offered in the editor.
     /// </summary>
     public bool AutomatedDialerEnabled { get; set; }
 
@@ -181,6 +181,63 @@ public class DialerProfileViewModel
     /// </summary>
     [BindNever]
     public DialerAbandonmentStatistics MonthlyAbandonment { get; set; }
+
+    /// <summary>
+    /// Gets or sets how a Predictive profile paces its calls.
+    /// </summary>
+    public PredictivePacingModel PredictivePacingModel { get; set; }
+
+    /// <summary>
+    /// Gets or sets the abandonment rate over-dialing steers toward, in percent. Validated by the profile handler.
+    /// </summary>
+    public double TargetAbandonmentRatePercent { get; set; } = PredictiveDialingDefaults.TargetAbandonmentRatePercent;
+
+    /// <summary>
+    /// Gets or sets the most calls over-dialing may have ringing per available agent. Validated by the profile handler.
+    /// </summary>
+    public double MaxLinesPerAgent { get; set; } = PredictiveDialingDefaults.LinesPerAgent;
+
+    /// <summary>
+    /// Gets or sets the most calls a Predictive profile may have in flight per campaign. Validated by the profile handler.
+    /// </summary>
+    public int MaxCallsInFlight { get; set; } = PredictiveDialingDefaults.CallsInFlight;
+
+    /// <summary>
+    /// Gets or sets the fewest settled calls the answer rate is measured over before over-dialing trusts it.
+    /// </summary>
+    public int AnswerRateSampleFloor { get; set; } = PredictiveDialingDefaults.AnswerRateSampleFloor;
+
+    /// <summary>
+    /// Gets or sets the minutes of history the answer rate is measured over.
+    /// </summary>
+    public int AnswerRateWindowMinutes { get; set; } = PredictiveDialingDefaults.AnswerRateWindowMinutes;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether agents expected to free up are counted.
+    /// </summary>
+    public bool CreditAgentsFreeingUp { get; set; }
+
+    /// <summary>
+    /// Gets or sets the percentage of the agents expected to free up that is counted.
+    /// </summary>
+    public int FreeUpCreditPercent { get; set; } = PredictiveDialingDefaults.FreeUpCreditPercent;
+
+    /// <summary>
+    /// Gets or sets how long, in milliseconds, a person who answered may wait for an agent to free up.
+    /// </summary>
+    public int ConnectWaitMilliseconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether an abandoned call is retried only with an agent reserved for it.
+    /// </summary>
+    public bool AbandonedRetryRequiresAgent { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets what the profile's recent calls measured over its answer-rate window, or <see langword="null"/> when
+    /// it is not measured (a new profile, or the Paced Dialing feature is off).
+    /// </summary>
+    [BindNever]
+    public DialerPacingStatistics PacingStatistics { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the dialer profile is enabled.

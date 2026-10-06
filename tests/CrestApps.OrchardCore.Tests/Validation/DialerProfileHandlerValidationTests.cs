@@ -50,35 +50,266 @@ public class DialerProfileHandlerValidationTests
     }
 
     [Fact]
-    public async Task ValidatingAsync_WhenTheModeIsPredictive_Fails()
+    public async Task ValidatingAsync_WhenTheModeIsPredictiveWithoutThePacedFeature_Fails()
     {
         // Arrange
         var profile = CreateValidProfile();
         profile.Mode = DialerMode.Predictive;
 
         // Act
-        var context = await ValidateAsync(profile);
-
-        // Assert
-        AssertFailedFor(context, nameof(DialerProfile.Mode));
-    }
-
-    // Bug: the Predictive refusal told the user to choose Manual, a mode the editor no longer offers. The message must
-    // name only the modes that can be chosen.
-    [Fact]
-    public async Task ValidatingAsync_WhenTheModeIsPredictive_NamesOnlyPreviewPowerAndProgressive()
-    {
-        // Arrange
-        var profile = CreateValidProfile();
-        profile.Mode = DialerMode.Predictive;
-
-        // Act
-        var context = await ValidateAsync(profile);
+        var context = await ValidateAsync(profile, automatedDialerEnabled: false);
 
         // Assert
         var error = Assert.Single(context.Result.Errors, error => error.MemberNames.Contains(nameof(DialerProfile.Mode)));
-        Assert.Equal("Predictive dialing is not available yet. Choose Preview, Power, or Progressive.", error.ErrorMessage);
-        Assert.DoesNotContain("Manual", error.ErrorMessage);
+        Assert.Equal("Enable the Contact Center Paced Dialing feature before using Power, Progressive or Predictive dialing.", error.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task ValidatingAsync_WhenTheModeIsPredictiveWithThePacedFeature_Succeeds()
+    {
+        // Arrange
+        var profile = CreateValidProfile();
+        profile.Mode = DialerMode.Predictive;
+
+        // Act
+        var context = await ValidateAsync(profile);
+
+        // Assert
+        Assert.True(context.Result.Succeeded);
+    }
+
+    [Fact]
+    public async Task ValidatingAsync_WhenAnOverDialingProfileHasEverySafeguard_Succeeds()
+    {
+        // Act
+        var context = await ValidateAsync(CreateOverDialProfile());
+
+        // Assert
+        Assert.True(context.Result.Succeeded);
+    }
+
+    [Fact]
+    public async Task ValidatingAsync_WhenOverDialingDoesNotEnforceTheCap_Fails()
+    {
+        // Arrange
+        var profile = CreateOverDialProfile();
+        profile.EnforceAbandonmentCap = false;
+
+        // Act
+        var context = await ValidateAsync(profile);
+
+        // Assert
+        AssertFailedFor(context, nameof(DialerProfile.EnforceAbandonmentCap));
+    }
+
+    [Fact]
+    public async Task ValidatingAsync_WhenOverDialingHasNeitherTheCapNorTheMessage_FailsForBoth()
+    {
+        // Arrange
+        var profile = CreateOverDialProfile();
+        profile.EnforceAbandonmentCap = false;
+        profile.SafeHarborEnabled = false;
+
+        // Act
+        var context = await ValidateAsync(profile);
+
+        // Assert
+        AssertFailedFor(context, nameof(DialerProfile.EnforceAbandonmentCap));
+        AssertFailedFor(context, nameof(DialerProfile.SafeHarborEnabled));
+    }
+
+    [Fact]
+    public async Task ValidatingAsync_WhenOverDialingCapsAbandonmentWithoutTheMessage_Fails()
+    {
+        // Arrange
+        var profile = CreateOverDialProfile();
+        profile.SafeHarborEnabled = false;
+
+        // Act
+        var context = await ValidateAsync(profile);
+
+        // Assert
+        AssertFailedFor(context, nameof(DialerProfile.SafeHarborEnabled));
+    }
+
+    [Theory]
+    [InlineData(3, 3)]
+    [InlineData(4, 3)]
+    public async Task ValidatingAsync_WhenTheOverDialTargetIsNotBelowTheCap_Fails(double target, double cap)
+    {
+        // Arrange
+        var profile = CreateOverDialProfile();
+        profile.TargetAbandonmentRatePercent = target;
+        profile.MaxAbandonmentRatePercent = cap;
+
+        // Act
+        var context = await ValidateAsync(profile);
+
+        // Assert
+        AssertFailedFor(context, nameof(DialerProfile.TargetAbandonmentRatePercent));
+    }
+
+    [Fact]
+    public async Task ValidatingAsync_WhenOverDialingHasAZeroCap_Fails()
+    {
+        // Arrange
+        var profile = CreateOverDialProfile();
+        profile.MaxAbandonmentRatePercent = 0;
+
+        // Act
+        var context = await ValidateAsync(profile);
+
+        // Assert
+        AssertFailedFor(context, nameof(DialerProfile.MaxAbandonmentRatePercent));
+    }
+
+    [Fact]
+    public async Task ValidatingAsync_WhenAReservedPredictiveProfileHasATargetAboveTheCap_Succeeds()
+    {
+        // Arrange: the target only steers over-dialing, so a profile that reserves an agent per call is not held to it.
+        var profile = CreateValidProfile();
+        profile.Mode = DialerMode.Predictive;
+        profile.TargetAbandonmentRatePercent = 5;
+        profile.MaxAbandonmentRatePercent = 3;
+
+        // Act
+        var context = await ValidateAsync(profile);
+
+        // Assert
+        Assert.True(context.Result.Succeeded);
+    }
+
+    public static TheoryData<string, string> PredictiveRangeCases => new()
+    {
+        { "pacing model undefined", nameof(DialerProfile.PredictivePacingModel) },
+        { "target zero", nameof(DialerProfile.TargetAbandonmentRatePercent) },
+        { "target above one hundred", nameof(DialerProfile.TargetAbandonmentRatePercent) },
+        { "target not a number", nameof(DialerProfile.TargetAbandonmentRatePercent) },
+        { "lines below one", nameof(DialerProfile.MaxLinesPerAgent) },
+        { "lines above the ceiling", nameof(DialerProfile.MaxLinesPerAgent) },
+        { "lines not a number", nameof(DialerProfile.MaxLinesPerAgent) },
+        { "no calls in flight", nameof(DialerProfile.MaxCallsInFlight) },
+        { "too many calls in flight", nameof(DialerProfile.MaxCallsInFlight) },
+        { "answer rate floor too low", nameof(DialerProfile.AnswerRateSampleFloor) },
+        { "answer rate floor too high", nameof(DialerProfile.AnswerRateSampleFloor) },
+        { "answer rate window too short", nameof(DialerProfile.AnswerRateWindowMinutes) },
+        { "answer rate window too long", nameof(DialerProfile.AnswerRateWindowMinutes) },
+        { "credit negative", nameof(DialerProfile.FreeUpCreditPercent) },
+        { "credit above one hundred", nameof(DialerProfile.FreeUpCreditPercent) },
+        { "connect wait negative", nameof(DialerProfile.ConnectWaitMilliseconds) },
+        { "connect wait too long", nameof(DialerProfile.ConnectWaitMilliseconds) },
+    };
+
+    [Theory]
+    [MemberData(nameof(PredictiveRangeCases))]
+    public async Task ValidatingAsync_WhenAPredictiveSettingIsOutOfRange_Fails(string scenario, string memberName)
+    {
+        // Arrange
+        var profile = CreateValidProfile();
+        profile.Mode = DialerMode.Predictive;
+        ApplyPredictiveScenario(profile, scenario);
+
+        // Act
+        var context = await ValidateAsync(profile);
+
+        // Assert
+        AssertFailedFor(context, memberName);
+    }
+
+    [Theory]
+    [MemberData(nameof(PredictiveRangeCases))]
+    public async Task ValidatingAsync_WhenAPredictiveSettingIsOutOfRangeOnAPowerProfile_Succeeds(string scenario, string memberName)
+    {
+        // Arrange: a setting the mode never uses is not a reason to refuse the profile.
+        var profile = CreateValidProfile();
+        profile.Mode = DialerMode.Power;
+        ApplyPredictiveScenario(profile, scenario);
+
+        // Act
+        var context = await ValidateAsync(profile);
+
+        // Assert
+        Assert.True(context.Result.Succeeded, memberName);
+    }
+
+    [Theory]
+    [InlineData(1, 1, 10, 5, 0, 0)]
+    [InlineData(5, 1000, 10000, 240, 100, 1500)]
+    public async Task ValidatingAsync_WhenPredictiveSettingsAreOnTheirBoundaries_Succeeds(
+        double linesPerAgent,
+        int callsInFlight,
+        int sampleFloor,
+        int windowMinutes,
+        int creditPercent,
+        int connectWaitMilliseconds)
+    {
+        // Arrange
+        var profile = CreateOverDialProfile();
+        profile.MaxLinesPerAgent = linesPerAgent;
+        profile.MaxCallsInFlight = callsInFlight;
+        profile.AnswerRateSampleFloor = sampleFloor;
+        profile.AnswerRateWindowMinutes = windowMinutes;
+        profile.FreeUpCreditPercent = creditPercent;
+        profile.ConnectWaitMilliseconds = connectWaitMilliseconds;
+
+        // Act
+        var context = await ValidateAsync(profile);
+
+        // Assert
+        Assert.True(context.Result.Succeeded);
+    }
+
+    [Fact]
+    public void NewProfile_DefaultsToReservingAnAgentPerCall()
+    {
+        // Act
+        var profile = new DialerProfile();
+
+        // Assert
+        Assert.Equal(PredictivePacingModel.ReservedPerCall, profile.PredictivePacingModel);
+        Assert.True(profile.TargetAbandonmentRatePercent < profile.MaxAbandonmentRatePercent);
+        Assert.False(profile.CreditAgentsFreeingUp);
+        Assert.Equal(0, profile.ConnectWaitMilliseconds);
+        Assert.True(profile.AbandonedRetryRequiresAgent);
+    }
+
+    private static void ApplyPredictiveScenario(DialerProfile profile, string scenario)
+    {
+        switch (scenario)
+        {
+            case "pacing model undefined": profile.PredictivePacingModel = (PredictivePacingModel)42; break;
+            case "target zero": profile.TargetAbandonmentRatePercent = 0; break;
+            case "target above one hundred": profile.TargetAbandonmentRatePercent = 101; break;
+            case "target not a number": profile.TargetAbandonmentRatePercent = double.NaN; break;
+            case "lines below one": profile.MaxLinesPerAgent = 0.9; break;
+            case "lines above the ceiling": profile.MaxLinesPerAgent = PredictiveDialingDefaults.MaxLinesPerAgent + 0.1; break;
+            case "lines not a number": profile.MaxLinesPerAgent = double.NaN; break;
+            case "no calls in flight": profile.MaxCallsInFlight = 0; break;
+            case "too many calls in flight": profile.MaxCallsInFlight = PredictiveDialingDefaults.MaxCallsInFlight + 1; break;
+            case "answer rate floor too low": profile.AnswerRateSampleFloor = PredictiveDialingDefaults.MinAnswerRateSampleFloor - 1; break;
+            case "answer rate floor too high": profile.AnswerRateSampleFloor = PredictiveDialingDefaults.MaxAnswerRateSampleFloor + 1; break;
+            case "answer rate window too short": profile.AnswerRateWindowMinutes = PredictiveDialingDefaults.MinAnswerRateWindowMinutes - 1; break;
+            case "answer rate window too long": profile.AnswerRateWindowMinutes = PredictiveDialingDefaults.MaxAnswerRateWindowMinutes + 1; break;
+            case "credit negative": profile.FreeUpCreditPercent = -1; break;
+            case "credit above one hundred": profile.FreeUpCreditPercent = 101; break;
+            case "connect wait negative": profile.ConnectWaitMilliseconds = -1; break;
+            case "connect wait too long": profile.ConnectWaitMilliseconds = PredictiveDialingDefaults.MaxConnectWaitMilliseconds + 1; break;
+            default: throw new ArgumentOutOfRangeException(nameof(scenario), scenario, null);
+        }
+    }
+
+    private static DialerProfile CreateOverDialProfile()
+    {
+        var profile = CreateValidProfile();
+        profile.Mode = DialerMode.Predictive;
+        profile.PredictivePacingModel = PredictivePacingModel.OverDial;
+        profile.EnforceAbandonmentCap = true;
+        profile.MaxAbandonmentRatePercent = 3;
+        profile.TargetAbandonmentRatePercent = 2;
+        profile.SafeHarborEnabled = true;
+        profile.SafeHarborMessage = DialerAbandonment.DefaultMessage;
+
+        return profile;
     }
 
     [Theory]
@@ -222,7 +453,9 @@ public class DialerProfileHandlerValidationTests
         AssertFailedFor(context, nameof(DialerProfile.SafeHarborMessage));
     }
 
-    private static async Task<ValidatingContext<DialerProfile>> ValidateAsync(DialerProfile profile, bool automatedDialerEnabled = true)
+    private static async Task<ValidatingContext<DialerProfile>> ValidateAsync(
+        DialerProfile profile,
+        bool automatedDialerEnabled = true)
     {
         var context = new ValidatingContext<DialerProfile>(profile);
 
