@@ -862,6 +862,18 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string Name { get; set; }
         public int SortOrder { get; set; }
     }
+    public enum AgentWorkPhase
+    {
+        Talking = 0,
+        WrappingUp = 1,
+    }
+    public sealed class AgentWorkSnapshot
+    {
+        public AgentWorkSnapshot() { }
+        public string AgentId { get; set; }
+        public System.TimeSpan Elapsed { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Core.Models.AgentWorkPhase Phase { get; set; }
+    }
     public sealed class AssistContext
     {
         public AssistContext() { }
@@ -1490,6 +1502,21 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string OwnerToken { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Core.Models.OutboxMessageStatus Status { get; set; }
     }
+    public sealed class ContactCenterPredictiveDialingOptions
+    {
+        public const string SectionName = "CrestApps:ContactCenter:PredictiveDialing";
+        public ContactCenterPredictiveDialingOptions() { }
+        public System.TimeSpan AnsweredUnconnectedSweepAfter { get; set; }
+        public int ComplianceWindowDays { get; set; }
+        public System.TimeSpan ConnectLockWait { get; set; }
+        public System.TimeSpan DefaultRingHorizon { get; set; }
+        public int MaxDialsPerCycle { get; set; }
+        public int MaxTimingSamples { get; set; }
+        public System.TimeSpan PacingDebounce { get; set; }
+        public System.TimeSpan PacingInterval { get; set; }
+        public System.TimeSpan PacingLockExpiration { get; set; }
+        public System.TimeSpan StatisticsCacheDuration { get; set; }
+    }
     public sealed class ContactCenterProcessedEvent : CrestApps.Core.Models.CatalogItem
     {
         public ContactCenterProcessedEvent() { }
@@ -1743,27 +1770,70 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public static void StampDial(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile profile, int attemptNumber) { }
         public static bool WasAnsweredByMachine(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
     }
+    public sealed class DialerCallTimingRow
+    {
+        public DialerCallTimingRow() { }
+        public System.DateTime? AgentJoinedUtc { get; set; }
+        public System.DateTime? EndedUtc { get; set; }
+        public string InteractionId { get; set; }
+        public System.DateTime? LiveAnsweredUtc { get; set; }
+        public System.DateTime StartedUtc { get; set; }
+        public System.DateTime? WrapUpCompletedUtc { get; set; }
+        public System.DateTime? WrapUpStartedUtc { get; set; }
+    }
+    public sealed class DialerPacingStatistics
+    {
+        public DialerPacingStatistics() { }
+        public long AbandonedCalls { get; set; }
+        public double? AbandonmentRatePercent { get; }
+        public double? AnswerRate { get; }
+        public long Attempts { get; set; }
+        public System.TimeSpan? AverageTalkTime { get; set; }
+        public System.TimeSpan? AverageWrapUpTime { get; set; }
+        public int ConnectLatencySamples { get; set; }
+        public System.DateTime FromUtc { get; set; }
+        public long LiveAnswers { get; set; }
+        public System.TimeSpan? MedianConnectLatency { get; set; }
+        public System.TimeSpan? MedianRingToAnswer { get; set; }
+        public System.TimeSpan? P75RingToAnswer { get; set; }
+        public System.TimeSpan? P95ConnectLatency { get; set; }
+        public int RingToAnswerSamples { get; set; }
+        public long SettledAttempts { get; set; }
+        public long SettledLiveAnswers { get; set; }
+        public int TalkTimeSamples { get; set; }
+        public System.DateTime ToUtc { get; set; }
+        public int WrapUpTimeSamples { get; set; }
+    }
     public sealed class DialerProfile : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel
     {
         public DialerProfile() { }
+        public bool AbandonedRetryRequiresAgent { get; set; }
         public int AbandonmentSampleFloor { get; set; }
         public bool AlwaysUseCallerId { get; set; }
+        public int AnswerRateSampleFloor { get; set; }
+        public int AnswerRateWindowMinutes { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Core.Models.DialerAnsweringMachineDetection AnsweringMachineDetection { get; set; }
         public string CallerId { get; set; }
         public string CallingCalendarId { get; set; }
         public int CallsPerAgent { get; set; }
+        public int ConnectWaitMilliseconds { get; set; }
         public System.DateTime CreatedUtc { get; set; }
+        public bool CreditAgentsFreeingUp { get; set; }
         public string DefaultRegionCode { get; set; }
         public string Description { get; set; }
         public bool Enabled { get; set; }
         public bool EnforceAbandonmentCap { get; set; }
         public bool EnforceCallingWindow { get; set; }
+        public int FreeUpCreditPercent { get; set; }
         public double MaxAbandonmentRatePercent { get; set; }
         public int MaxAttempts { get; set; }
+        public int MaxCallsInFlight { get; set; }
+        public double MaxLinesPerAgent { get; set; }
         public int MaxPreviewExtensions { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Models.DialerMode Mode { get; set; }
         public System.DateTime? ModifiedUtc { get; set; }
         public string Name { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Core.Models.PredictivePacingModel PredictivePacingModel { get; set; }
         public int PreviewExtensionSeconds { get; set; }
         public string ProviderName { get; set; }
         public System.Collections.Generic.IDictionary<string, string> RegionalCallingCalendarIds { get; set; }
@@ -1772,6 +1842,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public int RingTimeoutSeconds { get; set; }
         public bool SafeHarborEnabled { get; set; }
         public string SafeHarborMessage { get; set; }
+        public double TargetAbandonmentRatePercent { get; set; }
     }
     public sealed class DialerRetryScheduleResult
     {
@@ -2214,6 +2285,88 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string SupervisorLegId { get; set; }
         public string SupervisorUserId { get; set; }
         public bool TookOver { get; set; }
+    }
+    public static class PredictiveDialingDefaults
+    {
+        public const int AnswerRateSampleFloor = 50;
+        public const int AnswerRateWindowMinutes = 15;
+        public const int CallsInFlight = 100;
+        public const int FreeUpCreditPercent = 50;
+        public const double LinesPerAgent = 2D;
+        public const int MaxAnswerRateSampleFloor = 10000;
+        public const int MaxAnswerRateWindowMinutes = 240;
+        public const int MaxCallsInFlight = 1000;
+        public const int MaxConnectWaitMilliseconds = 1500;
+        public const double MaxLinesPerAgent = 5D;
+        public const int MinAnswerRateSampleFloor = 10;
+        public const int MinAnswerRateWindowMinutes = 5;
+        public const double MinLinesPerAgent = 1D;
+        public const double TargetAbandonmentRatePercent = 2D;
+    }
+    public sealed class PredictivePacingDecision
+    {
+        public PredictivePacingDecision() { }
+        public double AnswerRate { get; init; }
+        public int CallLimit { get; init; }
+        public int DialCount { get; init; }
+        public double EffectiveAgents { get; init; }
+        public double EffectiveTargetPercent { get; init; }
+        public double ExpectedAbandonmentPercent { get; init; }
+        public CrestApps.OrchardCore.ContactCenter.Core.Models.PredictivePacingDecisionMode Mode { get; init; }
+        public CrestApps.OrchardCore.ContactCenter.Core.Models.PredictivePacingReason Reason { get; init; }
+        public int TargetCalls { get; init; }
+        public double Throttle { get; init; }
+        public static CrestApps.OrchardCore.ContactCenter.Core.Models.PredictivePacingDecision ReservedFallback(CrestApps.OrchardCore.ContactCenter.Core.Models.PredictivePacingReason reason, double throttle = 0) { }
+        public static CrestApps.OrchardCore.ContactCenter.Core.Models.PredictivePacingDecision Suppressed(CrestApps.OrchardCore.ContactCenter.Core.Models.PredictivePacingReason reason) { }
+    }
+    public enum PredictivePacingDecisionMode
+    {
+        Suppressed = 0,
+        ReservedFallback = 1,
+        OverDial = 2,
+    }
+    public sealed class PredictivePacingInput
+    {
+        public PredictivePacingInput() { }
+        public double? AbandonmentRatePercent { get; set; }
+        public int AbandonmentSampleFloor { get; set; }
+        public long AbandonmentSampleSize { get; set; }
+        public double? AnswerRate { get; set; }
+        public int AnswerRateSampleFloor { get; set; }
+        public long AnswerRateSampleSize { get; set; }
+        public int AvailableAgents { get; set; }
+        public int CallsInFlight { get; set; }
+        public double? ComplianceAbandonmentRatePercent { get; set; }
+        public bool CreditAgentsFreeingUp { get; set; }
+        public int FreeUpCreditPercent { get; set; }
+        public int FreeingAgents { get; set; }
+        public double MaxAbandonmentRatePercent { get; set; }
+        public int MaxCallsInFlight { get; set; }
+        public int MaxDialsPerCycle { get; set; }
+        public double MaxLinesPerAgent { get; set; }
+        public bool PolicyPermitted { get; set; }
+        public double TargetAbandonmentRatePercent { get; set; }
+        public static CrestApps.OrchardCore.ContactCenter.Core.Models.PredictivePacingInput ForProfile(CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile profile, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterPredictiveDialingOptions options) { }
+    }
+    public enum PredictivePacingModel
+    {
+        ReservedPerCall = 0,
+        OverDial = 1,
+    }
+    public enum PredictivePacingReason
+    {
+        Paced = 0,
+        PolicySuppressed = 1,
+        InvalidSettings = 2,
+        AnswerRateUnavailable = 3,
+        AnswerRateSampleBelowFloor = 4,
+        AbandonmentRateUnavailable = 5,
+        AbandonmentSampleBelowFloor = 6,
+        ComplianceRateUnavailable = 7,
+        ComplianceRateAtCap = 8,
+        RollingRateAtCap = 9,
+        ThrottledToZero = 10,
+        NoAgents = 11,
     }
     public sealed class ProviderAnswerCommandRequest
     {
@@ -3129,6 +3282,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public static System.Collections.Generic.IList<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentQueueMembership> NormalizeQueueMemberships(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentQueueMembership> memberships) { }
         public static System.Collections.Generic.IList<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSkill> NormalizeSkillProficiencies(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSkill> skills) { }
     }
+    public static class AgentFreeUpPredictor
+    {
+        public static int CountFreeingWithin(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentWorkSnapshot> agents, System.TimeSpan? averageTalkTime, System.TimeSpan? averageWrapUpTime, System.TimeSpan horizon) { }
+        public static System.TimeSpan? PredictTimeToFree(CrestApps.OrchardCore.ContactCenter.Core.Models.AgentWorkSnapshot agent, System.TimeSpan? averageTalkTime, System.TimeSpan? averageWrapUpTime) { }
+    }
     public sealed class AgentPreDialCoordinator : CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentPreDialCoordinator
     {
         public AgentPreDialCoordinator(CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentPreDialLegStore store, CrestApps.OrchardCore.ContactCenter.IContactCenterVoiceProviderResolver voiceProviderResolver, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterAgentLegFailureService agentLegFailureService, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterScopeExecutor scopeExecutor, OrchardCore.Locking.Distributed.IDistributedLock distributedLock, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterCoordinationOptions> options, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.AgentPreDialCoordinator> logger) { }
@@ -3652,6 +3810,13 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SupervisorEngagementResult> SwitchModeAsync(string key, string supervisorUserId, System.Security.Claims.ClaimsPrincipal principal, CrestApps.OrchardCore.ContactCenter.Models.MonitorMode mode, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SupervisorEngagementResult> TakeOverAsync(string key, string supervisorUserId, System.Security.Claims.ClaimsPrincipal principal, System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public sealed class ContactCenterPredictiveDialingOptionsValidator : Microsoft.Extensions.Options.IValidateOptions<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterPredictiveDialingOptions>
+    {
+        public const int MaxComplianceWindowDays = 90;
+        public const int MaxDialsPerCycleLimit = 500;
+        public ContactCenterPredictiveDialingOptionsValidator() { }
+        public Microsoft.Extensions.Options.ValidateOptionsResult Validate(string name, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterPredictiveDialingOptions options) { }
+    }
     public sealed class ContactCenterProcessedEventStore : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterProcessedEvent, CrestApps.OrchardCore.ContactCenter.Core.Indexes.ContactCenterProcessedEventIndex>, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterProcessedEvent>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterProcessedEvent>, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterProcessedEventStore
     {
         public ContactCenterProcessedEventStore(YesSql.ISession session) { }
@@ -3940,6 +4105,22 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public string HandlerId { get; }
         public CrestApps.OrchardCore.ContactCenter.ContactCenterHandlerReplaySafety ReplaySafety { get; }
         public System.Threading.Tasks.Task HandleAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent interactionEvent, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public static class DialerPacingQueries
+    {
+        public const string AgentLegAnsweredParameter = "AgentLegAnswered";
+        public const string AggregateTypeParameter = "AggregateType";
+        public const string AttemptStartedParameter = "AttemptStarted";
+        public const string FromUtcParameter = "FromUtc";
+        public const string LiveAnsweredParameter = "LiveAnswered";
+        public const string ProfileIdParameter = "ProfileId";
+        public static string BuildCallTimingsSql(YesSql.IConfiguration configuration, int maxRows) { }
+    }
+    public sealed class DialerPacingStatisticsCache
+    {
+        public DialerPacingStatisticsCache() { }
+        public void Set(string dialerProfileId, System.TimeSpan window, CrestApps.OrchardCore.ContactCenter.Core.Models.DialerPacingStatistics statistics, System.DateTime expiresUtc) { }
+        public bool TryGet(string dialerProfileId, System.TimeSpan window, System.DateTime nowUtc, out CrestApps.OrchardCore.ContactCenter.Core.Models.DialerPacingStatistics statistics) { }
     }
     public sealed class DialerProfileManager : CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile>, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile>, CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerProfileManager
     {
@@ -4617,6 +4798,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Services.DialerEligibilityResult> EvaluateAsync(CrestApps.OrchardCore.ContactCenter.Core.Services.DialerEligibilityContext context, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface IDialerPacingStatisticsProvider
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerPacingStatistics> GetStatisticsAsync(string dialerProfileId, System.TimeSpan window, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IDialerProfileManager : CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile>
     {
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default);
@@ -5087,6 +5272,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public InteractionEventDialerAbandonmentStatisticsProvider(YesSql.ISession session, OrchardCore.Modules.IClock clock) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerAbandonmentStatistics> GetStatisticsAsync(string dialerProfileId, System.TimeSpan window, System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public sealed class InteractionEventDialerPacingStatisticsProvider : CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerPacingStatisticsProvider
+    {
+        public InteractionEventDialerPacingStatisticsProvider(YesSql.ISession session, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerAbandonmentStatisticsProvider> abandonmentStatisticsProviders, CrestApps.OrchardCore.ContactCenter.Core.Services.DialerPacingStatisticsCache cache, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterPredictiveDialingOptions> options, OrchardCore.Modules.IClock clock) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerPacingStatistics> GetStatisticsAsync(string dialerProfileId, System.TimeSpan window, System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public sealed class InteractionEventStore : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent, CrestApps.OrchardCore.ContactCenter.Core.Indexes.InteractionEventIndex>, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent>, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionEventStore
     {
         public InteractionEventStore(YesSql.ISession session, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionEventUpcastService upcastService) { }
@@ -5360,9 +5550,18 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public sealed class PredictiveDialerStrategy : CrestApps.OrchardCore.ContactCenter.Core.Services.DialerStrategyBase
     {
-        public PredictiveDialerStrategy(CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityAssignmentService assignmentService, CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerAttemptService attemptService, CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerAbandonmentPolicyService abandonmentPolicy) { }
+        public PredictiveDialerStrategy(CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityAssignmentService assignmentService, CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerAttemptService attemptService, CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerAbandonmentPolicyService abandonmentPolicy, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.PredictiveDialerStrategy> logger) { }
         public override CrestApps.OrchardCore.ContactCenter.Models.DialerMode Mode { get; }
         protected override System.Threading.Tasks.Task<int> GetMaxAttemptsPerCycleAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile profile, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public static class PredictiveOverDialCalculator
+    {
+        public const double MinimumAnswerRate = 0.05D;
+        public const double ThrottleThreshold = 0.5D;
+        public static CrestApps.OrchardCore.ContactCenter.Core.Models.PredictivePacingDecision Calculate(CrestApps.OrchardCore.ContactCenter.Core.Models.PredictivePacingInput input) { }
+        public static double CalculateThrottle(double abandonmentRatePercent, double targetPercent, double capPercent) { }
+        public static double ExpectedAbandonmentRate(int calls, double answerRate, double agents) { }
+        public static double ExpectedOverflow(int calls, double answerRate, double agents) { }
     }
     public sealed class PreferredSkillsRoutingStrategy : CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityRoutingStrategy
     {

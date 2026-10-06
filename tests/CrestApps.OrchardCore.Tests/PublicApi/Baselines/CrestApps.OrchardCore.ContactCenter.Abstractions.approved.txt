@@ -179,6 +179,7 @@ namespace CrestApps.OrchardCore.ContactCenter
             public const string BusinessHours = "CrestApps.OrchardCore.ContactCenter.BusinessHours";
             public const string Dialer = "CrestApps.OrchardCore.ContactCenter.Dialer";
             public const string DialerPaced = "CrestApps.OrchardCore.ContactCenter.Dialer.Paced";
+            public const string DialerPredictive = "CrestApps.OrchardCore.ContactCenter.Dialer.Predictive";
             public const string EntryPoints = "CrestApps.OrchardCore.ContactCenter.EntryPoints";
             public const string InboundVoice = "CrestApps.OrchardCore.ContactCenter.InboundVoice";
             public const string ProviderInbox = "CrestApps.OrchardCore.ContactCenter.ProviderInbox";
@@ -838,6 +839,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
     {
         public static bool IsAutomated(this CrestApps.OrchardCore.ContactCenter.Models.DialerMode mode) { }
         public static bool RequiresPacedDialerFeature(this CrestApps.OrchardCore.ContactCenter.Models.DialerMode mode) { }
+        public static bool RequiresPredictiveDialerFeature(this CrestApps.OrchardCore.ContactCenter.Models.DialerMode mode) { }
     }
     public enum DialerSuppressionReason
     {
