@@ -40,6 +40,34 @@ public sealed class CallRecordingCatalog : ICallRecordingCatalog
     }
 
     /// <inheritdoc/>
+    public async Task<CallRecording> BeginAsync(CallRecordingRegistration registration, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(registration);
+        ArgumentException.ThrowIfNullOrEmpty(registration.ProviderCallId);
+
+        var recording = await CreateAsync(registration, cancellationToken);
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Listed the recording started on call leg {ProviderCallId} ({Source}) for interaction {InteractionId}, activity {ActivityItemId}, agent {AgentUserId}; it is completed when the provider saves it.",
+                registration.ProviderCallId.SanitizeLogValue(),
+                recording.Source,
+                recording.InteractionId.SanitizeLogValue(),
+                recording.ActivityItemId.SanitizeLogValue(),
+                recording.AgentUserId.SanitizeLogValue());
+        }
+
+        return recording;
+    }
+
+    /// <inheritdoc/>
+    public Task<CallRecording> FindRunningAsync(string providerCallId, CancellationToken cancellationToken = default)
+        => string.IsNullOrEmpty(providerCallId)
+            ? Task.FromResult<CallRecording>(null)
+            : _store.FindRunningByProviderCallIdAsync(providerCallId, cancellationToken);
+
+    /// <inheritdoc/>
     public async Task<CallRecording> RegisterAsync(CallRecordingRegistration registration, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(registration);
@@ -52,6 +80,42 @@ public sealed class CallRecordingCatalog : ICallRecordingCatalog
             return existing;
         }
 
+        // The platform listed this recording when it started it; the provider has now saved it.
+        var running = string.IsNullOrEmpty(registration.ProviderCallId)
+            ? null
+            : await _store.FindRunningByProviderCallIdAsync(registration.ProviderCallId, cancellationToken);
+
+        if (running is not null)
+        {
+            running.ProviderRecordingId = registration.ProviderRecordingId;
+            running.StorageReference = registration.StorageReference ?? registration.ProviderRecordingId;
+            running.Format = registration.Format ?? running.Format;
+            running.StartedUtc = registration.StartedUtc ?? running.StartedUtc;
+            running.EndedUtc = registration.EndedUtc ?? running.EndedUtc;
+            running.DurationSeconds = DurationOf(running);
+
+            if (string.IsNullOrEmpty(running.InteractionId) && !string.IsNullOrEmpty(registration.InteractionId))
+            {
+                running.InteractionId = registration.InteractionId;
+                await DescribeFromInteractionAsync(running, registration, cancellationToken);
+            }
+
+            await _store.UpdateAsync(running, cancellationToken);
+
+            LogListed(running);
+
+            return running;
+        }
+
+        var recording = await CreateAsync(registration, cancellationToken);
+
+        LogListed(recording);
+
+        return recording;
+    }
+
+    private async Task<CallRecording> CreateAsync(CallRecordingRegistration registration, CancellationToken cancellationToken)
+    {
         var now = _clock.UtcNow;
         var recording = new CallRecording
         {
@@ -59,6 +123,7 @@ public sealed class CallRecordingCatalog : ICallRecordingCatalog
             Source = registration.Source,
             ProviderName = registration.ProviderName,
             ProviderRecordingId = registration.ProviderRecordingId,
+            ProviderCallId = registration.ProviderCallId,
             StorageReference = registration.StorageReference ?? registration.ProviderRecordingId,
             Format = registration.Format,
             InteractionId = registration.InteractionId,
@@ -78,25 +143,30 @@ public sealed class CallRecordingCatalog : ICallRecordingCatalog
             await DescribeFromInteractionAsync(recording, registration, cancellationToken);
         }
 
-        if (recording.EndedUtc is { } endedUtc && endedUtc > recording.StartedUtc)
-        {
-            recording.DurationSeconds = Math.Round((endedUtc - recording.StartedUtc).TotalSeconds, 1);
-        }
+        recording.DurationSeconds = DurationOf(recording);
 
         await _store.CreateAsync(recording, cancellationToken);
 
+        return recording;
+    }
+
+    private static double DurationOf(CallRecording recording)
+        => recording.EndedUtc is { } endedUtc && endedUtc > recording.StartedUtc
+            ? Math.Round((endedUtc - recording.StartedUtc).TotalSeconds, 1)
+            : 0;
+
+    private void LogListed(CallRecording recording)
+    {
         if (_logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation(
                 "Listed call recording {RecordingId} ({Source}) for interaction {InteractionId}, activity {ActivityItemId}, agent {AgentUserId}; it plays once it is stored.",
-                registration.ProviderRecordingId.SanitizeLogValue(),
+                recording.ProviderRecordingId.SanitizeLogValue(),
                 recording.Source,
                 recording.InteractionId.SanitizeLogValue(),
                 recording.ActivityItemId.SanitizeLogValue(),
                 recording.AgentUserId.SanitizeLogValue());
         }
-
-        return recording;
     }
 
     /// <inheritdoc/>

@@ -21,6 +21,7 @@ internal sealed class CallRecordingIndexMigrations : DataMigration
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<CallRecordingSource>("Source")
             .Column<string>("ProviderRecordingId", column => column.WithLength(128))
+            .Column<string>("ProviderCallId", column => column.WithLength(128))
             .Column<string>("InteractionId", column => column.WithLength(26))
             .Column<string>("ActivityItemId", column => column.WithLength(26))
             .Column<string>("AgentUserId", column => column.WithLength(26))
@@ -44,6 +45,30 @@ internal sealed class CallRecordingIndexMigrations : DataMigration
             collection: ContactCenterStorage.CollectionName
         );
 
-        return 1;
+        await SchemaBuilder.AlterIndexTableAsync<CallRecordingIndex>(table => table
+            .CreateIndex("IDX_CallRecordingIndex_ProviderCall", "ProviderCallId", "ProviderRecordingId", "DocumentId"),
+            collection: ContactCenterStorage.CollectionName
+        );
+
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds the recorded call leg, which a recording is listed under when it starts and matched by when it is saved.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<CallRecordingIndex>(table => table
+            .AddColumn<string>("ProviderCallId", column => column.WithLength(128)),
+            collection: ContactCenterStorage.CollectionName
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<CallRecordingIndex>(table => table
+            .CreateIndex("IDX_CallRecordingIndex_ProviderCall", "ProviderCallId", "ProviderRecordingId", "DocumentId"),
+            collection: ContactCenterStorage.CollectionName
+        );
+
+        return 2;
     }
 }
