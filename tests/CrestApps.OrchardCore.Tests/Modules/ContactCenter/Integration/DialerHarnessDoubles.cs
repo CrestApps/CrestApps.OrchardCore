@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -47,17 +48,34 @@ internal sealed class FakeVoiceContactCenterCallRouter : IVoiceContactCenterCall
     public Task<InboundVoiceRoutingResult> RouteInboundAsync(InboundVoiceEvent inboundEvent, CancellationToken cancellationToken = default)
         => throw new NotSupportedException("The dialer integration harness does not route inbound calls.");
 
+    /// <summary>
+    /// Gets or sets a value indicating whether a call asked to be screened for answering machines is reported back as
+    /// screened, as a provider that runs the screening does.
+    /// </summary>
+    public bool ReportsAnswerDetection { get; set; }
+
     public Task<ContactCenterVoiceProviderResult> RouteOutboundAsync(ContactCenterDialRequest request, string providerName = null, CancellationToken cancellationToken = default)
     {
-        PlacedCalls.Add(request);
-        var callId = $"fake-call-{Interlocked.Increment(ref _counter)}";
+        lock (PlacedCalls)
+        {
+            PlacedCalls.Add(request);
+        }
 
-        return Task.FromResult(new ContactCenterVoiceProviderResult
+        var callId = $"fake-call-{Interlocked.Increment(ref _counter)}";
+        var result = new ContactCenterVoiceProviderResult
         {
             Succeeded = true,
             ProviderCallId = callId,
             ProviderName = DialerModeIntegrationHarness.ProviderName,
-        });
+        };
+
+        if (ReportsAnswerDetection &&
+            request.Metadata?.ContainsKey(CrestApps.OrchardCore.Telephony.TelephonyConstants.RequestMetadata.AnsweringMachineDetection) == true)
+        {
+            result.Metadata[ContactCenterConstants.TelephonyMetadata.AnswerDetectionRequested] = bool.TrueString;
+        }
+
+        return Task.FromResult(result);
     }
 }
 
@@ -71,6 +89,11 @@ internal sealed class InMemoryProviderCommandStateService : IProviderCommandStat
 
     public ProviderCommand Find(string commandId)
         => _commands.TryGetValue(commandId, out var command) ? command : null;
+
+    /// <summary>
+    /// Gets every command registered, in no particular order.
+    /// </summary>
+    public IReadOnlyCollection<ProviderCommand> All => _commands.Values.ToArray();
 
     public Task<ProviderCommand> RegisterAsync(ProviderCommandRegistration registration, CancellationToken cancellationToken = default)
     {
@@ -137,22 +160,60 @@ internal sealed class HarnessScopeExecutor : IContactCenterScopeExecutor
 {
     private readonly ConcurrentQueue<Func<Task>> _pending = new();
     private IServiceProvider _provider;
+    private Func<HarnessFlow> _freshScope;
 
     public void Bind(IServiceProvider provider) => _provider = provider;
 
+    /// <summary>
+    /// Runs <see cref="ExecuteAsync{TContext}(Func{TContext, Task})"/> on a fresh unit of work, committed when the work
+    /// returns, as the host's scope executor does. Work retried after a lost compare-and-set needs it: the session that
+    /// lost is spent.
+    /// </summary>
+    public void UseFreshScopes(Func<HarnessFlow> freshScope) => _freshScope = freshScope;
+
     public bool TryDequeue(out Func<Task> work) => _pending.TryDequeue(out work);
 
-    public Task ExecuteAsync<TContext>(Func<TContext, Task> operation)
+    public async Task ExecuteAsync<TContext>(Func<TContext, Task> operation)
         where TContext : notnull
-        => operation(_provider.GetRequiredService<TContext>());
+    {
+        if (_freshScope is null)
+        {
+            await operation(_provider.GetRequiredService<TContext>());
 
-    public Task ExecuteAsync(Func<IServiceProvider, Task> operation)
-        => operation(_provider);
+            return;
+        }
+
+        await using var flow = _freshScope();
+        await operation(flow.Services.GetRequiredService<TContext>());
+        await flow.CommitAsync();
+    }
+
+    public async Task ExecuteAsync(Func<IServiceProvider, Task> operation)
+    {
+        if (_freshScope is null)
+        {
+            await operation(_provider);
+
+            return;
+        }
+
+        await using var flow = _freshScope();
+        await operation(flow.Services);
+        await flow.CommitAsync();
+    }
 
     public bool ScheduleAfterCommit<TContext>(Func<TContext, Task> operation)
         where TContext : notnull
     {
-        _pending.Enqueue(() => operation(_provider.GetRequiredService<TContext>()));
+        if (_freshScope is null)
+        {
+            _pending.Enqueue(() => operation(_provider.GetRequiredService<TContext>()));
+
+            return true;
+        }
+
+        // As in the host, the work runs on a scope of its own once this one has committed, and reads what committed.
+        _pending.Enqueue(() => ExecuteAsync(operation));
 
         return true;
     }
@@ -327,8 +388,22 @@ internal sealed class HarnessAvailabilityService : IAgentAvailabilityService
     public async Task<AgentAvailability> GetForDirectAsync(string agentId, CancellationToken cancellationToken = default)
         => await ResolveAsync(agentId, cancellationToken);
 
-    public Task<IReadOnlyCollection<AgentAvailability>> GetForQueueAsync(string queueId, CancellationToken cancellationToken = default)
-        => Task.FromResult<IReadOnlyCollection<AgentAvailability>>([]);
+    // The agents signed into the queue who are Available with no reservation, as the routing and over-dial paths read
+    // them. Busy, wrapping or reserved agents are left out, like an agent at capacity is in the host.
+    public async Task<IReadOnlyCollection<AgentAvailability>> GetForQueueAsync(string queueId, CancellationToken cancellationToken = default)
+    {
+        var agents = await _agentManager.GetByPresenceAsync(AgentPresenceStatus.Available, cancellationToken);
+
+        return agents
+            .Where(agent => agent.QueueIds.Contains(queueId, StringComparer.OrdinalIgnoreCase) && string.IsNullOrEmpty(agent.ActiveReservationId))
+            .Select(agent => new AgentAvailability
+            {
+                Agent = agent,
+                ActiveInteractionCount = 0,
+                LastHeartbeatUtc = DateTime.UtcNow,
+            })
+            .ToArray();
+    }
 
     private async Task<AgentAvailability> ResolveAsync(string agentId, CancellationToken cancellationToken)
     {
@@ -429,6 +504,23 @@ internal sealed class HarnessFlow : IAsyncDisposable
     /// </summary>
     public IReadOnlyList<InteractionEvent> PublishedEvents
         => ((RecordingContactCenterEventPublisher)_provider.GetRequiredService<IContactCenterEventPublisher>()).Events;
+
+    /// <summary>
+    /// Runs the work this unit deferred until after commit, then commits it, as a shell scope would.
+    /// </summary>
+    public async Task CommitAsync()
+    {
+        var scopeExecutor = (HarnessScopeExecutor)_provider.GetRequiredService<IContactCenterScopeExecutor>();
+
+        await Session.SaveChangesAsync();
+
+        while (scopeExecutor.TryDequeue(out var work))
+        {
+            await work();
+        }
+
+        await Session.SaveChangesAsync();
+    }
 
     public async ValueTask DisposeAsync()
     {

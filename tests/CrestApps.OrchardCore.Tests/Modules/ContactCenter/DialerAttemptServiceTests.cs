@@ -779,6 +779,10 @@ public sealed class DialerAttemptServiceTests
             providerCommandStateService.Object,
             outboundLineResolver ?? new NoOutboundLineResolver(),
             [addressManager ?? Mock.Of<IOmnichannelChannelEndpointManager>()],
+            Mock.Of<IQueueItemManager>(),
+            Mock.Of<global::OrchardCore.Locking.Distributed.IDistributedLock>(),
+            Mock.Of<IClock>(),
+            Microsoft.Extensions.Options.Options.Create(new ContactCenterCoordinationOptions()),
             new Mock<ILogger<DialerAttemptService>>().Object);
     }
 

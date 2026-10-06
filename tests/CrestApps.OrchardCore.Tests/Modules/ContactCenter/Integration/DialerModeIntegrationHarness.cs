@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
@@ -18,8 +19,10 @@ using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using OrchardCore.Settings;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
@@ -52,6 +55,7 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
     private readonly ServiceProvider _provider;
     private readonly TestClock _clock;
     private readonly bool _durableEventHistory;
+    private readonly HarnessShared _shared;
     private readonly List<string> _agentIds = [];
 
     private DialerModeIntegrationHarness(
@@ -60,7 +64,8 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
         string databasePath,
         ServiceProvider provider,
         TestClock clock,
-        bool durableEventHistory)
+        bool durableEventHistory,
+        HarnessShared shared)
     {
         _store = store;
         _session = session;
@@ -68,7 +73,142 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
         _provider = provider;
         _clock = clock;
         _durableEventHistory = durableEventHistory;
+        _shared = shared;
     }
+
+    /// <summary>
+    /// Gets the doubles every unit of work over the harness database shares, as the tenant's singletons are shared by
+    /// every scope: the activities, the provider commands, the provider, and the predictive doubles.
+    /// </summary>
+    internal HarnessShared Shared => _shared;
+
+    /// <summary>
+    /// The virtual campaign queue a predictive harness dials, which over-dialing requires.
+    /// </summary>
+    public static readonly string CampaignQueueId = ContactCenterConstants.CampaignQueue.CreateId(CampaignId);
+
+    /// <summary>
+    /// Gets the queue the pacing cycle dials: the campaign queue in a predictive harness, <see cref="QueueId"/> otherwise.
+    /// </summary>
+    public string PacingQueueId => _shared.Predictive ? CampaignQueueId : QueueId;
+
+    /// <summary>
+    /// Creates an over-dialing Predictive profile that passes every safeguard: an enforced cap of 3%, a target of 2%, the
+    /// abandoned-call message on, answering-machine screening off, and the profile registered with the harness's
+    /// profile reader so the authorizer, the tracker and the connector read it.
+    /// </summary>
+    public DialerProfile CreateOverDialProfile(Action<DialerProfile> configure = null)
+    {
+        var profile = CreateProfile(DialerMode.Predictive);
+        profile.PredictivePacingModel = PredictivePacingModel.OverDial;
+        profile.EnforceAbandonmentCap = true;
+        profile.MaxAbandonmentRatePercent = 3;
+        profile.TargetAbandonmentRatePercent = 2;
+        profile.AbandonmentSampleFloor = 30;
+        profile.AnswerRateSampleFloor = 50;
+        profile.MaxLinesPerAgent = 3;
+        profile.MaxCallsInFlight = 100;
+        profile.SafeHarborEnabled = true;
+        profile.SafeHarborMessage = "This call was from {company}. Please call {number}.";
+        profile.CallerId = "+15550001111";
+        profile.AnsweringMachineDetection = DialerAnsweringMachineDetection.Disabled;
+        configure?.Invoke(profile);
+        _shared.Profiles.Add(profile);
+
+        return profile;
+    }
+
+    /// <summary>
+    /// Sets what the statistics report: an answer rate measured from <paramref name="settledAttempts"/> calls, and a
+    /// rolling and long-run abandonment rate measured from <paramref name="liveAnswers"/> answers.
+    /// </summary>
+    public void SeedPacingStats(double answerRate = 0.25, long settledAttempts = 400, long liveAnswers = 100, long abandonedCalls = 0, long complianceAbandonedCalls = 0)
+        => _shared.Statistics.Seed(answerRate, settledAttempts, liveAnswers, abandonedCalls, complianceAbandonedCalls);
+
+    /// <summary>
+    /// Runs one Predictive cycle through the dialer, commits, and places the dials it staged.
+    /// </summary>
+    public Task<int> RunPredictiveCycleAsync(DialerProfile profile)
+        => RunPacingCycleAsync(profile);
+
+    /// <summary>
+    /// A person answers the placed call of the activity: the answer is ingested, committed, and the connect it schedules
+    /// after the commit runs.
+    /// </summary>
+    public Task RaiseHumanAnswerAsync(string activityId, string idempotencySuffix = "connected")
+        => RaiseCallStateAsync(activityId, VoiceCallState.Connected, idempotencySuffix);
+
+    /// <summary>
+    /// The provider reports a machine answered the screened call of the activity.
+    /// </summary>
+    public async Task RaiseMachineAnswerAsync(string activityId)
+    {
+        var interaction = await FindInteractionByActivityAsync(activityId);
+
+        await _provider.GetRequiredService<IProviderVoiceEventService>().IngestAsync(new ProviderVoiceEvent
+        {
+            ProviderName = ProviderName,
+            ProviderCallId = interaction.ProviderInteractionId,
+            State = VoiceCallState.Connected,
+            AnswerClassification = AnswerClassification.Machine,
+            OccurredUtc = _clock.UtcNow,
+            IdempotencyKey = $"{interaction.ProviderInteractionId}:machine",
+        }, TestContext.Current.CancellationToken);
+
+        await DrainAsync();
+    }
+
+    /// <summary>
+    /// The agent's leg of the call of the activity answers, joining the agent to the person.
+    /// </summary>
+    public async Task RaiseAgentLegAnsweredAsync(string activityId, string agentLegId = null)
+    {
+        var interaction = await FindInteractionByActivityAsync(activityId);
+
+        await _provider.GetRequiredService<IContactCenterAgentLegFailureService>().RecordAnsweredAsync(
+            ProviderName,
+            interaction.ProviderInteractionId,
+            agentLegId ?? $"agent-leg-{activityId}",
+            TestContext.Current.CancellationToken);
+
+        await DrainAsync();
+    }
+
+    /// <summary>
+    /// The call of the activity ends, and the routing of the ended call is released as the host's event handler does.
+    /// </summary>
+    public async Task RaiseCallEndedAsync(string activityId)
+    {
+        await RaiseCallStateAsync(activityId, VoiceCallState.Ended, "ended");
+
+        var interaction = await FindInteractionByActivityAsync(activityId);
+        var synchronization = _provider.GetService<IProviderVoiceOfferSynchronizationService>();
+
+        if (synchronization is not null)
+        {
+            await synchronization.ReconcileEndedOfferAsync(interaction.ItemId, TestContext.Current.CancellationToken);
+            await DrainAsync();
+        }
+    }
+
+    /// <summary>
+    /// Finds the queue item of the activity.
+    /// </summary>
+    public Task<QueueItem> FindQueueItemAsync(string activityId)
+        => _provider.GetRequiredService<IQueueItemManager>().FindByActivityIdAsync(activityId, TestContext.Current.CancellationToken);
+
+    /// <summary>
+    /// Counts the calls in flight without an agent.
+    /// </summary>
+    public Task<int> CountInFlightAsync()
+        => _provider.GetRequiredService<IQueueItemStore>().CountDialerInFlightAsync(PacingQueueId, TestContext.Current.CancellationToken);
+
+    /// <summary>
+    /// Lists every reservation stored.
+    /// </summary>
+    public async Task<IReadOnlyCollection<ActivityReservation>> GetReservationsAsync()
+        => (await _session.Query<ActivityReservation, ActivityReservationIndex>(collection: ContactCenterStorage.CollectionName)
+            .ListAsync(TestContext.Current.CancellationToken)).ToArray();
 
     public FakeVoiceContactCenterCallRouter Router => (FakeVoiceContactCenterCallRouter)_provider.GetRequiredService<IVoiceContactCenterCallRouter>();
 
@@ -114,7 +254,13 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
     /// that reads the history back (the stuck-Busy recovery reads each agent's latest state change) then sees exactly
     /// what the pipeline recorded. Off by default, so the history every other flow reads stays empty as it always was.
     /// </param>
-    public static async Task<DialerModeIntegrationHarness> CreateAsync(int? busyTimeoutSeconds = null, bool durableEventHistory = false)
+    /// <param name="predictive">
+    /// Whether the Predictive strategy and everything over-dialing needs are registered: the pacer, the agent connector,
+    /// the system-dial authorizer, the real abandonment tracker and policy over settable statistics, a recording
+    /// abandoned-call message, a voice provider that joins the agent through a leg of its own, and recording pacing and
+    /// deadline schedulers. Off by default, so every other flow is exactly what it always was.
+    /// </param>
+    public static async Task<DialerModeIntegrationHarness> CreateAsync(int? busyTimeoutSeconds = null, bool durableEventHistory = false, bool predictive = false)
     {
         var databasePath = Path.Combine(Path.GetTempPath(), $"cc-dialer-integration-{Guid.NewGuid():N}.db");
         var connectionString = busyTimeoutSeconds.HasValue
@@ -136,6 +282,7 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
             new InteractionIndexProvider(),
             new CallSessionIndexProvider(new ProviderIdentityResolver([])),
             new InteractionEventIndexProvider(),
+            new PredictivePacingStateIndexProvider(),
         ]);
         await store.InitializeAsync(TestContext.Current.CancellationToken);
         await store.InitializeCollectionAsync(ContactCenterStorage.CollectionName, TestContext.Current.CancellationToken);
@@ -143,13 +290,14 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
 
         var session = store.CreateSession();
         var clock = new TestClock();
-        var provider = BuildServiceProvider(session, clock, CreateAlwaysGrantingLock(), durableEventHistory);
+        var shared = new HarnessShared(predictive);
+        var provider = BuildServiceProvider(session, clock, CreateAlwaysGrantingLock(), durableEventHistory, shared);
 
         // Late-bind the harness scope executor and command processor to the built container so their deferred
         // work can resolve the real services.
         ((HarnessScopeExecutor)provider.GetRequiredService<IContactCenterScopeExecutor>()).Bind(provider);
 
-        return new DialerModeIntegrationHarness(store, session, databasePath, provider, clock, durableEventHistory);
+        return new DialerModeIntegrationHarness(store, session, databasePath, provider, clock, durableEventHistory, shared);
     }
 
     /// <summary>
@@ -163,9 +311,9 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
         agent.UserId = userId;
         agent.UserName = userId;
         agent.Name = userId;
-        agent.AllowedQueueIds = [QueueId];
+        agent.AllowedQueueIds = [PacingQueueId];
         agent.AllowedCampaignIds = [CampaignId];
-        agent.QueueIds = [QueueId];
+        agent.QueueIds = [PacingQueueId];
         agent.CampaignIds = [CampaignId];
         agent.MaxConcurrentInteractions = 1;
         agent.PresenceStatus = AgentPresenceStatus.Available;
@@ -205,7 +353,7 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
     /// Seeds a queued campaign activity (a waiting queue item plus its CRM activity) that a pacing cycle can dial.
     /// </summary>
     public Task SeedQueuedActivityAsync(string activityId, string destination)
-        => SeedQueuedActivityAsync(new OmnichannelActivity { ItemId = activityId, PreferredDestination = destination }, QueueId);
+        => SeedQueuedActivityAsync(new OmnichannelActivity { ItemId = activityId, PreferredDestination = destination }, PacingQueueId);
 
     /// <summary>
     /// Seeds a waiting queue item in <paramref name="queueId"/> for <paramref name="activity"/>, which is stored as
@@ -261,7 +409,7 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
     /// </summary>
     public async Task<int> RunPacingCycleAsync(DialerProfile profile)
     {
-        var started = await DialerService.RunCycleAsync(profile, QueueId, TestContext.Current.CancellationToken);
+        var started = await DialerService.RunCycleAsync(profile, PacingQueueId, TestContext.Current.CancellationToken);
         await _session.SaveChangesAsync(TestContext.Current.CancellationToken);
         await DrainAsync();
 
@@ -320,7 +468,7 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
     public async Task<IReadOnlyCollection<QueueItem>> GetWaitingQueueItemsAsync()
     {
         return await _provider.GetRequiredService<IQueueItemManager>()
-            .GetWaitingAsync(QueueId, TestContext.Current.CancellationToken);
+            .GetWaitingAsync(PacingQueueId, TestContext.Current.CancellationToken);
     }
 
     public async Task<Interaction> FindInteractionByActivityAsync(string activityId)
@@ -332,13 +480,21 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
     /// <summary>
     /// Opens an independent unit of work over the harness database: its own session and its own copy of every real
     /// service, as a webhook delivery processed side by side with another gets its own shell scope. Flows that must
-    /// serialize on a call share <paramref name="distributedLock"/>.
+    /// serialize on a call share <paramref name="distributedLock"/>. <paramref name="configure"/> replaces services of
+    /// this unit of work only, as a node of its own would run them.
     /// </summary>
-    public HarnessFlow OpenFlow(IDistributedLock distributedLock)
+    public HarnessFlow OpenFlow(IDistributedLock distributedLock, Action<IServiceCollection> configure = null)
     {
         var session = _store.CreateSession();
-        var provider = BuildServiceProvider(session, _clock, distributedLock, _durableEventHistory);
-        ((HarnessScopeExecutor)provider.GetRequiredService<IContactCenterScopeExecutor>()).Bind(provider);
+        var provider = BuildServiceProvider(session, _clock, distributedLock, _durableEventHistory, _shared, configure);
+        var scopeExecutor = (HarnessScopeExecutor)provider.GetRequiredService<IContactCenterScopeExecutor>();
+        scopeExecutor.Bind(provider);
+
+        // A predictive flow retries a lost claim in a fresh unit of work, as the host does.
+        if (_shared.Predictive)
+        {
+            scopeExecutor.UseFreshScopes(() => OpenFlow(distributedLock, configure));
+        }
 
         return new HarnessFlow(session, provider);
     }
@@ -367,7 +523,7 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
         TemporarySqliteDatabase.DisposeAndDelete(_store, _databasePath);
     }
 
-    private static ServiceProvider BuildServiceProvider(ISession session, TestClock clock, IDistributedLock distributedLock, bool durableEventHistory)
+    private static ServiceProvider BuildServiceProvider(ISession session, TestClock clock, IDistributedLock distributedLock, bool durableEventHistory, HarnessShared shared, Action<IServiceCollection> configure = null)
     {
         var services = new ServiceCollection();
         services.AddLogging();
@@ -404,15 +560,15 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
         services.AddSingleton<IContactCenterWorkStateActivityProjection, ContactCenterWorkStateActivityProjection>();
         services.AddSingleton<IContactCenterWorkStateService, ContactCenterWorkStateService>();
 
-        // CRM activities (in-memory).
-        services.AddSingleton<InMemoryOmnichannelActivities>();
+        // CRM activities (in-memory), shared by every unit of work over the database.
+        services.AddSingleton(shared.Activities);
         services.AddSingleton(sp => sp.GetRequiredService<InMemoryOmnichannelActivities>().BuildManager());
         services.AddSingleton<IContactCenterActivityWriter, ContactCenterActivityWriter>();
 
         // Harness doubles for the seams outside the agent-state machine.
-        services.AddSingleton<FakeVoiceContactCenterCallRouter>();
+        services.AddSingleton(shared.Router);
         services.AddSingleton<IVoiceContactCenterCallRouter>(sp => sp.GetRequiredService<FakeVoiceContactCenterCallRouter>());
-        services.AddSingleton<InMemoryProviderCommandStateService>();
+        services.AddSingleton(shared.Commands);
         services.AddSingleton<IProviderCommandStateService>(sp => sp.GetRequiredService<InMemoryProviderCommandStateService>());
         services.AddSingleton<HarnessScopeExecutor>();
         services.AddSingleton<IContactCenterScopeExecutor>(sp => sp.GetRequiredService<HarnessScopeExecutor>());
@@ -440,7 +596,7 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
         services.AddSingleton(CreateFeatureWorkManager());
         services.AddSingleton(Mock.Of<IActivityQueueManager>());
         services.AddSingleton(Mock.Of<IActivityQueueService>());
-        services.AddSingleton(Mock.Of<IContactCenterVoiceProviderResolver>());
+        services.AddSingleton(shared.Predictive ? CreateAgentLegVoiceProviderResolver() : Mock.Of<IContactCenterVoiceProviderResolver>());
         services.AddSingleton(Mock.Of<ITelephonyProviderResolver>());
         services.AddSingleton<IProviderIdentityResolver>(new ProviderIdentityResolver([]));
         // As registered in the host, the gate releases the scope's own open work before it waits on a held call.
@@ -456,7 +612,15 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
         services.AddSingleton<IAgentStateTransitionService, AgentStateTransitionService>();
         services.AddSingleton<IAgentPresenceManager, AgentPresenceManagerService>();
         services.AddSingleton<IActivityReservationService, ActivityReservationService>();
-        services.AddSingleton(Mock.Of<IDialerAbandonmentTracker>());
+        if (shared.Predictive)
+        {
+            AddPredictive(services, shared);
+        }
+        else
+        {
+            services.AddSingleton(Mock.Of<IDialerAbandonmentTracker>());
+        }
+
         services.AddSingleton<IProviderVoiceEventService, ProviderVoiceEventService>();
         services.AddSingleton(Mock.Of<ITelephonyService>());
         services.AddSingleton<IContactCenterAgentLegFailureService, ContactCenterAgentLegFailureService>();
@@ -474,7 +638,80 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
         services.AddSingleton<HarnessAssignmentService>();
         services.AddSingleton<IActivityAssignmentService>(sp => sp.GetRequiredService<HarnessAssignmentService>());
 
+        configure?.Invoke(services);
+
         return services.BuildServiceProvider();
+    }
+
+    // Everything over-dialing adds to the pipeline. The pacer, the connector, the claim, the authorizer, the tracker
+    // and the policy are the real ones; the statistics, the abandoned-call message, the routing order and the two
+    // in-process schedulers are doubles a test reads or drives.
+    private static void AddPredictive(ServiceCollection services, HarnessShared shared)
+    {
+        services.AddSingleton(shared.Profiles);
+        services.AddSingleton<IDialerProfileReader>(shared.Profiles);
+        services.AddSingleton(shared.Statistics);
+        services.AddSingleton<IDialerPacingStatisticsProvider>(shared.Statistics);
+        services.AddSingleton<IDialerAbandonmentStatisticsProvider>(shared.Statistics);
+        services.AddSingleton<IDialerAbandonmentPolicyService, DefaultDialerAbandonmentPolicyService>();
+        services.AddSingleton(shared.Treatment);
+        services.AddSingleton<IQueueTreatmentProvider>(shared.Treatment);
+        services.AddSingleton(Mock.Of<ISiteService>());
+        services.AddSingleton(Mock.Of<IShellHost>());
+        services.AddSingleton(new ShellSettings());
+        services.AddSingleton<IDialerAbandonmentTracker, DialerAbandonmentTracker>();
+
+        services.AddSingleton(shared.Deadlines);
+        services.AddSingleton<IContactCenterDeadlineScheduler>(shared.Deadlines);
+        services.AddSingleton(shared.Pacing);
+        services.AddSingleton<IPredictivePacingScheduler>(shared.Pacing);
+
+        services.AddSingleton<IActivityRoutingService, HarnessRoutingService>();
+        services.AddSingleton(CreateNoWithdrawalService());
+        services.AddSingleton(CreateOpenDialerWorkGate());
+        services.AddSingleton<IPredictivePacingStateStore, PredictivePacingStateStore>();
+        services.AddSingleton<IPredictiveSystemDialAuthorizer, PredictiveSystemDialAuthorizer>();
+        services.AddSingleton<IPredictiveOverDialPacer, PredictiveOverDialPacer>();
+        services.AddSingleton<IPredictiveAgentConnector, PredictiveAgentConnector>();
+        services.AddSingleton<IDialerStrategy, PredictiveDialerStrategy>();
+
+        // What a call's end runs through the event handlers in the host: releasing the routing of a call that ended.
+        services.AddSingleton(sp => new Lazy<IContactCenterAuditRecorder>(sp.GetRequiredService<IContactCenterAuditRecorder>));
+        services.AddSingleton<IProviderVoiceOfferSynchronizationService, ProviderVoiceOfferSynchronizationService>();
+    }
+
+    private static IContactCenterVoiceProviderResolver CreateAgentLegVoiceProviderResolver()
+    {
+        // A provider like Telnyx: the customer is dialed first, and the agent joins through a leg of their own once a
+        // person answers, connected by the Answer command.
+        var provider = new Mock<IContactCenterVoiceProvider>();
+        provider.As<IContactCenterVoiceCallControlProvider>();
+        provider.SetupGet(value => value.TechnicalName).Returns(ProviderName);
+        provider.SetupGet(value => value.DeliveryModel).Returns(VoiceProviderDeliveryModel.ServerSideAcd);
+        provider.SetupGet(value => value.Capabilities).Returns(ContactCenterVoiceProviderCapabilities.AgentConnect | ContactCenterVoiceProviderCapabilities.DialerDial);
+
+        var resolver = new Mock<IContactCenterVoiceProviderResolver>();
+        resolver.Setup(value => value.Get(It.IsAny<string>())).Returns(provider.Object);
+
+        return resolver.Object;
+    }
+
+    private static IQueuedWorkWithdrawalService CreateNoWithdrawalService()
+    {
+        var mock = new Mock<IQueuedWorkWithdrawalService>();
+        mock.Setup(service => service.TryWithdrawUnroutableAsync(It.IsAny<QueueItem>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        return mock.Object;
+    }
+
+    private static IQueuedDialerWorkGate CreateOpenDialerWorkGate()
+    {
+        var mock = new Mock<IQueuedDialerWorkGate>();
+        mock.Setup(gate => gate.TryHoldBackAsync(It.IsAny<QueueItem>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        return mock.Object;
     }
 
     private static IDialerEligibilityService CreateEligibilityService()
@@ -614,6 +851,11 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
             .Column<string>("IdempotencyKey", column => column.WithLength(128))
             .Column<string>("IdempotencyClaimKey", column => column.NotNull().WithDefault(string.Empty).WithLength(128))
             .Column<DateTime>("OccurredUtc", column => column.NotNull()),
+            collection: ContactCenterStorage.CollectionName);
+
+        await builder.CreateMapIndexTableAsync<PredictivePacingStateIndex>(table => table
+            .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<string>("QueueId", column => column.NotNull().Unique().WithLength(ContactCenterStorage.QueueIdLength)),
             collection: ContactCenterStorage.CollectionName);
 
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
