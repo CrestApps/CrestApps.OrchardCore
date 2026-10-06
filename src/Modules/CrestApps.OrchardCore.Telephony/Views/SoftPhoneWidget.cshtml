@@ -439,6 +439,13 @@
                     </select>
                     <small class="telephony-soft-phone__settings-hint">@T["Enhanced removes more background voices. Choose Light if the caller hears your voice crackle or break up, which can happen on an older computer."]</small>
                 </label>
+                <div data-telephony-voice-isolation-only>
+                    <label class="telephony-soft-phone__setting telephony-soft-phone__setting--check">
+                        <input type="checkbox" class="form-check-input" data-telephony-voice-isolation-auto-level checked>
+                        <span class="telephony-soft-phone__setting-label">@T["Automatic voice level"]</span>
+                    </label>
+                    <small class="telephony-soft-phone__settings-hint">@T["Raises a quiet voice to a normal level while you speak, and leaves the room alone while you listen. Turn it off only if you prefer to set your level yourself with Microphone boost."]</small>
+                </div>
                 <label class="telephony-soft-phone__setting telephony-soft-phone__setting--check">
                     <input type="checkbox" class="form-check-input" data-telephony-processing-ec checked>
                     <span class="telephony-soft-phone__setting-label">@T["Echo cancellation"]</span>
