@@ -22,6 +22,11 @@ internal static class AnsweredCallBridge
     /// <param name="agentId">The agent to connect.</param>
     /// <param name="agentUserId">The agent's user, which call-control authorization is keyed on.</param>
     /// <param name="reservationId">The reservation the agent holds the call under, when there is one.</param>
+    /// <param name="standbyReservationId">
+    /// The reservation to tag the agent's leg with, so a phone standing by answers it at once; only for an agent claimed
+    /// without an offer.
+    /// </param>
+    /// <param name="agentLegTimeoutSeconds">How long the agent's leg may ring, or 0 for the provider's default.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The command id, to dispatch after commit.</returns>
     public static async Task<string> RegisterAsync(
@@ -32,6 +37,8 @@ internal static class AnsweredCallBridge
         string agentId,
         string agentUserId,
         string reservationId,
+        string standbyReservationId,
+        int agentLegTimeoutSeconds,
         CancellationToken cancellationToken)
     {
         if (!session.Metadata.TryGetValue(ContactCenterConstants.CommandMetadata.CommandId, out var commandId) ||
@@ -59,6 +66,8 @@ internal static class AnsweredCallBridge
                 AgentId = agentId,
                 AgentUserId = agentUserId,
                 QueueId = session.QueueId ?? interaction.QueueId,
+                StandbyReservationId = standbyReservationId,
+                AgentLegTimeoutSeconds = agentLegTimeoutSeconds,
             }),
         }, cancellationToken);
 

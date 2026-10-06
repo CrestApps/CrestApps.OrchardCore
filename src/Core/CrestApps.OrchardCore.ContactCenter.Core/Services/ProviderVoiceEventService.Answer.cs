@@ -189,6 +189,8 @@ public sealed partial class ProviderVoiceEventService
             session.AgentId,
             agent.UserId,
             reservationId: null,
+            standbyReservationId: null,
+            agentLegTimeoutSeconds: 0,
             cancellationToken);
 
         _scopeExecutor.ScheduleAfterCommit<IProviderCommandProcessor>(processor =>

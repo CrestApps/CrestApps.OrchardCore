@@ -26,4 +26,24 @@ public interface IPredictiveAgentConnector
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The number of calls claimed or abandoned.</returns>
     Task<int> ServiceWaitingAsync(string queueId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gives up on the leg of the agent claimed for an answered over-dialed call when it has not answered: the leg is hung
+    /// up, the agent released back to work, and the person given the abandoned-call message. Does nothing once the agent
+    /// has joined, the call has ended or been abandoned, or no agent was claimed, so it is safe to race the answer.
+    /// </summary>
+    /// <param name="interactionId">The interaction of the answered call.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns><see langword="true"/> when the call was given up on.</returns>
+    Task<bool> ReleaseUnansweredAgentLegAsync(string interactionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Settles every over-dialed call a person answered that nothing has connected or abandoned well after the answer:
+    /// one never claimed for an agent is abandoned with the message, and one whose claimed agent never joined is given up
+    /// on as <see cref="ReleaseUnansweredAgentLegAsync"/> does. It is the backstop for a connect or a deadline lost with
+    /// the node that held it.
+    /// </summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The number of calls settled.</returns>
+    Task<int> SweepAnsweredUnconnectedAsync(CancellationToken cancellationToken = default);
 }

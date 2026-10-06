@@ -129,4 +129,12 @@ public interface IQueueItemStore : ICatalog<QueueItem>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The distinct queue identifiers.</returns>
     Task<IReadOnlyCollection<string>> GetDialerInFlightQueueIdsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists the calls an over-dialing Predictive campaign placed without an agent that an agent has since been claimed
+    /// for and that are still Assigned: the calls whose agent is joining, or should have joined.
+    /// </summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The claimed items of every campaign queue.</returns>
+    Task<IReadOnlyCollection<QueueItem>> GetDialerClaimedAsync(CancellationToken cancellationToken = default);
 }

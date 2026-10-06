@@ -77,18 +77,22 @@ public sealed class ActivityQueueService : IActivityQueueService
         => EnqueueAsync(activityItemId, queueId, priority, dialerProfileId: null, cancellationToken);
 
     /// <inheritdoc/>
-    public async Task<QueueItem> EnqueueAsync(string activityItemId, string queueId, InteractionPriority? priority, string dialerProfileId, CancellationToken cancellationToken = default)
+    public Task<QueueItem> EnqueueAsync(string activityItemId, string queueId, InteractionPriority? priority, string dialerProfileId, CancellationToken cancellationToken = default)
+        => EnqueueAsync(activityItemId, queueId, priority, dialerProfileId, requiresReservedAgent: false, cancellationToken);
+
+    /// <inheritdoc/>
+    public async Task<QueueItem> EnqueueAsync(string activityItemId, string queueId, InteractionPriority? priority, string dialerProfileId, bool requiresReservedAgent, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(activityItemId);
         ArgumentException.ThrowIfNullOrEmpty(queueId);
 
         try
         {
-            return await EnqueueCoreAsync(activityItemId, queueId, priority, dialerProfileId, cancellationToken);
+            return await EnqueueCoreAsync(activityItemId, queueId, priority, dialerProfileId, requiresReservedAgent, cancellationToken);
         }
         catch (Exception exception) when (IsEnqueueConflict(exception))
         {
-            return await RetryEnqueueInFreshScopeAsync(activityItemId, queueId, priority, dialerProfileId, cancellationToken);
+            return await RetryEnqueueInFreshScopeAsync(activityItemId, queueId, priority, dialerProfileId, requiresReservedAgent, cancellationToken);
         }
     }
 
@@ -97,6 +101,7 @@ public sealed class ActivityQueueService : IActivityQueueService
         string queueId,
         InteractionPriority? priority,
         string dialerProfileId,
+        bool requiresReservedAgent,
         CancellationToken cancellationToken)
     {
         var existing = await _queueItemManager.FindByActivityIdAsync(activityItemId, cancellationToken);
@@ -112,6 +117,7 @@ public sealed class ActivityQueueService : IActivityQueueService
         item.QueueId = queueId;
         item.ActivityItemId = activityItemId;
         item.DialerProfileId = dialerProfileId;
+        item.RequiresReservedAgent = requiresReservedAgent;
         item.Priority = priority ?? queue?.DefaultPriority ?? InteractionPriority.Normal;
         item.TransitionTo(QueueItemStatus.Waiting);
         var existingWorkState = activity is null
@@ -157,6 +163,7 @@ public sealed class ActivityQueueService : IActivityQueueService
         string queueId,
         InteractionPriority? priority,
         string dialerProfileId,
+        bool requiresReservedAgent,
         CancellationToken cancellationToken)
     {
         Exception lastException = null;
@@ -169,7 +176,7 @@ public sealed class ActivityQueueService : IActivityQueueService
             {
                 await _scopeExecutor.ExecuteAsync<IActivityQueueService>(async queueService =>
                 {
-                    item = await queueService.EnqueueAsync(activityItemId, queueId, priority, dialerProfileId, cancellationToken);
+                    item = await queueService.EnqueueAsync(activityItemId, queueId, priority, dialerProfileId, requiresReservedAgent, cancellationToken);
                 });
 
                 return item;

@@ -93,9 +93,28 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
             .Where(ContactCenterConstants.IsCampaignQueue)
             .ToArray();
 
-        // The safety net for an answered over-dialed call whose connect was lost -- the node stopped between the answer
-        // and the connect: every queue with calls still waiting for an agent is paced, and the pacing run connects or
-        // abandons them first, even once the queue has nothing left to dial.
+        // The safety net for an answered over-dialed call whose connect or agent-leg deadline was lost -- the node that held
+        // it stopped. The sweep gives the message to every call answered longer ago than the sweep delay that nothing
+        // connected or abandoned, and gives up on every claimed agent whose leg never answered. Every queue with calls in
+        // flight is then paced, so one whose last cycle was lost with the node is paced again even with nothing to dial.
+        var connector = serviceProvider.GetService<IPredictiveAgentConnector>();
+
+        if (connector is not null)
+        {
+            try
+            {
+                await connector.SweepAnsweredUnconnectedAsync(runToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogError(ex, "The sweep of answered over-dialed calls nothing connected failed; it runs again on the next tick.");
+            }
+        }
+
         if (pacingScheduler is not null)
         {
             foreach (var queueId in await queueItemStore.GetDialerInFlightQueueIdsAsync(runToken))

@@ -29,7 +29,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// the interaction make every later one a no-op.
 /// </para>
 /// </remarks>
-public sealed class PredictiveAgentConnector : IPredictiveAgentConnector
+public sealed partial class PredictiveAgentConnector : IPredictiveAgentConnector
 {
     private const int MaxClaimAttempts = 3;
 
@@ -44,6 +44,7 @@ public sealed class PredictiveAgentConnector : IPredictiveAgentConnector
     private readonly IActivityReservationService _reservationService;
     private readonly IDialerProfileReader _profileReader;
     private readonly IDialerAbandonmentTracker _abandonmentTracker;
+    private readonly IDialerPacingStatisticsProvider _pacingStatistics;
     private readonly IProviderCommandStateService _providerCommandStateService;
     private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
     private readonly IContactCenterEventPublisher _publisher;
@@ -51,6 +52,7 @@ public sealed class PredictiveAgentConnector : IPredictiveAgentConnector
     private readonly IContactCenterDeadlineScheduler _deadlineScheduler;
     private readonly IPredictivePacingScheduler _pacingScheduler;
     private readonly IDistributedLock _distributedLock;
+    private readonly IContactCenterAgentLegFailureService _agentLegFailureService;
     private readonly ISession _session;
     private readonly IClock _clock;
     private readonly ContactCenterPredictiveDialingOptions _options;
@@ -68,6 +70,7 @@ public sealed class PredictiveAgentConnector : IPredictiveAgentConnector
     /// <param name="reservationService">The reservation service that claims an agent.</param>
     /// <param name="profileReader">The dialer profiles, for the connect wait.</param>
     /// <param name="abandonmentTracker">The tracker that plays the abandoned-call message and counts the call abandoned.</param>
+    /// <param name="pacingStatistics">The measured connect times, which bound the profile's connect wait.</param>
     /// <param name="providerCommandStateService">The durable provider commands, for the command that bridges the agent.</param>
     /// <param name="voiceProviderResolver">The voice providers, to know whether the agent joins through a leg of their own.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
@@ -75,6 +78,7 @@ public sealed class PredictiveAgentConnector : IPredictiveAgentConnector
     /// <param name="deadlineScheduler">The in-process scheduler that retries the connect while the profile waits.</param>
     /// <param name="pacingScheduler">The scheduler that paces the queue again once a call is settled.</param>
     /// <param name="distributedLock">The lock that lets one delivery connect a call at a time.</param>
+    /// <param name="agentLegFailureService">The agent-leg failure path a claimed agent's unanswered leg is given up through.</param>
     /// <param name="session">The YesSql session.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="options">The predictive dialing options.</param>
@@ -89,6 +93,7 @@ public sealed class PredictiveAgentConnector : IPredictiveAgentConnector
         IActivityReservationService reservationService,
         IDialerProfileReader profileReader,
         IDialerAbandonmentTracker abandonmentTracker,
+        IDialerPacingStatisticsProvider pacingStatistics,
         IProviderCommandStateService providerCommandStateService,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
         IContactCenterEventPublisher publisher,
@@ -96,6 +101,7 @@ public sealed class PredictiveAgentConnector : IPredictiveAgentConnector
         IContactCenterDeadlineScheduler deadlineScheduler,
         IPredictivePacingScheduler pacingScheduler,
         IDistributedLock distributedLock,
+        IContactCenterAgentLegFailureService agentLegFailureService,
         ISession session,
         IClock clock,
         IOptions<ContactCenterPredictiveDialingOptions> options,
@@ -110,6 +116,7 @@ public sealed class PredictiveAgentConnector : IPredictiveAgentConnector
         _reservationService = reservationService;
         _profileReader = profileReader;
         _abandonmentTracker = abandonmentTracker;
+        _pacingStatistics = pacingStatistics;
         _providerCommandStateService = providerCommandStateService;
         _voiceProviderResolver = voiceProviderResolver;
         _publisher = publisher;
@@ -117,6 +124,7 @@ public sealed class PredictiveAgentConnector : IPredictiveAgentConnector
         _deadlineScheduler = deadlineScheduler;
         _pacingScheduler = pacingScheduler;
         _distributedLock = distributedLock;
+        _agentLegFailureService = agentLegFailureService;
         _session = session;
         _clock = clock;
         _options = options.Value;
@@ -136,6 +144,13 @@ public sealed class PredictiveAgentConnector : IPredictiveAgentConnector
     /// <param name="interactionId">The interaction of the call.</param>
     public static string GetConnectDeadlineKey(string interactionId)
         => $"predictive-connect:{interactionId}";
+
+    /// <summary>
+    /// The key of the in-process deadline that gives up on a claimed agent's leg that has not answered.
+    /// </summary>
+    /// <param name="interactionId">The interaction of the call.</param>
+    public static string GetAgentLegDeadlineKey(string interactionId)
+        => $"predictive-agent-leg:{interactionId}";
 
     /// <inheritdoc/>
     public Task<PredictiveConnectOutcome> ConnectAsync(string interactionId, CancellationToken cancellationToken = default)
@@ -265,7 +280,7 @@ public sealed class PredictiveAgentConnector : IPredictiveAgentConnector
         }
 
         var profile = await _profileReader.FindByIdAsync(DialerCallMetadata.GetDialerProfileId(interaction), cancellationToken);
-        var waitUntilUtc = liveAnsweredUtc.Value.AddMilliseconds(Math.Max(0, profile?.ConnectWaitMilliseconds ?? 0));
+        var waitUntilUtc = liveAnsweredUtc.Value.AddMilliseconds(await ResolveConnectWaitAsync(profile, cancellationToken));
 
         if (_clock.UtcNow < waitUntilUtc)
         {
@@ -284,9 +299,35 @@ public sealed class PredictiveAgentConnector : IPredictiveAgentConnector
             return PredictiveConnectOutcome.Waiting;
         }
 
-        await AbandonAsync(interaction, session, queueItem?.QueueId ?? interaction.QueueId, cancellationToken);
+        await AbandonAsync(interaction, session.ProviderName, session.ProviderCallId, queueItem?.QueueId ?? interaction.QueueId, DialerAbandonment.Reasons.NoAgentAvailable, cancellationToken);
 
         return PredictiveConnectOutcome.Abandoned;
+    }
+
+    private async Task<int> ResolveConnectWaitAsync(DialerProfile profile, CancellationToken cancellationToken)
+    {
+        if (profile is null || profile.ConnectWaitMilliseconds <= 0)
+        {
+            return 0;
+        }
+
+        // The wait is only allowed while the measured connect time leaves room for it within the two seconds after which
+        // the call is abandoned; a profile saved when the connects were quicker is held to today's measurement.
+        DialerPacingStatistics statistics = null;
+
+        try
+        {
+            statistics = await _pacingStatistics.GetStatisticsAsync(
+                profile.ItemId,
+                TimeSpan.FromMinutes(Math.Max(1, profile.AnswerRateWindowMinutes)),
+                cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "The connect times of dialer profile '{ProfileId}' could not be read; the call does not wait for an agent.", profile.ItemId.SanitizeLogValue());
+        }
+
+        return PredictiveConnectWait.ResolveEffectiveMilliseconds(profile.ConnectWaitMilliseconds, statistics);
     }
 
     private async Task<bool> TryClaimAsync(
@@ -320,6 +361,11 @@ public sealed class PredictiveAgentConnector : IPredictiveAgentConnector
                             agent.ItemId,
                             agent.UserId,
                             claimed.ItemId,
+
+                            // The agent's phone is standing by and answers a leg carrying this claim at once; the
+                            // provider gives up on the leg a little after the deadline that releases the agent.
+                            standbyReservationId: claimed.ItemId,
+                            agentLegTimeoutSeconds: AgentLegProviderTimeoutSeconds(),
                             cancellationToken);
                     }
                     else
@@ -343,6 +389,10 @@ public sealed class PredictiveAgentConnector : IPredictiveAgentConnector
             {
                 _scopeExecutor.ScheduleAfterCommit<IProviderCommandProcessor>(processor =>
                     processor.DispatchAsync(commandId, CancellationToken.None));
+
+                // The agent's leg has a short time to answer; a phone that does not pick up must not leave the person
+                // listening to silence. The sweep is the backstop should this node stop before the deadline.
+                ScheduleAgentLegDeadline(interaction.ItemId, _clock.UtcNow.Add(_options.AgentLegAnswerTimeout));
             }
 
             if (_logger.IsEnabled(LogLevel.Information))
@@ -413,33 +463,40 @@ public sealed class PredictiveAgentConnector : IPredictiveAgentConnector
         }
     }
 
-    private async Task AbandonAsync(Interaction interaction, CallSession session, string queueId, CancellationToken cancellationToken)
+    private async Task AbandonAsync(
+        Interaction interaction,
+        string providerName,
+        string providerCallId,
+        string queueId,
+        string reason,
+        CancellationToken cancellationToken)
     {
         _deadlineScheduler.Cancel(GetConnectDeadlineKey(interaction.ItemId));
 
         // The message starts before anything is written: the person is listening to silence until it does.
         var messageStarted = await _abandonmentTracker.AbandonAsync(
             interaction,
-            session.ProviderName,
-            session.ProviderCallId,
-            DialerAbandonment.Reasons.NoAgentAvailable,
+            providerName,
+            providerCallId,
+            reason,
             cancellationToken);
 
         // A call nobody could take is abandoned whatever else happens; the mark is what keeps a later connect, a retry
         // or the sweep from acting on it again.
-        DialerCallMetadata.MarkAbandoned(interaction, DialerAbandonment.Reasons.NoAgentAvailable);
+        DialerCallMetadata.MarkAbandoned(interaction, reason);
         await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
         await _session.SaveChangesAsync(cancellationToken);
 
         if (!messageStarted)
         {
-            await HangUpAsync(session, interaction);
+            await HangUpLegAsync(providerName, providerCallId, interaction);
         }
 
         _logger.LogWarning(
-            "No agent was free for over-dialed call '{ProviderCallId}' (interaction '{InteractionId}'); it was abandoned {How}.",
-            session.ProviderCallId.SanitizeLogValue(),
+            "Over-dialed call '{ProviderCallId}' (interaction '{InteractionId}') was abandoned ({Reason}) {How}.",
+            providerCallId.SanitizeLogValue(),
             interaction.ItemId.SanitizeLogValue(),
+            reason.SanitizeLogValue(),
             messageStarted ? "with the abandoned-call message" : "and hung up, because no abandoned-call message could be played");
 
         if (!string.IsNullOrEmpty(queueId))
@@ -448,10 +505,12 @@ public sealed class PredictiveAgentConnector : IPredictiveAgentConnector
         }
     }
 
-    private async Task HangUpAsync(CallSession session, Interaction interaction)
+    private async Task HangUpLegAsync(string providerName, string providerCallId, Interaction interaction)
     {
-        var providerName = session.ProviderName;
-        var providerCallId = session.ProviderCallId;
+        if (string.IsNullOrEmpty(providerName) || string.IsNullOrEmpty(providerCallId))
+        {
+            return;
+        }
 
         await _scopeExecutor.ExecuteAsync<ITelephonyProviderResolver>(async resolver =>
         {
@@ -467,7 +526,7 @@ public sealed class PredictiveAgentConnector : IPredictiveAgentConnector
                 if (!result.Succeeded)
                 {
                     _logger.LogWarning(
-                        "The provider did not confirm hanging up abandoned call '{ProviderCallId}' (interaction '{InteractionId}'): {Error}.",
+                        "The provider did not confirm hanging up leg '{ProviderCallId}' of over-dialed call '{InteractionId}': {Error}.",
                         providerCallId.SanitizeLogValue(),
                         interaction.ItemId.SanitizeLogValue(),
                         result.Error.SanitizeLogValue());
@@ -475,7 +534,7 @@ public sealed class PredictiveAgentConnector : IPredictiveAgentConnector
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                _logger.LogWarning(ex, "Could not hang up abandoned call '{ProviderCallId}'.", providerCallId.SanitizeLogValue());
+                _logger.LogWarning(ex, "Could not hang up leg '{ProviderCallId}' of an over-dialed call.", providerCallId.SanitizeLogValue());
             }
         });
     }
