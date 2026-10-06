@@ -22,6 +22,7 @@ public sealed class ActivityDispositionAppliedPublisher : IActivityDispositionHa
 {
     private readonly ICatalog<OmnichannelDisposition> _dispositionsCatalog;
     private readonly IContactCenterEventPublisher _publisher;
+    private readonly IInteractionManager _interactionManager;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -29,14 +30,17 @@ public sealed class ActivityDispositionAppliedPublisher : IActivityDispositionHa
     /// </summary>
     /// <param name="dispositionsCatalog">The dispositions, for the applied disposition's name and outcome.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
+    /// <param name="interactionManager">The interactions, read for the dialer attempt the activity was completed after.</param>
     /// <param name="logger">The logger.</param>
     public ActivityDispositionAppliedPublisher(
         ICatalog<OmnichannelDisposition> dispositionsCatalog,
         IContactCenterEventPublisher publisher,
+        IInteractionManager interactionManager,
         ILogger<ActivityDispositionAppliedPublisher> logger)
     {
         _dispositionsCatalog = dispositionsCatalog;
         _publisher = publisher;
+        _interactionManager = interactionManager;
         _logger = logger;
     }
 
@@ -73,6 +77,26 @@ public sealed class ActivityDispositionAppliedPublisher : IActivityDispositionHa
             CompletedById = activity.CompletedById,
         };
 
+        // What a workflow needs to decide whether, and when, the dialer calls again: which attempt this was, how many
+        // the profile allows, and how the call ended.
+        var interaction = await _interactionManager.FindByActivityIdAsync(activity.ItemId, cancellationToken);
+
+        if (interaction is not null)
+        {
+            data.InteractionId = interaction.ItemId;
+
+            if (DialerCallMetadata.IsCampaignDial(interaction))
+            {
+                data.DialerProfileId = DialerCallMetadata.GetDialerProfileId(interaction);
+                data.DialerOutcome = DialerCallMetadata.GetOutcome(interaction);
+                data.AttemptNumber = DialerCallMetadata.GetAttemptNumber(interaction) ?? Math.Max(1, activity.Attempts);
+                data.MaxAttempts = DialerCallMetadata.GetMaxAttempts(interaction);
+                data.RemainingAttempts = data.MaxAttempts.HasValue
+                    ? Math.Max(0, data.MaxAttempts.Value - data.AttemptNumber.Value)
+                    : null;
+            }
+        }
+
         var actor = request.Source switch
         {
             ActivityDispositionSource.Agent when !string.IsNullOrEmpty(request.ActorId) => new ContactCenterActor(ContactCenterActorType.Agent, request.ActorId),
@@ -100,11 +124,15 @@ public sealed class ActivityDispositionAppliedPublisher : IActivityDispositionHa
         if (_logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation(
-                "Published ActivityDispositionApplied for activity '{ActivityId}': disposition '{Disposition}', outcome {Outcome}, source {Source}.",
+                "Published ActivityDispositionApplied for activity '{ActivityId}': disposition '{Disposition}', outcome {Outcome}, source {Source}, dialer outcome {DialerOutcome}, attempt {AttemptNumber} of {MaxAttempts} ({RemainingAttempts} left).",
                 activity.ItemId.SanitizeLogValue(),
                 data.DispositionName.SanitizeLogValue(),
                 data.Outcome,
-                data.Source);
+                data.Source,
+                data.DialerOutcome,
+                data.AttemptNumber,
+                data.MaxAttempts,
+                data.RemainingAttempts);
         }
     }
 }

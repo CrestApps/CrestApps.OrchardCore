@@ -118,9 +118,34 @@ public sealed class ContactCenterWorkState : CatalogItem, IModifiedUtcAwareModel
     public DateTime? AssignedToUtc { get; set; }
 
     /// <summary>
-    /// Gets or sets the number of outbound attempts the dialer has made for the activity.
+    /// Gets or sets the attempt number of the activity, counted from one: the attempt the dialer last placed, or is
+    /// about to place when <see cref="DialCount"/> is zero. A follow-up activity created to try a contact again starts
+    /// at the attempt after the one it follows, so the count carries across the chain of activities.
     /// </summary>
     public int Attempts { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many calls the dialer has placed for this activity itself. The first call is the activity's
+    /// own <see cref="Attempts"/>; only a call after it counts as a further attempt.
+    /// </summary>
+    public int DialCount { get; set; }
+
+    /// <summary>
+    /// The attempt number the next call for the activity would be.
+    /// </summary>
+    /// <param name="workState">The work state, or <see langword="null"/> when the activity has none yet.</param>
+    /// <param name="activityAttempts">The attempt number the activity itself carries.</param>
+    public static int NextAttemptNumber(ContactCenterWorkState workState, int activityAttempts)
+    {
+        if (workState is null)
+        {
+            return Math.Max(1, activityAttempts);
+        }
+
+        var current = Math.Max(1, workState.Attempts);
+
+        return workState.DialCount > 0 ? current + 1 : current;
+    }
 
     /// <summary>
     /// Gets or sets the UTC time the work state was created.

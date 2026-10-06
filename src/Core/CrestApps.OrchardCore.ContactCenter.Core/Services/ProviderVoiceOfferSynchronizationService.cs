@@ -110,8 +110,13 @@ public sealed partial class ProviderVoiceOfferSynchronizationService : IProvider
         // A call a machine answered, and that was hung up before any agent joined it, was never the agent's either:
         // it is released like a call nobody answered, so the agent goes straight back to ready and the queue lets go.
         var isBackInQueue = queueItem?.Status is QueueItemStatus.Waiting or QueueItemStatus.Reserved;
+        // A campaign call is answered before its agent is joined, and routing accepted it for the agent before it was
+        // even placed, so neither the answer nor the accepted offer says the agent took it: only an agent actually
+        // connected does. One the customer hung up on while the agent was being joined is released like a call nobody
+        // answered, and the dialer dispositions it.
         var answeredByMachine = session?.HangupCause == HangupCause.AnsweringMachine && !HadJoinedAgentLeg(session);
-        var wasAnsweredByAgent = providerReportedAnswered && !answeredByMachine &&
+        var dialerCallWithoutAgent = DialerCallMetadata.IsAwaitingAgent(interaction) && !HadJoinedAgentLeg(session);
+        var wasAnsweredByAgent = providerReportedAnswered && !answeredByMachine && !dialerCallWithoutAgent &&
             (queueItem?.Status == QueueItemStatus.Assigned ||
                 reservations.Any(reservation => reservation.Status == ReservationStatus.Accepted) ||
                 (!isBackInQueue && (interaction.WrapUpStartedUtc.HasValue || HadJoinedAgentLeg(session))));

@@ -294,7 +294,8 @@ public sealed class DeclinedOfferRoutingTests
                 (IQueuedWorkWithdrawalService)withdrawalService,
                 (IActivityRoutingService)routingService,
                 businessHours.Object,
-                new SignedInAgents(Harness, availability));
+                new SignedInAgents(Harness, availability),
+                Mock.Of<IQueuedDialerWorkGate>());
 
             var preDial = new Mock<IAgentPreDialCoordinator>();
             preDial

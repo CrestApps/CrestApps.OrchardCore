@@ -109,6 +109,7 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
                     context.ReservationManager,
                     context.AgentManager,
                     context.QueueItemStore,
+                    context.ActivityManager,
                     cancellationToken);
                 break;
 
@@ -119,6 +120,7 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
                     context.ReservationManager,
                     context.AgentManager,
                     context.QueueItemStore,
+                    context.ActivityManager,
                     cancellationToken);
                 break;
 
@@ -147,6 +149,7 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
                     interactionEvent,
                     context.InteractionManager,
                     context.AgentManager,
+                    context.ActivityManager,
                     cancellationToken);
                 break;
 
@@ -164,6 +167,7 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
         InteractionEvent interactionEvent,
         IInteractionManager interactionManager,
         IAgentProfileManager agentManager,
+        IOmnichannelActivityManager activityManager,
         CancellationToken cancellationToken)
     {
         var interactionId = string.IsNullOrEmpty(interactionEvent.InteractionId)
@@ -213,6 +217,8 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
             EventType = interactionEvent.EventType,
             Status = interaction.Status.ToString(),
             Direction = interaction.Direction.ToString(),
+            ActivityItemId = interaction.ActivityItemId,
+            AutoOpenActivity = await IsPacedDialAgentJoinedAsync(interactionEvent, interaction, activityManager, cancellationToken),
             ServerTimeUtc = _clock.UtcNow,
         }, cancellationToken);
 
@@ -310,7 +316,10 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
             AgentId = reservation.AgentId,
             ReservationId = reservation.ItemId,
             ActivityItemId = reservation.ActivityItemId,
-            AutoOpenActivity = DialerActivitySourceHelper.IsDialerSource(activity?.Source),
+            // A preview opens the record so the agent can review it before dialing. An automatic dial is the dialer's
+            // until a customer answers and the agent is connected, so nothing pops for it here.
+            AutoOpenActivity = DialerActivitySourceHelper.IsDialerSource(activity?.Source) &&
+                AgentOfferKindHelper.FromActivitySource(activity?.Source) != AgentOfferKind.AutoDial,
             Kind = AgentOfferKindHelper.FromActivitySource(activity?.Source),
             QueueItemId = reservation.QueueItemId,
             QueueId = reservation.QueueId,
@@ -397,6 +406,7 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
         IActivityReservationManager reservationManager,
         IAgentProfileManager agentManager,
         IQueueItemStore queueItemStore,
+        IOmnichannelActivityManager activityManager,
         CancellationToken cancellationToken)
     {
         var reservation = await ResolveReservationAsync(interactionEvent.AggregateId, reservationManager, cancellationToken);
@@ -405,6 +415,10 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
         {
             return;
         }
+
+        var activity = string.IsNullOrEmpty(reservation.ActivityItemId)
+            ? null
+            : await activityManager.FindByIdAsync(reservation.ActivityItemId, cancellationToken);
 
         var resolvedReason = reservation.Status == ReservationStatus.Expired
             ? AgentOfferRevokedReason.Expired
@@ -420,9 +434,30 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
             ActivityItemId = reservation.ActivityItemId,
             QueueId = reservation.QueueId,
             Reason = resolvedReason,
+            Kind = AgentOfferKindHelper.FromActivitySource(activity?.Source),
         }, cancellationToken);
 
         await BroadcastQueueStatsAsync(reservation.QueueId, queueItemStore, cancellationToken);
+    }
+
+    // The moment a call the dialer placed becomes the agent's: their leg answered, or -- with a provider that has the
+    // agent on the call from the start -- the call connected. Only then does the record open on the agent's screen.
+    private static async Task<bool> IsPacedDialAgentJoinedAsync(
+        InteractionEvent interactionEvent,
+        Interaction interaction,
+        IOmnichannelActivityManager activityManager,
+        CancellationToken cancellationToken)
+    {
+        if (interactionEvent.EventType is not ContactCenterConstants.Events.AgentLegAnswered and not ContactCenterConstants.Events.CallConnected ||
+            !DialerCallMetadata.IsCampaignDial(interaction) ||
+            !DialerCallMetadata.HasAgentJoined(interaction))
+        {
+            return false;
+        }
+
+        var activity = await activityManager.FindByIdAsync(interaction.ActivityItemId, cancellationToken);
+
+        return AgentOfferKindHelper.FromActivitySource(activity?.Source) == AgentOfferKind.AutoDial;
     }
 
     private static async Task<ActivityReservation> ResolveReservationAsync(

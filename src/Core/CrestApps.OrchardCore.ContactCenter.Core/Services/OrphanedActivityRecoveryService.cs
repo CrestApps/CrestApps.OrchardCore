@@ -41,6 +41,7 @@ public sealed class OrphanedActivityRecoveryService : IOrphanedActivityRecoveryS
     private readonly IQueueItemManager _queueItemManager;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly IDialerAttemptFinalizer _dialerAttemptFinalizer;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrphanedActivityRecoveryService"/> class.
@@ -54,6 +55,10 @@ public sealed class OrphanedActivityRecoveryService : IOrphanedActivityRecoveryS
     /// <param name="queueItemManager">The queue item manager used to drop any lingering queue item.</param>
     /// <param name="clock">The clock used to evaluate staleness and stamp completion.</param>
     /// <param name="logger">The logger.</param>
+    /// <param name="dialerAttemptFinalizer">
+    /// The finalizer that dispositions a campaign attempt that ended before an agent was connected, when the call's own
+    /// end did not (the event was lost or failed), instead of dialing it again or failing it.
+    /// </param>
     public OrphanedActivityRecoveryService(
         ISession session,
         IInteractionManager interactionManager,
@@ -63,7 +68,8 @@ public sealed class OrphanedActivityRecoveryService : IOrphanedActivityRecoveryS
         IActivityQueueService queueService,
         IQueueItemManager queueItemManager,
         IClock clock,
-        ILogger<OrphanedActivityRecoveryService> logger)
+        ILogger<OrphanedActivityRecoveryService> logger,
+        IDialerAttemptFinalizer dialerAttemptFinalizer)
     {
         _session = session;
         _interactionManager = interactionManager;
@@ -74,6 +80,7 @@ public sealed class OrphanedActivityRecoveryService : IOrphanedActivityRecoveryS
         _queueItemManager = queueItemManager;
         _clock = clock;
         _logger = logger;
+        _dialerAttemptFinalizer = dialerAttemptFinalizer;
     }
 
     /// <inheritdoc/>
@@ -174,6 +181,13 @@ public sealed class OrphanedActivityRecoveryService : IOrphanedActivityRecoveryS
             return false;
         }
 
+        // A campaign call that ended before any agent was connected is the dialer's to disposition: its own end should
+        // have done it, and when that was lost this finishes it the same way rather than dialing it again or failing it.
+        if (await TryFinalizeDialerAttemptAsync(interaction, cancellationToken))
+        {
+            return true;
+        }
+
         // A record that reached InProgress, or whose interaction was answered, may already have reached the
         // customer. Never re-dial it; move it to a terminal state so it stops inflating the in-progress count. A
         // record still in a pre-answer status (Reserved/Dialing/Awaiting*) with no answered interaction was never
@@ -195,6 +209,53 @@ public sealed class OrphanedActivityRecoveryService : IOrphanedActivityRecoveryS
         }
 
         return true;
+    }
+
+    private async Task<bool> TryFinalizeDialerAttemptAsync(Interaction interaction, CancellationToken cancellationToken)
+    {
+        if (_dialerAttemptFinalizer is null || !DialerCallMetadata.IsAwaitingAgent(interaction))
+        {
+            return false;
+        }
+
+        var outcome = DialerCallMetadata.GetOutcome(interaction);
+
+        if (string.IsNullOrEmpty(outcome))
+        {
+            outcome = !interaction.AnsweredUtc.HasValue
+                ? DialerAttemptOutcomes.NoAnswer
+                : WasAnsweredByMachine(interaction)
+                    ? DialerAttemptOutcomes.AnsweringMachine
+                    : DialerAttemptOutcomes.Disconnected;
+        }
+
+        if (!DialerAttemptOutcomes.IsPreConnect(outcome))
+        {
+            return false;
+        }
+
+        var result = await _dialerAttemptFinalizer.FinalizeAsync(new DialerAttemptFinalizationRequest
+        {
+            ActivityItemId = interaction.ActivityItemId,
+            InteractionId = interaction.ItemId,
+            Outcome = outcome,
+            Trigger = "OrphanRecovery",
+        }, cancellationToken);
+
+        if (result is DialerAttemptFinalizationResult.Dispositioned or DialerAttemptFinalizationResult.AlreadyFinished)
+        {
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Recovered orphaned dialer activity '{ActivityItemId}' by dispositioning its unconnected attempt as {Outcome}; it was not re-dialed.",
+                    interaction.ActivityItemId.SanitizeLogValue(),
+                    outcome);
+            }
+
+            return true;
+        }
+
+        return false;
     }
 
     private async Task TerminateAsync(OmnichannelActivity activity, DateTime now, CancellationToken cancellationToken)

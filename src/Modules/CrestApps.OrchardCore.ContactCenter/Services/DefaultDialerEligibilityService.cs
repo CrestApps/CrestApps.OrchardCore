@@ -106,14 +106,14 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
         }
 
         var workState = await _workStateService.GetAsync(activity.ItemId, cancellationToken);
-        var attempts = workState?.Attempts ?? 0;
 
-        // The pre-attempt check counts the attempt about to be made (attempts == MaxAttempts means the limit is
-        // already spent). The dispatch re-validation runs after that attempt was recorded, so it must exclude the
-        // in-flight attempt or a single-attempt profile would suppress its own only call before it ever dials.
-        var attemptsExceedLimit = context.AttemptAlreadyCounted
-            ? attempts > profile.MaxAttempts
-            : attempts >= profile.MaxAttempts;
+        // The pre-attempt check looks at the attempt about to be made: the activity's own attempt number on its first
+        // call, the one after it on a further call. The dispatch re-validation runs after that attempt was recorded,
+        // so it checks the recorded attempt itself, or a single-attempt profile would suppress its only call.
+        var attemptNumber = context.AttemptAlreadyCounted
+            ? Math.Max(1, workState?.Attempts ?? activity.Attempts)
+            : ContactCenterWorkState.NextAttemptNumber(workState, activity.Attempts);
+        var attemptsExceedLimit = attemptNumber > profile.MaxAttempts;
 
         if (attemptsExceedLimit)
         {

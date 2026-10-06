@@ -99,13 +99,15 @@ public sealed partial class ProviderVoiceEventService
             }
         }
 
-        var provider = _voiceProviderResolver.Get(session.ProviderName);
-
-        if (provider is null ||
-            provider.DeliveryModel != VoiceProviderDeliveryModel.ServerSideAcd ||
-            !provider.Capabilities.HasFlag(ContactCenterVoiceProviderCapabilities.AgentConnect) ||
-            provider is not IContactCenterVoiceCallControlProvider)
+        if (!ProviderJoinsAgentAfterAnswer(session))
         {
+            // A provider that does not join the agent through a leg of its own puts the agent on the call as it is
+            // answered: the answer is the moment the agent is connected.
+            if (DialerCallMetadata.MarkAgentJoined(interaction, session.AnsweredUtc ?? _clock.UtcNow))
+            {
+                await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
+            }
+
             return;
         }
 

@@ -63,6 +63,10 @@ public sealed class DialerStartup : StartupBase
             .AddScoped<IContactCenterRetentionPolicy, CallbackRequestRetentionPolicy>()
             .AddScoped<IDialerService, DialerService>()
             .AddScoped<IActivityDialerContributor, ContactCenterActivityDialerContributor>()
+            // The next attempt of a campaign record -- from a disposition's "Try again" action or a workflow -- goes
+            // back into the campaign's queue with the profile that dialed the first, so the dialer calls it again.
+            .AddScoped<IFollowUpActivityHandler, DialerFollowUpActivityHandler>()
+            .AddScoped<IDialerRetryScheduler, DialerRetryScheduler>()
             .AddScoped<IDialerStrategyResolver, DialerStrategyResolver>()
             .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
                 new ContactCenterFeatureWorkLifecycleParticipant(
@@ -194,5 +198,6 @@ public sealed class ContactCenterDialerWorkflowsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddActivity<ScheduleCallbackTask, ScheduleCallbackTaskDisplayDriver>();
+        services.AddActivity<ScheduleDialerRetryTask, ScheduleDialerRetryTaskDisplayDriver>();
     }
 }

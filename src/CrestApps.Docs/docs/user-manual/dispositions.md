@@ -42,12 +42,15 @@ Set an **Outcome** only on a disposition the platform should apply on its own, w
 | --- | --- | --- | --- |
 | **None** | Nobody | Never. | Nothing extra. |
 | **Number not in service** | The dialer and automated (AI) calls | The network rejects the call as not in service. | Adds the number that was called to the [Numbers Not In Service](numbers-not-in-service.md) list, whoever picks it, so it is never loaded or dialed again. |
-| **No answer** | Automated (AI) calls | Nobody spoke on the call. | Nothing extra. |
-| **Busy** | Automated (AI) calls | The network reports the line busy. If no disposition has this outcome, *No answer* is used. | Nothing extra. |
-| **Answering machine** | Automated (AI) calls | The call reached voicemail. If no disposition has this outcome, *No answer* is used. | Nothing extra. |
+| **No answer** | The dialer and automated (AI) calls | Nobody answered (the dialer), or nobody spoke on the call (automated calls). | Nothing extra. |
+| **Busy** | The dialer and automated (AI) calls | The network reports the line busy. If no disposition has this outcome, *No answer* is used. | Nothing extra. |
+| **Answering machine** | The dialer and automated (AI) calls | The dialer's answering-machine screening hung up on a machine, or an automated call reached voicemail. If no disposition has this outcome, *No answer* is used. | Nothing extra. |
+| **Rejected** | The dialer | The called party or the network declined the call. If no disposition has this outcome, *No answer* is used. | Nothing extra. |
+| **Call failed** | The dialer | The network failed the call, or the provider refused to place it. If no disposition has this outcome, *No answer* is used. | Nothing extra. |
+| **Disconnected** | The dialer | A customer answered but hung up before the agent was connected. If no disposition has this outcome, *No answer* is used. | Nothing extra. |
 
-The dialer does not disposition a call that rang out, was busy or reached a machine: it dials the record again after the retry delay.
+The dialer dispositions every call that ends before an agent is connected, so the agent never receives it; see [Dialer profiles](dialer-profiles.md#what-happens-to-each-record).
 
-When the platform needs a disposition for an outcome, it uses the one with that outcome in the activity's subject flow, so the flow's actions for it run (for example **Try Again** for *No answer*). For *Number not in service*, a disposition with the outcome that is not in the flow is used too, and one named *Number Not In Service* is created if none exists. If no disposition has the *No answer*, *Busy* or *Answering machine* outcome, an unanswered automated call uses the disposition the subject's **Try Again** action is wired to.
+When the platform needs a disposition for an outcome, it uses the one with that outcome in the activity's subject flow, so the flow's actions for it run (for example **Try Again** for *No answer*). For a dialer call it then tries, in order: the flow's *No answer* disposition, the disposition the subject's **Try Again** action is wired to, any disposition with the outcome (or with *No answer*), and a disposition already named for the outcome. If there is still none, one is created: *No Answer*, *Busy*, *Answering Machine*, *Rejected*, *Call Failed* or *Disconnected*. A created disposition is not in any subject flow, so add it to the flow and wire **Try Again** to it to have the contact called again. For *Number not in service*, a disposition with the outcome that is not in the flow is used too, and one named *Number Not In Service* is created if none exists. If no disposition has the *No answer*, *Busy* or *Answering machine* outcome, an unanswered automated (AI) call uses the disposition the subject's **Try Again** action is wired to.
 
 To set a contact's Do Not Call when a disposition is picked, use **Set do not call** on the disposition's action in the [subject flow](subject-flows.md).

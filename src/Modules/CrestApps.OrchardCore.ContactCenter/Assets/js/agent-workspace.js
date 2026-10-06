@@ -767,6 +767,8 @@
         bindPresenceMenu();
         bindSecureControls();
 
+        var openedActivityId = null;
+
         if (window.contactCenterRealTime && config.hubUrl) {
             window.contactCenterRealTime.connect({
                 hubUrl: config.hubUrl,
@@ -810,6 +812,21 @@
                         direction: notification.direction,
                         status: notification.status
                     } : {});
+
+                    // The agent was just connected to a call the dialer placed: open its record now. Before this the
+                    // call was the dialer's, and its offer opened nothing.
+                    if (notification && notification.autoOpenActivity && notification.activityItemId &&
+                        config.completeActivityUrlTemplate && openedActivityId !== notification.activityItemId) {
+                        var openUrl = resolveSafeSameOriginUrl(config.completeActivityUrlTemplate.replace('__activityId__', encodeURIComponent(notification.activityItemId)));
+
+                        if (openUrl) {
+                            openedActivityId = notification.activityItemId;
+                            window.location.assign(openUrl);
+
+                            return;
+                        }
+                    }
+
                     refresh();
                 }
             });

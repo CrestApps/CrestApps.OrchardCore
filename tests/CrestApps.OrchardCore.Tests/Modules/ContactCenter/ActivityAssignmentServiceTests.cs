@@ -417,7 +417,8 @@ public sealed class ActivityAssignmentServiceTests
             (session ?? new Mock<ISession>()).Object,
             clock.Object,
             CoordinationOptions(),
-            NullLogger<ActivityAssignmentService>.Instance);
+            NullLogger<ActivityAssignmentService>.Instance,
+            Mock.Of<IQueuedDialerWorkGate>());
     }
 
     private static Mock<IDistributedLock> CreateDistributedLock(bool locked)

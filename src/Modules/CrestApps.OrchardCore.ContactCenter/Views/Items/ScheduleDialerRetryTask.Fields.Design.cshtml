@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.ContactCenter.Workflows.Models
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<ScheduleDialerRetryTask>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-rotate-right" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Schedule Dialer Retry"])
+    </h4>
+</header>
