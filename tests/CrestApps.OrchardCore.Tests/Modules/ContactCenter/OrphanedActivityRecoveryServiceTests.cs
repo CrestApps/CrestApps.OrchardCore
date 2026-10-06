@@ -322,7 +322,8 @@ public sealed class OrphanedActivityRecoveryServiceTests
                 Queues.Object,
                 QueueItems.Object,
                 clock.Object,
-                NullLogger<OrphanedActivityRecoveryService>.Instance);
+                NullLogger<OrphanedActivityRecoveryService>.Instance,
+                dialerAttemptFinalizer: null);
         }
 
         public OmnichannelActivity NewActivity(

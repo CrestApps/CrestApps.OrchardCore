@@ -488,7 +488,9 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
     public sealed class AgentInteractionNotification
     {
         public AgentInteractionNotification() { }
+        public string ActivityItemId { get; set; }
         public string AgentId { get; set; }
+        public bool AutoOpenActivity { get; set; }
         public string Direction { get; set; }
         public string EventType { get; set; }
         public string InteractionId { get; set; }
@@ -522,6 +524,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         public AgentOfferRevokedNotification() { }
         public string ActivityItemId { get; set; }
         public string AgentId { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Models.AgentOfferKind Kind { get; set; }
         public string QueueId { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Models.AgentOfferRevokedReason Reason { get; set; }
         public string ReservationId { get; set; }

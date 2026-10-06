@@ -177,7 +177,11 @@ public sealed class DialerAttemptServiceTests
         // Assert
         Assert.True(started);
         Assert.Equal(["accept", "update", "create", "publish", "register", "schedule"], order);
-        Assert.Equal(5, activity.Attempts);
+
+        // The activity's first call is the attempt it already stands for; only a further call of it counts again.
+        Assert.Equal(4, activity.Attempts);
+        Assert.Equal(4, DialerCallMetadata.GetAttemptNumber(interaction));
+        Assert.Equal(CreateProfile().MaxAttempts, DialerCallMetadata.GetMaxAttempts(interaction));
         Assert.Equal(ActivityStatus.Pending, activity.Status);
         Assert.Equal(InteractionChannel.Voice, interaction.Channel);
         Assert.Equal(InteractionDirection.Outbound, interaction.Direction);
@@ -307,7 +311,7 @@ public sealed class DialerAttemptServiceTests
         // Assert
         Assert.IsType<InvalidOperationException>(exception);
         Assert.Equal(["accept", "update", "create", "publish", "register", "compensate"], order);
-        Assert.Equal(5, activity.Attempts);
+        Assert.Equal(4, activity.Attempts);
         Assert.Equal(InteractionStatus.Created, interaction.Status);
         var eventRecord = Assert.IsType<InteractionEvent>(publishedEvent);
         Assert.Equal($"dialer-attempt:{interaction.ItemId}", eventRecord.IdempotencyKey);

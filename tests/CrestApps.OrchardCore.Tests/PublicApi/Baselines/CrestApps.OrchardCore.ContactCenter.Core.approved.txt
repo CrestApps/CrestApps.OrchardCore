@@ -431,15 +431,21 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
     {
         public ActivityDispositionEventData() { }
         public string ActivityItemId { get; set; }
+        public int? AttemptNumber { get; set; }
         public int Attempts { get; set; }
         public string CampaignId { get; set; }
         public string Channel { get; set; }
         public string CompletedById { get; set; }
         public string ContactContentItemId { get; set; }
+        public string DialerOutcome { get; set; }
+        public string DialerProfileId { get; set; }
         public string DispositionId { get; set; }
         public string DispositionName { get; set; }
+        public string InteractionId { get; set; }
+        public int? MaxAttempts { get; set; }
         public string Outcome { get; set; }
         public string PhoneNumber { get; set; }
+        public int? RemainingAttempts { get; set; }
         public string Source { get; set; }
         public string SubjectContentType { get; set; }
         public string TerminalReasonCode { get; set; }
@@ -1519,6 +1525,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityAssignmentStatus AssignmentStatus { get; }
         public int Attempts { get; set; }
         public System.DateTime CreatedUtc { get; set; }
+        public int DialCount { get; set; }
         public System.DateTime? ModifiedUtc { get; set; }
         public System.DateTime? ReservationExpiresUtc { get; set; }
         public string ReservationId { get; set; }
@@ -1529,6 +1536,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public bool CanTransitionTo(CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityAssignmentStatus status) { }
         public CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterWorkState RestorePersistedAssignmentStatus(CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityAssignmentStatus status) { }
         public void TransitionTo(CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityAssignmentStatus status) { }
+        public static int NextAttemptNumber(CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterWorkState workState, int activityAttempts) { }
     }
     public sealed class DialerAbandonmentEvaluation
     {
@@ -1552,16 +1560,55 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         Standard = 1,
         Premium = 2,
     }
+    public sealed class DialerAttemptFinalizationRequest
+    {
+        public DialerAttemptFinalizationRequest() { }
+        public string ActivityItemId { get; set; }
+        public string Detail { get; set; }
+        public string InteractionId { get; set; }
+        public string Outcome { get; set; }
+        public string PhoneNumber { get; set; }
+        public string TerminalReasonCode { get; set; }
+        public string Trigger { get; set; }
+    }
+    public enum DialerAttemptFinalizationResult
+    {
+        NotApplicable = 0,
+        Dispositioned = 1,
+        AlreadyFinished = 2,
+        NotDispositioned = 3,
+    }
     public static class DialerAttemptOutcomes
     {
         public const string Answered = "Answered";
         public const string AnsweringMachine = "AnsweringMachine";
         public const string Busy = "Busy";
+        public const string Disconnected = "Disconnected";
         public const string Failed = "Failed";
         public const string NoAnswer = "NoAnswer";
         public const string NotInService = "NotInService";
         public const string Rejected = "Rejected";
-        public static string Resolve(CrestApps.OrchardCore.Telephony.Models.HangupCause? hangupCause, bool answered) { }
+        public static bool IsPreConnect(string outcome) { }
+        public static string Resolve(CrestApps.OrchardCore.Telephony.Models.HangupCause? hangupCause, bool answered, bool agentJoined = true) { }
+    }
+    public static class DialerCallMetadata
+    {
+        public const string AgentJoinedUtcKey = "dialer_agent_joined_utc";
+        public const string AttemptNumberKey = "dialer_attempt_number";
+        public const string DialerProfileIdKey = "dialer_profile_id";
+        public const string MaxAttemptsKey = "dialer_max_attempts";
+        public const string OutcomeKey = "dialer_attempt_outcome";
+        public static int? GetAttemptNumber(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
+        public static string GetDialerProfileId(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
+        public static int? GetMaxAttempts(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
+        public static string GetOutcome(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
+        public static bool HasAgentJoined(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
+        public static bool IsAwaitingAgent(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
+        public static bool IsCampaignDial(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
+        public static bool MarkAgentJoined(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, System.DateTime joinedUtc) { }
+        public static void SetOutcome(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, string outcome) { }
+        public static void StampDial(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile profile, int attemptNumber) { }
+        public static bool WasAnsweredByMachine(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
     }
     public sealed class DialerProfile : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel
     {
@@ -1592,6 +1639,21 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public bool SafeHarborEnabled { get; set; }
         public string SafeHarborMessage { get; set; }
     }
+    public sealed class DialerRetryScheduleResult
+    {
+        public DialerRetryScheduleResult() { }
+        public int? AttemptNumber { get; set; }
+        public System.DateTime? DueUtc { get; set; }
+        public string NextActivityItemId { get; set; }
+        public string Reason { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Core.Models.DialerRetryScheduleStatus Status { get; set; }
+    }
+    public enum DialerRetryScheduleStatus
+    {
+        Scheduled = 0,
+        AttemptsExhausted = 1,
+        NotRetryable = 2,
+    }
     public sealed class DialerSuppressionEventData
     {
         public DialerSuppressionEventData() { }
@@ -1600,6 +1662,18 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string Destination { get; set; }
         public string ProfileItemId { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Models.DialerSuppressionReason Reason { get; set; }
+    }
+    public static class DialerTerminalReasons
+    {
+        public const string AnsweringMachine = "dialer_answering_machine";
+        public const string Busy = "dialer_busy";
+        public const string Disconnected = "dialer_disconnected";
+        public const string Failed = "dialer_failed";
+        public const string MaxAttemptsReached = "dialer_max_attempts";
+        public const string NoAnswer = "dialer_no_answer";
+        public const string Rejected = "dialer_rejected";
+        public static string ForOutcome(string outcome) { }
+        public static CrestApps.OrchardCore.Omnichannel.Core.Models.DispositionOutcome ToDispositionOutcome(string outcome) { }
     }
     public sealed class DispositionSuggestion
     {
@@ -2792,7 +2866,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
 {
     public sealed class ActivityAssignmentService : CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityAssignmentService
     {
-        public ActivityAssignmentService(CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemManager queueItemManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentAvailabilityService availabilityService, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueManager queueManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityRoutingService routingService, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityReservationService reservationService, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueuedWorkWithdrawalService withdrawalService, CrestApps.OrchardCore.ContactCenter.Core.Services.IBusinessHoursService businessHours, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventPublisher publisher, OrchardCore.Locking.Distributed.IDistributedLock distributedLock, YesSql.ISession session, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterCoordinationOptions> coordinationOptions, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.ActivityAssignmentService> logger) { }
+        public ActivityAssignmentService(CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemManager queueItemManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentAvailabilityService availabilityService, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueManager queueManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityRoutingService routingService, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityReservationService reservationService, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueuedWorkWithdrawalService withdrawalService, CrestApps.OrchardCore.ContactCenter.Core.Services.IBusinessHoursService businessHours, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventPublisher publisher, OrchardCore.Locking.Distributed.IDistributedLock distributedLock, YesSql.ISession session, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterCoordinationOptions> coordinationOptions, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.ActivityAssignmentService> logger, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueuedDialerWorkGate dialerWorkGate) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation> AssignNextAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<int> AssignQueueAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation> AssignSpecificAsync(string activityItemId, string queueId, string agentId, int? ringTimeoutSeconds = default, System.Threading.CancellationToken cancellationToken = default) { }
@@ -3638,6 +3712,18 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public DialerAttemptCompensationService(CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityReservationService reservationService, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemManager queueItemManager, OrchardCore.Modules.IClock clock) { }
         public System.Threading.Tasks.Task CompensateAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation reservation, bool removeFromQueue, System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public sealed class DialerAttemptFinalizer : CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerAttemptFinalizer
+    {
+        public DialerAttemptFinalizer(CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityManager activityManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterWorkStateService workStateService, System.IServiceProvider serviceProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.DialerAttemptFinalizer> logger) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerAttemptFinalizationResult> FinalizeAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.DialerAttemptFinalizationRequest request, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class DialerAttemptOutcomeHandler : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventHandler
+    {
+        public DialerAttemptOutcomeHandler(System.IServiceProvider serviceProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.DialerAttemptOutcomeHandler> logger) { }
+        public string HandlerId { get; }
+        public CrestApps.OrchardCore.ContactCenter.ContactCenterHandlerReplaySafety ReplaySafety { get; }
+        public System.Threading.Tasks.Task HandleAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent interactionEvent, System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public sealed class DialerAttemptService : CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerAttemptService
     {
         public DialerAttemptService(CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerEligibilityService eligibilityService, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityReservationService reservationService, CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerAttemptCompensationService compensationService, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityManager activityManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterWorkStateService workStateService, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterActivityWriter activityWriter, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IVoiceContactCenterCallRouter voiceCallRouter, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventPublisher publisher, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterAuditRecorder auditRecorder, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterScopeExecutor scopeExecutor, CrestApps.OrchardCore.ContactCenter.Core.Services.IProviderCommandStateService providerCommandStateService, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointManager> addressManagers, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.DialerAttemptService> logger) { }
@@ -3676,6 +3762,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public static CrestApps.OrchardCore.ContactCenter.Core.Services.DialerEligibilityResult Eligible() { }
         public static CrestApps.OrchardCore.ContactCenter.Core.Services.DialerEligibilityResult Suppressed(CrestApps.OrchardCore.ContactCenter.Models.DialerSuppressionReason reason, string description) { }
     }
+    public sealed class DialerFollowUpActivityHandler : CrestApps.OrchardCore.Omnichannel.Core.Services.IFollowUpActivityHandler
+    {
+        public DialerFollowUpActivityHandler(CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemManager queueItemManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerProfileReader profileReader, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterScopeExecutor scopeExecutor, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.DialerFollowUpActivityHandler> logger) { }
+        public System.Threading.Tasks.Task CreatingAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.FollowUpActivityContext context, System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public sealed class DialerNotInServiceHandler : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventHandler
     {
         public DialerNotInServiceHandler(CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityStore activityStore, System.IServiceProvider serviceProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.DialerNotInServiceHandler> logger) { }
@@ -3698,6 +3789,12 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         public DialerProfileStore(YesSql.ISession session) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class DialerRetryScheduler : CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerRetryScheduler
+    {
+        public const string CreatedBy = "Workflow";
+        public DialerRetryScheduler(CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityManager activityManager, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Services.IFollowUpActivityHandler> followUpHandlers, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.DialerRetryScheduler> logger) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerRetryScheduleResult> ScheduleRetryAsync(string activityItemId, int? delayMinutes, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class DialerService : CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerService
     {
@@ -4318,6 +4415,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         System.Threading.Tasks.Task CompensateAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation reservation, bool removeFromQueue, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface IDialerAttemptFinalizer
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerAttemptFinalizationResult> FinalizeAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.DialerAttemptFinalizationRequest request, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IDialerAttemptService
     {
         System.Threading.Tasks.Task<bool> TryDialAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile profile, CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation reservation, System.Threading.CancellationToken cancellationToken = default);
@@ -4338,6 +4439,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public interface IDialerProfileStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile>
     {
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IDialerRetryScheduler
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerRetryScheduleResult> ScheduleRetryAsync(string activityItemId, int? delayMinutes, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IDialerService
     {
@@ -4623,6 +4728,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public interface IQueuedCallbackService
     {
         System.Threading.Tasks.Task<bool> AcceptAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem item, string destination, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IQueuedDialerWorkGate
+    {
+        System.Threading.Tasks.Task<bool> TryHoldBackAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem queueItem, System.DateTime utcNow, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IQueuedVoiceWorkOfferService
     {
@@ -5005,7 +5114,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public sealed class OrphanedActivityRecoveryService : CrestApps.OrchardCore.ContactCenter.Core.Services.IOrphanedActivityRecoveryService
     {
-        public OrphanedActivityRecoveryService(YesSql.ISession session, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityReservationManager reservationManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterActivityWriter activityWriter, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterWorkStateService workStateService, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueService queueService, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemManager queueItemManager, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.OrphanedActivityRecoveryService> logger) { }
+        public OrphanedActivityRecoveryService(YesSql.ISession session, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityReservationManager reservationManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterActivityWriter activityWriter, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterWorkStateService workStateService, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueService queueService, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemManager queueItemManager, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.OrphanedActivityRecoveryService> logger, CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerAttemptFinalizer dialerAttemptFinalizer) { }
         public System.Threading.Tasks.Task<int> RecoverAsync(System.TimeSpan gracePeriod, int maxToRecover, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class OutboundLineOwnNumberSource : CrestApps.OrchardCore.ContactCenter.IContactCenterOwnNumberSource
@@ -5308,6 +5417,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         public QueuedCallbackService(CrestApps.OrchardCore.ContactCenter.Core.Services.ICallbackService callbackService, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemManager queueItemManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueService queueService, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.QueuedCallbackService> logger) { }
         public System.Threading.Tasks.Task<bool> AcceptAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem item, string destination, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class QueuedDialerWorkGate : CrestApps.OrchardCore.ContactCenter.Core.Services.IQueuedDialerWorkGate
+    {
+        public QueuedDialerWorkGate(CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerProfileReader profileReader, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityManager activityManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterWorkStateService workStateService, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemManager queueItemManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueService queueService, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterScopeExecutor scopeExecutor, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.QueuedDialerWorkGate> logger) { }
+        public System.Threading.Tasks.Task<bool> TryHoldBackAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem queueItem, System.DateTime utcNow, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class QueuedWorkWithdrawalService : CrestApps.OrchardCore.ContactCenter.Core.Services.IQueuedWorkWithdrawalService
     {

@@ -88,7 +88,8 @@ internal sealed class QueuedWorkWithdrawalFixture : IAsyncDisposable
             withdrawalService,
             (IActivityRoutingService)routingService,
             businessHours.Object,
-            new QueueAvailability(harness));
+            new QueueAvailability(harness),
+            Mock.Of<IQueuedDialerWorkGate>());
 
         return new QueuedWorkWithdrawalFixture(harness, reservationService, withdrawalService, assignmentService);
     }
