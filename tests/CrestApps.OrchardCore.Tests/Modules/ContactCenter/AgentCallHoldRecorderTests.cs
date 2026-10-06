@@ -359,7 +359,8 @@ public sealed class AgentCallHoldRecorderTests
                 session.Object,
                 gate,
                 clock.Object,
-                NullLogger<ProviderVoiceEventService>.Instance);
+                NullLogger<ProviderVoiceEventService>.Instance,
+                Mock.Of<IDialerAbandonmentTracker>());
         }
 
         public Interaction Interaction { get; }

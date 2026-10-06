@@ -626,7 +626,8 @@ public sealed class AnswerProviderCommandTypeExecutorTests
                 CallControlAuthorization,
                 PreDialCoordinators,
                 AuditRecorder,
-                ReservationManager.Object);
+                ReservationManager.Object,
+                Mock.Of<IDialerAbandonmentTracker>());
         }
 
         public void SetupActiveState()

@@ -109,6 +109,8 @@ namespace CrestApps.OrchardCore.ContactCenter
             public const string DialerAttemptCompleted = "DialerAttemptCompleted";
             public const string DialerAttemptScheduled = "DialerAttemptScheduled";
             public const string DialerAttemptStarted = "DialerAttemptStarted";
+            public const string DialerCallAbandoned = "DialerCallAbandoned";
+            public const string DialerLiveAnswered = "DialerLiveAnswered";
             public const string DialerRunStarted = "DialerRunStarted";
             public const string ExtensionCallEnded = "ExtensionCallEnded";
             public const string ExtensionCallStarted = "ExtensionCallStarted";

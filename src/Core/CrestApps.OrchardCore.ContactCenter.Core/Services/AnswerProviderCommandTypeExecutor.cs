@@ -33,6 +33,7 @@ public sealed partial class AnswerProviderCommandTypeExecutor : IProviderCommand
     private readonly IContactCenterAuditRecorder _auditRecorder;
     private readonly IActivityReservationManager _reservationManager;
     private readonly IClock _clock;
+    private readonly IDialerAbandonmentTracker _abandonmentTracker;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AnswerProviderCommandTypeExecutor"/> class.
@@ -47,6 +48,7 @@ public sealed partial class AnswerProviderCommandTypeExecutor : IProviderCommand
     /// <param name="preDialCoordinators">The optional coordinator that joins an agent leg rung while the offer was ringing.</param>
     /// <param name="auditRecorder">The recorder that writes the agent leg's outcome and a missed offer to the audit log.</param>
     /// <param name="reservationManager">The reservation manager used to date a missed offer from when it started ringing.</param>
+    /// <param name="abandonmentTracker">The tracker that plays an automated dialer call's abandoned-call message when its agent cannot be connected, and records an agent connected too late.</param>
     public AnswerProviderCommandTypeExecutor(
         IContactCenterVoiceProviderResolver voiceProviderResolver,
         ITelephonyService telephonyService,
@@ -57,8 +59,10 @@ public sealed partial class AnswerProviderCommandTypeExecutor : IProviderCommand
         ICallControlAuthorizationService callControlAuthorizationService,
         IEnumerable<IAgentPreDialCoordinator> preDialCoordinators,
         IContactCenterAuditRecorder auditRecorder,
-        IActivityReservationManager reservationManager)
+        IActivityReservationManager reservationManager,
+        IDialerAbandonmentTracker abandonmentTracker)
     {
+        _abandonmentTracker = abandonmentTracker;
         _voiceProviderResolver = voiceProviderResolver;
         _telephonyService = telephonyService;
         _interactionManager = interactionManager;
@@ -311,9 +315,11 @@ public sealed partial class AnswerProviderCommandTypeExecutor : IProviderCommand
                     CallTopologyProjector.EnsureBridge(session, session.Bridge?.ProviderBridgeId, now);
                     CallTopologyProjector.Join(session, result.ProviderLegId, CallPartyRole.Agent, now, request.AgentId);
 
-                    // The agent is on the call: from here a campaign call is the agent's to work and wrap up.
+                    // The agent is on the call: from here a campaign call is the agent's to work and wrap up. One who
+                    // reached the person who answered later than the abandonment threshold still abandoned the call.
                     if (DialerCallMetadata.MarkAgentJoined(interaction, now))
                     {
+                        await _abandonmentTracker.RecordAgentConnectedAsync(interaction, now, cancellationToken);
                         await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
                     }
 
@@ -348,6 +354,11 @@ public sealed partial class AnswerProviderCommandTypeExecutor : IProviderCommand
             // an answer nobody was waiting for would replace the real ending with an artifact of the retry.
             if (!interaction.IsSettled)
             {
+                if (!request.ReofferOnFailure && DialerCallMetadata.IsCampaignDial(interaction))
+                {
+                    await ReleaseDialerCustomerAsync(interaction, command.ProviderName, request.ProviderCallId, cancellationToken);
+                }
+
                 if (request.ReofferOnFailure)
                 {
                     interaction.Reoffer();
@@ -403,6 +414,48 @@ public sealed partial class AnswerProviderCommandTypeExecutor : IProviderCommand
             command.CommandId,
             command.InteractionId,
             cancellationToken);
+    }
+
+    // A campaign call is answered before its agent is connected, so an agent connect that failed leaves the person who
+    // answered on a silent line. An automated profile's abandoned-call message tells them who called, and the provider
+    // ends the call after it; without one the call is ended at once.
+    private async Task ReleaseDialerCustomerAsync(
+        Interaction interaction,
+        string providerName,
+        string providerCallId,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(providerCallId))
+        {
+            return;
+        }
+
+        if (await _abandonmentTracker.AbandonAsync(interaction, providerName, providerCallId, DialerAbandonment.Reasons.AgentConnectFailed, cancellationToken))
+        {
+            return;
+        }
+
+        if (_telephonyService is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _telephonyService.HangupAsync(new CallReference
+            {
+                CallId = providerCallId,
+            }, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            // The failed connect is recorded either way; a hang-up that does not land must not undo that, and the call's
+            // own end, or the orphaned-call recovery, releases the person.
+        }
     }
 
     /// <inheritdoc/>

@@ -456,6 +456,7 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
         services.AddSingleton<IAgentStateTransitionService, AgentStateTransitionService>();
         services.AddSingleton<IAgentPresenceManager, AgentPresenceManagerService>();
         services.AddSingleton<IActivityReservationService, ActivityReservationService>();
+        services.AddSingleton(Mock.Of<IDialerAbandonmentTracker>());
         services.AddSingleton<IProviderVoiceEventService, ProviderVoiceEventService>();
         services.AddSingleton(Mock.Of<ITelephonyService>());
         services.AddSingleton<IContactCenterAgentLegFailureService, ContactCenterAgentLegFailureService>();

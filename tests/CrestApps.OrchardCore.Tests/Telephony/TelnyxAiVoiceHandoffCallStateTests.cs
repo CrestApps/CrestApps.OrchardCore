@@ -205,7 +205,8 @@ public sealed class TelnyxAiVoiceHandoffCallStateTests
                 new Mock<ISession>().Object,
                 ingressGate,
                 clock.Object,
-                NullLogger<ProviderVoiceEventService>.Instance);
+                NullLogger<ProviderVoiceEventService>.Instance,
+                Mock.Of<IDialerAbandonmentTracker>());
 
             var ingestor = new NormalizedVoiceEventIngestor(
                 [new ContactCenterVoiceProjection(new ProviderVoiceEventSink(voiceEvents), NullLogger<ContactCenterVoiceProjection>.Instance)],
