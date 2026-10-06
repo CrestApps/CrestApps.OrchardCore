@@ -93,6 +93,7 @@ public sealed class TelnyxSettingsDisplayDriver : SiteDisplayDriver<TelnyxSettin
             model.NoiseSuppressionEngine = TelnyxNoiseSuppressionService.NormalizeEngine(settings.NoiseSuppressionEngine).ToString();
             model.NoiseSuppressionAgentVoice = settings.NoiseSuppressionAgentVoice;
             model.NoiseSuppressionCallerVoice = settings.NoiseSuppressionCallerVoice;
+            model.NoiseSuppressionStrength = TelnyxNoiseSuppressionService.NormalizeStrength(settings.NoiseSuppressionStrength).ToString();
             model.TtsVoice = settings.TtsVoice;
             model.TtsLanguage = settings.TtsLanguage;
             model.ApiBaseUrl = settings.ApiBaseUrl;
@@ -140,6 +141,7 @@ public sealed class TelnyxSettingsDisplayDriver : SiteDisplayDriver<TelnyxSettin
 
             // An engine this platform does not know is saved as off rather than refused.
             var noiseSuppressionEngine = TelnyxNoiseSuppressionService.NormalizeEngine(model.NoiseSuppressionEngine);
+            var noiseSuppressionStrength = TelnyxNoiseSuppressionService.NormalizeStrength(model.NoiseSuppressionStrength);
 
             // The connection ids (Call Control, SIP, outbound voice profile) are managed by the Connect
             // flow, not this form, so they are never read back from the model here — that keeps a plain Save
@@ -158,6 +160,7 @@ public sealed class TelnyxSettingsDisplayDriver : SiteDisplayDriver<TelnyxSettin
             hasChanges |= settings.NoiseSuppressionEngine != noiseSuppressionEngine;
             hasChanges |= settings.NoiseSuppressionAgentVoice != model.NoiseSuppressionAgentVoice;
             hasChanges |= settings.NoiseSuppressionCallerVoice != model.NoiseSuppressionCallerVoice;
+            hasChanges |= settings.NoiseSuppressionStrength != noiseSuppressionStrength;
             hasChanges |= settings.TtsVoice != Trim(model.TtsVoice);
             hasChanges |= settings.TtsLanguage != Trim(model.TtsLanguage);
             hasChanges |= settings.ApiBaseUrl != Trim(model.ApiBaseUrl);
@@ -177,6 +180,7 @@ public sealed class TelnyxSettingsDisplayDriver : SiteDisplayDriver<TelnyxSettin
             settings.NoiseSuppressionEngine = noiseSuppressionEngine;
             settings.NoiseSuppressionAgentVoice = model.NoiseSuppressionAgentVoice;
             settings.NoiseSuppressionCallerVoice = model.NoiseSuppressionCallerVoice;
+            settings.NoiseSuppressionStrength = noiseSuppressionStrength;
             settings.TtsVoice = Trim(model.TtsVoice);
             settings.TtsLanguage = Trim(model.TtsLanguage);
             settings.ApiBaseUrl = Trim(model.ApiBaseUrl);

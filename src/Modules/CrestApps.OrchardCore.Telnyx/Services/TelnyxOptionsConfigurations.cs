@@ -64,6 +64,7 @@ internal sealed class TelnyxOptionsConfigurations : IConfigureOptions<TelnyxOpti
         options.NoiseSuppressionEngine = TelnyxNoiseSuppressionService.NormalizeEngine(settings.NoiseSuppressionEngine);
         options.NoiseSuppressionAgentVoice = settings.NoiseSuppressionAgentVoice;
         options.NoiseSuppressionCallerVoice = settings.NoiseSuppressionCallerVoice;
+        options.NoiseSuppressionStrength = TelnyxNoiseSuppressionService.NormalizeStrength(settings.NoiseSuppressionStrength);
         options.TtsVoice = string.IsNullOrWhiteSpace(settings.TtsVoice) ? TelnyxConstants.Speech.DefaultVoice : settings.TtsVoice.Trim();
         options.TtsLanguage = string.IsNullOrWhiteSpace(settings.TtsLanguage) ? TelnyxConstants.Speech.DefaultLanguage : settings.TtsLanguage.Trim();
 

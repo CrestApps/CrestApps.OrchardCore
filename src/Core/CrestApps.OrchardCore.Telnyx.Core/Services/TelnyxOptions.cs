@@ -130,6 +130,11 @@ public sealed class TelnyxOptions
     public bool NoiseSuppressionCallerVoice { get; set; }
 
     /// <summary>
+    /// Gets or sets how hard the noise suppression engine works on each voice it cleans.
+    /// </summary>
+    public TelnyxNoiseSuppressionStrength NoiseSuppressionStrength { get; set; }
+
+    /// <summary>
     /// Gets or sets the text-to-speech voice every spoken prompt uses. Never empty: Telnyx refuses speech without one.
     /// </summary>
     public string TtsVoice { get; set; } = TelnyxConstants.Speech.DefaultVoice;
