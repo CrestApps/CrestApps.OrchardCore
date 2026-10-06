@@ -21,7 +21,7 @@ description: Design plan for a module that lets a "parent" tenant create and man
 1. **Every tenant gets its own host name**, never a path prefix. A firm is `{firm}.platform.com` and its businesses are `{business}.{firm}.platform.com`. Tenants on one host share one browser origin, and a cookie `Path` is not a security boundary. With path prefixes, a child admin's script could read parent and sibling pages in a firm user's browser.
 2. **The Default tenant owns policy.** Default decides which tenants are parents, and for each parent: the URL pattern for children, the database placement, the allowed setup recipes, the quotas and the session rules. A parent can never type a host, a prefix, a connection string, a table prefix or a schema. Section 5.4 shows how a free host or prefix choice could take over Default's or another firm's traffic.
 3. **The list of other businesses never enters a child page.** The switcher in the child only links to a picker that the *parent* serves. A malicious child admin can put scripts in their own pages, so anything in the child page is readable by the child.
-4. **All cross-tenant calls go through one broker** that resolves the other tenant from host-controlled settings only, checks the parent↔child link in both directions, and returns the smallest possible data.
+4. **All cross-tenant calls go through one broker** that resolves the other tenant from host-controlled settings only, checks the parent↔child link in both directions, and returns the smallest possible data. A host-level guard on `IShellHost` refuses any tenant scope that a parent or a child tries to open outside its own hierarchy (section 6.10).
 5. **Linked users are owned by the parent.** They have no password, child admins cannot edit them, and password login for them is refused. So a child admin cannot act "as" a firm user.
 
 **What we cannot promise:** all tenants run in one process. Any server code (a module) can call `IShellHost` and reach any tenant. The isolation boundary is therefore *what tenant users and tenant admins can do through HTTP and the UI*, not what server code can do. Only install modules you trust. This is the same trust model Orchard Core already has.
@@ -96,6 +96,7 @@ The words that people see on screen are configurable per parent (section 7.2), s
 | G5 | When a grant is removed, or a parent user is disabled or signs out, that user's child sessions end within a short, configured time. |
 | G6 | A parent cannot take over URLs, databases or features outside its policy. |
 | G7 | Default keeps full control. The standard Tenants admin still works on every tenant. |
+| G8 | A parent can open a scope on, read the settings of, or change only itself and its own children. A child can reach only its own parent, and only through the broker. Neither can reach another firm, another firm's businesses, a sibling or an ordinary tenant (section 6.10). |
 
 **Non-goal:** protecting tenants from malicious server code. All modules run in one process (section 1).
 
@@ -240,7 +241,12 @@ All cross-tenant calls go through `ITenantHierarchyBroker`. A call always runs f
 
 ### 6.4 Delegated access: entering a child
 
-The flow has the same shape as the OAuth 2.0 authorization code flow with PKCE. The code is redeemed in process instead of over HTTP, and the client is authenticated by its shell identity instead of a secret.
+A firm works with a business in two ways:
+
+- **Managing it as a tenant** (suspend, resume, reload, remove, features) happens in the firm's own child tenants admin (section 6.8). The firm user never signs in to the business. The firm checks the user's permission, then the broker opens the business's scope and calls the host services.
+- **Working inside it** (viewing and changing content, settings and reports) needs delegated access. The firm user is signed in to the business as a linked user, and from then on the business's own admin, permissions and data apply, exactly as for a local user with the granted roles.
+
+This section describes delegated access. The flow has the same shape as the OAuth 2.0 authorization code flow with PKCE. The code is redeemed in process instead of over HTTP, and the client is authenticated by its shell identity instead of a secret.
 
 ```mermaid
 sequenceDiagram
@@ -417,6 +423,45 @@ Firms and businesses are ordinary tenants, so **the standard Tenants admin in De
 | Disable, enable or reload a business | Works as for any tenant. The firm's child tenants admin shows the new state. |
 | Remove a business | Works as for any tenant. The firm's registry entry shows "Changed by platform" until the firm admin dismisses it. A database that our provisioner created must then be dropped from the Platform tree. |
 
+### 6.10 Scope containment
+
+**Requirement (G8).** A parent can reach only itself and its own children. A child can reach only itself, plus its own parent through the broker. Neither can open a scope on, read the shell settings of, or change the state of any other tenant: another firm, another firm's businesses, a sibling or an ordinary tenant.
+
+**Who could try.** Parent and child users and admins act only through HTTP and the features the platform installed. They cannot add server code: modules are compiled into the app, Jint scripts have no .NET access, and Liquid uses an allow-list (section 5.9). So containment means two things. No installed feature may let their input reach another tenant, and a bug in any feature must fail closed. Four layers do this.
+
+**Layer 1. Requests never name a tenant.** Every parent action takes the id of a `ChildTenantEntry` record from the parent's own database. It never takes a tenant name, host or `TenantId`. The broker turns the record id into the child's `TenantId`, finds the shell settings with that id, and checks that they name this parent in `TenantHierarchy:ParentTenantId`. A record id from another firm does not exist in this firm's database, so it fails with the same generic "not found" as an id that was made up.
+
+**Layer 2. One code path reaches other tenants.** In our module, only the broker calls `IShellHost`, `IShellSettingsManager` or `IShellRemovalManager` for a tenant other than the current one. The child tenants admin, the features screen, the setup job and the delegated access endpoints all go through the broker. An architecture test fails the build if any other type in our assemblies calls those services.
+
+**Layer 3. A host-level guard on `IShellHost`.** Orchard Core registers `IShellHost` once, in the host container (`src/OrchardCore/OrchardCore/Shell/ServiceCollectionExtensions.cs:18`), and every tenant resolves that same instance. `AddTenantHierarchy()` replaces the registration with a decorator. The decorator forwards every member to the real `ShellHost`, including the `IShellEvents` and `IShellDescriptorManagerEventHandler` members that `IShellHost` inherits. Before each call, it checks which tenant's code is running (the ambient `ShellScope`) against the tenant the call targets:
+
+| Code running in | May target |
+|---|---|
+| No tenant (host startup, distributed sync, the host's background loop) | Any tenant. Unchanged. |
+| Default | Any tenant. Unchanged Orchard Core behavior. |
+| An ordinary tenant (not in a hierarchy) | Any tenant except parents and children. For example, an ordinary tenant's OpenID validation settings cannot name a business. |
+| A parent | Itself. Its own children, only inside a broker call. Default by name (see below). |
+| A child | Itself. Its own parent, only inside a broker call. Default by name (see below). |
+
+- **Only the broker can grant cross-tenant rights.** "Inside a broker call" is an internal `AsyncLocal` marker that only the broker sets, so no other feature can borrow its rights.
+- **Changes and scopes outside the allowed targets throw.** This covers opening a scope, getting or creating a shell context, and updating, reloading, releasing or removing a tenant. Each refusal writes a security log entry with both tenant ids.
+- **Reads are filtered.** In a parent, `GetAllSettings` and `ListShellContexts` return only the parent and its own children. In a child, they return only the child. `TryGetSettings` and `TryGetShellContext` answer "not found" for anything else. So a feature cannot even list other tenants' names, hosts or connection strings.
+- **Default stays reachable by name.** Orchard Core itself reaches Default from inside a tenant for host coordination. The feature profile check opens Default's scope (`Shell/FeatureProfilesValidationProvider.cs:42`), and tenant removal reads Default's settings to take its lock (`Shell/Removing/ShellRemovalManager.cs:124`). Default is the platform and is fully trusted, and nothing a parent sends decides what runs there. **(verify)** The phase 0 spike lists every call from a tenant into Default. If none is needed for parent and child tenants, Default is blocked as well.
+
+The guard catches any installed feature (ours, Orchard Core's or another vendor's) that opens another tenant from a parent's or a child's request or background task, whether by design or by mistake. It does not stop malicious server code, which can get around any in-process check (section 1).
+
+**Layer 4. Feature audit.** Some features open other tenants by design. Each must be Default-only, blocked in parent and child tenants by the feature guard (section 7.9), or routed through the broker. The guard in layer 3 makes any feature this audit misses fail closed instead of leaking. Known today:
+
+| Feature | Reaches other tenants through | Status |
+|---|---|---|
+| `OrchardCore.Tenants`, and every feature that depends on it | A tenant name | Default only (`DefaultTenantOnly`) |
+| `OrchardCore.Features` managing another tenant | A tenant name | Default only (`IsDefaultShell()` check) |
+| `OrchardCore.OpenId.Validation` "Tenant" field | A tenant name typed by an admin | Blocked (section 5.9) |
+| CrestApps AI Agent tenant tools: list, get, create, set up, enable, disable, reload, remove | A tenant name chosen by the AI | Default only, through `[RequireFeatures("OrchardCore.Tenants")]`. Six of the eight tools also check `IsDefaultShell()`. `GetTenantTool` and `ListTenantTool` rely on the feature gate alone, so phase 1 adds the same check to both. |
+| CrestApps voice, SMS, Event Grid and contact center background work | Their own tenant's settings | Same tenant only. The guard allows it. |
+
+The audit is repeated whenever a module is added to the app.
+
 ## 7. Policies, provisioning and hardening
 
 ### 7.1 Why policy is host-controlled
@@ -577,6 +622,7 @@ Each phase follows the repository rules: tests, the module `README.md`, a docs p
 7. Confirm that `__Host-` cookie names work with Orchard Core's login and antiforgery code.
 8. Confirm that a host-level `IShellRemovingHandler` can refuse the removal of a firm that still has businesses, before any table is dropped.
 9. Confirm that enabling and disabling features in a child from a firm request works with the Features admin pattern, and that the child's validation providers (our guard) apply inside that scope.
+10. Replace `IShellHost` with the guard decorator (section 6.10) and run: host startup, distributed sync, a child's setup from a parent request, feature changes that reload a tenant, removal, and background tasks. Record every call the guard would refuse and every call from a tenant into Default.
 
 ### Phase 1 — Hierarchy and the child tenants admin
 
@@ -593,7 +639,8 @@ Each phase follows the repository rules: tests, the module `README.md`, a docs p
 - the registry;
 - the feature guard;
 - the host-level removal guard for firms;
-- naming, slug and host rules.
+- naming, slug and host rules;
+- scope containment (section 6.10): the `IShellHost` guard, the architecture test, and the `IsDefaultShell()` check in the AI Agent's `GetTenantTool` and `ListTenantTool`.
 
 **Tests:**
 - policy enforcement: no prefix, no wildcard, reserved slugs, quota;
@@ -602,7 +649,13 @@ Each phase follows the repository rules: tests, the module `README.md`, a docs p
 - blocked features never appear in a business's feature list, and the forced Child feature cannot be disabled;
 - removal refuses a running business, and Default cannot remove a firm that still has businesses;
 - generic errors;
-- registry and shell settings consistency.
+- registry and shell settings consistency;
+- scope containment:
+  - a `ChildTenantEntry` id from another firm, sent to every action including bulk actions, gives the generic "not found", and no scope is opened;
+  - from a parent request, opening a scope on, updating, reloading or removing another firm, another firm's business or an ordinary tenant throws;
+  - from a child request, the same for a sibling, and for its own parent outside a broker call;
+  - from an ordinary tenant's request, the same for any parent or child;
+  - `GetAllSettings` in a parent returns only the parent and its children, and in a child only the child.
 
 ### Phase 2 — Delegated access and linked users
 
@@ -688,6 +741,7 @@ Recorded on 2026-10-02.
 
 | Risk | Mitigation |
 |---|---|
+| An installed feature opens another tenant's scope | The `IShellHost` guard fails it closed and logs it, and the feature audit is repeated whenever a module is added (section 6.10). |
 | A custom sign-in protocol has a flaw | Keep it the same shape as OAuth 2.0 code + PKCE, keep it small, cover every check in section 10 phase 2 with tests, and do a focused security review before release. |
 | Orchard Core internals change (forced `Features` config, `SetupService`, `ShellScope`) | Integration tests in phase 0 and phase 1 that fail when these change. Pin the Orchard Core preview version as we do today. |
 | Many active tenants in one process | Measure in phase 0. Idle release. Scale out with several nodes. |
