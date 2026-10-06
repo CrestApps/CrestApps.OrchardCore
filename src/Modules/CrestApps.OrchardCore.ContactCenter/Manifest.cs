@@ -91,22 +91,11 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = ContactCenterConstants.Feature.DialerPaced,
     Name = "Contact Center Paced Dialing",
-    Description = "Adds Power and Progressive paced dialing that automatically dials for available agents, layering scheduled pacing on top of the Outbound Dialer, which already provides mandatory compliance screening and the dialing-profile administration.",
+    Description = "Adds Power, Progressive and Predictive paced dialing that automatically dials for available agents, layering scheduled pacing on top of the Outbound Dialer, which already provides mandatory compliance screening and the dialing-profile administration.",
     Category = "Contact Center",
     Dependencies =
     [
         ContactCenterConstants.Feature.Dialer,
-    ]
-)]
-
-[assembly: Feature(
-    Id = ContactCenterConstants.Feature.DialerPredictive,
-    Name = "Contact Center Predictive Dialing",
-    Description = "Adds the Predictive dialing mode on top of Paced Dialing, with the pacing statistics and safety limits predictive pacing is sized from. Predictive profiles dial one call per reserved agent, which cannot abandon a call.",
-    Category = "Contact Center",
-    Dependencies =
-    [
-        ContactCenterConstants.Feature.DialerPaced,
     ]
 )]
 

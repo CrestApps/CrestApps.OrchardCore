@@ -75,21 +75,22 @@ Missing abandonment statistics keep the existing full suppression.
 
 ## B1 - foundation (implemented, no behaviour change)
 
-- Feature `ContactCenterConstants.Feature.DialerPredictive` = `CrestApps.OrchardCore.ContactCenter.Dialer.Predictive`,
-  depending on Paced Dialing; `DialerPredictiveStartup` registers `PredictiveDialerStrategy` (moved from
-  `DialerPacedStartup`), `ContactCenterPredictiveDialingOptions` + validator, `DialerPacingStatisticsCache` (tenant
-  singleton) and `IDialerPacingStatisticsProvider`.
-- `DialerModeExtensions.RequiresPacedDialerFeature` now includes Predictive; `RequiresPredictiveDialerFeature` added.
+- No feature of its own: Predictive stays in Paced Dialing (`CrestApps.OrchardCore.ContactCenter.Dialer.Paced`).
+  `DialerPacedStartup` registers `PredictiveDialerStrategy` with Power and Progressive,
+  `ContactCenterPredictiveDialingOptions` + validator, `DialerPacingStatisticsCache` (tenant singleton) and
+  `IDialerPacingStatisticsProvider`. The real safety gate is the profile's `OverDial` pacing model and its validated
+  safeguards (enforced cap, abandoned-call message, target below the cap); a separate feature added nothing to that.
+- `DialerModeExtensions.RequiresPacedDialerFeature` includes Predictive.
 - `DialerProfile` JSON fields (no migration), constants in `PredictiveDialingDefaults`:
   `PredictivePacingModel` (`ReservedPerCall` default, `OverDial`), `TargetAbandonmentRatePercent` 2,
   `MaxLinesPerAgent` 2 (1-5), `MaxCallsInFlight` 100 (1-1000), `AnswerRateSampleFloor` 50 (10-10000),
   `AnswerRateWindowMinutes` 15 (5-240), `CreditAgentsFreeingUp` false, `FreeUpCreditPercent` 50 (0-100),
   `ConnectWaitMilliseconds` 0 (0-1500), `AbandonedRetryRequiresAgent` true.
-- `DialerProfileHandler`: the blanket Predictive rejection is replaced by "Predictive requires the Predictive Dialing
-  feature"; Predictive profiles are range-checked; `OverDial` additionally requires the enforced cap, the abandoned-call
+- `DialerProfileHandler`: the blanket Predictive rejection is replaced by the Paced Dialing check that already covers
+  Power and Progressive; Predictive profiles are range-checked; `OverDial` additionally requires the enforced cap, the abandoned-call
   message, a cap above 0 and target < cap. Other modes are not held to the predictive fields.
 - Editor: new `DialerProfilePredictive.Edit.cshtml` card "Predictive pacing" (`data-dialer-modes="Predictive"`), the
-  mode picker offers Predictive when the feature is on, Calls per agent and answering-machine screening are shown for
+  mode picker offers Predictive when Paced Dialing is on, Calls per agent and answering-machine screening are shown for
   Predictive. The card shows the measured answer rate, ring time and connect time of a saved profile.
 - Recipe schema describes every new property; recipe import and deployment are reflection-driven
   (`ContactCenterDeploymentSerializer`) and carry them without change.
@@ -163,7 +164,7 @@ Components (ContactCenter.Core/Services unless noted):
 - `ContactCenterAgentLegFailureService`: unreserved predictive and no agent joined: release the agent and take the
   abandonment path (#773 already plays the message on agent-leg failure).
 - `DialProviderCommandTypeExecutor.IsAuthorizedFirstDialAsync`: an empty AgentId is authorized only for a
-  Predictive + OverDial profile with the feature on and a campaign dial. The dispatch validator re-runs eligibility,
+  Predictive + OverDial profile and a campaign dial. The dispatch validator re-runs eligibility,
   including the cap.
 - `DialerAttemptFinalizer.RemoveWaitingQueueItemAsync`, `OrphanedActivityRecoveryService.DropQueueItemAsync`: also clear
   agentless Assigned items.

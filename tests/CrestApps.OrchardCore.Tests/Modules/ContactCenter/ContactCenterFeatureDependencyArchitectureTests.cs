@@ -471,7 +471,7 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
     }
 
     [Fact]
-    public void PredictiveDialingFeature_OwnsThePredictiveStrategyAndDependsOnPacedDialing()
+    public void PacedDialingFeature_OwnsThePredictiveStrategy()
     {
         // Arrange
         var repositoryRoot = FindRepositoryRoot();
@@ -483,18 +483,15 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
             ContactCenterConstantsFeatureArea(repositoryRoot));
 
         // Act
-        var dependencies = features["CrestApps.OrchardCore.ContactCenter.Dialer.Predictive"].Dependencies
-            .Order(StringComparer.Ordinal);
         var strategyOwner = startupClasses.Single(startup =>
             startup.Body.Contains(
                 "AddScoped<IDialerStrategy, PredictiveDialerStrategy>()",
                 StringComparison.Ordinal));
 
-        // Assert: without the feature a Predictive profile resolves to no strategy and is never dialed.
-        Assert.Equal(
-            ["CrestApps.OrchardCore.ContactCenter.Dialer.Paced"],
-            dependencies);
-        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Dialer.Predictive", strategyOwner.FeatureId);
+        // Assert: Predictive is one of the paced modes, so without Paced Dialing a Predictive profile resolves to no
+        // strategy and is never dialed. There is no Predictive feature of its own.
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Dialer.Paced", strategyOwner.FeatureId);
+        Assert.DoesNotContain("CrestApps.OrchardCore.ContactCenter.Dialer.Predictive", features.Keys);
     }
 
     [Fact]

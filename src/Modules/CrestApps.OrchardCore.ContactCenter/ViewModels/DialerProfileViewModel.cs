@@ -35,16 +35,9 @@ public class DialerProfileViewModel
 
     /// <summary>
     /// Gets or sets a value indicating whether the Contact Center Paced Dialing feature is enabled, which
-    /// determines whether the Power and Progressive automated pacing modes are offered in the editor.
+    /// determines whether the Power, Progressive and Predictive automated pacing modes are offered in the editor.
     /// </summary>
     public bool AutomatedDialerEnabled { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether the Contact Center Predictive Dialing feature is enabled, which
-    /// determines whether the Predictive mode is offered in the editor.
-    /// </summary>
-    [BindNever]
-    public bool PredictiveDialerEnabled { get; set; }
 
     /// <summary>
     /// Gets or sets the Contact Center voice provider technical name.
@@ -241,7 +234,7 @@ public class DialerProfileViewModel
 
     /// <summary>
     /// Gets or sets what the profile's recent calls measured over its answer-rate window, or <see langword="null"/> when
-    /// it is not measured (a new profile, or the Predictive Dialing feature is off).
+    /// it is not measured (a new profile, or the Paced Dialing feature is off).
     /// </summary>
     [BindNever]
     public DialerPacingStatistics PacingStatistics { get; set; }

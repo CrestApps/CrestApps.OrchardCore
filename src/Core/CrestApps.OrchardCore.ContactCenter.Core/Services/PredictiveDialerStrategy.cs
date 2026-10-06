@@ -18,8 +18,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <para>
 /// Every call is placed for an agent reserved before it is dialed (<see cref="PredictivePacingModel.ReservedPerCall"/>).
 /// Placing calls without a reserved agent (<see cref="PredictivePacingModel.OverDial"/>) is not available yet: a profile
-/// that selects it is dialed the same way, and a warning says so. The strategy is registered by the Predictive Dialing
-/// feature, so without it a Predictive profile resolves to no strategy and is not dialed.
+/// that selects it is dialed the same way, and a warning says so. The strategy is registered by the Paced Dialing
+/// feature with Power and Progressive, so without it a Predictive profile resolves to no strategy and is not dialed.
 /// </para>
 /// </summary>
 public sealed class PredictiveDialerStrategy : DialerStrategyBase

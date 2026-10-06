@@ -1318,7 +1318,7 @@ See [Outbound compliance gate](contact-center/agents-queues-dialer.md#outbound-c
 | | |
 | --- | --- |
 | **Section** | `CrestApps:ContactCenter:PredictiveDialing` |
-| **Feature** | Contact Center Predictive Dialing |
+| **Feature** | Contact Center Paced Dialing |
 | **Controls** | The timings and limits of predictive pacing, and how its statistics are measured |
 
 Every value is validated on start, and an invalid one stops the tenant with the key named.

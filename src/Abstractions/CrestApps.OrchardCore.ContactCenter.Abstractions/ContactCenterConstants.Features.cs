@@ -46,15 +46,9 @@ public static partial class ContactCenterConstants
         public const string Dialer = "CrestApps.OrchardCore.ContactCenter.Dialer";
 
         /// <summary>
-        /// The identifier of the paced Power and Progressive dialing feature.
+        /// The identifier of the paced Power, Progressive and Predictive dialing feature.
         /// </summary>
         public const string DialerPaced = "CrestApps.OrchardCore.ContactCenter.Dialer.Paced";
-
-        /// <summary>
-        /// The identifier of the predictive dialing feature, which offers the Predictive dialing mode on top of paced
-        /// dialing.
-        /// </summary>
-        public const string DialerPredictive = "CrestApps.OrchardCore.ContactCenter.Dialer.Predictive";
 
         /// <summary>
         /// The identifier of the durable provider webhook inbox feature. Provider webhook delivery is

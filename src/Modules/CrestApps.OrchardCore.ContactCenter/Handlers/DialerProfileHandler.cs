@@ -75,12 +75,7 @@ internal sealed class DialerProfileHandler : CatalogEntryHandlerBase<DialerProfi
             context.Result.Fail(new ValidationResult(S["Name is required."], [nameof(DialerProfile.Name)]));
         }
 
-        if (profile.Mode.RequiresPredictiveDialerFeature() &&
-            !await _shellFeaturesManager.IsFeatureEnabledAsync(ContactCenterConstants.Feature.DialerPredictive))
-        {
-            context.Result.Fail(new ValidationResult(S["Enable the Contact Center Predictive Dialing feature before using Predictive dialing."], [nameof(DialerProfile.Mode)]));
-        }
-        else if (profile.Mode.RequiresPacedDialerFeature() &&
+        if (profile.Mode.RequiresPacedDialerFeature() &&
             !await _shellFeaturesManager.IsFeatureEnabledAsync(ContactCenterConstants.Feature.DialerPaced))
         {
             context.Result.Fail(new ValidationResult(S["Enable the Contact Center Paced Dialing feature before using Power, Progressive or Predictive dialing."], [nameof(DialerProfile.Mode)]));

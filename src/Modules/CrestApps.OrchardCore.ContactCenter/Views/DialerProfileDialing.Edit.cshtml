@@ -24,7 +24,7 @@
             {
                 <option value="@DialerMode.Progressive">@T["Progressive"]</option>
             }
-            @if (Model.PredictiveDialerEnabled || Model.Mode == DialerMode.Predictive)
+            @if (Model.AutomatedDialerEnabled || Model.Mode == DialerMode.Predictive)
             {
                 <option value="@DialerMode.Predictive">@T["Predictive"]</option>
             }
@@ -33,11 +33,7 @@
         <span class="hint">@T["How calls are paced: Preview is agent-initiated (the agent reviews each record, then dials); Power, Progressive and Predictive are system-paced (the dialer reserves agents and places calls automatically)."]</span>
         @if (!Model.AutomatedDialerEnabled)
         {
-            <span class="hint">@T["Enable the Contact Center Paced Dialing feature to offer the Power and Progressive automated pacing modes."]</span>
-        }
-        @if (Model.AutomatedDialerEnabled && !Model.PredictiveDialerEnabled)
-        {
-            <span class="hint">@T["Enable the Contact Center Predictive Dialing feature to offer the Predictive mode."]</span>
+            <span class="hint">@T["Enable the Contact Center Paced Dialing feature to offer the Power, Progressive and Predictive automated pacing modes."]</span>
         }
     </div>
 </div>

@@ -50,29 +50,29 @@ public class DialerProfileHandlerValidationTests
     }
 
     [Fact]
-    public async Task ValidatingAsync_WhenTheModeIsPredictiveWithoutThePredictiveFeature_Fails()
+    public async Task ValidatingAsync_WhenTheModeIsPredictiveWithoutThePacedFeature_Fails()
     {
         // Arrange
         var profile = CreateValidProfile();
         profile.Mode = DialerMode.Predictive;
 
         // Act
-        var context = await ValidateAsync(profile, predictiveDialerEnabled: false);
+        var context = await ValidateAsync(profile, automatedDialerEnabled: false);
 
         // Assert
         var error = Assert.Single(context.Result.Errors, error => error.MemberNames.Contains(nameof(DialerProfile.Mode)));
-        Assert.Equal("Enable the Contact Center Predictive Dialing feature before using Predictive dialing.", error.ErrorMessage);
+        Assert.Equal("Enable the Contact Center Paced Dialing feature before using Power, Progressive or Predictive dialing.", error.ErrorMessage);
     }
 
     [Fact]
-    public async Task ValidatingAsync_WhenTheModeIsPredictiveWithThePredictiveFeature_Succeeds()
+    public async Task ValidatingAsync_WhenTheModeIsPredictiveWithThePacedFeature_Succeeds()
     {
         // Arrange
         var profile = CreateValidProfile();
         profile.Mode = DialerMode.Predictive;
 
         // Act
-        var context = await ValidateAsync(profile, predictiveDialerEnabled: true);
+        var context = await ValidateAsync(profile);
 
         // Assert
         Assert.True(context.Result.Succeeded);
@@ -82,7 +82,7 @@ public class DialerProfileHandlerValidationTests
     public async Task ValidatingAsync_WhenAnOverDialingProfileHasEverySafeguard_Succeeds()
     {
         // Act
-        var context = await ValidateAsync(CreateOverDialProfile(), predictiveDialerEnabled: true);
+        var context = await ValidateAsync(CreateOverDialProfile());
 
         // Assert
         Assert.True(context.Result.Succeeded);
@@ -96,7 +96,7 @@ public class DialerProfileHandlerValidationTests
         profile.EnforceAbandonmentCap = false;
 
         // Act
-        var context = await ValidateAsync(profile, predictiveDialerEnabled: true);
+        var context = await ValidateAsync(profile);
 
         // Assert
         AssertFailedFor(context, nameof(DialerProfile.EnforceAbandonmentCap));
@@ -111,7 +111,7 @@ public class DialerProfileHandlerValidationTests
         profile.SafeHarborEnabled = false;
 
         // Act
-        var context = await ValidateAsync(profile, predictiveDialerEnabled: true);
+        var context = await ValidateAsync(profile);
 
         // Assert
         AssertFailedFor(context, nameof(DialerProfile.EnforceAbandonmentCap));
@@ -126,7 +126,7 @@ public class DialerProfileHandlerValidationTests
         profile.SafeHarborEnabled = false;
 
         // Act
-        var context = await ValidateAsync(profile, predictiveDialerEnabled: true);
+        var context = await ValidateAsync(profile);
 
         // Assert
         AssertFailedFor(context, nameof(DialerProfile.SafeHarborEnabled));
@@ -143,7 +143,7 @@ public class DialerProfileHandlerValidationTests
         profile.MaxAbandonmentRatePercent = cap;
 
         // Act
-        var context = await ValidateAsync(profile, predictiveDialerEnabled: true);
+        var context = await ValidateAsync(profile);
 
         // Assert
         AssertFailedFor(context, nameof(DialerProfile.TargetAbandonmentRatePercent));
@@ -157,7 +157,7 @@ public class DialerProfileHandlerValidationTests
         profile.MaxAbandonmentRatePercent = 0;
 
         // Act
-        var context = await ValidateAsync(profile, predictiveDialerEnabled: true);
+        var context = await ValidateAsync(profile);
 
         // Assert
         AssertFailedFor(context, nameof(DialerProfile.MaxAbandonmentRatePercent));
@@ -173,7 +173,7 @@ public class DialerProfileHandlerValidationTests
         profile.MaxAbandonmentRatePercent = 3;
 
         // Act
-        var context = await ValidateAsync(profile, predictiveDialerEnabled: true);
+        var context = await ValidateAsync(profile);
 
         // Assert
         Assert.True(context.Result.Succeeded);
@@ -210,7 +210,7 @@ public class DialerProfileHandlerValidationTests
         ApplyPredictiveScenario(profile, scenario);
 
         // Act
-        var context = await ValidateAsync(profile, predictiveDialerEnabled: true);
+        var context = await ValidateAsync(profile);
 
         // Assert
         AssertFailedFor(context, memberName);
@@ -253,7 +253,7 @@ public class DialerProfileHandlerValidationTests
         profile.ConnectWaitMilliseconds = connectWaitMilliseconds;
 
         // Act
-        var context = await ValidateAsync(profile, predictiveDialerEnabled: true);
+        var context = await ValidateAsync(profile);
 
         // Assert
         Assert.True(context.Result.Succeeded);
@@ -455,12 +455,11 @@ public class DialerProfileHandlerValidationTests
 
     private static async Task<ValidatingContext<DialerProfile>> ValidateAsync(
         DialerProfile profile,
-        bool automatedDialerEnabled = true,
-        bool predictiveDialerEnabled = false)
+        bool automatedDialerEnabled = true)
     {
         var context = new ValidatingContext<DialerProfile>(profile);
 
-        await CreateHandler(automatedDialerEnabled, predictiveDialerEnabled).ValidatingAsync(context, TestContext.Current.CancellationToken);
+        await CreateHandler(automatedDialerEnabled).ValidatingAsync(context, TestContext.Current.CancellationToken);
 
         return context;
     }
@@ -471,7 +470,7 @@ public class DialerProfileHandlerValidationTests
         Assert.Contains(context.Result.Errors, error => error.MemberNames.Contains(memberName));
     }
 
-    private static DialerProfileHandler CreateHandler(bool automatedDialerEnabled, bool predictiveDialerEnabled = false)
+    private static DialerProfileHandler CreateHandler(bool automatedDialerEnabled)
     {
         var features = new List<IFeatureInfo>();
 
@@ -480,14 +479,6 @@ public class DialerProfileHandlerValidationTests
             var feature = new Mock<IFeatureInfo>();
 
             feature.SetupGet(x => x.Id).Returns(ContactCenterConstants.Feature.DialerPaced);
-            features.Add(feature.Object);
-        }
-
-        if (predictiveDialerEnabled)
-        {
-            var feature = new Mock<IFeatureInfo>();
-
-            feature.SetupGet(x => x.Id).Returns(ContactCenterConstants.Feature.DialerPredictive);
             features.Add(feature.Object);
         }
 

@@ -13,7 +13,7 @@ A **dialer profile** decides **how** outbound calls are placed: whether an agent
 | --- | --- |
 | **Menu** | Interaction Center > Management > Dialer Profiles |
 | **Permission** | Manage the Contact Center dialer |
-| **Features** | Contact Center Outbound Dialer for Preview. Contact Center Paced Dialing adds Power and Progressive. Contact Center Predictive Dialing adds Predictive. |
+| **Features** | Contact Center Outbound Dialer for Preview. Contact Center Paced Dialing adds Power, Progressive and Predictive. |
 
 <AskYourAdmin />
 
@@ -87,7 +87,7 @@ With a Power profile the agent only signs in and stays **Available**. Within a m
 
 ## Predictive dialing
 
-Predictive dialing needs the **Contact Center Predictive Dialing** feature. Without it the **Predictive** mode is not offered and a Predictive profile cannot be saved.
+Predictive dialing is part of the **Contact Center Paced Dialing** feature, like Power and Progressive. Without it the **Predictive** mode is not offered and a Predictive profile cannot be saved.
 
 Today a Predictive profile dials like Power: each call reserves its own available agent before it is placed, so a person who answers always has an agent waiting. As the abandonment rate climbs toward the **Maximum abandonment rate**, fewer calls are placed each cycle, down to one per agent at the cap.
 

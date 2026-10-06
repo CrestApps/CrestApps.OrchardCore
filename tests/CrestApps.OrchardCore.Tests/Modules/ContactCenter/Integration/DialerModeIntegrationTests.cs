@@ -89,25 +89,6 @@ public sealed class DialerModeIntegrationTests
         Assert.Equal(AgentPresenceStatus.Busy, await harness.GetPresenceAsync(otherAgentId));
     }
 
-    [Fact]
-    public async Task Predictive_WithoutThePredictiveFeature_IsRefused_NoCallPlacedAndAgentStaysAvailable()
-    {
-        // Arrange
-        await using var harness = await DialerModeIntegrationHarness.CreateAsync();
-        await harness.SignInAgentAsync("agent-1", "user-1");
-        await harness.SeedQueuedActivityAsync("activity-1", "+15551230001");
-        var profile = DialerModeIntegrationHarness.CreateProfile(DialerMode.Predictive);
-
-        // Act
-        var started = await harness.RunPacingCycleAsync(profile);
-
-        // Assert: without the Predictive Dialing feature the mode resolves to no strategy, so nothing is dialed and the
-        // agent is untouched.
-        Assert.Equal(0, started);
-        Assert.Empty(harness.Router.PlacedCalls);
-        Assert.Equal(AgentPresenceStatus.Available, await harness.GetPresenceAsync("agent-1"));
-    }
-
     [Theory]
     [InlineData(DialerMode.Manual)]
     [InlineData(DialerMode.Preview)]

@@ -121,7 +121,6 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
         }
 
         var automatedDialerEnabled = await _shellFeaturesManager.IsFeatureEnabledAsync(ContactCenterConstants.Feature.DialerPaced);
-        var predictiveDialerEnabled = await _shellFeaturesManager.IsFeatureEnabledAsync(ContactCenterConstants.Feature.DialerPredictive);
 
         // Grouped in cards by what they govern. Every card edits the same model under the same prefix, so the one form
         // still posts all of them together.
@@ -132,7 +131,6 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             model.Description = viewModel.Description;
             model.Mode = viewModel.Mode;
             model.AutomatedDialerEnabled = automatedDialerEnabled;
-            model.PredictiveDialerEnabled = predictiveDialerEnabled;
             model.ProviderName = viewModel.ProviderName;
             model.ProviderOptions = viewModel.ProviderOptions;
             model.CallsPerAgent = viewModel.CallsPerAgent;
