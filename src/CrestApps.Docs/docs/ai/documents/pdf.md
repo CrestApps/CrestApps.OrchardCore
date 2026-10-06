@@ -3,6 +3,8 @@ sidebar_label: PDF Support
 sidebar_position: 2
 title: AI Documents (PDF) Support
 description: PDF text extraction support for the AI Documents feature.
+user_manual:
+  - user-manual/ai/knowledge
 ---
 
 | | |

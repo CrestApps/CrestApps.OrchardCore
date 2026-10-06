@@ -2,33 +2,65 @@
 sidebar_label: Overview
 sidebar_position: 0
 title: Standard Modules
-description: Overview of CrestApps standard modules that enhance Orchard Core CMS functionality.
+description: Technical overview of the CrestApps standard modules that extend Orchard Core CMS, with their feature IDs, packages and links to the User Manual.
+user_manual:
+  - user-manual/administration/users
+  - user-manual/administration/roles
+  - user-manual/administration/content-access-control
+  - user-manual/administration/content-fields
+  - user-manual/administration/import-and-export
+  - user-manual/administration/do-not-call-lists
+  - user-manual/administration/phone-number-verification
+  - user-manual/administration/time-zones
+  - user-manual/reports
 ---
 
 # Standard Modules
 
-CrestApps provides a set of standard modules that enhance core Orchard Core CMS functionality. These modules focus on user management, real-time communication, role-based access control, and shared resources.
+The standard modules extend Orchard Core CMS with user and role enhancements, content tools, compliance and
+phone-number services, reporting, shared front-end resources and real-time infrastructure. The AI, Omnichannel,
+Telephony and Contact Center suites build on them.
 
-## Available Modules
+This section is for developers and IT: feature IDs, dependencies, configuration, recipes and extension points.
 
-| Module | Feature ID | Description |
-|--------|-----------|-------------|
-| [Content Access Control](content-access-control) | `CrestApps.OrchardCore.ContentAccessControl` | Role-based content access restrictions |
-| [Content Fields](content-fields) | `CrestApps.OrchardCore.ContentFields` | Custom Orchard Core content field editors |
-| [Content Transfer](content-transfer) | `CrestApps.OrchardCore.ContentTransfer` | Bulk Excel import and export for content items |
-| [DNC Registry](dnc-registry) | `CrestApps.OrchardCore.DncRegistry` | National do-not-call registry integrations and import compliance settings |
-| [Phone Number Verifications](phone-number-verifications) | `CrestApps.OrchardCore.PhoneNumbers.Verifications` | Provider-agnostic phone number verification with content-part storage, reporting, and background revalidation |
-| [Phone Number Verifications - AbstractAPI](phone-number-verifications-abstractapi) | `CrestApps.OrchardCore.PhoneNumbers.Verifications.AbstractApi` | AbstractAPI provider for phone number verification |
-| [Phone Number Verifications - Veriphone](phone-number-verifications-veriphone) | `CrestApps.OrchardCore.PhoneNumbers.Verifications.Veriphone` | Veriphone provider for phone number verification |
-| [Phone Number Verifications - Twilio](phone-number-verifications-twilio) | `CrestApps.OrchardCore.PhoneNumbers.Verifications.Twilio` | Twilio Lookup provider for phone number verification |
-| [Recipes](recipes) | `CrestApps.OrchardCore.Recipes` | JSON-Schema support for Orchard Core recipes |
-| [Reports](reports) | `CrestApps.OrchardCore.Reports` | Reusable reporting framework with a shared admin Reports area, extensible filters, and exports |
-| [Resources](resources) | `CrestApps.OrchardCore.Resources` | Shared scripts and stylesheets |
-| [Roles](roles) | `CrestApps.OrchardCore.Roles` | Enhanced role management with RolePickerPart |
-| [SignalR compatibility](signalr) | `CrestApps.OrchardCore.SignalR` | Deprecated compatibility feature for the Orchard Core SignalR module |
-| [Time Zones](time-zones) | `CrestApps.OrchardCore.TimeZones` | Friendly named time zone maps and grouped time zone selection |
-| [Users](users) | `CrestApps.OrchardCore.Users` | Enhanced user management with display names and avatars |
-| [WebSockets](websockets) | `CrestApps.OrchardCore.WebSockets` | Per-tenant WebSocket hosting and a swappable connection registry for features that host raw WebSocket endpoints |
+:::tip[Day-to-day use]
+The administrators who use these features in the browser have their own guides in the User Manual's
+**Site Administration** section: [Users](../user-manual/administration/users.md),
+[Roles and Permissions](../user-manual/administration/roles.md),
+[Restrict Content by Role](../user-manual/administration/content-access-control.md),
+[Content Fields](../user-manual/administration/content-fields.md),
+[Bulk Import and Export](../user-manual/administration/import-and-export.md),
+[Do Not Call Lists](../user-manual/administration/do-not-call-lists.md),
+[Phone Number Verification](../user-manual/administration/phone-number-verification.md),
+[Time Zones](../user-manual/administration/time-zones.md) and [Reports](../user-manual/reports.md).
+:::
+
+## Modules
+
+| Module | Feature ID | What it adds | User Manual |
+| --- | --- | --- | --- |
+| [Users](users.md) | `CrestApps.OrchardCore.Users` (dependency only), `CrestApps.OrchardCore.Users.DisplayName`, `CrestApps.OrchardCore.Users.Avatars` | User caching, display names, avatars, the reusable `UserPicker` and the user search endpoint | [Users](../user-manual/administration/users.md) |
+| [Roles](roles.md) | `CrestApps.OrchardCore.Roles` | `RolePickerPart` | [Roles and Permissions](../user-manual/administration/roles.md) |
+| [Content Access Control](content-access-control.md) | `CrestApps.OrchardCore.ContentAccessControl` | Role-based view restrictions on content items | [Restrict Content by Role](../user-manual/administration/content-access-control.md) |
+| [Content Fields](content-fields.md) | `CrestApps.OrchardCore.ContentFields` | `PhoneField` | [Content Fields](../user-manual/administration/content-fields.md) |
+| [Content Transfer](content-transfer.md) | `CrestApps.OrchardCore.ContentTransfer`, `CrestApps.OrchardCore.ContentTransfer.OpenXml` | Bulk CSV and Excel import and export with pluggable handlers and file formats | [Bulk Import and Export](../user-manual/administration/import-and-export.md) |
+| [DNC Registry](dnc-registry.md) | `CrestApps.OrchardCore.DncRegistry` and its `.UsaFtc`, `.CanadaDncl`, `.Local` and `.Azure` features | National and local do-not-call registries and import enforcement | [Do Not Call Lists](../user-manual/administration/do-not-call-lists.md) |
+| [Phone Number Verifications](phone-number-verifications.md) | `CrestApps.OrchardCore.PhoneNumbers.Verifications` (dependency only) | Provider-agnostic verification, content-part storage, background revalidation, queue and report | [Phone Number Verification](../user-manual/administration/phone-number-verification.md) |
+| [AbstractAPI provider](phone-number-verifications-abstractapi.md) | `CrestApps.OrchardCore.PhoneNumbers.Verifications.AbstractApi` | AbstractAPI Phone Validation provider | [Phone Number Verification](../user-manual/administration/phone-number-verification.md) |
+| [Veriphone provider](phone-number-verifications-veriphone.md) | `CrestApps.OrchardCore.PhoneNumbers.Verifications.Veriphone` | Veriphone provider | [Phone Number Verification](../user-manual/administration/phone-number-verification.md) |
+| [Twilio provider](phone-number-verifications-twilio.md) | `CrestApps.OrchardCore.PhoneNumbers.Verifications.Twilio` | Twilio Lookup provider | [Phone Number Verification](../user-manual/administration/phone-number-verification.md) |
+| [Recipes](recipes.md) | `CrestApps.OrchardCore.Recipes` | JSON-Schema support for Orchard Core recipes | |
+| [Reports](reports.md) | `CrestApps.OrchardCore.Reports`, `CrestApps.OrchardCore.Reports.OpenXml` | Shared Reports area, extensible filters, uniform renderer and CSV / Excel exports | [Reports](../user-manual/reports.md) |
+| [Resources](resources.md) | `CrestApps.OrchardCore.Resources` | Shared scripts, stylesheets and view components | |
+| [SignalR compatibility](signalr.md) | `CrestApps.OrchardCore.SignalR` | Deprecated compatibility feature for the Orchard Core SignalR module | |
+| [Time Zones](time-zones.md) | `CrestApps.OrchardCore.TimeZones` | Friendly named time zone maps that replace the Orchard Core time zone list | [Time Zones](../user-manual/administration/time-zones.md) |
+| [WebSockets](websockets.md) | `CrestApps.OrchardCore.WebSockets` (dependency only) | Per-tenant WebSocket middleware and a swappable connection registry | |
+
+The [Recipe Schemas](workflow-activity-schemas.md) pages in this section document the JSON schemas the Recipes
+module contributes for workflow activities, rule conditions, sitemap sources, deployment steps, admin menu nodes,
+query sources, URL rewrite rules and placement node filters.
+
+Feature IDs for every module are also listed in the [Feature ID Reference](../feature-reference.md).
 
 ## Installation
 
@@ -45,4 +77,7 @@ dotnet add package CrestApps.OrchardCore.Users
 # etc.
 ```
 
-After installation, enable the desired features in the **Orchard Core Admin Dashboard** under **Tools > Features**.
+After installation, enable the features under **Tools** -> **Features**, or with the `Feature` recipe step. Features
+marked "dependency only" do not appear as a toggle; they are enabled automatically by the features that need them.
+Settings that the modules read from `appsettings.json` and environment variables are listed on the
+[Configuration](../configuration.md) page.

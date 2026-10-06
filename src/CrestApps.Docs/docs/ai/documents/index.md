@@ -3,6 +3,9 @@ sidebar_label: Overview
 sidebar_position: 1
 title: AI Documents
 description: Document upload, text extraction, embedding, and RAG capabilities for AI Chat Interactions, AI Profiles, and AI Chat Sessions.
+user_manual:
+  - user-manual/ai/knowledge
+  - user-manual/ai/chat
 ---
 
 | | |
@@ -11,6 +14,8 @@ description: Document upload, text extraction, embedding, and RAG capabilities f
 | **Feature ID** | `CrestApps.OrchardCore.AI.Documents` |
 
 Provides the foundation for document processing, text extraction, and Retrieval-Augmented Generation (RAG) capabilities.
+
+Uploading documents to profiles, letting users attach files in chats, and the related settings are described for administrators and users in the User Manual under [Knowledge](../../user-manual/ai/knowledge.md) and [Attach files to a chat](../../user-manual/ai/chat.md#attach-files-to-a-chat).
 
 ## Overview
 
@@ -70,7 +75,7 @@ This scanner takes precedence over the framework's default no-op scanner. To plu
 
 Provides document upload and Retrieval-Augmented Generation (RAG) support for AI Chat Interactions.
 
-When enabled, a **Documents** tab appears in the chat interaction UI, allowing users to upload documents and chat against their own data.
+When enabled, the **Knowledge** tab of the chat interaction UI gets an **Attached files** upload area, allowing users to upload documents and chat against their own data.
 
 Documents uploaded to a chat interaction are **scoped to that session**.
 
@@ -101,8 +106,8 @@ The orchestrator supports various document-related operations:
 1. **Set up an indexing provider**: Enable Elasticsearch or Azure AI Search in the Orchard Core admin.
 2. **Create an index**: Navigate to **Search > Indexing** and create a new index (e.g., "AI Documents").
 3. **Configure settings**: Navigate to **Settings > Artificial Intelligence** and select your new index and default document retrieval mode. After the index is configured in production, avoid changing it to prevent losing access to documents in existing sessions.
-4. **Enable the feature**: Enable `AI Chat Interaction Documents` in the admin dashboard.
-5. Start using the Documents tab in your chat interactions.
+4. **Enable the feature**: Enable **AI Documents for Chat Interactions** in the admin dashboard.
+5. Start using the **Knowledge** tab in your chat interactions (see [Chat interactions](../../user-manual/ai/chat-interactions.md#knowledge-tab)).
 
 ## AI Documents for Profiles
 
@@ -113,7 +118,7 @@ The orchestrator supports various document-related operations:
 
 Provides document upload and Retrieval-Augmented Generation (RAG) support for AI Profiles.
 
-When enabled, a **Documents** tab appears on the AI Profile editor, allowing administrators to attach text-based documents that will be chunked, embedded, and used as context across all chat sessions using that profile.
+When enabled, the **Knowledge** tab of the AI Profile editor gets a document upload area, allowing administrators to attach text-based documents that will be chunked, embedded, and used as context across all chat sessions using that profile.
 
 Unlike chat interaction documents (which are scoped to a single session), profile documents **persist across all sessions** using the profile.
 Profile documents are treated as **background knowledge**. End users should not be told that the profile has attached documents unless they explicitly upload documents in the current session.
@@ -152,7 +157,7 @@ Tabular file types (`.csv`, `.tsv`, `.xlsx`, `.xls`) are registered as non-embed
 
 Documents are managed directly through the AI Profile editor form. When you save a profile:
 
-1. **New files** selected in the Documents tab are uploaded, text-extracted, chunked, embedded, and stored
+1. **New files** selected on the Knowledge tab are uploaded, text-extracted, chunked, embedded, and stored
 2. **Removed documents** marked for deletion are removed from the store
 3. All changes are applied atomically when the profile is saved
 
@@ -160,10 +165,7 @@ There are no separate API endpoints for profile document management — everythi
 
 ### Getting Started
 
-1. Enable the `AI Documents for Profiles` feature in the Orchard Core admin dashboard.
-2. Navigate to **Artificial Intelligence > AI Profiles** and edit a profile.
-3. Use the **Documents** tab to upload text-based documents.
-4. Configure **Document Top N** and, when needed, **Document retrieval mode** to control how much document context is injected and whether the response uses chunk-level or hierarchical retrieval.
+Enable the `AI Documents for Profiles` feature. Documents are then uploaded on the **Knowledge** tab of the AI Profile editor (**Artificial Intelligence > Profiles**), together with **Document Top N** and **Document retrieval mode**. See [Upload documents to a profile](../../user-manual/ai/knowledge.md#upload-documents-to-a-profile).
 
 ## AI Documents for Chat Sessions
 
@@ -190,19 +192,15 @@ Unlike profile documents (which persist across all sessions), chat session docum
 
 ### Per-Profile Opt-In
 
-Because document processing is resource-intensive, document upload is **not enabled by default** even when the feature is active. Administrators must explicitly opt in for each AI Profile:
+Because document processing is resource-intensive, document upload is **not enabled by default** even when the feature is active. Administrators must explicitly opt in for each AI Profile with **Allow session document uploads**, **Allow session image uploads**, or both, on the profile editor's **Knowledge** tab. See [Let users attach files](../../user-manual/ai/knowledge.md#let-users-attach-files).
 
-1. Navigate to **Artificial Intelligence > AI Profiles** and edit a profile.
-2. In the **Documents** section, enable **Allow session document uploads**, **Allow session image uploads**, or both, depending on the experience you want to allow.
-3. Save the profile.
-
-For **AI Chat Widget** content items, the same checkbox appears on the widget editor under the AI profile part settings.
+The **Artificial Intelligence Chat** widget has no upload setting of its own: it follows the settings of the profile it uses.
 
 ### Supported UIs
 
 | UI | Where | Notes |
 |----|-------|-------|
-| **AI Chat Session** | Admin > Artificial Intelligence > AI Chat | Full session page |
+| **AI Chat Session** | Admin > Artificial Intelligence > *profile name* | Full session page |
 | **AI Chat Admin Widget** | Floating admin widget | Compact chat widget on admin pages |
 | **AI Chat Widget** | Frontend content widget | Public-facing chat widget |
 
@@ -210,7 +208,7 @@ For **AI Chat Widget** content items, the same checkbox appears on the widget ed
 
 1. **Set up an indexing provider**: Enable Elasticsearch or Azure AI Search in the Orchard Core admin.
 2. **Create an index**: Navigate to **Search > Indexing** and create a new index (e.g., "AI Documents").
-3. **Configure settings**: Navigate to **Settings > Artificial Intelligence** and select your new index and default document retrieval mode. Use **Allow document uploads** and **Allow image uploads** to control which file types chat interactions can accept. After the index is configured in production, avoid changing it to prevent losing access to documents in existing sessions.
+3. **Configure settings**: Navigate to **Settings > Artificial Intelligence** and select your new index and default document retrieval mode. Use **Allow document uploads in chat interactions** and **Allow image uploads in chat interactions** to control which file types chat interactions can accept. After the index is configured in production, avoid changing it to prevent losing access to documents in existing sessions.
 4. **Enable the feature**: Enable `AI Documents for Chat Sessions` in the admin dashboard.
 5. **Opt in per profile**: Edit the desired AI Profile and enable **Allow session document uploads**, **Allow session image uploads**, or both.
 6. Open a chat session. The attach button and drag-and-drop zone are available when at least one upload type is enabled for the profile. Image uploads also require a configured vision deployment.
@@ -240,8 +238,8 @@ For **AI Chat Widget** content items, the same checkbox appears on the widget ed
 | Setting | Description | Default |
 |---------|-------------|---------|
 | Top N Results | Number of top matching document chunks to include as context | 3 |
-| Allow document uploads | Enables document uploads for chat interactions | True |
-| Allow image uploads | Enables image uploads for chat interactions when a vision deployment is configured | False |
+| Allow document uploads in chat interactions | Enables document uploads for chat interactions | True |
+| Allow image uploads in chat interactions | Enables image uploads for chat interactions when a vision deployment is configured | False |
 
 ### File storage providers
 

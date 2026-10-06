@@ -3,6 +3,8 @@ sidebar_label: SFTP Resources
 sidebar_position: 3
 title: MCP SFTP Resource Handler
 description: SFTP (SSH File Transfer Protocol) resource support for the MCP Server, allowing remote files on SFTP servers to be exposed as MCP resources.
+user_manual:
+  - user-manual/ai/tools-and-agents
 ---
 
 | | |
@@ -49,7 +51,7 @@ When creating an SFTP resource in the admin UI, you can configure:
 
 ### Creating an SFTP Resource via Admin UI
 
-1. Navigate to **Artificial Intelligence** → **MCP Resources**
+1. Navigate to **Artificial Intelligence** → **Model Context Protocol** → **Resources**
 2. Click **Add Resource**
 3. Select **SFTP** as the resource type
 4. Fill in the connection details:

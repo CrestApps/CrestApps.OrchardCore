@@ -3,6 +3,8 @@ sidebar_label: Phone Number Verifications - Veriphone
 sidebar_position: 10
 title: Veriphone Phone Number Verification
 description: Configure the Veriphone provider for the Phone Number Verifications module.
+user_manual:
+  - user-manual/administration/phone-number-verification
 ---
 
 | | |
@@ -68,9 +70,11 @@ Veriphone returns the following information, which the provider maps into the co
 
 ## Sample configuration
 
+The User Manual walks administrators through these screens on [Phone Number Verification](../user-manual/administration/phone-number-verification.md#set-up-a-provider). In short:
+
 1. Create an account at [veriphone.io](https://veriphone.io) and copy the API key.
-2. Enable the **Veriphone Phone Number Verification** feature under **Configuration** -> **Features**.
-3. Open **Settings** -> **Phone Number Verifications**, select the **Veriphone** tab, paste the key, and save.
+2. Enable the **Veriphone Phone Number Verification** feature under **Tools** -> **Features**.
+3. Open **Settings** -> **Phone Number Verifications**, select the **Veriphone** tab, switch on **Enable this provider**, paste the key, and save.
 4. On the **General** tab, select **Veriphone** as the default provider.
 
 ## Troubleshooting

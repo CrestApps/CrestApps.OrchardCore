@@ -17,6 +17,12 @@ The SignalR module has been migrated into the Orchard Core framework. Use `Orcha
 and the framework `signalr` script resource for new work. The deprecated CrestApps feature only
 exists as a compatibility feature for sites that still need migration.
 
+:::note[Contact Center distributed topologies]
+The Contact Center topology check looks for the deprecated `CrestApps.OrchardCore.SignalR.Redis` feature ID when a
+topology profile needs a Redis backplane, such as `single-node-distributed`. Enable that compatibility feature (it turns on
+`OrchardCore.SignalR.Redis`) on those sites. See [Production support](../contact-center/production-support.md).
+:::
+
 ## CrestApps hub helpers
 
 `SignalRHubRoutes` and `Html.SignalRHubUrl<T>()` are **not** part of the Orchard Core SignalR module. They

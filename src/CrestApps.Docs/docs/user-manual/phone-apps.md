@@ -3,6 +3,8 @@ sidebar_label: Browser Extension & Windows App
 sidebar_position: 42
 title: Soft Phone Browser Extension and Windows App
 description: Install the CrestApps Soft Phone browser extension or Windows app so calls keep going while you move between pages, and incoming calls ring even when the phone window is closed.
+technical_manual:
+  - telephony/index
 ---
 
 A phone that lives inside a web page loses its call when you reload or leave the page. The two **phone apps** fix that. Each opens your site's phone in its own window and keeps a background connection that rings for incoming calls, even while the phone window is closed.
@@ -21,8 +23,8 @@ Both apps show your site's own `/softphone` page, so the call controls are exact
 
 ## Before you start (administrator)
 
-1. Enable the **Telephony Soft Phone Extension** feature (`CrestApps.OrchardCore.Telephony.SoftPhone.Extension`). It adds the `/softphone` page the apps open.
-2. Give the users the **Use the telephony soft phone** permission.
+1. Enable the **Telephony Soft Phone Extension** feature in **Tools > Features**. It adds the `/softphone` page the apps open.
+2. Give the users the **Use the telephony soft phone** permission. The *Agent* role does not have it by default, so add it to that role or to another role your agents have.
 3. Tell your users the site's domain, for example `phone.example.com`.
 
 ## Browser extension

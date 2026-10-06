@@ -3,9 +3,20 @@ sidebar_label: Load Activities
 sidebar_position: 17
 title: Load Activities
 description: Turn a filtered list of contacts into activities - assigned to agents, handled by the AI, or queued for the outbound dialer.
+technical_manual:
+  - omnichannel/management
+  - contact-center/agents-queues-dialer
 ---
 
-**Load activities** creates activities in bulk. You describe which contacts to pick (their type, when they were created, phone number, time zone, last outcome...) and what kind of work to create, and the load runs in the background.
+**Load activities** creates activities in bulk. You describe which contacts to pick (their type, when they were created, phone number, time zone, last outcome...) and what kind of work to create, and the load runs in the background, so even a large list does not slow the site down.
+
+| | |
+| --- | --- |
+| **Menu** | Interaction Center > Management > Load Activities |
+| **Permission** | Manage activity batches. Deleting a finished load also needs **Delete loaded activity batches**. |
+| **Feature** | Omnichannel Management. The **Dialer** source needs Contact Center Outbound Dialer. |
+
+<AskYourAdmin />
 
 There are three sources:
 
@@ -15,11 +26,7 @@ There are three sources:
 | **Automatic** | Unassigned **automated** activities an AI profile works on its own. | AI SMS outreach and AI voice calls. See [Automated AI SMS and voice](automated-ai.md). |
 | **Dialer** | Unassigned phone activities queued for the outbound dialer. | Preview, power and progressive dialing. Shown when the Contact Center Outbound Dialer feature is on. |
 
-| | |
-| --- | --- |
-| **Menu** | Interaction Center > Management > Load Activities |
-| **Permission** | Manage activity batches. Deleting a finished load also needs **Delete loaded activity batches**. |
-| **Feature** | Omnichannel Management |
+The **Load Activities** list shows the newest loads first. A load does nothing when you save it: it starts only when you choose **Load batch** from its **Actions** menu.
 
 ## Manual loads
 
@@ -47,33 +54,55 @@ A load whose status is *Loaded* can be deleted by users with the **Delete loaded
 2. Pick the **Dialer profile** (it decides preview, power or progressive) and the **Campaign**. Agents sign in to this campaign to get the calls, so a dialer load will not save without one unless the subject has a default campaign.
 3. Fill in the record filters, save, and choose **Actions > Load batch**.
 
-Dialer loads always use the phone channel and create manual (agent-handled) activities. Each activity is queued for the campaign as it is created.
+Dialer loads always use the phone channel and create manual (agent-handled) activities. The activities are left unassigned, take the dialing mode of the dialer profile, and are queued for the campaign as they are created; the dialer then offers them to the agents signed in to that campaign. The campaign always comes from the load (or the subject's default campaign), never from the dialer profile.
 
 ## Fields
 
+The form has three cards: **Activity load settings** (what to create), **Record filters** (which contacts or leads to pick) and **Last activity filters**.
+
+### Activity load settings
+
 | Field | What it does |
 | --- | --- |
+| **Source** | The source you picked. It cannot be changed. |
 | **Title** | A name for the load. Required. |
 | **Subject content type** | The subject of every activity. Required. |
-| **Campaign** | Stamped on every activity; falls back to the subject's default campaign. |
-| **Channel** | **Phone** or **SMS**. Hidden for dialer loads. |
+| **Campaign** | Stamped on every activity. Leave it empty to use the subject's default campaign. |
+| **Channel** | **Phone** or **SMS**. Required, and hidden for dialer loads. |
 | **Address** | Automatic loads: the number to send from or call from. Only the [Omnichannel Addresses](channel-endpoints.md) used for the **Channel** picked are listed: numbers used for text messages for SMS, numbers used for voice calls for Phone. |
+| **Dialer profile** | Dialer loads: required. It decides the dialing mode (preview, power or progressive) and its pacing. |
 | **Dial from** | Dialer loads: the number the customers called from this load see, picked from the addresses used for voice calls. It is shown instead of the agent's own number and the dialer profile's **Caller ID**, unless the profile is set to **Always show this caller ID**. Leave it on **Default caller ID** to keep those. |
-| **Dialer profile** | Dialer loads: required. |
-| **Schedule at** | When the activities become due. |
-| **Users** | Manual loads: who gets the work. |
-| **Urgency** / **Instructions** | Copied onto every activity. Instructions are notes the agent reads first. |
+| **Schedule at** | When the activities become due. Required. |
+| **User(s) to assign activities to** | Manual loads: who gets the work. The activities are shared out in turn between them. |
+| **Urgency level** / **Instructions** | Copied onto every activity. Instructions are notes the agent reads first. |
 | **Prevent duplicate activity with the same subject** | Skips records that already have an open activity for this subject, on any campaign or channel. An open activity for a different subject does not stop a record from loading. |
+
+The automatic source adds AI fields; see [Automated AI SMS and voice](automated-ai.md#ai-options-on-an-automatic-load).
+
+### Record filters
+
+| Field | What it does |
+| --- | --- |
 | **Record type** | The contact or lead type to load. Required. A lead type adds a **Lead filters** panel right under it; see [Leads, Accounts and Opportunities](leads-accounts-opportunities.md#call-and-text-leads). |
-| **Created from / to** | Only records created in this range. |
-| **Only published records** | Skips drafts. |
+| **Created from** / **Created to** | Only records created in this range. |
+| **Only published records** | Skips drafts. When it is off, the latest version of each record is used, published or not. |
 | **Include records marked Do not call / Do not SMS / Do not email** | By default, records that opted out of the channel are skipped, including any record that shares their number. Tick to include them. |
-| **Phone number** and match type | Contains, Exact, Begins with, or Ends with. **Exact** finds the number however it was stored: `5555550123`, `15555550123` and `+15555550123` all find the same contact. A ten-digit number is read as a North American number. |
-| **Time zones** | Only records in these time zones. |
+| **Phone number filter** | A match type (**Contains**, **Exact match**, **Begins with** or **Ends with**) and a number. See the tips below. |
+| **Time zones** | Only records in these time zones, for example to call only where it is a good time of day. |
 | **Limit** | The most activities to create. |
+
+### Last activity filters
+
+| Field | What it does |
+| --- | --- |
 | **Last activity subject** / **Last activity disposition** | Only records whose last completed activity had this subject and outcome, for example everyone whose last *Lead generation* call was *No answer*. |
 
-The automatic source adds AI fields; see [Automated AI SMS and voice](automated-ai.md).
+### Phone number tips
+
+- The filter looks at each record's main cell and home numbers.
+- Type a national number or part of one, such as `702499`. Spaces, brackets and dashes are ignored.
+- Start with `+` to include the country code, such as `+1702499`. Without it, only the national number is compared, so records from more than one country can match.
+- **Exact match** finds the number however it was stored: `5555550123`, `15555550123` and `+15555550123` all find the same contact. A ten-digit number is read as a North American number.
 
 ## What a load reports
 

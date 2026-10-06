@@ -3,6 +3,8 @@ sidebar_label: Azure Event Grid
 sidebar_position: 4
 title: CrestApps Omnichannel - Azure Event Grid
 description: Receive inbound Omnichannel notifications via Azure Event Grid for decoupling and reliability.
+user_manual:
+  - user-manual/messaging
 ---
 
 | | |
@@ -116,7 +118,7 @@ A typical flow is:
 
 | Event Grid event type | What happens |
 | --- | --- |
-| `Microsoft.Communication.SMSReceived` | Routed. Raised as the platform's own `SmsReceived` event on the `SMS` channel, the same event the Twilio and Telnyx webhooks raise, so [SMS Automation](./sms) and the SMS channel of the [Messaging Workspace](./messaging-workspace) both act on it. |
+| `Microsoft.Communication.SMSReceived` | Routed. Raised as the platform's own `SmsReceived` event on the `SMS` channel, the same event the Twilio and Telnyx webhooks raise, so [SMS Automation](./sms.md) and the SMS channel of the [Messaging Workspace](./messaging-workspace.md) both act on it. |
 | `Microsoft.Communication.SMSDeliveryReportReceived` | Stored, not routed. The delivery status of the sent message is not updated. |
 | Any other type | Stored, not routed. |
 

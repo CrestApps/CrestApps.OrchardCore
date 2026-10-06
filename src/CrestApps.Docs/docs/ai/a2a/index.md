@@ -3,6 +3,8 @@ sidebar_label: Overview
 sidebar_position: 1
 title: Agent-to-Agent Protocol (A2A)
 description: Orchard Core client and host modules for the Agent-to-Agent protocol.
+user_manual:
+  - user-manual/ai/tools-and-agents
 ---
 
 # Agent-to-Agent Protocol (A2A)

@@ -3,6 +3,8 @@ sidebar_label: OpenAI
 sidebar_position: 1
 title: OpenAI Chat Feature
 description: OpenAI-compatible AI chat integration supporting DeepSeek, Google Gemini, Together AI, vLLM, and more.
+user_manual:
+  - user-manual/ai/connections
 ---
 
 | | |

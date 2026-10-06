@@ -3,6 +3,8 @@ sidebar_label: Ollama
 sidebar_position: 4
 title: Ollama AI Chat Feature
 description: Ollama integration for local AI model support in Orchard Core.
+user_manual:
+  - user-manual/ai/connections
 ---
 
 | | |

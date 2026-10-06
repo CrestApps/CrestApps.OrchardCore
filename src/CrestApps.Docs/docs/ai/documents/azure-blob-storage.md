@@ -3,6 +3,8 @@ sidebar_label: Azure Blob Storage
 sidebar_position: 2
 title: AI Documents - Azure Blob Storage
 description: Store uploaded AI documents in Azure Blob Storage instead of the local tenant web root.
+user_manual:
+  - user-manual/ai/knowledge
 ---
 
 | | |

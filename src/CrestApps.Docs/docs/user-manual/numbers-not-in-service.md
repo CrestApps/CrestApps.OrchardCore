@@ -3,6 +3,10 @@ sidebar_label: Numbers Not In Service
 sidebar_position: 19.8
 title: Numbers Not In Service - Skip Dead Numbers
 description: How calls that reach a disconnected or invalid number are completed automatically, and how those numbers are kept out of every later load and dial.
+technical_manual:
+  - omnichannel/management
+  - contact-center/agents-queues-dialer
+  - modules/phone-number-verifications
 ---
 
 A list of phone numbers is never fully clean. Some numbers are disconnected, some were never valid, and some have changed hands. When a call reaches one of them, the network reports that the number is **not in service**. The platform then completes the attempt on its own and adds the number to the **Numbers Not In Service** list, so no campaign loads or dials it again.
@@ -11,7 +15,9 @@ A list of phone numbers is never fully clean. Some numbers are disconnected, som
 | --- | --- |
 | **Menu** | Interaction Center > Management > Numbers Not In Service |
 | **Permission** | Manage activities |
-| **Feature** | Omnichannel Activities |
+| **Feature** | Omnichannel Management |
+
+<AskYourAdmin />
 
 ## What happens when a call finds a dead number
 
@@ -47,7 +53,7 @@ When a call finds a dead number, the platform uses the subject's disposition wit
 
 ## Catch dead numbers before you dial
 
-With [phone number verification](../modules/phone-number-verifications.md) turned on, each contact's preferred number is checked by a lookup provider. A number the lookup reports as invalid, or as an inactive line, is added to the list before anybody dials it. A number reported as *unreachable* (switched off, or out of coverage) is not added.
+With [phone number verification](administration/phone-number-verification.md) turned on, each contact's preferred number is checked by a lookup provider. A number the lookup reports as invalid, or as an inactive line, is added to the list before anybody dials it. A number reported as *unreachable* (switched off, or out of coverage) is not added.
 
 If a later lookup finds the same number active again, the mark the earlier lookup made is removed, because the number has been given to somebody new. A mark made by a real call stays until you use **Allow dialing** on it.
 

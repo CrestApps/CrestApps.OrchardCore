@@ -3,6 +3,8 @@ sidebar_label: Azure AI Search
 sidebar_position: 4
 title: AI Documents (Azure AI Search)
 description: Azure AI Search integration as an embedding and search provider for the AI Documents feature.
+user_manual:
+  - user-manual/ai/knowledge
 ---
 
 | | |
@@ -23,7 +25,7 @@ This module integrates Azure AI Search as an embedding and search provider for t
 
 1. Enable the `AI Documents indexing using Azure AI Search` feature in Orchard Core admin.
 2. Configure an Azure AI Search connection and create an index via **Search > Indexing**.
-3. Select the index in **Settings > Chat Interaction**.
+3. Select the index as the **Index profile** in the **Documents** section of **Settings > Artificial Intelligence** (see [Knowledge](../../user-manual/ai/knowledge.md#before-you-start)).
 
 ## Operational notes
 

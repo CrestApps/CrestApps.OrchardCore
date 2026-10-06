@@ -3,6 +3,8 @@ sidebar_label: Overview
 sidebar_position: 1
 title: AI Data Sources
 description: AI data source management, knowledge base indexing, and RAG search capabilities for Orchard Core.
+user_manual:
+  - user-manual/ai/knowledge
 ---
 
 | | |
@@ -38,11 +40,7 @@ This module provides AI data source management, knowledge base (KB) indexing, an
 
 ### End-to-End Screencast
 
-The following screencast shows the full Elasticsearch-backed RAG flow: reviewing the **Articles** content index and the **AI RAG Knowledge Base** index (both created with the Elasticsearch provider), creating an **AI Data Source** that maps the Articles index to the knowledge base, syncing the embeddings, creating an AI profile that is **restricted to the indexed data**, and finally asking a question. The assistant answers strictly from the indexed articles and renders the source article as a linked reference.
-
-<video controls preload="metadata" width="100%" aria-label="Screencast of an Elasticsearch-backed AI data source grounding answers on Article content">
-  <source src="/img/docs/ai-elasticsearch-datasource.mp4" type="video/mp4" />
-</video>
+The User Manual page [Knowledge](../../user-manual/ai/knowledge.md) has a screencast of the full Elasticsearch-backed RAG flow: reviewing the **Articles** content index and the **AI RAG Knowledge Base** index, creating an **AI Data Source** that maps the Articles index to the knowledge base, syncing the embeddings, creating an AI profile that is **restricted to the indexed data**, and asking a question that is answered strictly from the indexed articles with the source article as a linked reference. The same page describes every field of the data source editor and of the profile's **Knowledge** tab.
 
 The data source list now follows the deployments-style creation flow. **Add Data Source** opens a modal that lists the available source types. Built-in options include:
 
@@ -64,11 +62,12 @@ Existing data sources keep working without manual changes. Older records that di
 
 ### Site Settings
 
-Navigate to **Settings > Artificial Intelligence** to configure global data source defaults:
+The **Data Sources** section of **Settings > Artificial Intelligence** holds the global data source defaults:
 
-- **Top N Documents** — Default number of documents to retrieve (1–50).
-- **Strictness** — Default strictness level for search relevance (1–5).
-- **Enable Preemptive RAG** — When enabled, context is pre-fetched before AI completion for reduced latency.
+- **Default strictness** — Default strictness level for search relevance (1–5).
+- **Default top documents** — Default number of documents to retrieve (3–20).
+
+Preemptive retrieval is controlled by **Enable preemptive retrieval-augmented generation (RAG)** in the **Default Orchestrator** section of the same page. When tools are disabled on a profile, preemptive RAG is always active regardless of this setting.
 
 ### Data Source Settings
 
@@ -90,11 +89,13 @@ When a data source (or uploaded documents) is attached to an AI profile or chat 
 
 ### Preemptive RAG (Early Retrieval)
 
-When **Enable Preemptive RAG** is on, the system automatically searches the knowledge base **before** the model generates a response. The retrieved context is injected directly into the system prompt so the model can use it immediately.
+When preemptive RAG is on, the system automatically searches the knowledge base **before** the model generates a response. The retrieved context is injected directly into the system prompt so the model can use it immediately.
 
 When preemptive RAG is off but the data source is still attached, the system injects instructions telling the model to **call search tools** (e.g., `search_data_source`, `search_documents`) before answering. This gives the model the ability to search on demand instead of receiving pre-fetched context.
 
 ### IsInScope ("Limit Responses to Indexed Data")
+
+On a profile or chat interaction, `IsInScope` is the **Restrict answers to retrieved data only** checkbox on the **Knowledge** tab.
 
 | Preemptive RAG | IsInScope | Behavior |
 | --- | --- | --- |
@@ -192,7 +193,7 @@ This means the default synchronization flow is:
 
 Synchronizing a **source** index profile from **Search > Indexing** also queues a full re-sync for every AI data source whose **Source Index** matches that profile. This is the expected recovery path when you rebuild Orchard's built-in **Content** index and want the mapped `ai_knowledge_base_warehouse` documents regenerated from the rebuilt source index.
 
-For manual recovery or one-off reprocessing of a single mapping, use the **Sync** action in the Data Sources admin UI.
+For manual recovery or one-off reprocessing of a single mapping, use the **Sync index** action in the data source's **Actions** menu under **Artificial Intelligence > Data Sources**.
 
 ### Deletion cleanup
 
@@ -222,7 +223,7 @@ To populate the index correctly:
 
 3. **Trigger a sync:**
    - Go to **Artificial Intelligence > Data Sources**.
-   - Click **Sync** on each data source to index documents with embeddings.
+   - Choose **Sync index** from each data source's **Actions** menu to index documents with embeddings.
 
 :::note
 Without an embedding connection, the AI Knowledge Base index remains empty and AI profiles using these data sources do not receive contextual documents.

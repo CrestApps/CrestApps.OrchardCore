@@ -3,6 +3,11 @@ sidebar_label: Voice Routing Architecture
 sidebar_position: 3
 title: Inbound and Outbound Voice Routing Architecture
 description: Technical deep dive into Contact Center inbound and outbound voice routing, provider-truth synchronization, and restart reconciliation.
+user_manual:
+  - user-manual/entry-points-and-ivr
+  - user-manual/voicemail
+  - user-manual/queues
+  - user-manual/voice-media
 ---
 
 # Voice Routing Architecture
@@ -54,13 +59,17 @@ Configure the deadline in tenant shell configuration:
 
 ```json
 {
-  "CrestApps_Telephony": {
-    "Commands": {
-      "Timeout": "00:00:10"
+  "OrchardCore": {
+    "CrestApps_Telephony": {
+      "Commands": {
+        "Timeout": "00:00:10"
+      }
     }
   }
 }
 ```
+
+These examples show the host `appsettings.json` shape, with the `OrchardCore` wrapper. In a tenant's own `App_Data/Sites/{TenantName}/appsettings.json`, leave the wrapper out; for environment variables, see [Configuration](../configuration.md#how-configuration-reaches-the-modules).
 
 The default is 10 seconds; valid values range from one second through two minutes. The boundary returns on time even if a provider implementation fails to observe cancellation, and host shutdown also cancels the owned token. A timeout after provider contact is ambiguous: durable commands persist `OutcomeUnknown` with reconciliation required, while synchronous Telephony commands return an unknown result. The application must never interpret the timeout as proof that the PBX did not execute the command.
 
@@ -92,14 +101,16 @@ Configure tenant-local limits in shell configuration:
 
 ```json
 {
-  "CrestApps": {
-    "ContactCenter": {
-      "WebhookIngress": {
-        "ConcurrencyPermitLimit": 8,
-        "RatePermitLimit": 120,
-        "RatePeriodSeconds": 60,
-        "MaximumDeliveryAgeSeconds": 900,
-        "MaximumFutureSkewSeconds": 120
+  "OrchardCore": {
+    "CrestApps": {
+      "ContactCenter": {
+        "WebhookIngress": {
+          "ConcurrencyPermitLimit": 8,
+          "RatePermitLimit": 120,
+          "RatePeriodSeconds": 60,
+          "MaximumDeliveryAgeSeconds": 900,
+          "MaximumFutureSkewSeconds": 120
+        }
       }
     }
   }

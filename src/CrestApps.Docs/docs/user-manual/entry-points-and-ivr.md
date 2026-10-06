@@ -3,6 +3,9 @@ sidebar_label: Entry Points & IVR
 sidebar_position: 24
 title: Inbound Entry Points and IVR Menus
 description: Decide what happens when someone dials one of your numbers - which queue or person it rings, what happens after hours, where voicemail goes, and which keypad menu callers hear first.
+technical_manual:
+  - contact-center/voice-routing
+  - contact-center/agent-desktop
 ---
 
 An **inbound entry point** is the front door for one or more of your numbers, and the one place a number's inbound traffic is routed from. Each entry point answers one channel: **Voice calls** or **Text messages**. A number used for both has one entry point for its calls and one for its texts. A call entry point decides:
@@ -18,7 +21,9 @@ A text entry point decides where the conversations go, how a queue hands them ou
 | --- | --- |
 | **Menu** | Interaction Center > Management > Inbound entry points |
 | **Permission** | Manage Contact Center queues |
-| **Feature** | Contact Center Inbound Entry Points (`CrestApps.OrchardCore.ContactCenter.EntryPoints`), with Contact Center Inbound Voice (`CrestApps.OrchardCore.ContactCenter.InboundVoice`) for call entry points and SMS Messaging Channel (`CrestApps.OrchardCore.Omnichannel.Messaging.Sms`) for text entry points |
+| **Features** | Contact Center Inbound Entry Points, with Contact Center Inbound Voice for call entry points and SMS Messaging Channel for text entry points |
+
+<AskYourAdmin />
 
 <video controls preload="metadata" width="100%" aria-label="Screencast of adding a voice calls entry point that picks a number from the address list and routes its calls to a queue, with business hours and voicemail settings">
   <source src="/img/docs/um-entry-point.mp4" type="video/mp4" />
@@ -71,6 +76,8 @@ The **Welcome message** is spoken to every caller who rings while the entry poin
 
 To speak the welcome, the call is answered. On a line with no menu the caller then hears the queue's hold music, or a ringing tone, instead of the phone network's ringing while they wait for an agent.
 
+The queue has a **Welcome message** of its own, set on the [queue](queues.md). It is separate from this one, and is spoken when the caller starts waiting in the queue.
+
 ### Voicemail
 
 | Field | What it does |
@@ -78,6 +85,14 @@ To speak the welcome, the call is answered. On a line with no menu the caller th
 | **Default voicemail greeting** | Spoken when the person receiving the voicemail has not recorded [their own greeting](voicemail.md#record-your-voicemail-greeting). Empty uses the system default. |
 | **Deliver voicemail to** | Queue lines only: **An agent's inbox** (the default) or **The queue's shared voicemail box**, which any entitled supervisor or agent can pick up from [Shared voicemail](voicemail.md#shared-voicemail). |
 | **Voicemail inbox** | The agent whose inbox receives the voicemail. Hidden when the shared box is chosen. |
+
+## Test a new number before you publish it
+
+1. Add the number under [Omnichannel Addresses](channel-endpoints.md) with **Voice calls** ticked.
+2. Create the target [queue](queues.md): its routing strategy, service level, reservation timeout, required skills and overflow queue. Attach a [business hours](business-hours.md) calendar if the line should close or overflow outside staffed hours.
+3. Create the entry point for the number, as described above.
+4. Have at least one agent with the right skills [sign in to the queue](agent-workspace.md), then call the number. The call should reach the queue and be offered to the agent in **My workspace**, with the audio on the agent's soft phone.
+5. Keep the [Live dashboard](live-dashboard.md) open while you test. The queue's waiting count goes up before the call is offered, then the agent moves from available to busy, and to wrap-up when the call ends.
 
 ## Clone an entry point
 
@@ -139,7 +154,11 @@ An IVR menu is a set of **menus**. Each menu has a prompt and a list of **keys**
 4. At the top, set **Tries**, the number of wrong or missing keys a caller is allowed (default 3), and **When the tries run out** (the default, *Route to the entry point target*, sends the caller where the entry point routes calls with no menu).
 5. Click **Save**. Until every problem is fixed, the builder shows how many there are and the entry point will not save: a menu needs a prompt or recording and at least one key, a key can only be used once per menu, and queue, agent and transfer actions need a target. Allowed keys are 0-9, `*` and `#`.
 
-**Remove the IVR menu** takes the menu off the entry point. **Edit as JSON** shows the same menu as JSON, which is handy for copying a menu between entry points.
+Each menu has a **Menu** name; renaming a menu updates every key that opens it. A key that is already used on a menu is not offered again for that menu. **Remove menu** deletes a menu you no longer need.
+
+Two kinds of problems are only warnings, and do not stop you saving: a menu that no key leads to, listed under **Menus no key opens** (callers never hear it), and a queue, agent or destination that no longer exists (shown as *Not found*).
+
+**Remove the IVR menu** takes the menu off the entry point. **Edit as JSON** shows the same menu as text, which is handy for copying a menu between entry points: click **Copy** to copy it, paste it into the other entry point's **Edit as JSON** box, and click **Apply to menu**. The pasted text replaces the menu only once it is valid.
 
 A wrong key, no key, or **Repeat this menu** each use up one try; entering a new menu starts the count again. When a choice cannot be reached (the queue is disabled, for example), the caller goes to the entry point's target, and then to voicemail. The menu only plays while the entry point is open.
 

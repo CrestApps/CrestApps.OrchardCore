@@ -3,6 +3,8 @@ sidebar_label: Content Access Control
 sidebar_position: 4
 title: Content Access Control Feature
 description: Role-based content access restrictions for Orchard Core content items.
+user_manual:
+  - user-manual/administration/content-access-control
 ---
 
 | | |
@@ -14,15 +16,28 @@ Provides a way to control who can access content items.
 
 ## Overview
 
-The screencast below shows the **Restrict content?** setting on the *Page* content type's **Role Picker** part, then creates a page and uses the improved role selector — a searchable multi-select with **Select All / Deselect All** actions and tick indicators — to grant access to specific roles before publishing.
+This feature allows you to restrict access to content items based on user roles. It depends on
+[Enhanced Roles](roles.md) (`CrestApps.OrchardCore.Roles`) and adds a **Restrict content?** setting
+(`RolePickerPartContentAccessControlSettings.IsContentRestricted`) to the `RolePickerPart` settings on a content
+type. When it is `true`, the roles picked on each item decide who may view that item.
 
-<video controls preload="metadata" width="100%" aria-label="Screen cast of the Restrict content setting and the improved role selector picking roles on a page">
-  <source src="/img/docs/content-access-control.mp4" type="video/mp4" />
-</video>
+How administrators turn the restriction on for a content type and how editors restrict an item is described in the
+User Manual: [Restrict Content by Role](../user-manual/administration/content-access-control.md).
 
-This feature allows you to restrict access to content items based on user roles. Once enabled, you can add the `RolePickerPart` to any content type. This part lets you specify one or more roles required to access the content item. You can attach the part using the content definitions user interface or by adding a migration, as shown below:
+## How authorization works
 
-> Note: You must set the `Restrict content?` setting to `true` to enable the access control feature. This is part of the `RolePickerPart` settings, which can be configured via the user interface or through a migration.
+The feature registers `RoleBasedContentItemAuthorizationHandler`, an `IAuthorizationHandler` for
+`PermissionRequirement`:
+
+- It only acts on the `ViewContent` permission checked against a `ContentItem` resource. Edit, publish and delete
+  checks are not affected.
+- It collects the role names from every `RolePickerPart` on the content type (named or unnamed) whose settings have
+  `IsContentRestricted` set to `true`.
+- If the user is in any of those roles, the requirement succeeds. If roles were collected and the user is in none
+  of them, the handler fails the requirement. If no roles were picked, the item is not restricted.
+- It returns early when another handler has already succeeded the requirement.
+
+You can attach the part and set **Restrict content?** using the content definitions user interface or a migration.
 
 Here is an example of how to create or update a content type named `CustomContentType`, where access to its content items is restricted for all roles **except** "Administrator", "Authenticated", and "Anonymous".
 

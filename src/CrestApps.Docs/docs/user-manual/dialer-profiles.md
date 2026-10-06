@@ -3,15 +3,19 @@ sidebar_label: Dialer Profiles
 sidebar_position: 26
 title: Dialer Profiles - Preview, Power and Progressive Dialing
 description: Choose how outbound calls are placed for a campaign, what the customer sees as caller ID, and the compliance rules every call must pass.
+technical_manual:
+  - contact-center/agents-queues-dialer
 ---
 
-A **dialer profile** decides **how** outbound calls are placed: whether an agent reviews each record before the call (preview), or the system dials for available agents (power and progressive). It also carries the caller ID and the compliance rules. You pick the profile when you [load dialer activities](load-inventory.md#dialer-loads); the campaign you pick there is what agents sign in to.
+A **dialer profile** decides **how** outbound calls are placed: whether an agent reviews each record before the call (preview), or the system dials for available agents (power and progressive). It also carries the caller ID and the compliance rules. You pick the profile when you [load dialer activities](load-inventory.md#dialer-loads); the campaign you pick there is what agents sign in to. A profile names no campaign or queue, so one profile can serve many loads.
 
 | | |
 | --- | --- |
 | **Menu** | Interaction Center > Management > Dialer Profiles |
 | **Permission** | Manage the Contact Center dialer |
-| **Features** | Contact Center Outbound Dialer (`CrestApps.OrchardCore.ContactCenter.Dialer`) for Preview. Contact Center Paced Dialing (`CrestApps.OrchardCore.ContactCenter.Dialer.Paced`) adds Power and Progressive. |
+| **Features** | Contact Center Outbound Dialer for Preview. Contact Center Paced Dialing adds Power and Progressive. |
+
+<AskYourAdmin />
 
 <video controls preload="metadata" width="100%" aria-label="Screencast of creating a dialer profile and switching between preview, power and progressive modes">
   <source src="/img/docs/um-dialer-profiles.mp4" type="video/mp4" />
@@ -107,5 +111,6 @@ Queue callbacks use a built-in preview profile that skips the do-not-call and ca
 
 ## Next steps
 
+- Before you start an automated (power or progressive) campaign, set up the [dispositions](dispositions.md) and the [subject flow](subject-flows.md) first, so every call outcome has a result, and check the do-not-call, retry delay and calling window settings above.
 - [Load dialer activities](load-inventory.md#dialer-loads) with this profile and a campaign.
-- Give agents the campaign on their [entitlements](skills-and-entitlements.md), then have them [sign in to it](agent-workspace.md).
+- Give agents the campaign on their [entitlements](skills-and-entitlements.md), then have them [sign in to it](agent-workspace.md). [Calls from a dialer campaign](agent-workspace.md#calls-from-a-dialer-campaign) explains what agents see in each mode.

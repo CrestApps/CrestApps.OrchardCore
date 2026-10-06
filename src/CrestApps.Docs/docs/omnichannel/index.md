@@ -3,6 +3,14 @@ sidebar_label: Overview
 sidebar_position: 1
 title: Omnichannel Communications
 description: Orchard Core modules for unified communication orchestration and management.
+user_manual:
+  - user-manual/contacts
+  - user-manual/activities
+  - user-manual/load-inventory
+  - user-manual/channel-endpoints
+  - user-manual/messaging
+  - user-manual/automated-ai
+  - user-manual/leads-accounts-opportunities
 ---
 
 # Omnichannel Communications
@@ -20,14 +28,14 @@ The management experience layers a lightweight Customer Relationship Management 
 
 | Module | Docs |
 | --- | --- |
-| Base orchestration module (includes the **Omnichannel - Azure Communication Services** feature) | This page, [Azure Communication Services](azure-communication-services) |
-| Event Grid integration | [Event Grid](event-grid) |
-| Management UI (CRM), including re-engagement cadences | [Management](management), [Cadences](cadences) |
-| Leads, accounts and opportunities (**Omnichannel CRM**) | [CRM](crm) |
-| SMS automation (AI) | [SMS](sms) |
+| Base orchestration module (includes the **Omnichannel - Azure Communication Services** feature) | This page, [Azure Communication Services](azure-communication-services.md) |
+| Event Grid integration | [Event Grid](event-grid.md) |
+| Management UI (CRM), including re-engagement cadences | [Management](management.md), [Cadences](cadences.md) |
+| Leads, accounts and opportunities (**Omnichannel CRM**) | [CRM](crm.md) |
+| SMS automation (AI) | [SMS](sms.md) |
 | Automated Voice (AI voice conversations over any telephony provider) | [Telnyx AI Voice Agent](../telephony/telnyx.md#telnyx-ai-voice-agent) |
-| Messaging workspace (human two-way, every non-voice channel) and its **SMS Messaging Channel** | [Messaging Workspace](messaging-workspace) |
-| DNC Registry (national and local do-not-call screening) | [DNC Registry](../modules/dnc-registry) |
+| Messaging workspace (human two-way, every non-voice channel) and its **SMS Messaging Channel** | [Messaging Workspace](messaging-workspace.md) |
+| DNC Registry (national and local do-not-call screening) | [DNC Registry](../modules/dnc-registry.md) |
 | Contact Center Business Hours (calendars that gate automated sends) | [Business hours](../user-manual/business-hours.md) |
 
 ## What the base module does
@@ -52,8 +60,8 @@ feature that owns the provider:
 
 | Feature | Endpoint |
 | --- | --- |
-| [Omnichannel - Azure Event Grid](event-grid) | `POST ~/api/azure/webhook/eventgrid` |
-| [SMS Omnichannel Automation](sms) or the [SMS Messaging Channel](messaging-workspace#setting-up-sms), with Orchard Core's Twilio SMS feature (Twilio inbound SMS) | `POST ~/api/twilio/webhook/sms` |
+| [Omnichannel - Azure Event Grid](event-grid.md) | `POST ~/api/azure/webhook/eventgrid` |
+| [SMS Omnichannel Automation](sms.md) or the [SMS Messaging Channel](messaging-workspace.md#setting-up-sms), with Orchard Core's Twilio SMS feature (Twilio inbound SMS) | `POST ~/api/twilio/webhook/sms` |
 | [Telnyx SMS](../telephony/telnyx.md#telnyx-sms) (Telnyx inbound SMS) | `POST ~/api/telnyx/webhook/sms` |
 
 Enable the channel feature that matches how your provider delivers events, and configure its
@@ -80,7 +88,7 @@ Examples include:
 - **Campaign source, channel, disposition, and attempt mixes**, **Channel endpoint usage**, and per-user
   productivity and completion-time reports.
 
-See [Management: Reports](management#reports) and [Reports](../user-manual/reports.md) in the user manual.
+See [Management: Reports](management.md#reports) and [Reports](../user-manual/reports.md) in the user manual.
 
 Access is gated by the **View Omnichannel reports** (`ViewOmnichannelReports`) permission, which is
 implied by **Manage activities** and granted to administrators by default.
