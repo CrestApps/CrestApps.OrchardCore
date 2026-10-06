@@ -667,6 +667,33 @@
   }
 
   /*
+   * Adds the boost stage -- gain, then the limiter -- to a graph that is being built, after `input`. Returns the
+   * node the rest of the graph continues from and the nodes it created (for disposal), or null when the boost is
+   * off and nothing was added. Shared by the plain boost below and the voice isolation chain
+   * (voice-isolation.js), so there is one gain/limiter definition whichever path the capture takes.
+   */
+  function connectBoostStage(context, input, boostDb) {
+    var db = clampBoostDb(boostDb);
+    if (db === 0) {
+      return null;
+    }
+    var gain = context.createGain();
+    gain.gain.value = boostGainFor(db);
+    var limiter = context.createDynamicsCompressor();
+    limiter.threshold.value = LIMITER_THRESHOLD_DB;
+    limiter.knee.value = LIMITER_KNEE_DB;
+    limiter.ratio.value = LIMITER_RATIO;
+    limiter.attack.value = LIMITER_ATTACK_S;
+    limiter.release.value = LIMITER_RELEASE_S;
+    input.connect(gain);
+    gain.connect(limiter);
+    return {
+      output: limiter,
+      nodes: [gain, limiter]
+    };
+  }
+
+  /*
    * Builds the send stream for a captured microphone stream.
    *
    * With no boost, the source stream is returned as the send stream and there is nothing to dispose. With a
@@ -690,24 +717,14 @@
     }
     var context;
     var source;
-    var gain;
-    var limiter;
+    var stage;
     var destination;
     try {
       context = new AudioCtx();
       source = context.createMediaStreamSource(sourceStream);
-      gain = context.createGain();
-      gain.gain.value = boostGainFor(db);
-      limiter = context.createDynamicsCompressor();
-      limiter.threshold.value = LIMITER_THRESHOLD_DB;
-      limiter.knee.value = LIMITER_KNEE_DB;
-      limiter.ratio.value = LIMITER_RATIO;
-      limiter.attack.value = LIMITER_ATTACK_S;
-      limiter.release.value = LIMITER_RELEASE_S;
+      stage = connectBoostStage(context, source, db);
       destination = context.createMediaStreamDestination();
-      source.connect(gain);
-      gain.connect(limiter);
-      limiter.connect(destination);
+      stage.output.connect(destination);
 
       // A context created outside a user gesture starts suspended and a suspended graph is silence; the
       // switch that builds this runs from a settings change or a call, so the request is normally granted.
@@ -740,8 +757,9 @@
         disposed = true;
         try {
           source.disconnect();
-          gain.disconnect();
-          limiter.disconnect();
+          stage.nodes.forEach(function (node) {
+            node.disconnect();
+          });
         } catch (error) {/* best effort */}
         try {
           if (typeof context.close === 'function') {
@@ -755,7 +773,534 @@
   softPhone.clampBoostDb = clampBoostDb;
   softPhone.boostGainFor = boostGainFor;
   softPhone.describeBoost = describeBoost;
+  softPhone.connectBoostStage = connectBoostStage;
   softPhone.createBoostPipeline = createBoostPipeline;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * Voice isolation: a neural noise suppressor and a noise gate in front of the encoder.
+ *
+ * The browser's own noise suppression only removes steady noise -- fans, hum, hiss. A call centre's noise is other
+ * people talking, and that passes straight through it; automatic gain control then makes it worse, raising the room
+ * every time the agent pauses. An agent on a busy floor sounded to the caller like they were in the middle of a
+ * crowd, while the same headset on a desk phone app with "voice isolation" sounded quiet. This is the soft phone's
+ * answer: the raw capture runs through a speech-enhancement model, then through a gate tuned for a close-talk
+ * headset, then through the optional boost (mic-boost.js), and that is what the call sends.
+ *
+ *   microphone -> denoiser (GTCRN or RNNoise) -+-> noise gate -+-> [boost gain -> limiter] -> send track
+ *                                              +-> floor gain -+
+ *
+ * The denoiser removes what it recognizes as not-speech, including much of the babble of nearby voices. The gate
+ * handles what is left: a close-talk headset hears its wearer 20 dB or more above anyone else in the room, so
+ * when the agent is not speaking the level drops under the gate's threshold and the room is cut. The floor is a
+ * copy of the denoised signal far below the gate, so a closed gate attenuates the room instead of putting the
+ * line into dead digital silence -- which callers hear as a dropped call.
+ *
+ * Two engines are offered. GTCRN (the default) is a current speech-enhancement network trained on the DNS
+ * challenge's mixed noise, and it handles non-stationary noise and babble markedly better than RNNoise, whose
+ * band-gain model is closer to a smarter spectral subtractor. It runs at 16 kHz inside (exactly telephony's
+ * wideband) and, measured in Chrome, renders at about a tenth of real time, so it fits the audio thread with room
+ * to spare on an ordinary desktop. RNNoise renders at about a twenty-fifth of real time and is the lighter choice
+ * for an older machine; it is also the automatic fallback when GTCRN cannot load.
+ *
+ * Everything here is best effort. A browser without AudioWorklet or WebAssembly, a model that fails to load, or an
+ * audio engine the browser will not start without a click all reject the returned promise with a reason; the
+ * caller sends the raw capture instead and says so in the diagnostics. A call never goes out silent because this
+ * failed.
+ *
+ * The model and gate files are vendored from @sapphi-red/web-noise-suppressor (MIT; RNNoise BSD-3-Clause, GTCRN
+ * MIT) by the Resources module and loaded from the URL the widget configuration passes in, so tenant prefixes and
+ * virtual directories keep working.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a
+ * shared namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ * Every browser API is injectable so the graph wiring can be tested without a browser.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // The engines an agent can choose, in order of preference. The first is the default.
+  var VOICE_ISOLATION_ENGINES = ['gtcrn', 'rnnoise'];
+
+  // The gate strengths an agent can choose. The middle one is the default.
+  var VOICE_ISOLATION_STRENGTHS = ['low', 'medium', 'high'];
+
+  // The gate settings per strength. Thresholds are the RMS level, in dBFS, of the denoised signal over one
+  // 128-sample block. A close-talk headset with automatic gain control off puts conversational speech around
+  // -30 to -20 dBFS; voices across the room arrive 20 dB or more below that, and the denoiser has already taken
+  // most of them down further. The gate opens on the agent's voice, stays open through the gaps inside a phrase
+  // for the hold time, and closes only once the level has stayed under the (lower) close threshold that long.
+  // The floor is how far the room is turned down while the gate is closed.
+  //   low    - for a quiet voice or a microphone that sits further from the mouth: opens easily, cuts gently.
+  //   medium - a headset microphone at the corner of the mouth.
+  //   high   - a loud floor: needs a clearer voice to open and cuts the room hardest.
+  var GATE_SETTINGS = {
+    low: {
+      openThreshold: -50,
+      closeThreshold: -58,
+      holdMs: 300,
+      floorDb: -24
+    },
+    medium: {
+      openThreshold: -40,
+      closeThreshold: -50,
+      holdMs: 250,
+      floorDb: -30
+    },
+    high: {
+      openThreshold: -36,
+      closeThreshold: -45,
+      holdMs: 200,
+      floorDb: -40
+    }
+  };
+
+  // RNNoise is trained at 48 kHz and GTCRN accepts 48 kHz; asking for it avoids a resampler in the worklet.
+  var SAMPLE_RATE = 48000;
+
+  // The vendored files, relative to the configured base URL. Their names match the package's dist folder.
+  var WORKLET_PATHS = {
+    gtcrn: 'gtcrn/workletProcessor.js',
+    rnnoise: 'rnnoise/workletProcessor.js',
+    gate: 'noiseGate/workletProcessor.js'
+  };
+
+  // The processor names the vendored worklets register.
+  var PROCESSOR_NAMES = {
+    gtcrn: '@sapphi-red/web-noise-suppressor/gtcrn',
+    rnnoise: '@sapphi-red/web-noise-suppressor/rnnoise',
+    gate: '@sapphi-red/web-noise-suppressor/noise-gate'
+  };
+
+  // The wasm binaries. RNNoise ships a SIMD build that is used wherever the browser validates SIMD.
+  var WASM_PATHS = {
+    gtcrn: {
+      url: 'gtcrn.wasm'
+    },
+    rnnoise: {
+      url: 'rnnoise.wasm',
+      simdUrl: 'rnnoise_simd.wasm'
+    }
+  };
+
+  // The smallest module using a SIMD instruction, to ask the browser whether it can run the SIMD build. The same
+  // probe the package's own loader uses (wasm-feature-detect).
+  var SIMD_PROBE = [0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 123, 3, 2, 1, 0, 10, 10, 1, 8, 0, 65, 0, 253, 15, 253, 98, 11];
+
+  // How long the whole build may take before the capture is sent raw instead. Registration waits on it, so it
+  // has to be short; the files are small and cached after the first load.
+  var BUILD_TIMEOUT_MS = 6000;
+
+  // How long to wait for a suspended audio engine to start. Started inside a click it is immediate; refused, the
+  // promise never settles, so it is raced against this.
+  var RESUME_TIMEOUT_MS = 400;
+
+  // How often the raw microphone level is read for the dead-microphone check.
+  var SOURCE_METER_INTERVAL_MS = 200;
+
+  // The peak level of the RAW capture (0..1 RMS) at or under which a window is digital silence. With the gate
+  // in the chain the send track is legitimately near-silent whenever the agent listens, so the dead-microphone
+  // check reads the capture before processing instead; any working microphone, even in a quiet room, sits far
+  // above this, while a dead or hardware-muted one delivers zeros.
+  var RAW_CAPTURE_SILENT_LEVEL = 0.0001;
+
+  // Loaded wasm binaries, per URL, shared by every graph built on this page: a device switch or a settings
+  // change rebuilds the graph, and the binary does not need fetching again. A failed load is forgotten so the
+  // next build retries it.
+  var wasmCache = {};
+  function clampVoiceIsolationEngine(value) {
+    return VOICE_ISOLATION_ENGINES.indexOf(value) === -1 ? VOICE_ISOLATION_ENGINES[0] : value;
+  }
+  function clampVoiceIsolationStrength(value) {
+    return VOICE_ISOLATION_STRENGTHS.indexOf(value) === -1 ? 'medium' : value;
+  }
+
+  // The gate settings for a strength (a copy, so a caller cannot change the table).
+  function noiseGateSettingsFor(strength) {
+    var settings = GATE_SETTINGS[clampVoiceIsolationStrength(strength)];
+    return {
+      openThreshold: settings.openThreshold,
+      closeThreshold: settings.closeThreshold,
+      holdMs: settings.holdMs,
+      floorDb: settings.floorDb
+    };
+  }
+
+  /*
+   * A short token for the capture readout and the call quality report:
+   *   state 'off'     -> 'vi=off'
+   *   state 'active'  -> 'vi=gtcrn+gate' (the engine actually running, which may be the fallback)
+   *   state 'pending' -> 'vi=pending' (waiting for a click to start the audio engine)
+   *   state 'failed'  -> 'vi=failed'
+   */
+  function describeVoiceIsolation(state, engine) {
+    if (state === 'active') {
+      return 'vi=' + (engine || '?') + '+gate';
+    }
+    if (state === 'pending' || state === 'failed') {
+      return 'vi=' + state;
+    }
+    return 'vi=off';
+  }
+
+  // Joins a base URL and a relative path with exactly one slash between them.
+  function joinUrl(base, path) {
+    return String(base || '').replace(/\/+$/, '') + '/' + path;
+  }
+
+  // Whether this browser has everything the chain needs. Checked before anything is built, so an unsupported
+  // browser costs nothing.
+  function isVoiceIsolationSupported(options) {
+    var settings = options || {};
+    var AudioCtx = settings.audioContext || root.AudioContext || root.webkitAudioContext;
+    var WorkletNode = settings.audioWorkletNode || root.AudioWorkletNode;
+    var wasm = settings.webAssembly || root.WebAssembly;
+    return !!AudioCtx && !!WorkletNode && !!wasm && typeof wasm.validate === 'function';
+  }
+  function reasonError(reason, message, cause) {
+    var error = new Error(message);
+    error.voiceIsolationReason = reason;
+    if (cause) {
+      error.cause = cause;
+    }
+    return error;
+  }
+
+  // Fetches one engine's wasm binary as an ArrayBuffer, picking RNNoise's SIMD build where the browser supports
+  // it. The worklet receives it through processorOptions (copied, not transferred), so one cached buffer serves
+  // every graph.
+  function loadWasm(engine, baseUrl, fetchFn, wasm) {
+    var paths = WASM_PATHS[engine];
+    var useSimd = false;
+    if (paths.simdUrl) {
+      try {
+        useSimd = !!wasm.validate(new Uint8Array(SIMD_PROBE));
+      } catch (error) {
+        useSimd = false;
+      }
+    }
+    var url = joinUrl(baseUrl, useSimd ? paths.simdUrl : paths.url);
+    if (!wasmCache[url]) {
+      wasmCache[url] = Promise.resolve(fetchFn(url, {
+        credentials: 'same-origin'
+      })).then(function (response) {
+        if (!response || typeof response.ok === 'boolean' && !response.ok) {
+          throw new Error('Loading ' + url + ' failed' + (response && response.status ? ' (' + response.status + ')' : '') + '.');
+        }
+        return response.arrayBuffer();
+      });
+      wasmCache[url].catch(function () {
+        delete wasmCache[url];
+      });
+    }
+    return wasmCache[url];
+  }
+
+  // Resolves once the context is running, or with false once the wait runs out.
+  function waitForRunning(context, timers, timeoutMs) {
+    if (context.state === 'running') {
+      return Promise.resolve(true);
+    }
+    return new Promise(function (resolve) {
+      var settled = false;
+      var timer = timers.setTimeout(function () {
+        if (!settled) {
+          settled = true;
+          resolve(context.state === 'running');
+        }
+      }, timeoutMs);
+      var resumed;
+      try {
+        resumed = typeof context.resume === 'function' ? context.resume() : null;
+      } catch (error) {
+        resumed = null;
+      }
+      Promise.resolve(resumed).then(function () {
+        if (!settled && context.state === 'running') {
+          settled = true;
+          timers.clearTimeout(timer);
+          resolve(true);
+        }
+      }, function () {/* refused; the timer decides */});
+    });
+  }
+
+  /*
+   * Builds the voice isolation chain for a captured microphone stream.
+   *
+   * options.engine            - 'gtcrn' or 'rnnoise' (anything else is the default). GTCRN falls back to RNNoise
+   *                             when it cannot load.
+   * options.strength          - 'low', 'medium' or 'high': the gate settings.
+   * options.boostDb           - the microphone boost, added after the gate (see mic-boost.js).
+   * options.assetBaseUrl      - where the vendored worklets and wasm files are served from.
+   * options.audioContext      - AudioContext constructor (defaults to the browser's).
+   * options.audioWorkletNode  - AudioWorkletNode constructor (defaults to the browser's).
+   * options.fetch, options.webAssembly, options.timers - injectable for the tests.
+   *
+   * Resolves to { stream, boosted, isolated: true, engine, requestedEngine, strength, label, state(),
+   * readSourcePeak(), dispose() }. Rejects with an Error whose voiceIsolationReason is one of:
+   *   'unsupported' - the browser lacks AudioWorklet, WebAssembly, or the asset URL is not configured.
+   *   'load-failed' - no engine's worklet or wasm file could be loaded.
+   *   'suspended'   - the browser would not start the audio engine without a click on the page.
+   *   'graph-failed'- the browser refused the graph (for example a capture rate it cannot connect).
+   *   'timeout'     - the build took longer than it may hold up the capture.
+   * Nothing is left running after a rejection.
+   */
+  function createVoiceIsolationPipeline(sourceStream, options) {
+    var settings = options || {};
+    var AudioCtx = settings.audioContext || root.AudioContext || root.webkitAudioContext;
+    var WorkletNode = settings.audioWorkletNode || root.AudioWorkletNode;
+    var wasm = settings.webAssembly || root.WebAssembly;
+    var fetchFn = settings.fetch || (typeof root.fetch === 'function' ? root.fetch.bind(root) : null);
+    var timers = settings.timers || root;
+    var baseUrl = settings.assetBaseUrl;
+    var requestedEngine = clampVoiceIsolationEngine(settings.engine);
+    var strength = clampVoiceIsolationStrength(settings.strength);
+    var gateSettings = noiseGateSettingsFor(strength);
+    var connectBoostStage = softPhone.connectBoostStage;
+    var clampBoostDb = softPhone.clampBoostDb;
+    if (!sourceStream || !baseUrl || !fetchFn || !isVoiceIsolationSupported(settings)) {
+      return Promise.reject(reasonError('unsupported', !baseUrl ? 'No voice isolation asset URL is configured.' : 'This browser does not support AudioWorklet and WebAssembly.'));
+    }
+    var context;
+    try {
+      context = new AudioCtx({
+        sampleRate: SAMPLE_RATE,
+        latencyHint: 'interactive'
+      });
+    } catch (error) {
+      return Promise.reject(reasonError('graph-failed', 'The audio engine could not be created: ' + (error && error.message || error), error));
+    }
+    if (!context.audioWorklet || typeof context.audioWorklet.addModule !== 'function') {
+      closeQuietly(context);
+      return Promise.reject(reasonError('unsupported', 'This browser does not support AudioWorklet.'));
+    }
+
+    // Asked for at once, while any click that led here still counts as one.
+    var running = waitForRunning(context, timers, RESUME_TIMEOUT_MS);
+    var nodes = [];
+    var meterTimer = null;
+    var disposed = false;
+    var timedOut = false;
+    var engine = null;
+    var denoiser = null;
+    var analyser = null;
+    var meterData = null;
+    var sourcePeak = 0;
+    var sourceReads = 0;
+    function dispose() {
+      if (disposed) {
+        return;
+      }
+      disposed = true;
+      if (meterTimer !== null) {
+        timers.clearInterval(meterTimer);
+        meterTimer = null;
+      }
+
+      // Frees the model's memory in the worklet. The context closing below ends the worklet scope anyway;
+      // this is the polite half.
+      try {
+        if (denoiser && denoiser.port && typeof denoiser.port.postMessage === 'function') {
+          denoiser.port.postMessage('destroy');
+        }
+      } catch (error) {/* best effort */}
+      nodes.forEach(function (node) {
+        try {
+          node.disconnect();
+        } catch (error) {/* best effort */}
+      });
+      closeQuietly(context);
+    }
+
+    // Loads one engine: its worklet module and its wasm binary, in parallel.
+    function loadEngine(name) {
+      return Promise.all([context.audioWorklet.addModule(joinUrl(baseUrl, WORKLET_PATHS[name])), loadWasm(name, baseUrl, fetchFn, wasm)]).then(function (results) {
+        return {
+          name: name,
+          wasmBinary: results[1]
+        };
+      });
+    }
+
+    // The requested engine, then the lighter one if it is different and the first could not load.
+    function loadAnyEngine() {
+      return loadEngine(requestedEngine).catch(function (firstError) {
+        var fallback = requestedEngine === 'rnnoise' ? null : 'rnnoise';
+        if (!fallback) {
+          throw firstError;
+        }
+        return loadEngine(fallback).catch(function () {
+          throw firstError;
+        });
+      });
+    }
+    var build = Promise.all([loadAnyEngine().catch(function (error) {
+      throw reasonError('load-failed', 'The voice isolation model could not be loaded: ' + (error && error.message || error), error);
+    }), context.audioWorklet.addModule(joinUrl(baseUrl, WORKLET_PATHS.gate)).catch(function (error) {
+      throw reasonError('load-failed', 'The noise gate could not be loaded: ' + (error && error.message || error), error);
+    }), running]).then(function (results) {
+      if (timedOut || disposed) {
+        throw reasonError('timeout', 'Voice isolation took too long to start.');
+      }
+      if (!results[2]) {
+        throw reasonError('suspended', 'The browser has not allowed the audio engine to start yet; it needs a click on the page.');
+      }
+      var loaded = results[0];
+      var mono = {
+        channelCount: 1,
+        channelCountMode: 'explicit',
+        channelInterpretation: 'speakers',
+        numberOfInputs: 1,
+        numberOfOutputs: 1,
+        outputChannelCount: [1]
+      };
+      engine = loaded.name;
+      try {
+        var source = context.createMediaStreamSource(sourceStream);
+        nodes.push(source);
+        denoiser = new WorkletNode(context, PROCESSOR_NAMES[engine], Object.assign({
+          processorOptions: {
+            maxChannels: 1,
+            wasmBinary: loaded.wasmBinary
+          }
+        }, mono));
+        nodes.push(denoiser);
+        var gate = new WorkletNode(context, PROCESSOR_NAMES.gate, Object.assign({
+          processorOptions: {
+            openThreshold: gateSettings.openThreshold,
+            closeThreshold: gateSettings.closeThreshold,
+            holdMs: gateSettings.holdMs,
+            maxChannels: 1
+          }
+        }, mono));
+        nodes.push(gate);
+        var floor = context.createGain();
+        floor.gain.value = Math.pow(10, gateSettings.floorDb / 20);
+        nodes.push(floor);
+        var mix = context.createGain();
+        mix.gain.value = 1;
+        nodes.push(mix);
+        source.connect(denoiser);
+        denoiser.connect(gate);
+        denoiser.connect(floor);
+        gate.connect(mix);
+        floor.connect(mix);
+        var output = mix;
+        var boost = typeof connectBoostStage === 'function' ? connectBoostStage(context, mix, settings.boostDb) : null;
+        if (boost) {
+          boost.nodes.forEach(function (node) {
+            nodes.push(node);
+          });
+          output = boost.output;
+        }
+        var destination = context.createMediaStreamDestination();
+        output.connect(destination);
+
+        // The raw-capture meter for the dead-microphone check (see RAW_CAPTURE_SILENT_LEVEL). Routed into
+        // the destination through a silent gain so every browser pulls it; it adds nothing to the call.
+        analyser = context.createAnalyser();
+        analyser.fftSize = 512;
+        nodes.push(analyser);
+        var meterSink = context.createGain();
+        meterSink.gain.value = 0;
+        nodes.push(meterSink);
+        source.connect(analyser);
+        analyser.connect(meterSink);
+        meterSink.connect(destination);
+        meterData = new Float32Array(analyser.fftSize);
+        meterTimer = timers.setInterval(function () {
+          if (disposed) {
+            return;
+          }
+          try {
+            analyser.getFloatTimeDomainData(meterData);
+          } catch (error) {
+            return;
+          }
+          var total = 0;
+          for (var i = 0; i < meterData.length; i++) {
+            total += meterData[i] * meterData[i];
+          }
+          sourcePeak = Math.max(sourcePeak, Math.sqrt(total / meterData.length));
+          sourceReads++;
+        }, SOURCE_METER_INTERVAL_MS);
+        return destination.stream;
+      } catch (error) {
+        throw reasonError('graph-failed', 'The browser refused the voice isolation graph: ' + (error && error.message || error), error);
+      }
+    }).then(function (stream) {
+      var boosted = typeof clampBoostDb === 'function' && clampBoostDb(settings.boostDb) > 0;
+      return {
+        stream: stream,
+        boosted: boosted,
+        isolated: true,
+        engine: engine,
+        requestedEngine: requestedEngine,
+        strength: strength,
+        label: describeVoiceIsolation('active', engine),
+        // The audio engine's state: anything but 'running' means the far end hears silence.
+        state: function () {
+          return disposed ? 'closed' : context.state;
+        },
+        // The loudest raw-capture level since the previous read (0..1 RMS), or -1 when nothing was
+        // measured in the window. Starts a new window.
+        readSourcePeak: function () {
+          if (!sourceReads) {
+            return -1;
+          }
+          var peak = sourcePeak;
+          sourcePeak = 0;
+          sourceReads = 0;
+          return peak;
+        },
+        dispose: dispose
+      };
+    });
+    var guarded = new Promise(function (resolve, reject) {
+      var timer = timers.setTimeout(function () {
+        timedOut = true;
+        dispose();
+        reject(reasonError('timeout', 'Voice isolation took longer than ' + BUILD_TIMEOUT_MS + ' ms to start.'));
+      }, typeof settings.timeoutMs === 'number' ? settings.timeoutMs : BUILD_TIMEOUT_MS);
+      build.then(function (pipeline) {
+        timers.clearTimeout(timer);
+        if (timedOut) {
+          pipeline.dispose();
+          return;
+        }
+        resolve(pipeline);
+      }, function (error) {
+        timers.clearTimeout(timer);
+        dispose();
+        reject(error);
+      });
+    });
+    return guarded;
+  }
+  function closeQuietly(context) {
+    try {
+      if (context && typeof context.close === 'function') {
+        Promise.resolve(context.close()).catch(function () {});
+      }
+    } catch (error) {/* best effort */}
+  }
+
+  // Forgets every cached wasm binary. For the tests.
+  function resetVoiceIsolationCache() {
+    wasmCache = {};
+  }
+  softPhone.VOICE_ISOLATION_ENGINES = VOICE_ISOLATION_ENGINES;
+  softPhone.VOICE_ISOLATION_STRENGTHS = VOICE_ISOLATION_STRENGTHS;
+  softPhone.RAW_CAPTURE_SILENT_LEVEL = RAW_CAPTURE_SILENT_LEVEL;
+  softPhone.clampVoiceIsolationEngine = clampVoiceIsolationEngine;
+  softPhone.clampVoiceIsolationStrength = clampVoiceIsolationStrength;
+  softPhone.noiseGateSettingsFor = noiseGateSettingsFor;
+  softPhone.describeVoiceIsolation = describeVoiceIsolation;
+  softPhone.isVoiceIsolationSupported = isVoiceIsolationSupported;
+  softPhone.createVoiceIsolationPipeline = createVoiceIsolationPipeline;
+  softPhone.resetVoiceIsolationCache = resetVoiceIsolationCache;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*
  * Playout delay: asking the browser to hold less incoming audio before playing it.
@@ -7088,6 +7633,12 @@
   var clampBoostDb = softPhoneModules.clampBoostDb;
   var describeBoost = softPhoneModules.describeBoost;
   var createBoostPipeline = softPhoneModules.createBoostPipeline;
+  var clampVoiceIsolationEngine = softPhoneModules.clampVoiceIsolationEngine;
+  var clampVoiceIsolationStrength = softPhoneModules.clampVoiceIsolationStrength;
+  var describeVoiceIsolation = softPhoneModules.describeVoiceIsolation;
+  var isVoiceIsolationSupported = softPhoneModules.isVoiceIsolationSupported;
+  var createVoiceIsolationPipeline = softPhoneModules.createVoiceIsolationPipeline;
+  var RAW_CAPTURE_SILENT_LEVEL = softPhoneModules.RAW_CAPTURE_SILENT_LEVEL;
   var clampPlayoutDelay = softPhoneModules.clampPlayoutDelay;
   var describePlayoutDelay = softPhoneModules.describePlayoutDelay;
   var applyPlayoutDelay = softPhoneModules.applyPlayoutDelay;
@@ -8281,7 +8832,13 @@
         // Where the browser reports no capture statistics at all -- Firefox, where this call was
         // answered -- the probe stands in, so the agent is told about a dead microphone there too
         // instead of the check quietly never firing.
-        var captureSilent = captureReported ? isCaptureSilent(micLevel, energyDelta) : captureProbeLevel >= 0 && captureProbeLevel <= LEVEL_SILENT;
+        //
+        // With voice isolation on, the send track is gated: it is meant to be near-silent whenever the
+        // agent is listening, so judging the microphone by it would call a working headset dead after the
+        // caller had talked for half a minute. The isolation chain meters the raw capture ahead of its
+        // processing instead, and that reading -- digital silence or not -- decides.
+        var rawCapturePeak = typeof context.readRawCapturePeak === 'function' ? context.readRawCapturePeak() : -1;
+        var captureSilent = rawCapturePeak >= 0 ? rawCapturePeak <= RAW_CAPTURE_SILENT_LEVEL : captureReported ? isCaptureSilent(micLevel, energyDelta) : captureProbeLevel >= 0 && captureProbeLevel <= LEVEL_SILENT;
         if (captureSilent) {
           qualityState.silentSamples++;
         } else {
@@ -8328,9 +8885,10 @@
           captureSampleRate: captureSettings && captureSettings.sampleRate || 0,
           captureDevice: typeof context.captureDeviceLabel === 'function' ? context.captureDeviceLabel() : '',
           captureProcessing: [captureSettings && captureSettings.echoCancellation ? 'ec' : '', captureSettings && captureSettings.noiseSuppression ? 'ns' : '', captureSettings && captureSettings.autoGainControl ? 'agc' : '',
-          // The soft phone's own gain stage, when set: a caller's "louder now" or "distorted now"
-          // has to be readable against the boost that was active.
-          typeof context.captureBoostLabel === 'function' ? context.captureBoostLabel() : ''].filter(Boolean).join('+'),
+          // The soft phone's own processing, when set: voice isolation and the gain stage. A caller's
+          // "louder now", "distorted now" or "I can hear the room" has to be readable against what
+          // was active.
+          typeof context.captureChainLabel === 'function' ? context.captureChainLabel() : ''].filter(Boolean).join('+'),
           mos: mos,
           poor: poor
         };
@@ -9390,6 +9948,10 @@
       processingNs: rootElement.querySelector('[data-telephony-processing-ns]'),
       processingAgc: rootElement.querySelector('[data-telephony-processing-agc]'),
       micBoost: rootElement.querySelector('[data-telephony-mic-boost]'),
+      voiceIsolation: rootElement.querySelector('[data-telephony-voice-isolation]'),
+      voiceIsolationEngine: rootElement.querySelector('[data-telephony-voice-isolation-engine]'),
+      voiceIsolationStrength: rootElement.querySelector('[data-telephony-voice-isolation-strength]'),
+      voiceIsolationStatus: rootElement.querySelector('[data-telephony-voice-isolation-status]'),
       playoutDelay: rootElement.querySelector('[data-telephony-playout-delay]'),
       signalingRegion: rootElement.querySelector('[data-telephony-signaling-region]'),
       signalingRegionStatus: rootElement.querySelector('[data-telephony-signaling-region-status]'),
@@ -10042,9 +10604,9 @@
       return hasLiveCall() || holdsMonitorLeg(monitorLegs);
     }
     function stopLocalAudioStream() {
-      if (micBoostPipeline) {
-        micBoostPipeline.dispose();
-        micBoostPipeline = null;
+      if (sendPipeline) {
+        sendPipeline.dispose();
+        sendPipeline = null;
       }
       if (sourceAudioStream) {
         sourceAudioStream.getTracks().forEach(function (track) {
@@ -10135,6 +10697,20 @@
       if (processing.length) {
         parts.push(processing.join('+'));
       }
+      var chain = captureChainLabel();
+      if (chain) {
+        parts.push(chain);
+      }
+      return parts.join(' ');
+    }
+
+    // The soft phone's own processing after the browser's: voice isolation (always named, so "off" is as
+    // readable as "on") and the boost when one is set. "vi=gtcrn+gate boost+6".
+    function captureChainLabel() {
+      var parts = [];
+      if (typeof describeVoiceIsolation === 'function') {
+        parts.push(describeVoiceIsolation(voiceIsolationState, voiceIsolationEngine));
+      }
       var boost = describeBoost(micBoostDb);
       if (boost) {
         parts.push(boost);
@@ -10190,7 +10766,14 @@
         return Promise.resolve(false);
       }
       return captureMicrophone().then(function (stream) {
-        commitCapture(stream, createBoostPipeline(stream, micBoostDb));
+        return buildSendPipeline(stream).then(function (pipeline) {
+          return {
+            stream: stream,
+            pipeline: pipeline
+          };
+        });
+      }).then(function (capture) {
+        commitCapture(capture.stream, capture.pipeline);
         watchLocalAudioTrack();
         reportDiagnostic('warning', 'microphone-revived', 'The outgoing microphone track had ended; a fresh capture was taken for the call.', localAudioTrackLabel());
         return true;
@@ -10270,8 +10853,22 @@
         return Promise.reject(new Error('Media capture is not available.'));
       }
       return captureMicrophone().then(function (stream) {
-        // The new send track: the capture itself, or the boost graph's output when a boost is set.
-        var pipeline = createBoostPipeline(stream, micBoostDb);
+        return buildSendPipeline(stream).then(function (pipeline) {
+          return {
+            stream: stream,
+            pipeline: pipeline
+          };
+        }, function (error) {
+          stream.getTracks().forEach(function (track) {
+            track.stop();
+          });
+          throw error;
+        });
+      }).then(function (capture) {
+        // The new send track: the capture itself, or the processing graph's output when voice isolation
+        // or a boost is set.
+        var stream = capture.stream;
+        var pipeline = capture.pipeline;
         var fresh = pipeline.stream.getAudioTracks()[0];
         var abandon = function (error) {
           pipeline.dispose();
@@ -10312,7 +10909,7 @@
             browserAudioSession.refreshCaptureProbe();
           }
           watchLocalAudioTrack();
-          reportDiagnostic('info', 'microphone-switched', 'The captured microphone was switched (' + reason + ').', localAudioTrackLabel() + (describeBoost(micBoostDb) ? ' ' + describeBoost(micBoostDb) : ''));
+          reportDiagnostic('info', 'microphone-switched', 'The captured microphone was switched (' + reason + ').', localAudioTrackLabel() + ' ' + captureChainLabel());
           if (micPermissionState === null) {
             showError(null);
           }
@@ -10357,12 +10954,18 @@
     // configuration. When the agent has picked a specific input device (item 5) it is requested exactly;
     // otherwise the browser's default input is used.
     function buildAudioConstraints() {
+      // With voice isolation on, the browser's noise suppression and gain control default to off: the model
+      // does a better job of the first, and the second raises the room every time the agent pauses. If
+      // isolation cannot run here (an unsupported browser, a model that failed to load, an audio engine
+      // waiting for a click), the capture falls back to the browser's own two so the agent is never sent
+      // with no noise handling at all.
+      var isolationFallback = voiceIsolationSettings.enabled && !isVoiceIsolationExpected();
       var audio = {
-        // On by default; each can be switched off in the settings overlay, live, when a caller reports
-        // the agent sounding hollow or processed -- these three are the usual suspects.
+        // Each can be switched off in the settings overlay, live, when a caller reports the agent sounding
+        // hollow or processed -- these three are the usual suspects.
         echoCancellation: processingSettings.echoCancellation,
-        noiseSuppression: processingSettings.noiseSuppression,
-        autoGainControl: processingSettings.autoGainControl,
+        noiseSuppression: processingSettings.noiseSuppression || isolationFallback,
+        autoGainControl: processingSettings.autoGainControl || isolationFallback,
         // Ask for a single channel. A call is mono end to end, so stereo capture buys nothing and can
         // cost a great deal: headset microphones routed through a shared audio codec are often
         // presented as a stereo pair carrying the microphone on one side and silence on the other, and
@@ -10378,10 +10981,210 @@
           exact: selectedInputDeviceId
         };
       }
+
+      // Chrome's own voice isolation, where the platform offers it (ChromeOS today). Asked for only when the
+      // browser lists it, so other browsers never see an unknown constraint; it stacks with ours harmlessly.
+      if (isVoiceIsolationExpected() && supportsVoiceIsolationConstraint()) {
+        audio.voiceIsolation = true;
+      }
       return {
         audio: audio,
         video: false
       };
+    }
+    function supportsVoiceIsolationConstraint() {
+      try {
+        var supported = navigator.mediaDevices && typeof navigator.mediaDevices.getSupportedConstraints === 'function' ? navigator.mediaDevices.getSupportedConstraints() : null;
+        return !!(supported && supported.voiceIsolation);
+      } catch (error) {
+        return false;
+      }
+    }
+
+    // ---- Voice isolation (see soft-phone/voice-isolation.js) ----
+
+    // Whether the isolation chain can run in this browser at all: switched on, configured, supported, and not
+    // already known to be failing.
+    function isVoiceIsolationPossible() {
+      return voiceIsolationSettings.enabled && voiceIsolationState !== 'failed' && !!config.voiceIsolationAssetsUrl && typeof createVoiceIsolationPipeline === 'function' && typeof isVoiceIsolationSupported === 'function' && isVoiceIsolationSupported();
+    }
+
+    // Whether the next capture is expected to run through the isolation chain: possible, and not waiting for
+    // a click on the page to start the audio engine.
+    function isVoiceIsolationExpected() {
+      return isVoiceIsolationPossible() && voiceIsolationState !== 'pending' && pageHasUserActivation();
+    }
+
+    // Whether this page may start an audio engine without waiting for a click. Chrome and Safari keep a new
+    // AudioContext suspended -- a graph producing silence -- until the page has had a user gesture, unless the
+    // page is allowed to play audio anyway (an extension's own page, a site the browser's media engagement
+    // trusts). A page that has had a click is allowed; one that has not is asked directly, with a throwaway
+    // context whose state says at once whether it was allowed to start. Once allowed, always allowed.
+    var audioEngineAllowed = false;
+    function pageHasUserActivation() {
+      if (audioEngineAllowed) {
+        return true;
+      }
+      var activation = navigator.userActivation;
+      if (!activation || activation.hasBeenActive) {
+        audioEngineAllowed = true;
+        return true;
+      }
+      var AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) {
+        return false;
+      }
+      try {
+        var probe = new AudioCtx();
+        var running = probe.state === 'running';
+        Promise.resolve(probe.close()).catch(function () {});
+        audioEngineAllowed = running;
+        return running;
+      } catch (error) {
+        return false;
+      }
+    }
+
+    // Builds what a fresh capture sends: through voice isolation when it is on and can run, through the boost
+    // alone otherwise. Never rejects -- a failure falls back to the boost (or the raw capture) and is reported.
+    function buildSendPipeline(stream) {
+      if (!voiceIsolationSettings.enabled) {
+        voiceIsolationState = 'off';
+        voiceIsolationEngine = '';
+        return Promise.resolve(createBoostPipeline(stream, micBoostDb));
+      }
+      if (!isVoiceIsolationPossible()) {
+        if (voiceIsolationState !== 'failed') {
+          markVoiceIsolationFailed('unsupported', !config.voiceIsolationAssetsUrl ? 'No voice isolation asset URL is configured.' : 'This browser does not support AudioWorklet and WebAssembly.');
+        }
+        return Promise.resolve(createBoostPipeline(stream, micBoostDb));
+      }
+
+      // Before the page has had a click the audio engine cannot start, and a graph that is not running sends
+      // silence. Wait for the click rather than try: the capture goes out with the browser's processing until
+      // then (buildAudioConstraints), and the first click anywhere on the page switches it over.
+      if (!pageHasUserActivation() || voiceIsolationState === 'pending') {
+        markVoiceIsolationPending();
+        return Promise.resolve(createBoostPipeline(stream, micBoostDb));
+      }
+      return createVoiceIsolationPipeline(stream, {
+        engine: voiceIsolationSettings.engine,
+        strength: voiceIsolationSettings.strength,
+        boostDb: micBoostDb,
+        assetBaseUrl: config.voiceIsolationAssetsUrl
+      }).then(function (pipeline) {
+        voiceIsolationState = 'active';
+        voiceIsolationEngine = pipeline.engine;
+        showVoiceIsolationStatus();
+        if (pipeline.engine !== pipeline.requestedEngine) {
+          reportDiagnostic('warning', 'voice-isolation-fallback', 'The ' + pipeline.requestedEngine + ' voice isolation model could not load; ' + pipeline.engine + ' is used instead.', pipeline.label);
+        }
+        reportDiagnostic('info', 'voice-isolation-started', 'Voice isolation is running (' + pipeline.engine + ', ' + pipeline.strength + ' strength).', localAudioTrackLabel() + ' ' + captureChainLabel());
+        return pipeline;
+      }, function (error) {
+        var reason = error && error.voiceIsolationReason || 'failed';
+        if (reason === 'suspended') {
+          // This capture was taken expecting isolation, without the browser's own processing; retake it
+          // with that processing for the wait (the retake sees 'pending' and does not try again).
+          markVoiceIsolationPending();
+          scheduleVoiceIsolationRecapture('voice isolation waiting for a click');
+        } else {
+          markVoiceIsolationFailed(reason, error && error.message || String(error));
+        }
+        return createBoostPipeline(stream, micBoostDb);
+      });
+    }
+
+    // Isolation could not run. The agent keeps a working capture (without it), the browser's own noise
+    // suppression and gain control take over from the next capture on, and the reason goes to the log. The
+    // current capture was taken expecting isolation, so it is retaken once now with the fallback processing.
+    function markVoiceIsolationFailed(reason, message) {
+      var firstFailure = voiceIsolationState !== 'failed';
+      voiceIsolationState = 'failed';
+      voiceIsolationEngine = '';
+      showVoiceIsolationStatus();
+      if (!firstFailure) {
+        return;
+      }
+      if (window.console && typeof window.console.warn === 'function') {
+        window.console.warn('[soft-phone] voice isolation unavailable (' + reason + '): ' + message);
+      }
+      reportDiagnostic('warning', 'voice-isolation-unavailable', 'Voice isolation could not start (' + reason + '): ' + message + ' The browser\'s noise suppression is used instead.', localAudioTrackLabel());
+      if (reason !== 'unsupported') {
+        scheduleVoiceIsolationRecapture('voice isolation unavailable');
+      }
+    }
+
+    // The audio engine needs a click on the page before it can run. Arms a one-time listener that switches the
+    // capture over on the first one.
+    function markVoiceIsolationPending() {
+      var firstPending = voiceIsolationState !== 'pending';
+      voiceIsolationState = 'pending';
+      voiceIsolationEngine = '';
+      showVoiceIsolationStatus();
+      if (firstPending) {
+        reportDiagnostic('info', 'voice-isolation-pending', 'Voice isolation waits for the first click on the page before it can start; the browser\'s noise suppression is used until then.', localAudioTrackLabel());
+      }
+      armVoiceIsolationGesture();
+    }
+    var voiceIsolationGestureArmed = false;
+    function armVoiceIsolationGesture() {
+      if (voiceIsolationGestureArmed || typeof document === 'undefined') {
+        return;
+      }
+      voiceIsolationGestureArmed = true;
+      var onGesture = function () {
+        document.removeEventListener('pointerdown', onGesture, true);
+        document.removeEventListener('keydown', onGesture, true);
+        voiceIsolationGestureArmed = false;
+        if (voiceIsolationState !== 'pending' || !voiceIsolationSettings.enabled) {
+          return;
+        }
+        voiceIsolationState = 'off';
+
+        // Deferred past the click itself, so whatever the click was for runs first.
+        window.setTimeout(function () {
+          if (!localAudioStream) {
+            return;
+          }
+          switchLocalAudioTrack('voice isolation ready').catch(function (error) {
+            reportDiagnostic('warning', 'processing-switch-failed', String(error && error.message || error), localAudioTrackLabel());
+          });
+        }, 0);
+      };
+      document.addEventListener('pointerdown', onGesture, true);
+      document.addEventListener('keydown', onGesture, true);
+    }
+
+    // Retakes the capture once, after the current switch settles, so a capture taken expecting isolation gets
+    // the browser's fallback processing instead.
+    function scheduleVoiceIsolationRecapture(reason) {
+      window.setTimeout(function () {
+        if (!localAudioStream) {
+          return;
+        }
+        switchLocalAudioTrack(reason).catch(function (error) {
+          reportDiagnostic('warning', 'processing-switch-failed', String(error && error.message || error), localAudioTrackLabel());
+        });
+      }, 0);
+    }
+
+    // The one-line status under the voice isolation controls.
+    function showVoiceIsolationStatus() {
+      if (!dom.voiceIsolationStatus) {
+        return;
+      }
+      var text = '';
+      if (voiceIsolationSettings.enabled) {
+        if (voiceIsolationState === 'pending') {
+          text = strings.voiceIsolationPending || 'Voice isolation starts after your first click on the page.';
+        } else if (voiceIsolationState === 'failed') {
+          text = strings.voiceIsolationUnavailable || 'Voice isolation is not available in this browser, so the browser\'s noise suppression is used instead.';
+        } else if (voiceIsolationState === 'active') {
+          text = strings.voiceIsolationActive || 'Voice isolation is on.';
+        }
+      }
+      dom.voiceIsolationStatus.textContent = text;
     }
 
     // Maps a getUserMedia rejection to an actionable error and records the recovery state (item 9). The browser's
@@ -10538,19 +11341,37 @@
 
     // ---- Audio device selection (item 5) ----
 
-    // The browser's capture processing (echo cancellation, noise suppression, automatic gain control). All on
-    // by default; persisted with the device selection so an agent who found that one of them made them sound
-    // hollow to callers does not have to rediscover it every day. Stored as explicit booleans -- a missing
-    // value means "on", never "off".
+    // The browser's capture processing (echo cancellation, noise suppression, automatic gain control). Echo
+    // cancellation is on by default; the other two are on by default only when voice isolation is off, because
+    // the isolation chain replaces the first and the second works against it (see loadDeviceSelection).
+    // Persisted with the device selection so an agent who found that one of them made them sound hollow to
+    // callers does not have to rediscover it every day. Stored as explicit booleans.
     var processingSettings = {
       echoCancellation: true,
-      noiseSuppression: true,
-      autoGainControl: true
+      noiseSuppression: false,
+      autoGainControl: false
     };
 
     // Microphone boost in decibels (0 = off). When set, the raw capture is routed through a gain stage and a
     // limiter, and the limiter's output is what the call sends. See mic-boost.js for why.
     var micBoostDb = 0;
+
+    // Voice isolation: a speech-enhancement model and a noise gate between the microphone and the call, for an
+    // agent on a floor full of other people talking. On by default; see voice-isolation.js. The engine is the
+    // model ('gtcrn' or the lighter 'rnnoise'); the strength sets the gate.
+    var voiceIsolationSettings = {
+      enabled: true,
+      engine: 'gtcrn',
+      strength: 'medium'
+    };
+
+    // What the chain is actually doing, for the readout and the status line: 'off', 'active', 'pending' (the
+    // audio engine waits for a click on the page) or 'failed' (it cannot run here). A failure sticks until the
+    // agent changes a voice isolation setting, so a broken model is not retried on every device switch.
+    var voiceIsolationState = 'off';
+
+    // The model running, which can be the fallback rather than the one chosen.
+    var voiceIsolationEngine = '';
 
     // How long the browser should hold arriving audio before playing it, in seconds (-1 = the browser's own
     // judgement, which is the default). Half of the pause between an agent finishing a sentence and hearing
@@ -10567,10 +11388,11 @@
     var reregisterOnNextEnsure = false;
 
     // The raw capture from the device -- what the device label, mute/ended state and capture settings are
-    // read from -- as distinct from localAudioStream, which is the stream the call SENDS. Without a boost the
-    // two carry the same track; with one, localAudioStream carries the boosted output.
+    // read from -- as distinct from localAudioStream, which is the stream the call SENDS. Without processing
+    // the two carry the same track; with voice isolation or a boost, localAudioStream carries the graph's
+    // output.
     var sourceAudioStream = null;
-    var micBoostPipeline = null;
+    var sendPipeline = null;
     function getSourceAudioTrack() {
       if (!sourceAudioStream || typeof sourceAudioStream.getAudioTracks !== 'function') {
         return null;
@@ -10584,10 +11406,10 @@
     // once the new track is in place.
     function commitCapture(stream, pipeline) {
       var previousSource = sourceAudioStream;
-      var previousPipeline = micBoostPipeline;
+      var previousPipeline = sendPipeline;
       var fresh = pipeline.stream.getAudioTracks()[0] || null;
       sourceAudioStream = stream;
-      micBoostPipeline = pipeline;
+      sendPipeline = pipeline;
       if (!localAudioStream) {
         localAudioStream = new MediaStream();
       }
@@ -10618,10 +11440,20 @@
       var layout = loadLayout();
       selectedInputDeviceId = layout.inputDeviceId || null;
       selectedOutputDeviceId = layout.outputDeviceId || null;
+      // Voice isolation is on unless the agent turned it off. An agent who has never seen the setting gets
+      // it with the browser's noise suppression and gain control off, which is what it is designed to run
+      // with -- their stored "on" for those two was only ever the old default.
+      var isolationStored = typeof layout.voiceIsolation === 'boolean';
+      var isolate = readProcessingFlag(layout.voiceIsolation, true);
+      voiceIsolationSettings = {
+        enabled: isolate,
+        engine: typeof clampVoiceIsolationEngine === 'function' ? clampVoiceIsolationEngine(layout.voiceIsolationEngine) : 'gtcrn',
+        strength: typeof clampVoiceIsolationStrength === 'function' ? clampVoiceIsolationStrength(layout.voiceIsolationStrength) : 'medium'
+      };
       processingSettings = {
         echoCancellation: readProcessingFlag(layout.echoCancellation, true),
-        noiseSuppression: readProcessingFlag(layout.noiseSuppression, true),
-        autoGainControl: readProcessingFlag(layout.autoGainControl, true)
+        noiseSuppression: isolationStored ? readProcessingFlag(layout.noiseSuppression, !isolate) : !isolate,
+        autoGainControl: isolationStored ? readProcessingFlag(layout.autoGainControl, !isolate) : !isolate
       };
       micBoostDb = clampBoostDb(layout.micBoostDb);
       playoutDelaySeconds = clampPlayoutDelay(Object.prototype.hasOwnProperty.call(layout, 'playoutDelaySeconds') ? layout.playoutDelaySeconds : config.playoutDelaySeconds);
@@ -10634,6 +11466,9 @@
         echoCancellation: processingSettings.echoCancellation,
         noiseSuppression: processingSettings.noiseSuppression,
         autoGainControl: processingSettings.autoGainControl,
+        voiceIsolation: voiceIsolationSettings.enabled,
+        voiceIsolationEngine: voiceIsolationSettings.engine,
+        voiceIsolationStrength: voiceIsolationSettings.strength,
         micBoostDb: micBoostDb,
         playoutDelaySeconds: playoutDelaySeconds,
         signalingRegion: signalingRegion
@@ -10694,8 +11529,55 @@
       });
     }
 
+    // A voice isolation control changed: persist and rebuild the capture through the new chain, live if need
+    // be -- the same A/B as the other processing switches. Turning isolation on turns the browser's noise
+    // suppression and gain control off (they fight it: gain control raises the room in every pause), and
+    // turning it off gives them back; either can still be changed by hand afterwards.
+    function onVoiceIsolationChange(event) {
+      var enabled = !!(dom.voiceIsolation && dom.voiceIsolation.checked);
+      var toggled = enabled !== voiceIsolationSettings.enabled;
+      voiceIsolationSettings = {
+        enabled: enabled,
+        engine: clampVoiceIsolationEngine(dom.voiceIsolationEngine ? dom.voiceIsolationEngine.value : voiceIsolationSettings.engine),
+        strength: clampVoiceIsolationStrength(dom.voiceIsolationStrength ? dom.voiceIsolationStrength.value : voiceIsolationSettings.strength)
+      };
+      if (toggled) {
+        processingSettings = {
+          echoCancellation: processingSettings.echoCancellation,
+          noiseSuppression: !enabled,
+          autoGainControl: !enabled
+        };
+      }
+
+      // Any change is a fresh attempt: a model that failed, or a wait for a click, starts over. The change
+      // itself came from a click, so the audio engine may start now.
+      voiceIsolationState = 'off';
+      voiceIsolationEngine = '';
+      persistDeviceSelection();
+      syncProcessingControls();
+      showVoiceIsolationStatus();
+      if (!localAudioStream) {
+        return;
+      }
+      switchLocalAudioTrack(event && event.target === dom.voiceIsolation ? 'voice isolation changed' : 'voice isolation settings changed').catch(function (error) {
+        reportDiagnostic('warning', 'processing-switch-failed', String(error && error.message || error), localAudioTrackLabel());
+        showError(strings.processingSwitchFailed || 'The microphone processing change could not be applied on this call.');
+      });
+    }
+
     // Reflects the stored processing flags into the settings checkboxes.
     function syncProcessingControls() {
+      if (dom.voiceIsolation) {
+        dom.voiceIsolation.checked = voiceIsolationSettings.enabled;
+      }
+      if (dom.voiceIsolationEngine) {
+        dom.voiceIsolationEngine.value = voiceIsolationSettings.engine;
+        dom.voiceIsolationEngine.disabled = !voiceIsolationSettings.enabled;
+      }
+      if (dom.voiceIsolationStrength) {
+        dom.voiceIsolationStrength.value = voiceIsolationSettings.strength;
+        dom.voiceIsolationStrength.disabled = !voiceIsolationSettings.enabled;
+      }
       if (dom.processingEc) {
         dom.processingEc.checked = processingSettings.echoCancellation;
       }
@@ -11063,7 +11945,15 @@
         captureInFlight = true;
         return captureMicrophone().then(function (stream) {
           captureInFlight = false;
-          return stream;
+
+          // The capture becomes the send stream through voice isolation and the boost (each a no-op when
+          // off). Built here, before the abandoned check below, so a late attempt releases it too.
+          return buildSendPipeline(stream).then(function (pipeline) {
+            return {
+              stream: stream,
+              pipeline: pipeline
+            };
+          });
         }, function (mediaError) {
           captureInFlight = false;
 
@@ -11072,8 +11962,10 @@
           return categorizeMicError(mediaError).then(function (categorized) {
             throw categorized;
           });
-        }).then(function (stream) {
+        }).then(function (capture) {
+          var stream = capture.stream;
           if (abandoned) {
+            capture.pipeline.dispose();
             stream.getTracks().forEach(function (track) {
               track.stop();
             });
@@ -11085,9 +11977,7 @@
             throw new Error('The registration was given up on.');
           }
           stage = 'provider login';
-
-          // The capture becomes the send stream through the boost pipeline (a no-op when boost is off).
-          commitCapture(stream, createBoostPipeline(stream, micBoostDb));
+          commitCapture(stream, capture.pipeline);
           // This capture has to survive until the registration is replaced, so watch it for the
           // device dying underneath it rather than discovering it on the next call.
           watchLocalAudioTrack();
@@ -11146,8 +12036,11 @@
             // would record the format the call is not using.
             readCaptureSettings: localCaptureSettings,
             captureDeviceLabel: localAudioTrackLabel,
-            captureBoostLabel: function () {
-              return describeBoost(micBoostDb);
+            captureChainLabel: captureChainLabel,
+            // The raw microphone's peak level since the last read when voice isolation meters it, so
+            // the dead-microphone check is not fooled by the gate closing while the agent listens.
+            readRawCapturePeak: function () {
+              return sendPipeline && typeof sendPipeline.readSourcePeak === 'function' ? sendPipeline.readSourcePeak() : -1;
             },
             readPlayoutDelay: function () {
               return playoutDelaySeconds;
@@ -15951,13 +16844,18 @@
       if (dom.micBoost) {
         dom.micBoost.addEventListener('change', onBoostChange);
       }
+      [dom.voiceIsolation, dom.voiceIsolationEngine, dom.voiceIsolationStrength].forEach(function (control) {
+        if (control) {
+          control.addEventListener('change', onVoiceIsolationChange);
+        }
+      });
       if (dom.playoutDelay) {
         dom.playoutDelay.addEventListener('change', onPlayoutDelayChange);
       }
       if (dom.signalingRegion) {
         dom.signalingRegion.addEventListener('change', onSignalingRegionChange);
       }
-      if (dom.processingEc || dom.processingNs || dom.processingAgc || dom.micBoost || dom.playoutDelay || dom.signalingRegion) {
+      if (dom.processingEc || dom.processingNs || dom.processingAgc || dom.micBoost || dom.playoutDelay || dom.signalingRegion || dom.voiceIsolation) {
         syncProcessingControls();
       }
       if (navigator.mediaDevices && typeof navigator.mediaDevices.addEventListener === 'function') {
