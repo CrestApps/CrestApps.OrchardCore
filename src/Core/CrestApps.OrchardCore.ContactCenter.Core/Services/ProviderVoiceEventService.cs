@@ -299,7 +299,12 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
 
         // A handled call ending is what releases the agent from the interaction. Whether that release parks the
         // agent in wrap-up or returns them straight to a ready state depends on how the call was routed.
+        // A campaign call nobody connected an agent to -- it rang out, a machine answered, the customer hung up while
+        // the agent was being joined -- was never the agent's call, so it neither parks them in wrap-up nor asks them
+        // for a disposition: the dialer dispositions it on its own and routing releases the agent.
+        var endedWithoutAgent = IsTerminalState(providerEvent.State) && RecordDialerAttemptEnd(session, interaction, now);
         var handledCallEnded = IsTerminalState(providerEvent.State) &&
+            !endedWithoutAgent &&
             !string.IsNullOrEmpty(session.AgentId) &&
             (session.AnsweredUtc.HasValue || interaction.AnsweredUtc.HasValue);
 

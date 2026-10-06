@@ -229,10 +229,23 @@ public sealed class DialerAttemptService : IDialerAttemptService
 
         try
         {
+            // The activity's first call is the attempt the activity already stands for (a follow-up created to try
+            // again starts at the attempt after the one it follows); only a further call of the same activity is a
+            // new attempt. Counting every call as one made a three-attempt profile stop after two calls.
+            var attemptNumber = 1;
+
             await _workStateService.MutateAsync(
                 activity.ItemId,
-                workState => workState.Attempts++,
+                workState =>
+                {
+                    attemptNumber = ContactCenterWorkState.NextAttemptNumber(workState, activity.Attempts);
+                    workState.Attempts = attemptNumber;
+                    workState.DialCount++;
+                },
                 cancellationToken);
+
+            DialerCallMetadata.StampDial(interaction, profile, attemptNumber);
+
             await _interactionManager.CreateAsync(interaction, cancellationToken: cancellationToken);
             await _auditRecorder.RecordInteractionCreatedAsync(interaction, activity.Source, ContactCenterActor.System, cancellationToken);
             await _publisher.PublishAsync(new InteractionEvent
@@ -355,6 +368,19 @@ public sealed class DialerAttemptService : IDialerAttemptService
     {
         var status = ResolveSuppressedStatus(eligibility.Reason);
 
+        // A record that has used every attempt is finished by the dialer with the disposition for how its last attempt
+        // ended, like any attempt that never reached an agent, rather than left failed with nothing for a workflow or a
+        // report to act on. It is completed once this cycle has committed and the reservation is released.
+        if (eligibility.Reason == DialerSuppressionReason.MaxAttemptsReached &&
+            !QueueCallbackDialerProfile.IsCallbackProfile(profile.ItemId) &&
+            ScheduleExhaustedFinalization(activity.ItemId))
+        {
+            await _compensationService.CompensateAsync(reservation, removeFromQueue: true, cancellationToken);
+            await PublishSuppressedAsync(profile, activity, eligibility, cancellationToken);
+
+            return;
+        }
+
         if (status.HasValue)
         {
             // A number already known dead is recorded as the reason the attempt was never made, so a report can
@@ -378,7 +404,19 @@ public sealed class DialerAttemptService : IDialerAttemptService
         }
 
         await _compensationService.CompensateAsync(reservation, removeFromQueue: status.HasValue, cancellationToken);
+        await PublishSuppressedAsync(profile, activity, eligibility, cancellationToken);
+    }
 
+    private bool ScheduleExhaustedFinalization(string activityItemId)
+        => _scopeExecutor.ScheduleAfterCommit<IServiceProvider>(services =>
+            DialerAttemptFinalizer.FinalizeExhaustedAsync(services, activityItemId));
+
+    private async Task PublishSuppressedAsync(
+        DialerProfile profile,
+        OmnichannelActivity activity,
+        DialerEligibilityResult eligibility,
+        CancellationToken cancellationToken)
+    {
         if (_logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation(

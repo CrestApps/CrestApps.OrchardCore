@@ -310,6 +310,13 @@ public sealed partial class AnswerProviderCommandTypeExecutor : IProviderCommand
                 {
                     CallTopologyProjector.EnsureBridge(session, session.Bridge?.ProviderBridgeId, now);
                     CallTopologyProjector.Join(session, result.ProviderLegId, CallPartyRole.Agent, now, request.AgentId);
+
+                    // The agent is on the call: from here a campaign call is the agent's to work and wrap up.
+                    if (DialerCallMetadata.MarkAgentJoined(interaction, now))
+                    {
+                        await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
+                    }
+
                     await RecordAgentLegAnsweredAsync(session, interaction, result.ProviderLegId, request.AgentId, now, cancellationToken);
                 }
             }

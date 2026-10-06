@@ -32,6 +32,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
     private readonly ISession _session;
     private readonly IClock _clock;
     private readonly ContactCenterCoordinationOptions _coordinationOptions;
+    private readonly IQueuedDialerWorkGate _dialerWorkGate;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -49,6 +50,10 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
     /// <param name="session">The YesSql session used to persist each reservation before assigning more queue work.</param>
     /// <param name="clock">The clock used to evaluate SLA aging and business hours.</param>
     /// <param name="logger">The logger.</param>
+    /// <param name="dialerWorkGate">
+    /// The gate that holds back a campaign record that may not be dialed yet before an agent is reserved for it, when
+    /// queues are enabled; without it every waiting record is offered.
+    /// </param>
     public ActivityAssignmentService(
         IQueueItemManager queueItemManager,
         IAgentAvailabilityService availabilityService,
@@ -62,7 +67,8 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         ISession session,
         IClock clock,
         IOptions<ContactCenterCoordinationOptions> coordinationOptions,
-        ILogger<ActivityAssignmentService> logger)
+        ILogger<ActivityAssignmentService> logger,
+        IQueuedDialerWorkGate dialerWorkGate = null)
     {
         _queueItemManager = queueItemManager;
         _availabilityService = availabilityService;
@@ -76,6 +82,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         _session = session;
         _clock = clock;
         _coordinationOptions = coordinationOptions.Value;
+        _dialerWorkGate = dialerWorkGate;
         _logger = logger;
     }
 
@@ -376,18 +383,48 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
 
     /// <summary>
     /// Finds the next waiting item whose activity is still routable, withdrawing any ahead of it whose activity was
-    /// purged, closed or deleted outside routing, so they heal here rather than being offered on every pass.
+    /// purged, closed or deleted outside routing, so they heal here rather than being offered on every pass. A campaign
+    /// record that may not be dialed yet -- scheduled for later, cooling down after its last attempt, or out of
+    /// attempts -- is held back here too, before any agent is reserved for it.
     /// </summary>
     private async Task<QueueItem> NextRoutableItemAsync(ActivityQueue queue, DateTime now, CancellationToken cancellationToken)
     {
+        HashSet<string> heldBack = null;
+
         for (var withdrawn = 0; withdrawn < MaxWithdrawalsPerPass; withdrawn++)
         {
             var item = await _queueItemManager.FindNextWaitingAsync(queue, now, cancellationToken);
 
-            if (item is null || !await _withdrawalService.TryWithdrawUnroutableAsync(item, cancellationToken))
+            if (item is null || await _withdrawalService.TryWithdrawUnroutableAsync(item, cancellationToken))
+            {
+                if (item is null)
+                {
+                    return null;
+                }
+
+                continue;
+            }
+
+            if (_dialerWorkGate is null)
             {
                 return item;
             }
+
+            // A record held back goes to the back of the queue. Reaching one again in the same pass means every
+            // waiting record has been looked at and none is due.
+            heldBack ??= new HashSet<string>(StringComparer.Ordinal);
+
+            if (heldBack.Contains(item.ItemId))
+            {
+                return null;
+            }
+
+            if (!await _dialerWorkGate.TryHoldBackAsync(item, now, cancellationToken))
+            {
+                return item;
+            }
+
+            heldBack.Add(item.ItemId);
         }
 
         // A backlog of dead items longer than one pass is withdrawn over the following passes.

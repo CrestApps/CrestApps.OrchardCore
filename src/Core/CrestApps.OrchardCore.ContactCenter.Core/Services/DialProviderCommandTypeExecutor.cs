@@ -263,7 +263,10 @@ public sealed partial class DialProviderCommandTypeExecutor : IProviderCommandTy
             await RecordDialFailedAsync(command, interaction, cancellationToken);
         }
 
-        if (!string.IsNullOrWhiteSpace(command.ActivityItemId))
+        // A campaign dial the provider refused is dispositioned by the dialer from the DialFailed record above
+        // (DialerAttemptOutcomeHandler), the same way as one that rang out: marking it failed here would finish it
+        // before that could, with no disposition for a workflow or a report to act on.
+        if (!string.IsNullOrWhiteSpace(command.ActivityItemId) && !IsCampaignDial(command))
         {
             await _activityWriter.ScheduleUpdateAsync(
                 command.ActivityItemId,
@@ -271,6 +274,10 @@ public sealed partial class DialProviderCommandTypeExecutor : IProviderCommandTy
                 cancellationToken);
         }
     }
+
+    private static bool IsCampaignDial(ProviderCommand command)
+        => !string.IsNullOrWhiteSpace(command.DialerProfileId) &&
+            !QueueCallbackDialerProfile.IsCallbackProfile(command.DialerProfileId);
 
     /// <inheritdoc/>
     public async Task ProjectOutcomeUnknownAsync(
