@@ -71,31 +71,57 @@ public sealed class TelnyxRecordingIngestEnqueuer : ITelnyxRecordingSavedHandler
             return false;
         }
 
-        // A recording is correlated to its interaction only through the recording client_state the platform set
-        // when it started recording. A recording without that state was not started for a Contact Center
-        // interaction (for example, a connection-level recording), so there is no interaction to ingest it for.
-        if (!TelnyxRecordingClientState.TryParse(callEvent.ClientState, out var recordingState))
+        // A voicemail is recorded with a recording client_state naming its interaction: the caller's leg ends with the
+        // message, so nothing else needs the leg's own state afterwards.
+        if (TelnyxRecordingClientState.TryParse(callEvent.ClientState, out var recordingState))
         {
-            return false;
+            var voicemailInteraction = await _interactionManager.FindByIdAsync(recordingState.InteractionId, cancellationToken);
+
+            return voicemailInteraction is not null &&
+                await EnqueueInteractionRecordingAsync(callEvent, voicemailInteraction, recordingState.IsVoicemail, recordingState.RecipientUserId, cancellationToken);
         }
 
-        // An automated voice agent's call, or a number dialed on the soft phone, is not an interaction: it is listed
-        // on the call recordings page and ingested on its own.
-        if (string.IsNullOrWhiteSpace(recordingState.InteractionId))
+        // A call recording carries no client_state, which would replace the state the leg's own events need. It is
+        // traced through the leg Telnyx names instead: a recording the platform listed when it started it (an
+        // automated voice agent's call, or a number dialed on the soft phone), else the interaction whose call it is.
+        if (_callRecordingCatalog is not null &&
+            await _callRecordingCatalog.FindRunningAsync(callEvent.CallControlId, cancellationToken) is { } running)
         {
-            return await EnqueueCallRecordingAsync(callEvent, recordingState, cancellationToken);
+            return await EnqueueCallRecordingAsync(callEvent, running, cancellationToken);
         }
 
-        // Stamp the interaction with the recording's retrieval handle now that the Telnyx recording id is known.
-        // The recording id is the deterministic media-store storage key, so recording it here makes the recording
-        // discoverable through the interaction the moment the encrypted copy lands, even though ingestion itself
-        // runs asynchronously. A missing interaction means there is nothing to ingest the recording for.
-        var interaction = await _interactionManager.FindByIdAsync(recordingState.InteractionId, cancellationToken);
+        var interaction = string.IsNullOrWhiteSpace(callEvent.CallControlId)
+            ? null
+            : await _interactionManager.FindByProviderInteractionIdAsync(TelnyxConstants.ProviderTechnicalName, callEvent.CallControlId, cancellationToken);
 
         if (interaction is null)
         {
+            // Not started by the platform (for example, a connection-level recording), so nothing owns it here.
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Telnyx recording {RecordingId} on leg {CallControlId} matches no recording the platform started, so it was not stored.",
+                    callEvent.RecordingId.SanitizeLogValue(),
+                    callEvent.CallControlId.SanitizeLogValue());
+            }
+
             return false;
         }
+
+        return await EnqueueInteractionRecordingAsync(callEvent, interaction, isVoicemail: false, recipientUserId: null, cancellationToken);
+    }
+
+    private async Task<bool> EnqueueInteractionRecordingAsync(
+        TelnyxCallEvent callEvent,
+        Interaction interaction,
+        bool isVoicemail,
+        string recipientUserId,
+        CancellationToken cancellationToken)
+    {
+        // Stamp the interaction with the recording's retrieval handle now that the Telnyx recording id is known.
+        // The recording id is the deterministic media-store storage key, so recording it here makes the recording
+        // discoverable through the interaction the moment the encrypted copy lands, even though ingestion itself
+        // runs asynchronously.
 
         interaction.RecordingReference = callEvent.RecordingId;
         interaction.TechnicalMetadata ??= new Dictionary<string, object>();
@@ -109,12 +135,12 @@ public sealed class TelnyxRecordingIngestEnqueuer : ITelnyxRecordingSavedHandler
         // "send to voicemail" from the soft phone, whose path does not go through the routing engine.
         var publishVoicemailProjection = false;
 
-        if (recordingState.IsVoicemail &&
+        if (isVoicemail &&
             !IsAlreadyFlaggedVoicemail(interaction))
         {
             interaction.TechnicalMetadata[ContactCenterConstants.Voicemail.ProjectionMetadataKey] = true;
 
-            var recipientAgentId = await ResolveRecipientAgentIdAsync(recordingState.RecipientUserId, interaction, cancellationToken);
+            var recipientAgentId = await ResolveRecipientAgentIdAsync(recipientUserId, interaction, cancellationToken);
 
             if (!string.IsNullOrWhiteSpace(recipientAgentId))
             {
@@ -129,7 +155,7 @@ public sealed class TelnyxRecordingIngestEnqueuer : ITelnyxRecordingSavedHandler
 
             // A voicemail is listened to from the voicemail inbox; every other recording of the call is listed on the
             // call recordings page.
-            if (!recordingState.IsVoicemail && _callRecordingCatalog is not null)
+            if (!isVoicemail && _callRecordingCatalog is not null)
             {
                 await _callRecordingCatalog.RegisterAsync(new CallRecordingRegistration
                 {
@@ -139,6 +165,7 @@ public sealed class TelnyxRecordingIngestEnqueuer : ITelnyxRecordingSavedHandler
                     StorageReference = callEvent.RecordingId,
                     Format = TelnyxConstants.Recording.Format,
                     InteractionId = interaction.ItemId,
+                    ProviderCallId = callEvent.CallControlId,
                     StartedUtc = callEvent.RecordingStartedUtc,
                     EndedUtc = callEvent.RecordingEndedUtc,
                 }, cancellationToken);
@@ -150,7 +177,7 @@ public sealed class TelnyxRecordingIngestEnqueuer : ITelnyxRecordingSavedHandler
             }
 
             await _jobStore.EnqueueAsync(
-                recordingState.InteractionId,
+                interaction.ItemId,
                 callEvent.RecordingId,
                 TelnyxConstants.Recording.Format,
                 _clock.UtcNow,
@@ -182,42 +209,27 @@ public sealed class TelnyxRecordingIngestEnqueuer : ITelnyxRecordingSavedHandler
 
     private async Task<bool> EnqueueCallRecordingAsync(
         TelnyxCallEvent callEvent,
-        TelnyxRecordingClientState recordingState,
+        CallRecording running,
         CancellationToken cancellationToken)
     {
-        // Such a recording is only started while the Call Recording feature is enabled. One saved after the feature
-        // was turned off has nowhere to be listed, so it is left on Telnyx rather than stored where nobody can find it.
-        if (_callRecordingCatalog is null)
-        {
-            _logger.LogWarning(
-                "Telnyx recording {RecordingId} was saved, but the Contact Center Call Recording feature is not enabled, so it was not stored.",
-                callEvent.RecordingId.SanitizeLogValue());
-
-            return false;
-        }
-
         try
         {
             // An AI call the AI handed to a person became an interaction partway through. The recording kept running
             // across the hand-off, so it is tied to that interaction too: the agent who took it then finds it among
             // their own calls, and erasing the interaction's recording erases this one.
-            var handedOff = recordingState.IsAiCall
-                ? await _interactionManager.FindByActivityIdAsync(recordingState.ActivityId, cancellationToken)
+            var handedOff = running.Source == CallRecordingSource.AiAgent && !string.IsNullOrEmpty(running.ActivityItemId)
+                ? await _interactionManager.FindByActivityIdAsync(running.ActivityItemId, cancellationToken)
                 : null;
 
             await _callRecordingCatalog.RegisterAsync(new CallRecordingRegistration
             {
+                Source = running.Source,
                 InteractionId = handedOff?.ItemId,
-                Source = recordingState.IsAiCall ? CallRecordingSource.AiAgent : CallRecordingSource.SoftPhone,
                 ProviderName = TelnyxConstants.ProviderTechnicalName,
                 ProviderRecordingId = callEvent.RecordingId,
+                ProviderCallId = callEvent.CallControlId,
                 StorageReference = callEvent.RecordingId,
                 Format = TelnyxConstants.Recording.Format,
-                ActivityItemId = recordingState.ActivityId,
-                TelephonyCallId = recordingState.TelephonyCallId,
-                AgentUserId = recordingState.AgentUserId,
-                CustomerAddress = recordingState.CustomerNumber,
-                Direction = recordingState.IsInbound == true ? InteractionDirection.Inbound : InteractionDirection.Outbound,
                 StartedUtc = callEvent.RecordingStartedUtc,
                 EndedUtc = callEvent.RecordingEndedUtc,
             }, cancellationToken);
@@ -238,9 +250,9 @@ public sealed class TelnyxRecordingIngestEnqueuer : ITelnyxRecordingSavedHandler
         {
             _logger.LogError(
                 ex,
-                "Failed to enqueue Telnyx recording {RecordingId} of a {Kind} call for ingestion.",
+                "Failed to enqueue Telnyx recording {RecordingId} of a {Source} call for ingestion.",
                 callEvent.RecordingId.SanitizeLogValue(),
-                recordingState.Kind.SanitizeLogValue());
+                running.Source);
 
             return false;
         }
