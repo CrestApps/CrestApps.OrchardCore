@@ -204,4 +204,11 @@ public sealed class QueueItem : CatalogItem, IModifiedUtcAwareModel
     /// </summary>
     [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime? CallbackAcceptedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets when an over-dialing Predictive campaign placed this item's call before any agent was reserved for
+    /// it. Such an item is Assigned with no agent until a person answers and an agent is claimed for the call.
+    /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
+    public DateTime? DialedUtc { get; set; }
 }

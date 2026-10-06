@@ -67,4 +67,28 @@ public interface IActivityReservationService
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The number of reservations that expired.</returns>
     Task<int> ExpireDueAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Claims an agent for an over-dialed call a person has just answered: under the activity and agent locks it
+    /// re-checks that the call is still placed for the campaign with nobody claimed and that the agent is still free,
+    /// then creates the reservation already accepted, names the agent on the queue item, the work state and the
+    /// interaction, moves the agent to Busy and commits through the same compare-and-set as every other routing
+    /// transition.
+    /// </summary>
+    /// <param name="queueItem">The call's queue item, Assigned with no agent.</param>
+    /// <param name="agent">The agent to claim.</param>
+    /// <param name="interactionId">The interaction of the answered call.</param>
+    /// <param name="lockWait">How long to wait for the locks; a held agent is skipped rather than waited for.</param>
+    /// <param name="beforeCommit">Work to stage in the same transaction once the agent is claimed, such as connecting
+    /// the agent to the call.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The accepted reservation, or <see langword="null"/> when the call or the agent could not be claimed.</returns>
+    /// <exception cref="YesSql.ConcurrencyException">Another transition changed the agent, the item or the call first.</exception>
+    Task<ActivityReservation> ClaimConnectedCallAsync(
+        QueueItem queueItem,
+        AgentProfile agent,
+        string interactionId,
+        TimeSpan lockWait,
+        Func<ActivityReservation, AgentProfile, Task> beforeCommit = null,
+        CancellationToken cancellationToken = default);
 }

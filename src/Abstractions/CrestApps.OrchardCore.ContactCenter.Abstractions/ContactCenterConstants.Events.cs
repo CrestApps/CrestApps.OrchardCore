@@ -168,6 +168,18 @@ public static partial class ContactCenterConstants
         public const string DialerCallAbandoned = "DialerCallAbandoned";
 
         /// <summary>
+        /// Raised when an agent is claimed for a call an over-dialing Predictive profile placed without one, once a person
+        /// answered it. Filed under the dialer profile.
+        /// </summary>
+        public const string DialerAgentConnectClaimed = "DialerAgentConnectClaimed";
+
+        /// <summary>
+        /// Raised when an over-dialing Predictive campaign queue switches between placing calls without an agent and
+        /// reserving an agent for every call, or stops dialing, so the reason its pacing changed is on record.
+        /// </summary>
+        public const string DialerPacingModeChanged = "DialerPacingModeChanged";
+
+        /// <summary>
         /// Raised when the outbound compliance gate suppresses a dialing attempt.
         /// </summary>
         public const string DialSuppressed = "DialSuppressed";

@@ -282,7 +282,9 @@ public sealed class DialerAttemptFinalizer : IDialerAttemptFinalizer
     }
 
     // The recovery sweep may have put the attempt back in the queue before this ran. A completed activity has nothing
-    // left to dial, so the waiting item goes too, or it would be offered again.
+    // left to dial, so the waiting item goes too, or it would be offered again. So does the item of a call an
+    // over-dialing campaign placed without an agent: it stays Assigned with nobody on it, and left there it would count
+    // as a call in flight for good.
     private async Task RemoveWaitingQueueItemAsync(string activityItemId, CancellationToken cancellationToken)
     {
         var queueItemManager = _serviceProvider.GetService<IQueueItemManager>();
@@ -295,7 +297,9 @@ public sealed class DialerAttemptFinalizer : IDialerAttemptFinalizer
 
         var queueItem = await queueItemManager.FindByActivityIdAsync(activityItemId, cancellationToken);
 
-        if (queueItem is not null && queueItem.Status == QueueItemStatus.Waiting)
+        if (queueItem is not null &&
+            (queueItem.Status == QueueItemStatus.Waiting ||
+                (queueItem.Status == QueueItemStatus.Assigned && string.IsNullOrEmpty(queueItem.AgentId))))
         {
             await queueService.DequeueAsync(queueItem, QueueItemStatus.Removed, cancellationToken);
         }

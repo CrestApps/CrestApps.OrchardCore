@@ -17,4 +17,15 @@ public interface IDialerAttemptService
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns><see langword="true"/> when an outbound call was started; otherwise <see langword="false"/>.</returns>
     Task<bool> TryDialAsync(DialerProfile profile, ActivityReservation reservation, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Attempts to dial a waiting campaign item without reserving an agent for it, for an over-dialing Predictive
+    /// profile. The item becomes Assigned with no agent, the compliance gate runs first, and the call is placed once the
+    /// caller's transaction commits; an agent is claimed for it only when a person answers.
+    /// </summary>
+    /// <param name="profile">The over-dialing Predictive profile that governs the attempt.</param>
+    /// <param name="queueItem">The waiting queue item to dial.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns><see langword="true"/> when the call was staged to be placed; otherwise <see langword="false"/>.</returns>
+    Task<bool> TryDialUnreservedAsync(DialerProfile profile, QueueItem queueItem, CancellationToken cancellationToken = default);
 }

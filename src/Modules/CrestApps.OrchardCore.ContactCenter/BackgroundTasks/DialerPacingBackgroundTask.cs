@@ -1,4 +1,6 @@
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -52,6 +54,7 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
         var dialerService = serviceProvider.GetRequiredService<IDialerService>();
         var queueItemStore = serviceProvider.GetRequiredService<IQueueItemStore>();
         var clock = serviceProvider.GetRequiredService<IClock>();
+        var pacingScheduler = serviceProvider.GetService<IPredictivePacingScheduler>();
         var logger = serviceProvider.GetRequiredService<ILogger<DialerPacingBackgroundTask>>();
 
         using var runCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -90,6 +93,17 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
             .Where(ContactCenterConstants.IsCampaignQueue)
             .ToArray();
 
+        // The safety net for an answered over-dialed call whose connect was lost -- the node stopped between the answer
+        // and the connect: every queue with calls still waiting for an agent is paced, and the pacing run connects or
+        // abandons them first, even once the queue has nothing left to dial.
+        if (pacingScheduler is not null)
+        {
+            foreach (var queueId in await queueItemStore.GetDialerInFlightQueueIdsAsync(runToken))
+            {
+                pacingScheduler.Request(queueId);
+            }
+        }
+
         foreach (var queueId in campaignQueueIds)
         {
             if (clock.UtcNow >= runDeadlineUtc)
@@ -120,6 +134,18 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
 
                 if (profile is null)
                 {
+                    continue;
+                }
+
+                // An over-dialing queue is paced by its own requests, each on a scope of its own, so a cycle that loses a
+                // race with another node cannot spend the session this run shares with every other queue. This run is
+                // the backstop that re-arms it every minute.
+                if (pacingScheduler is not null &&
+                    profile.Mode == DialerMode.Predictive &&
+                    profile.PredictivePacingModel == PredictivePacingModel.OverDial)
+                {
+                    pacingScheduler.Request(queueId);
+
                     continue;
                 }
 

@@ -233,6 +233,46 @@ public sealed class QueueItemStore : DocumentCatalog<QueueItem, QueueItemIndex>,
             .FirstOrDefaultAsync(cancellationToken);
     }
 
+    /// <inheritdoc/>
+    public async Task<int> CountDialerInFlightAsync(string queueId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(queueId);
+
+        return await Session.Query<QueueItem, QueueItemIndex>(
+            index => index.QueueId == queueId && index.Status == QueueItemStatus.Assigned && index.AgentId == null,
+            collection: ContactCenterStorage.CollectionName)
+            .CountAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<QueueItem>> GetDialerInFlightAsync(string queueId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(queueId);
+
+        var items = await Session.Query<QueueItem, QueueItemIndex>(
+            index => index.QueueId == queueId && index.Status == QueueItemStatus.Assigned && index.AgentId == null,
+            collection: ContactCenterStorage.CollectionName)
+            .OrderBy(index => index.EnqueuedUtc)
+            .ListAsync(cancellationToken);
+
+        return items.ToArray();
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<string>> GetDialerInFlightQueueIdsAsync(CancellationToken cancellationToken = default)
+    {
+        var rows = await Session.QueryIndex<QueueItemIndex>(
+            index => index.Status == QueueItemStatus.Assigned && index.AgentId == null,
+            collection: ContactCenterStorage.CollectionName)
+            .ListAsync(cancellationToken);
+
+        return rows
+            .Select(row => row.QueueId)
+            .Where(queueId => !string.IsNullOrEmpty(queueId))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+    }
+
     private sealed class QueueWaitingCount
     {
         public string QueueId { get; set; }
