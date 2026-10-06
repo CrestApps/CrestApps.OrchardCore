@@ -1,7 +1,7 @@
 # True predictive dialing - design and plan
 
-Status: B1 (foundation) and B2 (over-dial core) implemented; B3 (latency and compliance hardening) open. B2's
-differences from the plan are under [B2 as built](#as-built).
+Status: B1 (foundation), B2 (over-dial core) and B3 (latency and compliance hardening) implemented. B2's differences
+from the plan are under [B2 as built](#as-built); B3 is described as built.
 
 This is the engineering plan for placing calls without a reserved agent ("over-dialing") on Predictive dialer profiles.
 It was first written against the dialer auto-disposition work and before the abandoned-call message work (PR #773)
@@ -272,12 +272,46 @@ recovery leave in-flight calls alone; two nodes -> `ConcurrencyException` keeps 
 agent -> abandonment path; agent-leg failure after the claim -> message. The B1 harness test that Predictive without the
 feature places nothing must keep passing.
 
-## B3 - latency and compliance hardening (open)
+## B3 - latency and compliance hardening (implemented)
 
-Standby auto-answer armed while Available on an over-dial campaign plus a SIP header (for example `X-CC-Reservation`)
-matched by `auto-answer.js` (Telnyx and JS), removing the push-versus-INVITE race; the answered-unconnected sweep; the
-optional connect wait, validated so wait plus measured p95 connect latency stays within 2 s and refused without latency
-data; abandoned-retry-requires-agent enforcement; supervisor visibility of `LastDecision`.
+- **Standby auto-answer.** The browser, not the server, decides when it stands by: the Contact Center soft phone calls
+  `api.setPredictiveStandby(eligible, userId)` from the hub snapshot and `PresenceChanged`, eligible meaning presence
+  Available and at least one campaign (`isStandbyEligible`). A server flag per over-dial campaign was not needed: the
+  real guard is the tag, which only the claim puts on a leg. The connector registers the Answer command with
+  `ProviderAnswerCommandRequest.StandbyReservationId` and `AgentLegTimeoutSeconds`, `ContactCenterConnectRequest` carries
+  both, and Telnyx adds `custom_headers` `X-CC-Reservation: <reservationId>` and `X-CC-Agent-User: <userId>`
+  (`TelnyxStandbyAnswerHeaders`), `timeout_secs`, and the reservation in the agent leg's own client state (the leg is new,
+  so no other code relies on its state) so `TryRingContactCenterAgentAgainAsync` tags a re-rung leg too. The pure decision
+  is `soft-phone/predictive-standby.js` (`shouldStandbyAnswerLeg`): standing by, not a transfer or destination leg, not on
+  a call, both headers present, user matches. Two details found while building it: the claim moves the agent to Busy and
+  that push can beat the invite, so a dropped standby keeps answering tagged legs for 5 s; and the accept push arriving
+  after a standby answer would otherwise arm the one-shot auto-answer for the next unrelated leg, so tagged legs are
+  remembered for a minute and `armInboundAutoAnswer` skips their reservation.
+- **Agent-leg deadline.** `AgentLegAnswerTimeout` (3 s from the claim, 1-30 s). `predictive-agent-leg:{interactionId}` on
+  `IContactCenterDeadlineScheduler`; `ReleaseUnansweredAgentLegAsync` under the connect lock, idempotent through the
+  joined, abandoned and settled marks; it settles through a new `IContactCenterAgentLegFailureService.FailAsync` overload
+  with reason `agent_leg_timeout`, commits, and then hangs up the pending agent leg, so that leg's hang-up webhook finds
+  the call settled and cannot abandon it twice. The provider's ring limit (`max(5, timeout + 2)` seconds) is the backstop.
+  Trade-off: agent-leg setup alone takes 1-2 s, so the 2-second rule cannot be guaranteed by any timeout; late connects
+  are counted abandoned by #773 (`agent_connected_late`), and the deadline bounds the silence.
+- **Sweep.** `SweepAnsweredUnconnectedAsync`, run by the minute `DialerPacingBackgroundTask` before its pacing requests,
+  each call in its own scope: unclaimed answered calls older than `AnsweredUnconnectedSweepAfter` are abandoned
+  (`answered_unconnected`), claimed calls whose agent never joined after `AgentLegAnswerTimeout + AnsweredUnconnectedSweepAfter`
+  are given up on (`IQueueItemStore.GetDialerClaimedAsync`: Assigned with an agent, in a campaign queue, with `DialedUtc`).
+- **Connect wait.** `PredictiveConnectWait` (pure): allowed only when `wait <= 2 s - P95ConnectLatency` with at least 20
+  measured connects. `DialerProfileHandler` refuses otherwise (and for an unsaved profile); the connector also applies it
+  at run time, cutting a stored wait to today's budget, or to 0 without data.
+- **Follow-ups.** `QueueItem.RequiresReservedAgent`, written with the item by a new
+  `IActivityQueueService.EnqueueAsync(..., bool requiresReservedAgent, ...)` overload (no window in which a cycle sees the
+  item unmarked); `DialerFollowUpActivityHandler` sets it when the previous attempt's interaction was abandoned or its item
+  was marked, and the pacer treats a marked item like a same-activity abandoned retry.
+- **Lock held.** The pacer calls `IPredictivePacingScheduler.RequestRetry`, which arms the queue's run after
+  `PacingLockRetryDelay` (1 s).
+- **Supervisor visibility.** The profile editor's Predictive card lists `LastDecision` per campaign
+  (`IPredictivePacingStateStore.GetByDialerProfileIdAsync`; the records are few, so the profile is not indexed). The live
+  dashboard tile was not changed.
+- **Inbound discount.** `DiscountAgentsWithWaitingInbound` (tenant option, off): free agents also signed in to an inbound
+  queue with waiting items are left out of `A` and of the retry reservations.
 
 ## Compliance
 

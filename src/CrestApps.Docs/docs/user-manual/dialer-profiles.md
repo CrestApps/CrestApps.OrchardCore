@@ -102,7 +102,7 @@ Over-dialing needs **Enforce an abandonment-rate cap**, the **Abandoned call mes
 It stops dialing altogether when the abandonment rate cannot be measured at all. Watch the abandonment rate during the first days of a new over-dialing campaign, and start with **Lines per agent** at 1.5 and a **Target abandonment rate** of 1%.
 
 :::tip[Agents on an over-dialing campaign]
-Agents on an over-dialing campaign do not see an offer before a call: the call is theirs as soon as they are connected. Keep their phone ready to answer automatically, and if they also take inbound calls, an inbound call that reaches them first takes them out of the campaign until it ends.
+Agents on an over-dialing campaign do not see an offer before a call: the call is theirs as soon as they are connected. While an agent is **Available** and signed in to a campaign, the soft phone stands by and answers the call it is given at once, with no click; inbound offers still ring for the agent to accept. If the agent's phone does not pick up within a few seconds, the agent is put back to **Available**, the person hears the abandoned-call message and the call counts as abandoned. If they also take inbound calls, an inbound call that reaches them first takes them out of the campaign until it ends.
 :::
 
 The settings on the **Predictive pacing** card:
@@ -110,6 +110,7 @@ The settings on the **Predictive pacing** card:
 | Field | What it does |
 | --- | --- |
 | **Measured answer rate** | Shown once a Predictive profile has placed calls: the share of recent calls with an outcome that a person answered, how long people take to answer, and how long agents take to be connected. A call still ringing is left out until it has an outcome. |
+| **Last pacing decision** | Shown once an over-dialing profile has paced a campaign: for each campaign, when the last cycle ran, whether it over-dialed, reserved an agent per call or did not dial and why, how many calls it placed of those allowed, the free agents (plus those about to free up when counted), the calls ringing without an agent, the answer rate and the abandonment rates over the rolling window and the compliance window. Read-only; it changes every cycle. |
 | **Pacing** | **One call per reserved agent** (the default) or **Over-dial**. Over-dialing needs **Enforce an abandonment-rate cap**, the abandoned-call message and a target below the cap. |
 | **Target abandonment rate** | The rate over-dialing steers toward. Default 2%. For over-dialing it must be lower than the **Maximum abandonment rate**, which stays the hard limit. |
 | **Lines per agent** | The most calls ringing for each free agent, from 1 to 5. Default 2. |
@@ -118,8 +119,8 @@ The settings on the **Predictive pacing** card:
 | **Answer rate window (minutes)** | How far back the answer rate is measured, from 5 to 240. Default 15. |
 | **Count agents about to free up** | Also counts agents expected to finish their call and wrap-up before a new call is answered. Off by default. |
 | **Share of agents about to free up** | How many of those agents are counted, from 0 to 100%. Default 50%. |
-| **Connect wait (milliseconds)** | How long a person who answered may wait for an agent to free up before the abandoned-call message plays, from 0 to 1500. Default 0, which is recommended: a call not connected within two seconds counts as abandoned. |
-| **Retry abandoned calls only with an agent reserved** | When the same activity is dialed again after its call was abandoned, an agent is reserved for it first, so the person is not abandoned twice. On by default. |
+| **Connect wait (milliseconds)** | How long a person who answered may wait for an agent to free up before the abandoned-call message plays, from 0 to 1500. Default 0, which is recommended: a call not connected within two seconds counts as abandoned. A wait above 0 can only be saved once the profile has connected at least 20 calls, and only while the wait plus the time the slowest 5% of those connects took stays within two seconds; the message names the longest wait allowed. |
+| **Retry abandoned calls only with an agent reserved** | When the contact is called again after their call was abandoned, an agent is reserved for the call first, so the person is not abandoned twice. This covers the next attempt created by **Try again** or by a workflow too. On by default. |
 
 ## Abandoned calls
 
