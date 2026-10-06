@@ -185,6 +185,13 @@ public static class TelnyxConstants
         public const string SavedEventType = "call.recording.saved";
 
         /// <summary>
+        /// How a call recording lays out its audio: each party on a channel of its own, so the agent's level and the
+        /// customer's can be told apart when a call is reviewed. The call recordings player mixes the two back down,
+        /// so a recording still sounds like the call. A voicemail has one speaker and stays single.
+        /// </summary>
+        public const string CallChannels = "dual";
+
+        /// <summary>
         /// The <c>client_state</c> intent that marks a recording started for a Contact Center interaction, so the
         /// saved-recording webhook can be correlated back to the interaction that owns it.
         /// </summary>
