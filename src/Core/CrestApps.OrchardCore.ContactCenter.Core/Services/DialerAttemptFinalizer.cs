@@ -256,7 +256,7 @@ public sealed class DialerAttemptFinalizer : IDialerAttemptFinalizer
             return;
         }
 
-        await _workStateService.MutateAsync(activity.ItemId, state =>
+        var released = await _workStateService.MutateAsync(activity.ItemId, state =>
         {
             if (state.AssignmentStatus != ActivityAssignmentStatus.Released && state.CanTransitionTo(ActivityAssignmentStatus.Released))
             {
@@ -273,15 +273,12 @@ public sealed class DialerAttemptFinalizer : IDialerAttemptFinalizer
             state.ReservationExpiresUtc = null;
         }, cancellationToken);
 
-        // The completion below reads the activity's copy of the assignment; it no longer names the agent either.
-        activity.AssignedToId = null;
-        activity.AssignedToUsername = null;
-        activity.AssignedToUtc = null;
-        activity.ReservationId = null;
-        activity.ReservedById = null;
-        activity.ReservedByUsername = null;
-        activity.ReservedUtc = null;
-        activity.ReservationExpiresUtc = null;
+        // The completion below saves the activity as loaded here; its copy of the assignment no longer names the agent
+        // either.
+        if (released is not null)
+        {
+            ContactCenterWorkStateProjector.Apply(activity, released);
+        }
     }
 
     // The recovery sweep may have put the attempt back in the queue before this ran. A completed activity has nothing

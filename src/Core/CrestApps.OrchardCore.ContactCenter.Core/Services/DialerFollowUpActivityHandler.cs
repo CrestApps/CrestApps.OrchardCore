@@ -16,7 +16,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// saw it and the contact was never called again. It now goes into the same campaign queue the first attempt was dialed
 /// from, carrying the attempt number on, due no sooner than the profile's retry delay after the attempt it follows. One
 /// past the profile's attempt limit is not created at all, and one the action gave to a named person stays that person's
-/// own work.
+/// own work. The dialer picks the agent; a follow-up of an attempt an agent dispositioned prefers that agent, as a
+/// sticky preference only.
 /// </remarks>
 public sealed class DialerFollowUpActivityHandler : IFollowUpActivityHandler
 {
@@ -108,12 +109,6 @@ public sealed class DialerFollowUpActivityHandler : IFollowUpActivityHandler
 
             return;
         }
-
-        // The dialer picks the agent, as it did for the first attempt.
-        followUp.AssignedToId = null;
-        followUp.AssignedToUsername = null;
-        followUp.AssignedToUtc = null;
-        followUp.AssignmentStatus = ActivityAssignmentStatus.Available;
 
         var earliestUtc = (previous.CompletedUtc ?? _clock.UtcNow).AddMinutes(Math.Max(0, profile.RetryDelayMinutes));
 

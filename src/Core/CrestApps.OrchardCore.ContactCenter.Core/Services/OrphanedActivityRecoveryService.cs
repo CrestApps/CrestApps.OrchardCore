@@ -69,7 +69,7 @@ public sealed class OrphanedActivityRecoveryService : IOrphanedActivityRecoveryS
         IQueueItemManager queueItemManager,
         IClock clock,
         ILogger<OrphanedActivityRecoveryService> logger,
-        IDialerAttemptFinalizer dialerAttemptFinalizer = null)
+        IDialerAttemptFinalizer dialerAttemptFinalizer)
     {
         _session = session;
         _interactionManager = interactionManager;

@@ -68,7 +68,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         IClock clock,
         IOptions<ContactCenterCoordinationOptions> coordinationOptions,
         ILogger<ActivityAssignmentService> logger,
-        IQueuedDialerWorkGate dialerWorkGate = null)
+        IQueuedDialerWorkGate dialerWorkGate)
     {
         _queueItemManager = queueItemManager;
         _availabilityService = availabilityService;
