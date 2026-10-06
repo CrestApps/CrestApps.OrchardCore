@@ -14,8 +14,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Handlers;
 /// </summary>
 /// <remarks>
 /// <para>
-/// "Recording enabled" only permits recording; before this handler nothing started one unless a workflow or a
-/// supervisor asked, so a tenant that turned recording on got no recordings at all. A call is recorded from the moment
+/// Before this handler nothing started a recording unless a workflow or a supervisor asked, so a tenant that turned
+/// recording on got no recordings at all. A call is recorded from the moment
 /// it is bridged to an agent (<see cref="ContactCenterConstants.Events.CallConnected"/>), so the queue's hold music is
 /// not captured.
 /// </para>
@@ -77,7 +77,7 @@ public sealed class AutomaticCallRecordingHandler : IContactCenterEventHandler
 
         var settings = (await _siteService.GetSiteSettingsAsync()).GetOrCreate<ContactCenterRecordingSettings>();
 
-        if (!settings.RecordingEnabled || !settings.RecordAllCalls)
+        if (!settings.RecordAllCalls)
         {
             return;
         }

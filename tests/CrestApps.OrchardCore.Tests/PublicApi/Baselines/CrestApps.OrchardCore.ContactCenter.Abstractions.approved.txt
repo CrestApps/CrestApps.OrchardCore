@@ -229,7 +229,6 @@ namespace CrestApps.OrchardCore.ContactCenter
         {
             public const string AutomaticRecordingOff = "automaticRecordingOff";
             public const string ConsentRequired = "consentRequired";
-            public const string RecordingDisabled = "recordingDisabled";
         }
         public static class RecordingMetadata
         {

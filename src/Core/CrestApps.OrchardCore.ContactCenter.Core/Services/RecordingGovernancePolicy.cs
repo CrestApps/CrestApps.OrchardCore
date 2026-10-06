@@ -34,11 +34,6 @@ public sealed class RecordingGovernancePolicy : IRecordingGovernancePolicy
         var site = await _siteService.GetSiteSettingsAsync();
         var settings = site.GetOrCreate<ContactCenterRecordingSettings>();
 
-        if (!settings.RecordingEnabled)
-        {
-            return RecordingGovernanceDecision.Deny(ContactCenterConstants.RecordingGovernanceDenyReason.RecordingDisabled);
-        }
-
         // Fail closed for any consent model that is not explicitly single-party (including an undefined persisted
         // value): when explicit consent is required and none has been captured, recording is denied.
         if (settings.RequireExplicitConsent &&
@@ -62,11 +57,6 @@ public sealed class RecordingGovernancePolicy : IRecordingGovernancePolicy
     {
         var site = await _siteService.GetSiteSettingsAsync();
         var settings = site.GetOrCreate<ContactCenterRecordingSettings>();
-
-        if (!settings.RecordingEnabled)
-        {
-            return RecordingGovernanceDecision.Deny(ContactCenterConstants.RecordingGovernanceDenyReason.RecordingDisabled);
-        }
 
         if (!settings.RecordAllCalls)
         {

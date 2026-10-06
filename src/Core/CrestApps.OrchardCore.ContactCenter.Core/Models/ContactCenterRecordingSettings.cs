@@ -19,26 +19,14 @@ public sealed class ContactCenterRecordingSettings
     public const int MaxSecurePauseSecondsLimit = 86400;
 
     /// <summary>
-    /// Gets or sets a value indicating whether recording is permitted for this tenant. When disabled the
-    /// governance policy fails closed and no interaction may start recording regardless of provider capability.
-    /// </summary>
-    /// <remarks>
-    /// Ships <see langword="false"/> by default. Recording is a compliance-sensitive capability whose end-to-end
-    /// media path is only proven for a deployment by the base-voice audio verification step (see the base-voice
-    /// deployment acceptance gate), so an operator must consciously enable it after that proof passes rather than
-    /// have it on the moment the feature is enabled.
-    /// </remarks>
-    public bool RecordingEnabled { get; set; }
-
-    /// <summary>
     /// Gets or sets a value indicating whether every voice call starts recording on its own the moment it connects:
     /// a routed or dialed call once it is bridged to an agent, and an automated voice agent's call once it is
-    /// answered. Only applies while <see cref="RecordingEnabled"/> is on; when off, recording starts only when a
-    /// workflow or a supervisor asks for it.
+    /// answered. When off, recording starts only when a workflow or a supervisor asks for it.
     /// </summary>
     /// <remarks>
-    /// Defaults to <see langword="true"/> because <see cref="RecordingEnabled"/> alone only permits recording, and
-    /// a tenant that turns recording on expects its calls to be recorded without also building a workflow.
+    /// Recording is permitted by enabling the Call Recording feature itself; there is no separate tenant switch. This
+    /// defaults to <see langword="true"/> because a tenant that enables recording expects its calls to be recorded
+    /// without also building a workflow.
     /// </remarks>
     public bool RecordAllCalls { get; set; } = true;
 

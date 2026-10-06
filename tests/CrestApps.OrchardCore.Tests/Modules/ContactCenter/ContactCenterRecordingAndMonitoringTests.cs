@@ -101,7 +101,7 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             publisher.Object,
             CreateCommandExecutor(),
             CreateGovernancePolicy(RecordingGovernanceDecision.Deny(
-                ContactCenterConstants.RecordingGovernanceDenyReason.RecordingDisabled)),
+                ContactCenterConstants.RecordingGovernanceDenyReason.ConsentRequired)),
             new StubClock());
 
         // Act
