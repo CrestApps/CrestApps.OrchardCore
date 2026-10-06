@@ -20,6 +20,8 @@ using OrchardCore.Data.Migration;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
+using OrchardCore.Navigation;
+using OrchardCore.Security.Permissions;
 using OrchardCore.Workflows.Helpers;
 
 namespace CrestApps.OrchardCore.ContactCenter;
@@ -55,6 +57,13 @@ public sealed class RecordingStartup : StartupBase
 
         // Recording and monitoring settings screens.
         services.AddSiteDisplayDriver<ContactCenterRecordingSettingsDisplayDriver>();
+
+        // The call recordings page: search, playback and the transcript beside it.
+        services
+            .AddPermissionProvider<CallRecordingPermissionProvider>()
+            .AddNavigationProvider<ContactCenterCallRecordingsAdminMenu>()
+            .AddResourceConfiguration<ContactCenterCallRecordingsResourceConfiguration>()
+            .AddScoped<ICallRecordingTranscriptProvider, AIConversationCallRecordingTranscriptProvider>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

@@ -1,0 +1,141 @@
+@using System.Globalization
+
+@model CallRecordingListViewModel
+
+@functions {
+    private static string FormatSeconds(double seconds)
+    {
+        var span = TimeSpan.FromSeconds(Math.Max(0, Math.Round(seconds)));
+
+        return span.ToString(span.TotalHours >= 1 ? "h\\:mm\\:ss" : "m\\:ss", CultureInfo.InvariantCulture);
+    }
+}
+
+<zone Name="Title">
+    <breadcrumb name="ContactCenterCallRecordings" title="@T["Call recordings"]" />
+</zone>
+
+<form asp-action="Index" method="get" class="no-multisubmit">
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-3 gy-2 align-items-end">
+                <div class="col-sm-auto">
+                    <label for="From" class="form-label small mb-1">@T["From"]</label>
+                    <input type="date" id="From" name="From" class="form-control" value="@Model.Filter.From?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" />
+                </div>
+                <div class="col-sm-auto">
+                    <label for="To" class="form-label small mb-1">@T["To"]</label>
+                    <input type="date" id="To" name="To" class="form-control" value="@Model.Filter.To?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" />
+                </div>
+                <div class="col-sm-auto">
+                    <label for="Number" class="form-label small mb-1">@T["Phone number"]</label>
+                    <input type="search" id="Number" name="Number" class="form-control" value="@Model.Filter.Number" placeholder="@T["Any number"]" />
+                </div>
+                <div class="col-sm-auto">
+                    <label for="Direction" class="form-label small mb-1">@T["Direction"]</label>
+                    <select id="Direction" name="Direction" class="form-select" asp-items="Model.DirectionOptions">
+                        <option value="">@T["Any direction"]</option>
+                    </select>
+                </div>
+                <div class="col-sm-auto">
+                    <label for="Source" class="form-label small mb-1">@T["Call type"]</label>
+                    <select id="Source" name="Source" class="form-select" asp-items="Model.SourceOptions">
+                        <option value="">@T["Any call"]</option>
+                    </select>
+                </div>
+                @if (Model.CanListEveryone)
+                {
+                    <div class="col-sm-auto">
+                        <span class="form-label small mb-1 d-block">@T["Agent"]</span>
+                        @await Component.InvokeAsync("UserPicker", new
+                        {
+                            name = "AgentUserId",
+                            selectedValues = string.IsNullOrEmpty(Model.Filter.AgentUserId) ? Array.Empty<string>() : new[] { Model.Filter.AgentUserId },
+                            valueType = "userId",
+                            multiple = false,
+                            buttonText = T["Any agent"].Value,
+                            searchPlaceholder = T["Search agents"].Value,
+                            smallButton = false,
+                        })
+                    </div>
+                }
+                <div class="col-sm-auto">
+                    <button type="submit" class="btn btn-secondary">@T["Search"]</button>
+                    <a asp-action="Index" class="btn btn-link">@T["Clear"]</a>
+                </div>
+                <div class="col text-sm-end">
+                    <span class="badge text-bg-secondary">@(Model.Count == 1 ? T["1 recording"] : T["{0} recordings", Model.Count])</span>
+                </div>
+            </div>
+            @if (!Model.CanListEveryone)
+            {
+                <div class="form-text mt-2">@T["You see the recordings of your own calls."]</div>
+            }
+        </div>
+    </div>
+</form>
+
+@if (Model.Items.Count > 0)
+{
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">@T["Started"]</th>
+                    <th scope="col">@T["Agent"]</th>
+                    <th scope="col">@T["Customer"]</th>
+                    <th scope="col">@T["Direction"]</th>
+                    <th scope="col">@T["Type"]</th>
+                    <th scope="col" class="text-end">@T["Length"]</th>
+                    <th scope="col" class="text-end"><span class="visually-hidden">@T["Actions"]</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.Items)
+                {
+                    var recording = item.Recording;
+
+                    <tr>
+                        <td>
+                            <time datetime="@recording.StartedUtc.ToString(DateTimeFormatConstants.HtmlDateTimeOffset, CultureInfo.InvariantCulture)">@await DisplayAsync(await New.DateTime(Utc: recording.StartedUtc, Format: "g"))</time>
+                        </td>
+                        <td>@(item.AgentName ?? (recording.Source == CallRecordingSource.AiAgent ? T["AI voice agent"].Value : T["Nobody"].Value))</td>
+                        <td>@(string.IsNullOrWhiteSpace(recording.CustomerAddress) ? T["Unknown"].Value : recording.CustomerAddress)</td>
+                        <td>@(recording.Direction == InteractionDirection.Inbound ? T["Inbound"] : T["Outbound"])</td>
+                        <td>
+                            @switch (recording.Source)
+                            {
+                                case CallRecordingSource.AiAgent:
+                                    <span class="badge text-bg-info">@T["AI voice agent"]</span>
+                                    break;
+                                case CallRecordingSource.SoftPhone:
+                                    <span class="badge text-bg-secondary">@T["Soft phone keypad"]</span>
+                                    break;
+                                default:
+                                    <span class="badge text-bg-primary">@T["Contact Center call"]</span>
+                                    break;
+                            }
+                        </td>
+                        <td class="text-end font-monospace">@(recording.DurationSeconds > 0 ? FormatSeconds(recording.DurationSeconds) : "-")</td>
+                        <td class="text-end">
+                            <a asp-action="Display" asp-route-id="@recording.ItemId" class="btn btn-primary btn-sm">
+                                <i class="fa-solid fa-play" aria-hidden="true"></i>
+                                @T["Play"]
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else
+{
+    <ul class="list-group">
+        <li class="list-group-item list-group-item-info text-center">
+            @T["No recorded call matches. Calls are listed here once their recording has been saved."]
+        </li>
+    </ul>
+}
+
+@await DisplayAsync(Model.Pager)
