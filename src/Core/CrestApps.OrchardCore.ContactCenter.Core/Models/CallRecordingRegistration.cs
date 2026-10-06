@@ -24,6 +24,11 @@ public sealed class CallRecordingRegistration
     public string ProviderRecordingId { get; set; }
 
     /// <summary>
+    /// Gets or sets the provider's identifier of the call leg that was recorded.
+    /// </summary>
+    public string ProviderCallId { get; set; }
+
+    /// <summary>
     /// Gets or sets the reference the recording will be stored under in the media store.
     /// </summary>
     public string StorageReference { get; set; }

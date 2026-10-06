@@ -17,6 +17,15 @@ public interface ICallRecordingStore : ICatalog<CallRecording>
     Task<CallRecording> FindByProviderRecordingIdAsync(string providerRecordingId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Finds the newest entry listed for a recording that is still running on a call leg: one started by the platform
+    /// that the provider has not reported saved yet.
+    /// </summary>
+    /// <param name="providerCallId">The provider's identifier of the recorded call leg.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The entry, or <see langword="null"/> when there is none.</returns>
+    Task<CallRecording> FindRunningByProviderCallIdAsync(string providerCallId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Lists the recordings made of a Contact Center interaction.
     /// </summary>
     /// <param name="interactionId">The interaction identifier.</param>
