@@ -109,15 +109,25 @@
         </div>
 
         <div class="mb-3">
+            <label asp-for="NoiseSuppressionStrength">@T["Suppression strength"]</label>
+            <select class="form-select" asp-for="NoiseSuppressionStrength">
+                <option value="@TelnyxNoiseSuppressionStrength.Light">@T["Light - the most natural voice"]</option>
+                <option value="@TelnyxNoiseSuppressionStrength.Balanced">@T["Balanced - removes line hiss, keeps word endings"]</option>
+                <option value="@TelnyxNoiseSuppressionStrength.Strong">@T["Strong - removes the most noise"]</option>
+            </select>
+            <span class="hint">@T["How hard the engine works on each voice it cleans. Strong can cut off the quiet end of words and make a voice sound louder and less natural, so Balanced suits most call centers. Every engine except Denoiser, which has no strength to set, honors it."]</span>
+        </div>
+
+        <div class="mb-3">
             <div class="form-check">
                 <input type="checkbox" class="form-check-input" asp-for="NoiseSuppressionAgentVoice" />
                 <label class="form-check-label" asp-for="NoiseSuppressionAgentVoice">@T["Clean the agent's voice (what callers hear)"]</label>
-                <span class="hint dashed">@T["Removes the noise around the agent before it reaches the caller."]</span>
+                <span class="hint dashed">@T["Removes the noise around the agent before it reaches the caller. The soft phone's voice isolation, on by default, usually does this already."]</span>
             </div>
             <div class="form-check">
                 <input type="checkbox" class="form-check-input" asp-for="NoiseSuppressionCallerVoice" />
                 <label class="form-check-label" asp-for="NoiseSuppressionCallerVoice">@T["Clean the caller's voice (what the agent hears)"]</label>
-                <span class="hint dashed">@T["Removes the noise around the caller before it reaches the agent. Billed separately."]</span>
+                <span class="hint dashed">@T["Removes line hiss and the noise around the caller before it reaches the agent. Billed separately."]</span>
             </div>
         </div>
 

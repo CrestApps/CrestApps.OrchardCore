@@ -46,6 +46,7 @@ internal static class PhoneProviderSettingsSchemas
                 ("NoiseSuppressionEngine", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Off", "Krisp", "DeepFilterNet", "Denoiser", "AiCoustics").Description("The Telnyx noise suppression engine started on an agent's leg once it is connected, or 'Off'.")),
                 ("NoiseSuppressionAgentVoice", Boolean("Whether noise suppression cleans the agent's voice, which is what the caller hears.")),
                 ("NoiseSuppressionCallerVoice", Boolean("Whether noise suppression cleans the caller's voice, which is what the agent hears.")),
+                ("NoiseSuppressionStrength", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Light", "Balanced", "Strong").Description("How hard the noise suppression engine works on each voice it cleans. 'Balanced' (the default) removes line hiss while keeping the soft endings of words.")),
                 ("TtsVoice", NullableString("Text-to-speech voice used by spoken prompts, either 'female', 'male' or a 'Provider.Model.VoiceId' name such as 'AWS.Polly.Joanna-Neural'.")),
                 ("TtsLanguage", NullableString("Language spoken prompts are said in, for example 'en-US'.")))
             .AdditionalProperties(false);

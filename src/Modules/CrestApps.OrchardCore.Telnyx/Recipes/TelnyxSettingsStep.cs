@@ -55,6 +55,7 @@ internal sealed class TelnyxSettingsStep : NamedRecipeStepHandler
         // The settings screen applies the same normalization, so an imported value reads exactly as a saved one would.
         settings.WebRtcRegion = TelnyxSignalingRegions.Normalize(settings.WebRtcRegion);
         settings.NoiseSuppressionEngine = TelnyxNoiseSuppressionService.NormalizeEngine(settings.NoiseSuppressionEngine);
+        settings.NoiseSuppressionStrength = TelnyxNoiseSuppressionService.NormalizeStrength(settings.NoiseSuppressionStrength);
 
         if (settings.CredentialLifetimeMinutes <= 0)
         {
