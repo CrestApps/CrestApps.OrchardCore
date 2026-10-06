@@ -19,6 +19,7 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
     private readonly IShellFeaturesManager _shellFeaturesManager;
     private readonly IEnumerable<IDialerAbandonmentStatisticsProvider> _statisticsProviders;
     private readonly IEnumerable<IDialerPacingStatisticsProvider> _pacingStatisticsProviders;
+    private readonly IEnumerable<IPredictivePacingStateStore> _pacingStateStores;
     private readonly ContactCenterComplianceOptions _complianceOptions;
 
     internal readonly IStringLocalizer S;
@@ -30,6 +31,7 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
     /// <param name="shellFeaturesManager">The shell features manager used to detect the Paced Dialing feature.</param>
     /// <param name="statisticsProviders">The providers of the measured abandonment shown on the editor.</param>
     /// <param name="pacingStatisticsProviders">The providers of the measured answer rate shown on a Predictive profile.</param>
+    /// <param name="pacingStateStores">The pacing records whose last decisions are shown on an over-dialing profile.</param>
     /// <param name="complianceOptions">The compliance options, for the rolling window the abandonment cap is measured over.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public DialerProfileDisplayDriver(
@@ -37,6 +39,7 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
         IShellFeaturesManager shellFeaturesManager,
         IEnumerable<IDialerAbandonmentStatisticsProvider> statisticsProviders,
         IEnumerable<IDialerPacingStatisticsProvider> pacingStatisticsProviders,
+        IEnumerable<IPredictivePacingStateStore> pacingStateStores,
         IOptions<ContactCenterComplianceOptions> complianceOptions,
         IStringLocalizer<DialerProfileDisplayDriver> stringLocalizer)
     {
@@ -44,6 +47,7 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
         _shellFeaturesManager = shellFeaturesManager;
         _statisticsProviders = statisticsProviders;
         _pacingStatisticsProviders = pacingStatisticsProviders;
+        _pacingStateStores = pacingStateStores;
         _complianceOptions = complianceOptions.Value;
         S = stringLocalizer;
     }
@@ -118,6 +122,7 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
         if (!string.IsNullOrEmpty(profile.ItemId) && profile.Mode == DialerMode.Predictive)
         {
             viewModel.PacingStatistics = await GetPacingStatisticsAsync(profile.ItemId, TimeSpan.FromMinutes(Math.Max(1, profile.AnswerRateWindowMinutes)));
+            viewModel.PacingDecisions = await GetPacingDecisionsAsync(profile.ItemId);
         }
 
         var automatedDialerEnabled = await _shellFeaturesManager.IsFeatureEnabledAsync(ContactCenterConstants.Feature.DialerPaced);
@@ -167,6 +172,7 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             model.ConnectWaitMilliseconds = viewModel.ConnectWaitMilliseconds;
             model.AbandonedRetryRequiresAgent = viewModel.AbandonedRetryRequiresAgent;
             model.PacingStatistics = viewModel.PacingStatistics;
+            model.PacingDecisions = viewModel.PacingDecisions;
         }
 
         return Combine(
@@ -242,6 +248,42 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
         }
 
         return null;
+    }
+
+    // What the pacer last decided for each campaign this profile dials, so a supervisor can see why it dials as it does.
+    private async Task<IList<PredictivePacingDecisionViewModel>> GetPacingDecisionsAsync(string profileId)
+    {
+        var decisions = new List<PredictivePacingDecisionViewModel>();
+
+        foreach (var store in _pacingStateStores)
+        {
+            var states = await store.GetByDialerProfileIdAsync(profileId);
+
+            if (states.Count == 0)
+            {
+                continue;
+            }
+
+            var campaignNames = (await _optionsProvider.GetCampaignOptionsAsync([]))
+                .ToDictionary(option => option.Value, option => option.Text, StringComparer.Ordinal);
+
+            foreach (var state in states.Where(state => state.LastDecision is not null))
+            {
+                var campaignId = ContactCenterConstants.CampaignQueue.GetCampaignId(state.QueueId);
+
+                decisions.Add(new PredictivePacingDecisionViewModel
+                {
+                    QueueId = state.QueueId,
+                    CampaignName = campaignId is not null && campaignNames.TryGetValue(campaignId, out var name) ? name : campaignId ?? state.QueueId,
+                    LastCycleUtc = state.LastCycleUtc,
+                    Decision = state.LastDecision,
+                });
+            }
+
+            break;
+        }
+
+        return decisions;
     }
 
     private async Task<DialerPacingStatistics> GetPacingStatisticsAsync(string profileId, TimeSpan window)

@@ -46,6 +46,7 @@ public sealed class PredictiveOverDialPacer : IPredictiveOverDialPacer
     private readonly IDialerAttemptService _attemptService;
     private readonly IPredictivePacingStateStore _stateStore;
     private readonly IContactCenterEventPublisher _publisher;
+    private readonly IPredictivePacingScheduler _pacingScheduler;
     private readonly IDistributedLock _distributedLock;
     private readonly ISession _session;
     private readonly IClock _clock;
@@ -70,6 +71,7 @@ public sealed class PredictiveOverDialPacer : IPredictiveOverDialPacer
     /// <param name="attemptService">The attempt service that places each call.</param>
     /// <param name="stateStore">The pacing records.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
+    /// <param name="pacingScheduler">The scheduler that paces the queue again shortly when its lock was held.</param>
     /// <param name="distributedLock">The pacing lock.</param>
     /// <param name="session">The YesSql session the cycle commits.</param>
     /// <param name="clock">The clock.</param>
@@ -91,6 +93,7 @@ public sealed class PredictiveOverDialPacer : IPredictiveOverDialPacer
         IDialerAttemptService attemptService,
         IPredictivePacingStateStore stateStore,
         IContactCenterEventPublisher publisher,
+        IPredictivePacingScheduler pacingScheduler,
         IDistributedLock distributedLock,
         ISession session,
         IClock clock,
@@ -112,6 +115,7 @@ public sealed class PredictiveOverDialPacer : IPredictiveOverDialPacer
         _attemptService = attemptService;
         _stateStore = stateStore;
         _publisher = publisher;
+        _pacingScheduler = pacingScheduler;
         _distributedLock = distributedLock;
         _session = session;
         _clock = clock;
@@ -142,8 +146,12 @@ public sealed class PredictiveOverDialPacer : IPredictiveOverDialPacer
         {
             if (_logger.IsEnabled(LogLevel.Debug))
             {
-                _logger.LogDebug("Skipped an over-dial cycle of queue '{QueueId}' because another cycle holds its pacing lock.", queueId.SanitizeLogValue());
+                _logger.LogDebug("Skipped an over-dial cycle of queue '{QueueId}' because another cycle holds its pacing lock; it is paced again shortly.", queueId.SanitizeLogValue());
             }
+
+            // The holder may be finishing a cycle that measured the queue before the change that asked for this one, so the
+            // queue is paced again shortly rather than left for the next event.
+            _pacingScheduler.RequestRetry(queueId);
 
             return PredictivePacingCycleResult.NotRun;
         }
@@ -209,6 +217,11 @@ public sealed class PredictiveOverDialPacer : IPredictiveOverDialPacer
             .Select(candidate => candidate.Agent)
             .OrderBy(agent => agent.LastAssignedUtc ?? DateTime.MinValue)
             .ToList();
+
+        if (_options.DiscountAgentsWithWaitingInbound)
+        {
+            available = await WithoutAgentsOwedToInboundAsync(available, cancellationToken);
+        }
 
         input.AvailableAgents = available.Count;
         input.FreeingAgents = profile.CreditAgentsFreeingUp
@@ -280,7 +293,7 @@ public sealed class PredictiveOverDialPacer : IPredictiveOverDialPacer
             // A reservation commits on its own. Once this cycle has staged a call without an agent, that commit would
             // carry the staged call with it ahead of the pacing record that guards it, so the retry waits for the next
             // cycle instead.
-            if (profile.AbandonedRetryRequiresAgent && await WasAbandonedAsync(item, cancellationToken))
+            if (profile.AbandonedRetryRequiresAgent && (item.RequiresReservedAgent || await WasAbandonedAsync(item, cancellationToken)))
             {
                 if (stagedUnreserved || !await DialWithReservedAgentAsync(profile, item, available, cancellationToken))
                 {
@@ -311,6 +324,36 @@ public sealed class PredictiveOverDialPacer : IPredictiveOverDialPacer
         }
 
         return dialed;
+    }
+
+    // An agent signed in to an inbound queue with calls waiting is likely to be given one of them before an answered
+    // campaign call reaches them, so sizing the over-dial on them would abandon the campaign call instead.
+    private async Task<List<AgentProfile>> WithoutAgentsOwedToInboundAsync(List<AgentProfile> available, CancellationToken cancellationToken)
+    {
+        var inboundQueueIds = available
+            .SelectMany(agent => agent.QueueIds ?? [])
+            .Where(queueId => !string.IsNullOrEmpty(queueId) && !ContactCenterConstants.IsCampaignQueue(queueId))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (inboundQueueIds.Length == 0)
+        {
+            return available;
+        }
+
+        var waiting = await _queueItemStore.CountWaitingByQueueIdsAsync(inboundQueueIds, cancellationToken);
+        var busyQueues = new HashSet<string>(
+            waiting.Where(pair => pair.Value > 0).Select(pair => pair.Key),
+            StringComparer.OrdinalIgnoreCase);
+
+        if (busyQueues.Count == 0)
+        {
+            return available;
+        }
+
+        return available
+            .Where(agent => !(agent.QueueIds ?? []).Any(busyQueues.Contains))
+            .ToList();
     }
 
     private async Task<bool> WasAbandonedAsync(QueueItem item, CancellationToken cancellationToken)

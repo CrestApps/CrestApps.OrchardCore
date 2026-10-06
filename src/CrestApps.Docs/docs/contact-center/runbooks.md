@@ -122,7 +122,11 @@ Thresholds are configurable under `CrestApps:ContactCenter:HealthChecks`; tune t
 5. `PolicySuppressed` (mode `Suppressed`): the abandonment statistics cannot be read at all, or the rolling rate is over the cap; nothing is dialed. Check the database and the event store.
 6. No `Over-dial cycle` line at all: the pacing runs are not happening. Check that **Contact Center Paced Dialing** is enabled and the dialer pacing background task runs; a cycle that lost a race with another node logs `lost a race with another cycle` and places nothing, which is expected now and then with several nodes and constant without the Redis lock feature only under unusual load.
 
-A person who answered and heard nothing points at the connect: search the log for the call id. `Claiming a free agent` followed by neither `Connecting agent` nor `abandoned` means the connect was lost (for example a node stopped); the next pacing run of the queue connects or abandons the call.
+The last decision of every campaign a profile paces is also shown, read-only, on the **Predictive pacing** card of the profile's editor.
+
+A person who answered and heard nothing points at the connect: search the log for the call id. `Claiming a free agent` followed by neither `Connecting agent` nor `abandoned` means the connect was lost (for example a node stopped); the minute sweep gives the message to such a call `AnsweredUnconnectedSweepAfter` after the answer and records it abandoned with reason `answered_unconnected`.
+
+Calls abandoned with reason `agent_leg_timeout` were claimed for an agent whose phone did not answer within `AgentLegAnswerTimeout`: the agent was put back to work and the person heard the message. Several in a row for one agent point at that agent's phone: check it is open, registered and standing by (the soft phone diagnostics log `standby-leg-answered` for every leg it answers on standby); a phone that rings the leg instead of answering it is not receiving the agent's presence or campaign membership.
 
 ## Rolling deployment
 

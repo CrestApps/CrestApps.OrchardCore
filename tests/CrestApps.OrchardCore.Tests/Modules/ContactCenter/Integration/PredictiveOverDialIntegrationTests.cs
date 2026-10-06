@@ -542,6 +542,8 @@ public sealed class PredictiveOverDialIntegrationTests
             return state;
         }
 
+        public Task<IReadOnlyCollection<PredictivePacingState>> GetByDialerProfileIdAsync(string dialerProfileId, CancellationToken cancellationToken = default) => _inner.GetByDialerProfileIdAsync(dialerProfileId, cancellationToken);
+
         public ValueTask<bool> DeleteAsync(PredictivePacingState entry, CancellationToken cancellationToken = default) => _inner.DeleteAsync(entry, cancellationToken);
 
         public ValueTask<PredictivePacingState> FindByIdAsync(string id, CancellationToken cancellationToken = default) => _inner.FindByIdAsync(id, cancellationToken);

@@ -509,6 +509,10 @@ public sealed partial class AnswerProviderCommandTypeExecutor : IProviderCommand
             PreDialedAgentLegId = string.IsNullOrWhiteSpace(request.PreDialedAgentLegId)
                 ? null
                 : request.PreDialedAgentLegId,
+            StandbyReservationId = string.IsNullOrWhiteSpace(request.StandbyReservationId)
+                ? null
+                : request.StandbyReservationId,
+            AgentLegTimeoutSeconds = Math.Max(0, request.AgentLegTimeoutSeconds),
         };
 
         StampMetadata(connectRequest.Metadata, claim);

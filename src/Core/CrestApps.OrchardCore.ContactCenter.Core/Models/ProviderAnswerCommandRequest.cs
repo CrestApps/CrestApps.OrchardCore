@@ -45,4 +45,17 @@ public sealed class ProviderAnswerCommandRequest
     /// readies the caller and joins this leg instead of ringing the agent again.
     /// </summary>
     public string PreDialedAgentLegId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the reservation an agent standing by for an over-dialing campaign was claimed under, when the agent
+    /// was connected to an answered call without being offered it. The provider tags the agent's leg with it, so the
+    /// agent's phone answers the leg at once instead of waiting to learn of the claim.
+    /// </summary>
+    public string StandbyReservationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets how long the agent's leg may ring before the provider gives up on it, in seconds, or 0 for the
+    /// provider's own default.
+    /// </summary>
+    public int AgentLegTimeoutSeconds { get; set; }
 }

@@ -240,6 +240,13 @@ public class DialerProfileViewModel
     public DialerPacingStatistics PacingStatistics { get; set; }
 
     /// <summary>
+    /// Gets or sets the last over-dial decision of each campaign the profile paces, most recent first; empty when it has
+    /// never over-dialed. Read-only, for whoever watches the campaign.
+    /// </summary>
+    [BindNever]
+    public IList<PredictivePacingDecisionViewModel> PacingDecisions { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets a value indicating whether the dialer profile is enabled.
     /// </summary>
     public bool Enabled { get; set; } = true;

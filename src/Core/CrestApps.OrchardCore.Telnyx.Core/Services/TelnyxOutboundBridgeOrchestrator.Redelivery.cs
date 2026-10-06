@@ -137,6 +137,14 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator
         // Telnyx de-duplicates by command_id, so a redelivered refusal cannot ring the agent twice.
         originate.AdditionalFields["command_id"] = $"cc-agent-again-{callEvent.CallControlId}";
 
+        // A leg rung for an agent standing by carries the same tag the first one did, so their phone answers it at once too.
+        var standbyHeaders = TelnyxStandbyAnswerHeaders.Create(state.ReservationId, state.RingUserId);
+
+        if (standbyHeaders is not null)
+        {
+            originate.AdditionalFields["custom_headers"] = standbyHeaders;
+        }
+
         try
         {
             var result = await _apiClient.OriginateAsync(originate, cancellationToken);

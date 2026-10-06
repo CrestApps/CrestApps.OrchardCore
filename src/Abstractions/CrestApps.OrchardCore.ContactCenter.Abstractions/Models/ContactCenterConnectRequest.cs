@@ -51,6 +51,19 @@ public sealed class ContactCenterConnectRequest
     public string PreDialedAgentLegId { get; set; }
 
     /// <summary>
+    /// Gets or sets the reservation the agent was claimed under while standing by for an over-dialing campaign, when the
+    /// agent is connected to an answered call without being offered it. A provider that rings the agent's phone tags the
+    /// leg with it and with <see cref="AgentUserId"/>, so a phone standing by answers that leg at once and no other.
+    /// </summary>
+    public string StandbyReservationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets how long the agent's leg may ring before the provider gives up on it, in seconds, or 0 for the
+    /// provider's own default.
+    /// </summary>
+    public int AgentLegTimeoutSeconds { get; set; }
+
+    /// <summary>
     /// Gets or sets provider-specific metadata for the connect request.
     /// </summary>
     public IDictionary<string, string> Metadata { get; set; } = new Dictionary<string, string>();

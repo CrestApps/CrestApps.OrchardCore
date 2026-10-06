@@ -211,4 +211,12 @@ public sealed class QueueItem : CatalogItem, IModifiedUtcAwareModel
     /// </summary>
     [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime? DialedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether this item retries a contact whose last call was abandoned, so an
+    /// over-dialing Predictive campaign whose profile requires it places the call with an agent reserved for it rather
+    /// than without one. It is carried to the next attempt when a disposition or a workflow creates the follow-up as a new
+    /// activity.
+    /// </summary>
+    public bool RequiresReservedAgent { get; set; }
 }

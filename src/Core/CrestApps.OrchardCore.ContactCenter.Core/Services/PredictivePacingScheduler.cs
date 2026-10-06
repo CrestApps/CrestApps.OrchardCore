@@ -59,6 +59,13 @@ public sealed class PredictivePacingScheduler : IPredictivePacingScheduler
 
     /// <inheritdoc/>
     public void Request(string queueId)
+        => Request(queueId, _options.PacingDebounce);
+
+    /// <inheritdoc/>
+    public void RequestRetry(string queueId)
+        => Request(queueId, _options.PacingLockRetryDelay);
+
+    private void Request(string queueId, TimeSpan delay)
     {
         if (!ContactCenterConstants.IsCampaignQueue(queueId))
         {
@@ -83,7 +90,7 @@ public sealed class PredictivePacingScheduler : IPredictivePacingScheduler
             return;
         }
 
-        _deadlineScheduler.Schedule(GetDeadlineKey(queueId), now.Add(_options.PacingDebounce), (services, cancellationToken) => RunAsync(services, queueId, cancellationToken));
+        _deadlineScheduler.Schedule(GetDeadlineKey(queueId), now.Add(delay), (services, cancellationToken) => RunAsync(services, queueId, cancellationToken));
     }
 
     private async Task<DateTime?> RunAsync(IServiceProvider services, string queueId, CancellationToken cancellationToken)

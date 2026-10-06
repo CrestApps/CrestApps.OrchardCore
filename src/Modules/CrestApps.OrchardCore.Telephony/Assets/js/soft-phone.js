@@ -110,6 +110,12 @@
     var disarmOtherOffers = softPhoneModules.disarmOtherOffers;
     var shouldAutoAnswerInboundLeg = softPhoneModules.shouldAutoAnswerInboundLeg;
     var canArmForAcceptedOffer = softPhoneModules.canArmForAcceptedOffer;
+    var createPredictiveStandby = softPhoneModules.createPredictiveStandby;
+    var setPredictiveStandbyFor = softPhoneModules.setPredictiveStandby;
+    var shouldStandbyAnswerLeg = softPhoneModules.shouldStandbyAnswerLeg;
+    var readStandbyLegTag = softPhoneModules.readStandbyLegTag;
+    var noteStandbyLeg = softPhoneModules.noteStandbyLeg;
+    var wasStandbyLegSeen = softPhoneModules.wasStandbyLegSeen;
     var createMonitorLegArms = softPhoneModules.createMonitorLegArms;
     var armMonitorLegFor = softPhoneModules.armMonitorLeg;
     var disarmMonitorLegFor = softPhoneModules.disarmMonitorLeg;
@@ -3164,6 +3170,11 @@
         // ringing. It names what it is for and is dropped when that is over (see soft-phone/auto-answer.js); a genuine
         // incoming call arriving without it armed still rings.
         var inboundAutoAnswer = createAutoAnswerArm();
+
+        // Standing by for an over-dialing campaign: while the agent is Available and signed in to a campaign, a leg the
+        // platform tags with a claim for this phone's user is answered at once, without waiting for the push about the
+        // claim (see soft-phone/predictive-standby.js). Set by the Contact Center layer.
+        var predictiveStandby = typeof createPredictiveStandby === 'function' ? createPredictiveStandby() : null;
 
         // The monitor legs this supervisor's phone was told to expect, by token, and the ones it answered (see
         // soft-phone/monitor-leg.js). Separate from the arm above: an engagement never answers anybody's call.
@@ -6274,6 +6285,12 @@
         //   acceptedUserId, ownUserId - who the accept names, and this phone's user: a callback or a preview dial never
         //   rings here, so its accept is how the phone learns of it (see soft-phone/auto-answer.js).
         function armInboundAutoAnswer(reservationId, acceptedUserId, ownUserId) {
+            // The leg of a claim made while standing by already reached this phone; the push about the claim came after
+            // it. Arming now would answer whatever leg came next, for a call that is not this one.
+            if (reservationId && typeof wasStandbyLegSeen === 'function' && wasStandbyLegSeen(predictiveStandby, reservationId, Date.now())) {
+                return;
+            }
+
             // Only for this phone's own offer: the Contact Center layer hears of other agents' accepts too.
             if (!canArmForAcceptedOffer(reservationId, offerCallIds, acceptedUserId, ownUserId)) {
                 reportDiagnostic('info', 'auto-answer-arm-refused',
@@ -6290,7 +6307,45 @@
         // phone just placed. "The agent answered" is not one -- it outlived the call it was about and had every later
         // colleague's call answered on arrival (see soft-phone/auto-answer.js).
         function consumeInboundAutoAnswer(options) {
-            return shouldAutoAnswerInboundLeg(inboundAutoAnswer, Date.now(), options || {});
+            var leg = options || {};
+            var now = Date.now();
+
+            if (predictiveStandby && typeof shouldStandbyAnswerLeg === 'function') {
+                var standbyReservationId = shouldStandbyAnswerLeg(predictiveStandby, leg, now, {
+                    onCall: !!currentCall && !isRingingInbound()
+                });
+
+                if (standbyReservationId) {
+                    noteStandbyLeg(predictiveStandby, standbyReservationId, now);
+
+                    // An arm the push about this claim already set is spent by this leg too.
+                    disarmAutoAnswer(inboundAutoAnswer, autoAnswerOfferKey(standbyReservationId));
+                    reportDiagnostic('info', 'standby-leg-answered',
+                        'Answered at once the leg of a call this agent was claimed for while standing by for a campaign.', standbyReservationId);
+
+                    return true;
+                }
+
+                // A claim's leg the standby did not take (the phone was busy, or not standing by) still reached this
+                // phone: remember it, so the push about the claim does not arm the phone for a leg that never comes.
+                var tag = readStandbyLegTag(leg);
+
+                if (tag.reservationId) {
+                    noteStandbyLeg(predictiveStandby, tag.reservationId, now);
+                }
+            }
+
+            return shouldAutoAnswerInboundLeg(inboundAutoAnswer, now, leg);
+        }
+
+        // The Contact Center layer says whether the agent stands by for an over-dialing campaign (Available and signed in
+        // to a campaign), and who the agent is. Dropping the standby keeps it for a short grace period.
+        function setPredictiveStandby(armed, userId) {
+            if (!predictiveStandby || typeof setPredictiveStandbyFor !== 'function') {
+                return false;
+            }
+
+            return setPredictiveStandbyFor(predictiveStandby, !!armed, userId || '', Date.now());
         }
 
         // A supervisor's engagement: the platform is about to ring this phone with a leg carrying `token`. `info` is
@@ -11192,6 +11247,9 @@
             // Lets the Contact Center layer declare that a routed leg is on its way to this browser, so the
             // media adapter answers it instead of ringing it as an unsolicited incoming call.
             armInboundAutoAnswer: armInboundAutoAnswer,
+            // Lets the Contact Center layer stand the phone by for an over-dialing campaign, so the leg of a call the
+            // agent is claimed for is answered at once (see soft-phone/predictive-standby.js).
+            setPredictiveStandby: setPredictiveStandby,
             // A supervisor's engagement (the Contact Center supervision layer): expect the monitor leg carrying a token,
             // hear about it as it is answered, connects and ends, and let it go.
             armMonitorLeg: armMonitorLeg,

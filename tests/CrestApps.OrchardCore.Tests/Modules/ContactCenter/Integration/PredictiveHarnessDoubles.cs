@@ -78,6 +78,14 @@ internal sealed class HarnessPredictiveStatistics : IDialerPacingStatisticsProvi
         _compliance = new DialerAbandonmentStatistics { LiveAnswers = liveAnswers, AbandonedCalls = complianceAbandonedCalls };
     }
 
+    public void SeedConnectLatency(TimeSpan p95, int samples)
+    {
+        _pacing ??= new DialerPacingStatistics();
+        _pacing.P95ConnectLatency = p95;
+        _pacing.MedianConnectLatency = p95 / 2;
+        _pacing.ConnectLatencySamples = samples;
+    }
+
     public void MakePacingUnavailable() => _pacing = null;
 
     public void MakeUnavailable()
@@ -143,13 +151,17 @@ internal sealed class RecordingDeadlineScheduler : IContactCenterDeadlineSchedul
 }
 
 /// <summary>
-/// Records the campaign queues pacing was requested for.
+/// Records the campaign queues pacing was requested for, and those asked to be paced again because their lock was held.
 /// </summary>
 internal sealed class RecordingPacingScheduler : IPredictivePacingScheduler
 {
     public ConcurrentQueue<string> Requests { get; } = new();
 
+    public ConcurrentQueue<string> Retries { get; } = new();
+
     public void Request(string queueId) => Requests.Enqueue(queueId);
+
+    public void RequestRetry(string queueId) => Retries.Enqueue(queueId);
 }
 
 /// <summary>

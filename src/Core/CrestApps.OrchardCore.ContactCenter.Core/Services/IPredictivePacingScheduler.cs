@@ -17,4 +17,11 @@ public interface IPredictivePacingScheduler
     /// </summary>
     /// <param name="queueId">The campaign queue.</param>
     void Request(string queueId);
+
+    /// <summary>
+    /// Asks for the campaign queue to be paced again after the pacing lock retry delay, because a cycle found its pacing
+    /// lock held by another. A request already pending is kept; the retry merges into it.
+    /// </summary>
+    /// <param name="queueId">The campaign queue.</param>
+    void RequestRetry(string queueId);
 }

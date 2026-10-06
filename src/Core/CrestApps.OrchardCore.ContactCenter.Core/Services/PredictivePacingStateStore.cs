@@ -37,4 +37,19 @@ public sealed class PredictivePacingStateStore : DocumentCatalog<PredictivePacin
             collection: ContactCenterStorage.CollectionName)
             .FirstOrDefaultAsync(cancellationToken);
     }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<PredictivePacingState>> GetByDialerProfileIdAsync(string dialerProfileId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(dialerProfileId);
+
+        // One record per over-dialed campaign queue, so the whole set is small; the profile is not indexed.
+        var states = await Session.Query<PredictivePacingState, PredictivePacingStateIndex>(collection: ContactCenterStorage.CollectionName)
+            .ListAsync(cancellationToken);
+
+        return states
+            .Where(state => string.Equals(state.DialerProfileId, dialerProfileId, StringComparison.Ordinal))
+            .OrderByDescending(state => state.LastCycleUtc ?? DateTime.MinValue)
+            .ToArray();
+    }
 }

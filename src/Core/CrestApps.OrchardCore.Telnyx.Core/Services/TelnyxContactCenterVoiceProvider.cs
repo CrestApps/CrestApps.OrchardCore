@@ -201,22 +201,40 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
             // the invite; when its call.answered webhook arrives, the outbound-bridge orchestration bridges it
             // to the caller leg carried in client_state. Bridging is deferred to then because Telnyx requires
             // both legs to be answered first.
-            var originateTask = _apiClient.OriginateAsync(
-                new TelnyxOriginateRequest
+            var ringUserId = string.IsNullOrWhiteSpace(request.AgentUserId) ? null : request.AgentUserId.Trim();
+            var standbyReservationId = string.IsNullOrWhiteSpace(request.StandbyReservationId) ? null : request.StandbyReservationId.Trim();
+            var originate = new TelnyxOriginateRequest
+            {
+                ConnectionId = _options.ConnectionId,
+                To = agentEndpoint,
+                From = _options.DefaultOutboundCallerId,
+                ClientState = new TelnyxOutboundBridgeState
                 {
-                    ConnectionId = _options.ConnectionId,
-                    To = agentEndpoint,
-                    From = _options.DefaultOutboundCallerId,
-                    ClientState = new TelnyxOutboundBridgeState
-                    {
-                        Intent = TelnyxOutboundBridgeState.ContactCenterAgentLegIntent,
-                        PeerCallControlId = callerCallControlId,
+                    Intent = TelnyxOutboundBridgeState.ContactCenterAgentLegIntent,
+                    PeerCallControlId = callerCallControlId,
 
-                        // Named so a leg refused as unavailable can ring the agent again where their phone moved to.
-                        RingUserId = string.IsNullOrWhiteSpace(request.AgentUserId) ? null : request.AgentUserId.Trim(),
-                    }.ToClientStateJson(),
-                },
-                cancellationToken);
+                    // Named so a leg refused as unavailable can ring the agent again where their phone moved to.
+                    RingUserId = ringUserId,
+
+                    // Kept so a leg rung again carries the same standby tag as the first.
+                    ReservationId = standbyReservationId,
+                }.ToClientStateJson(),
+
+                // Telnyx accepts a ring window of five seconds to ten minutes.
+                TimeoutSeconds = request.AgentLegTimeoutSeconds > 0 ? Math.Clamp(request.AgentLegTimeoutSeconds, 5, 600) : null,
+            };
+
+            // An agent claimed for an answered over-dialed call is not offered it: their phone, standing by for the
+            // campaign, answers a leg tagged with the claim and their own user at once, rather than waiting for the
+            // platform's push about the claim, which can arrive after the invite.
+            var standbyHeaders = TelnyxStandbyAnswerHeaders.Create(standbyReservationId, ringUserId);
+
+            if (standbyHeaders is not null)
+            {
+                originate.AdditionalFields["custom_headers"] = standbyHeaders;
+            }
+
+            var originateTask = _apiClient.OriginateAsync(originate, cancellationToken);
 
             var answerResult = await answerTask;
 

@@ -273,6 +273,23 @@ public sealed class QueueItemStore : DocumentCatalog<QueueItem, QueueItemIndex>,
             .ToArray();
     }
 
+    /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<QueueItem>> GetDialerClaimedAsync(CancellationToken cancellationToken = default)
+    {
+        var items = await Session.Query<QueueItem, QueueItemIndex>(
+            index => index.Status == QueueItemStatus.Assigned &&
+                index.AgentId != null &&
+                index.QueueId.StartsWith(ContactCenterConstants.CampaignQueue.Prefix),
+            collection: ContactCenterStorage.CollectionName)
+            .ListAsync(cancellationToken);
+
+        // Only a call placed without an agent carries the time it was dialed; one placed for a reserved agent does not. The
+        // prefix is matched again exactly, since LIKE reads its underscores as wildcards.
+        return items
+            .Where(item => item.DialedUtc.HasValue && ContactCenterConstants.IsCampaignQueue(item.QueueId))
+            .ToArray();
+    }
+
     private sealed class QueueWaitingCount
     {
         public string QueueId { get; set; }
