@@ -122,29 +122,36 @@ public sealed class InteractionEventDialerPacingStatisticsProvider : IDialerPaci
             var ended = AsUtc(row.EndedUtc);
 
             // A call with neither an answer nor an end is still ringing: it has no outcome yet.
-            if (liveAnswered is null && ended is null)
+            if (liveAnswered is null && agentJoined is null && ended is null)
             {
                 continue;
             }
 
             statistics.SettledAttempts++;
 
-            if (liveAnswered is not { } answered)
+            // A call an agent was connected to was answered, even when no live answer was recorded for it (a call placed
+            // before live answers were recorded, or one whose record was missed). Counting it as unanswered would make
+            // the answer rate read low, and a low answer rate places more calls.
+            if (liveAnswered is null && agentJoined is null)
             {
                 continue;
             }
 
             statistics.SettledLiveAnswers++;
-            AddIfNotNegative(ringToAnswer, answered - started);
 
-            if (agentJoined is { } joined)
+            if (liveAnswered is { } answered)
             {
-                AddIfNotNegative(connectLatency, joined - answered);
+                AddIfNotNegative(ringToAnswer, answered - started);
 
-                if (ended is { } callEnded)
+                if (agentJoined is { } connected)
                 {
-                    AddIfNotNegative(talkTime, callEnded - joined);
+                    AddIfNotNegative(connectLatency, connected - answered);
                 }
+            }
+
+            if (agentJoined is { } joined && ended is { } callEnded)
+            {
+                AddIfNotNegative(talkTime, callEnded - joined);
             }
 
             if (AsUtc(row.WrapUpStartedUtc) is { } wrapStarted && AsUtc(row.WrapUpCompletedUtc) is { } wrapCompleted)

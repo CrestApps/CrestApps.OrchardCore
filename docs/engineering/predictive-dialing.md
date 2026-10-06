@@ -53,6 +53,11 @@ latency. B1 reads the same facts from what is already stored:
   `WrapUpCompletedUtc` through the interaction index's unique `ItemId`. The statement (`DialerPacingQueries`) uses
   correlated sub-selects, reads at most `MaxTimingSamples` newest attempts and is cached for `StatisticsCacheDuration`.
 
+Calls placed before #773 have no `DialerLiveAnswered`; a call an agent was connected to (`AgentLegAnswered`) is
+therefore counted as answered even without one, so old history cannot make the answer rate read low. A call answered and
+abandoned before #773 still reads as unanswered, which is why B2 must require the answer-rate sample to come from the
+window only (it does: at most 240 minutes) and should not enable over-dial in the first window after #773 deploys.
+
 That gives history from the first cycle (a new index starts empty, and the plan ruled out a backfill), no new write or
 migration on the call path, and one definition of "answered" and "abandoned" shared with the cap. A dedicated projection
 remains an option if production profiling shows the sub-selects are too costly; it would sit behind

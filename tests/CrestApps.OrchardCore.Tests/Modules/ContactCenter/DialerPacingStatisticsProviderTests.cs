@@ -46,7 +46,7 @@ public sealed class DialerPacingStatisticsProviderTests
             Assert.NotNull(statistics);
             Assert.Equal(_now - _window, statistics.FromUtc);
             Assert.Equal(_now, statistics.ToUtc);
-            Assert.Equal(5, statistics.Attempts);
+            Assert.Equal(6, statistics.Attempts);
             Assert.Equal(3, statistics.LiveAnswers);
             Assert.Equal(1, statistics.AbandonedCalls);
             Assert.Equal(100d / 3, statistics.AbandonmentRatePercent.Value, 1e-9);
@@ -71,10 +71,11 @@ public sealed class DialerPacingStatisticsProviderTests
             // Act
             var statistics = await CreateProvider(session).GetStatisticsAsync(ProfileId, _window, cancellationToken);
 
-            // Assert: of the five calls, the one still ringing has no outcome; three of the other four were answered.
-            Assert.Equal(4, statistics.SettledAttempts);
-            Assert.Equal(3, statistics.SettledLiveAnswers);
-            Assert.Equal(0.75, statistics.AnswerRate.Value, 1e-9);
+            // Assert: of the six calls, the one still ringing has no outcome; four of the other five were answered, the
+            // one an agent was connected to without a recorded live answer included.
+            Assert.Equal(5, statistics.SettledAttempts);
+            Assert.Equal(4, statistics.SettledLiveAnswers);
+            Assert.Equal(0.8, statistics.AnswerRate.Value, 1e-9);
         }
         finally
         {
@@ -106,9 +107,9 @@ public sealed class DialerPacingStatisticsProviderTests
             Assert.Equal(TimeSpan.FromSeconds(0.5), statistics.MedianConnectLatency);
             Assert.Equal(TimeSpan.FromSeconds(1.5), statistics.P95ConnectLatency);
 
-            // Talked 60 s and 120 s, wrapped up 30 s and 10 s.
-            Assert.Equal(2, statistics.TalkTimeSamples);
-            Assert.Equal(TimeSpan.FromSeconds(90), statistics.AverageTalkTime);
+            // Talked 60 s, 120 s and 60 s, wrapped up 30 s and 10 s.
+            Assert.Equal(3, statistics.TalkTimeSamples);
+            Assert.Equal(TimeSpan.FromSeconds(80), statistics.AverageTalkTime);
             Assert.Equal(2, statistics.WrapUpTimeSamples);
             Assert.Equal(TimeSpan.FromSeconds(20), statistics.AverageWrapUpTime);
         }
@@ -134,7 +135,7 @@ public sealed class DialerPacingStatisticsProviderTests
                 .GetStatisticsAsync(ProfileId, _window, cancellationToken);
 
             // Assert: the two newest calls are the one still ringing and the abandoned one; every call is still counted.
-            Assert.Equal(5, statistics.Attempts);
+            Assert.Equal(6, statistics.Attempts);
             Assert.Equal(1, statistics.SettledAttempts);
             Assert.Equal(1, statistics.SettledLiveAnswers);
             Assert.Equal(TimeSpan.FromSeconds(14), statistics.MedianRingToAnswer);
@@ -309,6 +310,10 @@ public sealed class DialerPacingStatisticsProviderTests
 
         // Answered after 6 s, an agent half a second later; talked two minutes and wrapped up for 10 s.
         await seed.CallAsync("call-2", ProfileId, placed: 20, liveAnswered: 26, agentJoined: 26.5, ended: 146.5, wrapUpCompleted: 156.5);
+
+        // Connected to an agent without a recorded live answer, as calls placed before live answers were recorded are;
+        // talked a minute.
+        await seed.CallAsync("call-legacy", ProfileId, placed: 30, agentJoined: 40, ended: 100);
 
         // Rang out.
         await seed.CallAsync("call-3", ProfileId, placed: 40, ended: 70);
