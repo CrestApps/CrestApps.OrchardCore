@@ -318,7 +318,7 @@ The factory receives `credentials`, `localStream`, `remoteAudioElement`, `setRem
 
 When the soft phone uses browser audio, a **headset** icon (titled **Settings**) appears in the widget header. It opens a **Settings** panel where the agent can choose which **microphone** and **speaker** the soft phone uses, instead of relying on the operating-system default. The choice is saved per agent in the browser's `localStorage` and applied to microphone capture (`getUserMedia`) and speaker output (`setSinkId`, where the browser supports it); the device lists refresh automatically when devices are plugged in or removed.
 
-The same panel holds the rest of the agent's audio settings: **Voice isolation** (on by default, with an **Isolation strength** and an **Isolation model**; see [Voice isolation](#voice-isolation)), the browser's microphone processing (**Echo cancellation**, **Noise suppression**, **Automatic gain control**, applied to the live track immediately; noise suppression and automatic gain control are off while voice isolation is on), **Microphone boost** (a gain stage with a limiter, up to +12 dB), **Audio delay** (how long incoming audio is held before it plays, applied to the current call), and the connection **Region** (Automatic follows the team's setting and then the provider's own choice; changing it re-registers the phone, so it waits until the current call ends). Each setting, its options, and troubleshooting tips for quiet, delayed, or one-way audio are in the user manual under [Audio settings](../user-manual/soft-phone.md#audio-settings). Some limits no setting removes: a call to an ordinary phone number travels over the telephone network at narrowband quality, and a browser call bridged to the telephone network always has a little more delay than a direct phone-to-phone call.
+The same panel holds the rest of the agent's audio settings: **Voice isolation** (on by default, with an **Isolation strength** and an **Isolation model**; see [Voice isolation](#voice-isolation)), the browser's microphone processing (**Echo cancellation**, **Noise suppression**, **Automatic gain control**, applied to the live track immediately; noise suppression and automatic gain control are hidden and off while voice isolation is checked, and shown when it is unchecked), **Microphone boost** (a gain stage with a limiter, up to +12 dB), **Audio delay** (how long incoming audio is held before it plays, applied to the current call), and the connection **Region** (Automatic follows the team's setting and then the provider's own choice; changing it re-registers the phone, so it waits until the current call ends). Each setting, its options, and troubleshooting tips for quiet, delayed, or one-way audio are in the user manual under [Audio settings](../user-manual/soft-phone.md#audio-settings). Some limits no setting removes: a call to an ordinary phone number travels over the telephone network at narrowband quality, and a browser call bridged to the telephone network always has a little more delay than a direct phone-to-phone call.
 
 #### Voice isolation
 
@@ -342,8 +342,9 @@ agent, and no gate can separate the two.
 
 :::note[When voice isolation cannot run]
 Voice isolation needs a browser with AudioWorklet and WebAssembly (current Chrome, Edge and Firefox). Where it
-cannot run, the phone keeps working with the browser's own noise suppression and automatic gain control, and
-the settings panel says so. Browsers also hold back audio processing until the agent has clicked somewhere on
+cannot run, the phone keeps working with the browser's own noise suppression and automatic gain control, which
+it turns on by itself, and the status line under **Voice isolation** says so; the two checkboxes stay hidden
+while voice isolation is checked. Browsers also hold back audio processing until the agent has clicked somewhere on
 the page, so right after the page loads the phone may use the browser's processing until the first click,
 then switch over by itself.
 :::

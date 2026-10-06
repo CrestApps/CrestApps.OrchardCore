@@ -9952,6 +9952,7 @@
       voiceIsolationEngine: rootElement.querySelector('[data-telephony-voice-isolation-engine]'),
       voiceIsolationStrength: rootElement.querySelector('[data-telephony-voice-isolation-strength]'),
       voiceIsolationStatus: rootElement.querySelector('[data-telephony-voice-isolation-status]'),
+      browserProcessingRows: Array.prototype.slice.call(rootElement.querySelectorAll('[data-telephony-browser-processing]')),
       playoutDelay: rootElement.querySelector('[data-telephony-playout-delay]'),
       signalingRegion: rootElement.querySelector('[data-telephony-signaling-region]'),
       signalingRegionStatus: rootElement.querySelector('[data-telephony-signaling-region-status]'),
@@ -11578,6 +11579,14 @@
         dom.voiceIsolationStrength.value = voiceIsolationSettings.strength;
         dom.voiceIsolationStrength.disabled = !voiceIsolationSettings.enabled;
       }
+
+      // The browser's noise suppression and gain control are not the agent's to set while voice isolation is
+      // checked: off while it runs, and turned on by the phone itself while it waits for a click or cannot run
+      // (the status line says which). So they are offered only when isolation is unchecked. Echo cancellation
+      // applies either way and stays.
+      (dom.browserProcessingRows || []).forEach(function (row) {
+        row.style.display = voiceIsolationSettings.enabled ? 'none' : '';
+      });
       if (dom.processingEc) {
         dom.processingEc.checked = processingSettings.echoCancellation;
       }

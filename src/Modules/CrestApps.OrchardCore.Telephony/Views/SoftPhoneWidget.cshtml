@@ -416,7 +416,7 @@
                     <input type="checkbox" class="form-check-input" data-telephony-voice-isolation checked>
                     <span class="telephony-soft-phone__setting-label">@T["Voice isolation"]</span>
                 </label>
-                <small class="telephony-soft-phone__settings-hint">@T["Removes background noise and the voices of people around you before the caller hears you. Works best with a headset microphone close to your mouth. Turning it on turns the browser's noise suppression and automatic gain control off."]</small>
+                <small class="telephony-soft-phone__settings-hint">@T["Removes background noise and the voices of people around you before the caller hears you. Works best with a headset microphone close to your mouth. The browser's own noise suppression and automatic gain control are offered when it is off."]</small>
                 <small class="telephony-soft-phone__settings-hint" data-telephony-voice-isolation-status></small>
                 <label class="telephony-soft-phone__setting">
                     <span class="telephony-soft-phone__setting-label">
@@ -443,11 +443,11 @@
                     <input type="checkbox" class="form-check-input" data-telephony-processing-ec checked>
                     <span class="telephony-soft-phone__setting-label">@T["Echo cancellation"]</span>
                 </label>
-                <label class="telephony-soft-phone__setting telephony-soft-phone__setting--check">
+                <label class="telephony-soft-phone__setting telephony-soft-phone__setting--check" data-telephony-browser-processing>
                     <input type="checkbox" class="form-check-input" data-telephony-processing-ns>
                     <span class="telephony-soft-phone__setting-label">@T["Noise suppression"]</span>
                 </label>
-                <label class="telephony-soft-phone__setting telephony-soft-phone__setting--check">
+                <label class="telephony-soft-phone__setting telephony-soft-phone__setting--check" data-telephony-browser-processing>
                     <input type="checkbox" class="form-check-input" data-telephony-processing-agc>
                     <span class="telephony-soft-phone__setting-label">@T["Automatic gain control"]</span>
                 </label>
