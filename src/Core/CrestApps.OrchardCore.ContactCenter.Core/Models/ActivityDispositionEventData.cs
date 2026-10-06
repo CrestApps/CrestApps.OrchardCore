@@ -63,9 +63,41 @@ public sealed class ActivityDispositionEventData
     public string PhoneNumber { get; set; }
 
     /// <summary>
-    /// Gets or sets how many times the activity has been attempted.
+    /// Gets or sets the attempt number of the activity, counted from one across the chain of activities that tried the
+    /// contact again.
     /// </summary>
     public int Attempts { get; set; }
+
+    /// <summary>
+    /// Gets or sets the attempt number of the dialer call the activity was completed after, when the dialer placed one.
+    /// </summary>
+    public int? AttemptNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets the most attempts the dialer profile allows, when the dialer placed the call.
+    /// </summary>
+    public int? MaxAttempts { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many attempts the dialer profile still allows after this one, when the dialer placed the call.
+    /// A workflow that schedules the next call checks it is above zero.
+    /// </summary>
+    public int? RemainingAttempts { get; set; }
+
+    /// <summary>
+    /// Gets or sets how the dialer's call ended, one of <see cref="DialerAttemptOutcomes"/>, when the dialer placed it.
+    /// </summary>
+    public string DialerOutcome { get; set; }
+
+    /// <summary>
+    /// Gets or sets the dialer profile that placed the call, when the dialer placed it.
+    /// </summary>
+    public string DialerProfileId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the interaction of the call the activity was completed after, when there was one.
+    /// </summary>
+    public string InteractionId { get; set; }
 
     /// <summary>
     /// Gets or sets the user who completed the activity, when a person did.
