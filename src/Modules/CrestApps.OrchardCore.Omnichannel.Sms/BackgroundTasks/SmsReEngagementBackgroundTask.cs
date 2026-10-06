@@ -7,6 +7,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Services;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -372,6 +373,7 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
                     return;
                 }
 
+                using var usageScope = AIUsageScope.Begin(contextType: AIUsageCategories.Sms, purpose: AIUsageFeaturePurposes.ReEngagement);
                 var completion = await completionService.CompleteAsync(deployment, transcript, context, cancellationToken);
                 message = completion?.Messages?.FirstOrDefault()?.Text?.Trim();
             }

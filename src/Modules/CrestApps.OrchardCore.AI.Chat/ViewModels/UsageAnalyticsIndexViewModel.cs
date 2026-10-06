@@ -1,3 +1,5 @@
+using CrestApps.Core.AI.Completions;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -40,6 +42,12 @@ public sealed class UsageAnalyticsIndexViewModel
     public AIVoiceUsageGroupBy VoiceGroupBy { get; set; }
 
     /// <summary>
+    /// Gets or sets how the metered usage table is grouped: per model, or per model broken down by category or
+    /// purpose.
+    /// </summary>
+    public AIUsageReportGrouping MeteringGroupBy { get; set; }
+
+    /// <summary>
     /// Gets or sets the profiles the report can be limited to.
     /// </summary>
     [BindNever]
@@ -74,6 +82,19 @@ public sealed class UsageAnalyticsIndexViewModel
     /// Gets or sets the rows.
     /// </summary>
     public IReadOnlyList<AICompletionUsageSummaryViewModel> Rows { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets how many requests were sent to AI providers in the range, of every kind and from every
+    /// feature. Each model round trip counts as one request.
+    /// </summary>
+    [BindNever]
+    public int TotalMeteredRequests { get; set; }
+
+    /// <summary>
+    /// Gets or sets the metered usage grouped by <see cref="MeteringGroupBy"/>.
+    /// </summary>
+    [BindNever]
+    public IReadOnlyList<AIUsageReportRow> MeteringRows { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the voice usage of every automated call in the range.

@@ -1,5 +1,8 @@
 @model CrestApps.OrchardCore.AI.Chat.ViewModels.UsageAnalyticsIndexViewModel
 @using System.Globalization
+@using CrestApps.Core.AI.Completions
+@using CrestApps.Core.AI.Models
+@using CrestApps.Core.AI.Services
 @using CrestApps.OrchardCore.AI.Chat.Models
 
 @{
@@ -23,6 +26,39 @@
         AIVoiceUsageGroupBy.Day => T["Day"],
         _ => T["Deployment (model)"],
     };
+    var meteringBreakdownLabel = Model.MeteringGroupBy switch
+    {
+        AIUsageReportGrouping.ModelAndCategory => T["Category"],
+        AIUsageReportGrouping.ModelAndPurpose => T["Purpose"],
+        _ => null,
+    };
+
+    string KindLabel(string operationType) => operationType switch
+    {
+        AIUsageOperationTypes.Chat => T["Chat"].Value,
+        AIUsageOperationTypes.Embedding => T["Embeddings"].Value,
+        AIUsageOperationTypes.Image => T["Images"].Value,
+        AIUsageOperationTypes.SpeechToText => T["Speech-to-text"].Value,
+        AIUsageOperationTypes.TextToSpeech => T["Text-to-speech"].Value,
+        AIUsageOperationTypes.Realtime => T["Realtime voice"].Value,
+        AIUsageOperationTypes.RealtimeTranscription => T["Realtime transcription"].Value,
+        _ => operationType,
+    };
+
+    string BreakdownLabel(AIUsageReportRow row)
+    {
+        var value = Model.MeteringGroupBy == AIUsageReportGrouping.ModelAndCategory ? row.ContextType : row.Purpose;
+
+        return value switch
+        {
+            nameof(AIChatSession) => T["Chat sessions"].Value,
+            nameof(ChatInteraction) => T["Chat interactions"].Value,
+            AIUsageReport.Unspecified => T["Unspecified"].Value,
+            _ => value,
+        };
+    }
+
+    string Count(long value) => value > 0 ? value.ToString("N0", CultureInfo.CurrentCulture) : "-";
 }
 
 <style asp-name="flatpickr"></style>
@@ -84,6 +120,14 @@
                         <option value="@AIVoiceUsageGroupBy.Day">@T["Day"]</option>
                     </select>
                 </div>
+                <div class="col p-1">
+                    <label asp-for="MeteringGroupBy" class="form-label">@T["Group metered usage by"]</label>
+                    <select asp-for="MeteringGroupBy" class="form-select">
+                        <option value="@AIUsageReportGrouping.Model">@T["Model"]</option>
+                        <option value="@AIUsageReportGrouping.ModelAndCategory">@T["Model and category"]</option>
+                        <option value="@AIUsageReportGrouping.ModelAndPurpose">@T["Model and purpose"]</option>
+                    </select>
+                </div>
                 <div class="col p-1 d-flex align-items-end">
                     <button type="submit" class="btn btn-dark">
                         <i class="fas fa-filter"></i> @T["Show"]
@@ -100,6 +144,81 @@
         }
         else
         {
+            <h2 class="h4">@T["Metered usage"]</h2>
+            <p class="text-muted">@T["Every request sent to an AI provider, of every kind and from every feature. Each round trip to a model is one request, so a reply that plans, searches and calls tools counts each of those calls. Units a model is not billed in are shown as a dash."]</p>
+
+            if (Model.MeteringRows.Count == 0)
+            {
+                <div class="alert alert-warning">@T["No metered usage was found for the selected filters."]</div>
+            }
+            else
+            {
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between">
+                        <span>@(meteringBreakdownLabel is null ? T["Usage by model"] : T["Usage by model and {0}", meteringBreakdownLabel.Value.ToLower(CultureInfo.CurrentCulture)])</span>
+                        <span class="text-muted">@T["{0} requests", Model.TotalMeteredRequests.ToString("N0", CultureInfo.CurrentCulture)]</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>@T["Provider"]</th>
+                                    <th>@T["Model"]</th>
+                                    <th>@T["Kind"]</th>
+                                    @if (meteringBreakdownLabel is not null)
+                                    {
+                                        <th>@meteringBreakdownLabel</th>
+                                    }
+                                    <th class="text-end">@T["Requests"]</th>
+                                    <th class="text-end">@T["Input"]</th>
+                                    <th class="text-end">@T["Cached input"]</th>
+                                    <th class="text-end">@T["Output"]</th>
+                                    <th class="text-end">@T["Reasoning"]</th>
+                                    <th class="text-end">@T["Audio in"]</th>
+                                    <th class="text-end">@T["Audio out"]</th>
+                                    <th class="text-end">@T["Tokens"]</th>
+                                    <th class="text-end">@T["Audio minutes"]</th>
+                                    <th class="text-end">@T["Characters"]</th>
+                                    <th class="text-end">@T["Images"]</th>
+                                    <th class="text-end">@T["Avg latency"]</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            @foreach (var row in Model.MeteringRows)
+                            {
+                                <tr>
+                                    <td>@row.ClientName</td>
+                                    <td class="fw-semibold">@row.ModelName</td>
+                                    <td>@KindLabel(row.OperationType)</td>
+                                    @if (meteringBreakdownLabel is not null)
+                                    {
+                                        <td>@BreakdownLabel(row)</td>
+                                    }
+                                    <td class="text-end">@row.RequestCount.ToString("N0", CultureInfo.CurrentCulture)</td>
+                                    <td class="text-end">@Count(row.InputTokenCount)</td>
+                                    <td class="text-end">@Count(row.CachedInputTokenCount)</td>
+                                    <td class="text-end">@Count(row.OutputTokenCount)</td>
+                                    <td class="text-end">@Count(row.ReasoningTokenCount)</td>
+                                    <td class="text-end">@Count(row.InputAudioTokenCount)</td>
+                                    <td class="text-end">@Count(row.OutputAudioTokenCount)</td>
+                                    <td class="text-end fw-semibold">@Count(row.TotalTokenCount)</td>
+                                    <td class="text-end">@(row.AudioDurationMs > 0 ? (row.AudioDurationMs / 60000d).ToString("N1", CultureInfo.CurrentCulture) : "-")</td>
+                                    <td class="text-end">@Count(row.CharacterCount)</td>
+                                    <td class="text-end">@Count(row.ImageCount)</td>
+                                    <td class="text-end">@(row.AverageResponseLatencyMs > 0 ? $"{row.AverageResponseLatencyMs} ms" : "-")</td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="card-footer text-muted small">
+                        @T["Cached input, reasoning and audio tokens are part of the input and output totals; providers bill them at their own rates. Audio minutes are measured up to where the last recognized speech ended."]
+                    </div>
+                </div>
+            }
+
+            <h2 class="h4">@T["Chat completions"]</h2>
+
             if (Model.Rows.Count == 0)
             {
                 <div class="alert alert-warning">@T["No usage data was found for the selected filters."]</div>
@@ -235,7 +354,7 @@
                         </table>
                     </div>
                     <div class="card-footer text-muted small">
-                        @T["Text tokens are the completions recorded against each call's chat session, including the review that concludes the call. Audio tokens appear once the realtime provider's usage is reported."]
+                        @T["Text tokens are the text tokens recorded against each call's chat session: turn-based replies, the text part of realtime responses, and the review that concludes the call. Audio tokens are the audio tokens the realtime provider reported for the call."]
                     </div>
                 </div>
             }

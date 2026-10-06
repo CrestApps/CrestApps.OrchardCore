@@ -1,3 +1,4 @@
+using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Chat.Services;
@@ -260,6 +261,50 @@ public sealed class UsageAnalyticsReportTests
 
         // Assert
         Assert.Equal(["2026-09-23", "2026-09-24"], rows.Select(row => row.Label));
+    }
+
+    [Fact]
+    public void TheCompletionTable_LeavesOutOtherKindsOfRequestsMadeForTheSameSession()
+    {
+        // Arrange
+        // A chat session's retrieval embeddings and voice responses are metered against the session too.
+        var embedding = Completion("session-1", "profile-1", tokens: 30);
+        embedding.OperationType = AIUsageOperationTypes.Embedding;
+        var realtime = Completion("session-1", "profile-1", tokens: 50);
+        realtime.OperationType = AIUsageOperationTypes.Realtime;
+        var records = new[] { Completion("session-1", "profile-1", tokens: 10), embedding, realtime };
+
+        // Act
+        var relevant = AICompletionUsageReport.Relevant(records, profileId: null);
+
+        // Assert
+        Assert.Equal(10, Assert.Single(relevant).TotalTokenCount);
+    }
+
+    [Fact]
+    public void ACallsTokens_SplitRealtimeResponsesIntoTextAndAudio()
+    {
+        // Arrange
+        var realtime = Completion("session-1", "profile-1", tokens: 1_000);
+        realtime.OperationType = AIUsageOperationTypes.Realtime;
+        realtime.InputAudioTokenCount = 400;
+        realtime.OutputAudioTokenCount = 500;
+        var embedding = Completion("session-1", "profile-1", tokens: 70);
+        embedding.OperationType = AIUsageOperationTypes.Embedding;
+        var records = new[] { Completion("session-1", "profile-1", tokens: 20), realtime, embedding };
+        var call = Call("activity-1", AIVoiceSessionEngine.Realtime, AIVoiceSessionOutcome.CompletedByAI, sessionMs: 1_000, session: "session-1");
+
+        // Act
+        var totals = AIVoiceUsageReport.Summarize(
+            label: null,
+            [call],
+            AICompletionUsageReport.TokensBySession(records),
+            AICompletionUsageReport.AudioTokensBySession(records));
+
+        // Assert
+        // The chat completion's 20 tokens and the realtime response's 100 text tokens; never the embedding.
+        Assert.Equal(120, totals.TextTokens);
+        Assert.Equal(900, totals.AudioTokens);
     }
 
     private static AICompletionUsageRecord Completion(

@@ -8,6 +8,7 @@ using CrestApps.Core.AI.Handlers;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -749,6 +750,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         _handoffTurn.Reset();
         _endCallTurn.Reset();
 
+        using var usageScope = AIUsageScope.Begin(contextType: AIUsageCategories.Voice);
         var completion = await _completionService.CompleteAsync(deployment, transcript, context, cancellationToken);
 
         var reply = completion?.Messages?.FirstOrDefault()?.Text;

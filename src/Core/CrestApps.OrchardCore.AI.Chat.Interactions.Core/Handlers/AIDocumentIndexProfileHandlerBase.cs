@@ -1,4 +1,5 @@
 using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Resilience;
 using CrestApps.OrchardCore.AI.Core;
@@ -72,6 +73,8 @@ public abstract class AIDocumentIndexProfileHandlerBase : IndexProfileHandlerBas
             }
 
             // Generate embedding for a sample text to determine dimensions
+
+            using var usageScope = AIUsageScope.Begin(purpose: AIUsagePurposes.Indexing);
             var embedding = await embeddingGenerator.GenerateAsync(["Sample"]);
 
             if (embedding?.Count > 0 && embedding[0].Vector.Length > 0)

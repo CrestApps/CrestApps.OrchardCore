@@ -1,4 +1,6 @@
+using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Services;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
 
@@ -12,13 +14,15 @@ internal static class AICompletionUsageReport
     private const string Unknown = "Unknown";
 
     /// <summary>
-    /// The records the report counts: those that belong to a chat session or a chat interaction, and to the chosen
-    /// profile when one is chosen.
+    /// The records the report counts: the chat completions that belong to a chat session or a chat interaction, and to
+    /// the chosen profile when one is chosen. Embeddings, speech and realtime requests made for a session are metered
+    /// too, but are reported in the metered usage table rather than counted as completions.
     /// </summary>
     /// <param name="records">The records read for the date range.</param>
     /// <param name="profileId">The profile to keep, or <see langword="null"/> for every profile.</param>
     public static IReadOnlyList<AICompletionUsageRecord> Relevant(IEnumerable<AICompletionUsageRecord> records, string profileId)
         => records
+            .Where(record => AIUsageReport.GetOperationType(record) == AIUsageOperationTypes.Chat)
             .Where(record => !string.IsNullOrEmpty(record.SessionId) || !string.IsNullOrEmpty(record.InteractionId))
             .Where(record => string.IsNullOrEmpty(profileId) || string.Equals(record.ProfileId, profileId, StringComparison.Ordinal))
             .ToList();
@@ -62,14 +66,35 @@ internal static class AICompletionUsageReport
 
     /// <summary>
     /// The text tokens recorded against each chat session, so an automated call can be shown with the tokens its
-    /// completions used.
+    /// completions used: every chat completion's tokens, and the text part of every realtime response.
     /// </summary>
     /// <param name="records">The records read for the date range.</param>
     public static IReadOnlyDictionary<string, long> TokensBySession(IEnumerable<AICompletionUsageRecord> records)
         => records
             .Where(record => !string.IsNullOrEmpty(record.SessionId))
             .GroupBy(record => record.SessionId, StringComparer.Ordinal)
-            .ToDictionary(group => group.Key, group => group.Sum(record => (long)record.TotalTokenCount), StringComparer.Ordinal);
+            .ToDictionary(group => group.Key, group => group.Sum(TextTokens), StringComparer.Ordinal);
+
+    /// <summary>
+    /// The audio tokens recorded against each chat session by realtime voice responses and their transcriptions.
+    /// Sessions with none are left out.
+    /// </summary>
+    /// <param name="records">The records read for the date range.</param>
+    public static IReadOnlyDictionary<string, long> AudioTokensBySession(IEnumerable<AICompletionUsageRecord> records)
+        => records
+            .Where(record => !string.IsNullOrEmpty(record.SessionId))
+            .Where(record => record.InputAudioTokenCount > 0 || record.OutputAudioTokenCount > 0)
+            .GroupBy(record => record.SessionId, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Sum(record => (long)record.InputAudioTokenCount + record.OutputAudioTokenCount), StringComparer.Ordinal);
+
+    private static long TextTokens(AICompletionUsageRecord record)
+        => AIUsageReport.GetOperationType(record) switch
+        {
+            AIUsageOperationTypes.Chat => record.TotalTokenCount,
+            AIUsageOperationTypes.Realtime or AIUsageOperationTypes.RealtimeTranscription
+                => Math.Max(0L, (long)record.TotalTokenCount - record.InputAudioTokenCount - record.OutputAudioTokenCount),
+            _ => 0,
+        };
 
     private static string Label(AICompletionUsageRecord record, AICompletionUsageGroupBy groupBy, IReadOnlyDictionary<string, string> profileNames)
         => groupBy switch

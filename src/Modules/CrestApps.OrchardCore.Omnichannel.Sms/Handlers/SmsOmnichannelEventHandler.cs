@@ -14,6 +14,7 @@ using CrestApps.Core.AI.Resilience;
 using CrestApps.Core.Services;
 using CrestApps.Core.Support;
 using CrestApps.Core.Templates.Services;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -487,6 +488,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                         // records the decision on the scoped turn, which we reset first and read back afterwards.
                         _handoffTurn.Reset();
 
+                        using var usageScope = AIUsageScope.Begin(contextType: AIUsageCategories.Sms);
                         var completion = await _aICompletionService.CompleteAsync(deployment, transcript, context, generationToken);
 
                         bestChoice = completion?.Messages?.FirstOrDefault()?.Text;
@@ -698,7 +700,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                             return;
                         }
 
-                        var client = await clientFactory.CreateChatClientAsync(deployment, builder => builder.UseDefaultResilience());
+                        var client = await clientFactory.CreateChatClientAsync(deployment, builder => builder.UseDefaultResilience().UseUsageLabels(contextType: AIUsageCategories.Sms, purpose: AIUsageFeaturePurposes.ConversationConclusion));
 
                         var contentManager = scope.ServiceProvider.GetRequiredService<IContentManager>();
                         var contentDefinitionManager = scope.ServiceProvider.GetRequiredService<IContentDefinitionManager>();
@@ -1059,7 +1061,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                 return null;
             }
 
-            var client = await _aiClientFactory.CreateChatClientAsync(deployment, builder => builder.UseDefaultResilience());
+            var client = await _aiClientFactory.CreateChatClientAsync(deployment, builder => builder.UseDefaultResilience().UseUsageLabels(contextType: AIUsageCategories.Sms, purpose: AIUsageFeaturePurposes.HandoffSummary));
 
             var messages = new List<ChatMessage> { new(ChatRole.System, summaryPrompt) };
             messages.AddRange(conversation.Select(prompt => new ChatMessage(prompt.Role, prompt.Content)));
@@ -1199,7 +1201,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                 return true;
             }
 
-            var client = await _aiClientFactory.CreateChatClientAsync(deployment, builder => builder.UseDefaultResilience());
+            var client = await _aiClientFactory.CreateChatClientAsync(deployment, builder => builder.UseDefaultResilience().UseUsageLabels(contextType: AIUsageCategories.Sms, purpose: AIUsageFeaturePurposes.ReplyDecision));
 
             var messages = new List<ChatMessage>
             {

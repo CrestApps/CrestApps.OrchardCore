@@ -1,6 +1,7 @@
 using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.AI.Core;
 using Fluid;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Localization;
@@ -117,6 +118,7 @@ public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithCo
                 return Outcome("Failed");
             }
 
+            using var usageScope = AIUsageScope.Begin(contextType: AIUsageCategories.Workflow);
             var completion = await _completionService.CompleteAsync(deployment, [new ChatMessage(ChatRole.User, userPrompt.Trim())], context);
 
             var bestChoice = completion.Messages.FirstOrDefault();
