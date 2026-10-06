@@ -26,9 +26,16 @@ public sealed class CallRecording : CatalogItem
 
     /// <summary>
     /// Gets or sets the provider's identifier of the recording. It is unique per recording, so a redelivered
-    /// "recording saved" notification finds the entry it already made.
+    /// "recording saved" notification finds the entry it already made. Empty while the recording is still running.
     /// </summary>
     public string ProviderRecordingId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider's identifier of the call leg that was recorded. A recording started by the platform
+    /// is listed under it the moment it starts, and the provider's "recording saved" notification, which names the
+    /// leg, completes that entry.
+    /// </summary>
+    public string ProviderCallId { get; set; }
 
     /// <summary>
     /// Gets or sets the reference the recording is stored under in the media store.

@@ -25,6 +25,11 @@ public sealed class CallRecordingIndex : CatalogItemIndex
     public string ProviderRecordingId { get; set; }
 
     /// <summary>
+    /// Gets or sets the provider's identifier of the call leg that was recorded.
+    /// </summary>
+    public string ProviderCallId { get; set; }
+
+    /// <summary>
     /// Gets or sets the recorded Contact Center interaction, when the call is one.
     /// </summary>
     public string InteractionId { get; set; }

@@ -44,65 +44,6 @@ public sealed class TelnyxRecordingClientState
     [JsonPropertyName("u")]
     public string RecipientUserId { get; set; }
 
-    /// <summary>
-    /// Gets or sets the kind of call recorded when it is not a Contact Center interaction: <see cref="AiCallKind"/>
-    /// or <see cref="SoftPhoneCallKind"/>. Empty for an interaction's recording.
-    /// </summary>
-    [JsonPropertyName("k")]
-    public string Kind { get; set; }
-
-    /// <summary>
-    /// Gets or sets the CRM activity an automated voice agent's call belongs to.
-    /// </summary>
-    [JsonPropertyName("a")]
-    public string ActivityId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the user identifier of the agent who dialed a number on the soft phone.
-    /// </summary>
-    [JsonPropertyName("o")]
-    public string AgentUserId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the soft phone's identifier of the call, which is the agent's leg.
-    /// </summary>
-    [JsonPropertyName("c")]
-    public string TelephonyCallId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the other party's number.
-    /// </summary>
-    [JsonPropertyName("n")]
-    public string CustomerNumber { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether the other party placed the call.
-    /// </summary>
-    [JsonPropertyName("in")]
-    public bool? IsInbound { get; set; }
-
-    /// <summary>
-    /// The <see cref="Kind"/> of an automated voice agent's call.
-    /// </summary>
-    public const string AiCallKind = "ai";
-
-    /// <summary>
-    /// The <see cref="Kind"/> of a number an agent dialed on the soft phone's keypad.
-    /// </summary>
-    public const string SoftPhoneCallKind = "sp";
-
-    /// <summary>
-    /// Gets a value indicating whether the recording belongs to an automated voice agent's call.
-    /// </summary>
-    [JsonIgnore]
-    public bool IsAiCall => Kind == AiCallKind;
-
-    /// <summary>
-    /// Gets a value indicating whether the recording belongs to a number dialed on the soft phone.
-    /// </summary>
-    [JsonIgnore]
-    public bool IsSoftPhoneCall => Kind == SoftPhoneCallKind;
-
     private static readonly JsonSerializerOptions _options = new(JsonSerializerDefaults.Web)
     {
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
@@ -117,39 +58,6 @@ public sealed class TelnyxRecordingClientState
         {
             Intent = TelnyxConstants.Recording.ClientStateIntent,
             InteractionId = interactionId,
-        };
-
-    /// <summary>
-    /// Creates a recording client state for an automated voice agent's call.
-    /// </summary>
-    /// <param name="activityId">The CRM activity the call belongs to.</param>
-    /// <param name="customerNumber">The other party's number.</param>
-    /// <param name="isInbound">Whether the other party placed the call.</param>
-    public static TelnyxRecordingClientState ForAiCall(string activityId, string customerNumber, bool isInbound)
-        => new()
-        {
-            Intent = TelnyxConstants.Recording.ClientStateIntent,
-            Kind = AiCallKind,
-            ActivityId = activityId,
-            CustomerNumber = customerNumber,
-            IsInbound = isInbound,
-        };
-
-    /// <summary>
-    /// Creates a recording client state for a number an agent dialed on the soft phone's keypad.
-    /// </summary>
-    /// <param name="agentUserId">The user identifier of the agent who dialed.</param>
-    /// <param name="telephonyCallId">The soft phone's identifier of the call (the agent's leg).</param>
-    /// <param name="customerNumber">The number dialed.</param>
-    public static TelnyxRecordingClientState ForSoftPhoneCall(string agentUserId, string telephonyCallId, string customerNumber)
-        => new()
-        {
-            Intent = TelnyxConstants.Recording.ClientStateIntent,
-            Kind = SoftPhoneCallKind,
-            AgentUserId = agentUserId,
-            TelephonyCallId = telephonyCallId,
-            CustomerNumber = customerNumber,
-            IsInbound = false,
         };
 
     /// <summary>
@@ -194,7 +102,7 @@ public sealed class TelnyxRecordingClientState
     /// </summary>
     /// <param name="decodedClientState">The already base64-decoded client-state JSON.</param>
     /// <param name="state">The parsed state when successful.</param>
-    /// <returns><see langword="true"/> when the value is a recording client state carrying an interaction id, or naming the automated voice agent's call or soft phone call it recorded.</returns>
+    /// <returns><see langword="true"/> when the value is a recording client state carrying an interaction id.</returns>
     public static bool TryParse(string decodedClientState, out TelnyxRecordingClientState state)
         => TryParse(decodedClientState, TelnyxConstants.Recording.ClientStateIntent, out state);
 
@@ -221,15 +129,9 @@ public sealed class TelnyxRecordingClientState
         {
             var parsed = JsonSerializer.Deserialize<TelnyxRecordingClientState>(decodedClientState, _options);
 
-            // A recording that is not an interaction's is still traced back to its call by what it names instead.
-            var namesItsCall = !string.IsNullOrWhiteSpace(parsed?.InteractionId) ||
-                (parsed is not null && expectedIntent == TelnyxConstants.Recording.ClientStateIntent &&
-                    (parsed.IsAiCall && !string.IsNullOrWhiteSpace(parsed.ActivityId) ||
-                    parsed.IsSoftPhoneCall && !string.IsNullOrWhiteSpace(parsed.AgentUserId)));
-
             if (parsed is null ||
                 parsed.Intent != expectedIntent ||
-                !namesItsCall)
+                string.IsNullOrWhiteSpace(parsed.InteractionId))
             {
                 return false;
             }
