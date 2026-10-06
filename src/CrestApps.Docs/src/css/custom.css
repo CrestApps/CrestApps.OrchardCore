@@ -262,6 +262,25 @@ html[data-manual='technical'] .navbar__link--active {
     border-radius: 8px;
 }
 
+/* Center every crumb, its separator and the manual's icon crumb on one line. */
+.breadcrumbs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    row-gap: 0.25rem;
+}
+
+.breadcrumbs__item {
+    display: inline-flex;
+    align-items: center;
+}
+
+.breadcrumbs__link {
+    display: inline-flex;
+    align-items: center;
+    line-height: 1.4;
+}
+
 .breadcrumbs__item--active .breadcrumbs__link {
     background: var(--ifm-menu-color-background-active);
     color: var(--ifm-color-primary);
@@ -373,7 +392,7 @@ html[data-manual='technical'] .navbar__link--active {
 .sidebar-icon--rocket { --sidebar-icon: url('/img/icons/rocket.svg'); }
 .sidebar-icon--shield-check { --sidebar-icon: url('/img/icons/shield-check.svg'); }
 .sidebar-icon--sliders-horizontal { --sidebar-icon: url('/img/icons/sliders-horizontal.svg'); }
-.sidebar-icon--sparkles { --sidebar-icon: url('/img/icons/sparkles.svg'); }
+.sidebar-icon--hexagon-nodes { --sidebar-icon: url('/img/icons/hexagon-nodes.svg'); }
 .sidebar-icon--tags { --sidebar-icon: url('/img/icons/tags.svg'); }
 
 /* ---------- Table of contents ---------- */

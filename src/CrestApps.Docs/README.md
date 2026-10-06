@@ -114,7 +114,7 @@ The values are page IDs: the file path under `docs/` without the extension (`doc
 
 1. Decide the manual with the dividing rule.
 2. Create the file under `docs/user-manual/` or in the matching technical folder, with the front matter above.
-3. Add the page ID to `userManualSidebar` or `technicalSidebar` in `sidebars.js`. A new **top-level** entry also gets an icon: `className: icon('name')`, where `name` is a [Lucide](https://lucide.dev/icons) icon. Copy its SVG from the `lucide-static` package into `static/img/icons/` and add a `.sidebar-icon--name` rule in `src/css/custom.css`.
+3. Add the page ID to `userManualSidebar` or `technicalSidebar` in `sidebars.js`. A new **top-level** entry also gets an icon: `className: icon('name')`, where `name` is an SVG file in `static/img/icons/`. Copy new icons from the `lucide-static` package ([Lucide](https://lucide.dev/icons)), or from `@fortawesome/fontawesome-free` (free solid icons only, keeping the license comment in the file), and add a `.sidebar-icon--name` rule in `src/css/custom.css`. See `static/img/icons/README.md`.
 4. When you move or remove a page, add a redirect from the old path to the `@docusaurus/plugin-client-redirects` options in `docusaurus.config.js`, so links from outside the site keep working.
 5. Run the checks below.
 
@@ -160,7 +160,7 @@ When a task touches the docs site, in addition to everything above:
 | Audience strip above each title, and the card at the end of each page that links to the other manual | `src/components/Manual/ManualBar.js`, `ManualCrossLinks.js`, placed by `src/theme/DocItem/` |
 | `<AskYourAdmin />` note and `<ManualSearch />` box, usable in any page without an import | `src/components/Manual/`, registered in `src/theme/MDXComponents.js` |
 | The manual's crumb in the breadcrumbs (Home > User Manual > ...) | `src/theme/DocBreadcrumbs/Items/Home/` |
-| Icons (`<Icon name="..." />` in React, `icon('...')` in `sidebars.js`) | `src/components/SiteIcon/`, `static/img/icons/` (Lucide, ISC license) |
+| Icons (`<Icon name="..." />` in React, `icon('...')` in `sidebars.js`) | `src/components/SiteIcon/`, `static/img/icons/` (Lucide and Font Awesome Free; see the README there) |
 | Colors for each manual, the sidebar and the tables | `src/css/custom.css` |
 | The manual rules | `scripts/check-manuals.mjs` |
 

@@ -50,7 +50,7 @@ const sidebars = {
         {
             type: 'category',
             label: 'AI Assistant',
-            className: icon('sparkles'),
+            className: icon('hexagon-nodes'),
             link: { type: 'doc', id: 'user-manual/ai/index' },
             items: [
                 'user-manual/ai/connections',
@@ -159,7 +159,7 @@ const sidebars = {
         {
             type: 'category',
             label: 'Artificial Intelligence Suite',
-            className: icon('sparkles'),
+            className: icon('hexagon-nodes'),
             collapsed: false,
             link: { type: 'doc', id: 'ai/index' },
             items: [

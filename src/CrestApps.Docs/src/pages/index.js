@@ -46,7 +46,7 @@ const AREAS = [
   {
     title: 'AI Assistant',
     inHero: true,
-    icon: 'sparkles',
+    icon: 'hexagon-nodes',
     text: 'AI chat, AI profiles, website chat, knowledge from your documents, tools and agents.',
     user: '/docs/user-manual/ai',
     technical: '/docs/ai',
