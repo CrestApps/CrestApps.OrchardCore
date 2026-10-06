@@ -1,5 +1,7 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -13,10 +15,17 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// agent as the measured rate climbs toward the cap. A profile that does not enforce a cap paces at one call
 /// per agent, which cannot abandon.
 /// </para>
+/// <para>
+/// Every call is placed for an agent reserved before it is dialed (<see cref="PredictivePacingModel.ReservedPerCall"/>).
+/// Placing calls without a reserved agent (<see cref="PredictivePacingModel.OverDial"/>) is not available yet: a profile
+/// that selects it is dialed the same way, and a warning says so. The strategy is registered by the Predictive Dialing
+/// feature, so without it a Predictive profile resolves to no strategy and is not dialed.
+/// </para>
 /// </summary>
 public sealed class PredictiveDialerStrategy : DialerStrategyBase
 {
     private readonly IDialerAbandonmentPolicyService _abandonmentPolicy;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PredictiveDialerStrategy"/> class.
@@ -24,13 +33,16 @@ public sealed class PredictiveDialerStrategy : DialerStrategyBase
     /// <param name="assignmentService">The assignment service used to reserve agents and activities.</param>
     /// <param name="attemptService">The attempt service that applies compliance and places each call.</param>
     /// <param name="abandonmentPolicy">The abandonment policy that gates and paces predictive dialing.</param>
+    /// <param name="logger">The logger.</param>
     public PredictiveDialerStrategy(
         IActivityAssignmentService assignmentService,
         IDialerAttemptService attemptService,
-        IDialerAbandonmentPolicyService abandonmentPolicy)
+        IDialerAbandonmentPolicyService abandonmentPolicy,
+        ILogger<PredictiveDialerStrategy> logger)
         : base(assignmentService, attemptService)
     {
         _abandonmentPolicy = abandonmentPolicy;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -40,6 +52,15 @@ public sealed class PredictiveDialerStrategy : DialerStrategyBase
     protected override async Task<int> GetMaxAttemptsPerCycleAsync(DialerProfile profile, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(profile);
+
+        // Over-dialing places calls before an agent is reserved, which this strategy never does. Until it is available the
+        // profile is dialed one call per reserved agent, the pacing that cannot abandon, rather than not at all.
+        if (profile.PredictivePacingModel == PredictivePacingModel.OverDial)
+        {
+            _logger.LogWarning(
+                "Dialer profile '{ProfileId}' asks for over-dialing, which is not available yet. It is dialed with one call per reserved agent.",
+                profile.ItemId.SanitizeLogValue());
+        }
 
         var evaluation = await _abandonmentPolicy.EvaluateAsync(profile, cancellationToken);
 

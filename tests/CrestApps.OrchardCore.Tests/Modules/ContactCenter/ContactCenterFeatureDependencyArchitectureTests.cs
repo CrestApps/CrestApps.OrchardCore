@@ -471,6 +471,33 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
     }
 
     [Fact]
+    public void PredictiveDialingFeature_OwnsThePredictiveStrategyAndDependsOnPacedDialing()
+    {
+        // Arrange
+        var repositoryRoot = FindRepositoryRoot();
+        var features = ParseManifestFeatures(repositoryRoot, ContactCenterManifestPath)
+            .ToDictionary(feature => feature.Id, StringComparer.Ordinal);
+        var startupClasses = ParseStartupClassesInDirectory(
+            repositoryRoot,
+            ContactCenterModulePath,
+            ContactCenterConstantsFeatureArea(repositoryRoot));
+
+        // Act
+        var dependencies = features["CrestApps.OrchardCore.ContactCenter.Dialer.Predictive"].Dependencies
+            .Order(StringComparer.Ordinal);
+        var strategyOwner = startupClasses.Single(startup =>
+            startup.Body.Contains(
+                "AddScoped<IDialerStrategy, PredictiveDialerStrategy>()",
+                StringComparison.Ordinal));
+
+        // Assert: without the feature a Predictive profile resolves to no strategy and is never dialed.
+        Assert.Equal(
+            ["CrestApps.OrchardCore.ContactCenter.Dialer.Paced"],
+            dependencies);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Dialer.Predictive", strategyOwner.FeatureId);
+    }
+
+    [Fact]
     public void InboundVoiceFeature_OwnsInboundQualificationSurface()
     {
         // Arrange

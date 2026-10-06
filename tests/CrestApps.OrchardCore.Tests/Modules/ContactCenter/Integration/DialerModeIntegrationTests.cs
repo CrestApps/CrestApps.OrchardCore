@@ -90,7 +90,7 @@ public sealed class DialerModeIntegrationTests
     }
 
     [Fact]
-    public async Task Predictive_IsRefused_NoCallPlacedAndAgentStaysAvailable()
+    public async Task Predictive_WithoutThePredictiveFeature_IsRefused_NoCallPlacedAndAgentStaysAvailable()
     {
         // Arrange
         await using var harness = await DialerModeIntegrationHarness.CreateAsync();
@@ -101,7 +101,8 @@ public sealed class DialerModeIntegrationTests
         // Act
         var started = await harness.RunPacingCycleAsync(profile);
 
-        // Assert: the blocked mode resolves to no strategy, so nothing is dialed and the agent is untouched.
+        // Assert: without the Predictive Dialing feature the mode resolves to no strategy, so nothing is dialed and the
+        // agent is untouched.
         Assert.Equal(0, started);
         Assert.Empty(harness.Router.PlacedCalls);
         Assert.Equal(AgentPresenceStatus.Available, await harness.GetPresenceAsync("agent-1"));

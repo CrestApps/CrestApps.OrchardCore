@@ -100,6 +100,17 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = ContactCenterConstants.Feature.DialerPredictive,
+    Name = "Contact Center Predictive Dialing",
+    Description = "Adds the Predictive dialing mode on top of Paced Dialing, with the pacing statistics and safety limits predictive pacing is sized from. Predictive profiles dial one call per reserved agent, which cannot abandon a call.",
+    Category = "Contact Center",
+    Dependencies =
+    [
+        ContactCenterConstants.Feature.DialerPaced,
+    ]
+)]
+
+[assembly: Feature(
     Id = ContactCenterConstants.Feature.ProviderInbox,
     Name = "Contact Center Provider Webhook Inbox",
     Description = "Durably commits an authenticated provider webhook delivery before any handler runs, deduplicates redeliveries on the provider's own delivery id, and retries processing from storage so a callback is never lost to a restart. Shared by every channel that ingests provider callbacks.",

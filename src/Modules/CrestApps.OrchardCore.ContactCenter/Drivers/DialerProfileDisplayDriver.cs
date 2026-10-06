@@ -18,6 +18,7 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
     private readonly ContactCenterAdminFormOptionsProvider _optionsProvider;
     private readonly IShellFeaturesManager _shellFeaturesManager;
     private readonly IEnumerable<IDialerAbandonmentStatisticsProvider> _statisticsProviders;
+    private readonly IEnumerable<IDialerPacingStatisticsProvider> _pacingStatisticsProviders;
     private readonly ContactCenterComplianceOptions _complianceOptions;
 
     internal readonly IStringLocalizer S;
@@ -28,18 +29,21 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
     /// <param name="optionsProvider">The admin form options provider.</param>
     /// <param name="shellFeaturesManager">The shell features manager used to detect the Paced Dialing feature.</param>
     /// <param name="statisticsProviders">The providers of the measured abandonment shown on the editor.</param>
+    /// <param name="pacingStatisticsProviders">The providers of the measured answer rate shown on a Predictive profile.</param>
     /// <param name="complianceOptions">The compliance options, for the rolling window the abandonment cap is measured over.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public DialerProfileDisplayDriver(
         ContactCenterAdminFormOptionsProvider optionsProvider,
         IShellFeaturesManager shellFeaturesManager,
         IEnumerable<IDialerAbandonmentStatisticsProvider> statisticsProviders,
+        IEnumerable<IDialerPacingStatisticsProvider> pacingStatisticsProviders,
         IOptions<ContactCenterComplianceOptions> complianceOptions,
         IStringLocalizer<DialerProfileDisplayDriver> stringLocalizer)
     {
         _optionsProvider = optionsProvider;
         _shellFeaturesManager = shellFeaturesManager;
         _statisticsProviders = statisticsProviders;
+        _pacingStatisticsProviders = pacingStatisticsProviders;
         _complianceOptions = complianceOptions.Value;
         S = stringLocalizer;
     }
@@ -87,6 +91,16 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             SafeHarborEnabled = profile.SafeHarborEnabled,
             SafeHarborMessage = profile.SafeHarborMessage,
             Enabled = profile.Enabled,
+            PredictivePacingModel = profile.PredictivePacingModel,
+            TargetAbandonmentRatePercent = profile.TargetAbandonmentRatePercent,
+            MaxLinesPerAgent = profile.MaxLinesPerAgent,
+            MaxCallsInFlight = profile.MaxCallsInFlight,
+            AnswerRateSampleFloor = profile.AnswerRateSampleFloor,
+            AnswerRateWindowMinutes = profile.AnswerRateWindowMinutes,
+            CreditAgentsFreeingUp = profile.CreditAgentsFreeingUp,
+            FreeUpCreditPercent = profile.FreeUpCreditPercent,
+            ConnectWaitMilliseconds = profile.ConnectWaitMilliseconds,
+            AbandonedRetryRequiresAgent = profile.AbandonedRetryRequiresAgent,
             AbandonmentWindowMinutes = _complianceOptions.AbandonmentRollingWindowMinutes,
         };
 
@@ -100,7 +114,14 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             viewModel.MonthlyAbandonment = await GetStatisticsAsync(profile.ItemId, TimeSpan.FromDays(30));
         }
 
+        // What predictive pacing is sized from, so whoever tunes the profile sees the answer rate it measures.
+        if (!string.IsNullOrEmpty(profile.ItemId) && profile.Mode == DialerMode.Predictive)
+        {
+            viewModel.PacingStatistics = await GetPacingStatisticsAsync(profile.ItemId, TimeSpan.FromMinutes(Math.Max(1, profile.AnswerRateWindowMinutes)));
+        }
+
         var automatedDialerEnabled = await _shellFeaturesManager.IsFeatureEnabledAsync(ContactCenterConstants.Feature.DialerPaced);
+        var predictiveDialerEnabled = await _shellFeaturesManager.IsFeatureEnabledAsync(ContactCenterConstants.Feature.DialerPredictive);
 
         // Grouped in cards by what they govern. Every card edits the same model under the same prefix, so the one form
         // still posts all of them together.
@@ -111,6 +132,7 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             model.Description = viewModel.Description;
             model.Mode = viewModel.Mode;
             model.AutomatedDialerEnabled = automatedDialerEnabled;
+            model.PredictiveDialerEnabled = predictiveDialerEnabled;
             model.ProviderName = viewModel.ProviderName;
             model.ProviderOptions = viewModel.ProviderOptions;
             model.CallsPerAgent = viewModel.CallsPerAgent;
@@ -136,6 +158,17 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             model.AbandonmentWindowMinutes = viewModel.AbandonmentWindowMinutes;
             model.MonthlyAbandonment = viewModel.MonthlyAbandonment;
             model.Enabled = viewModel.Enabled;
+            model.PredictivePacingModel = viewModel.PredictivePacingModel;
+            model.TargetAbandonmentRatePercent = viewModel.TargetAbandonmentRatePercent;
+            model.MaxLinesPerAgent = viewModel.MaxLinesPerAgent;
+            model.MaxCallsInFlight = viewModel.MaxCallsInFlight;
+            model.AnswerRateSampleFloor = viewModel.AnswerRateSampleFloor;
+            model.AnswerRateWindowMinutes = viewModel.AnswerRateWindowMinutes;
+            model.CreditAgentsFreeingUp = viewModel.CreditAgentsFreeingUp;
+            model.FreeUpCreditPercent = viewModel.FreeUpCreditPercent;
+            model.ConnectWaitMilliseconds = viewModel.ConnectWaitMilliseconds;
+            model.AbandonedRetryRequiresAgent = viewModel.AbandonedRetryRequiresAgent;
+            model.PacingStatistics = viewModel.PacingStatistics;
         }
 
         return Combine(
@@ -143,7 +176,8 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             Initialize<DialerProfileViewModel>("DialerProfileDialing_Edit", Populate).Location("Content:1%Dialing;2"),
             Initialize<DialerProfileViewModel>("DialerProfileCallerId_Edit", Populate).Location("Content:1%Caller ID;3"),
             Initialize<DialerProfileViewModel>("DialerProfileCompliance_Edit", Populate).Location("Content:1%Compliance;4"),
-            Initialize<DialerProfileViewModel>("DialerProfileAbandonment_Edit", Populate).Location("Content:1%Abandoned calls;5"));
+            Initialize<DialerProfileViewModel>("DialerProfileAbandonment_Edit", Populate).Location("Content:1%Abandoned calls;5"),
+            Initialize<DialerProfileViewModel>("DialerProfilePredictive_Edit", Populate).Location("Content:1%Predictive pacing;6"));
     }
 
     /// <inheritdoc/>
@@ -183,6 +217,16 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             ? null
             : model.SafeHarborMessage.Trim();
         profile.Enabled = model.Enabled;
+        profile.PredictivePacingModel = model.PredictivePacingModel;
+        profile.TargetAbandonmentRatePercent = model.TargetAbandonmentRatePercent;
+        profile.MaxLinesPerAgent = model.MaxLinesPerAgent;
+        profile.MaxCallsInFlight = model.MaxCallsInFlight;
+        profile.AnswerRateSampleFloor = model.AnswerRateSampleFloor;
+        profile.AnswerRateWindowMinutes = model.AnswerRateWindowMinutes;
+        profile.CreditAgentsFreeingUp = model.CreditAgentsFreeingUp;
+        profile.FreeUpCreditPercent = model.FreeUpCreditPercent;
+        profile.ConnectWaitMilliseconds = model.ConnectWaitMilliseconds;
+        profile.AbandonedRetryRequiresAgent = model.AbandonedRetryRequiresAgent;
 
         return await EditAsync(profile, context);
     }
@@ -190,6 +234,21 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
     private async Task<DialerAbandonmentStatistics> GetStatisticsAsync(string profileId, TimeSpan window)
     {
         foreach (var provider in _statisticsProviders)
+        {
+            var statistics = await provider.GetStatisticsAsync(profileId, window);
+
+            if (statistics is not null)
+            {
+                return statistics;
+            }
+        }
+
+        return null;
+    }
+
+    private async Task<DialerPacingStatistics> GetPacingStatisticsAsync(string profileId, TimeSpan window)
+    {
+        foreach (var provider in _pacingStatisticsProviders)
         {
             var statistics = await provider.GetStatisticsAsync(profileId, window);
 

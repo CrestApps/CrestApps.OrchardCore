@@ -85,6 +85,9 @@ public sealed class ContactCenterAdministrationSurfaceTests
         ContactCenterConstants.Feature.DialerPaced,
         "CrestApps.OrchardCore.ContactCenter.Controllers.DialerProfilesController")]
     [InlineData(
+        ContactCenterConstants.Feature.DialerPredictive,
+        "CrestApps.OrchardCore.ContactCenter.Controllers.DialerProfilesController")]
+    [InlineData(
         ContactCenterConstants.Feature.Recording,
         "CrestApps.OrchardCore.ContactCenter.Drivers.ContactCenterRecordingSettingsDisplayDriver")]
     [InlineData(

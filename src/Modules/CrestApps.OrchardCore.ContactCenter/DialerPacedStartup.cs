@@ -33,9 +33,7 @@ public sealed class DialerPacedStartup : StartupBase
         services
             .AddScoped<IDialerStrategy, PowerDialerStrategy>()
             .AddScoped<IDialerStrategy, ProgressiveDialerStrategy>()
-            // Predictive is no longer blocked: its pacing is gated by the abandonment policy, which fails
-            // closed when the rate cannot be proven.
-            .AddScoped<IDialerStrategy, PredictiveDialerStrategy>()
+            // Predictive is registered by the Predictive Dialing feature, which depends on this one.
             .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
                 new ContactCenterFeatureWorkLifecycleParticipant(
                     ContactCenterConstants.Feature.DialerPaced,
@@ -56,7 +54,7 @@ public sealed class DialerPacedStartup : StartupBase
         });
 
         // The paced modes are stored on the activities of a dialer load whose profile uses them, so the Dialer
-        // source filter matches them too. Predictive profiles cannot be saved today; the value is matched only so
+        // source filter matches them too, Predictive included: its profiles need the Predictive Dialing feature, but
         // an activity that carries it is never left out of a Dialer filter.
         services.Configure<ActivitySourceOptions>(options =>
         {
