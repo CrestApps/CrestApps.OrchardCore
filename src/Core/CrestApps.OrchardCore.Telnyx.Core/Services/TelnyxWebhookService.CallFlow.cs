@@ -18,6 +18,17 @@ public sealed partial class TelnyxWebhookService
     /// </summary>
     private async Task<TelnyxWebhookResult?> HandleCallFlowAsync(TelnyxCallEvent callEvent, CancellationToken cancellationToken)
     {
+        // A last message sent without a client state of its own, so the leg keeps the state other code reads from it:
+        // the leg was remembered on the server when the message started, and is hung up now that it has been heard.
+        if (string.Equals(callEvent.EventType?.Trim(), SpeakEndedEventType, StringComparison.OrdinalIgnoreCase) &&
+            await _hangUpAfterSpeech.TryClaimAsync(callEvent.CallControlId, cancellationToken))
+        {
+            // Hanging up a leg that has already ended is harmless; the caller may well have gone first.
+            await _apiClient.HangupAsync(callEvent.CallControlId, cancellationToken);
+
+            return TelnyxWebhookResult.Updated;
+        }
+
         if (!TelnyxCallFlowClientState.TryParse(callEvent.ClientState, out var state))
         {
             return null;

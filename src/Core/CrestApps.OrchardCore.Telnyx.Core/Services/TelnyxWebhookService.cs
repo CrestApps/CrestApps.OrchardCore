@@ -23,6 +23,7 @@ public sealed partial class TelnyxWebhookService : ITelnyxWebhookService
     private readonly IEnumerable<ICallQualityObserver> _callQualityObservers;
     private readonly IExternalTransferOutcomeSink _transferOutcomeSink;
     private readonly TelnyxApiClient _apiClient;
+    private readonly TelnyxHangUpAfterSpeechRegistry _hangUpAfterSpeech;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -38,6 +39,7 @@ public sealed partial class TelnyxWebhookService : ITelnyxWebhookService
     /// </param>
     /// <param name="transferOutcomeSink">Where the outcome of an external transfer's destination leg is reported.</param>
     /// <param name="apiClient">The typed Telnyx client, for the hang-up after a last message.</param>
+    /// <param name="hangUpAfterSpeech">The legs to hang up once their last message ends.</param>
     /// <param name="clock">The clock used to stamp event times.</param>
     /// <param name="logger">The logger.</param>
     public TelnyxWebhookService(
@@ -49,9 +51,11 @@ public sealed partial class TelnyxWebhookService : ITelnyxWebhookService
         IEnumerable<ICallQualityObserver> callQualityObservers,
         IExternalTransferOutcomeSink transferOutcomeSink,
         TelnyxApiClient apiClient,
+        TelnyxHangUpAfterSpeechRegistry hangUpAfterSpeech,
         IClock clock,
         ILogger<TelnyxWebhookService> logger)
     {
+        _hangUpAfterSpeech = hangUpAfterSpeech;
         _normalizedVoiceEventIngestor = normalizedVoiceEventIngestor;
         _inboundCallRouter = inboundCallRouter;
         _digitsSink = digitsSink;

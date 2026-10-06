@@ -1,12 +1,14 @@
 using System.Net;
-using CrestApps.OrchardCore.Telnyx.Services;
-using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using Moq;
+using CrestApps.OrchardCore.Telnyx;
+using CrestApps.OrchardCore.Telnyx.Services;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using CrestApps.OrchardCore.Telnyx;
+using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -180,11 +182,12 @@ public sealed class TelnyxQueueTreatmentProviderTests
     }
 
     [Fact]
-    public async Task ALastMessage_IsSpokenMarkedSoTheCallEndsWhenItFinishes()
+    public async Task ALastMessage_IsSpokenWithoutReplacingTheLegsOwnState()
     {
         // Arrange
-        // Hanging up straight after asking Telnyx to speak would cut the confirmation off; the hang-up is issued
-        // from call.speak.ended, which carries this state back.
+        // Hanging up straight after asking Telnyx to speak would cut the confirmation off; the hang-up is issued from
+        // call.speak.ended. The leg is remembered on the server rather than in a client_state on the speak: Telnyx
+        // stamps a command's state on every later event of the leg, which would erase a recording's link to its call.
         var handler = new RecordingHttpMessageHandler().AlwaysRespondWith(HttpStatusCode.OK);
         var provider = CreateProvider(handler);
 
@@ -196,9 +199,7 @@ public sealed class TelnyxQueueTreatmentProviderTests
         Assert.Equal("/v2/calls/ctrl-1/actions/speak", request.Path);
         using var body = System.Text.Json.JsonDocument.Parse(request.Body);
         Assert.Equal("female", body.RootElement.GetProperty("voice").GetString());
-        var state = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(body.RootElement.GetProperty("client_state").GetString()));
-        Assert.True(TelnyxCallFlowClientState.TryParse(state, out var parsed));
-        Assert.Equal(TelnyxCallFlowClientState.HangUpAfterSpeechIntent, parsed.Intent);
+        Assert.False(body.RootElement.TryGetProperty("client_state", out _));
     }
 
     [Fact]
@@ -314,6 +315,7 @@ public sealed class TelnyxQueueTreatmentProviderTests
             apiClient,
             voiceMedia.Object,
             new TestOptionsMonitor<TelnyxOptions>(options ?? new TelnyxOptions()),
+            new TelnyxHangUpAfterSpeechRegistry(new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()))),
             NullLogger<TelnyxQueueTreatmentProvider>.Instance);
     }
 }

@@ -24,6 +24,7 @@ public sealed class TelnyxQueueTreatmentProvider : IQueueTreatmentProvider
     private readonly TelnyxApiClient _apiClient;
     private readonly IVoiceMediaItemManager _voiceMediaItemManager;
     private readonly IOptionsMonitor<TelnyxOptions> _options;
+    private readonly TelnyxHangUpAfterSpeechRegistry _hangUpAfterSpeech;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -32,16 +33,19 @@ public sealed class TelnyxQueueTreatmentProvider : IQueueTreatmentProvider
     /// <param name="apiClient">The typed Telnyx client.</param>
     /// <param name="voiceMediaItemManager">The voice media catalog, used to resolve a clip to its provider name.</param>
     /// <param name="options">The tenant's Telnyx options, for the voice and language prompts are spoken in.</param>
+    /// <param name="hangUpAfterSpeech">Where a leg to be hung up after its last message is remembered.</param>
     /// <param name="logger">The logger.</param>
     public TelnyxQueueTreatmentProvider(
         TelnyxApiClient apiClient,
         IVoiceMediaItemManager voiceMediaItemManager,
         IOptionsMonitor<TelnyxOptions> options,
+        TelnyxHangUpAfterSpeechRegistry hangUpAfterSpeech,
         ILogger<TelnyxQueueTreatmentProvider> logger)
     {
         _apiClient = apiClient;
         _voiceMediaItemManager = voiceMediaItemManager;
         _options = options;
+        _hangUpAfterSpeech = hangUpAfterSpeech;
         _logger = logger;
     }
 
@@ -176,20 +180,25 @@ public sealed class TelnyxQueueTreatmentProvider : IQueueTreatmentProvider
         {
             var options = _options.CurrentValue;
 
-            // The hang-up is issued when Telnyx reports the speech ended (call.speak.ended carries this state back),
-            // so the caller hears the whole message.
+            // The hang-up is issued when Telnyx reports the speech ended, so the caller hears the whole message. The leg
+            // is remembered on the server rather than in a client_state on the speak command: Telnyx would stamp that
+            // state on every later event of the leg, replacing what the leg already carries (a recording's link to its
+            // interaction, for one), so the recording saved when the call ends could no longer be filed.
+            await _hangUpAfterSpeech.MarkAsync(providerCallId, cancellationToken);
+
             var spoken = await _apiClient.SpeakAsync(
                 providerCallId,
                 text,
                 TelnyxPrompts.ResolveVoice(options),
                 TelnyxPrompts.ResolveLanguage(options),
-                TelnyxCallFlowClientState.ForHangUpAfterSpeech().ToJson(),
-                cancellationToken);
+                cancellationToken: cancellationToken);
 
             if (spoken.Succeeded)
             {
                 return;
             }
+
+            await _hangUpAfterSpeech.ForgetAsync(providerCallId, cancellationToken);
 
             Report(spoken.Succeeded, "speak", providerCallId);
         }
