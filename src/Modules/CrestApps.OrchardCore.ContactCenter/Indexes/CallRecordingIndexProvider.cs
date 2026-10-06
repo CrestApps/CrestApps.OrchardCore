@@ -27,6 +27,7 @@ public sealed class CallRecordingIndexProvider : IndexProvider<CallRecording>
                 ItemId = recording.ItemId,
                 Source = recording.Source,
                 ProviderRecordingId = recording.ProviderRecordingId,
+                ProviderCallId = recording.ProviderCallId,
                 InteractionId = recording.InteractionId,
                 ActivityItemId = recording.ActivityItemId,
                 AgentUserId = recording.AgentUserId,
