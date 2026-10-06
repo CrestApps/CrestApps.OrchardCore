@@ -334,7 +334,19 @@ inside the browser, before anything is sent:
   louder than anyone else in the room, so the gate opens on the agent's voice and closes in the pauses.
   **Isolation strength** sets how firmly it does this: use **High** on a loud floor, and **Low** if callers
   say the start or end of the agent's words is cut off.
-- **Microphone boost**, when set, is applied after voice isolation.
+- **Automatic voice level** (on by default) replaces the browser's automatic gain control, which voice
+  isolation has to turn off. Without it, a headset that picks the agent up at -35 to -25 dBFS sends the voice
+  at that level, well under what callers expect. The level measures the cleaned-up voice and steers it toward
+  about -18 dBFS (measured over roughly 40 ms windows; about -20 dBFS as an average over speech). It moves only
+  while the agent's voice is above the gate's opening level, and holds in every pause, so the room is never raised
+  on its own. It rises at most 6 dB a second, falls up to 15 dB a second on loud speech, adds at most +20 dB, and
+  goes below 0 dB only for a voice already close to full scale. A limiter always follows it. The gain it reaches is
+  remembered per microphone in the browser, so the next call starts at the agent's level.
+- The gate works on the voice before the automatic level. It separates the agent from the room by how much
+  louder the agent is at a close-talk microphone, and leveling first would raise the room by the same amount as
+  the voice. If callers say a quiet agent's words are clipped at the start, use the **Low** strength or move the
+  microphone closer; no gain added after the gate can restore what the gate removed.
+- **Microphone boost**, when set, is applied after the automatic level, as a manual adjustment on top of it.
 
 Changing any of these applies at once, including on a call in progress. Voice isolation works best with a
 headset microphone close to the mouth; a laptop or webcam microphone hears the room almost as loudly as the
@@ -350,9 +362,12 @@ then switch over by itself.
 :::
 
 The [Diagnostics](#diagnostics) tab shows what is running on the **capture** line: `vi=gtcrn+gate` or
-`vi=rnnoise+gate` when voice isolation is on, `vi=pending` while it waits for a click, `vi=failed` when it
-cannot run here, and `vi=off` when the agent turned it off. The same value is recorded with each call's quality
-report, and the server log records `voice-isolation-started`, `voice-isolation-pending`,
+`vi=rnnoise+gate` when voice isolation is on (with `+level(+9dB)` and the gain applied right now when the
+automatic level is on), `vi=pending` while it waits for a click, `vi=failed` when it cannot run here, and
+`vi=off` when the agent turned it off. The same value is recorded with each call's quality report. While voice
+isolation runs, the report's `Mic` is the raw microphone level measured before processing, on the same scale as
+`OutLevel` (the level sent), and `AutoLevel` is the automatic level's gain, so a quiet call shows whether the
+microphone itself was quiet. The server log also records `voice-isolation-started`, `voice-isolation-pending`,
 `voice-isolation-fallback` and `voice-isolation-unavailable` client diagnostics.
 
 For noise the agent's browser cannot remove, Telnyx can also clean up the audio on its side of the call. See

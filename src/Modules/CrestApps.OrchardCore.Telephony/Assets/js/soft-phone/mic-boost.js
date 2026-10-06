@@ -32,6 +32,10 @@
     var LIMITER_ATTACK_S = 0.003;
     var LIMITER_RELEASE_S = 0.05;
 
+    // Where the soft clipper after the limiter starts to round peaks off (linear, about -0.9 dBFS). The limiter's
+    // own output sits under it except for the milliseconds before it reacts.
+    var CLIPPER_KNEE = 0.9;
+
     // Normalizes a stored or chosen value to one of the allowed boosts. Anything unrecognized is off, never a
     // surprise lift.
     function clampBoostDb(value) {
@@ -57,26 +61,81 @@
      * node the rest of the graph continues from and the nodes it created (for disposal), or null when the boost is
      * off and nothing was added. Shared by the plain boost below and the voice isolation chain
      * (voice-isolation.js), so there is one gain/limiter definition whichever path the capture takes.
+     *
+     * options.alwaysLimit - add the limiter even when the boost is off. The voice isolation chain asks for it
+     *                       while its automatic voice level is on: that gain can lift a voice by up to 20 dB and
+     *                       has to be exactly as safe as a boost the agent chose.
      */
-    function connectBoostStage(context, input, boostDb) {
+    function connectBoostStage(context, input, boostDb, options) {
         var db = clampBoostDb(boostDb);
+        var alwaysLimit = !!(options && options.alwaysLimit);
 
-        if (db === 0) {
+        if (db === 0 && !alwaysLimit) {
             return null;
         }
 
-        var gain = context.createGain();
-        gain.gain.value = boostGainFor(db);
+        var nodes = [];
+        var tail = input;
+
+        if (db !== 0) {
+            var gain = context.createGain();
+            gain.gain.value = boostGainFor(db);
+            tail.connect(gain);
+            tail = gain;
+            nodes.push(gain);
+        }
+
         var limiter = context.createDynamicsCompressor();
         limiter.threshold.value = LIMITER_THRESHOLD_DB;
         limiter.knee.value = LIMITER_KNEE_DB;
         limiter.ratio.value = LIMITER_RATIO;
         limiter.attack.value = LIMITER_ATTACK_S;
         limiter.release.value = LIMITER_RELEASE_S;
-        input.connect(gain);
-        gain.connect(limiter);
+        tail.connect(limiter);
+        nodes.push(limiter);
+        tail = limiter;
 
-        return { output: limiter, nodes: [gain, limiter] };
+        // The compressor needs a few milliseconds to react, and a word that starts far louder than the gain was set
+        // for (an agent who suddenly raises their voice while the gain is lifting a quiet one) overshot full scale
+        // by 6 dB in a measured run before it caught up -- clipped at the encoder. A soft clipper after it takes
+        // those first milliseconds: transparent below the knee, it rounds anything above it off under full scale.
+        if (typeof context.createWaveShaper === 'function') {
+            var clipper = context.createWaveShaper();
+            clipper.curve = softClipCurve();
+            clipper.oversample = '2x';
+            tail.connect(clipper);
+            nodes.push(clipper);
+            tail = clipper;
+        }
+
+        return { output: tail, nodes: nodes };
+    }
+
+    // The soft clipper's transfer curve: the identity up to CLIPPER_KNEE, then a tanh shoulder that reaches
+    // just under full scale at an input of 1. A wave shaper holds anything beyond +/-1 at the curve's ends.
+    var clipCurve = null;
+
+    function softClipCurve() {
+        if (clipCurve) {
+            return clipCurve;
+        }
+
+        var points = 4097;
+        var curve = new Float32Array(points);
+
+        for (var i = 0; i < points; i++) {
+            var x = (i / (points - 1)) * 2 - 1;
+            var magnitude = Math.abs(x);
+            var y = magnitude <= CLIPPER_KNEE
+                ? magnitude
+                : CLIPPER_KNEE + (1 - CLIPPER_KNEE) * Math.tanh((magnitude - CLIPPER_KNEE) / (1 - CLIPPER_KNEE));
+
+            curve[i] = x < 0 ? -y : y;
+        }
+
+        clipCurve = curve;
+
+        return curve;
     }
 
     /*

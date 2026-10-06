@@ -6,10 +6,26 @@
  * every time the agent pauses. An agent on a busy floor sounded to the caller like they were in the middle of a
  * crowd, while the same headset on a desk phone app with "voice isolation" sounded quiet. This is the soft phone's
  * answer: the raw capture runs through a speech-enhancement model, then through a gate tuned for a close-talk
- * headset, then through the optional boost (mic-boost.js), and that is what the call sends.
+ * headset, then through an automatic voice level and the optional boost (mic-boost.js), and that is what the
+ * call sends.
  *
- *   microphone -> denoiser (GTCRN or RNNoise) -+-> noise gate -+-> [boost gain -> limiter] -> send track
+ *   microphone -> denoiser (GTCRN or RNNoise) -+-> noise gate -+-> auto level -> [boost gain] -> limiter -> send track
  *                                              +-> floor gain -+
+ *                                              +-> level meter (decides the auto level; see auto-level.js)
+ *
+ * The automatic voice level stands in for the browser's automatic gain control, which this chain has to turn
+ * off (it raises the room in every pause). Without it a headset delivering -35 to -25 dBFS was sent at that level,
+ * and callers said the agent was very quiet. The level only moves while the denoised signal is above the gate's
+ * open threshold -- while the agent is speaking -- and holds through every pause, so it lifts the voice without
+ * ever lifting the room on its own. A limiter always follows it.
+ *
+ * The gate stays ahead of the level, on purpose. Its job is to tell the agent from the room by how loud each is
+ * at a close-talk microphone, and that gap is a fact of the acoustics. Levelled first, a quiet headset lifted by
+ * 15 dB would carry the room 15 dB nearer every fixed threshold, and the strengths would mean something different
+ * on every microphone. Ahead of the level, the gate and the level also agree on what speech is: the level
+ * measures the same denoised signal against the same open threshold the gate uses. A voice so quiet that the
+ * gate cuts its edges at Medium or High needs the Low strength (or the microphone moved closer) either way --
+ * no gain placed after the gate could restore what it cut.
  *
  * The denoiser removes what it recognizes as not-speech, including much of the babble of nearby voices. The gate
  * handles what is left: a close-talk headset hears its wearer 20 dB or more above anyone else in the room, so
@@ -101,6 +117,15 @@
     // How often the raw microphone level is read for the dead-microphone check.
     var SOURCE_METER_INTERVAL_MS = 200;
 
+    // How often the automatic voice level measures the denoised signal and decides its gain, and how many samples
+    // each measurement covers (2048 at 48 kHz is about 43 ms, so consecutive reads cover nearly all the audio).
+    var AUTO_LEVEL_INTERVAL_MS = 50;
+    var AUTO_LEVEL_FFT_SIZE = 2048;
+
+    // How quickly the gain node follows a new decision (the time constant of setTargetAtTime): short enough to
+    // track the decisions, long enough that a step is not heard as a click.
+    var AUTO_LEVEL_SMOOTHING_S = 0.03;
+
     // The peak level of the RAW capture (0..1 RMS) at or under which a window is digital silence. With the gate
     // in the chain the send track is legitimately near-silent whenever the agent listens, so the dead-microphone
     // check reads the capture before processing instead; any working microphone, even in a quiet room, sits far
@@ -135,13 +160,22 @@
     /*
      * A short token for the capture readout and the call quality report:
      *   state 'off'     -> 'vi=off'
-     *   state 'active'  -> 'vi=gtcrn+gate' (the engine actually running, which may be the fallback)
+     *   state 'active'  -> 'vi=gtcrn+gate' (the engine actually running, which may be the fallback), with
+     *                      '+level(+9dB)' when the automatic voice level is on, showing the gain it applies now
      *   state 'pending' -> 'vi=pending' (waiting for a click to start the audio engine)
      *   state 'failed'  -> 'vi=failed'
      */
-    function describeVoiceIsolation(state, engine) {
+    function describeVoiceIsolation(state, engine, autoLevelGainDb) {
         if (state === 'active') {
-            return 'vi=' + (engine || '?') + '+gate';
+            var label = 'vi=' + (engine || '?') + '+gate';
+
+            if (typeof autoLevelGainDb === 'number' && isFinite(autoLevelGainDb)) {
+                var rounded = Math.round(autoLevelGainDb);
+
+                label += '+level(' + (rounded >= 0 ? '+' : '') + rounded + 'dB)';
+            }
+
+            return label;
         }
 
         if (state === 'pending' || state === 'failed') {
@@ -252,14 +286,19 @@
      * options.engine            - 'gtcrn' or 'rnnoise' (anything else is the default). GTCRN falls back to RNNoise
      *                             when it cannot load.
      * options.strength          - 'low', 'medium' or 'high': the gate settings.
-     * options.boostDb           - the microphone boost, added after the gate (see mic-boost.js).
+     * options.autoLevel         - the automatic voice level (on unless false; see auto-level.js).
+     * options.autoLevelInitialDb- the gain the automatic level starts from, for example the one it had reached
+     *                             on this microphone before the chain was rebuilt (unity when absent).
+     * options.boostDb           - the microphone boost, added after the auto level as a manual trim (see
+     *                             mic-boost.js).
      * options.assetBaseUrl      - where the vendored worklets and wasm files are served from.
      * options.audioContext      - AudioContext constructor (defaults to the browser's).
      * options.audioWorkletNode  - AudioWorkletNode constructor (defaults to the browser's).
-     * options.fetch, options.webAssembly, options.timers - injectable for the tests.
+     * options.fetch, options.webAssembly, options.timers, options.now - injectable for the tests.
      *
-     * Resolves to { stream, boosted, isolated: true, engine, requestedEngine, strength, label, state(),
-     * readSourcePeak(), dispose() }. Rejects with an Error whose voiceIsolationReason is one of:
+     * Resolves to { stream, boosted, isolated: true, autoLevel, engine, requestedEngine, strength, label, state(),
+     * readSourcePeak(), readAutoLevelGainDb(), dispose() }. Rejects with an Error whose voiceIsolationReason is
+     * one of:
      *   'unsupported' - the browser lacks AudioWorklet, WebAssembly, or the asset URL is not configured.
      *   'load-failed' - no engine's worklet or wasm file could be loaded.
      *   'suspended'   - the browser would not start the audio engine without a click on the page.
@@ -280,6 +319,15 @@
         var gateSettings = noiseGateSettingsFor(strength);
         var connectBoostStage = softPhone.connectBoostStage;
         var clampBoostDb = softPhone.clampBoostDb;
+        var nextAutoLevelGainDb = softPhone.nextAutoLevelGainDb;
+        var clampAutoLevelGainDb = softPhone.clampAutoLevelGainDb;
+        var amplitudeToDb = softPhone.amplitudeToDb;
+        var dbToGain = softPhone.dbToGain;
+        var now = typeof settings.now === 'function' ? settings.now : function () { return Date.now(); };
+        var autoLevelOn = settings.autoLevel !== false && typeof nextAutoLevelGainDb === 'function';
+        // The level decides on the same threshold the gate opens at, so it moves exactly when the agent is let
+        // through (see the header).
+        var autoLevelOptions = { speechThresholdDb: gateSettings.openThreshold };
 
         if (!sourceStream || !baseUrl || !fetchFn || !isVoiceIsolationSupported(settings)) {
             return Promise.reject(reasonError('unsupported',
@@ -305,6 +353,8 @@
 
         var nodes = [];
         var meterTimer = null;
+        var levelTimer = null;
+        var autoLevelGainDb = autoLevelOn ? clampAutoLevelGainDb(settings.autoLevelInitialDb) : null;
         var disposed = false;
         var timedOut = false;
         var engine = null;
@@ -326,6 +376,11 @@
                 meterTimer = null;
             }
 
+            if (levelTimer !== null) {
+                timers.clearInterval(levelTimer);
+                levelTimer = null;
+            }
+
             // Frees the model's memory in the worklet. The context closing below ends the worklet scope anyway;
             // this is the polite half.
             try {
@@ -341,6 +396,60 @@
             });
 
             closeQuietly(context);
+        }
+
+        // The automatic voice level: meters the denoised signal (ahead of the gate, the floor and the level
+        // itself) and steers the level gain with nextAutoLevelGainDb. Main-thread polling is plenty here -- the
+        // decisions are slow by design, and each one is bounded by the time that actually passed, so a timer the
+        // browser delays only slows the level down; it can never make it jump.
+        function startAutoLevel(input, level, destination) {
+            var levelAnalyser = context.createAnalyser();
+            levelAnalyser.fftSize = AUTO_LEVEL_FFT_SIZE;
+            nodes.push(levelAnalyser);
+
+            var levelSink = context.createGain();
+            levelSink.gain.value = 0;
+            nodes.push(levelSink);
+
+            input.connect(levelAnalyser);
+            levelAnalyser.connect(levelSink);
+            levelSink.connect(destination);
+
+            var levelData = new Float32Array(levelAnalyser.fftSize);
+            var lastDecision = now();
+
+            levelTimer = timers.setInterval(function () {
+                if (disposed) {
+                    return;
+                }
+
+                var at = now();
+                var elapsed = at - lastDecision;
+
+                lastDecision = at;
+
+                try {
+                    levelAnalyser.getFloatTimeDomainData(levelData);
+                } catch (error) {
+                    return;
+                }
+
+                var next = nextAutoLevelGainDb(autoLevelGainDb, amplitudeToDb(frameRms(levelData)), autoLevelOptions, elapsed);
+
+                if (next === autoLevelGainDb) {
+                    return;
+                }
+
+                autoLevelGainDb = next;
+
+                try {
+                    if (typeof level.gain.setTargetAtTime === 'function') {
+                        level.gain.setTargetAtTime(dbToGain(next), context.currentTime, AUTO_LEVEL_SMOOTHING_S);
+                    } else {
+                        level.gain.value = dbToGain(next);
+                    }
+                } catch (error) { /* best effort: the previous gain stays */ }
+            }, AUTO_LEVEL_INTERVAL_MS);
         }
 
         // Loads one engine: its worklet module and its wasm binary, in parallel.
@@ -424,7 +533,21 @@
                 floor.connect(mix);
 
                 var output = mix;
-                var boost = typeof connectBoostStage === 'function' ? connectBoostStage(context, mix, settings.boostDb) : null;
+                var level = null;
+
+                if (autoLevelOn) {
+                    level = context.createGain();
+                    level.gain.value = dbToGain(autoLevelGainDb);
+                    nodes.push(level);
+                    mix.connect(level);
+                    output = level;
+                }
+
+                // The boost is the agent's manual trim on top of the auto level; the limiter after it is always
+                // there while the auto level is, so neither can clip.
+                var boost = typeof connectBoostStage === 'function'
+                    ? connectBoostStage(context, output, settings.boostDb, { alwaysLimit: autoLevelOn })
+                    : null;
 
                 if (boost) {
                     boost.nodes.forEach(function (node) { nodes.push(node); });
@@ -433,6 +556,10 @@
 
                 var destination = context.createMediaStreamDestination();
                 output.connect(destination);
+
+                if (level) {
+                    startAutoLevel(denoiser, level, destination);
+                }
 
                 // The raw-capture meter for the dead-microphone check (see RAW_CAPTURE_SILENT_LEVEL). Routed into
                 // the destination through a silent gain so every browser pulls it; it adds nothing to the call.
@@ -460,13 +587,7 @@
                         return;
                     }
 
-                    var total = 0;
-
-                    for (var i = 0; i < meterData.length; i++) {
-                        total += meterData[i] * meterData[i];
-                    }
-
-                    sourcePeak = Math.max(sourcePeak, Math.sqrt(total / meterData.length));
+                    sourcePeak = Math.max(sourcePeak, frameRms(meterData));
                     sourceReads++;
                 }, SOURCE_METER_INTERVAL_MS);
 
@@ -481,10 +602,15 @@
                 stream: stream,
                 boosted: boosted,
                 isolated: true,
+                autoLevel: autoLevelOn,
                 engine: engine,
                 requestedEngine: requestedEngine,
                 strength: strength,
-                label: describeVoiceIsolation('active', engine),
+                label: describeVoiceIsolation('active', engine, autoLevelGainDb),
+                // The gain the automatic voice level applies now, in dB, or null when it is off.
+                readAutoLevelGainDb: function () {
+                    return autoLevelGainDb;
+                },
                 // The audio engine's state: anything but 'running' means the far end hears silence.
                 state: function () {
                     return disposed ? 'closed' : context.state;
@@ -532,6 +658,17 @@
         });
 
         return guarded;
+    }
+
+    // Root-mean-square amplitude of one waveform read.
+    function frameRms(samples) {
+        var total = 0;
+
+        for (var i = 0; i < samples.length; i++) {
+            total += samples[i] * samples[i];
+        }
+
+        return samples.length ? Math.sqrt(total / samples.length) : 0;
     }
 
     function closeQuietly(context) {

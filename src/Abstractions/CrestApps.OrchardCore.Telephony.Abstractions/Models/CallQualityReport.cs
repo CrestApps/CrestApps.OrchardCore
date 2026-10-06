@@ -71,11 +71,25 @@ public sealed class CallQualityReport
     /// the agent is listening to; this one describes whether the agent can be heard. A sustained value at or
     /// near zero while the call is connected means the caller is hearing silence. It is <c>-1</c> when the
     /// browser reported no capture statistics; check <see cref="CaptureReported"/> before reading it.
+    /// With voice isolation on, the browser reports no capture statistics for the processed track the call sends,
+    /// so the value is the isolation chain's own meter of the raw microphone instead: the loudest RMS amplitude
+    /// in the window, on the same scale as <see cref="CaptureProbeLevel"/>, so the two read as the level into
+    /// and out of the chain.
     /// </summary>
     public double MicrophoneLevel { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether the browser reported capture statistics for this sample. When
+    /// Gets or sets the gain, in dB, that the soft phone's automatic voice level applied to the agent's voice at
+    /// this sample, or <see langword="null"/> when it was not running (voice isolation or the setting off). It
+    /// stands in for the browser's automatic gain control, which voice isolation turns off; read with
+    /// <see cref="MicrophoneLevel"/> and <see cref="CaptureProbeLevel"/> it tells a microphone too quiet to lift
+    /// (gain at its ceiling) from one the level never heard speech from (gain still at unity).
+    /// </summary>
+    public double? AutoLevelGainDb { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the microphone level was measured for this sample -- by the
+    /// browser's capture statistics, or under voice isolation by the chain's own meter. When
     /// <see langword="false"/> the microphone level is unknown rather than silent — a distinction worth keeping,
     /// because reporting an absent measurement as zero would send an agent hunting a microphone that works.
     /// </summary>
