@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telnyx.Models;
@@ -28,6 +29,7 @@ internal sealed class TelnyxRecordingIngestService : ITelnyxRecordingIngestServi
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IRecordingMediaStore _mediaStore;
     private readonly IRecordingErasureGuard _erasureGuard;
+    private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IClock _clock;
     private readonly ILogger<TelnyxRecordingIngestService> _logger;
     private readonly TelnyxOptions _options;
@@ -46,6 +48,7 @@ internal sealed class TelnyxRecordingIngestService : ITelnyxRecordingIngestServi
     /// <param name="clock">The clock.</param>
     /// <param name="telnyxOptions">The Telnyx options carrying the API base address and API key.</param>
     /// <param name="logger">The logger instance.</param>
+    /// <param name="scopeExecutor">The scope executor used to mark a stored recording playable on the call recordings page, in a scope of its own that commits it.</param>
     public TelnyxRecordingIngestService(
         ITelnyxRecordingIngestJobStore jobStore,
         IHttpClientFactory httpClientFactory,
@@ -53,8 +56,10 @@ internal sealed class TelnyxRecordingIngestService : ITelnyxRecordingIngestServi
         IEnumerable<IRecordingErasureGuard> erasureGuards,
         IClock clock,
         IOptionsMonitor<TelnyxOptions> telnyxOptions,
-        ILogger<TelnyxRecordingIngestService> logger)
+        ILogger<TelnyxRecordingIngestService> logger,
+        IContactCenterScopeExecutor scopeExecutor = null)
     {
+        _scopeExecutor = scopeExecutor;
         _jobStore = jobStore;
         _httpClientFactory = httpClientFactory;
         _mediaStore = mediaStore;
@@ -109,7 +114,7 @@ internal sealed class TelnyxRecordingIngestService : ITelnyxRecordingIngestServi
     {
         // Refuse to ingest a recording whose interaction has already been erased (or no longer exists) so a late
         // job can never resurrect deleted media. This is checked before any download or store work is done.
-        if (await IsRecordingErasedAsync(job.InteractionId, cancellationToken))
+        if (await IsRecordingErasedAsync(job, cancellationToken))
         {
             return await CancelErasedIngestAsync(job, nowUtc, cancellationToken);
         }
@@ -164,6 +169,8 @@ internal sealed class TelnyxRecordingIngestService : ITelnyxRecordingIngestServi
 
             job.MediaStored = true;
 
+            await MarkCallRecordingStoredAsync(job);
+
             // Durably record that the encrypted copy exists before attempting the Telnyx source cleanup. If the
             // process crashes after a successful delete but before the job is marked Completed, the retry reloads a
             // job with MediaStored == true and skips the download/store, treating a Telnyx 404 on delete as success.
@@ -174,7 +181,7 @@ internal sealed class TelnyxRecordingIngestService : ITelnyxRecordingIngestServi
 
         // Re-check erasure after the media is stored: an erasure request can land during the download/store window,
         // in which case the media just written must be deleted rather than left orphaned in the store.
-        if (await IsRecordingErasedAsync(job.InteractionId, cancellationToken))
+        if (await IsRecordingErasedAsync(job, cancellationToken))
         {
             return await CancelErasedIngestAsync(job, nowUtc, cancellationToken);
         }
@@ -268,8 +275,53 @@ internal sealed class TelnyxRecordingIngestService : ITelnyxRecordingIngestServi
         }
     }
 
-    private async Task<bool> IsRecordingErasedAsync(string interactionId, CancellationToken cancellationToken)
-        => _erasureGuard is not null && await _erasureGuard.IsRecordingErasedAsync(interactionId, cancellationToken);
+    // A recording of an interaction is guarded by the interaction's erasure; one of an automated voice agent's call or
+    // of a number dialed on the soft phone belongs to no interaction, and is guarded by its call recordings entry.
+    private async Task<bool> IsRecordingErasedAsync(TelnyxRecordingIngestJob job, CancellationToken cancellationToken)
+    {
+        if (_erasureGuard is null)
+        {
+            return false;
+        }
+
+        return string.IsNullOrEmpty(job.InteractionId)
+            ? await _erasureGuard.IsCallRecordingErasedAsync(job.RecordingId, cancellationToken)
+            : await _erasureGuard.IsRecordingErasedAsync(job.InteractionId, cancellationToken);
+    }
+
+    // The call recordings page lists a recording as soon as it is saved, but only plays it once it is stored.
+    private async Task MarkCallRecordingStoredAsync(TelnyxRecordingIngestJob job)
+    {
+        if (_scopeExecutor is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _scopeExecutor.ExecuteAsync(async serviceProvider =>
+            {
+                var catalog = serviceProvider.GetService(typeof(ICallRecordingCatalog)) as ICallRecordingCatalog;
+
+                if (catalog is not null &&
+                    await catalog.MarkStoredAsync(job.RecordingId, job.MediaReference ?? job.RecordingId, CancellationToken.None) &&
+                    _logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation(
+                        "Telnyx recording {RecordingId} is stored and can be played on the call recordings page.",
+                        job.RecordingId.SanitizeLogValue());
+                }
+            });
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // The recording is safely stored either way; only its listing lags, so the job is not failed for it.
+            _logger.LogWarning(
+                ex,
+                "Telnyx recording {RecordingId} was stored, but could not be marked playable on the call recordings page.",
+                job.RecordingId.SanitizeLogValue());
+        }
+    }
 
     private async Task<bool> CancelErasedIngestAsync(TelnyxRecordingIngestJob job, DateTime nowUtc, CancellationToken cancellationToken)
     {

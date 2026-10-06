@@ -321,6 +321,7 @@ public sealed partial class TelnyxTelephonyProvider :
                 CallerDisplayName = callerDisplayName,
                 VoicemailRecipientUserId = voicemailRecipientUserId,
                 RingTimeoutSeconds = ringTimeoutSeconds,
+                DialedByUserId = TryGetMetadataValue(request.Metadata, TelephonyConstants.RequestMetadata.SoftPhoneUserId),
             }.ToClientState(),
         };
 

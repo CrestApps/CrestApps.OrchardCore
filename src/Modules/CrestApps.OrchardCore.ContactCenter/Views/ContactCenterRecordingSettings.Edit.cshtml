@@ -2,14 +2,14 @@
 @model ContactCenterRecordingSettingsViewModel
 
 <p class="alert alert-info">
-    @T["Recording governance is enforced server-side before any recording starts. When recording is disabled or required consent has not been captured, recording is denied and a governance event is recorded."]
+    @T["Calls can be recorded while the Contact Center Call Recording feature is enabled; disable the feature to stop all recording. These rules are enforced server-side before any recording starts: when required consent has not been captured, recording is denied and a governance event is recorded."]
 </p>
 
 <div class="mb-3">
     <div class="form-check">
-        <input type="checkbox" asp-for="RecordingEnabled" class="form-check-input" />
-        <label asp-for="RecordingEnabled" class="form-check-label">@T["Recording enabled"]</label>
-        <span class="hint dashed">@T["When disabled, no interaction may start recording for this tenant regardless of provider capability."]</span>
+        <input type="checkbox" asp-for="RecordAllCalls" class="form-check-input" />
+        <label asp-for="RecordAllCalls" class="form-check-label">@T["Record every call automatically"]</label>
+        <span class="hint dashed">@T["Starts recording as soon as a call connects to an agent, or as soon as an AI agent's call is answered. When unchecked, a call is recorded only when a workflow or a supervisor starts it."]</span>
     </div>
 </div>
 

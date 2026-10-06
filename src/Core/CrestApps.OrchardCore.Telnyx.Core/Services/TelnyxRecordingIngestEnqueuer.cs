@@ -2,6 +2,7 @@ using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 using YesSql;
@@ -22,6 +23,7 @@ public sealed class TelnyxRecordingIngestEnqueuer : ITelnyxRecordingSavedHandler
     private readonly IAgentProfileManager _agentProfileManager;
     private readonly IContactCenterEventPublisher _eventPublisher;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
+    private readonly ICallRecordingCatalog _callRecordingCatalog;
     private readonly IClock _clock;
     private readonly ILogger<TelnyxRecordingIngestEnqueuer> _logger;
 
@@ -35,6 +37,8 @@ public sealed class TelnyxRecordingIngestEnqueuer : ITelnyxRecordingSavedHandler
     /// <param name="interactionManager">The interaction manager used to stamp the recording retrieval handle.</param>
     /// <param name="agentProfileManager">The agent profile manager used to resolve a voicemail's recipient agent.</param>
     /// <param name="eventPublisher">The Contact Center event publisher used to surface a saved voicemail to its recipient.</param>
+    /// <param name="scopeExecutor">The scope executor used to ingest the recording right after the webhook commits.</param>
+    /// <param name="callRecordingCatalogs">The call recordings catalog, when the Call Recording feature is enabled, which lists each recorded call.</param>
     /// <param name="clock">The clock used to stamp the job's creation and first-due time.</param>
     /// <param name="logger">The logger instance.</param>
     public TelnyxRecordingIngestEnqueuer(
@@ -43,9 +47,11 @@ public sealed class TelnyxRecordingIngestEnqueuer : ITelnyxRecordingSavedHandler
         IEnumerable<IAgentProfileManager> agentProfileManagers,
         IContactCenterEventPublisher eventPublisher,
         IContactCenterScopeExecutor scopeExecutor,
+        IEnumerable<ICallRecordingCatalog> callRecordingCatalogs,
         IClock clock,
         ILogger<TelnyxRecordingIngestEnqueuer> logger)
     {
+        _callRecordingCatalog = callRecordingCatalogs.FirstOrDefault();
         _jobStore = jobStore;
         _interactionManager = interactionManager;
         _agentProfileManager = agentProfileManagers.FirstOrDefault();
@@ -71,6 +77,13 @@ public sealed class TelnyxRecordingIngestEnqueuer : ITelnyxRecordingSavedHandler
         if (!TelnyxRecordingClientState.TryParse(callEvent.ClientState, out var recordingState))
         {
             return false;
+        }
+
+        // An automated voice agent's call, or a number dialed on the soft phone, is not an interaction: it is listed
+        // on the call recordings page and ingested on its own.
+        if (string.IsNullOrWhiteSpace(recordingState.InteractionId))
+        {
+            return await EnqueueCallRecordingAsync(callEvent, recordingState, cancellationToken);
         }
 
         // Stamp the interaction with the recording's retrieval handle now that the Telnyx recording id is known.
@@ -114,6 +127,23 @@ public sealed class TelnyxRecordingIngestEnqueuer : ITelnyxRecordingSavedHandler
         {
             await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
 
+            // A voicemail is listened to from the voicemail inbox; every other recording of the call is listed on the
+            // call recordings page.
+            if (!recordingState.IsVoicemail && _callRecordingCatalog is not null)
+            {
+                await _callRecordingCatalog.RegisterAsync(new CallRecordingRegistration
+                {
+                    Source = CallRecordingSource.ContactCenter,
+                    ProviderName = TelnyxConstants.ProviderTechnicalName,
+                    ProviderRecordingId = callEvent.RecordingId,
+                    StorageReference = callEvent.RecordingId,
+                    Format = TelnyxConstants.Recording.Format,
+                    InteractionId = interaction.ItemId,
+                    StartedUtc = callEvent.RecordingStartedUtc,
+                    EndedUtc = callEvent.RecordingEndedUtc,
+                }, cancellationToken);
+            }
+
             if (publishVoicemailProjection)
             {
                 await _eventPublisher.PublishAsync(BuildVoicemailProjectionEvent(interaction, callEvent.RecordingId), cancellationToken);
@@ -145,6 +175,72 @@ public sealed class TelnyxRecordingIngestEnqueuer : ITelnyxRecordingSavedHandler
                 ex,
                 "Failed to enqueue Telnyx recording {RecordingId} for ingestion.",
                 callEvent.RecordingId.SanitizeLogValue());
+
+            return false;
+        }
+    }
+
+    private async Task<bool> EnqueueCallRecordingAsync(
+        TelnyxCallEvent callEvent,
+        TelnyxRecordingClientState recordingState,
+        CancellationToken cancellationToken)
+    {
+        // Such a recording is only started while the Call Recording feature is enabled. One saved after the feature
+        // was turned off has nowhere to be listed, so it is left on Telnyx rather than stored where nobody can find it.
+        if (_callRecordingCatalog is null)
+        {
+            _logger.LogWarning(
+                "Telnyx recording {RecordingId} was saved, but the Contact Center Call Recording feature is not enabled, so it was not stored.",
+                callEvent.RecordingId.SanitizeLogValue());
+
+            return false;
+        }
+
+        try
+        {
+            // An AI call the AI handed to a person became an interaction partway through. The recording kept running
+            // across the hand-off, so it is tied to that interaction too: the agent who took it then finds it among
+            // their own calls, and erasing the interaction's recording erases this one.
+            var handedOff = recordingState.IsAiCall
+                ? await _interactionManager.FindByActivityIdAsync(recordingState.ActivityId, cancellationToken)
+                : null;
+
+            await _callRecordingCatalog.RegisterAsync(new CallRecordingRegistration
+            {
+                InteractionId = handedOff?.ItemId,
+                Source = recordingState.IsAiCall ? CallRecordingSource.AiAgent : CallRecordingSource.SoftPhone,
+                ProviderName = TelnyxConstants.ProviderTechnicalName,
+                ProviderRecordingId = callEvent.RecordingId,
+                StorageReference = callEvent.RecordingId,
+                Format = TelnyxConstants.Recording.Format,
+                ActivityItemId = recordingState.ActivityId,
+                TelephonyCallId = recordingState.TelephonyCallId,
+                AgentUserId = recordingState.AgentUserId,
+                CustomerAddress = recordingState.CustomerNumber,
+                Direction = recordingState.IsInbound == true ? InteractionDirection.Inbound : InteractionDirection.Outbound,
+                StartedUtc = callEvent.RecordingStartedUtc,
+                EndedUtc = callEvent.RecordingEndedUtc,
+            }, cancellationToken);
+
+            await _jobStore.EnqueueAsync(
+                interactionId: null,
+                callEvent.RecordingId,
+                TelnyxConstants.Recording.Format,
+                _clock.UtcNow,
+                cancellationToken);
+
+            _scopeExecutor.ScheduleAfterCommit<ITelnyxRecordingIngestService>(
+                ingestService => ingestService.ProcessDueAsync(CancellationToken.None));
+
+            return true;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException and not ConcurrencyException)
+        {
+            _logger.LogError(
+                ex,
+                "Failed to enqueue Telnyx recording {RecordingId} of a {Kind} call for ingestion.",
+                callEvent.RecordingId.SanitizeLogValue(),
+                recordingState.Kind.SanitizeLogValue());
 
             return false;
         }

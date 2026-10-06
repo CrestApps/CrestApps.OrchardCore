@@ -226,6 +226,12 @@ public sealed partial class RealtimeVoiceConversationRunner
         var closingRequested = false;
         var utteranceInFlight = false;
 
+        // When the line being transcribed began. A transcript only arrives once a line is over, so each line is
+        // stamped with when it started instead -- the caller's first syllable, the assistant's first audio played --
+        // and the call recordings page can play it from there. Empty until the line starts, and cleared once stored.
+        DateTime? callerLineStartedUtc = null;
+        DateTime? assistantLineStartedUtc = null;
+
         // Whether the assistant has finished a line since the customer last spoke. A request to end the call that
         // arrives with nothing in flight means the goodbye is already said only when the assistant has answered
         // the customer's last words. The model does not always speak first: live, after the customer said "bye",
@@ -325,6 +331,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                             // to actually finish before it hangs up. Both mean "finished playing", not "arrived".
                             // Where it plays is kept too, so a caller who talks over it can have it taken back.
                             var startsTicks = ExtendAssistantPlayback(speech.Length);
+                            assistantLineStartedUtc ??= new DateTime(startsTicks, DateTimeKind.Utc);
                             bargeIn.Queued(conversationEvent.ResponseId, conversationEvent.ItemId, startsTicks, speech.Length, DateTime.UtcNow.Ticks);
                             _meter?.AssistantAudioScheduled(startsTicks, AssistantBargeIn.DurationTicks(speech.Length));
                         }
@@ -354,6 +361,10 @@ public sealed partial class RealtimeVoiceConversationRunner
                     case RealtimeConversationEventType.UserSpeechStarted:
                         _meter?.CallerSpeechStarted(DateTime.UtcNow.Ticks);
 
+                        // The first start since the last transcript: a pause mid-sentence starts speech again, but
+                        // the line it belongs to began at the first one.
+                        callerLineStartedUtc ??= _clock.UtcNow;
+
                         // First, while it is still known whether the line being talked over is the closing one:
                         // a caller talking over the assistant has to stop hearing it, and the provider stopping
                         // the model does not do that on its own.
@@ -381,6 +392,12 @@ public sealed partial class RealtimeVoiceConversationRunner
 
                     case RealtimeConversationEventType.ResponseStarted:
                     case RealtimeConversationEventType.UserTurnCommitted:
+                        // A new response is a new line, even when the last one was cut off before its transcript.
+                        if (conversationEvent.Type == RealtimeConversationEventType.ResponseStarted)
+                        {
+                            assistantLineStartedUtc = null;
+                        }
+
                         // The detector commits the caller's turn once it hears them stop, which is the only end of
                         // their speech the session reports.
                         if (conversationEvent.Type == RealtimeConversationEventType.UserTurnCommitted)
@@ -413,11 +430,14 @@ public sealed partial class RealtimeVoiceConversationRunner
 
                         // Recorded so the call is concluded, summarized and dispositioned exactly the way a
                         // turn-based one is: everything downstream reads the transcript, not the audio.
-                        await StorePromptAsync(context, ChatRole.User, conversationEvent.Text, cancellationToken);
+                        await StorePromptAsync(context, ChatRole.User, conversationEvent.Text, callerLineStartedUtc, cancellationToken);
+                        callerLineStartedUtc = null;
 
                         break;
 
                     case RealtimeConversationEventType.UserTranscriptFailed:
+                        callerLineStartedUtc = null;
+
                         // The provider took an utterance and could not transcribe it. Said at information level
                         // rather than debug because it is not a detail: a turn the caller took has been lost, the
                         // model is still waiting for them, and the caller believes they have already answered.
@@ -440,6 +460,9 @@ public sealed partial class RealtimeVoiceConversationRunner
                         var spoken = assistantText.Length > 0 ? assistantText.ToString() : conversationEvent.Text;
                         assistantText.Clear();
 
+                        var lineStartedUtc = assistantLineStartedUtc;
+                        assistantLineStartedUtc = null;
+
                         // A line the customer never heard is not part of the conversation, so it is not written
                         // to the transcript either -- the record should say what was said on the call.
                         if (goodbyeSaid)
@@ -447,7 +470,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                             break;
                         }
 
-                        await StorePromptAsync(context, ChatRole.Assistant, spoken, cancellationToken);
+                        await StorePromptAsync(context, ChatRole.Assistant, spoken, lineStartedUtc, cancellationToken);
 
                         utteranceInFlight = false;
                         Volatile.Write(ref spokeSinceCaller, true);
@@ -538,6 +561,7 @@ public sealed partial class RealtimeVoiceConversationRunner
         RealtimeVoiceConversationContext context,
         ChatRole role,
         string content,
+        DateTime? spokenUtc,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(content))
@@ -546,6 +570,13 @@ public sealed partial class RealtimeVoiceConversationRunner
         }
 
         var now = _clock.UtcNow;
+
+        // When the line began, when the session reported it; otherwise when its transcript finished arriving. The
+        // assistant's line can start a moment from now, queued behind the audio still playing. A start more than a
+        // minute away belongs to a line that was never transcribed, not to this one.
+        var saidUtc = spokenUtc is { } started && (now - started).Duration() < TimeSpan.FromMinutes(1)
+            ? started
+            : now;
 
         await _promptStore.CreateAsync(new AIChatSessionPrompt
         {
@@ -558,7 +589,7 @@ public sealed partial class RealtimeVoiceConversationRunner
             // read back in CreatedUtc order every realtime turn collapses onto the same instant — so the call
             // review is handed a conversation whose speakers are interleaved in arbitrary order, and it
             // dispositions the call off that. A two-minute answered call came back as "No Answer" this way.
-            CreatedUtc = now,
+            CreatedUtc = saidUtc,
         }, cancellationToken);
 
         context.Session.LastActivityUtc = now;

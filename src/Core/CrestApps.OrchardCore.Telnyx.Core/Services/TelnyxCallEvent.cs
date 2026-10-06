@@ -81,6 +81,16 @@ public sealed class TelnyxCallEvent
     public string RecordingId { get; set; }
 
     /// <summary>
+    /// Gets or sets the UTC time the recording started, when the event is a <c>call.recording.saved</c>.
+    /// </summary>
+    public DateTime? RecordingStartedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time the recording ended, when the event is a <c>call.recording.saved</c>.
+    /// </summary>
+    public DateTime? RecordingEndedUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets the recognized transcript text, when the event is a <c>call.transcription</c>.
     /// </summary>
     public string TranscriptionText { get; set; }

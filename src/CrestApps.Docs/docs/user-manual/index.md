@@ -53,6 +53,7 @@ What you see in the app depends on your role. Most people are not administrators
 | **Interaction Center > Live dashboard** | The supervisor's real-time view of queues and agents. |
 | **Interaction Center > Shared voicemail** | Voicemail left for a queue rather than one person. |
 | **Interaction Center > My voicemail greeting** | The greeting callers hear when you miss a call. |
+| **Interaction Center > Call recordings** | Recorded calls to search and play back, with the transcript of AI calls. |
 | **Interaction Center > Management** | The manager's setup screens: subject flows, dispositions, campaigns, load activities, bulk activity management, queues, skills, business hours, agent states, entry points, voice media, dialer profiles, extensions and omnichannel addresses. |
 | **Messaging** | The shared SMS inbox, broadcasts and message templates. |
 | **Artificial Intelligence** | AI profiles, templates, provider connections, deployments and tool instances. |
@@ -67,7 +68,7 @@ What you see in the app depends on your role. Most people are not administrators
 - **Building the CRM**: [contacts](contacts.md), [leads, accounts and opportunities](leads-accounts-opportunities.md), [subjects](subjects.md), [dispositions](dispositions.md), [subject flows](subject-flows.md), [campaigns](campaigns.md), [omnichannel addresses](channel-endpoints.md) and [cadences](cadences.md).
 - **Loading and Managing Work**: [load activities](load-inventory.md), [automated AI SMS and voice](automated-ai.md), [activities](activities.md), [bulk activities](bulk-activities.md) and [numbers not in service](numbers-not-in-service.md).
 - **Setting Up the Contact Center**: [queues](queues.md), [skills and entitlements](skills-and-entitlements.md), [agent states](agent-states.md), [business hours](business-hours.md), [entry points and IVR menus](entry-points-and-ivr.md), [voice media](voice-media.md), [dialer profiles](dialer-profiles.md), [extensions](extensions.md) and [Contact Center settings](contact-center-settings.md).
-- **Working in the Contact Center**: the [agent workspace](agent-workspace.md), [calls](calls.md), [voicemail](voicemail.md), the [messaging workspace](messaging.md), the [live dashboard](live-dashboard.md), [reports](reports.md) and [workflows](workflows.md).
+- **Working in the Contact Center**: the [agent workspace](agent-workspace.md), [calls](calls.md), [voicemail](voicemail.md), [call recordings](call-recordings.md), the [messaging workspace](messaging.md), the [live dashboard](live-dashboard.md), [reports](reports.md) and [workflows](workflows.md).
 - **Phone Tools**: [phone and SMS setup](telephony-settings.md), the [soft phone](soft-phone.md), and the [browser extension and Windows app](phone-apps.md).
 - **Site Administration**: [users](administration/users.md), [roles](administration/roles.md), [content access](administration/content-access-control.md), [content fields](administration/content-fields.md), [import and export](administration/import-and-export.md), [Do Not Call lists](administration/do-not-call-lists.md), [phone number verification](administration/phone-number-verification.md) and [time zones](administration/time-zones.md).
 - **[Troubleshooting](troubleshooting.md)**: what to do when something doesn't work as expected.

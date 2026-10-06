@@ -47,6 +47,12 @@
   },
   {
     "inputs": [
+      "Assets/js/contact-center-call-recording.js"
+    ],
+    "output": "wwwroot/scripts/contact-center-call-recording.js"
+  },
+  {
+    "inputs": [
       "Assets/js/ivr-menu/ivr-flow-model.js",
       "Assets/js/ivr-menu/ivr-menu-editor.js"
     ],

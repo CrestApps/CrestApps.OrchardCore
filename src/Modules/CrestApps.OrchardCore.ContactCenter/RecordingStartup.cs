@@ -3,6 +3,8 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Drivers;
 using CrestApps.OrchardCore.ContactCenter.Endpoints;
 using CrestApps.OrchardCore.ContactCenter.Handlers;
+using CrestApps.OrchardCore.ContactCenter.Indexes;
+using CrestApps.OrchardCore.ContactCenter.Migrations;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Drivers;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Models;
@@ -13,9 +15,13 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.AuditTrail.Services.Models;
+using OrchardCore.Data;
+using OrchardCore.Data.Migration;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
+using OrchardCore.Navigation;
+using OrchardCore.Security.Permissions;
 using OrchardCore.Workflows.Helpers;
 
 namespace CrestApps.OrchardCore.ContactCenter;
@@ -37,10 +43,27 @@ public sealed class RecordingStartup : StartupBase
         // feature), so voicemail playback can reuse the same governance without enabling full call recording.
         services.AddScoped<IContactCenterEventHandler, RecordingMediaDeletionHandler>();
         services.AddScoped<IRecordingErasureGuard, RecordingErasureGuard>();
+
+        // Recordings start on their own when the tenant records every call, and every recording a provider saves is
+        // listed on the call recordings page.
+        services.AddScoped<IContactCenterEventHandler, AutomaticCallRecordingHandler>();
+        services
+            .AddScoped<ICallRecordingStore, CallRecordingStore>()
+            .AddScoped<ICallRecordingCatalog, CallRecordingCatalog>()
+            .AddScoped<IContactCenterEventHandler, CallRecordingErasureHandler>()
+            .AddIndexProvider<CallRecordingIndexProvider>()
+            .AddDataMigration<CallRecordingIndexMigrations>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, SecurePauseAutoResumeBackgroundTask>());
 
         // Recording and monitoring settings screens.
         services.AddSiteDisplayDriver<ContactCenterRecordingSettingsDisplayDriver>();
+
+        // The call recordings page: search, playback and the transcript beside it.
+        services
+            .AddPermissionProvider<CallRecordingPermissionProvider>()
+            .AddNavigationProvider<ContactCenterCallRecordingsAdminMenu>()
+            .AddResourceConfiguration<ContactCenterCallRecordingsResourceConfiguration>()
+            .AddScoped<ICallRecordingTranscriptProvider, AIConversationCallRecordingTranscriptProvider>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

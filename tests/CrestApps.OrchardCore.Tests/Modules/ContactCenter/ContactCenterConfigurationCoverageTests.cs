@@ -26,6 +26,7 @@ public sealed class ContactCenterConfigurationCoverageTests
         ["AgentSession"] = "Runtime state. One row per signed-in agent, heartbeat driven.",
         ["CallSession"] = "Runtime state. One row per call in progress or completed.",
         ["CallQualityRecord"] = "Runtime state. One measurement per ended call leg, produced by traffic.",
+        ["CallRecording"] = "Communication history. One row per recorded call, produced by traffic; its media lives in this environment's encrypted store.",
         ["CallbackRequest"] = "Runtime state. One row per caller waiting to be called back.",
         ["SharedVoicemail"] = "Runtime state. One row per message a caller left in a queue's shared voicemail box; its recording lives on an interaction that does not exist in another environment.",
         ["ContactCenterEventMetric"] = "Derived state. Aggregated counters rebuilt by projecting events.",

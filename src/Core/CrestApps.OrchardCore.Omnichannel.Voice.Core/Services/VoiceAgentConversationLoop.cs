@@ -497,7 +497,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         var turnsBefore = prompts.Count;
         var customerHadSpoken = prompts.Any(prompt => prompt.Role == ChatRole.User && !prompt.IsGeneratedPrompt && !string.IsNullOrWhiteSpace(prompt.Content));
 
-        await StorePromptAsync(session, ChatRole.User, caller, cancellationToken);
+        await StorePromptAsync(session, ChatRole.User, caller, EstimateCallerLineStart(voiceEvent, caller, prompts), cancellationToken);
 
         // A recording answering is not somebody to converse with, and must never be read as the customer's reply.
         if (await HandleVoicemailTurnAsync(voiceEvent, media, activity, profile, session, turnsBefore, customerHadSpoken, caller, stopListening, cancellationToken))
@@ -769,19 +769,5 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
             : activity.TextToSpeechVoiceId.Trim();
 
         return media.SpeakAsync(providerCallId, text, voice: voice, language: "en-US", cancellationToken: cancellationToken);
-    }
-
-    private async Task StorePromptAsync(AIChatSession session, ChatRole role, string content, CancellationToken cancellationToken)
-    {
-        await _promptStore.CreateAsync(new AIChatSessionPrompt
-        {
-            ItemId = UniqueId.GenerateId(),
-            SessionId = session.SessionId,
-            Role = role,
-            Content = content,
-        }, cancellationToken);
-
-        session.LastActivityUtc = _clock.UtcNow;
-        await _chatSessionManager.SaveAsync(session, cancellationToken);
     }
 }
