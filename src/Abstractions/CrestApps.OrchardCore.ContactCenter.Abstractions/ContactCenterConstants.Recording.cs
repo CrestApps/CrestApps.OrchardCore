@@ -42,17 +42,12 @@ public static partial class ContactCenterConstants
     public static class RecordingGovernanceDenyReason
     {
         /// <summary>
-        /// Recording is disabled for the tenant by the recording governance policy.
-        /// </summary>
-        public const string RecordingDisabled = "recordingDisabled";
-
-        /// <summary>
         /// Recording requires explicit party consent that has not been captured on the interaction.
         /// </summary>
         public const string ConsentRequired = "consentRequired";
 
         /// <summary>
-        /// Recording is permitted, but calls are not recorded automatically.
+        /// Calls are not recorded automatically; a workflow or a supervisor has to start each recording.
         /// </summary>
         public const string AutomaticRecordingOff = "automaticRecordingOff";
     }

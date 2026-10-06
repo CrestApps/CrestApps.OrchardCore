@@ -1524,7 +1524,6 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public bool LegalHoldByDefault { get; set; }
         public int MaxSecurePauseSeconds { get; set; }
         public bool RecordAllCalls { get; set; }
-        public bool RecordingEnabled { get; set; }
         public bool RequireExplicitConsent { get; set; }
         public bool RequirePauseReason { get; set; }
         public int RetentionDays { get; set; }

@@ -379,9 +379,9 @@ Declare the result once the run passes:
 }
 ```
 
-### Recording ships off by default
+### Recording follows the feature
 
-Because the unverified-audio risk compounds with the recording media-lifecycle and erasure risk, **recording is disabled by default** (`ContactCenterRecordingSettings.RecordingEnabled` defaults to `false`). A fresh tenant records nothing until an operator enables it in the Recording governance section of the Contact Center settings screen (which requires the separate **Contact Center Recording – Administration** feature to be enabled), which should happen only after the base-voice acceptance run passes for the deployment. The `Recording` provider capability stays advertised — the media path is implemented — and `Monitor`, `Whisper`, and `Barge` remain advertised and enabled; only the recording *policy* defaults off.
+Recording is permitted exactly while the **Contact Center Call Recording** feature is enabled; there is no separate tenant switch. With the feature on, `ContactCenterRecordingSettings.RecordAllCalls` (default `true`) starts recording every routed or dialed call when it connects to an agent, every automated voice agent call when it is answered, and every number dialed on the soft phone keypad when it is answered. Turning it off leaves recording to workflows and supervisors. Because recording now starts as soon as the feature is enabled, enable it only after the base-voice acceptance run passes for the deployment, and disable the feature to stop all recording. The `Recording` provider capability stays advertised, and `Monitor`, `Whisper`, and `Barge` remain advertised and enabled.
 
 ### Agent secure pause for sensitive-data capture
 

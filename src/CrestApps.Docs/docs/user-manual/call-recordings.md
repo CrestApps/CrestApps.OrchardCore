@@ -24,7 +24,7 @@ Every recorded call is listed on one page, whatever kind of call it was. You can
 
 ## Which calls are recorded
 
-Recording must be allowed and switched on in [Contact Center settings](contact-center-settings.md#recording-governance): **Recording enabled** allows it, and **Record every call automatically** makes it happen without anyone pressing a button. With both on:
+Calls are recorded while the **Contact Center Call Recording** feature is enabled and **Record every call automatically** is checked in [Contact Center settings](contact-center-settings.md#recording-governance), which it is by default:
 
 | Call | Recorded from |
 | --- | --- |

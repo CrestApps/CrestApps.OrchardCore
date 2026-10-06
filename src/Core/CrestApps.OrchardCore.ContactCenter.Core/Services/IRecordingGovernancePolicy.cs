@@ -17,8 +17,8 @@ public interface IRecordingGovernancePolicy
     Task<RecordingGovernanceDecision> EvaluateStartAsync(Interaction interaction, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Evaluates whether a call may start recording on its own, without anyone asking: recording must be permitted
-    /// and set to record every call. Consent can never have been captured on a call this is asked about, so a tenant
+    /// Evaluates whether a call may start recording on its own, without anyone asking: the tenant must record every
+    /// call. Consent can never have been captured on a call this is asked about, so a tenant
     /// that requires explicit consent from every party is refused.
     /// </summary>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
