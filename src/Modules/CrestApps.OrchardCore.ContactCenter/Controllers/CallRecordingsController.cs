@@ -278,8 +278,8 @@ public sealed class CallRecordingsController : Controller
             return NotFound();
         }
 
-        // The store decrypts forward only, but a player seeks with byte ranges. The recording is decrypted into a
-        // temporary file the response streams ranges from; the file is deleted as soon as the response closes it.
+        // The store decrypts forward only, but a player seeks with byte ranges. The recording is decrypted into memory
+        // (a temporary file only for very long calls) that the response streams ranges from, and released with it.
         var media = await SeekableRecordingMedia.CreateAsync(source, HttpContext.RequestAborted);
 
         Response.Headers.CacheControl = "private, no-store";
