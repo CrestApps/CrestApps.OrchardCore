@@ -315,7 +315,10 @@ The same panel holds the rest of the agent's audio settings:
 
 | Group | Setting | Description |
 | --- | --- | --- |
-| Microphone processing | **Echo cancellation**, **Noise suppression**, **Automatic gain control** | The browser's microphone processing, each on by default. Changes apply immediately, including on a call in progress. Turn one off at a time if the other party hears the agent hollow, distant, or with artifacts. |
+| Microphone processing | **Voice isolation** | On by default. Removes background noise and the voices of people around the agent before the caller hears them. See [Voice isolation](#voice-isolation). |
+| Microphone processing | **Isolation strength** | **Low**, **Medium** (default), or **High**. How firmly the room is cut while the agent is not speaking. |
+| Microphone processing | **Isolation model** | **Enhanced** (default) or **Light**. Enhanced removes more background voices; Light uses less processing for an older computer. |
+| Microphone processing | **Echo cancellation**, **Noise suppression**, **Automatic gain control** | The browser's own microphone processing. Echo cancellation is on by default. Noise suppression and automatic gain control are off while voice isolation is on, and on when it is off. Changes apply immediately, including on a call in progress. Turn one off at a time if the other party hears the agent hollow, distant, or with artifacts. |
 | Microphone processing | **Microphone boost** | **Off**, **+3 dB**, **+6 dB**, **+9 dB**, or **+12 dB**. Raises the agent's voice before it is sent, with a limiter so loud words do not distort. |
 | Incoming audio | **Audio delay** | **Automatic**, **120 ms**, **80 ms**, **40 ms**, or **20 ms**. How long incoming audio is held before it plays; shorter shortens the pause before the agent hears the other party, but too short makes their voice break up. Applies to the current call. |
 | Connection | **Region** | **Automatic** or a specific provider location (US West, US Central, US East, Canada Central, Europe, Asia Pacific, South Asia). Automatic follows the team's setting and then the provider's own choice. Changing it re-registers the phone, so it waits until the current call ends. |
@@ -329,6 +332,43 @@ compare the round-trip time on the Diagnostics tab before and after changing it.
 removes: a call to an ordinary phone number travels over the telephone network at narrowband quality, so it will
 sound like a landline even when every setting is right, and a browser call bridged to the telephone network
 always has a little more delay than a direct phone-to-phone call.
+
+#### Voice isolation
+
+The browser's own noise suppression removes steady noise such as fans and hum, but it lets the voices of
+people nearby straight through, and automatic gain control makes the room louder every time the agent pauses.
+**Voice isolation** runs the agent's microphone through a speech-enhancement model and then a noise gate,
+inside the browser, before anything is sent:
+
+- The model removes what it recognizes as not the agent's speech, including much of the chatter around them.
+  **Enhanced** uses the GTCRN model, which handles nearby voices best. **Light** uses RNNoise, which needs
+  less processing. If the Enhanced model cannot load, the phone switches to Light by itself.
+- The gate turns the room down while the agent is not speaking. A headset microphone hears its wearer far
+  louder than anyone else in the room, so the gate opens on the agent's voice and closes in the pauses.
+  **Isolation strength** sets how firmly it does this: use **High** on a loud floor, and **Low** if callers
+  say the start or end of the agent's words is cut off.
+- **Microphone boost**, when set, is applied after voice isolation.
+
+Changing any of these applies at once, including on a call in progress. Voice isolation works best with a
+headset microphone close to the mouth; a laptop or webcam microphone hears the room almost as loudly as the
+agent, and no gate can separate the two.
+
+:::note[When voice isolation cannot run]
+Voice isolation needs a browser with AudioWorklet and WebAssembly (current Chrome, Edge and Firefox). Where it
+cannot run, the phone keeps working with the browser's own noise suppression and automatic gain control, and
+the settings panel says so. Browsers also hold back audio processing until the agent has clicked somewhere on
+the page, so right after the page loads the phone may use the browser's processing until the first click,
+then switch over by itself.
+:::
+
+The [Diagnostics](#diagnostics) tab shows what is running on the **capture** line: `vi=gtcrn+gate` or
+`vi=rnnoise+gate` when voice isolation is on, `vi=pending` while it waits for a click, `vi=failed` when it
+cannot run here, and `vi=off` when the agent turned it off. The same value is recorded with each call's quality
+report, and the server log records `voice-isolation-started`, `voice-isolation-pending`,
+`voice-isolation-fallback` and `voice-isolation-unavailable` client diagnostics.
+
+For noise the agent's browser cannot remove, Telnyx can also clean up the audio on its side of the call. See
+[Background noise suppression](telnyx.md#background-noise-suppression).
 
 This matters because a browser's *default* input device is not always the agent's real microphone — a common cause of "the other side can't hear me" is a virtual audio device (for example VB-Audio Virtual Cable) being the system default. The picker lists only real, unambiguous devices so the agent can select their actual microphone; the [Diagnostics](#diagnostics) tab's microphone meter shows which device is live and whether it is producing audio.
 

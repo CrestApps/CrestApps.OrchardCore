@@ -40,7 +40,10 @@ Click the **headset** button:
 | Setting | What it does |
 | --- | --- |
 | **Microphone** / **Speaker** | The devices to use. You can switch during a call. |
-| **Echo cancellation**, **Noise suppression**, **Automatic gain control** | Browser audio clean-up. Leave them on unless support asks you to change them. |
+| **Voice isolation** | On by default. Removes background noise and the voices of people around you before the caller hears you. Works best with a headset microphone close to your mouth. |
+| **Isolation strength** | Low, Medium or High. Use High on a loud floor, and Low if callers say the start or end of your words is cut off. |
+| **Isolation model** | Enhanced removes more background voices. Choose Light if callers hear your voice crackle, which can happen on an older computer. |
+| **Echo cancellation**, **Noise suppression**, **Automatic gain control** | The browser's own audio clean-up. With voice isolation on, noise suppression and automatic gain control are off. Leave these as they are unless support asks you to change them. |
 | **Microphone boost** | Off up to +12 dB, for a quiet microphone. |
 | **Audio delay** | Automatic, or a fixed buffer from 120 down to 20 ms. |
 | **Region** | The provider location closest to you. Changing it re-registers the phone after the current call. |
