@@ -227,6 +227,7 @@ namespace CrestApps.OrchardCore.ContactCenter
         }
         public static class RecordingGovernanceDenyReason
         {
+            public const string AutomaticRecordingOff = "automaticRecordingOff";
             public const string ConsentRequired = "consentRequired";
             public const string RecordingDisabled = "recordingDisabled";
         }
@@ -476,11 +477,18 @@ namespace CrestApps.OrchardCore.ContactCenter
     }
     public interface IRecordingErasureGuard
     {
+        System.Threading.Tasks.Task<bool> IsCallRecordingErasedAsync(string providerRecordingId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> IsRecordingErasedAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface ISecureCaptureTokenSink
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.SecureCaptureTokenResult> TokenizeAsync(CrestApps.OrchardCore.ContactCenter.Models.SecureCaptureField field, string rawValue, string idempotencyKey, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public static class SpokenLineTiming
+    {
+        public const double WordsPerSecond = 2.6D;
+        public static readonly System.TimeSpan MinimumDuration;
+        public static System.TimeSpan EstimateDuration(string text) { }
     }
 }
 namespace CrestApps.OrchardCore.ContactCenter.Models
