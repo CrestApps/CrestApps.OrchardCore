@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -70,6 +71,33 @@ public sealed class DialerProfilesController : ContactCenterCatalogController<Di
     /// <inheritdoc/>
     protected override LocalizedHtmlString DeletedNotification
         => H["The dialer profile has been deleted successfully."];
+
+    /// <inheritdoc/>
+    protected override LocalizedHtmlString ClonedNotification
+        => H["A copy of the dialer profile has been created. Review its settings before using it in a campaign."];
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// A Predictive connect wait is only allowed once the profile's own connected calls show the wait still connects
+    /// an agent in time. The copy has dialed nothing yet, so it starts without a connect wait; keeping it would refuse
+    /// the copy outright.
+    /// </remarks>
+    protected override void InitializeClone(DialerProfile clone, DialerProfile source)
+    {
+        if (RequiresConnectWaitReset(source))
+        {
+            clone.ConnectWaitMilliseconds = 0;
+        }
+    }
+
+    /// <inheritdoc/>
+    protected override async Task OnClonedAsync(DialerProfile clone, DialerProfile source)
+    {
+        if (RequiresConnectWaitReset(source))
+        {
+            await Notifier.InformationAsync(H["The copy starts with no connect wait because it has not measured any connected calls yet. Set it again once the copy has dialed enough calls."]);
+        }
+    }
 
     /// <summary>
     /// Lists the dialer profiles.
@@ -146,4 +174,17 @@ public sealed class DialerProfilesController : ContactCenterCatalogController<Di
     [Admin("contact-center/dialers/delete/{id}", "ContactCenterDialersDelete")]
     public Task<IActionResult> Delete(string id)
         => DeleteAsync(id);
+
+    /// <summary>
+    /// Creates a copy of a dialer profile with every setting of the source and opens it in the editor.
+    /// </summary>
+    /// <param name="id">The identifier of the dialer profile to copy.</param>
+    /// <returns>A redirect to the copy's editor, or to the list when the copy cannot be created.</returns>
+    [HttpPost]
+    [Admin("contact-center/dialers/clone/{id}", "ContactCenterDialersClone")]
+    public Task<IActionResult> Clone(string id)
+        => ClonePostAsync(id);
+
+    private static bool RequiresConnectWaitReset(DialerProfile source)
+        => source.Mode == DialerMode.Predictive && source.ConnectWaitMilliseconds > 0;
 }

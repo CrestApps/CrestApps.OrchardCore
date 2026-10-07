@@ -61,7 +61,9 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             View("DialerProfile_Buttons_SummaryAdmin", profile)
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:5"),
             View("DialerProfile_DefaultMeta_SummaryAdmin", profile)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5"),
+            View("DialerProfile_CloneActionsMenu_SummaryAdmin", profile)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "ActionsMenu:5")
         );
     }
 
