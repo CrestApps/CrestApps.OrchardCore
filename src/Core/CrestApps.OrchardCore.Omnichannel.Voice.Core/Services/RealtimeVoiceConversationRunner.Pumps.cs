@@ -390,7 +390,15 @@ public sealed partial class RealtimeVoiceConversationRunner
                         // commits. The transcript commit (StorePromptAsync) comes before the response completes,
                         // so without this the lock was held through the caller's whole next turn and, after the
                         // last response, until the call ended -- live, a 37 second tenant-wide stall at hangup.
-                        await _session.SaveChangesAsync(cancellationToken);
+                        // Bookkeeping, so a commit the database refuses is reported and the conversation goes on.
+                        try
+                        {
+                            await _session.SaveChangesAsync(cancellationToken);
+                        }
+                        catch (Exception ex) when (ex is not OperationCanceledException)
+                        {
+                            _logger.LogWarning(ex, "Could not commit the usage of a realtime response on activity '{ActivityId}'; the call carries on.", activityId);
+                        }
 
                         break;
 
