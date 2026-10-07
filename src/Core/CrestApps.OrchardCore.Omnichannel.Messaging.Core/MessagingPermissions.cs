@@ -1,3 +1,4 @@
+using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core;
@@ -14,12 +15,12 @@ public static class MessagingPermissions
     /// Grants management of the workspace's shared configuration: canned-response templates and the inbound
     /// routing configured on each messaging endpoint.
     /// </summary>
-    public static readonly Permission ManageMessaging = new("ManageMessaging", "Manage the messaging workspace");
+    public static readonly Permission ManageMessaging = new("ManageMessaging", LocalizationSource.Create("Manage the messaging workspace", typeof(MessagingPermissions)));
 
     /// <summary>
     /// Grants an agent access to the messaging workspace to send and receive on the endpoints they own or serve.
     /// </summary>
-    public static readonly Permission UseMessagingWorkspace = new("UseMessagingWorkspace", "Use the messaging workspace");
+    public static readonly Permission UseMessagingWorkspace = new("UseMessagingWorkspace", LocalizationSource.Create("Use the messaging workspace", typeof(MessagingPermissions)));
 
     /// <summary>
     /// Grants the ability to send outside the destination queue's business hours, in the contact's local time, on
@@ -27,15 +28,15 @@ public static class MessagingPermissions
     /// genuinely needs to reach a customer out of hours exists; this permission is what makes going ahead a
     /// decision somebody made.
     /// </summary>
-    public static readonly Permission SendDuringQuietHours = new("SendMessagesDuringQuietHours", "Send messages outside business hours", [UseMessagingWorkspace]);
+    public static readonly Permission SendDuringQuietHours = new("SendMessagesDuringQuietHours", LocalizationSource.Create("Send messages outside business hours", typeof(MessagingPermissions)), [UseMessagingWorkspace]);
 
     /// <summary>
     /// Grants the ability to send a group message (broadcast) from the workspace.
     /// </summary>
-    public static readonly Permission SendGroupMessages = new("SendGroupMessages", "Send group messages", [UseMessagingWorkspace]);
+    public static readonly Permission SendGroupMessages = new("SendGroupMessages", LocalizationSource.Create("Send group messages", typeof(MessagingPermissions)), [UseMessagingWorkspace]);
 
     /// <summary>
     /// Grants a supervisor visibility of every conversation, not only their own or their queue's.
     /// </summary>
-    public static readonly Permission ViewAllConversations = new("ViewAllMessagingConversations", "View all messaging conversations", [UseMessagingWorkspace]);
+    public static readonly Permission ViewAllConversations = new("ViewAllMessagingConversations", LocalizationSource.Create("View all messaging conversations", typeof(MessagingPermissions)), [UseMessagingWorkspace]);
 }

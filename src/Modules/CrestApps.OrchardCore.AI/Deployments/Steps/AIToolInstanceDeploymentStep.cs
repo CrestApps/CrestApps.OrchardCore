@@ -9,13 +9,17 @@ namespace CrestApps.OrchardCore.AI.Deployments.Steps;
 /// </summary>
 public sealed class AIToolInstanceDeploymentStep : DeploymentStep
 {
+    private static readonly LocalizationSource _category = LocalizationSource.Create<AIToolInstanceDeploymentStep>("Artificial Intelligence");
+    private static readonly LocalizationSource _title = LocalizationSource.Create<AIToolInstanceDeploymentStep>("AI Tool Instances");
+
     /// <summary>
     /// Initializes a new instance of the <see cref="AIToolInstanceDeploymentStep"/> class.
     /// </summary>
     public AIToolInstanceDeploymentStep()
     {
         Name = AIToolInstanceStep.StepKey;
-        Category = LocalizationSource.Create<AIToolInstanceDeploymentStep>("Artificial Intelligence");
+        Category = _category;
+        Title = _title;
     }
 
     /// <summary>

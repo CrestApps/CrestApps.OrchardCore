@@ -1,3 +1,4 @@
+using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.DncRegistry;
@@ -12,5 +13,5 @@ public static class DncRegistryPermissions
     /// </summary>
     public static readonly Permission ManageDncRegistrySettings = new(
         "ManageDncRegistrySettings",
-        "Manage DNC registry settings");
+        LocalizationSource.Create("Manage DNC registry settings", typeof(DncRegistryPermissions)));
 }

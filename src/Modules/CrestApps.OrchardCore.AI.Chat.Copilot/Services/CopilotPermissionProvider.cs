@@ -1,4 +1,5 @@
 ﻿using OrchardCore;
+using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Chat.Copilot;
@@ -8,7 +9,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Copilot;
 /// </summary>
 public sealed class CopilotPermissionProvider : IPermissionProvider
 {
-    public static readonly Permission ManageCopilotSettings = new("ManageCopilotSettings", "Manage Copilot Settings");
+    public static readonly Permission ManageCopilotSettings = new("ManageCopilotSettings", LocalizationSource.Create<CopilotPermissionProvider>("Manage Copilot Settings"));
 
     private readonly IEnumerable<Permission> _allPermissions =
     [

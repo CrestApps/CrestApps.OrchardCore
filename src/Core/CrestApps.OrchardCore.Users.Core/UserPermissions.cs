@@ -1,4 +1,5 @@
-﻿using OrchardCore.Security.Permissions;
+﻿using OrchardCore.Localization;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Users.Core;
 
@@ -7,7 +8,7 @@ namespace CrestApps.OrchardCore.Users.Core;
 /// </summary>
 public class UserPermissions
 {
-    public readonly static Permission ManageDisplaySettings = new("ManageDisplaySettings", "Manage the user display name settings.");
+    public readonly static Permission ManageDisplaySettings = new("ManageDisplaySettings", LocalizationSource.Create<UserPermissions>("Manage the user display name settings."));
 
-    public readonly static Permission ManageAvatarSettings = new("ManageAvatarSettings", "Manage the avatar settings.");
+    public readonly static Permission ManageAvatarSettings = new("ManageAvatarSettings", LocalizationSource.Create<UserPermissions>("Manage the avatar settings."));
 }
