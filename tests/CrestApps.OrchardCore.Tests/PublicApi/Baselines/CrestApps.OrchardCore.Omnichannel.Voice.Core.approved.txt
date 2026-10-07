@@ -111,6 +111,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice
     public static class VoiceTemplateIds
     {
         public const string ConclusionAnalysis = "voice-conclusion-analysis";
+        public const string HandoffSummary = "voice-handoff-summary";
     }
 }
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Services

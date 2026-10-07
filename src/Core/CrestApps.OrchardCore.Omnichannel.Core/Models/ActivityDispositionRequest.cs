@@ -21,6 +21,13 @@ public sealed class ActivityDispositionRequest
     public ActivityDispositionSource Source { get; set; } = ActivityDispositionSource.Agent;
 
     /// <summary>
+    /// Gets or sets who dispositioned the activity, recorded on <see cref="OmnichannelActivity.DispositionedBy"/>.
+    /// Leave it unset to derive it from <see cref="Source"/>; set it when the source alone cannot tell, such as the
+    /// dialer completing an attempt as a <see cref="ActivityDispositionSource.System"/> outcome.
+    /// </summary>
+    public ActivityDispositionActor? DispositionedBy { get; set; }
+
+    /// <summary>
     /// Gets or sets optional notes to append or store with the activity disposition.
     /// </summary>
     public string Notes { get; set; }

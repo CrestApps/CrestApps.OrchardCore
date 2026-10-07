@@ -322,6 +322,9 @@ public sealed partial class VoiceAgentConversationLoop
         concluded.Status = ActivityStatus.Completed;
         concluded.CompletedUtc = clock.UtcNow;
 
+        // Whether or not anybody answered, the AI agent's own call ended the activity, so it is the one named.
+        ActivityDispositionActors.Stamp(concluded, ActivityDispositionActor.AIAgent);
+
         // Notes and disposition are written together in this single terminal update, so a concluded call is never
         // dispositioned without notes: the notes fall back to a default line when the model returns no summary.
         concluded.Notes = notes;

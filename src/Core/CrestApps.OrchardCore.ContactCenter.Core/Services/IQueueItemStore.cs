@@ -103,4 +103,38 @@ public interface IQueueItemStore : ICatalog<QueueItem>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The oldest waiting item, or <see langword="null"/> when the queue has none waiting.</returns>
     Task<QueueItem> FindLongestWaitingAsync(string queueId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Counts the calls an over-dialing Predictive campaign has placed in the queue that no agent has been claimed for
+    /// yet: the items Assigned with no agent, still ringing or answered and waiting for one.
+    /// </summary>
+    /// <param name="queueId">The campaign queue.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The number of calls in flight without an agent.</returns>
+    Task<int> CountDialerInFlightAsync(string queueId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists the calls an over-dialing Predictive campaign has placed in the queue that no agent has been claimed for
+    /// yet, oldest dial first.
+    /// </summary>
+    /// <param name="queueId">The campaign queue.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The items Assigned with no agent.</returns>
+    Task<IReadOnlyCollection<QueueItem>> GetDialerInFlightAsync(string queueId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists the queues that have calls an over-dialing Predictive campaign placed without an agent and no agent has
+    /// been claimed for yet.
+    /// </summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The distinct queue identifiers.</returns>
+    Task<IReadOnlyCollection<string>> GetDialerInFlightQueueIdsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists the calls an over-dialing Predictive campaign placed without an agent that an agent has since been claimed
+    /// for and that are still Assigned: the calls whose agent is joining, or should have joined.
+    /// </summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The claimed items of every campaign queue.</returns>
+    Task<IReadOnlyCollection<QueueItem>> GetDialerClaimedAsync(CancellationToken cancellationToken = default);
 }

@@ -84,7 +84,7 @@ public sealed class NotInServiceNumbersController : Controller
 
         options ??= new CatalogEntryOptions<NotInServiceNumberBulkAction>();
 
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
         var result = await _notInServiceNumbers.PageAsync(pager.Page, pager.PageSize, options.Search, HttpContext.RequestAborted);
 
         var campaignIds = result.Entries
@@ -135,7 +135,7 @@ public sealed class NotInServiceNumbersController : Controller
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("omnichannel/numbers-not-in-service", "OmnichannelNotInServiceNumbersIndex")]
-    public async Task<IActionResult> IndexFilterPost(NotInServiceNumbersIndexViewModel model)
+    public async Task<IActionResult> IndexFilterPost(NotInServiceNumbersIndexViewModel model, PagerParameters pagerParameters)
     {
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageActivities))
         {
@@ -145,6 +145,7 @@ public sealed class NotInServiceNumbersController : Controller
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
             { _optionsSearch, model?.Options?.Search },
+            { "pageSize", pagerParameters.PageSize },
         });
     }
 

@@ -135,6 +135,23 @@ public sealed partial class RealtimeVoiceConversationRunner
         {
             // The call ended or the other pump stopped. Both are ordinary ends to a conversation.
         }
+        catch (ContactCenterVoiceMediaLostException ex)
+        {
+            // The provider lost the call's audio and could not bring it back, with the caller still on the line. The
+            // assistant can neither hear them nor be heard, so the call is handed on exactly as a lost session is --
+            // to a person, or an apology and a hangup -- rather than ended as if they had hung up. Live, a stream
+            // that broke this way left the assistant asking "are you still there?" into silence until the caller
+            // gave up.
+            if (!context.EndCallRequested.IsCancellationRequested && !context.HandoffRequested.IsCancellationRequested)
+            {
+                context.SessionLost = true;
+            }
+
+            _logger.LogError(
+                ex,
+                "The call audio on activity '{ActivityId}' was lost with the caller still on the line; the call is handed on.",
+                context.Activity?.ItemId.SanitizeLogValue());
+        }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "The caller audio stream ended unexpectedly during a realtime voice session.");

@@ -26,7 +26,7 @@ There are three sources:
 | **Automatic** | Unassigned **automated** activities an AI profile works on its own. | AI SMS outreach and AI voice calls. See [Automated AI SMS and voice](automated-ai.md). |
 | **Dialer** | Unassigned phone activities queued for the outbound dialer. | Preview, power and progressive dialing. Shown when the Contact Center Outbound Dialer feature is on. |
 
-The **Load Activities** list shows the newest loads first. A load does nothing when you save it: it starts only when you choose **Load batch** from its **Actions** menu.
+The **Load Activities** list shows the newest loads first. A load does nothing when you save it: it starts only when you choose **Load activities** from its **Actions** menu, or click **Save & Load activities** on the load form.
 
 ## Manual loads
 
@@ -36,9 +36,13 @@ The **Load Activities** list shows the newest loads first. A load does nothing w
 
 1. Open **Interaction Center > Management > Load Activities**, click **Add Activity Load** and choose **Manual**.
 2. Fill in the load (fields below). A manual load needs a **Channel** and at least one user in **User(s) to assign activities to**; the activities are shared between the users you pick. Click **Save**.
-3. In the list, open the load's **Actions** menu, choose **Load batch** and confirm with **Ok**. The load runs in the background: the status moves through *Started* and *Loading* to *Loaded*, and the row then shows how many activities it created, how many contacts matched the filters, and why any matching contact was skipped (see [What a load reports](#what-a-load-reports)).
+3. In the list, open the load's **Actions** menu, choose **Load activities** and confirm with **Ok**. To save and start the load in one step, click **Save & Load activities** on the form instead of **Save**, and confirm. The load runs in the background: the status moves through *Started* and *Loading* to *Loaded*, and the row then shows how many activities it created, how many contacts matched the filters, and why any matching contact was skipped (see [What a load reports](#what-a-load-reports)).
 
 Once a load has started it can no longer be edited. While it is *Started* or *Loading* it cannot be deleted either.
+
+### Clone a load
+
+To run a load again, or a load much like it, open its **Actions** menu and choose **Clone**. This works whatever the load's status. The copy has every setting of the original -- subject, campaign, channel, AI options, filters, limit and schedule -- and is named after it with *(copy)* added. It starts as *New* with nothing loaded, and opens for editing so you can adjust it before you load it.
 
 ### Delete a finished load
 
@@ -52,7 +56,7 @@ A load whose status is *Loaded* can be deleted by users with the **Delete loaded
 
 1. Click **Add Activity Load** and choose **Dialer**.
 2. Pick the **Dialer profile** (it decides preview, power or progressive) and the **Campaign**. Agents sign in to this campaign to get the calls, so a dialer load will not save without one unless the subject has a default campaign.
-3. Fill in the record filters, save, and choose **Actions > Load batch**.
+3. Fill in the record filters, save, and choose **Actions > Load activities**.
 
 Dialer loads always use the phone channel and create manual (agent-handled) activities. The activities are left unassigned, take the dialing mode of the dialer profile, and are queued for the campaign as they are created; the dialer then offers them to the agents signed in to that campaign. The campaign always comes from the load (or the subject's default campaign), never from the dialer profile.
 

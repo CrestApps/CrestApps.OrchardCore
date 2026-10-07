@@ -22,6 +22,7 @@ This module extends the AI Documents feature with PDF document support.
 
 - **PDF Text Extraction**: Extract text content from PDF documents
 - **Page-by-Page Processing**: Text is extracted from each page of the PDF
+- **PDF Agent**: A system agent that creates, converts, edits, previews and analyses PDFs in a conversation
 
 ## Getting Started
 

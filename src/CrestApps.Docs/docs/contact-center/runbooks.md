@@ -107,6 +107,27 @@ Thresholds are configurable under `CrestApps:ContactCenter:HealthChecks`; tune t
 
 **Prevention.** Co-locate nodes, SQL, and Redis within a single region and availability-zone-redundant network. Multi-region active-active is an unsupported topology for this release.
 
+## Over-dialing falls back or stops
+
+**Detection.** A Predictive campaign on the `OverDial` pacing model places one call per reserved agent, or no call at all, although agents are free and records are waiting. The log carries an `Over-dial cycle of queue ...` line for every cycle with the mode and the reason, the queue's `PredictivePacingState.LastDecision` holds the last cycle's inputs and decision, and `DialerPacingModeChanged` is recorded each time the mode changes.
+
+**Impact.** None for compliance: every fallback dials the way that cannot abandon a call. Throughput drops to one call per free agent, or to nothing when dialing is suppressed.
+
+**Response.** Read the reason on the last decision:
+
+1. `AnswerRateUnavailable` or `AnswerRateSampleBelowFloor`: too few calls with an outcome in `AnswerRateWindowMinutes`. Expected at the start of a campaign and after a quiet period; it clears as calls settle. Lower **Answer rate sample floor** only with care. Right after the abandoned-call message work is first deployed, calls answered and abandoned before it read as unanswered, so do not switch a profile to over-dialing until a full answer-rate window has passed.
+2. `AbandonmentRateUnavailable` or `AbandonmentSampleBelowFloor`: too few live answers in the rolling window to trust the rolling rate.
+3. `ComplianceRateUnavailable` or `ComplianceRateAtCap`: the long-run (`ComplianceWindowDays`) rate is missing or at the cap. Over-dialing resumes only when the long-run rate falls below the cap; consider lowering **Target abandonment rate** or **Lines per agent**.
+4. `RollingRateAtCap` or `ThrottledToZero`: the rolling rate reached the cap or is too close to it. It resumes as the window moves on.
+5. `PolicySuppressed` (mode `Suppressed`): the abandonment statistics cannot be read at all, or the rolling rate is over the cap; nothing is dialed. Check the database and the event store.
+6. No `Over-dial cycle` line at all: the pacing runs are not happening. Check that **Contact Center Paced Dialing** is enabled and the dialer pacing background task runs; a cycle that lost a race with another node logs `lost a race with another cycle` and places nothing, which is expected now and then with several nodes and constant without the Redis lock feature only under unusual load.
+
+The last decision of every campaign a profile paces is also shown, read-only, on the **Predictive pacing** card of the profile's editor.
+
+A person who answered and heard nothing points at the connect: search the log for the call id. `Claiming a free agent` followed by neither `Connecting agent` nor `abandoned` means the connect was lost (for example a node stopped); the minute sweep gives the message to such a call `AnsweredUnconnectedSweepAfter` after the answer and records it abandoned with reason `answered_unconnected`.
+
+Calls abandoned with reason `agent_leg_timeout` were claimed for an agent whose phone did not answer within `AgentLegAnswerTimeout`: the agent was put back to work and the person heard the message. Several in a row for one agent point at that agent's phone: check it is open, registered and standing by (the soft phone diagnostics log `standby-leg-answered` for every leg it answers on standby); a phone that rings the leg instead of answering it is not receiving the agent's presence or campaign membership.
+
 ## Rolling deployment
 
 Contact Center supports zero-downtime rolling deployments because every shipped schema migration is additive (see the expand-migrate-contract policy in [Production support](production-support.md)).

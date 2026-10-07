@@ -489,7 +489,8 @@ public sealed class QueuedVoiceWorkOfferServiceTests
             new FakeDistributedLock(),
             CoordinationOptions(),
             session.Object,
-            Mock.Of<ILogger<QueuedVoiceWorkOfferService>>());
+            Mock.Of<ILogger<QueuedVoiceWorkOfferService>>(),
+            []);
     }
 
     // The coordination timings are options now, so a test uses the shipped defaults rather than a value it

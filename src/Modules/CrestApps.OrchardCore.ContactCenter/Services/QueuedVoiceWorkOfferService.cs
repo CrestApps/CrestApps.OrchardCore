@@ -25,6 +25,7 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
     private readonly IDistributedLock _distributedLock;
     private readonly ContactCenterCoordinationOptions _coordinationOptions;
     private readonly ISession _session;
+    private readonly IEnumerable<IPredictivePacingScheduler> _pacingSchedulers;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -45,6 +46,8 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
     /// <param name="coordinationOptions">The coordination options carrying the sync lease.</param>
     /// <param name="session">The YesSql session used to persist availability before querying routing indexes.</param>
     /// <param name="logger">The logger.</param>
+    /// <param name="pacingSchedulers">The over-dial pacing scheduler, when Paced Dialing is on: an agent reachable again is
+    /// capacity an over-dialing campaign they are signed into can dial for.</param>
     public QueuedVoiceWorkOfferService(
         IAgentProfileManager agentManager,
         IAgentWorkStateHealingService agentWorkStateHealingService,
@@ -57,7 +60,8 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
         IDistributedLock distributedLock,
         IOptions<ContactCenterCoordinationOptions> coordinationOptions,
         ISession session,
-        ILogger<QueuedVoiceWorkOfferService> logger)
+        ILogger<QueuedVoiceWorkOfferService> logger,
+        IEnumerable<IPredictivePacingScheduler> pacingSchedulers)
     {
         _agentManager = agentManager;
         _agentWorkStateHealingService = agentWorkStateHealingService;
@@ -71,6 +75,7 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
         _coordinationOptions = coordinationOptions.Value;
         _session = session;
         _logger = logger;
+        _pacingSchedulers = pacingSchedulers;
     }
 
     /// <inheritdoc/>
@@ -194,6 +199,13 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
             // The queue is left to the pacing engine and the selection moves on.
             if (await IsAutomatedPacedCampaignQueueAsync(queueId, cancellationToken))
             {
+                // An over-dialing campaign is paced as agents free up rather than once a minute. Its pacing run connects
+                // any answered call still waiting for an agent before it places a new one.
+                foreach (var scheduler in _pacingSchedulers)
+                {
+                    scheduler.Request(queueId);
+                }
+
                 excludedQueueIds.Add(queueId);
 
                 continue;

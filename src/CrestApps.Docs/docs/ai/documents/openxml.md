@@ -24,6 +24,8 @@ This module extends the AI Documents feature with Microsoft Office document supp
 - **Excel Spreadsheet Extraction**: Extract data from .xlsx files
 - **PowerPoint Presentation Extraction**: Extract text from .pptx files
 - **Full Content Parsing**: Extracts text from all paragraphs, cells, and slides
+- **PowerPoint Agent**: A system agent that creates, edits, designs, reviews, previews and exports `.pptx` decks in a conversation (PDF export needs the `AI Documents (PDF)` feature)
+- **Word Agent**: A system agent that writes, edits, reviews, previews and exports `.docx` documents in a conversation
 
 ## Getting Started
 

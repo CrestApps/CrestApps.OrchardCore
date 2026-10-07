@@ -259,14 +259,10 @@ public sealed class AdminController : Controller
             options.RouteValues.TryAdd("q", options.SearchText);
         }
 
-        var page = 1;
+        // The pager resolves the page size the viewer chose, so the query reads exactly the page the pager shows.
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
 
-        if (pagerParameters.Page.HasValue && pagerParameters.Page.Value > 0)
-        {
-            page = pagerParameters.Page.Value;
-        }
-
-        var sessionResult = await _sessionManager.PageAsync(page, pagerOptions.Value.GetPageSize(), new AIChatSessionQueryContext
+        var sessionResult = await _sessionManager.PageAsync(pager.Page, pager.PageSize, new AIChatSessionQueryContext
         {
             ProfileId = profileId,
             Name = options.SearchText
@@ -275,8 +271,6 @@ public sealed class AdminController : Controller
         var itemsPerPage = pagerOptions.Value.MaxPagedCount > 0
             ? pagerOptions.Value.MaxPagedCount
             : sessionResult.Count;
-
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
 
         var pagerShape = await shapeFactory.PagerAsync(pager, itemsPerPage, options.RouteValues);
 
@@ -297,9 +291,10 @@ public sealed class AdminController : Controller
     /// Performs the history post operation.
     /// </summary>
     /// <param name="profileId">The profile id.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
     [HttpPost]
     [ActionName(nameof(History))]
-    public async Task<ActionResult> HistoryPost(string profileId)
+    public async Task<ActionResult> HistoryPost(string profileId, PagerParameters pagerParameters)
     {
         var profile = await _profileManager.FindByIdAsync(profileId);
 
@@ -322,6 +317,7 @@ public sealed class AdminController : Controller
 
         options.RouteValues.TryAdd("q", options.SearchText);
         options.RouteValues.TryAdd("profileId", profileId);
+        options.RouteValues.TryAdd("pageSize", pagerParameters.PageSize);
 
         return RedirectToAction(nameof(History), options.RouteValues);
     }

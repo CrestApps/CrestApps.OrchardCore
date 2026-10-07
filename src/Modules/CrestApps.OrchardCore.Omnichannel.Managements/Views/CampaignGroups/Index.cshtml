@@ -8,7 +8,7 @@
     <breadcrumb name="OmnichannelCampaignGroups" title="@T["Campaign groups"]" />
 </zone>
 
-<form asp-action="Index" method="post" class="no-multisubmit">
+<form asp-action="Index" asp-route-pageSize="@Context.Request.Query["pageSize"]" method="post" class="no-multisubmit">
     <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
 
     <div class="card text-bg-theme mb-3 position-sticky action-bar">

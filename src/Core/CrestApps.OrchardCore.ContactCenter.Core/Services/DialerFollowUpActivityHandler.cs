@@ -17,12 +17,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// from, carrying the attempt number on, due no sooner than the profile's retry delay after the attempt it follows. One
 /// past the profile's attempt limit is not created at all, and one the action gave to a named person stays that person's
 /// own work. The dialer picks the agent; a follow-up of an attempt an agent dispositioned prefers that agent, as a
-/// sticky preference only.
+/// sticky preference only. A follow-up of an attempt whose call was abandoned -- a person answered and no agent was
+/// there -- is marked so an over-dialing campaign retries it only with an agent reserved for it.
 /// </remarks>
 public sealed class DialerFollowUpActivityHandler : IFollowUpActivityHandler
 {
     private readonly IQueueItemManager _queueItemManager;
     private readonly IDialerProfileReader _profileReader;
+    private readonly IInteractionManager _interactionManager;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -32,18 +34,21 @@ public sealed class DialerFollowUpActivityHandler : IFollowUpActivityHandler
     /// </summary>
     /// <param name="queueItemManager">The queue items, read for the queue and profile the first attempt was dialed with.</param>
     /// <param name="profileReader">The dialer profiles, read for the attempt limit and the retry delay.</param>
+    /// <param name="interactionManager">The interactions, read for whether the first attempt's call was abandoned.</param>
     /// <param name="scopeExecutor">The executor that queues the follow-up once it has been saved.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
     public DialerFollowUpActivityHandler(
         IQueueItemManager queueItemManager,
         IDialerProfileReader profileReader,
+        IInteractionManager interactionManager,
         IContactCenterScopeExecutor scopeExecutor,
         IClock clock,
         ILogger<DialerFollowUpActivityHandler> logger)
     {
         _queueItemManager = queueItemManager;
         _profileReader = profileReader;
+        _interactionManager = interactionManager;
         _scopeExecutor = scopeExecutor;
         _clock = clock;
         _logger = logger;
@@ -121,9 +126,17 @@ public sealed class DialerFollowUpActivityHandler : IFollowUpActivityHandler
         var queueId = previousItem.QueueId;
         var dialerProfileId = previousItem.DialerProfileId;
 
+        // Recorded on the attempt itself so the activity screens can say which dialer will call it.
+        followUp.DialerProfileId = dialerProfileId;
+
+        // A person who answered the last call and found nobody there is not called again without an agent waiting for
+        // them: the follow-up is a new activity, so the mark travels with its queue item. Once set it stays on every later
+        // attempt of the contact, the safe reading of the rules on repeat calls after an abandoned one.
+        var requiresReservedAgent = previousItem.RequiresReservedAgent || await WasAbandonedAsync(previous.ItemId, cancellationToken);
+
         // Queueing commits, and the follow-up is only saved after this returns, so it is queued once it is.
         if (!_scopeExecutor.ScheduleAfterCommit<IActivityQueueService>(queueService =>
-            queueService.EnqueueAsync(activityItemId, queueId, priority: null, dialerProfileId, CancellationToken.None)))
+            queueService.EnqueueAsync(activityItemId, queueId, priority: null, dialerProfileId, requiresReservedAgent, CancellationToken.None)))
         {
             _logger.LogWarning(
                 "The next attempt '{FollowUpId}' of dialer activity '{ActivityId}' could not be queued for the dialer because there was no scope to queue it from after it was saved.",
@@ -136,7 +149,7 @@ public sealed class DialerFollowUpActivityHandler : IFollowUpActivityHandler
         if (_logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation(
-                "Queued attempt {AttemptNumber} of {MaxAttempts} ('{FollowUpId}') of dialer activity '{ActivityId}' in queue '{QueueId}' with dialer profile '{DialerProfileId}', due {DueUtc:O}; created by {CreatedBy}.",
+                "Queued attempt {AttemptNumber} of {MaxAttempts} ('{FollowUpId}') of dialer activity '{ActivityId}' in queue '{QueueId}' with dialer profile '{DialerProfileId}', due {DueUtc:O}; created by {CreatedBy}; an agent reserved for it: {RequiresReservedAgent}.",
                 followUp.Attempts,
                 profile.MaxAttempts,
                 activityItemId.SanitizeLogValue(),
@@ -144,7 +157,15 @@ public sealed class DialerFollowUpActivityHandler : IFollowUpActivityHandler
                 queueId.SanitizeLogValue(),
                 dialerProfileId.SanitizeLogValue(),
                 followUp.ScheduledUtc,
-                context.CreatedBy.SanitizeLogValue());
+                context.CreatedBy.SanitizeLogValue(),
+                requiresReservedAgent);
         }
+    }
+
+    private async Task<bool> WasAbandonedAsync(string activityItemId, CancellationToken cancellationToken)
+    {
+        var interaction = await _interactionManager.FindByActivityIdAsync(activityItemId, cancellationToken);
+
+        return interaction is not null && DialerCallMetadata.IsAbandoned(interaction);
     }
 }

@@ -21,6 +21,96 @@ public sealed class DialProviderCommandTypeExecutorTests
 {
     private static readonly DateTime _now = new(2026, 7, 14, 23, 0, 0, DateTimeKind.Utc);
 
+    private const string SystemDialPayload = """{"ActivityId":"activity-1","InteractionId":"interaction-1","QueueId":"__campaign-queue__campaign-1","Destination":"+15551112222"}""";
+
+    // A dial that names no agent: only an over-dialing Predictive campaign call, vouched for by an authorizer.
+
+    [Fact]
+    public async Task CanDispatchAsync_WhenTheDialNamesNoAgentAndNoAuthorizerIsRegistered_ReturnsFalse()
+    {
+        // Arrange: Paced Dialing is off, so nothing can vouch for a dial without an agent.
+        var harness = CreateHarness(requestPayload: SystemDialPayload, dialerProfileId: "profile-1");
+
+        // Act
+        var result = await harness.Executor.CanDispatchAsync(harness.Command, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task CanDispatchAsync_WhenTheDialNamesNoAgent_FollowsTheAuthorizer(bool authorized)
+    {
+        // Arrange
+        var authorizer = new Mock<IPredictiveSystemDialAuthorizer>();
+        authorizer
+            .Setup(a => a.IsAuthorizedAsync(It.IsAny<ProviderCommand>(), It.IsAny<ContactCenterDialRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(authorized);
+        var harness = CreateHarness(systemDialAuthorizers: [authorizer.Object], requestPayload: SystemDialPayload, dialerProfileId: "profile-1");
+
+        // Act
+        var result = await harness.Executor.CanDispatchAsync(harness.Command, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(authorized, result);
+        authorizer.Verify(
+            a => a.IsAuthorizedAsync(harness.Command, It.Is<ContactCenterDialRequest>(r => r.AgentId == null && r.QueueId == "__campaign-queue__campaign-1"), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenTheDialNamesNoAgentAndTheAuthorizerRefuses_DoesNotRouteTheCall()
+    {
+        // Arrange
+        var authorizer = new Mock<IPredictiveSystemDialAuthorizer>();
+        authorizer
+            .Setup(a => a.IsAuthorizedAsync(It.IsAny<ProviderCommand>(), It.IsAny<ContactCenterDialRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        var harness = CreateHarness(systemDialAuthorizers: [authorizer.Object], requestPayload: SystemDialPayload, dialerProfileId: "profile-1");
+
+        // Act
+        var result = await harness.Executor.ExecuteAsync(harness.Command, harness.Claim, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Equal("dial_denied", result.ErrorCode);
+        harness.Router.Verify(
+            r => r.RouteOutboundAsync(It.IsAny<ContactCenterDialRequest>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task CanDispatchAsync_WhenTheDialNamesAnAgent_NeverAsksTheAuthorizer()
+    {
+        // Arrange
+        var authorizer = new Mock<IPredictiveSystemDialAuthorizer>(MockBehavior.Strict);
+        var harness = CreateHarness(systemDialAuthorizers: [authorizer.Object]);
+
+        // Act
+        var result = await harness.Executor.CanDispatchAsync(harness.Command, TestContext.Current.CancellationToken);
+
+        // Assert: an agent dial is checked against the agent it names, as before.
+        Assert.True(result);
+    }
+
+    [Fact]
+    public async Task CanDispatchAsync_WhenTheDialNamesAnAgentIdButNoUser_ReturnsFalseWithoutAskingTheAuthorizer()
+    {
+        // Arrange: half an agent is not a system dial.
+        var authorizer = new Mock<IPredictiveSystemDialAuthorizer>(MockBehavior.Strict);
+        var harness = CreateHarness(
+            systemDialAuthorizers: [authorizer.Object],
+            requestPayload: """{"ActivityId":"activity-1","InteractionId":"interaction-1","AgentId":"agent-1","Destination":"+15551112222"}""");
+
+        // Act
+        var result = await harness.Executor.CanDispatchAsync(harness.Command, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result);
+    }
+
     // CanDispatchAsync
 
     [Fact]
@@ -632,7 +722,10 @@ public sealed class DialProviderCommandTypeExecutorTests
         bool canDispatch = true,
         IList<IProviderCommandDispatchValidator> validators = null,
         CallSession callSession = null,
-        RecordingContactCenterAuditRecorder auditRecorder = null)
+        RecordingContactCenterAuditRecorder auditRecorder = null,
+        IEnumerable<IPredictiveSystemDialAuthorizer> systemDialAuthorizers = null,
+        string requestPayload = null,
+        string dialerProfileId = null)
     {
         var command = new ProviderCommand
         {
@@ -641,7 +734,8 @@ public sealed class DialProviderCommandTypeExecutorTests
             ProviderName = "provider",
             ActivityItemId = "activity-1",
             InteractionId = "interaction-1",
-            RequestPayload = """{"ActivityId":"activity-1","InteractionId":"interaction-1","AgentId":"agent-1","AgentUserId":"user-1","Destination":"+15551112222"}""",
+            DialerProfileId = dialerProfileId,
+            RequestPayload = requestPayload ?? """{"ActivityId":"activity-1","InteractionId":"interaction-1","AgentId":"agent-1","AgentUserId":"user-1","Destination":"+15551112222"}""",
         };
         var claim = new ProviderCommandClaim
         {
@@ -699,7 +793,8 @@ public sealed class DialProviderCommandTypeExecutorTests
             dialAgentManager.Object,
             CreateDialDestinationPolicy(),
             auditRecorder ?? new RecordingContactCenterAuditRecorder(),
-            NullLogger<DialProviderCommandTypeExecutor>.Instance);
+            NullLogger<DialProviderCommandTypeExecutor>.Instance,
+            systemDialAuthorizers ?? []);
 
         return new TestHarness(command, claim, interaction, activity, validator, router, executor, callSessionManager, callSession);
     }

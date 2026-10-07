@@ -24,11 +24,14 @@ public sealed class AiVoiceStartup : StartupBase
         services.AddScoped<ITelnyxVoiceAgentClient, TelnyxVoiceAgentClient>();
 
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IOmnichannelProcessor, VoiceOmnichannelProcessor>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<ITelnyxAiVoiceEventHandler, TelnyxAiVoiceConversationHandler>());
 
         // Records the call from its answer when the tenant records every call (a no-op without the Call Recording feature).
+        // The handlers run in the order they are registered, and this one must come before the conversation: a realtime
+        // conversation holds the answered webhook for as long as the AI talks, so a recorder registered after it only
+        // started when the AI handed the caller to an agent, and nothing the AI said was recorded.
         services.TryAddScoped<ITelnyxAutomaticCallRecorder, TelnyxAutomaticCallRecorder>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ITelnyxAiVoiceEventHandler, TelnyxAiVoiceRecordingHandler>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ITelnyxAiVoiceEventHandler, TelnyxAiVoiceConversationHandler>());
 
         // An inbound call an entry point routes to an AI voice agent is answered with the AI voice leg's state, so its
         // events reach the same conversation a call the AI places does. The picker for the agent is on the entry point.

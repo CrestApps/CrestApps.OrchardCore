@@ -1,4 +1,5 @@
 ﻿using OrchardCore;
+using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Chat.Claude;
@@ -8,7 +9,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Claude;
 /// </summary>
 public sealed class ClaudePermissionProvider : IPermissionProvider
 {
-    public static readonly Permission ManageClaudeSettings = new("ManageClaudeSettings", "Manage Claude Settings");
+    public static readonly Permission ManageClaudeSettings = new("ManageClaudeSettings", LocalizationSource.Create<ClaudePermissionProvider>("Manage Claude Settings"));
 
     private readonly IEnumerable<Permission> _allPermissions =
     [

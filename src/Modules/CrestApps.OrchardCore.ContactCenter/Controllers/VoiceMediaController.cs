@@ -89,13 +89,14 @@ public sealed class VoiceMediaController : ContactCenterCatalogController<VoiceM
     /// Applies the voice media list filter.
     /// </summary>
     /// <param name="model">The submitted list model.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
     /// <returns>A redirect to the filtered list.</returns>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("contact-center/voice-media", "ContactCenterVoiceMediaIndex")]
-    public Task<IActionResult> IndexFilterPost(ListCatalogEntryViewModel model)
-        => IndexFilterPostAsync(model);
+    public Task<IActionResult> IndexFilterPost(ListCatalogEntryViewModel model, PagerParameters pagerParameters)
+        => IndexFilterPostAsync(model, pagerParameters);
 
     /// <summary>
     /// Displays the voice media create form.

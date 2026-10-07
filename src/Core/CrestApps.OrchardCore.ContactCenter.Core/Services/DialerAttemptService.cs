@@ -9,6 +9,9 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using OrchardCore.Locking.Distributed;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -34,6 +37,10 @@ public sealed class DialerAttemptService : IDialerAttemptService
     private readonly IProviderCommandStateService _providerCommandStateService;
     private readonly IOutboundLineResolver _outboundLineResolver;
     private readonly IOmnichannelChannelEndpointManager _addressManager;
+    private readonly IQueueItemManager _queueItemManager;
+    private readonly IDistributedLock _distributedLock;
+    private readonly IClock _clock;
+    private readonly ContactCenterCoordinationOptions _coordinationOptions;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -53,6 +60,10 @@ public sealed class DialerAttemptService : IDialerAttemptService
     /// <param name="scopeExecutor">The executor used for compensation and post-commit command wake-up.</param>
     /// <param name="providerCommandStateService">The service used to persist provider command intent.</param>
     /// <param name="addressManagers">The address list, which holds the number a load dials from, when the feature is on.</param>
+    /// <param name="queueItemManager">The queue items, claimed by a call placed before any agent is reserved.</param>
+    /// <param name="distributedLock">The lock that serializes claiming an activity with routing reserving it.</param>
+    /// <param name="clock">The clock.</param>
+    /// <param name="coordinationOptions">The coordination options carrying the reservation lock timings.</param>
     /// <param name="logger">The logger instance.</param>
     public DialerAttemptService(
         IDialerEligibilityService eligibilityService,
@@ -69,6 +80,10 @@ public sealed class DialerAttemptService : IDialerAttemptService
         IContactCenterScopeExecutor scopeExecutor,
         IProviderCommandStateService providerCommandStateService,
         IEnumerable<IOmnichannelChannelEndpointManager> addressManagers,
+        IQueueItemManager queueItemManager,
+        IDistributedLock distributedLock,
+        IClock clock,
+        IOptions<ContactCenterCoordinationOptions> coordinationOptions,
         ILogger<DialerAttemptService> logger)
     {
         _eligibilityService = eligibilityService;
@@ -86,6 +101,10 @@ public sealed class DialerAttemptService : IDialerAttemptService
         _providerCommandStateService = providerCommandStateService;
         // The address list is a feature of its own; without it a load cannot have picked a number.
         _addressManager = addressManagers.FirstOrDefault();
+        _queueItemManager = queueItemManager;
+        _distributedLock = distributedLock;
+        _clock = clock;
+        _coordinationOptions = coordinationOptions.Value;
         _logger = logger;
     }
 
@@ -108,6 +127,10 @@ public sealed class DialerAttemptService : IDialerAttemptService
     /// <param name="providerCommandStateService">The service used to persist provider command intent.</param>
     /// <param name="outboundLineResolver">The resolver of the line each agent dials out from.</param>
     /// <param name="addressManagers">The address list, which holds the number a load dials from, when the feature is on.</param>
+    /// <param name="queueItemManager">The queue items, claimed by a call placed before any agent is reserved.</param>
+    /// <param name="distributedLock">The lock that serializes claiming an activity with routing reserving it.</param>
+    /// <param name="clock">The clock.</param>
+    /// <param name="coordinationOptions">The coordination options carrying the reservation lock timings.</param>
     /// <param name="logger">The logger instance.</param>
     public DialerAttemptService(
         IDialerEligibilityService eligibilityService,
@@ -125,6 +148,10 @@ public sealed class DialerAttemptService : IDialerAttemptService
         IProviderCommandStateService providerCommandStateService,
         IOutboundLineResolver outboundLineResolver,
         IEnumerable<IOmnichannelChannelEndpointManager> addressManagers,
+        IQueueItemManager queueItemManager,
+        IDistributedLock distributedLock,
+        IClock clock,
+        IOptions<ContactCenterCoordinationOptions> coordinationOptions,
         ILogger<DialerAttemptService> logger)
         : this(
             eligibilityService,
@@ -141,6 +168,10 @@ public sealed class DialerAttemptService : IDialerAttemptService
             scopeExecutor,
             providerCommandStateService,
             addressManagers,
+            queueItemManager,
+            distributedLock,
+            clock,
+            coordinationOptions,
             logger)
     {
         _outboundLineResolver = outboundLineResolver;
@@ -193,13 +224,128 @@ public sealed class DialerAttemptService : IDialerAttemptService
             return false;
         }
 
+        try
+        {
+            await PlaceAsync(
+                profile,
+                activity,
+                reservation.QueueId,
+                agent,
+                acceptedReservation.ItemId,
+                await ResolveCallerIdAsync(profile, agent, activity, cancellationToken),
+                cancellationToken);
+        }
+        catch
+        {
+            await _scopeExecutor.ExecuteAsync<IDialerAttemptCompensationService>(service =>
+                service.CompensateAsync(acceptedReservation, removeFromQueue: true, CancellationToken.None));
+
+            throw;
+        }
+
+        return true;
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> TryDialUnreservedAsync(DialerProfile profile, QueueItem queueItem, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+        ArgumentNullException.ThrowIfNull(queueItem);
+
+        // The same lock routing takes to reserve the activity, so the dial and an agent offer can never both claim it.
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+            ActivityReservationLockKeys.ForActivity(queueItem.ActivityItemId),
+            _coordinationOptions.ReservationLockTimeout,
+            _coordinationOptions.ReservationLockExpiration);
+
+        if (!locked)
+        {
+            return false;
+        }
+
+        await using var acquiredLock = locker;
+
+        var current = await _queueItemManager.FindByIdAsync(queueItem.ItemId, cancellationToken);
+
+        if (current is null || current.Status != QueueItemStatus.Waiting)
+        {
+            return false;
+        }
+
+        var activity = await _activityManager.FindByIdAsync(current.ActivityItemId, cancellationToken);
+
+        if (activity is null)
+        {
+            return false;
+        }
+
+        var eligibility = await _eligibilityService.EvaluateAsync(new DialerEligibilityContext
+        {
+            Profile = profile,
+            Activity = activity,
+        }, cancellationToken);
+
+        if (!eligibility.IsEligible)
+        {
+            await SuppressUnreservedAsync(profile, current, activity, eligibility, cancellationToken);
+
+            return false;
+        }
+
+        var now = _clock.UtcNow;
+
+        // The call is placed for the campaign, not for an agent: nobody is reserved, the item is Assigned with no agent,
+        // and the first person who answers is connected to whichever agent is free then.
+        current.TransitionTo(QueueItemStatus.Assigned);
+        current.AgentId = null;
+        current.ReservationId = null;
+        current.DialedUtc = now;
+        await _queueItemManager.UpdateAsync(current, cancellationToken: cancellationToken);
+
+        await _workStateService.MutateAsync(activity.ItemId, workState =>
+        {
+            workState.TransitionTo(ActivityAssignmentStatus.Assigned);
+            workState.ReservationId = null;
+            workState.ReservedById = null;
+            workState.ReservedByUsername = null;
+            workState.ReservedUtc = null;
+            workState.ReservationExpiresUtc = null;
+            workState.AssignedToId = null;
+            workState.AssignedToUsername = null;
+            workState.AssignedToUtc = now;
+        }, cancellationToken);
+
+        await PlaceAsync(
+            profile,
+            activity,
+            current.QueueId,
+            agent: null,
+            reservationId: null,
+            await ResolveCallerIdAsync(profile, agent: null, activity, cancellationToken),
+            cancellationToken);
+
+        return true;
+    }
+
+    // Records the attempt and registers the provider dial, which is dispatched once the caller's transaction commits: a
+    // commit that is lost places no call. A call placed without an agent carries no agent on the request, on the
+    // interaction or on the command, and is marked as over-dialed so the answer knows to pick an agent for it.
+    private async Task PlaceAsync(
+        DialerProfile profile,
+        OmnichannelActivity activity,
+        string queueId,
+        AgentProfile agent,
+        string reservationId,
+        string callerId,
+        CancellationToken cancellationToken)
+    {
         var interaction = await _interactionManager.NewAsync(cancellationToken: cancellationToken);
         interaction.Channel = InteractionChannel.Voice;
         interaction.Direction = InteractionDirection.Outbound;
         interaction.TransitionTo(InteractionStatus.Created);
         interaction.ActivityItemId = activity.ItemId;
-        interaction.QueueId = reservation.QueueId;
-        interaction.AgentId = reservation.AgentId;
+        interaction.QueueId = queueId;
+        interaction.AgentId = agent?.ItemId;
         interaction.ProviderName = _voiceCallRouter.GetOutboundProviderName(profile.ProviderName);
         interaction.CustomerAddress = activity.PreferredDestination;
         interaction.TechnicalMetadata[ContactCenterConstants.CommandMetadata.CommandId] = interaction.ItemId;
@@ -208,12 +354,12 @@ public sealed class DialerAttemptService : IDialerAttemptService
             ActivityId = activity.ItemId,
             InteractionId = interaction.ItemId,
             CommandId = interaction.ItemId,
-            AgentId = reservation.AgentId,
-            AgentUserId = agent.UserId,
-            QueueId = reservation.QueueId,
+            AgentId = agent?.ItemId,
+            AgentUserId = agent?.UserId,
+            QueueId = queueId,
             CampaignId = activity.CampaignId,
             Destination = activity.PreferredDestination,
-            CallerId = await ResolveCallerIdAsync(profile, agent, activity, cancellationToken),
+            CallerId = callerId,
             Metadata = new Dictionary<string, string>
             {
                 [ContactCenterConstants.CommandMetadata.CommandId] = interaction.ItemId,
@@ -236,60 +382,53 @@ public sealed class DialerAttemptService : IDialerAttemptService
                 DialerAbandonment.ResolveRingTimeoutSeconds(profile).ToString(CultureInfo.InvariantCulture);
         }
 
-        try
-        {
-            // The activity's first call is the attempt the activity already stands for (a follow-up created to try
-            // again starts at the attempt after the one it follows); only a further call of the same activity is a
-            // new attempt. Counting every call as one made a three-attempt profile stop after two calls.
-            var attemptNumber = 1;
+        // The activity's first call is the attempt the activity already stands for (a follow-up created to try
+        // again starts at the attempt after the one it follows); only a further call of the same activity is a
+        // new attempt. Counting every call as one made a three-attempt profile stop after two calls.
+        var attemptNumber = 1;
 
-            await _workStateService.MutateAsync(
-                activity.ItemId,
-                workState =>
-                {
-                    attemptNumber = ContactCenterWorkState.NextAttemptNumber(workState, activity.Attempts);
-                    workState.Attempts = attemptNumber;
-                    workState.DialCount++;
-                },
-                cancellationToken);
-
-            DialerCallMetadata.StampDial(interaction, profile, attemptNumber);
-
-            await _interactionManager.CreateAsync(interaction, cancellationToken: cancellationToken);
-            await _auditRecorder.RecordInteractionCreatedAsync(interaction, activity.Source, ContactCenterActor.System, cancellationToken);
-            await _publisher.PublishAsync(new InteractionEvent
+        await _workStateService.MutateAsync(
+            activity.ItemId,
+            workState =>
             {
-                EventType = ContactCenterConstants.Events.DialerAttemptStarted,
-                InteractionId = interaction.ItemId,
-                AggregateType = nameof(DialerProfile),
-                AggregateId = profile.ItemId,
-                SourceComponent = ContactCenterConstants.Components.Dialer,
-                IdempotencyKey = $"dialer-attempt:{interaction.ItemId}",
-            }, cancellationToken);
-            await _providerCommandStateService.RegisterAsync(new ProviderCommandRegistration
-            {
-                CommandId = interaction.ItemId,
-                ProviderName = interaction.ProviderName,
-                CommandType = ProviderCommandType.Dial,
-                ActivityItemId = activity.ItemId,
-                InteractionId = interaction.ItemId,
-                ReservationId = acceptedReservation.ItemId,
-                DialerProfileId = profile.ItemId,
-                RequestPayload = JsonSerializer.Serialize(request),
-            }, cancellationToken);
-        }
-        catch
-        {
-            await _scopeExecutor.ExecuteAsync<IDialerAttemptCompensationService>(service =>
-                service.CompensateAsync(acceptedReservation, removeFromQueue: true, CancellationToken.None));
+                attemptNumber = ContactCenterWorkState.NextAttemptNumber(workState, activity.Attempts);
+                workState.Attempts = attemptNumber;
+                workState.DialCount++;
+            },
+            cancellationToken);
 
-            throw;
+        DialerCallMetadata.StampDial(interaction, profile, attemptNumber);
+
+        if (agent is null)
+        {
+            DialerCallMetadata.MarkOverDialed(interaction);
         }
+
+        await _interactionManager.CreateAsync(interaction, cancellationToken: cancellationToken);
+        await _auditRecorder.RecordInteractionCreatedAsync(interaction, activity.Source, ContactCenterActor.System, cancellationToken);
+        await _publisher.PublishAsync(new InteractionEvent
+        {
+            EventType = ContactCenterConstants.Events.DialerAttemptStarted,
+            InteractionId = interaction.ItemId,
+            AggregateType = nameof(DialerProfile),
+            AggregateId = profile.ItemId,
+            SourceComponent = ContactCenterConstants.Components.Dialer,
+            IdempotencyKey = $"dialer-attempt:{interaction.ItemId}",
+        }, cancellationToken);
+        await _providerCommandStateService.RegisterAsync(new ProviderCommandRegistration
+        {
+            CommandId = interaction.ItemId,
+            ProviderName = interaction.ProviderName,
+            CommandType = ProviderCommandType.Dial,
+            ActivityItemId = activity.ItemId,
+            InteractionId = interaction.ItemId,
+            ReservationId = reservationId,
+            DialerProfileId = profile.ItemId,
+            RequestPayload = JsonSerializer.Serialize(request),
+        }, cancellationToken);
 
         _scopeExecutor.ScheduleAfterCommit<IProviderCommandProcessor>(processor =>
             processor.DispatchAsync(interaction.ItemId, CancellationToken.None));
-
-        return true;
     }
 
     // The number the customer sees. A profile that insists on its own caller ID wins. Next comes the number picked when
@@ -310,7 +449,8 @@ public sealed class DialerAttemptService : IDialerAttemptService
             return loadNumber;
         }
 
-        if (_outboundLineResolver is null)
+        // A call placed before any agent is reserved has no agent line to present: nobody knows yet who takes it.
+        if (_outboundLineResolver is null || agent is null)
         {
             return profile.CallerId;
         }
@@ -366,6 +506,67 @@ public sealed class DialerAttemptService : IDialerAttemptService
 
             return null;
         }
+    }
+
+    // An over-dialed attempt the compliance gate refuses is handled as a reserved one would be, without a reservation to
+    // release: a record that may never be dialed leaves the queue, one that may be dialed later stays Waiting.
+    private async Task SuppressUnreservedAsync(
+        DialerProfile profile,
+        QueueItem queueItem,
+        OmnichannelActivity activity,
+        DialerEligibilityResult eligibility,
+        CancellationToken cancellationToken)
+    {
+        var status = ResolveSuppressedStatus(eligibility.Reason);
+
+        if (eligibility.Reason == DialerSuppressionReason.MaxAttemptsReached &&
+            !QueueCallbackDialerProfile.IsCallbackProfile(profile.ItemId) &&
+            ScheduleExhaustedFinalization(activity.ItemId))
+        {
+            await RemoveFromQueueAsync(queueItem, cancellationToken);
+            await PublishSuppressedAsync(profile, activity, eligibility, cancellationToken);
+
+            return;
+        }
+
+        if (status.HasValue)
+        {
+            var terminalReasonCode = eligibility.Reason == DialerSuppressionReason.NumberNotInService
+                ? OmnichannelConstants.TerminalReasons.NumberNotInService
+                : null;
+
+            await _activityWriter.ScheduleUpdateAsync(
+                activity.ItemId,
+                suppressed =>
+                {
+                    suppressed.Status = status.Value;
+
+                    if (terminalReasonCode is not null)
+                    {
+                        suppressed.TerminalReasonCode = terminalReasonCode;
+                    }
+                },
+                cancellationToken);
+
+            await RemoveFromQueueAsync(queueItem, cancellationToken);
+        }
+
+        await PublishSuppressedAsync(profile, activity, eligibility, cancellationToken);
+    }
+
+    private async Task RemoveFromQueueAsync(QueueItem queueItem, CancellationToken cancellationToken)
+    {
+        queueItem.TransitionTo(QueueItemStatus.Removed);
+        queueItem.DequeuedUtc = _clock.UtcNow;
+        await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
+
+        await _workStateService.MutateAsync(queueItem.ActivityItemId, workState =>
+        {
+            if (workState.AssignmentStatus != ActivityAssignmentStatus.Released && workState.CanTransitionTo(ActivityAssignmentStatus.Released))
+            {
+                workState.TransitionTo(ActivityAssignmentStatus.Released);
+            }
+        }, cancellationToken);
     }
 
     private async Task SuppressAsync(

@@ -118,6 +118,9 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
             var activity = Assert.Single(await ListLoadedActivitiesAsync(store));
 
             Assert.Equal("subject-campaign", activity.CampaignId);
+
+            // The profile is recorded on the activity so the activity screens can say which dialer will call it.
+            Assert.Equal(DialerProfileId, activity.DialerProfileId);
             Assert.Equal([activity.ItemId], dialer.EnqueuedActivityIds);
             Assert.Equal(["subject-campaign"], dialer.EnqueuedCampaignIds);
             Assert.Equal(OmnichannelActivityBatchStatus.Loaded, batch.Status);

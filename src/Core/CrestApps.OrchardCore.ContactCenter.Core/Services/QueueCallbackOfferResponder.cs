@@ -182,6 +182,7 @@ public sealed class QueueCallbackOfferResponder : IQueueCallbackOfferResponder
             activity.Status = ActivityStatus.Completed;
             activity.TerminalReasonCode = ReasonCode;
             activity.CompletedUtc = now;
+            ActivityDispositionActors.Stamp(activity, ActivityDispositionActor.System);
         }, cancellationToken);
 
         // Said once the callback is committed, so a caller is never told it is arranged when it was not. The call is

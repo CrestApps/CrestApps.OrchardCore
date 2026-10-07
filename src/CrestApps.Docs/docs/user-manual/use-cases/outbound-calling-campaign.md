@@ -44,7 +44,7 @@ When it is done:
 6. **Set the calling window.** Create a business hours calendar for the hours you may call. The dialer checks it in each contact's own time zone. See [Business hours](../business-hours.md).
 7. **Choose how to dial.** Create a dialer profile: the mode (**Preview**, **Power** or **Progressive**), the caller ID customers see, the compliance rules with your calling calendar, and, for power and progressive, attempts, retry delay and the abandonment cap. See [Dialer profiles](../dialer-profiles.md).
 8. **Give agents the campaign.** On each agent's entitlement record, add the campaign under **Allowed campaigns**. See [Skills and agent entitlements](../skills-and-entitlements.md).
-9. **Load the work.** Create a **Dialer** activity load with the subject, the dialer profile and the campaign, filter the contacts, and pick a **Dial from** number if this campaign should show its own number. Save, then choose **Actions > Load batch**, and read the load's report of what was loaded and skipped. See [Load activities](../load-inventory.md).
+9. **Load the work.** Create a **Dialer** activity load with the subject, the dialer profile and the campaign, filter the contacts, and pick a **Dial from** number if this campaign should show its own number. Save, then choose **Actions > Load activities**, and read the load's report of what was loaded and skipped. See [Load activities](../load-inventory.md).
 10. **Agents dial.** Agents sign in to the campaign from the soft phone's **Work** tab and set themselves **Available**. With preview, each record is offered with **Dial** and **Skip**; with power or progressive, the call is placed for them and the record opens as it rings. See [Agent workspace](../agent-workspace.md) and [Placing and handling calls](../calls.md).
 11. **Agents record the outcome.** After the call, the agent completes the activity with a disposition and notes, which ends wrap-up and runs the subject flow. See [Activities](../activities.md).
 12. **Watch and adjust.** Supervisors filter the live dashboard by the campaign. Managers reassign, reschedule or move work to another dialer profile in bulk, and review dead numbers. See [Live dashboard](../live-dashboard.md), [Managing activities in bulk](../bulk-activities.md) and [Numbers not in service](../numbers-not-in-service.md).
@@ -52,7 +52,7 @@ When it is done:
 
 ## Check that it works
 
-1. After **Load batch**, the load's status reaches *Loaded* and says how many records it loaded. If it loaded none, its report says why.
+1. After **Load activities**, the load's status reaches *Loaded* and says how many records it loaded. If it loaded none, its report says why.
 2. Sign in to the campaign as a test agent and set yourself **Available**.
 3. With a preview profile, an offer appears in the docked agent bar and **My workspace**: click **Dial**. With a power profile, a call is placed within about a minute.
 4. Complete the activity with *Call back*, and check on the contact's **List Activities** page that the flow scheduled the next attempt.

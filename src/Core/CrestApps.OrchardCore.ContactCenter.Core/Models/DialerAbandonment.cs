@@ -168,5 +168,23 @@ public static class DialerAbandonment
         /// The person hung up while waiting for an agent, after <see cref="ConnectThreshold"/> had passed.
         /// </summary>
         public const string CustomerHungUpWaiting = "customer_hung_up_waiting";
+
+        /// <summary>
+        /// A call an over-dialing Predictive profile placed without an agent was answered by a person, and no agent was
+        /// free to take it.
+        /// </summary>
+        public const string NoAgentAvailable = "no_agent_available";
+
+        /// <summary>
+        /// An agent was claimed for an answered over-dialed call, but their leg did not answer within the time allowed, so
+        /// the agent was released and the person given the abandoned-call message.
+        /// </summary>
+        public const string AgentLegTimeout = "agent_leg_timeout";
+
+        /// <summary>
+        /// An answered over-dialed call was found by the sweep with no agent claimed and no message played, long after
+        /// the answer: the connect that should have handled it was lost.
+        /// </summary>
+        public const string AnsweredUnconnected = "answered_unconnected";
     }
 }

@@ -51,10 +51,19 @@ public sealed partial class ContactCenterAgentLegFailureService : IContactCenter
     }
 
     /// <inheritdoc />
+    public Task<bool> FailAsync(
+        string providerName,
+        string peerProviderCallId,
+        HangupCause? hangupCause,
+        CancellationToken cancellationToken = default)
+        => FailAsync(providerName, peerProviderCallId, hangupCause, DialerAbandonment.Reasons.AgentLegFailed, cancellationToken);
+
+    /// <inheritdoc />
     public async Task<bool> FailAsync(
         string providerName,
         string peerProviderCallId,
         HangupCause? hangupCause,
+        string abandonmentReason,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(peerProviderCallId))
@@ -77,7 +86,7 @@ public sealed partial class ContactCenterAgentLegFailureService : IContactCenter
         // A person who answered an automated dialer call is listening to silence while the agent never arrives. The
         // abandoned-call message starts first, before anything is written, and the provider ends the call once it has
         // been spoken; the failure is then recorded as before.
-        var messageStarted = await _abandonmentTracker.AbandonAsync(interaction, providerName, peerProviderCallId, DialerAbandonment.Reasons.AgentLegFailed, cancellationToken);
+        var messageStarted = await _abandonmentTracker.AbandonAsync(interaction, providerName, peerProviderCallId, string.IsNullOrEmpty(abandonmentReason) ? DialerAbandonment.Reasons.AgentLegFailed : abandonmentReason, cancellationToken);
 
         var now = _clock.UtcNow;
         var session = await _callSessionManager.FindByInteractionIdAsync(interaction.ItemId, cancellationToken);

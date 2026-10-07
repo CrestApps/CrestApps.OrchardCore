@@ -116,7 +116,7 @@ namespace CrestApps.OrchardCore.Telephony.Controllers
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("telephony/extensions", "TelephonyExtensionsIndex")]
         [OrchardCore.Routing.FormValueRequired("submit.Filter")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> IndexFilterPost(CrestApps.OrchardCore.Core.Models.ListCatalogEntryViewModel model) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> IndexFilterPost(CrestApps.OrchardCore.Core.Models.ListCatalogEntryViewModel model, OrchardCore.Navigation.PagerParameters pagerParameters) { }
         [Microsoft.AspNetCore.Mvc.ActionName("Index")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("telephony/extensions", "TelephonyExtensionsIndex")]
@@ -494,6 +494,11 @@ namespace CrestApps.OrchardCore.Telephony.Services
         public const string Sha256Method = "S256";
         public static string CreateCodeChallenge(string codeVerifier) { }
         public static string CreateCodeVerifier() { }
+    }
+    public sealed class TelephonyRemotePartyNotifier : CrestApps.OrchardCore.Telephony.ITelephonyRemotePartyNotifier
+    {
+        public TelephonyRemotePartyNotifier(CrestApps.OrchardCore.Telephony.ITelephonyInteractionStore telephonyInteractionStore, Microsoft.AspNetCore.SignalR.IHubContext<CrestApps.OrchardCore.Telephony.Hubs.TelephonyHub, CrestApps.OrchardCore.Telephony.ITelephonyClient> hubContext, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Telephony.Services.TelephonyRemotePartyNotifier> logger, OrchardCore.Environment.Shell.ShellSettings shellSettings) { }
+        public System.Threading.Tasks.Task NotifyAsync(string providerName, string providerCallId, CrestApps.OrchardCore.Telephony.Models.RemotePartyState state, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class TelephonySettingsConfiguration : Microsoft.Extensions.Options.IPostConfigureOptions<CrestApps.OrchardCore.Telephony.TelephonySettings>
     {

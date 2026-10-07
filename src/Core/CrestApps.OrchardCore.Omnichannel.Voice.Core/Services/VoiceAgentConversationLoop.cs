@@ -349,50 +349,6 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
     }
 
     /// <summary>
-    /// The deployment a live session would be held on, or <see langword="null"/> when this profile cannot hold one.
-    /// </summary>
-    /// <remarks>
-    /// Realtime used to be its own deployment on the profile; it is a model capability now, so the profile's chat
-    /// deployment is asked whether it declares it. A profile that names no chat deployment falls back to whatever
-    /// deployment the tenant has with the capability, which is how the rest of the platform resolves it.
-    /// </remarks>
-    /// <param name="profile">The profile driving the conversation.</param>
-    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    private async Task<string> ResolveRealtimeDeploymentNameAsync(AIProfile profile, CancellationToken cancellationToken)
-    {
-        // Asked of the deployment catalog by capability, not through the chat slot. A speech-to-speech model
-        // cannot serve a text completion, so the framework excludes the realtime feature from that slot -- which
-        // means asking the chat slot to resolve the profile's deployment answers "no such deployment" for
-        // precisely the deployment being looked for. Nothing failed when it did: the call connected, the
-        // assistant spoke, and the only symptom was that it could not hear the caller while it was talking.
-        //
-        // With no deployment named, this falls back to whatever deployment the tenant has with the capability,
-        // which is how the rest of the platform resolves it.
-        var deployment = await _capabilityService.ResolveDeploymentWithFeatureAsync(
-            AIDeploymentFeatureNames.Realtime,
-            profile.ChatDeploymentName,
-            cancellationToken);
-
-        if (deployment is not null)
-        {
-            return deployment.Name;
-        }
-
-        // Said plainly on the record, because running turn-based is not an error and produces no other trace:
-        // the difference is audible on the phone and invisible in the log.
-        if (_logger.IsEnabled(LogLevel.Information))
-        {
-            _logger.LogInformation(
-                "Profile '{ProfileName}' runs the turn-based voice loop: deployment '{DeploymentName}' does not declare the '{Feature}' capability.",
-                profile.Name.SanitizeLogValue(),
-                profile.ChatDeploymentName.SanitizeLogValue(),
-                AIDeploymentFeatureNames.Realtime);
-        }
-
-        return null;
-    }
-
-    /// <summary>
     /// Moves an answered call into the live in-progress state.
     /// </summary>
     /// <remarks>

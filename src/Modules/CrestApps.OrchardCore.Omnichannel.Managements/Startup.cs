@@ -51,6 +51,7 @@ public sealed class Startup : StartupBase
 
         services.AddDisplayDriver<OmnichannelActivityBatch, OmnichannelActivityBatchDisplayDriver>();
 
+        services.AddScoped<ActivityHandlerDescriber>();
         services.AddDisplayDriver<OmnichannelActivityContainer, OmnichannelActivityContainerDisplayDriver>();
         services.AddScoped<IContentDisplayDriver, OmnichannelContactDisplayDriver>();
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, OmnichannelContactPartSettingsDisplayDriver>();
@@ -61,7 +62,8 @@ public sealed class Startup : StartupBase
         services.AddScoped<IContentHandler, OmnichannelContactMethodIdsHandler>();
 
         services
-            .AddDisplayDriver<OmnichannelActivity, OmnichannelActivityDisplayDriver>();
+            .AddDisplayDriver<OmnichannelActivity, OmnichannelActivityDisplayDriver>()
+            .AddDisplayDriver<OmnichannelActivity, OmnichannelActivityHandoffSummaryDisplayDriver>();
 
         services
             .AddDisplayDriver<ListOmnichannelActivityFilter, ListOmnichannelActivityFilterDisplayDriver>()

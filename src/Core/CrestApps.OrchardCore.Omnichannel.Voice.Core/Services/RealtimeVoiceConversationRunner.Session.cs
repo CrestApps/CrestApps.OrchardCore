@@ -184,6 +184,10 @@ public sealed partial class RealtimeVoiceConversationRunner
                 {
                     ConfigureCallTools(orchestration, context);
 
+                    // Kept, so a prompt sent in the middle of the call can carry the session's own instructions with
+                    // it (see WithSessionInstructions).
+                    _sessionInstructions = orchestration?.SystemMessageBuilder;
+
                     if (!string.IsNullOrEmpty(conversationSoFar) && orchestration?.SystemMessageBuilder is not null)
                     {
                         orchestration.SystemMessageBuilder.AppendLine();
@@ -202,6 +206,28 @@ public sealed partial class RealtimeVoiceConversationRunner
 
             return null;
         }
+    }
+
+    /// <summary>
+    /// The instructions for one prompted response: the session's own, followed by what this response is for.
+    /// </summary>
+    /// <remarks>
+    /// Instructions given with a single response replace the session's for that response -- the profile's persona
+    /// and every rule about the call included. Sent on their own, "ask whether they are still there" was answered by
+    /// a model that no longer knew who it was. So the session's instructions go first, and the prompt is added to
+    /// them rather than put in their place.
+    /// </remarks>
+    /// <param name="prompt">What this response is for.</param>
+    private string WithSessionInstructions(string prompt)
+    {
+        var sessionInstructions = _sessionInstructions?.ToString();
+
+        if (string.IsNullOrWhiteSpace(sessionInstructions))
+        {
+            return prompt;
+        }
+
+        return sessionInstructions.TrimEnd() + "\n\n## Right now\n\n" + prompt;
     }
 
     /// <summary>

@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Security.Claims;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
@@ -11,7 +10,6 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
-using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -26,10 +24,6 @@ using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Settings;
-using OrchardCore.Users.Indexes;
-using OrchardCore.Users.Models;
-using YesSql;
-using YesSql.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 
@@ -58,8 +52,8 @@ public sealed class CallRecordingsController : Controller
     private readonly IInteractionManager _interactionManager;
     private readonly IOmnichannelActivityManager _activityManager;
     private readonly IRecordingMediaStore _mediaStore;
-    private readonly ISession _session;
-    private readonly IDisplayNameProvider _displayNameProvider;
+    private readonly CallRecordingAccessEvaluator _accessEvaluator;
+    private readonly CallRecordingAgentNameResolver _nameResolver;
     private readonly IPhoneNumberService _phoneNumberService;
     private readonly IAgentProfileManager _agentProfileManager;
     private readonly ISiteService _siteService;
@@ -81,8 +75,8 @@ public sealed class CallRecordingsController : Controller
     /// <param name="interactionManager">The interaction manager, read for a recording's legal hold.</param>
     /// <param name="activityManager">The CRM activity manager, read for the contact a call was with.</param>
     /// <param name="mediaStores">The encrypted recording media store, when telephony registered one.</param>
-    /// <param name="session">The YesSql session, used to name the agents on a page of calls in one query.</param>
-    /// <param name="displayNameProviders">The site's display name provider, when there is one.</param>
+    /// <param name="accessEvaluator">Works out which recordings the viewer may hear.</param>
+    /// <param name="nameResolver">Names the agents on a page of calls in one query.</param>
     /// <param name="phoneNumberService">The phone number service, which formats the customer's number for reading.</param>
     /// <param name="agentProfileManagers">The agent profile manager, when agents are enabled, listing the agents the page can be narrowed to.</param>
     /// <param name="siteService">The site service, read for the region phone numbers are shown in.</param>
@@ -100,8 +94,8 @@ public sealed class CallRecordingsController : Controller
         IInteractionManager interactionManager,
         IOmnichannelActivityManager activityManager,
         IEnumerable<IRecordingMediaStore> mediaStores,
-        ISession session,
-        IEnumerable<IDisplayNameProvider> displayNameProviders,
+        CallRecordingAccessEvaluator accessEvaluator,
+        CallRecordingAgentNameResolver nameResolver,
         IPhoneNumberService phoneNumberService,
         IEnumerable<IAgentProfileManager> agentProfileManagers,
         ISiteService siteService,
@@ -119,8 +113,8 @@ public sealed class CallRecordingsController : Controller
         _interactionManager = interactionManager;
         _activityManager = activityManager;
         _mediaStore = mediaStores.LastOrDefault();
-        _session = session;
-        _displayNameProvider = displayNameProviders.LastOrDefault();
+        _accessEvaluator = accessEvaluator;
+        _nameResolver = nameResolver;
         _phoneNumberService = phoneNumberService;
         _agentProfileManager = agentProfileManagers.FirstOrDefault();
         _siteService = siteService;
@@ -161,7 +155,7 @@ public sealed class CallRecordingsController : Controller
             filter.AgentUserId = null;
         }
 
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
         var query = new CallRecordingQuery
         {
             // Someone who may only hear their own calls is only ever searched their own, whatever was asked for.
@@ -415,15 +409,8 @@ public sealed class CallRecordingsController : Controller
         => string.IsNullOrWhiteSpace(range) ||
             range.Trim().StartsWith("bytes=0-", StringComparison.OrdinalIgnoreCase);
 
-    private async Task<CallRecordingAccess> GetAccessAsync()
-    {
-        var everyone = await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.ListenToAllCallRecordings);
-
-        return new CallRecordingAccess(
-            User.FindFirstValue(ClaimTypes.NameIdentifier),
-            everyone || await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.ListenToOwnCallRecordings),
-            everyone);
-    }
+    private Task<CallRecordingAccess> GetAccessAsync()
+        => _accessEvaluator.GetAccessAsync(User);
 
     // A recording the viewer may not hear, or that cannot be played, is reported as one that is not there.
     private async Task<CallRecording> FindPlayableAsync(string id, CallRecordingAccess access)
@@ -435,21 +422,9 @@ public sealed class CallRecordingsController : Controller
 
         var recording = await _store.FindByIdAsync(id, HttpContext.RequestAborted);
 
-        if (recording is null ||
-            !recording.StoredUtc.HasValue ||
-            recording.ErasedUtc.HasValue ||
-            string.IsNullOrEmpty(recording.StorageReference))
-        {
-            return null;
-        }
-
-        if (!access.CanListEveryone &&
-            (string.IsNullOrEmpty(access.UserId) || !string.Equals(recording.AgentUserId, access.UserId, StringComparison.Ordinal)))
-        {
-            return null;
-        }
-
-        return recording;
+        return CallRecordingAccess.IsPlayable(recording) && access.CanHear(recording)
+            ? recording
+            : null;
     }
 
     private async Task AuditAccessAsync(CallRecording recording, CallRecordingAccess access, string purpose)
@@ -556,33 +531,8 @@ public sealed class CallRecordingsController : Controller
             .ToList();
     }
 
-    private async Task<Dictionary<string, string>> GetUserNamesAsync(IEnumerable<string> userIds)
-    {
-        var ids = userIds
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .Distinct(StringComparer.Ordinal)
-            .ToArray();
-        var names = new Dictionary<string, string>(StringComparer.Ordinal);
-
-        if (ids.Length == 0)
-        {
-            return names;
-        }
-
-        // One query for the whole page, rather than one per row.
-        var users = await _session.Query<User, UserIndex>(index => index.UserId.IsIn(ids)).ListAsync(HttpContext.RequestAborted);
-
-        foreach (var user in users)
-        {
-            var name = _displayNameProvider is null
-                ? null
-                : await _displayNameProvider.GetAsync(user, HttpContext.RequestAborted);
-
-            names[user.UserId] = string.IsNullOrWhiteSpace(name) ? user.UserName : name.Trim();
-        }
-
-        return names;
-    }
+    private Task<Dictionary<string, string>> GetUserNamesAsync(IEnumerable<string> userIds)
+        => _nameResolver.GetNamesAsync(userIds, HttpContext.RequestAborted);
 
     private void LogErased(CallRecording recording, CallRecordingAccess access)
     {
@@ -597,9 +547,7 @@ public sealed class CallRecordingsController : Controller
     }
 
     private static string NameOf(string userId, Dictionary<string, string> names)
-        => string.IsNullOrEmpty(userId)
-            ? null
-            : names.TryGetValue(userId, out var name) ? name : userId;
+        => CallRecordingAgentNameResolver.NameOf(userId, names);
 
     private static string NullIfEmpty(string value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
@@ -622,5 +570,4 @@ public sealed class CallRecordingsController : Controller
             _ => "audio/mpeg",
         };
 
-    private sealed record CallRecordingAccess(string UserId, bool CanListOwn, bool CanListEveryone);
 }

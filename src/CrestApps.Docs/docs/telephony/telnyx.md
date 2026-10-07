@@ -451,6 +451,15 @@ the soft phone asks the platform to place a keypad dial instead, naming the cred
 3. When the number answers, the two are bridged on the agent leg with `park_after_unbridge: self`, as a Contact Center
    agent leg is.
 
+Because the agent leg is answered before the number is dialed, and joined to it only on answer, the carrier's ringback
+plays on the number's leg and never reaches the agent. So the orchestrator tells the soft phone where the number stands
+through `ITelephonyRemotePartyNotifier`, which the Telephony module pushes to the user's phones as the hub message
+`RemotePartyChanged`: `Ringing` once the number is dialed, `Answered` once it is bridged (or, for an extension call, once
+the colleague joins its conference), and `Ended` when its leg hangs up unbridged -- before the not-in-service notice or
+voicemail starts. The phone plays a local ringback (440 + 480 Hz, 2 s on, 4 s off) in between and shows *Ringing...*;
+it reports `ringback-started` and `ringback-stopped` (with the reason) to the soft-phone diagnostics. No Telnyx command
+is sent for it, so the legs' client state is untouched. Consults are left out: they have their own status.
+
 The soft phone tracks the agent leg, but Telnyx's commands act on the leg they are given, so every command on such a call
 is sent to the dialed party's leg, read back from the agent leg's client state (`GET /v2/calls/{agent}`):
 

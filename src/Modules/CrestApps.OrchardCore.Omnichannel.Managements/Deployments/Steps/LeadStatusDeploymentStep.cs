@@ -8,12 +8,16 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Steps;
 /// </summary>
 public sealed class LeadStatusDeploymentStep : DeploymentStep
 {
+    private static readonly LocalizationSource _category = LocalizationSource.Create<LeadStatusDeploymentStep>("Omnichannel");
+    private static readonly LocalizationSource _title = LocalizationSource.Create<LeadStatusDeploymentStep>("Omnichannel Lead Statuses");
+
     /// <summary>
     /// Initializes a new instance of the <see cref="LeadStatusDeploymentStep"/> class.
     /// </summary>
     public LeadStatusDeploymentStep()
     {
         Name = OmnichannelDeploymentSteps.LeadStatus;
-        Category = LocalizationSource.Create<LeadStatusDeploymentStep>("Omnichannel");
+        Category = _category;
+        Title = _title;
     }
 }

@@ -129,7 +129,7 @@
     </div>
 </div>
 
-<form asp-action="Export" asp-controller="Admin" method="post" id="items-form" autocomplete="off">
+<form asp-action="Export" asp-route-pageSize="@Context.Request.Query["pageSize"]" asp-controller="Admin" method="post" id="items-form" autocomplete="off">
     @await DisplayAsync(Model.List)
 </form>
 

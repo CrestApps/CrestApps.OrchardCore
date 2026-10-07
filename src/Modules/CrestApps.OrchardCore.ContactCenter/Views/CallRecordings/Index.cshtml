@@ -7,6 +7,10 @@
 </zone>
 
 <form asp-action="Index" method="get" class="no-multisubmit">
+    @if (Context.Request.Query.TryGetValue("pageSize", out var selectedPageSize))
+    {
+        <input type="hidden" name="pageSize" value="@selectedPageSize" />
+    }
     <div class="card text-bg-theme mb-3 position-sticky action-bar">
         <div class="card-body">
             <div class="row gx-3 gy-2 align-items-end">

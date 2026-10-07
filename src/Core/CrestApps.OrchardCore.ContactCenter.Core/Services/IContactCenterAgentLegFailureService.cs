@@ -46,6 +46,23 @@ public interface IContactCenterAgentLegFailureService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Settles the call whose agent leg failed, as <see cref="FailAsync(string, string, Telephony.Models.HangupCause?, CancellationToken)"/>
+    /// does, recording the person's abandonment with the given reason.
+    /// </summary>
+    /// <param name="providerName">The technical name of the provider that reported the failure.</param>
+    /// <param name="peerProviderCallId">The provider identifier of the customer call the agent leg was joining.</param>
+    /// <param name="hangupCause">The cause the provider reported for the failed agent leg, when it reported one.</param>
+    /// <param name="abandonmentReason">Why the person was abandoned, one of <see cref="Models.DialerAbandonment.Reasons"/>.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns><see langword="true"/> when a live call was settled; otherwise <see langword="false"/>.</returns>
+    Task<bool> FailAsync(
+        string providerName,
+        string peerProviderCallId,
+        Telephony.Models.HangupCause? hangupCause,
+        string abandonmentReason,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Ends the call whose joined agent leg hung up first, at the moment the leg ended, and releases the caller.
     /// </summary>
     /// <remarks>

@@ -39,6 +39,15 @@ public interface ITelephonyClient
     Task CredentialsIssued(TelephonyClientCredentials credentials);
 
     /// <summary>
+    /// Notifies the client where the other party of one of its calls stands: still ringing, answered, or gone. A call
+    /// the platform connects on the server reads as connected from the moment the agent's own leg answers, so this is
+    /// how the client knows to play a ringback tone while the number rings.
+    /// </summary>
+    /// <param name="update">The call and where its other party stands.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    Task RemotePartyChanged(TelephonyRemotePartyUpdate update);
+
+    /// <summary>
     /// Asks the client to place an outbound call. This is raised when a call is started from outside the soft
     /// phone surface, such as the "call" button next to a phone-number field. The client decides how to place
     /// the call (for example, registering first if needed, or holding an active call).

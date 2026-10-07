@@ -1,0 +1,45 @@
+@model ActivityCallRecordingsViewModel
+
+@* The recorded calls of the activity the viewer may hear. Read-only: erasing a recording is done on its own page. *@
+@if (Model.Items.Count > 0)
+{
+    <div class="card mb-4">
+        <div class="card-header d-flex align-items-center gap-2 fw-semibold">
+            <i class="fa-solid fa-microphone-lines" aria-hidden="true"></i>
+            @T["Call recordings"]
+        </div>
+        <ul class="list-group list-group-flush">
+            @foreach (var item in Model.Items)
+            {
+                var recording = item.Recording;
+                var source = recording.Source switch
+                {
+                    CallRecordingSource.AiAgent => T["AI voice agent"].Value,
+                    CallRecordingSource.SoftPhone => T["Soft phone"].Value,
+                    _ => T["Contact Center"].Value,
+                };
+                var mediaUrl = Url.Action("Media", "CallRecordings", new { area = "CrestApps.OrchardCore.ContactCenter", id = recording.ItemId });
+                var displayUrl = Url.Action("Display", "CallRecordings", new { area = "CrestApps.OrchardCore.ContactCenter", id = recording.ItemId });
+
+                @* Each recording is a player of its own, which the recording player script mixes down to mono as it plays. *@
+                <li class="list-group-item" data-cc-call-recording>
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                        <span>@item.StartedLocal.ToString("g")</span>
+                        <span class="font-monospace text-muted" title="@T["Length"]">@CallRecordingFormat.Duration(recording.DurationSeconds)</span>
+                        <span class="badge ta-badge">@source</span>
+                        @if (!string.IsNullOrEmpty(item.AgentName))
+                        {
+                            <span class="text-muted"><i class="fa-solid fa-headset" aria-hidden="true"></i> @item.AgentName</span>
+                        }
+                        <a class="ms-auto" href="@displayUrl">@T["View"]</a>
+                    </div>
+                    <audio controls preload="none" class="w-100" src="@mediaUrl" data-cc-recording-player>
+                        @T["Your browser cannot play this recording."]
+                    </audio>
+                </li>
+            }
+        </ul>
+    </div>
+
+    <script asp-name="contact-center-call-recording" at="Foot"></script>
+}

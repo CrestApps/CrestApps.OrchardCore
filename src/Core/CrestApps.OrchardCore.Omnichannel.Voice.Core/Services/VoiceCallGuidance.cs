@@ -55,14 +55,24 @@ internal static class VoiceCallGuidance
     /// "hello?", like the cue to open. So this now says outright that those instructions are spent after the first
     /// line, and what to say instead.
     /// </para>
+    /// <para>
+    /// It used to state as a fact that the opening "has been said", from the first word of the call. A model that
+    /// takes its instructions literally believed it: it opened one call with "You still with me?", and on the next,
+    /// when the caller's "hello?" cancelled its greeting before a word of it played, it answered "Yes, I'm here"
+    /// and never introduced itself. So the opening is described as something that happens once, and a "hello?"
+    /// before it is the cue to give it.
+    /// </para>
     /// </remarks>
     public const string WhenTalkedOver =
-        "Your first line on this call was your opening, and it has been said: from then on the customer knows who " +
-        "you are and why you are calling, even if they talked over part of it. Any instructions about how to open " +
-        "the call apply only to your first line. Never say it again: do not greet the customer by name again, and " +
-        "do not say who you are or where you are calling from again unless they ask. " +
-        "If the customer speaks while you are talking, you stop; answer what they actually said. If they say " +
-        "\"hello?\", \"are you there?\" or \"can you hear me?\", answer in a few words (\"Yes, I'm here!\") and go " +
-        "straight on with the question you were asking. If they only acknowledge you (\"OK\", \"yeah\"), carry on " +
-        "with the conversation rather than starting it again.";
+        "Your first line on this call is your opening: greet the customer and introduce yourself as your " +
+        "instructions describe. If you have not spoken yet, give it even if the customer speaks first — a " +
+        "\"hello?\" before you have said anything is your cue to open, not a sign they have been waiting. Once your " +
+        "opening has been said, the customer knows who you are and why you are calling, even if they talked over " +
+        "part of it. Any instructions about how to open the call apply only to your first line. Never say it " +
+        "again: do not greet the customer by name again, and do not say who you are or where you are calling from " +
+        "again unless they ask. " +
+        "If the customer speaks while you are talking, you stop; answer what they actually said. After your " +
+        "opening, if they say \"hello?\", \"are you there?\" or \"can you hear me?\", answer in a few words " +
+        "(\"Yes, I'm here!\") and go straight on with the question you were asking. If they only acknowledge you " +
+        "(\"OK\", \"yeah\"), carry on with the conversation rather than starting it again.";
 }

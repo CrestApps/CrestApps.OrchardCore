@@ -153,7 +153,7 @@ public sealed class ActivitiesController : Controller
 
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
 
         options ??= new ListOmnichannelActivityFilter();
 
@@ -210,12 +210,14 @@ public sealed class ActivitiesController : Controller
     /// <summary>
     /// Performs the activities filter post operation.
     /// </summary>
+    /// <param name="pagerParameters">The pager parameters.</param>
     /// <param name="filterDisplayManager">The filter display manager.</param>
     [HttpPost]
     [ActionName(nameof(Activities))]
     [FormValueRequired("submit.Filter")]
     [Admin("omnichannel/activities", "OmnichannelActivities")]
     public async Task<ActionResult> ActivitiesFilterPost(
+        PagerParameters pagerParameters,
         [FromServices] IDisplayManager<ListOmnichannelActivityFilter> filterDisplayManager)
     {
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ListActivities))
@@ -227,6 +229,7 @@ public sealed class ActivitiesController : Controller
 
         // Evaluate the values provided in the form post and map them to the filter result and route values.
         await filterDisplayManager.UpdateEditorAsync(options, _updateModelAccessor.ModelUpdater, isNew: false);
+        AddPagerRouteValues(options.RouteValues, pagerParameters);
 
         return RedirectToAction(nameof(Activities), options.RouteValues);
     }
@@ -256,14 +259,14 @@ public sealed class ActivitiesController : Controller
             return Forbid();
         }
 
-        var scheduledPager = new Pager(scheduledPagerParameters, pagerOptions.Value.GetPageSize());
+        var scheduledPager = new Pager(WithSharedPageSize(scheduledPagerParameters, pagerParameters), pagerOptions.Value);
 
         var scheduledResults = await _omnichannelActivityManager.PageContactManualScheduledAsync(contentItemId, scheduledPager.Page, scheduledPager.PageSize);
 
         var scheduledPagerShape = await shapeFactory.PagerAsync(scheduledPager, scheduledResults.Count);
         scheduledPagerShape.Properties["PagerId"] = "s.pagenum";
 
-        var completedPager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var completedPager = new Pager(pagerParameters, pagerOptions.Value);
 
         var completedResults = await _omnichannelActivityManager.PageContactManualCompletedAsync(contentItemId, scheduledPager.Page, scheduledPager.PageSize);
 
@@ -353,8 +356,8 @@ public sealed class ActivitiesController : Controller
             .Distinct(StringComparer.Ordinal)
             .ToArray();
 
-        var scheduledPager = new Pager(scheduledPagerParameters, pagerOptions.Value.GetPageSize());
-        var completedPager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var scheduledPager = new Pager(WithSharedPageSize(scheduledPagerParameters, pagerParameters), pagerOptions.Value);
+        var completedPager = new Pager(pagerParameters, pagerOptions.Value);
 
         var scheduled = await PageAccountActivitiesAsync(memberIds, completed: false, scheduledPager);
         var completed = await PageAccountActivitiesAsync(memberIds, completed: true, completedPager);
@@ -1190,7 +1193,7 @@ public sealed class ActivitiesController : Controller
             return Forbid();
         }
 
-        var pager = new Pager(pagerParameters.Page, pagerParameters.PageSize, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
 
         options ??= new BulkManageActivityFilter();
 
@@ -1241,13 +1244,6 @@ public sealed class ActivitiesController : Controller
             Pager = pagerShape,
             TotalCount = result.Count,
             CurrentPageSize = pager.PageSize,
-            PageSizeOptions =
-            [
-                new SelectListItem("10", "10", pager.PageSize == 10),
-                new SelectListItem("25", "25", pager.PageSize == 25),
-                new SelectListItem("50", "50", pager.PageSize == 50),
-                new SelectListItem("100", "100", pager.PageSize == 100),
-            ],
         };
 
         dynamic bulkActionsShape = await bulkActionsDisplayManager.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater);
@@ -1459,6 +1455,15 @@ public sealed class ActivitiesController : Controller
             routeValues["pageSize"] = pagerParameters.PageSize.Value.ToString(CultureInfo.InvariantCulture);
         }
     }
+
+    // A page that shows two paged lists renders a page size selector under each, and both write the one
+    // unprefixed "pageSize" query value, so the prefixed list takes its page number alone and shares the page size.
+    private static PagerParameters WithSharedPageSize(PagerParameters prefixedPagerParameters, PagerParameters pagerParameters)
+        => new()
+        {
+            Page = prefixedPagerParameters.Page,
+            PageSize = pagerParameters.PageSize,
+        };
 
     private async Task<int> BulkAssignAsync(List<OmnichannelActivity> activities, string[] assignToUserIds)
     {

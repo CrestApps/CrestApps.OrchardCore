@@ -30,11 +30,5 @@ public static class DialerActivitySourceHelper
     /// <param name="source">The activity source identifier.</param>
     /// <returns><see langword="true"/> when the source is a dialer source; otherwise, <see langword="false"/>.</returns>
     public static bool IsDialerSource(string source)
-    {
-        return string.Equals(source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(source, ActivitySources.PreviewDial, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(source, ActivitySources.PowerDial, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(source, ActivitySources.ProgressiveDial, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(source, ActivitySources.PredictiveDial, StringComparison.OrdinalIgnoreCase);
-    }
+        => ActivitySources.IsDialer(source);
 }

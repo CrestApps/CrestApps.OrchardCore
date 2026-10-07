@@ -8,12 +8,16 @@ namespace CrestApps.OrchardCore.ContactCenter.Deployments.Steps;
 /// </summary>
 public sealed class ContactCenterSkillDeploymentStep : DeploymentStep
 {
+    private static readonly LocalizationSource _category = LocalizationSource.Create<ContactCenterSkillDeploymentStep>("Contact Center");
+    private static readonly LocalizationSource _title = LocalizationSource.Create<ContactCenterSkillDeploymentStep>("Contact Center Skills");
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterSkillDeploymentStep"/> class.
     /// </summary>
     public ContactCenterSkillDeploymentStep()
     {
         Name = ContactCenterDeploymentSteps.Skill;
-        Category = LocalizationSource.Create<ContactCenterSkillDeploymentStep>("Contact Center");
+        Category = _category;
+        Title = _title;
     }
 }

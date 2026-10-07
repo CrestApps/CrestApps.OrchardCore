@@ -5,6 +5,6 @@
     <breadcrumb name="ContentTransferImports" title="@T["Bulk Import"]" />
 </zone>
 
-<form asp-action="List" asp-controller="Admin" method="post" id="items-form" autocomplete="off">
+<form asp-action="List" asp-route-pageSize="@Context.Request.Query["pageSize"]" asp-controller="Admin" method="post" id="items-form" autocomplete="off">
     @await DisplayAsync(Model)
 </form>

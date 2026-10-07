@@ -17,6 +17,7 @@ internal sealed class DialerProfileHandler : CatalogEntryHandlerBase<DialerProfi
     private readonly IClock _clock;
     private readonly IShellFeaturesManager _shellFeaturesManager;
     private readonly IPhoneNumberService _phoneNumberService;
+    private readonly IEnumerable<IDialerPacingStatisticsProvider> _pacingStatisticsProviders;
 
     internal readonly IStringLocalizer S;
 
@@ -26,16 +27,22 @@ internal sealed class DialerProfileHandler : CatalogEntryHandlerBase<DialerProfi
     /// <param name="clock">The clock used to stamp audit times.</param>
     /// <param name="shellFeaturesManager">The shell features manager used to detect the Paced Dialing feature.</param>
     /// <param name="phoneNumberService">The phone number service used to validate the outbound caller id.</param>
+    /// <param name="pacingStatisticsProviders">
+    /// The measured connect times a Predictive profile's connect wait is checked against; registered by the Paced Dialing
+    /// feature, and none without it.
+    /// </param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public DialerProfileHandler(
         IClock clock,
         IShellFeaturesManager shellFeaturesManager,
         IPhoneNumberService phoneNumberService,
+        IEnumerable<IDialerPacingStatisticsProvider> pacingStatisticsProviders,
         IStringLocalizer<DialerProfileHandler> stringLocalizer)
     {
         _clock = clock;
         _shellFeaturesManager = shellFeaturesManager;
         _phoneNumberService = phoneNumberService;
+        _pacingStatisticsProviders = pacingStatisticsProviders;
         S = stringLocalizer;
     }
 
@@ -84,6 +91,7 @@ internal sealed class DialerProfileHandler : CatalogEntryHandlerBase<DialerProfi
         if (profile.Mode == DialerMode.Predictive)
         {
             ValidatePredictivePacing(context, profile);
+            await ValidateConnectWaitAsync(context, profile, cancellationToken);
         }
 
         // The caller id becomes the outbound "from" the voice provider dials with, and a provider rejects a
@@ -135,6 +143,59 @@ internal sealed class DialerProfileHandler : CatalogEntryHandlerBase<DialerProfi
         {
             context.Result.Fail(new ValidationResult(S["Provide the abandoned-call message when it is enabled."], [nameof(DialerProfile.SafeHarborMessage)]));
         }
+    }
+
+    // A connect wait holds a person who answered for an agent about to free up. It only helps while that agent can still be
+    // connected inside the two seconds after which the call counts as abandoned, which only the campaign's measured
+    // answer-to-agent time can show; without enough measured connects there is no evidence, and no wait is allowed.
+    private async Task ValidateConnectWaitAsync(ValidatingContext<DialerProfile> context, DialerProfile profile, CancellationToken cancellationToken)
+    {
+        if (profile.ConnectWaitMilliseconds is <= 0 or > PredictiveDialingDefaults.MaxConnectWaitMilliseconds)
+        {
+            return;
+        }
+
+        var statistics = await GetPacingStatisticsAsync(profile, cancellationToken);
+        var check = PredictiveConnectWait.Check(profile.ConnectWaitMilliseconds, statistics);
+        var thresholdSeconds = DialerAbandonment.ConnectThreshold.TotalSeconds;
+
+        if (check.Verdict == PredictiveConnectWaitVerdict.NoLatencyData)
+        {
+            context.Result.Fail(new ValidationResult(
+                S["A connect wait needs the measured time it takes to connect an agent to a person who answered: at least {0} connected calls of this profile, so the wait plus that time can be shown to stay within {1} seconds. Set the connect wait to 0 until this profile has dialed enough calls.", PredictiveConnectWait.MinimumLatencySamples, thresholdSeconds],
+                [nameof(DialerProfile.ConnectWaitMilliseconds)]));
+
+            return;
+        }
+
+        if (check.Verdict == PredictiveConnectWaitVerdict.ExceedsBudget)
+        {
+            context.Result.Fail(new ValidationResult(
+                S["The connect wait plus the measured time to connect an agent ({0:0} ms at the 95th percentile) must stay within {1} seconds. The longest connect wait allowed now is {2} ms.", check.P95ConnectLatency.Value.TotalMilliseconds, thresholdSeconds, check.MaxAllowedMilliseconds],
+                [nameof(DialerProfile.ConnectWaitMilliseconds)]));
+        }
+    }
+
+    private async Task<DialerPacingStatistics> GetPacingStatisticsAsync(DialerProfile profile, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(profile.ItemId))
+        {
+            return null;
+        }
+
+        var window = TimeSpan.FromMinutes(Math.Clamp(profile.AnswerRateWindowMinutes, PredictiveDialingDefaults.MinAnswerRateWindowMinutes, PredictiveDialingDefaults.MaxAnswerRateWindowMinutes));
+
+        foreach (var provider in _pacingStatisticsProviders)
+        {
+            var statistics = await provider.GetStatisticsAsync(profile.ItemId, window, cancellationToken);
+
+            if (statistics is not null)
+            {
+                return statistics;
+            }
+        }
+
+        return null;
     }
 
     // The predictive settings only govern Predictive profiles, so only they are held to them: a Power profile imported with

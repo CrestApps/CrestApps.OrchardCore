@@ -45,6 +45,8 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator
     {
         var handedToContactCenter = await IsHandedToContactCenterAsync(callEvent, cancellationToken);
 
+        // In registration order, one after another. A realtime conversation's handler returns only when the AI is done
+        // with the caller, so anything that must happen at the answer (recording the call) is registered ahead of it.
         foreach (var handler in _aiVoiceEventHandlers)
         {
             await handler.HandleAsync(callEvent, state, cancellationToken);

@@ -745,12 +745,29 @@
       list.appendChild(item);
     });
   }
+
+  // Stands the soft phone by for an over-dialing campaign while the agent is Available and signed in to a campaign: a
+  // leg the platform rings for a call this agent was claimed for is then answered at once, even when it arrives before
+  // the push about the claim (see the telephony soft phone's soft-phone/predictive-standby.js).
+  function syncPredictiveStandby(root, presenceStatus) {
+    var api = root && root.__contactCenterSoftPhoneApi;
+    var modules = window.CrestAppsSoftPhone || {};
+    if (!api || typeof api.setPredictiveStandby !== 'function' || typeof modules.isStandbyEligible !== 'function') {
+      return;
+    }
+    var snapshot = root.__contactCenterMembershipSnapshot || {};
+    if (presenceStatus !== undefined && presenceStatus !== null && presenceStatus !== '') {
+      root.__contactCenterPresenceStatus = presence.normalizePresenceStatus ? presence.normalizePresenceStatus(presenceStatus) : presenceStatus;
+    }
+    api.setPredictiveStandby(modules.isStandbyEligible(root.__contactCenterPresenceStatus, snapshot.campaignIds || []), ownUserId || snapshot.userId || '');
+  }
   function updateMembershipUi(root, snapshot) {
     if (!root || !snapshot) {
       return;
     }
     root.__contactCenterMembershipSnapshot = snapshot;
     updatePresenceUi(snapshot);
+    syncPredictiveStandby(root, snapshot.presenceStatus || 'Offline');
     var isSignedIn = !!(snapshot.queueIds && snapshot.queueIds.length) || !!(snapshot.campaignIds && snapshot.campaignIds.length);
     var signedInText = root.getAttribute('data-contact-center-signed-in-text') || 'Signed in';
     var offlineText = root.getAttribute('data-contact-center-offline-text') || 'Signed out';
@@ -1047,6 +1064,8 @@
       }
     }) : null;
     api.__contactCenterQueuedVoiceSyncBound = true;
+    root.__contactCenterSoftPhoneApi = api;
+    syncPredictiveStandby(root);
     bindMembershipForms(root, api, client);
     bindPresenceForms(root, api, client);
     if (client && client.connection) {
@@ -1062,6 +1081,7 @@
           presenceReason: notification.reason,
           requestedPresenceStatus: notification.requestedStatus
         });
+        syncPredictiveStandby(root, notification.status);
       });
       client.connection.on('OfferReceived', function (notification) {
         // The soft phone never navigates on an offer. It runs chromeless in its own window (the /softphone

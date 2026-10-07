@@ -14,4 +14,9 @@ public static class VoiceTemplateIds
     /// Reviews a finished call and produces its summary and disposition.
     /// </summary>
     public const string ConclusionAnalysis = "voice-conclusion-analysis";
+
+    /// <summary>
+    /// Summarizes a call for the live agent the customer was handed to.
+    /// </summary>
+    public const string HandoffSummary = "voice-handoff-summary";
 }

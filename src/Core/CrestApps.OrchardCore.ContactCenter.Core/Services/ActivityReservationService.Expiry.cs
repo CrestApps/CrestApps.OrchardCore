@@ -341,6 +341,11 @@ public sealed partial class ActivityReservationService
             {
                 activity.Status = terminalStatus;
                 activity.CompletedUtc = now;
+
+                if (terminalStatus == ActivityStatus.Completed)
+                {
+                    ActivityDispositionActors.Stamp(activity, ActivityDispositionActor.System);
+                }
             }, cancellationToken);
         }
 
