@@ -89,6 +89,9 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     /// </summary>
     private OutgoingCallAudio _outgoing;
 
+    // The instructions the live session was opened with, as the orchestrator assembled them.
+    private System.Text.StringBuilder _sessionInstructions;
+
     /// <summary>
     /// How long the session is given to finish its closing line after the model asks to transfer, before it is
     /// closed and the caller is handed to the queue. Long enough for "connecting you now", short enough that a
@@ -281,6 +284,11 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         // session waits to be spoken to -- voice detection is how a turn begins -- and every live transcript
         // opened with the customer saying "Hello?" into dead air before the assistant introduced itself. A
         // session that creates its own responses ignores this, so it is safe to ask either way.
+        //
+        // Asked for with no instructions of its own, on purpose. Instructions given with one response replace the
+        // session's for that response -- the profile's persona included -- and a call opened that way greeted the
+        // customer as a generic assistant ("Hi there! I'm ChatGPT"). What the opening must be is said in the
+        // session's own instructions instead (see VoiceCallGuidance.WhenTalkedOver).
         await first.RequestUnpromptedResponseAsync(cancellationToken: cancellationToken);
 
         // Both silence clocks start now rather than at zero. Left unset, "quiet since the beginning of time" is a
@@ -429,9 +437,11 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
                 // had even less chance of answering than the one they had just missed. What a person does here
                 // is ask again, so that is what this asks for, and it forbids the alternative outright.
                 await conversation.RequestUnpromptedResponseAsync(
-                    "The line has gone quiet and the customer has not answered. Say one short sentence only: " +
-                    "either ask whether they are still there, or repeat the question you just asked them. Do not " +
-                    "ask anything new, do not move on to another topic, and do not continue the previous sentence.",
+                    WithSessionInstructions(
+                        "The line has gone quiet and the customer has not answered. Say one short sentence only: " +
+                        "either ask whether they are still there, or repeat the question you just asked them. Do " +
+                        "not ask anything new, do not move on to another topic, and do not continue the previous " +
+                        "sentence."),
                     callToken);
             }
         }

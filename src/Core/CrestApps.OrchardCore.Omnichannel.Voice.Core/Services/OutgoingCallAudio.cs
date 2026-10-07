@@ -23,6 +23,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 /// first sample happened to be. After <see cref="Reset"/> the voice fades in.</item>
 /// </list>
 /// <para>
+/// The voice is also brought to a steady level (see <see cref="AssistantVoiceLeveler"/>), because models do not all
+/// speak equally loud and a quieter one was heard on the phone as an assistant mumbling.
+/// </para>
+/// <para>
 /// One per call, shared by everything that writes to the line — the voice and the room bed — so the stream stays
 /// continuous across them. Calls are serialized, because the two write from different tasks.
 /// </para>
@@ -39,6 +43,7 @@ internal sealed class OutgoingCallAudio
     private readonly int _bytesPerSample;
     private readonly int _fadeSamples;
     private readonly StreamingResampler _resampler;
+    private readonly AssistantVoiceLeveler _leveler;
     private readonly List<double> _converted = [];
     private readonly List<byte> _pending = [];
 
@@ -61,6 +66,9 @@ internal sealed class OutgoingCallAudio
         _bytesPerSample = _encoding is ContactCenterVoiceMediaEncoding.MuLaw or ContactCenterVoiceMediaEncoding.ALaw ? 1 : 2;
         _fadeSamples = Math.Max(1, sampleRate * FadeMilliseconds / 1000);
         _resampler = new StreamingResampler(RealtimeAudioConverter.RealtimeSampleRate, sampleRate);
+
+        // Kept for the whole call, across lines and clears: how loud the model speaks does not change mid-call.
+        _leveler = new AssistantVoiceLeveler(sampleRate);
         FrameBytes = sampleRate / 50 * _bytesPerSample;
         _fadeIn = _fadeSamples;
     }
@@ -87,6 +95,7 @@ internal sealed class OutgoingCallAudio
 
             _converted.Clear();
             _resampler.Process(samples, _converted);
+            _leveler.Process(_converted);
 
             foreach (var value in _converted)
             {
