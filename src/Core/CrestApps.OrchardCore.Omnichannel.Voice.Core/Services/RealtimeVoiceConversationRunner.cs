@@ -89,6 +89,9 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     /// </summary>
     private OutgoingCallAudio _outgoing;
 
+    // The instructions the live session was opened with, as the orchestrator assembled them.
+    private System.Text.StringBuilder _sessionInstructions;
+
     /// <summary>
     /// How long the session is given to finish its closing line after the model asks to transfer, before it is
     /// closed and the caller is handed to the queue. Long enough for "connecting you now", short enough that a
@@ -434,9 +437,11 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
                 // had even less chance of answering than the one they had just missed. What a person does here
                 // is ask again, so that is what this asks for, and it forbids the alternative outright.
                 await conversation.RequestUnpromptedResponseAsync(
-                    "The line has gone quiet and the customer has not answered. Say one short sentence only: " +
-                    "either ask whether they are still there, or repeat the question you just asked them. Do not " +
-                    "ask anything new, do not move on to another topic, and do not continue the previous sentence.",
+                    WithSessionInstructions(
+                        "The line has gone quiet and the customer has not answered. Say one short sentence only: " +
+                        "either ask whether they are still there, or repeat the question you just asked them. Do " +
+                        "not ask anything new, do not move on to another topic, and do not continue the previous " +
+                        "sentence."),
                     callToken);
             }
         }
