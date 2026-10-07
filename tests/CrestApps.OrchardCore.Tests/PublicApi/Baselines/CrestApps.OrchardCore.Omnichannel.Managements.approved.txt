@@ -257,8 +257,16 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
     public sealed class ActivityBatchesController : Microsoft.AspNetCore.Mvc.Controller
     {
         public ActivityBatchesController(CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityBatch> manager, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor updateModelAccessor, OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityBatch> batchDisplayManager, OrchardCore.DisplayManagement.Notify.INotifier notifier, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityBatchSourceOptions> activityBatchSourceOptions, Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.ActivityBatchesController> htmlLocalizer, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.ActivityBatchesController> stringLocalizer) { }
+        [Microsoft.AspNetCore.Mvc.HttpPost]
+        [OrchardCore.Admin.Admin("omnichannel/activity/batches/clone/{id}", "OmnichannelActivityBatchesClone")]
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> Clone(string id) { }
         [OrchardCore.Admin.Admin("omnichannel/activity/batches/create/{source}", "OmnichannelActivityBatchesCreate")]
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> Create(string source) { }
+        [Microsoft.AspNetCore.Mvc.ActionName("Create")]
+        [Microsoft.AspNetCore.Mvc.HttpPost]
+        [OrchardCore.Admin.Admin("omnichannel/activity/batches/create/{source}", "OmnichannelActivityBatchesCreate")]
+        [OrchardCore.Routing.FormValueRequired("submit.SaveAndLoad")]
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> CreateAndLoadPost(string source) { }
         [Microsoft.AspNetCore.Mvc.ActionName("Create")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/activity/batches/create/{source}", "OmnichannelActivityBatchesCreate")]
@@ -268,6 +276,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Delete(string id) { }
         [OrchardCore.Admin.Admin("omnichannel/activity/batches/edit/{id}", "OmnichannelActivityBatchesEdit")]
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> Edit(string id) { }
+        [Microsoft.AspNetCore.Mvc.ActionName("Edit")]
+        [Microsoft.AspNetCore.Mvc.HttpPost]
+        [OrchardCore.Admin.Admin("omnichannel/activity/batches/edit/{id}", "OmnichannelActivityBatchesEdit")]
+        [OrchardCore.Routing.FormValueRequired("submit.SaveAndLoad")]
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> EditAndLoadPost(string id) { }
         [Microsoft.AspNetCore.Mvc.ActionName("Edit")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/activity/batches/edit/{id}", "OmnichannelActivityBatchesEdit")]
