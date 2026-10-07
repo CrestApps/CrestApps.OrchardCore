@@ -765,10 +765,13 @@ window.coreAIChatManager = function (_window$CoreAIChatMar, _window$CoreAIChatMa
       renderer: renderer
     }));
     message._pendingCharts = _pendingCharts.length > 0 ? _toConsumableArray(_pendingCharts) : [];
-    return DOMPurify.sanitize(html, {
+    var sanitizedHtml = DOMPurify.sanitize(html, {
       ADD_TAGS: ['canvas'],
       ADD_ATTR: ['target']
     });
+
+    // Optional, shared with every chat surface: a run of pictures becomes one stacked carousel.
+    return window.CoreAIChatImageCarousel ? window.CoreAIChatImageCarousel.stackAdjacentImages(sanitizedHtml) : sanitizedHtml;
   }
   function compactObject(source) {
     if (!source || _typeof(source) !== 'object') {

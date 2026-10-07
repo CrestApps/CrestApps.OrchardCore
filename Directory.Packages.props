@@ -3,7 +3,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
     <OrchardCoreVersion>4.0.0-preview-19174</OrchardCoreVersion>
-    <CrestAppsCoreVersion>2.0.0-preview.297</CrestAppsCoreVersion>
+    <CrestAppsCoreVersion>2.0.0-preview.311</CrestAppsCoreVersion>
     <ModelContextProtocolVersion>2.2.0</ModelContextProtocolVersion>
   </PropertyGroup>
   <ItemGroup>
@@ -132,6 +132,7 @@
     <PackageVersion Include="CrestApps.Core.AI.OpenAI.Azure" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.Documents.OpenXml" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.Documents.Pdf" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.AI.Documents.Word" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.Sftp" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.Azure" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.Azure" Version="$(CrestAppsCoreVersion)" />
