@@ -203,7 +203,7 @@ public sealed class TelnyxMediaStreamReconnectTests
     }
 
     // The session keeps the token registered from the start; a test plays Telnyx by claiming it.
-    private static async Task<WebSocketRendezvous> ClaimWhenRegisteredAsync(IWebSocketConnectionRegistry registry)
+    private static async Task<WebSocketRendezvous> ClaimWhenRegisteredAsync(InMemoryWebSocketConnectionRegistry registry)
     {
         var deadline = DateTime.UtcNow.AddSeconds(5);
 
