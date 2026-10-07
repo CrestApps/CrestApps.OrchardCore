@@ -2,9 +2,18 @@
 
 @model ShapeViewModel<OmnichannelActivityBatch>
 
-<a asp-action="Load"
+@if (Model.Value.Status == OmnichannelActivityBatchStatus.New)
+{
+    <a asp-action="Load"
+       asp-route-id="@Model.Value.ItemId"
+       class="text-danger dropdown-item"
+       data-url-af="RemoveUrl UnsafeUrl"
+       data-title="@T["Load activities"]"
+       data-message="@T["Are you sure you want to load activities for this batch?"]">@T["Load activities"]</a>
+}
+
+@* Cloning copies the settings only: the copy is a new batch that has loaded nothing. *@
+<a asp-action="Clone"
    asp-route-id="@Model.Value.ItemId"
-   class="text-danger dropdown-item"
-   data-url-af="RemoveUrl UnsafeUrl"
-   data-title="@T["Load Batch"]"
-   data-message="@T["Are you sure you want to load this batch?"]">@T["Load batch"]</a>
+   class="dropdown-item"
+   data-url-af="UnsafeUrl">@T["Clone"]</a>

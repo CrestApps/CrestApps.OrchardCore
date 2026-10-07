@@ -31,6 +31,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers;
 [Admin]
 public sealed class ActivityBatchesController : Controller
 {
+    /// <summary>
+    /// The name of the submit button that saves a batch and then loads its activities.
+    /// </summary>
+    internal const string SaveAndLoadSubmitName = "submit.SaveAndLoad";
+
     private const string _optionsSearch = "Options.Search";
 
     private readonly ICatalogManager<OmnichannelActivityBatch> _manager;
@@ -200,7 +205,21 @@ public sealed class ActivityBatchesController : Controller
     [HttpPost]
     [ActionName(nameof(Create))]
     [Admin("omnichannel/activity/batches/create/{source}", "OmnichannelActivityBatchesCreate")]
-    public async Task<ActionResult> CreatePost(string source)
+    public Task<ActionResult> CreatePost(string source)
+        => CreateBatchAsync(source, loadAfterSave: false);
+
+    /// <summary>
+    /// Creates a new batch and, once it is saved, starts loading its activities in the background.
+    /// </summary>
+    /// <param name="source">The activity load source of the new batch.</param>
+    [HttpPost]
+    [ActionName(nameof(Create))]
+    [FormValueRequired(SaveAndLoadSubmitName)]
+    [Admin("omnichannel/activity/batches/create/{source}", "OmnichannelActivityBatchesCreate")]
+    public Task<ActionResult> CreateAndLoadPost(string source)
+        => CreateBatchAsync(source, loadAfterSave: true);
+
+    private async Task<ActionResult> CreateBatchAsync(string source, bool loadAfterSave)
     {
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageActivityBatches))
         {
@@ -226,6 +245,11 @@ public sealed class ActivityBatchesController : Controller
         if (ModelState.IsValid)
         {
             await _manager.CreateAsync(model);
+
+            if (loadAfterSave)
+            {
+                return await StartLoadAsync(model);
+            }
 
             await _notifier.SuccessAsync(H["A new activity load has been created successfully."]);
 
@@ -272,7 +296,22 @@ public sealed class ActivityBatchesController : Controller
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("omnichannel/activity/batches/edit/{id}", "OmnichannelActivityBatchesEdit")]
-    public async Task<ActionResult> EditPost(string id)
+    public Task<ActionResult> EditPost(string id)
+        => UpdateBatchAsync(id, loadAfterSave: false);
+
+    /// <summary>
+    /// Saves the batch exactly as <see cref="EditPost(string)"/> does and, once it is saved, starts loading its
+    /// activities in the background. A batch that fails validation is shown again and is not loaded.
+    /// </summary>
+    /// <param name="id">The id.</param>
+    [HttpPost]
+    [ActionName(nameof(Edit))]
+    [FormValueRequired(SaveAndLoadSubmitName)]
+    [Admin("omnichannel/activity/batches/edit/{id}", "OmnichannelActivityBatchesEdit")]
+    public Task<ActionResult> EditAndLoadPost(string id)
+        => UpdateBatchAsync(id, loadAfterSave: true);
+
+    private async Task<ActionResult> UpdateBatchAsync(string id, bool loadAfterSave)
     {
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageActivityBatches))
         {
@@ -310,6 +349,11 @@ public sealed class ActivityBatchesController : Controller
         {
             await _manager.UpdateAsync(model);
 
+            if (loadAfterSave)
+            {
+                return await StartLoadAsync(model);
+            }
+
             await _notifier.SuccessAsync(H["The activity load has been updated successfully."]);
 
             return RedirectToAction(nameof(Index));
@@ -318,6 +362,36 @@ public sealed class ActivityBatchesController : Controller
         ViewData["IsReadOnly"] = model.Status != OmnichannelActivityBatchStatus.New;
 
         return View(viewModel);
+    }
+
+    /// <summary>
+    /// Creates a new batch with the settings of an existing one and opens it for editing. The new batch is
+    /// <see cref="OmnichannelActivityBatchStatus.New"/> and has loaded nothing, whatever the status of the source.
+    /// </summary>
+    /// <param name="id">The id of the batch to copy.</param>
+    [HttpPost]
+    [Admin("omnichannel/activity/batches/clone/{id}", "OmnichannelActivityBatchesClone")]
+    public async Task<ActionResult> Clone(string id)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageActivityBatches))
+        {
+            return Forbid();
+        }
+
+        var source = await _manager.FindByIdAsync(id);
+
+        if (source == null)
+        {
+            return NotFound();
+        }
+
+        var copy = ActivityBatchCloner.CreateCopy(source, await _manager.NewAsync(), S["{0} (copy)", source.DisplayText]);
+
+        await _manager.CreateAsync(copy);
+
+        await _notifier.SuccessAsync(H["The activity load has been copied. Review the copy and load its activities when it is ready."]);
+
+        return RedirectToAction(nameof(Edit), new { id = copy.ItemId });
     }
 
     /// <summary>
@@ -397,6 +471,13 @@ public sealed class ActivityBatchesController : Controller
             return RedirectToAction(nameof(Index));
         }
 
+        return await StartLoadAsync(model);
+    }
+
+    // Marks the batch as started and hands the load to a background job that runs once the request has committed,
+    // so the job reads the batch as it was saved here. Shared by the Load action and by Save & Load.
+    private async Task<ActionResult> StartLoadAsync(OmnichannelActivityBatch model)
+    {
         model.Status = OmnichannelActivityBatchStatus.Started;
         await _manager.UpdateAsync(model);
 
