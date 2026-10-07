@@ -1,6 +1,8 @@
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Indexes;
+using CrestApps.OrchardCore.ContactCenter.Migrations;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,6 +10,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
+using OrchardCore.Data;
+using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
 
@@ -65,6 +69,20 @@ public sealed class DialerPacedStartup : StartupBase
         services
             .AddSingleton<DialerPacingStatisticsCache>()
             .AddScoped<IDialerPacingStatisticsProvider, InteractionEventDialerPacingStatisticsProvider>();
+
+        // Over-dialing: calls placed without a reserved agent, an agent claimed when a person answers, the pacing record
+        // that keeps racing nodes within the calculated calls in flight, and the event-driven pacing that runs it. Only a
+        // Predictive profile on the over-dial pacing model uses any of it, and validation holds such a profile to an
+        // enforced abandonment cap, the abandoned-call message and a target below the cap.
+        services
+            .AddScoped<IPredictiveOverDialPacer, PredictiveOverDialPacer>()
+            .AddScoped<IPredictiveAgentConnector, PredictiveAgentConnector>()
+            .AddScoped<IPredictiveSystemDialAuthorizer, PredictiveSystemDialAuthorizer>()
+            .AddSingleton<IPredictivePacingScheduler, PredictivePacingScheduler>()
+            .AddScoped<IContactCenterEventHandler, PredictivePacingTriggerHandler>()
+            .AddScoped<IPredictivePacingStateStore, PredictivePacingStateStore>()
+            .AddIndexProvider<PredictivePacingStateIndexProvider>()
+            .AddDataMigration<PredictivePacingStateIndexMigrations>();
 
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, DialerPacingBackgroundTask>());
 

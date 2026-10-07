@@ -1,11 +1,10 @@
-using System.Text.Json;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OrchardCore;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -60,7 +59,17 @@ public sealed partial class ProviderVoiceEventService
         DateTime now,
         CancellationToken cancellationToken)
     {
-        if (session.Direction != InteractionDirection.Outbound || string.IsNullOrEmpty(session.AgentId))
+        if (session.Direction != InteractionDirection.Outbound)
+        {
+            return;
+        }
+
+        // A call an over-dialing Predictive profile placed has no agent yet: one is claimed once a person answers.
+        var overDialed = string.IsNullOrEmpty(session.AgentId) &&
+            string.IsNullOrEmpty(interaction.AgentId) &&
+            DialerCallMetadata.IsOverDialed(interaction);
+
+        if (string.IsNullOrEmpty(session.AgentId) && !overDialed)
         {
             return;
         }
@@ -113,6 +122,21 @@ public sealed partial class ProviderVoiceEventService
             await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
         }
 
+        if (overDialed)
+        {
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Over-dialed call '{ProviderCallId}' (interaction '{InteractionId}') was answered by a person; claiming a free agent for it.",
+                    session.ProviderCallId.SanitizeLogValue(),
+                    interaction.ItemId.SanitizeLogValue());
+            }
+
+            ScheduleOverDialConnect(interaction);
+
+            return;
+        }
+
         if (!ProviderJoinsAgentAfterAnswer(session))
         {
             // A provider that does not join the agent through a leg of its own puts the agent on the call as it is
@@ -157,35 +181,44 @@ public sealed partial class ProviderVoiceEventService
             return;
         }
 
-        if (!session.Metadata.TryGetValue(ContactCenterConstants.CommandMetadata.CommandId, out var commandId) ||
-            string.IsNullOrEmpty(commandId))
-        {
-            commandId = IdGenerator.GenerateId();
-            session.Metadata[ContactCenterConstants.CommandMetadata.CommandId] = commandId;
-            await _callSessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
-        }
-
-        await _providerCommandStateService.RegisterAsync(new ProviderCommandRegistration
-        {
-            CommandId = commandId,
-            ProviderName = session.ProviderName,
-            CommandType = ProviderCommandType.Answer,
-            ActivityItemId = interaction.ActivityItemId,
-            InteractionId = interaction.ItemId,
-            RemoveReservationFromQueueOnFailure = false,
-            RequestPayload = JsonSerializer.Serialize(new ProviderAnswerCommandRequest
-            {
-                ActivityId = interaction.ActivityItemId,
-                InteractionId = interaction.ItemId,
-                ProviderCallId = session.ProviderCallId,
-                AgentId = session.AgentId,
-                AgentUserId = agent.UserId,
-                QueueId = session.QueueId,
-            }),
-        }, cancellationToken);
+        var commandId = await AnsweredCallBridge.RegisterAsync(
+            _providerCommandStateService,
+            _callSessionManager,
+            session,
+            interaction,
+            session.AgentId,
+            agent.UserId,
+            reservationId: null,
+            standbyReservationId: null,
+            agentLegTimeoutSeconds: 0,
+            cancellationToken);
 
         _scopeExecutor.ScheduleAfterCommit<IProviderCommandProcessor>(processor =>
             processor.DispatchAsync(commandId, CancellationToken.None));
+    }
+
+    // An over-dialed call has no agent until a person answers. Once this delivery has committed the answer, the connector
+    // claims a free agent and connects them, or plays the abandoned-call message when nobody is free. It runs after the
+    // commit so the live answer the two-second rule is measured from is on record first.
+    private void ScheduleOverDialConnect(Interaction interaction)
+    {
+        var interactionId = interaction.ItemId;
+
+        _scopeExecutor.ScheduleAfterCommit<IServiceProvider>(async services =>
+        {
+            var connector = services.GetService<IPredictiveAgentConnector>();
+
+            if (connector is null)
+            {
+                _logger.LogWarning(
+                    "Over-dialed call '{InteractionId}' was answered, but no predictive connector is registered to connect an agent to it.",
+                    interactionId.SanitizeLogValue());
+
+                return;
+            }
+
+            await connector.ConnectAsync(interactionId, CancellationToken.None);
+        });
     }
 
     // The call is hung up after this delivery commits, so the verdict is on record before the hangup it causes. The

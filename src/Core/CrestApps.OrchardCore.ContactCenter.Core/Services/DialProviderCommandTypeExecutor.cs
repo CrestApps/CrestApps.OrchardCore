@@ -32,6 +32,7 @@ public sealed partial class DialProviderCommandTypeExecutor : IProviderCommandTy
     private readonly IContactCenterActivityWriter _activityWriter;
     private readonly IDialDestinationPolicy _destinationPolicy;
     private readonly IContactCenterAuditRecorder _auditRecorder;
+    private readonly IEnumerable<IPredictiveSystemDialAuthorizer> _systemDialAuthorizers;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -48,6 +49,7 @@ public sealed partial class DialProviderCommandTypeExecutor : IProviderCommandTy
     /// <param name="destinationPolicy">The safety policy deciding which destinations may be reached.</param>
     /// <param name="auditRecorder">The recorder that writes each dial started or failed to the audit log.</param>
     /// <param name="logger">The logger used to surface why an outbound dial was rejected by the provider.</param>
+    /// <param name="systemDialAuthorizers">The authorizers that vouch for a campaign dial placed without an agent; with none, such a dial is refused.</param>
     public DialProviderCommandTypeExecutor(
         IEnumerable<IProviderCommandDispatchValidator> dispatchValidators,
         IVoiceContactCenterCallRouter voiceCallRouter,
@@ -58,7 +60,8 @@ public sealed partial class DialProviderCommandTypeExecutor : IProviderCommandTy
         IAgentProfileManager agentManager,
         IDialDestinationPolicy destinationPolicy,
         IContactCenterAuditRecorder auditRecorder,
-        ILogger<DialProviderCommandTypeExecutor> logger)
+        ILogger<DialProviderCommandTypeExecutor> logger,
+        IEnumerable<IPredictiveSystemDialAuthorizer> systemDialAuthorizers)
     {
         _dispatchValidators = dispatchValidators;
         _voiceCallRouter = voiceCallRouter;
@@ -68,6 +71,7 @@ public sealed partial class DialProviderCommandTypeExecutor : IProviderCommandTy
         _activityWriter = activityWriter;
         _destinationPolicy = destinationPolicy;
         _auditRecorder = auditRecorder;
+        _systemDialAuthorizers = systemDialAuthorizers;
         _clock = clock;
         _logger = logger;
     }
@@ -104,7 +108,7 @@ public sealed partial class DialProviderCommandTypeExecutor : IProviderCommandTy
 
         var request = DeserializeDialRequest(command);
 
-        if (!await IsAuthorizedFirstDialAsync(request, cancellationToken))
+        if (!await IsAuthorizedFirstDialAsync(request, command, cancellationToken))
         {
             return false;
         }
@@ -127,7 +131,7 @@ public sealed partial class DialProviderCommandTypeExecutor : IProviderCommandTy
 
         StampRequest(request, command, claim);
 
-        if (!await IsAuthorizedFirstDialAsync(request, cancellationToken))
+        if (!await IsAuthorizedFirstDialAsync(request, command, cancellationToken))
         {
             return new ContactCenterVoiceProviderResult
             {
@@ -331,13 +335,32 @@ public sealed partial class DialProviderCommandTypeExecutor : IProviderCommandTy
 
     private async Task<bool> IsAuthorizedFirstDialAsync(
         ContactCenterDialRequest request,
+        ProviderCommand command,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.InteractionId) ||
-            string.IsNullOrWhiteSpace(request.AgentId) ||
-            string.IsNullOrWhiteSpace(request.AgentUserId) ||
             !IsDialable(request.Destination) ||
             (!string.IsNullOrWhiteSpace(request.CallerId) && !IsDialable(request.CallerId)))
+        {
+            return false;
+        }
+
+        // A dial that names no agent is a system dial: only a call an over-dialing Predictive profile placed for its
+        // campaign may be one. Without an authorizer to vouch for it -- the Paced Dialing feature is off -- it is refused.
+        if (string.IsNullOrWhiteSpace(request.AgentId) && string.IsNullOrWhiteSpace(request.AgentUserId))
+        {
+            foreach (var authorizer in _systemDialAuthorizers)
+            {
+                if (await authorizer.IsAuthorizedAsync(command, request, cancellationToken))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(request.AgentId) || string.IsNullOrWhiteSpace(request.AgentUserId))
         {
             return false;
         }

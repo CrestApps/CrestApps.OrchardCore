@@ -36,6 +36,10 @@ public sealed class ContactCenterPredictiveDialingOptionsValidatorTests
         { "no compliance window", nameof(ContactCenterPredictiveDialingOptions.ComplianceWindowDays) },
         { "compliance window too long", nameof(ContactCenterPredictiveDialingOptions.ComplianceWindowDays) },
         { "no timing samples", nameof(ContactCenterPredictiveDialingOptions.MaxTimingSamples) },
+        { "agent leg timeout too short", nameof(ContactCenterPredictiveDialingOptions.AgentLegAnswerTimeout) },
+        { "agent leg timeout too long", nameof(ContactCenterPredictiveDialingOptions.AgentLegAnswerTimeout) },
+        { "lock retry zero", nameof(ContactCenterPredictiveDialingOptions.PacingLockRetryDelay) },
+        { "lock retry not shorter than the lock", nameof(ContactCenterPredictiveDialingOptions.PacingLockRetryDelay) },
     };
 
     [Theory]
@@ -61,6 +65,10 @@ public sealed class ContactCenterPredictiveDialingOptionsValidatorTests
             case "no compliance window": options.ComplianceWindowDays = 0; break;
             case "compliance window too long": options.ComplianceWindowDays = ContactCenterPredictiveDialingOptionsValidator.MaxComplianceWindowDays + 1; break;
             case "no timing samples": options.MaxTimingSamples = 0; break;
+            case "agent leg timeout too short": options.AgentLegAnswerTimeout = ContactCenterPredictiveDialingOptionsValidator.MinAgentLegAnswerTimeout - TimeSpan.FromMilliseconds(1); break;
+            case "agent leg timeout too long": options.AgentLegAnswerTimeout = ContactCenterPredictiveDialingOptionsValidator.MaxAgentLegAnswerTimeout + TimeSpan.FromSeconds(1); break;
+            case "lock retry zero": options.PacingLockRetryDelay = TimeSpan.Zero; break;
+            case "lock retry not shorter than the lock": options.PacingLockRetryDelay = options.PacingLockExpiration; break;
             default: throw new ArgumentOutOfRangeException(nameof(scenario), scenario, null);
         }
 

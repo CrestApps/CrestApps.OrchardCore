@@ -608,17 +608,11 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
     }
 
     private static string GetAgentReservationLockKey(string agentId)
-    {
-        return $"ContactCenterAgentReservation:{agentId}";
-    }
+        => ActivityReservationLockKeys.ForAgent(agentId);
 
     private static string GetActivityReservationLockKey(string activityItemId)
-    {
-        return $"ContactCenterActivityReservation:{activityItemId}";
-    }
+        => ActivityReservationLockKeys.ForActivity(activityItemId);
 
     private static string GetReservationLockKey(string reservationId)
-    {
-        return $"ContactCenterReservation:{reservationId}";
-    }
+        => ActivityReservationLockKeys.ForReservation(reservationId);
 }

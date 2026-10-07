@@ -34,6 +34,7 @@ public sealed class ContactCenterConfigurationCoverageTests
         ["ContactCenterOutboxMessage"] = "Runtime state. Messages awaiting delivery by this node.",
         ["ContactCenterProcessedEvent"] = "Runtime state. Deduplication ledger for events this tenant already handled.",
         ["ContactCenterProjectionCheckpoint"] = "Runtime state. Per-projection position; copying one would skip events in the destination.",
+        ["PredictivePacingState"] = "Runtime state. The pacing record of a campaign queue; copied elsewhere it would carry a decision measured on calls that deployment never placed.",
         ["ContactCenterWorkState"] = "Runtime state. The current disposition of work in flight.",
         ["Interaction"] = "Communication history. One row per contact attempt, produced by traffic.",
         ["InteractionEvent"] = "Communication history. The append-only event stream behind an interaction.",

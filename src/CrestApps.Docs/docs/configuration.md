@@ -1333,12 +1333,30 @@ Every value is validated on start, and an invalid one stops the tenant with the 
 | `ComplianceWindowDays` | `30` | `1` to `90`. |
 | `DefaultRingHorizon` | `00:00:12` | Greater than zero. |
 | `AnsweredUnconnectedSweepAfter` | `00:00:05` | Longer than 2 seconds. |
+| `AgentLegAnswerTimeout` | `00:00:03` | `1` to `30` seconds. |
+| `PacingLockRetryDelay` | `00:00:01` | Greater than zero and shorter than `PacingLockExpiration`. |
+| `DiscountAgentsWithWaitingInbound` | `false` | `true` or `false`. |
 | `StatisticsCacheDuration` | `00:00:05` | Greater than zero. |
 | `MaxTimingSamples` | `2000` | Greater than zero. |
 
-Predictive profiles reserve an agent for every call, so today only `StatisticsCacheDuration` and `MaxTimingSamples`
-are read, when a Predictive profile's measured answer rate is shown. The rest govern over-dialing, which is not
-available yet.
+They govern over-dialing (Predictive profiles on the **Over-dial** pacing model): `PacingDebounce` delays a pacing run
+after the event that asked for it, `PacingInterval` is how soon a queue that is placing calls is paced again,
+`PacingLockExpiration` bounds the per-queue pacing lock, `MaxDialsPerCycle` caps the calls one cycle places,
+`ConnectLockWait` is how long the claim of an agent at answer waits for the agent's lock before trying the next agent,
+`ComplianceWindowDays` is the long-run abandonment window that must stay under the cap, and `DefaultRingHorizon` is the
+ring time assumed for agents about to free up until it is measured. `StatisticsCacheDuration` and `MaxTimingSamples`
+govern the measurement shown on the profile and used for pacing.
+
+`AgentLegAnswerTimeout` is how long, from the moment an agent is claimed for an answered call, the agent's leg has to
+answer before it is hung up, the agent is released back to work and the person hears the abandoned-call message. The
+agent's leg is an invite to their phone and takes a second or more to set up on its own, so no value can promise an agent
+within the two seconds after which a call counts as abandoned (a later connect is counted abandoned anyway); the timeout
+bounds how long a person hears silence when a phone does not pick up. `AnsweredUnconnectedSweepAfter` is how long after
+the answer the minute sweep gives the message to a call that nothing connected or abandoned, and gives up on a claimed
+agent whose leg never answered (after `AgentLegAnswerTimeout` plus this delay), should the node that held the connect or
+the deadline stop. `PacingLockRetryDelay` is how soon a campaign is paced again when a cycle found its pacing lock held by
+another. `DiscountAgentsWithWaitingInbound` leaves out of the free agents an over-dial is sized for every agent who is
+also signed in to an inbound queue with calls waiting.
 
 ```json
 {

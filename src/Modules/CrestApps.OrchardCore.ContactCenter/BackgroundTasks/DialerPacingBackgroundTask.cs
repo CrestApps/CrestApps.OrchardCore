@@ -1,4 +1,6 @@
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -52,6 +54,7 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
         var dialerService = serviceProvider.GetRequiredService<IDialerService>();
         var queueItemStore = serviceProvider.GetRequiredService<IQueueItemStore>();
         var clock = serviceProvider.GetRequiredService<IClock>();
+        var pacingScheduler = serviceProvider.GetService<IPredictivePacingScheduler>();
         var logger = serviceProvider.GetRequiredService<ILogger<DialerPacingBackgroundTask>>();
 
         using var runCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -90,6 +93,36 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
             .Where(ContactCenterConstants.IsCampaignQueue)
             .ToArray();
 
+        // The safety net for an answered over-dialed call whose connect or agent-leg deadline was lost -- the node that held
+        // it stopped. The sweep gives the message to every call answered longer ago than the sweep delay that nothing
+        // connected or abandoned, and gives up on every claimed agent whose leg never answered. Every queue with calls in
+        // flight is then paced, so one whose last cycle was lost with the node is paced again even with nothing to dial.
+        var connector = serviceProvider.GetService<IPredictiveAgentConnector>();
+
+        if (connector is not null)
+        {
+            try
+            {
+                await connector.SweepAnsweredUnconnectedAsync(runToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogError(ex, "The sweep of answered over-dialed calls nothing connected failed; it runs again on the next tick.");
+            }
+        }
+
+        if (pacingScheduler is not null)
+        {
+            foreach (var queueId in await queueItemStore.GetDialerInFlightQueueIdsAsync(runToken))
+            {
+                pacingScheduler.Request(queueId);
+            }
+        }
+
         foreach (var queueId in campaignQueueIds)
         {
             if (clock.UtcNow >= runDeadlineUtc)
@@ -120,6 +153,18 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
 
                 if (profile is null)
                 {
+                    continue;
+                }
+
+                // An over-dialing queue is paced by its own requests, each on a scope of its own, so a cycle that loses a
+                // race with another node cannot spend the session this run shares with every other queue. This run is
+                // the backstop that re-arms it every minute.
+                if (pacingScheduler is not null &&
+                    profile.Mode == DialerMode.Predictive &&
+                    profile.PredictivePacingModel == PredictivePacingModel.OverDial)
+                {
+                    pacingScheduler.Request(queueId);
+
                     continue;
                 }
 

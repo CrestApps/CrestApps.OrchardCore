@@ -53,6 +53,80 @@ public static class DialerCallMetadata
     public const string AbandonedReasonKey = "dialer_abandoned_reason";
 
     /// <summary>
+    /// The key of how the call was paced, <see cref="OverDialPacingModel"/> when it was placed before any agent was
+    /// reserved for it.
+    /// </summary>
+    public const string PacingModelKey = "dialer_pacing_model";
+
+    /// <summary>
+    /// The <see cref="PacingModelKey"/> value of a call an over-dialing Predictive profile placed without an agent.
+    /// </summary>
+    public const string OverDialPacingModel = "overdial";
+
+    /// <summary>
+    /// The key of the instant an agent was claimed for an over-dialed call a person answered.
+    /// </summary>
+    public const string AgentClaimedUtcKey = "dialer_agent_claimed_utc";
+
+    /// <summary>
+    /// Records that the call is placed without a reserved agent, so an agent is picked only when a person answers.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    public static void MarkOverDialed(Interaction interaction)
+    {
+        ArgumentNullException.ThrowIfNull(interaction);
+
+        interaction.TechnicalMetadata[PacingModelKey] = OverDialPacingModel;
+    }
+
+    /// <summary>
+    /// Whether the call is a campaign dial an over-dialing Predictive profile placed without a reserved agent.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    public static bool IsOverDialed(Interaction interaction)
+        => IsCampaignDial(interaction) &&
+            string.Equals(Read(interaction, PacingModelKey), OverDialPacingModel, StringComparison.Ordinal);
+
+    /// <summary>
+    /// Records that an agent was claimed for the over-dialed call, keeping the first instant it happened.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    /// <param name="claimedUtc">When the agent was claimed.</param>
+    /// <returns><see langword="true"/> when this is the first time it is recorded.</returns>
+    public static bool MarkAgentClaimed(Interaction interaction, DateTime claimedUtc)
+    {
+        if (interaction is null || IsAgentClaimed(interaction))
+        {
+            return false;
+        }
+
+        interaction.TechnicalMetadata[AgentClaimedUtcKey] = claimedUtc.ToString("O", CultureInfo.InvariantCulture);
+
+        return true;
+    }
+
+    /// <summary>
+    /// Whether an agent was claimed for the over-dialed call.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    public static bool IsAgentClaimed(Interaction interaction)
+        => !string.IsNullOrEmpty(Read(interaction, AgentClaimedUtcKey));
+
+    /// <summary>
+    /// When an agent was claimed for the over-dialed call, or <see langword="null"/> while none has been.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    public static DateTime? GetAgentClaimedUtc(Interaction interaction)
+        => ReadUtc(interaction, AgentClaimedUtcKey);
+
+    /// <summary>
+    /// Why the call was abandoned, one of <see cref="DialerAbandonment.Reasons"/>, or <see langword="null"/>.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    public static string GetAbandonedReason(Interaction interaction)
+        => Read(interaction, AbandonedReasonKey);
+
+    /// <summary>
     /// Records the profile and the attempt on the interaction of a call the dialer is about to place.
     /// </summary>
     /// <param name="interaction">The interaction of the call.</param>

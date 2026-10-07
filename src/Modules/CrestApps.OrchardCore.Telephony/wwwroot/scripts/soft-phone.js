@@ -3379,6 +3379,161 @@
   softPhone.disarmOtherOffers = disarmOtherOffers;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*
+ * Standing by for an over-dialing campaign: answering, at once, the leg of a call this agent was just claimed for.
+ *
+ * An over-dialing campaign places calls before any agent is chosen, and claims a free agent only when a person answers.
+ * The platform then rings the agent's leg straight away, and the push telling this phone about the claim travels
+ * separately: when the invite won the race, the phone rang the leg as an unsolicited call (or refused it as busy) while
+ * the person who answered listened to silence, and the two-second limit on connecting them ran out.
+ *
+ * While the agent is Available and signed in to a campaign, the phone stands by. A leg the platform rings for a claim
+ * carries two SIP headers -- the claim (reservation) and the user it was made for -- and a standing-by phone answers a
+ * leg carrying both, naming its own user, without waiting for the push. Nothing else is answered on the strength of the
+ * standby: a leg without the tag, a leg for another user, a colleague's call to this phone and a call handed over all
+ * ring as before, and inbound offers keep their accept.
+ *
+ * The claim also takes the agent off Available, and that push can arrive a moment before the invite, so a standby just
+ * dropped still answers a tagged leg for a few seconds. A leg answered or seen on standby is remembered for a minute: the
+ * push about its claim arriving afterwards must not arm the phone to answer whatever leg comes next.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline after offer-leg.js and
+ * auto-answer.js, whose header and destination-leg readers it uses. It attaches to a shared namespace rather than
+ * exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // The SIP headers the platform tags a claimed agent's leg with (see TelnyxConstants on the server).
+  var STANDBY_RESERVATION_HEADER = 'x-cc-reservation';
+  var STANDBY_AGENT_USER_HEADER = 'x-cc-agent-user';
+
+  // How long a standby just dropped still answers a tagged leg.
+  var STANDBY_GRACE_MS = 5000;
+
+  // How long a tagged leg is remembered once seen.
+  var STANDBY_LEG_MEMORY_MS = 60000;
+  function createPredictiveStandby() {
+    return {
+      armed: false,
+      until: 0,
+      userId: '',
+      legs: {}
+    };
+  }
+
+  // Whether the agent should stand by: Available, and signed in to at least one campaign. Only a campaign can claim the
+  // agent for a call without offering it; a queue offers its calls.
+  function isStandbyEligible(presenceStatus, campaignIds) {
+    return presenceStatus === 'Available' && Array.isArray(campaignIds) && campaignIds.some(function (id) {
+      return !!id;
+    });
+  }
+
+  // Stands by (armed true) for `userId`, or stops standing by after the grace period. Returns whether it stands by.
+  function setPredictiveStandby(standby, armed, userId, now, graceMs) {
+    if (!standby) {
+      return false;
+    }
+    if (userId) {
+      standby.userId = String(userId);
+    }
+    if (armed) {
+      standby.armed = true;
+      standby.until = 0;
+      return true;
+    }
+    if (standby.armed) {
+      standby.armed = false;
+      standby.until = now + (typeof graceMs === 'number' && graceMs >= 0 ? graceMs : STANDBY_GRACE_MS);
+    }
+    return false;
+  }
+  function isStandingBy(standby, now) {
+    return !!standby && (standby.armed || now < standby.until);
+  }
+
+  // What a leg's SIP headers say about a standby claim: { reservationId, agentUserId }, both '' for an untagged leg.
+  function readStandbyLegTag(options) {
+    var readHeader = softPhone.readProviderHeader;
+    var headers = options ? options.customHeaders || options.custom_headers : null;
+    if (typeof readHeader !== 'function' || !headers) {
+      return {
+        reservationId: '',
+        agentUserId: ''
+      };
+    }
+    return {
+      reservationId: readHeader(headers, STANDBY_RESERVATION_HEADER),
+      agentUserId: readHeader(headers, STANDBY_AGENT_USER_HEADER)
+    };
+  }
+  function forgetOldLegs(standby, now) {
+    Object.keys(standby.legs).forEach(function (id) {
+      if (now - standby.legs[id] > STANDBY_LEG_MEMORY_MS) {
+        delete standby.legs[id];
+      }
+    });
+  }
+
+  // Remembers that the leg of a claim reached this phone, answered or not.
+  function noteStandbyLeg(standby, reservationId, now) {
+    if (!standby || !reservationId) {
+      return;
+    }
+    forgetOldLegs(standby, now);
+    standby.legs[reservationId] = now;
+  }
+
+  // Whether the leg of this claim already reached this phone: an accept arriving after it must not arm the phone for a
+  // leg that will never come.
+  function wasStandbyLegSeen(standby, reservationId, now) {
+    if (!standby || !reservationId || typeof standby.legs[reservationId] !== 'number') {
+      return false;
+    }
+    return now - standby.legs[reservationId] <= STANDBY_LEG_MEMORY_MS;
+  }
+
+  // Decides whether an incoming leg is answered on standby. Returns the claim's reservation id when it is, '' when the
+  // phone's usual rules apply.
+  //   leg     - the incoming leg's options: { customHeaders | custom_headers, clientState, transferLeg }.
+  //   context - { ownUserId, onCall }: this phone's user (when known better than the standby's), and whether the phone
+  //             is already on a call.
+  function shouldStandbyAnswerLeg(standby, leg, now, context) {
+    if (!leg || !isStandingBy(standby, now)) {
+      return '';
+    }
+
+    // Somebody's call to this phone, or a call handed over, rings whatever it carries.
+    if (leg.transferLeg || typeof softPhone.isDestinationLeg === 'function' && softPhone.isDestinationLeg(leg)) {
+      return '';
+    }
+    if (context && context.onCall) {
+      return '';
+    }
+    var tag = readStandbyLegTag(leg);
+    if (!tag.reservationId || !tag.agentUserId) {
+      return '';
+    }
+    var ownUserId = context && context.ownUserId || standby.userId;
+    if (!ownUserId || String(ownUserId) !== tag.agentUserId) {
+      return '';
+    }
+    return tag.reservationId;
+  }
+  softPhone.STANDBY_GRACE_MS = STANDBY_GRACE_MS;
+  softPhone.STANDBY_LEG_MEMORY_MS = STANDBY_LEG_MEMORY_MS;
+  softPhone.createPredictiveStandby = createPredictiveStandby;
+  softPhone.isStandbyEligible = isStandbyEligible;
+  softPhone.setPredictiveStandby = setPredictiveStandby;
+  softPhone.isStandingBy = isStandingBy;
+  softPhone.readStandbyLegTag = readStandbyLegTag;
+  softPhone.noteStandbyLeg = noteStandbyLeg;
+  softPhone.wasStandbyLegSeen = wasStandbyLegSeen;
+  softPhone.shouldStandbyAnswerLeg = shouldStandbyAnswerLeg;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
  * The leg a supervisor's own soft phone is rung on to listen to, coach or join a Contact Center call.
  *
  * The platform rings the supervisor's registered browser with a leg that carries a one-off token -- in its client state
@@ -8172,6 +8327,12 @@
   var disarmOtherOffers = softPhoneModules.disarmOtherOffers;
   var shouldAutoAnswerInboundLeg = softPhoneModules.shouldAutoAnswerInboundLeg;
   var canArmForAcceptedOffer = softPhoneModules.canArmForAcceptedOffer;
+  var createPredictiveStandby = softPhoneModules.createPredictiveStandby;
+  var setPredictiveStandbyFor = softPhoneModules.setPredictiveStandby;
+  var shouldStandbyAnswerLeg = softPhoneModules.shouldStandbyAnswerLeg;
+  var readStandbyLegTag = softPhoneModules.readStandbyLegTag;
+  var noteStandbyLeg = softPhoneModules.noteStandbyLeg;
+  var wasStandbyLegSeen = softPhoneModules.wasStandbyLegSeen;
   var createMonitorLegArms = softPhoneModules.createMonitorLegArms;
   var armMonitorLegFor = softPhoneModules.armMonitorLeg;
   var disarmMonitorLegFor = softPhoneModules.disarmMonitorLeg;
@@ -10962,6 +11123,11 @@
     // incoming call arriving without it armed still rings.
     var inboundAutoAnswer = createAutoAnswerArm();
 
+    // Standing by for an over-dialing campaign: while the agent is Available and signed in to a campaign, a leg the
+    // platform tags with a claim for this phone's user is answered at once, without waiting for the push about the
+    // claim (see soft-phone/predictive-standby.js). Set by the Contact Center layer.
+    var predictiveStandby = typeof createPredictiveStandby === 'function' ? createPredictiveStandby() : null;
+
     // The monitor legs this supervisor's phone was told to expect, by token, and the ones it answered (see
     // soft-phone/monitor-leg.js). Separate from the arm above: an engagement never answers anybody's call.
     var monitorLegArms = createMonitorLegArms();
@@ -13648,6 +13814,12 @@
     //   acceptedUserId, ownUserId - who the accept names, and this phone's user: a callback or a preview dial never
     //   rings here, so its accept is how the phone learns of it (see soft-phone/auto-answer.js).
     function armInboundAutoAnswer(reservationId, acceptedUserId, ownUserId) {
+      // The leg of a claim made while standing by already reached this phone; the push about the claim came after
+      // it. Arming now would answer whatever leg came next, for a call that is not this one.
+      if (reservationId && typeof wasStandbyLegSeen === 'function' && wasStandbyLegSeen(predictiveStandby, reservationId, Date.now())) {
+        return;
+      }
+
       // Only for this phone's own offer: the Contact Center layer hears of other agents' accepts too.
       if (!canArmForAcceptedOffer(reservationId, offerCallIds, acceptedUserId, ownUserId)) {
         reportDiagnostic('info', 'auto-answer-arm-refused', 'An accept of an offer this phone was never offered did not arm it to answer the next leg.', reservationId || '');
@@ -13661,7 +13833,38 @@
     // phone just placed. "The agent answered" is not one -- it outlived the call it was about and had every later
     // colleague's call answered on arrival (see soft-phone/auto-answer.js).
     function consumeInboundAutoAnswer(options) {
-      return shouldAutoAnswerInboundLeg(inboundAutoAnswer, Date.now(), options || {});
+      var leg = options || {};
+      var now = Date.now();
+      if (predictiveStandby && typeof shouldStandbyAnswerLeg === 'function') {
+        var standbyReservationId = shouldStandbyAnswerLeg(predictiveStandby, leg, now, {
+          onCall: !!currentCall && !isRingingInbound()
+        });
+        if (standbyReservationId) {
+          noteStandbyLeg(predictiveStandby, standbyReservationId, now);
+
+          // An arm the push about this claim already set is spent by this leg too.
+          disarmAutoAnswer(inboundAutoAnswer, autoAnswerOfferKey(standbyReservationId));
+          reportDiagnostic('info', 'standby-leg-answered', 'Answered at once the leg of a call this agent was claimed for while standing by for a campaign.', standbyReservationId);
+          return true;
+        }
+
+        // A claim's leg the standby did not take (the phone was busy, or not standing by) still reached this
+        // phone: remember it, so the push about the claim does not arm the phone for a leg that never comes.
+        var tag = readStandbyLegTag(leg);
+        if (tag.reservationId) {
+          noteStandbyLeg(predictiveStandby, tag.reservationId, now);
+        }
+      }
+      return shouldAutoAnswerInboundLeg(inboundAutoAnswer, now, leg);
+    }
+
+    // The Contact Center layer says whether the agent stands by for an over-dialing campaign (Available and signed in
+    // to a campaign), and who the agent is. Dropping the standby keeps it for a short grace period.
+    function setPredictiveStandby(armed, userId) {
+      if (!predictiveStandby || typeof setPredictiveStandbyFor !== 'function') {
+        return false;
+      }
+      return setPredictiveStandbyFor(predictiveStandby, !!armed, userId || '', Date.now());
     }
 
     // A supervisor's engagement: the platform is about to ring this phone with a leg carrying `token`. `info` is
@@ -17884,6 +18087,9 @@
       // Lets the Contact Center layer declare that a routed leg is on its way to this browser, so the
       // media adapter answers it instead of ringing it as an unsolicited incoming call.
       armInboundAutoAnswer: armInboundAutoAnswer,
+      // Lets the Contact Center layer stand the phone by for an over-dialing campaign, so the leg of a call the
+      // agent is claimed for is answered at once (see soft-phone/predictive-standby.js).
+      setPredictiveStandby: setPredictiveStandby,
       // A supervisor's engagement (the Contact Center supervision layer): expect the monitor leg carrying a token,
       // hear about it as it is answered, connects and ends, and let it go.
       armMonitorLeg: armMonitorLeg,

@@ -326,7 +326,9 @@ public sealed class OrphanedActivityRecoveryService : IOrphanedActivityRecoveryS
 
         // For a re-queue we only need to clear a stale reserved/assigned item so EnqueueAsync will create a fresh
         // Waiting one (it returns any existing Waiting/Reserved/Assigned item untouched). For a terminate we drop
-        // any still-active item so nothing offers the now-Failed activity.
+        // any still-active item so nothing offers the now-Failed activity. That includes the agentless Assigned item of a
+        // call an over-dialing campaign placed: once its interaction has settled it is no longer in flight, and left in
+        // place it would be counted as a call in flight for good.
         var isActive = queueItem.Status is QueueItemStatus.Waiting or QueueItemStatus.Reserved or QueueItemStatus.Assigned;
 
         if (requeue && queueItem.Status == QueueItemStatus.Waiting)

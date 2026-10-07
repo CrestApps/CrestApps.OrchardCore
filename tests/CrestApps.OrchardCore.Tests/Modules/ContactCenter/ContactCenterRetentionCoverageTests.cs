@@ -34,6 +34,7 @@ public sealed class ContactCenterRetentionCoverageTests
         ["DialerProfileIndex"] = "Configuration. One row per configured dialer profile.",
         ["VoiceMediaItemIndex"] = "Tenant-local reference data. One row per voice media library entry an operator uploaded, bounded by tenant setup rather than traffic.",
         ["ContactCenterProjectionCheckpointIndex"] = "Bookkeeping. One row per projection handler; deleting one would replay that projection from the beginning.",
+        ["PredictivePacingStateIndex"] = "Bookkeeping. One row per over-dialed campaign queue, rewritten every pacing cycle rather than added to.",
         ["CallSessionLegIndex"] = "A second index over call sessions, one row per leg. Its rows leave with the session when the call session policy purges it.",
         ["CallRecordingIndex"] = "Communication history, kept while its recording is: one row per recorded call. Erasing the recording takes it off the list, and the media's retention is set by the recording settings. A policy that purges erased rows is owed.",
     };

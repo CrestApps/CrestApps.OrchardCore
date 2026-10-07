@@ -23,6 +23,16 @@ public sealed class ContactCenterPredictiveDialingOptionsValidator : IValidateOp
     /// </summary>
     public const int MaxComplianceWindowDays = 90;
 
+    /// <summary>
+    /// The shortest time an agent's leg may be given to answer.
+    /// </summary>
+    public static readonly TimeSpan MinAgentLegAnswerTimeout = TimeSpan.FromSeconds(1);
+
+    /// <summary>
+    /// The longest time an agent's leg may be given to answer.
+    /// </summary>
+    public static readonly TimeSpan MaxAgentLegAnswerTimeout = TimeSpan.FromSeconds(30);
+
     /// <inheritdoc/>
     public ValidateOptionsResult Validate(string name, ContactCenterPredictiveDialingOptions options)
     {
@@ -56,6 +66,16 @@ public sealed class ContactCenterPredictiveDialingOptionsValidator : IValidateOp
         if (options.AnsweredUnconnectedSweepAfter <= DialerAbandonment.ConnectThreshold)
         {
             failures.Add($"'{Section}:{nameof(options.AnsweredUnconnectedSweepAfter)}' must exceed {DialerAbandonment.ConnectThreshold.TotalSeconds:0} seconds, otherwise calls still being connected are swept up as abandoned.");
+        }
+
+        if (options.AgentLegAnswerTimeout < MinAgentLegAnswerTimeout || options.AgentLegAnswerTimeout > MaxAgentLegAnswerTimeout)
+        {
+            failures.Add($"'{Section}:{nameof(options.AgentLegAnswerTimeout)}' must be between {MinAgentLegAnswerTimeout.TotalSeconds:0} and {MaxAgentLegAnswerTimeout.TotalSeconds:0} seconds.");
+        }
+
+        if (options.PacingLockRetryDelay <= TimeSpan.Zero || options.PacingLockRetryDelay >= options.PacingLockExpiration)
+        {
+            failures.Add($"'{Section}:{nameof(options.PacingLockRetryDelay)}' must be greater than zero and shorter than '{nameof(options.PacingLockExpiration)}'.");
         }
 
         if (options.MaxDialsPerCycle is < 1 or > MaxDialsPerCycleLimit)

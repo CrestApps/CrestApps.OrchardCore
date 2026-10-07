@@ -10,14 +10,12 @@
         => value is { } actual
             ? actual.TotalSeconds.ToString("0.#", System.Globalization.CultureInfo.CurrentCulture)
             : null;
-
-    var overDialSelected = Model.PredictivePacingModel == PredictivePacingModel.OverDial;
 }
 
 <div class="ocat-wrapper" data-dialer-modes="Predictive">
     <div class="ocat-end-offset">
         <div class="alert alert-info" role="alert">
-            @T["Predictive dialing reserves an agent for every call it places, so a person who answers always has an agent waiting. Over-dialing, which places more calls than there are free agents and sizes the extra calls from the measured answer rate, will be available in a later release. The settings below are kept with the profile for when it is."]
+            @T["One call per reserved agent places a call only for an agent who is waiting for it, so a person who answers always has an agent. Over-dialing places more calls than there are free agents, sized from the measured answer rate, and picks the free agent when a person answers; when nobody is free, the person hears the abandoned-call message. Whenever the answer rate or the abandonment rate cannot be trusted, or the abandonment rate nears the cap, an over-dialing profile dials one call per reserved agent until it can."]
         </div>
     </div>
 </div>
@@ -52,28 +50,87 @@
     </div>
 }
 
+@if (Model.PacingDecisions?.Count > 0)
+{
+    <div class="ocat-wrapper" data-dialer-modes="Predictive">
+        <label class="ocat-label">@T["Last pacing decision"]</label>
+        <div class="ocat-end">
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-1" data-predictive-pacing-decisions>
+                    <thead>
+                        <tr>
+                            <th scope="col">@T["Campaign"]</th>
+                            <th scope="col">@T["When"]</th>
+                            <th scope="col">@T["Pacing"]</th>
+                            <th scope="col" class="text-end">@T["Placed"]</th>
+                            <th scope="col" class="text-end" title="@T["Free agents, plus agents about to free up when they are counted"]">@T["Agents"]</th>
+                            <th scope="col" class="text-end" title="@T["Calls placed without an agent and not connected yet"]">@T["In flight"]</th>
+                            <th scope="col" class="text-end">@T["Answer rate"]</th>
+                            <th scope="col" class="text-end" title="@T["Abandonment over the rolling window, then over the compliance window"]">@T["Abandoned"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Model.PacingDecisions)
+                        {
+                            var decision = row.Decision;
+                            var modeText = decision.Mode switch
+                            {
+                                PredictivePacingDecisionMode.OverDial => T["Over-dialing"],
+                                PredictivePacingDecisionMode.ReservedFallback => T["One call per reserved agent"],
+                                _ => T["Not dialing"],
+                            };
+                            var reasonText = decision.Reason switch
+                            {
+                                PredictivePacingReason.Paced => T["Measured and paced"],
+                                PredictivePacingReason.PolicySuppressed => T["The abandonment policy does not permit dialing"],
+                                PredictivePacingReason.InvalidSettings => T["The pacing settings are not valid"],
+                                PredictivePacingReason.AnswerRateUnavailable => T["No answer rate measured"],
+                                PredictivePacingReason.AnswerRateSampleBelowFloor => T["Too few calls to trust the answer rate"],
+                                PredictivePacingReason.AbandonmentRateUnavailable => T["No abandonment rate measured"],
+                                PredictivePacingReason.AbandonmentSampleBelowFloor => T["Too few answered calls to trust the abandonment rate"],
+                                PredictivePacingReason.ComplianceRateUnavailable => T["No compliance-window abandonment rate measured"],
+                                PredictivePacingReason.ComplianceRateAtCap => T["The compliance-window abandonment rate is at the cap"],
+                                PredictivePacingReason.RollingRateAtCap => T["The rolling abandonment rate is at the cap"],
+                                PredictivePacingReason.ThrottledToZero => T["Throttled by the abandonment rate"],
+                                PredictivePacingReason.NoAgents => T["No free agents"],
+                                _ => T["Unknown"],
+                            };
+                            <tr data-predictive-pacing-decision="@row.QueueId">
+                                <td>@row.CampaignName</td>
+                                <td>
+                                    @if (row.LastCycleUtc is { } cycleUtc)
+                                    {
+                                        <time datetime="@cycleUtc.ToString("O", System.Globalization.CultureInfo.InvariantCulture)">@await DisplayAsync(await New.DateTime(Utc: cycleUtc, Format: "G"))</time>
+                                    }
+                                </td>
+                                <td>
+                                    @modeText
+                                    <div class="small text-body-secondary">@reasonText</div>
+                                </td>
+                                <td class="text-end">@T["{0} of {1}", decision.Dialed, decision.DialCount]</td>
+                                <td class="text-end">@(decision.FreeingAgents > 0 ? T["{0} + {1}", decision.AvailableAgents, decision.FreeingAgents] : T["{0}", decision.AvailableAgents])</td>
+                                <td class="text-end">@decision.CallsInFlight</td>
+                                <td class="text-end">@(decision.AnswerRate is { } answerRate ? T["{0}%", Percent(answerRate)] : T["-"])</td>
+                                <td class="text-end">@(decision.AbandonmentRatePercent is { } rolling ? T["{0}%", rolling.ToString("0.##", System.Globalization.CultureInfo.CurrentCulture)] : T["-"]) / @(decision.ComplianceAbandonmentRatePercent is { } compliance ? T["{0}%", compliance.ToString("0.##", System.Globalization.CultureInfo.CurrentCulture)] : T["-"])</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <span class="hint">@T["What the last pacing cycle of each campaign measured and decided, rewritten every cycle. Read-only."]</span>
+        </div>
+    </div>
+}
+
 <div class="ocat-wrapper" asp-validation-class-for="PredictivePacingModel" data-dialer-modes="Predictive">
     <label asp-for="PredictivePacingModel" class="ocat-label">@T["Pacing"]</label>
     <div class="ocat-end">
         <select asp-for="PredictivePacingModel" class="form-select">
             <option value="@PredictivePacingModel.ReservedPerCall">@T["One call per reserved agent"]</option>
-            @if (overDialSelected)
-            {
-                <option value="@PredictivePacingModel.OverDial">@T["Over-dial (available in a later release)"]</option>
-            }
-            else
-            {
-                <option value="@PredictivePacingModel.OverDial" disabled>@T["Over-dial (available in a later release)"]</option>
-            }
+            <option value="@PredictivePacingModel.OverDial">@T["Over-dial"]</option>
         </select>
         <span asp-validation-for="PredictivePacingModel" class="text-danger"></span>
-        <span class="hint">@T["One call per reserved agent cannot abandon a call. Over-dialing places more calls than there are free agents and plays the abandoned-call message when nobody is free to take one; it requires the abandonment cap and the abandoned-call message."]</span>
-        @if (overDialSelected)
-        {
-            <div class="alert alert-warning mt-2 mb-0" role="alert">
-                @T["Over-dialing is not available yet. This profile is dialed with one call per reserved agent until it is."]
-            </div>
-        }
+        <span class="hint">@T["One call per reserved agent cannot abandon a call. Over-dialing places more calls than there are free agents and plays the abandoned-call message when nobody is free to take one; it requires the abandonment cap, the abandoned-call message and a target abandonment rate below the cap."]</span>
     </div>
 </div>
 
@@ -152,7 +209,7 @@
     <div class="ocat-end">
         <input asp-for="ConnectWaitMilliseconds" type="number" min="0" max="@PredictiveDialingDefaults.MaxConnectWaitMilliseconds" step="100" class="form-control" />
         <span asp-validation-for="ConnectWaitMilliseconds" class="text-danger"></span>
-        <span class="hint">@T["How long a person who answered may wait for an agent to free up before the abandoned-call message plays, from 0 to {0} milliseconds. Connecting an agent takes time too, and a call not connected within two seconds counts as abandoned, so 0 is recommended.", PredictiveDialingDefaults.MaxConnectWaitMilliseconds]</span>
+        <span class="hint">@T["How long a person who answered may wait for an agent to free up before the abandoned-call message plays, from 0 to {0} milliseconds. Connecting an agent takes time too, and a call not connected within two seconds counts as abandoned, so a wait is only allowed while it plus the measured time to connect an agent (the slowest 5%) stays within two seconds, and not at all until at least {1} calls have been connected. 0 is recommended.", PredictiveDialingDefaults.MaxConnectWaitMilliseconds, PredictiveConnectWait.MinimumLatencySamples]</span>
     </div>
 </div>
 

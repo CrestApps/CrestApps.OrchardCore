@@ -234,7 +234,7 @@ public class DialerProfileHandlerValidationTests
 
     [Theory]
     [InlineData(1, 1, 10, 5, 0, 0)]
-    [InlineData(5, 1000, 10000, 240, 100, 1500)]
+    [InlineData(5, 1000, 10000, 240, 100, 0)]
     public async Task ValidatingAsync_WhenPredictiveSettingsAreOnTheirBoundaries_Succeeds(
         double linesPerAgent,
         int callsInFlight,
@@ -296,6 +296,85 @@ public class DialerProfileHandlerValidationTests
             case "connect wait too long": profile.ConnectWaitMilliseconds = PredictiveDialingDefaults.MaxConnectWaitMilliseconds + 1; break;
             default: throw new ArgumentOutOfRangeException(nameof(scenario), scenario, null);
         }
+    }
+
+    [Fact]
+    public async Task ValidatingAsync_WhenAConnectWaitHasNoMeasuredConnectTimes_Fails()
+    {
+        // Arrange: a profile that has not connected enough calls to show the wait is safe.
+        var profile = CreateOverDialProfile();
+        profile.ItemId = "profile-1";
+        profile.ConnectWaitMilliseconds = 500;
+        var statistics = new DialerPacingStatistics
+        {
+            P95ConnectLatency = TimeSpan.FromMilliseconds(400),
+            ConnectLatencySamples = PredictiveConnectWait.MinimumLatencySamples - 1,
+        };
+
+        // Act
+        var context = await ValidateAsync(profile, statistics: statistics);
+
+        // Assert
+        AssertFailedFor(context, nameof(DialerProfile.ConnectWaitMilliseconds));
+    }
+
+    [Fact]
+    public async Task ValidatingAsync_WhenANewProfileAsksForAConnectWait_Fails()
+    {
+        // Arrange: nothing can have been measured for a profile not saved yet.
+        var profile = CreateOverDialProfile();
+        profile.ConnectWaitMilliseconds = 500;
+
+        // Act
+        var context = await ValidateAsync(profile);
+
+        // Assert
+        AssertFailedFor(context, nameof(DialerProfile.ConnectWaitMilliseconds));
+    }
+
+    [Theory]
+    [InlineData(500, 1500, true)]
+    [InlineData(600, 1500, false)]
+    [InlineData(1900, 200, false)]
+    public async Task ValidatingAsync_AConnectWait_IsAllowedOnlyWhenItPlusTheMeasuredConnectTimeStaysWithinTwoSeconds(int p95Milliseconds, int waitMilliseconds, bool succeeds)
+    {
+        // Arrange
+        var profile = CreateOverDialProfile();
+        profile.ItemId = "profile-1";
+        profile.ConnectWaitMilliseconds = waitMilliseconds;
+        var statistics = new DialerPacingStatistics
+        {
+            P95ConnectLatency = TimeSpan.FromMilliseconds(p95Milliseconds),
+            ConnectLatencySamples = PredictiveConnectWait.MinimumLatencySamples,
+        };
+
+        // Act
+        var context = await ValidateAsync(profile, statistics: statistics);
+
+        // Assert
+        if (succeeds)
+        {
+            Assert.True(context.Result.Succeeded);
+        }
+        else
+        {
+            AssertFailedFor(context, nameof(DialerProfile.ConnectWaitMilliseconds));
+        }
+    }
+
+    [Fact]
+    public async Task ValidatingAsync_AConnectWaitOnAPowerProfile_IsNotChecked()
+    {
+        // Arrange: a setting the mode never uses.
+        var profile = CreateValidProfile();
+        profile.Mode = DialerMode.Power;
+        profile.ConnectWaitMilliseconds = 500;
+
+        // Act
+        var context = await ValidateAsync(profile);
+
+        // Assert
+        Assert.True(context.Result.Succeeded);
     }
 
     private static DialerProfile CreateOverDialProfile()
@@ -455,11 +534,12 @@ public class DialerProfileHandlerValidationTests
 
     private static async Task<ValidatingContext<DialerProfile>> ValidateAsync(
         DialerProfile profile,
-        bool automatedDialerEnabled = true)
+        bool automatedDialerEnabled = true,
+        DialerPacingStatistics statistics = null)
     {
         var context = new ValidatingContext<DialerProfile>(profile);
 
-        await CreateHandler(automatedDialerEnabled).ValidatingAsync(context, TestContext.Current.CancellationToken);
+        await CreateHandler(automatedDialerEnabled, statistics).ValidatingAsync(context, TestContext.Current.CancellationToken);
 
         return context;
     }
@@ -470,7 +550,7 @@ public class DialerProfileHandlerValidationTests
         Assert.Contains(context.Result.Errors, error => error.MemberNames.Contains(memberName));
     }
 
-    private static DialerProfileHandler CreateHandler(bool automatedDialerEnabled)
+    private static DialerProfileHandler CreateHandler(bool automatedDialerEnabled, DialerPacingStatistics statistics = null)
     {
         var features = new List<IFeatureInfo>();
 
@@ -492,7 +572,18 @@ public class DialerProfileHandlerValidationTests
             new Mock<IClock>().Object,
             featuresManager.Object,
             new DefaultPhoneNumberService(),
+            [CreatePacingStatistics(statistics)],
             new PassThroughStringLocalizer<DialerProfileHandler>());
+    }
+
+    private static IDialerPacingStatisticsProvider CreatePacingStatistics(DialerPacingStatistics statistics)
+    {
+        var provider = new Mock<IDialerPacingStatisticsProvider>();
+        provider
+            .Setup(value => value.GetStatisticsAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(statistics);
+
+        return provider.Object;
     }
 
     /// <summary>

@@ -101,6 +101,19 @@ public static class TelnyxConstants
     public const string OfferIdSipHeader = "X-Offer-Id";
 
     /// <summary>
+    /// The SIP header the leg of an agent claimed for an answered over-dialed call carries the claim (reservation)
+    /// identifier in. An agent's phone standing by for an over-dialing campaign answers a leg carrying it at once, without
+    /// waiting to be told of the claim. Only the platform rings a soft phone, and only that leg carries the header.
+    /// </summary>
+    public const string StandbyReservationSipHeader = "X-CC-Reservation";
+
+    /// <summary>
+    /// The SIP header that names, next to <see cref="StandbyReservationSipHeader"/>, the user the claim was made for, so a
+    /// phone answers the leg only when it is that user's.
+    /// </summary>
+    public const string StandbyAgentUserSipHeader = "X-CC-Agent-User";
+
+    /// <summary>
     /// The SIP header on the leg a supervisor's own soft phone is rung on to listen to a call. Its value is the one-off
     /// token the phone was told to expect, so the phone answers that leg by itself and never another; the same token
     /// travels in the leg's <c>client_state</c> for an SDK that surfaces it.

@@ -106,11 +106,13 @@ namespace CrestApps.OrchardCore.ContactCenter
             public const string DialFailed = "DialFailed";
             public const string DialStarted = "DialStarted";
             public const string DialSuppressed = "DialSuppressed";
+            public const string DialerAgentConnectClaimed = "DialerAgentConnectClaimed";
             public const string DialerAttemptCompleted = "DialerAttemptCompleted";
             public const string DialerAttemptScheduled = "DialerAttemptScheduled";
             public const string DialerAttemptStarted = "DialerAttemptStarted";
             public const string DialerCallAbandoned = "DialerCallAbandoned";
             public const string DialerLiveAnswered = "DialerLiveAnswered";
+            public const string DialerPacingModeChanged = "DialerPacingModeChanged";
             public const string DialerRunStarted = "DialerRunStarted";
             public const string ExtensionCallEnded = "ExtensionCallEnded";
             public const string ExtensionCallStarted = "ExtensionCallStarted";
@@ -660,12 +662,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         public string ActivityId { get; set; }
         public string AgentEndpoint { get; set; }
         public string AgentId { get; set; }
+        public int AgentLegTimeoutSeconds { get; set; }
         public string AgentUserId { get; set; }
         public string InteractionId { get; set; }
         public System.Collections.Generic.IDictionary<string, string> Metadata { get; set; }
         public string PreDialedAgentLegId { get; set; }
         public string ProviderCallId { get; set; }
         public string QueueId { get; set; }
+        public string StandbyReservationId { get; set; }
     }
     public sealed class ContactCenterDialRequest
     {

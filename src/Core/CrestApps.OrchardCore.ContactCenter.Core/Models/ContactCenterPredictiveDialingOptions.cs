@@ -63,6 +63,33 @@ public sealed class ContactCenterPredictiveDialingOptions
     public TimeSpan AnsweredUnconnectedSweepAfter { get; set; } = TimeSpan.FromSeconds(5);
 
     /// <summary>
+    /// Gets or sets how long, from the moment an agent is claimed for an answered over-dialed call, the agent's leg has to
+    /// answer. A leg still unanswered then is hung up, the agent is released back to work and the person hears the
+    /// abandoned-call message.
+    /// </summary>
+    /// <remarks>
+    /// The agent's leg is an invite to the agent's phone, and setting it up takes a second or more on its own, so no value
+    /// can promise an agent within the two seconds after which a call counts as abandoned; an agent who joins later than
+    /// that is counted abandoned anyway. This bounds how long a person hears silence when the agent's phone does not pick
+    /// up. Between one and thirty seconds.
+    /// </remarks>
+    public TimeSpan AgentLegAnswerTimeout { get; set; } = TimeSpan.FromSeconds(3);
+
+    /// <summary>
+    /// Gets or sets how soon a campaign is paced again when its pacing lock was held by another cycle, so a campaign whose
+    /// cycle lost the lock is not left waiting for the next agent or call event. Must be shorter than
+    /// <see cref="PacingLockExpiration"/>.
+    /// </summary>
+    public TimeSpan PacingLockRetryDelay { get; set; } = TimeSpan.FromSeconds(1);
+
+    /// <summary>
+    /// Gets or sets a value indicating whether a free agent who is also signed in to an inbound queue with calls waiting
+    /// is left out of the free agents an over-dial is sized for, because routing may give them one of those calls first.
+    /// Off by default: dedicated campaign agents are the recommended set-up.
+    /// </summary>
+    public bool DiscountAgentsWithWaitingInbound { get; set; }
+
+    /// <summary>
     /// Gets or sets how long a profile's measured pacing statistics are reused before they are read again.
     /// </summary>
     public TimeSpan StatisticsCacheDuration { get; set; } = TimeSpan.FromSeconds(5);

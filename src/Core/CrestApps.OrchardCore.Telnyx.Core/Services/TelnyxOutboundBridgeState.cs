@@ -248,8 +248,9 @@ public sealed class TelnyxOutboundBridgeState
     public int? RingTimeoutSeconds { get; set; }
 
     /// <summary>
-    /// Gets or sets the Contact Center offer (reservation) a pre-dialed agent leg was rung for (pre-dialed agent-leg
-    /// state only). The agent's browser reads it too, to tie the incoming leg to the offer it is showing.
+    /// Gets or sets the Contact Center offer (reservation) a pre-dialed agent leg was rung for, or the claim a Contact
+    /// Center agent leg was rung for when the agent was standing by for an over-dialing campaign. The agent's browser reads
+    /// the first to tie the incoming leg to the offer it is showing; the second keeps the standby tag on a leg rung again.
     /// </summary>
     [JsonPropertyName("r")]
     public string ReservationId { get; set; }
