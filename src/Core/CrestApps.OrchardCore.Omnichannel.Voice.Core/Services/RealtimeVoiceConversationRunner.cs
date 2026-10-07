@@ -300,6 +300,9 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         Interlocked.Exchange(ref _assistantSpeechEndsTicks, 0);
         Volatile.Write(ref _goodbyeAlreadySaid, false);
         _replyListener = new CallerReplyListener();
+        Interlocked.Exchange(ref _providerHeardCallerTicks, 0);
+        Interlocked.Exchange(ref _callerTurnOpenSinceTicks, 0);
+        Interlocked.Exchange(ref _responseInFlight, 0);
 
         // The moment the model asks to transfer, the caller stops being the assistant's to talk to. Without this
         // the session ran until the caller hung up — the transfer was recorded, the caller was told someone was

@@ -142,6 +142,57 @@ public sealed class TelnyxRecordingIngestEnqueuerTests
             () => handler.HandleAsync(callEvent, TestContext.Current.CancellationToken));
     }
 
+    [Fact]
+    public async Task HandleAsync_WhenTheDatabaseCannotBeReached_PropagatesSoTheDeliveryIsRetried()
+    {
+        // Live, SQLite stayed locked past its busy timeout as a call ended. The enqueuer logged the failure and
+        // returned, the delivery was settled as handled, and the recording was never downloaded.
+        var interaction = new Interaction
+        {
+            ItemId = "interaction-1",
+            ProviderInteractionId = "call-1",
+            TechnicalMetadata = new Dictionary<string, object>(),
+        };
+
+        var callEvent = new TelnyxCallEvent
+        {
+            RecordingId = "rec-1",
+            ClientState = DecodeClientState(TelnyxRecordingClientState.ForVoicemail("interaction-1", "user-1").ToClientState()),
+        };
+
+        var (jobStore, interactionManager, agentManager, publisher, clock) = CreateMocks(interaction);
+
+        jobStore
+            .Setup(store => store.EnqueueAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new DatabaseLockedException());
+
+        var handler = new TelnyxRecordingIngestEnqueuer(
+            jobStore.Object,
+            interactionManager.Object,
+            [agentManager.Object],
+            publisher.Object,
+            Mock.Of<IContactCenterScopeExecutor>(),
+            [],
+            clock.Object,
+            NullLogger<TelnyxRecordingIngestEnqueuer>.Instance);
+
+        await Assert.ThrowsAnyAsync<System.Data.Common.DbException>(
+            () => handler.HandleAsync(callEvent, TestContext.Current.CancellationToken));
+    }
+
+    private sealed class DatabaseLockedException : System.Data.Common.DbException
+    {
+        public DatabaseLockedException()
+            : base("database is locked")
+        {
+        }
+    }
+
     private static (
         Mock<ITelnyxRecordingIngestJobStore>,
         Mock<IInteractionManager>,

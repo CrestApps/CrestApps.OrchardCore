@@ -379,6 +379,8 @@ public sealed partial class RealtimeVoiceConversationRunner
                         break;
 
                     case RealtimeConversationEventType.ResponseCompleted:
+                        ResponseInFlight(false);
+
                         // The line is over: fade it out and send its last, padded packet, rather than stopping dead
                         // on whatever sample it ended on -- which was heard as a click as the assistant finished.
                         await WriteToLineAsync(media, _outgoing.Finish(), cancellationToken);
@@ -387,6 +389,7 @@ public sealed partial class RealtimeVoiceConversationRunner
 
                     case RealtimeConversationEventType.UserSpeechStarted:
                         _meter?.CallerSpeechStarted(DateTime.UtcNow.Ticks);
+                        ProviderHeardCaller(turnOpen: true);
 
                         // The first start since the last transcript: a pause mid-sentence starts speech again, but
                         // the line it belongs to began at the first one.
@@ -423,6 +426,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                         if (conversationEvent.Type == RealtimeConversationEventType.ResponseStarted)
                         {
                             assistantLineStartedUtc = null;
+                            ResponseInFlight(true);
                         }
 
                         // The detector commits the caller's turn once it hears them stop, which is the only end of
@@ -430,6 +434,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                         if (conversationEvent.Type == RealtimeConversationEventType.UserTurnCommitted)
                         {
                             _meter?.CallerSpeechStopped(DateTime.UtcNow.Ticks);
+                            ProviderHeardCaller(turnOpen: false);
                         }
 
                         // A new turn, so speech from here is not the rest of a line the caller talked over.
