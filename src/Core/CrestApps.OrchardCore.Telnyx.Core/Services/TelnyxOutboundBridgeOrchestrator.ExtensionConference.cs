@@ -1,4 +1,5 @@
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.Telnyx.Services;
@@ -64,6 +65,7 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator
             }
 
             await MarkPeerAnsweredAsync(agentLegCallControlId, cancellationToken);
+            await NotifyRemotePartyAsync(agentLegCallControlId, RemotePartyState.Answered, cancellationToken);
 
             // Two colleagues: each leg cleans the voice of the agent it reaches, so neither voice is cleaned twice.
             await ApplyNoiseSuppressionAsync(agentLegCallControlId, TelnyxNoiseSuppressionLeg.InternalAgent, cancellationToken);

@@ -495,6 +495,11 @@ namespace CrestApps.OrchardCore.Telephony.Services
         public static string CreateCodeChallenge(string codeVerifier) { }
         public static string CreateCodeVerifier() { }
     }
+    public sealed class TelephonyRemotePartyNotifier : CrestApps.OrchardCore.Telephony.ITelephonyRemotePartyNotifier
+    {
+        public TelephonyRemotePartyNotifier(CrestApps.OrchardCore.Telephony.ITelephonyInteractionStore telephonyInteractionStore, Microsoft.AspNetCore.SignalR.IHubContext<CrestApps.OrchardCore.Telephony.Hubs.TelephonyHub, CrestApps.OrchardCore.Telephony.ITelephonyClient> hubContext, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Telephony.Services.TelephonyRemotePartyNotifier> logger, OrchardCore.Environment.Shell.ShellSettings shellSettings) { }
+        public System.Threading.Tasks.Task NotifyAsync(string providerName, string providerCallId, CrestApps.OrchardCore.Telephony.Models.RemotePartyState state, System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public sealed class TelephonySettingsConfiguration : Microsoft.Extensions.Options.IPostConfigureOptions<CrestApps.OrchardCore.Telephony.TelephonySettings>
     {
         public TelephonySettingsConfiguration(OrchardCore.Settings.ISiteService siteService) { }

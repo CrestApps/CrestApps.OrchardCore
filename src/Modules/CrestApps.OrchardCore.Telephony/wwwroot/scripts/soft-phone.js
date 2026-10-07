@@ -3647,6 +3647,196 @@
   softPhone.readOfferHandledMessage = readOfferHandledMessage;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*
+ * The ringback tone the agent hears while a number they dialed is ringing.
+ *
+ * A number dialed from the keypad (and an extension call) is connected on the server: the platform rings this phone's
+ * own leg, the phone answers it at once, and only then is the number dialed -- and joined to the agent once it answers.
+ * The carrier's ringback plays on the number's leg, which is not joined to the agent until then, so the agent heard
+ * nothing at all and could not tell whether the number was being dialed. The server now says where the other party
+ * stands ('RemotePartyChanged': Ringing, Answered, Ended) and the phone plays a ringback of its own in between.
+ *
+ * Once a call's party answered or went, the call never rings again: a late or redelivered 'Ringing' is ignored. A
+ * ringback that is never stopped by the server stops by itself after RINGBACK_MAX_MS.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // Longer than any carrier lets a number ring unanswered; the server's own end arrives well before.
+  var RINGBACK_MAX_MS = 120000;
+
+  // The North American ringback: 440 Hz and 480 Hz together, two seconds on and four off.
+  var RINGBACK_CADENCE = {
+    frequencies: [440, 480],
+    onSeconds: 2,
+    offSeconds: 4
+  };
+  var RINGING = 'ringing';
+  var ANSWERED = 'answered';
+  var ENDED = 'ended';
+
+  // Must match CrestApps.OrchardCore.Telephony.Models.RemotePartyState, sent as its name or, failing that, its value.
+  var STATES_BY_NAME = {
+    ringing: RINGING,
+    answered: ANSWERED,
+    ended: ENDED
+  };
+  var STATES_BY_VALUE = [RINGING, ANSWERED, ENDED];
+  function normalizeRemotePartyState(value) {
+    if (typeof value === 'number') {
+      return STATES_BY_VALUE[value] || null;
+    }
+    return typeof value === 'string' ? STATES_BY_NAME[value.trim().toLowerCase()] || null : null;
+  }
+  function createRingbackMemory() {
+    return {
+      calls: {}
+    };
+  }
+
+  // Records where a call's other party stands. Returns the state the call is in afterwards ('ringing', 'answered' or
+  // 'ended'), or null for an update that names no call or no state.
+  function noteRemoteParty(memory, update, nowMs) {
+    if (!memory || !update || !update.callId) {
+      return null;
+    }
+    var state = normalizeRemotePartyState(update.state);
+    if (!state) {
+      return null;
+    }
+    var entry = memory.calls[update.callId];
+
+    // Answered or gone is final.
+    if (entry && entry.state !== RINGING) {
+      return entry.state;
+    }
+    if (state === RINGING) {
+      if (!entry) {
+        memory.calls[update.callId] = {
+          state: RINGING,
+          since: nowMs
+        };
+      }
+      return RINGING;
+    }
+    memory.calls[update.callId] = {
+      state: state,
+      since: entry ? entry.since : nowMs
+    };
+    return state;
+  }
+
+  // Forgets a call that ended.
+  function forgetRemoteParty(memory, callId) {
+    if (memory && callId) {
+      delete memory.calls[callId];
+    }
+  }
+
+  // Forgets every call the phone no longer shows.
+  function pruneRemoteParties(memory, activeCallIds) {
+    if (!memory) {
+      return;
+    }
+    var keep = {};
+    (activeCallIds || []).forEach(function (callId) {
+      keep[callId] = true;
+    });
+    Object.keys(memory.calls).forEach(function (callId) {
+      if (!keep[callId]) {
+        delete memory.calls[callId];
+      }
+    });
+  }
+
+  // Whether the call's other party is ringing right now: told so, not told otherwise since, and not for too long.
+  function isRemotePartyRinging(memory, callId, nowMs) {
+    var entry = memory && callId ? memory.calls[callId] : null;
+    return !!entry && entry.state === RINGING && nowMs - entry.since < RINGBACK_MAX_MS;
+  }
+
+  // How long until a ringing call's ringback stops by itself, or null when it is not ringing.
+  function ringbackTimeLeftMs(memory, callId, nowMs) {
+    return isRemotePartyRinging(memory, callId, nowMs) ? Math.max(0, RINGBACK_MAX_MS - (nowMs - memory.calls[callId].since)) : null;
+  }
+  function isLive(call) {
+    var state = call && call.state ? String(call.state) : '';
+    return !!state && state !== 'Disconnected' && state !== 'Failed' && state !== 'Idle';
+  }
+
+  // Whether to play the ringback, and if not, why. Plays for the call the agent is on while its party rings; a call the
+  // browser dialed itself carries the carrier's own ringback, and a held call is not in the agent's ear.
+  //   memory  - the remote-party memory
+  //   call    - the call the phone shows: { callId, state, isOnHold, browserOriginated }
+  //   options - { nowMs, isHeld }
+  // Returns { play: true } or { play: false, reason } with reason one of: 'no-call', 'browser-call', 'call-ended',
+  // 'held', 'answered', 'ended', 'timeout', 'not-ringing'.
+  function planRingback(memory, call, options) {
+    options = options || {};
+    var nowMs = typeof options.nowMs === 'number' ? options.nowMs : Date.now();
+    if (!call || !call.callId) {
+      return {
+        play: false,
+        reason: 'no-call'
+      };
+    }
+    if (call.browserOriginated) {
+      return {
+        play: false,
+        reason: 'browser-call'
+      };
+    }
+    if (!isLive(call)) {
+      return {
+        play: false,
+        reason: 'call-ended'
+      };
+    }
+    if (call.isOnHold || options.isHeld) {
+      return {
+        play: false,
+        reason: 'held'
+      };
+    }
+    var entry = memory ? memory.calls[call.callId] : null;
+    if (!entry) {
+      return {
+        play: false,
+        reason: 'not-ringing'
+      };
+    }
+    if (entry.state === ANSWERED || entry.state === ENDED) {
+      return {
+        play: false,
+        reason: entry.state
+      };
+    }
+    if (!isRemotePartyRinging(memory, call.callId, nowMs)) {
+      return {
+        play: false,
+        reason: 'timeout'
+      };
+    }
+    return {
+      play: true
+    };
+  }
+  softPhone.RINGBACK_MAX_MS = RINGBACK_MAX_MS;
+  softPhone.RINGBACK_CADENCE = RINGBACK_CADENCE;
+  softPhone.normalizeRemotePartyState = normalizeRemotePartyState;
+  softPhone.createRingbackMemory = createRingbackMemory;
+  softPhone.noteRemoteParty = noteRemoteParty;
+  softPhone.forgetRemoteParty = forgetRemoteParty;
+  softPhone.pruneRemoteParties = pruneRemoteParties;
+  softPhone.isRemotePartyRinging = isRemotePartyRinging;
+  softPhone.ringbackTimeLeftMs = ringbackTimeLeftMs;
+  softPhone.planRingback = planRingback;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
  * When the soft phone gives up ringing for a Contact Center offer on its own.
  *
  * The server owns an offer's deadline. When it passes, the server expires the offer, moves the caller on (voicemail,
@@ -8004,6 +8194,14 @@
   var shouldDialFromBrowser = softPhoneModules.shouldDialFromBrowser;
   var sharedMicrophoneEnabled = softPhoneModules.sharedMicrophoneEnabled;
   var shouldRingForOffer = softPhoneModules.shouldRingForOffer;
+  var RINGBACK_CADENCE = softPhoneModules.RINGBACK_CADENCE;
+  var createRingbackMemory = softPhoneModules.createRingbackMemory;
+  var noteRemoteParty = softPhoneModules.noteRemoteParty;
+  var forgetRemoteParty = softPhoneModules.forgetRemoteParty;
+  var pruneRemoteParties = softPhoneModules.pruneRemoteParties;
+  var isRemotePartyRinging = softPhoneModules.isRemotePartyRinging;
+  var ringbackTimeLeftMs = softPhoneModules.ringbackTimeLeftMs;
+  var planRingback = softPhoneModules.planRingback;
   var shouldStartRegistration = softPhoneModules.shouldStartRegistration;
   var planRegistrationSelfHeal = softPhoneModules.planRegistrationSelfHeal;
   var planMicrophoneLossRecovery = softPhoneModules.planMicrophoneLossRecovery;
@@ -10221,6 +10419,97 @@
       }
     };
   }
+
+  // The ringback the agent hears while a number they dialed rings (see soft-phone/ringback.js), synthesized like the
+  // ringtone so nothing is fetched. It plays where the call's audio plays: getSinkId names the agent's chosen speaker,
+  // applied when the browser can route an AudioContext. start() and stop() are idempotent.
+  function createRingbackPlayer(cadence, getSinkId) {
+    var AudioCtx = window.AudioContext || window.webkitAudioContext;
+    var frequencies = cadence && cadence.frequencies ? cadence.frequencies : [440, 480];
+    var onSeconds = cadence && cadence.onSeconds > 0 ? cadence.onSeconds : 2;
+    var offSeconds = cadence && cadence.offSeconds >= 0 ? cadence.offSeconds : 4;
+    var ctx = null;
+    var oscillators = [];
+    var gain = null;
+    var timer = null;
+    var running = false;
+    function ringOnce() {
+      if (!ctx || !gain) {
+        return;
+      }
+      var now = ctx.currentTime;
+      var peak = 0.1;
+      var floor = 0.0001;
+      gain.gain.cancelScheduledValues(now);
+      gain.gain.setValueAtTime(floor, now);
+      gain.gain.exponentialRampToValueAtTime(peak, now + 0.03);
+      gain.gain.setValueAtTime(peak, now + onSeconds - 0.03);
+      gain.gain.exponentialRampToValueAtTime(floor, now + onSeconds);
+    }
+    return {
+      isRunning: function () {
+        return running;
+      },
+      start: function () {
+        if (running || !AudioCtx) {
+          return running;
+        }
+        running = true;
+        try {
+          ctx = new AudioCtx();
+          gain = ctx.createGain();
+          gain.gain.value = 0.0001;
+          gain.connect(ctx.destination);
+          oscillators = frequencies.map(function (frequency) {
+            var oscillator = ctx.createOscillator();
+            oscillator.type = 'sine';
+            oscillator.frequency.value = frequency;
+            oscillator.connect(gain);
+            oscillator.start();
+            return oscillator;
+          });
+          var sinkId = typeof getSinkId === 'function' ? getSinkId() : '';
+          if (sinkId && typeof ctx.setSinkId === 'function') {
+            Promise.resolve(ctx.setSinkId(sinkId)).catch(function () {});
+          }
+          if (ctx.state === 'suspended' && typeof ctx.resume === 'function') {
+            ctx.resume().catch(function () {});
+          }
+          ringOnce();
+          timer = window.setInterval(ringOnce, (onSeconds + offSeconds) * 1000);
+        } catch (error) {
+          running = false;
+        }
+        return running;
+      },
+      stop: function () {
+        if (!running) {
+          return;
+        }
+        running = false;
+        if (timer) {
+          window.clearInterval(timer);
+          timer = null;
+        }
+        try {
+          if (gain && ctx) {
+            gain.gain.cancelScheduledValues(ctx.currentTime);
+            gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+          }
+          oscillators.forEach(function (oscillator) {
+            oscillator.stop();
+          });
+        } catch (error) {/* best effort */}
+        try {
+          if (ctx && typeof ctx.close === 'function') {
+            ctx.close();
+          }
+        } catch (error) {/* best effort */}
+        ctx = gain = null;
+        oscillators = [];
+      }
+    };
+  }
   function createSoftPhone(rootElement, options) {
     options = options || {};
     var config = parseConfig(rootElement);
@@ -10517,6 +10806,14 @@
     var callsBeforeLookup = null;
     // Audible inbound-call alert, started/stopped from renderIncoming so an away agent hears a ringing call.
     var ringtone = createRingtonePlayer();
+    // The ringback while a number the agent dialed rings (soft-phone/ringback.js), started/stopped from syncRingback.
+    // It plays through the speaker the call's audio plays through.
+    var ringback = createRingbackPlayer(RINGBACK_CADENCE, function () {
+      return selectedOutputDeviceId || '';
+    });
+    var remoteParties = createRingbackMemory();
+    var ringbackCallId = null;
+    var ringbackExpiryTimer = null;
 
     // Every open agent page runs its own soft phone, and each rings for the same offer. Answering or declining
     // in one page tells the others through the browser, so they fall silent at once: before this, the pages the
@@ -13991,6 +14288,11 @@
       if (metadataBoolean(call, 'isConference')) {
         return strings.inConference || 'In conference';
       }
+
+      // The agent's own leg is up, but the number they dialed is still ringing: not connected to anybody yet.
+      if (remotePartyRinging(call)) {
+        return strings.ringing || 'Ringing...';
+      }
       return statusTextForState(normalizeState(call && call.state));
     }
 
@@ -14001,7 +14303,7 @@
 
     // A line's state in the active-call list: Active, On hold, or what the header would say.
     function lineStateText(call) {
-      if (!metadataBoolean(call, 'isConference') && normalizeState(call && call.state) === 'Connected') {
+      if (!metadataBoolean(call, 'isConference') && normalizeState(call && call.state) === 'Connected' && !remotePartyRinging(call)) {
         return strings.lineActive || 'Active';
       }
       return statusTextForCall(call);
@@ -14576,7 +14878,9 @@
           var lineState = normalizeState(call.state);
 
           // Each line keeps its own clock from the first moment it was seen connected, current or not.
-          callConnectedAt[callId] = connectedAtFor(lineState === 'Connected' || lineState === 'OnHold', callConnectedAt[callId], Date.now());
+          // A line whose number is still ringing has nobody on it yet: no clock, and nothing to merge.
+          var lineAnswered = (lineState === 'Connected' || lineState === 'OnHold') && !remotePartyRinging(call);
+          callConnectedAt[callId] = connectedAtFor(lineAnswered, callConnectedAt[callId], Date.now());
           return {
             callId: callId,
             number: lineLabel(call),
@@ -14585,8 +14889,8 @@
             elapsed: lineElapsedText(callId),
             current: !!(currentCall && currentCall.callId === callId),
             // A line still connecting or ringing cannot be merged: nobody has answered it yet.
-            selectable: canMergeCalls && canConferenceCall(call) && (lineState === 'Connected' || lineState === 'OnHold'),
-            unselectableReason: !canConferenceCall(call) ? 'browser-call' : lineState === 'Connected' || lineState === 'OnHold' ? '' : 'not-answered',
+            selectable: canMergeCalls && canConferenceCall(call) && lineAnswered,
+            unselectableReason: !canConferenceCall(call) ? 'browser-call' : lineAnswered ? '' : 'not-answered',
             selected: !!conferenceSelections[callId],
             inConference: metadataBoolean(call, 'isConference'),
             canHangup: has(CAPABILITIES.Hangup)
@@ -14776,8 +15080,74 @@
         }
       });
     }
+
+    // Whether the other party of a call is still being rung: the agent's leg is up, the number is not.
+    function remotePartyRinging(call) {
+      return !!(call && call.callId) && isRemotePartyRinging(remoteParties, call.callId, Date.now());
+    }
+
+    // Plays the ringback while the number the agent is on rings, and stops it the moment it answers, goes, the agent
+    // hangs up, holds it or moves to another call. Called on every render; start() and stop() are idempotent, and
+    // each start and stop is reported once.
+    function syncRingback() {
+      var plan = planRingback(remoteParties, currentCall ? {
+        callId: currentCall.callId,
+        state: normalizeState(currentCall.state),
+        isOnHold: !!currentCall.isOnHold,
+        browserOriginated: !!currentCall.browserOriginated
+      } : null, {
+        nowMs: Date.now(),
+        isHeld: !!(currentCall && isAgentHeld(agentHolds, currentCall.callId))
+      });
+      if (plan.play) {
+        if (ringbackCallId !== currentCall.callId) {
+          stopRingback(ringbackCallId ? 'other-call' : '');
+          ringbackCallId = currentCall.callId;
+          ringback.start();
+          reportDiagnostic('info', 'ringback-started', 'The number is ringing; playing a ringback tone until it answers.', ringbackCallId);
+        }
+        scheduleRingbackExpiry(ringbackTimeLeftMs(remoteParties, ringbackCallId, Date.now()));
+        return;
+      }
+
+      // The plan is about the call shown now; a ringback for a call that ended or is no longer shown says so.
+      var reason = plan.reason;
+      if (ringbackCallId && !activeCalls[ringbackCallId]) {
+        reason = 'call-ended';
+      } else if (ringbackCallId && (!currentCall || currentCall.callId !== ringbackCallId)) {
+        reason = 'other-call';
+      } else if (hubReconnecting && reason === 'not-ringing') {
+        reason = 'hub-lost';
+      }
+      stopRingback(reason);
+    }
+    function stopRingback(reason) {
+      if (ringbackExpiryTimer) {
+        window.clearTimeout(ringbackExpiryTimer);
+        ringbackExpiryTimer = null;
+      }
+      if (!ringbackCallId) {
+        return;
+      }
+      var callId = ringbackCallId;
+      ringbackCallId = null;
+      ringback.stop();
+      reportDiagnostic('info', 'ringback-stopped', 'Ringback stopped: ' + (reason || 'stopped') + '.', callId);
+    }
+
+    // A ringback the server never ends stops by itself (RINGBACK_MAX_MS); nothing else would render at that moment.
+    function scheduleRingbackExpiry(timeLeftMs) {
+      if (ringbackExpiryTimer || typeof timeLeftMs !== 'number') {
+        return;
+      }
+      ringbackExpiryTimer = window.setTimeout(function () {
+        ringbackExpiryTimer = null;
+        render();
+      }, timeLeftMs + 50);
+    }
     function render() {
       renderIncoming();
+      syncRingback();
       ensureActiveTab();
       renderExtensionHint();
 
@@ -14943,7 +15313,8 @@
       // in the one place every call state passes through -- server-tracked and browser-originated alike --
       // so the clock is the same however the call was placed.
       if (currentCall && currentCall.callId) {
-        callConnectedAt[currentCall.callId] = connectedAtFor(stateName === 'Connected' || stateName === 'OnHold', callConnectedAt[currentCall.callId], Date.now());
+        // A number still ringing has not been talked to yet: its clock starts when it answers.
+        callConnectedAt[currentCall.callId] = connectedAtFor((stateName === 'Connected' || stateName === 'OnHold') && !remotePartyRinging(currentCall), callConnectedAt[currentCall.callId], Date.now());
       }
       setStatus(formatCallStatus(baseStatus, currentCallElapsedSeconds()));
       scheduleCallTimer();
@@ -16935,6 +17306,7 @@
           if (call && call.callId) {
             forgetUnacceptedOfferCall(unacceptedOfferCalls, call.callId);
             delete heldBackOfferReports[call.callId];
+            forgetRemoteParty(remoteParties, call.callId);
           }
 
           // A terminal state from the server for a call THIS browser placed is bookkeeping, not the call
@@ -16966,6 +17338,7 @@
             });
             pruneAgentHolds(agentHolds, Object.keys(activeCalls));
             pruneAgentMutes(agentMutes, Object.keys(activeCalls));
+            pruneRemoteParties(remoteParties, Object.keys(activeCalls));
             currentCall = getActiveCalls()[0] || null;
             incomingHandled = false;
           } else {
@@ -17031,6 +17404,17 @@
         notifyBrowserAudio(call);
         scheduleActiveCallsRefresh();
       });
+
+      // Where the other party of a call the platform connects stands: the number the agent dialed is ringing, has
+      // answered, or went without answering. Drives the ringback (see soft-phone/ringback.js).
+      connection.on('RemotePartyChanged', function (update) {
+        var state = noteRemoteParty(remoteParties, update, Date.now());
+        if (!state) {
+          return;
+        }
+        reportDiagnostic('info', 'remote-party-' + state, 'The other party of the call is ' + state + '.', update.callId);
+        render();
+      });
       connection.on('IncomingCall', function (call, context) {
         setIncomingOffer(call, context || null);
       });
@@ -17085,6 +17469,12 @@
         return;
       }
       hubReconnecting = !!active;
+
+      // Whatever the server says about a ringing number while the hub is down is lost, its answer included: a
+      // ringback left playing could carry on over the conversation, so it stops.
+      if (hubReconnecting) {
+        pruneRemoteParties(remoteParties, []);
+      }
       render();
     }
     function setMediaReconnecting(active) {
@@ -17433,6 +17823,7 @@
         // release the provider media session.
         pageUnloading = true;
         ringtone.stop();
+        stopRingback('page-unload');
         hostDelegation.reset();
         // Before the capture is released: the next page picks the agent's voice level up from here.
         rememberAutoLevelGain();
