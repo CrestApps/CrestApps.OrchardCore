@@ -1,3 +1,4 @@
+using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.FileSources;
@@ -10,5 +11,5 @@ public static class FileSourcePermissions
     /// <summary>
     /// Permission that allows managing file sources (create, edit, delete, and run).
     /// </summary>
-    public static readonly Permission ManageFileSources = new("ManageFileSources", "Manage file sources");
+    public static readonly Permission ManageFileSources = new("ManageFileSources", LocalizationSource.Create("Manage file sources", typeof(FileSourcePermissions)));
 }

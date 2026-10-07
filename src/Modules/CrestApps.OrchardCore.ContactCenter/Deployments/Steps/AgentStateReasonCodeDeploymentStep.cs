@@ -8,12 +8,16 @@ namespace CrestApps.OrchardCore.ContactCenter.Deployments.Steps;
 /// </summary>
 public sealed class AgentStateReasonCodeDeploymentStep : DeploymentStep
 {
+    private static readonly LocalizationSource _category = LocalizationSource.Create<AgentStateReasonCodeDeploymentStep>("Contact Center");
+    private static readonly LocalizationSource _title = LocalizationSource.Create<AgentStateReasonCodeDeploymentStep>("Agent State Reason Codes");
+
     /// <summary>
     /// Initializes a new instance of the <see cref="AgentStateReasonCodeDeploymentStep"/> class.
     /// </summary>
     public AgentStateReasonCodeDeploymentStep()
     {
         Name = ContactCenterDeploymentSteps.AgentStateReasonCode;
-        Category = LocalizationSource.Create<AgentStateReasonCodeDeploymentStep>("Contact Center");
+        Category = _category;
+        Title = _title;
     }
 }

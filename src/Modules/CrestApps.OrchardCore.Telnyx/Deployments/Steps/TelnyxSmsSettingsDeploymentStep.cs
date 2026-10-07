@@ -8,12 +8,16 @@ namespace CrestApps.OrchardCore.Telnyx.Deployments.Steps;
 /// </summary>
 public sealed class TelnyxSmsSettingsDeploymentStep : DeploymentStep
 {
+    private static readonly LocalizationSource _category = LocalizationSource.Create<TelnyxSmsSettingsDeploymentStep>("Telephony");
+    private static readonly LocalizationSource _title = LocalizationSource.Create<TelnyxSmsSettingsDeploymentStep>("Telnyx SMS Settings");
+
     /// <summary>
     /// Initializes a new instance of the <see cref="TelnyxSmsSettingsDeploymentStep"/> class.
     /// </summary>
     public TelnyxSmsSettingsDeploymentStep()
     {
         Name = TelnyxDeploymentSteps.SmsSettings;
-        Category = LocalizationSource.Create<TelnyxSmsSettingsDeploymentStep>("Telephony");
+        Category = _category;
+        Title = _title;
     }
 }

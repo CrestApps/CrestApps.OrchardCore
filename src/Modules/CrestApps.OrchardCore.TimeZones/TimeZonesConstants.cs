@@ -1,3 +1,4 @@
+using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.TimeZones;
@@ -37,6 +38,6 @@ public static class TimeZonesConstants
         /// <summary>
         /// Gets the permission to manage time zone maps.
         /// </summary>
-        public static readonly Permission ManageTimeZoneMaps = new("ManageTimeZoneMaps", "Manage time zone maps");
+        public static readonly Permission ManageTimeZoneMaps = new("ManageTimeZoneMaps", LocalizationSource.Create("Manage time zone maps", typeof(Permissions)));
     }
 }

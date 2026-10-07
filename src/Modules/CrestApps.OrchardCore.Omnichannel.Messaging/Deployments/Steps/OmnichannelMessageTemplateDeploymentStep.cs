@@ -8,12 +8,16 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Deployments.Steps;
 /// </summary>
 public sealed class OmnichannelMessageTemplateDeploymentStep : DeploymentStep
 {
+    private static readonly LocalizationSource _category = LocalizationSource.Create<OmnichannelMessageTemplateDeploymentStep>("Omnichannel");
+    private static readonly LocalizationSource _title = LocalizationSource.Create<OmnichannelMessageTemplateDeploymentStep>("Messaging Templates");
+
     /// <summary>
     /// Initializes a new instance of the <see cref="OmnichannelMessageTemplateDeploymentStep"/> class.
     /// </summary>
     public OmnichannelMessageTemplateDeploymentStep()
     {
         Name = MessagingDeploymentSteps.MessageTemplate;
-        Category = LocalizationSource.Create<OmnichannelMessageTemplateDeploymentStep>("Omnichannel");
+        Category = _category;
+        Title = _title;
     }
 }

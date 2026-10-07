@@ -1,3 +1,4 @@
+using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.WebCrawlers;
@@ -10,5 +11,5 @@ public static class WebCrawlerPermissions
     /// <summary>
     /// Permission that allows managing web crawlers (create, edit, delete, and synchronize).
     /// </summary>
-    public static readonly Permission ManageWebCrawlers = new("ManageWebCrawlers", "Manage web crawlers");
+    public static readonly Permission ManageWebCrawlers = new("ManageWebCrawlers", LocalizationSource.Create("Manage web crawlers", typeof(WebCrawlerPermissions)));
 }

@@ -8,12 +8,16 @@ namespace CrestApps.OrchardCore.Asterisk.Deployments.Steps;
 /// </summary>
 public sealed class AsteriskSettingsDeploymentStep : DeploymentStep
 {
+    private static readonly LocalizationSource _category = LocalizationSource.Create<AsteriskSettingsDeploymentStep>("Telephony");
+    private static readonly LocalizationSource _title = LocalizationSource.Create<AsteriskSettingsDeploymentStep>("Asterisk Settings");
+
     /// <summary>
     /// Initializes a new instance of the <see cref="AsteriskSettingsDeploymentStep"/> class.
     /// </summary>
     public AsteriskSettingsDeploymentStep()
     {
         Name = AsteriskDeploymentSteps.Settings;
-        Category = LocalizationSource.Create<AsteriskSettingsDeploymentStep>("Telephony");
+        Category = _category;
+        Title = _title;
     }
 }

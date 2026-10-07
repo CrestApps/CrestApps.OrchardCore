@@ -1,3 +1,4 @@
+using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Agent;
@@ -12,30 +13,30 @@ internal static class OrchardCorePermissions
     /// <summary>
     /// Gets the permission to manage features.
     /// </summary>
-    public static readonly Permission ManageFeatures = new("ManageFeatures", "Manage Features");
+    public static readonly Permission ManageFeatures = new("ManageFeatures", LocalizationSource.Create("Manage Features", typeof(OrchardCorePermissions)));
 
     /// <summary>
     /// Gets the permission to manage tenants.
     /// </summary>
-    public static readonly Permission ManageTenants = new("ManageTenants", "Manage tenants");
+    public static readonly Permission ManageTenants = new("ManageTenants", LocalizationSource.Create("Manage tenants", typeof(OrchardCorePermissions)));
 
     /// <summary>
     /// Gets the permission to view content types.
     /// </summary>
-    public static readonly Permission ViewContentTypes = new("ViewContentTypes", "View content types.");
+    public static readonly Permission ViewContentTypes = new("ViewContentTypes", LocalizationSource.Create("View content types.", typeof(OrchardCorePermissions)));
 
     /// <summary>
     /// Gets the security-critical permission to edit content types.
     /// </summary>
-    public static readonly Permission EditContentTypes = new("EditContentTypes", "Edit content types.", isSecurityCritical: true);
+    public static readonly Permission EditContentTypes = new("EditContentTypes", LocalizationSource.Create("Edit content types.", typeof(OrchardCorePermissions)), isSecurityCritical: true);
 
     /// <summary>
     /// Gets the security-critical permission to manage recipes.
     /// </summary>
-    public static readonly Permission ManageRecipes = new("ManageRecipes", "Manage Recipes", isSecurityCritical: true);
+    public static readonly Permission ManageRecipes = new("ManageRecipes", LocalizationSource.Create("Manage Recipes", typeof(OrchardCorePermissions)), isSecurityCritical: true);
 
     /// <summary>
     /// Gets the security-critical permission to manage workflows.
     /// </summary>
-    public static readonly Permission ManageWorkflows = new("ManageWorkflows", "Manage workflows", isSecurityCritical: true);
+    public static readonly Permission ManageWorkflows = new("ManageWorkflows", LocalizationSource.Create("Manage workflows", typeof(OrchardCorePermissions)), isSecurityCritical: true);
 }

@@ -1,3 +1,4 @@
+using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core;
@@ -247,102 +248,102 @@ public static class OmnichannelConstants
         /// <summary>
         /// Gets the permission to list activities.
         /// </summary>
-        public readonly static Permission ListActivities = new("ListActivities", "List activities");
+        public readonly static Permission ListActivities = new("ListActivities", LocalizationSource.Create("List activities", typeof(Permissions)));
 
         /// <summary>
         /// Gets the permission to list contact activities.
         /// </summary>
-        public readonly static Permission ListContactActivities = new("ListContactActivities", "List Contact activities", [ListActivities]);
+        public readonly static Permission ListContactActivities = new("ListContactActivities", LocalizationSource.Create("List Contact activities", typeof(Permissions)), [ListActivities]);
 
         /// <summary>
         /// Gets the permission to complete an activity.
         /// </summary>
-        public readonly static Permission CompleteActivity = new("CompleteActivity", "Complete activity");
+        public readonly static Permission CompleteActivity = new("CompleteActivity", LocalizationSource.Create("Complete activity", typeof(Permissions)));
 
         /// <summary>
         /// Gets the permission to complete own activities.
         /// </summary>
-        public readonly static Permission CompleteOwnActivity = new("CompleteOwnActivity", "Complete own activity");
+        public readonly static Permission CompleteOwnActivity = new("CompleteOwnActivity", LocalizationSource.Create("Complete own activity", typeof(Permissions)));
 
         /// <summary>
         /// Gets the permission to manage dispositions.
         /// </summary>
-        public readonly static Permission ManageDispositions = new("ManageDispositions", "Manage dispositions");
+        public readonly static Permission ManageDispositions = new("ManageDispositions", LocalizationSource.Create("Manage dispositions", typeof(Permissions)));
 
         /// <summary>
         /// Gets the permission to manage campaigns.
         /// </summary>
-        public readonly static Permission ManageCampaigns = new("ManageCampaigns", "Manage campaigns");
+        public readonly static Permission ManageCampaigns = new("ManageCampaigns", LocalizationSource.Create("Manage campaigns", typeof(Permissions)));
 
         /// <summary>
         /// Gets the permission to manage re-engagement (nudge) schedules.
         /// </summary>
-        public readonly static Permission ManageCadences = new("ManageCadences", "Manage cadences");
+        public readonly static Permission ManageCadences = new("ManageCadences", LocalizationSource.Create("Manage cadences", typeof(Permissions)));
 
         /// <summary>
         /// Gets the permission to manage campaign groups.
         /// </summary>
-        public readonly static Permission ManageCampaignGroups = new("ManageCampaignGroups", "Manage campaign groups");
+        public readonly static Permission ManageCampaignGroups = new("ManageCampaignGroups", LocalizationSource.Create("Manage campaign groups", typeof(Permissions)));
 
         /// <summary>
         /// Gets the permission to manage activities in bulk.
         /// </summary>
-        public readonly static Permission ManageActivities = new("ManageActivities", "Manage activities");
+        public readonly static Permission ManageActivities = new("ManageActivities", LocalizationSource.Create("Manage activities", typeof(Permissions)));
 
         /// <summary>
         /// Gets the permission to create and edit activities. Anyone who can manage activities can also edit them.
         /// Declared after <see cref="ManageActivities"/> because static fields initialize in declaration order.
         /// </summary>
-        public readonly static Permission EditActivity = new("EditActivity", "Create and edit activities", [ManageActivities]);
+        public readonly static Permission EditActivity = new("EditActivity", LocalizationSource.Create("Create and edit activities", typeof(Permissions)), [ManageActivities]);
 
         /// <summary>
         /// Gets the permission to purge an activity.
         /// </summary>
-        public readonly static Permission PurgeActivity = new("PurgeActivity", "Purge activity", [ManageActivities]);
+        public readonly static Permission PurgeActivity = new("PurgeActivity", LocalizationSource.Create("Purge activity", typeof(Permissions)), [ManageActivities]);
 
         /// <summary>
         /// Gets the permission to manage activity batches.
         /// </summary>
-        public readonly static Permission ManageActivityBatches = new("ManageActivityBatches", "Manage activity batches");
+        public readonly static Permission ManageActivityBatches = new("ManageActivityBatches", LocalizationSource.Create("Manage activity batches", typeof(Permissions)));
 
         /// <summary>
         /// Gets the permission to delete an activity batch that has finished loading. The activities it created are kept.
         /// </summary>
-        public readonly static Permission DeleteLoadedActivityBatches = new("DeleteLoadedActivityBatches", "Delete loaded activity batches");
+        public readonly static Permission DeleteLoadedActivityBatches = new("DeleteLoadedActivityBatches", LocalizationSource.Create("Delete loaded activity batches", typeof(Permissions)));
 
         /// <summary>
         /// Gets the permission to manage channel endpoints.
         /// </summary>
-        public readonly static Permission ManageChannelEndpoints = new("ManageChannelEndpoints", "Manage omnichannel addresses");
+        public readonly static Permission ManageChannelEndpoints = new("ManageChannelEndpoints", LocalizationSource.Create("Manage omnichannel addresses", typeof(Permissions)));
 
         /// <summary>
         /// Gets the permission to manage subject flows.
         /// </summary>
-        public readonly static Permission ManageSubjectFlows = new("ManageSubjectFlows", "Manage subject flows");
+        public readonly static Permission ManageSubjectFlows = new("ManageSubjectFlows", LocalizationSource.Create("Manage subject flows", typeof(Permissions)));
 
         /// <summary>
         /// Gets the permission to view the Omnichannel reports.
         /// </summary>
-        public readonly static Permission ViewReports = new("ViewOmnichannelReports", "View Omnichannel reports", [ManageActivities]);
+        public readonly static Permission ViewReports = new("ViewOmnichannelReports", LocalizationSource.Create("View Omnichannel reports", typeof(Permissions)), [ManageActivities]);
 
         /// <summary>
         /// Gets the permission to convert a lead into a contact.
         /// </summary>
-        public readonly static Permission ConvertLead = new("ConvertLead", "Convert leads", [ManageActivities]);
+        public readonly static Permission ConvertLead = new("ConvertLead", LocalizationSource.Create("Convert leads", typeof(Permissions)), [ManageActivities]);
 
         /// <summary>
         /// Gets the permission to edit a lead after it was converted, for correcting its record only.
         /// </summary>
-        public readonly static Permission EditConvertedLead = new("EditConvertedLead", "Edit converted leads");
+        public readonly static Permission EditConvertedLead = new("EditConvertedLead", LocalizationSource.Create("Edit converted leads", typeof(Permissions)));
 
         /// <summary>
         /// Gets the permission to manage lead statuses.
         /// </summary>
-        public readonly static Permission ManageLeadStatuses = new("ManageLeadStatuses", "Manage lead statuses");
+        public readonly static Permission ManageLeadStatuses = new("ManageLeadStatuses", LocalizationSource.Create("Manage lead statuses", typeof(Permissions)));
 
         /// <summary>
         /// Gets the permission to manage opportunity stages.
         /// </summary>
-        public readonly static Permission ManageOpportunityStages = new("ManageOpportunityStages", "Manage opportunity stages");
+        public readonly static Permission ManageOpportunityStages = new("ManageOpportunityStages", LocalizationSource.Create("Manage opportunity stages", typeof(Permissions)));
     }
 }

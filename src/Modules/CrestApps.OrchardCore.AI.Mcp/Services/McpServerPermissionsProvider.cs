@@ -1,4 +1,5 @@
 ﻿using OrchardCore;
+using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Services;
@@ -8,9 +9,9 @@ namespace CrestApps.OrchardCore.AI.Mcp.Services;
 /// </summary>
 public sealed class McpServerPermissionsProvider : IPermissionProvider
 {
-    public static readonly Permission AccessMcpServer = new("AccessMcpServer", "Access the MCP Server", isSecurityCritical: true);
+    public static readonly Permission AccessMcpServer = new("AccessMcpServer", LocalizationSource.Create<McpServerPermissionsProvider>("Access the MCP Server"), isSecurityCritical: true);
 
-    public static readonly Permission ManageMcpServerSettings = new("ManageMcpServerSettings", "Manage the MCP Server settings", isSecurityCritical: true);
+    public static readonly Permission ManageMcpServerSettings = new("ManageMcpServerSettings", LocalizationSource.Create<McpServerPermissionsProvider>("Manage the MCP Server settings"), isSecurityCritical: true);
 
     private readonly IEnumerable<Permission> _allPermissions =
     [
