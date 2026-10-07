@@ -316,6 +316,41 @@
   {
     "copy": true,
     "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/chat-image-carousel.js"
+    ],
+    "output": "wwwroot/vendors/crestapps/chat-image-carousel.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/chat-image-carousel.min.js"
+    ],
+    "output": "wwwroot/vendors/crestapps/chat-image-carousel.min.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/chat-image-carousel.min.js.map"
+    ],
+    "output": "wwwroot/vendors/crestapps/chat-image-carousel.min.js.map"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/chat-image-carousel.css"
+    ],
+    "output": "wwwroot/vendors/crestapps/chat-image-carousel.css"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/chat-image-carousel.min.css"
+    ],
+    "output": "wwwroot/vendors/crestapps/chat-image-carousel.min.css"
+  },
+  {
+    "copy": true,
+    "inputs": [
       "node_modules/intl-tel-input/dist/js/intlTelInputWithUtils.js"
     ],
     "output": "wwwroot/vendors/intl-tel-input/js/intlTelInputWithUtils.js"

@@ -798,6 +798,10 @@
       realtimeMicDeviceId = '',
       realtimeOutputDeviceId = '',
       realtimeLanguage = '',
+      // The listener's saved speed (null for the normal pace), and what each session reports about its own.
+      realtimeSpeechSpeed = null,
+      realtimeSessionSpeechSpeed = 1,
+      realtimeSpeechSpeedAdjustable = false,
       realtimeAudioSettingsBuilt = false,
       // The settings popover this instance built. A page can host two chat clients at once -- its own chat
       // and the admin widget -- and both popovers carry the same element id, so looking one up by id would
@@ -814,6 +818,14 @@
     // name merely looked like a room microphone, and the earlier repair deliberately left that alone, so users
     // found interruptions "off by default" with no idea why.
     var REALTIME_PREFS_VERSION = 3;
+
+    // Mirrors RealtimeSpeechSpeedRange on the server.
+    var REALTIME_SPEECH_SPEED_MIN = 0.75,
+      REALTIME_SPEECH_SPEED_MAX = 1.5,
+      REALTIME_SPEECH_SPEED_DEFAULT = 1;
+    function clampRealtimeSpeechSpeed(speed) {
+      return Math.round(Math.min(REALTIME_SPEECH_SPEED_MAX, Math.max(REALTIME_SPEECH_SPEED_MIN, speed)) * 100) / 100;
+    }
     function loadRealtimeAudioPrefs() {
       var prefs = {
         bargeIn: true,
@@ -822,6 +834,7 @@
         micDeviceId: '',
         outputDeviceId: '',
         language: '',
+        speechSpeed: null,
         version: 0
       };
       try {
@@ -845,6 +858,9 @@
           }
           if (typeof parsed.language === 'string') {
             prefs.language = parsed.language;
+          }
+          if (typeof parsed.speechSpeed === 'number' && isFinite(parsed.speechSpeed)) {
+            prefs.speechSpeed = clampRealtimeSpeechSpeed(parsed.speechSpeed);
           }
           if (typeof parsed.version === 'number') {
             prefs.version = parsed.version;
@@ -875,6 +891,7 @@
       realtimeMicDeviceId = prefs.micDeviceId || '';
       realtimeOutputDeviceId = prefs.outputDeviceId || '';
       realtimeLanguage = prefs.language || '';
+      realtimeSpeechSpeed = typeof prefs.speechSpeed === 'number' ? prefs.speechSpeed : null;
       // The gate runs on the audio thread and cannot see these variables; push the change to it.
       syncRealtimeGateMode();
       if (realtimeGain) {
@@ -1021,7 +1038,7 @@
       gear.className = 'btn btn-outline-secondary';
       gear.title = localize('settingsTitle', 'Voice settings');
       gear.setAttribute('aria-label', localize('settingsTitle', 'Voice settings'));
-      gear.innerHTML = '<i class="fa-solid fa-gear"></i>';
+      gear.innerHTML = '<i class="fa-solid fa-headset"></i>';
       var langs = [['en', 'English'], ['es', 'Spanish'], ['fr', 'French'], ['de', 'German'], ['it', 'Italian'], ['pt', 'Portuguese'], ['nl', 'Dutch'], ['zh', 'Chinese'], ['ja', 'Japanese'], ['ko', 'Korean'], ['ar', 'Arabic'], ['hi', 'Hindi'], ['ru', 'Russian']];
       var langOptions = '<option value=""' + (prefs.language === '' ? ' selected' : '') + '>' + localize('languageAuto', 'Automatic') + '</option>' + langs.map(function (l) {
         return '<option value="' + l[0] + '"' + (prefs.language === l[0] ? ' selected' : '') + '>' + l[1] + '</option>';
@@ -1029,7 +1046,9 @@
       var panel = document.createElement('div');
       panel.className = 'card shadow-sm';
       panel.style.cssText = 'position:absolute;bottom:calc(100% + 6px);right:0;z-index:1080;width:290px;max-height:70vh;overflow:auto;display:none;';
-      panel.innerHTML = '<div class="card-body p-3">' + '<div class="fw-semibold mb-2" style="font-size:0.85rem;">' + localize('settingsTitle', 'Voice settings') + '</div>' + '<label class="form-label mb-1 d-block" style="font-size:0.8rem;">' + localize('microphone', 'Microphone') + '</label>' + '<select class="form-select form-select-sm js-mic mb-2"><option value="">' + localize('defaultMicrophone', 'Default microphone') + '</option></select>' + '<label class="form-label mb-1 d-block" style="font-size:0.8rem;">' + localize('speaker', 'Speaker') + '</label>' + '<select class="form-select form-select-sm js-out mb-1"><option value="">' + localize('automatic', 'Automatic') + '</option></select>' + '<button type="button" class="btn btn-outline-secondary btn-sm mb-2 js-pick-out" style="display:none;">' + localize('chooseSpeaker', 'Choose speaker…') + '</button>' + '<div class="form-text mb-2 js-out-help">' + localize('speakerHelp', 'Automatic uses the device your system uses for calls. If you cannot hear the assistant, pick the speakers you are actually listening to.') + '</div>' + '<label class="form-label mb-1 d-block" style="font-size:0.8rem;">' + localize('assistantVolume', 'Assistant volume') + ': <strong class="js-vol-val">' + Math.round(prefs.volume * 100) + '</strong>%</label>' + '<input type="range" class="form-range js-vol mb-2" min="0" max="100" step="5" value="' + Math.round(prefs.volume * 100) + '">' + '<label class="form-label mb-1 d-block" style="font-size:0.8rem;">' + localize('language', 'Language') + '</label>' + '<select class="form-select form-select-sm js-lang mb-2">' + langOptions + '</select>' + '<div class="form-check form-switch mb-1">' + '<input class="form-check-input js-barge" type="checkbox" id="realtime-setting-barge"' + (prefs.bargeIn ? ' checked' : '') + '>' + '<label class="form-check-label" for="realtime-setting-barge">' + localize('allowInterruptions', 'Allow interruptions') + '</label>' + '</div>' + '<div class="form-text mb-2">' + localize('allowInterruptionsHelp', 'Talk over the assistant to interrupt it. Turn this off if the assistant keeps hearing itself through your speakers.') + '</div>' + '<div class="form-check form-switch mb-1">' + '<input class="form-check-input js-ptt" type="checkbox" id="realtime-setting-ptt"' + (prefs.pushToTalk ? ' checked' : '') + '>' + '<label class="form-check-label" for="realtime-setting-ptt">' + localize('pushToTalk', 'Push-to-talk') + '</label>' + '</div>' + '<div class="form-text">' + localize('pushToTalkHelp', 'Hold <kbd>Space</kbd> (or the button) to talk. For very noisy places.') + '</div>' + '</div>';
+      panel.innerHTML = '<div class="card-body p-3">' + '<div class="fw-semibold mb-2" style="font-size:0.85rem;">' + localize('settingsTitle', 'Voice settings') + '</div>' + '<label class="form-label mb-1 d-block" style="font-size:0.8rem;">' + localize('microphone', 'Microphone') + '</label>' + '<select class="form-select form-select-sm js-mic mb-2"><option value="">' + localize('defaultMicrophone', 'Default microphone') + '</option></select>' + '<label class="form-label mb-1 d-block" style="font-size:0.8rem;">' + localize('speaker', 'Speaker') + '</label>' + '<select class="form-select form-select-sm js-out mb-1"><option value="">' + localize('automatic', 'Automatic') + '</option></select>' + '<button type="button" class="btn btn-outline-secondary btn-sm mb-2 js-pick-out" style="display:none;">' + localize('chooseSpeaker', 'Choose speaker…') + '</button>' + '<div class="form-text mb-2 js-out-help">' + localize('speakerHelp', 'Automatic uses the device your system uses for calls. If you cannot hear the assistant, pick the speakers you are actually listening to.') + '</div>' + '<label class="form-label mb-1 d-block" style="font-size:0.8rem;">' + localize('assistantVolume', 'Assistant volume') + ': <strong class="js-vol-val">' + Math.round(prefs.volume * 100) + '</strong>%</label>' + '<input type="range" class="form-range js-vol mb-2" min="0" max="100" step="5" value="' + Math.round(prefs.volume * 100) + '">' +
+      // Hidden until the session reports that its speed can change.
+      '<div class="js-speed-row" hidden>' + '<label class="form-label mb-1 d-flex align-items-baseline" style="font-size:0.8rem;">' + '<span>' + localize('speechSpeed', 'Speaking speed') + ': <strong class="js-speed-val">1.00</strong>×</span>' + '<button type="button" class="btn btn-link btn-sm p-0 ms-auto js-speed-reset" style="font-size:0.8rem;" hidden>' + localize('speechSpeedReset', 'Reset') + '</button>' + '</label>' + '<input type="range" class="form-range js-speed mb-0" min="' + REALTIME_SPEECH_SPEED_MIN + '" max="' + REALTIME_SPEECH_SPEED_MAX + '" step="0.05" value="' + REALTIME_SPEECH_SPEED_DEFAULT + '">' + '<div class="form-text mt-0 mb-2">' + localize('speechSpeedHelp', 'Applies from the assistant\'s next reply.') + '</div>' + '</div>' + '<label class="form-label mb-1 d-block" style="font-size:0.8rem;">' + localize('language', 'Language') + '</label>' + '<select class="form-select form-select-sm js-lang mb-2">' + langOptions + '</select>' + '<div class="form-check form-switch mb-1">' + '<input class="form-check-input js-barge" type="checkbox" id="realtime-setting-barge"' + (prefs.bargeIn ? ' checked' : '') + '>' + '<label class="form-check-label" for="realtime-setting-barge">' + localize('allowInterruptions', 'Allow interruptions') + '</label>' + '</div>' + '<div class="form-text mb-2">' + localize('allowInterruptionsHelp', 'Talk over the assistant to interrupt it. Turn this off if the assistant keeps hearing itself through your speakers.') + '</div>' + '<div class="form-check form-switch mb-1">' + '<input class="form-check-input js-ptt" type="checkbox" id="realtime-setting-ptt"' + (prefs.pushToTalk ? ' checked' : '') + '>' + '<label class="form-check-label" for="realtime-setting-ptt">' + localize('pushToTalk', 'Push-to-talk') + '</label>' + '</div>' + '<div class="form-text">' + localize('pushToTalkHelp', 'Hold <kbd>Space</kbd> (or the button) to talk. For very noisy places.') + '</div>' + '</div>';
       wrap.appendChild(gear);
       wrap.appendChild(panel);
       realtimeBtn.insertAdjacentElement('afterend', wrap);
@@ -1042,19 +1061,34 @@
       var outSelect = panel.querySelector('.js-out');
       var outPickButton = panel.querySelector('.js-pick-out');
       var langSelect = panel.querySelector('.js-lang');
-      function persist() {
-        var next = {
+      var speedInput = panel.querySelector('.js-speed');
+      var speedVal = panel.querySelector('.js-speed-val');
+      var speedReset = panel.querySelector('.js-speed-reset');
+      function readPanelPrefs() {
+        return {
           bargeIn: bargeInput.checked,
           pushToTalk: pttInput.checked,
           volume: (parseInt(volInput.value, 10) || 0) / 100,
           micDeviceId: micSelect.value || '',
           outputDeviceId: outSelect.value || '',
           language: langSelect.value || '',
+          speechSpeed: realtimeSpeechSpeed,
           version: REALTIME_PREFS_VERSION
         };
+      }
+      function persist() {
+        var next = readPanelPrefs();
         applyRealtimeAudioPrefs(next);
         saveRealtimeAudioPrefs(next);
         pushRealtimeSettingsToServer();
+      }
+
+      // Kept out of persist(), which resends turn detection on every volume tick.
+      function persistSpeechSpeed(speed) {
+        realtimeSpeechSpeed = speed;
+        saveRealtimeAudioPrefs(readPanelPrefs());
+        syncRealtimeSpeechSpeedControl();
+        pushRealtimeSpeechSpeedToServer();
       }
       function populateDevices() {
         if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
@@ -1153,6 +1187,17 @@
       volInput.addEventListener('input', function () {
         volVal.textContent = volInput.value;
         persist();
+      });
+      // The label follows the drag; the speed is sent once, on release.
+      speedInput.addEventListener('input', function () {
+        speedVal.textContent = formatRealtimeSpeechSpeed(parseFloat(speedInput.value));
+      });
+      speedInput.addEventListener('change', function () {
+        persistSpeechSpeed(clampRealtimeSpeechSpeed(parseFloat(speedInput.value)));
+      });
+      // Back to the model's normal pace.
+      speedReset.addEventListener('click', function () {
+        persistSpeechSpeed(null);
       });
       micSelect.addEventListener('change', persist);
       langSelect.addEventListener('change', persist);
@@ -1294,6 +1339,50 @@
         connection.send('UpdateRealtimeSettings', realtimeBargeIn, null, null);
       } catch (err) {}
     }
+    function formatRealtimeSpeechSpeed(speed) {
+      return (isFinite(speed) ? speed : REALTIME_SPEECH_SPEED_DEFAULT).toFixed(2);
+    }
+
+    // The listener's saved speed wins over the session's own.
+    function effectiveRealtimeSpeechSpeed() {
+      return realtimeSpeechSpeed !== null ? realtimeSpeechSpeed : realtimeSessionSpeechSpeed;
+    }
+    function syncRealtimeSpeechSpeedControl() {
+      if (!realtimeAudioSettingsElement) {
+        return;
+      }
+      var row = realtimeAudioSettingsElement.querySelector('.js-speed-row');
+      var input = realtimeAudioSettingsElement.querySelector('.js-speed');
+      var value = realtimeAudioSettingsElement.querySelector('.js-speed-val');
+      var reset = realtimeAudioSettingsElement.querySelector('.js-speed-reset');
+      if (!row || !input || !value || !reset) {
+        return;
+      }
+      var speed = effectiveRealtimeSpeechSpeed();
+      row.hidden = !realtimeSpeechSpeedAdjustable;
+      input.value = String(speed);
+      value.textContent = formatRealtimeSpeechSpeed(speed);
+      reset.hidden = realtimeSpeechSpeed === null;
+    }
+    function pushRealtimeSpeechSpeedToServer() {
+      if (!isRealtimeActive || !realtimeSpeechSpeedAdjustable || !connection || typeof connection.send !== 'function') {
+        return;
+      }
+      try {
+        connection.send('UpdateRealtimeSpeechSpeed', effectiveRealtimeSpeechSpeed());
+      } catch (err) {}
+    }
+
+    // An empty payload means this session's speed can't change; otherwise a saved speed is applied before anyone speaks.
+    function applySessionSpeechSpeed(payload) {
+      var speed = parseFloat(payload);
+      realtimeSpeechSpeedAdjustable = isFinite(speed);
+      realtimeSessionSpeechSpeed = realtimeSpeechSpeedAdjustable ? speed : REALTIME_SPEECH_SPEED_DEFAULT;
+      syncRealtimeSpeechSpeedControl();
+      if (realtimeSpeechSpeed !== null && realtimeSpeechSpeed !== realtimeSessionSpeechSpeed) {
+        pushRealtimeSpeechSpeedToServer();
+      }
+    }
 
     // Reports the session's state to the host so it can show something more honest than a button that flips to
     // "End Conversation" before anything has connected.
@@ -1337,7 +1426,9 @@
         if (!isRealtimeActive) {
           return;
         }
-        if (type === 'session_ready') {
+        if (type === 'speech_speed') {
+          applySessionSpeechSpeed(payload);
+        } else if (type === 'session_ready') {
           realtimeSessionReady = true;
           setRealtimeState('listening');
         } else if (type === 'session_ended') {
@@ -1565,6 +1656,9 @@
       var attempt = ++realtimeAttemptToken;
       realtimeFellBack = false;
       realtimeSessionReady = false;
+      // Hidden until this session reports its own speed.
+      realtimeSpeechSpeedAdjustable = false;
+      syncRealtimeSpeechSpeedControl();
       realtimeEndedNotice = null;
       clearRealtimeStatus();
       bindRealtimeLifecycleHandlers();

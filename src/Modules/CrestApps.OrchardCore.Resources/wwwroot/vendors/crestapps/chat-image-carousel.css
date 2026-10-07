@@ -1,0 +1,277 @@
+/* ── Stacked image carousel ── */
+/* The pictures of one run are laid over each other in a single grid cell, so the stage is as tall as the
+   tallest of them and does not jump as the reader moves between pictures of different heights. The current
+   picture sits in front; its neighbours are pushed out to either side and shrunk, far enough that their
+   edges show and can be clicked. Cards further out are stacked out of sight behind the last visible one.
+
+   The selectors that size and place a card are deliberately specific: the chat surfaces already style
+   .generated-image-container -- the widget through .ai-chat-widget-messages, one host through a <style> of
+   its own -- and a card has to win over all of them wherever this file happens to be loaded. */
+.ai-image-carousel {
+    --ai-image-carousel-card-width: 70%;
+    display: block;
+    width: 100%;
+    max-width: 520px;
+    margin: 0.5rem 0;
+    border-radius: 0.5rem;
+    transition: max-width 0.25s ease;
+}
+
+/* The reader's choice from the size picker; medium is the default. */
+.ai-image-carousel[data-carousel-size="small"] {
+    max-width: 360px;
+}
+
+.ai-image-carousel[data-carousel-size="large"] {
+    max-width: 760px;
+}
+
+.ai-image-carousel:focus {
+    outline: none;
+}
+
+.ai-image-carousel:focus-visible {
+    outline: 2px solid var(--bs-primary, #0d6efd);
+    outline-offset: 4px;
+}
+
+/* The widget's panel is narrow, so the card takes more of it and the fan stays inside it. */
+.ai-chat-widget-messages .ai-image-carousel {
+    --ai-image-carousel-card-width: 78%;
+}
+
+.ai-image-carousel-stage {
+    display: grid;
+    align-items: center;
+    justify-items: center;
+    padding: 0.25rem 0;
+    /* The cards are layered with z-index, and without a stacking context of their own those values are compared
+       with everything else on the page -- including the zoomed picture and its overlay, which carry none, so the
+       cards behind were drawn over the picture being looked at. Isolated, they only order among themselves. */
+    isolation: isolate;
+    /* A horizontal swipe is the carousel's; a vertical one still scrolls the conversation. */
+    touch-action: pan-y;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.ai-image-carousel-stage > .generated-image-container.ai-image-carousel-item {
+    grid-area: 1 / 1;
+    display: block;
+    width: var(--ai-image-carousel-card-width);
+    margin: 0;
+    cursor: pointer;
+    transform-origin: center;
+    transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1), opacity 0.35s ease, filter 0.35s ease;
+}
+
+.ai-image-carousel-stage > .generated-image-container.ai-image-carousel-item img {
+    display: block;
+    width: 100%;
+    max-width: 100% !important;
+    -webkit-user-drag: none;
+    box-shadow: 0 0.375rem 1.25rem rgba(0, 0, 0, 0.14);
+}
+
+.ai-image-carousel-stage > .ai-image-carousel-item[data-stack-offset="0"] {
+    z-index: 4;
+    cursor: default;
+    /* Set on the stage while the reader drags, so the card follows the pointer. */
+    transform: translateX(var(--ai-image-carousel-drag, 0px));
+}
+
+.ai-image-carousel-stage > .ai-image-carousel-item[data-stack-offset="-1"],
+.ai-image-carousel-stage > .ai-image-carousel-item[data-stack-offset="1"] {
+    z-index: 3;
+    opacity: 0.85;
+    filter: brightness(0.94);
+}
+
+.ai-image-carousel-stage > .ai-image-carousel-item[data-stack-offset="-1"] {
+    transform: translateX(-16%) scale(0.88);
+}
+
+.ai-image-carousel-stage > .ai-image-carousel-item[data-stack-offset="1"] {
+    transform: translateX(16%) scale(0.88);
+}
+
+.ai-image-carousel-stage > .ai-image-carousel-item[data-stack-offset="-2"],
+.ai-image-carousel-stage > .ai-image-carousel-item[data-stack-offset="2"] {
+    z-index: 2;
+    opacity: 0.55;
+    filter: brightness(0.9);
+}
+
+.ai-image-carousel-stage > .ai-image-carousel-item[data-stack-offset="-2"] {
+    transform: translateX(-26%) scale(0.76);
+}
+
+.ai-image-carousel-stage > .ai-image-carousel-item[data-stack-offset="2"] {
+    transform: translateX(26%) scale(0.76);
+}
+
+.ai-image-carousel-stage > .ai-image-carousel-item[data-stack-offset="-3"],
+.ai-image-carousel-stage > .ai-image-carousel-item[data-stack-offset="3"] {
+    z-index: 1;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.ai-image-carousel-stage > .ai-image-carousel-item[data-stack-offset="-3"] {
+    transform: translateX(-26%) scale(0.7);
+}
+
+.ai-image-carousel-stage > .ai-image-carousel-item[data-stack-offset="3"] {
+    transform: translateX(26%) scale(0.7);
+}
+
+/* Pointing at a card behind says it can be brought forward. */
+.ai-image-carousel-stage > .ai-image-carousel-item:not(.is-active):hover {
+    opacity: 1;
+    filter: none;
+}
+
+.ai-image-carousel-stage > .generated-image-container.ai-image-carousel-item:not(.is-active) img {
+    cursor: pointer;
+}
+
+/* Only the picture in front is downloaded; a click on one behind brings it forward instead. */
+.ai-image-carousel-stage > .ai-image-carousel-item:not(.is-active) .ai-download-image {
+    display: none;
+}
+
+/* While dragging, the card is moved by the pointer, not eased toward it. */
+.ai-image-carousel-stage.is-dragging > .ai-image-carousel-item {
+    transition: none;
+}
+
+.ai-image-carousel-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+    font-size: 0.8125rem;
+    line-height: 1.25;
+    color: var(--bs-secondary-color, #6c757d);
+}
+
+.ai-image-carousel-caption {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ai-image-carousel-navigation {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.ai-image-carousel-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0;
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 50%;
+    color: var(--bs-body-color, #212529);
+    background-color: var(--bs-body-bg, #ffffff);
+    transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.ai-image-carousel-button:hover:not(:disabled) {
+    background-color: var(--bs-tertiary-bg, #f8f9fa);
+}
+
+.ai-image-carousel-button:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.ai-image-carousel-dots {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.ai-image-carousel-dot {
+    position: relative;
+    width: 0.5rem;
+    height: 0.5rem;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background-color: var(--bs-border-color, #dee2e6);
+    transition: width 0.2s ease, background-color 0.2s ease;
+}
+
+/* The dot is small to look at but not to hit. */
+.ai-image-carousel-dot::after {
+    content: "";
+    position: absolute;
+    inset: -0.375rem -0.25rem;
+}
+
+.ai-image-carousel-dot.is-active {
+    width: 1.25rem;
+    background-color: var(--bs-primary, #0d6efd);
+}
+
+.ai-image-carousel-sizes {
+    display: inline-flex;
+    flex: none;
+    overflow: hidden;
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 0.375rem;
+}
+
+.ai-image-carousel-size {
+    min-width: 1.5rem;
+    height: 1.5rem;
+    padding: 0 0.375rem;
+    border: 0;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--bs-secondary-color, #6c757d);
+    background-color: var(--bs-body-bg, #ffffff);
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.ai-image-carousel-size + .ai-image-carousel-size {
+    border-left: 1px solid var(--bs-border-color, #dee2e6);
+}
+
+.ai-image-carousel-size:hover {
+    color: var(--bs-body-color, #212529);
+    background-color: var(--bs-tertiary-bg, #f8f9fa);
+}
+
+.ai-image-carousel-size[aria-pressed="true"] {
+    color: #ffffff;
+    background-color: var(--bs-primary, #0d6efd);
+}
+
+/* The widget's panel is narrower than even the small preset, so there is nothing for the picker to change. */
+.ai-chat-widget-messages .ai-image-carousel-sizes {
+    display: none;
+}
+
+/* With one picture left -- the others could not be loaded -- there is nothing to move between. */
+.ai-image-carousel[data-image-count="1"] .ai-image-carousel-navigation {
+    display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ai-image-carousel-stage > .generated-image-container.ai-image-carousel-item,
+    .ai-image-carousel-dot {
+        transition: none;
+    }
+}
+
+/*# sourceMappingURL=chat-image-carousel.css.map */
