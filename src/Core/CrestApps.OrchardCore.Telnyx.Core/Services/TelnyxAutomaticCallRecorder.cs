@@ -141,7 +141,7 @@ public sealed class TelnyxAutomaticCallRecorder : ITelnyxAutomaticCallRecorder
             var result = await _apiClient.PostCallActionAsync(callControlId, "record_start", new Dictionary<string, object>
             {
                 ["format"] = TelnyxConstants.Recording.Format,
-                ["channels"] = "single",
+                ["channels"] = TelnyxConstants.Recording.CallChannels,
                 // Telnyx redelivers webhooks; the command id makes the redelivered answer's start a no-op.
                 ["command_id"] = $"auto-record-{callControlId}",
             }, cancellationToken);

@@ -72,10 +72,12 @@ public sealed class TelnyxNoiseSuppressionService : ITelnyxNoiseSuppressionServi
         }
 
         var legId = callControlId.Trim();
+        var strength = NormalizeStrength(options.NoiseSuppressionStrength);
+        var engineConfig = BuildEngineConfig(options.NoiseSuppressionEngine, strength);
 
         try
         {
-            var result = await _apiClient.PostCallActionAsync(legId, StartAction, BuildStartBody(legId, engine, direction), cancellationToken);
+            var result = await _apiClient.PostCallActionAsync(legId, StartAction, BuildStartBody(legId, engine, direction, engineConfig), cancellationToken);
 
             if (!result.Succeeded)
             {
@@ -97,11 +99,13 @@ public sealed class TelnyxNoiseSuppressionService : ITelnyxNoiseSuppressionServi
             if (_logger.IsEnabled(LogLevel.Information))
             {
                 _logger.LogInformation(
-                    "Telnyx noise suppression {Engine} started on {Leg} leg {CallControlId} ({Direction})",
+                    "Telnyx noise suppression {Engine} started on {Leg} leg {CallControlId} ({Direction}, {Strength} strength{EngineConfig})",
                     engine,
                     leg,
                     legId.SanitizeLogValue(),
-                    direction);
+                    direction,
+                    strength,
+                    engineConfig is null ? string.Empty : ": " + string.Join(", ", engineConfig.Select(setting => FormattableString.Invariant($"{setting.Key}={setting.Value}"))));
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -125,9 +129,14 @@ public sealed class TelnyxNoiseSuppressionService : ITelnyxNoiseSuppressionServi
     /// <param name="callControlId">The leg the command is issued on, which the <c>command_id</c> is made from.</param>
     /// <param name="engine">The Telnyx engine name.</param>
     /// <param name="direction">The Telnyx direction.</param>
+    /// <param name="engineConfig">
+    /// The <c>noise_suppression_engine_config</c> from <see cref="BuildEngineConfig"/>, or <see langword="null"/> to send
+    /// none.
+    /// </param>
     /// <returns>The command body.</returns>
-    public static IDictionary<string, object> BuildStartBody(string callControlId, string engine, string direction)
-        => new Dictionary<string, object>(StringComparer.Ordinal)
+    public static IDictionary<string, object> BuildStartBody(string callControlId, string engine, string direction, IDictionary<string, object> engineConfig = null)
+    {
+        var body = new Dictionary<string, object>(StringComparer.Ordinal)
         {
             ["direction"] = direction,
             ["noise_suppression_engine"] = engine,
@@ -135,6 +144,14 @@ public sealed class TelnyxNoiseSuppressionService : ITelnyxNoiseSuppressionServi
             // (after a hold, a transfer, or a redelivered webhook) is not started twice.
             ["command_id"] = $"noise-suppression-{callControlId}",
         };
+
+        if (engineConfig is { Count: > 0 })
+        {
+            body["noise_suppression_engine_config"] = engineConfig;
+        }
+
+        return body;
+    }
 
     /// <summary>
     /// Returns the Telnyx name of the engine, or <see langword="null"/> when suppression is off or the value is not one
@@ -156,9 +173,17 @@ public sealed class TelnyxNoiseSuppressionService : ITelnyxNoiseSuppressionServi
     /// there is nothing to clean on it.
     /// </summary>
     /// <remarks>
-    /// Telnyx names the direction from its own side of the leg: <c>outbound</c> cleans what it receives from the party the
-    /// leg reaches, <c>inbound</c> what it plays to them. On the agent's leg the agent's voice is <c>outbound</c> and the
-    /// caller's <c>inbound</c>; on the customer's leg it is the other way round.
+    /// <para>
+    /// Telnyx names the direction from its own side of the leg: <c>inbound</c> cleans the audio Telnyx receives from the
+    /// party the leg reaches (that party's own voice), and <c>outbound</c> cleans the audio Telnyx plays to them (the
+    /// other side of the call). On the agent's leg the agent's voice is therefore <c>inbound</c> and the caller's
+    /// <c>outbound</c>; on the customer's leg it is the other way round.
+    /// </para>
+    /// <para>
+    /// This was verified on a live call: <c>outbound</c> started on the agent's leg left the agent's voice alone and
+    /// changed the caller's voice as the agent heard it. The line hiss the agent heard went away, the caller's level rose,
+    /// and the caller's channel went to digital silence in every pause, on a network with no loss or concealment.
+    /// </para>
     /// </remarks>
     /// <param name="leg">Whose leg it is.</param>
     /// <param name="agentVoice">Whether the agent's voice, which the caller hears, is cleaned.</param>
@@ -167,7 +192,9 @@ public sealed class TelnyxNoiseSuppressionService : ITelnyxNoiseSuppressionServi
     {
         if (leg == TelnyxNoiseSuppressionLeg.InternalAgent)
         {
-            // The colleague's own leg cleans the colleague's voice.
+            // On an internal call each colleague's own leg cleans only that colleague's own voice (what Telnyx receives
+            // from them). What is played to them is the other colleague's voice, which that colleague's leg already
+            // cleans, so it is never cleaned twice.
             callerVoice = false;
         }
 
@@ -178,11 +205,87 @@ public sealed class TelnyxNoiseSuppressionService : ITelnyxNoiseSuppressionServi
         return (receivedFromParty, playedToParty) switch
         {
             (true, true) => "both",
-            (true, false) => "outbound",
-            (false, true) => "inbound",
+            (true, false) => "inbound",
+            (false, true) => "outbound",
             _ => null,
         };
     }
+
+    /// <summary>
+    /// Returns the Telnyx <c>noise_suppression_engine_config</c> that sets how hard the engine works, or
+    /// <see langword="null"/> when the engine has no strength to set.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Left to its defaults, Krisp runs at full strength. On a live call that cut off the quiet end of words (heard as a
+    /// tick where a word should trail away), pushed the cleaned voice louder than it was spoken, and left digital silence
+    /// in every pause. <see cref="TelnyxNoiseSuppressionStrength.Balanced"/> backs each engine off from its maximum far
+    /// enough to keep word endings while still taking out steady line hiss, which is what an agent notices most.
+    /// </para>
+    /// <list type="bullet">
+    ///   <item><description>Krisp: <c>suppression_level</c> from 0 to 100; light 50, balanced 70, strong 100.</description></item>
+    ///   <item><description>DeepFilterNet: <c>attenuation_limit</c>, the most noise is turned down by, in decibels, where 100 is no limit; light 12, balanced 24, strong 100.</description></item>
+    ///   <item><description>ai-coustics: <c>enhancement_level</c> from 0 to 1; light 0.5, balanced 0.7, strong 1.</description></item>
+    ///   <item><description>Denoiser has no strength to set, so no config is sent.</description></item>
+    /// </list>
+    /// </remarks>
+    /// <param name="engine">The configured engine.</param>
+    /// <param name="strength">The configured strength.</param>
+    public static IDictionary<string, object> BuildEngineConfig(TelnyxNoiseSuppressionEngine engine, TelnyxNoiseSuppressionStrength strength)
+    {
+        strength = NormalizeStrength(strength);
+
+        return engine switch
+        {
+            TelnyxNoiseSuppressionEngine.Krisp => new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["suppression_level"] = strength switch
+                {
+                    TelnyxNoiseSuppressionStrength.Light => 50.0,
+                    TelnyxNoiseSuppressionStrength.Strong => 100.0,
+                    _ => 70.0,
+                },
+            },
+            TelnyxNoiseSuppressionEngine.DeepFilterNet => new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["attenuation_limit"] = strength switch
+                {
+                    TelnyxNoiseSuppressionStrength.Light => 12,
+                    TelnyxNoiseSuppressionStrength.Strong => 100,
+                    _ => 24,
+                },
+            },
+            TelnyxNoiseSuppressionEngine.AiCoustics => new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["enhancement_level"] = strength switch
+                {
+                    TelnyxNoiseSuppressionStrength.Light => 0.5,
+                    TelnyxNoiseSuppressionStrength.Strong => 1.0,
+                    _ => 0.7,
+                },
+            },
+            _ => null,
+        };
+    }
+
+    /// <summary>
+    /// Reads a stored or submitted strength value, treating anything this platform does not know as
+    /// <see cref="TelnyxNoiseSuppressionStrength.Balanced"/>.
+    /// </summary>
+    /// <param name="value">The strength name or number.</param>
+    public static TelnyxNoiseSuppressionStrength NormalizeStrength(string value)
+        => !string.IsNullOrWhiteSpace(value) &&
+            Enum.TryParse<TelnyxNoiseSuppressionStrength>(value.Trim(), ignoreCase: true, out var strength)
+            ? NormalizeStrength(strength)
+            : TelnyxNoiseSuppressionStrength.Balanced;
+
+    /// <summary>
+    /// Returns the strength when it is one this platform knows, otherwise
+    /// <see cref="TelnyxNoiseSuppressionStrength.Balanced"/>.
+    /// </summary>
+    /// <param name="strength">The strength.</param>
+    public static TelnyxNoiseSuppressionStrength NormalizeStrength(TelnyxNoiseSuppressionStrength strength)
+        => Enum.IsDefined(strength) ? strength : TelnyxNoiseSuppressionStrength.Balanced;
 
     /// <summary>
     /// Reads a stored or submitted engine value, treating anything this platform does not know as off.

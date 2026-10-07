@@ -217,9 +217,35 @@ Pick an engine under **Noise suppression** in the Telnyx settings:
 Then choose what it cleans:
 
 - **Clean the agent's voice (what callers hear)** — on by default. Removes the noise around the agent before it
-  reaches the caller. This is the one that stops callers hearing the room.
-- **Clean the caller's voice (what the agent hears)** — off by default. Removes the noise around the caller before
-  it reaches the agent.
+  reaches the caller, which stops callers hearing the room.
+- **Clean the caller's voice (what the agent hears)** — off by default. Removes the noise around the caller, and the
+  hiss of the phone line, before it reaches the agent.
+
+:::note[The soft phone already cleans the agent's voice]
+The soft phone's [voice isolation](./index.md#voice-isolation), on by default, already cleans the agent's microphone
+in the browser before anything is sent. With it on, **Clean the agent's voice** adds little and is billed. **Clean the
+caller's voice** is the one that removes the line hiss and background noise agents hear from callers.
+:::
+
+Then choose how hard it works under **Suppression strength**:
+
+| Strength | What it does |
+| --- | --- |
+| **Light** | Takes the edge off background sound and leaves the voice closest to how it was spoken. |
+| **Balanced** (default) | Removes steady line hiss and most background sound while keeping the soft endings of words. |
+| **Strong** | The engine at full strength. Removes the most noise, but can cut off the quiet end of a word (heard as a click where the word should trail away), make the voice sound louder and less natural, and leave dead silence in every pause. |
+
+Balanced is the default because full strength, which is what Telnyx applies when no strength is given, clipped word
+endings on real calls, while a lighter setting still removes the line hiss a listener notices most. Each engine takes
+the strength in its own terms:
+
+| Engine | Light | Balanced | Strong |
+| --- | --- | --- | --- |
+| **Krisp** (suppression level, 0–100) | 50 | 70 | 100 |
+| **DeepFilterNet** (attenuation limit in dB, 100 is no limit) | 12 | 24 | 100 |
+| **ai-coustics** (enhancement level, 0–1) | 0.5 | 0.7 | 1 |
+
+**Denoiser** has no strength to set, so it always runs the same way whatever you choose.
 
 Suppression is started on the agent's leg as soon as the agent is connected to the caller: a routed Contact Center
 call, a dialer call, a number dialed from the soft phone's keypad, a call a colleague is handed through a transfer or
@@ -238,12 +264,13 @@ both voices costs twice as much as cleaning one. If Telnyx refuses it, the call 
 To confirm it is working, look in the application log for a line such as:
 
 ```text
-Telnyx noise suppression Krisp started on Agent leg v3:abc123 (outbound)
+Telnyx noise suppression Krisp started on Agent leg v3:abc123 (outbound, Balanced strength: suppression_level=70)
 ```
 
-`outbound` means the agent's voice is cleaned, `inbound` the caller's voice, and `both` both of them. Telnyx names
-the direction from its own side of the leg, so on the agent's leg the agent's voice is `outbound`. When Telnyx
-refuses the command, the log carries a warning with the status code and Telnyx's reason instead.
+On the agent's leg, `inbound` means the agent's voice is cleaned, `outbound` the caller's voice, and `both` both of
+them. Telnyx names the direction from its own side of the leg: `inbound` is what it receives from the person the leg
+reaches, and `outbound` is what it plays to them. When Telnyx refuses the command, the log carries a warning with the
+status code and Telnyx's reason instead.
 
 ## Outbound calls and caller id
 

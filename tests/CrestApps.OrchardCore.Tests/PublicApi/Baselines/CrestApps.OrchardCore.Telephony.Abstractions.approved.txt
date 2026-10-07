@@ -420,6 +420,7 @@ namespace CrestApps.OrchardCore.Telephony.Models
     public sealed class CallQualityReport
     {
         public CallQualityReport() { }
+        public double? AutoLevelGainDb { get; set; }
         public double AvgMos { get; set; }
         public long BytesReceived { get; set; }
         public long BytesSent { get; set; }
