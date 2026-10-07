@@ -84,6 +84,13 @@ public sealed class CallRecordingStore : DocumentCatalog<CallRecording, CallReco
             recordings = recordings.Where(index => index.AgentUserId == agentUserId);
         }
 
+        if (!string.IsNullOrEmpty(query.ActivityItemId))
+        {
+            var activityItemId = query.ActivityItemId;
+
+            recordings = recordings.Where(index => index.ActivityItemId == activityItemId);
+        }
+
         if (!string.IsNullOrWhiteSpace(query.CustomerAddress))
         {
             // Numbers are stored as dialed (usually E.164), so a search for the local digits still matches.

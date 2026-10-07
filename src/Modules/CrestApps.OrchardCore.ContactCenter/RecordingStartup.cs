@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.ContactCenter.Migrations;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Drivers;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -63,7 +64,14 @@ public sealed class RecordingStartup : StartupBase
             .AddPermissionProvider<CallRecordingPermissionProvider>()
             .AddNavigationProvider<ContactCenterCallRecordingsAdminMenu>()
             .AddResourceConfiguration<ContactCenterCallRecordingsResourceConfiguration>()
-            .AddScoped<ICallRecordingTranscriptProvider, AIConversationCallRecordingTranscriptProvider>();
+            .AddScoped<ICallRecordingTranscriptProvider, AIConversationCallRecordingTranscriptProvider>()
+            .AddScoped<CallRecordingAccessEvaluator>()
+            .AddScoped<CallRecordingAgentNameResolver>();
+
+        // An activity's page lists the recordings of its calls, for whoever may hear them.
+        services
+            .AddScoped<ActivityCallRecordingLookup>()
+            .AddDisplayDriver<OmnichannelActivity, OmnichannelActivityCallRecordingsDisplayDriver>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

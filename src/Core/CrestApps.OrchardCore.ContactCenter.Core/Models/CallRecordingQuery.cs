@@ -14,6 +14,11 @@ public sealed class CallRecordingQuery
     public string AgentUserId { get; set; }
 
     /// <summary>
+    /// Gets or sets the CRM activity whose calls are listed, matched exactly.
+    /// </summary>
+    public string ActivityItemId { get; set; }
+
+    /// <summary>
     /// Gets or sets part of the customer's phone number to match.
     /// </summary>
     public string CustomerAddress { get; set; }
