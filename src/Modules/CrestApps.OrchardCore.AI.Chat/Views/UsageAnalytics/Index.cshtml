@@ -6,8 +6,6 @@
 @using CrestApps.OrchardCore.AI.Chat.Models
 
 @{
-    var datePattern = CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern;
-    var timePattern = CultureInfo.CurrentCulture.DateTimeFormat.ShortTimePattern;
     var groupedByUser = Model.GroupBy == AICompletionUsageGroupBy.UserAndModel;
     var groupLabel = Model.GroupBy switch
     {
@@ -61,10 +59,6 @@
     string Count(long value) => value > 0 ? value.ToString("N0", CultureInfo.CurrentCulture) : "-";
 }
 
-<style asp-name="flatpickr"></style>
-<script asp-name="flatpickr" at="Foot"></script>
-<script asp-name="flatpickr-culture" at="Foot"></script>
-
 <zone Name="Title">
     <breadcrumb name="AIUsageAnalytics" title="@T["AI Usage Analytics"]" />
 </zone>
@@ -85,14 +79,18 @@
         <form asp-action="Index" method="post">
             @Html.AntiForgeryToken()
             <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-6 no-gutters">
-                <div class="col p-1">
-                    <label asp-for="StartDate" class="form-label">@T["From"]</label>
-                    <input type="text" asp-for="StartDate" class="form-control" placeholder="@T["From"]" />
-                </div>
-                <div class="col p-1">
-                    <label asp-for="EndDate" class="form-label">@T["To"]</label>
-                    <input type="text" asp-for="EndDate" class="form-control" placeholder="@T["To"]" />
-                </div>
+                @await Component.InvokeAsync("DateRangePicker", new
+                {
+                    fromName = Html.NameFor(m => m.StartDate),
+                    toName = Html.NameFor(m => m.EndDate),
+                    fromId = Html.IdFor(m => m.StartDate),
+                    toId = Html.IdFor(m => m.EndDate),
+                    from = Model.StartDate,
+                    to = Model.EndDate,
+                    selectedRangeName = Html.NameFor(m => m.Range),
+                    selectedRange = Model.Range,
+                    label = T["Date range"].Value,
+                })
                 <div class="col p-1">
                     <label asp-for="ProfileId" class="form-label">@T["AI profile"]</label>
                     <select asp-for="ProfileId" asp-items="Model.Profiles" class="form-select">
@@ -361,12 +359,3 @@
         }
     </div>
 </div>
-
-<script at="Foot" depends-on="flatpickr,flatpickr-culture">
-    flatpickr('#@Html.IdFor(m => m.StartDate)', flatpickrCulture.createLocalizedDateTimeConfig('@datePattern', '@timePattern', {
-        altInputClass: 'form-control'
-    }));
-    flatpickr('#@Html.IdFor(m => m.EndDate)', flatpickrCulture.createLocalizedDateTimeConfig('@datePattern', '@timePattern', {
-        altInputClass: 'form-control'
-    }));
-</script>

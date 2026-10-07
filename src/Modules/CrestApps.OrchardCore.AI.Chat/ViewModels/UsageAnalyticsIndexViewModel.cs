@@ -27,6 +27,11 @@ public sealed class UsageAnalyticsIndexViewModel
     public DateTime? EndDate { get; set; }
 
     /// <summary>
+    /// Gets or sets the key of the preset the date-range picker selected, so it can show the same choice again.
+    /// </summary>
+    public string Range { get; set; }
+
+    /// <summary>
     /// Gets or sets the AI profile the report is limited to, or <see langword="null"/> for every profile.
     /// </summary>
     public string ProfileId { get; set; }
