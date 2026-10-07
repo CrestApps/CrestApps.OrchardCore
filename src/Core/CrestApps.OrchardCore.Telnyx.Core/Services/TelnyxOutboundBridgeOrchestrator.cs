@@ -33,6 +33,7 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
     private readonly TelnyxSupervisedConference _supervisedConference;
     private readonly ITelnyxNoiseSuppressionService _noiseSuppression;
     private readonly ITelnyxAutomaticCallRecorder _automaticCallRecorder;
+    private readonly ITelephonyRemotePartyNotifier _remotePartyNotifier;
 
     public TelnyxOutboundBridgeOrchestrator(
         TelnyxApiClient apiClient,
@@ -48,8 +49,10 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
         ITelnyxAgentEndpointResolver agentEndpointResolver = null,
         IEnumerable<ISupervisorLegEventSink> supervisorLegEventSinks = null,
         ITelnyxNoiseSuppressionService noiseSuppression = null,
-        ITelnyxAutomaticCallRecorder automaticCallRecorder = null)
+        ITelnyxAutomaticCallRecorder automaticCallRecorder = null,
+        ITelephonyRemotePartyNotifier remotePartyNotifier = null)
     {
+        _remotePartyNotifier = remotePartyNotifier;
         _automaticCallRecorder = automaticCallRecorder;
         _apiClient = apiClient;
         _logger = logger;
@@ -245,6 +248,12 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
             }
             else if (await BridgeDialedNumberAsync(agentLegCallControlId: state.PeerCallControlId, destinationLegCallControlId: callEvent.CallControlId, cancellationToken))
             {
+                // The agent hears the number from here on, not the soft phone's ringback.
+                if (IsAgentsOwnDial(state))
+                {
+                    await NotifyRemotePartyAsync(state.PeerCallControlId, RemotePartyState.Answered, cancellationToken);
+                }
+
                 if (!string.IsNullOrWhiteSpace(state.TransferOfCallControlId) && state.Detached != true)
                 {
                     // The number a consult dialed answered: the agent can now hand the call to it.
@@ -285,6 +294,12 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
             if (isInternalExtensionCall && await TryRingExtensionTargetAgainAsync(callEvent, state, cancellationToken))
             {
                 return TelnyxOutboundBridgeLeg.DestinationLeg;
+            }
+
+            // Whatever follows -- voicemail, the not-in-service notice, or the call ending -- the number is no longer ringing.
+            if (IsAgentsOwnDial(state))
+            {
+                await NotifyRemotePartyAsync(state.PeerCallControlId, RemotePartyState.Ended, cancellationToken);
             }
 
             // A colleague whose phone is not there is an unavailable extension, which goes to voicemail like one that rang out.

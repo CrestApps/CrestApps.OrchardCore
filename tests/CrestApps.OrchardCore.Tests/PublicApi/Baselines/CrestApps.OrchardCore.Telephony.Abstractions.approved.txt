@@ -123,6 +123,7 @@ namespace CrestApps.OrchardCore.Telephony
         System.Threading.Tasks.Task IncomingCall(CrestApps.OrchardCore.Telephony.Models.TelephonyCall call, CrestApps.OrchardCore.Telephony.Models.IncomingCallContext context);
         System.Threading.Tasks.Task IncomingCallAnswered(CrestApps.OrchardCore.Telephony.Models.IncomingCallAnsweredNotification notification);
         System.Threading.Tasks.Task ReceiveError(string message);
+        System.Threading.Tasks.Task RemotePartyChanged(CrestApps.OrchardCore.Telephony.Models.TelephonyRemotePartyUpdate update);
     }
     public interface ITelephonyCommandExecutor
     {
@@ -201,6 +202,10 @@ namespace CrestApps.OrchardCore.Telephony
     public interface ITelephonyProviderResolver
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.ITelephonyProvider> GetAsync(string name = null);
+    }
+    public interface ITelephonyRemotePartyNotifier
+    {
+        System.Threading.Tasks.Task NotifyAsync(string providerName, string providerCallId, CrestApps.OrchardCore.Telephony.Models.RemotePartyState state, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface ITelephonyService
     {
@@ -684,6 +689,13 @@ namespace CrestApps.OrchardCore.Telephony.Models
         Paused = 2,
         Stopped = 3,
     }
+    [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
+    public enum RemotePartyState
+    {
+        Ringing = 0,
+        Answered = 1,
+        Ended = 2,
+    }
     public sealed class SendDigitsRequest
     {
         public SendDigitsRequest() { }
@@ -933,6 +945,12 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public string UserId { get; set; }
         public string UserName { get; set; }
         public System.DateTime? VoicemailReadUtc { get; set; }
+    }
+    public sealed class TelephonyRemotePartyUpdate
+    {
+        public TelephonyRemotePartyUpdate() { }
+        public string CallId { get; set; }
+        public CrestApps.OrchardCore.Telephony.Models.RemotePartyState State { get; set; }
     }
     public sealed class TelephonyResult
     {

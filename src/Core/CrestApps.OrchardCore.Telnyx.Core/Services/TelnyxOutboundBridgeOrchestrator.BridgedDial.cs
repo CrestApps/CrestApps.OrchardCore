@@ -1,4 +1,5 @@
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.Telnyx.Services;
@@ -29,6 +30,7 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator
             if (!string.IsNullOrWhiteSpace(destinationLegCallControlId))
             {
                 await RecordPeerAsync(agentLegCallControlId, state, destinationLegCallControlId, cancellationToken);
+                await NotifyRemotePartyAsync(agentLegCallControlId, RemotePartyState.Ringing, cancellationToken);
             }
 
             return;
@@ -42,6 +44,13 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator
         }
 
         await RecordPeerAsync(agentLegCallControlId, state, destinationLegCallControlId, cancellationToken);
+
+        // The number is being rung and the agent's leg is already up and silent: the soft phone plays its ringback.
+        // A consult has a status of its own, and is left alone.
+        if (!state.IsConsultAgentLeg)
+        {
+            await NotifyRemotePartyAsync(agentLegCallControlId, RemotePartyState.Ringing, cancellationToken);
+        }
     }
 
     private async Task RecordPeerAsync(

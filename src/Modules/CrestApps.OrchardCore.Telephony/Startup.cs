@@ -99,6 +99,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IVoiceIngressGate, VoiceIngressGate>();
         services.AddScoped<INormalizedVoiceEventIngestor, NormalizedVoiceEventIngestor>();
         services.AddScoped<INormalizedVoiceEventHandler, TelephonyCallHistoryVoiceEventHandler>();
+        services.AddScoped<ITelephonyRemotePartyNotifier, TelephonyRemotePartyNotifier>();
         services.AddScoped<ITelephonyProviderResolver, DefaultTelephonyProviderResolver>();
         services.AddScoped<IVoiceAgentMediaProviderResolver, VoiceAgentMediaProviderResolver>();
         services.AddScoped<IOutboundCallScreeningService, DefaultOutboundCallScreeningService>();
