@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
@@ -33,6 +34,12 @@ internal sealed class TelnyxRecordingIngestService : ITelnyxRecordingIngestServi
     private readonly IClock _clock;
     private readonly ILogger<TelnyxRecordingIngestService> _logger;
     private readonly TelnyxOptions _options;
+
+    // The recordings being stored right now in this process. A saved recording is ingested straight after the
+    // webhook commits and by the background task, and the two ran into each other: both downloaded the same
+    // recording, and the second failed to write a file the first had open, which was logged as an error on a
+    // recording that had been stored perfectly well. The second now leaves it to the first.
+    private static readonly ConcurrentDictionary<string, byte> _inFlight = new(StringComparer.Ordinal);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TelnyxRecordingIngestService"/> class.
@@ -85,6 +92,18 @@ internal sealed class TelnyxRecordingIngestService : ITelnyxRecordingIngestServi
         {
             cancellationToken.ThrowIfCancellationRequested();
 
+            if (!_inFlight.TryAdd(job.RecordingId, 0))
+            {
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug(
+                        "Telnyx recording {RecordingId} is already being stored by another run; leaving it to that run.",
+                        job.RecordingId.SanitizeLogValue());
+                }
+
+                continue;
+            }
+
             try
             {
                 if (await TryIngestAsync(job, nowUtc, cancellationToken))
@@ -104,6 +123,10 @@ internal sealed class TelnyxRecordingIngestService : ITelnyxRecordingIngestServi
                     job.RecordingId.SanitizeLogValue());
 
                 await RecordFailureAsync(job, nowUtc, "An unexpected error occurred during ingestion.", cancellationToken);
+            }
+            finally
+            {
+                _inFlight.TryRemove(job.RecordingId, out _);
             }
         }
 
