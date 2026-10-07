@@ -137,6 +137,30 @@ public sealed partial class RealtimeVoiceConversationRunner
     }
 
     /// <summary>
+    /// Says how loud the model spoke on this call and what the leveler did about it, so a model that sounds wrong on
+    /// the phone can be checked against numbers rather than recordings.
+    /// </summary>
+    /// <param name="context">The call.</param>
+    private void LogVoiceLevel(RealtimeVoiceConversationContext context)
+    {
+        var leveler = _outgoing?.Leveler;
+
+        if (leveler is null || leveler.SpeechMilliseconds == 0 || !_logger.IsEnabled(LogLevel.Information))
+        {
+            return;
+        }
+
+        _logger.LogInformation(
+            "The assistant on activity '{ActivityId}' spoke at {SpeechLevelDbfs:F1} dBFS over {SpeechSeconds:F1} s of speech; its speech was raised by {AverageGainDb:F1} dB on average toward {TargetDbfs:F1} dBFS, and {LimitedSamples} samples were turned down so as not to clip.",
+            context.Activity?.ItemId.SanitizeLogValue(),
+            leveler.SpeechLevelDbfs,
+            leveler.SpeechMilliseconds / 1000d,
+            leveler.AverageSpeechGainDb,
+            AssistantVoiceLeveler.TargetDbfs,
+            leveler.LimitedSamples);
+    }
+
+    /// <summary>
     /// Records the provider reporting the caller's turn: started (and still open) or committed.
     /// </summary>
     /// <param name="turnOpen">Whether the turn is still open, as it is when the provider has only heard it start.</param>

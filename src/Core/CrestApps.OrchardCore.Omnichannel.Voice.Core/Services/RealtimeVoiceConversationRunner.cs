@@ -361,6 +361,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         {
             _meter?.Stop(DateTime.UtcNow.Ticks);
             await callScope.CancelAsync();
+            LogVoiceLevel(context);
 
             // All of them are awaited so none is left writing to a disposed session.
             await Task.WhenAll(Settle(toModel), Settle(bed), Settle(closing), Settle(idle), Settle(unheard));
