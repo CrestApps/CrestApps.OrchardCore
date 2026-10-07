@@ -133,6 +133,11 @@ public static class TelnyxConstants
         public const string Codec = "PCMU";
 
         /// <summary>
+        /// The webhook Telnyx sends when a media stream broke and it could not reconnect it.
+        /// </summary>
+        public const string FailedEventType = "streaming.failed";
+
+        /// <summary>
         /// The call track streamed to the WebSocket. The inbound track carries the audio arriving from the far end.
         /// </summary>
         public const string Track = "inbound_track";

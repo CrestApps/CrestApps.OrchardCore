@@ -28,6 +28,7 @@ internal sealed class TelnyxContactCenterVoiceMediaProvider : IContactCenterVoic
     private readonly TelnyxOptions _options;
     private readonly ILogger _logger;
     private readonly TimeSpan _connectTimeout;
+    private readonly TelnyxMediaStreamTracker _streamTracker;
 
     public TelnyxContactCenterVoiceMediaProvider(
         ISiteService siteService,
@@ -37,7 +38,8 @@ internal sealed class TelnyxContactCenterVoiceMediaProvider : IContactCenterVoic
         IWebSocketConnectionRegistry registry,
         IOptionsMonitor<TelnyxOptions> options,
         ILogger<TelnyxContactCenterVoiceMediaProvider> logger,
-        TimeSpan? connectTimeout = null)
+        TimeSpan? connectTimeout = null,
+        TelnyxMediaStreamTracker streamTracker = null)
     {
         _siteService = siteService;
         _httpContextAccessor = httpContextAccessor;
@@ -47,6 +49,7 @@ internal sealed class TelnyxContactCenterVoiceMediaProvider : IContactCenterVoic
         _options = options.CurrentValue;
         _logger = logger;
         _connectTimeout = connectTimeout ?? TimeSpan.FromSeconds(15);
+        _streamTracker = streamTracker;
     }
 
     /// <inheritdoc/>
@@ -92,13 +95,23 @@ internal sealed class TelnyxContactCenterVoiceMediaProvider : IContactCenterVoic
 
             var webSocket = await AwaitConnectionAsync(token, connection, callControlId, cancellationToken);
 
+            // The token stays claimable for the life of the session, so a stream Telnyx dials back in after a break
+            // reaches it instead of being refused; and Telnyx's report that the stream failed starts it again.
             return new TelnyxContactCenterVoiceMediaSession(
                 Guid.NewGuid().ToString("n"),
                 callControlId,
                 webSocket,
                 workLease,
                 connection,
-                stopToken => StopStreamingAsync(callControlId, stopToken));
+                stopToken => StopStreamingAsync(callControlId, stopToken),
+                new TelnyxMediaStreamReconnect
+                {
+                    Registry = _registry,
+                    Token = token,
+                    RestartStreaming = restartToken => StartStreamingAsync(callControlId, streamUrl, token, restartToken),
+                    Tracker = _streamTracker,
+                    Logger = _logger,
+                });
         }
         catch
         {
