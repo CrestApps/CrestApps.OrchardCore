@@ -146,14 +146,6 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     private static readonly TimeSpan IdleBeforeSpeakingUp = TimeSpan.FromSeconds(12);
 
     /// <summary>
-    /// What the session is asked to say first: the opening the profile describes, as a call that has only just begun.
-    /// </summary>
-    internal const string OpeningInstruction =
-        "The call has just connected and nobody has spoken yet. Open the conversation now, the way your " +
-        "instructions say to: greet the person and introduce yourself. The call has only just started, so do not " +
-        "ask whether they are still there and do not carry on from an earlier conversation.";
-
-    /// <summary>
     /// How often the idle watchdog looks.
     /// </summary>
     private static readonly TimeSpan IdlePollInterval = TimeSpan.FromSeconds(1);
@@ -290,10 +282,11 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         // opened with the customer saying "Hello?" into dead air before the assistant introduced itself. A
         // session that creates its own responses ignores this, so it is safe to ask either way.
         //
-        // Asked in so many words. Asked with no instruction at all, one model opened a call with "You still with
-        // me?" -- it read the seconds the answering-machine check takes as a customer who had gone quiet, and the
-        // greeting the profile asks for was never said.
-        await first.RequestUnpromptedResponseAsync(OpeningInstruction, cancellationToken);
+        // Asked for with no instructions of its own, on purpose. Instructions given with one response replace the
+        // session's for that response -- the profile's persona included -- and a call opened that way greeted the
+        // customer as a generic assistant ("Hi there! I'm ChatGPT"). What the opening must be is said in the
+        // session's own instructions instead (see VoiceCallGuidance.WhenTalkedOver).
+        await first.RequestUnpromptedResponseAsync(cancellationToken: cancellationToken);
 
         // Both silence clocks start now rather than at zero. Left unset, "quiet since the beginning of time" is a
         // very long silence indeed, and the watchdog below would speak up a second into the call -- over the top
