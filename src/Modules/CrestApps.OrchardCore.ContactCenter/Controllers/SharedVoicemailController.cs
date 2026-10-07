@@ -119,7 +119,7 @@ public sealed class SharedVoicemailController : Controller
         // from it anyway.
         queueId = !string.IsNullOrWhiteSpace(queueId) && access.CoversQueue(queueId) ? queueId : null;
 
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
         var query = new SharedVoicemailQuery
         {
             QueueIds = queueId is null ? null : [queueId],

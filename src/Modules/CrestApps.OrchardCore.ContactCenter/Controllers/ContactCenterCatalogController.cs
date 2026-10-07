@@ -117,7 +117,7 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
             return Forbid();
         }
 
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
         var result = await _manager.PageAsync(pager.Page, pager.PageSize, new QueryContext
         {
             Name = options.Search,
@@ -153,8 +153,9 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
     /// Applies the list filter.
     /// </summary>
     /// <param name="model">The submitted list model.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
     /// <returns>A redirect to the filtered list.</returns>
-    protected async Task<IActionResult> IndexFilterPostAsync(ListCatalogEntryViewModel model)
+    protected async Task<IActionResult> IndexFilterPostAsync(ListCatalogEntryViewModel model, PagerParameters pagerParameters)
     {
         if (!await _authorizationService.AuthorizeAsync(User, ManagePermission))
         {
@@ -164,6 +165,7 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
         return RedirectToAction(_indexAction, new RouteValueDictionary
         {
             { _optionsSearch, model.Options?.Search },
+            { "pageSize", pagerParameters.PageSize },
         });
     }
 

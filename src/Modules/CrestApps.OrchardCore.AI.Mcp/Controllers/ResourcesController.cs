@@ -88,7 +88,7 @@ public sealed class ResourcesController : Controller
             return Forbid();
         }
 
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
 
         var result = await _manager.PageAsync(pager.Page, pager.PageSize, new QueryContext
         {
@@ -133,11 +133,12 @@ public sealed class ResourcesController : Controller
     /// Performs the index filter post operation.
     /// </summary>
     /// <param name="model">The model.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("ai/mcp/resources", "AIMCPResourcesIndex")]
-    public async Task<ActionResult> IndexFilterPost(ListCatalogEntryViewModel model)
+    public async Task<ActionResult> IndexFilterPost(ListCatalogEntryViewModel model, PagerParameters pagerParameters)
     {
         if (!await _authorizationService.AuthorizeAsync(User, McpPermissions.ManageMcpResources))
         {
@@ -147,6 +148,7 @@ public sealed class ResourcesController : Controller
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
             { _optionsSearch, model.Options?.Search },
+            { "pageSize", pagerParameters.PageSize },
         });
     }
 

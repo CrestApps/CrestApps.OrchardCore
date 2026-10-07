@@ -95,7 +95,7 @@ public sealed class FileSourcesController : Controller
             return Forbid();
         }
 
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
         var records = await LoadFileSourcesAsync(options.Search);
 
         var routeData = new RouteData();
@@ -137,7 +137,7 @@ public sealed class FileSourcesController : Controller
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("ai/file-sources", "FileSourcesIndex")]
-    public async Task<ActionResult> IndexFilterPost(ListCatalogEntryViewModel model)
+    public async Task<ActionResult> IndexFilterPost(ListCatalogEntryViewModel model, PagerParameters pagerParameters)
     {
         if (!await _authorizationService.AuthorizeAsync(User, FileSourcePermissions.ManageFileSources))
         {
@@ -147,6 +147,7 @@ public sealed class FileSourcesController : Controller
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
             { _optionsSearch, model.Options?.Search },
+            { "pageSize", pagerParameters.PageSize },
         });
     }
 

@@ -91,13 +91,14 @@ public sealed class DialerProfilesController : ContactCenterCatalogController<Di
     /// Applies the dialer profiles list filter.
     /// </summary>
     /// <param name="model">The submitted list model.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
     /// <returns>A redirect to the filtered list.</returns>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("contact-center/dialers", "ContactCenterDialersIndex")]
-    public Task<IActionResult> IndexFilterPost(ListCatalogEntryViewModel model)
-        => IndexFilterPostAsync(model);
+    public Task<IActionResult> IndexFilterPost(ListCatalogEntryViewModel model, PagerParameters pagerParameters)
+        => IndexFilterPostAsync(model, pagerParameters);
 
     /// <summary>
     /// Displays the dialer profile create form.

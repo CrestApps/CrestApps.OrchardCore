@@ -161,7 +161,7 @@ public sealed class CallRecordingsController : Controller
             filter.AgentUserId = null;
         }
 
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
         var query = new CallRecordingQuery
         {
             // Someone who may only hear their own calls is only ever searched their own, whatever was asked for.

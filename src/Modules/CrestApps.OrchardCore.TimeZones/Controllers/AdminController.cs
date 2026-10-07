@@ -86,7 +86,7 @@ public sealed class AdminController : Controller
             return Forbid();
         }
 
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
         var result = await _manager.PageAsync(pager.Page, pager.PageSize, new QueryContext
         {
             Name = options.Search,
@@ -124,11 +124,12 @@ public sealed class AdminController : Controller
     /// Handles filtering on the list page.
     /// </summary>
     /// <param name="model">The list view model.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("timezones", "TimeZoneMapsIndex")]
-    public async Task<ActionResult> IndexFilterPost(ListCatalogEntryViewModel model)
+    public async Task<ActionResult> IndexFilterPost(ListCatalogEntryViewModel model, PagerParameters pagerParameters)
     {
         if (!await _authorizationService.AuthorizeAsync(User, TimeZonesConstants.Permissions.ManageTimeZoneMaps))
         {
@@ -138,6 +139,7 @@ public sealed class AdminController : Controller
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
             { _optionsSearch, model.Options?.Search },
+            { "pageSize", pagerParameters.PageSize },
         });
     }
 

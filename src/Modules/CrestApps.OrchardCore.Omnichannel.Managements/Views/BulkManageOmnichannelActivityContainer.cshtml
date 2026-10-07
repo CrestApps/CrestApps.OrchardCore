@@ -9,7 +9,7 @@
 <script asp-name="flatpickr-culture" at="Foot"></script>
 <style asp-name="flatpickr"></style>
 
-<form asp-route-area="CrestApps.OrchardCore.Omnichannel.Managements" asp-action="ManageActivities" asp-controller="Activities" method="post" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-item-input-name="ItemIds" data-bulk-action-selector="">
+<form asp-route-area="CrestApps.OrchardCore.Omnichannel.Managements" asp-action="ManageActivities" asp-route-pageSize="@Context.Request.Query["pageSize"]" asp-controller="Activities" method="post" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-item-input-name="ItemIds" data-bulk-action-selector="">
     <input type="submit" name="submit.Filter" id="submitFilter" value="Filter" class="visually-hidden" />
     <input type="submit" name="submit.BulkAction" value="Execute" class="visually-hidden" />
     <input type="hidden" name="BulkAction" id="BulkAction" value="@nameof(BulkActivityAction.None)" />
@@ -32,11 +32,6 @@
                 <div class="card-body">
                     <div class="row gx-2 gy-2 align-items-end">
                         @await DisplayAsync(Model.Header)
-
-                        <div class="col-auto">
-                            <label class="form-label form-label-sm mb-1" for="page-size">@T["Page size"]</label>
-                            <select id="page-size" name="pageSize" asp-items="Model.PageSizeOptions" class="form-select form-select-sm"></select>
-                        </div>
                     </div>
                 </div>
             </div>
