@@ -552,6 +552,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
 
                 activity.Kind = GetActivityKind(channel);
                 activity.Source = activitySource;
+                activity.DialerProfileId = dialerProfile?.ProfileId;
                 activity.InteractionType = interactionType;
                 activity.Channel = channel;
                 activity.AIProfileId = automatedSettings.AIProfileId;

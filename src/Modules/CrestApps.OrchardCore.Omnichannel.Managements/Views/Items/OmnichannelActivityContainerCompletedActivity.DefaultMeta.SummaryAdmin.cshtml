@@ -3,14 +3,12 @@
 @using CrestApps.OrchardCore.Omnichannel.Core
 @using CrestApps.OrchardCore.Omnichannel.Core.Models
 @using CrestApps.Core.Services
-@using CrestApps.OrchardCore.Users
 @using Microsoft.AspNetCore.Mvc.Localization
 @using OrchardCore.DisplayManagement.Views
 @using OrchardCore.Modules
 
 @model ShapeViewModel<OmnichannelActivityContainer>
 
-@inject IDisplayNameProvider DisplayNameProvider
 @inject ICatalog<OmnichannelDisposition> DispositionCatalog
 @inject IClock Clock
 
@@ -44,12 +42,8 @@
     </span>
 }
 
-@if (Model.Value.User is not null)
-{
-    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Completed by"]">
-        <i class="fa-solid fa-user text-secondary me-1" aria-hidden="true"></i>@await DisplayNameProvider.GetAsync(Model.Value.User)
-    </span>
-}
+@* Who completed the activity is shown by OmnichannelActivityContainerCompletedActivity.DispositionedBy.SummaryAdmin,
+   which also names the AI agent, the dialer or the platform when no person did. *@
 
 @if (!string.IsNullOrEmpty(Model.Value.Activity.Channel))
 {

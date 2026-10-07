@@ -40,6 +40,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
     private readonly UserManager<IUser> _userManager;
     private readonly IContentManager _contentManager;
     private readonly IYesSqlSession _session;
+    private readonly ActivityHandlerDescriber _handlerDescriber;
 
     internal readonly IStringLocalizer S;
 
@@ -58,6 +59,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
     /// <param name="contentManager">The content manager.</param>
     /// <param name="session">The YesSql session.</param>
     /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="handlerDescriber">Describes who dispositioned a completed activity.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelActivityDisplayDriver(
         ICatalog<OmnichannelDisposition> dispositionsCatalog,
@@ -73,6 +75,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
         IContentManager contentManager,
         IYesSqlSession session,
         IHttpContextAccessor httpContextAccessor,
+        ActivityHandlerDescriber handlerDescriber,
         IStringLocalizer<OmnichannelActivityDisplayDriver> stringLocalizer)
     {
         _dispositionsCatalog = dispositionsCatalog;
@@ -88,6 +91,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
         _contentManager = contentManager;
         _session = session;
         _httpContextAccessor = httpContextAccessor;
+        _handlerDescriber = handlerDescriber;
         S = stringLocalizer;
     }
 
@@ -257,7 +261,10 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
             if (activity.Status == ActivityStatus.Completed)
             {
                 model.CompletedLocal = (await _localClock.ConvertToLocalAsync(activity.CompletedUtc.Value)).DateTime;
-                model.CompletedByName = await _displayNameProvider.GetAsync(await _userManager.FindByIdAsync(activity.CompletedById));
+                model.CompletedByName = string.IsNullOrEmpty(activity.CompletedById)
+                    ? null
+                    : await _displayNameProvider.GetAsync(await _userManager.FindByIdAsync(activity.CompletedById));
+                model.DispositionedByName = await _handlerDescriber.GetDispositionedByNameAsync(activity, model.CompletedByName);
             }
         }).Location("Content:5")
         .OnGroup(OmnichannelConstants.CompleteActivityGroup);

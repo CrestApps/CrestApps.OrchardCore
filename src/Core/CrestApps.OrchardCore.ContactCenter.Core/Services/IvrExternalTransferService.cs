@@ -253,6 +253,7 @@ public sealed class IvrExternalTransferService : IIvrExternalTransferService
             activity.Status = ActivityStatus.Completed;
             activity.TerminalReasonCode = ReasonCode;
             activity.CompletedUtc = now;
+            ActivityDispositionActors.Stamp(activity, ActivityDispositionActor.System);
         }, cancellationToken);
 
         await _auditRecorder.RecordIvrAsync(

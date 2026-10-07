@@ -364,6 +364,7 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
         activity.CompletedUtc = now;
         activity.TerminalReasonCode = OmnichannelConstants.TerminalReasons.HandedOffAfterHoursCallback;
         activity.AiEscalated = true;
+        ActivityDispositionActors.Stamp(activity, ActivityDispositionActor.AIAgent);
 
         await _activityManager.UpdateAsync(activity, cancellationToken: cancellationToken);
 

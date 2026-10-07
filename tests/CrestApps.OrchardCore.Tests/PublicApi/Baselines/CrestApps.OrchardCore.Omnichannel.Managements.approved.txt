@@ -905,6 +905,14 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Schemas
 }
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
 {
+    public sealed class ActivityHandlerDescriber
+    {
+        public ActivityHandlerDescriber(System.Collections.Generic.IEnumerable<CrestApps.Core.AI.Profiles.IAIProfileManager> aiProfileManagers, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaigns, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Services.IActivityDialerContributor> dialerContributors, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Services.ActivityHandlerDescriber> stringLocalizer) { }
+        public System.Threading.Tasks.Task DescribeDispositionAsync(CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.ActivityHandlerViewModel model, CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity, string completedByName) { }
+        public System.Threading.Tasks.Task DescribeHandlerAsync(CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.ActivityHandlerViewModel model, CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity, string assignedToName) { }
+        public System.Threading.Tasks.Task<string> GetDispositionedByNameAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity, string completedByName) { }
+        public string GetSourceName(string source) { }
+    }
     public sealed class AutomatedActivityCompletionService : CrestApps.OrchardCore.Omnichannel.Core.Services.IAutomatedActivityCompletionService
     {
         public AutomatedActivityCompletionService(CrestApps.OrchardCore.Omnichannel.Core.Services.IActivityDispositionService activityDispositionService) { }
@@ -1066,6 +1074,19 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public string AccountDisplayText { get; set; }
         public bool Rendered { get; set; }
+    }
+    public class ActivityHandlerViewModel
+    {
+        public ActivityHandlerViewModel() { }
+        public string AIProfileName { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity Activity { get; set; }
+        public string AssignedToName { get; set; }
+        public string CampaignName { get; set; }
+        public string DialerProfileName { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDispositionActor DispositionedBy { get; set; }
+        public string DispositionedByName { get; set; }
+        public string InteractionTypeName { get; set; }
+        public string SourceName { get; set; }
     }
     public class BulkActivityActionsViewModel
     {
@@ -1618,6 +1639,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ContactCandidates { get; set; }
         public string DispositionId { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public string DispositionedByName { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> Dispositions { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]

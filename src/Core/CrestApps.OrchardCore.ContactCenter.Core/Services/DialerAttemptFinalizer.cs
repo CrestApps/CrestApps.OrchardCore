@@ -160,6 +160,9 @@ public sealed class DialerAttemptFinalizer : IDialerAttemptFinalizer
                     : request.TerminalReasonCode,
                 Notes = BuildNotes(request, phoneNumber, attemptNumber.Value, maxAttempts),
                 Source = ActivityDispositionSource.System,
+
+                // The source stays System for reporting, but the person reading the activity is told it was the dialer.
+                DispositionedBy = ActivityDispositionActor.Dialer,
             }, cancellationToken);
         }
 

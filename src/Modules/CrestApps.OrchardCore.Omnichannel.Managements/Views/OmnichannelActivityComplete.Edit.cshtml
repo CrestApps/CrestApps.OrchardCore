@@ -72,7 +72,17 @@
 
 @if (Model.CompletedLocal.HasValue)
 {
-    if (!string.IsNullOrWhiteSpace(Model.CompletedByName))
+    @* Who dispositioned it and how: a person, the AI agent of a profile, the dialer, or the platform. *@
+    if (!string.IsNullOrWhiteSpace(Model.DispositionedByName))
+    {
+        <div class="ocat-wrapper">
+            <label asp-for="DispositionedByName" class="ocat-label">@T["Dispositioned by"]</label>
+            <div class="ocat-end">
+                <input id="@Html.IdFor(x => x.DispositionedByName)" class="form-control-plaintext" value="@Model.DispositionedByName" readonly />
+            </div>
+        </div>
+    }
+    else if (!string.IsNullOrWhiteSpace(Model.CompletedByName))
     {
         <div class="ocat-wrapper">
             <label asp-for="CompletedByName" class="ocat-label">@T["Completed by"]</label>

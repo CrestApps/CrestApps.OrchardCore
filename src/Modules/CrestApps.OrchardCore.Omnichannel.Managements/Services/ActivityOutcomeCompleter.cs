@@ -91,6 +91,7 @@ internal sealed class ActivityOutcomeCompleter : IActivityOutcomeCompleter
             Activity = activity,
             DispositionId = disposition?.ItemId,
             Source = request.Source,
+            DispositionedBy = request.DispositionedBy,
             Notes = request.Notes,
         }, cancellationToken);
     }
