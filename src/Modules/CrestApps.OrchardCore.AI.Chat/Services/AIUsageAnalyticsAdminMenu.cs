@@ -1,11 +1,12 @@
-﻿using Microsoft.Extensions.Localization;
+﻿using CrestApps.OrchardCore.Reports;
+using Microsoft.Extensions.Localization;
 using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.AI.Chat.Services;
 
 /// <summary>
-/// Adds the AI usage report to the Artificial Intelligence reports menu. It lives in the AI Chat feature rather than
-/// the session analytics feature because the report works without it.
+/// Lists the AI usage report under the Billing &amp; Usage category of the top-level Reports menu. It lives in the AI
+/// Chat feature rather than the session analytics feature because the report works without it.
 /// </summary>
 public sealed class AIUsageAnalyticsAdminMenu : AdminNavigationProvider
 {
@@ -22,20 +23,21 @@ public sealed class AIUsageAnalyticsAdminMenu : AdminNavigationProvider
 
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
+        // The top-level Reports menu is built by the Reports module, which merges this entry into its category by name.
+        var category = new LocalizedString(ReportsConstants.Categories.BillingUsage, ReportsConstants.Categories.BillingUsage);
+
         builder
-            .Add(S["Artificial Intelligence"], ai => ai
-                .Add(S["Reports"], S["Reports"].PrefixPosition(), reports => reports
-                    .AddClass("ai-reports")
-                    .Id("aiReports")
+            .Add(S["Reports"], "after.40", reports => reports
+                .Add(category, category.PrefixPosition(), categoryNode => categoryNode
+                    .AddClass("report-category")
                     .Add(S["AI Usage Analytics"], S["AI Usage Analytics"].PrefixPosition(), usageAnalytics => usageAnalytics
-                        .AddClass("ai-usage-analytics")
+                        .AddClass("report")
                         .Id("aiUsageAnalytics")
                         .Permission(ChatAnalyticsPermissionProvider.ViewChatAnalytics)
                         .Action("Index", "UsageAnalytics", "CrestApps.OrchardCore.AI.Chat")
                         .LocalNav()
                     )
-                )
-            );
+                ), priority: 1);
 
         return ValueTask.CompletedTask;
     }
