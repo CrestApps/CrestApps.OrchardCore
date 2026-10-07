@@ -81,7 +81,7 @@ public sealed class ConnectionsController : Controller
             return Forbid();
         }
 
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
 
         var result = await _manager.PageAsync(pager.Page, pager.PageSize, new QueryContext
         {
@@ -124,11 +124,12 @@ public sealed class ConnectionsController : Controller
     /// Index Filter Post.
     /// </summary>
     /// <param name="model">The model instance.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("ai/a2a/connections", "AIA2AConnectionsIndex")]
-    public async Task<ActionResult> IndexFilterPost(ListCatalogEntryViewModel model)
+    public async Task<ActionResult> IndexFilterPost(ListCatalogEntryViewModel model, PagerParameters pagerParameters)
     {
         if (!await _authorizationService.AuthorizeAsync(User, A2APermissions.ManageA2AConnections))
         {
@@ -138,6 +139,7 @@ public sealed class ConnectionsController : Controller
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
             { _optionsSearch, model.Options?.Search },
+            { "pageSize", pagerParameters.PageSize },
         });
     }
 

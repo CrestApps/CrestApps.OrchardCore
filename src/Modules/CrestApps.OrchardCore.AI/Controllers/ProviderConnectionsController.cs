@@ -111,7 +111,7 @@ public sealed class ProviderConnectionsController : Controller
         var readOnlyEntries = filtered.Where(e => e.IsReadOnly);
 
         var editableCount = editableEntries.Count();
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
 
         var pagedEditable = editableEntries
             .Skip((pager.Page - 1) * pager.PageSize)
@@ -164,12 +164,13 @@ public sealed class ProviderConnectionsController : Controller
     /// Handles the filter form submission for the provider connections index.
     /// </summary>
     /// <param name="model">The list view model containing filter options.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
     /// <returns>A redirect to the filtered index view.</returns>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("ai/provider/connections", "AIProviderConnectionsIndex")]
-    public async Task<ActionResult> IndexFilterPost(ListCatalogEntryViewModel model)
+    public async Task<ActionResult> IndexFilterPost(ListCatalogEntryViewModel model, PagerParameters pagerParameters)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageProviderConnections))
         {
@@ -179,6 +180,7 @@ public sealed class ProviderConnectionsController : Controller
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
             { _optionsSearch, model.Options?.Search },
+            { "pageSize", pagerParameters.PageSize },
         });
     }
 

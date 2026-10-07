@@ -67,7 +67,7 @@ public sealed class TemplatesController : Controller
             return Forbid();
         }
 
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
         var result = await _manager.PageAsync(pager.Page, pager.PageSize, new QueryContext { Sorted = true, Name = options.Search });
 
         var routeData = new RouteData();
@@ -105,14 +105,14 @@ public sealed class TemplatesController : Controller
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("messaging/templates", "MessagingTemplatesIndex")]
-    public async Task<IActionResult> IndexFilterPost(ListCatalogEntryViewModel model)
+    public async Task<IActionResult> IndexFilterPost(ListCatalogEntryViewModel model, PagerParameters pagerParameters)
     {
         if (!await _authorizationService.AuthorizeAsync(User, MessagingPermissions.ManageMessaging))
         {
             return Forbid();
         }
 
-        return RedirectToAction(nameof(Index), new RouteValueDictionary { { _optionsSearch, model.Options?.Search } });
+        return RedirectToAction(nameof(Index), new RouteValueDictionary { { _optionsSearch, model.Options?.Search }, { "pageSize", pagerParameters.PageSize } });
     }
 
     [HttpPost]

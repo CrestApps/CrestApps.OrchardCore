@@ -208,7 +208,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/activities", "OmnichannelActivities")]
         [OrchardCore.Routing.FormValueRequired("submit.Filter")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> ActivitiesFilterPost([Microsoft.AspNetCore.Mvc.FromServices] OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Omnichannel.Core.Models.ListOmnichannelActivityFilter> filterDisplayManager) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> ActivitiesFilterPost(OrchardCore.Navigation.PagerParameters pagerParameters, [Microsoft.AspNetCore.Mvc.FromServices] OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Omnichannel.Core.Models.ListOmnichannelActivityFilter> filterDisplayManager) { }
         [OrchardCore.Admin.Admin("omnichannel/activities/complete/{id}", null)]
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Complete(string id, string returnUrl) { }
         [Microsoft.AspNetCore.Mvc.ActionName("Complete")]
@@ -291,7 +291,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/activity/batches", "OmnichannelActivityBatchesIndex")]
         [OrchardCore.Routing.FormValueRequired("submit.Filter")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> IndexFilterPost(CrestApps.OrchardCore.Core.Models.ListCatalogEntryViewModel model) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> IndexFilterPost(CrestApps.OrchardCore.Core.Models.ListCatalogEntryViewModel model, OrchardCore.Navigation.PagerParameters pagerParameters) { }
         [Microsoft.AspNetCore.Mvc.ActionName("Index")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/activity/batches", "OmnichannelActivityBatchesIndex")]
@@ -327,7 +327,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/cadences", "OmnichannelCadencesIndex")]
         [OrchardCore.Routing.FormValueRequired("submit.Filter")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> IndexFilterPost(CrestApps.OrchardCore.Core.Models.ListCatalogEntryViewModel model) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> IndexFilterPost(CrestApps.OrchardCore.Core.Models.ListCatalogEntryViewModel model, OrchardCore.Navigation.PagerParameters pagerParameters) { }
     }
     [OrchardCore.Admin.Admin(null, null)]
     public sealed class CampaignGroupsController : Microsoft.AspNetCore.Mvc.Controller
@@ -351,7 +351,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/campaign-groups", "OmnichannelCampaignGroupsIndex")]
         [OrchardCore.Routing.FormValueRequired("submit.Filter")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> IndexFilterPost(CrestApps.OrchardCore.Core.Models.ListCatalogEntryViewModel model) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> IndexFilterPost(CrestApps.OrchardCore.Core.Models.ListCatalogEntryViewModel model, OrchardCore.Navigation.PagerParameters pagerParameters) { }
     }
     [OrchardCore.Admin.Admin(null, null)]
     public sealed class CampaignsController : Microsoft.AspNetCore.Mvc.Controller
@@ -375,7 +375,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/campaigns", "OmnichannelCampaignsIndex")]
         [OrchardCore.Routing.FormValueRequired("submit.Filter")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> IndexFilterPost(CrestApps.OrchardCore.Core.Models.ListCatalogEntryViewModel model) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> IndexFilterPost(CrestApps.OrchardCore.Core.Models.ListCatalogEntryViewModel model, OrchardCore.Navigation.PagerParameters pagerParameters) { }
     }
     [OrchardCore.Admin.Admin(null, null)]
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.ChannelEndpoints")]
@@ -400,7 +400,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/channel-endpoints", "OmnichannelChannelEndpointsIndex")]
         [OrchardCore.Routing.FormValueRequired("submit.Filter")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> IndexFilterPost(CrestApps.OrchardCore.Core.Models.ListCatalogEntryViewModel model) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> IndexFilterPost(CrestApps.OrchardCore.Core.Models.ListCatalogEntryViewModel model, OrchardCore.Navigation.PagerParameters pagerParameters) { }
     }
     [OrchardCore.Admin.Admin(null, null)]
     public sealed class DispositionsController : Microsoft.AspNetCore.Mvc.Controller
@@ -428,7 +428,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/dispositions", "OmnichannelDispositionsIndex")]
         [OrchardCore.Routing.FormValueRequired("submit.Filter")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> IndexFilterPost(CrestApps.OrchardCore.Core.Models.ListCatalogEntryViewModel model) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> IndexFilterPost(CrestApps.OrchardCore.Core.Models.ListCatalogEntryViewModel model, OrchardCore.Navigation.PagerParameters pagerParameters) { }
     }
     [OrchardCore.Admin.Admin(null, null)]
     public sealed class LeadStatusesController : Microsoft.AspNetCore.Mvc.Controller
@@ -477,7 +477,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/numbers-not-in-service", "OmnichannelNotInServiceNumbersIndex")]
         [OrchardCore.Routing.FormValueRequired("submit.Filter")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> IndexFilterPost(CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.NotInServiceNumbersIndexViewModel model) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> IndexFilterPost(CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.NotInServiceNumbersIndexViewModel model, OrchardCore.Navigation.PagerParameters pagerParameters) { }
         [Microsoft.AspNetCore.Mvc.ActionName("Index")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/numbers-not-in-service", "OmnichannelNotInServiceNumbersIndex")]
@@ -1176,8 +1176,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         public int CurrentPageSize { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public OrchardCore.DisplayManagement.IShape Header { get; set; }
-        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
-        public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> PageSizeOptions { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public OrchardCore.DisplayManagement.IShape Pager { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]

@@ -134,13 +134,14 @@ public sealed class EntryPointsController : ContactCenterCatalogController<Conta
     /// Applies the entry points list filter.
     /// </summary>
     /// <param name="model">The submitted list model.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
     /// <returns>A redirect to the filtered list.</returns>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("contact-center/entry-points", "ContactCenterEntryPointsIndex")]
-    public Task<IActionResult> IndexFilterPost(ListCatalogEntryViewModel model)
-        => IndexFilterPostAsync(model);
+    public Task<IActionResult> IndexFilterPost(ListCatalogEntryViewModel model, PagerParameters pagerParameters)
+        => IndexFilterPostAsync(model, pagerParameters);
 
     /// <summary>
     /// Displays the entry point create form.

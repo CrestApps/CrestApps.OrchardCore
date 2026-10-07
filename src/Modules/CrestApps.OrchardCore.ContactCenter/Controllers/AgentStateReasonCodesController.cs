@@ -91,13 +91,14 @@ public sealed class AgentStateReasonCodesController : ContactCenterCatalogContro
     /// Applies the reason codes list filter.
     /// </summary>
     /// <param name="model">The submitted list model.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
     /// <returns>A redirect to the filtered list.</returns>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("contact-center/agent-states", "ContactCenterAgentStatesIndex")]
-    public Task<IActionResult> IndexFilterPost(ListCatalogEntryViewModel model)
-        => IndexFilterPostAsync(model);
+    public Task<IActionResult> IndexFilterPost(ListCatalogEntryViewModel model, PagerParameters pagerParameters)
+        => IndexFilterPostAsync(model, pagerParameters);
 
     /// <summary>
     /// Displays the reason code create form.
