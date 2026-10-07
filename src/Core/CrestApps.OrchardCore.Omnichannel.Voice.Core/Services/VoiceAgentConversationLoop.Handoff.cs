@@ -420,6 +420,9 @@ public sealed partial class VoiceAgentConversationLoop
 
         await SpeakAsync(media, voiceEvent.ProviderCallId, activity, handoffLine, cancellationToken);
 
+        // The agent taking the call should not have to ask the customer to repeat themselves.
+        SummarizeForTheAgentAfterCommit(activity.ItemId);
+
         if (_logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation(

@@ -61,7 +61,8 @@ public sealed class Startup : StartupBase
         services.AddScoped<IContentHandler, OmnichannelContactMethodIdsHandler>();
 
         services
-            .AddDisplayDriver<OmnichannelActivity, OmnichannelActivityDisplayDriver>();
+            .AddDisplayDriver<OmnichannelActivity, OmnichannelActivityDisplayDriver>()
+            .AddDisplayDriver<OmnichannelActivity, OmnichannelActivityHandoffSummaryDisplayDriver>();
 
         services
             .AddDisplayDriver<ListOmnichannelActivityFilter, ListOmnichannelActivityFilterDisplayDriver>()
