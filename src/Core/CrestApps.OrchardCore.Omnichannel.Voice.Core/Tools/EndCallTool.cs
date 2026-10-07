@@ -52,7 +52,9 @@ public sealed class EndCallTool : AIFunction
         "the customer has what they needed, has declined, has asked not to be called again, or has said goodbye. " +
         "Say your closing line first and call this tool immediately after it; the call is hung up once you have " +
         "finished speaking and the customer has had a moment to add anything. Do not call it while the customer " +
-        "still has questions, is mid-sentence, or is being transferred to a person. If the call is answered by " +
+        "still has questions, is mid-sentence, or is being transferred to a person, and never in the same turn as a " +
+        "question you have just asked them: if you read details back to confirm them, wait for the customer to " +
+        "confirm before you say goodbye. If the call is answered by " +
         "voicemail or an answering machine, wait until its greeting and tone have finished, leave one short " +
         "message, and call this tool immediately after it with voicemail set to true: nobody is going to answer, " +
         "so do not wait for a reply and do not repeat the message.";

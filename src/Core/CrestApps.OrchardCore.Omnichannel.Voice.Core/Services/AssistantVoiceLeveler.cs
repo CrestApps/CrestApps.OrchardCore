@@ -19,9 +19,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 internal sealed class AssistantVoiceLeveler
 {
     /// <summary>
-    /// The speaking level the voice is brought to, in dBFS: where the model that callers heard clearly spoke.
+    /// The speaking level the voice is brought to, in dBFS: where the model that callers heard clearly spoke, so
+    /// that model is left as it was and only a quieter one is lifted.
     /// </summary>
-    internal const double TargetDbfs = -21d;
+    internal const double TargetDbfs = -22d;
 
     /// <summary>
     /// The most the voice is ever raised, in dB.
@@ -37,7 +38,7 @@ internal sealed class AssistantVoiceLeveler
     private const double SpeechGateDbfs = -50d;
 
     // The peak any sample may reach after gain, as a fraction of full scale.
-    private const double PeakCeiling = 0.89d;
+    private const double PeakCeiling = 0.85d;
 
     // How quickly the estimate follows speech, per block: quick enough to settle within the first sentence.
     private const double LevelSmoothing = 0.08d;
