@@ -815,6 +815,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string CreatedByUsername { get; set; }
         public System.DateTime CreatedUtc { get; set; }
         public string DispositionId { get; set; }
+        public string HandoffSummary { get; set; }
+        public System.DateTime? HandoffSummaryUtc { get; set; }
         public long Id { get; set; }
         public string Instructions { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityInteractionType InteractionType { get; set; }

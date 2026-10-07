@@ -1598,6 +1598,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> SubjectContentTypes { get; set; }
     }
+    public class OmnichannelActivityHandoffSummaryViewModel
+    {
+        public OmnichannelActivityHandoffSummaryViewModel() { }
+        public string Summary { get; set; }
+        public System.DateTime? WrittenLocal { get; set; }
+    }
     public class OmnichannelActivityViewModel
     {
         public OmnichannelActivityViewModel() { }
