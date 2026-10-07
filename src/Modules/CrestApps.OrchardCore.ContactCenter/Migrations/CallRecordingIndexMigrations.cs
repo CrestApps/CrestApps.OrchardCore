@@ -50,7 +50,9 @@ internal sealed class CallRecordingIndexMigrations : DataMigration
             collection: ContactCenterStorage.CollectionName
         );
 
-        return 2;
+        await CreateActivityIndexAsync();
+
+        return 3;
     }
 
     /// <summary>
@@ -71,4 +73,21 @@ internal sealed class CallRecordingIndexMigrations : DataMigration
 
         return 2;
     }
+
+    /// <summary>
+    /// Indexes the CRM activity a recording belongs to, which an activity's page lists its call recordings by.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom2Async()
+    {
+        await CreateActivityIndexAsync();
+
+        return 3;
+    }
+
+    private Task CreateActivityIndexAsync()
+        => SchemaBuilder.AlterIndexTableAsync<CallRecordingIndex>(table => table
+            .CreateIndex("IDX_CallRecordingIndex_Activity", "ActivityItemId", "IsStored", "IsErased", "DocumentId"),
+            collection: ContactCenterStorage.CollectionName
+        );
 }

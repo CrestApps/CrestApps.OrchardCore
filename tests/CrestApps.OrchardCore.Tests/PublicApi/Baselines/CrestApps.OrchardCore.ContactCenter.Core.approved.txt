@@ -1140,6 +1140,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
     public sealed class CallRecordingQuery
     {
         public CallRecordingQuery() { }
+        public string ActivityItemId { get; set; }
         public string AgentUserId { get; set; }
         public string CustomerAddress { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Models.InteractionDirection? Direction { get; set; }
