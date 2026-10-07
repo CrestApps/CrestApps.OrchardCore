@@ -1,6 +1,7 @@
 using System.Buffers;
 using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.WebSockets;
@@ -390,7 +391,7 @@ internal sealed class TelnyxContactCenterVoiceMediaSession : IContactCenterVoice
             _reconnect.Logger?.LogWarning(
                 exception,
                 "Could not keep the Telnyx media stream for call {CallControlId} open to a reconnect.",
-                ProviderCallId);
+                ProviderCallId.SanitizeLogValue());
 
             return;
         }
@@ -469,7 +470,7 @@ internal sealed class TelnyxContactCenterVoiceMediaSession : IContactCenterVoice
         {
             _reconnect.Logger.LogInformation(
                 "Telnyx reconnected the media stream for call {CallControlId}; the call carries on over the new connection.",
-                ProviderCallId);
+                ProviderCallId.SanitizeLogValue());
         }
 
         _ = ArmStandbyAsync();
@@ -547,7 +548,7 @@ internal sealed class TelnyxContactCenterVoiceMediaSession : IContactCenterVoice
     {
         _reconnect.Logger?.LogWarning(
             "Telnyx reported the media stream for call {CallControlId} failed; starting it again.",
-            ProviderCallId);
+            ProviderCallId.SanitizeLogValue());
 
         try
         {
@@ -560,7 +561,7 @@ internal sealed class TelnyxContactCenterVoiceMediaSession : IContactCenterVoice
             _reconnect.Logger?.LogWarning(
                 exception,
                 "Telnyx did not accept restarting the media stream for call {CallControlId}.",
-                ProviderCallId);
+                ProviderCallId.SanitizeLogValue());
         }
 
         var deadline = DateTime.UtcNow + _reconnect.Grace;
@@ -584,7 +585,7 @@ internal sealed class TelnyxContactCenterVoiceMediaSession : IContactCenterVoice
 
         _reconnect.Logger?.LogError(
             "The media stream for call {CallControlId} failed and did not come back within {Seconds} seconds; the call is handed on.",
-            ProviderCallId,
+            ProviderCallId.SanitizeLogValue(),
             _reconnect.Grace.TotalSeconds);
 
         // A broken socket can sit open on this side forever; closing it is what lets the read report the loss.
@@ -616,7 +617,7 @@ internal sealed class TelnyxContactCenterVoiceMediaSession : IContactCenterVoice
         {
             if (_reconnect.Logger?.IsEnabled(LogLevel.Debug) == true)
             {
-                _reconnect.Logger.LogDebug(exception, "Could not withdraw the media stream token for call {CallControlId}.", ProviderCallId);
+                _reconnect.Logger.LogDebug(exception, "Could not withdraw the media stream token for call {CallControlId}.", ProviderCallId.SanitizeLogValue());
             }
         }
 
