@@ -838,6 +838,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
                                     omnichannelActivity.CompletedById = omnichannelActivity.AssignedToId;
                                     omnichannelActivity.CompletedByUsername = omnichannelActivity.AssignedToUsername;
+                                    ActivityDispositionActors.Stamp(omnichannelActivity, ActivityDispositionActor.AIAgent);
 
                                     // Always notate the account on conclusion, mirroring the voice channel: the AI summary
                                     // becomes the activity notes, falling back to a default line when the model returned none.
@@ -1014,6 +1015,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         activity.AiEscalated = true;
         activity.CompletedById = activity.AssignedToId;
         activity.CompletedByUsername = activity.AssignedToUsername;
+        ActivityDispositionActors.Stamp(activity, ActivityDispositionActor.AIAgent);
 
         if (string.IsNullOrWhiteSpace(activity.Notes))
         {

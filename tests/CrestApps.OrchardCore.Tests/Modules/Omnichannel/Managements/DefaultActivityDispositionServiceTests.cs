@@ -1,4 +1,5 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
@@ -50,6 +51,8 @@ public sealed class DefaultActivityDispositionServiceTests
         Assert.Equal(ActivityStatus.Completed, activity.Status);
         Assert.Equal("u1", activity.CompletedById);
         Assert.Equal(_now, activity.CompletedUtc);
+        Assert.Equal(ActivityDispositionActor.User, activity.DispositionedBy);
+        Assert.Null(activity.DispositionedByAIProfileId);
 
         executor.Verify(
             e => e.ExecuteAsync(
@@ -188,6 +191,43 @@ public sealed class DefaultActivityDispositionServiceTests
                 It.IsAny<ActivityDispositionRequest>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+
+    [Theory]
+    [InlineData(ActivityDispositionSource.AI, null, null, ActivityDispositionActor.AIAgent)]
+    [InlineData(ActivityDispositionSource.System, null, ActivityDispositionActor.Dialer, ActivityDispositionActor.Dialer)]
+    [InlineData(ActivityDispositionSource.Provider, OmnichannelConstants.NotInServiceSources.Dialer, null, ActivityDispositionActor.Dialer)]
+    [InlineData(ActivityDispositionSource.Provider, OmnichannelConstants.NotInServiceSources.AutomatedCall, null, ActivityDispositionActor.AIAgent)]
+    [InlineData(ActivityDispositionSource.Workflow, null, null, ActivityDispositionActor.System)]
+    public async Task ApplyAsync_RecordsWhoDispositionedTheActivity(
+        ActivityDispositionSource source,
+        string notInServiceSource,
+        ActivityDispositionActor? explicitActor,
+        ActivityDispositionActor expected)
+    {
+        // Arrange
+        var activity = new OmnichannelActivity { ItemId = "act1", AIProfileId = "profile-1" };
+        var service = CreateService(
+            new Mock<IOmnichannelActivityManager>(),
+            new Mock<INamedCatalog<OmnichannelDisposition>>(),
+            new Mock<IContentManager>(),
+            new Mock<ISubjectActionExecutor>());
+
+        // Act
+        var result = await service.ApplyAsync(
+            new ActivityDispositionRequest
+            {
+                Activity = activity,
+                Source = source,
+                NotInServiceSource = notInServiceSource,
+                DispositionedBy = explicitActor,
+            },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Equal(expected, activity.DispositionedBy);
+        Assert.Equal(expected == ActivityDispositionActor.AIAgent ? "profile-1" : null, activity.DispositionedByAIProfileId);
     }
 
     private static DefaultActivityDispositionService CreateService(

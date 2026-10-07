@@ -22,6 +22,8 @@ technical_manual:
   <source src="/img/docs/um-manage-activities.mp4" type="video/mp4" />
 </video>
 
+Each row shows who will handle the activity: **Manual** or **Automated (AI)** work and its source, the **AI profile** of an automated conversation, the **dialer profile** and **campaign** of dialed work, and the user it is **assigned to**.
+
 ## Filter the activities
 
 Click **Filters** to open or close the filter panel; the page remembers your choice in this browser. Combine any of these:

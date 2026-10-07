@@ -41,4 +41,10 @@ public sealed class ActivityOutcomeCompletionRequest
     /// Gets or sets who reached the outcome.
     /// </summary>
     public ActivityDispositionSource Source { get; set; } = ActivityDispositionSource.System;
+
+    /// <summary>
+    /// Gets or sets who dispositioned the activity, recorded on <see cref="OmnichannelActivity.DispositionedBy"/>.
+    /// Leave it unset to derive it from <see cref="Source"/>.
+    /// </summary>
+    public ActivityDispositionActor? DispositionedBy { get; set; }
 }

@@ -126,6 +126,9 @@ public sealed class DialerFollowUpActivityHandler : IFollowUpActivityHandler
         var queueId = previousItem.QueueId;
         var dialerProfileId = previousItem.DialerProfileId;
 
+        // Recorded on the attempt itself so the activity screens can say which dialer will call it.
+        followUp.DialerProfileId = dialerProfileId;
+
         // A person who answered the last call and found nobody there is not called again without an agent waiting for
         // them: the follow-up is a new activity, so the mark travels with its queue item. Once set it stays on every later
         // attempt of the contact, the safe reading of the rules on repeat calls after an abandoned one.

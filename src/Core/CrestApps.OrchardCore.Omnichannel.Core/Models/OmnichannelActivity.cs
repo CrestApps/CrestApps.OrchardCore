@@ -181,6 +181,12 @@ public sealed class OmnichannelActivity : CatalogItem
     public string CampaignId { get; set; }
 
     /// <summary>
+    /// Gets or sets the identifier of the dialer profile the activity was loaded for, so the activity screens can say
+    /// which dialer will call it. Empty for work that is not dialed, and for activities loaded before it was stored.
+    /// </summary>
+    public string DialerProfileId { get; set; }
+
+    /// <summary>
     /// Gets or sets the scheduled utc.
     /// </summary>
     public DateTime ScheduledUtc { get; set; }
@@ -272,6 +278,20 @@ public sealed class OmnichannelActivity : CatalogItem
     /// Gets or sets the completed by username.
     /// </summary>
     public string CompletedByUsername { get; set; }
+
+    /// <summary>
+    /// Gets or sets who or what dispositioned the activity: a person, the AI agent, the dialer, or the platform.
+    /// Stamped wherever an activity is completed. Activities completed before it was stored read as
+    /// <see cref="ActivityDispositionActor.Unknown"/>; <see cref="ActivityDispositionActors.Resolve(OmnichannelActivity)"/>
+    /// infers the actor for them.
+    /// </summary>
+    public ActivityDispositionActor DispositionedBy { get; set; }
+
+    /// <summary>
+    /// Gets or sets the AI profile whose agent concluded the activity, when <see cref="DispositionedBy"/> is
+    /// <see cref="ActivityDispositionActor.AIAgent"/>.
+    /// </summary>
+    public string DispositionedByAIProfileId { get; set; }
 
     /// <summary>
     /// Gets or sets the UTC time the activity was purged.

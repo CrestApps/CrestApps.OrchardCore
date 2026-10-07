@@ -1,0 +1,46 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model ActivityHandlerViewModel
+
+@* Who or what will handle the activity: automated (AI) or manual work, where it came from, and the AI profile,
+   dialer, campaign or person that will take it. *@
+
+@{
+    var isAutomated = Model.Activity?.InteractionType == ActivityInteractionType.Automated;
+    var handlerText = string.IsNullOrEmpty(Model.SourceName)
+        ? Model.InteractionTypeName
+        : $"{Model.InteractionTypeName} · {Model.SourceName}";
+}
+
+<span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Interaction type and source"]">
+    <i class="fa-solid @(isAutomated ? "fa-robot" : "fa-user-gear") text-secondary me-1" aria-hidden="true"></i>@handlerText
+</span>
+
+@if (!string.IsNullOrEmpty(Model.AIProfileName))
+{
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["AI profile that will handle this activity"]">
+        <i class="fa-solid fa-microchip text-secondary me-1" aria-hidden="true"></i>@Model.AIProfileName
+    </span>
+}
+
+@if (!string.IsNullOrEmpty(Model.DialerProfileName))
+{
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Dialer profile that will dial this activity"]">
+        <i class="fa-solid fa-phone-volume text-secondary me-1" aria-hidden="true"></i>@Model.DialerProfileName
+    </span>
+}
+
+@if (!string.IsNullOrEmpty(Model.CampaignName))
+{
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Campaign"]">
+        <i class="fa-solid fa-bullhorn text-secondary me-1" aria-hidden="true"></i>@Model.CampaignName
+    </span>
+}
+
+@if (!string.IsNullOrEmpty(Model.AssignedToName))
+{
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Assigned to"]">
+        <i class="fa-solid fa-user text-secondary me-1" aria-hidden="true"></i>@Model.AssignedToName
+    </span>
+}

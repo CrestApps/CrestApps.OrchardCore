@@ -59,4 +59,18 @@ public static class ActivitySources
     /// The activity was created by an API integration.
     /// </summary>
     public const string Api = "Api";
+
+    /// <summary>
+    /// Determines whether an activity source is one a dialer drives.
+    /// </summary>
+    /// <param name="source">The activity source identifier.</param>
+    /// <returns><see langword="true"/> when the source is a dialer source; otherwise, <see langword="false"/>.</returns>
+    public static bool IsDialer(string source)
+    {
+        return string.Equals(source, Dialer, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(source, PreviewDial, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(source, PowerDial, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(source, ProgressiveDial, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(source, PredictiveDial, StringComparison.OrdinalIgnoreCase);
+    }
 }

@@ -618,6 +618,11 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
             terminated.Status = activityStatus;
             terminated.TerminalReasonCode = reasonCode;
             terminated.CompletedUtc = endedUtc;
+
+            if (activityStatus == ActivityStatus.Completed)
+            {
+                ActivityDispositionActors.Stamp(terminated, ActivityDispositionActor.System);
+            }
         }, cancellationToken);
 
         await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
