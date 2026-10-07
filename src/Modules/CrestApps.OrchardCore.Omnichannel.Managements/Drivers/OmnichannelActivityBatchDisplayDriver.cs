@@ -111,12 +111,10 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             View("OmnichannelActivityBatch_Fields_SummaryAdmin", batch).Location("Content:1"),
             View("OmnichannelActivityBatch_Buttons_SummaryAdmin", batch).Location("Actions:5"),
             View("OmnichannelActivityBatch_DefaultMeta_SummaryAdmin", batch).Location("Meta:5"),
-        };
 
-        if (batch.Status == OmnichannelActivityBatchStatus.New)
-        {
-            results.Add(View("OmnichannelActivityBatch_ActionsMenuItems_SummaryAdmin", batch).Location("ActionsMenu:10"));
-        }
+            // Every batch can be cloned, whatever its status; the view offers Load activities only to a new one.
+            View("OmnichannelActivityBatch_ActionsMenuItems_SummaryAdmin", batch).Location("ActionsMenu:10"),
+        };
 
         if (HasLoadReport(batch))
         {

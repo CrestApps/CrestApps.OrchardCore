@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Views;
 
@@ -53,12 +52,6 @@ public class BulkManageOmnichannelActivityContainer : ShapeViewModel
     /// </summary>
     [BindNever]
     public int CurrentPageSize { get; set; }
-
-    /// <summary>
-    /// Gets or sets the available page size options for the grid.
-    /// </summary>
-    [BindNever]
-    public IEnumerable<SelectListItem> PageSizeOptions { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the bulk actions panel shape rendered by the display driver.

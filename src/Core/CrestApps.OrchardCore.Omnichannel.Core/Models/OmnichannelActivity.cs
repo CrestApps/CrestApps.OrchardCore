@@ -319,6 +319,21 @@ public sealed class OmnichannelActivity : CatalogItem
     public string Notes { get; set; }
 
     /// <summary>
+    /// Gets or sets the AI assistant's summary of its conversation with the customer, written when it handed the
+    /// customer to a live agent, so the agent who takes over can read what was already said.
+    /// </summary>
+    /// <remarks>
+    /// Kept apart from <see cref="Notes"/>, which are the agent's own: the agent writes them when completing the
+    /// activity, and mixing the assistant's account into them would let one overwrite the other.
+    /// </remarks>
+    public string HandoffSummary { get; set; }
+
+    /// <summary>
+    /// Gets or sets when <see cref="HandoffSummary"/> was written, in UTC.
+    /// </summary>
+    public DateTime? HandoffSummaryUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets the created utc.
     /// </summary>
     public DateTime CreatedUtc { get; set; }

@@ -142,9 +142,9 @@ public sealed class AdminController : Controller, IUpdateModel
     [HttpPost]
     [ActionName(nameof(List))]
     [FormValueRequired("submit.Filter")]
-    public async Task<ActionResult> ListFilterPOST(ListContentTransferEntryOptions options)
+    public async Task<ActionResult> ListFilterPOST(ListContentTransferEntryOptions options, PagerParameters pagerParameters)
     {
-        return await FilterListAsync(nameof(List), options);
+        return await FilterListAsync(nameof(List), options, pagerParameters);
     }
 
     [HttpPost]
@@ -412,14 +412,14 @@ public sealed class AdminController : Controller, IUpdateModel
     [HttpPost]
     [ActionName(nameof(Export))]
     [FormValueRequired("submit.Filter")]
-    public async Task<ActionResult> ExportFilterPOST(ListContentTransferEntryOptions options)
+    public async Task<ActionResult> ExportFilterPOST(ListContentTransferEntryOptions options, PagerParameters pagerParameters)
     {
         if (!await _authorizationService.AuthorizeAsync(HttpContext.User, ContentTransferPermissions.ExportContentFromFile))
         {
             return Forbid();
         }
 
-        return await FilterListAsync(nameof(Export), options);
+        return await FilterListAsync(nameof(Export), options, pagerParameters);
     }
 
     [HttpPost]
@@ -949,7 +949,7 @@ public sealed class AdminController : Controller, IUpdateModel
     private async Task<IShape> BuildListViewModelAsync(ListContentTransferEntryOptions options, PagerParameters pagerParameters)
     {
         var routeData = new RouteData(options.RouteValues);
-        var pager = new Pager(pagerParameters, _pagerOptions.GetPageSize());
+        var pager = new Pager(pagerParameters, _pagerOptions);
 
         var queryResult = await _entriesAdminListQueryService.QueryAsync(pager.Page, pager.PageSize, options, this);
         var pagerShape = await _shapeFactory.PagerAsync(pager, queryResult.TotalCount, routeData);
@@ -1029,18 +1029,20 @@ public sealed class AdminController : Controller, IUpdateModel
         };
     }
 
-    private async Task<ActionResult> FilterListAsync(string actionName, ListContentTransferEntryOptions options)
+    private async Task<ActionResult> FilterListAsync(string actionName, ListContentTransferEntryOptions options, PagerParameters pagerParameters)
     {
         if (!string.Equals(options.SearchText, options.OriginalSearchText, StringComparison.OrdinalIgnoreCase))
         {
             return RedirectToAction(actionName, new RouteValueDictionary
             {
                 { "q", options.SearchText },
+                { "pageSize", pagerParameters.PageSize },
             });
         }
 
         await _entryOptionsDisplayManager.UpdateEditorAsync(options, this, false, string.Empty, string.Empty);
         options.RouteValues.TryAdd("q", options.FilterResult?.ToString());
+        options.RouteValues.TryAdd("pageSize", pagerParameters.PageSize);
 
         return RedirectToAction(actionName, options.RouteValues);
     }

@@ -30,6 +30,10 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
 {
     private const string _optionsSearch = "Options.Search";
     private const string _indexAction = "Index";
+    private const string _editAction = "Edit";
+
+    // Every Contact Center catalog indexes its name in a 255-character column.
+    private const int _maxNameLength = 255;
 
     private readonly ICatalogManager<TModel> _manager;
     private readonly IAuthorizationService _authorizationService;
@@ -99,6 +103,18 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
     protected abstract LocalizedHtmlString DeletedNotification { get; }
 
     /// <summary>
+    /// Gets the success notification shown after a copy of an entry is created.
+    /// </summary>
+    protected virtual LocalizedHtmlString ClonedNotification
+        => H["A copy has been created successfully. Review it before putting it to use."];
+
+    /// <summary>
+    /// Gets the notifier, so a concrete controller can add its own messages to the shared flow.
+    /// </summary>
+    private protected INotifier Notifier
+        => _notifier;
+
+    /// <summary>
     /// Lists the catalog entries.
     /// </summary>
     /// <param name="options">The catalog entry options.</param>
@@ -117,7 +133,7 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
             return Forbid();
         }
 
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
         var result = await _manager.PageAsync(pager.Page, pager.PageSize, new QueryContext
         {
             Name = options.Search,
@@ -153,8 +169,9 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
     /// Applies the list filter.
     /// </summary>
     /// <param name="model">The submitted list model.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
     /// <returns>A redirect to the filtered list.</returns>
-    protected async Task<IActionResult> IndexFilterPostAsync(ListCatalogEntryViewModel model)
+    protected async Task<IActionResult> IndexFilterPostAsync(ListCatalogEntryViewModel model, PagerParameters pagerParameters)
     {
         if (!await _authorizationService.AuthorizeAsync(User, ManagePermission))
         {
@@ -164,6 +181,7 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
         return RedirectToAction(_indexAction, new RouteValueDictionary
         {
             { _optionsSearch, model.Options?.Search },
+            { "pageSize", pagerParameters.PageSize },
         });
     }
 
@@ -184,6 +202,30 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
     protected virtual void InitializeClone(TModel clone, TModel source)
     {
     }
+
+    /// <summary>
+    /// Gets the name proposed for a copy of an entry.
+    /// </summary>
+    /// <param name="sourceName">The name of the entry being cloned.</param>
+    /// <param name="copyNumber">
+    /// The one-based number of the attempt: <c>1</c> for the first proposal, and higher while the proposed name is
+    /// already taken.
+    /// </param>
+    /// <returns>The proposed name.</returns>
+    protected virtual string GetCloneName(string sourceName, int copyNumber)
+        => copyNumber <= 1
+            ? S["{0} (copy)", sourceName]
+            : S["{0} (copy {1})", sourceName, copyNumber];
+
+    /// <summary>
+    /// Runs after a copy created by <see cref="ClonePostAsync(string)"/> is stored, so a concrete controller can tell the
+    /// operator what the copy did not keep.
+    /// </summary>
+    /// <param name="clone">The stored copy.</param>
+    /// <param name="source">The entry it was copied from.</param>
+    /// <returns>A task that completes when the work is done.</returns>
+    protected virtual Task OnClonedAsync(TModel clone, TModel source)
+        => Task.CompletedTask;
 
     /// <summary>
     /// Displays the create form.
@@ -340,6 +382,65 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
         return RedirectToAction(_indexAction);
     }
 
+    /// <summary>
+    /// Stores a copy of an entry and opens the copy in the editor.
+    /// </summary>
+    /// <remarks>
+    /// The copy carries every configured member of its source, including the settings other features keep in its
+    /// property bag, under a new identifier and a name no other entry holds. Nothing the source has recorded while in
+    /// use travels with it: measurements and runtime records are keyed by the entry identifier, so the copy starts
+    /// with none. A copy the entry's rules refuse is not stored, and the reasons are shown on the list.
+    /// </remarks>
+    /// <param name="id">The identifier of the entry to copy.</param>
+    /// <returns>A redirect to the copy's editor, or to the list when the copy cannot be stored.</returns>
+    protected async Task<IActionResult> ClonePostAsync(string id)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, ManagePermission))
+        {
+            return Forbid();
+        }
+
+        if (string.IsNullOrEmpty(id))
+        {
+            return NotFound();
+        }
+
+        var source = await _manager.FindByIdAsync(id);
+
+        if (source is null)
+        {
+            return NotFound();
+        }
+
+        var clone = await NewCloneAsync(source);
+        SetName(clone, await GetUniqueCloneNameAsync(source.Name));
+
+        var updater = _updateModelAccessor.ModelUpdater;
+
+        if (!await CatalogEntryValidation.ValidateAsync(_manager, clone, updater, typeof(TModel).Name))
+        {
+            // There is no form to show the reasons on, so they travel with the notification instead.
+            var reasons = string.Join(" ", updater.ModelState.Values
+                .SelectMany(entry => entry.Errors)
+                .Select(error => error.ErrorMessage)
+                .Where(message => !string.IsNullOrWhiteSpace(message))
+                .Distinct(StringComparer.Ordinal));
+
+            await _notifier.ErrorAsync(H["The copy could not be created. {0}", reasons]);
+
+            return RedirectToAction(_indexAction);
+        }
+
+        await _manager.CreateAsync(clone);
+        await _notifier.SuccessAsync(ClonedNotification);
+        await OnClonedAsync(clone, source);
+
+        return RedirectToAction(_editAction, new RouteValueDictionary
+        {
+            { "id", clone.ItemId },
+        });
+    }
+
     // A clone is built the way a deployment plan would recreate its source: every configured member is carried and
     // none of the record's identity or history, so it is a new entry with the same settings. The post rebuilds it the
     // same way before binding the form, which keeps the settings the editor does not show.
@@ -359,10 +460,56 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
             return null;
         }
 
+        return await NewCloneAsync(source);
+    }
+
+    private async Task<TModel> NewCloneAsync(TModel source)
+    {
         var clone = await _manager.NewAsync(ContactCenterDeploymentSerializer.Export(source));
 
         InitializeClone(clone, source);
 
         return clone;
+    }
+
+    // The name contract is read-only, so a copy is renamed through the entry's own writable Name property.
+    private static void SetName(TModel entry, string name)
+    {
+        var property = typeof(TModel).GetProperty(nameof(INameAwareModel.Name));
+
+        if (property?.CanWrite != true)
+        {
+            throw new InvalidOperationException($"The catalog entry type '{typeof(TModel).FullName}' must expose a writable '{nameof(INameAwareModel.Name)}' property.");
+        }
+
+        property.SetValue(entry, name);
+    }
+
+    // Names are compared without regard to case, the way an operator reads the list.
+    private async Task<string> GetUniqueCloneNameAsync(string sourceName)
+    {
+        var takenNames = (await _manager.GetAllAsync())
+            .Select(entry => entry.Name)
+            .Where(name => !string.IsNullOrEmpty(name))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        sourceName ??= string.Empty;
+
+        for (var copyNumber = 1; ; copyNumber++)
+        {
+            var name = GetCloneName(sourceName, copyNumber);
+
+            // A long source name is shortened so the suffix still fits in the stored name.
+            if (name.Length > _maxNameLength)
+            {
+                var overflow = name.Length - _maxNameLength;
+                name = GetCloneName(sourceName[..Math.Max(0, sourceName.Length - overflow)].TrimEnd(), copyNumber);
+            }
+
+            if (!takenNames.Contains(name))
+            {
+                return name;
+            }
+        }
     }
 }
