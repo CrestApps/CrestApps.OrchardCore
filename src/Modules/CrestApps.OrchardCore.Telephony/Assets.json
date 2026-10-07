@@ -33,6 +33,7 @@
       "Assets/js/soft-phone/predictive-standby.js",
       "Assets/js/soft-phone/monitor-leg.js",
       "Assets/js/soft-phone/offer-ring.js",
+      "Assets/js/soft-phone/ringback.js",
       "Assets/js/soft-phone/offer-deadline.js",
       "Assets/js/soft-phone/call-legs.js",
       "Assets/js/soft-phone/keypad-dial.js",

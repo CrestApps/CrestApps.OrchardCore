@@ -33,12 +33,18 @@ The phone only shows the buttons your phone system supports. If a button describ
 
 The number field empties as soon as the call starts, so a second press of **Enter** does not dial again. While the call is connected, the field shows the number you are talking to.
 
+### What you hear while it rings
+
+While the number rings, the phone plays a ringback tone in your headset (two seconds of tone, four seconds of silence) and the status reads *Ringing...* with no call timer. The tone stops the moment the other person answers, and the timer starts then. It also stops if the number is busy, does not answer or is not in service (you hear the not-in-service message instead), when you hang up, and when you put the call on hold or switch to another call. The same applies when you call an extension and your colleague's phone is ringing.
+
+If the phone loses its connection to the site while the number rings, the tone stops rather than risk playing over the conversation, and it stops by itself after two minutes in any case.
+
 The phone refuses some numbers before anything is dialed: emergency numbers, premium-rate numbers, and short numbers your administrator has not allowed. Use another phone for emergency calls.
 
 A **Call with the soft phone** button also appears beside phone numbers on admin pages, for example on a contact. Click it to dial that number in your soft phone. To call a customer as part of your work, open their activity first so the call is logged against it; see [Activities](activities.md).
 
 :::note[Telnyx: the phone answers its own line first]
-On Telnyx, the phone system connects your keypad calls: your phone answers a line of its own by itself, and the number is dialed from there. You hear silence, not a ringing tone, until the other person answers. Such a call can be held, transferred, merged and sent key presses like any other.
+On Telnyx, the phone system connects your keypad calls: your phone answers a line of its own by itself, and the number is dialed from there. Such a call can be held, transferred, merged and sent key presses like any other.
 
 If the phone system cannot connect the call that way, for example while your phone is still connecting, the phone dials the number itself. That call cannot be transferred or merged: the transfer panel says so, and its line in **Active calls** has a disabled checkbox.
 :::
