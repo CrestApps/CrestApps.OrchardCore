@@ -307,6 +307,12 @@ namespace CrestApps.OrchardCore.ContactCenter
         public System.Threading.Tasks.Task StartAsync(System.Threading.CancellationToken cancellationToken) { }
         public System.Threading.Tasks.Task StopAsync(System.Threading.CancellationToken cancellationToken) { }
     }
+    public sealed class ContactCenterVoiceMediaLostException : System.Exception
+    {
+        public ContactCenterVoiceMediaLostException() { }
+        public ContactCenterVoiceMediaLostException(string message) { }
+        public ContactCenterVoiceMediaLostException(string message, System.Exception innerException) { }
+    }
     public interface IAutomatedVoiceCallObserver
     {
         System.Threading.Tasks.Task ObserveAsync(CrestApps.OrchardCore.ContactCenter.Models.AutomatedVoiceCallObservation observation, System.Threading.CancellationToken cancellationToken = default);

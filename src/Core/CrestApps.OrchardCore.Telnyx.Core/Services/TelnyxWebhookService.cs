@@ -15,6 +15,7 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 /// </summary>
 public sealed partial class TelnyxWebhookService : ITelnyxWebhookService
 {
+    private readonly TelnyxMediaStreamTracker _mediaStreamTracker;
     private readonly INormalizedVoiceEventIngestor _normalizedVoiceEventIngestor;
     private readonly ITelnyxInboundCallRouter _inboundCallRouter;
     private readonly IInboundVoiceDigitsSink _digitsSink;
@@ -53,8 +54,10 @@ public sealed partial class TelnyxWebhookService : ITelnyxWebhookService
         TelnyxApiClient apiClient,
         TelnyxHangUpAfterSpeechRegistry hangUpAfterSpeech,
         IClock clock,
-        ILogger<TelnyxWebhookService> logger)
+        ILogger<TelnyxWebhookService> logger,
+        TelnyxMediaStreamTracker mediaStreamTracker = null)
     {
+        _mediaStreamTracker = mediaStreamTracker;
         _hangUpAfterSpeech = hangUpAfterSpeech;
         _normalizedVoiceEventIngestor = normalizedVoiceEventIngestor;
         _inboundCallRouter = inboundCallRouter;
@@ -99,6 +102,13 @@ public sealed partial class TelnyxWebhookService : ITelnyxWebhookService
         // Every leg's quality is kept, before the hidden bridge leg returns below: that leg is the customer's side of
         // an outbound call, which is the side the agent's soft phone cannot measure.
         await ObserveCallQualityAsync(callEvent, cancellationToken);
+
+        // A media stream that broke is not a call-state transition either. The session carrying it is told, so it can
+        // start the stream again rather than keep talking to a socket nobody is on.
+        if (string.Equals(callEvent.EventType?.Trim(), TelnyxConstants.MediaStreaming.FailedEventType, StringComparison.OrdinalIgnoreCase))
+        {
+            _mediaStreamTracker?.NotifyStreamFailed(callEvent.CallControlId);
+        }
 
         // A finished recording is not a call-state transition, so it is dispatched to the recording handlers
         // before state mapping. When Contact Center Voice is enabled a handler ingests the recording into the
