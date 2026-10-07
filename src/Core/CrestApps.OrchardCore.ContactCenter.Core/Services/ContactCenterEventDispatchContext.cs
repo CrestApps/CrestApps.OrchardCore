@@ -1,3 +1,4 @@
+using System.Data.Common;
 using CrestApps.Core.Support;
 using Microsoft.Extensions.Logging;
 
@@ -47,6 +48,20 @@ public sealed class ContactCenterEventDispatchContext
             return;
         }
 
-        await _outbox.DispatchAsync(interactionEvent);
+        try
+        {
+            await _outbox.DispatchAsync(interactionEvent);
+        }
+        catch (DbException ex)
+        {
+            // Dispatching straight after the commit only saves the event waiting for the outbox's background pass;
+            // the event is already stored and that pass delivers it either way. A database too busy to take the
+            // claim -- SQLite allows one writer, and a call ending writes from several requests at once -- is
+            // therefore not an error: logged as one, it reported a failure that the next pass quietly repaired.
+            _logger.LogWarning(
+                ex,
+                "Deferred dispatch of Contact Center event '{EventId}' could not reach the database; the outbox's background pass will deliver it.",
+                eventId.SanitizeLogValue());
+        }
     }
 }
