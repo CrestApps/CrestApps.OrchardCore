@@ -84,6 +84,23 @@ public sealed class UsageAnalyticsReportTests
         Assert.All(rows, row => Assert.Null(row.GroupLabel));
     }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void TheCompletionTable_NamesTheDeployment_WhenTheProviderReportedNoModel(string model)
+    {
+        // Arrange
+        var records = new[] { Completion("session-1", "profile-1", tokens: 10, model: model, deployment: "chat-main") };
+
+        // Act
+        var byUser = AICompletionUsageReport.BuildRows(records, AICompletionUsageGroupBy.UserAndModel, _profileNames);
+        var byModel = AICompletionUsageReport.BuildRows(records, AICompletionUsageGroupBy.Model, _profileNames);
+
+        // Assert
+        Assert.Equal("chat-main", Assert.Single(byUser).ModelName);
+        Assert.Equal("chat-main", Assert.Single(byModel).GroupLabel);
+    }
+
     [Fact]
     public void TextTokens_AreTotalledPerChatSession()
     {

@@ -41,7 +41,7 @@ internal static class AICompletionUsageReport
         if (groupBy == AICompletionUsageGroupBy.UserAndModel)
         {
             return records
-                .GroupBy(record => (UserLabel: GetUserLabel(record), record.IsAuthenticated, ClientName: record.ClientName ?? Unknown, ModelName: record.ModelName ?? record.DeploymentName ?? Unknown))
+                .GroupBy(record => (UserLabel: GetUserLabel(record), record.IsAuthenticated, ClientName: record.ClientName ?? Unknown, ModelName: GetModelLabel(record)))
                 .Select(group => Summarize(group, row =>
                 {
                     row.UserLabel = group.Key.UserLabel;
@@ -96,10 +96,16 @@ internal static class AICompletionUsageReport
             _ => 0,
         };
 
+    // A provider that reports no model leaves the name empty rather than null, so fall back on the deployment.
+    private static string GetModelLabel(AICompletionUsageRecord record)
+        => !string.IsNullOrEmpty(record.ModelName)
+            ? record.ModelName
+            : !string.IsNullOrEmpty(record.DeploymentName) ? record.DeploymentName : Unknown;
+
     private static string Label(AICompletionUsageRecord record, AICompletionUsageGroupBy groupBy, IReadOnlyDictionary<string, string> profileNames)
         => groupBy switch
         {
-            AICompletionUsageGroupBy.Model => record.ModelName ?? record.DeploymentName ?? Unknown,
+            AICompletionUsageGroupBy.Model => GetModelLabel(record),
             AICompletionUsageGroupBy.Deployment => record.DeploymentName ?? Unknown,
             AICompletionUsageGroupBy.Connection => record.ConnectionName ?? Unknown,
             AICompletionUsageGroupBy.Profile => string.IsNullOrEmpty(record.ProfileId)
