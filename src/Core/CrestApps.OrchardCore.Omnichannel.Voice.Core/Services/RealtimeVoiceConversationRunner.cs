@@ -368,6 +368,12 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
             await media.StopAsync(CancellationToken.None);
         }
 
+        // Whatever the session still had pending -- usage recorded for a line that never got a transcript, a turn
+        // cut off as the call ended -- is committed before the call is handed on. The caller finishes the call and
+        // writes its summary on scopes of their own, and on SQLite those cannot write while this request still
+        // holds the write lock.
+        await _session.SaveChangesAsync(CancellationToken.None);
+
         return true;
     }
 

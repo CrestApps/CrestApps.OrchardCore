@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Omnichannel.Voice.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell;
+using OrchardCore.Environment.Shell.Scope;
 
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 
@@ -61,23 +62,32 @@ public sealed class RealtimeCallCompletionRunner : IRealtimeCallCompletionRunner
 
         // Not awaited, exactly as the SMS webhook does it: the request this was called from is finished (or
         // abandoned), and the work must not be tied to whether it lives long enough to see it through.
-        _ = scope.UsingAsync(async childScope =>
+        //
+        // And not started on this thread either: on SQLite every YesSql call completes synchronously, so an
+        // un-awaited scope runs inline, commit included, until something truly asynchronous yields. A commit made
+        // there while the request's own session still holds the write lock waits out the busy timeout against
+        // its own request, stalling the whole tenant (see AIVoiceSessionTracker.RecordAsync).
+        _ = Task.Run(() => FinishInOwnScopeAsync(scope, completion));
+    }
+
+    private async Task FinishInOwnScopeAsync(ShellScope scope, RealtimeCallCompletion completion)
+    {
+        try
         {
-            try
+            await scope.UsingAsync(async childScope =>
             {
                 await childScope.ServiceProvider
                     .GetRequiredService<VoiceAgentConversationLoop>()
                     .FinishRealtimeCallAsync(completion);
-            }
-            catch (Exception ex)
-            {
-                childScope.ServiceProvider
-                    .GetRequiredService<ILogger<RealtimeCallCompletionRunner>>()
-                    .LogError(
-                        ex,
-                        "Failed to finish the automated call for activity '{ActivityId}'.",
-                        completion.ActivityId.SanitizeLogValue());
-            }
-        });
+            });
+        }
+        catch (Exception ex)
+        {
+            // Around the scope rather than inside it, so a commit refused when the scope ends is reported too.
+            _logger.LogError(
+                ex,
+                "Failed to finish the automated call for activity '{ActivityId}'.",
+                completion.ActivityId.SanitizeLogValue());
+        }
     }
 }

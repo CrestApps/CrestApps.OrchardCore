@@ -385,6 +385,13 @@ public sealed partial class RealtimeVoiceConversationRunner
                         // on whatever sample it ended on -- which was heard as a click as the assistant finished.
                         await WriteToLineAsync(media, _outgoing.Finish(), cancellationToken);
 
+                        // The response's usage was recorded on this scope's session just before this event was
+                        // handed over, and recording it flushes: the write lock is taken and held until something
+                        // commits. The transcript commit (StorePromptAsync) comes before the response completes,
+                        // so without this the lock was held through the caller's whole next turn and, after the
+                        // last response, until the call ended -- live, a 37 second tenant-wide stall at hangup.
+                        await _session.SaveChangesAsync(cancellationToken);
+
                         break;
 
                     case RealtimeConversationEventType.UserSpeechStarted:

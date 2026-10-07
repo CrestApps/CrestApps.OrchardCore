@@ -149,8 +149,48 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         await harness.RunAsync();
 
         // Assert
-        // One flush per turn, each seeing exactly the turns stored so far — not a single flush at the end.
-        Assert.Equal([1, 2], harness.FlushedPromptCounts);
+        // One flush per turn, each seeing exactly the turns stored so far — not a single flush at the end. The
+        // last flush is the one made as the session hands the call on, with nothing new to commit.
+        Assert.Equal([1, 2, 2], harness.FlushedPromptCounts);
+    }
+
+    [Fact]
+    public async Task EachResponse_IsCommittedAsItCompletes()
+    {
+        // Arrange
+        // A response's usage is recorded on the request's session as the response completes, and recording it
+        // flushes, which takes the write lock. The transcript commit comes before the response completes, so the
+        // lock was held through the caller's whole next turn and, after the last response, until the call ended:
+        // on SQLite, every other writer in the tenant waited, and some gave up.
+        var harness = new RealtimeHarness();
+        harness.Conversation.Queue(
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.ResponseStarted },
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.ResponseCompleted },
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.UserTranscript, Text = "Yes." });
+
+        // Act
+        await harness.RunAsync();
+
+        // Assert
+        // Committed when the response completed, before the caller's next turn was stored; then the turn, then
+        // the hand-off.
+        Assert.Equal([0, 1, 1], harness.FlushedPromptCounts);
+    }
+
+    [Fact]
+    public async Task TheSessionsLastWrites_AreCommittedBeforeTheCallIsHandedOn()
+    {
+        // Arrange
+        // The call is finished, and its summary written, on scopes of their own. On SQLite those cannot write while
+        // this request still holds the write lock, and the summary's write waited 30 seconds on it and failed.
+        var harness = new RealtimeHarness();
+
+        // Act
+        var heldTheCall = await harness.RunAsync();
+
+        // Assert
+        Assert.True(heldTheCall);
+        Assert.Single(harness.FlushedPromptCounts);
     }
 
     [Fact]
