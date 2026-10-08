@@ -630,6 +630,20 @@ public sealed partial class TelnyxApiClient
                     continue;
                 }
 
+                var failure = TelnyxApiResult.Failure(response.StatusCode, content);
+
+                // A hangup refused because the call has already ended got what it asked for: the caller put the phone
+                // down first. It was logged as a warning at the end of nearly every call the customer finished.
+                if (path.EndsWith("/actions/hangup", StringComparison.OrdinalIgnoreCase) && TelnyxApiErrors.IsCallAlreadyEnded(failure))
+                {
+                    if (_logger.IsEnabled(LogLevel.Debug))
+                    {
+                        _logger.LogDebug("Telnyx had already ended the call {Path} was asked to hang up.", path);
+                    }
+
+                    return (failure, null);
+                }
+
                 // Why Telnyx refused the command. Only the status was logged, so a call whose answer, menu and hold music
                 // were all refused with 422 left no trace of the reason (a call already answered elsewhere, a leg on
                 // another connection, a call that had ended).
@@ -643,7 +657,7 @@ public sealed partial class TelnyxApiClient
                         DescribeErrors(content));
                 }
 
-                return (TelnyxApiResult.Failure(response.StatusCode, content), null);
+                return (failure, null);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
