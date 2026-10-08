@@ -1,4 +1,5 @@
 using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Resilience;
 using CrestApps.Core.Infrastructure;
@@ -52,7 +53,7 @@ public abstract class DataSourceIndexProfileHandlerBase : IndexProfileHandlerBas
                 return defaultDimensions;
             }
 
-            var embeddingGenerator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(deployment, builder => builder.UseDefaultResilience());
+            var embeddingGenerator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(deployment, builder => builder.UseDefaultResilience().UseUsageLabels(purpose: AIUsagePurposes.Indexing));
 
             if (embeddingGenerator == null)
             {

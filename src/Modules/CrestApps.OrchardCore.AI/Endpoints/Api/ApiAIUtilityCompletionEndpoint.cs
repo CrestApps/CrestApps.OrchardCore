@@ -78,6 +78,7 @@ internal static class ApiAIUtilityCompletionEndpoint
             return TypedResults.BadRequest("Unable to resolve a chat deployment for the profile.");
         }
 
+        using var usageScope = AIUsageScope.Begin(contextType: AIUsageCategories.Api, purpose: AIUsageFeaturePurposes.Utility);
         var completion = await completionService.CompleteAsync(deployment, [new ChatMessage(ChatRole.User, requestData.Prompt.Trim())], context);
 
         var result = new AIChatResponse
