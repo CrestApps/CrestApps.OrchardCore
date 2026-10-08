@@ -19,6 +19,12 @@ public sealed class ContactCenterRecordingSettings
     public const int MaxSecurePauseSecondsLimit = 86400;
 
     /// <summary>
+    /// The maximum length of the recording disclosure text, so the notice stays a sentence or two that a caller
+    /// actually hears before they go on.
+    /// </summary>
+    public const int MaxRecordingDisclosureLength = 500;
+
+    /// <summary>
     /// Gets or sets a value indicating whether every voice call starts recording on its own the moment it connects:
     /// a routed or dialed call once it is bridged to an agent, and an automated voice agent's call once it is
     /// answered. When off, recording starts only when a workflow or a supervisor asks for it.
@@ -36,10 +42,41 @@ public sealed class ContactCenterRecordingSettings
     public RecordingConsentModel ConsentModel { get; set; } = RecordingConsentModel.AllParties;
 
     /// <summary>
-    /// Gets or sets a value indicating whether explicit, recorded consent must be captured on the interaction
-    /// before recording may start. When enabled and consent has not been captured, the policy denies recording.
+    /// Gets or sets a value indicating whether consent must be captured on the interaction before recording may
+    /// start. Consent is captured when the caller has heard the recording disclosure, or when the agent confirms
+    /// they gave it. When enabled and consent has not been captured, the policy denies recording.
     /// </summary>
     public bool RequireExplicitConsent { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether callers are told the call is recorded, using
+    /// <see cref="RecordingDisclosureText"/>.
+    /// </summary>
+    public bool EnableRecordingDisclosure { get; set; }
+
+    /// <summary>
+    /// Gets or sets the notice callers are given, such as "This call may be recorded for quality and training
+    /// purposes." It is spoken word for word by the platform, or read by the agent.
+    /// </summary>
+    public string RecordingDisclosureText { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the disclosure is spoken to an inbound caller on an entry point,
+    /// before the entry point's own welcome message, menu or queue.
+    /// </summary>
+    public bool DiscloseOnInboundCalls { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether an automated voice agent gives the disclosure before anything else
+    /// it says.
+    /// </summary>
+    public bool DiscloseOnAIVoiceCalls { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether an agent on a call whose caller has not heard the disclosure, such
+    /// as an outbound call, is shown it to read out and confirm.
+    /// </summary>
+    public bool PromptAgentsToDisclose { get; set; } = true;
 
     /// <summary>
     /// Gets or sets the number of days a captured recording is retained before it becomes eligible for erasure.

@@ -78,4 +78,10 @@ public sealed class WorkspaceActiveInteractionViewModel
     /// the desktop shows the control only when a pause could actually be executed.
     /// </summary>
     public bool SupportsSecurePause { get; set; }
+
+    /// <summary>
+    /// Gets or sets the recording disclosure the agent must read to the customer, or <see langword="null"/> when the
+    /// customer has already been told the call is recorded or the tenant does not ask agents to tell them.
+    /// </summary>
+    public string RecordingDisclosure { get; set; }
 }

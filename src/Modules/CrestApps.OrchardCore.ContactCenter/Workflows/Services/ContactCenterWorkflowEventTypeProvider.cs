@@ -113,6 +113,7 @@ public sealed class ContactCenterWorkflowEventTypeProvider : IContactCenterWorkf
             new SelectListItem(S["Recording auto-resumed"].Value, ContactCenterConstants.Events.RecordingAutoResumed) { Group = recording },
             new SelectListItem(S["Recording stopped"].Value, ContactCenterConstants.Events.RecordingStopped) { Group = recording },
             new SelectListItem(S["Recording denied"].Value, ContactCenterConstants.Events.RecordingDenied) { Group = recording },
+            new SelectListItem(S["Caller told the call is recorded"].Value, ContactCenterConstants.Events.RecordingDisclosed) { Group = recording },
             new SelectListItem(S["Recording accessed"].Value, ContactCenterConstants.Events.RecordingAccessed) { Group = recording },
             new SelectListItem(S["Recording erased"].Value, ContactCenterConstants.Events.RecordingErased) { Group = recording },
             new SelectListItem(S["Recording erasure denied"].Value, ContactCenterConstants.Events.RecordingErasureDenied) { Group = recording },

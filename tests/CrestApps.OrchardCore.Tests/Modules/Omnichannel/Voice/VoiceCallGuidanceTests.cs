@@ -39,4 +39,24 @@ public sealed class VoiceCallGuidanceTests
         // Live, "no, not right now" was wished a good day and closed as finished, so the lead was never called again.
         Assert.Contains("now is not a good time, offer to call them back", VoiceCallGuidance.EndingTheCall, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void TheRecordingDisclosure_IsQuotedWordForWord_AsTheStartOfTheOpening()
+    {
+        // A legal notice is the approved words: asked only to mention the recording, a model paraphrases it.
+        var guidance = VoiceCallGuidance.RecordingDisclosure("  This call may be recorded for training.  ");
+
+        Assert.Contains("\"This call may be recorded for training.\"", guidance, StringComparison.Ordinal);
+        Assert.Contains("word for word", guidance, StringComparison.Ordinal);
+        Assert.Contains("Your opening must begin", guidance, StringComparison.Ordinal);
+        Assert.Contains("say it again in full", guidance, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("  ")]
+    public void NoRecordingDisclosure_GivesNoGuidance(string disclosure)
+    {
+        Assert.Null(VoiceCallGuidance.RecordingDisclosure(disclosure));
+    }
 }

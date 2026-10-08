@@ -57,6 +57,37 @@ internal static class VoiceCallGuidance
     public const string EndingTheCallSection = "## Ending the call\n\n" + EndingTheCall;
 
     /// <summary>
+    /// The heading <see cref="RecordingDisclosure(string)"/> is given in a live session's instructions.
+    /// </summary>
+    public const string RecordingDisclosureHeading = "## Telling the customer the call is recorded";
+
+    /// <summary>
+    /// Tells a live session to give the tenant's recording disclosure word for word, before anything else.
+    /// </summary>
+    /// <remarks>
+    /// A live session writes its own opening line, so the platform cannot say the disclosure for it the way the
+    /// turn-based loop does. A legal notice has to be the approved words, so the model is told to quote it rather
+    /// than to mention that the call is recorded, and to say it again in full if the caller talked over it.
+    /// </remarks>
+    /// <param name="disclosure">The disclosure text, exactly as the tenant configured it.</param>
+    /// <returns>The guidance, or <see langword="null"/> when there is no disclosure to give.</returns>
+    public static string RecordingDisclosure(string disclosure)
+    {
+        if (string.IsNullOrWhiteSpace(disclosure))
+        {
+            return null;
+        }
+
+        return
+            "This call is recorded, and the customer must be told so before anything else. Your opening must begin " +
+            "with this sentence, said word for word exactly as it is written here: \"" + disclosure.Trim() + "\" " +
+            "Do not paraphrase, shorten, translate or skip it, and do not add anything to it; then go straight on " +
+            "with the rest of your opening. If the customer talks over it before you have finished it, say it again " +
+            "in full before anything else. Once you have said it in full, do not say it again, but if the customer " +
+            "asks whether the call is recorded, tell them that it is.";
+    }
+
+    /// <summary>
     /// The heading <see cref="WhenTalkedOver"/> is given in a live session's instructions.
     /// </summary>
     public const string WhenTalkedOverHeading = "## When the customer talks over you";

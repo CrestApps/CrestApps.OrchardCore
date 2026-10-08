@@ -1452,6 +1452,8 @@ public sealed partial class InboundVoiceServiceTests
 
         public List<IInboundAIVoiceAnswerer> AIVoiceAnswerers { get; } = [];
 
+        public List<IRecordingDisclosureProvider> DisclosureProviders { get; } = [];
+
         public Mock<IInboundAIVoiceAnswererDispatcher> AIVoiceDispatcher { get; } = new();
 
         public Harness()
@@ -1553,6 +1555,7 @@ public sealed partial class InboundVoiceServiceTests
                 AuditRecorder,
                 new InboundPriorityResolver([], NullLogger<InboundPriorityResolver>.Instance),
                 AIVoiceAnswerers,
+                DisclosureProviders,
                 new Mock<global::YesSql.ISession> { DefaultValue = DefaultValue.Mock }.Object,
                 clock.Object,
                 Options.Create(new ContactCenterCoordinationOptions()),

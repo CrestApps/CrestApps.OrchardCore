@@ -59,6 +59,9 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
     // Optional: automated voice runs on tenants with no Contact Center, which have no queue to release.
     private readonly IEnumerable<IQueuedCallerAbandonmentHandler> _abandonmentHandlers;
     private readonly IEnumerable<IAutomatedVoiceCallObserver> _callObservers;
+
+    // Optional: registered only while Contact Center call recording is enabled.
+    private readonly IEnumerable<IRecordingDisclosureProvider> _disclosureProviders;
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly IAIDeploymentCapabilityService _capabilityService;
     private readonly IAICompletionContextBuilder _contextBuilder;
@@ -86,6 +89,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         IRealtimeCallCompletionRunner completionRunner,
         IEnumerable<IQueuedCallerAbandonmentHandler> abandonmentHandlers,
         IEnumerable<IAutomatedVoiceCallObserver> callObservers,
+        IEnumerable<IRecordingDisclosureProvider> disclosureProviders,
         IAIDeploymentManager deploymentManager,
         IAIDeploymentCapabilityService capabilityService,
         IAICompletionContextBuilder contextBuilder,
@@ -111,6 +115,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         _completionRunner = completionRunner;
         _abandonmentHandlers = abandonmentHandlers;
         _callObservers = callObservers;
+        _disclosureProviders = disclosureProviders;
         _deploymentManager = deploymentManager;
         _capabilityService = capabilityService;
         _contextBuilder = contextBuilder;
@@ -219,6 +224,9 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         // for that long lets the no-response expiry pass fail a call that is being held right now.
         await MarkInProgressAsync(activity, cancellationToken);
 
+        // Whatever else the assistant says, a tenant that tells callers they are recorded has it say so first.
+        var recordingDisclosure = await ResolveRecordingDisclosureAsync(cancellationToken);
+
         // A profile whose model can hold a live conversation takes the call as a speech-to-speech session instead
         // of the transcribe-complete-synthesize loop below. That loop cannot begin a reply until the caller has
         // stopped talking, the transcript has come back, the model has answered and the answer has been
@@ -292,6 +300,9 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
                     // So the assistant addresses the person it actually called, rather than a name it invented.
                     ContactName = await ResolveContactNameAsync(activity, cancellationToken),
 
+                    // A live session writes its own opening, so it is told to give the disclosure word for word.
+                    RecordingDisclosure = recordingDisclosure,
+
                     // Talk time, silence and interruptions, measured from the session's own audio.
                     Meter = meter,
                 }, cancellationToken);
@@ -332,8 +343,35 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
             greeting = "Hi there, this is Alex calling from Prestige Auto Group. Do you have a quick minute?";
         }
 
+        // Spoken by the platform as part of the opening line, so it is said word for word and before anything else.
+        // Stored with the greeting, so the model knows the caller has already been told.
+        if (!string.IsNullOrWhiteSpace(recordingDisclosure))
+        {
+            greeting = recordingDisclosure + " " + greeting.Trim();
+        }
+
         await StorePromptAsync(session, ChatRole.Assistant, greeting, cancellationToken);
         await SpeakAsync(media, voiceEvent.ProviderCallId, activity, greeting, cancellationToken);
+    }
+
+    /// <summary>
+    /// The recording disclosure the assistant gives first, or <see langword="null"/> when the tenant gives none on
+    /// automated voice calls.
+    /// </summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    private async Task<string> ResolveRecordingDisclosureAsync(CancellationToken cancellationToken)
+    {
+        foreach (var provider in _disclosureProviders)
+        {
+            var disclosure = await provider.GetDisclosureAsync(RecordingDisclosureCallType.AIVoiceAgent, cancellationToken);
+
+            if (!string.IsNullOrWhiteSpace(disclosure))
+            {
+                return disclosure.Trim();
+            }
+        }
+
+        return null;
     }
 
     /// <summary>

@@ -339,6 +339,12 @@ public static partial class ContactCenterConstants
         public const string RecordingDenied = "RecordingDenied";
 
         /// <summary>
+        /// Raised when the caller is told the call is recorded, by the platform or by the agent, which also
+        /// captures their consent to the recording.
+        /// </summary>
+        public const string RecordingDisclosed = "RecordingDisclosed";
+
+        /// <summary>
         /// Raised when a captured recording is accessed or retrieved, recording who accessed it and why for the
         /// recording access audit trail.
         /// </summary>

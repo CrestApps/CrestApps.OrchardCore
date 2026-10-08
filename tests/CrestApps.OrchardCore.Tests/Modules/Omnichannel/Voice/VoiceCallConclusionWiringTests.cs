@@ -670,6 +670,7 @@ public sealed class VoiceCallConclusionWiringTests
                 Mock.Of<IRealtimeCallCompletionRunner>(),
                 [],
                 [],
+                [],
                 deploymentManager.Object,
                 Mock.Of<IAIDeploymentCapabilityService>(),
                 contextBuilder.Object,

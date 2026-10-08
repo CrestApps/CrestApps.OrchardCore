@@ -127,8 +127,8 @@ public sealed class Interaction : CatalogItem, IEntity, IModifiedUtcAwareModel
     public string RecordingPauseReason { get; set; }
 
     /// <summary>
-    /// Gets or sets the UTC instant at which explicit party consent to record this interaction was captured, when
-    /// the tenant recording governance policy requires it.
+    /// Gets or sets the UTC instant at which party consent to record this interaction was captured, when the tenant
+    /// recording governance policy requires it. Giving the recording disclosure captures it.
     /// </summary>
     [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime? RecordingConsentCapturedUtc { get; set; }
@@ -137,6 +137,13 @@ public sealed class Interaction : CatalogItem, IEntity, IModifiedUtcAwareModel
     /// Gets or sets the jurisdiction under which recording consent for this interaction was evaluated, when known.
     /// </summary>
     public string RecordingConsentJurisdiction { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC instant at which the caller was told the call is recorded, either by the platform or by
+    /// the agent, or <see langword="null"/> when they have not been told.
+    /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
+    public DateTime? RecordingDisclosedUtc { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the captured recording is under legal hold. A recording under legal

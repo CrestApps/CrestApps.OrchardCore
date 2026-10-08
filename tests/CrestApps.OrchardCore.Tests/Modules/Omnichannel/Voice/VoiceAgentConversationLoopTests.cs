@@ -1361,6 +1361,7 @@ public sealed partial class VoiceAgentConversationLoopTests
                 CompletionRunner,
                 [AbandonmentHandler],
                 [CallObserver],
+                DisclosureProviders,
                 deploymentManager.Object,
                 CapabilityService.Object,
                 contextBuilder.Object,
@@ -1422,6 +1423,11 @@ public sealed partial class VoiceAgentConversationLoopTests
         public RecordingAbandonmentHandler AbandonmentHandler { get; }
 
         public RecordingAutomatedVoiceCallObserver CallObserver { get; } = new();
+
+        /// <summary>
+        /// The recording disclosure the assistant gives first; empty while Contact Center call recording is off.
+        /// </summary>
+        public List<IRecordingDisclosureProvider> DisclosureProviders { get; } = [];
 
         public Mock<IAIDeploymentManager> DeploymentManager { get; }
 
