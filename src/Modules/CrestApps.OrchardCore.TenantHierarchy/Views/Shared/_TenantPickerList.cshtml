@@ -1,0 +1,115 @@
+@model TenantSwitchViewModel
+
+@{
+    var labels = Model.Labels;
+    var target = Model.Embedded ? "_top" : "_self";
+}
+
+<div class="th-picker" data-th-picker>
+    <div class="has-search mb-3">
+        <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+        <input class="form-control" type="search" placeholder="@T["Search {0}", labels.ChildrenLower]" autocomplete="off" data-th-picker-search autofocus />
+    </div>
+
+    @if (Model.All.Count == 0)
+    {
+        <div class="text-center py-5 text-muted">
+            <i class="fa-solid fa-sitemap fa-2x mb-2" aria-hidden="true"></i>
+            <p class="mb-0">@T["There is no {0} you can open yet.", labels.ChildLower]</p>
+        </div>
+    }
+    else
+    {
+        foreach (var group in new[] { ("favorites", T["Favorites"].Value, Model.Favorites), ("recent", T["Recent"].Value, Model.Recent), ("all", T["All {0}", labels.ChildrenLower].Value, Model.All) })
+        {
+            if (group.Item3.Count == 0)
+            {
+                continue;
+            }
+
+            <h6 class="text-uppercase text-muted small fw-semibold mt-3 mb-2" data-th-picker-section="@group.Item1">@group.Item2</h6>
+            <div class="list-group mb-2" data-th-picker-group="@group.Item1">
+                @foreach (var item in group.Item3)
+                {
+                    var entry = item.Info.Entry;
+                    var isCurrent = entry.EntryId == Model.CurrentEntryId;
+
+                    <div class="list-group-item list-group-item-action d-flex align-items-center gap-3 @(isCurrent ? "active" : null)" data-th-picker-item="@($"{entry.DisplayName} {entry.Host}".ToLowerInvariant())">
+                        <div class="th-avatar rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 fw-semibold" aria-hidden="true">@item.Initials</div>
+                        <a class="flex-grow-1 min-w-0 text-reset text-decoration-none stretched-link-th" href="@Url.Content($"~/delegated-access/open/{entry.EntryId}")" target="@target">
+                            <div class="fw-semibold text-truncate">@entry.DisplayName</div>
+                            <div class="small text-truncate @(isCurrent ? null : "text-muted")">@entry.Host</div>
+                        </a>
+                        @if (isCurrent)
+                        {
+                            <span class="badge text-bg-light">@T["You are here"]</span>
+                        }
+                        <form method="post" action="@Url.Content($"~/delegated-access/favorite/{entry.EntryId}")" class="m-0" data-th-favorite asp-antiforgery="true">
+                            <input type="hidden" name="returnUrl" value="@($"{Context.Request.PathBase}{Context.Request.Path}{Context.Request.QueryString}")" />
+                            <button type="submit" class="btn btn-link p-1 @(item.IsFavorite ? "text-warning" : "text-muted")" title="@(item.IsFavorite ? T["Remove from favorites"] : T["Add to favorites"])" aria-pressed="@(item.IsFavorite ? "true" : "false")">
+                                <i class="@(item.IsFavorite ? "fa-solid" : "fa-regular") fa-star" aria-hidden="true"></i>
+                                <span class="visually-hidden">@T["Favorite"]</span>
+                            </button>
+                        </form>
+                    </div>
+                }
+            </div>
+        }
+
+        <div class="alert alert-info d-none" data-th-picker-empty>@T["No {0} matches your search.", labels.ChildLower]</div>
+    }
+</div>
+
+<script at="Foot">
+    (function () {
+        const root = document.querySelector('[data-th-picker]');
+
+        if (!root) {
+            return;
+        }
+
+        const search = root.querySelector('[data-th-picker-search]');
+
+        if (search) {
+            search.addEventListener('input', () => {
+                const text = search.value.trim().toLowerCase();
+                const filtering = text.length > 0;
+                let visible = 0;
+
+                root.querySelectorAll('[data-th-picker-group]').forEach((group) => {
+                    const isAll = group.dataset.thPickerGroup === 'all';
+                    const heading = root.querySelector('[data-th-picker-section="' + group.dataset.thPickerGroup + '"]');
+
+                    // While searching, only the full list is shown, so a match appears once.
+                    group.classList.toggle('d-none', filtering && !isAll);
+                    heading?.classList.toggle('d-none', filtering && !isAll);
+
+                    if (!isAll) {
+                        return;
+                    }
+
+                    group.querySelectorAll('[data-th-picker-item]').forEach((item) => {
+                        const match = !filtering || item.dataset.thPickerItem.includes(text);
+                        item.classList.toggle('d-none', !match);
+                        visible += match ? 1 : 0;
+                    });
+                });
+
+                root.querySelector('[data-th-picker-empty]')?.classList.toggle('d-none', visible > 0);
+            });
+
+            search.addEventListener('keydown', (event) => {
+                if (event.key !== 'Enter') {
+                    return;
+                }
+
+                const first = root.querySelector('[data-th-picker-group="all"] [data-th-picker-item]:not(.d-none) a');
+
+                if (first) {
+                    event.preventDefault();
+                    first.click();
+                }
+            });
+        }
+    })();
+</script>

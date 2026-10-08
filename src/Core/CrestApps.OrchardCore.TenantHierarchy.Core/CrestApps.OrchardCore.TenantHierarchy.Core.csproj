@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>CrestApps.OrchardCore.TenantHierarchy.Core</RootNamespace>
+    <Title>CrestApps OrchardCore Tenant Hierarchy Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Core services for the Tenant Hierarchy module: the broker, the scope guard, the feature, cookie and egress guards, the stores and the database provisioners.
+    </Description>
+    <PackageTags>$(PackageTags) OrchardCoreCMS MultiTenancy TenantHierarchy Core</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.Data.Abstractions" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+    <PackageReference Include="OrchardCore.Recipes.Abstractions" />
+    <PackageReference Include="OrchardCore.Roles.Abstractions" />
+    <PackageReference Include="OrchardCore.Setup.Core" />
+    <PackageReference Include="OrchardCore.Users.Core" />
+    <PackageReference Include="Npgsql" />
+    <PackageReference Include="YesSql.Core" />
+    <PackageReference Include="YesSql.Provider.SqlServer" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.TenantHierarchy.Abstractions/CrestApps.OrchardCore.TenantHierarchy.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.TenantHierarchy" />
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.TenantHierarchy.IntegrationTests" />
+  </ItemGroup>
+
+</Project>

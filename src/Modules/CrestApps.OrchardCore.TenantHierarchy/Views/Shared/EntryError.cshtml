@@ -1,0 +1,68 @@
+@model EntryErrorViewModel
+
+@{
+    Layout = null;
+
+    var childWord = Model.Labels?.ChildLower ?? T["site"].Value;
+    string title;
+    string message;
+
+    switch (Model.Kind)
+    {
+        case EntryErrorKind.MfaRequired:
+            title = T["Two-factor sign-in required"].Value;
+            message = T["Your organization requires two-factor authentication to open a {0}. Sign out, then sign in again with two-factor authentication.", childWord].Value;
+            break;
+        case EntryErrorKind.SignInExpired:
+            title = T["The sign-in expired"].Value;
+            message = T["The sign-in took too long or was started in another browser window. Try again."].Value;
+            break;
+        default:
+            title = T["You cannot open this {0}", childWord].Value;
+            message = T["It does not exist, it is not available right now, or you have no access to it. Ask your administrator if you think you should have access."].Value;
+            break;
+    }
+}
+
+<!DOCTYPE html>
+<html lang="@System.Globalization.CultureInfo.CurrentUICulture.Name">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>@title</title>
+    <style>
+        :root { color-scheme: light dark; }
+        body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: Canvas; color: CanvasText; }
+        .th-card { max-width: 28rem; margin: 1.5rem; padding: 2rem; border-radius: .75rem; border: 1px solid color-mix(in srgb, CanvasText 15%, transparent); box-shadow: 0 .5rem 1.5rem color-mix(in srgb, CanvasText 8%, transparent); }
+        .th-icon { width: 3rem; height: 3rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; background: color-mix(in srgb, #d97706 18%, transparent); color: #b45309; margin-bottom: 1rem; }
+        h1 { font-size: 1.35rem; margin: 0 0 .5rem; }
+        p { margin: 0 0 1.5rem; line-height: 1.5; opacity: .85; }
+        .th-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+        .th-button { display: inline-block; padding: .5rem 1rem; border-radius: .375rem; text-decoration: none; font-weight: 600; border: 1px solid #2563eb; }
+        .th-primary { background: #2563eb; color: #fff; }
+        .th-secondary { color: #2563eb; }
+    </style>
+</head>
+<body>
+    <main class="th-card" role="alert">
+        <div class="th-icon" aria-hidden="true">!</div>
+        <h1>@title</h1>
+        <p>@message</p>
+        <div class="th-actions">
+            @if (!string.IsNullOrEmpty(Model.RetryUrl))
+            {
+                <a class="th-button th-primary" href="@Model.RetryUrl">@T["Try again"]</a>
+            }
+            @if (!string.IsNullOrEmpty(Model.BackUrl))
+            {
+                <a class="th-button @(string.IsNullOrEmpty(Model.RetryUrl) ? "th-primary" : "th-secondary")" href="@Model.BackUrl">@T["Go back"]</a>
+            }
+            else
+            {
+                <a class="th-button th-secondary" href="javascript:history.back()">@T["Go back"]</a>
+            }
+        </div>
+    </main>
+</body>
+</html>

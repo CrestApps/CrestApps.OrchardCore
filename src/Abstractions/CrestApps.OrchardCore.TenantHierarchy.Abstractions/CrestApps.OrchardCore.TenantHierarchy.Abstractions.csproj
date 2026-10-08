@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>CrestApps.OrchardCore.TenantHierarchy</RootNamespace>
+    <Title>CrestApps OrchardCore Tenant Hierarchy Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Contracts, models and constants for the Tenant Hierarchy module: parent tenants that create, manage and enter their own child tenants.
+    </Description>
+    <PackageTags>$(PackageTags) OrchardCoreCMS MultiTenancy TenantHierarchy Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Abstractions" />
+  </ItemGroup>
+
+</Project>

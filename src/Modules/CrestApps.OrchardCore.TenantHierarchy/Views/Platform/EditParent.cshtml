@@ -1,0 +1,251 @@
+@model ParentPolicyEditViewModel
+
+@{
+    var title = Model.IsNew
+        ? T["Make a parent tenant"].Value
+        : T["Policy of {0}", Model.DisplayName].Value;
+    var action = Model.IsNew ? "MakeParent" : "EditParent";
+}
+
+<zone Name="Title">
+    <breadcrumb name="@(Model.IsNew ? "TenantHierarchyPlatformMakeParent" : "TenantHierarchyPlatformPolicy")" title="@T["{0}", title]">
+        <breadcrumb-item id="TenantHierarchyPlatform" action="Index" controller="Platform" area="@TenantHierarchyConstants.Features.Area" permission="@TenantHierarchyPermissions.ManageTenantHierarchy.Name">@T["Tenant Hierarchy"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form asp-action="@action" asp-route-id="@(Model.IsNew ? null : Model.TenantName)" method="post" class="no-multisubmit">
+    @Html.ValidationSummary(true, string.Empty, new { @class = "text-danger" })
+
+    <h5 class="mb-3">@T["Parent"]</h5>
+
+    <div class="ocat-wrapper">
+        <label asp-for="TenantName" class="ocat-label">@T["Tenant"]</label>
+        <div class="ocat-end">
+            @if (Model.IsNew)
+            {
+                if (Model.Candidates.Count == 0)
+                {
+                    <div class="alert alert-info mb-0">@T["Every tenant is already part of a hierarchy. Create a tenant in the Tenants screen first."]</div>
+                }
+                else
+                {
+                    <select asp-for="TenantName" asp-items="Model.Candidates" class="form-select">
+                        <option value="">@T["Select a tenant"]</option>
+                    </select>
+                    <span class="hint">@T["An existing tenant that is not part of a hierarchy. Its address is replaced by the one below, and its users keep working at the new address."]</span>
+                }
+            }
+            else
+            {
+                <input value="@Model.TenantName" class="form-control" readonly />
+                <input asp-for="TenantName" type="hidden" />
+            }
+            <span asp-validation-for="TenantName" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="DisplayName" class="ocat-label">@T["Display name"]</label>
+        <div class="ocat-end">
+            <input asp-for="DisplayName" class="form-control" />
+            <span asp-validation-for="DisplayName" class="text-danger"></span>
+            <span class="hint">@T["Shown to the parent's users and in the tenant switcher of its child tenants."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="Slug" class="ocat-label">@T["Address"]</label>
+        <div class="ocat-end">
+            @if (Model.IsNew)
+            {
+                <div class="input-group">
+                    <input asp-for="Slug" class="form-control" autocomplete="off" spellcheck="false" maxlength="40" />
+                    <span class="input-group-text">.@Model.PlatformDomain</span>
+                </div>
+                <span class="hint">@T["Lowercase letters, digits and hyphens. Every tenant gets its own host name, never a path, so tenants never share a browser origin."]</span>
+            }
+            else
+            {
+                <input value="@Model.Host" class="form-control" readonly />
+                <input asp-for="Slug" type="hidden" />
+            }
+            <span asp-validation-for="Slug" class="text-danger"></span>
+        </div>
+    </div>
+
+    <h5 class="mt-4 mb-3">@T["Child tenants"]</h5>
+
+    <div class="ocat-wrapper">
+        <label asp-for="MaxChildren" class="ocat-label">@T["Limit"]</label>
+        <div class="ocat-end">
+            <input asp-for="MaxChildren" type="number" min="0" max="10000" class="form-control" />
+            <span asp-validation-for="MaxChildren" class="text-danger"></span>
+            <span class="hint">@T["The highest number of child tenants the parent may have."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="ChildHostPattern" class="ocat-label">@T["Address pattern"]</label>
+        <div class="ocat-end">
+            <input asp-for="ChildHostPattern" class="form-control" placeholder="{business}.{parent address}" spellcheck="false" />
+            <span asp-validation-for="ChildHostPattern" class="text-danger"></span>
+            <span class="hint">@T["Leave empty to use {{business}} followed by the parent's address. A custom pattern must start with {{business}}. and must not use a wildcard."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="Recipes" class="ocat-label">@T["Setup recipes"]</label>
+        <div class="ocat-end">
+            @foreach (var recipe in Model.AvailableRecipes)
+            {
+                var id = $"recipe-{recipe.Value}";
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="Recipes" value="@recipe.Value" id="@id" @(recipe.Selected ? "checked" : null) />
+                    <label class="form-check-label" for="@id">@recipe.Text</label>
+                </div>
+            }
+            <span class="hint">@T["The recipes a new child tenant can start from. Select none to allow every setup recipe. A recipe must not enable a blocked feature."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="DatabaseStrategy" class="ocat-label">@T["Database"]</label>
+        <div class="ocat-end">
+            <select asp-for="DatabaseStrategy" class="form-select">
+                <option value="@ChildDatabaseStrategy.SqlitePerChild">@T["A SQLite file per child tenant"]</option>
+                <option value="@ChildDatabaseStrategy.DatabasePerChild">@T["A database and login per child tenant"]</option>
+                <option value="@ChildDatabaseStrategy.SchemaPerChild">@T["A schema and login per child tenant"]</option>
+                <option value="@ChildDatabaseStrategy.TablePrefixPerChild">@T["A table prefix per child tenant"]</option>
+            </select>
+            <span class="hint">@T["A database per child tenant isolates best. A shared database with table prefixes blocks the SQL queries feature in child tenants."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="DatabasePool" class="ocat-label">@T["Database pool"]</label>
+        <div class="ocat-end">
+            <select asp-for="DatabasePool" asp-items="Model.DatabasePools" class="form-select">
+                <option value="">@T["None (SQLite only)"]</option>
+            </select>
+            <span asp-validation-for="DatabasePool" class="text-danger"></span>
+            <span class="hint">@T["A database server configured on the host under TenantHierarchy:DatabasePools. Its credentials are never shown to a tenant."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="BlockedFeatures" class="ocat-label">@T["Blocked features"]</label>
+        <div class="ocat-end">
+            <textarea asp-for="BlockedFeatures" class="form-control font-monospace" rows="3" spellcheck="false"></textarea>
+            <span class="hint">@T["One feature identifier per line. These features are hidden from child tenants, in addition to the built-in list."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="DeniedLocalPermissions" class="ocat-label">@T["Denied to local users"]</label>
+        <div class="ocat-end">
+            <textarea asp-for="DeniedLocalPermissions" class="form-control font-monospace" rows="3" spellcheck="false"></textarea>
+            <span class="hint">@T["One permission name per line, for example ManageRecipes. The child tenant's own users never get these, even administrators. People from the parent are not affected."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="RemovalGraceDays" class="ocat-label">@T["Keep removed child tenants"]</label>
+        <div class="ocat-end">
+            <div class="input-group">
+                <input asp-for="RemovalGraceDays" type="number" min="0" max="365" class="form-control" />
+                <span class="input-group-text">@T["days"]</span>
+            </div>
+            <span asp-validation-for="RemovalGraceDays" class="text-danger"></span>
+            <span class="hint">@T["0 removes a child tenant at once. More keeps it suspended and restorable for that many days."]</span>
+        </div>
+    </div>
+
+    <h5 class="mt-4 mb-3">@T["Opening child tenants"]</h5>
+
+    <div class="ocat-wrapper">
+        <span class="ocat-label">@T["Sign-in"]</span>
+        <div class="ocat-end">
+            <div class="form-check">
+                <input asp-for="RequireMfa" class="form-check-input" />
+                <label asp-for="RequireMfa" class="form-check-label">@T["Require two-factor authentication"]</label>
+                <span class="hint dashed">@T["Users must have signed in to the parent with two-factor authentication before they can open a child tenant."]</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="SessionValidationMinutes" class="ocat-label">@T["Check sessions every"]</label>
+        <div class="ocat-end">
+            <div class="input-group">
+                <input asp-for="SessionValidationMinutes" type="number" min="1" max="60" class="form-control" />
+                <span class="input-group-text">@T["minutes"]</span>
+            </div>
+            <span asp-validation-for="SessionValidationMinutes" class="text-danger"></span>
+            <span class="hint">@T["How soon a removed grant or a disabled user takes effect in an open child tenant."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="SessionIdleMinutes" class="ocat-label">@T["End idle sessions after"]</label>
+        <div class="ocat-end">
+            <div class="input-group">
+                <input asp-for="SessionIdleMinutes" type="number" min="1" class="form-control" />
+                <span class="input-group-text">@T["minutes"]</span>
+            </div>
+            <span asp-validation-for="SessionIdleMinutes" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="SessionLifetimeHours" class="ocat-label">@T["End every session after"]</label>
+        <div class="ocat-end">
+            <div class="input-group">
+                <input asp-for="SessionLifetimeHours" type="number" min="1" class="form-control" />
+                <span class="input-group-text">@T["hours"]</span>
+            </div>
+            <span asp-validation-for="SessionLifetimeHours" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="SwitcherMode" class="ocat-label">@T["Tenant switcher"]</label>
+        <div class="ocat-end">
+            <select asp-for="SwitcherMode" class="form-select">
+                <option value="@SwitcherMode.Hosted">@T["Open the parent's picker page"]</option>
+                <option value="@SwitcherMode.Embedded">@T["Show the parent's picker in a panel"]</option>
+            </select>
+            <span class="hint">@T["Either way, the list of other child tenants is served by the parent and never becomes part of a child tenant's page."]</span>
+        </div>
+    </div>
+
+    <h5 class="mt-4 mb-3">@T["Words on screen"]</h5>
+
+    <div class="ocat-wrapper">
+        <label asp-for="ParentLabel" class="ocat-label">@T["The parent"]</label>
+        <div class="ocat-end">
+            <input asp-for="ParentLabel" class="form-control" placeholder="@T["Parent tenant"]" />
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="ChildLabel" class="ocat-label">@T["One child"]</label>
+        <div class="ocat-end">
+            <input asp-for="ChildLabel" class="form-control" placeholder="@T["Child tenant"]" />
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="ChildrenLabel" class="ocat-label">@T["Several children"]</label>
+        <div class="ocat-end">
+            <input asp-for="ChildrenLabel" class="form-control" placeholder="@T["Child tenants"]" />
+            <span class="hint">@T["For example a bookkeeping firm can use \"Practice\", \"Client\" and \"Clients\"."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button class="btn btn-primary" type="submit">@(Model.IsNew ? T["Make parent tenant"] : T["Save"])</button>
+            <a class="btn btn-secondary cancel" role="button" asp-action="Index">@T["Cancel"]</a>
+        </div>
+    </div>
+</form>

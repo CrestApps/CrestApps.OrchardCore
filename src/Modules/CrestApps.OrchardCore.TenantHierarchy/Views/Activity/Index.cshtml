@@ -1,0 +1,109 @@
+@model HierarchyActivityViewModel
+
+@{
+    var labels = Model.Labels;
+    var title = Model.Child is null
+        ? T["Activity"].Value
+        : T["Activity of {0}", Model.Child.DisplayName].Value;
+
+    string Describe(string name) => name switch
+    {
+        HierarchyAuditEventNames.Created => T["Created"].Value,
+        HierarchyAuditEventNames.SetupSucceeded => T["Set up"].Value,
+        HierarchyAuditEventNames.SetupFailed => T["Setup failed"].Value,
+        HierarchyAuditEventNames.Edited => T["Edited"].Value,
+        HierarchyAuditEventNames.Suspended => T["Suspended"].Value,
+        HierarchyAuditEventNames.Resumed => T["Resumed"].Value,
+        HierarchyAuditEventNames.Reloaded => T["Reloaded"].Value,
+        HierarchyAuditEventNames.RemovalScheduled => T["Removal scheduled"].Value,
+        HierarchyAuditEventNames.Restored => T["Restored"].Value,
+        HierarchyAuditEventNames.Removed => T["Removed"].Value,
+        HierarchyAuditEventNames.RemovalFailed => T["Removal failed"].Value,
+        HierarchyAuditEventNames.FeatureEnabled => T["Feature enabled"].Value,
+        HierarchyAuditEventNames.FeatureDisabled => T["Feature disabled"].Value,
+        HierarchyAuditEventNames.GrantAdded => T["Access granted"].Value,
+        HierarchyAuditEventNames.GrantRemoved => T["Access removed"].Value,
+        HierarchyAuditEventNames.Entered => T["Opened"].Value,
+        HierarchyAuditEventNames.EntryRefused => T["Open refused"].Value,
+        HierarchyAuditEventNames.SessionEnded => T["Session ended"].Value,
+        HierarchyAuditEventNames.Dismissed => T["Removed from list"].Value,
+        _ => name,
+    };
+
+    string Badge(string name) => name switch
+    {
+        HierarchyAuditEventNames.Entered => "text-bg-primary",
+        HierarchyAuditEventNames.EntryRefused or HierarchyAuditEventNames.SetupFailed or HierarchyAuditEventNames.RemovalFailed => "text-bg-danger",
+        HierarchyAuditEventNames.Removed or HierarchyAuditEventNames.Suspended or HierarchyAuditEventNames.RemovalScheduled => "text-bg-warning",
+        HierarchyAuditEventNames.Created or HierarchyAuditEventNames.SetupSucceeded or HierarchyAuditEventNames.Resumed or HierarchyAuditEventNames.Restored => "text-bg-success",
+        _ => "text-bg-light",
+    };
+}
+
+<zone Name="Title">
+    <breadcrumb name="TenantHierarchyActivity" title="@T["{0}", title]">
+        <breadcrumb-item id="TenantHierarchyChildren" action="Index" controller="ChildTenants" area="@TenantHierarchyConstants.Features.Area" permission="@TenantHierarchyPermissions.ViewChildTenants.Name">@labels.Children</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+@if (Model.Child is not null)
+{
+    <p><a asp-action="Index"><i class="fa-solid fa-xmark me-1" aria-hidden="true"></i>@T["Show the activity of every {0}", labels.ChildLower]</a></p>
+}
+
+<div class="table-responsive">
+    <table class="table table-sm align-middle">
+        <thead>
+            <tr>
+                <th scope="col">@T["When"]</th>
+                <th scope="col">@T["What"]</th>
+                <th scope="col">@labels.Child</th>
+                <th scope="col">@T["Who"]</th>
+                <th scope="col">@T["Details"]</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Events.Count == 0)
+            {
+                <tr><td colspan="5" class="text-muted text-center py-4">@T["No activity yet."]</td></tr>
+            }
+            @foreach (var auditEvent in Model.Events)
+            {
+                <tr>
+                    <td class="text-nowrap small" title="@auditEvent.CreatedUtc.ToString("u")">@auditEvent.CreatedUtc.ToLocalTime().ToString("g")</td>
+                    <td><span class="badge @Badge(auditEvent.Name)">@Describe(auditEvent.Name)</span></td>
+                    <td>
+                        @if (!string.IsNullOrEmpty(auditEvent.ChildEntryId) && Model.Child is null)
+                        {
+                            <a asp-action="Index" asp-route-child="@auditEvent.ChildEntryId">@(auditEvent.ChildDisplayName ?? auditEvent.ChildEntryId)</a>
+                        }
+                        else
+                        {
+                            @auditEvent.ChildDisplayName
+                        }
+                    </td>
+                    <td class="small">
+                        @(auditEvent.UserName ?? T["System"].Value)
+                        @if (!string.IsNullOrEmpty(auditEvent.IpAddress))
+                        {
+                            <div class="text-muted">@auditEvent.IpAddress</div>
+                        }
+                    </td>
+                    <td class="small text-break">
+                        @auditEvent.Details
+                        @if (auditEvent.AuthenticationMethods?.Length > 0)
+                        {
+                            <div class="text-muted">@T["Sign-in: {0}", string.Join(", ", auditEvent.AuthenticationMethods)]</div>
+                        }
+                        @if (!string.IsNullOrEmpty(auditEvent.SessionReference))
+                        {
+                            <div class="text-muted">@T["Session {0}", auditEvent.SessionReference]</div>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@await DisplayAsync(Model.Pager)

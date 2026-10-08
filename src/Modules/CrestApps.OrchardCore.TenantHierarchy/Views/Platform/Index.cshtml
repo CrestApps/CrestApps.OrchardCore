@@ -1,0 +1,115 @@
+@model PlatformIndexViewModel
+
+@{
+    var overview = Model.Overview;
+    string StateBadge(OrchardCore.Environment.Shell.ShellSettings settings) => settings.State switch
+    {
+        OrchardCore.Environment.Shell.Models.TenantState.Running => "text-bg-success",
+        OrchardCore.Environment.Shell.Models.TenantState.Disabled => "text-bg-secondary",
+        _ => "text-bg-light",
+    };
+}
+
+<zone Name="Title">
+    <breadcrumb name="TenantHierarchyPlatform" title="@T["Tenant Hierarchy"]" />
+</zone>
+
+@if (!Model.HostGuardInstalled)
+{
+    <div class="alert alert-warning">
+        <h5 class="alert-heading"><i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>@T["The host guards are not installed"]</h5>
+        <p class="mb-0">@T["Call AddTenantHierarchy() inside AddOrchardCms() in Program.cs, then restart the application. Until then, no tenant can be made a parent."]</p>
+    </div>
+}
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body d-flex flex-wrap align-items-center gap-3">
+        <div class="flex-grow-1">
+            <span class="text-muted">@T["Parent tenants get the address <code>{{slug}}.{0}</code>. Their child tenants get addresses under the parent's address.", Model.PlatformDomain]</span>
+        </div>
+        @if (Model.HostGuardInstalled && overview.Candidates.Count > 0)
+        {
+            <a class="btn btn-secondary" asp-action="MakeParent"><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Make a parent tenant"]</a>
+        }
+    </div>
+</div>
+
+@if (overview.Parents.Count == 0)
+{
+    <div class="text-center py-5 border rounded mb-4">
+        <i class="fa-solid fa-sitemap fa-3x text-muted mb-3" aria-hidden="true"></i>
+        <h4>@T["No parent tenants yet"]</h4>
+        <p class="text-muted mb-0">@T["A parent tenant can create and manage its own child tenants, and its users can open them without signing in again."]</p>
+    </div>
+}
+
+@foreach (var parent in overview.Parents)
+{
+    var policy = parent.Settings.GetParentPolicy();
+
+    <div class="card mb-3">
+        <div class="card-header d-flex flex-wrap align-items-center gap-2">
+            <i class="fa-solid fa-building text-muted" aria-hidden="true"></i>
+            <a class="fw-semibold" asp-action="Parent" asp-route-id="@parent.Settings.Name">@parent.DisplayName</a>
+            <span class="badge @StateBadge(parent.Settings)">@parent.Settings.State</span>
+            @if (!string.IsNullOrEmpty(parent.Address))
+            {
+                <a href="@parent.Address" class="small text-decoration-none" target="_blank" rel="noopener noreferrer"><code>@parent.Settings.GetPrimaryHost()</code></a>
+            }
+            <span class="ms-auto small text-muted">@T["{0} of {1} child tenants", parent.Children.Count, policy.MaxChildren]</span>
+            <a class="btn btn-sm btn-outline-secondary" asp-action="EditParent" asp-route-id="@parent.Settings.Name">@T["Policy"]</a>
+        </div>
+        @if (parent.Children.Count > 0)
+        {
+            <ul class="list-group list-group-flush">
+                @foreach (var child in parent.Children.Take(10))
+                {
+                    <li class="list-group-item d-flex flex-wrap align-items-center gap-2 ps-4">
+                        <i class="fa-solid fa-turn-up fa-rotate-90 text-muted small" aria-hidden="true"></i>
+                        <span>@child.DisplayName</span>
+                        <span class="badge @StateBadge(child.Settings)">@child.Settings.State</span>
+                        <code class="small">@child.Settings.GetPrimaryHost()</code>
+                        <span class="ms-auto small text-muted">@child.Settings.Name</span>
+                    </li>
+                }
+                @if (parent.Children.Count > 10)
+                {
+                    <li class="list-group-item ps-4"><a asp-action="Parent" asp-route-id="@parent.Settings.Name">@T["Show all {0} child tenants", parent.Children.Count]</a></li>
+                }
+            </ul>
+        }
+    </div>
+}
+
+@if (overview.Orphans.Count > 0)
+{
+    <h5 class="mt-4">@T["Orphaned child tenants"]</h5>
+    <p class="text-muted small">@T["Their parent tenant no longer exists. Move each one to a parent tenant, or make it an ordinary tenant."]</p>
+    <ul class="list-group mb-4">
+        @foreach (var orphan in overview.Orphans)
+        {
+            <li class="list-group-item d-flex flex-wrap align-items-center gap-2">
+                <i class="fa-solid fa-triangle-exclamation text-warning" aria-hidden="true"></i>
+                <span class="fw-semibold">@orphan.DisplayName</span>
+                <code class="small">@orphan.Settings.GetPrimaryHost()</code>
+                <span class="small text-muted">@orphan.Settings.Name</span>
+                <span class="ms-auto d-flex gap-2">
+                    @if (overview.Parents.Count > 0)
+                    {
+                        <form asp-action="Adopt" method="post" class="d-flex gap-1">
+                            <input type="hidden" name="child" value="@orphan.Settings.Name" />
+                            <select name="newParent" class="form-select form-select-sm" aria-label="@T["New parent"]">
+                                @foreach (var parent in overview.Parents)
+                                {
+                                    <option value="@parent.Settings.Name">@parent.DisplayName</option>
+                                }
+                            </select>
+                            <button type="submit" class="btn btn-sm btn-secondary text-nowrap">@T["Move"]</button>
+                        </form>
+                    }
+                    <a class="btn btn-sm btn-outline-danger text-nowrap" asp-action="Detach" asp-route-child="@orphan.Settings.Name" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Make ordinary"]" data-message="@T["Make {0} an ordinary tenant? It keeps its data and address.", orphan.DisplayName]">@T["Make ordinary"]</a>
+                </span>
+            </li>
+        }
+    </ul>
+}

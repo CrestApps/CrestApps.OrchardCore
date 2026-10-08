@@ -1,0 +1,33 @@
+@model TenantSwitchViewModel
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="@System.Globalization.CultureInfo.CurrentUICulture.Name" data-bs-theme="auto">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>@T["Open a {0}", Model.Labels.ChildLower]</title>
+    <style asp-name="bootstrap" version="5"></style>
+    <style asp-name="font-awesome" version="6"></style>
+    <resources type="Meta" />
+    <resources type="HeadLink" />
+    <resources type="Stylesheet" />
+    <style>
+        body { padding: 1rem; background: transparent; }
+        .th-avatar { width: 2.25rem; height: 2.25rem; background-color: var(--bs-primary-bg-subtle); color: var(--bs-primary-text-emphasis); }
+        .list-group-item.active .th-avatar { background-color: rgba(255, 255, 255, .25); color: inherit; }
+        .min-w-0 { min-width: 0; }
+        .has-search { position: relative; }
+        .has-search .form-control-feedback { position: absolute; top: .75rem; left: .75rem; color: var(--bs-secondary-color); }
+        .has-search .form-control { padding-left: 2.25rem; }
+    </style>
+</head>
+<body>
+    <partial name="_TenantPickerList" model="Model" />
+    <resources type="FootScript" />
+</body>
+</html>
