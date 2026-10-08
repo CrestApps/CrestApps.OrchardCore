@@ -30,11 +30,17 @@ internal static class VoiceCallGuidance
     /// customer who answered "no, not right now" was wished a good day and closed as finished -- never called again
     /// -- when "not now" is a timing answer, not a refusal.
     /// </para>
+    /// <para>
+    /// The closing line is held to one sentence because every word of it is waited through: live, a confirmed email
+    /// was followed by "let me just wrap this up with you" and a two-sentence goodbye, twelve seconds of talking
+    /// before the line could drop.
+    /// </para>
     /// </remarks>
     public const string EndingTheCall =
         "You are on a live phone call. When the conversation has genuinely finished — the customer has what " +
-        "they needed, has declined, has asked not to be called again, or has said goodbye — say a short, warm " +
-        "closing line and then call the " + EndCallTool.ToolName + " tool. The call is hung up for you once you " +
+        "they needed, has declined, has asked not to be called again, or has said goodbye — say one short, warm " +
+        "closing sentence (thank them and say goodbye) and then call the " + EndCallTool.ToolName + " tool. Do " +
+        "not say you are wrapping up or about to finish first; just say goodbye. The call is hung up for you once you " +
         "have finished speaking and the customer has had a moment to add anything, so do not announce that you " +
         "are hanging up and do not wait for them to do it. Never call it while the customer still has questions " +
         "or is being transferred to a person. When you read details back to confirm them, only a clear yes " +

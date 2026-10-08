@@ -25,6 +25,15 @@ public sealed class VoiceCallGuidanceTests
     }
 
     [Fact]
+    public void TheGoodbye_IsOneSentence_WithNoAnnouncementBeforeIt()
+    {
+        // Live, a confirmed email was followed by "let me just wrap this up with you" and a two-sentence goodbye:
+        // twelve seconds of talking before the line could drop.
+        Assert.Contains("one short, warm closing sentence", VoiceCallGuidance.EndingTheCall, StringComparison.Ordinal);
+        Assert.Contains("Do not say you are wrapping up", VoiceCallGuidance.EndingTheCall, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void NotRightNow_IsAnsweredWithAnOfferToCallBack()
     {
         // Live, "no, not right now" was wished a good day and closed as finished, so the lead was never called again.
