@@ -201,12 +201,16 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         // On an 8 kHz companded line those defaults had the model answering phantom turns and restarting its own
         // sentences — the caller's experience is an assistant talking to itself that never lets them speak.
         var harness = new RealtimeHarness();
+        harness.Conversation.Queue(new RealtimeConversationEvent { Type = RealtimeConversationEventType.UserTurnCommitted });
 
         // Act
         await harness.RunAsync();
 
         // Assert
-        var applied = Assert.Single(harness.Conversation.TurnDetectionUpdates);
+        // The call opens on a quick detector for the caller's "hello?" (see the next test); from their first turn on
+        // it runs on the configured one, tuned for the phone.
+        Assert.Equal(2, harness.Conversation.TurnDetectionUpdates.Count);
+        var applied = harness.Conversation.TurnDetectionUpdates[^1];
 
         Assert.True(applied.AllowInterruption, "Being talked over is the other half of sounding like a machine.");
         Assert.True(applied.SilenceDurationMs >= 800, "A caller must be allowed to pause mid-sentence.");
@@ -218,8 +222,33 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         // quiet. (Under the default semantic detector the provider ignores this value anyway.)
         Assert.True(applied.VadThreshold <= 0.55f, "A short 'yeah' must not be clipped before the model hears it.");
 
-        // The detector type belongs to the provider; naming one here would be a guess that fails closed.
+        // The detector type belongs to the provider's configuration; leaving it unnamed restores what the session
+        // was configured with.
         Assert.Null(applied.TurnDetectionType);
+    }
+
+    [Fact]
+    public async Task TheCallersFirstWords_AreHeardQuickly_ThenTheConfiguredDetectorTakesOver()
+    {
+        // Arrange
+        // Live, a caller answered with "hello?", which cancelled the greeting about to be said, and the patient
+        // default detector took 1.3 seconds to decide they had finished: the greeting came three seconds after them.
+        var harness = new RealtimeHarness();
+        harness.Conversation.Queue(new RealtimeConversationEvent { Type = RealtimeConversationEventType.UserTurnCommitted });
+        harness.Conversation.Queue(new RealtimeConversationEvent { Type = RealtimeConversationEventType.UserTurnCommitted });
+
+        // Act
+        await harness.RunAsync();
+
+        // Assert
+        var opening = harness.Conversation.TurnDetectionUpdates[0];
+        Assert.Equal(RealtimeTurnDetectionTypes.ServerVad, opening.TurnDetectionType);
+        Assert.True(opening.SilenceDurationMs <= 500, "The first turn is \"hello?\"; it should not wait over a second.");
+        Assert.True(opening.AllowInterruption);
+
+        // Restored once, at the first turn, and not again at the second.
+        Assert.Equal(2, harness.Conversation.TurnDetectionUpdates.Count);
+        Assert.Null(harness.Conversation.TurnDetectionUpdates[1].TurnDetectionType);
     }
 
     [Fact]
@@ -623,6 +652,48 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         // Assert
         // The customer hears the goodbye once, and the record says it was said once.
         Assert.Equal(spokenAfterGoodbye, harness.Media.WrittenAudio.Count);
+        Assert.Single(harness.StoredPrompts, prompt => prompt.Role == ChatRole.Assistant);
+
+        harness.Conversation.KeepAlive = false;
+        harness.Media.KeepAlive = false;
+
+        await Task.WhenAny(run, Task.Delay(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task NothingIsAddedToAVoicemail_AfterTheMessage()
+    {
+        // Arrange
+        // Live, the model left its message, ended the call on voicemail, and then said "Thanks, goodbye." onto the
+        // recording as well: the message did not sound like a goodbye, so the line after it was let through.
+        var harness = new RealtimeHarness();
+        using var endCall = new CancellationTokenSource();
+        harness.EndCallRequested = endCall.Token;
+        harness.Conversation.KeepAlive = true;
+        harness.Media.KeepAlive = true;
+
+        var run = harness.RunAsync();
+
+        harness.Conversation.Queue(
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantAudioDelta, Audio = new byte[320] },
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantTranscriptDone, Text = "Hi Haneen, it's Sarah with Prestige Auto Group. Please call us back when you can." });
+
+        await Task.Delay(TimeSpan.FromMilliseconds(300), TestContext.Current.CancellationToken);
+        harness.ReachedVoicemail = true;
+        await endCall.CancelAsync();
+
+        await Task.Delay(TimeSpan.FromMilliseconds(500), TestContext.Current.CancellationToken);
+        var spokenAfterMessage = harness.Media.WrittenAudio.Count;
+
+        // Act
+        harness.Conversation.Queue(
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantAudioDelta, Audio = new byte[320] },
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantTranscriptDone, Text = "Thanks, goodbye." });
+
+        await Task.Delay(TimeSpan.FromMilliseconds(500), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(spokenAfterMessage, harness.Media.WrittenAudio.Count);
         Assert.Single(harness.StoredPrompts, prompt => prompt.Role == ChatRole.Assistant);
 
         harness.Conversation.KeepAlive = false;
@@ -1216,7 +1287,7 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
             var mediaProvider = new Mock<IContactCenterVoiceMediaProvider>();
             mediaProvider.SetupGet(x => x.TechnicalName).Returns("Fake");
             mediaProvider.Setup(x => x.OpenSessionAsync(It.IsAny<ContactCenterVoiceMediaSessionRequest>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(Media);
+                .Returns(OpenMediaAsync);
 
             var mediaResolver = new Mock<IContactCenterVoiceMediaProviderResolver>();
             mediaResolver.Setup(x => x.Get(It.IsAny<string>()))
@@ -1251,6 +1322,32 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         }
 
         public Mock<ISession> DocumentSession { get; }
+
+        /// <summary>
+        /// When set, the call's audio stream is still connecting until this completes, the way a provider takes most
+        /// of a second to dial its stream back in.
+        /// </summary>
+        public TaskCompletionSource MediaConnecting { get; set; }
+
+        /// <summary>
+        /// When set, the call's audio stream fails to open.
+        /// </summary>
+        public bool MediaFails { get; set; }
+
+        private async Task<IContactCenterVoiceMediaSession> OpenMediaAsync()
+        {
+            if (MediaConnecting is not null)
+            {
+                await MediaConnecting.Task;
+            }
+
+            if (MediaFails)
+            {
+                throw new InvalidOperationException("The call's audio stream could not be opened.");
+            }
+
+            return Media;
+        }
 
         /// <summary>
         /// The number of stored prompts observed at each flush, in flush order.
@@ -1702,7 +1799,13 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
             return Task.CompletedTask;
         }
 
+        public bool Disposed { get; private set; }
+
         public ValueTask DisposeAsync()
-            => ValueTask.CompletedTask;
+        {
+            Disposed = true;
+
+            return ValueTask.CompletedTask;
+        }
     }
 }

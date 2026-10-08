@@ -29,11 +29,12 @@ internal sealed class AssistantVoiceLeveler
     /// The speaking level the voice is brought to, in dBFS, as this measures it: speech only, not the gaps.
     /// </summary>
     /// <remarks>
-    /// Set just under where the model callers heard clearly speaks. Measured this way on its recordings it sat
-    /// between -21 and -23.5, so it is never lifted, and a quieter model is brought up to within a decibel or so
-    /// of it. The quieter model measured about -29 under the first version of this class.
+    /// Set just under where the model callers heard clearly speaks: measured by this class on a live call, before
+    /// any gain, it spoke at -21.0, so it is never lifted. At -24 the quieter model still came out about 4 dB below
+    /// it on the recordings (speech medians of -23.6 and -19.8), because its speech has more soft syllables at the
+    /// same measured level; -22 halves that and still leaves the louder model untouched.
     /// </remarks>
-    internal const double TargetDbfs = -24d;
+    internal const double TargetDbfs = -22d;
 
     /// <summary>
     /// The most the voice is ever raised, in dB.

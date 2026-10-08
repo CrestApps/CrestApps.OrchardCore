@@ -5,6 +5,7 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Voice.Models;
 using CrestApps.OrchardCore.Telnyx.Services;
 using CrestApps.Core.Support;
 using Microsoft.Extensions.Logging;
@@ -94,6 +95,13 @@ public sealed class VoiceOmnichannelProcessor : IOmnichannelProcessor
         }
 
         activity.Status = ActivityStatus.AwaitingCustomerAnswer;
+
+        // When it was dialed, so a call whose answer or hangup is never reported can still be recognised as over.
+        activity.Put(new AutomatedVoiceCallDial
+        {
+            DialedUtc = _clock.UtcNow,
+            ProviderCallId = callControlId,
+        });
 
         if (_logger.IsEnabled(LogLevel.Information))
         {

@@ -34,6 +34,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Models
         public System.DateTime StartedUtc { get; set; }
         public long? TimeToFirstAssistantAudioMs { get; set; }
     }
+    public sealed class AutomatedVoiceCallDial
+    {
+        public AutomatedVoiceCallDial() { }
+        public System.DateTime DialedUtc { get; set; }
+        public string ProviderCallId { get; set; }
+    }
     public sealed class PendingVoiceHandoff
     {
         public PendingVoiceHandoff() { }
@@ -145,10 +151,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
     }
     public interface IVoiceAgentConversationLoop
     {
+        System.Threading.Tasks.Task<bool> ConcludeStrandedCallAsync(string activityId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task HandleAsync(CrestApps.OrchardCore.Omnichannel.Voice.Models.VoiceAgentEvent voiceEvent, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IVoiceCallEndTurn
     {
+        bool ClosingLineOwed { get; }
         bool EndCallRequested { get; }
         System.Threading.CancellationToken EndCallRequestedToken { get; }
         bool ReachedVoicemail { get; }
@@ -206,6 +214,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         public RealtimeVoiceConversationRunner(CrestApps.Core.AI.Realtime.IRealtimeOrchestrator orchestrator, CrestApps.OrchardCore.ContactCenter.IContactCenterVoiceMediaProviderResolver mediaResolver, CrestApps.Core.AI.IAIChatSessionPromptStore promptStore, CrestApps.Core.AI.Chat.IAIChatSessionManager chatSessionManager, YesSql.ISession session, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Voice.Services.RealtimeVoiceConversationRunner> logger) { }
         public System.Threading.Tasks.Task<bool> RunAsync(CrestApps.OrchardCore.Omnichannel.Voice.Services.RealtimeVoiceConversationContext context, System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public static class StrandedVoiceCallPolicy
+    {
+        public static readonly System.TimeSpan QuietFor;
+        public static readonly System.TimeSpan QuietForWithoutDialTime;
+        public static bool IsStranded(System.DateTime nowUtc, System.DateTime? dialedUtc, System.DateTime? lastTurnUtc, System.DateTime createdUtc, System.DateTime scheduledUtc) { }
+    }
     public sealed class TurnBasedSilenceWatchdog : CrestApps.OrchardCore.Omnichannel.Voice.Services.ITurnBasedSilenceWatchdog
     {
         public static readonly System.TimeSpan SilenceBeforeSpeakingUp;
@@ -239,6 +253,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
                     OrchardCore.Modules.IClock clock,
                     Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Voice.Services.VoiceAgentConversationLoop> logger,
                     Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Voice.Services.VoiceAgentConversationLoop> stringLocalizer) { }
+        public System.Threading.Tasks.Task<bool> ConcludeStrandedCallAsync(string activityId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task HandleAsync(CrestApps.OrchardCore.Omnichannel.Voice.Models.VoiceAgentEvent voiceEvent, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task OnListeningTimedOutAsync(CrestApps.OrchardCore.Omnichannel.Voice.Models.TurnBasedSilence silence, System.Threading.CancellationToken cancellationToken) { }
     }
@@ -252,10 +267,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         public const string SessionLostReasonCode = "ai_session_lost";
         public const string VoicemailNote = "The automated call reached voicemail and left a message; nobody spoke with the cu" +
             "stomer.";
+        public static readonly System.TimeSpan LongestCallbackDelay;
+        public static System.Collections.Generic.Dictionary<string, System.DateTime?> CallbackScheduleDates(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectAction> subjectActions, string subjectContentType, string dispositionId, System.DateTime? callbackUtc) { }
         public static CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition ChooseDisposition(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> choices, string modelChoiceId) { }
         public static CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition ChooseSessionLostDisposition(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> choices, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectAction> subjectActions, string subjectContentType, string modelChoiceId) { }
         public static CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition ChooseUnansweredDisposition(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> choices, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectAction> subjectActions, string subjectContentType, bool reachedVoicemail = false, bool lineBusy = false) { }
         public static bool HasConversation(System.Collections.Generic.IEnumerable<CrestApps.Core.AI.Models.AIChatSessionPrompt> prompts) { }
+        public static System.DateTime? ResolveCallbackUtc(string requested, System.DateTime nowUtc, System.TimeSpan localOffset) { }
         public static string ResolveNotes(bool hasConversation, string modelSummary) { }
         public static string ResolveSessionLostNotes(bool hasConversation, string modelSummary) { }
         public static System.Collections.Generic.IReadOnlyList<string> ResolveSubjectDispositionIds(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectAction> subjectActions, string subjectContentType) { }
@@ -264,6 +282,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
     public sealed class VoiceCallEndTurn : CrestApps.OrchardCore.Omnichannel.Voice.Services.IVoiceCallEndTurn
     {
         public VoiceCallEndTurn() { }
+        public bool ClosingLineOwed { get; }
         public bool EndCallRequested { get; }
         public System.Threading.CancellationToken EndCallRequestedToken { get; }
         public bool ReachedVoicemail { get; }
