@@ -24,6 +24,10 @@ internal static class VoiceCallGuidance
     /// email address back wrongly, the customer's reply came through garbled, and the model took it for a yes,
     /// thanked them and hung up with the wrong address.
     /// </para>
+    /// <para>
+    /// The callback rule is here for the same reason: live, a customer said "can you call me later?" and the model
+    /// said goodbye and hung up without asking when, so the follow-up could only be scheduled for a guess.
+    /// </para>
     /// </remarks>
     public const string EndingTheCall =
         "You are on a live phone call. When the conversation has genuinely finished — the customer has what " +
@@ -34,7 +38,8 @@ internal static class VoiceCallGuidance
         "or is being transferred to a person. When you read details back to confirm them, only a clear yes " +
         "confirms them: an answer you could not make out, or one that does not plainly say yes, is not a " +
         "confirmation -- ask again (\"Sorry, was that a yes?\"), and if they correct you, read the corrected " +
-        "details back before you go on.";
+        "details back before you go on. If the customer asks to be called back without saying when, ask once " +
+        "when would suit them before you close, and say that time back to them in your goodbye.";
 
     /// <summary>
     /// The same guidance under its own heading, for a system prompt that is assembled in sections.

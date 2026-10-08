@@ -118,11 +118,12 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     /// do speak, the assistant answers and the call carries on; this window only ends a conversation that both
     /// sides have finished.
     /// <para>
-    /// Two seconds was about the length of a breath, and it read on a real call as being hung up on. The cost of
-    /// the extra couple of seconds is a little silence at the end of a call that was over anyway.
+    /// Measured from the end of the goodbye's playback, which already reaches the caller a moment after it leaves
+    /// here. Four seconds was tried after two read once as being hung up on, but live it left five seconds of dead
+    /// air after every goodbye, which the caller heard as the call taking too long to end; two is back.
     /// </para>
     /// </remarks>
-    private static readonly TimeSpan ClosingListeningGrace = TimeSpan.FromSeconds(4);
+    private static readonly TimeSpan ClosingListeningGrace = TimeSpan.FromSeconds(2);
 
     /// <summary>
     /// How long a voicemail message is allowed past the projected end of its playback before the call is hung up.

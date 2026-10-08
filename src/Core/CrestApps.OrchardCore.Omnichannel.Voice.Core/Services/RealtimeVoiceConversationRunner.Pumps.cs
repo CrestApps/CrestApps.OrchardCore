@@ -283,6 +283,11 @@ public sealed partial class RealtimeVoiceConversationRunner
         // muted -- the customer heard silence and then the line go dead.
         string lastAssistantLine = null;
 
+        // When the provider last took a caller turn as finished, and whether its answer has started playing yet:
+        // for how long the caller waited for each answer, and on what.
+        long turnCommittedTicks = 0;
+        var awaitingFirstAudio = false;
+
         // The requests already acted on, so a later one -- the model ending the call again after the customer
         // answered its first goodbye -- is recognised as new.
         var requestsSeen = 0;
@@ -370,6 +375,12 @@ public sealed partial class RealtimeVoiceConversationRunner
                         }
 
                         utteranceInFlight = true;
+
+                        if (awaitingFirstAudio && !speech.IsEmpty)
+                        {
+                            awaitingFirstAudio = false;
+                            LogAnswerLatency(activityId, turnCommittedTicks);
+                        }
 
                         if (!speech.IsEmpty)
                         {
@@ -469,6 +480,8 @@ public sealed partial class RealtimeVoiceConversationRunner
                         // their speech the session reports.
                         if (conversationEvent.Type == RealtimeConversationEventType.UserTurnCommitted)
                         {
+                            turnCommittedTicks = DateTime.UtcNow.Ticks;
+                            awaitingFirstAudio = true;
                             _meter?.CallerSpeechStopped(DateTime.UtcNow.Ticks);
                             ProviderHeardCaller(turnOpen: false);
                             await LeaveOpeningTurnDetectionAsync(conversation, cancellationToken);
@@ -675,6 +688,40 @@ public sealed partial class RealtimeVoiceConversationRunner
         // blocked agent presence heartbeats and other webhook deliveries until they timed out. Flushing per turn
         // keeps each write short, and also means a transcript survives a call that ends abruptly.
         await _session.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Says how long the caller waited for an answer, split into the two waits that make it up.
+    /// </summary>
+    /// <remarks>
+    /// A caller who says the assistant is slow to answer is hearing the sum of two things this side cannot see
+    /// otherwise: how long the provider's turn detector waited after they stopped before taking the turn as
+    /// finished, and how long the model then took to produce its first audio. Which one is long decides the fix --
+    /// a more eager detector, or a faster model -- so each answer logs both.
+    /// </remarks>
+    /// <param name="activityId">The call, already sanitized for the log.</param>
+    /// <param name="turnCommittedTicks">When the provider took the caller's turn as finished, in UTC ticks.</param>
+    private void LogAnswerLatency(string activityId, long turnCommittedTicks)
+    {
+        if (turnCommittedTicks == 0 || !_logger.IsEnabled(LogLevel.Information))
+        {
+            return;
+        }
+
+        var now = DateTime.UtcNow.Ticks;
+        var lastVoice = _replyListener?.LastVoiceTicks ?? 0;
+
+        // The caller's voice is only tracked once the assistant has finished, so a turn that began by talking over it
+        // has no end on the line to measure from.
+        var detectorWait = lastVoice > 0 && lastVoice <= turnCommittedTicks && turnCommittedTicks - lastVoice < TimeSpan.TicksPerSecond * 10
+            ? (int)((turnCommittedTicks - lastVoice) / TimeSpan.TicksPerMillisecond)
+            : -1;
+
+        _logger.LogInformation(
+            "Answered the caller on activity '{ActivityId}': the turn was taken as finished {DetectorWaitMilliseconds} ms after their voice stopped on the line (-1 when it began over the assistant), and the model's first audio came {ModelMilliseconds} ms after that.",
+            activityId,
+            detectorWait,
+            (int)((now - turnCommittedTicks) / TimeSpan.TicksPerMillisecond));
     }
 
     /// <summary>

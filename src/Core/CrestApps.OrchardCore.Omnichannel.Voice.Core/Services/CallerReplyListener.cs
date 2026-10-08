@@ -125,6 +125,12 @@ internal sealed class CallerReplyListener
     public long LatestReplyStartTicks => Interlocked.Read(ref _replyStartTicks);
 
     /// <summary>
+    /// Gets when the caller's voice was last heard after the assistant finished, in UTC ticks, or zero when it has not
+    /// been.
+    /// </summary>
+    public long LastVoiceTicks => Interlocked.Read(ref _lastVoiceTicks);
+
+    /// <summary>
     /// Takes the caller's latest reply when it has gone unheard: it finished at least <paramref name="wait"/> ago,
     /// and the provider has not reported the caller speaking since it began. Each reply is taken at most once.
     /// </summary>

@@ -16,4 +16,11 @@ public sealed class VoiceCallGuidanceTests
         Assert.Contains("was that a yes?", VoiceCallGuidance.EndingTheCall, StringComparison.Ordinal);
         Assert.Contains("read the corrected details back", VoiceCallGuidance.EndingTheCall, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void ACallbackWithoutATime_IsAskedWhenBeforeTheGoodbye()
+    {
+        // Live, a customer said "can you call me later?" and the model said goodbye and hung up without asking when.
+        Assert.Contains("called back without saying when, ask once", VoiceCallGuidance.EndingTheCall, StringComparison.Ordinal);
+    }
 }
