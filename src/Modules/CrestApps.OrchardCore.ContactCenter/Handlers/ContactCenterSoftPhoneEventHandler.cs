@@ -11,7 +11,6 @@ using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.ContactCenter.Handlers;
@@ -52,8 +51,8 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
         ITelephonyInteractionStore telephonyInteractionStore,
         IHubContext<TelephonyHub, ITelephonyClient> hubContext,
         ShellSettings shellSettings,
-        IOmnichannelActivityStore activityStore = null,
-        ILogger<ContactCenterSoftPhoneEventHandler> logger = null)
+        IOmnichannelActivityStore activityStore,
+        ILogger<ContactCenterSoftPhoneEventHandler> logger)
     {
         _interactionManager = interactionManager;
         _callSessionManager = callSessionManager;
@@ -61,7 +60,7 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
         _telephonyInteractionStore = telephonyInteractionStore;
         _hubContext = hubContext;
         _activityStore = activityStore;
-        _logger = (ILogger)logger ?? NullLogger.Instance;
+        _logger = logger;
         _tenantName = shellSettings.Name;
     }
 
@@ -170,7 +169,7 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
     // the agent's own from the start, so it still shows.
     private async Task<bool> IsPacedDialAwaitingAgentAsync(Interaction interaction, CancellationToken cancellationToken)
     {
-        if (_activityStore is null || !DialerCallMetadata.IsAwaitingAgent(interaction))
+        if (!DialerCallMetadata.IsAwaitingAgent(interaction))
         {
             return false;
         }

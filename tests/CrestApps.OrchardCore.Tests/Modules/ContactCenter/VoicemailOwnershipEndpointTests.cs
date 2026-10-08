@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Endpoints;
 using CrestApps.OrchardCore.ContactCenter.Handlers;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Hubs;
@@ -18,6 +19,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
@@ -25,7 +27,6 @@ using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
 using YesSqlSession = YesSql.ISession;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -438,7 +439,9 @@ public sealed class VoicemailOwnershipEndpointTests : IAsyncLifetime
             CreateAgentProfileManager().Object,
             CreateInteractionStore(session),
             hubContext.Object,
-            new ShellSettings { Name = "Default" });
+            new ShellSettings { Name = "Default" },
+            Mock.Of<IOmnichannelActivityStore>(),
+            NullLogger<ContactCenterSoftPhoneEventHandler>.Instance);
 
         await handler.HandleAsync(new InteractionEvent
         {

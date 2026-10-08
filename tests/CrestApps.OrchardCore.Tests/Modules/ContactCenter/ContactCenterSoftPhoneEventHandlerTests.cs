@@ -3,11 +3,13 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Handlers;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.SignalR.Core;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Environment.Shell;
 
@@ -89,7 +91,9 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
             agentManager.Object,
             store.Object,
             hubContext.Object,
-            _shellSettings);
+            _shellSettings,
+            Mock.Of<IOmnichannelActivityStore>(),
+            NullLogger<ContactCenterSoftPhoneEventHandler>.Instance);
 
         var interactionEvent = new InteractionEvent
         {
@@ -187,7 +191,9 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
             agentManager.Object,
             store.Object,
             hubContext.Object,
-            _shellSettings);
+            _shellSettings,
+            Mock.Of<IOmnichannelActivityStore>(),
+            NullLogger<ContactCenterSoftPhoneEventHandler>.Instance);
 
         var interactionEvent = new InteractionEvent
         {
@@ -273,7 +279,9 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
             agentManager.Object,
             store.Object,
             hubContext.Object,
-            _shellSettings);
+            _shellSettings,
+            Mock.Of<IOmnichannelActivityStore>(),
+            NullLogger<ContactCenterSoftPhoneEventHandler>.Instance);
 
         var interactionEvent = new InteractionEvent
         {
@@ -342,7 +350,9 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
             agentManager.Object,
             store.Object,
             hubContext.Object,
-            _shellSettings);
+            _shellSettings,
+            Mock.Of<IOmnichannelActivityStore>(),
+            NullLogger<ContactCenterSoftPhoneEventHandler>.Instance);
 
         // Act
         await handler.HandleAsync(new InteractionEvent { EventType = eventType, InteractionId = "interaction-1" }, TestContext.Current.CancellationToken);
@@ -418,7 +428,9 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
             agentManager.Object,
             store.Object,
             hubContext.Object,
-            _shellSettings);
+            _shellSettings,
+            Mock.Of<IOmnichannelActivityStore>(),
+            NullLogger<ContactCenterSoftPhoneEventHandler>.Instance);
 
         var interactionEvent = new InteractionEvent
         {
@@ -502,7 +514,9 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
             agentManager.Object,
             store.Object,
             hubContext.Object,
-            _shellSettings);
+            _shellSettings,
+            Mock.Of<IOmnichannelActivityStore>(),
+            NullLogger<ContactCenterSoftPhoneEventHandler>.Instance);
 
         var interactionEvent = new InteractionEvent
         {
@@ -594,7 +608,9 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
             agentManager.Object,
             store.Object,
             hubContext.Object,
-            _shellSettings);
+            _shellSettings,
+            Mock.Of<IOmnichannelActivityStore>(),
+            NullLogger<ContactCenterSoftPhoneEventHandler>.Instance);
 
         var interactionEvent = new InteractionEvent
         {
@@ -683,7 +699,9 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
             agentManager.Object,
             new Mock<ITelephonyInteractionStore>().Object,
             hubContext.Object,
-            _shellSettings);
+            _shellSettings,
+            Mock.Of<IOmnichannelActivityStore>(),
+            NullLogger<ContactCenterSoftPhoneEventHandler>.Instance);
 
         // Act
         await handler.HandleAsync(
