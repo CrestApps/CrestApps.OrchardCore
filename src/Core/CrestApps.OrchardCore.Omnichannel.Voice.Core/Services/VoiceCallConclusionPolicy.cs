@@ -209,6 +209,110 @@ public static class VoiceCallConclusionPolicy
             : SessionLostNote + " " + modelSummary.Trim();
 
     // The offered disposition the subject's try-again action is wired to, or null when it has none.
+    /// <summary>
+    /// How far ahead a callback the customer asked for may be scheduled. Further than this is a misheard date.
+    /// </summary>
+    public static readonly TimeSpan LongestCallbackDelay = TimeSpan.FromDays(90);
+
+    /// <summary>
+    /// The time the customer asked to be called back at, in UTC, from what the review returned.
+    /// </summary>
+    /// <remarks>
+    /// The review reads "call me back in an hour" or "tomorrow at three" against the current time it is given and
+    /// returns the moment as an ISO 8601 date and time with its offset. A value without an offset is read in the
+    /// site's time zone, through <paramref name="localOffset"/>. Anything that is not a time in the future, within
+    /// <see cref="LongestCallbackDelay"/>, is not used: the follow-up then takes its action's default delay rather
+    /// than a moment the model invented.
+    /// </remarks>
+    /// <param name="requested">The time the review returned, or <see langword="null"/>.</param>
+    /// <param name="nowUtc">The current time, in UTC.</param>
+    /// <param name="localOffset">The site's offset from UTC, for a value given without one.</param>
+    public static DateTime? ResolveCallbackUtc(string requested, DateTime nowUtc, TimeSpan localOffset)
+    {
+        if (string.IsNullOrWhiteSpace(requested))
+        {
+            return null;
+        }
+
+        var text = requested.Trim();
+        DateTime utc;
+
+        if (HasOffset(text) &&
+            DateTimeOffset.TryParse(text, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var withOffset))
+        {
+            utc = withOffset.UtcDateTime;
+        }
+        else if (DateTime.TryParse(text, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var local))
+        {
+            utc = new DateTimeOffset(DateTime.SpecifyKind(local, DateTimeKind.Unspecified), localOffset).UtcDateTime;
+        }
+        else
+        {
+            return null;
+        }
+
+        if (utc <= nowUtc || utc - nowUtc > LongestCallbackDelay)
+        {
+            return null;
+        }
+
+        return utc;
+    }
+
+    /// <summary>
+    /// The schedule dates for the follow-ups a disposition creates, so they are due when the customer asked to be
+    /// called back.
+    /// </summary>
+    /// <remarks>
+    /// Keyed by subject action, the way an agent's completion form passes the date it was given. Only actions that
+    /// create a follow-up -- trying again, or a new activity -- take a date; the rest have nothing to schedule.
+    /// </remarks>
+    /// <param name="subjectActions">Every configured subject action.</param>
+    /// <param name="subjectContentType">The subject content type of the call being concluded.</param>
+    /// <param name="dispositionId">The disposition the call is concluded as.</param>
+    /// <param name="callbackUtc">When the customer asked to be called back, from <see cref="ResolveCallbackUtc"/>.</param>
+    /// <returns>The dates, or <see langword="null"/> when there is nothing to schedule.</returns>
+    public static Dictionary<string, DateTime?> CallbackScheduleDates(
+        IEnumerable<SubjectAction> subjectActions,
+        string subjectContentType,
+        string dispositionId,
+        DateTime? callbackUtc)
+    {
+        if (callbackUtc is null || string.IsNullOrEmpty(dispositionId) || subjectActions is null)
+        {
+            return null;
+        }
+
+        var dates = subjectActions
+            .Where(action => action is not null &&
+                !string.IsNullOrEmpty(action.ItemId) &&
+                string.Equals(action.DispositionId, dispositionId, StringComparison.Ordinal) &&
+                string.Equals(action.SubjectContentType, subjectContentType, StringComparison.OrdinalIgnoreCase) &&
+                (string.Equals(action.Source, OmnichannelConstants.ActionTypes.TryAgain, StringComparison.Ordinal) ||
+                 string.Equals(action.Source, OmnichannelConstants.ActionTypes.NewActivity, StringComparison.Ordinal)))
+            .ToDictionary(action => action.ItemId, _ => (DateTime?)DateTime.SpecifyKind(callbackUtc.Value, DateTimeKind.Utc), StringComparer.Ordinal);
+
+        return dates.Count > 0 ? dates : null;
+    }
+
+    // An ISO 8601 time with its offset ends in Z or in +hh:mm / -hh:mm after the time.
+    private static bool HasOffset(string text)
+    {
+        if (text.EndsWith('Z') || text.EndsWith('z'))
+        {
+            return true;
+        }
+
+        var timeStart = text.IndexOf('T', StringComparison.OrdinalIgnoreCase);
+
+        if (timeStart < 0)
+        {
+            timeStart = text.IndexOf(' ', StringComparison.Ordinal);
+        }
+
+        return timeStart >= 0 && text.IndexOfAny(['+', '-'], timeStart) > timeStart;
+    }
+
     private static OmnichannelDisposition FindRetriedDisposition(
         IList<OmnichannelDisposition> offered,
         IEnumerable<SubjectAction> subjectActions,

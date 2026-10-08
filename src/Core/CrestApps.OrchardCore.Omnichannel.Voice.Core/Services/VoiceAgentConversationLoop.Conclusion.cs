@@ -226,9 +226,16 @@ public sealed partial class VoiceAgentConversationLoop
                 ["LeadQualification"] = allowLeadConversion ? LeadAIConversion.GetQualification(leadConversion, flowSettings?.SubjectGoal) : null,
             });
 
+        // The review turns "call me back in an hour" or "tomorrow at three" into a moment, so it is told what time it
+        // is where the business is. Read here, before the activity is touched, like the other reads above.
+        var localClock = services.GetService<ILocalClock>();
+        var localNow = localClock is null ? new DateTimeOffset(clock.UtcNow) : await localClock.GetLocalNowAsync();
+
         var userPrompt = $"""
             Call transcript:
             {transcriptText}
+
+            Current date and time: {localNow.ToString("dddd yyyy-MM-dd'T'HH:mm:sszzz", System.Globalization.CultureInfo.InvariantCulture)}
 
             Subject goal: {flowSettings?.SubjectGoal}
 
@@ -301,6 +308,25 @@ public sealed partial class VoiceAgentConversationLoop
                 ? VoiceCallConclusionPolicy.ChooseSessionLostDisposition(dispositions, allActions, activity.SubjectContentType, result?.DispositionId)
                 : VoiceCallConclusionPolicy.ChooseDisposition(dispositions, result?.DispositionId);
         var dispositionId = disposition?.ItemId;
+
+        // When the customer asked to be called back at a particular time, the follow-up the disposition creates is
+        // due then rather than after its action's default delay. Only from a conversation that ran its course.
+        var callbackUtc = hasConversation && !sessionLost
+            ? VoiceCallConclusionPolicy.ResolveCallbackUtc(result?.CallbackTime, clock.UtcNow, localNow.Offset)
+            : null;
+        var scheduleDates = VoiceCallConclusionPolicy.CallbackScheduleDates(allActions, activity.SubjectContentType, dispositionId, callbackUtc);
+
+        if (!string.IsNullOrWhiteSpace(result?.CallbackTime) && _logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "The customer on AI voice activity '{ActivityId}' asked to be called back at '{RequestedTime}'; the follow-up is due {Due} (disposition '{Disposition}').",
+                activityId.SanitizeLogValue(),
+                result.CallbackTime.SanitizeLogValue(),
+                scheduleDates is null
+                    ? "after its action's default delay, as the time was not usable or the disposition creates no follow-up"
+                    : $"at {callbackUtc.Value.ToString("u", System.Globalization.CultureInfo.InvariantCulture)}",
+                disposition?.Name.SanitizeLogValue());
+        }
 
         var notes = reachedVoicemail
             ? VoiceCallConclusionPolicy.VoicemailNote
@@ -394,6 +420,7 @@ public sealed partial class VoiceAgentConversationLoop
                 Contact = contact,
                 Subject = subject,
                 Disposition = disposition,
+                ActionScheduleDates = scheduleDates,
             });
         }
 
@@ -514,5 +541,11 @@ public sealed partial class VoiceAgentConversationLoop
         /// Gets or sets whether the AI judged the lead qualified and asks to convert it, when allowed. Null otherwise.
         /// </summary>
         public bool? ConvertLead { get; set; }
+
+        /// <summary>
+        /// Gets or sets when the customer asked to be called back, as an ISO 8601 date and time with its offset, or
+        /// null when they named no time.
+        /// </summary>
+        public string CallbackTime { get; set; }
     }
 }
