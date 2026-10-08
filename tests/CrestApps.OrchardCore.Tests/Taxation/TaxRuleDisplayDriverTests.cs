@@ -1,12 +1,15 @@
 using System.Threading.Tasks;
 using CrestApps.OrchardCore.Taxation;
 using CrestApps.OrchardCore.Taxation.Core.Services;
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Taxation.Drivers;
+using CrestApps.OrchardCore.Taxation.Handlers;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
 using CrestApps.OrchardCore.Taxation.ViewModels;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using Microsoft.AspNetCore.Http;
 using OrchardCore.DisplayManagement.Handlers;
 using Xunit;
 
@@ -14,20 +17,28 @@ namespace CrestApps.OrchardCore.Tests.Taxation;
 
 public sealed class TaxRuleDisplayDriverTests
 {
-    private static TaxRuleMethodDisplayDriver CreateDriver()
-    {
-        var provider = new DefaultTaxCalculationMethodProvider(
+    private static DefaultTaxCalculationMethodProvider CreateProvider()
+        => new(
             new ITaxCalculationMethod[]
             {
                 new PercentageTaxCalculationMethod(),
                 new TaxTableTaxCalculationMethod(),
             });
 
+    private static TaxRuleMethodDisplayDriver CreateDriver()
+    {
         return new TaxRuleMethodDisplayDriver(
-            provider,
+            CreateProvider(),
             new InMemoryNamedCatalog<TaxTable>(),
             new PassThroughStringLocalizer<TaxRuleMethodDisplayDriver>());
     }
+
+    private static TaxRuleHandler CreateHandler()
+        => new(
+            new HttpContextAccessor(),
+            CreateProvider(),
+            new TestClock(DateTime.UtcNow),
+            new PassThroughStringLocalizer<TaxRuleHandler>());
 
     private static UpdateEditorContext CreateUpdateContext(TaxRuleMethodViewModel submitted)
     {
@@ -64,7 +75,7 @@ public sealed class TaxRuleDisplayDriverTests
     }
 
     [Fact]
-    public async Task UpdateAsync_WhenTableMethodHasNoTaxTable_AddsModelError()
+    public async Task UpdateAsync_WhenTableMethodHasNoTaxTable_LeavesTheRuleToTheHandler()
     {
         // Arrange
         var driver = CreateDriver();
@@ -82,8 +93,67 @@ public sealed class TaxRuleDisplayDriverTests
         await driver.UpdateAsync(rule, context);
 
         // Assert
-        Assert.False(context.Updater.ModelState.IsValid);
+        // The handler owns the "a table method needs a table" rule, so a recipe is held to it as well.
+        Assert.True(context.Updater.ModelState.IsValid);
         Assert.Null(rule.TaxTableId);
+    }
+
+    [Fact]
+    public async Task ValidatingAsync_WhenTableMethodHasNoTaxTable_Fails()
+    {
+        // Arrange
+        var handler = CreateHandler();
+        var context = new ValidatingContext<TaxRule>(new TaxRule
+        {
+            Name = "Sales tax",
+            TaxType = "sales",
+            Source = TaxCalculationMethodNames.TaxTable,
+        });
+
+        // Act
+        await handler.ValidatingAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Contains(context.Result.Errors, error => error.MemberNames.Contains(nameof(TaxRule.TaxTableId)));
+    }
+
+    [Fact]
+    public async Task ValidatingAsync_WhenTableMethodHasTaxTable_Succeeds()
+    {
+        // Arrange
+        var handler = CreateHandler();
+        var context = new ValidatingContext<TaxRule>(new TaxRule
+        {
+            Name = "Sales tax",
+            TaxType = "sales",
+            Source = TaxCalculationMethodNames.TaxTable,
+            TaxTableId = "tt-42",
+        });
+
+        // Act
+        await handler.ValidatingAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(context.Result.Succeeded);
+    }
+
+    [Fact]
+    public async Task ValidatingAsync_WhenPercentageMethodHasNoTaxTable_Succeeds()
+    {
+        // Arrange
+        var handler = CreateHandler();
+        var context = new ValidatingContext<TaxRule>(new TaxRule
+        {
+            Name = "Sales tax",
+            TaxType = "sales",
+            Source = TaxCalculationMethodNames.Percentage,
+        });
+
+        // Act
+        await handler.ValidatingAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(context.Result.Succeeded);
     }
 
     [Fact]

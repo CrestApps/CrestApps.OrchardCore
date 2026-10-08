@@ -4,6 +4,7 @@ using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Taxation.Deployments;
 using CrestApps.OrchardCore.Taxation.Models;
+using CrestApps.OrchardCore.Taxation.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
@@ -13,16 +14,19 @@ namespace CrestApps.OrchardCore.Taxation.Handlers;
 internal sealed class TaxRuleHandler : CatalogEntryHandlerBase<TaxRule>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ITaxCalculationMethodProvider _methodProvider;
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
 
     public TaxRuleHandler(
         IHttpContextAccessor httpContextAccessor,
+        ITaxCalculationMethodProvider methodProvider,
         IClock clock,
         IStringLocalizer<TaxRuleHandler> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
+        _methodProvider = methodProvider;
         _clock = clock;
         S = stringLocalizer;
     }
@@ -73,6 +77,11 @@ internal sealed class TaxRuleHandler : CatalogEntryHandlerBase<TaxRule>
         if (string.IsNullOrWhiteSpace(context.Model.Source))
         {
             context.Result.Fail(new ValidationResult(S["Calculation method is required."], [nameof(TaxRule.Source)]));
+        }
+        else if (string.IsNullOrEmpty(context.Model.TaxTableId) &&
+            _methodProvider.GetMethod(context.Model.Source)?.Inputs.HasFlag(TaxCalculationMethodInputs.TaxTable) == true)
+        {
+            context.Result.Fail(new ValidationResult(S["A tax table is required for the '{0}' calculation method.", context.Model.Source], [nameof(TaxRule.TaxTableId)]));
         }
 
         if (context.Model.MinimumAmount.HasValue &&

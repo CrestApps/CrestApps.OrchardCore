@@ -85,11 +85,7 @@ internal sealed class TaxRuleMethodDisplayDriver : DisplayDriver<TaxRule>
 
         if (inputs.HasFlag(TaxCalculationMethodInputs.TaxTable))
         {
-            if (string.IsNullOrEmpty(model.TaxTableId))
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.TaxTableId), S["A tax table is required for the '{0}' calculation method.", rule.Source]);
-            }
-
+            // The rule that a table-driven method needs a table is the handler's, so a recipe enforces it too.
             rule.TaxTableId = string.IsNullOrEmpty(model.TaxTableId) ? null : model.TaxTableId;
         }
         else
