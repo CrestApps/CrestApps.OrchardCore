@@ -99,4 +99,15 @@ public interface IVoiceCallEndTurn
     /// <returns><see langword="true"/> when the call should stay open for the customer's answer.</returns>
     bool TryHoldForAnswer()
         => false;
+
+    /// <summary>
+    /// Gets a value indicating whether the customer spoke last and the assistant has said nothing since, so a call
+    /// ended now would end on the customer's words with no closing line.
+    /// </summary>
+    /// <remarks>
+    /// Live, a customer confirmed their email with "yes", the model answered with the end-call tool alone, was told
+    /// to say nothing further, and the line went dead four seconds later: to the customer, hung up on mid-sentence.
+    /// </remarks>
+    bool ClosingLineOwed
+        => false;
 }

@@ -98,18 +98,35 @@ public sealed class EndCallTool : AIFunction
 
         var recorded = turn is not null;
 
+        // Read before the request: the customer's words are the last thing on the call, so ending it now ends it on
+        // them. A voicemail's message is its closing line.
+        var closingLineOwed = recorded && !answeredByMachine && turn.ClosingLineOwed;
+
         turn?.RequestEndCall(reason, answeredByMachine);
 
         if (logger is not null && logger.IsEnabled(LogLevel.Information))
         {
-            logger.LogInformation("The AI ended the call (recorded: {Recorded}, answered by a machine: {AnsweredByMachine}).", recorded, answeredByMachine);
+            logger.LogInformation(
+                "The AI ended the call (recorded: {Recorded}, answered by a machine: {AnsweredByMachine}, closing line owed: {ClosingLineOwed}).",
+                recorded,
+                answeredByMachine,
+                closingLineOwed);
         }
 
         // What the model reads back after the tool call. It is told the hangup is handled so it does not narrate
-        // it ("let me disconnect now"), and does not call the tool again when nothing appears to happen.
-        return ValueTask.FromResult<object>(recorded
-            ? "The call will be ended for you once you finish speaking. Say nothing further unless the customer speaks again."
-            : "This conversation cannot be ended from here; continue assisting the customer.");
+        // it ("let me disconnect now"), and does not call the tool again when nothing appears to happen. A model that
+        // ended the call without a word is told to say its goodbye: told only to say nothing further, it did, and
+        // the customer heard their own "yes" answered by the line going dead.
+        if (!recorded)
+        {
+            return ValueTask.FromResult<object>("This conversation cannot be ended from here; continue assisting the customer.");
+        }
+
+        return ValueTask.FromResult<object>(closingLineOwed
+            ? "The call will be ended for you once you finish speaking, but you have not said goodbye: the customer " +
+              "spoke last. Say one short closing line now -- thank them and say goodbye -- and nothing else. Do not " +
+              "ask anything and do not mention hanging up."
+            : "The call will be ended for you once you finish speaking. Say nothing further unless the customer speaks again.");
     }
 
     // The schema says boolean, but the tool is not strict, so the argument can arrive as a JSON value or as text.

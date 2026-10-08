@@ -156,6 +156,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
     }
     public interface IVoiceCallEndTurn
     {
+        bool ClosingLineOwed { get; }
         bool EndCallRequested { get; }
         System.Threading.CancellationToken EndCallRequestedToken { get; }
         bool ReachedVoicemail { get; }
@@ -278,6 +279,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
     public sealed class VoiceCallEndTurn : CrestApps.OrchardCore.Omnichannel.Voice.Services.IVoiceCallEndTurn
     {
         public VoiceCallEndTurn() { }
+        public bool ClosingLineOwed { get; }
         public bool EndCallRequested { get; }
         public System.Threading.CancellationToken EndCallRequestedToken { get; }
         public bool ReachedVoicemail { get; }

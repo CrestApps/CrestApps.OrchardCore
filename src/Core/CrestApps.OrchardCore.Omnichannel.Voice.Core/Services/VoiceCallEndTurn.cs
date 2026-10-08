@@ -11,6 +11,7 @@ public sealed class VoiceCallEndTurn : IVoiceCallEndTurn
     private int _requestCount;
     private int _awaitingAnswer;
     private int _holds;
+    private int _customerSpokeLast;
 
     // How many times one unanswered question may keep the call open against the model's request to end it.
     private const int MaximumHolds = 2;
@@ -49,6 +50,11 @@ public sealed class VoiceCallEndTurn : IVoiceCallEndTurn
     /// <inheritdoc/>
     public void AssistantSaid(string line)
     {
+        if (!string.IsNullOrWhiteSpace(line))
+        {
+            Volatile.Write(ref _customerSpokeLast, 0);
+        }
+
         // Only set here, never cleared: a goodbye said straight after the question, without the customer
         // answering, is exactly what must not close the call.
         if (VoiceConfirmation.AwaitsAnswer(line))
@@ -60,7 +66,14 @@ public sealed class VoiceCallEndTurn : IVoiceCallEndTurn
 
     /// <inheritdoc/>
     public void CustomerAnswered()
-        => Volatile.Write(ref _awaitingAnswer, 0);
+    {
+        Volatile.Write(ref _awaitingAnswer, 0);
+        Volatile.Write(ref _customerSpokeLast, 1);
+    }
+
+    /// <inheritdoc/>
+    public bool ClosingLineOwed
+        => Volatile.Read(ref _customerSpokeLast) == 1;
 
     /// <inheritdoc/>
     public bool TryHoldForAnswer()
@@ -77,6 +90,7 @@ public sealed class VoiceCallEndTurn : IVoiceCallEndTurn
     {
         Volatile.Write(ref _awaitingAnswer, 0);
         Volatile.Write(ref _holds, 0);
+        Volatile.Write(ref _customerSpokeLast, 0);
         EndCallRequested = false;
         Reason = null;
         ReachedVoicemail = false;

@@ -173,6 +173,11 @@ public sealed partial class RealtimeVoiceConversationRunner
     /// voice. It used to end this pump, and with it the call. Now the session is marked dead so it can be replaced,
     /// and the caller's audio keeps being read. While a replacement opens there is nowhere to send it, so it is not.
     /// </remarks>
+    /// <summary>
+    /// How long one send of caller audio to the session may take before it is logged as holding the caller back.
+    /// </summary>
+    private static readonly TimeSpan CallerAudioSendStall = TimeSpan.FromMilliseconds(250);
+
     private async Task SendToModelAsync(
         LiveConversation live,
         List<ReadOnlyMemory<byte>> released,
@@ -188,9 +193,24 @@ public sealed partial class RealtimeVoiceConversationRunner
 
         try
         {
+            var started = System.Diagnostics.Stopwatch.GetTimestamp();
+
             foreach (var chunk in released)
             {
                 await conversation.SendAudioAsync(chunk, cancellationToken);
+            }
+
+            // A send that waits holds up every frame behind it, so the session hears the caller late. Measured here
+            // so a provider that reports the caller late (see LogProviderRunningBehind) can be told apart from audio
+            // that left here late.
+            var elapsed = System.Diagnostics.Stopwatch.GetElapsedTime(started);
+
+            if (elapsed >= CallerAudioSendStall && _logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Sending the caller's audio to the realtime session on activity '{ActivityId}' took {ElapsedMilliseconds} ms, so the session hears the caller that much late.",
+                    context.Activity?.ItemId.SanitizeLogValue(),
+                    (int)elapsed.TotalMilliseconds);
             }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -404,6 +424,7 @@ public sealed partial class RealtimeVoiceConversationRunner
 
                     case RealtimeConversationEventType.UserSpeechStarted:
                         _meter?.CallerSpeechStarted(DateTime.UtcNow.Ticks);
+                        LogProviderRunningBehind(activityId);
                         ProviderHeardCaller(turnOpen: true);
 
                         // The first start since the last transcript: a pause mid-sentence starts speech again, but
@@ -654,6 +675,40 @@ public sealed partial class RealtimeVoiceConversationRunner
         // blocked agent presence heartbeats and other webhook deliveries until they timed out. Flushing per turn
         // keeps each write short, and also means a transcript survives a call that ends abruptly.
         await _session.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Says so when the provider reports the caller starting well after their voice was heard on the line.
+    /// </summary>
+    /// <remarks>
+    /// Live, a caller's "yes" reached the session as it was said and the provider reported it four and a half
+    /// seconds later; the assistant's own request to have it repeated was refused six seconds after it was sent,
+    /// as colliding with the reply to that "yes". To the caller it was eight seconds of silence and then the line
+    /// going dead, and nothing in the log said the provider was behind. The provider normally reports a voice
+    /// within half a second; this measures it against the line, so a slow session shows as one.
+    /// </remarks>
+    /// <param name="activityId">The call, already sanitized for the log.</param>
+    private void LogProviderRunningBehind(string activityId)
+    {
+        var heardOnLine = _replyListener?.LatestReplyStartTicks ?? 0;
+
+        // Only a reply the provider has not reported yet: once it has, later starts are the same reply resuming.
+        if (heardOnLine == 0 || heardOnLine <= Interlocked.Read(ref _providerHeardCallerTicks))
+        {
+            return;
+        }
+
+        var lag = TimeSpan.FromTicks(DateTime.UtcNow.Ticks - heardOnLine);
+
+        if (lag < ProviderLagWorthReporting || !_logger.IsEnabled(LogLevel.Information))
+        {
+            return;
+        }
+
+        _logger.LogInformation(
+            "The realtime session on activity '{ActivityId}' reported the caller starting {LagMilliseconds} ms after their voice was heard on the line; it is running behind the call's audio.",
+            activityId,
+            (int)lag.TotalMilliseconds);
     }
 
     private static ValueTask WriteToLineAsync(IContactCenterVoiceMediaSession media, ReadOnlyMemory<byte> audio, CancellationToken cancellationToken)

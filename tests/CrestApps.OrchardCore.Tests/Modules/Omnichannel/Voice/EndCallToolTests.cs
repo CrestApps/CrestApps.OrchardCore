@@ -153,6 +153,73 @@ public sealed class EndCallToolTests
         Assert.False(turn.EndCallRequested);
     }
 
+    [Fact]
+    public async Task EndingTheCall_OnTheCustomersLastWords_AsksForAGoodbyeFirst()
+    {
+        // Arrange
+        // Live, the customer confirmed their email with "yes", the model answered with the end-call tool alone, was
+        // told to say nothing further, and the line went dead four seconds later with no goodbye.
+        var (tool, turn, arguments) = Create();
+        turn.AssistantSaid("I heard: mike at gmail dot com. Did I get that right?");
+        turn.CustomerAnswered();
+        arguments["reason"] = "got basics and confirmed email";
+
+        // Act
+        var result = await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(turn.EndCallRequested);
+        Assert.Contains("you have not said goodbye", result?.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("Say nothing further", result?.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task EndingTheCall_AfterTheGoodbye_AsksForNothingMore()
+    {
+        // Arrange
+        var (tool, turn, arguments) = Create();
+        turn.CustomerAnswered();
+        turn.AssistantSaid("Perfect, thanks Haneen. Have a great day!");
+
+        // Act
+        var result = await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(turn.EndCallRequested);
+        Assert.Contains("Say nothing further", result?.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task EndingTheCall_OnVoicemail_NeverAsksForAGoodbye()
+    {
+        // Arrange
+        // The greeting is transcribed as the customer speaking, but the message left on it is the closing line.
+        var (tool, turn, arguments) = Create();
+        turn.CustomerAnswered();
+        arguments["voicemail"] = true;
+
+        // Act
+        var result = await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(turn.ReachedVoicemail);
+        Assert.Contains("Say nothing further", result?.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AReset_ForgetsWhoSpokeLast()
+    {
+        // Arrange
+        var turn = new VoiceCallEndTurn();
+        turn.CustomerAnswered();
+
+        // Act
+        turn.Reset();
+
+        // Assert
+        Assert.False(turn.ClosingLineOwed);
+    }
+
     private static (EndCallTool Tool, VoiceCallEndTurn Turn, AIFunctionArguments Arguments) Create()
     {
         var turn = new VoiceCallEndTurn();

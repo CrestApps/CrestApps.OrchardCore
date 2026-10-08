@@ -20,6 +20,12 @@ public sealed partial class RealtimeVoiceConversationRunner
     private static readonly TimeSpan UnheardReplyPollInterval = TimeSpan.FromMilliseconds(200);
 
     /// <summary>
+    /// How late the provider may report a reply heard on the line before that is logged as it running behind.
+    /// Normally under half a second.
+    /// </summary>
+    private static readonly TimeSpan ProviderLagWorthReporting = TimeSpan.FromMilliseconds(1500);
+
+    /// <summary>
     /// How many times on one call the assistant asks for a reply it did not catch. A line that keeps producing
     /// voice the provider will not hear is noise, and asking about it again and again is worse than the idle prompt.
     /// </summary>

@@ -120,6 +120,11 @@ internal sealed class CallerReplyListener
     }
 
     /// <summary>
+    /// Gets when the caller's latest reply began on the line, in UTC ticks, or zero when none has been heard.
+    /// </summary>
+    public long LatestReplyStartTicks => Interlocked.Read(ref _replyStartTicks);
+
+    /// <summary>
     /// Takes the caller's latest reply when it has gone unheard: it finished at least <paramref name="wait"/> ago,
     /// and the provider has not reported the caller speaking since it began. Each reply is taken at most once.
     /// </summary>

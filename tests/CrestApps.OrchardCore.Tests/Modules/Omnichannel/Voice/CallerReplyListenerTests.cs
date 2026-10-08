@@ -182,6 +182,25 @@ public sealed class CallerReplyListenerTests
     }
 
     // Feeds the frames one every 20 ms from the start, and returns when the last one arrived.
+    [Fact]
+    public void AReply_RecordsWhenItBeganOnTheLine()
+    {
+        // Arrange
+        // What the provider's report of the caller starting is measured against, to show a session running behind.
+        var listener = new CallerReplyListener();
+        var replyStarts = _start + Ms(1_000);
+
+        // Act
+        Feed(listener, Frames(Speech, 10), replyStarts, _start);
+
+        // Assert
+        Assert.Equal(replyStarts, listener.LatestReplyStartTicks);
+    }
+
+    [Fact]
+    public void BeforeAnyReply_NothingHasBegun()
+        => Assert.Equal(0, new CallerReplyListener().LatestReplyStartTicks);
+
     private static long Feed(CallerReplyListener listener, byte[][] frames, long startTicks, long assistantPlaysUntilTicks)
     {
         var now = startTicks;
