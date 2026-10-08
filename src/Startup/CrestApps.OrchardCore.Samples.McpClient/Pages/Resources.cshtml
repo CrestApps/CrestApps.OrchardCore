@@ -1,7 +1,13 @@
 @page
 @model CrestApps.OrchardCore.Samples.McpClient.Pages.ResourcesModel
 
-<h1>Resources</h1>
+<h1>
+    Resources
+    @if (string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    {
+        <span class="badge bg-secondary align-middle fs-6">@(Model.Resources?.Count ?? 0)</span>
+    }
+</h1>
 
 @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
 {

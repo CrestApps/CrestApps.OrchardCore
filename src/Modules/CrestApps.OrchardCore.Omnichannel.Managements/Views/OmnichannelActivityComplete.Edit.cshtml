@@ -6,6 +6,8 @@
 
 <h5 class="mb-3">@T["Activity information"]</h5>
 
+@* Optional values that are not set are left out rather than shown as an empty, full-height row. *@
+
 <div class="ocat-wrapper">
     <label asp-for="InteractionType" class="ocat-label">@T["Interaction type"]</label>
     <div class="ocat-end">
@@ -13,19 +15,25 @@
     </div>
 </div>
 
-<div class="ocat-wrapper">
-    <label asp-for="Channel" class="ocat-label">@T["Channel"]</label>
-    <div class="ocat-end">
-        <input id="@Html.IdFor(x => x.Channel)" class="form-control-plaintext" value="@Model.Channel" readonly />
+@if (!string.IsNullOrWhiteSpace(Model.Channel))
+{
+    <div class="ocat-wrapper">
+        <label asp-for="Channel" class="ocat-label">@T["Channel"]</label>
+        <div class="ocat-end">
+            <input id="@Html.IdFor(x => x.Channel)" class="form-control-plaintext" value="@Model.Channel" readonly />
+        </div>
     </div>
-</div>
+}
 
-<div class="ocat-wrapper">
-    <label asp-for="CampaignTitle" class="ocat-label">@T["Campaign"]</label>
-    <div class="ocat-end">
-        <input id="@Html.IdFor(x => x.CampaignTitle)" class="form-control-plaintext" value="@Model.CampaignTitle" readonly />
+@if (!string.IsNullOrWhiteSpace(Model.CampaignTitle))
+{
+    <div class="ocat-wrapper">
+        <label asp-for="CampaignTitle" class="ocat-label">@T["Campaign"]</label>
+        <div class="ocat-end">
+            <input id="@Html.IdFor(x => x.CampaignTitle)" class="form-control-plaintext" value="@Model.CampaignTitle" readonly />
+        </div>
     </div>
-</div>
+}
 
 <div class="ocat-wrapper">
     <label asp-for="UrgencyLevel" class="ocat-label">@T["Urgency level"]</label>
@@ -45,12 +53,15 @@
     </div>
 </div>
 
-<div class="ocat-wrapper">
-    <label asp-for="AssignedToName" class="ocat-label">@T["Assigned to"]</label>
-    <div class="ocat-end">
-        <input id="@Html.IdFor(x => x.AssignedToName)" class="form-control-plaintext" value="@Model.AssignedToName" readonly />
+@if (!string.IsNullOrWhiteSpace(Model.AssignedToName))
+{
+    <div class="ocat-wrapper">
+        <label asp-for="AssignedToName" class="ocat-label">@T["Assigned to"]</label>
+        <div class="ocat-end">
+            <input id="@Html.IdFor(x => x.AssignedToName)" class="form-control-plaintext" value="@Model.AssignedToName" readonly />
+        </div>
     </div>
-</div>
+}
 
 <div class="ocat-wrapper">
     <label asp-for="ScheduledLocal" class="ocat-label">@T["Scheduled at"]</label>
@@ -61,12 +72,25 @@
 
 @if (Model.CompletedLocal.HasValue)
 {
-    <div class="ocat-wrapper">
-        <label asp-for="CompletedByName" class="ocat-label">@T["Completed by"]</label>
-        <div class="ocat-end">
-            <input id="@Html.IdFor(x => x.CompletedByName)" class="form-control-plaintext" value="@Model.CompletedByName" readonly />
+    @* Who dispositioned it and how: a person, the AI agent of a profile, the dialer, or the platform. *@
+    if (!string.IsNullOrWhiteSpace(Model.DispositionedByName))
+    {
+        <div class="ocat-wrapper">
+            <label asp-for="DispositionedByName" class="ocat-label">@T["Dispositioned by"]</label>
+            <div class="ocat-end">
+                <input id="@Html.IdFor(x => x.DispositionedByName)" class="form-control-plaintext" value="@Model.DispositionedByName" readonly />
+            </div>
         </div>
-    </div>
+    }
+    else if (!string.IsNullOrWhiteSpace(Model.CompletedByName))
+    {
+        <div class="ocat-wrapper">
+            <label asp-for="CompletedByName" class="ocat-label">@T["Completed by"]</label>
+            <div class="ocat-end">
+                <input id="@Html.IdFor(x => x.CompletedByName)" class="form-control-plaintext" value="@Model.CompletedByName" readonly />
+            </div>
+        </div>
+    }
 
     <div class="ocat-wrapper">
         <label asp-for="CompletedLocal" class="ocat-label">@T["Completed at"]</label>

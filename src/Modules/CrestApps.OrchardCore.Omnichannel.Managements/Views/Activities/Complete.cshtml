@@ -1,12 +1,22 @@
+@using CrestApps.OrchardCore.Omnichannel.Core
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
-<zone Name="Title">
-    <h1>@RenderTitleSegments(T["Complete Activity"])</h1>
-</zone>
+@using OrchardCore.ContentManagement
+@using OrchardCore.Contents
 
 @{
     var activityId = ViewContext.HttpContext.Request.RouteValues["id"];
-    var contactContentItem = Model.ContactContentItem;
+    var contactContentItem = Model.ContactContentItem as ContentItem;
 }
+
+<zone Name="Title">
+    <breadcrumb name="OmnichannelActivitiesComplete" title="@T["Complete Activity"]">
+        @if (contactContentItem is not null)
+        {
+            <breadcrumb-item id="OmnichannelContact" action="Edit" controller="Admin" area="OrchardCore.Contents" route-contentItemId="@contactContentItem.ContentItemId" permission="@CommonPermissions.EditContent.Name" resource="@contactContentItem">@contactContentItem.DisplayText</breadcrumb-item>
+            <breadcrumb-item id="OmnichannelContactActivities" action="List" controller="Activities" area="CrestApps.OrchardCore.Omnichannel.Managements" route-contentItemId="@contactContentItem.ContentItemId" permission="@OmnichannelConstants.Permissions.ListContactActivities.Name" resource="@contactContentItem">@T["Activities"]</breadcrumb-item>
+        }
+    </breadcrumb>
+</zone>
 
 @if (contactContentItem is not null)
 {

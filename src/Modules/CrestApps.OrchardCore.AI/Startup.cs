@@ -15,6 +15,7 @@ using CrestApps.Core.Services;
 using CrestApps.Core.Templates.Extensions;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Handlers;
+using CrestApps.OrchardCore.AI.Core.Indexes;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Deployments.Drivers;
 using CrestApps.OrchardCore.AI.Deployments.Sources;
@@ -40,6 +41,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
@@ -64,6 +66,10 @@ public sealed class Startup : StartupBase
     {
         services.AddAICoreServices()
             .AddCoreAIServicesStoresYesSql()
+            // Has to follow the YesSql stores: they bind the connection and deployment catalogs to the
+            // database alone, which hides configuration-backed entries from everything that resolves a
+            // catalog instead of a store.
+            .AddMultiSourceAICatalogs()
             .AddDataMigration<AIDeploymentIndexMigrations>()
             .AddDataMigration<AIProfileIndexMigrations>()
             .AddDataMigration<AIProviderConnectionIndexMigrations>()
@@ -86,6 +92,7 @@ public sealed class Startup : StartupBase
             .AddScoped<IAIToolInstanceAccessor, DefaultAIToolInstanceAccessor>()
             .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
             .AddTransient<IConfigureOptions<GeneralAIOptions>, GeneralAIOptionsConfiguration>()
+            .AddSignalOptionsChangeTokenSource<GeneralAIOptions>()
             .AddTransient<IConfigureOptions<DefaultAIOptions>, DefaultAIOptionsConfiguration>()
             .AddNavigationProvider<AIProfileAdminMenu>();
 
@@ -97,8 +104,14 @@ public sealed class Startup : StartupBase
             .AddAIDeploymentServices()
             .AddPermissionProvider<AIDeploymentPermissionProvider>()
             .AddDisplayDriver<AIDeployment, AIDeploymentDisplayDriver>()
+            .AddDisplayDriver<AIDeployment, AIDeploymentModelCapabilitiesDisplayDriver>()
+            .AddDisplayDriver<AIDeployment, AIDeploymentCascadedRealtimeDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileDeploymentDisplayDriver>()
+            .AddDisplayDriver<AIProfile, AIProfileModelParametersDisplayDriver>()
+            .AddDisplayDriver<AIProfile, AIProfileUtilityModelParametersDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateDeploymentDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateModelParametersDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateUtilityModelParametersDisplayDriver>()
             .AddNavigationProvider<AIDeploymentAdminMenu>()
             .AddDataMigration<AIDeploymentTypeMigrations>()
             .AddDataMigration<AIDeploymentV1DocumentMigrations>()
@@ -126,11 +139,12 @@ public sealed class Startup : StartupBase
             .AddScoped<ICatalogEntryHandler<AIProfileTemplate>, AIProfileTemplateHandler>()
             .AddScoped<IAIProfileTemplateProvider, ModuleAIProfileTemplateProvider>()
             .AddScoped<IAIProfileTemplateProvider, AppDataAIProfileTemplateProvider>()
+            .AddScoped<AIProfileTemplateProfileFactory>()
+            .AddScoped<ProfileScenarioCatalog>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, SystemPromptTemplateDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateToolsDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateAgentsDisplayDriver>()
-            .AddDisplayDriver<AIProfile, AIProfileTemplateSelectionDisplayDriver>()
             .AddNavigationProvider<AITemplateAdminMenu>()
             .AddPermissionProvider<AIProfileTemplatePermissionsProvider>();
     }
@@ -147,6 +161,36 @@ public sealed class Startup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Indexing feature.
 /// </summary>
+/// <summary>
+/// Registers the deployment provider for cascaded realtime deployments: deployments that answer speech with
+/// speech by chaining a speech-to-text, a chat, and a text-to-speech deployment rather than talking to a
+/// provider of their own.
+/// </summary>
+public sealed class CascadedRealtimeStartup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CascadedRealtimeStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public CascadedRealtimeStartup(IStringLocalizer<CascadedRealtimeStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        // The deployment carries no connection of its own; it only names the deployments to chain.
+        services.AddCoreAIDeploymentProvider(AIConstants.CascadedRealtimeClientName, options =>
+        {
+            options.DisplayName = S["Cascaded Realtime"];
+            options.Description = S["Answers speech with speech by chaining a speech-to-text, a chat, and a text-to-speech deployment."];
+            options.UseContainedConnection = true;
+        });
+    }
+}
+
 [RequireFeatures("OrchardCore.Indexing")]
 public sealed class IndexingStartup : StartupBase
 {
@@ -256,8 +300,9 @@ public sealed class ChatCoreStartup : StartupBase
         services
             .AddCoreAIChatSessionStoresYesSql()
             .AddScoped<IAIChatSessionManager, DefaultAIChatSessionManager>()
-            .AddDataMigration<AIChatSessionIndexMigrations>()
-            .AddSingleton<IBackgroundTask, AIChatSessionCloseBackgroundTask>();
+            .AddDataMigration<AIChatSessionIndexMigrations>();
+
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AIChatSessionCloseBackgroundTask>());
 
         services.AddDisplayDriver<AIProfile, AIProfileResponseHandlerDisplayDriver>();
 
@@ -289,6 +334,7 @@ public sealed class ChatCoreStartup : StartupBase
         services.AddSiteDisplayDriver<DefaultOrchestratorSettingsDisplayDriver>();
         services.AddNavigationProvider<AISiteSettingsAdminMenu>();
 
+        services.AddResourceConfiguration<ResourceManagementOptionsConfiguration>();
     }
 }
 
@@ -373,7 +419,13 @@ public sealed class ChatAnalyticsStartup : StartupBase
         services
             .AddDataMigration<AIChatSessionMetricsIndexMigrations>()
             .AddDataMigration<AICompletionUsageIndexMigrations>()
-            .AddIndexProvider<AICompletionUsageIndexProvider>();
+            .AddIndexProvider<AICompletionUsageIndexProvider>()
+            .AddDataMigration<AIVoiceSessionSummaryIndexMigrations>()
+            .AddIndexProvider<AIVoiceSessionSummaryIndexProvider>();
+
+        // The table is this feature's, so the store that fills it is too. Without it the tenant keeps the default
+        // that records nothing, and the voice loop's summaries are dropped rather than written to a missing table.
+        services.Replace(ServiceDescriptor.Scoped<IAIVoiceSessionSummaryStore, YesSqlAIVoiceSessionSummaryStore>());
     }
 }
 
@@ -385,19 +437,18 @@ public sealed class ToolInstancesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        // The default registry surfaces every stored instance to the model, so it is skipped in favor of
-        // OrchardCoreToolInstanceRegistryProvider, which only surfaces instances the current user may access.
+        // Tool-instance access is enforced when a profile, template, or chat interaction is configured, so
+        // the default registry is used to surface the instances stored on the completion context at chat time
+        // without re-checking permissions during the AI session.
         services.AddCrestAppsCore(crestApps => crestApps
             .AddAISuite(ai => ai
                 .AddToolInstances(toolInstances => toolInstances
                     .AddHttpApiRequestSource()
                     .AddDocumentationSearchSources()
-                    .AddYesSqlStores(),
-                    useDefaultRegistry: false)
+                    .AddYesSqlStores()
+                )
             )
         );
-
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IToolRegistryProvider, OrchardCoreToolInstanceRegistryProvider>());
 
         services.TryAddEnumerable(
         [
@@ -408,10 +459,12 @@ public sealed class ToolInstancesStartup : StartupBase
         services
             .AddDataMigration<AIToolInstanceIndexMigrations>()
             .AddDisplayDriver<AIToolInstance, AIToolInstanceDisplayDriver>()
+            .AddDisplayDriver<AIToolInstance, AIToolInstanceParametersDisplayDriver>()
             .AddDisplayDriver<AIToolInstance, HttpApiRequestToolInstanceDisplayDriver>()
             .AddDisplayDriver<AIToolInstance, SitemapDocumentationToolInstanceDisplayDriver>()
             .AddDisplayDriver<AIToolInstance, SearchIndexDocumentationToolInstanceDisplayDriver>()
             .AddDisplayDriver<AIToolInstance, AlgoliaDocumentationToolInstanceDisplayDriver>()
+            .AddDisplayDriver<AIToolInstance, WebsiteSearchToolInstanceDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileToolInstancesDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateToolInstancesDisplayDriver>()
             .AddNavigationProvider<AIToolInstanceAdminMenu>()

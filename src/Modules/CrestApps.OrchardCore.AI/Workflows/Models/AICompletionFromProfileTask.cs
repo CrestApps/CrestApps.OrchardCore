@@ -2,6 +2,7 @@
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.AI.Core;
 using Fluid;
 using Fluid.Values;
 using Microsoft.Extensions.AI;
@@ -119,10 +120,11 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
         try
         {
             var context = await _completionContextBuilder.BuildAsync(profile);
-            var deployment = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.Chat, deploymentName: context.ChatDeploymentName)
+            var deployment = await _deploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.Chat, deploymentName: context.ChatDeploymentName)
 
             ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
 
+            using var usageScope = AIUsageScope.Begin(contextType: AIUsageCategories.Workflow);
             var completion = await _completionService.CompleteAsync(deployment, [new ChatMessage(ChatRole.User, userPrompt.Trim())], context);
 
             var bestChoice = completion.Messages.FirstOrDefault();

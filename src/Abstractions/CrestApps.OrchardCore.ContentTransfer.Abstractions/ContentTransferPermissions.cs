@@ -1,16 +1,17 @@
+using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.ContentTransfer;
 
 public sealed class ContentTransferPermissions
 {
-    public static readonly Permission ListContentTransferEntries = new("ListContentTransferEntries", "List content transfer entries");
-    public static readonly Permission DeleteContentTransferEntries = new("DeleteContentTransferEntries", "Delete content transfer entries", new[] { ListContentTransferEntries });
+    public static readonly Permission ListContentTransferEntries = new("ListContentTransferEntries", LocalizationSource.Create<ContentTransferPermissions>("List content transfer entries"));
+    public static readonly Permission DeleteContentTransferEntries = new("DeleteContentTransferEntries", LocalizationSource.Create<ContentTransferPermissions>("Delete content transfer entries"), new[] { ListContentTransferEntries });
 
-    public static readonly Permission ImportContentFromFile = new("ImportContentFromFile", "Import content items from file");
+    public static readonly Permission ImportContentFromFile = new("ImportContentFromFile", LocalizationSource.Create<ContentTransferPermissions>("Import content items from file"));
     public static readonly Permission ImportContentFromFileOfType = new("ImportContentFromFile_{0}", "Import {0} content items from file", new[] { ImportContentFromFile });
 
-    public static readonly Permission ExportContentFromFile = new("ExportContentFromFile", "Export content items from file");
+    public static readonly Permission ExportContentFromFile = new("ExportContentFromFile", LocalizationSource.Create<ContentTransferPermissions>("Export content items from file"));
     public static readonly Permission ExportContentFromFileOfType = new("ExportContentFromFile_{0}", "Export {0} content items from file", new[] { ExportContentFromFile });
 
     private static Dictionary<ValueTuple<string, string>, Permission> _permissionsByType = new();
@@ -28,7 +29,7 @@ public sealed class ContentTransferPermissions
 
         permission = new Permission(
             string.Format(template.Name, contentType),
-            string.Format(template.Description, contentType),
+            string.Format(template.Description?.Value, contentType),
             (template.ImpliedBy ?? []).Select(t => CreateDynamicPermission(t, contentType)
             )
         );

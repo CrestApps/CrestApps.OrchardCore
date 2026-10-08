@@ -1,8 +1,6 @@
 ﻿using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Tooling;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
-using CrestApps.OrchardCore.AI.Core;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -14,7 +12,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 internal sealed class ChatInteractionToolsDisplayDriver : DisplayDriver<ChatInteraction>
 {
     private readonly AIToolDefinitionOptions _toolDefinitions;
-    private readonly IAuthorizationService _authorizationService;
+    private readonly IAIToolAccessEvaluator _toolAccessEvaluator;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
     internal readonly IStringLocalizer S;
@@ -23,17 +21,17 @@ internal sealed class ChatInteractionToolsDisplayDriver : DisplayDriver<ChatInte
     /// Initializes a new instance of the <see cref="ChatInteractionToolsDisplayDriver"/> class.
     /// </summary>
     /// <param name="toolDefinitions">The tool definitions.</param>
-    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="toolAccessEvaluator">The evaluator used to check tool access permissions.</param>
     /// <param name="httpContextAccessor">The http context accessor.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ChatInteractionToolsDisplayDriver(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
-        IAuthorizationService authorizationService,
+        IAIToolAccessEvaluator toolAccessEvaluator,
         IHttpContextAccessor httpContextAccessor,
         IStringLocalizer<ChatInteractionToolsDisplayDriver> stringLocalizer)
     {
         _toolDefinitions = toolDefinitions.Value;
-        _authorizationService = authorizationService;
+        _toolAccessEvaluator = toolAccessEvaluator;
         _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
     }
@@ -53,7 +51,7 @@ internal sealed class ChatInteractionToolsDisplayDriver : DisplayDriver<ChatInte
         {
             // Check if user has access to this tool
 
-            if (await _authorizationService.AuthorizeAsync(user, AIPermissions.AccessAITool, tool.Key as object))
+            if (await _toolAccessEvaluator.IsAuthorizedAsync(user, tool.Key))
             {
                 accessibleTools[tool.Key] = tool.Value;
             }

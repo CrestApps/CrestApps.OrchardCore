@@ -5,14 +5,25 @@ namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 /// <summary>
 /// Represents the content definition recipe step base.
 /// </summary>
-public abstract class ContentDefinitionRecipeStepBase(
-    IEnumerable<IContentSchemaDefinition> schemaDefinitions,
-    IContentSchemaProvider contentSchemaProvider) : IRecipeStep
+public abstract class ContentDefinitionRecipeStepBase : IRecipeStep
 {
-    private readonly IEnumerable<IContentSchemaDefinition> _schemaDefinitions = schemaDefinitions;
-    private readonly IContentSchemaProvider _contentSchemaProvider = contentSchemaProvider;
+    private readonly IEnumerable<IContentSchemaDefinition> _schemaDefinitions;
+    private readonly IContentSchemaProvider _contentSchemaProvider;
 
     private JsonSchema _cached;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ContentDefinitionRecipeStepBase"/> class.
+    /// </summary>
+    /// <param name="schemaDefinitions">The registered content schema definitions used to compose the step schema.</param>
+    /// <param name="contentSchemaProvider">The provider used to resolve dynamic enum values.</param>
+    protected ContentDefinitionRecipeStepBase(
+        IEnumerable<IContentSchemaDefinition> schemaDefinitions,
+        IContentSchemaProvider contentSchemaProvider)
+    {
+        _schemaDefinitions = schemaDefinitions;
+        _contentSchemaProvider = contentSchemaProvider;
+    }
 
     /// <summary>
     /// Gets the name.

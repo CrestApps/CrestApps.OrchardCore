@@ -42,7 +42,9 @@ internal sealed class AIProfileTemplateDeploymentDisplayDriver : DisplayDriver<A
             return null;
         }
 
-        return Initialize<EditProfileDeploymentViewModel>("AIProfileDeployment_Edit", async model =>
+        // Render the chat and utility deployment selectors as separate shapes so the metadata-driven model
+        // parameter editors (for example reasoning effort) can be injected immediately after each selection.
+        async ValueTask PopulateAsync(EditProfileDeploymentViewModel model)
         {
             var metadata = template.GetOrCreate<ProfileTemplateMetadata>();
             var settings = await _siteService.GetSettingsAsync<DefaultAIDeploymentSettings>();
@@ -51,13 +53,22 @@ internal sealed class AIProfileTemplateDeploymentDisplayDriver : DisplayDriver<A
             model.ShowMissingDefaultChatDeploymentWarning = string.IsNullOrEmpty(settings.DefaultChatDeploymentName);
             model.ShowMissingDefaultUtilityDeploymentWarning = string.IsNullOrEmpty(settings.DefaultUtilityDeploymentName);
 
-            model.ChatDeployments = BuildGroupedDeploymentItems(
-                await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Chat));
+            // The chat deployment is the text model the generated profile talks to, so the picker offers the
+            // chat slot only -- a speech-to-speech model cannot answer a typed turn. The model that carries a
+            // spoken conversation is named separately, on the chat mode editor. The utility slot serves
+            // background text work and so stays text-only too.
+            model.ChatDeployments = (await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Chat)).ToSelectList();
 
-            model.UtilityDeployments = BuildGroupedDeploymentItems(
-                await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Utility));
-        }).Location("Content:1%Deployments;2")
-        .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
+            model.UtilityDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Utility);
+        }
+
+        return Combine(
+            Initialize<EditProfileDeploymentViewModel>("AIProfileChatDeployment_Edit", PopulateAsync)
+                .Location("Content:1%Deployments & Interactions;2")
+                .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile)),
+            Initialize<EditProfileDeploymentViewModel>("AIProfileUtilityDeployment_Edit", PopulateAsync)
+                .Location("Content:2%Deployments & Interactions;2")
+                .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile)));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfileTemplate template, UpdateEditorContext context)
@@ -78,30 +89,4 @@ internal sealed class AIProfileTemplateDeploymentDisplayDriver : DisplayDriver<A
         return Edit(template, context);
     }
 
-    private static IEnumerable<SelectListItem> BuildGroupedDeploymentItems(IEnumerable<AIDeployment> deployments)
-    {
-        var groups = new Dictionary<string, SelectListGroup>(StringComparer.OrdinalIgnoreCase);
-
-        return deployments
-            .OrderBy(d => d.GetConnectionDisplayName(), StringComparer.OrdinalIgnoreCase)
-            .ThenBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
-            .Select(d =>
-            {
-                var groupKey = d.GetConnectionDisplayName();
-                SelectListGroup group = null;
-
-                if (!string.IsNullOrEmpty(groupKey) && !groups.TryGetValue(groupKey, out group))
-                {
-                    group = new SelectListGroup { Name = groupKey };
-
-                    groups[groupKey] = group;
-                }
-
-                var label = string.Equals(d.Name, d.ModelName, StringComparison.OrdinalIgnoreCase)
-                ? d.Name
-                : $"{d.Name} ({d.ModelName})";
-
-                return new SelectListItem(label, d.Name) { Group = group };
-            });
-    }
 }

@@ -2,17 +2,19 @@
   "name": "crestapps.orchardcore.resources",
   "private": true,
   "devDependencies": {
-    "dompurify": "^3.4.13",
+    "dompurify": "^3.4.16",
     "easymde": "2.21.0",
     "flatpickr": "4.6.13",
-    "highlight.js": "^11.11.1",
-    "marked": "^18.0.5"
+    "highlight.js": "^11.12.0",
+    "marked": "^18.0.14"
   },
   "dependencies": {
-    "@crestapps/ai-chat-ui": "1.2.0",
-    "@crestapps/bootstrap-select": "1.2.1",
+    "@crestapps/ai-chat-ui": "2.0.0-preview.215",
+    "@crestapps/bootstrap-select": "^1.2.4",
+    "@sapphi-red/web-noise-suppressor": "0.4.1",
     "chart.js": "^4.5.1",
-    "intl-tel-input": "29.1.0"
+    "intl-tel-input": "^29.5.3",
+    "medium-zoom": "1.1.0"
   },
   "overrides": {
     "postcss": "^8.5.15"

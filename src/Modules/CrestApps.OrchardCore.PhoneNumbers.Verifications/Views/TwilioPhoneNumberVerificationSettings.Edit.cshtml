@@ -9,8 +9,8 @@
         <div class="form-check form-switch">
             <input type="checkbox" class="form-check-input" asp-for="IsEnabled" data-bs-toggle="collapse" data-bs-target="#Twilio_Provider_Settings" aria-controls="Twilio_Provider_Settings" aria-expanded="@(Model.IsEnabled ? "true" : "false")" />
             <label class="form-check-label" asp-for="IsEnabled">@T["Enable this provider"]</label>
+            <span class="hint dashed">@T["When enabled, this provider becomes available for selection as the default verification provider."]</span>
         </div>
-        <span class="hint">@T["When enabled, this provider becomes available for selection as the default verification provider."]</span>
     </div>
 </div>
 
@@ -39,7 +39,7 @@
         <div class="ocat-wrapper">
             <label asp-for="ApiKeySecret" class="ocat-label">@T["API key secret"]</label>
             <div class="ocat-end">
-                <input type="password" class="form-control" asp-for="ApiKeySecret" autocomplete="off" placeholder='@T["Enter a new API key secret to replace the saved value"]' />
+                <input type="password" class="form-control" asp-for="ApiKeySecret" autocomplete="new-password" placeholder='@T["Enter a new API key secret to replace the saved value"]' data-1p-ignore data-lpignore="true" data-bwignore="true" />
                 <span asp-validation-for="ApiKeySecret" class="text-danger"></span>
                 @if (Model.HasApiKeySecret)
                 {
@@ -66,7 +66,7 @@
         <div class="ocat-wrapper">
             <label asp-for="AuthToken" class="ocat-label">@T["Auth Token"]</label>
             <div class="ocat-end">
-                <input type="password" class="form-control" asp-for="AuthToken" autocomplete="off" placeholder='@T["Enter a new Auth Token to replace the saved value"]' />
+                <input type="password" class="form-control" asp-for="AuthToken" autocomplete="new-password" placeholder='@T["Enter a new Auth Token to replace the saved value"]' data-1p-ignore data-lpignore="true" data-bwignore="true" />
                 <span asp-validation-for="AuthToken" class="text-danger"></span>
                 @if (Model.HasAuthToken)
                 {

@@ -1,191 +1,68 @@
-using System.Text.Json;
 using CrestApps.OrchardCore.Telephony.PlaywrightTests.Infrastructure;
 using Microsoft.Playwright;
 
 namespace CrestApps.OrchardCore.Telephony.PlaywrightTests;
 
 /// <summary>
-/// End-to-end tests that drive the real soft phone client in a headless browser against a test hub,
-/// verifying the SignalR contract and the widget's call state transitions.
+/// Drives the real soft phone bundle through placing, holding, adding, conferencing, transferring and ending calls
+/// against the test hub.
 /// </summary>
-public sealed class SoftPhoneWidgetTests : IAsyncLifetime
+public sealed class SoftPhoneWidgetTests : SoftPhoneBrowserTest
 {
-    private SoftPhoneTestServer _server = null!;
-    private IPlaywright _playwright = null!;
-    private IBrowser _browser = null!;
-
-    public async ValueTask InitializeAsync()
-    {
-        var exitCode = Microsoft.Playwright.Program.Main(["install", "chromium"]);
-
-        if (exitCode != 0)
-        {
-            throw new InvalidOperationException($"Playwright browser installation failed with exit code {exitCode}.");
-        }
-
-        _server = new SoftPhoneTestServer();
-        await _server.StartAsync();
-
-        _playwright = await Playwright.CreateAsync();
-        _browser = await _playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_browser is not null)
-        {
-            await _browser.DisposeAsync();
-        }
-
-        _playwright?.Dispose();
-
-        if (_server is not null)
-        {
-            await _server.DisposeAsync();
-        }
-    }
-
-    [Fact]
-    public async Task BrowserAudio_DialInitializesAdapterAndMicrophone()
-    {
-        // Arrange
-        var page = await _browser.NewPageAsync();
-        await page.AddInitScriptAsync(
-            """
-            window.browserAudioState = {
-                getUserMediaCount: 0,
-                initialized: false,
-                handledStates: [],
-                track: {
-                    enabled: false,
-                    stopped: false,
-                    stop: function () { this.stopped = true; }
-                }
-            };
-            Object.defineProperty(navigator, 'mediaDevices', {
-                configurable: true,
-                value: {
-                    getUserMedia: function () {
-                        window.browserAudioState.getUserMediaCount++;
-                        var track = window.browserAudioState.track;
-                        return Promise.resolve({
-                            getTracks: function () { return [track]; },
-                            getAudioTracks: function () { return [track]; }
-                        });
-                    }
-                }
-            });
-            """);
-        await page.GotoAsync(_server.BaseUrl + "?browserAudio=true");
-        await WaitForConnectedAsync(page);
-        await page.EvaluateAsync(
-            """
-            () => {
-                window.telephonySoftPhone.getInstance().registerMediaAdapter('in-memory', function (context) {
-                    window.browserAudioState.initialized = !!context.localStream;
-                    return {
-                        handleCallState: function (call) {
-                            window.browserAudioState.handledStates.push(call ? call.state : null);
-                        },
-                        dispose: function () {
-                            window.browserAudioState.disposed = true;
-                        }
-                    };
-                });
-            }
-            """);
-        await page.ClickAsync("[data-telephony-toggle]");
-        await page.FillAsync("[data-telephony-number]", "+15551234567");
-
-        // Act
-        await page.ClickAsync("[data-telephony-dial]");
-        await PublishLatestCallStateAsync(page);
-
-        // Assert
-        await page.WaitForFunctionAsync("() => window.browserAudioState.handledStates.length > 0");
-        var state = await page.EvaluateAsync<JsonElement>("() => window.browserAudioState");
-        Assert.Equal(1, state.GetProperty("getUserMediaCount").GetInt32());
-        Assert.True(state.GetProperty("initialized").GetBoolean());
-        Assert.True(state.GetProperty("track").GetProperty("enabled").GetBoolean());
-    }
-
-    [Fact]
-    public async Task BrowserAudio_WhenAdapterIsNotRegistered_FailsClosedWithoutAcquiringTheMicrophone()
-    {
-        // Arrange
-        var page = await _browser.NewPageAsync();
-        await page.AddInitScriptAsync(
-            """
-            window.browserAudioState = { getUserMediaCount: 0 };
-            Object.defineProperty(navigator, 'mediaDevices', {
-                configurable: true,
-                value: {
-                    getUserMedia: function () {
-                        window.browserAudioState.getUserMediaCount++;
-                        return Promise.reject(new Error('The microphone must never be requested.'));
-                    }
-                }
-            });
-            """);
-        await page.GotoAsync(_server.BaseUrl + "?browserAudio=true");
-        await WaitForConnectedAsync(page);
-
-        // No adapter is registered for the configured 'in-memory' name.
-        await page.ClickAsync("[data-telephony-toggle]");
-        await page.FillAsync("[data-telephony-number]", "+15551234567");
-
-        // Act
-        await page.ClickAsync("[data-telephony-dial]");
-
-        // Assert - the widget surfaces the unavailable adapter and never reaches the microphone.
-        await page.Locator("[data-telephony-error]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
-        var error = await page.Locator("[data-telephony-error]").InnerTextAsync();
-
-        Assert.Equal("The browser audio adapter is unavailable.", error.Trim());
-        Assert.Equal(0, await page.EvaluateAsync<int>("() => window.browserAudioState.getUserMediaCount"));
-    }
-
     [Fact]
     public async Task Dial_ThenHangup_TransitionsSoftPhoneUi()
     {
         // Arrange
-        var page = await _browser.NewPageAsync();
-        await page.GotoAsync(_server.BaseUrl);
-        await WaitForConnectedAsync(page);
-
+        var page = await OpenAsync();
         await page.ClickAsync("[data-telephony-toggle]");
         await page.FillAsync("[data-telephony-number]", "+15551234567");
+
+        // Holds the dial's round trip open, so what the phone shows while it is in flight can be seen.
+        await page.EvaluateAsync("() => window.telephonySoftPhone.getInstance().getConnection().invoke('SetDialDelay', 500)");
 
         // Act
         await page.ClickAsync("[data-telephony-dial]");
 
-        // Assert - the command response alone does not change the call state.
-        Assert.Equal("Ready", (await page.Locator("[data-telephony-status]").InnerTextAsync()).Trim());
+        // Assert - while the dial is in flight the phone says it is connecting at once, keeps the (now disabled) dial
+        // button where it was, and offers no call controls: there is no call to control yet.
+        await AssertStatusAsync(page, "Connecting...");
         Assert.True(await page.Locator("[data-telephony-dial]").IsVisibleAsync());
+        Assert.True(await page.Locator("[data-telephony-dial]").IsDisabledAsync());
+        Assert.True(await page.Locator("[data-telephony-hangup]").IsHiddenAsync());
 
-        // Act - publish the provider-authoritative state.
+        // Assert - the provider acknowledges the dial as connecting: the call can be cancelled, but there is no running
+        // time and no hold or mute until the far end answers.
+        await page.Locator("[data-telephony-hangup]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        await AssertStatusAsync(page, "Connecting...");
+        Assert.True(await page.Locator("[data-telephony-dial]").IsHiddenAsync());
+        Assert.True(await page.Locator("[data-telephony-hold]").IsHiddenAsync());
+        Assert.True(await page.Locator("[data-telephony-mute]").IsHiddenAsync());
+
+        // Act - the provider reports the call connected.
         await PublishLatestCallStateAsync(page);
 
         // Assert
-        await page.Locator("[data-telephony-hangup]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
-        var status = await page.Locator("[data-telephony-status]").InnerTextAsync();
-        Assert.Equal("In call", status.Trim());
+        await page.Locator("[data-telephony-mute]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        await AssertTimedStatusAsync(page, "In call");
         Assert.True(await page.Locator("[data-telephony-dial]").IsHiddenAsync());
+        Assert.True(await page.Locator("[data-telephony-hold]").IsVisibleAsync());
+        Assert.Equal(0, await page.Locator("[data-telephony-merge-calls]").CountAsync());
         Assert.Equal("fa-solid fa-phone", await page.Locator("[data-telephony-toggle-icon]").GetAttributeAsync("class"));
-        Assert.True(await page.Locator("[data-telephony-mute]").IsVisibleAsync());
-        Assert.True(await page.Locator("[data-telephony-merge]").IsHiddenAsync());
 
-        // Act - hang up
+        // Act - hang up.
         await page.ClickAsync("[data-telephony-hangup]");
 
-        // Assert - the command acknowledgement does not change the state.
-        Assert.Equal("In call", (await page.Locator("[data-telephony-status]").InnerTextAsync()).Trim());
+        // Assert - the provider's answer to the hangup says the call is over, and the phone is ready at once rather
+        // than waiting for a separate event.
+        await page.Locator("[data-telephony-dial]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        Assert.True(await page.Locator("[data-telephony-hangup]").IsHiddenAsync());
+        await AssertStatusAsync(page, "Ready");
 
-        // Act - publish the provider-authoritative terminal state.
+        // Act - the provider's own report that the call ended arrives afterwards.
         await PublishLatestCallStateAsync(page);
 
-        // Assert - back to idle after the provider event.
-        await page.Locator("[data-telephony-dial]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        // Assert - it changes nothing.
+        await AssertStatusAsync(page, "Ready");
         Assert.True(await page.Locator("[data-telephony-hangup]").IsHiddenAsync());
     }
 
@@ -193,9 +70,7 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
     public async Task EnterInPhoneNumber_DialsNumber()
     {
         // Arrange
-        var page = await _browser.NewPageAsync();
-        await page.GotoAsync(_server.BaseUrl);
-        await WaitForConnectedAsync(page);
+        var page = await OpenAsync();
         await page.ClickAsync("[data-telephony-toggle]");
         await page.FillAsync("[data-telephony-number]", "+15551234567");
         var baselineCount = await page.EvaluateAsync<int>(
@@ -205,24 +80,23 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
         await page.PressAsync("[data-telephony-number]", "Enter");
 
         // Assert
-        await page.WaitForFunctionAsync(
+        await WaitForPromiseAsync(
+            page,
             "([count]) => window.telephonySoftPhone.getInstance().getConnection().invoke('GetDialRequestCount').then(value => value === count + 1)",
             new[] { baselineCount });
-        Assert.Equal(string.Empty, await page.Locator("[data-telephony-number]").InputValueAsync());
+
+        // While the dial is in flight the widget mirrors the number being connected in the (now read-only) input,
+        // so the display does not jump when the first authoritative call state arrives.
+        Assert.Equal("+1 (555) 123-4567", await page.Locator("[data-telephony-number]").InputValueAsync());
     }
 
     [Fact]
     public async Task ActiveCallNumber_RemainsVisibleAndDisabledAfterReload()
     {
         // Arrange
-        var page = await _browser.NewPageAsync();
-        await page.GotoAsync(_server.BaseUrl);
-        await WaitForConnectedAsync(page);
+        var page = await OpenAsync();
         await page.ClickAsync("[data-telephony-toggle]");
-        await page.FillAsync("[data-telephony-number]", "+15551234567");
-        await page.ClickAsync("[data-telephony-dial]");
-        await PublishLatestCallStateAsync(page);
-        await page.Locator("[data-telephony-hangup]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        await DialAndConnectAsync(page, "+15551234567");
 
         // Act
         await page.ReloadAsync();
@@ -230,7 +104,7 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
 
         // Assert
         var number = page.Locator("[data-telephony-number]");
-        await number.WaitForAsync();
+        await page.WaitForFunctionAsync("() => document.querySelector('[data-telephony-number]').value !== ''");
         Assert.Equal("+1 (555) 123-4567", await number.InputValueAsync());
         Assert.True(await number.IsDisabledAsync());
     }
@@ -239,9 +113,7 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
     public async Task Dial_WhileCommandIsPending_SendsOnlyOneRequest()
     {
         // Arrange
-        var page = await _browser.NewPageAsync();
-        await page.GotoAsync(_server.BaseUrl);
-        await WaitForConnectedAsync(page);
+        var page = await OpenAsync();
         await page.ClickAsync("[data-telephony-toggle]");
         await page.FillAsync("[data-telephony-number]", "+15551234567");
 
@@ -263,61 +135,55 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
 
         Assert.Equal(baselineCount + 1, pendingCount);
 
-        await page.Locator("[data-telephony-dial]").WaitForAsync(new LocatorWaitForOptions
-        {
-            State = WaitForSelectorState.Visible,
-        });
-        await page.WaitForFunctionAsync(
-            "() => !document.querySelector('[data-telephony-dial]').disabled");
-        await page.EvaluateAsync(
-            "() => window.telephonySoftPhone.getInstance().getConnection().invoke('SetDialDelay', 0)");
+        // Once the dial is acknowledged the connecting call can be cancelled, and no second call was placed.
+        await page.Locator("[data-telephony-hangup]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        Assert.Equal(baselineCount + 1, await page.EvaluateAsync<int>(
+            "() => window.telephonySoftPhone.getInstance().getConnection().invoke('GetDialRequestCount')"));
     }
 
     [Fact]
     public async Task Dial_ThenHold_ShowsResumeControl()
     {
         // Arrange
-        var page = await _browser.NewPageAsync();
-        await page.GotoAsync(_server.BaseUrl);
-        await WaitForConnectedAsync(page);
-
+        var page = await OpenAsync();
         await page.ClickAsync("[data-telephony-toggle]");
-        await page.FillAsync("[data-telephony-number]", "+15551234567");
-        await page.ClickAsync("[data-telephony-dial]");
-        await PublishLatestCallStateAsync(page);
-        await page.Locator("[data-telephony-hold]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        await DialAndConnectAsync(page, "+15551234567");
 
         // Act
-        await page.ClickAsync("[data-telephony-hold]");
-        await PublishLatestCallStateAsync(page);
+        await HoldAsync(page);
 
         // Assert
-        await page.Locator("[data-telephony-resume]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
-        var status = await page.Locator("[data-telephony-status]").InnerTextAsync();
-        Assert.Equal("On hold", status.Trim());
+        await AssertTimedStatusAsync(page, "On hold");
         Assert.Equal("+1 (555) 123-4567", await page.Locator("[data-telephony-number]").InputValueAsync());
         Assert.True(await page.Locator("[data-telephony-active-calls]").IsHiddenAsync());
+        Assert.True(await page.Locator("[data-telephony-hold]").IsHiddenAsync());
+
+        // The field only shows the held call's number, so the dial button -- which would sit where Hold just was -- is
+        // not offered until the agent enters a number to add.
+        Assert.True(await page.Locator("[data-telephony-dial]").IsHiddenAsync());
     }
 
     [Fact]
     public async Task HeldCall_AllowsSecondDial_AndListsBothCalls()
     {
         // Arrange
-        var page = await _browser.NewPageAsync();
-        await page.GotoAsync(_server.BaseUrl);
-        await WaitForConnectedAsync(page);
+        var page = await OpenAsync();
         await page.ClickAsync("[data-telephony-toggle]");
-        await page.FillAsync("[data-telephony-number]", "+15551234567");
-        await page.ClickAsync("[data-telephony-dial]");
-        await PublishLatestCallStateAsync(page);
-        await page.ClickAsync("[data-telephony-hold]");
-        await PublishLatestCallStateAsync(page);
+        await DialAndConnectAsync(page, "+15551234567");
+        await HoldAsync(page);
 
-        // Act
         var number = page.Locator("[data-telephony-number]");
         Assert.False(await number.IsDisabledAsync());
         Assert.Equal("+1 (555) 123-4567", await number.InputValueAsync());
+        Assert.True(await page.Locator("[data-telephony-dial]").IsHiddenAsync());
+
+        // Act
         await number.FillAsync("+15557654321");
+
+        // Assert - entering a number to add offers the dial button straight away.
+        Assert.True(await page.Locator("[data-telephony-dial]").IsVisibleAsync());
+
+        // Act
         await page.ClickAsync("[data-telephony-dial]");
         await PublishLatestCallStateAsync(page);
 
@@ -330,19 +196,54 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
         Assert.Contains("(555) 765-4321", callListText);
     }
 
+    // Bug: on hold the agent entered the number to add and the Call button never appeared -- the field's input did not
+    // re-render the phone -- and the next render wrote the held call's number back over what they had typed.
+    [Fact]
+    public async Task HeldCall_KeepsTheNumberTheAgentEntered_WhenThePhoneRendersAgain()
+    {
+        // Arrange
+        var page = await OpenAsync();
+        await page.ClickAsync("[data-telephony-toggle]");
+        await DialAndConnectAsync(page, "+15551234567");
+        await HoldAsync(page);
+        await page.FillAsync("[data-telephony-number]", "+15557654321");
+
+        // Act - another report of the held call re-renders the phone.
+        await PublishLatestCallStateAsync(page);
+        await page.WaitForTimeoutAsync(100);
+
+        // Assert
+        Assert.Equal("+15557654321", await page.Locator("[data-telephony-number]").InputValueAsync());
+        Assert.True(await page.Locator("[data-telephony-dial]").IsVisibleAsync());
+        await AssertTimedStatusAsync(page, "On hold");
+    }
+
+    [Fact]
+    public async Task HeldCall_KeypadEntry_StartsANewNumberAndOffersTheDialButton()
+    {
+        // Arrange
+        var page = await OpenAsync();
+        await page.ClickAsync("[data-telephony-toggle]");
+        await DialAndConnectAsync(page, "+15551234567");
+        await HoldAsync(page);
+
+        // Act
+        await page.ClickAsync("[data-telephony-key=\"1\"]");
+
+        // Assert - the digit starts a fresh entry instead of being appended to the held call's number.
+        Assert.Equal("1", await page.Locator("[data-telephony-number]").InputValueAsync());
+        Assert.True(await page.Locator("[data-telephony-dial]").IsVisibleAsync());
+    }
+
     [Fact]
     public async Task ActiveCallList_WithOneCall_RemainsHidden()
     {
         // Arrange
-        var page = await _browser.NewPageAsync();
-        await page.GotoAsync(_server.BaseUrl);
-        await WaitForConnectedAsync(page);
+        var page = await OpenAsync();
         await page.ClickAsync("[data-telephony-toggle]");
-        await page.FillAsync("[data-telephony-number]", "2001");
 
         // Act
-        await page.ClickAsync("[data-telephony-dial]");
-        await PublishLatestCallStateAsync(page);
+        await DialAndConnectAsync(page, "2001");
 
         // Assert
         Assert.True(await page.Locator("[data-telephony-active-calls]").IsHiddenAsync());
@@ -355,23 +256,29 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
         var page = await CreateThreeCallPageAsync();
         var baselineCount = await page.EvaluateAsync<int>(
             "() => window.telephonySoftPhone.getInstance().getConnection().invoke('GetMergeRequestCount')");
-        var merge = page.Locator("[data-telephony-merge]");
-        Assert.True(await merge.IsHiddenAsync());
+        var merge = page.Locator("[data-telephony-merge-calls]");
+        var summary = page.Locator("[data-telephony-merge-summary]");
 
-        // Act
+        // Assert - with nothing ticked, Merge is offered but waits for the agent to pick the calls.
+        Assert.True(await merge.IsVisibleAsync());
+        Assert.True(await merge.IsDisabledAsync());
+        Assert.Equal(0, CountOf(await summary.InnerTextAsync(), "(555)"));
+
+        // Act - ticking two calls merges just them; ticking the third merges all three.
         var selections = page.Locator("[data-telephony-conference-call]");
         await selections.Nth(0).CheckAsync();
-        Assert.True(await merge.IsHiddenAsync());
         await selections.Nth(1).CheckAsync();
-        Assert.True(await merge.IsVisibleAsync());
+        Assert.Equal(2, CountOf(await summary.InnerTextAsync(), "(555)"));
         await selections.Nth(2).CheckAsync();
+        Assert.Equal(3, CountOf(await summary.InnerTextAsync(), "(555)"));
         await merge.ClickAsync();
 
         // Assert
-        await page.WaitForFunctionAsync(
+        await WaitForPromiseAsync(
+            page,
             "([count]) => window.telephonySoftPhone.getInstance().getConnection().invoke('GetMergeRequestCount').then(value => value === count + 1)",
             new[] { baselineCount });
-        Assert.True(await merge.IsHiddenAsync());
+        await page.WaitForFunctionAsync("() => !document.querySelector('[data-telephony-merge-calls]')");
         await page.WaitForFunctionAsync(
             "() => Array.from(document.querySelectorAll('.telephony-soft-phone__active-call-state')).every(element => element.textContent.trim() === 'In conference')");
     }
@@ -380,13 +287,9 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
     public async Task Transfer_WhenDirectorySupported_ListsEntriesAndTransfersSelectedCall()
     {
         // Arrange
-        var page = await _browser.NewPageAsync();
-        await page.GotoAsync(_server.BaseUrl);
-        await WaitForConnectedAsync(page);
+        var page = await OpenAsync();
         await page.ClickAsync("[data-telephony-toggle]");
-        await page.FillAsync("[data-telephony-number]", "7024993350");
-        await page.ClickAsync("[data-telephony-dial]");
-        await PublishLatestCallStateAsync(page);
+        await DialAndConnectAsync(page, "7024993350");
         var baselineCount = await page.EvaluateAsync<int>(
             "() => window.telephonySoftPhone.getInstance().getConnection().invoke('GetTransferRequestCount')");
 
@@ -399,11 +302,13 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
         await page.ClickAsync("[data-telephony-transfer-confirm]");
 
         // Assert
-        await page.WaitForFunctionAsync(
+        await WaitForPromiseAsync(
+            page,
             "([count]) => window.telephonySoftPhone.getInstance().getConnection().invoke('GetTransferRequestCount').then(value => value === count + 1)",
             new[] { baselineCount });
         Assert.True(await page.Locator("[data-telephony-transfer-panel]").IsHiddenAsync());
-        Assert.True(await page.Locator("[data-telephony-keypad-panel]").IsVisibleAsync());
+        // The call carries on until the provider reports it transferred, with its keypad closed until asked for.
+        Assert.True(await page.Locator("[data-telephony-keypad-panel]").IsHiddenAsync());
         Assert.Equal("Transfer", await page.Locator("[data-telephony-transfer-label]").InnerTextAsync());
     }
 
@@ -430,7 +335,7 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
 
         // Assert
         var transfer = page.Locator("[data-telephony-transfer]");
-        Assert.True(await transfer.IsHiddenAsync());
+        await page.WaitForFunctionAsync("() => document.querySelector('[data-telephony-transfer]').hidden");
 
         // Act
         await page.Locator($"[data-telephony-conference-call=\"{currentCallId}\"]").CheckAsync();
@@ -447,431 +352,32 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
         var baselineCount = await page.EvaluateAsync<int>(
             "() => window.telephonySoftPhone.getInstance().getConnection().invoke('GetHangupRequestCount')");
 
-        // Act
+        // Act - the phone asks before ending every call, and the agent confirms.
         await page.ClickAsync("[data-telephony-hangup-all]");
+        var confirm = page.Locator("[data-telephony-confirm]");
+        await confirm.WaitForAsync();
+        Assert.Contains("Hang up all 2 calls?", await confirm.InnerTextAsync());
+        await page.ClickAsync("[data-telephony-confirm-accept]");
 
         // Assert
-        await page.WaitForFunctionAsync(
+        await WaitForPromiseAsync(
+            page,
             "([count]) => window.telephonySoftPhone.getInstance().getConnection().invoke('GetHangupRequestCount').then(value => value === count + 2)",
             new[] { baselineCount });
     }
 
-    [Fact]
-    public async Task RemoteProviderDisconnect_ImmediatelyClearsActiveCall()
+    private static int CountOf(string text, string value)
     {
-        // Arrange
-        var page = await _browser.NewPageAsync();
-        await page.GotoAsync(_server.BaseUrl);
-        await WaitForConnectedAsync(page);
-        await page.ClickAsync("[data-telephony-toggle]");
-        await page.FillAsync("[data-telephony-number]", "+15551234567");
-        await page.ClickAsync("[data-telephony-dial]");
-        await PublishLatestCallStateAsync(page);
-        await page.Locator("[data-telephony-hangup]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
-
-        // Act
-        await page.EvaluateAsync(
-            """
-            () => window.telephonySoftPhone.getInstance().getConnection().invoke('DisconnectLatestCall')
-            """);
-
-        // Assert
-        await page.Locator("[data-telephony-dial]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
-        Assert.True(await page.Locator("[data-telephony-hangup]").IsHiddenAsync());
-        Assert.Equal("Ready", (await page.Locator("[data-telephony-status]").InnerTextAsync()).Trim());
-    }
-
-    [Fact]
-    public async Task StaleDisconnectForPreviousCall_DoesNotClearCurrentCall()
-    {
-        // Arrange
-        var page = await _browser.NewPageAsync();
-        await page.GotoAsync(_server.BaseUrl);
-        await WaitForConnectedAsync(page);
-        await page.ClickAsync("[data-telephony-toggle]");
-        await page.FillAsync("[data-telephony-number]", "+15551234567");
-        await page.ClickAsync("[data-telephony-dial]");
-        await PublishLatestCallStateAsync(page);
-        var previousCallId = await GetCurrentCallIdAsync(page);
-        await page.EvaluateAsync(
-            "() => window.telephonySoftPhone.getInstance().getConnection().invoke('DisconnectLatestCall')");
-        await page.Locator("[data-telephony-dial]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
-
-        await page.FillAsync("[data-telephony-number]", "+15557654321");
-        await page.ClickAsync("[data-telephony-dial]");
-        await PublishLatestCallStateAsync(page);
-        var currentCallId = await GetCurrentCallIdAsync(page);
-
-        // Act
-        await page.EvaluateAsync(
-            """
-            ([callId]) => window.telephonySoftPhone.getInstance().getConnection().invoke(
-                'PublishCallState',
-                {
-                    callId,
-                    direction: 0,
-                    state: 5,
-                    providerName: 'InMemory'
-                })
-            """,
-            new[] { previousCallId });
-
-        // Assert
-        Assert.NotEqual(previousCallId, currentCallId);
-        Assert.Equal(currentCallId, await GetCurrentCallIdAsync(page));
-        Assert.Equal("In call", (await page.Locator("[data-telephony-status]").InnerTextAsync()).Trim());
-        Assert.True(await page.Locator("[data-telephony-hangup]").IsVisibleAsync());
-    }
-
-    [Fact]
-    public async Task TerminalEventForProviderCall_WhenClientHoldsDifferentStaleCall_RefreshesAndClearsState()
-    {
-        // Arrange
-        var page = await _browser.NewPageAsync();
-        await page.GotoAsync(_server.BaseUrl);
-        await WaitForConnectedAsync(page);
-        await page.ClickAsync("[data-telephony-toggle]");
-        await page.EvaluateAsync(
-            """
-            async () => {
-                const connection = window.telephonySoftPhone.getInstance().getConnection();
-                await connection.invoke('Dial', { to: '+15551234567' });
-                await connection.invoke(
-                    'PublishCallState',
-                    {
-                        callId: 'stale-contact-center-call',
-                        direction: 1,
-                        state: 3,
-                        providerName: 'InMemory'
-                    });
-            }
-            """);
-        await page.Locator("[data-telephony-hangup]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
-
-        // Act
-        await page.EvaluateAsync(
-            "() => window.telephonySoftPhone.getInstance().getConnection().invoke('DisconnectLatestCall')");
-
-        // Assert
-        await page.Locator("[data-telephony-dial]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
-        Assert.Null(await page.EvaluateAsync<object>(
-            "() => window.telephonySoftPhone.getInstance().getCurrentCall()"));
-        Assert.Equal("Ready", (await page.Locator("[data-telephony-status]").InnerTextAsync()).Trim());
-    }
-
-    [Fact]
-    public async Task ProviderEventDuringActiveCallRestoration_WinsOverStaleLookup()
-    {
-        // Arrange
-        var page = await _browser.NewPageAsync();
-        await page.GotoAsync(_server.BaseUrl);
-        await WaitForConnectedAsync(page);
-        await page.ClickAsync("[data-telephony-toggle]");
-        await page.FillAsync("[data-telephony-number]", "+15551234567");
-        await page.ClickAsync("[data-telephony-dial]");
-        await PublishLatestCallStateAsync(page);
-        var connection = "window.telephonySoftPhone.getInstance().getConnection()";
-        var baselineLookupCount = await page.EvaluateAsync<int>(
-            $"() => {connection}.invoke('GetCallLookupRequestCount')");
-        await page.EvaluateAsync(
-            $"() => {connection}.invoke('SetCallLookupDelay', 500)");
-
-        await page.ReloadAsync();
-        await WaitForConnectedAsync(page);
-        await page.WaitForFunctionAsync(
-            """
-            async baseline => {
-                const connection = window.telephonySoftPhone.getInstance().getConnection();
-                return await connection.invoke('GetCallLookupRequestCount') > baseline;
-            }
-            """,
-            baselineLookupCount);
-
-        // Act
-        await page.EvaluateAsync(
-            "() => window.telephonySoftPhone.getInstance().getConnection().invoke('DisconnectLatestCall')");
-
-        // Assert
-        await page.Locator("[data-telephony-dial]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
-        await page.WaitForTimeoutAsync(600);
-        Assert.Equal("Ready", (await page.Locator("[data-telephony-status]").InnerTextAsync()).Trim());
-        Assert.True(await page.Locator("[data-telephony-hangup]").IsHiddenAsync());
-    }
-
-    [Fact]
-    public async Task RecentTab_ShowsCallHistory_AndHidesKeypad()
-    {
-        // Arrange
-        var page = await _browser.NewPageAsync();
-        await page.GotoAsync(_server.BaseUrl);
-        await WaitForConnectedAsync(page);
-
-        await page.ClickAsync("[data-telephony-toggle]");
-
-        // Act - switch to the Recent calls tab in the footer.
-        await page.ClickAsync("[data-telephony-tab=\"history\"]");
-
-        // Assert - the history view is shown, the keypad view is hidden, and recent calls are listed.
-        await page.Locator("[data-telephony-view=\"history\"]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
-        Assert.True(await page.Locator("[data-telephony-view=\"keypad\"]").IsHiddenAsync());
-
-        var historyText = await page.Locator("[data-telephony-history-list]").InnerTextAsync();
-        Assert.Contains("+1 (555) 123-4567", historyText);
-        Assert.Contains("+1 (555) 987-6543", historyText);
-
-        // Act - switch back to the keypad tab.
-        await page.ClickAsync("[data-telephony-tab=\"keypad\"]");
-
-        // Assert - the keypad view is shown again.
-        await page.Locator("[data-telephony-view=\"keypad\"]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
-        Assert.True(await page.Locator("[data-telephony-view=\"history\"]").IsHiddenAsync());
-    }
-
-    [Fact]
-    public async Task ExtensionTab_ShowsExtensionView_AndHidesBuiltInViews()
-    {
-        // Arrange
-        var page = await _browser.NewPageAsync();
-        await page.GotoAsync(_server.BaseUrl);
-        await WaitForConnectedAsync(page);
-
-        await page.ClickAsync("[data-telephony-toggle]");
-
-        // Act
-        await page.ClickAsync("[data-telephony-tab=\"contact-center\"]");
-
-        // Assert
-        await page.Locator("[data-telephony-view=\"contact-center\"]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
-        Assert.True(await page.Locator("[data-telephony-view=\"keypad\"]").IsHiddenAsync());
-        Assert.True(await page.Locator("[data-telephony-view=\"history\"]").IsHiddenAsync());
-    }
-
-    [Theory]
-    [InlineData("keypad")]
-    [InlineData("history")]
-    [InlineData("contact-center")]
-    public async Task SelectedTab_PersistsAcrossReload(string tab)
-    {
-        // Arrange
-        var page = await _browser.NewPageAsync();
-        await page.GotoAsync(_server.BaseUrl);
-        await WaitForConnectedAsync(page);
-
-        await page.ClickAsync("[data-telephony-toggle]");
-        await page.ClickAsync($"[data-telephony-tab=\"{tab}\"]");
-
-        // Act
-        await page.ReloadAsync();
-        await WaitForConnectedAsync(page);
-
-        // Assert
-        await page.Locator($"[data-telephony-view=\"{tab}\"]")
-            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
-        Assert.Equal("true", await page.Locator($"[data-telephony-tab=\"{tab}\"]").GetAttributeAsync("aria-selected"));
-
-        if (tab == "history")
-        {
-            var historyText = await page.Locator("[data-telephony-history-list]").InnerTextAsync();
-            Assert.Contains("+1 (555) 123-4567", historyText);
-        }
-    }
-
-    [Fact]
-    public async Task AllTabs_KeepTheSameBodyHeight()
-    {
-        // Arrange
-        var page = await _browser.NewPageAsync();
-        await page.GotoAsync(_server.BaseUrl);
-        await WaitForConnectedAsync(page);
-        await page.ClickAsync("[data-telephony-toggle]");
-
-        // Act
-        await page.ClickAsync("[data-telephony-tab=\"keypad\"]");
-        await page.Locator("[data-telephony-view=\"keypad\"]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
-        var keypadHeight = await GetConfiguredHeightAsync(page);
-        await page.ClickAsync("[data-telephony-tab=\"history\"]");
-        await page.Locator("[data-telephony-view=\"history\"]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
-        var historyHeight = await GetConfiguredHeightAsync(page);
-        await page.ClickAsync("[data-telephony-tab=\"contact-center\"]");
-        await page.Locator("[data-telephony-view=\"contact-center\"]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
-        var extensionHeight = await GetConfiguredHeightAsync(page);
-
-        // Assert
-        Assert.NotEqual(string.Empty, keypadHeight);
-        Assert.Equal(keypadHeight, historyHeight);
-        Assert.Equal(keypadHeight, extensionHeight);
-    }
-
-    [Fact]
-    public async Task RingingInboundCall_DoesNotShowHangup_UntilConnected()
-    {
-        // Arrange
-        var page = await _browser.NewPageAsync();
-        await page.GotoAsync(_server.BaseUrl);
-        await WaitForConnectedAsync(page);
-        await page.ClickAsync("[data-telephony-toggle]");
-
-        await page.EvaluateAsync(
-            """
-            () => {
-                const api = window.telephonySoftPhone.getInstance();
-                api.setIncomingOffer(
-                    {
-                        callId: 'call-inbound-1',
-                        from: '+15550001000',
-                        direction: 'Inbound',
-                        state: 'Ringing',
-                        providerName: 'InMemory'
-                    },
-                    {
-                        properties: {
-                            acceptUrl: '/accept',
-                            reservationId: 'res-1'
-                        }
-                    });
-
-                window.fetch = async () => ({
-                    ok: true,
-                    json: async () => ({ succeeded: true, requiresDeviceAnswer: false })
-                });
-            }
-            """);
-
-        // Assert - ringing should not expose hangup yet.
-        Assert.True(await page.Locator("[data-telephony-hangup]").IsHiddenAsync());
-        Assert.Equal("Ringing...", (await page.Locator("[data-telephony-status]").InnerTextAsync()).Trim());
-
-        // Act
-        await page.ClickAsync("[data-telephony-incoming-answer]");
-        await PublishCallStateAsync(page, "call-inbound-1", "+15550001000");
-
-        // Assert - once the provider event arrives, the call is live.
-        await page.Locator("[data-telephony-hangup]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
-        Assert.Equal("In call", (await page.Locator("[data-telephony-status]").InnerTextAsync()).Trim());
-        Assert.Equal("+1 (555) 000-1000", await page.Locator("[data-telephony-number]").InputValueAsync());
-    }
-
-    [Fact]
-    public async Task PendingInboundOffer_OverridesProviderConnectedState_ForTheSameCall()
-    {
-        // Arrange
-        var page = await _browser.NewPageAsync();
-        await page.GotoAsync(_server.BaseUrl);
-        await WaitForConnectedAsync(page);
-        await page.ClickAsync("[data-telephony-toggle]");
-        await PublishCallStateAsync(page, "call-inbound-pending", "+15550001001");
-        await page.Locator("[data-telephony-hangup]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
-
-        // Act
-        await page.EvaluateAsync(
-            """
-            () => window.telephonySoftPhone.getInstance().setIncomingOffer(
-                {
-                    callId: 'call-inbound-pending',
-                    from: '+15550001001',
-                    direction: 'Inbound',
-                    state: 'Ringing',
-                    providerName: 'InMemory'
-                },
-                {
-                    properties: {
-                        acceptUrl: '/accept',
-                        reservationId: 'res-pending'
-                    }
-                })
-            """);
-
-        // Assert
-        await page.Locator("[data-telephony-incoming]")
-            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
-        Assert.True(await page.Locator("[data-telephony-hangup]").IsHiddenAsync());
-        Assert.Equal("Ringing...", (await page.Locator("[data-telephony-status]").InnerTextAsync()).Trim());
-        Assert.Equal("+1 (555) 000-1001", await page.Locator("[data-telephony-number]").InputValueAsync());
-    }
-
-    [Fact]
-    public async Task AcceptedInboundOffer_RemainsActive_WhenOfferIsRevokedDuringAccept()
-    {
-        // Arrange
-        var page = await _browser.NewPageAsync();
-        await page.GotoAsync(_server.BaseUrl);
-        await WaitForConnectedAsync(page);
-        await page.ClickAsync("[data-telephony-toggle]");
-
-        await page.EvaluateAsync(
-            """
-            () => {
-                const api = window.telephonySoftPhone.getInstance();
-                api.setIncomingOffer(
-                    {
-                        callId: 'call-inbound-2',
-                        from: '+15550001000',
-                        direction: 'Inbound',
-                        state: 'Ringing',
-                        providerName: 'InMemory'
-                    },
-                    {
-                        properties: {
-                            acceptUrl: '/accept',
-                            reservationId: 'res-2'
-                        }
-                    });
-
-                window.__completeInboundAccept = null;
-                window.fetch = () => new Promise(resolve => {
-                    window.__completeInboundAccept = () => resolve({
-                        ok: true,
-                        json: async () => ({ succeeded: true, requiresDeviceAnswer: false })
-                    });
-                });
-            }
-            """);
-
-        // Act
-        await page.ClickAsync("[data-telephony-incoming-answer]");
-        await page.EvaluateAsync(
-            """
-            () => {
-                const api = window.telephonySoftPhone.getInstance();
-                api.clearIncomingOffer({ preserveCurrentCall: true, preservePendingAccept: true });
-                window.__completeInboundAccept();
-            }
-            """);
-        await PublishCallStateAsync(page, "call-inbound-2", "+15550001000");
-
-        // Assert
-        await page.Locator("[data-telephony-hangup]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
-        Assert.Equal("In call", (await page.Locator("[data-telephony-status]").InnerTextAsync()).Trim());
-        Assert.Equal("+1 (555) 000-1000", await page.Locator("[data-telephony-number]").InputValueAsync());
-    }
-
-    private static async Task WaitForConnectedAsync(IPage page)
-    {
-        await page.WaitForFunctionAsync(
-            """
-            () => {
-                const el = document.querySelector('#telephony-soft-phone');
-                const api = el && el.__telephonySoftPhone;
-                const connection = api && api.getConnection && api.getConnection();
-                return connection && connection.state === 'Connected';
-            }
-            """);
+        return (text.Length - text.Replace(value, string.Empty, StringComparison.Ordinal).Length) / value.Length;
     }
 
     private async Task<IPage> CreateTwoCallPageAsync()
     {
-        var page = await _browser.NewPageAsync();
-        await page.GotoAsync(_server.BaseUrl);
-        await WaitForConnectedAsync(page);
+        var page = await OpenAsync();
         await page.ClickAsync("[data-telephony-toggle]");
-        await page.FillAsync("[data-telephony-number]", "+15551234567");
-        await page.ClickAsync("[data-telephony-dial]");
-        await PublishLatestCallStateAsync(page);
-        await page.ClickAsync("[data-telephony-hold]");
-        await PublishLatestCallStateAsync(page);
-        await page.FillAsync("[data-telephony-number]", "+15557654321");
-        await page.ClickAsync("[data-telephony-dial]");
-        await PublishLatestCallStateAsync(page);
+        await DialAndConnectAsync(page, "+15551234567");
+        await HoldAsync(page);
+        await DialAndConnectAsync(page, "+15557654321");
         await page.Locator("[data-telephony-call-select]").Nth(1).WaitForAsync();
 
         return page;
@@ -881,64 +387,10 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
     {
         var page = await CreateTwoCallPageAsync();
 
-        await page.ClickAsync("[data-telephony-hold]");
-        await PublishLatestCallStateAsync(page);
-        await page.FillAsync("[data-telephony-number]", "+15551112222");
-        await page.ClickAsync("[data-telephony-dial]");
-        await PublishLatestCallStateAsync(page);
+        await HoldAsync(page);
+        await DialAndConnectAsync(page, "+15551112222");
         await page.Locator("[data-telephony-call-select]").Nth(2).WaitForAsync();
 
         return page;
-    }
-
-    private static async Task PublishLatestCallStateAsync(IPage page)
-    {
-        await page.EvaluateAsync(
-            """
-            async () => {
-                const connection = window.telephonySoftPhone.getInstance().getConnection();
-
-                for (let attempt = 0; attempt < 20; attempt++) {
-                    const published = await connection.invoke('PublishLatestCallState');
-
-                    if (published) {
-                        return;
-                    }
-
-                    await new Promise(resolve => setTimeout(resolve, 25));
-                }
-
-                throw new Error('The test provider did not create a call.');
-            }
-            """);
-    }
-
-    private static async Task PublishCallStateAsync(IPage page, string callId, string from)
-    {
-        await page.EvaluateAsync(
-            """
-            ([callId, from]) => window.telephonySoftPhone.getInstance().getConnection().invoke(
-                'PublishCallState',
-                {
-                    callId,
-                    from,
-                    direction: 1,
-                    state: 3,
-                    providerName: 'InMemory'
-                })
-            """,
-            new[] { callId, from });
-    }
-
-    private static async Task<string> GetConfiguredHeightAsync(IPage page)
-    {
-        return await page.Locator("#telephony-soft-phone").EvaluateAsync<string>(
-            "element => element.style.getPropertyValue('--telephony-view-height').trim()");
-    }
-
-    private static async Task<string> GetCurrentCallIdAsync(IPage page)
-    {
-        return await page.EvaluateAsync<string>(
-            "() => window.telephonySoftPhone.getInstance().getCurrentCall().callId");
     }
 }

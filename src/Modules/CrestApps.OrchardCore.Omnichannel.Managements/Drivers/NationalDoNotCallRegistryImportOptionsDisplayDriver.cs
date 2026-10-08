@@ -52,6 +52,7 @@ public sealed class NationalDoNotCallRegistryImportOptionsDisplayDriver : Displa
         {
             viewModel.IsGloballyEnforced = settings.EnforceGlobally;
             viewModel.IgnoreDoNotCallNumbers = settings.EnforceGlobally || options.IgnoreDoNotCallNumbers;
+            viewModel.MarkRegistryNumbersDoNotCall = options.MarkRegistryNumbersDoNotCall;
             viewModel.SelectedRegistryKeys = GetEffectiveRegistryKeys(options, settings);
             viewModel.AvailableRegistries = _registries.Select(r => new NationalDoNotCallRegistryEntry
             {
@@ -78,6 +79,7 @@ public sealed class NationalDoNotCallRegistryImportOptionsDisplayDriver : Displa
             var options = model.GetOrCreate<OmnichannelContactImportOptionsPart>();
 
             options.IgnoreDoNotCallNumbers = settings.EnforceGlobally || viewModel.IgnoreDoNotCallNumbers;
+            options.MarkRegistryNumbersDoNotCall = viewModel.MarkRegistryNumbersDoNotCall;
             options.SelectedRegistryKeys = GetEffectiveRegistryKeys(viewModel, settings);
 
             model.Put(options);

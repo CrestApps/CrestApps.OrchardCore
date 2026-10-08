@@ -1,9 +1,9 @@
-using CrestApps.Core.AI.Chat;
+﻿using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Chat.Security;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Security;
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore;
+using CrestApps.OrchardCore.AI.Chat.Core;
 using CrestApps.OrchardCore.AI.Chat.Core.Hubs;
 using CrestApps.OrchardCore.AI.Chat.Core.Services;
 using CrestApps.OrchardCore.AI.Chat.Drivers;
@@ -50,6 +50,8 @@ public sealed class Startup : StartupBase
 
         services
             .AddPermissionProvider<ChatSessionPermissionProvider>()
+            .AddPermissionProvider<ChatAnalyticsPermissionProvider>()
+            .AddNavigationProvider<AIUsageAnalyticsAdminMenu>()
             .AddScoped<AIChatProfileAccessEvaluator>()
             .AddSingleton<IAIProfileAdminMenuCacheService, DefaultAIProfileAdminMenuCacheService>()
             .AddScoped<ICatalogEntryHandler<AIProfile>, AIProfileAdminMenuCacheHandler>()
@@ -57,7 +59,6 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<AIChatSession, AIChatSessionDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileMenuDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateMenuDisplayDriver>()
-            .AddResourceConfiguration<ResourceManagementOptionsConfiguration>()
             .AddNavigationProvider<ChatAdminMenu>()
             .AddDisplayDriver<AIProfile, AIProfileSessionSettingsDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateSessionSettingsDisplayDriver>()
@@ -78,6 +79,19 @@ public sealed class Startup : StartupBase
 
         services.AddKeyedScoped<IChatNotificationTransport, AIChatNotificationTransport>(ChatContextType.AIChatSession);
         services.ConfigureCrestAppsChatHubOptions<AIChatHub>();
+
+        // Enables realtime (speech-to-speech) voice over the server-relay WebRTC transport, with automatic
+        // WebSocket fallback. The realtime hubs advertise WebRTC to the browser when this is registered.
+        services.AddWebRtcRealtimeTransport();
+
+        // Lets a tenant mint its own short-lived TURN credentials from Cloudflare Realtime instead of
+        // sharing the host's, falling back to the configured STUN and TURN servers while it has no token.
+        services.AddTenantCloudflareRealtimeTurn();
+
+        // The usage report asks for voice session summaries whether or not the analytics feature that keeps them
+        // is on; until it is, there are none.
+        services.TryAddScoped<IAIVoiceSessionSummaryStore, NullAIVoiceSessionSummaryStore>();
+
         services.AddDataProtection();
         services.AddOptions<AIVisitorIdentityOptions>();
         services.Replace(ServiceDescriptor.Singleton<IAIVisitorIdentityResolver, DefaultAIVisitorIdentityResolver>());
@@ -134,7 +148,6 @@ public sealed class ChatAnalyticsUIStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services
-            .AddPermissionProvider<ChatAnalyticsPermissionProvider>()
             .AddNavigationProvider<ChatAnalyticsAdminMenu>()
             .AddDataMigration<AIChatSessionExtractedDataMigrations>()
             .AddDisplayDriver<AIProfile, AIProfileAnalyticsDisplayDriver>()

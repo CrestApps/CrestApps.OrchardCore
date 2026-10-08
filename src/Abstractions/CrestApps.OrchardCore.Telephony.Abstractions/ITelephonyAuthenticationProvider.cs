@@ -53,10 +53,17 @@ public interface ITelephonyAuthenticationProvider
 
     /// <summary>
     /// Revokes the given tokens at the provider, for example when the user disconnects their account.
-    /// Implementations should not throw when revocation fails.
+    /// Implementations should not throw when revocation fails; they report the outcome through the
+    /// returned <see cref="TelephonyResult"/> instead so the caller can decide how to react to a grant
+    /// that may still be active at the provider.
     /// </summary>
     /// <param name="tokens">The tokens to revoke.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    Task RevokeTokensAsync(TelephonyUserTokens tokens, CancellationToken cancellationToken = default);
+    /// <returns>
+    /// A successful result when the provider confirmed the grant was revoked (or when there was nothing
+    /// to revoke); a failed result when the provider definitively rejected the revocation; or an
+    /// indeterminate result (<see cref="TelephonyResult.OutcomeUnknown"/>) when the outcome could not be
+    /// observed.
+    /// </returns>
+    Task<TelephonyResult> RevokeTokensAsync(TelephonyUserTokens tokens, CancellationToken cancellationToken = default);
 }

@@ -103,6 +103,13 @@ public class OmnichannelActivityViewModel
     public string CompletedByName { get; set; }
 
     /// <summary>
+    /// Gets or sets who dispositioned the completed activity and how: the user's name, the AI agent and its profile,
+    /// the dialer, or the platform.
+    /// </summary>
+    [BindNever]
+    public string DispositionedByName { get; set; }
+
+    /// <summary>
     /// Gets or sets the dispositions.
     /// </summary>
     [BindNever]

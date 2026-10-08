@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.AI.Core.Models;
 
 namespace CrestApps.OrchardCore.AI.Services;
 
@@ -12,8 +13,12 @@ internal static class AIProfileTemplateApplicator
         {
             foreach (var property in template.Properties)
             {
+                // These describe the template itself rather than the profile built from it. Scenario metadata in
+                // particular would otherwise ride along onto every profile created from a featured scenario.
                 if (string.Equals(property.Key, nameof(ProfileTemplateMetadata), StringComparison.Ordinal) ||
-                    string.Equals(property.Key, nameof(SystemPromptTemplateMetadata), StringComparison.Ordinal))
+                    string.Equals(property.Key, nameof(SystemPromptTemplateMetadata), StringComparison.Ordinal) ||
+                    string.Equals(property.Key, nameof(ProfileScenarioMetadata), StringComparison.Ordinal) ||
+                    string.Equals(property.Key, nameof(ProfileTemplateDefaultsMetadata), StringComparison.Ordinal))
                 {
                     continue;
                 }
@@ -55,6 +60,34 @@ internal static class AIProfileTemplateApplicator
             profile.OrchestratorName = templateMetadata.OrchestratorName;
         }
 
+        // The chat deployment is the text model the profile talks to; the conversation deployment names the
+        // model that carries a spoken conversation. A template written before that split named its
+        // speech-to-speech model in a separate field, which is the conversation deployment now.
+#pragma warning disable CS0618 // Type or member is obsolete - an existing template still applies.
+        var conversationDeploymentName = !string.IsNullOrEmpty(templateMetadata.ConversationDeploymentName)
+            ? templateMetadata.ConversationDeploymentName
+            : templateMetadata.RealtimeDeploymentName;
+#pragma warning restore CS0618
+
+        if (!string.IsNullOrEmpty(conversationDeploymentName))
+        {
+            // A template edited through the chat mode editor carries its own ChatModeProfileSettings, copied
+            // onto the profile above, and the mode it holds is the author's choice.
+            var templateChoseChatMode = template.Properties?.ContainsKey(nameof(ChatModeProfileSettings)) == true;
+
+            profile.AlterSettings<ChatModeProfileSettings>(chatModeSettings =>
+            {
+                chatModeSettings.ConversationDeploymentName = conversationDeploymentName;
+
+                // A template that names a model to speak with is asking for a spoken conversation. Without
+                // this the profile would carry the deployment and never use it.
+                if (!templateChoseChatMode)
+                {
+                    chatModeSettings.ChatMode = ChatMode.Conversation;
+                }
+            });
+        }
+
         if (templateMetadata.TitleType.HasValue)
         {
             profile.TitleType = templateMetadata.TitleType;
@@ -80,6 +113,14 @@ internal static class AIProfileTemplateApplicator
         if (!string.IsNullOrEmpty(templateMetadata.SystemMessage))
         {
             metadata.SystemMessage = templateMetadata.SystemMessage;
+        }
+
+        // The shared template model has no initial prompt, so a template file carries it separately. Automated SMS
+        // conversations and calls only offer profiles that have one, because it is their opening message.
+        if (template.TryGet<ProfileTemplateDefaultsMetadata>(out var defaults) &&
+            !string.IsNullOrWhiteSpace(defaults.InitialPrompt))
+        {
+            metadata.InitialPrompt = defaults.InitialPrompt.Trim();
         }
 
         if (templateMetadata.Temperature.HasValue)

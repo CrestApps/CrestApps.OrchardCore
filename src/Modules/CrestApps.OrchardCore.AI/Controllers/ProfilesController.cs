@@ -2,6 +2,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Services;
+using CrestApps.OrchardCore.AI.ViewModels;
 using CrestApps.OrchardCore.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -84,7 +85,7 @@ public sealed class ProfilesController : Controller
             return Forbid();
         }
 
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
 
         var result = await _profileManager.PageAsync(pager.Page, pager.PageSize, new AIProfileQueryContext
         {
@@ -121,6 +122,15 @@ public sealed class ProfilesController : Controller
             new SelectListItem(S["Delete"], nameof(CatalogEntryAction.Remove)),
         ];
 
+        // "Add Profile" opens the "New AI profile" picker over this list. The catalog is internal to this
+        // module, so it is resolved here rather than injected into this public controller.
+        var scenarioCatalog = HttpContext.RequestServices.GetRequiredService<ProfileScenarioCatalog>();
+
+        ViewData[ProfileScenarioPickerViewModel.ViewDataKey] = new ProfileScenarioPickerViewModel
+        {
+            Scenarios = await scenarioCatalog.GetPickerScenariosAsync(),
+        };
+
         return View(viewModel);
     }
 
@@ -128,12 +138,13 @@ public sealed class ProfilesController : Controller
     /// Handles the filter form submission for the profiles index.
     /// </summary>
     /// <param name="model">The list view model containing filter options.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
     /// <returns>A redirect to the filtered index view.</returns>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("ai/profiles", "AIProfilesIndex")]
-    public async Task<ActionResult> IndexFilterPost(ListCatalogEntryViewModel model)
+    public async Task<ActionResult> IndexFilterPost(ListCatalogEntryViewModel model, PagerParameters pagerParameters)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfiles))
         {
@@ -143,6 +154,7 @@ public sealed class ProfilesController : Controller
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
             { _optionsSearch, model.Options?.Search },
+            { "pageSize", pagerParameters.PageSize },
         });
     }
 
@@ -150,32 +162,63 @@ public sealed class ProfilesController : Controller
     /// Displays the editor for creating a new AI profile.
     /// </summary>
     /// <param name="templateId">The optional template identifier to pre-populate the profile.</param>
+    /// <param name="cloneId">The optional identifier of an existing profile to clone into an unsaved draft.</param>
     /// <returns>The create view.</returns>
     [Admin("ai/profile/create", "AIProfilesCreate")]
-    public async Task<ActionResult> Create([FromQuery] string templateId)
+    public async Task<ActionResult> Create([FromQuery] string templateId, [FromQuery] string cloneId)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfiles))
         {
             return Forbid();
         }
 
-        var profile = await _profileManager.NewAsync();
+        AIProfile profile;
 
-        if (profile == null)
+        if (!string.IsNullOrEmpty(cloneId))
         {
-            await _notifier.ErrorAsync(H["Unable to create a new profile."]);
+            var source = await _profileManager.FindByIdAsync(cloneId);
 
-            return RedirectToAction(nameof(Index));
-        }
-
-        if (!string.IsNullOrEmpty(templateId))
-        {
-            var templateManager = HttpContext.RequestServices.GetService<IAIProfileTemplateManager>();
-            var template = templateManager != null ? await templateManager.FindByIdAsync(templateId) : null;
-
-            if (template != null)
+            if (source == null)
             {
-                AIProfileTemplateApplicator.Apply(profile, template);
+                await _notifier.ErrorAsync(H["The profile to clone could not be found."]);
+
+                return RedirectToAction(nameof(Index));
+            }
+
+            // Clone every configured value, then reset identity so this reads as a brand-new, unsaved draft.
+            profile = source.Clone();
+            profile.ItemId = null;
+            profile.OwnerId = null;
+            profile.Author = null;
+            profile.CreatedUtc = default;
+            profile.ModifiedUtc = null;
+
+            // Prefix the name and title so the copy is distinguishable from its source.
+            profile.DisplayText = S["Copy of {0}", string.IsNullOrEmpty(source.DisplayText) ? source.Name : source.DisplayText];
+            profile.Name = string.IsNullOrEmpty(source.Name) ? null : $"{source.Name}-copy";
+
+            ViewData["IsClone"] = true;
+        }
+        else
+        {
+            profile = await _profileManager.NewAsync();
+
+            if (profile == null)
+            {
+                await _notifier.ErrorAsync(H["Unable to create a new profile."]);
+
+                return RedirectToAction(nameof(Index));
+            }
+
+            if (!string.IsNullOrEmpty(templateId))
+            {
+                var templateManager = HttpContext.RequestServices.GetService<IAIProfileTemplateManager>();
+                var template = templateManager != null ? await templateManager.FindByIdAsync(templateId) : null;
+
+                if (template != null)
+                {
+                    AIProfileTemplateApplicator.Apply(profile, template);
+                }
             }
         }
 

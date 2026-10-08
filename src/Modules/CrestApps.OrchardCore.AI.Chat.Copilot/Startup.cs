@@ -1,4 +1,5 @@
 ﻿using CrestApps.Core.AI.Copilot;
+using CrestApps.Core.AI.Copilot.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Orchestration;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Drivers;
@@ -40,6 +41,10 @@ public sealed class Startup : StartupBase
 
         // Bridge OrchardCore site settings → CopilotOptions.
         services.ConfigureOptions<CopilotOptionsConfiguration>();
+
+        // CrestApps.Core reads CopilotOptions through IOptionsMonitor, which only recomputes them when signalled.
+        // Without the signal, saved Copilot settings stayed unused until the app restarted.
+        services.AddSignalOptionsChangeTokenSource<CopilotOptions>();
 
         // Bridge OrchardCore User model → ICopilotCredentialStore.
         services.AddScoped<ICopilotCredentialStore, OrchardCoreCopilotCredentialStore>();

@@ -6,6 +6,7 @@ using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore;
+using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -58,9 +59,10 @@ internal sealed class OrchardCoreA2ARequestHandler : IA2ARequestHandler
 
             var completionContext = await completionContextBuilder.BuildAsync(context.Profile, cancellationToken: cancellationToken);
             completionContext.DisableTools = true;
+            completionContext.AdditionalProperties[AICompletionContextKeys.UsageContextType] = AIUsageCategories.AgentToAgent;
 
-            var deployment = await deploymentManager.ResolveOrDefaultAsync(
-                AIDeploymentPurpose.Chat,
+            var deployment = await deploymentManager.ResolveSlotAsync(
+                AIDeploymentSlotNames.Chat,
                 deploymentName: completionContext.ChatDeploymentName,
                 cancellationToken: cancellationToken)
                 ?? throw new InvalidOperationException($"Unable to resolve a chat deployment for profile '{context.Profile.Name}'.");
@@ -117,9 +119,10 @@ internal sealed class OrchardCoreA2ARequestHandler : IA2ARequestHandler
 
         var completionContext = await completionContextBuilder.BuildAsync(context.Profile, cancellationToken: cancellationToken);
         completionContext.DisableTools = true;
+        completionContext.AdditionalProperties[AICompletionContextKeys.UsageContextType] = AIUsageCategories.AgentToAgent;
 
-        var deployment = await deploymentManager.ResolveOrDefaultAsync(
-            AIDeploymentPurpose.Chat,
+        var deployment = await deploymentManager.ResolveSlotAsync(
+            AIDeploymentSlotNames.Chat,
             deploymentName: completionContext.ChatDeploymentName,
             cancellationToken: cancellationToken)
             ?? throw new InvalidOperationException($"Unable to resolve a chat deployment for profile '{context.Profile.Name}'.");

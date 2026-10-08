@@ -1,10 +1,12 @@
 using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Documents;
 using CrestApps.Core.AI.Documents.Models;
 using CrestApps.Core.AI.Documents.Services;
+using CrestApps.Core.AI.Ingestion;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Resilience;
 using CrestApps.Core.Infrastructure.Indexing;
@@ -92,8 +94,10 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
             var documentsMetadata = template.GetOrCreate<DocumentsMetadata>();
             model.TopN = documentsMetadata.DocumentTopN ?? 3;
             model.DocumentRetrievalMode = documentsMetadata.RetrievalMode;
+            model.MaxIndexableCharacters = documentsMetadata.MaxIndexableCharacters;
+            model.DescribeFiguresInUploads = documentsMetadata.DescribeFiguresInUploads;
             model.DocumentRetrievalModes = DocumentRetrievalModeSelectListBuilder.Build(S, model.DocumentRetrievalMode);
-        }).Location("Content:7#Knowledge;2")
+        }).Location("Content:2.5#Knowledge;2")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
 
         var documentsResult = Initialize<EditAIProfileDocumentsViewModel>("AIProfileDocuments_Edit", async model =>
@@ -135,6 +139,8 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
         var documentsMetadata = template.GetOrCreate<DocumentsMetadata>();
         documentsMetadata.DocumentTopN = model.TopN > 0 ? model.TopN : 3;
         documentsMetadata.RetrievalMode = model.DocumentRetrievalMode;
+        documentsMetadata.MaxIndexableCharacters = NormalizeMaxIndexableCharacters(model.MaxIndexableCharacters);
+        documentsMetadata.DescribeFiguresInUploads = model.DescribeFiguresInUploads;
         documentsMetadata.Documents ??= [];
 
         if (context.Updater.ModelState.IsValid)
@@ -192,12 +198,12 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
             {
                 var profileMetadata = template.GetOrCreate<ProfileTemplateMetadata>();
                 var deployment = await ResolveDeploymentAsync(profileMetadata);
-                var embeddingDeployment = await _deploymentManager.ResolveOrDefaultAsync(
-                    AIDeploymentPurpose.Embedding,
+                var embeddingDeployment = await _deploymentManager.ResolveSlotAsync(
+                    AIDeploymentSlotNames.Embedding,
                     clientName: deployment?.ClientName);
                 var embeddingGenerator = embeddingDeployment == null
                     ? null
-                    : await _aiClientFactory.CreateEmbeddingGeneratorAsync(embeddingDeployment, builder => builder.UseDefaultResilience());
+                    : await _aiClientFactory.CreateEmbeddingGeneratorAsync(embeddingDeployment, builder => builder.UseDefaultResilience().UseUsageLabels(purpose: AIUsagePurposes.Indexing));
                 var processedDocuments = new List<AIDocument>();
 
                 foreach (var file in model.Files)
@@ -222,7 +228,12 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
                             file,
                             template.ItemId,
                             AIConstants.DocumentReferenceTypes.ProfileTemplate,
-                            embeddingGenerator);
+                            embeddingGenerator,
+                            // This template's own answers when it gave them, the site's otherwise, so a
+                            // template's knowledge files are measured the same way the profiles built from
+                            // it will measure theirs.
+                            documentsMetadata.MaxIndexableCharacters,
+                            documentsMetadata.DescribeFiguresInUploads);
 
                         if (!result.Success)
                         {
@@ -267,14 +278,21 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
         return Edit(template, context);
     }
 
+    /// <summary>
+    /// Keeps a blank field meaning "use the site default" and clamps a negative number to the "no limit"
+    /// zero, rather than storing a ceiling no upload could satisfy.
+    /// </summary>
+    private static int? NormalizeMaxIndexableCharacters(int? value)
+        => value is null ? null : Math.Max(0, value.Value);
+
     private async Task<AIDeployment> ResolveDeploymentAsync(ProfileTemplateMetadata profileMetadata)
     {
-        return await _deploymentManager.ResolveOrDefaultAsync(
-            AIDeploymentPurpose.Chat,
-            deploymentName: profileMetadata.ChatDeploymentName)
-        ?? await _deploymentManager.ResolveOrDefaultAsync(
-            AIDeploymentPurpose.Utility,
-            deploymentName: profileMetadata.UtilityDeploymentName);
+        // One resolve, not two joined with "??". The chat slot's own chain already ends in the first
+        // text-capable deployment, so a second independent resolve for the utility slot -- which filters on
+        // the same capability -- could never answer.
+        return await _deploymentManager.ResolveSlotAsync(
+            AIDeploymentSlotNames.Chat,
+            deploymentName: profileMetadata.ChatDeploymentName);
     }
 
     private static async Task IndexDocumentChunksAsync(ShellScope scope, List<AIDocument> documents)

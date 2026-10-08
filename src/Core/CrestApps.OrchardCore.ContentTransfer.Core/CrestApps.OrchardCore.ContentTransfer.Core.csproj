@@ -22,6 +22,7 @@
     <PackageReference Include="OrchardCore.Autoroute.Core" />
     <PackageReference Include="OrchardCore.ContentFields" />
     <PackageReference Include="OrchardCore.Html" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
     <PackageReference Include="OrchardCore.Liquid" />
     <PackageReference Include="OrchardCore.Markdown" />
     <PackageReference Include="OrchardCore.Media.Core" />

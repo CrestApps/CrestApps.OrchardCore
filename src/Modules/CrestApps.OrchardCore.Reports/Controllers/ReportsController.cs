@@ -56,7 +56,7 @@ public sealed class ReportsController : Controller
     {
         var accessible = new List<IReport>();
 
-        foreach (var report in _reportManager.ListReports())
+        foreach (var report in _reportManager.GetReports())
         {
             if (await _authorizationService.AuthorizeAsync(User, report.Permission))
             {
@@ -100,7 +100,7 @@ public sealed class ReportsController : Controller
         return View(new ReportDisplayViewModel
         {
             Report = report,
-            ExportFormats = _exportManager.ListFormats(),
+            ExportFormats = _exportManager.GetFormats(),
             FilterShape = filterShape,
             Document = document,
         });

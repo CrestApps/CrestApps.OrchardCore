@@ -1,0 +1,73 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using Microsoft.AspNetCore.Html
+@using Microsoft.AspNetCore.Mvc.Localization
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<OmnichannelActivityBatch>
+
+@{
+    // Every record that matched the filters was either loaded or skipped for exactly one of these reasons, so the
+    // sentences below add up to the matching count and nobody has to read the database to learn why a load came up short.
+    var batch = Model.Value;
+    var loaded = batch.TotalLoaded ?? 0;
+    var matched = batch.TotalMatched ?? 0;
+    var reasons = new List<IHtmlContent>();
+
+    if (batch.TotalSkippedAsDuplicate > 0)
+    {
+        reasons.Add(T.Plural((int)batch.TotalSkippedAsDuplicate, "1 already has an open activity for this subject.", "{0} already have an open activity for this subject."));
+    }
+
+    if (batch.TotalSkippedAsOptedOut > 0)
+    {
+        reasons.Add(T.Plural((int)batch.TotalSkippedAsOptedOut, "1 asked not to be reached on this channel.", "{0} asked not to be reached on this channel."));
+    }
+
+    if (batch.TotalSkippedAsSharedNumberOptedOut > 0)
+    {
+        reasons.Add(T.Plural((int)batch.TotalSkippedAsSharedNumberOptedOut, "1 shares a phone number with someone who asked not to be reached on this channel.", "{0} share a phone number with someone who asked not to be reached on this channel."));
+    }
+
+    if (batch.TotalSkippedForNoDestination > 0)
+    {
+        reasons.Add(T.Plural((int)batch.TotalSkippedForNoDestination, "1 has no address on this channel.", "{0} have no address on this channel."));
+    }
+
+    if (batch.TotalSkippedAsConverted > 0)
+    {
+        reasons.Add(T.Plural((int)batch.TotalSkippedAsConverted, "1 lead was already converted into a contact.", "{0} leads were already converted into contacts."));
+    }
+
+    if (batch.TotalSkippedAsExistingContact > 0)
+    {
+        reasons.Add(T.Plural((int)batch.TotalSkippedAsExistingContact, "1 lead shares a phone number with a contact.", "{0} leads share a phone number with a contact."));
+    }
+
+    if (batch.TotalSkippedAsNotInService > 0)
+    {
+        reasons.Add(T.Plural((int)batch.TotalSkippedAsNotInService, "1 has only numbers that are not in service.", "{0} have only numbers that are not in service."));
+    }
+
+    if (batch.TotalSkippedByLimit > 0)
+    {
+        reasons.Add(T.Plural((int)batch.TotalSkippedByLimit, "1 was not loaded because the limit was reached.", "{0} were not loaded because the limit was reached."));
+    }
+
+    var isEditor = string.Equals(Model.Metadata.DisplayType, "Edit", StringComparison.Ordinal);
+}
+
+<div class="@(isEditor ? "alert alert-secondary mb-3" : "text-muted small mt-1")" role="status">
+    @if (matched == 0)
+    {
+        <span>@T["No records matched the filters, so nothing was loaded."]</span>
+    }
+    else
+    {
+        <span>@T["Loaded {0} of {1} matching records.", loaded, matched]</span>
+    }
+
+    @foreach (var reason in reasons)
+    {
+        <span>@reason</span>
+    }
+</div>

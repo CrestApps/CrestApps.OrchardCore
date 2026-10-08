@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 
@@ -13,6 +14,8 @@ public sealed class BulkActivityAdminFormOptionsProvider
 {
     private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
     private readonly IEnumerable<IActivityDialerContributor> _dialerContributors;
+    private readonly ActivitySourceOptions _activitySourceOptions;
+    private readonly ActivityChannelOptions _activityChannelOptions;
 
     internal readonly IStringLocalizer S;
 
@@ -21,14 +24,20 @@ public sealed class BulkActivityAdminFormOptionsProvider
     /// </summary>
     /// <param name="campaignManager">The omnichannel campaign manager.</param>
     /// <param name="dialerContributors">The optional dialer contributors.</param>
+    /// <param name="activitySourceOptions">The activity sources registered by the enabled features.</param>
+    /// <param name="activityChannelOptions">The activity channels registered by the enabled features.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public BulkActivityAdminFormOptionsProvider(
         ICatalogManager<OmnichannelCampaign> campaignManager,
         IEnumerable<IActivityDialerContributor> dialerContributors,
+        IOptions<ActivitySourceOptions> activitySourceOptions,
+        IOptions<ActivityChannelOptions> activityChannelOptions,
         IStringLocalizer<BulkActivityAdminFormOptionsProvider> stringLocalizer)
     {
         _campaignManager = campaignManager;
         _dialerContributors = dialerContributors;
+        _activitySourceOptions = activitySourceOptions.Value;
+        _activityChannelOptions = activityChannelOptions.Value;
         S = stringLocalizer;
     }
 
@@ -36,21 +45,29 @@ public sealed class BulkActivityAdminFormOptionsProvider
         string selectedSource,
         string emptyText)
     {
-        return
-        [
-            new SelectListItem(S[emptyText], string.Empty, string.IsNullOrEmpty(selectedSource)),
-            new SelectListItem(S["Manual"], ActivitySources.Manual, string.Equals(selectedSource, ActivitySources.Manual, StringComparison.Ordinal)),
-            new SelectListItem(S["Automatic"], ActivitySources.Automatic, string.Equals(selectedSource, ActivitySources.Automatic, StringComparison.Ordinal)),
-            new SelectListItem(S["Dialer"], ActivitySources.Dialer, string.Equals(selectedSource, ActivitySources.Dialer, StringComparison.Ordinal)),
-            new SelectListItem(S["Preview dial"], ActivitySources.PreviewDial, string.Equals(selectedSource, ActivitySources.PreviewDial, StringComparison.Ordinal)),
-            new SelectListItem(S["Power dial"], ActivitySources.PowerDial, string.Equals(selectedSource, ActivitySources.PowerDial, StringComparison.Ordinal)),
-            new SelectListItem(S["Progressive dial"], ActivitySources.ProgressiveDial, string.Equals(selectedSource, ActivitySources.ProgressiveDial, StringComparison.Ordinal)),
-            new SelectListItem(S["Predictive dial"], ActivitySources.PredictiveDial, string.Equals(selectedSource, ActivitySources.PredictiveDial, StringComparison.Ordinal)),
-            new SelectListItem(S["Callback"], ActivitySources.Callback, string.Equals(selectedSource, ActivitySources.Callback, StringComparison.Ordinal)),
-            new SelectListItem(S["Inbound"], ActivitySources.Inbound, string.Equals(selectedSource, ActivitySources.Inbound, StringComparison.Ordinal)),
-            new SelectListItem(S["Workflow"], ActivitySources.Workflow, string.Equals(selectedSource, ActivitySources.Workflow, StringComparison.Ordinal)),
-            new SelectListItem(S["API"], ActivitySources.Api, string.Equals(selectedSource, ActivitySources.Api, StringComparison.Ordinal)),
-        ];
+        var options = ActivityFilterSelectListBuilder.BuildSourceItems(_activitySourceOptions, selectedSource);
+        options.Insert(0, new SelectListItem(S[emptyText], string.Empty, string.IsNullOrEmpty(selectedSource)));
+
+        return options;
+    }
+
+    internal IList<SelectListItem> GetManuallyAssignableSourceOptions(string emptyText)
+    {
+        var options = ActivityFilterSelectListBuilder.BuildManuallyAssignableSourceItems(_activitySourceOptions);
+        options.Insert(0, new SelectListItem(S[emptyText], string.Empty, selected: true));
+
+        return options;
+    }
+
+    internal string[] GetStoredSourceValues(string selectedSource)
+        => _activitySourceOptions.GetStoredValues(selectedSource);
+
+    internal IList<SelectListItem> GetChannelOptions(string selectedChannel, string emptyText)
+    {
+        var options = ActivityFilterSelectListBuilder.BuildChannelItems(_activityChannelOptions, selectedChannel);
+        options.Insert(0, new SelectListItem(S[emptyText], string.Empty, string.IsNullOrEmpty(selectedChannel)));
+
+        return options;
     }
 
     internal IList<SelectListItem> GetInteractionTypeOptions(string selectedInteractionType, string emptyText)

@@ -31,6 +31,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers;
 [Admin]
 public sealed class ActivityBatchesController : Controller
 {
+    /// <summary>
+    /// The name of the submit button that saves a batch and then loads its activities.
+    /// </summary>
+    internal const string SaveAndLoadSubmitName = "submit.SaveAndLoad";
+
     private const string _optionsSearch = "Options.Search";
 
     private readonly ICatalogManager<OmnichannelActivityBatch> _manager;
@@ -94,7 +99,7 @@ public sealed class ActivityBatchesController : Controller
             return Forbid();
         }
 
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
 
         var query = session.Query<OmnichannelActivityBatch, OmnichannelActivityBatchIndex>(collection: OmnichannelConstants.CollectionName);
 
@@ -147,11 +152,12 @@ public sealed class ActivityBatchesController : Controller
     /// Performs the index filter post operation.
     /// </summary>
     /// <param name="model">The model.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("omnichannel/activity/batches", "OmnichannelActivityBatchesIndex")]
-    public async Task<ActionResult> IndexFilterPost(ListCatalogEntryViewModel model)
+    public async Task<ActionResult> IndexFilterPost(ListCatalogEntryViewModel model, PagerParameters pagerParameters)
     {
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageActivityBatches))
         {
@@ -161,6 +167,7 @@ public sealed class ActivityBatchesController : Controller
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
             { _optionsSearch, model.Options?.Search },
+            { "pageSize", pagerParameters.PageSize },
         });
     }
 
@@ -177,7 +184,7 @@ public sealed class ActivityBatchesController : Controller
 
         if (!TryGetActivityBatchSource(source, out var sourceEntry))
         {
-            await _notifier.ErrorAsync(H["Unable to find an inventory load source with the name '{0}'.", source]);
+            await _notifier.ErrorAsync(H["Unable to find an activity load source with the name '{0}'.", source]);
 
             return RedirectToAction(nameof(Index));
         }
@@ -200,7 +207,21 @@ public sealed class ActivityBatchesController : Controller
     [HttpPost]
     [ActionName(nameof(Create))]
     [Admin("omnichannel/activity/batches/create/{source}", "OmnichannelActivityBatchesCreate")]
-    public async Task<ActionResult> CreatePost(string source)
+    public Task<ActionResult> CreatePost(string source)
+        => CreateBatchAsync(source, loadAfterSave: false);
+
+    /// <summary>
+    /// Creates a new batch and, once it is saved, starts loading its activities in the background.
+    /// </summary>
+    /// <param name="source">The activity load source of the new batch.</param>
+    [HttpPost]
+    [ActionName(nameof(Create))]
+    [FormValueRequired(SaveAndLoadSubmitName)]
+    [Admin("omnichannel/activity/batches/create/{source}", "OmnichannelActivityBatchesCreate")]
+    public Task<ActionResult> CreateAndLoadPost(string source)
+        => CreateBatchAsync(source, loadAfterSave: true);
+
+    private async Task<ActionResult> CreateBatchAsync(string source, bool loadAfterSave)
     {
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageActivityBatches))
         {
@@ -209,7 +230,7 @@ public sealed class ActivityBatchesController : Controller
 
         if (!TryGetActivityBatchSource(source, out var sourceEntry))
         {
-            await _notifier.ErrorAsync(H["Unable to find an inventory load source with the name '{0}'.", source]);
+            await _notifier.ErrorAsync(H["Unable to find an activity load source with the name '{0}'.", source]);
 
             return RedirectToAction(nameof(Index));
         }
@@ -227,7 +248,12 @@ public sealed class ActivityBatchesController : Controller
         {
             await _manager.CreateAsync(model);
 
-            await _notifier.SuccessAsync(H["A new inventory load has been created successfully."]);
+            if (loadAfterSave)
+            {
+                return await StartLoadAsync(model);
+            }
+
+            await _notifier.SuccessAsync(H["A new activity load has been created successfully."]);
 
             return RedirectToAction(nameof(Index));
         }
@@ -272,7 +298,22 @@ public sealed class ActivityBatchesController : Controller
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("omnichannel/activity/batches/edit/{id}", "OmnichannelActivityBatchesEdit")]
-    public async Task<ActionResult> EditPost(string id)
+    public Task<ActionResult> EditPost(string id)
+        => UpdateBatchAsync(id, loadAfterSave: false);
+
+    /// <summary>
+    /// Saves the batch exactly as <see cref="EditPost(string)"/> does and, once it is saved, starts loading its
+    /// activities in the background. A batch that fails validation is shown again and is not loaded.
+    /// </summary>
+    /// <param name="id">The id.</param>
+    [HttpPost]
+    [ActionName(nameof(Edit))]
+    [FormValueRequired(SaveAndLoadSubmitName)]
+    [Admin("omnichannel/activity/batches/edit/{id}", "OmnichannelActivityBatchesEdit")]
+    public Task<ActionResult> EditAndLoadPost(string id)
+        => UpdateBatchAsync(id, loadAfterSave: true);
+
+    private async Task<ActionResult> UpdateBatchAsync(string id, bool loadAfterSave)
     {
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageActivityBatches))
         {
@@ -310,7 +351,12 @@ public sealed class ActivityBatchesController : Controller
         {
             await _manager.UpdateAsync(model);
 
-            await _notifier.SuccessAsync(H["The inventory load has been updated successfully."]);
+            if (loadAfterSave)
+            {
+                return await StartLoadAsync(model);
+            }
+
+            await _notifier.SuccessAsync(H["The activity load has been updated successfully."]);
 
             return RedirectToAction(nameof(Index));
         }
@@ -318,6 +364,36 @@ public sealed class ActivityBatchesController : Controller
         ViewData["IsReadOnly"] = model.Status != OmnichannelActivityBatchStatus.New;
 
         return View(viewModel);
+    }
+
+    /// <summary>
+    /// Creates a new batch with the settings of an existing one and opens it for editing. The new batch is
+    /// <see cref="OmnichannelActivityBatchStatus.New"/> and has loaded nothing, whatever the status of the source.
+    /// </summary>
+    /// <param name="id">The id of the batch to copy.</param>
+    [HttpPost]
+    [Admin("omnichannel/activity/batches/clone/{id}", "OmnichannelActivityBatchesClone")]
+    public async Task<ActionResult> Clone(string id)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageActivityBatches))
+        {
+            return Forbid();
+        }
+
+        var source = await _manager.FindByIdAsync(id);
+
+        if (source == null)
+        {
+            return NotFound();
+        }
+
+        var copy = ActivityBatchCloner.CreateCopy(source, await _manager.NewAsync(), S["{0} (copy)", source.DisplayText]);
+
+        await _manager.CreateAsync(copy);
+
+        await _notifier.SuccessAsync(H["The activity load has been copied. Review the copy and load its activities when it is ready."]);
+
+        return RedirectToAction(nameof(Edit), new { id = copy.ItemId });
     }
 
     /// <summary>
@@ -340,27 +416,24 @@ public sealed class ActivityBatchesController : Controller
             return NotFound();
         }
 
-        if (model.Status == OmnichannelActivityBatchStatus.Loaded)
-        {
-            await _notifier.ErrorAsync(H["This batch was already loaded and can't be removed."]);
+        var refusal = await GetDeleteRefusalAsync(model);
 
-            return RedirectToAction(nameof(Index));
-        }
-
-        if (model.Status == OmnichannelActivityBatchStatus.Started || model.Status == OmnichannelActivityBatchStatus.Loading)
+        if (refusal is not null)
         {
-            await _notifier.ErrorAsync(H["This batch is being loaded and can't be removed."]);
+            await _notifier.ErrorAsync(refusal);
 
             return RedirectToAction(nameof(Index));
         }
 
         if (await _manager.DeleteAsync(model))
         {
-            await _notifier.SuccessAsync(H["The inventory load has been deleted successfully."]);
+            await _notifier.SuccessAsync(model.Status == OmnichannelActivityBatchStatus.Loaded
+                ? H["The activity load has been deleted. The activities it loaded were kept."]
+                : H["The activity load has been deleted successfully."]);
         }
         else
         {
-            await _notifier.ErrorAsync(H["Unable to remove the inventory load."]);
+            await _notifier.ErrorAsync(H["Unable to remove the activity load."]);
         }
 
         return RedirectToAction(nameof(Index));
@@ -400,6 +473,13 @@ public sealed class ActivityBatchesController : Controller
             return RedirectToAction(nameof(Index));
         }
 
+        return await StartLoadAsync(model);
+    }
+
+    // Marks the batch as started and hands the load to a background job that runs once the request has committed,
+    // so the job reads the batch as it was saved here. Shared by the Load action and by Save & Load.
+    private async Task<ActionResult> StartLoadAsync(OmnichannelActivityBatch model)
+    {
         model.Status = OmnichannelActivityBatchStatus.Started;
         await _manager.UpdateAsync(model);
 
@@ -419,7 +499,7 @@ public sealed class ActivityBatchesController : Controller
             });
         });
 
-        await _notifier.SuccessAsync(H["The inventory load has started loading in the background."]);
+        await _notifier.SuccessAsync(H["The activity load has started loading in the background. When it finishes, the list shows how many matching records were loaded and why any were skipped."]);
 
         return RedirectToAction(nameof(Index));
     }
@@ -448,6 +528,7 @@ public sealed class ActivityBatchesController : Controller
                     break;
                 case CatalogEntryAction.Remove:
                     var counter = 0;
+                    var refused = 0;
                     foreach (var id in itemIds)
                     {
                         var instance = await _manager.FindByIdAsync(id);
@@ -457,18 +538,31 @@ public sealed class ActivityBatchesController : Controller
                             continue;
                         }
 
+                        // The bulk path is held to the same rules as a single delete, so a batch being loaded is
+                        // never removed from under its load.
+                        if (await GetDeleteRefusalAsync(instance) is not null)
+                        {
+                            refused++;
+
+                            continue;
+                        }
+
                         if (await _manager.DeleteAsync(instance))
                         {
                             counter++;
                         }
                     }
+                    if (refused > 0)
+                    {
+                        await _notifier.WarningAsync(H.Plural(refused, "1 activity load was not removed because it is being loaded or you may not remove a loaded batch.", "{0} activity loads were not removed because they are being loaded or you may not remove a loaded batch."));
+                    }
                     if (counter == 0)
                     {
-                        await _notifier.WarningAsync(H["No inventory loads were removed."]);
+                        await _notifier.WarningAsync(H["No activity loads were removed."]);
                     }
                     else
                     {
-                        await _notifier.SuccessAsync(H.Plural(counter, "1 inventory load has been removed successfully.", "{0} inventory loads have been removed successfully."));
+                        await _notifier.SuccessAsync(H.Plural(counter, "1 activity load has been removed successfully.", "{0} activity loads have been removed successfully."));
                     }
                     break;
                 default:
@@ -477,6 +571,26 @@ public sealed class ActivityBatchesController : Controller
         }
 
         return RedirectToAction(nameof(Index));
+    }
+
+    // A batch is never removed while it is being loaded: the load reads it again as it commits, and would store it a
+    // second time. A loaded batch is only the record of a finished load. Nothing refers to it afterwards -- the
+    // activities it created carry no reference back to it and stay exactly as they are -- so it may be removed, but
+    // only by someone allowed to remove that record.
+    private async Task<LocalizedHtmlString> GetDeleteRefusalAsync(OmnichannelActivityBatch batch)
+    {
+        if (batch.Status == OmnichannelActivityBatchStatus.Started || batch.Status == OmnichannelActivityBatchStatus.Loading)
+        {
+            return H["This batch is being loaded and can't be removed."];
+        }
+
+        if (batch.Status == OmnichannelActivityBatchStatus.Loaded &&
+            !await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.DeleteLoadedActivityBatches))
+        {
+            return H["This batch was already loaded, and you are not allowed to remove a loaded batch."];
+        }
+
+        return null;
     }
 
     private bool TryGetActivityBatchSource(string source, out ActivityBatchSourceEntry sourceEntry)

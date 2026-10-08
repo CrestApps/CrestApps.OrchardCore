@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.BackgroundWork;
 using CrestApps.OrchardCore.DncRegistry.BackgroundTasks;
 using CrestApps.OrchardCore.DncRegistry.Drivers;
 using CrestApps.OrchardCore.DncRegistry.Indexes;
@@ -5,6 +6,7 @@ using CrestApps.OrchardCore.DncRegistry.Migrations;
 using CrestApps.OrchardCore.DncRegistry.Models;
 using CrestApps.OrchardCore.DncRegistry.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
@@ -12,6 +14,7 @@ using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Environment.Shell;
+using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.FileStorage.FileSystem;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -69,8 +72,16 @@ public sealed class CanadaDnclStartup : StartupBase
 [Feature(DncRegistryConstants.Features.Local)]
 public sealed class LocalDncRegistryStartup : StartupBase
 {
+    private readonly IShellConfiguration _configuration;
+
+    public LocalDncRegistryStartup(IShellConfiguration configuration)
+    {
+        _configuration = configuration;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.Configure<BackgroundWorkPacingOptions>(_configuration.GetSection(BackgroundWorkPacingOptions.SectionName));
         services.Configure<StoreCollectionOptions>(o => o.Collections.Add(DncRegistryConstants.CollectionName));
 
         services.AddSingleton<ILocalDncFileStore>(serviceProvider =>
@@ -91,7 +102,7 @@ public sealed class LocalDncRegistryStartup : StartupBase
 
         services.AddScoped<INationalDoNotCallRegistry, LocalDncRegistry>();
         services.AddScoped<ILocalDncListManager, DefaultLocalDncListManager>();
-        services.AddSingleton<IBackgroundTask, LocalDncImportBackgroundTask>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, LocalDncImportBackgroundTask>());
         services.AddNavigationProvider<LocalDncRegistryAdminMenu>();
         services.AddDataMigration<LocalDncRegistryMigrations>();
         services.AddSingleton<IIndexProvider, LocalDncListIndexProvider>();

@@ -6,8 +6,10 @@ using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Infrastructure.Indexing.Models;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.AI.DataSources.PostgreSQL.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Npgsql;
 
 namespace CrestApps.OrchardCore.AI.DataSources.PostgreSQL.Services;
@@ -17,18 +19,22 @@ internal sealed class PostgreSQLAIDataSourceSourceHandler : IAIDataSourceSourceH
     private const int BatchSize = 1000;
 
     private readonly IDataProtectionProvider _dataProtectionProvider;
+    private readonly PostgreSQLDataSourceOptions _options;
     private readonly ILogger<PostgreSQLAIDataSourceSourceHandler> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PostgreSQLAIDataSourceSourceHandler"/> class.
     /// </summary>
     /// <param name="dataProtectionProvider">The data protection provider.</param>
+    /// <param name="options">The global PostgreSQL data source options.</param>
     /// <param name="logger">The logger.</param>
     public PostgreSQLAIDataSourceSourceHandler(
         IDataProtectionProvider dataProtectionProvider,
+        IOptions<PostgreSQLDataSourceOptions> options,
         ILogger<PostgreSQLAIDataSourceSourceHandler> logger)
     {
         _dataProtectionProvider = dataProtectionProvider;
+        _options = options.Value;
         _logger = logger;
     }
 
@@ -49,9 +55,10 @@ internal sealed class PostgreSQLAIDataSourceSourceHandler : IAIDataSourceSourceH
             return ValueTask.CompletedTask;
         }
 
-        if (string.IsNullOrWhiteSpace(metadata.ConnectionString))
+        if (string.IsNullOrWhiteSpace(metadata.ConnectionString) &&
+            string.IsNullOrWhiteSpace(_options.ConnectionString))
         {
-            result.Fail(new ValidationResult("PostgreSQL connection string is required.", [nameof(PostgreSQLSourceMetadata.ConnectionString)]));
+            result.Fail(new ValidationResult($"PostgreSQL connection string is required. Provide one for this data source or configure '{PostgreSQLDataSourceOptionsConfiguration.SharedConfigurationSectionName}:{nameof(PostgreSQLDataSourceOptions.ConnectionString)}'.", [nameof(PostgreSQLSourceMetadata.ConnectionString)]));
         }
 
         if (string.IsNullOrWhiteSpace(metadata.TableName))
@@ -169,6 +176,17 @@ internal sealed class PostgreSQLAIDataSourceSourceHandler : IAIDataSourceSourceH
         AIDataSource dataSource,
         PostgreSQLSourceMetadata metadata)
     {
+        // Data sources without their own connection string use the globally configured one.
+        if (string.IsNullOrWhiteSpace(metadata.ConnectionString))
+        {
+            if (string.IsNullOrWhiteSpace(_options.ConnectionString))
+            {
+                throw new InvalidOperationException($"No PostgreSQL connection string is available for data source '{dataSource.ItemId}'. Provide one for this data source or configure '{PostgreSQLDataSourceOptionsConfiguration.SharedConfigurationSectionName}:{nameof(PostgreSQLDataSourceOptions.ConnectionString)}'.");
+            }
+
+            return _options.ConnectionString;
+        }
+
         var protector = _dataProtectionProvider.CreateProtector(AIDataSourceProtectionConstants.SourceSecretPurpose);
 
         return DataProtectionHelper.Unprotect(protector, metadata.ConnectionString, _logger, "Failed to unprotect AI data source field '{FieldName}' for data source '{DataSourceId}'.", nameof(PostgreSQLSourceMetadata.ConnectionString), dataSource.ItemId);

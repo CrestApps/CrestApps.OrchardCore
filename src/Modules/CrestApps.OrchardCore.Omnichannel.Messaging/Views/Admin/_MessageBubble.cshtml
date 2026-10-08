@@ -1,0 +1,121 @@
+@using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments
+@using CrestApps.OrchardCore.Omnichannel.Messaging.Services
+@model MessageBubbleViewModel
+@inject MessagingAttachmentLinks AttachmentLinks
+
+@{
+    var message = Model.Message;
+    var outbound = !message.IsInbound;
+    // Among outbound messages, a human agent sets SentByAgentId; automated (AI) replies leave it null.
+    var isAgent = outbound && !string.IsNullOrEmpty(message.SentByAgentId);
+    var isAi = outbound && string.IsNullOrEmpty(message.SentByAgentId);
+
+    var bubbleClass = isAgent
+        ? "bg-primary-subtle border border-primary-subtle text-body"
+        : isAi
+            ? "bg-info-subtle border border-info-subtle text-body"
+            : "bg-body border text-body";
+
+    // Normalize whitespace so a message an AI padded with blank lines does not inflate the bubble: unify line
+    // endings, trim the ends, and collapse any run of blank lines down to a single line break. A single
+    // intentional line break inside the message is preserved (pre-wrap still renders it).
+    var normalized = (message.Content ?? string.Empty)
+        .Replace("\r\n", "\n")
+        .Replace("\r", "\n")
+        .Trim();
+    var content = System.Text.RegularExpressions.Regex.Replace(normalized, "\n{2,}", "\n");
+
+    var attachments = message.GetAttachments();
+    var skippedAttachments = message.GetSkippedAttachmentCount();
+}
+
+@functions {
+    private static string FileIcon(MessagingFileFormat format)
+        => format?.ContentType switch
+        {
+            "application/pdf" => "fa-regular fa-file-pdf",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document" => "fa-regular fa-file-word",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" => "fa-regular fa-file-excel",
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation" => "fa-regular fa-file-powerpoint",
+            "text/csv" => "fa-solid fa-file-csv",
+            "text/vcard" => "fa-regular fa-address-card",
+            _ => "fa-regular fa-file-lines",
+        };
+}
+
+<div class="messaging-message d-flex flex-column mb-2 @(outbound ? "align-items-end" : "align-items-start")"
+     data-message-id="@message.Id"
+     data-inbound="@(message.IsInbound ? "true" : "false")"
+     data-created-ticks="@message.CreatedUtc.Ticks">
+    <div class="p-2 px-3 rounded-4 @bubbleClass" style="max-width: 80%; min-width: 6rem;">
+        @if (attachments.Count > 0 && !string.IsNullOrEmpty(message.ConversationId))
+        {
+            <div class="messaging-attachments d-flex flex-wrap gap-1 @(string.IsNullOrEmpty(content) ? string.Empty : "mb-2")">
+                @foreach (var attachment in attachments)
+                {
+                    var src = Url.Action("Show", "Attachments", new { area = "CrestApps.OrchardCore.Omnichannel.Messaging", id = message.ConversationId, token = AttachmentLinks.CreateViewToken(message.ConversationId, attachment) });
+                    var format = MessagingFileFormats.FindByContentType(attachment.ContentType);
+
+                    @* A picture is shown as a thumbnail; every other file is a download, named as it was sent. *@
+                    if (format?.IsImage == true)
+                    {
+                        var label = string.IsNullOrEmpty(attachment.FileName) ? T["Picture"].Value : attachment.FileName;
+                        <a href="@src" target="_blank" rel="noopener" class="messaging-attachment d-block rounded-3 overflow-hidden" title="@label">
+                            <img src="@src" alt="@label" loading="lazy" data-messaging-attachment />
+                        </a>
+                    }
+                    else
+                    {
+                        var fileLabel = string.IsNullOrEmpty(attachment.FileName) ? T["Attachment"].Value : attachment.FileName;
+                        var sizeLabel = attachment.Length >= 1024 * 1024
+                            ? $"{attachment.Length / (1024d * 1024):0.#} MB"
+                            : $"{Math.Max(1, attachment.Length / 1024)} KB";
+                        <a href="@src" class="messaging-file d-flex align-items-center gap-2 rounded-3 border bg-body px-2 py-1 text-decoration-none text-body" title="@T["Download {0}", fileLabel]" data-messaging-file>
+                            <i class="@FileIcon(format) fa-lg text-secondary" aria-hidden="true"></i>
+                            <span class="d-flex flex-column" style="min-width: 0;">
+                                <span class="text-truncate small fw-semibold">@fileLabel</span>
+                                <span class="text-muted" style="font-size: .7rem;">@(format?.Name ?? T["File"].Value) &middot; @sizeLabel</span>
+                            </span>
+                            <i class="fa-solid fa-download text-secondary small ms-1" aria-hidden="true"></i>
+                        </a>
+                    }
+                }
+            </div>
+        }
+        @if (skippedAttachments > 0)
+        {
+            <div class="small text-muted fst-italic @(string.IsNullOrEmpty(content) ? string.Empty : "mb-1")">
+                <i class="fa-regular fa-image me-1" aria-hidden="true"></i>@(skippedAttachments == 1 ? T["An attachment could not be shown."] : T["{0} attachments could not be shown.", skippedAttachments])
+            </div>
+        }
+        @if (!string.IsNullOrEmpty(content))
+        {
+            <div style="white-space: pre-wrap; word-break: break-word;">@content</div>
+        }
+
+        @* Sender name and time sit below the message in a slightly smaller, muted font. *@
+        <div class="d-flex justify-content-between align-items-baseline gap-3 text-muted mt-1" style="font-size: .72rem;">
+            <span class="text-truncate">
+                @if (isAgent)
+                {
+                    <i class="fa-solid fa-headset me-1" aria-hidden="true"></i>@(string.IsNullOrEmpty(Model.AgentName) ? T["Agent"].Value : Model.AgentName)
+                }
+                else if (isAi)
+                {
+                    <i class="fa-solid fa-robot me-1" aria-hidden="true"></i><text>@T["AI assistant"]</text>
+                }
+                else
+                {
+                    <i class="fa-solid fa-user me-1" aria-hidden="true"></i><text>@Model.ContactLabel</text>
+                }
+            </span>
+            <span class="text-nowrap">
+                @message.CreatedUtc.ToLocalTime().ToString("t")
+                @if (outbound && !string.IsNullOrEmpty(message.DeliveryStatus))
+                {
+                    <text>&middot; @message.DeliveryStatus</text>
+                }
+            </span>
+        </div>
+    </div>
+</div>

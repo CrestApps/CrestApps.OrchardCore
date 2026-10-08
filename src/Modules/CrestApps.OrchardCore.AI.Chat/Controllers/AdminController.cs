@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
@@ -37,6 +38,7 @@ public sealed class AdminController : Controller
     private readonly IShapeFactory _shapeFactory;
 
     private readonly INotifier _notifier;
+    private readonly ILogger _logger;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -53,6 +55,7 @@ public sealed class AdminController : Controller
     /// <param name="updateModelAccessor">The update model accessor.</param>
     /// <param name="shapeFactory">The shape factory.</param>
     /// <param name="notifier">The notifier.</param>
+    /// <param name="logger">The logger.</param>
     /// <param name="htmlLocalizer">The html localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AdminController(
@@ -65,6 +68,7 @@ public sealed class AdminController : Controller
         IUpdateModelAccessor updateModelAccessor,
         IShapeFactory shapeFactory,
         INotifier notifier,
+        ILogger<AdminController> logger,
         IHtmlLocalizer<AdminController> htmlLocalizer,
         IStringLocalizer<AdminController> stringLocalizer
         )
@@ -78,6 +82,7 @@ public sealed class AdminController : Controller
         _updateModelAccessor = updateModelAccessor;
         _shapeFactory = shapeFactory;
         _notifier = notifier;
+        _logger = logger;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -118,22 +123,59 @@ public sealed class AdminController : Controller
 
         if (!string.IsNullOrEmpty(sessionId))
         {
-            var chatSession = await _sessionManager.FindAsync(sessionId);
+            // Load the session unscoped: system-owned sessions (for example an automated AI voice or SMS
+            // conversation) carry no UserId, so the user-scoped FindAsync would never return them and the
+            // "Review AI conversation" link would 404. Ownership is enforced by the checks below instead —
+            // a user session belonging to someone else is rejected, and a system session must pass the
+            // resource-based access providers.
+            var chatSession = await _sessionManager.FindByIdAsync(sessionId);
 
             if (chatSession == null || chatSession.ProfileId != profile.ItemId)
             {
+                _logger.LogWarning(
+                    "AI chat session page: session {SessionId} was not found for profile {ProfileId} (stored profile {StoredProfileId}, resource {ResourceId}).",
+                    sessionId,
+                    profile.ItemId,
+                    chatSession?.ProfileId,
+                    resourceId);
+
                 return NotFound();
             }
 
             if (!string.IsNullOrEmpty(chatSession.UserId) && chatSession.UserId != userId)
             {
+                _logger.LogWarning(
+                    "AI chat session page: user {UserId} was refused session {SessionId} of profile {ProfileId} because it belongs to another user.",
+                    userId,
+                    sessionId,
+                    profile.ItemId);
+
                 return Forbid();
             }
 
-            if (string.IsNullOrEmpty(chatSession.UserId) &&
-                !await CanAccessSystemSessionAsync(profile.ItemId, sessionId, resourceId))
+            if (string.IsNullOrEmpty(chatSession.UserId))
             {
-                return Forbid();
+                if (!await CanAccessSystemSessionAsync(profile.ItemId, sessionId, resourceId))
+                {
+                    _logger.LogWarning(
+                        "AI chat session page: user {UserId} was refused system-owned session {SessionId} of profile {ProfileId}; no access provider authorized resource {ResourceId}.",
+                        userId,
+                        sessionId,
+                        profile.ItemId,
+                        resourceId);
+
+                    return Forbid();
+                }
+
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug(
+                        "AI chat session page: user {UserId} is reviewing system-owned session {SessionId} of profile {ProfileId} through resource {ResourceId}; the transcript is rendered read-only and the chat hub is not asked to load it.",
+                        userId,
+                        sessionId,
+                        profile.ItemId,
+                        resourceId);
+                }
             }
 
             model.SessionId = sessionId;
@@ -217,14 +259,10 @@ public sealed class AdminController : Controller
             options.RouteValues.TryAdd("q", options.SearchText);
         }
 
-        var page = 1;
+        // The pager resolves the page size the viewer chose, so the query reads exactly the page the pager shows.
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
 
-        if (pagerParameters.Page.HasValue && pagerParameters.Page.Value > 0)
-        {
-            page = pagerParameters.Page.Value;
-        }
-
-        var sessionResult = await _sessionManager.PageAsync(page, pagerOptions.Value.GetPageSize(), new AIChatSessionQueryContext
+        var sessionResult = await _sessionManager.PageAsync(pager.Page, pager.PageSize, new AIChatSessionQueryContext
         {
             ProfileId = profileId,
             Name = options.SearchText
@@ -233,8 +271,6 @@ public sealed class AdminController : Controller
         var itemsPerPage = pagerOptions.Value.MaxPagedCount > 0
             ? pagerOptions.Value.MaxPagedCount
             : sessionResult.Count;
-
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
 
         var pagerShape = await shapeFactory.PagerAsync(pager, itemsPerPage, options.RouteValues);
 
@@ -255,9 +291,10 @@ public sealed class AdminController : Controller
     /// Performs the history post operation.
     /// </summary>
     /// <param name="profileId">The profile id.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
     [HttpPost]
     [ActionName(nameof(History))]
-    public async Task<ActionResult> HistoryPost(string profileId)
+    public async Task<ActionResult> HistoryPost(string profileId, PagerParameters pagerParameters)
     {
         var profile = await _profileManager.FindByIdAsync(profileId);
 
@@ -280,6 +317,7 @@ public sealed class AdminController : Controller
 
         options.RouteValues.TryAdd("q", options.SearchText);
         options.RouteValues.TryAdd("profileId", profileId);
+        options.RouteValues.TryAdd("pageSize", pagerParameters.PageSize);
 
         return RedirectToAction(nameof(History), options.RouteValues);
     }

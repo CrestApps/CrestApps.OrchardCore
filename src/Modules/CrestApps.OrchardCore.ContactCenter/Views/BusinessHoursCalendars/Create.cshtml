@@ -1,0 +1,22 @@
+@using CrestApps.OrchardCore.ContactCenter.Core
+@using CrestApps.OrchardCore.Core.Models
+
+@model EditCatalogEntryViewModel
+
+<zone Name="Title">
+    <breadcrumb name="ContactCenterBusinessHoursCalendarsCreate" title="@T["New Business Hours Calendar"]">
+        <breadcrumb-item id="ContactCenterBusinessHoursCalendars" action="Index" controller="BusinessHoursCalendars" area="CrestApps.OrchardCore.ContactCenter" permission="@ContactCenterPermissions.ManageBusinessHours.Name">@T["Business hours"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" enctype="multipart/form-data" class="no-multisubmit">
+    @Html.ValidationSummary()
+    @await DisplayAsync(Model.Editor)
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button class="btn btn-primary" type="submit">@T["Save"]</button>
+            <a class="btn btn-secondary cancel" role="button" asp-route-action="Index">@T["Cancel"]</a>
+        </div>
+    </div>
+</form>

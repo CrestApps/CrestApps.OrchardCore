@@ -1,8 +1,12 @@
+using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Services;
+using CrestApps.Core.AI.Tooling;
+using CrestApps.Core.AI.Tooling.Instances.DataSources;
 using CrestApps.Core.Data.YesSql;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.DataSources.BackgroundTasks;
 using CrestApps.OrchardCore.AI.DataSources.Deployments;
@@ -46,6 +50,7 @@ public sealed class Startup : StartupBase
             .AddCoreAIDataSourceStoresYesSql();
 
         services.AddTransient<IConfigureOptions<AIDataSourceOptions>, AIDataSourceOptionsConfiguration>();
+        services.AddSignalOptionsChangeTokenSource<AIDataSourceOptions>();
         services.AddDataMigration<AIDataSourceIndexMigrations>();
         services.AddDataMigration<DataSourceMetadataMigrations>();
         services.AddDisplayDriver<AIDataSource, AIDataSourceDisplayDriver>();
@@ -68,7 +73,10 @@ public sealed class Startup : StartupBase
             .AddScoped<IAIDataSourceIndexingService, OrchardAIDataSourceIndexingServiceAdapter>();
         services.AddKeyedScoped<IAIDataSourceSourceHandler, SearchIndexProfileAIDataSourceSourceHandler>(AIDataSourceSourceTypes.SearchIndexProfile);
 
-        services.AddSingleton<IBackgroundTask, DataSourceAlignmentBackgroundTask>();
+        // This source reads an index it did not shape, so it has to ask which field carries the content.
+        services.Configure<AIDataSourceFieldMappingOptions>(options => options.Require(AIDataSourceSourceTypes.SearchIndexProfile));
+
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, DataSourceAlignmentBackgroundTask>());
         services.AddScoped<IDocumentIndexHandler, AIDataSourceDocumentIndexNotificationHandler>();
         services.AddIndexProfileHandler<DataSourceIndexProfileHandler>();
         services.AddIndexProfileHandler<DataSourceSourceIndexProfileHandler>();
@@ -125,5 +133,26 @@ public sealed class ChatInteractionsWorkflowsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddActivity<AICompletionWithConfigTask, AICompletionWithConfigDataSourceDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Registers the data source search tool instance source, which exposes an existing AI data source to the
+/// model as a callable vector search function.
+/// </summary>
+[RequireFeatures(AIConstants.Feature.ToolInstances)]
+public sealed class DataSourcesToolInstancesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddCrestAppsCore(crestApps => crestApps
+            .AddAISuite(ai => ai
+                .AddToolInstances(toolInstances => toolInstances
+                    .AddDataSourceSearchSource()
+                )
+            )
+        );
+
+        services.AddDisplayDriver<AIToolInstance, DataSourceSearchToolInstanceDisplayDriver>();
     }
 }

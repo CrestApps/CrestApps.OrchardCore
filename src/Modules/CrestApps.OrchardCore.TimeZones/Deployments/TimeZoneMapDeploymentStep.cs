@@ -1,5 +1,5 @@
-using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
+using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.TimeZones.Deployments;
 
@@ -8,22 +8,17 @@ namespace CrestApps.OrchardCore.TimeZones.Deployments;
 /// </summary>
 public sealed class TimeZoneMapDeploymentStep : DeploymentStep
 {
+    private static readonly LocalizationSource _category = LocalizationSource.Create<TimeZoneMapDeploymentStep>("Infrastructure");
+    private static readonly LocalizationSource _title = LocalizationSource.Create<TimeZoneMapDeploymentStep>("Time Zone Maps");
+
     /// <summary>
     /// Initializes a new instance of the <see cref="TimeZoneMapDeploymentStep"/> class.
     /// </summary>
     public TimeZoneMapDeploymentStep()
     {
         Name = TimeZonesConstants.Recipes.TimeZoneMaps;
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="TimeZoneMapDeploymentStep"/> class.
-    /// </summary>
-    /// <param name="S">The string localizer.</param>
-    public TimeZoneMapDeploymentStep(IStringLocalizer<TimeZoneMapDeploymentStep> S)
-        : this()
-    {
-        Category = S["Infrastructure"];
+        Category = _category;
+        Title = _title;
     }
 
     /// <summary>

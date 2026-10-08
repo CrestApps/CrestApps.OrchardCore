@@ -1,0 +1,30 @@
+@using System.Globalization
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model OpportunityPartViewModel
+
+@if (!string.IsNullOrEmpty(Model.StageName))
+{
+    var badgeClass = Model.IsWon ? "text-bg-success" : Model.IsClosed ? "text-bg-secondary" : "text-bg-info";
+
+    <span class="badge @badgeClass" title="@T["Stage"]">@Model.StageName</span>
+}
+
+@if (Model.Amount.HasValue)
+{
+    <span class="badge ta-badge font-weight-normal" title="@T["Amount"]">
+        <i class="fa-solid fa-sack-dollar text-secondary me-1" aria-hidden="true"></i>@Model.Amount.Value.ToString("N2", CultureInfo.CurrentCulture)
+    </span>
+}
+
+@if (Model.Probability.HasValue && !Model.IsClosed)
+{
+    <span class="badge ta-badge font-weight-normal" title="@T["Probability"]">@Model.Probability%</span>
+}
+
+@if (Model.CloseDate.HasValue)
+{
+    <span class="badge ta-badge font-weight-normal" title="@T["Close date"]">
+        <i class="fa-solid fa-calendar text-secondary me-1" aria-hidden="true"></i>@Model.CloseDate.Value.ToString("d", CultureInfo.CurrentCulture)
+    </span>
+}

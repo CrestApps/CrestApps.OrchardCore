@@ -19,27 +19,36 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
     private readonly ISourceCatalog<SubjectAction> _actionCatalog;
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
     private readonly IContentManager _contentManager;
+    private readonly INotInServiceNumberService _notInServiceNumbers;
     private readonly ISession _session;
     private readonly IClock _clock;
     private readonly ILocalClock _localClock;
     private readonly ILogger _logger;
+    private readonly IEnumerable<ISubjectActionHandler> _handlers;
+    private readonly IEnumerable<IFollowUpActivityHandler> _followUpHandlers;
 
     public DefaultSubjectActionExecutor(
         ISourceCatalog<SubjectAction> actionCatalog,
         ISubjectFlowSettingsService subjectFlowSettingsService,
         IContentManager contentManager,
+        INotInServiceNumberService notInServiceNumbers,
         ISession session,
         IClock clock,
         ILocalClock localClock,
-        ILogger<DefaultSubjectActionExecutor> logger)
+        ILogger<DefaultSubjectActionExecutor> logger,
+        IEnumerable<ISubjectActionHandler> handlers = null,
+        IEnumerable<IFollowUpActivityHandler> followUpHandlers = null)
     {
         _actionCatalog = actionCatalog;
         _subjectFlowSettingsService = subjectFlowSettingsService;
         _contentManager = contentManager;
+        _notInServiceNumbers = notInServiceNumbers;
         _session = session;
         _clock = clock;
         _localClock = localClock;
         _logger = logger;
+        _handlers = handlers ?? [];
+        _followUpHandlers = followUpHandlers ?? [];
     }
 
     public async Task ExecuteAsync(SubjectActionExecutionContext context, CancellationToken cancellationToken = default)
@@ -63,11 +72,18 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
             return;
         }
 
+        // What the disposition itself means is applied once, whatever actions the subject wires to it -- and when it
+        // wires none, which is how a disposition the platform chose on its own is usually recorded.
+        await ApplyOutcomeAsync(context);
+
         var allActions = await _actionCatalog.GetAllAsync(cancellationToken);
 
         var actions = allActions
             .Where(a => string.Equals(a.SubjectContentType, context.Activity.SubjectContentType, StringComparison.OrdinalIgnoreCase)
                      && string.Equals(a.DispositionId, context.Disposition.ItemId, StringComparison.OrdinalIgnoreCase))
+            // An action that changes which record the activity is about, such as converting a lead, runs first so
+            // the actions after it work on the new record. The sort is stable, so the others keep their order.
+            .OrderBy(a => GetHandler(a.Source)?.Order ?? 0)
             .ToArray();
 
         foreach (var action in actions)
@@ -78,7 +94,8 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
 
     private async Task ExecuteActionAsync(SubjectAction action, SubjectActionExecutionContext context)
     {
-        ApplyCommunicationPreferences(action, context.Contact);
+        await ApplyCommunicationPreferencesAsync(action, context.Contact);
+        await ApplyLeadStatusAsync(action, context.Contact);
 
         switch (action.Source)
         {
@@ -94,7 +111,15 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
                 break;
 
             default:
-                _logger.LogWarning("Unknown subject action type: {ActionType}", action.Source);
+                var handler = GetHandler(action.Source);
+
+                if (handler is null)
+                {
+                    _logger.LogWarning("Unknown subject action type: {ActionType}", action.Source);
+                    break;
+                }
+
+                await handler.ExecuteAsync(action, context);
                 break;
         }
     }
@@ -114,32 +139,9 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         }
 
         var now = _clock.UtcNow;
-        var nextAttempt = new OmnichannelActivity
-        {
-            ItemId = IdGenerator.GenerateId(),
-            Channel = activity.Channel,
-            ChannelEndpointId = activity.ChannelEndpointId,
-            InteractionType = activity.InteractionType,
-            PreferredDestination = activity.PreferredDestination,
-            ContactContentItemId = activity.ContactContentItemId,
-            ContactContentType = activity.ContactContentType,
-            ContactResolutionStatus = activity.ContactResolutionStatus,
-            ContactResolutionCandidates = activity.ContactResolutionCandidates.ToList(),
-            ContactResolvedUtc = activity.ContactResolvedUtc,
-            ContactResolvedById = activity.ContactResolvedById,
-            ContactResolvedByUsername = activity.ContactResolvedByUsername,
-            CampaignId = activity.CampaignId,
-            Instructions = ResolvePreparationNotes(action, context, activity.Instructions),
-            Attempts = activity.Attempts + 1,
-            CreatedById = activity.CompletedById,
-            CreatedByUsername = activity.CompletedByUsername,
-            CreatedUtc = now,
-            SubjectContentType = activity.SubjectContentType,
-            Subject = activity.Subject,
-            UrgencyLevel = metadata.UrgencyLevel ?? activity.UrgencyLevel,
-            Status = ActivityStatus.NotStated,
-        };
-
+        var nextAttempt = OmnichannelActivityFollowUps.CreateNextAttempt(activity, now);
+        nextAttempt.Instructions = ResolvePreparationNotes(action, context, activity.Instructions);
+        nextAttempt.UrgencyLevel = metadata.UrgencyLevel ?? activity.UrgencyLevel;
         nextAttempt.ScheduledUtc = await ResolveScheduleDateAsync(action, context, metadata.DefaultScheduleHours);
 
         if (!await TryAssignOwnerAsync(
@@ -150,6 +152,34 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
             activity,
             now))
         {
+            return;
+        }
+
+        // Whatever carried the first attempt takes the next one in too -- a dialer campaign queues it again -- or
+        // refuses it when no attempt is left.
+        var followUp = new FollowUpActivityContext
+        {
+            PreviousActivity = activity,
+            FollowUpActivity = nextAttempt,
+            CreatedBy = OmnichannelConstants.ActionTypes.TryAgain,
+            HasNamedOwner = SubjectActionOwnerAssignmentTypeResolver.Resolve(metadata.AssignmentType, metadata.NormalizedUserName) != SubjectActionOwnerAssignmentType.SameOwner,
+        };
+
+        foreach (var handler in _followUpHandlers)
+        {
+            await handler.CreatingAsync(followUp);
+        }
+
+        if (followUp.Cancel)
+        {
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Did not create the next attempt of activity {ActivityId}: {Reason}",
+                    activity.ItemId,
+                    followUp.CancelReason);
+            }
+
             return;
         }
 
@@ -233,7 +263,55 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         return await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(subjectContentType);
     }
 
-    private void ApplyCommunicationPreferences(SubjectAction action, ContentItem contact)
+    private async Task ApplyOutcomeAsync(SubjectActionExecutionContext context)
+    {
+        if (context.Disposition.Outcome == DispositionOutcome.NotInService)
+        {
+            await MarkNumberNotInServiceAsync(context);
+        }
+    }
+
+    private async Task MarkNumberNotInServiceAsync(SubjectActionExecutionContext context)
+    {
+        var activity = context.Activity;
+
+        // A disposition the platform applied because the network reported the number dead arrives with the number
+        // already marked -- the one that was actually dialed -- so it is not marked a second time.
+        if (context.NotInServiceSource is not null)
+        {
+            return;
+        }
+
+        // Only a call reaches a number; the destination of a message or an email says nothing about a phone line.
+        if (!string.Equals(activity.Channel, OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase) ||
+            string.IsNullOrWhiteSpace(activity.PreferredDestination))
+        {
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Disposition '{Disposition}' marks the number as not in service, but activity '{ActivityId}' has no phone number to mark (channel '{Channel}').",
+                    context.Disposition.Name,
+                    activity.ItemId,
+                    activity.Channel);
+            }
+
+            return;
+        }
+
+        await _notInServiceNumbers.MarkAsync(new NotInServiceMark
+        {
+            PhoneNumber = activity.PreferredDestination,
+            Source = OmnichannelConstants.NotInServiceSources.Agent,
+            Reason = context.Disposition.Name,
+            ActivityId = activity.ItemId,
+            CampaignId = activity.CampaignId,
+            ContactContentItemId = activity.ContactContentItemId,
+            MarkedById = activity.CompletedById,
+            MarkedByUsername = activity.CompletedByUsername,
+        });
+    }
+
+    private async Task ApplyCommunicationPreferencesAsync(SubjectAction action, ContentItem contact)
     {
         if (contact is null)
         {
@@ -242,8 +320,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
 
         if (!action.SetDoNotCall.HasValue &&
             !action.SetDoNotEmail.HasValue &&
-            !action.SetDoNotSms.HasValue &&
-            !action.SetDoNotChat.HasValue)
+            !action.SetDoNotSms.HasValue)
         {
             return;
         }
@@ -266,12 +343,47 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
             {
                 part.SetDoNotSms(action.SetDoNotSms.Value, now);
             }
-
-            if (action.SetDoNotChat.HasValue)
-            {
-                part.SetDoNotChat(action.SetDoNotChat.Value, now);
-            }
         });
+
+        // Altering the content item only changes the copy in memory. Nothing downstream reads that copy: the
+        // preference is read back from the contact's own record, and the lists that decide who gets dialled or
+        // messaged query the published one. Without these two lines a customer could ask not to be called, be
+        // dispositioned exactly right, and be dialled again on the next load -- which is what happened.
+        await _contentManager.UpdateAsync(contact);
+
+        if (contact.Published)
+        {
+            await _contentManager.PublishAsync(contact);
+        }
+    }
+
+    private ISubjectActionHandler GetHandler(string actionType)
+        => _handlers.FirstOrDefault(handler => string.Equals(handler.ActionType, actionType, StringComparison.Ordinal));
+
+    /// <summary>
+    /// Moves the activity's lead to the status the action names. It does nothing for a contact, for a lead that was
+    /// already converted, or for an action that names no status.
+    /// </summary>
+    private async Task ApplyLeadStatusAsync(SubjectAction action, ContentItem contact)
+    {
+        if (contact is null ||
+            !action.TryGet<SetLeadStatusActionMetadata>(out var metadata) ||
+            string.IsNullOrEmpty(metadata.StatusId) ||
+            !contact.TryGet<LeadPart>(out var leadPart) ||
+            leadPart.IsConverted ||
+            string.Equals(leadPart.StatusId, metadata.StatusId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        contact.Alter<LeadPart>(part => part.StatusId = metadata.StatusId);
+
+        await _contentManager.UpdateAsync(contact);
+
+        if (contact.Published)
+        {
+            await _contentManager.PublishAsync(contact);
+        }
     }
 
     private async Task<DateTime> ResolveScheduleDateAsync(

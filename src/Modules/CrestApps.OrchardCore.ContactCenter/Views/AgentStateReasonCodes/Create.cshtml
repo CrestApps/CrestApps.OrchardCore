@@ -1,0 +1,22 @@
+@using CrestApps.OrchardCore.ContactCenter.Core
+@using CrestApps.OrchardCore.Core.Models
+
+@model EditCatalogEntryViewModel
+
+<zone Name="Title">
+    <breadcrumb name="ContactCenterAgentStateReasonCodesCreate" title="@T["New agent state reason code"]">
+        <breadcrumb-item id="ContactCenterAgentStateReasonCodes" action="Index" controller="AgentStateReasonCodes" area="CrestApps.OrchardCore.ContactCenter" permission="@ContactCenterPermissions.ManageAgents.Name">@T["Agent states"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" enctype="multipart/form-data" class="no-multisubmit">
+    @Html.ValidationSummary()
+    @await DisplayAsync(Model.Editor)
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button class="btn btn-primary" type="submit">@T["Save"]</button>
+            <a class="btn btn-secondary cancel" role="button" asp-route-action="Index">@T["Cancel"]</a>
+        </div>
+    </div>
+</form>

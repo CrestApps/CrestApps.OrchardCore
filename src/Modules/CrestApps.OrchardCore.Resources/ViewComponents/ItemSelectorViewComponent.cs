@@ -35,6 +35,7 @@ public sealed class ItemSelectorViewComponent : ViewComponent
     /// <param name="showSelectedItems">Whether the selected items list is shown below the toggle button.</param>
     /// <param name="closeOnSelect">Whether the dropdown closes after selecting an item.</param>
     /// <param name="searchDelay">The debounce delay, in milliseconds, used for search-as-you-type.</param>
+    /// <param name="smallButton">Whether the toggle button uses the small button size. Pass <see langword="false"/> when the selector sits in a form row beside full-height inputs.</param>
     /// <returns>The rendered selector view.</returns>
     public IViewComponentResult Invoke(
         string id,
@@ -60,7 +61,8 @@ public sealed class ItemSelectorViewComponent : ViewComponent
         bool enableSearchButton = true,
         bool showSelectedItems = true,
         bool closeOnSelect = false,
-        int searchDelay = 300)
+        int searchDelay = 300,
+        bool smallButton = true)
     {
         ArgumentException.ThrowIfNullOrEmpty(id);
         ArgumentException.ThrowIfNullOrEmpty(inputName);
@@ -71,38 +73,57 @@ public sealed class ItemSelectorViewComponent : ViewComponent
             initialItemsJson = "[]";
         }
 
+        // The script needs only where to search and how long to wait; everything shown is rendered on the select.
         var configurationJson = JsonSerializer.Serialize(new
         {
-            id,
-            inputName,
             endpoint,
-            multiple,
-            enableSearch,
-            enableSelectAll,
-            enableDeselectAll,
-            buttonText = buttonText ?? (multiple ? "Select items" : "Select item"),
-            searchPlaceholder = searchPlaceholder ?? "Search items",
-            emptyResultsText = emptyResultsText ?? "No items found.",
-            noSelectionText = noSelectionText ?? "No items selected.",
-            loadingText = loadingText ?? "Loading items...",
-            loadErrorText = loadErrorText ?? "Unable to load items.",
-            resultsTextFormat = resultsTextFormat ?? "Found {0} item(s).",
-            selectedItemsLabel = selectedItemsLabel ?? "Selected items",
-            availableItemsLabel = availableItemsLabel ?? "Available items",
-            selectAllText = selectAllText ?? "Select all",
-            deselectAllText = deselectAllText ?? "Deselect all",
-            searchButtonText = searchButtonText ?? "Search",
-            enableSearchButton,
-            showSelectedItems,
-            closeOnSelect = closeOnSelect || !multiple,
             searchDelay = searchDelay < 0 ? 0 : searchDelay,
-            initialItems = JsonSerializer.Deserialize<JsonElement>(initialItemsJson),
         });
 
         return View(new ItemSelectorViewModel
         {
             Id = id,
+            InputName = inputName,
+            Multiple = multiple,
+            ActionsBox = multiple && enableSelectAll,
             ConfigurationJson = configurationJson,
+            InitialItems = ReadInitialItems(initialItemsJson),
+            ButtonText = buttonText ?? noSelectionText ?? (multiple ? "Select items" : "Select item"),
+            SearchPlaceholder = enableSearch ? searchPlaceholder ?? "Search items" : null,
+            EmptyResultsText = emptyResultsText ?? "No items found.",
+            MenuHeader = buttonText,
+            SmallButton = smallButton,
         });
+    }
+
+    // The saved values are the items the caller passes in; each counts as selected unless it says otherwise.
+    private static List<ItemSelectorOption> ReadInitialItems(string initialItemsJson)
+    {
+        using var document = JsonDocument.Parse(initialItemsJson);
+
+        if (document.RootElement.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        static string Read(JsonElement item, string name)
+            => item.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+
+        static bool ReadFlag(JsonElement item, string name, bool missing)
+            => item.TryGetProperty(name, out var value) && value.ValueKind is JsonValueKind.True or JsonValueKind.False
+                ? value.GetBoolean()
+                : missing;
+
+        return document.RootElement.EnumerateArray()
+            .Where(item => item.ValueKind == JsonValueKind.Object && !string.IsNullOrEmpty(Read(item, "value")))
+            .Select(item => new ItemSelectorOption
+            {
+                Value = Read(item, "value"),
+                Text = Read(item, "text") ?? Read(item, "value"),
+                SecondaryText = Read(item, "secondaryText"),
+                Selected = ReadFlag(item, "selected", missing: true),
+                IsEnabled = ReadFlag(item, "isEnabled", missing: true),
+            })
+            .ToList();
     }
 }

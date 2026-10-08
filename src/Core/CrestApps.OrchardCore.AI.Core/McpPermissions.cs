@@ -1,4 +1,5 @@
-﻿using OrchardCore.Security.Permissions;
+﻿using OrchardCore.Localization;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Core;
 
@@ -7,11 +8,11 @@ namespace CrestApps.OrchardCore.AI.Mcp.Core;
 /// </summary>
 public static class McpPermissions
 {
-    public static readonly Permission ManageMcpConnections = new("ManageMcpConnections", "Manage MCP Connections");
+    public static readonly Permission ManageMcpConnections = new("ManageMcpConnections", LocalizationSource.Create("Manage MCP Connections", typeof(McpPermissions)));
 
-    public static readonly Permission ManageMcpPrompts = new("ManageMcpPrompts", "Manage MCP Prompts");
+    public static readonly Permission ManageMcpPrompts = new("ManageMcpPrompts", LocalizationSource.Create("Manage MCP Prompts", typeof(McpPermissions)));
 
-    public static readonly Permission ManageMcpResources = new("ManageMcpResources", "Manage MCP Resources");
+    public static readonly Permission ManageMcpResources = new("ManageMcpResources", LocalizationSource.Create("Manage MCP Resources", typeof(McpPermissions)));
 
     /// <summary>
     /// Represents the feature.

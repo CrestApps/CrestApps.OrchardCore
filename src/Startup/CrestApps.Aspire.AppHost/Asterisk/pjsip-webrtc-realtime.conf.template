@@ -1,0 +1,39 @@
+; CrestApps Contact Center browser-media template for chan_pjsip WebRTC.
+; Architecture: browser SIP UA <-> Asterisk over WSS + DTLS-SRTP + ICE. .NET never handles agent RTP.
+; Credential lifecycle decision: use PJSIP Realtime for browser agents. Orchard issues tenant/session/expiry-bound endpoint/auth/AOR rows, rotates them, deletes revoked or expired rows, and tears down active registrations/dialogs explicitly. ARI cannot create these objects, and static pre-provisioning cannot safely bind each browser credential to a tenant and session.
+
+[global]
+type=global
+user_agent=CrestApps-Asterisk-WebRTC
+
+[transport-wss]
+type=transport
+protocol=wss
+bind=0.0.0.0:8089
+
+; Static template inherited by Realtime endpoint rows.
+[crestapps-webrtc-endpoint](!)
+type=endpoint
+context=crestapps-agents
+transport=transport-wss
+disallow=all
+allow=opus,g722,ulaw
+webrtc=yes
+use_avpf=yes
+media_encryption=dtls
+dtls_auto_generate_cert=yes
+ice_support=yes
+rtcp_mux=yes
+; Required: Asterisk must stay in the media path for recording, DTMF, snoop, monitor, whisper, and barge.
+direct_media=no
+force_rport=yes
+rewrite_contact=yes
+rtp_symmetric=yes
+
+; Realtime rows created by Orchard use endpoint/auth/AOR ids such as cc-tenant-<26-char-id>.
+; Configure extconfig/sorcery so ps_endpoints, ps_auths, and ps_aors resolve from your Realtime database.
+; Example sorcery.conf:
+; [res_pjsip]
+; endpoint=realtime,ps_endpoints
+; auth=realtime,ps_auths
+; aor=realtime,ps_aors

@@ -10,6 +10,7 @@ public sealed class ContentImportManager : IContentImportManager
     private readonly ITypeActivatorFactory<ContentPart> _contentPartFactory;
     private readonly ITypeActivatorFactory<ContentField> _contentFieldFactory;
     private readonly IEnumerable<IContentImportHandler> _contentImportHandlers;
+    private readonly IEnumerable<IContentExportBatchHandler> _contentExportBatchHandlers;
     private readonly IContentManager _contentManager;
     private readonly ILogger _logger;
 
@@ -18,6 +19,7 @@ public sealed class ContentImportManager : IContentImportManager
         ITypeActivatorFactory<ContentPart> contentPartFactory,
         ITypeActivatorFactory<ContentField> contentFieldFactory,
         IEnumerable<IContentImportHandler> contentImportHandlers,
+        IEnumerable<IContentExportBatchHandler> contentExportBatchHandlers,
         IContentManager contentManager,
         ILogger<ContentImportManager> logger
         )
@@ -26,8 +28,16 @@ public sealed class ContentImportManager : IContentImportManager
         _contentPartFactory = contentPartFactory;
         _contentFieldFactory = contentFieldFactory;
         _contentImportHandlers = contentImportHandlers;
+        _contentExportBatchHandlers = contentExportBatchHandlers;
         _contentManager = contentManager;
         _logger = logger;
+    }
+
+    public async Task PrepareExportBatchAsync(ContentExportBatchContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        await _contentExportBatchHandlers.InvokeAsync(handler => handler.PrepareExportBatchAsync(context), _logger);
     }
 
     public async Task<IReadOnlyCollection<ImportColumn>> GetColumnsAsync(ImportContentContext context)

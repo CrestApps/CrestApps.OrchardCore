@@ -6,10 +6,12 @@
 
 @model ListCatalogEntryViewModel<CatalogEntryViewModel<OmnichannelDisposition>>
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["Dispositions"])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="OmnichannelDispositions" title="@T["Dispositions"]" />
+</zone>
 
 @* The form is necessary to generate an antiforgery token for the delete and toggle actions. *@
-<form asp-action="Index" method="post" class="no-multisubmit">
+<form asp-action="Index" asp-route-pageSize="@Context.Request.Query["pageSize"]" method="post" class="no-multisubmit">
     <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
     <input asp-for="Options.BulkAction" type="hidden" />
     <input type="submit" name="submit.BulkAction" class="visually-hidden" />

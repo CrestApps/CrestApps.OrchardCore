@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Documents;
+using CrestApps.Core.AI.Ingestion;
 using CrestApps.OrchardCore.AI.Documents.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Options;

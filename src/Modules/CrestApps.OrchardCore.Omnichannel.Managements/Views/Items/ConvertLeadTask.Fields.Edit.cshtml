@@ -1,0 +1,57 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using CrestApps.OrchardCore.Omnichannel.Managements.Workflows.ViewModels
+
+@model ConvertLeadTaskViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="LeadContentItemId">
+    <label class="ocat-label" asp-for="LeadContentItemId">@T["Lead"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="LeadContentItemId" />
+        <span asp-validation-for="LeadContentItemId"></span>
+        <span class="hint">@T["A Liquid expression resolving the content item id of the lead to convert. The default is the content item the workflow started for."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label" asp-for="AccountMode">@T["Account"]</label>
+    <div class="ocat-end">
+        <select class="form-select" asp-for="AccountMode">
+            <option value="@LeadConversionAccountMode.Automatic">@T["Use the account named after the lead's company, or create it"]</option>
+            <option value="@LeadConversionAccountMode.CreateNew">@T["Always create a new account"]</option>
+            <option value="@LeadConversionAccountMode.None">@T["No account"]</option>
+        </select>
+        <span class="hint">@T["A contact the lead is merged into keeps the account it already has."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="CreateOpportunity" />
+            <label class="form-check-label" asp-for="CreateOpportunity">@T["Create an opportunity"]</label>
+            <span class="hint dashed">@T["Records the deal, with the contact as its primary contact, in the contact's account."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label" asp-for="OpportunityContentType">@T["Opportunity type"]</label>
+    <div class="ocat-end">
+        <select class="form-select" asp-for="OpportunityContentType" asp-items="Model.OpportunityContentTypes">
+            <option value="">@T["The lead type's default"]</option>
+        </select>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label" asp-for="OpenActivities">@T["Other open activities"]</label>
+    <div class="ocat-end">
+        <select class="form-select" asp-for="OpenActivities">
+            <option value="@LeadOpenActivityMode.Move">@T["Move them to the contact"]</option>
+            <option value="@LeadOpenActivityMode.Cancel">@T["Cancel them"]</option>
+        </select>
+        <span class="hint">@T["Finished activities always move to the contact."]</span>
+    </div>
+</div>
+
+<p class="text-muted small">@T["The lead is merged into an existing contact only when exactly one shares its phone number or email; otherwise a new contact is created. The contact's id is the task's result. A lead that is already converted counts as converted."]</p>

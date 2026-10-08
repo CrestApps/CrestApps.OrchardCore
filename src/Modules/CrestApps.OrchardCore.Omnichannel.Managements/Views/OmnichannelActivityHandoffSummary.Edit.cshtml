@@ -1,0 +1,16 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model OmnichannelActivityHandoffSummaryViewModel
+
+<div class="alert alert-info mb-4" role="note">
+    <div class="d-flex align-items-center gap-2 mb-1">
+        <i class="fa-solid fa-robot" aria-hidden="true"></i>
+        <strong>@T["AI assistant's summary"]</strong>
+        @if (Model.WrittenLocal.HasValue)
+        {
+            <small class="text-muted ms-auto">@Model.WrittenLocal.Value.ToString("g")</small>
+        }
+    </div>
+    <p class="mb-0" style="white-space: pre-line">@Model.Summary</p>
+    <small class="text-muted">@T["Written by the AI assistant when it handed the customer to you. It is not part of your notes."]</small>
+</div>

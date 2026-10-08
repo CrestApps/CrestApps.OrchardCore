@@ -1,0 +1,224 @@
+@model DialerProfileViewModel
+
+@{
+    static string Percent(double? value)
+        => value is { } actual
+            ? (actual * 100).ToString("0.#", System.Globalization.CultureInfo.CurrentCulture)
+            : null;
+
+    static string Seconds(TimeSpan? value)
+        => value is { } actual
+            ? actual.TotalSeconds.ToString("0.#", System.Globalization.CultureInfo.CurrentCulture)
+            : null;
+}
+
+<div class="ocat-wrapper" data-dialer-modes="Predictive">
+    <div class="ocat-end-offset">
+        <div class="alert alert-info" role="alert">
+            @T["One call per reserved agent places a call only for an agent who is waiting for it, so a person who answers always has an agent. Over-dialing places more calls than there are free agents, sized from the measured answer rate, and picks the free agent when a person answers; when nobody is free, the person hears the abandoned-call message. Whenever the answer rate or the abandonment rate cannot be trusted, or the abandonment rate nears the cap, an over-dialing profile dials one call per reserved agent until it can."]
+        </div>
+    </div>
+</div>
+
+@if (Model.PacingStatistics is not null)
+{
+    <div class="ocat-wrapper" data-dialer-modes="Predictive">
+        <label class="ocat-label">@T["Measured answer rate"]</label>
+        <div class="ocat-end">
+            <p class="form-control-plaintext mb-0" data-predictive-answer-rate>
+                @if (Model.PacingStatistics.AnswerRate is not null)
+                {
+                    @T["{0}% of the last {1} settled calls were answered by a person ({2} calls placed in the last {3} minutes).", Percent(Model.PacingStatistics.AnswerRate), Model.PacingStatistics.SettledAttempts, Model.PacingStatistics.Attempts, Model.AnswerRateWindowMinutes]
+                }
+                else
+                {
+                    @T["No call placed in the last {0} minutes has an outcome yet.", Model.AnswerRateWindowMinutes]
+                }
+                @if (Model.PacingStatistics.MedianRingToAnswer is not null)
+                {
+                    <br />
+                    @T["A person answers {0} seconds after the call is placed (median).", Seconds(Model.PacingStatistics.MedianRingToAnswer)]
+                }
+                @if (Model.PacingStatistics.MedianConnectLatency is not null)
+                {
+                    <br />
+                    @T["An agent is connected {0} seconds after the answer (median), {1} seconds for the slowest 5%.", Seconds(Model.PacingStatistics.MedianConnectLatency), Seconds(Model.PacingStatistics.P95ConnectLatency)]
+                }
+            </p>
+            <span class="hint">@T["Counted for this profile. A call still ringing is left out until it has an outcome."]</span>
+        </div>
+    </div>
+}
+
+@if (Model.PacingDecisions?.Count > 0)
+{
+    <div class="ocat-wrapper" data-dialer-modes="Predictive">
+        <label class="ocat-label">@T["Last pacing decision"]</label>
+        <div class="ocat-end">
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-1" data-predictive-pacing-decisions>
+                    <thead>
+                        <tr>
+                            <th scope="col">@T["Campaign"]</th>
+                            <th scope="col">@T["When"]</th>
+                            <th scope="col">@T["Pacing"]</th>
+                            <th scope="col" class="text-end">@T["Placed"]</th>
+                            <th scope="col" class="text-end" title="@T["Free agents, plus agents about to free up when they are counted"]">@T["Agents"]</th>
+                            <th scope="col" class="text-end" title="@T["Calls placed without an agent and not connected yet"]">@T["In flight"]</th>
+                            <th scope="col" class="text-end">@T["Answer rate"]</th>
+                            <th scope="col" class="text-end" title="@T["Abandonment over the rolling window, then over the compliance window"]">@T["Abandoned"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Model.PacingDecisions)
+                        {
+                            var decision = row.Decision;
+                            var modeText = decision.Mode switch
+                            {
+                                PredictivePacingDecisionMode.OverDial => T["Over-dialing"],
+                                PredictivePacingDecisionMode.ReservedFallback => T["One call per reserved agent"],
+                                _ => T["Not dialing"],
+                            };
+                            var reasonText = decision.Reason switch
+                            {
+                                PredictivePacingReason.Paced => T["Measured and paced"],
+                                PredictivePacingReason.PolicySuppressed => T["The abandonment policy does not permit dialing"],
+                                PredictivePacingReason.InvalidSettings => T["The pacing settings are not valid"],
+                                PredictivePacingReason.AnswerRateUnavailable => T["No answer rate measured"],
+                                PredictivePacingReason.AnswerRateSampleBelowFloor => T["Too few calls to trust the answer rate"],
+                                PredictivePacingReason.AbandonmentRateUnavailable => T["No abandonment rate measured"],
+                                PredictivePacingReason.AbandonmentSampleBelowFloor => T["Too few answered calls to trust the abandonment rate"],
+                                PredictivePacingReason.ComplianceRateUnavailable => T["No compliance-window abandonment rate measured"],
+                                PredictivePacingReason.ComplianceRateAtCap => T["The compliance-window abandonment rate is at the cap"],
+                                PredictivePacingReason.RollingRateAtCap => T["The rolling abandonment rate is at the cap"],
+                                PredictivePacingReason.ThrottledToZero => T["Throttled by the abandonment rate"],
+                                PredictivePacingReason.NoAgents => T["No free agents"],
+                                _ => T["Unknown"],
+                            };
+                            <tr data-predictive-pacing-decision="@row.QueueId">
+                                <td>@row.CampaignName</td>
+                                <td>
+                                    @if (row.LastCycleUtc is { } cycleUtc)
+                                    {
+                                        <time datetime="@cycleUtc.ToString("O", System.Globalization.CultureInfo.InvariantCulture)">@await DisplayAsync(await New.DateTime(Utc: cycleUtc, Format: "G"))</time>
+                                    }
+                                </td>
+                                <td>
+                                    @modeText
+                                    <div class="small text-body-secondary">@reasonText</div>
+                                </td>
+                                <td class="text-end">@T["{0} of {1}", decision.Dialed, decision.DialCount]</td>
+                                <td class="text-end">@(decision.FreeingAgents > 0 ? T["{0} + {1}", decision.AvailableAgents, decision.FreeingAgents] : T["{0}", decision.AvailableAgents])</td>
+                                <td class="text-end">@decision.CallsInFlight</td>
+                                <td class="text-end">@(decision.AnswerRate is { } answerRate ? T["{0}%", Percent(answerRate)] : T["-"])</td>
+                                <td class="text-end">@(decision.AbandonmentRatePercent is { } rolling ? T["{0}%", rolling.ToString("0.##", System.Globalization.CultureInfo.CurrentCulture)] : T["-"]) / @(decision.ComplianceAbandonmentRatePercent is { } compliance ? T["{0}%", compliance.ToString("0.##", System.Globalization.CultureInfo.CurrentCulture)] : T["-"])</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <span class="hint">@T["What the last pacing cycle of each campaign measured and decided, rewritten every cycle. Read-only."]</span>
+        </div>
+    </div>
+}
+
+<div class="ocat-wrapper" asp-validation-class-for="PredictivePacingModel" data-dialer-modes="Predictive">
+    <label asp-for="PredictivePacingModel" class="ocat-label">@T["Pacing"]</label>
+    <div class="ocat-end">
+        <select asp-for="PredictivePacingModel" class="form-select">
+            <option value="@PredictivePacingModel.ReservedPerCall">@T["One call per reserved agent"]</option>
+            <option value="@PredictivePacingModel.OverDial">@T["Over-dial"]</option>
+        </select>
+        <span asp-validation-for="PredictivePacingModel" class="text-danger"></span>
+        <span class="hint">@T["One call per reserved agent cannot abandon a call. Over-dialing places more calls than there are free agents and plays the abandoned-call message when nobody is free to take one; it requires the abandonment cap, the abandoned-call message and a target abandonment rate below the cap."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="TargetAbandonmentRatePercent" data-dialer-modes="Predictive">
+    <label asp-for="TargetAbandonmentRatePercent" class="ocat-label">@T["Target abandonment rate"]</label>
+    <div class="ocat-end">
+        <div class="input-group">
+            <input asp-for="TargetAbandonmentRatePercent" type="number" min="0.1" max="100" step="0.1" class="form-control" />
+            <span class="input-group-text">@T["%"]</span>
+        </div>
+        <span asp-validation-for="TargetAbandonmentRatePercent" class="text-danger"></span>
+        <span class="hint">@T["The abandonment rate over-dialing steers toward. It must be lower than the maximum abandonment rate, which stays the hard limit."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="MaxLinesPerAgent" data-dialer-modes="Predictive">
+    <label asp-for="MaxLinesPerAgent" class="ocat-label">@T["Lines per agent"]</label>
+    <div class="ocat-end">
+        <input asp-for="MaxLinesPerAgent" type="number" min="@PredictiveDialingDefaults.MinLinesPerAgent" max="@PredictiveDialingDefaults.MaxLinesPerAgent" step="0.1" class="form-control" />
+        <span asp-validation-for="MaxLinesPerAgent" class="text-danger"></span>
+        <span class="hint">@T["The most calls over-dialing may have ringing for each free agent, from {0} to {1}, whatever the answer rate suggests.", PredictiveDialingDefaults.MinLinesPerAgent, PredictiveDialingDefaults.MaxLinesPerAgent]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="MaxCallsInFlight" data-dialer-modes="Predictive">
+    <label asp-for="MaxCallsInFlight" class="ocat-label">@T["Calls in flight"]</label>
+    <div class="ocat-end">
+        <input asp-for="MaxCallsInFlight" type="number" min="1" max="@PredictiveDialingDefaults.MaxCallsInFlight" class="form-control" />
+        <span asp-validation-for="MaxCallsInFlight" class="text-danger"></span>
+        <span class="hint">@T["The most calls one campaign may have ringing at once, however many agents are free."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="AnswerRateSampleFloor" data-dialer-modes="Predictive">
+    <label asp-for="AnswerRateSampleFloor" class="ocat-label">@T["Answer rate sample floor"]</label>
+    <div class="ocat-end">
+        <input asp-for="AnswerRateSampleFloor" type="number" min="@PredictiveDialingDefaults.MinAnswerRateSampleFloor" max="@PredictiveDialingDefaults.MaxAnswerRateSampleFloor" class="form-control" />
+        <span asp-validation-for="AnswerRateSampleFloor" class="text-danger"></span>
+        <span class="hint">@T["The fewest calls with an outcome the answer rate must be measured from before over-dialing trusts it. Until then the profile dials one call per reserved agent."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="AnswerRateWindowMinutes" data-dialer-modes="Predictive">
+    <label asp-for="AnswerRateWindowMinutes" class="ocat-label">@T["Answer rate window (minutes)"]</label>
+    <div class="ocat-end">
+        <input asp-for="AnswerRateWindowMinutes" type="number" min="@PredictiveDialingDefaults.MinAnswerRateWindowMinutes" max="@PredictiveDialingDefaults.MaxAnswerRateWindowMinutes" class="form-control" />
+        <span asp-validation-for="AnswerRateWindowMinutes" class="text-danger"></span>
+        <span class="hint">@T["How far back the answer rate is measured, from {0} to {1} minutes. A shorter window follows changes in the list sooner; a longer one is steadier.", PredictiveDialingDefaults.MinAnswerRateWindowMinutes, PredictiveDialingDefaults.MaxAnswerRateWindowMinutes]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="CreditAgentsFreeingUp" data-dialer-modes="Predictive">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="CreditAgentsFreeingUp" class="form-check-input" />
+            <label asp-for="CreditAgentsFreeingUp" class="form-check-label">@T["Count agents about to free up"]</label>
+            <span class="hint dashed">@T["When enabled, over-dialing also counts agents expected to finish their call and wrap-up before a new call is answered. More calls are placed, and a wrong guess abandons a call."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="FreeUpCreditPercent" data-dialer-modes="Predictive">
+    <label asp-for="FreeUpCreditPercent" class="ocat-label">@T["Share of agents about to free up"]</label>
+    <div class="ocat-end">
+        <div class="input-group">
+            <input asp-for="FreeUpCreditPercent" type="number" min="0" max="100" class="form-control" />
+            <span class="input-group-text">@T["%"]</span>
+        </div>
+        <span asp-validation-for="FreeUpCreditPercent" class="text-danger"></span>
+        <span class="hint">@T["How many of the agents expected to free up are counted, when they are counted at all."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="ConnectWaitMilliseconds" data-dialer-modes="Predictive">
+    <label asp-for="ConnectWaitMilliseconds" class="ocat-label">@T["Connect wait (milliseconds)"]</label>
+    <div class="ocat-end">
+        <input asp-for="ConnectWaitMilliseconds" type="number" min="0" max="@PredictiveDialingDefaults.MaxConnectWaitMilliseconds" step="100" class="form-control" />
+        <span asp-validation-for="ConnectWaitMilliseconds" class="text-danger"></span>
+        <span class="hint">@T["How long a person who answered may wait for an agent to free up before the abandoned-call message plays, from 0 to {0} milliseconds. Connecting an agent takes time too, and a call not connected within two seconds counts as abandoned, so a wait is only allowed while it plus the measured time to connect an agent (the slowest 5%) stays within two seconds, and not at all until at least {1} calls have been connected. 0 is recommended.", PredictiveDialingDefaults.MaxConnectWaitMilliseconds, PredictiveConnectWait.MinimumLatencySamples]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="AbandonedRetryRequiresAgent" data-dialer-modes="Predictive">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="AbandonedRetryRequiresAgent" class="form-check-input" />
+            <label asp-for="AbandonedRetryRequiresAgent" class="form-check-label">@T["Retry abandoned calls only with an agent reserved"]</label>
+            <span class="hint dashed">@T["When enabled, a person whose call was abandoned is called again only with an agent already reserved for them, so they are never abandoned twice."]</span>
+        </div>
+    </div>
+</div>

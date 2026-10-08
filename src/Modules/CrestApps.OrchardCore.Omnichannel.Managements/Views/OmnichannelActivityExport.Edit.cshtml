@@ -1,0 +1,72 @@
+@using System.Text.Json
+@model CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.OmnichannelActivityExportViewModel
+
+@{
+    var contactTypesJson = JsonSerializer.Serialize(Model.ContactContentTypes ?? Array.Empty<string>());
+}
+
+<div id="omnichannel-activity-export" class="mb-3 w-100" data-contact-types="@contactTypesJson" style="display: none;">
+    <hr />
+    <label class="form-label fw-bold">@T["CRM last activity"]</label>
+
+    <div class="form-check">
+        <input type="checkbox" class="form-check-input" asp-for="IncludeLastActivity" id="omnichannel-include-last-activity" />
+        <label class="form-check-label" asp-for="IncludeLastActivity">@T["Include last completed activity information"]</label>
+        <span class="hint dashed">@T["Appends each contact's most recent completed activity of the selected subject: the agent note, completion date, disposition, the subject, and the subject's fields."]</span>
+    </div>
+
+    <div id="omnichannel-last-activity-options" class="mt-3" style="display: none;">
+        <div class="mb-3">
+            <label asp-for="SubjectContentType" class="form-label">@T["Subject"]</label>
+            <select asp-for="SubjectContentType" asp-items="Model.SubjectContentTypes" class="form-select">
+                <option value="">@T["Select a subject"]</option>
+            </select>
+            <span asp-validation-for="SubjectContentType" class="text-danger"></span>
+        </div>
+
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="OnlyContactsWithLastActivity" id="omnichannel-only-with-last-activity" />
+            <label class="form-check-label" asp-for="OnlyContactsWithLastActivity">@T["Include only contacts with a last activity record"]</label>
+            <span class="hint dashed">@T["When enabled, contacts that have no completed activity of the selected subject are omitted from the export."]</span>
+        </div>
+    </div>
+</div>
+
+<script at="Foot">
+    (function () {
+        var container = document.getElementById('omnichannel-activity-export');
+
+        if (!container) {
+            return;
+        }
+
+        var contentTypeMenu = document.getElementById('contentTypeId');
+        var includeCheck = document.getElementById('omnichannel-include-last-activity');
+        var optionsPanel = document.getElementById('omnichannel-last-activity-options');
+        var contactTypes = [];
+
+        try {
+            contactTypes = JSON.parse(container.getAttribute('data-contact-types')) || [];
+        } catch (e) {
+            contactTypes = [];
+        }
+
+        function toggleContainer() {
+            var isContact = contentTypeMenu && contactTypes.indexOf(contentTypeMenu.value) !== -1;
+            container.style.display = isContact ? '' : 'none';
+        }
+
+        function toggleOptions() {
+            optionsPanel.style.display = includeCheck.checked ? '' : 'none';
+        }
+
+        if (contentTypeMenu) {
+            contentTypeMenu.addEventListener('change', toggleContainer);
+        }
+
+        includeCheck.addEventListener('change', toggleOptions);
+
+        toggleContainer();
+        toggleOptions();
+    })();
+</script>

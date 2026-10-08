@@ -70,7 +70,7 @@ Providers return a provider-agnostic `PhoneNumberVerificationResult`:
 | `Status` | The normalized status (`Unverified`, `Verified`, `Invalid`, `Failed`). |
 | `Metadata` | A provider-extensible bag for additional values. |
 
-The entire normalized response is stored, so future providers can expose additional information without schema changes. Rich responses such as Dialpad Professional phone intelligence can map common fields (format, carrier, location, validation, and risk) into the shared model while retaining plan-specific details such as messaging, registration, and breach data in `Metadata` and `RawProviderResponse`.
+The entire normalized response is stored, so future providers can expose additional information without schema changes. Rich phone-intelligence responses can map common fields (format, carrier, location, validation, and risk) into the shared model while retaining plan-specific details such as messaging, registration, and breach data in `Metadata` and `RawProviderResponse`.
 
 ## Content item integration
 

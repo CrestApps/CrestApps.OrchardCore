@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Core.Validation;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Managements.Deployments;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -13,6 +14,7 @@ using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
 using QueryContext = CrestApps.Core.Models.QueryContext;
@@ -23,6 +25,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers;
 /// Provides endpoints for managing channel endpoints resources.
 /// </summary>
 [Admin]
+[Feature(OmnichannelConstants.Features.ChannelEndpoints)]
 public sealed class ChannelEndpointsController : Controller
 {
     private const string _optionsSearch = "Options.Search";
@@ -32,6 +35,7 @@ public sealed class ChannelEndpointsController : Controller
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<OmnichannelChannelEndpoint> _displayDriver;
     private readonly INotifier _notifier;
+    private readonly OmnichannelAddressOptions _addressOptions;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -44,6 +48,7 @@ public sealed class ChannelEndpointsController : Controller
     /// <param name="updateModelAccessor">The update model accessor.</param>
     /// <param name="displayManager">The display manager.</param>
     /// <param name="notifier">The notifier.</param>
+    /// <param name="addressOptions">The address types and capabilities the enabled features registered.</param>
     /// <param name="htmlLocalizer">The html localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ChannelEndpointsController(
@@ -52,6 +57,7 @@ public sealed class ChannelEndpointsController : Controller
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<OmnichannelChannelEndpoint> displayManager,
         INotifier notifier,
+        IOptions<OmnichannelAddressOptions> addressOptions,
         IHtmlLocalizer<ChannelEndpointsController> htmlLocalizer,
         IStringLocalizer<ChannelEndpointsController> stringLocalizer)
     {
@@ -60,6 +66,7 @@ public sealed class ChannelEndpointsController : Controller
         _updateModelAccessor = updateModelAccessor;
         _displayDriver = displayManager;
         _notifier = notifier;
+        _addressOptions = addressOptions.Value;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -83,7 +90,7 @@ public sealed class ChannelEndpointsController : Controller
             return Forbid();
         }
 
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
 
         var result = await _manager.PageAsync(pager.Page, pager.PageSize, new QueryContext
         {
@@ -98,11 +105,12 @@ public sealed class ChannelEndpointsController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var viewModel = new ListCatalogEntryViewModel<CatalogEntryViewModel<OmnichannelChannelEndpoint>>
+        var viewModel = new ListSourceCatalogEntryViewModel<OmnichannelChannelEndpoint>
         {
             Models = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
+            Sources = _addressOptions.GetCreatableTypes().Select(type => type.Name).Order(),
         };
 
         foreach (var model in result.Entries)
@@ -123,11 +131,12 @@ public sealed class ChannelEndpointsController : Controller
     /// Performs the index filter post operation.
     /// </summary>
     /// <param name="model">The model.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("omnichannel/channel-endpoints", "OmnichannelChannelEndpointsIndex")]
-    public async Task<ActionResult> IndexFilterPost(ListCatalogEntryViewModel model)
+    public async Task<ActionResult> IndexFilterPost(ListCatalogEntryViewModel model, PagerParameters pagerParameters)
     {
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageChannelEndpoints))
         {
@@ -137,25 +146,38 @@ public sealed class ChannelEndpointsController : Controller
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
             { _optionsSearch, model.Options?.Search },
+            { "pageSize", pagerParameters.PageSize },
         });
     }
 
     /// <summary>
-    /// Creates a new .
+    /// Displays the form for adding an address of the given type.
     /// </summary>
-    [Admin("omnichannel/channel-endpoints/create", "OmnichannelChannelEndpointsCreate")]
-    public async Task<ActionResult> Create()
+    /// <param name="source">The address type being added, such as a phone number.</param>
+    /// <param name="cloneId">The identifier of the address to copy, when cloning one.</param>
+    [Admin("omnichannel/channel-endpoints/create/{source}", "OmnichannelChannelEndpointsCreate")]
+    public async Task<ActionResult> Create(string source, [FromQuery] string cloneId)
     {
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageChannelEndpoints))
         {
             return Forbid();
         }
 
-        var model = await _manager.NewAsync();
+        if (!TryGetCreatableType(source, out var addressType))
+        {
+            return NotFound();
+        }
+
+        var model = await NewAddressAsync(addressType, cloneId);
+
+        if (model is null)
+        {
+            return NotFound();
+        }
 
         var viewModel = new EditCatalogEntryViewModel
         {
-            DisplayName = S["Channel Endpoint"],
+            DisplayName = addressType.DisplayName?.Value ?? addressType.Name,
             Editor = await _displayDriver.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
@@ -163,23 +185,35 @@ public sealed class ChannelEndpointsController : Controller
     }
 
     /// <summary>
-    /// Creates a new post.
+    /// Adds an address of the given type.
     /// </summary>
+    /// <param name="source">The address type being added, such as a phone number.</param>
+    /// <param name="cloneId">The identifier of the address being copied, when cloning one.</param>
     [HttpPost]
     [ActionName(nameof(Create))]
-    [Admin("omnichannel/channel-endpoints/create", "OmnichannelChannelEndpointsCreate")]
-    public async Task<ActionResult> CreatePost()
+    [Admin("omnichannel/channel-endpoints/create/{source}", "OmnichannelChannelEndpointsCreate")]
+    public async Task<ActionResult> CreatePost(string source, [FromQuery] string cloneId)
     {
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageChannelEndpoints))
         {
             return Forbid();
         }
 
-        var model = await _manager.NewAsync();
+        if (!TryGetCreatableType(source, out var addressType))
+        {
+            return NotFound();
+        }
+
+        var model = await NewAddressAsync(addressType, cloneId);
+
+        if (model is null)
+        {
+            return NotFound();
+        }
 
         var viewModel = new EditCatalogEntryViewModel
         {
-            DisplayName = S["New Channel Endpoint"],
+            DisplayName = addressType.DisplayName?.Value ?? addressType.Name,
             Editor = await _displayDriver.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
@@ -189,7 +223,7 @@ public sealed class ChannelEndpointsController : Controller
         {
             await _manager.CreateAsync(model);
 
-            await _notifier.SuccessAsync(H["A new Channel Endpoint has been created successfully."]);
+            await _notifier.SuccessAsync(H["The address has been added."]);
 
             return RedirectToAction(nameof(Index));
         }
@@ -258,11 +292,67 @@ public sealed class ChannelEndpointsController : Controller
         {
             await _manager.UpdateAsync(model);
 
-            await _notifier.SuccessAsync(H["The Channel Endpoint has been updated successfully."]);
+            await _notifier.SuccessAsync(H["The address has been updated."]);
 
             return RedirectToAction(nameof(Index));
         }
 
         return View(viewModel);
+    }
+
+    private bool TryGetCreatableType(string addressType, out OmnichannelAddressType type)
+    {
+        type = null;
+
+        return !string.IsNullOrEmpty(addressType) &&
+            _addressOptions.AddressTypes.TryGetValue(addressType, out type) &&
+            _addressOptions.GetCapabilities(type.Name).Any();
+    }
+
+    private async Task<OmnichannelChannelEndpoint> NewAddressAsync(OmnichannelAddressType type, string cloneId)
+    {
+        if (!string.IsNullOrEmpty(cloneId))
+        {
+            return await CloneAddressAsync(type, cloneId);
+        }
+
+        var model = await _manager.NewAsync();
+        model.AddressType = type.Name;
+
+        // With a single capability on offer there is nothing to choose, so it starts ticked.
+        var capabilities = _addressOptions.GetCapabilities(type.Name).ToArray();
+
+        if (capabilities.Length == 1)
+        {
+            model.Capabilities = [capabilities[0].Name];
+        }
+
+        return model;
+    }
+
+    // A clone is built the way a deployment plan would recreate its source, so it carries the address's configuration
+    // and none of its identity or history; the post rebuilds it the same way before binding the form. What only one
+    // address may hold is left behind: the value itself, the ids of the records merged into it, and the agents who
+    // dial or text from it, since an agent has one number per channel and keeping them would refuse the save.
+    private async Task<OmnichannelChannelEndpoint> CloneAddressAsync(OmnichannelAddressType type, string cloneId)
+    {
+        var source = await _manager.FindByIdAsync(cloneId);
+
+        if (source is null || !string.Equals(source.GetAddressType(), type.Name, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var data = OmnichannelDeploymentSerializer.Export(source);
+
+        data.Remove(nameof(OmnichannelChannelEndpoint.Properties));
+
+        var clone = await _manager.NewAsync(data);
+
+        clone.DisplayText = S["Copy of {0}", source.DisplayText];
+        clone.Value = null;
+        clone.MergedItemIds = [];
+
+        return clone;
     }
 }

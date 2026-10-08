@@ -73,6 +73,20 @@ internal sealed class McpPromptHandler : CatalogEntryHandlerBase<McpPrompt>
             }
         }
 
+        if (context.Model.Messages != null)
+        {
+            for (var i = 0; i < context.Model.Messages.Count; i++)
+            {
+                var role = context.Model.Messages[i].Role;
+                if (!string.IsNullOrWhiteSpace(role)
+                    && !string.Equals(role, "user", StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(role, "assistant", StringComparison.OrdinalIgnoreCase))
+                {
+                    context.Result.Fail(new ValidationResult(S["Message {0} must have a role of 'user' or 'assistant'.", i + 1], [$"Messages[{i}].Role"]));
+                }
+            }
+        }
+
         return Task.CompletedTask;
     }
 
@@ -119,6 +133,26 @@ internal sealed class McpPromptHandler : CatalogEntryHandlerBase<McpPrompt>
             {
                 entry.Prompt.Description = description;
             }
+        }
+
+        // Populate the messages from data if provided (recipe/programmatic creation).
+        var messagesData = data?[nameof(McpPrompt.Messages)]?.AsArray();
+
+        if (messagesData is not null)
+        {
+            entry.Messages = messagesData
+                .Where(m => m is not null)
+                .Select(m =>
+                {
+                    var obj = m.AsObject();
+                    return new McpPromptMessage
+                    {
+                        Role = obj[nameof(McpPromptMessage.Role)]?.ToString(),
+                        Content = obj[nameof(McpPromptMessage.Content)]?.ToString(),
+                    };
+                })
+                .Where(m => !string.IsNullOrWhiteSpace(m.Content))
+                .ToList();
         }
 
         return Task.CompletedTask;

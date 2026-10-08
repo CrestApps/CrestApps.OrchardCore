@@ -63,11 +63,11 @@ internal sealed class OmnichannelSubjectPartSettingsDisplayDriver : ContentTypeP
             [
                 new(S["Phone"], OmnichannelConstants.Channels.Phone),
                 new(S["SMS"], OmnichannelConstants.Channels.Sms),
-                new(S["Email"], OmnichannelConstants.Channels.Email),
             ];
 
             model.ChannelEndpoints = (await _channelEndpointsCatalog.GetAllAsync())
-                .Select(endpoint => new SelectListItem(endpoint.DisplayText, endpoint.ItemId))
+                .Where(endpoint => endpoint.HasCapability(OmnichannelConstants.Channels.Phone) || endpoint.HasCapability(OmnichannelConstants.Channels.Sms))
+                .Select(endpoint => new SelectListItem($"{endpoint.DisplayText} ({endpoint.Value})", endpoint.ItemId))
                 .OrderBy(item => item.Text);
 
             model.Campaigns = (await _campaignCatalog.GetAllAsync())
@@ -91,7 +91,7 @@ internal sealed class OmnichannelSubjectPartSettingsDisplayDriver : ContentTypeP
 
             if (model.InteractionType == ActivityInteractionType.Automated && string.IsNullOrWhiteSpace(model.ChannelEndpointId))
             {
-                context.Updater.ModelState.AddModelError($"{Prefix}.{nameof(model.ChannelEndpointId)}", S["A channel endpoint is required for automated inbound subjects."]);
+                context.Updater.ModelState.AddModelError($"{Prefix}.{nameof(model.ChannelEndpointId)}", S["An address is required for automated inbound subjects."]);
             }
         }
 

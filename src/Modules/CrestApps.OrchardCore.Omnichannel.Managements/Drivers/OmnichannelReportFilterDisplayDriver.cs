@@ -1,38 +1,58 @@
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Reports;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
+using CrestApps.OrchardCore.Reports.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 
 /// <summary>
-/// Adds campaign, channel, source, and status filters to Omnichannel reports.
+/// Adds campaign, channel, source, and status filters to Omnichannel reports. A report that declares its filters
+/// through <see cref="IReportFilterMetadata"/> gets them only when it names <see cref="FilterName"/>.
 /// </summary>
 public sealed class OmnichannelReportFilterDisplayDriver : DisplayDriver<ReportFilter>
 {
     private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
     private readonly ICatalogManager<OmnichannelCampaignGroup> _campaignGroupManager;
+    private readonly IReportManager _reportManager;
+    private readonly ActivitySourceOptions _activitySourceOptions;
+    private readonly ActivityChannelOptions _activityChannelOptions;
+
+    /// <summary>
+    /// The filter name a report lists in <see cref="IReportFilterMetadata.FilterNames"/> to get these filters.
+    /// </summary>
+    public const string FilterName = "OmnichannelActivity";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OmnichannelReportFilterDisplayDriver"/> class.
     /// </summary>
     /// <param name="campaignManager">The campaign manager.</param>
     /// <param name="campaignGroupManager">The campaign group manager.</param>
+    /// <param name="reportManager">The report manager.</param>
+    /// <param name="activitySourceOptions">The activity sources registered by the enabled features.</param>
+    /// <param name="activityChannelOptions">The activity channels registered by the enabled features.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelReportFilterDisplayDriver(
         ICatalogManager<OmnichannelCampaign> campaignManager,
         ICatalogManager<OmnichannelCampaignGroup> campaignGroupManager,
+        IReportManager reportManager,
+        IOptions<ActivitySourceOptions> activitySourceOptions,
+        IOptions<ActivityChannelOptions> activityChannelOptions,
         IStringLocalizer<OmnichannelReportFilterDisplayDriver> stringLocalizer)
     {
         _campaignManager = campaignManager;
         _campaignGroupManager = campaignGroupManager;
+        _reportManager = reportManager;
+        _activitySourceOptions = activitySourceOptions.Value;
+        _activityChannelOptions = activityChannelOptions.Value;
         S = stringLocalizer;
     }
 
@@ -41,7 +61,7 @@ public sealed class OmnichannelReportFilterDisplayDriver : DisplayDriver<ReportF
     /// <inheritdoc/>
     public override IDisplayResult Edit(ReportFilter filter, BuildEditorContext context)
     {
-        if (filter.ReportName?.StartsWith("omnichannel-", StringComparison.Ordinal) != true)
+        if (!AppliesTo(filter.ReportName))
         {
             return null;
         }
@@ -55,7 +75,7 @@ public sealed class OmnichannelReportFilterDisplayDriver : DisplayDriver<ReportF
     /// <inheritdoc/>
     public override async Task<IDisplayResult> UpdateAsync(ReportFilter filter, UpdateEditorContext context)
     {
-        if (filter.ReportName?.StartsWith("omnichannel-", StringComparison.Ordinal) != true)
+        if (!AppliesTo(filter.ReportName))
         {
             return null;
         }
@@ -70,6 +90,17 @@ public sealed class OmnichannelReportFilterDisplayDriver : DisplayDriver<ReportF
         filter.Set(OmnichannelReportFilter.Status, model.Status);
 
         return Edit(filter, context);
+    }
+
+    private bool AppliesTo(string reportName)
+    {
+        if (reportName?.StartsWith("omnichannel-", StringComparison.Ordinal) != true)
+        {
+            return false;
+        }
+
+        return _reportManager.FindByName(reportName) is not IReportFilterMetadata metadata ||
+            metadata.FilterNames.Contains(FilterName, StringComparer.Ordinal);
     }
 
     private async Task PopulateAsync(OmnichannelReportFilterViewModel model, ReportFilter filter)
@@ -94,28 +125,10 @@ public sealed class OmnichannelReportFilterDisplayDriver : DisplayDriver<ReportF
             .Select(group => new SelectListItem(group.DisplayText ?? group.ItemId, group.ItemId))
             .ToList();
 
-        model.Channels =
-        [
-            new SelectListItem(S["Phone"], OmnichannelConstants.Channels.Phone),
-            new SelectListItem(S["SMS"], OmnichannelConstants.Channels.Sms),
-            new SelectListItem(S["Email"], OmnichannelConstants.Channels.Email),
-            new SelectListItem(S["Chat"], "Chat"),
-        ];
-
-        model.Sources =
-        [
-            new SelectListItem(S["Manual"], ActivitySources.Manual),
-            new SelectListItem(S["Automatic"], ActivitySources.Automatic),
-            new SelectListItem(S["Dialer"], ActivitySources.Dialer),
-            new SelectListItem(S["Preview dial"], ActivitySources.PreviewDial),
-            new SelectListItem(S["Power dial"], ActivitySources.PowerDial),
-            new SelectListItem(S["Progressive dial"], ActivitySources.ProgressiveDial),
-            new SelectListItem(S["Predictive dial"], ActivitySources.PredictiveDial),
-            new SelectListItem(S["Callback"], ActivitySources.Callback),
-            new SelectListItem(S["Inbound"], ActivitySources.Inbound),
-            new SelectListItem(S["Workflow"], ActivitySources.Workflow),
-            new SelectListItem(S["API"], ActivitySources.Api),
-        ];
+        // Only the channels and sources the enabled features can put on activities are offered. A value saved
+        // before, such as a channel no feature creates, stays listed so the filter still shows what it applies.
+        model.Channels = ActivityFilterSelectListBuilder.BuildChannelItems(_activityChannelOptions, model.Channel);
+        model.Sources = ActivityFilterSelectListBuilder.BuildSourceItems(_activitySourceOptions, model.Source);
 
         model.Statuses =
         [

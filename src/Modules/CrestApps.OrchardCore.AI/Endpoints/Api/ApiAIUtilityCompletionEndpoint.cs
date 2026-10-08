@@ -71,13 +71,14 @@ internal static class ApiAIUtilityCompletionEndpoint
         }
 
         var context = await completionContextBuilder.BuildAsync(profile);
-        var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.Chat, deploymentName: context.ChatDeploymentName);
+        var deployment = await deploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.Chat, deploymentName: context.ChatDeploymentName);
 
         if (deployment is null)
         {
             return TypedResults.BadRequest("Unable to resolve a chat deployment for the profile.");
         }
 
+        using var usageScope = AIUsageScope.Begin(contextType: AIUsageCategories.Api, purpose: AIUsageFeaturePurposes.Utility);
         var completion = await completionService.CompleteAsync(deployment, [new ChatMessage(ChatRole.User, requestData.Prompt.Trim())], context);
 
         var result = new AIChatResponse

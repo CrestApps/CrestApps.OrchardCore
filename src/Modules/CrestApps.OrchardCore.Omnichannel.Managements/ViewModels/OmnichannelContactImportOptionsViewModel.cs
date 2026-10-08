@@ -19,6 +19,65 @@ public class OmnichannelContactImportOptionsViewModel
     public string SelectedCountryCode { get; set; }
 
     /// <summary>
+    /// Gets or sets which existing records a contact import compares phone numbers against.
+    /// </summary>
+    public Models.ContactImportDuplicateScope DuplicateScope { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether a lead import skips numbers that belong to a contact.
+    /// </summary>
+    public bool SkipNumbersOfExistingContacts { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets whether a lead import skips numbers that belong to an open lead.
+    /// </summary>
+    public bool SkipNumbersOfOpenLeads { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the content item identifier of the lead source stamped on the leads of the file.
+    /// </summary>
+    public string LeadSourceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the list name stamped on the leads of the file.
+    /// </summary>
+    public string LeadListName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the status of the leads of the file.
+    /// </summary>
+    public string LeadStatusId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the owner of the leads of the file.
+    /// </summary>
+    public string LeadOwnerId { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the imported type is a lead type.
+    /// </summary>
+    [BindNever]
+    public bool IsLeadType { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the CRM feature is enabled, which makes the duplicate scope meaningful.
+    /// </summary>
+    [BindNever]
+    public bool CrmEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets the lead statuses to choose from.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> LeadStatuses { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the lead sources to choose from.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> LeadSources { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the available countries for phone-number normalization.
     /// </summary>
     [BindNever]

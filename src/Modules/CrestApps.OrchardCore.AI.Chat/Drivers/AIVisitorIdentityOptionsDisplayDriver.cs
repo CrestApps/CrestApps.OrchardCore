@@ -53,6 +53,8 @@ public sealed class AIVisitorIdentityOptionsDisplayDriver : SiteDisplayDriver<AI
         {
             model.CookieName = settings.CookieName;
             model.CookieLifetimeDays = (int)Math.Round(settings.CookieLifetime.TotalDays);
+            model.AllowCrossSiteEmbedding = settings.AllowCrossSiteEmbedding;
+            model.UsePartitionedCookie = settings.UsePartitionedCookie;
             model.RemoteAddressMode = settings.RemoteAddressMode;
             model.RemoteAddressHashSalt = settings.RemoteAddressHashSalt;
         }).Location("Content:2.1%Visitor Identity;1")
@@ -100,11 +102,15 @@ public sealed class AIVisitorIdentityOptionsDisplayDriver : SiteDisplayDriver<AI
         var settingsChanged =
             !string.Equals(settings.CookieName, cookieName, StringComparison.Ordinal) ||
             settings.CookieLifetime != cookieLifetime ||
+            settings.AllowCrossSiteEmbedding != model.AllowCrossSiteEmbedding ||
+            settings.UsePartitionedCookie != model.UsePartitionedCookie ||
             settings.RemoteAddressMode != model.RemoteAddressMode ||
             !string.Equals(settings.RemoteAddressHashSalt, remoteAddressHashSalt, StringComparison.Ordinal);
 
         settings.CookieName = cookieName;
         settings.CookieLifetime = cookieLifetime;
+        settings.AllowCrossSiteEmbedding = model.AllowCrossSiteEmbedding;
+        settings.UsePartitionedCookie = model.UsePartitionedCookie;
         settings.RemoteAddressMode = model.RemoteAddressMode;
         settings.RemoteAddressHashSalt = remoteAddressHashSalt;
 

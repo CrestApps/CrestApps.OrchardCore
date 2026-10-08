@@ -1,8 +1,13 @@
+@using CrestApps.OrchardCore.Omnichannel.Core
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+@using OrchardCore.Contents
 @model CreateInboundActivityViewModel
 
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["Log Inbound Activity"])</h1>
+    <breadcrumb name="OmnichannelActivitiesCreateInbound" title="@T["Log Inbound Activity"]">
+        <breadcrumb-item id="OmnichannelContact" action="Edit" controller="Admin" area="OrchardCore.Contents" route-contentItemId="@Model.ContactContentItem.ContentItemId" permission="@CommonPermissions.EditContent.Name" resource="@Model.ContactContentItem">@Model.ContactContentItem.DisplayText</breadcrumb-item>
+        <breadcrumb-item id="OmnichannelContactActivities" action="List" controller="Activities" area="CrestApps.OrchardCore.Omnichannel.Managements" route-contentItemId="@Model.ContactContentItem.ContentItemId" permission="@OmnichannelConstants.Permissions.ListContactActivities.Name" resource="@Model.ContactContentItem">@T["Activities"]</breadcrumb-item>
+    </breadcrumb>
 </zone>
 
 @{

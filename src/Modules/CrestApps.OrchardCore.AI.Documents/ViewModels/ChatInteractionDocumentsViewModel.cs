@@ -1,4 +1,4 @@
-﻿using CrestApps.Core.AI.Documents.Models;
+using CrestApps.Core.AI.Documents.Models;
 using CrestApps.Core.AI.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -44,6 +44,11 @@ public class ChatInteractionDocumentsViewModel
     /// Gets or sets the document retrieval mode override for the interaction.
     /// </summary>
     public DocumentRetrievalMode? DocumentRetrievalMode { get; set; }
+
+    /// <summary>
+    /// Gets or sets how much extracted text an uploaded document may hold and still be indexed, or
+    /// <see langword="null"/> to use the site's own limit.
+    /// </summary>
 
     /// <summary>
     /// Gets or sets the name of the configured index profile, if any.

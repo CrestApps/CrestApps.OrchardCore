@@ -3,9 +3,15 @@ sidebar_label: Getting Started
 sidebar_position: 2
 title: Getting Started
 description: Install, build, and run the Orchard Core modules in this repository or consume the published packages in your own Orchard solution.
+user_manual:
+  - user-manual/getting-started/finding-your-way
 ---
 
 # Getting Started
+
+:::note[Technical Manual]
+This is the Technical Manual, for developers and IT staff who install, configure, deploy and extend the modules. If you use the app in the browser, go to the [User Manual](user-manual/index.md) instead.
+:::
 
 Use this repository when you want the Orchard Core host applications, Orchard-specific modules, or the Orchard documentation site. For shared framework guidance, see **[core.crestapps.com](https://core.crestapps.com)**.
 
@@ -36,11 +42,13 @@ dotnet add package CrestApps.OrchardCore.OpenAI
 
 After installing packages, enable the required features in **Tools -> Features** inside the Orchard admin.
 
+Modules that need connection strings, API keys or tuning values read them from `appsettings.json`, environment variables or a secret store. The [Configuration Reference](configuration.md) lists every section, the environment-variable form of each key, and which source wins when a value is set in more than one place.
+
 ## Release notes
 
-Review the current [Version 2.0.0 Release Notes](changelog/2.0.0) before updating package references or tenant code.
+Review the current [Version 3.0.0 Release Notes](changelog/3.0.0) before updating package references or tenant code. They list the breaking changes since the `2.x` line.
 
-The current repository version is the `2.0.0` line on `.NET 10` and Orchard Core `3.0.x`.
+The repository currently builds the `3.0.0` line on `.NET 10` against Orchard Core `4.0.x` preview packages. The published `2.1.x` line is the latest stable release; its documentation is available from the version picker.
 
 ## Build this repository locally
 
@@ -49,9 +57,10 @@ git clone https://github.com/CrestApps/CrestApps.OrchardCore.git
 cd CrestApps.OrchardCore
 npm install
 npm run rebuild
-dotnet build .\CrestApps.OrchardCore.slnx -c Release /p:NuGetAudit=false
-dotnet test .\tests\CrestApps.OrchardCore.Tests\CrestApps.OrchardCore.Tests.csproj -c Release /p:NuGetAudit=false
+dotnet build .\CrestApps.OrchardCore.slnx -c Release
 ```
+
+> Dependency vulnerability auditing is enabled for every build and a published advisory fails it. If the build stops on an `NU1901`-`NU1904` error, pin the patched version in `Directory.Packages.props` rather than disabling the audit.
 
 > The .NET build depends on Orchard Core preview packages. If Cloudsmith is unreachable, asset builds still work but the .NET restore/build will not.
 >
@@ -76,6 +85,63 @@ dotnet run
 ```
 
 Use this when you want the local orchestration environment for the sample clients and supporting services.
+
+The Aspire host starts Ollama, Redis, a PostgreSQL container running the [pgvector](https://github.com/pgvector/pgvector) image, and an Elasticsearch container. PostgreSQL provides a local vector store, and Elasticsearch backs the Orchard Core search indexes.
+
+Both stores keep their data under `src\Startup\CrestApps.OrchardCore.Cms.Web\App_Data`, mounted into the containers instead of Docker volumes, so they sit beside the rest of the tenant data:
+
+| Container | Data folder | Host port |
+| --- | --- | --- |
+| PostgreSQL (pgvector) | `App_Data\PostgreSQL` | 5432 |
+| Elasticsearch | `App_Data\Elasticsearch` | 9200 |
+
+The app host creates both folders on startup, and the first run initializes the data there. Delete a folder's contents to start that store over.
+
+The credentials are app host parameters, so they can be overridden through user secrets:
+
+```powershell
+cd .\src\Startup\CrestApps.Aspire.AppHost
+dotnet user-secrets set Parameters:PostgresPassword "<password>"
+dotnet user-secrets set Parameters:ElasticsearchPassword "<password>"
+```
+
+PostgreSQL defaults to `postgres`/`postgres` with a `vectordb` database, and Elasticsearch to the built-in `elastic` user with the password `elasticsearch`.
+
+The host passes both connections to the CMS as environment variables, so features pick them up without any per-feature setup:
+
+```text
+OrchardCore__CrestApps__PostgreSQL__ConnectionString
+OrchardCore__CrestApps__Elasticsearch__Url
+OrchardCore__CrestApps__Elasticsearch__Username
+OrchardCore__CrestApps__Elasticsearch__Password
+OrchardCore__OrchardCore_Elasticsearch__*
+```
+
+The `CrestApps` sections are the global connections described in [AI Data Sources - PostgreSQL](./ai/data-sources/postgresql.md) and [AI Data Sources - Elasticsearch](./ai/data-sources/elasticsearch.md). For everything else the app host sets, see [Local development with Aspire](configuration.md#local-development-with-aspire). The `OrchardCore_Elasticsearch` section configures the Orchard Core Elasticsearch feature that owns the Orchard-managed indexes.
+
+#### Share the local stores
+
+Because the data lives in `App_Data`, sharing that folder shares the vector store and the indexes with it. Stop the Aspire host first so both containers shut down cleanly, then copy or zip `App_Data`; copying the files while the containers run produces torn data. The other developer drops the folder into their own `CrestApps.OrchardCore.Cms.Web` and starts the app host, which mounts it as is.
+
+Leave `App_Data\logs` out of the copy. It holds the site logs rather than any state, and it grows to gigabytes on a long-running development site.
+
+Each store is only readable by the major version that wrote it, so both sides must stay on the images pinned by the app host. Both must also use the same passwords, since PostgreSQL bakes its credentials into the cluster when it is first initialized.
+
+To move individual databases instead of the whole folder, run `pg_dump` and `pg_restore` inside the container:
+
+```powershell
+docker exec -e PGPASSWORD=postgres <container> pg_dump --username postgres --dbname vectordb --format=custom --file /tmp/vectordb.dump
+docker cp <container>:/tmp/vectordb.dump .\vectordb.dump
+```
+
+To work against shared servers instead of copies, host them somewhere both developers can reach and set the connections per developer rather than in source control. The CMS project does not declare a user secrets ID, so run `dotnet user-secrets init` once first. User secrets are only read when `ASPNETCORE_ENVIRONMENT` is `Development`:
+
+```powershell
+cd .\src\Startup\CrestApps.OrchardCore.Cms.Web
+dotnet user-secrets init
+dotnet user-secrets set OrchardCore:CrestApps:PostgreSQL:ConnectionString "<connection string>"
+dotnet user-secrets set OrchardCore:CrestApps:Elasticsearch:Url "<url>"
+```
 
 ### Sample clients
 

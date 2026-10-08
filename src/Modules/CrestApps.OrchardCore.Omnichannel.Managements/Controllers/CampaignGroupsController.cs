@@ -1,6 +1,6 @@
-using CrestApps.OrchardCore.Core.Validation;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Models;
+using CrestApps.OrchardCore.Core.Validation;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -84,7 +84,7 @@ public sealed class CampaignGroupsController : Controller
             return Forbid();
         }
 
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
         var result = await _manager.PageAsync(pager.Page, pager.PageSize, new QueryContext
         {
             Name = options.Search,
@@ -121,12 +121,13 @@ public sealed class CampaignGroupsController : Controller
     /// Applies the campaign-group list filter.
     /// </summary>
     /// <param name="model">The list model.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
     /// <returns>A redirect to the filtered list.</returns>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("omnichannel/campaign-groups", "OmnichannelCampaignGroupsIndex")]
-    public async Task<ActionResult> IndexFilterPost(ListCatalogEntryViewModel model)
+    public async Task<ActionResult> IndexFilterPost(ListCatalogEntryViewModel model, PagerParameters pagerParameters)
     {
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageCampaignGroups))
         {
@@ -136,6 +137,7 @@ public sealed class CampaignGroupsController : Controller
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
             { _optionsSearch, model.Options?.Search },
+            { "pageSize", pagerParameters.PageSize },
         });
     }
 

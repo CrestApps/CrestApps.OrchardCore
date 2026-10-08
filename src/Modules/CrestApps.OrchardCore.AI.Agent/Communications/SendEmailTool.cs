@@ -1,12 +1,9 @@
 using System.Text.Json;
 using CrestApps.Core.AI.Extensions;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Email;
-using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.AI.Agent.Communications;
 
@@ -109,33 +106,12 @@ public sealed class SendEmailTool : AIFunction
             return "Unable to find a body argument in the function arguments.";
         }
 
-        string senderEmail = null;
-
-        // HttpContext may be null when invoked from a background task (e.g., post-session processing).
-        var httpContextAccessor = arguments.Services.GetService<IHttpContextAccessor>();
-
-        var principal = httpContextAccessor?.HttpContext?.User;
-
-        if (principal is not null)
-        {
-            var userManager = arguments.Services.GetService<UserManager<IUser>>();
-
-            var user = await userManager?.GetUserAsync(principal);
-
-            if (user is not null)
-            {
-                senderEmail = await userManager.GetEmailAsync(user);
-            }
-        }
-
+        // Leave From and Sender unset for the configured provider default; do not derive ReplyTo from the current user.
         var message = new MailMessage
         {
             To = to,
             Subject = subject,
             HtmlBody = body,
-            Sender = senderEmail,
-            From = senderEmail,
-            ReplyTo = senderEmail,
         };
 
         if (arguments.TryGetFirstString("cc", out var cc))

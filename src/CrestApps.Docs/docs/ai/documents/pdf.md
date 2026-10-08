@@ -3,6 +3,8 @@ sidebar_label: PDF Support
 sidebar_position: 2
 title: AI Documents (PDF) Support
 description: PDF text extraction support for the AI Documents feature.
+user_manual:
+  - user-manual/ai/knowledge
 ---
 
 | | |
@@ -20,6 +22,7 @@ This module extends the AI Documents feature with PDF document support.
 
 - **PDF Text Extraction**: Extract text content from PDF documents
 - **Page-by-Page Processing**: Text is extracted from each page of the PDF
+- **PDF Agent**: A system agent that creates, converts, edits, previews and analyses PDFs in a conversation
 
 ## Getting Started
 

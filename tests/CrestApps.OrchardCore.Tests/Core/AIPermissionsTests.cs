@@ -16,7 +16,7 @@ public sealed class AIPermissionsTests
     {
         // Assert
         Assert.Equal("AccessAnyAITool", AIPermissions.AccessAnyAITool.Name);
-        Assert.Equal("Access any AI tool", AIPermissions.AccessAnyAITool.Description);
+        Assert.Equal("Access any AI tool", AIPermissions.AccessAnyAITool.Description.Value);
     }
 
     [Fact]
@@ -24,7 +24,7 @@ public sealed class AIPermissionsTests
     {
         // Assert
         Assert.Equal("AccessAITool", AIPermissions.AccessAITool.Name);
-        Assert.Equal("Access AI tool", AIPermissions.AccessAITool.Description);
+        Assert.Equal("Access AI tool", AIPermissions.AccessAITool.Description.Value);
     }
 
     [Fact]
@@ -38,7 +38,7 @@ public sealed class AIPermissionsTests
 
         // Assert
         Assert.Equal("AccessAITool_TestTool", permission.Name);
-        Assert.Equal("Access AI tool - TestTool", permission.Description);
+        Assert.Equal("Access AI tool - TestTool", permission.Description.Value);
     }
 
     [Fact]
@@ -81,7 +81,7 @@ public sealed class AIPermissionsTests
 
         // Assert
         Assert.Equal("QueryAIProfile_TestProfile", permission.Name);
-        Assert.Equal("Query AI profile - TestProfile", permission.Description);
+        Assert.Equal("Query AI profile - TestProfile", permission.Description.Value);
     }
 
     [Fact]

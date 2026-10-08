@@ -1,5 +1,5 @@
-using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
+using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Steps;
 
@@ -8,21 +8,16 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Steps;
 /// </summary>
 public sealed class OmnichannelCampaignGroupDeploymentStep : DeploymentStep
 {
+    private static readonly LocalizationSource _category = LocalizationSource.Create<OmnichannelCampaignGroupDeploymentStep>("Omnichannel");
+    private static readonly LocalizationSource _title = LocalizationSource.Create<OmnichannelCampaignGroupDeploymentStep>("Omnichannel Campaign Groups");
+
     /// <summary>
     /// Initializes a new instance of the <see cref="OmnichannelCampaignGroupDeploymentStep"/> class.
     /// </summary>
     public OmnichannelCampaignGroupDeploymentStep()
     {
         Name = OmnichannelDeploymentSteps.CampaignGroup;
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="OmnichannelCampaignGroupDeploymentStep"/> class.
-    /// </summary>
-    /// <param name="stringLocalizer">The string localizer.</param>
-    public OmnichannelCampaignGroupDeploymentStep(IStringLocalizer<OmnichannelCampaignGroupDeploymentStep> stringLocalizer)
-        : this()
-    {
-        Category = stringLocalizer["Omnichannel"];
+        Category = _category;
+        Title = _title;
     }
 }

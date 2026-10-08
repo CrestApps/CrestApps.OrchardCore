@@ -285,7 +285,6 @@ public sealed class PartSchemaDefinitionTests
         Assert.Contains("DoNotCallUtc", partJson);
         Assert.Contains("DoNotEmail", partJson);
         Assert.Contains("DoNotSms", partJson);
-        Assert.Contains("DoNotChat", partJson);
     }
 
     [Fact]

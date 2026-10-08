@@ -1,0 +1,198 @@
+using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
+using Microsoft.Extensions.Compliance.Redaction;
+using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
+using OrchardCore.ContentManagement;
+using OrchardCore.Infrastructure;
+using OrchardCore.Modules;
+using OrchardCore.Sms;
+
+namespace CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services;
+
+/// <summary>
+/// The default <see cref="ISmsDispatcher"/>: resolves the provider that owns the sending number and sends
+/// through it, so a workspace whose numbers span multiple carriers routes each send to the correct provider.
+/// </summary>
+public sealed class SmsDispatcher : ISmsDispatcher
+{
+    private readonly ISmsProviderRouter _providerRouter;
+    private readonly IMessagingContactResolver _contactResolver;
+    private readonly IContentManager _contentManager;
+    private readonly IClock _clock;
+    private readonly Redactor _addressRedactor;
+    private readonly IEnumerable<ISmsMediaSender> _mediaSenders;
+    private readonly ILogger _logger;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SmsDispatcher"/> class.
+    /// </summary>
+    /// <param name="providerRouter">The router that picks the provider owning the sending number, shared with automated SMS.</param>
+    /// <param name="contactResolver">The resolver that finds the contact a refused recipient number belongs to.</param>
+    /// <param name="contentManager">The content manager used to record a contact's SMS opt-out.</param>
+    /// <param name="clock">The clock the opt-out is stamped with.</param>
+    /// <param name="redactorProvider">The redactor provider used to keep phone numbers out of the log.</param>
+    /// <param name="mediaSenders">The picture-message senders for providers whose own implementation carries text only.</param>
+    /// <param name="logger">The logger instance.</param>
+    public SmsDispatcher(
+        ISmsProviderRouter providerRouter,
+        IMessagingContactResolver contactResolver,
+        IContentManager contentManager,
+        IClock clock,
+        IRedactorProvider redactorProvider,
+        IEnumerable<ISmsMediaSender> mediaSenders,
+        ILogger<SmsDispatcher> logger)
+    {
+        _providerRouter = providerRouter;
+        _contactResolver = contactResolver;
+        _contentManager = contentManager;
+        _clock = clock;
+        _addressRedactor = redactorProvider.GetRedactor(LogDataClassifications.AddressSet);
+        _mediaSenders = mediaSenders ?? [];
+        _logger = logger;
+    }
+
+    /// <inheritdoc/>
+    public Task<MessageDispatchResult> SendAsync(SmsMessage message, CancellationToken cancellationToken = default)
+        => SendAsync(message, [], cancellationToken);
+
+    /// <inheritdoc/>
+    public async Task<MessageDispatchResult> SendAsync(SmsMessage message, IReadOnlyList<string> mediaUrls, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+
+        mediaUrls ??= [];
+
+        if (string.IsNullOrEmpty(message.From))
+        {
+            return MessageDispatchResult.Failed("The sending number (From) is required to resolve a provider.");
+        }
+
+        var providerName = await ResolveProviderNameAsync(message.From, cancellationToken);
+
+        if (string.IsNullOrEmpty(providerName))
+        {
+            return MessageDispatchResult.Failed("No SMS provider could be resolved for the sending number or the tenant default.");
+        }
+
+        // The router logs the warning when the provider is missing.
+        var provider = await _providerRouter.GetProviderAsync(providerName, cancellationToken);
+
+        if (provider is null)
+        {
+            return MessageDispatchResult.Failed($"The SMS provider '{providerName}' is not registered or enabled.");
+        }
+
+        // Pictures only leave through a provider that can carry them. Sending the text alone would tell the customer
+        // about a picture they never receive.
+        var mediaSender = mediaUrls.Count > 0 && provider is not ISmsMediaDispatchProvider
+            ? _mediaSenders.FirstOrDefault(sender => string.Equals(sender.ProviderName, providerName, StringComparison.OrdinalIgnoreCase))
+            : null;
+
+        if (mediaUrls.Count > 0 && provider is not ISmsMediaDispatchProvider && mediaSender is null)
+        {
+            _logger.LogWarning("The SMS provider '{ProviderName}' cannot send picture messages, so a message with {Count} picture(s) was refused.", providerName, mediaUrls.Count);
+
+            var refused = MessageDispatchResult.Failed($"The SMS provider '{providerName}' cannot send pictures.");
+            refused.ErrorCode = OmnichannelConstants.SmsErrorCodes.MediaNotSupported;
+
+            return refused;
+        }
+
+        // A provider that only answers "not sent" can still say why through the refusal scope: the provider-specific
+        // code that reads its response reports the reason into it.
+        using var refusal = SmsProviderRefusalScope.Begin();
+
+        MessageDispatchResult dispatch;
+
+        // A provider that can report its own message id does so, because that identifier is what makes a later
+        // delivery receipt match this exact message instead of the newest one without an id.
+        if (mediaUrls.Count > 0 && provider is ISmsMediaDispatchProvider mediaProvider)
+        {
+            dispatch = await mediaProvider.DispatchAsync(message, mediaUrls, cancellationToken);
+        }
+        else if (mediaSender is not null)
+        {
+            dispatch = await mediaSender.SendAsync(message, mediaUrls, cancellationToken);
+        }
+        else if (provider is ISmsDispatchProvider dispatchProvider)
+        {
+            dispatch = await dispatchProvider.DispatchAsync(message, cancellationToken);
+        }
+        else
+        {
+            var result = await provider.SendAsync(message, cancellationToken);
+
+            dispatch = result.Succeeded
+                ? MessageDispatchResult.Success()
+                : MessageDispatchResult.Failed((result.Errors ?? []).Select(error => error.Message).ToArray());
+        }
+
+        if (!dispatch.Succeeded)
+        {
+            dispatch.ErrorCode ??= refusal.ErrorCode;
+
+            if (string.Equals(dispatch.ErrorCode, OmnichannelConstants.SmsErrorCodes.RecipientOptedOut, StringComparison.Ordinal))
+            {
+                await RecordOptOutAsync(message.To, cancellationToken);
+            }
+        }
+
+        return dispatch;
+    }
+
+    // The provider refuses a recipient who opted out with it or the carrier — a STOP it handled itself — and will
+    // refuse every later send the same way. Recording the opt-out on the contact, exactly as an inbound STOP does,
+    // is what stops the workspace, broadcasts and the outbox from trying again.
+    private async Task RecordOptOutAsync(string recipient, CancellationToken cancellationToken)
+    {
+        var contactContentItemId = string.IsNullOrWhiteSpace(recipient)
+            ? null
+            : await _contactResolver.ResolveContactContentItemIdAsync(OmnichannelConstants.Channels.Sms, recipient.GetCleanedPhoneNumber(), cancellationToken);
+
+        var contact = string.IsNullOrEmpty(contactContentItemId)
+            ? null
+            : await _contentManager.GetAsync(contactContentItemId, VersionOptions.Latest);
+
+        if (contact is null)
+        {
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "The SMS provider refused a message because the recipient {Recipient} has opted out, and no contact record matches the number to record it on.",
+                    _addressRedactor.Redact(recipient));
+            }
+
+            return;
+        }
+
+        if (contact.TryGet<OmnichannelContactPart>(out var part) && part.DoNotSms)
+        {
+            return;
+        }
+
+        contact.Alter<OmnichannelContactPart>(contactPart => contactPart.SetDoNotSms(true, _clock.UtcNow));
+
+        await _contentManager.UpdateAsync(contact);
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "The SMS provider refused a message because the recipient has opted out; contact {ContactContentItemId} is now marked Do not SMS.",
+                contact.ContentItemId.SanitizeLogValue());
+        }
+    }
+
+    /// <inheritdoc/>
+    public ValueTask<string> ResolveProviderNameAsync(string fromNumber, CancellationToken cancellationToken = default)
+        // Automated SMS resolves through the same router, so a number sends through one provider whoever sends.
+        => _providerRouter.ResolveProviderNameAsync(fromNumber, cancellationToken);
+
+    private static Result Failed(string message)
+        => Result.Failed(new LocalizedString(message, message));
+}

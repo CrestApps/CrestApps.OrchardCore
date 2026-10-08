@@ -1,4 +1,6 @@
+using CrestApps.Core.AI;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.ContentTransfer.Models;
@@ -8,18 +10,24 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 using CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Managements.Reports;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
+using CrestApps.OrchardCore.Omnichannel.Managements.Tools;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using CrestApps.OrchardCore.PhoneNumbers.Core;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
+using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.Contents.Services;
+using OrchardCore.Contents.ViewModels;
 using OrchardCore.ContentTypes.Editors;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 
@@ -43,15 +51,19 @@ public sealed class Startup : StartupBase
 
         services.AddDisplayDriver<OmnichannelActivityBatch, OmnichannelActivityBatchDisplayDriver>();
 
+        services.AddScoped<ActivityHandlerDescriber>();
         services.AddDisplayDriver<OmnichannelActivityContainer, OmnichannelActivityContainerDisplayDriver>();
         services.AddScoped<IContentDisplayDriver, OmnichannelContactDisplayDriver>();
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, OmnichannelContactPartSettingsDisplayDriver>();
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, OmnichannelSubjectPartSettingsDisplayDriver>();
         services.AddContentPart<OmnichannelContactPart>()
             .UseDisplayDriver<OmnichannelContactPartDisplayDriver>();
+        services.AddScoped<IContentHandler, OmnichannelContactTimeZoneHandler>();
+        services.AddScoped<IContentHandler, OmnichannelContactMethodIdsHandler>();
 
         services
-            .AddDisplayDriver<OmnichannelActivity, OmnichannelActivityDisplayDriver>();
+            .AddDisplayDriver<OmnichannelActivity, OmnichannelActivityDisplayDriver>()
+            .AddDisplayDriver<OmnichannelActivity, OmnichannelActivityHandoffSummaryDisplayDriver>();
 
         services
             .AddDisplayDriver<ListOmnichannelActivityFilter, ListOmnichannelActivityFilterDisplayDriver>()
@@ -77,7 +89,7 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<OmnichannelCampaignGroup, OmnichannelCampaignGroupDisplayDriver>();
 
         services
-            .AddDisplayDriver<OmnichannelChannelEndpoint, OmnichannelChannelEndpointDisplayDriver>();
+            .AddDisplayDriver<Cadence, CadenceDisplayDriver>();
 
         services
             .AddDisplayDriver<SubjectAction, SubjectActionDisplayDriver>()
@@ -87,21 +99,57 @@ public sealed class Startup : StartupBase
         services.AddNavigationProvider<AdminMenu>();
 
         services.AddTransient<IContentsAdminListFilterProvider, OmnichannelContactPhoneContentsAdminListFilterProvider>();
+        services.AddDisplayDriver<ContentOptionsViewModel, OmnichannelContactPhoneContentsAdminListDisplayDriver>();
 
         services.AddShapeTableProvider<OmnichannelSubjectButtonsShapeTableProvider>();
         services.AddShapeTableProvider<OmnichannelSubjectPartIndexSettingsShapeTableProvider>();
+        services.AddShapeTableProvider<ContactListPartShapeTableProvider>();
+        services.AddScoped<ContactListPartNavigationResolver>();
+
+        // Registered outside the CRM feature because the content import options driver, which is not part of it, uses it.
+        services.AddScoped<LeadSourceProvider>();
     }
 }
 
 [RequireFeatures("CrestApps.OrchardCore.AI")]
 public sealed class AISubjectFlowStartup : StartupBase
 {
+    internal readonly IStringLocalizer S;
+    private readonly IShellConfiguration _shellConfiguration;
+
+    public AISubjectFlowStartup(
+        IStringLocalizer<AISubjectFlowStartup> stringLocalizer,
+        IShellConfiguration shellConfiguration)
+    {
+        S = stringLocalizer;
+        _shellConfiguration = shellConfiguration;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
         services
             .AddScoped<IContentTypePartDefinitionDisplayDriver, OmnichannelSubjectAISettingsDisplayDriver>()
             .AddScoped<IAIChatSessionAccessProvider, OmnichannelAIChatSessionAccessProvider>()
             .AddScoped<IAutomatedVoiceActivitySettingsResolver, AutomatedVoiceActivitySettingsResolver>();
+
+        // The automated-activity processing tunables, and their startup validation.
+        services.Configure<OmnichannelAutomationOptions>(_shellConfiguration.GetSection("CrestApps:Omnichannel:Automation"));
+        services.AddSingleton<IValidateOptions<OmnichannelAutomationOptions>, OmnichannelAutomationOptionsValidator>();
+
+        // One reply in flight per conversation. A singleton inside the tenant container, so it is shared by the
+        // scoped handlers separate inbound webhooks create and isolated from every other tenant.
+        services.AddSingleton<IAutomatedConversationGate, InMemoryAutomatedConversationGate>();
+
+        // The turn a completion records its handoff decision on. Scoped, so the tool and the handler that ran
+        // the completion share one instance and two concurrent conversations cannot see each other's decision.
+        services.TryAddScoped<IOmnichannelHandoffTurn, OmnichannelHandoffTurn>();
+
+        // The transfer-to-agent tool is enabled per-turn by the automated conversation handlers (not admin-
+        // selectable), so it is registered but intentionally not marked Selectable.
+        services.AddCoreAITool<TransferToAgentTool>(OmnichannelHandoffHelper.TransferToAgentToolName)
+            .WithTitle(S["Transfer to live agent"])
+            .WithDescription(S["Hands the automated conversation off to a human agent."])
+            .WithCategory(S["Omnichannel"]);
     }
 }
 
@@ -112,8 +160,16 @@ public sealed class ContentTransferStartup : StartupBase
     {
         services.AddContentPartImportHandler<OmnichannelContactPart, OmnichannelContactPartContentImportHandler>();
         services.AddScoped<IOmnichannelContactDuplicateLookupService, OmnichannelContactDuplicateLookupService>();
+        services.AddScoped<ImportRowDoNotCallFlags>();
         services.AddScoped<IContentImportRowFilter, OmnichannelContactImportRowFilter>();
         services.AddScoped<IDisplayDriver<ImportContent>, OmnichannelContactImportOptionsDisplayDriver>();
+        services.AddScoped<IDisplayDriver<ExportRequest>, OmnichannelActivityExportDisplayDriver>();
+
+        // Register the concrete handler once so the same scoped instance serves both interfaces: the batch
+        // hook pre-loads the page's activities and the import handler reads them back while mapping rows.
+        services.AddScoped<ContactActivityExportHandler>();
+        services.AddScoped<IContentImportHandler>(sp => sp.GetRequiredService<ContactActivityExportHandler>());
+        services.AddScoped<IContentExportBatchHandler>(sp => sp.GetRequiredService<ContactActivityExportHandler>());
     }
 }
 
@@ -144,7 +200,8 @@ public sealed class ReportsStartup : StartupBase
         services
             .AddScoped<IReport, ActivitySummaryReportProvider>()
             .AddScoped<IReport, CampaignPerformanceReportProvider>()
-            .AddScoped<IReport, DispositionBreakdownReportProvider>();
+            .AddScoped<IReport, DispositionBreakdownReportProvider>()
+            .AddScoped<IReport, HandoffContainmentReportProvider>();
         services.AddDisplayDriver<ReportFilter, OmnichannelReportFilterDisplayDriver>();
 
         AddEnterpriseReport(services, "omnichannel-activity-backlog", () => S["Activity backlog"], () => S["Open CRM activity inventory, assignment, reservation, and overdue workload."], EnterpriseActivityReportKind.Backlog, ReportsConstants.Categories.QueueRouting);
@@ -165,7 +222,7 @@ public sealed class ReportsStartup : StartupBase
         AddEnterpriseReport(services, "omnichannel-campaign-disposition-mix", () => S["Campaign disposition mix"], () => S["Campaign activity volume and outcomes by disposition."], EnterpriseActivityReportKind.CampaignDispositionMix, ReportsConstants.Categories.CrmCampaigns);
         AddEnterpriseReport(services, "omnichannel-campaign-attempt-performance", () => S["Campaign attempt performance"], () => S["Campaign activity outcomes grouped by attempt count."], EnterpriseActivityReportKind.CampaignAttemptPerformance, ReportsConstants.Categories.CrmCampaigns);
         AddEnterpriseReport(services, "omnichannel-overdue-by-user", () => S["Overdue workload by user"], () => S["Overdue activity count, age, and unassigned volume grouped by assigned user."], EnterpriseActivityReportKind.OverdueByUser, ReportsConstants.Categories.AgentPerformance);
-        AddEnterpriseReport(services, "omnichannel-channel-endpoint-usage", () => S["Channel endpoint usage"], () => S["Activity volume, outcomes, and attempts by configured channel endpoint."], EnterpriseActivityReportKind.ChannelEndpointUsage, ReportsConstants.Categories.Technical);
+        AddEnterpriseReport(services, "omnichannel-channel-endpoint-usage", () => S["Address usage"], () => S["Activity volume, outcomes, and attempts by configured address."], EnterpriseActivityReportKind.ChannelEndpointUsage, ReportsConstants.Categories.Technical);
         AddEnterpriseReport(services, "omnichannel-customer-workload", () => S["Customer workload"], () => S["Activity volume, outcomes, and attempts grouped by customer record."], EnterpriseActivityReportKind.CustomerWorkload, ReportsConstants.Categories.CrmCampaigns);
         AddEnterpriseReport(services, "omnichannel-schedule-completion", () => S["Scheduled completion performance"], () => S["Activities completed by schedule versus late, with completion variance."], EnterpriseActivityReportKind.ScheduleCompletion, ReportsConstants.Categories.Operations);
     }
@@ -185,6 +242,8 @@ public sealed class ReportsStartup : StartupBase
             serviceProvider.GetRequiredService<ICatalogManager<OmnichannelCampaign>>(),
             serviceProvider.GetRequiredService<ICatalogManager<OmnichannelCampaignGroup>>(),
             serviceProvider.GetRequiredService<INamedCatalogManager<OmnichannelDisposition>>(),
+            serviceProvider.GetRequiredService<IOptions<ActivitySourceOptions>>().Value,
+            serviceProvider.GetRequiredService<IOmnichannelChannelEndpointStore>(),
             definition,
             serviceProvider.GetRequiredService<IStringLocalizer<EnterpriseActivityReportProvider>>()));
     }

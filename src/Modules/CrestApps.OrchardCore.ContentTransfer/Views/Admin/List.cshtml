@@ -1,8 +1,10 @@
 @using OrchardCore.DisplayManagement
 @model IShape
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["Bulk Import"])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="ContentTransferImports" title="@T["Bulk Import"]" />
+</zone>
 
-<form asp-action="List" asp-controller="Admin" method="post" id="items-form" autocomplete="off">
+<form asp-action="List" asp-route-pageSize="@Context.Request.Query["pageSize"]" asp-controller="Admin" method="post" id="items-form" autocomplete="off">
     @await DisplayAsync(Model)
 </form>

@@ -11,17 +11,6 @@
         </div>
     </div>
 
-    @if (Model.IsConfigurationLocked)
-    {
-        <div class="ocat-wrapper">
-            <div class="ocat-end-offset">
-                <div class="alert alert-info mb-0">
-                    @T["The source type, knowledge base index, and field mappings are locked. Delete this data source and create a new one to change that structure."]
-                </div>
-            </div>
-        </div>
-    }
-
     <input type="hidden" asp-for="SourceType" data-ai-data-source-source-type />
 
     <span asp-validation-for="SourceType" class="text-danger"></span>

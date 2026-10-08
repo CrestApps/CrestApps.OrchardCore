@@ -1,0 +1,29 @@
+@using CrestApps.Core.AI
+@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model EditProfileDeploymentViewModel
+
+@if (Model.ShowMissingDefaultChatDeploymentWarning)
+{
+    <div class="ocat-wrapper orchestrator-dependent orchestrator-dependent-default">
+        <div class="ocat-end-offset">
+            <div class="alert alert-warning mb-0" role="alert">
+                @T["Default chat deployment is not configured in Settings > Artificial Intelligence > Default Deployments. Configure it there so the Default option resolves to the intended chat deployment."]
+            </div>
+        </div>
+    </div>
+}
+
+<div class="ocat-wrapper orchestrator-dependent orchestrator-dependent-default">
+    <label asp-for="ChatDeploymentName" class="ocat-label">@T["Chat deployment"]</label>
+    <div class="ocat-end">
+        @* The chat mode editor lives in another shape and finds this selection by id, so the id is stable
+           rather than generated. *@
+        <select asp-for="ChatDeploymentName" asp-items="Model.ChatDeployments" class="form-select" id="profileChatDeploymentSelect">
+            <option value="">@T["Default"]</option>
+        </select>
+        <span asp-validation-for="ChatDeploymentName" class="text-danger"></span>
+        <span class="hint">@T["The text model this profile talks to. It answers typed messages, including those typed during a voice conversation."]</span>
+    </div>
+</div>

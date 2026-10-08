@@ -117,7 +117,7 @@ internal sealed class DataSourceMetadataMigrations : DataMigration
         var dbConnectionAccessor = serviceProvider.GetRequiredService<IDbConnectionAccessor>();
         var dataSourceManager = serviceProvider.GetRequiredService<ICatalogManager<AIDataSource>>();
         var indexProfileStore = serviceProvider.GetRequiredService<IIndexProfileStore>();
-        var dataSourceOptions = serviceProvider.GetRequiredService<IOptions<AIDataSourceOptions>>().Value;
+        var dataSourceOptions = serviceProvider.GetRequiredService<IOptionsMonitor<AIDataSourceOptions>>().CurrentValue;
         var logger = serviceProvider.GetRequiredService<ILogger<DataSourceMetadataMigrations>>();
 
         var dialect = store.Configuration.SqlDialect;
@@ -379,7 +379,7 @@ internal sealed class DataSourceMetadataMigrations : DataMigration
     private static async Task<DataSourceIndexProfileMetadata> FindFirstEmbeddingMetadataAsync(IServiceProvider serviceProvider, ILogger logger)
     {
         var deploymentManager = serviceProvider.GetRequiredService<IAIDeploymentManager>();
-        var deployment = (await deploymentManager.GetByTypeAsync(AIDeploymentType.Embedding)).FirstOrDefault();
+        var deployment = (await deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Embedding)).FirstOrDefault();
 
         if (deployment != null)
         {

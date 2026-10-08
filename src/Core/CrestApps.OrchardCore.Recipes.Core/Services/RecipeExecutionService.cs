@@ -4,6 +4,7 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Deployment;
+using OrchardCore.FileStorage;
 using OrchardCore.Json;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Services;
@@ -16,6 +17,7 @@ public sealed class RecipeExecutionService
 {
     private readonly IEnumerable<IDeploymentTargetHandler> _deploymentTargetHandlers;
     private readonly DocumentJsonSerializerOptions _options;
+    private readonly ITempDirectoryProvider _tempDirectoryProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -23,14 +25,17 @@ public sealed class RecipeExecutionService
     /// </summary>
     /// <param name="deploymentTargetHandlers">The deployment target handlers that process recipe files.</param>
     /// <param name="options">The document JSON serializer options.</param>
+    /// <param name="tempDirectoryProvider">The provider used to resolve tenant-scoped temporary file locations.</param>
     /// <param name="logger">The logger instance.</param>
     public RecipeExecutionService(
         IEnumerable<IDeploymentTargetHandler> deploymentTargetHandlers,
         IOptions<DocumentJsonSerializerOptions> options,
+        ITempDirectoryProvider tempDirectoryProvider,
         ILogger<RecipeExecutionService> logger)
     {
         _deploymentTargetHandlers = deploymentTargetHandlers;
         _options = options.Value;
+        _tempDirectoryProvider = tempDirectoryProvider;
         _logger = logger;
     }
 
@@ -43,8 +48,8 @@ public sealed class RecipeExecutionService
     {
         ArgumentNullException.ThrowIfNull(data);
 
-        var tempArchiveName = $"{PathExtensions.GetTempFileName()}.json";
-        var tempArchiveFolder = PathExtensions.GetTempFileName();
+        var tempArchiveName = _tempDirectoryProvider.GetTempFileName(".json");
+        var tempArchiveFolder = _tempDirectoryProvider.GetTempFileName();
 
         try
         {

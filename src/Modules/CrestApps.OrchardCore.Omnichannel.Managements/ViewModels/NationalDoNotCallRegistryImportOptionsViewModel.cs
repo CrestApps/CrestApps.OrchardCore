@@ -11,6 +11,11 @@ public class NationalDoNotCallRegistryImportOptionsViewModel
     public bool IgnoreDoNotCallNumbers { get; set; }
 
     /// <summary>
+    /// Gets or sets whether a registry number is imported marked Do not call instead of being skipped.
+    /// </summary>
+    public bool MarkRegistryNumbersDoNotCall { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether DNC checking is globally enforced by site settings.
     /// </summary>
     public bool IsGloballyEnforced { get; set; }

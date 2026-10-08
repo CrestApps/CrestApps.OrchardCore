@@ -1,5 +1,5 @@
-using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
+using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Steps;
 
@@ -8,21 +8,16 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Steps;
 /// </summary>
 public sealed class OmnichannelDispositionDeploymentStep : DeploymentStep
 {
+    private static readonly LocalizationSource _category = LocalizationSource.Create<OmnichannelDispositionDeploymentStep>("Omnichannel");
+    private static readonly LocalizationSource _title = LocalizationSource.Create<OmnichannelDispositionDeploymentStep>("Omnichannel Dispositions");
+
     /// <summary>
     /// Initializes a new instance of the <see cref="OmnichannelDispositionDeploymentStep"/> class.
     /// </summary>
     public OmnichannelDispositionDeploymentStep()
     {
         Name = OmnichannelDeploymentSteps.Disposition;
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="OmnichannelDispositionDeploymentStep"/> class.
-    /// </summary>
-    /// <param name="stringLocalizer">The string localizer.</param>
-    public OmnichannelDispositionDeploymentStep(IStringLocalizer<OmnichannelDispositionDeploymentStep> stringLocalizer)
-        : this()
-    {
-        Category = stringLocalizer["Omnichannel"];
+        Category = _category;
+        Title = _title;
     }
 }

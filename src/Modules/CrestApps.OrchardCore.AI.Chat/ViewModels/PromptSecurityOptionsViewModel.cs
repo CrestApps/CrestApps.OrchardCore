@@ -53,6 +53,13 @@ public class PromptSecurityOptionsViewModel
     public int RateLimitWindowSeconds { get; set; }
 
     /// <summary>
+    /// Gets or sets the multi-tier sliding-window message limits applied to anonymous callers,
+    /// as one <c>limit, window</c> line per tier. When blank, anonymous callers fall back to
+    /// <see cref="MaxMessagesPerWindow"/> and <see cref="RateLimitWindowSeconds"/>.
+    /// </summary>
+    public string AnonymousMessageRateLimitTiers { get; set; }
+
+    /// <summary>
     /// Gets or sets the maximum anonymous sessions per rate-limit window.
     /// </summary>
     public int MaxAnonymousSessionsPerWindow { get; set; }
@@ -61,4 +68,11 @@ public class PromptSecurityOptionsViewModel
     /// Gets or sets the anonymous session-start rate-limit window length in seconds.
     /// </summary>
     public int AnonymousSessionRateLimitWindowSeconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the multi-tier sliding-window session-start limits applied to anonymous callers,
+    /// as one <c>limit, window</c> line per tier. When blank, anonymous session starts fall back to
+    /// <see cref="MaxAnonymousSessionsPerWindow"/> and <see cref="AnonymousSessionRateLimitWindowSeconds"/>.
+    /// </summary>
+    public string AnonymousSessionStartRateLimitTiers { get; set; }
 }

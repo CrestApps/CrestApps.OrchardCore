@@ -1,4 +1,5 @@
-using Xunit;
+using Xunit.Sdk;
+using Xunit.v3;
 
 // Json.Schema exposes a process-wide, non-thread-safe schema registry (SchemaRegistry.Global) that a
 // JsonSchemaBuilder mutates whenever it builds a schema carrying an absolute identifier. A large number of
@@ -7,4 +8,4 @@ using Xunit;
 // intermittently corrupted it ("Operations that change non-concurrent collections must have exclusive
 // access"), which failed the build on CI. Disabling test-collection parallelization serializes every schema
 // build across the assembly and removes the race. Tests within a collection already run sequentially.
-[assembly: CollectionBehavior(DisableTestParallelization = true)]
+[assembly: Parallelization(Mode = ParallelMode.None)]

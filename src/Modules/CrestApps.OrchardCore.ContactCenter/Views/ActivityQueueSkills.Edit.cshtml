@@ -1,0 +1,163 @@
+@using CrestApps.OrchardCore.ContactCenter.Core.Models
+@model QueueViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+@{
+    var skillRequirementsPrefix = Html.NameFor(m => m.SkillRequirements);
+    var skillRequirementsId = Html.IdFor(m => m.SkillRequirements);
+    var proficiencyLevels = Enumerable.Range(AgentSkill.MinimumProficiency, AgentSkill.MaximumProficiency - AgentSkill.MinimumProficiency + 1).ToArray();
+    var noSkillTitle = T["Select a skill"].Value;
+}
+
+<div class="ocat-wrapper" asp-validation-class-for="RequiredSkills">
+    <label asp-for="RequiredSkills" class="ocat-label">@T["Required skills"]</label>
+    <div class="ocat-end">
+        <select asp-for="RequiredSkills" asp-items="Model.SkillOptions" class="selectpicker show-tick" multiple data-live-search="true" data-show-selected-tags="true" data-actions-box="true" data-header="@T["Select skills"]" data-selected-text-format="count > 2" data-count-selected-text="{0} skills selected" title="@T["No required skills"]"></select>
+        <span asp-validation-for="RequiredSkills" class="text-danger"></span>
+        <span class="hint">@T["Agents must have every selected skill, at the default proficiency, to receive work from this queue. Use the requirements below to ask for a specific proficiency, make a skill preferred rather than required, or relax it after a wait."]</span>
+    </div>
+</div>
+
+@* Each requirement is drawn like an Orchard bag-part item: a collapsible card whose header names the skill, with the
+   delete (trash) button on its right. *@
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Skill requirements"]</label>
+    <div class="ocat-end">
+        <div data-repeater data-repeater-prefix="@skillRequirementsPrefix">
+            <div data-repeater-rows>
+                @for (var i = 0; i < Model.SkillRequirements.Count; i++)
+                {
+                    var row = Model.SkillRequirements[i];
+                    var key = i.ToString();
+                    var itemId = $"{skillRequirementsId}-{key}";
+                    var skillName = Model.SkillOptions.FirstOrDefault(option => string.Equals(option.Value, row.SkillId, StringComparison.OrdinalIgnoreCase))?.Text;
+
+                    <div class="widget-editor card mb-2" data-repeater-row>
+                        <input type="hidden" name="@(skillRequirementsPrefix).Index" value="@key" />
+                        <div class="widget-editor-header card-header text-muted d-flex align-items-center gap-2 py-1 ps-2 pe-1">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#@(itemId)-body" aria-expanded="true" aria-controls="@(itemId)-body" title="@T["Collapse or expand"]"><i class="fa-solid fa-angle-down" aria-hidden="true"></i></button>
+                            <span class="flex-grow-1 text-truncate">
+                                <span data-repeater-title data-repeater-title-empty="@noSkillTitle">@(string.IsNullOrEmpty(skillName) ? noSkillTitle : skillName)</span>
+                                <span class="hint dashed">@T["Skill requirement"]</span>
+                            </span>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-danger" data-repeater-remove title="@T["Remove"]" aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                            </div>
+                        </div>
+                        <div id="@(itemId)-body" class="collapse show">
+                            <div class="widget-editor-body card-body">
+                                <div class="ocat-wrapper">
+                                    <label class="ocat-label" for="@(itemId)-skill">@T["Skill"]</label>
+                                    <div class="ocat-end">
+                                        <select id="@(itemId)-skill" name="@(skillRequirementsPrefix)[@key].SkillId" class="form-select" data-repeater-title-source>
+                                            <option value="">@T["Select a skill"]</option>
+                                            @foreach (var option in Model.SkillOptions)
+                                            {
+                                                <option value="@option.Value" selected="@(string.Equals(option.Value, row.SkillId, StringComparison.OrdinalIgnoreCase))">@option.Text</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="ocat-wrapper">
+                                    <label class="ocat-label" for="@(itemId)-proficiency">@T["Minimum proficiency"]</label>
+                                    <div class="ocat-end">
+                                        <select id="@(itemId)-proficiency" name="@(skillRequirementsPrefix)[@key].MinimumProficiency" class="form-select">
+                                            @foreach (var level in proficiencyLevels)
+                                            {
+                                                <option value="@level" selected="@(level == row.MinimumProficiency)">@level</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="ocat-wrapper">
+                                    <div class="ocat-end-offset">
+                                        <div class="form-check">
+                                            <input type="checkbox" id="@(itemId)-required" name="@(skillRequirementsPrefix)[@key].Required" value="true" class="form-check-input" checked="@row.Required" />
+                                            <input type="hidden" name="@(skillRequirementsPrefix)[@key].Required" value="false" />
+                                            <label class="form-check-label" for="@(itemId)-required">@T["Required"]</label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="ocat-wrapper">
+                                    <label class="ocat-label" for="@(itemId)-relax">@T["Relax after (seconds)"]</label>
+                                    <div class="ocat-end">
+                                        <input type="number" min="0" id="@(itemId)-relax" name="@(skillRequirementsPrefix)[@key].RelaxAfterSeconds" value="@row.RelaxAfterSeconds" class="form-control" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+            <template data-repeater-template>
+                <div class="widget-editor card mb-2" data-repeater-row>
+                    <input type="hidden" name="@(skillRequirementsPrefix).Index" value="__KEY__" />
+                    <div class="widget-editor-header card-header text-muted d-flex align-items-center gap-2 py-1 ps-2 pe-1">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#@(skillRequirementsId)-__KEY__-body" aria-expanded="true" aria-controls="@(skillRequirementsId)-__KEY__-body" title="@T["Collapse or expand"]"><i class="fa-solid fa-angle-down" aria-hidden="true"></i></button>
+                        <span class="flex-grow-1 text-truncate">
+                            <span data-repeater-title data-repeater-title-empty="@noSkillTitle">@noSkillTitle</span>
+                            <span class="hint dashed">@T["Skill requirement"]</span>
+                        </span>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-danger" data-repeater-remove title="@T["Remove"]" aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                        </div>
+                    </div>
+                    <div id="@(skillRequirementsId)-__KEY__-body" class="collapse show">
+                        <div class="widget-editor-body card-body">
+                            <div class="ocat-wrapper">
+                                <label class="ocat-label" for="@(skillRequirementsId)-__KEY__-skill">@T["Skill"]</label>
+                                <div class="ocat-end">
+                                    <select id="@(skillRequirementsId)-__KEY__-skill" name="@(skillRequirementsPrefix)[__KEY__].SkillId" class="form-select" data-repeater-title-source>
+                                        <option value="">@T["Select a skill"]</option>
+                                        @foreach (var option in Model.SkillOptions)
+                                        {
+                                            <option value="@option.Value">@option.Text</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="ocat-wrapper">
+                                <label class="ocat-label" for="@(skillRequirementsId)-__KEY__-proficiency">@T["Minimum proficiency"]</label>
+                                <div class="ocat-end">
+                                    <select id="@(skillRequirementsId)-__KEY__-proficiency" name="@(skillRequirementsPrefix)[__KEY__].MinimumProficiency" class="form-select">
+                                        @foreach (var level in proficiencyLevels)
+                                        {
+                                            <option value="@level" selected="@(level == AgentSkill.DefaultProficiency)">@level</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="ocat-wrapper">
+                                <div class="ocat-end-offset">
+                                    <div class="form-check">
+                                        <input type="checkbox" id="@(skillRequirementsId)-__KEY__-required" name="@(skillRequirementsPrefix)[__KEY__].Required" value="true" class="form-check-input" checked />
+                                        <input type="hidden" name="@(skillRequirementsPrefix)[__KEY__].Required" value="false" />
+                                        <label class="form-check-label" for="@(skillRequirementsId)-__KEY__-required">@T["Required"]</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="ocat-wrapper">
+                                <label class="ocat-label" for="@(skillRequirementsId)-__KEY__-relax">@T["Relax after (seconds)"]</label>
+                                <div class="ocat-end">
+                                    <input type="number" min="0" id="@(skillRequirementsId)-__KEY__-relax" name="@(skillRequirementsPrefix)[__KEY__].RelaxAfterSeconds" value="0" class="form-control" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-repeater-add><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add skill requirement"]</button>
+        </div>
+        <span class="hint">@T["A required skill excludes agents below the minimum proficiency; a preferred skill only ranks them lower. A relax time drops the requirement once a caller has waited that long, so a specialist queue still answers when no specialist is free."]</span>
+    </div>
+</div>
+
+@await Html.PartialAsync("_ContactCenterRepeaterScript")

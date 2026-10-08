@@ -1,9 +1,12 @@
 @using CrestApps.OrchardCore.Core.Models
+@using CrestApps.OrchardCore.TimeZones
 
 @model EditCatalogEntryViewModel
 
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["New '{0}' Time Zone Map", Model.DisplayName])</h1>
+    <breadcrumb name="TimeZonesCreate" title="@T["New Time Zone Map"]">
+        <breadcrumb-item id="TimeZones" action="Index" controller="Admin" area="CrestApps.OrchardCore.TimeZones" permission="@TimeZonesConstants.Permissions.ManageTimeZoneMaps.Name">@T["Time Zones"]</breadcrumb-item>
+    </breadcrumb>
 </zone>
 
 <form method="post" enctype="multipart/form-data" class="no-multisubmit">

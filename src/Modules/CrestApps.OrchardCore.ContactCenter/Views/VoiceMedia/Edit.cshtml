@@ -1,0 +1,22 @@
+@using CrestApps.OrchardCore.ContactCenter.Core
+@using CrestApps.OrchardCore.Core.Models
+
+@model EditCatalogEntryViewModel
+
+<zone Name="Title">
+    <breadcrumb name="ContactCenterVoiceMediaEdit" title="@T["Edit '{0}' Voice Media", Model.DisplayName]">
+        <breadcrumb-item id="ContactCenterVoiceMedia" action="Index" controller="VoiceMedia" area="CrestApps.OrchardCore.ContactCenter" permission="@ContactCenterPermissions.ManageVoiceMedia.Name">@T["Voice media"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" asp-route-id="@ViewContext.HttpContext.Request.RouteValues["id"]" enctype="multipart/form-data" class="no-multisubmit">
+    @Html.ValidationSummary()
+    @await DisplayAsync(Model.Editor)
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button class="btn btn-primary" type="submit">@T["Save"]</button>
+            <a class="btn btn-secondary cancel" role="button" asp-route-action="Index">@T["Cancel"]</a>
+        </div>
+    </div>
+</form>

@@ -9,6 +9,7 @@ using Moq;
 using OrchardCore.Email;
 using OrchardCore.Infrastructure;
 using OrchardCore.Users;
+using System.Security.Claims;
 
 namespace CrestApps.OrchardCore.Tests.Agent.Communications;
 
@@ -50,14 +51,15 @@ public sealed class SendEmailToolTests
                     && m.Subject == "Test Subject"
                     && m.HtmlBody == "<p>Test body</p>"
                     && m.Sender == null
-                    && m.From == null),
+                    && m.From == null
+                    && m.ReplyTo == null),
                 It.IsAny<string>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
     [Fact]
-    public async Task InvokeAsync_WithHttpContext_ShouldSendEmailWithSenderFromUser()
+    public async Task InvokeAsync_WithHttpContext_ShouldSendEmailWithoutSenderOrReplyTo()
     {
         // Arrange
         var emailService = new Mock<IEmailService>();
@@ -74,7 +76,10 @@ public sealed class SendEmailToolTests
             .Setup(x => x.GetEmailAsync(mockUser.Object))
             .ReturnsAsync("sender@example.com");
 
-        var httpContext = new DefaultHttpContext();
+        var httpContext = new DefaultHttpContext
+        {
+            User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "user-id")], "TestAuthentication")),
+        };
         var httpContextAccessor = new Mock<IHttpContextAccessor>();
         httpContextAccessor.Setup(x => x.HttpContext).Returns(httpContext);
 
@@ -98,11 +103,14 @@ public sealed class SendEmailToolTests
         emailService.Verify(
             x => x.SendAsync(
                 It.Is<MailMessage>(m =>
-                    m.Sender == "sender@example.com"
-                    && m.From == "sender@example.com"),
+                    m.Sender == null
+                    && m.From == null
+                    && m.ReplyTo == null),
                 It.IsAny<string>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
+
+        userManager.Verify(x => x.GetUserAsync(It.IsAny<System.Security.Claims.ClaimsPrincipal>()), Times.Never);
     }
 
     [Fact]

@@ -1,0 +1,73 @@
+@using CrestApps.OrchardCore.Omnichannel.Messaging.Models
+@using CrestApps.OrchardCore.Omnichannel.Messaging.Services
+@model ConversationRowViewModel
+
+@{
+    var conversation = Model.Conversation;
+    var hasContactName = !string.IsNullOrEmpty(Model.ContactName);
+    var name = hasContactName ? Model.ContactName : Model.ContactAddressDisplay;
+
+    // Initials for the avatar, or a generic glyph for an unknown sender known only by their address.
+    var initials = hasContactName ? AvatarPalette.Initials(Model.ContactName) : null;
+    var avatarClasses = AvatarPalette.For(conversation.GetCustomerKey());
+}
+
+<div class="d-flex gap-2 align-items-start">
+    <div class="messaging-avatar rounded-circle @avatarClasses d-flex align-items-center justify-content-center flex-shrink-0 fw-semibold">
+        @if (string.IsNullOrEmpty(initials))
+        {
+            <i class="fa-solid fa-user" aria-hidden="true"></i>
+        }
+        else
+        {
+            @initials
+        }
+    </div>
+    <div class="flex-grow-1" style="min-width: 0;">
+        <div class="d-flex justify-content-between align-items-baseline gap-2">
+            <span class="messaging-row-name text-truncate">@name</span>
+            @if (conversation.LastMessageUtc.HasValue)
+            {
+                <span class="text-muted text-nowrap" style="font-size: .72rem;">@conversation.LastMessageUtc.Value.ToLocalTime().ToString("g")</span>
+            }
+        </div>
+        <div class="messaging-row-preview small text-muted text-truncate">
+            @if (Model.Channel is not null)
+            {
+                <i class="@Model.Channel.IconCssClass me-1" title="@Model.Channel.DisplayName" aria-label="@Model.Channel.DisplayName"></i>
+            }
+            @conversation.LastMessagePreview
+        </div>
+        <div class="d-flex flex-wrap gap-1 mt-1" style="font-size: .7rem;">
+            @switch (conversation.Status)
+            {
+                case ConversationStatus.Snoozed:
+                    <span class="badge text-bg-warning">@T["Snoozed"]</span>
+                    break;
+                case ConversationStatus.Closed:
+                    <span class="badge text-bg-secondary">@T["Closed"]</span>
+                    break;
+                case ConversationStatus.Spam:
+                    <span class="badge text-bg-danger">@T["Spam"]</span>
+                    break;
+            }
+
+            @if (conversation.AssignmentStatus == ConversationAssignmentStatus.Assigned && !string.IsNullOrEmpty(Model.AssignedToName))
+            {
+                <span class="badge text-bg-light border" title="@T["Assigned to"]">
+                    <i class="fa-solid fa-user me-1" aria-hidden="true"></i>@Model.AssignedToName
+                </span>
+            }
+            else if (conversation.AssignmentStatus == ConversationAssignmentStatus.Pooled)
+            {
+                <span class="badge text-bg-light border" title="@T["Available for any member of the queue to claim."]">
+                    <i class="fa-solid fa-users me-1" aria-hidden="true"></i>@T["Pooled"]
+                </span>
+            }
+            else if (conversation.AssignmentStatus == ConversationAssignmentStatus.Unassigned)
+            {
+                <span class="badge text-bg-warning" title="@T["Not yet assigned to an agent."]">@T["Unassigned"]</span>
+            }
+        </div>
+    </div>
+</div>

@@ -11,6 +11,13 @@ internal sealed class PermissionProvider : IPermissionProvider
         OmnichannelConstants.Permissions.ListActivities,
         OmnichannelConstants.Permissions.ListContactActivities,
         OmnichannelConstants.Permissions.CompleteOwnActivity,
+        OmnichannelConstants.Permissions.EditActivity,
+    ];
+
+    // A supervisor reads every report; the reports of each feature are granted by that feature's own provider.
+    private readonly IEnumerable<Permission> _supervisorPermissions =
+    [
+        OmnichannelConstants.Permissions.ViewReports,
     ];
 
     private readonly IEnumerable<Permission> _allPermissions =
@@ -19,13 +26,16 @@ internal sealed class PermissionProvider : IPermissionProvider
         OmnichannelConstants.Permissions.ListContactActivities,
         OmnichannelConstants.Permissions.CompleteActivity,
         OmnichannelConstants.Permissions.CompleteOwnActivity,
+        OmnichannelConstants.Permissions.EditActivity,
         OmnichannelConstants.Permissions.ManageActivities,
         OmnichannelConstants.Permissions.PurgeActivity,
         OmnichannelConstants.Permissions.ManageDispositions,
         OmnichannelConstants.Permissions.ManageCampaigns,
+        OmnichannelConstants.Permissions.ManageCadences,
         OmnichannelConstants.Permissions.ManageCampaignGroups,
         OmnichannelConstants.Permissions.ManageChannelEndpoints,
         OmnichannelConstants.Permissions.ManageActivityBatches,
+        OmnichannelConstants.Permissions.DeleteLoadedActivityBatches,
         OmnichannelConstants.Permissions.ManageSubjectFlows,
         OmnichannelConstants.Permissions.ViewReports,
     ];
@@ -45,6 +55,11 @@ internal sealed class PermissionProvider : IPermissionProvider
         {
             Name = OmnichannelConstants.AgentRole,
             Permissions = _agentPermissions,
+        },
+        new PermissionStereotype
+        {
+            Name = OmnichannelConstants.SupervisorRole,
+            Permissions = _supervisorPermissions,
         },
     ];
 

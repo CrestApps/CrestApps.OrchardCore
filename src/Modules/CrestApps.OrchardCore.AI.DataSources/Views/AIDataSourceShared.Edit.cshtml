@@ -28,6 +28,8 @@
     </div>
 </fieldset>
 
+@if (Model.ShowFieldMapping)
+{
 <fieldset class="ocat-wrapper">
     <legend class="ocat-label">@T["Field Mapping"]</legend>
     <div class="ocat-end">
@@ -116,3 +118,4 @@
         </div>
     </div>
 </fieldset>
+}

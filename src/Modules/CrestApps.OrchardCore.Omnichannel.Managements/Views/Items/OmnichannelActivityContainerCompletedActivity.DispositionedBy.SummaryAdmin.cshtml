@@ -1,0 +1,23 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model ActivityHandlerViewModel
+
+@* Who dispositioned the completed activity, and how: a person, the AI agent of a profile, the dialer, or the platform. *@
+
+@{
+    var icon = Model.DispositionedBy switch
+    {
+        ActivityDispositionActor.User => "fa-user",
+        ActivityDispositionActor.AIAgent => "fa-robot",
+        ActivityDispositionActor.Dialer => "fa-phone-volume",
+        _ => "fa-gears",
+    };
+}
+
+@if (!string.IsNullOrEmpty(Model.DispositionedByName))
+{
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Dispositioned by"]">
+        <i class="fa-solid @icon text-secondary me-1" aria-hidden="true"></i>@Model.DispositionedByName
+    </span>
+}

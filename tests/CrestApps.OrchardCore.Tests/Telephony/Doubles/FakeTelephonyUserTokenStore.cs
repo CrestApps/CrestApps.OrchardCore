@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 
@@ -8,7 +9,7 @@ namespace CrestApps.OrchardCore.Tests.Telephony.Doubles;
 /// </summary>
 internal sealed class FakeTelephonyUserTokenStore : ITelephonyUserTokenStore
 {
-    private readonly Dictionary<string, TelephonyUserTokens> _store = [];
+    private readonly ConcurrentDictionary<string, TelephonyUserTokens> _store = new(StringComparer.Ordinal);
 
     public Task<TelephonyUserTokens> GetAsync(string providerName, CancellationToken cancellationToken = default)
         => Task.FromResult(_store.TryGetValue(providerName, out var tokens) ? tokens : null);
@@ -22,7 +23,7 @@ internal sealed class FakeTelephonyUserTokenStore : ITelephonyUserTokenStore
 
     public Task RemoveAsync(string providerName, CancellationToken cancellationToken = default)
     {
-        _store.Remove(providerName);
+        _store.TryRemove(providerName, out _);
 
         return Task.CompletedTask;
     }

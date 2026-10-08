@@ -25,6 +25,12 @@
   },
   {
     "inputs": [
+      "Assets/js/tool-instance-parameters.js"
+    ],
+    "output": "wwwroot/scripts/tool-instance-parameters.js"
+  },
+  {
+    "inputs": [
       "Assets/css/item-selector.css"
     ],
     "output": "wwwroot/styles/item-selector.css"
@@ -35,6 +41,69 @@
       "node_modules/chart.js/dist/chart.umd.js"
     ],
     "output": "wwwroot/vendors/chartjs/chart.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/medium-zoom/dist/medium-zoom.js"
+    ],
+    "output": "wwwroot/vendors/medium-zoom/medium-zoom.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/medium-zoom/dist/medium-zoom.min.js"
+    ],
+    "output": "wwwroot/vendors/medium-zoom/medium-zoom.min.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@sapphi-red/web-noise-suppressor/dist/gtcrn/workletProcessor.js"
+    ],
+    "output": "wwwroot/vendors/web-noise-suppressor/gtcrn/workletProcessor.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@sapphi-red/web-noise-suppressor/dist/rnnoise/workletProcessor.js"
+    ],
+    "output": "wwwroot/vendors/web-noise-suppressor/rnnoise/workletProcessor.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@sapphi-red/web-noise-suppressor/dist/noiseGate/workletProcessor.js"
+    ],
+    "output": "wwwroot/vendors/web-noise-suppressor/noiseGate/workletProcessor.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@sapphi-red/web-noise-suppressor/dist/gtcrn.wasm"
+    ],
+    "output": "wwwroot/vendors/web-noise-suppressor/gtcrn.wasm"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@sapphi-red/web-noise-suppressor/dist/rnnoise.wasm"
+    ],
+    "output": "wwwroot/vendors/web-noise-suppressor/rnnoise.wasm"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@sapphi-red/web-noise-suppressor/dist/rnnoise_simd.wasm"
+    ],
+    "output": "wwwroot/vendors/web-noise-suppressor/rnnoise_simd.wasm"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@sapphi-red/web-noise-suppressor/LICENSE"
+    ],
+    "output": "wwwroot/vendors/web-noise-suppressor/LICENSE"
   },
   {
     "copy": true,
@@ -201,6 +270,83 @@
       "node_modules/@crestapps/ai-chat-ui/dist/document-drop-zone.min.css"
     ],
     "output": "wwwroot/vendors/crestapps/document-drop-zone.min.css"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/chat-markers.js"
+    ],
+    "output": "wwwroot/vendors/crestapps/chat-markers.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/chat-markers.min.js"
+    ],
+    "output": "wwwroot/vendors/crestapps/chat-markers.min.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/chat-markers.min.js.map"
+    ],
+    "output": "wwwroot/vendors/crestapps/chat-markers.min.js.map"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/realtime-audio.js"
+    ],
+    "output": "wwwroot/vendors/crestapps/realtime-audio.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/realtime-audio.min.js"
+    ],
+    "output": "wwwroot/vendors/crestapps/realtime-audio.min.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/realtime-audio.min.js.map"
+    ],
+    "output": "wwwroot/vendors/crestapps/realtime-audio.min.js.map"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/chat-image-carousel.js"
+    ],
+    "output": "wwwroot/vendors/crestapps/chat-image-carousel.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/chat-image-carousel.min.js"
+    ],
+    "output": "wwwroot/vendors/crestapps/chat-image-carousel.min.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/chat-image-carousel.min.js.map"
+    ],
+    "output": "wwwroot/vendors/crestapps/chat-image-carousel.min.js.map"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/chat-image-carousel.css"
+    ],
+    "output": "wwwroot/vendors/crestapps/chat-image-carousel.css"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/chat-image-carousel.min.css"
+    ],
+    "output": "wwwroot/vendors/crestapps/chat-image-carousel.min.css"
   },
   {
     "copy": true,

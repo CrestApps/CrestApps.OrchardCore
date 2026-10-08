@@ -1,0 +1,20 @@
+@using CrestApps.OrchardCore.AI.FileSources
+@model EditCatalogEntryViewModel
+
+<zone Name="Title">
+    <breadcrumb name="AIFileSourcesEdit" title="@T["Edit File Source: '{0}'", Model.DisplayName]">
+        <breadcrumb-item id="AIFileSources" action="Index" controller="FileSources" area="CrestApps.OrchardCore.AI.FileSources" permission="@FileSourcePermissions.ManageFileSources.Name">@T["File Sources"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" asp-route-id="@ViewContext.HttpContext.Request.RouteValues["id"]" enctype="multipart/form-data" class="no-multisubmit">
+    @Html.ValidationSummary()
+    @await DisplayAsync(Model.Editor)
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button class="btn btn-primary" type="submit">@T["Save"]</button>
+            <a class="btn btn-secondary cancel" role="button" asp-route-action="Index">@T["Cancel"]</a>
+        </div>
+    </div>
+</form>

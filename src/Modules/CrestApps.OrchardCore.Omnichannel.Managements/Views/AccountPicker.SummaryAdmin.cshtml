@@ -1,0 +1,11 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model AccountPickerViewModel
+
+@if (!string.IsNullOrEmpty(Model.AccountDisplayText))
+{
+    <a class="badge ta-badge font-weight-normal text-decoration-none" title="@T["Account"]"
+       asp-action="Display" asp-controller="Admin" asp-route-area="OrchardCore.Contents" asp-route-contentItemId="@Model.AccountContentItemId">
+        <i class="fa-solid fa-building text-secondary me-1" aria-hidden="true"></i>@Model.AccountDisplayText
+    </a>
+}

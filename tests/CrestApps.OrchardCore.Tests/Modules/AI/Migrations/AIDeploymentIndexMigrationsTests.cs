@@ -1,5 +1,4 @@
-#pragma warning disable CS0618 // Type or member is obsolete - Tests cover legacy migration logic
-
+using System.Collections;
 using System.Reflection;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI;
@@ -13,10 +12,7 @@ public sealed class AIDeploymentIndexMigrationsTests
     public void InferLegacyDeploymentType_WhenProfileReferencesLegacyDeploymentId_ShouldReturnChat()
     {
         // Arrange
-        var profileDeploymentTypesById = new Dictionary<string, AIDeploymentType>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["legacy-chat-id"] = AIDeploymentType.Chat,
-        };
+        var profileDeploymentTypesById = CreateDeploymentTypeHints(("legacy-chat-id", LegacyDeploymentPurposes.Chat));
 
         // Act
         var deploymentType = InvokeInferLegacyDeploymentType(
@@ -25,11 +21,11 @@ public sealed class AIDeploymentIndexMigrationsTests
             connectionSelector: "winnerware",
             sourceName: "Azure",
             profileDeploymentTypesById,
-            new Dictionary<string, AIDeploymentType>(StringComparer.OrdinalIgnoreCase),
+            CreateDeploymentTypeHints(),
             []);
 
         // Assert
-        Assert.Equal(AIDeploymentType.Chat, deploymentType);
+        Assert.Equal(LegacyDeploymentPurposes.Chat, deploymentType);
     }
 
     [Fact]
@@ -51,12 +47,12 @@ public sealed class AIDeploymentIndexMigrationsTests
             deploymentName: "text-embedding-3-small",
             connectionSelector: "winnerware",
             sourceName: "Azure",
-            new Dictionary<string, AIDeploymentType>(StringComparer.OrdinalIgnoreCase),
-            new Dictionary<string, AIDeploymentType>(StringComparer.OrdinalIgnoreCase),
+            CreateDeploymentTypeHints(),
+            CreateDeploymentTypeHints(),
             connections);
 
         // Assert
-        Assert.Equal(AIDeploymentType.Embedding, deploymentType);
+        Assert.Equal(LegacyDeploymentPurposes.Embedding, deploymentType);
     }
 
     [Fact]
@@ -78,12 +74,12 @@ public sealed class AIDeploymentIndexMigrationsTests
             deploymentName: "gpt-4.1-mini",
             connectionSelector: "winnerware",
             sourceName: "Azure",
-            new Dictionary<string, AIDeploymentType>(StringComparer.OrdinalIgnoreCase),
-            new Dictionary<string, AIDeploymentType>(StringComparer.OrdinalIgnoreCase),
+            CreateDeploymentTypeHints(),
+            CreateDeploymentTypeHints(),
             connections);
 
         // Assert
-        Assert.Equal(AIDeploymentType.Chat | AIDeploymentType.Utility, deploymentType);
+        Assert.Equal(LegacyDeploymentPurposes.Chat | LegacyDeploymentPurposes.Utility, deploymentType);
     }
 
     [Fact]
@@ -97,21 +93,39 @@ public sealed class AIDeploymentIndexMigrationsTests
             deploymentName: "gpt-4.1-mini",
             connectionSelector: "winnerware",
             sourceName: "Azure",
-            new Dictionary<string, AIDeploymentType>(StringComparer.OrdinalIgnoreCase),
-            new Dictionary<string, AIDeploymentType>(StringComparer.OrdinalIgnoreCase),
+            CreateDeploymentTypeHints(),
+            CreateDeploymentTypeHints(),
             []);
 
         // Assert
-        Assert.Equal(AIDeploymentType.Chat, deploymentType);
+        Assert.Equal(LegacyDeploymentPurposes.Chat, deploymentType);
     }
 
-    private static AIDeploymentType InvokeInferLegacyDeploymentType(
+    /// <summary>
+    /// Builds a hint dictionary keyed to the migrations' internal legacy purpose enum, which the reflected
+    /// method's signature requires exactly.
+    /// </summary>
+    private static object CreateDeploymentTypeHints(params (string Key, int Purpose)[] hints)
+    {
+        var dictionary = (IDictionary)Activator.CreateInstance(
+            typeof(Dictionary<,>).MakeGenericType(typeof(string), LegacyDeploymentPurposes.PurposeType),
+            [StringComparer.OrdinalIgnoreCase])!;
+
+        foreach (var (key, purpose) in hints)
+        {
+            dictionary[key] = LegacyDeploymentPurposes.Box(purpose);
+        }
+
+        return dictionary;
+    }
+
+    private static int InvokeInferLegacyDeploymentType(
         string itemId,
         string deploymentName,
         string connectionSelector,
         string sourceName,
-        IReadOnlyDictionary<string, AIDeploymentType> profileDeploymentTypesById,
-        IReadOnlyDictionary<string, AIDeploymentType> profileDeploymentTypesByName,
+        object profileDeploymentTypesById,
+        object profileDeploymentTypesByName,
         IEnumerable<AIProviderConnection> legacyConnections)
     {
         var method = typeof(Startup).Assembly
@@ -120,9 +134,9 @@ public sealed class AIDeploymentIndexMigrationsTests
                 "InferLegacyDeploymentType",
                 BindingFlags.NonPublic | BindingFlags.Static)!;
 
-        return (AIDeploymentType)method.Invoke(
+        return LegacyDeploymentPurposes.Unbox(method.Invoke(
             null,
-            [itemId, deploymentName, connectionSelector, sourceName, profileDeploymentTypesById, profileDeploymentTypesByName, legacyConnections])!;
+            [itemId, deploymentName, connectionSelector, sourceName, profileDeploymentTypesById, profileDeploymentTypesByName, legacyConnections])!);
     }
 
     private static AIProviderConnection CreateConnection(

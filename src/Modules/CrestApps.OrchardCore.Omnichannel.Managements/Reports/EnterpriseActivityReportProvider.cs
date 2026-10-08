@@ -3,10 +3,13 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
+using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Records;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
@@ -19,8 +22,10 @@ internal sealed class EnterpriseActivityReportProvider : IReport
 {
     private readonly ISession _session;
     private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
+    private readonly ActivitySourceOptions _activitySourceOptions;
     private readonly ICatalogManager<OmnichannelCampaignGroup> _campaignGroupManager;
     private readonly INamedCatalogManager<OmnichannelDisposition> _dispositionManager;
+    private readonly IOmnichannelChannelEndpointStore _addressStore;
     private readonly EnterpriseActivityReportDefinition _definition;
     private readonly IStringLocalizer _stringLocalizer;
 
@@ -29,13 +34,17 @@ internal sealed class EnterpriseActivityReportProvider : IReport
         ICatalogManager<OmnichannelCampaign> campaignManager,
         ICatalogManager<OmnichannelCampaignGroup> campaignGroupManager,
         INamedCatalogManager<OmnichannelDisposition> dispositionManager,
+        ActivitySourceOptions activitySourceOptions,
+        IOmnichannelChannelEndpointStore addressStore,
         EnterpriseActivityReportDefinition definition,
         IStringLocalizer stringLocalizer)
     {
         _session = session;
         _campaignManager = campaignManager;
+        _activitySourceOptions = activitySourceOptions;
         _campaignGroupManager = campaignGroupManager;
         _dispositionManager = dispositionManager;
+        _addressStore = addressStore;
         _definition = definition;
         _stringLocalizer = stringLocalizer;
     }
@@ -53,10 +62,15 @@ internal sealed class EnterpriseActivityReportProvider : IReport
     public async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
         var range = context.Filter.GetDateRange();
-        var toUtc = range.ToUtc.GetValueOrDefault();
-        var fromUtc = _definition.Kind is EnterpriseActivityReportKind.Backlog or EnterpriseActivityReportKind.Aging
-            ? DateTime.MinValue
-            : range.FromUtc.GetValueOrDefault();
+
+        // Clamp the bounds to a database-safe range. Backlog and Aging intentionally span all history,
+        // but an unbounded lower bound such as DateTime.MinValue overflows SQL Server's datetime column,
+        // so it must be floored to the lowest value every provider can store.
+        var toUtc = OmnichannelReportQuery.ClampToQueryableRange(range.ToUtc.GetValueOrDefault());
+        var fromUtc = OmnichannelReportQuery.ClampToQueryableRange(
+            _definition.Kind is EnterpriseActivityReportKind.Backlog or EnterpriseActivityReportKind.Aging
+                ? OmnichannelReportQuery.MinQueryableUtc
+                : range.FromUtc.GetValueOrDefault());
 
         var activities = (await _session.QueryIndex<OmnichannelActivityIndex>(
             index => index.CreatedUtc >= fromUtc && index.CreatedUtc <= toUtc,
@@ -65,7 +79,7 @@ internal sealed class EnterpriseActivityReportProvider : IReport
             .ToArray();
         var filteredActivities = OmnichannelReportQuery.Filter(
             activities,
-            await OmnichannelReportFilter.GetCriteriaAsync(context.Filter, _campaignManager, cancellationToken));
+            await OmnichannelReportFilter.GetCriteriaAsync(context.Filter, _campaignManager, _activitySourceOptions, cancellationToken));
         var campaigns = IsCampaignReport()
             ? await _campaignManager.GetAllAsync(cancellationToken)
             : null;
@@ -84,6 +98,15 @@ internal sealed class EnterpriseActivityReportProvider : IReport
             : null;
         var userNames = IsUserReport()
             ? await ResolveUserNamesAsync(filteredActivities, cancellationToken)
+            : null;
+        // Activities name the address they used, by the id it had then. A number once listed per channel is now one
+        // address, so the ids merged into it are counted as that address, under its name rather than a raw id.
+        var addressesById = _definition.Kind == EnterpriseActivityReportKind.ChannelEndpointUsage
+            ? await ResolveAddressesAsync(cancellationToken)
+            : null;
+
+        var contactNames = IsContactReport()
+            ? await ResolveContactNamesAsync(filteredActivities, cancellationToken)
             : null;
 
         return _definition.Kind switch
@@ -155,8 +178,16 @@ internal sealed class EnterpriseActivityReportProvider : IReport
                 S["Assigned user"].Value,
                 activity => activity.AssignedToId,
                 activity => ResolveUser(activity.AssignedToId, userNames)),
-            EnterpriseActivityReportKind.ChannelEndpointUsage => BuildProgress(filteredActivities, S["Channel endpoint"].Value, activity => Display(activity.ChannelEndpointId)),
-            EnterpriseActivityReportKind.CustomerWorkload => BuildProgress(filteredActivities, S["Customer"].Value, activity => Display(activity.ContactContentItemId)),
+            EnterpriseActivityReportKind.ChannelEndpointUsage => BuildProgress(
+                filteredActivities,
+                S["Address"].Value,
+                activity => ResolveAddress(activity.ChannelEndpointId, addressesById)?.ItemId ?? activity.ChannelEndpointId ?? string.Empty,
+                activity => ResolveAddressName(activity.ChannelEndpointId, addressesById)),
+            EnterpriseActivityReportKind.CustomerWorkload => BuildProgress(
+                filteredActivities,
+                S["Customer"].Value,
+                activity => activity.ContactContentItemId ?? string.Empty,
+                activity => ResolveContact(activity.ContactContentItemId, contactNames)),
             EnterpriseActivityReportKind.ScheduleCompletion => BuildScheduleCompletion(filteredActivities),
             _ => new ReportDocument(),
         };
@@ -575,6 +606,38 @@ internal sealed class EnterpriseActivityReportProvider : IReport
             .Add(ReportSection.ForTable(S["Scheduled completion performance"].Value, columns, rows));
     }
 
+    private async Task<IReadOnlyDictionary<string, OmnichannelChannelEndpoint>> ResolveAddressesAsync(CancellationToken cancellationToken)
+    {
+        var byId = new Dictionary<string, OmnichannelChannelEndpoint>(StringComparer.Ordinal);
+
+        foreach (var address in await _addressStore.GetAllAsync(cancellationToken))
+        {
+            foreach (var id in address.GetKnownIds())
+            {
+                byId[id] = address;
+            }
+        }
+
+        return byId;
+    }
+
+    private static OmnichannelChannelEndpoint ResolveAddress(string id, IReadOnlyDictionary<string, OmnichannelChannelEndpoint> addressesById)
+        => !string.IsNullOrEmpty(id) && addressesById is not null && addressesById.TryGetValue(id, out var address) ? address : null;
+
+    private string ResolveAddressName(string id, IReadOnlyDictionary<string, OmnichannelChannelEndpoint> addressesById)
+    {
+        if (string.IsNullOrEmpty(id))
+        {
+            return S["(Not set)"].Value;
+        }
+
+        var address = ResolveAddress(id, addressesById);
+
+        return address is null
+            ? S["(Unknown address)"].Value
+            : string.IsNullOrWhiteSpace(address.DisplayText) ? address.Value : $"{address.DisplayText} ({address.Value})";
+    }
+
     private string Display(string value)
     {
         return string.IsNullOrWhiteSpace(value) ? S["(Not set)"].Value : value;
@@ -613,6 +676,61 @@ internal sealed class EnterpriseActivityReportProvider : IReport
         return userNames.TryGetValue(userId, out var userName)
             ? ReportValue.UserDisplayName(userName, S["(Unknown user)"].Value)
             : S["(Unknown user)"].Value;
+    }
+
+    private async Task<IReadOnlyDictionary<string, string>> ResolveContactNamesAsync(
+        IEnumerable<OmnichannelActivityIndex> activities,
+        CancellationToken cancellationToken)
+    {
+        var contactIds = activities
+            .Select(activity => activity.ContactContentItemId)
+            .Where(contactId => !string.IsNullOrEmpty(contactId))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        if (contactIds.Length == 0)
+        {
+            return new Dictionary<string, string>(StringComparer.Ordinal);
+        }
+
+        var contacts = await _session.Query<ContentItem, ContentItemIndex>(
+                index => index.ContentItemId.IsIn(contactIds) && index.Latest)
+            .ListAsync(cancellationToken);
+
+        var names = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        foreach (var contact in contacts)
+        {
+            names[contact.ContentItemId] = BuildContactDisplayName(contact);
+        }
+
+        return names;
+    }
+
+    private static string BuildContactDisplayName(ContentItem contact)
+    {
+        return !string.IsNullOrWhiteSpace(contact.DisplayText)
+            ? contact.DisplayText.Trim()
+            : contact.ContentItemId;
+    }
+
+    private string ResolveContact(
+        string contactId,
+        IReadOnlyDictionary<string, string> contactNames)
+    {
+        if (string.IsNullOrEmpty(contactId))
+        {
+            return S["(Not set)"].Value;
+        }
+
+        return contactNames is not null && contactNames.TryGetValue(contactId, out var name)
+            ? name
+            : contactId;
+    }
+
+    private bool IsContactReport()
+    {
+        return _definition.Kind is EnterpriseActivityReportKind.CustomerWorkload;
     }
 
     private bool IsUserReport()

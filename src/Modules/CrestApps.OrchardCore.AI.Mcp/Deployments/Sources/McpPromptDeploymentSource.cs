@@ -58,6 +58,17 @@ internal sealed class McpPromptDeploymentSource : DeploymentSourceBase<McpPrompt
                 { nameof(Prompt.Arguments), argumentsArray },
             };
 
+            var messagesArray = new JsonArray();
+
+            foreach (var message in entry.Messages ?? [])
+            {
+                messagesArray.Add(new JsonObject
+                {
+                    { nameof(McpPromptMessage.Role), message.Role },
+                    { nameof(McpPromptMessage.Content), message.Content },
+                });
+            }
+
             var deploymentInfo = new JsonObject()
             {
                 { nameof(McpPrompt.ItemId), entry.ItemId },
@@ -66,6 +77,7 @@ internal sealed class McpPromptDeploymentSource : DeploymentSourceBase<McpPrompt
                 { nameof(McpPrompt.CreatedUtc), entry.CreatedUtc },
                 { nameof(McpPrompt.OwnerId), entry.OwnerId },
                 { nameof(McpPrompt.Prompt), promptData },
+                { nameof(McpPrompt.Messages), messagesArray },
             };
 
             promptsData.Add(deploymentInfo);

@@ -1,0 +1,84 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model WebsiteSearchToolInstanceViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="BaseUrl" class="ocat-label">@T["Base URL"]</label>
+    <div class="ocat-end">
+        <input asp-for="BaseUrl" class="form-control" placeholder="https://www.example.com" />
+        <span asp-validation-for="BaseUrl" class="text-danger"></span>
+        <span class="hint">@T["The root URL of the site to search. The instance queries the site's own search API on each request — no crawling or caching."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="SearchPath" class="ocat-label">@T["Search endpoint path"]</label>
+    <div class="ocat-end">
+        <input asp-for="SearchPath" class="form-control font-monospace" placeholder="/wp-json/wp/v2/search" />
+        <span asp-validation-for="SearchPath" class="text-danger"></span>
+        <span class="hint">@T["Appended to the base URL. The default targets the WordPress REST search endpoint."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="QueryParameter" class="ocat-label">@T["Query parameter"]</label>
+    <div class="ocat-end">
+        <input asp-for="QueryParameter" class="form-control font-monospace" placeholder="search" />
+        <span asp-validation-for="QueryParameter" class="text-danger"></span>
+        <span class="hint">@T["The query-string parameter the model's query is placed in."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ExtraQuery" class="ocat-label">@T["Extra query parameters"]</label>
+    <div class="ocat-end">
+        <input asp-for="ExtraQuery" class="form-control font-monospace" placeholder="_embed=1" />
+        <span asp-validation-for="ExtraQuery" class="text-danger"></span>
+        <span class="hint">@T["Optional. Fixed parameters always appended to the request. The WordPress <code>_embed=1</code> returns each result's excerpt for the snippet."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ResultsPath" class="ocat-label">@T["Results array path"]</label>
+    <div class="ocat-end">
+        <input asp-for="ResultsPath" class="form-control font-monospace" />
+        <span asp-validation-for="ResultsPath" class="text-danger"></span>
+        <span class="hint">@T["A dotted path to the results array in the JSON response (supports <code>[index]</code>). Leave it empty when the response body is itself the array (the WordPress default)."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="TitlePath" class="ocat-label">@T["Title path"]</label>
+    <div class="ocat-end">
+        <input asp-for="TitlePath" class="form-control font-monospace" placeholder="title" />
+        <span asp-validation-for="TitlePath" class="text-danger"></span>
+        <span class="hint">@T["A dotted path, relative to each result, to the result title."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="UrlPath" class="ocat-label">@T["URL path"]</label>
+    <div class="ocat-end">
+        <input asp-for="UrlPath" class="form-control font-monospace" placeholder="url" />
+        <span asp-validation-for="UrlPath" class="text-danger"></span>
+        <span class="hint">@T["A dotted path, relative to each result, to the result URL."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="SnippetPath" class="ocat-label">@T["Snippet path"]</label>
+    <div class="ocat-end">
+        <input asp-for="SnippetPath" class="form-control font-monospace" placeholder="_embedded.self[0].excerpt.rendered" />
+        <span asp-validation-for="SnippetPath" class="text-danger"></span>
+        <span class="hint">@T["A dotted path, relative to each result, to the text snippet. Point it at <code>_embedded.self[0].content.rendered</code> for the full body. HTML in the resolved value is stripped."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="MaxResults" class="ocat-label">@T["Maximum results"]</label>
+    <div class="ocat-end">
+        <input asp-for="MaxResults" type="number" min="1" class="form-control" />
+        <span asp-validation-for="MaxResults" class="text-danger"></span>
+        <span class="hint">@T["The maximum number of results returned for a single search. Leave it empty to use the default."]</span>
+    </div>
+</div>

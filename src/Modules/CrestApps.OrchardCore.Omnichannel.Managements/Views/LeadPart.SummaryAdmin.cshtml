@@ -1,0 +1,42 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model LeadPartViewModel
+
+@if (Model.IsConverted)
+{
+    <span class="badge text-bg-success" title="@T["This lead was converted into a contact."]">
+        <i class="fa-solid fa-check me-1" aria-hidden="true"></i>@T["Converted"]
+    </span>
+}
+else if (Model.Statuses.Count > 0)
+{
+    <span class="badge text-bg-info" title="@T["Lead status"]">@Model.Statuses[0].Text</span>
+}
+
+@if (!string.IsNullOrEmpty(Model.Rating))
+{
+    <span class="badge ta-badge font-weight-normal" title="@T["Rating"]">
+        <i class="fa-solid fa-temperature-half text-secondary me-1" aria-hidden="true"></i>@Model.Rating
+    </span>
+}
+
+@if (!string.IsNullOrEmpty(Model.Company))
+{
+    <span class="badge ta-badge font-weight-normal" title="@T["Company"]">
+        <i class="fa-solid fa-building text-secondary me-1" aria-hidden="true"></i>@Model.Company
+    </span>
+}
+
+@if (!string.IsNullOrEmpty(Model.SourceName))
+{
+    <span class="badge ta-badge font-weight-normal" title="@T["Lead source"]">
+        <i class="fa-solid fa-bullhorn text-secondary me-1" aria-hidden="true"></i>@Model.SourceName
+    </span>
+}
+
+@if (!string.IsNullOrEmpty(Model.ListName))
+{
+    <span class="badge ta-badge font-weight-normal" title="@T["List"]">
+        <i class="fa-solid fa-list text-secondary me-1" aria-hidden="true"></i>@Model.ListName
+    </span>
+}

@@ -25,13 +25,13 @@
 @if (Model.Status != OmnichannelActivityBatchStatus.New)
 {
     <div class="alert alert-info" role="alert">
-        @T["You cannot change the settings of an inventory load once it has started loading. If you need to change any of these settings, please create a new inventory load."]
+        @T["You cannot change the settings of an activity load once it has started loading. If you need to change any of these settings, please create a new activity load."]
     </div>
 }
 
 <div class="card mb-3">
     <div class="card-header">
-        @T["Inventory load settings"]
+        @T["Activity load settings"]
     </div>
     <div class="card-body">
         <input asp-for="Source" type="hidden" />
@@ -67,7 +67,7 @@
                     <option value="">@T["Select a subject content type"]</option>
                 </select>
                 <span asp-validation-for="SubjectContentType" class="text-danger"></span>
-                <span class="hint">@T["The subject determines the flow and disposition-driven actions. The channel, endpoint, and campaign used for this load are selected below."]</span>
+                <span class="hint">@T["The subject determines the flow and disposition-driven actions. The channel, address, and campaign used for this load are selected below."]</span>
             </div>
         </div>
 
@@ -76,7 +76,14 @@
             <div class="ocat-end">
                 <select asp-for="CampaignId" asp-items="Model.Campaigns" class="form-select"></select>
                 <span asp-validation-for="CampaignId" class="text-danger"></span>
-                <span class="hint">@T["Optional. Campaigns are used for grouping and reporting only."]</span>
+                @if (string.Equals(Model.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase))
+                {
+                    <span class="hint">@T["Required unless the subject has a default campaign. Agents sign in to this campaign to receive the dialer calls from this load, and a dialer load without a campaign cannot be queued for dialing."]</span>
+                }
+                else
+                {
+                    <span class="hint">@T["Optional. Leave empty to use the subject's default campaign, if it has one. Campaigns group the loaded activities for reporting."]</span>
+                }
             </div>
         </div>
 
@@ -89,9 +96,85 @@
                         <option value="">@T["Select an AI profile"]</option>
                     </select>
                     <span asp-validation-for="AIProfileId" class="text-danger"></span>
-                    <span class="hint">@T["Only chat profiles with Add initial prompt enabled are shown. The selected profile is stored on each loaded activity and starts automated conversations. Leave empty to use the subject flow profile."]</span>
+                    <span class="hint">@T["Only chat profiles with Start the conversation automatically enabled are shown. The selected profile is stored on each loaded activity and starts automated conversations. Leave empty to use the subject flow profile."]</span>
                 </div>
             </div>
+
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" asp-for="AllowAIToUpdateSubject">
+                        <label class="form-check-label" asp-for="AllowAIToUpdateSubject">@T["Allow AI to update the subject"]</label>
+                        <span class="hint dashed">@T["When enabled, the AI may write back fields on the subject (for example the lead) it captures during the automated conversation."]</span>
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" asp-for="AllowAIToUpdateContact">
+                        <label class="form-check-label" asp-for="AllowAIToUpdateContact">@T["Allow AI to update the contact or lead"]</label>
+                        <span class="hint dashed">@T["When enabled, the AI may write back fields on the contact or lead (for example a corrected phone number or email) it captures during the automated conversation."]</span>
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" asp-for="UseCallAmbience">
+                        <label class="form-check-label" asp-for="UseCallAmbience">@T["Play background office sound on calls"]</label>
+                        <span class="hint dashed">@T["When enabled, live speech-to-speech calls carry a quiet background bed — faint room tone and the sound of an agent typing — instead of arriving on a silent line. Applies only to calls using a realtime voice profile."]</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper">
+                <label asp-for="ResponseDelayMode" class="ocat-label">@T["Reply delay"]</label>
+                <div class="ocat-end">
+                    <select asp-for="ResponseDelayMode" asp-items="Model.ResponseDelayModes" class="form-select" data-response-delay-mode></select>
+                    <span class="hint">@T["How long to wait before sending each AI reply, so responses do not feel instant. Applied to automated conversations loaded from this batch."]</span>
+
+                    <div class="mt-2" data-response-delay-seconds hidden>
+                        <label asp-for="ResponseDelaySeconds" class="form-label" data-response-delay-seconds-label>@T["Delay (seconds)"]</label>
+                        <input type="number" min="0" class="form-control" asp-for="ResponseDelaySeconds">
+                    </div>
+
+                    <div class="mt-2" data-response-delay-jitter hidden>
+                        <label asp-for="ResponseDelayJitterSeconds" class="form-label">@T["Jitter ± (seconds)"]</label>
+                        <input type="number" min="0" class="form-control" asp-for="ResponseDelayJitterSeconds">
+                        <span class="hint dashed">@T["Each reply waits a random time between (base − jitter) and (base + jitter) seconds, never less than zero."]</span>
+                    </div>
+                </div>
+            </div>
+            <script at="Foot">
+            (function () {
+                var mode = document.querySelector('[data-response-delay-mode]');
+                if (!mode) { return; }
+                var seconds = document.querySelector('[data-response-delay-seconds]');
+                var secondsLabel = document.querySelector('[data-response-delay-seconds-label]');
+                var jitter = document.querySelector('[data-response-delay-jitter]');
+                function sync() {
+                    var v = mode.value;
+                    seconds.hidden = !(v === 'Fixed' || v === 'Random');
+                    jitter.hidden = v !== 'Random';
+                    if (secondsLabel) { secondsLabel.textContent = v === 'Random' ? '@T["Base (seconds)"]' : '@T["Delay (seconds)"]'; }
+                }
+                mode.addEventListener('change', sync);
+                sync();
+            })();
+            </script>
+
+            <div class="ocat-wrapper">
+                <label asp-for="CadenceId" class="ocat-label">@T["Re-engagement"]</label>
+                <div class="ocat-end">
+                    <select asp-for="CadenceId" asp-items="Model.Cadences" class="form-select"></select>
+                    <span asp-validation-for="CadenceId" class="text-danger"></span>
+                    <span class="hint">@T["Optionally follow up with contacts who go quiet using a reusable cadence. Nudges are sent on the schedule's cadence, respect the business hours below, and stop after the schedule's last step. Leave as \"No follow-up cadence\" to never follow up."]</span>
+                </div>
+            </div>
+
+            @if (Model.ShowBusinessHoursCalendar)
+            {
+                <div class="ocat-wrapper">
+                    <label asp-for="BusinessHoursCalendarId" class="ocat-label">@T["Business hours"]</label>
+                    <div class="ocat-end">
+                        <select asp-for="BusinessHoursCalendarId" asp-items="Model.BusinessHoursCalendars" class="form-select"></select>
+                        <span class="hint">@T["Background follow-ups (re-engagement nudges) are only sent while this calendar is open, evaluated in the contact's local time zone. A live reply to a contact who is actively messaging is always sent."]</span>
+                    </div>
+                </div>
+            }
         }
 
         @if (!string.Equals(Model.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase))
@@ -111,13 +194,47 @@
         @if (string.Equals(Model.Source, ActivitySources.Automatic, StringComparison.OrdinalIgnoreCase))
         {
             <div class="ocat-wrapper">
-                <label asp-for="ChannelEndpointId" class="ocat-label">@T["Channel endpoint"]</label>
+                <label asp-for="ChannelEndpointId" class="ocat-label">@T["Address"]</label>
                 <div class="ocat-end">
-                    <select asp-for="ChannelEndpointId" asp-items="Model.ChannelEndpoints" class="form-select"></select>
+                    <select asp-for="ChannelEndpointId" class="form-select" data-load-address>
+                        @foreach (var option in Model.ChannelEndpoints)
+                        {
+                            Model.ChannelEndpointCapabilities.TryGetValue(option.Value ?? string.Empty, out var capabilities);
+                            <option value="@option.Value" selected="@option.Selected" data-capabilities="@capabilities">@option.Text</option>
+                        }
+                    </select>
                     <span asp-validation-for="ChannelEndpointId" class="text-danger"></span>
-                    <span class="hint">@T["Optional. The endpoint (such as a phone number or SMS number) used to reach contacts."]</span>
+                    <span class="hint">@T["Optional. The number used to reach contacts. Only the addresses used for the channel picked above are listed."]</span>
                 </div>
             </div>
+
+            <script at="Foot">
+                (function () {
+                    var channel = document.querySelector('select[name$=".Channel"]');
+                    var address = document.querySelector('[data-load-address]');
+
+                    if (!channel || !address) {
+                        return;
+                    }
+
+                    // An address reaches contacts only on a channel it is used for, so the others are hidden, and a picked
+                    // one that no longer fits is cleared rather than posted to be refused.
+                    var apply = function () {
+                        Array.prototype.forEach.call(address.options, function (option) {
+                            var capabilities = (option.getAttribute('data-capabilities') || '').split(',');
+                            var fits = !option.value || !channel.value || capabilities.indexOf(channel.value) !== -1;
+                            option.hidden = !fits;
+
+                            if (!fits && option.selected) {
+                                address.value = '';
+                            }
+                        });
+                    };
+
+                    channel.addEventListener('change', apply);
+                    apply();
+                })();
+            </script>
         }
 
         @if (string.Equals(Model.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase))
@@ -128,7 +245,16 @@
                     <select asp-for="DialerProfileId" asp-items="Model.DialerProfiles" class="form-select">
                     </select>
                     <span asp-validation-for="DialerProfileId" class="text-danger"></span>
-                    <span class="hint">@T["Required. The selected dialer profile controls the outbound dialing mode, queue, and campaign assignment for the loaded activities."]</span>
+                    <span class="hint">@T["Required. The dialer profile chooses how the loaded activities are dialed: the dialing mode (preview, power, or progressive) and its pacing. The campaign comes from the Campaign field above, or from the subject's default campaign."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper">
+                <label asp-for="ChannelEndpointId" class="ocat-label">@T["Dial from"]</label>
+                <div class="ocat-end">
+                    <select asp-for="ChannelEndpointId" asp-items="Model.ChannelEndpoints" class="form-select"></select>
+                    <span asp-validation-for="ChannelEndpointId" class="text-danger"></span>
+                    <span class="hint">@T["Optional. The number the customers called from this load see, picked from the Omnichannel Addresses used for voice calls. It is shown instead of the agent's own number and the dialer profile's caller ID, unless the profile is set to always show its caller ID. Leave it on Default caller ID to show the agent's number, the profile's caller ID or the provider default."]</span>
                 </div>
             </div>
         }
@@ -201,7 +327,7 @@
                 <div class="form-check">
                     <input type="checkbox" class="form-check-input" asp-for="PreventDuplicates">
                     <label class="form-check-label" asp-for="PreventDuplicates">@T["Prevent duplicate activity with the same subject"]</label>
-                    <span class="hint dashed">@T["When enabled, if a contact already has an outstanding activity with the same subject, a new one will not be created."]</span>
+                    <span class="hint dashed">@T["When enabled, a record that already has an open activity with the same subject does not get another one."]</span>
                 </div>
             </div>
         </div>
@@ -210,44 +336,49 @@
 
 <div class="card mb-3">
     <div class="card-header">
-        @T["Contact filters"]
+        @T["Record filters"]
     </div>
     <div class="card-body">
         <div class="ocat-wrapper">
-            <label asp-for="ContactContentType" class="ocat-label">@T["Contact content type"]</label>
+            <label asp-for="ContactContentType" class="ocat-label">@T["Record type"]</label>
             <div class="ocat-end">
                 <select asp-for="ContactContentType" asp-items="Model.ContactContentTypes" class="form-select">
-                    <option value="">@T["Select a contact content type"]</option>
+                    <option value="">@T["Select a contact or lead type"]</option>
                 </select>
                 <span asp-validation-for="ContactContentType" class="text-danger"></span>
             </div>
         </div>
 
+        @if (Model.RecordFilters is not null)
+        {
+            @await DisplayAsync(Model.RecordFilters)
+        }
+
         <div class="ocat-wrapper">
-            <label asp-for="LeadCreatedFrom" class="ocat-label">@T["Contact created from"]</label>
+            <label asp-for="LeadCreatedFrom" class="ocat-label">@T["Created from"]</label>
             <div class="ocat-end">
                 <input type="text"
                        id="@contactCreatedFromId"
                        name="@Html.NameFor(m => m.LeadCreatedFrom)"
                        value="@contactCreatedFromValue"
                        class="form-control"
-                       placeholder="@T["Contact created from"]" />
+                       placeholder="@T["Created from"]" />
                 <span asp-validation-for="LeadCreatedFrom" class="text-danger"></span>
-                <span class="hint">@T["Optionally, only include contacts created on or after this date."]</span>
+                <span class="hint">@T["Optionally, only include records created on or after this date."]</span>
             </div>
         </div>
 
         <div class="ocat-wrapper">
-            <label asp-for="LeadCreatedTo" class="ocat-label">@T["Contact created to"]</label>
+            <label asp-for="LeadCreatedTo" class="ocat-label">@T["Created to"]</label>
             <div class="ocat-end">
                 <input type="text"
                        id="@contactCreatedToId"
                        name="@Html.NameFor(m => m.LeadCreatedTo)"
                        value="@contactCreatedToValue"
                        class="form-control"
-                       placeholder="@T["Contact created to"]" />
+                       placeholder="@T["Created to"]" />
                 <span asp-validation-for="LeadCreatedTo" class="text-danger"></span>
-                <span class="hint">@T["Optionally, only include contacts created on or before this date."]</span>
+                <span class="hint">@T["Optionally, only include records created on or before this date."]</span>
             </div>
         </div>
 
@@ -255,8 +386,8 @@
             <div class="ocat-end-offset">
                 <div class="form-check">
                     <input type="checkbox" class="form-check-input" asp-for="OnlyPublishedLeads">
-                    <label class="form-check-label" asp-for="OnlyPublishedLeads">@T["Only published contacts"]</label>
-                    <span class="hint dashed">@T["When enabled, only published contacts will be included. When disabled, the latest version of contacts will be included regardless of their publish status."]</span>
+                    <label class="form-check-label" asp-for="OnlyPublishedLeads">@T["Only published records"]</label>
+                    <span class="hint dashed">@T["When enabled, only published records are included. When disabled, the latest version of each record is included, whatever its publish status."]</span>
                 </div>
             </div>
         </div>
@@ -265,8 +396,8 @@
             <div class="ocat-end-offset">
                 <div class="form-check">
                     <input type="checkbox" class="form-check-input" asp-for="IncludeDoNoCalls">
-                    <label class="form-check-label" asp-for="IncludeDoNoCalls">@T["Include do not call contacts"]</label>
-                    <span class="hint dashed">@T["When enabled, we'll include any contact that is flagged as do not call."]</span>
+                    <label class="form-check-label" asp-for="IncludeDoNoCalls">@T["Include records marked Do not call"]</label>
+                    <span class="hint dashed">@T["When enabled, records marked Do not call are loaded too."]</span>
                 </div>
             </div>
         </div>
@@ -275,8 +406,8 @@
             <div class="ocat-end-offset">
                 <div class="form-check">
                     <input type="checkbox" class="form-check-input" asp-for="IncludeDoNoEmail">
-                    <label class="form-check-label" asp-for="IncludeDoNoEmail">@T["Include do not email contacts"]</label>
-                    <span class="hint dashed">@T["When enabled, we'll include any contact that is flagged as do not email."]</span>
+                    <label class="form-check-label" asp-for="IncludeDoNoEmail">@T["Include records marked Do not email"]</label>
+                    <span class="hint dashed">@T["When enabled, records marked Do not email are loaded too."]</span>
                 </div>
             </div>
         </div>
@@ -285,8 +416,8 @@
             <div class="ocat-end-offset">
                 <div class="form-check">
                     <input type="checkbox" class="form-check-input" asp-for="IncludeDoNoSms">
-                    <label class="form-check-label" asp-for="IncludeDoNoSms">@T["Include do not SMS contacts"]</label>
-                    <span class="hint dashed">@T["When enabled, we'll include any contact that is flagged as do not SMS."]</span>
+                    <label class="form-check-label" asp-for="IncludeDoNoSms">@T["Include records marked Do not SMS"]</label>
+                    <span class="hint dashed">@T["When enabled, records marked Do not SMS are loaded too."]</span>
                 </div>
             </div>
         </div>
@@ -306,17 +437,17 @@
         <div class="ocat-wrapper">
             <label asp-for="TimeZoneIds" class="ocat-label">@T["Time zones"]</label>
             <div class="ocat-end">
-                <select asp-for="TimeZoneIds" asp-items="Model.TimeZones" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-header="@T["Select time zones"]" data-width="100%" data-selected-text-format="count > 2" data-count-selected-text="{0} time zones selected" title="@T["Any time zone"]">
+                <select asp-for="TimeZoneIds" asp-items="Model.TimeZones" class="selectpicker show-tick" multiple data-live-search="true" data-show-selected-tags="true" data-actions-box="true" data-header="@T["Select time zones"]" data-selected-text-format="count > 2" data-count-selected-text="{0} time zones selected" title="@T["Any time zone"]">
                 </select>
-                <span class="hint">@T["Optionally, only include contacts in the selected time zones."]</span>
+                <span class="hint">@T["Optionally, only include records in the selected time zones."]</span>
             </div>
         </div>
 
         <div class="ocat-wrapper">
             <label asp-for="Limit" class="ocat-label">@T["Limit"]</label>
             <div class="ocat-end">
-                <input type="number" asp-for="Limit" class="form-control" placeholder="@T["Max contacts"]" min="1" />
-                <span class="hint">@T["Optionally, limit the number of contacts loaded into this batch."]</span>
+                <input type="number" asp-for="Limit" class="form-control" placeholder="@T["Max records"]" min="1" />
+                <span class="hint">@T["Optionally, limit the number of records loaded into this batch."]</span>
             </div>
         </div>
     </div>
@@ -327,7 +458,7 @@
         @T["Last activity filters"]
     </div>
     <div class="card-body">
-        <p class="text-muted mb-3">@T["Filter contacts based on their last completed activity. For example, find contacts whose last activity had a specific subject and disposition."]</p>
+        <p class="text-muted mb-3">@T["Filter records by their last completed activity. For example, find the records whose last activity had a specific subject and disposition."]</p>
 
         <div class="ocat-wrapper">
             <label asp-for="LastActivitySubjectContentType" class="ocat-label">@T["Last activity subject"]</label>
@@ -335,7 +466,7 @@
                 <select asp-for="LastActivitySubjectContentType" asp-items="Model.SubjectContentTypes" class="form-select">
                     <option value="">@T["Any subject"]</option>
                 </select>
-                <span class="hint">@T["Filter contacts whose last completed activity had this subject type."]</span>
+                <span class="hint">@T["Only include records whose last completed activity had this subject."]</span>
             </div>
         </div>
 
@@ -344,7 +475,7 @@
             <div class="ocat-end">
                 <select asp-for="LastActivityDispositionId" asp-items="Model.Dispositions" class="form-select">
                 </select>
-                <span class="hint">@T["Filter contacts whose last completed activity had this disposition."]</span>
+                <span class="hint">@T["Only include records whose last completed activity had this disposition."]</span>
             </div>
         </div>
     </div>

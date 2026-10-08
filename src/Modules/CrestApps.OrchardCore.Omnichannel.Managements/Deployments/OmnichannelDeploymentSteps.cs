@@ -26,6 +26,11 @@ public static class OmnichannelDeploymentSteps
     public const string Campaign = "OmnichannelCampaign";
 
     /// <summary>
+    /// The recipe step that carries re-engagement cadences.
+    /// </summary>
+    public const string Cadence = "OmnichannelCadence";
+
+    /// <summary>
     /// The recipe step that carries subject flow settings.
     /// </summary>
     public const string SubjectFlowSettings = "OmnichannelSubjectFlowSettings";
@@ -34,4 +39,14 @@ public static class OmnichannelDeploymentSteps
     /// The recipe step that carries the actions a subject disposition triggers.
     /// </summary>
     public const string SubjectAction = "OmnichannelSubjectAction";
+
+    /// <summary>
+    /// The recipe step that carries lead statuses.
+    /// </summary>
+    public const string LeadStatus = "OmnichannelLeadStatus";
+
+    /// <summary>
+    /// The recipe step that carries opportunity stages.
+    /// </summary>
+    public const string OpportunityStage = "OmnichannelOpportunityStage";
 }

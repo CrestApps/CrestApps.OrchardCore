@@ -31,7 +31,7 @@ internal static class GetDataSourceFieldsEndpoint
         [FromRoute] string indexProfileName,
         [FromServices] IAuthorizationService authorizationService,
         [FromServices] IIndexProfileStore indexProfileStore,
-        [FromServices] IOptions<AIDataSourceOptions> dataSourceOptions,
+        [FromServices] IOptionsMonitor<AIDataSourceOptions> dataSourceOptions,
         HttpContext httpContext)
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.ManageAIDataSources))
@@ -58,7 +58,7 @@ internal static class GetDataSourceFieldsEndpoint
         string suggestedContentField = null;
         string suggestedKeyField = null;
 
-        if (dataSourceOptions.Value.GetFieldMapping(profile.ProviderName, profile.Type) is DataSourceFieldMapping fieldMapping)
+        if (dataSourceOptions.CurrentValue.GetFieldMapping(profile.ProviderName, profile.Type) is DataSourceFieldMapping fieldMapping)
         {
             suggestedTitleField = fieldMapping.DefaultTitleField;
             suggestedContentField = fieldMapping.DefaultContentField;

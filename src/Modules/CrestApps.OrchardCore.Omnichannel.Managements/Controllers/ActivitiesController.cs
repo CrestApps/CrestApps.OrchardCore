@@ -1,7 +1,9 @@
 using System.Globalization;
 using System.Security.Claims;
 using CrestApps.Core;
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
@@ -23,6 +25,9 @@ using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.DisplayManagement.Shapes;
+using OrchardCore.DisplayManagement.Zones;
+using OrchardCore.Lists.Indexes;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
@@ -148,7 +153,7 @@ public sealed class ActivitiesController : Controller
 
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
 
         options ??= new ListOmnichannelActivityFilter();
 
@@ -205,12 +210,14 @@ public sealed class ActivitiesController : Controller
     /// <summary>
     /// Performs the activities filter post operation.
     /// </summary>
+    /// <param name="pagerParameters">The pager parameters.</param>
     /// <param name="filterDisplayManager">The filter display manager.</param>
     [HttpPost]
     [ActionName(nameof(Activities))]
     [FormValueRequired("submit.Filter")]
     [Admin("omnichannel/activities", "OmnichannelActivities")]
     public async Task<ActionResult> ActivitiesFilterPost(
+        PagerParameters pagerParameters,
         [FromServices] IDisplayManager<ListOmnichannelActivityFilter> filterDisplayManager)
     {
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ListActivities))
@@ -222,6 +229,7 @@ public sealed class ActivitiesController : Controller
 
         // Evaluate the values provided in the form post and map them to the filter result and route values.
         await filterDisplayManager.UpdateEditorAsync(options, _updateModelAccessor.ModelUpdater, isNew: false);
+        AddPagerRouteValues(options.RouteValues, pagerParameters);
 
         return RedirectToAction(nameof(Activities), options.RouteValues);
     }
@@ -251,14 +259,14 @@ public sealed class ActivitiesController : Controller
             return Forbid();
         }
 
-        var scheduledPager = new Pager(scheduledPagerParameters, pagerOptions.Value.GetPageSize());
+        var scheduledPager = new Pager(WithSharedPageSize(scheduledPagerParameters, pagerParameters), pagerOptions.Value);
 
         var scheduledResults = await _omnichannelActivityManager.PageContactManualScheduledAsync(contentItemId, scheduledPager.Page, scheduledPager.PageSize);
 
         var scheduledPagerShape = await shapeFactory.PagerAsync(scheduledPager, scheduledResults.Count);
         scheduledPagerShape.Properties["PagerId"] = "s.pagenum";
 
-        var completedPager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var completedPager = new Pager(pagerParameters, pagerOptions.Value);
 
         var completedResults = await _omnichannelActivityManager.PageContactManualCompletedAsync(contentItemId, scheduledPager.Page, scheduledPager.PageSize);
 
@@ -314,6 +322,150 @@ public sealed class ActivitiesController : Controller
     }
 
     /// <summary>
+    /// Lists the scheduled and completed activities of every contact in an account.
+    /// </summary>
+    /// <param name="contentItemId">The account content item id.</param>
+    /// <param name="pagerParameters">The pager of the completed activities.</param>
+    /// <param name="scheduledPagerParameters">The pager of the scheduled activities.</param>
+    /// <param name="pagerOptions">The pager options.</param>
+    /// <param name="shapeFactory">The shape factory.</param>
+    [Admin("omnichannel/accounts/{contentItemId}/activities", "OmnichannelAccountActivities")]
+    public async Task<IActionResult> Account(
+        string contentItemId,
+        PagerParameters pagerParameters,
+        [Bind(Prefix = "s")] PagerParameters scheduledPagerParameters,
+        [FromServices] IOptions<PagerOptions> pagerOptions,
+        [FromServices] IShapeFactory shapeFactory)
+    {
+        var account = await _contentManager.GetAsync(contentItemId, VersionOptions.Latest);
+
+        if (account is null || !account.Has<AccountPart>())
+        {
+            return NotFound();
+        }
+
+        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ListContactActivities, account))
+        {
+            return Forbid();
+        }
+
+        // An account holds its contacts through the list part, so its activities are those of the items it contains.
+        var memberIds = (await _session.QueryIndex<ContainedPartIndex>(index => index.ListContentItemId == contentItemId)
+            .ListAsync())
+            .Select(index => index.ContentItemId)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        var scheduledPager = new Pager(WithSharedPageSize(scheduledPagerParameters, pagerParameters), pagerOptions.Value);
+        var completedPager = new Pager(pagerParameters, pagerOptions.Value);
+
+        var scheduled = await PageAccountActivitiesAsync(memberIds, completed: false, scheduledPager);
+        var completed = await PageAccountActivitiesAsync(memberIds, completed: true, completedPager);
+
+        var scheduledPagerShape = await shapeFactory.PagerAsync(scheduledPager, scheduled.Count);
+        scheduledPagerShape.Properties["PagerId"] = "s.pagenum";
+        var completedPagerShape = await shapeFactory.PagerAsync(completedPager, completed.Count);
+
+        var userIds = scheduled.Entries.Select(x => x.AssignedToId)
+            .Concat(completed.Entries.Select(x => x.CompletedById))
+            .Where(x => !string.IsNullOrEmpty(x))
+            .Distinct()
+            .ToArray();
+
+        var users = userIds.Length == 0
+            ? []
+            : (await _session.Query<User, UserIndex>(index => index.UserId.IsIn(userIds)).ListAsync()).ToArray();
+
+        var contactIds = scheduled.Entries.Concat(completed.Entries)
+            .Select(activity => activity.ContactContentItemId)
+            .Where(id => !string.IsNullOrEmpty(id))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        var contacts = (await _contentManager.GetAsync(contactIds, VersionOptions.Latest))
+            .ToDictionary(contact => contact.ContentItemId, StringComparer.Ordinal);
+
+        var contentTypeDefinitions = new Dictionary<string, ContentTypeDefinition>(StringComparer.OrdinalIgnoreCase);
+
+        var model = new ListAccountActivitiesViewModel
+        {
+            Account = account,
+            ScheduledPager = scheduledPagerShape,
+            CompletedPager = completedPagerShape,
+        };
+
+        foreach (var activity in scheduled.Entries)
+        {
+            contacts.TryGetValue(activity.ContactContentItemId ?? string.Empty, out var contact);
+
+            var container = new OmnichannelActivityContainer(
+                activity,
+                await GetSubjectContentTypeDefinitionAsync(activity, contentTypeDefinitions),
+                contact,
+                users.FirstOrDefault(x => x.UserId == activity.AssignedToId));
+
+            model.Scheduled.Add(new AccountActivityEntry
+            {
+                Contact = contact,
+                Shape = await _containerDisplayManager.BuildDisplayAsync(container, _updateModelAccessor.ModelUpdater, "SummaryAdmin", groupId: "ScheduledActivity"),
+            });
+        }
+
+        foreach (var activity in completed.Entries)
+        {
+            contacts.TryGetValue(activity.ContactContentItemId ?? string.Empty, out var contact);
+
+            var container = new OmnichannelActivityContainer(
+                activity,
+                await GetSubjectContentTypeDefinitionAsync(activity, contentTypeDefinitions),
+                contact,
+                users.FirstOrDefault(x => x.UserId == activity.CompletedById));
+
+            model.Completed.Add(new AccountActivityEntry
+            {
+                Contact = contact,
+                Shape = await _containerDisplayManager.BuildDisplayAsync(container, _updateModelAccessor.ModelUpdater, "SummaryAdmin", "CompletedActivity"),
+            });
+        }
+
+        return View(model);
+    }
+
+    private static bool IsConvertedLead(ContentItem contact)
+        => contact.TryGet<LeadPart>(out var leadPart) && leadPart.IsConverted;
+
+    private async Task<PageResult<OmnichannelActivity>> PageAccountActivitiesAsync(string[] contactIds, bool completed, Pager pager)
+    {
+        if (contactIds.Length == 0)
+        {
+            return new PageResult<OmnichannelActivity> { Count = 0, Entries = [] };
+        }
+
+        var query = completed
+            ? _session.Query<OmnichannelActivity, OmnichannelActivityIndex>(index =>
+                index.ContactContentItemId.IsIn(contactIds) &&
+                index.Status == ActivityStatus.Completed,
+                collection: OmnichannelConstants.CollectionName)
+                .OrderByDescending(index => index.CompletedUtc)
+                .ThenBy(index => index.Id)
+            : _session.Query<OmnichannelActivity, OmnichannelActivityIndex>(index =>
+                index.ContactContentItemId.IsIn(contactIds) &&
+                index.Status == ActivityStatus.NotStated &&
+                index.InteractionType == ActivityInteractionType.Manual,
+                collection: OmnichannelConstants.CollectionName)
+                .OrderBy(index => index.ScheduledUtc)
+                .ThenBy(index => index.Id);
+
+        var skip = (Math.Max(pager.Page, 1) - 1) * pager.PageSize;
+
+        return new PageResult<OmnichannelActivity>
+        {
+            Count = await query.CountAsync(),
+            Entries = (await query.Skip(skip).Take(pager.PageSize).ListAsync()).ToArray(),
+        };
+    }
+
+    /// <summary>
     /// Creates a new outbound (scheduled) activity.
     /// </summary>
     /// <param name="contentItemId">The content item id.</param>
@@ -330,6 +482,13 @@ public sealed class ActivitiesController : Controller
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.EditActivity))
         {
             return Forbid();
+        }
+
+        if (IsConvertedLead(contact))
+        {
+            await _notifier.WarningAsync(H["This lead was converted, so new activities go on the contact it became."]);
+
+            return RedirectToAction(nameof(List), new { contentItemId = contact.ContentItemId });
         }
 
         var outboundSubjects = await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync(SubjectDirection.Outbound);
@@ -372,6 +531,13 @@ public sealed class ActivitiesController : Controller
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.EditActivity))
         {
             return Forbid();
+        }
+
+        if (IsConvertedLead(contact))
+        {
+            await _notifier.WarningAsync(H["This lead was converted, so new activities go on the contact it became."]);
+
+            return RedirectToAction(nameof(List), new { contentItemId = contact.ContentItemId });
         }
 
         var outboundSubjects = await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync(SubjectDirection.Outbound);
@@ -428,6 +594,13 @@ public sealed class ActivitiesController : Controller
             return Forbid();
         }
 
+        if (IsConvertedLead(contact))
+        {
+            await _notifier.WarningAsync(H["This lead was converted, so new activities go on the contact it became."]);
+
+            return RedirectToAction(nameof(List), new { contentItemId = contact.ContentItemId });
+        }
+
         var inboundSubjects = await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync(SubjectDirection.Inbound);
 
         var model = new CreateInboundActivityViewModel
@@ -458,7 +631,7 @@ public sealed class ActivitiesController : Controller
         model.Container = new CompleteOmnichannelActivityContainer
         {
             ContactContentItem = contact,
-            Contact = await _contentItemDisplayManager.BuildDisplayAsync(contact, _updateModelAccessor.ModelUpdater, "Detail"),
+            Contact = await BuildContactInformationAsync(contact),
             Activity = await _activityDisplayManager.BuildEditorAsync(activity, _updateModelAccessor.ModelUpdater, isNew: true, OmnichannelConstants.CompleteActivityGroup),
         };
 
@@ -491,6 +664,13 @@ public sealed class ActivitiesController : Controller
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.EditActivity))
         {
             return Forbid();
+        }
+
+        if (IsConvertedLead(contact))
+        {
+            await _notifier.WarningAsync(H["This lead was converted, so new activities go on the contact it became."]);
+
+            return RedirectToAction(nameof(List), new { contentItemId = contact.ContentItemId });
         }
 
         var inboundSubjects = await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync(SubjectDirection.Inbound);
@@ -567,7 +747,7 @@ public sealed class ActivitiesController : Controller
         model.Container = new CompleteOmnichannelActivityContainer
         {
             ContactContentItem = contact,
-            Contact = await _contentItemDisplayManager.BuildDisplayAsync(contact, _updateModelAccessor.ModelUpdater, "Detail"),
+            Contact = await BuildContactInformationAsync(contact),
             Activity = activityEditor,
         };
 
@@ -745,6 +925,13 @@ public sealed class ActivitiesController : Controller
             return Forbid();
         }
 
+        // Asking for a disposition on an activity that is already finished only sets the agent up to lose their
+        // work, because the submit cannot be accepted.
+        if (IsAlreadyFinished(activity))
+        {
+            return await AlreadyFinishedAsync(returnUrl);
+        }
+
         var subject = activity.Subject;
 
         if (subject is null && !string.IsNullOrEmpty(activity.SubjectContentType))
@@ -758,7 +945,7 @@ public sealed class ActivitiesController : Controller
             ContactContentItem = contact,
             Contact = contact is null
                 ? null
-                : await _contentItemDisplayManager.BuildDisplayAsync(contact, _updateModelAccessor.ModelUpdater, "Detail"),
+                : await BuildContactInformationAsync(contact),
             Activity = await _activityDisplayManager.BuildEditorAsync(activity, _updateModelAccessor.ModelUpdater, isNew: false, OmnichannelConstants.CompleteActivityGroup),
             Subject = subject is null
                 ? null
@@ -787,8 +974,7 @@ public sealed class ActivitiesController : Controller
     {
         var activity = await _omnichannelActivityManager.FindByIdAsync(id);
 
-        if (activity is null ||
-            activity.Status is ActivityStatus.Completed or ActivityStatus.Cancelled or ActivityStatus.Purged)
+        if (activity is null)
         {
             return NotFound();
         }
@@ -796,6 +982,14 @@ public sealed class ActivitiesController : Controller
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.CompleteActivity, activity))
         {
             return Forbid();
+        }
+
+        // An activity that is already finished cannot be completed again, but "already done" is not "never
+        // existed": answering 404 gave the agent an error page and threw away the disposition, the notes and the
+        // scheduled actions they had just filled in, with nothing saying why.
+        if (IsAlreadyFinished(activity))
+        {
+            return await AlreadyFinishedAsync(returnUrl);
         }
 
         var subject = activity.Subject;
@@ -823,7 +1017,7 @@ public sealed class ActivitiesController : Controller
             ContactContentItem = contact,
             Contact = contact is null
                 ? null
-                : await _contentItemDisplayManager.BuildDisplayAsync(contact, _updateModelAccessor.ModelUpdater, "Detail"),
+                : await BuildContactInformationAsync(contact),
             Activity = activityEditor,
             Subject = subjectEditor,
             ReturnUrl = GetSafeReturnUrl(returnUrl),
@@ -866,11 +1060,69 @@ public sealed class ActivitiesController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Builds the contact information card shown on the activity pages. The card shows who the contact is, so a
+    /// list part on the contact type does not render the items listed under the contact there.
+    /// </summary>
+    private async Task<IShape> BuildContactInformationAsync(ContentItem contact)
+    {
+        var shape = await _contentItemDisplayManager.BuildDisplayAsync(contact, _updateModelAccessor.ModelUpdater, "Detail");
+
+        RemoveListPartShapes(shape);
+
+        return shape;
+    }
+
+    internal static void RemoveListPartShapes(IShape contactShape)
+    {
+        if (contactShape is not IZoneHolding zoneHolding ||
+            zoneHolding.Zones["Content"] is not Shape content ||
+            !content.HasItems)
+        {
+            return;
+        }
+
+        var listPartShapes = content.Items
+            .OfType<IShape>()
+            .Where(shape => shape.Metadata.Type == ContactListPartShapeTableProvider.ListPartName)
+            .ToArray();
+
+        foreach (var listPartShape in listPartShapes)
+        {
+            content.Remove(listPartShape.Metadata.Name);
+        }
+    }
+
     private string GetSafeReturnUrl(string returnUrl)
     {
         return !string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)
             ? returnUrl
             : null;
+    }
+
+    /// <summary>
+    /// Whether the activity has already reached an end state, so there is no outcome left to record.
+    /// </summary>
+    private static bool IsAlreadyFinished(OmnichannelActivity activity)
+        => activity.Status is ActivityStatus.Completed or ActivityStatus.Cancelled or ActivityStatus.Purged;
+
+    /// <summary>
+    /// Sends the agent back where they came from, told why the activity would not take their disposition.
+    /// </summary>
+    /// <remarks>
+    /// This happens in ordinary use rather than only through a stale link: an automated call that hands off to a
+    /// live agent concludes its own activity, so an agent who wraps up afterwards is dispositioning something the
+    /// automation has already closed.
+    /// </remarks>
+    private async Task<IActionResult> AlreadyFinishedAsync(string returnUrl)
+    {
+        await _notifier.WarningAsync(H["This activity was already completed, so your disposition was not recorded."]);
+
+        var safeReturnUrl = GetSafeReturnUrl(returnUrl);
+
+        return string.IsNullOrEmpty(safeReturnUrl)
+            ? RedirectToAction(nameof(Activities))
+            : Redirect(safeReturnUrl);
     }
 
     /// <summary>
@@ -941,7 +1193,7 @@ public sealed class ActivitiesController : Controller
             return Forbid();
         }
 
-        var pager = new Pager(pagerParameters.Page, pagerParameters.PageSize, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
 
         options ??= new BulkManageActivityFilter();
 
@@ -992,13 +1244,6 @@ public sealed class ActivitiesController : Controller
             Pager = pagerShape,
             TotalCount = result.Count,
             CurrentPageSize = pager.PageSize,
-            PageSizeOptions =
-            [
-                new SelectListItem("10", "10", pager.PageSize == 10),
-                new SelectListItem("25", "25", pager.PageSize == 25),
-                new SelectListItem("50", "50", pager.PageSize == 50),
-                new SelectListItem("100", "100", pager.PageSize == 100),
-            ],
         };
 
         dynamic bulkActionsShape = await bulkActionsDisplayManager.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater);
@@ -1057,6 +1302,9 @@ public sealed class ActivitiesController : Controller
     /// Processes a bulk action on selected activities.
     /// </summary>
     /// <param name="viewModel">The view model containing action and selection data.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
+    /// <param name="filterDisplayManager">The filter display manager.</param>
+    /// <param name="activitySourceOptions">The activity sources registered by the enabled features.</param>
     [HttpPost]
     [ActionName(nameof(ManageActivities))]
     [FormValueRequired("submit.BulkAction")]
@@ -1064,7 +1312,8 @@ public sealed class ActivitiesController : Controller
     public async Task<ActionResult> ManageActivitiesBulkActionPost(
         BulkManageActivitiesViewModel viewModel,
         PagerParameters pagerParameters,
-        [FromServices] IDisplayManager<BulkManageActivityFilter> filterDisplayManager)
+        [FromServices] IDisplayManager<BulkManageActivityFilter> filterDisplayManager,
+        [FromServices] IOptions<ActivitySourceOptions> activitySourceOptions)
     {
         var requiredPermission = viewModel.BulkAction == BulkActivityAction.Purge
             ? OmnichannelConstants.Permissions.PurgeActivity
@@ -1098,11 +1347,23 @@ public sealed class ActivitiesController : Controller
             return RedirectToAction(nameof(ManageActivities), filter.RouteValues);
         }
 
+        ActivitySourceEntry newSourceEntry = null;
+
+        // Only the sources no other feature owns may be set by hand. A dialer mode is set through the dialer
+        // profile, and a value that is not registered at all would leave activities no screen can find again.
+        if (viewModel.BulkAction == BulkActivityAction.ChangeSource &&
+            !activitySourceOptions.Value.TryGetManuallyAssignableSource(viewModel.NewSource, out newSourceEntry))
+        {
+            await _notifier.WarningAsync(H["The selected source cannot be set by hand. Choose one of the listed sources."]);
+
+            return RedirectToAction(nameof(ManageActivities), filter.RouteValues);
+        }
+
         List<OmnichannelActivity> activities;
 
         if (applyToAllMatching)
         {
-            activities = (await _omnichannelActivityManager.ListBulkManageableAsync(filter)).ToList();
+            activities = (await _omnichannelActivityManager.GetBulkManageableAsync(filter)).ToList();
         }
         else
         {
@@ -1167,7 +1428,7 @@ public sealed class ActivitiesController : Controller
                 break;
 
             case BulkActivityAction.ChangeSource:
-                processedCount = await BulkChangeSourceAsync(activities, viewModel.NewSource, viewModel.NewInteractionType, viewModel.ClearCurrentAssignment);
+                processedCount = await BulkChangeSourceAsync(activities, newSourceEntry.Source, viewModel.NewInteractionType, viewModel.ClearCurrentAssignment);
                 break;
 
             case BulkActivityAction.ChangeDialerProfile:
@@ -1194,6 +1455,15 @@ public sealed class ActivitiesController : Controller
             routeValues["pageSize"] = pagerParameters.PageSize.Value.ToString(CultureInfo.InvariantCulture);
         }
     }
+
+    // A page that shows two paged lists renders a page size selector under each, and both write the one
+    // unprefixed "pageSize" query value, so the prefixed list takes its page number alone and shares the page size.
+    private static PagerParameters WithSharedPageSize(PagerParameters prefixedPagerParameters, PagerParameters pagerParameters)
+        => new()
+        {
+            Page = prefixedPagerParameters.Page,
+            PageSize = pagerParameters.PageSize,
+        };
 
     private async Task<int> BulkAssignAsync(List<OmnichannelActivity> activities, string[] assignToUserIds)
     {
@@ -1452,7 +1722,7 @@ public sealed class ActivitiesController : Controller
 
         foreach (var activity in activities)
         {
-            activity.CampaignId = profile.CampaignId;
+            // The profile no longer owns a campaign; changing the dialer profile keeps the activity's own campaign.
             activity.Source = profile.ActivitySource;
             activity.InteractionType = ActivityInteractionType.Manual;
             activity.AISessionId = null;

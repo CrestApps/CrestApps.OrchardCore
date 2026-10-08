@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Http;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Environment.Shell;
+using OrchardCore.Environment.Options;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Memory.Drivers;
@@ -20,7 +20,7 @@ public sealed class ChatInteractionMemorySettingsDisplayDriver : SiteDisplayDriv
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly ISiteService _siteService;
-    private readonly IShellReleaseManager _shellReleaseManager;
+    private readonly IOptionsUpdateNotifier _optionsUpdateNotifier;
 
     protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
 
@@ -30,23 +30,21 @@ public sealed class ChatInteractionMemorySettingsDisplayDriver : SiteDisplayDriv
     /// <param name="httpContextAccessor">The http context accessor.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="siteService">The site service.</param>
-    /// <param name="shellReleaseManager">The shell release manager.</param>
+    /// <param name="optionsUpdateNotifier">The options update notifier.</param>
     public ChatInteractionMemorySettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
         ISiteService siteService,
-        IShellReleaseManager shellReleaseManager)
+        IOptionsUpdateNotifier optionsUpdateNotifier)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _siteService = siteService;
-        _shellReleaseManager = shellReleaseManager;
+        _optionsUpdateNotifier = optionsUpdateNotifier;
     }
 
     public override IDisplayResult Edit(ISite site, MemoryMetadata settings, BuildEditorContext context)
     {
-        context.AddTenantReloadWarningWrapper();
-
         return Initialize<ChatInteractionMemorySettingsViewModel>("ChatInteractionMemorySettings_Edit", async model =>
         {
             model.EnableUserMemory = settings.EnableUserMemory ?? true;
@@ -71,7 +69,7 @@ public sealed class ChatInteractionMemorySettingsDisplayDriver : SiteDisplayDriv
 
         if (settingsChanged)
         {
-            _shellReleaseManager.RequestRelease();
+            _optionsUpdateNotifier.RequestUpdate<ChatInteractionMemoryOptions>();
         }
 
         return Edit(site, settings, context);

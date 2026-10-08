@@ -14,7 +14,9 @@
     };
 }
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["Phone Verifications Queue"])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="PhoneVerifications" title="@T["Phone Verifications Queue"]" />
+</zone>
 
 <div class="row row-cols-2 row-cols-md-3 row-cols-xl-6 g-3 mb-4">
     @foreach (var filter in filters)
@@ -41,7 +43,7 @@
         };
 
         <div class="col">
-            <a asp-action="Index" asp-route-status="@filter" asp-route-q="@Model.Q" asp-route-sort="@Model.Sort"
+            <a asp-action="Index" asp-route-status="@filter" asp-route-q="@Model.Q" asp-route-sort="@Model.Sort" asp-route-pageSize="@Context.Request.Query["pageSize"]"
                class="card h-100 text-decoration-none @(isActive ? "border-primary border-2" : "")"
                title="@T["Show {0} records", label]">
                 <div class="card-body py-3">
@@ -55,6 +57,10 @@
 
 <form asp-action="Index" asp-controller="Records" method="get">
     <input type="hidden" asp-for="Status" />
+    @if (Context.Request.Query.TryGetValue("pageSize", out var selectedPageSize))
+    {
+        <input type="hidden" name="pageSize" value="@selectedPageSize" />
+    }
 
     <div class="card text-bg-theme mb-3 position-sticky action-bar">
         <div class="card-body">

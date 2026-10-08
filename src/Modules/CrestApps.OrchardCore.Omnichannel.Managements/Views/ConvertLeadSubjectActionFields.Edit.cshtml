@@ -1,0 +1,45 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model LeadSubjectActionViewModel
+
+<div class="alert alert-info">
+    @T["Converts the activity's lead into a contact. The lead is merged into an existing contact when exactly one shares its phone number or email; otherwise a new contact of the type set on the lead type is created. The actions after this one work on the contact."]
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="AccountMode" class="ocat-label">@T["Account"]</label>
+    <div class="ocat-end">
+        <select asp-for="AccountMode" asp-items="Model.AccountModes" class="form-select"></select>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="CreateOpportunity" class="form-check-input" type="checkbox" />
+            <label asp-for="CreateOpportunity" class="form-check-label">@T["Create an opportunity"]</label>
+            <span class="hint dashed">@T["Creates an opportunity with the new contact as its primary contact, in the contact's account."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="OpportunityContentType" class="ocat-label">@T["Opportunity type"]</label>
+    <div class="ocat-end">
+        <select asp-for="OpportunityContentType" asp-items="Model.OpportunityContentTypes" class="form-select">
+            <option value="">@T["The lead type's default"]</option>
+        </select>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="OpenActivities" class="ocat-label">@T["Other open activities"]</label>
+    <div class="ocat-end">
+        <select asp-for="OpenActivities" class="form-select">
+            <option value="@nameof(LeadOpenActivityMode.Move)">@T["Move them to the contact"]</option>
+            <option value="@nameof(LeadOpenActivityMode.Cancel)">@T["Cancel them"]</option>
+        </select>
+        <span class="hint">@T["What happens to the lead's other scheduled work. Finished activities always move to the contact."]</span>
+    </div>
+</div>

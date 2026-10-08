@@ -77,8 +77,8 @@ public sealed class ChatInteractionChatModeSettingsDisplayDriver : SiteDisplayDr
 
     private async Task<IEnumerable<SelectListItem>> GetAvailableModesAsync()
     {
-        var hasSpeechToText = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.SpeechToText) != null;
-        var hasTextToSpeech = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.TextToSpeech) != null;
+        var hasSpeechToText = await _deploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.SpeechToText) != null;
+        var hasTextToSpeech = await _deploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.TextToSpeech) != null;
 
         var modes = new List<SelectListItem>
         {
@@ -95,6 +95,8 @@ public sealed class ChatInteractionChatModeSettingsDisplayDriver : SiteDisplayDr
             modes.Add(new SelectListItem(S["Conversation"], nameof(ChatMode.Conversation)));
         }
 
+        // There is no realtime mode. An interaction becomes a speech-to-speech conversation by selecting a
+        // realtime chat deployment, which is a per-interaction answer rather than a site-wide one.
         return modes;
     }
 }

@@ -1,5 +1,12 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+@using OrchardCore.Contents
+
+@model ListOmnichannelActivity
+
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["Activities"])</h1>
+    <breadcrumb name="OmnichannelContactActivities" title="@T["Activities"]">
+        <breadcrumb-item id="OmnichannelContact" action="Edit" controller="Admin" area="OrchardCore.Contents" route-contentItemId="@Model.ContactContentItem.ContentItemId" permission="@CommonPermissions.EditContent.Name" resource="@Model.ContactContentItem">@Model.ContactContentItem.DisplayText</breadcrumb-item>
+    </breadcrumb>
 </zone>
 
 @await DisplayAsync(Model)

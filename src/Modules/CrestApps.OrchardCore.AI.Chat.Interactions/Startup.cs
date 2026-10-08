@@ -1,8 +1,9 @@
-using CrestApps.Core.AI.Chat;
+﻿using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Chat.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.OrchardCore;
+using CrestApps.OrchardCore.AI.Chat.Core;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Handlers;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
@@ -10,7 +11,6 @@ using CrestApps.OrchardCore.AI.Chat.Interactions.Migrations;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -43,6 +43,8 @@ public sealed class Startup : StartupBase
             .AddScoped<IAuthorizationHandler, ChatInteractionAuthorizationHandler>()
             .AddPermissionProvider<ChatInteractionPermissionProvider>()
             .AddDisplayDriver<ChatInteraction, ChatInteractionDisplayDriver>()
+            .AddDisplayDriver<ChatInteraction, ChatInteractionModelParametersDisplayDriver>()
+            .AddDisplayDriver<ChatInteraction, ChatInteractionUtilityModelParametersDisplayDriver>()
             .AddDisplayDriver<ChatInteraction, ChatInteractionToolsDisplayDriver>()
             .AddDisplayDriver<ChatInteraction, ChatInteractionAgentsDisplayDriver>()
             .AddDisplayDriver<ChatInteractionListOptions, ChatInteractionListOptionsDisplayDriver>()
@@ -60,6 +62,14 @@ public sealed class Startup : StartupBase
         // Chat Interaction notification transport and hub options.
         services.AddKeyedScoped<IChatNotificationTransport, ChatInteractionNotificationTransport>(ChatContextType.ChatInteraction);
         services.ConfigureCrestAppsChatHubOptions<ChatInteractionHub>();
+
+        // Enables realtime (speech-to-speech) voice over the server-relay WebRTC transport, with automatic
+        // WebSocket fallback. Idempotent when also registered by the AI Chat feature.
+        services.AddWebRtcRealtimeTransport();
+
+        // Lets a tenant mint its own short-lived TURN credentials from Cloudflare Realtime instead of
+        // sharing the host's, falling back to the configured STUN and TURN servers while it has no token.
+        services.AddTenantCloudflareRealtimeTurn();
 
         services.AddDisplayDriver<ChatInteraction, ChatInteractionConnectionDisplayDriver>();
     }

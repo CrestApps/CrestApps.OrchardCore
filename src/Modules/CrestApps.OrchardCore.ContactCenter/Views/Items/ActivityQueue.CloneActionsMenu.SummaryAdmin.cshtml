@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.ContactCenter.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<ActivityQueue>
+
+<li>
+    <a asp-action="Create"
+       asp-route-cloneId="@Model.Value.ItemId"
+       class="dropdown-item">@T["Clone"]</a>
+</li>

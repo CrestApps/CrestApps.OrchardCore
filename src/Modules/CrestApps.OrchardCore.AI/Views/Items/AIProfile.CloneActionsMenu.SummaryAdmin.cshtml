@@ -1,0 +1,9 @@
+@using CrestApps.Core.AI.Models
+
+@model ShapeViewModel<AIProfile>
+
+<li>
+    <a asp-action="Create"
+       asp-route-cloneId="@Model.Value.ItemId"
+       class="dropdown-item">@T["Clone"]</a>
+</li>

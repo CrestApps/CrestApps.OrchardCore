@@ -39,4 +39,11 @@ public sealed class SubjectActionExecutionContext
     /// Key is the subject action ItemId, value is the preparation note.
     /// </summary>
     public IDictionary<string, string> ActionPreparationNotes { get; set; }
+
+    /// <summary>
+    /// Gets or sets what found the number out of service when the platform chose a not-in-service disposition on its
+    /// own, one of <see cref="OmnichannelConstants.NotInServiceSources"/>. It has already marked the number it dialed,
+    /// so the disposition's outcome does not mark it again. Not set when a person chose the disposition.
+    /// </summary>
+    public string NotInServiceSource { get; set; }
 }

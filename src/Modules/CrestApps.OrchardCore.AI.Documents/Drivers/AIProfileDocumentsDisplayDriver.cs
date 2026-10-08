@@ -1,9 +1,11 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Documents;
 using CrestApps.Core.AI.Documents.Models;
 using CrestApps.Core.AI.Documents.Services;
+using CrestApps.Core.AI.Ingestion;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.Resilience;
@@ -22,8 +24,6 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Indexing;
-using OrchardCore.Indexing.Models;
-using OrchardCore.Modules;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
 
@@ -40,6 +40,7 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
     private readonly IAIDocumentProcessingService _documentProcessingService;
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly IAIProfileTemplateManager _templateManager;
+    private readonly ProfileTemplateDocumentCloner _documentCloner;
     private readonly IAIClientFactory _aiClientFactory;
     private readonly IOptions<ChatDocumentsOptions> _extractorOptions;
     private readonly ILogger _logger;
@@ -57,6 +58,8 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
     /// <param name="chunkStore">The chunk store.</param>
     /// <param name="documentProcessingService">The document processing service.</param>
     /// <param name="deploymentManager">The deployment manager.</param>
+    /// <param name="templateManager">The template manager.</param>
+    /// <param name="documentCloner">The service that copies a template's documents to a new profile.</param>
     /// <param name="aiClientFactory">The ai client factory.</param>
     /// <param name="extractorOptions">The extractor options.</param>
     /// <param name="logger">The logger.</param>
@@ -71,6 +74,7 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
         IAIDocumentProcessingService documentProcessingService,
         IAIDeploymentManager deploymentManager,
         IAIProfileTemplateManager templateManager,
+        ProfileTemplateDocumentCloner documentCloner,
         IAIClientFactory aiClientFactory,
         IOptions<ChatDocumentsOptions> extractorOptions,
         ILogger<AIProfileDocumentsDisplayDriver> logger,
@@ -85,6 +89,7 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
         _documentProcessingService = documentProcessingService;
         _deploymentManager = deploymentManager;
         _templateManager = templateManager;
+        _documentCloner = documentCloner;
         _aiClientFactory = aiClientFactory;
         _extractorOptions = extractorOptions;
         _logger = logger;
@@ -100,12 +105,15 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
             var documentsMetadata = profile.GetOrCreate<DocumentsMetadata>();
             model.TopN = documentsMetadata.DocumentTopN ?? 3;
             model.DocumentRetrievalMode = documentsMetadata.RetrievalMode;
+            model.MaxIndexableCharacters = documentsMetadata.MaxIndexableCharacters;
+            model.DescribeFiguresInUploads = documentsMetadata.DescribeFiguresInUploads;
             model.DocumentRetrievalModes = DocumentRetrievalModeSelectListBuilder.Build(S, model.DocumentRetrievalMode);
-        }).Location("Content:7#Knowledge;2");
+        }).Location("Content:2.5#Knowledge;2");
 
         var documentsResult = Initialize<EditAIProfileDocumentsViewModel>("AIProfileDocuments_Edit", async model =>
         {
             model.ProfileId = profile.ItemId;
+            model.AllowDownload = true;
 
             var documentsMetadata = profile.GetOrCreate<DocumentsMetadata>();
             model.Documents = documentsMetadata.Documents ?? [];
@@ -143,6 +151,8 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
 
         documentsMetadata.DocumentTopN = model.TopN > 0 ? model.TopN : 3;
         documentsMetadata.RetrievalMode = model.DocumentRetrievalMode;
+        documentsMetadata.MaxIndexableCharacters = NormalizeMaxIndexableCharacters(model.MaxIndexableCharacters);
+        documentsMetadata.DescribeFiguresInUploads = model.DescribeFiguresInUploads;
 
         if (context.Updater.ModelState.IsValid)
         {
@@ -200,12 +210,12 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
             if (model.Files != null && model.Files.Length > 0)
             {
                 var deployment = await ResolveDeploymentAsync(profile);
-                var embeddingDeployment = await _deploymentManager.ResolveOrDefaultAsync(
-                    AIDeploymentPurpose.Embedding,
+                var embeddingDeployment = await _deploymentManager.ResolveSlotAsync(
+                    AIDeploymentSlotNames.Embedding,
                     clientName: deployment?.ClientName);
                 var embeddingGenerator = embeddingDeployment == null
                     ? null
-                    : await _aiClientFactory.CreateEmbeddingGeneratorAsync(embeddingDeployment, builder => builder.UseDefaultResilience());
+                    : await _aiClientFactory.CreateEmbeddingGeneratorAsync(embeddingDeployment, builder => builder.UseDefaultResilience().UseUsageLabels(purpose: AIUsagePurposes.Indexing));
                 var processedDocuments = new List<AIDocument>();
 
                 foreach (var file in model.Files)
@@ -230,7 +240,12 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
                             file,
                             profile.ItemId,
                             AIConstants.DocumentReferenceTypes.Profile,
-                            embeddingGenerator);
+                            embeddingGenerator,
+                            // This profile's own answers when it gave them, the site's otherwise. Passing
+                            // nothing here would measure the profile's own knowledge files against the site
+                            // ceiling while its sessions were measured against the profile's.
+                            documentsMetadata.MaxIndexableCharacters,
+                            documentsMetadata.DescribeFiguresInUploads);
 
                         if (!result.Success)
                         {
@@ -266,7 +281,7 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
                         profile.ItemId);
                     }
 
-                    ShellScope.AddDeferredTask(scope => IndexDocumentChunksAsync(scope, processedDocuments));
+                    ProfileDocumentChunkIndexer.ScheduleIndexing(processedDocuments);
                 }
             }
         }
@@ -276,12 +291,42 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
         return Edit(profile, context);
     }
 
+    /// <summary>
+    /// Keeps a blank field meaning "use the site default" and clamps a negative number to the "no limit"
+    /// zero, rather than storing a ceiling no upload could satisfy.
+    /// </summary>
+    private static int? NormalizeMaxIndexableCharacters(int? value)
+        => value is null ? null : Math.Max(0, value.Value);
+
+    /// <summary>
+    /// Finds which template this profile is being created from.
+    /// </summary>
+    /// <returns>The template id, or <see langword="null"/> when the profile is not from a template.</returns>
+    /// <remarks>
+    /// The editor opened as <c>Create?templateId=</c> posts back to that same URL, so the template id is
+    /// read from the query string. Profiles created through the New AI Profile picker are built by the
+    /// template factory, which copies the documents itself and never reaches this path.
+    /// </remarks>
+    private string ReadTemplateId()
+    {
+        var request = _httpContextAccessor.HttpContext?.Request;
+
+        if (request is null)
+        {
+            return null;
+        }
+
+        var fromQuery = request.Query["templateId"].ToString();
+
+        return string.IsNullOrWhiteSpace(fromQuery) ? null : fromQuery;
+    }
+
     private async Task CloneTemplateDocumentsAsync(
         AIProfile profile,
         DocumentsMetadata documentsMetadata,
         IEnumerable<string> removedDocumentIds)
     {
-        var templateId = _httpContextAccessor.HttpContext?.Request?.Form["TemplateId"].ToString();
+        var templateId = ReadTemplateId();
 
         if (string.IsNullOrWhiteSpace(templateId))
         {
@@ -295,150 +340,17 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
             return;
         }
 
-        var templateDocumentsMetadata = template.GetOrCreate<DocumentsMetadata>();
-
-        if (templateDocumentsMetadata.Documents == null || templateDocumentsMetadata.Documents.Count == 0)
-        {
-            return;
-        }
-
-        var excludedDocumentIds = removedDocumentIds?
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .ToHashSet(StringComparer.Ordinal) ?? [];
-
-        foreach (var docInfo in templateDocumentsMetadata.Documents)
-        {
-            if (excludedDocumentIds.Contains(docInfo.DocumentId))
-            {
-                continue;
-            }
-
-            var templateDocument = await _documentStore.FindByIdAsync(docInfo.DocumentId);
-
-            if (templateDocument == null)
-            {
-                continue;
-            }
-
-            var clonedDocument = new AIDocument
-            {
-                ItemId = UniqueId.GenerateId(),
-                ReferenceId = profile.ItemId,
-                ReferenceType = AIConstants.DocumentReferenceTypes.Profile,
-                FileName = templateDocument.FileName,
-                ContentType = templateDocument.ContentType,
-                FileSize = templateDocument.FileSize,
-                UploadedUtc = templateDocument.UploadedUtc,
-            };
-
-            await _documentStore.CreateAsync(clonedDocument);
-
-            var templateChunks = await _chunkStore.GetChunksByAIDocumentIdAsync(templateDocument.ItemId);
-
-            foreach (var templateChunk in templateChunks)
-            {
-                await _chunkStore.CreateAsync(new AIDocumentChunk
-                {
-                    ItemId = UniqueId.GenerateId(),
-                    AIDocumentId = clonedDocument.ItemId,
-                    ReferenceId = profile.ItemId,
-                    ReferenceType = AIConstants.DocumentReferenceTypes.Profile,
-                    Content = templateChunk.Content,
-                    Embedding = templateChunk.Embedding,
-                    Index = templateChunk.Index,
-                });
-            }
-
-            documentsMetadata.Documents.Add(new ChatDocumentInfo
-            {
-                DocumentId = clonedDocument.ItemId,
-                FileName = clonedDocument.FileName,
-                ContentType = clonedDocument.ContentType,
-                FileSize = clonedDocument.FileSize,
-            });
-        }
+        await _documentCloner.CloneAsync(profile, template, documentsMetadata, removedDocumentIds);
     }
 
     private async Task<AIDeployment> ResolveDeploymentAsync(AIProfile profile)
     {
-        return await _deploymentManager.ResolveOrDefaultAsync(
-            AIDeploymentPurpose.Chat,
-            deploymentName: profile.ChatDeploymentName)
-        ?? await _deploymentManager.ResolveOrDefaultAsync(
-            AIDeploymentPurpose.Utility,
-            deploymentName: profile.UtilityDeploymentName);
-    }
-
-    private static async Task IndexDocumentChunksAsync(ShellScope scope, List<AIDocument> documents)
-    {
-        var services = scope.ServiceProvider;
-        var indexStore = services.GetRequiredService<IIndexProfileStore>();
-        var indexProfiles = await indexStore.GetByTypeAsync(AIConstants.AIDocumentsIndexingTaskType);
-
-        if (!indexProfiles.Any())
-        {
-            return;
-        }
-
-        var chunkStore = services.GetRequiredService<IAIDocumentChunkStore>();
-        var documentIndexHandlers = services.GetRequiredService<IEnumerable<IDocumentIndexHandler>>();
-        var logger = services.GetRequiredService<ILogger<AIProfileDocumentsDisplayDriver>>();
-
-        foreach (var indexProfile in indexProfiles)
-        {
-            var documentIndexManager = services.GetKeyedService<IDocumentIndexManager>(indexProfile.ProviderName);
-
-            if (documentIndexManager == null)
-            {
-                continue;
-            }
-
-            var chunkDocuments = new List<DocumentIndex>();
-
-            foreach (var aiDocument in documents)
-            {
-                var chunks = await chunkStore.GetChunksByAIDocumentIdAsync(aiDocument.ItemId);
-
-                if (chunks.Count == 0)
-                {
-                    continue;
-                }
-
-                foreach (var chunk in chunks)
-                {
-                    var documentIndex = new DocumentIndex(chunk.ItemId);
-
-                    var aiDocumentChunk = new AIDocumentChunkContext
-                    {
-                        ChunkId = chunk.ItemId,
-                        DocumentId = aiDocument.ItemId,
-                        Content = chunk.Content,
-                        FileName = aiDocument.FileName,
-                        ReferenceId = aiDocument.ReferenceId,
-                        ReferenceType = aiDocument.ReferenceType,
-                        ChunkIndex = chunk.Index,
-                        Embedding = chunk.Embedding,
-                    };
-
-                    var buildContext = new BuildDocumentIndexContext(documentIndex, aiDocumentChunk, [chunk.ItemId], documentIndexManager.GetContentIndexSettings())
-                    {
-                        AdditionalProperties = new Dictionary<string, object>
-                        {
-                            { nameof(IndexProfile), indexProfile },
-                        }
-                    };
-
-                    await documentIndexHandlers.InvokeAsync((handler, ctx) => handler.BuildIndexAsync(ctx), buildContext, logger);
-
-                    chunkDocuments.Add(documentIndex);
-                }
-            }
-
-            if (chunkDocuments.Count > 0)
-            {
-                await documentIndexManager.AddOrUpdateDocumentsAsync(indexProfile, chunkDocuments);
-            }
-        }
+        // One resolve, not two joined with "??". The chat slot's own chain already ends in the first
+        // text-capable deployment, so a second independent resolve for the utility slot -- which filters on
+        // the same capability -- could never answer.
+        return await _deploymentManager.ResolveSlotAsync(
+            AIDeploymentSlotNames.Chat,
+            deploymentName: profile.ChatDeploymentName);
     }
 
     private static async Task RemoveDocumentChunksAsync(ShellScope scope, List<string> chunkIds)

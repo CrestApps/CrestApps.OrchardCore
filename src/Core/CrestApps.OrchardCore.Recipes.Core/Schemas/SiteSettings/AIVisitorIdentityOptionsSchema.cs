@@ -22,6 +22,8 @@ public sealed class AIVisitorIdentityOptionsSchema : SiteSettingsSchemaBase
             .Properties(
                 ("CookieName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The cookie name used to persist the anonymous visitor identifier.")),
                 ("CookieLifetime", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The visitor cookie lifetime as a .NET TimeSpan string.")),
+                ("AllowCrossSiteEmbedding", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the visitor cookie is written SameSite=None; Secure so it survives inside a frame on another site. A request that did not arrive over HTTPS keeps the SameSite=Lax cookie either way.")),
+                ("UsePartitionedCookie", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the visitor cookie carries the Partitioned attribute while AllowCrossSiteEmbedding is on, which keeps the cookie written in a frame apart from the first-party one of the same name.")),
                 ("RemoteAddressMode", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The remote-address storage mode.")),
                 ("RemoteAddressHashSalt", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The application-specific salt used when hashing remote addresses.")))
             .AdditionalProperties(false);

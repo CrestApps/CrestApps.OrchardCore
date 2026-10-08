@@ -1,5 +1,5 @@
-@using CrestApps.Core.Models
 @using CrestApps.Core.AI.Models
+@using CrestApps.Core.Models
 @using CrestApps.OrchardCore.AI.ViewModels
 @using Microsoft.AspNetCore.Mvc.Localization
 @using OrchardCore.DisplayManagement
@@ -7,11 +7,11 @@
 @model ListCatalogEntryWithReadOnlyViewModel<AIDeployment>
 
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["AI Deployments"])</h1>
+    <breadcrumb name="AIDeployments" title="@T["AI Deployments"]" />
 </zone>
 
 @* The form is necessary to generate an antiforgery token for the delete and toggle actions. *@
-<form asp-action="Index" method="post" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-client-side-search="true">
+<form asp-action="Index" asp-route-pageSize="@Context.Request.Query["pageSize"]" method="post" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-client-side-search="true">
     <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
     <input asp-for="Options.BulkAction" type="hidden" />
     <input type="submit" name="submit.BulkAction" class="visually-hidden" />

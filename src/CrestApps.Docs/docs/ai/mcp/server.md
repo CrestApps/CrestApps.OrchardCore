@@ -3,6 +3,8 @@ sidebar_label: MCP Server
 sidebar_position: 4
 title: MCP Server
 description: Expose Orchard Core AI tools, prompts, and resources through the Model Context Protocol.
+user_manual:
+  - user-manual/ai/tools-and-agents
 ---
 
 | | |
@@ -14,7 +16,7 @@ Exposes Orchard Core AI tools through the MCP protocol, enabling external MCP-co
 
 ## Overview
 
-The **MCP Server Feature** allows your Orchard Core application to expose its AI tools and capabilities to external MCP clients. This feature supports the SSE transport type, enabling real-time communication.
+The **MCP Server Feature** allows your Orchard Core application to expose its AI tools and capabilities to external MCP clients. It serves the **Streamable HTTP** transport defined by the current MCP specification, which carries both request/response traffic and server-sent event streams over a single endpoint.
 
 The Orchard Core server feature builds on the shared `AddCoreAIMcpServer()` registrations from `CrestApps.Core.AI.Mcp`, then layers Orchard-specific prompt, resource, admin, and permission services on top.
 
@@ -173,18 +175,27 @@ Use only for local development and testing.
 
 ## MCP endpoint
 
-The server exposes a single SSE endpoint:
+The server exposes a single **Streamable HTTP** endpoint at `/mcp` (prefixed with the tenant URL prefix when one is configured):
 
 | Endpoint | Method | Description |
 | --- | --- | --- |
-| `/mcp/sse` | POST | SSE transport for MCP communication |
+| `/mcp` | POST | Sends a JSON-RPC message. The response is either a single JSON payload or a `text/event-stream` the client reads until the request completes. |
+| `/mcp` | GET | Opens the server-to-client event stream for an established session. |
+| `/mcp` | DELETE | Ends the session. |
 
 Example request:
 
 ```text
-POST /mcp/sse
+POST /mcp
 Authorization: Bearer <your-token-or-api-key>
+Accept: application/json, text/event-stream
 ```
+
+:::note
+The deprecated HTTP+SSE transport from the 2024-11-05 specification — a `GET /mcp/sse` stream paired with
+`POST /mcp/message` — is **not** mapped. Point clients at `/mcp` instead. A client that only speaks the
+older transport cannot connect to this server.
+:::
 
 ## Example client configuration
 
@@ -195,8 +206,8 @@ Authorization: Bearer <your-token-or-api-key>
   "mcpServers": {
     "orchard-core": {
       "transport": {
-        "type": "sse",
-        "url": "https://your-orchard-site.com/mcp/sse",
+        "type": "http",
+        "url": "https://your-orchard-site.com/mcp",
         "headers": {
           "Authorization": "Bearer <your-oauth-token>"
         }
@@ -213,8 +224,8 @@ Authorization: Bearer <your-token-or-api-key>
   "mcpServers": {
     "orchard-core": {
       "transport": {
-        "type": "sse",
-        "url": "https://your-orchard-site.com/mcp/sse",
+        "type": "http",
+        "url": "https://your-orchard-site.com/mcp",
         "headers": {
           "Authorization": "ApiKey <your-api-key>"
         }
@@ -231,8 +242,8 @@ Authorization: Bearer <your-token-or-api-key>
   "mcpServers": {
     "orchard-core": {
       "transport": {
-        "type": "sse",
-        "url": "http://localhost:5000/mcp/sse"
+        "type": "http",
+        "url": "http://localhost:5000/mcp"
       }
     }
   }
@@ -247,16 +258,15 @@ Prompts are listed by clients via `ListPrompts` and invoked via `GetPrompt`, whi
 
 ### Managing Prompts via Admin UI
 
-1. Navigate to **Artificial Intelligence** → **MCP Prompts**
-2. Click **Add Prompt** to create a new prompt
-3. Fill in the required fields:
-   - **Name**: A unique identifier for the prompt (used by MCP clients to reference it)
-   - **Display Text**: A human-readable name shown in the admin list
-   - **Description**: Optional description that helps clients understand what the prompt does
-4. Add one or more **Messages** to the prompt:
-   - Each message has a **Role** (e.g., `system`, `user`) and **Content** (the message text)
-   - Messages are returned in order when a client calls `GetPrompt`
-5. Save the prompt
+Prompts are managed under **Artificial Intelligence** → **Model Context Protocol** → **Prompts** (permission `ManageMcpPrompts`; the menu appears only when the MCP Server feature is enabled). **Add Prompt** opens an editor with:
+
+- **Title**: a human-readable name shown in the admin list
+- **Name**: a unique identifier for the prompt, used by MCP clients to reference it
+- **Description**: optional text that helps clients understand what the prompt does
+- **Arguments**: optional named arguments (name, title, description, required) that clients supply; message content can reference them as `{{argName}}`
+- **Messages**: one or more messages, each with a **Role** (**User** or **Assistant**) and **Content**. Messages are returned in order when a client calls `GetPrompt`
+
+See also [Share your tools with other AI apps](../../user-manual/ai/tools-and-agents.md#share-your-tools-with-other-ai-apps) in the User Manual.
 
 Prompts can also be registered programmatically in code or imported via recipes.
 
@@ -268,23 +278,20 @@ MCP **Resources** represent data that MCP clients can read. A resource has a URI
 - **Templated Resources**: Have a URI containing `{variable}` placeholders (e.g., `file://abc123/{fileName}`). The client fills in the variables when reading the resource. These appear in `ListResourceTemplates` and allow dynamic content resolution.
 
 Resources can be:
-- Created and managed via the admin UI under **Artificial Intelligence** → **MCP Resources**
+- Created and managed via the admin UI under **Artificial Intelligence** → **Model Context Protocol** → **Resources**
 - Registered programmatically in code
 - Discovered and accessed by external MCP clients
 
 ### Managing Resources via Admin UI
 
-1. Navigate to **Artificial Intelligence** → **MCP Resources**
-2. Click **Add Resource** to create a new resource
-3. Select a **Resource Type** (e.g., File, Content Item, Recipe Step Schema). Each type defines what kind of data the resource serves and which URI variables are available.
-4. Fill in the required fields:
-   - **Display Text**: A friendly name for the resource shown in the admin list
-   - **Path**: The path portion of the URI. For templated resources, include variable placeholders from the supported variables list shown in the UI (e.g., `{fileName}`, `{contentType}`)
-   - **Name**: The MCP resource name (used by clients to identify the resource)
-   - **Title**: Optional human-readable title
-   - **Description**: Optional description that helps clients understand the resource
-   - **MIME Type**: The content type of the resource (e.g., `application/json`, `text/plain`)
-5. Save the resource
+Resources are managed under **Artificial Intelligence** → **Model Context Protocol** → **Resources** (permission `ManageMcpResources`; the menu appears only when the MCP Server feature is enabled). **Add Resource** opens **Available Resource Types**; each type defines what kind of data the resource serves and which URI variables are available. The editor then has:
+
+- **Display Text**: a friendly name for the resource shown in the admin list
+- **Name**: the MCP resource name, used by clients to identify the resource
+- **Path**: the path portion of the URI. For templated resources, include variable placeholders from the supported variables list shown in the UI (e.g., `{fileName}`, `{contentType}`). The editor shows the resulting full URI
+- **Description**: optional text that helps clients understand the resource
+- **MIME Type**: the content type of the resource (e.g., `application/json`, `text/plain`)
+- type-specific fields, such as the connection settings of the FTP/FTPS and SFTP types
 
 The system automatically constructs the full URI by prepending the scheme and a unique resource ID to your path. For example, if you select the **File** resource type and enter `{fileName}` as the path, the full URI might be `file://abc123/{fileName}`.
 

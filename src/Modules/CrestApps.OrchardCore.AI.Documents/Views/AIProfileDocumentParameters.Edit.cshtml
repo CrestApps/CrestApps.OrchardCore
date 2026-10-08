@@ -1,6 +1,36 @@
+@using System.Globalization
 @using CrestApps.OrchardCore.AI.Documents.ViewModels
 
 @model EditAIProfileDocumentsViewModel
+
+@*
+    What an upload costs. Both only apply to documents uploaded into a session, so they follow the
+    "Allow session document uploads" switch on the shape above; the script at the foot keeps them in step
+    with it. Both are blank by default, which means "use the site default" rather than any value.
+*@
+<div class="ocat-wrapper" data-session-documents-dependent>
+    <label for="@Html.IdFor(m => m.MaxIndexableCharacters)" class="ocat-label">@T["Largest document that can be indexed"]</label>
+    <div class="ocat-end">
+        <input type="number" class="form-control" id="@Html.IdFor(m => m.MaxIndexableCharacters)" name="@Html.NameFor(m => m.MaxIndexableCharacters)" value="@(Model.MaxIndexableCharacters?.ToString(CultureInfo.InvariantCulture))" min="0" step="1" placeholder="@T["Use site default"]" />
+        <div class="form-text">@T["Characters of extracted text. A larger document is refused at upload rather than stored unsearchable. 0 means no limit. Leave empty to use the site default."]</div>
+    </div>
+</div>
+
+@*
+    The selected option is written here rather than left to the select tag helper: a null bool? is the
+    common case on a new profile, and it has to land on "Use site default" rather than on "false".
+*@
+<div class="ocat-wrapper" data-session-documents-dependent>
+    <label for="@Html.IdFor(m => m.DescribeFiguresInUploadsSelection)" class="ocat-label">@T["Describe figures in uploaded documents"]</label>
+    <div class="ocat-end">
+        <select class="form-select" id="@Html.IdFor(m => m.DescribeFiguresInUploadsSelection)" name="@Html.NameFor(m => m.DescribeFiguresInUploadsSelection)">
+            <option value="" selected="@(!Model.DescribeFiguresInUploads.HasValue)">@T["Use site default"]</option>
+            <option value="true" selected="@(Model.DescribeFiguresInUploads == true)">@T["Describe figures"]</option>
+            <option value="false" selected="@(Model.DescribeFiguresInUploads == false)">@T["Do not describe figures"]</option>
+        </select>
+        <div class="form-text">@T["Describing figures uses a vision model and is the expensive part of ingestion. It needs a deployment in the Vision slot — with none configured nothing is described, and a figure keeps its caption either way."]</div>
+    </div>
+</div>
 
 <div class="ocat-wrapper">
     <label asp-for="TopN" class="ocat-label">
@@ -24,3 +54,23 @@
         <div class="form-text">@T["Chunk keeps chunk-level context. Hierarchical matches on chunks, then injects the full text of the matched documents."]</div>
     </div>
 </div>
+
+<script at="Foot">
+    (function () {
+        const toggle = document.querySelector('[data-session-documents-toggle]');
+        const dependents = document.querySelectorAll('[data-session-documents-dependent]');
+
+        if (!toggle || dependents.length === 0) {
+            return;
+        }
+
+        const sync = function () {
+            dependents.forEach(function (element) {
+                element.classList.toggle('d-none', !toggle.checked);
+            });
+        };
+
+        toggle.addEventListener('change', sync);
+        sync();
+    })();
+</script>

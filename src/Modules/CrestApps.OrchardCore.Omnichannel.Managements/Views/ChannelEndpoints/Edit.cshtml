@@ -1,9 +1,12 @@
 @using CrestApps.Core.Models
+@using CrestApps.OrchardCore.Omnichannel.Core
 
 @model EditCatalogEntryViewModel
 
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["Edit '{0}' Channel Endpoint", Model.DisplayName])</h1>
+    <breadcrumb name="OmnichannelChannelEndpointsEdit" title="@T["Edit '{0}'", Model.DisplayName]">
+        <breadcrumb-item id="OmnichannelChannelEndpoints" action="Index" controller="ChannelEndpoints" area="CrestApps.OrchardCore.Omnichannel.Managements" permission="@OmnichannelConstants.Permissions.ManageChannelEndpoints.Name">@T["Omnichannel Addresses"]</breadcrumb-item>
+    </breadcrumb>
 </zone>
 
 <form method="post" asp-route-id="@ViewContext.HttpContext.Request.RouteValues["id"]" enctype="multipart/form-data" class="no-multisubmit">

@@ -2,7 +2,7 @@
 
 @model ListOmnichannelActivityContainer
 
-<form asp-route-area="CrestApps.OrchardCore.Omnichannel.Managements" asp-action="Activities" asp-controller="Activities" method="post">
+<form asp-route-area="CrestApps.OrchardCore.Omnichannel.Managements" asp-action="Activities" asp-route-pageSize="@Context.Request.Query["pageSize"]" asp-controller="Activities" method="post">
     @if (Model.Header is not null)
     {
         <div class="card text-bg-theme mb-3 position-sticky action-bar">

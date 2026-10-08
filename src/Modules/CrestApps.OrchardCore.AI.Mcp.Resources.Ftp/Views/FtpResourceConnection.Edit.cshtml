@@ -34,12 +34,12 @@
     <div class="ocat-end">
         @if (Model.HasPassword)
         {
-            <input asp-for="Password" type="password" class="form-control" placeholder="@T["Keep current password"]" />
+            <input asp-for="Password" type="password" class="form-control" placeholder="@T["Keep current password"]" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
             <span class="hint">@T["Leave empty to keep the current password."]</span>
         }
         else
         {
-            <input asp-for="Password" type="password" class="form-control" />
+            <input asp-for="Password" type="password" class="form-control" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
         }
         <span asp-validation-for="Password" class="text-danger"></span>
     </div>
@@ -81,8 +81,8 @@
         <div class="form-check">
             <input asp-for="ValidateAnyCertificate" class="form-check-input" />
             <label asp-for="ValidateAnyCertificate" class="form-check-label">@T["Accept Any Certificate"]</label>
+            <span class="hint dashed">@T["Accept any SSL/TLS certificate, including self-signed certificates. Use with caution."]</span>
         </div>
-        <span class="hint">@T["Accept any SSL/TLS certificate, including self-signed certificates. Use with caution."]</span>
     </div>
 </div>
 

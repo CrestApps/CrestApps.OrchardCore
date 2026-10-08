@@ -3,11 +3,15 @@ sidebar_label: AI Workflows
 sidebar_position: 11
 title: AI Chat with Workflows
 description: How to use AI completion tasks in Orchard Core Workflows.
+user_manual:
+  - user-manual/ai/workflows
 ---
 
 # AI Chat with Workflows
 
 When combined with the **Workflows** feature, the **AI Services** module introduces new activities that allow workflows to interact directly with AI chat services.
+
+Adding these activities in **Design > Workflows**, their fields and outcomes (**Done**, **Drew Blank**, **Failed**), and example uses are described in the User Manual under [AI in workflows](../user-manual/ai/workflows.md). This page covers the output and input contracts.
 
 ## AI Completion using Profile Task
 
@@ -23,11 +27,7 @@ For example, if the **Result Property Name** is `AI-CrestApps-Step1`, you can ac
 
 To prevent naming conflicts with other workflow tasks, it's recommended to prefix your **Result Property Name** with `AI-`.
 
-The screencast below enables the **Workflows** feature, creates a workflow, adds the **AI Completion using Profile** task, and binds it to the `Demo Assistant` profile with the result property `AI-CrestApps-Step1`.
-
-<video controls preload="metadata" width="100%" aria-label="Screen cast of adding an AI Completion using Profile task to a workflow">
-  <source src="/img/docs/ai-workflows.mp4" type="video/mp4" />
-</video>
+The task's **Prompt template** is a Liquid template rendered with the selected profile available as `Profile`. An empty rendered prompt or an unknown profile ends the task on **Failed**, and an empty model response on **Drew Blank**.
 
 ## AI Completion using Direct Config Task
 

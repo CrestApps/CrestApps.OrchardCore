@@ -1,34 +1,188 @@
 // @ts-check
 
+/**
+ * The site has two manuals, each with its own sidebar and navbar tab:
+ *
+ * - userManualSidebar: every page under docs/user-manual/. For the people who use the app in the
+ *   browser, including administrators who only work in the admin screens. No code, no configuration
+ *   files.
+ * - technicalSidebar: every other page. For developers and IT: installing, configuring with
+ *   appsettings.json and environment variables, recipes, deploying, operating and extending.
+ *
+ * Every page belongs to exactly one sidebar; `npm run check:manuals` enforces it.
+ */
+
+/** Top-level entries show a Lucide icon from static/img/icons (see the sidebar-icon rules in src/css/custom.css). */
+const icon = (name) => `sidebar-icon sidebar-icon--${name}`;
+
 /** @type {import('@docusaurus/plugin-content-docs').SidebarsConfig} */
 const sidebars = {
-    docsSidebar: [
-        'intro',
-        'getting-started',
-        'feature-reference',
+    userManualSidebar: [
+        { type: 'doc', id: 'user-manual/index', className: icon('door-open') },
+        {
+            type: 'category',
+            label: 'Getting Started',
+            className: icon('rocket'),
+            collapsed: false,
+            items: [
+                'user-manual/getting-started/finding-your-way',
+                'user-manual/getting-started/roles-and-permissions',
+                'user-manual/getting-started/training-paths',
+                'user-manual/getting-started/features-and-settings',
+            ],
+        },
+        {
+            type: 'category',
+            label: 'Use Cases',
+            className: icon('lightbulb'),
+            link: { type: 'doc', id: 'user-manual/use-cases/index' },
+            items: [
+                'user-manual/use-cases/inbound-call-center',
+                'user-manual/use-cases/outbound-calling-campaign',
+                'user-manual/use-cases/text-your-contacts',
+                'user-manual/use-cases/automatic-follow-ups',
+                'user-manual/use-cases/leads-to-deals',
+                'user-manual/use-cases/ai-answers-customers',
+                'user-manual/use-cases/ai-assistant-on-your-website',
+                'user-manual/use-cases/ai-knowledge-assistant',
+            ],
+        },
+        {
+            type: 'category',
+            label: 'AI Assistant',
+            className: icon('hexagon-nodes'),
+            link: { type: 'doc', id: 'user-manual/ai/index' },
+            items: [
+                'user-manual/ai/connections',
+                'user-manual/ai/profiles',
+                'user-manual/ai/chat',
+                'user-manual/ai/chat-widgets',
+                'user-manual/ai/chat-interactions',
+                'user-manual/ai/prompt-templates',
+                'user-manual/ai/knowledge',
+                'user-manual/ai/tools-and-agents',
+                'user-manual/ai/memory',
+                'user-manual/ai/analytics',
+                'user-manual/ai/workflows',
+            ],
+        },
+        {
+            type: 'category',
+            label: 'Building the CRM',
+            className: icon('contact'),
+            items: [
+                'user-manual/contacts',
+                'user-manual/leads-accounts-opportunities',
+                'user-manual/subjects',
+                'user-manual/dispositions',
+                'user-manual/subject-flows',
+                'user-manual/campaigns',
+                'user-manual/channel-endpoints',
+                'user-manual/cadences',
+            ],
+        },
+        {
+            type: 'category',
+            label: 'Loading and Managing Work',
+            className: icon('list-checks'),
+            items: [
+                'user-manual/load-inventory',
+                'user-manual/automated-ai',
+                'user-manual/activities',
+                'user-manual/bulk-activities',
+                'user-manual/numbers-not-in-service',
+            ],
+        },
+        {
+            type: 'category',
+            label: 'Setting Up the Contact Center',
+            className: icon('sliders-horizontal'),
+            items: [
+                'user-manual/queues',
+                'user-manual/skills-and-entitlements',
+                'user-manual/agent-states',
+                'user-manual/business-hours',
+                'user-manual/entry-points-and-ivr',
+                'user-manual/voice-media',
+                'user-manual/dialer-profiles',
+                'user-manual/extensions',
+                'user-manual/contact-center-settings',
+            ],
+        },
+        {
+            type: 'category',
+            label: 'Working in the Contact Center',
+            className: icon('headset'),
+            items: [
+                'user-manual/agent-workspace',
+                'user-manual/calls',
+                'user-manual/voicemail',
+                'user-manual/call-recordings',
+                'user-manual/messaging',
+                'user-manual/live-dashboard',
+                'user-manual/reports',
+                'user-manual/workflows',
+            ],
+        },
+        {
+            type: 'category',
+            label: 'Phone Tools',
+            className: icon('phone'),
+            items: [
+                'user-manual/telephony-settings',
+                'user-manual/soft-phone',
+                'user-manual/phone-apps',
+            ],
+        },
+        {
+            type: 'category',
+            label: 'Site Administration',
+            className: icon('shield-check'),
+            items: [
+                'user-manual/administration/users',
+                'user-manual/administration/roles',
+                'user-manual/administration/content-access-control',
+                'user-manual/administration/content-fields',
+                'user-manual/administration/import-and-export',
+                'user-manual/administration/do-not-call-lists',
+                'user-manual/administration/phone-number-verification',
+                'user-manual/administration/time-zones',
+            ],
+        },
+        { type: 'doc', id: 'user-manual/glossary', className: icon('book-a') },
+        { type: 'doc', id: 'user-manual/troubleshooting', className: icon('life-buoy') },
+    ],
+    technicalSidebar: [
+        { type: 'doc', id: 'intro', className: icon('compass') },
+        { type: 'doc', id: 'getting-started', className: icon('rocket') },
+        { type: 'doc', id: 'configuration', className: icon('file-cog') },
+        { type: 'doc', id: 'feature-reference', className: icon('tags') },
         {
             type: 'category',
             label: 'Artificial Intelligence Suite',
+            className: icon('hexagon-nodes'),
             collapsed: false,
+            link: { type: 'doc', id: 'ai/index' },
             items: [
-                {
-                    type: 'doc',
-                    id: 'ai/index',
-                },
                 'ai/overview',
                 'ai/chat',
                 'ai/chat-analytics',
+                'ai/usage-analytics',
                 'ai/chat-interactions',
                 'ai/chat-notifications',
                 'ai/copilot',
                 'ai/claude',
                 'ai/agent',
                 'ai/tool-instances',
+                'ai/tools',
                 'ai/prompt-templates',
                 'ai/profile-templates',
                 'ai/memory',
                 'ai/memory-azure-ai',
                 'ai/memory-elasticsearch',
+                'ai/model-capabilities',
+                'ai/realtime-voice',
+                'ai/file-sources',
                 'ai/workflows',
                 {
                     type: 'category',
@@ -57,6 +211,8 @@ const sidebars = {
                         'ai/data-sources/index',
                         'ai/data-sources/azure-ai',
                         'ai/data-sources/elasticsearch',
+                        'ai/data-sources/postgresql',
+                        'ai/data-sources/web-crawlers',
                     ],
                 },
                 {
@@ -82,34 +238,79 @@ const sidebars = {
                         'ai/mcp/sftp',
                     ],
                 },
+                {
+                    type: 'category',
+                    label: 'Framework References',
+                    items: [
+                        'ai/consuming-ai-services',
+                        'ai/profiles-code',
+                        'ai/response-handlers',
+                    ],
+                },
             ],
         },
         {
             type: 'category',
             label: 'Omnichannel Communications',
+            className: icon('messages-square'),
+            link: { type: 'doc', id: 'omnichannel/index' },
             items: [
-                'omnichannel/index',
+                'omnichannel/management',
+                'omnichannel/crm',
+                'omnichannel/cadences',
+                'omnichannel/sms',
+                'omnichannel/messaging-workspace',
                 'omnichannel/azure-communication-services',
                 'omnichannel/event-grid',
-                'omnichannel/management',
-                'omnichannel/sms',
             ],
         },
         {
             type: 'category',
             label: 'Telephony',
+            className: icon('phone'),
+            link: { type: 'doc', id: 'telephony/index' },
             items: [
-                'telephony/index',
-                'telephony/dialpad',
+                'telephony/telnyx',
+                'telephony/asterisk',
+                'telephony/extension-dialing',
+                'telephony/recording-azure-blob-storage',
+                'telephony/custom-providers',
+            ],
+        },
+        {
+            type: 'category',
+            label: 'Contact Center',
+            className: icon('headset'),
+            link: { type: 'doc', id: 'contact-center/index' },
+            items: [
+                'contact-center/agents-queues-dialer',
+                'contact-center/agent-desktop',
+                'contact-center/voice-routing',
+                'contact-center/routing-work-state',
+                'contact-center/live-call-topology',
+                'contact-center/workflows',
+                'contact-center/report-catalog',
+                {
+                    type: 'category',
+                    label: 'Operations',
+                    items: [
+                        'contact-center/configuration-deployment',
+                        'contact-center/runbooks',
+                        'contact-center/production-support',
+                    ],
+                },
             ],
         },
         {
             type: 'category',
             label: 'Standard Modules',
+            className: icon('boxes'),
+            link: { type: 'doc', id: 'modules/index' },
             items: [
-                'modules/index',
                 'modules/content-access-control',
                 'modules/content-fields',
+                'modules/content-transfer',
+                'modules/dnc-registry',
                 'modules/phone-number-verifications',
                 'modules/phone-number-verifications-abstractapi',
                 'modules/phone-number-verifications-veriphone',
@@ -124,22 +325,37 @@ const sidebars = {
                 'modules/receipts',
                 'modules/recipes',
                 'modules/reports',
-                'modules/workflow-activity-schemas',
                 'modules/resources',
                 'modules/roles',
                 'modules/signalr',
                 'modules/taxation',
                 'modules/addresses',
+                'modules/websockets',
                 'modules/time-zones',
                 'modules/users',
                 'modules/wizard',
+                {
+                    type: 'category',
+                    label: 'Recipe Schemas',
+                    items: [
+                        'modules/workflow-activity-schemas',
+                        'modules/rule-condition-schemas',
+                        'modules/sitemap-source-schemas',
+                        'modules/deployment-step-schemas',
+                        'modules/admin-menu-node-schemas',
+                        'modules/query-source-schemas',
+                        'modules/url-rewrite-rule-schemas',
+                        'modules/placement-node-filter-schemas',
+                    ],
+                },
             ],
         },
         {
             type: 'category',
             label: 'Samples',
+            className: icon('code-xml'),
+            link: { type: 'doc', id: 'samples/index' },
             items: [
-                'samples/index',
                 'samples/mcp-client',
                 'samples/a2a-client',
             ],
@@ -147,8 +363,9 @@ const sidebars = {
         {
             type: 'category',
             label: 'Changelog',
+            className: icon('history'),
+            link: { type: 'doc', id: 'changelog/index' },
             items: [
-                'changelog/index',
                 'changelog/3.0.0',
                 'changelog/2.0.0',
             ],

@@ -75,6 +75,45 @@
     </div>
 </fieldset>
 
+<fieldset class="ocat-wrapper">
+    <legend class="ocat-label">@T["Messages"]</legend>
+    <div class="ocat-end">
+        <div class="hint mb-2">@T["Define the messages returned when this prompt is requested. Use {{argName}} to reference an argument."]</div>
+
+        <div id="messages-container">
+            @for (int i = 0; i < Model.Messages.Count; i++)
+            {
+                <div class="card mb-2 message-item" data-index="@i">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <label class="form-label">@T["Role"]</label>
+                                <select name="@Html.NameFor(m => m.Messages[i].Role)" class="form-select">
+                                    <option value="user" selected="@(string.Equals(Model.Messages[i].Role, "assistant", StringComparison.OrdinalIgnoreCase) ? null : "selected")">@T["User"]</option>
+                                    <option value="assistant" selected="@(string.Equals(Model.Messages[i].Role, "assistant", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">@T["Assistant"]</option>
+                                </select>
+                            </div>
+                            <div class="col-md-8">
+                                <label class="form-label">@T["Content"]</label>
+                                <textarea name="@Html.NameFor(m => m.Messages[i].Content)" class="form-control" rows="3" placeholder="@T["Message content"]">@Model.Messages[i].Content</textarea>
+                            </div>
+                            <div class="col-md-1 d-flex align-items-end">
+                                <button type="button" class="btn btn-danger btn-sm remove-message" title="@T["Remove message"]">
+                                    <i class="fa-solid fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <button type="button" class="btn btn-secondary btn-sm" id="add-message">
+            <i class="fa-solid fa-plus"></i> @T["Add Message"]
+        </button>
+    </div>
+</fieldset>
+
 <script asp-name="technical-name-generator"></script>
 <script at="Foot" depends-on="technical-name-generator">
     window.initAutoGenerateTechnicalName('@Html.IdFor(x => x.Title)', '@Html.IdFor(x => x.Name)');
@@ -134,6 +173,57 @@
         argumentsContainer.addEventListener('click', function (e) {
             if (e.target.classList.contains('remove-argument') || e.target.closest('.remove-argument')) {
                 const item = e.target.closest('.argument-item');
+                if (item) {
+                    item.remove();
+                }
+            }
+        });
+
+        const messagesContainer = document.getElementById('messages-container');
+        const addMessageBtn = document.getElementById('add-message');
+
+        function getNextMessageIndex() {
+            const items = messagesContainer.querySelectorAll('.message-item');
+            return items.length;
+        }
+
+        function createMessageItem(index) {
+            const prefix = '@Html.NameFor(m => m.Messages)';
+            const html = `
+            <div class="card mb-2 message-item" data-index="${index}">
+            <div class="card-body">
+            <div class="row">
+            <div class="col-md-3">
+            <label class="form-label">@T["Role"]</label>
+            <select name="${prefix}[${index}].Role" class="form-select">
+            <option value="user" selected>@T["User"]</option>
+            <option value="assistant">@T["Assistant"]</option>
+            </select>
+            </div>
+            <div class="col-md-8">
+            <label class="form-label">@T["Content"]</label>
+            <textarea name="${prefix}[${index}].Content" class="form-control" rows="3" placeholder="@T["Message content"]"></textarea>
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+            <button type="button" class="btn btn-danger btn-sm remove-message" title="@T["Remove message"]">
+            <i class="fa-solid fa-times"></i>
+            </button>
+            </div>
+            </div>
+            </div>
+            </div>
+            `;
+            return html;
+        }
+
+        addMessageBtn.addEventListener('click', function () {
+            const index = getNextMessageIndex();
+            messagesContainer.insertAdjacentHTML('beforeend', createMessageItem(index));
+        });
+
+        messagesContainer.addEventListener('click', function (e) {
+            if (e.target.classList.contains('remove-message') || e.target.closest('.remove-message')) {
+                const item = e.target.closest('.message-item');
                 if (item) {
                     item.remove();
                 }

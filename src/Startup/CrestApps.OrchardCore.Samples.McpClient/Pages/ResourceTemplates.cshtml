@@ -5,7 +5,13 @@
     IReadOnlyList<string> GetParameters(string uri) => CrestApps.OrchardCore.Samples.McpClient.Pages.ResourceTemplatesModel.ExtractParameters(uri);
 }
 
-<h1>Resource Templates</h1>
+<h1>
+    Resource Templates
+    @if (string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    {
+        <span class="badge bg-secondary align-middle fs-6">@(Model.Templates?.Count ?? 0)</span>
+    }
+</h1>
 
 @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
 {

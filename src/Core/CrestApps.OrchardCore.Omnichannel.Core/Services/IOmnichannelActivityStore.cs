@@ -51,7 +51,7 @@ public interface IOmnichannelActivityStore : ICatalog<OmnichannelActivity>
     /// </summary>
     /// <param name="filter">The bulk manage filter criteria.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    Task<IReadOnlyList<OmnichannelActivity>> ListBulkManageableAsync(BulkManageActivityFilter filter, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<OmnichannelActivity>> GetBulkManageableAsync(BulkManageActivityFilter filter, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Lists the activities matching the supplied identifiers using a single query. Identifiers that do not
@@ -61,7 +61,7 @@ public interface IOmnichannelActivityStore : ICatalog<OmnichannelActivity>
     /// <param name="itemIds">The activity identifiers to resolve.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The activities that resolved.</returns>
-    Task<IReadOnlyList<OmnichannelActivity>> ListByIdsAsync(IReadOnlyCollection<string> itemIds, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<OmnichannelActivity>> GetByIdsAsync(IReadOnlyCollection<string> itemIds, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets an activity by channel, endpoint, destination, and interaction type.
@@ -72,4 +72,15 @@ public interface IOmnichannelActivityStore : ICatalog<OmnichannelActivity>
     /// <param name="interactionType">The interaction type to match.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     Task<OmnichannelActivity> GetAsync(string channel, string channelEndpoint, string preferredDestination, ActivityInteractionType interactionType, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the latest activity on any of an address's identifiers: its own, and those of the records merged into it,
+    /// which activities created before the merge still carry.
+    /// </summary>
+    /// <param name="channel">The channel name.</param>
+    /// <param name="channelEndpointIds">The address's identifiers.</param>
+    /// <param name="preferredDestination">The preferred destination to match.</param>
+    /// <param name="interactionType">The interaction type to match.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<OmnichannelActivity> GetAsync(string channel, IReadOnlyCollection<string> channelEndpointIds, string preferredDestination, ActivityInteractionType interactionType, CancellationToken cancellationToken = default);
 }

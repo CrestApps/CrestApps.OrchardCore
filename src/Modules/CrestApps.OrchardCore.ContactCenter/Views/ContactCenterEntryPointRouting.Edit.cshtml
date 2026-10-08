@@ -1,0 +1,93 @@
+@using CrestApps.OrchardCore.Omnichannel.Core
+@model EntryPointViewModel
+
+@{
+    // Calls are answered by an AI voice agent; texts and any other channel by an AI agent that writes back.
+    var answersCalls = string.Equals(Model.Channel, OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase);
+}
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<div class="ocat-wrapper" asp-validation-class-for="TargetType">
+    <label asp-for="TargetType" class="ocat-label">@T["Route to"]</label>
+    <div class="ocat-end">
+        <select asp-for="TargetType" class="form-select" data-entry-point-target-type>
+            <option value="@EntryPointTargetType.Queue">@T["Queue"]</option>
+            <option value="@EntryPointTargetType.Agent">@T["Specific agent"]</option>
+            @if (Model.AIAgentAvailable)
+            {
+                <option value="@EntryPointTargetType.AIAgent">@(answersCalls ? T["AI voice agent"] : T["AI agent"])</option>
+            }
+        </select>
+        <span asp-validation-for="TargetType" class="text-danger"></span>
+        <span class="hint">@(!Model.AIAgentAvailable
+            ? T["Route to a queue, or directly to a specific agent (a personal line). A specific agent gets it directly, with no queue fallback."]
+            : answersCalls
+                ? T["Route to a queue, directly to a specific agent (a personal line), or to an AI voice agent that answers the call and can hand the caller to a person. A specific agent gets it directly, with no queue fallback."]
+                : T["Route to a queue, directly to a specific agent (a personal line), or to an AI agent that answers the texts itself and can hand the conversation to a person. A specific agent gets it directly, with no queue fallback."])</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="TargetAgentId" data-entry-point-agent-field>
+    <label asp-for="TargetAgentId" class="ocat-label">@T["Target agent"]</label>
+    <div class="ocat-end">
+        <select asp-for="TargetAgentId" asp-items="Model.TargetAgentOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select an agent"]" title="@T["No agent"]">
+            <option value="">@T["No agent"]</option>
+        </select>
+        <span asp-validation-for="TargetAgentId" class="text-danger"></span>
+        <span class="hint">@T["Used when Route to is set to Specific agent."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="TargetQueueId" data-entry-point-queue-field>
+    <label asp-for="TargetQueueId" class="ocat-label">@T["Target queue"]</label>
+    <div class="ocat-end">
+        <select asp-for="TargetQueueId" asp-items="Model.TargetQueueOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a queue"]" title="@T["No queue"]">
+            <option value="">@T["No queue"]</option>
+        </select>
+        <span asp-validation-for="TargetQueueId" class="text-danger"></span>
+        <span class="hint">@T["The queue it routes to."]</span>
+    </div>
+</div>
+
+<script at="Foot" depends-on="bootstrap-select">
+    (function () {
+        var typeSelect = document.querySelector('[data-entry-point-target-type]');
+        // The agent's ring settings come from the call entry point's own shape, so they are looked up across the form.
+        var agentFields = document.querySelectorAll('[data-entry-point-agent-field]');
+        var queueFields = document.querySelectorAll('[data-entry-point-queue-field]');
+        // The AI voice agent's card comes from the provider's AI voice feature, so it is looked up across the form too.
+        var aiFields = document.querySelectorAll('[data-entry-point-ai-field]');
+        var voicemailToggle = document.querySelector('[data-entry-point-voicemail-toggle]');
+        var ringWindowField = document.querySelector('[data-entry-point-ringwindow-field]');
+
+        if (!typeSelect || agentFields.length === 0 || queueFields.length === 0) {
+            return;
+        }
+
+        // An entry point routes to a specific agent or a queue, never both. Show the agent-only fields only for
+        // a specific-agent target and the queue field only for a queue target. The ring window is shown only
+        // when routing to an agent AND voicemail is enabled.
+        function apply() {
+            var isAgent = typeSelect.value === '@EntryPointTargetType.Agent';
+            var isAI = typeSelect.value === '@EntryPointTargetType.AIAgent';
+            agentFields.forEach(function (field) { field.style.display = isAgent ? '' : 'none'; });
+            queueFields.forEach(function (field) { field.style.display = isAgent || isAI ? 'none' : ''; });
+            aiFields.forEach(function (field) { field.style.display = isAI ? '' : 'none'; });
+
+            if (ringWindowField) {
+                var voicemailOn = !voicemailToggle || voicemailToggle.checked;
+                ringWindowField.style.display = (isAgent && voicemailOn) ? '' : 'none';
+            }
+        }
+
+        typeSelect.addEventListener('change', apply);
+
+        if (voicemailToggle) {
+            voicemailToggle.addEventListener('change', apply);
+        }
+
+        apply();
+    })();
+</script>

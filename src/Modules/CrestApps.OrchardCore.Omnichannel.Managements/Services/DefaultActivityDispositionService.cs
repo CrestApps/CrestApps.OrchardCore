@@ -93,6 +93,7 @@ public sealed class DefaultActivityDispositionService : IActivityDispositionServ
         activity.CompletedById = request.ActorId;
         activity.CompletedByUsername = request.ActorDisplayName;
         activity.CompletedUtc = _clock.UtcNow;
+        ActivityDispositionActors.Stamp(activity, ActivityDispositionActors.FromRequest(request));
 
         await _activityManager.UpdateAsync(activity, cancellationToken: cancellationToken);
 
@@ -117,6 +118,7 @@ public sealed class DefaultActivityDispositionService : IActivityDispositionServ
                 Disposition = disposition,
                 ActionScheduleDates = request.ActionScheduleDates,
                 ActionPreparationNotes = request.ActionPreparationNotes,
+                NotInServiceSource = request.NotInServiceSource,
             };
 
             await _subjectActionExecutor.ExecuteAsync(executionContext, cancellationToken);

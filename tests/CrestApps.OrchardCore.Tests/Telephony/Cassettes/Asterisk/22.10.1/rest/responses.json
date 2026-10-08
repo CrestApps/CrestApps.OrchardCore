@@ -1,0 +1,236 @@
+{
+  "description": "Recorded Asterisk REST Interface responses, keyed by the operation template the vendored declarations publish. Every JSON body is expressible by the declared response model for the pinned release, so replaying them cannot prove the client against a payload Asterisk could never send.",
+  "responses": [
+    {
+      "httpMethod": "POST",
+      "pathTemplate": "channels",
+      "statusCode": 200,
+      "model": "Channel",
+      "body": {
+        "id": "1699887600.42",
+        "name": "PJSIP/agent-0000002a",
+        "state": "Up",
+        "protocol_id": "a1b2c3d4@203.0.113.10",
+        "caller": {
+          "name": "Jordan Reyes",
+          "number": "+15550001"
+        },
+        "connected": {
+          "name": "",
+          "number": "5551000"
+        },
+        "accountcode": "",
+        "dialplan": {
+          "context": "crestapps-inbound",
+          "exten": "5551000",
+          "priority": 1,
+          "app_name": "Stasis",
+          "app_data": "crestapps-telephony"
+        },
+        "creationtime": "2023-11-13T14:20:00.123+0000",
+        "language": "en"
+      }
+    },
+    {
+      "httpMethod": "POST",
+      "pathTemplate": "bridges/{bridgeId}",
+      "statusCode": 200,
+      "model": "Bridge",
+      "body": {
+        "id": "conf-01HTQ0",
+        "technology": "simple_bridge",
+        "bridge_type": "mixing",
+        "bridge_class": "stasis",
+        "creator": "Stasis",
+        "name": "",
+        "channels": [
+          "1699887600.42",
+          "1699887600.43"
+        ],
+        "creationtime": "2023-11-13T14:20:00.900+0000",
+        "video_mode": "talker"
+      }
+    },
+    {
+      "httpMethod": "GET",
+      "pathTemplate": "bridges/{bridgeId}",
+      "statusCode": 200,
+      "model": "Bridge",
+      "body": {
+        "id": "conf-01HTQ0",
+        "technology": "simple_bridge",
+        "bridge_type": "mixing",
+        "bridge_class": "stasis",
+        "creator": "Stasis",
+        "name": "",
+        "channels": [
+          "1699887600.42",
+          "1699887600.43"
+        ],
+        "creationtime": "2023-11-13T14:20:00.900+0000",
+        "video_mode": "talker"
+      }
+    },
+    {
+      "httpMethod": "DELETE",
+      "pathTemplate": "bridges/{bridgeId}",
+      "statusCode": 204
+    },
+    {
+      "httpMethod": "POST",
+      "pathTemplate": "bridges/{bridgeId}/addChannel",
+      "statusCode": 204
+    },
+    {
+      "httpMethod": "POST",
+      "pathTemplate": "bridges/{bridgeId}/removeChannel",
+      "statusCode": 204
+    },
+    {
+      "httpMethod": "POST",
+      "pathTemplate": "bridges/{bridgeId}/record",
+      "statusCode": 200,
+      "model": "LiveRecording",
+      "body": {
+        "name": "rec-01HTQ0",
+        "format": "wav",
+        "state": "recording",
+        "target_uri": "bridge:conf-01HTQ0",
+        "duration": 42,
+        "talking_duration": 30,
+        "silence_duration": 12
+      }
+    },
+    {
+      "httpMethod": "POST",
+      "pathTemplate": "channels/{channelId}/answer",
+      "statusCode": 204
+    },
+    {
+      "httpMethod": "DELETE",
+      "pathTemplate": "channels/{channelId}",
+      "statusCode": 204
+    },
+    {
+      "httpMethod": "GET",
+      "pathTemplate": "channels/{channelId}",
+      "statusCode": 200,
+      "model": "Channel",
+      "body": {
+        "id": "1699887600.42",
+        "name": "PJSIP/agent-0000002a",
+        "state": "Up",
+        "protocol_id": "a1b2c3d4@203.0.113.10",
+        "caller": {
+          "name": "Jordan Reyes",
+          "number": "+15550001"
+        },
+        "connected": {
+          "name": "",
+          "number": "5551000"
+        },
+        "accountcode": "",
+        "dialplan": {
+          "context": "crestapps-inbound",
+          "exten": "5551000",
+          "priority": 1,
+          "app_name": "Stasis",
+          "app_data": "crestapps-telephony"
+        },
+        "creationtime": "2023-11-13T14:20:00.123+0000",
+        "language": "en"
+      }
+    },
+    {
+      "httpMethod": "POST",
+      "pathTemplate": "channels/{channelId}/hold",
+      "statusCode": 204
+    },
+    {
+      "httpMethod": "DELETE",
+      "pathTemplate": "channels/{channelId}/hold",
+      "statusCode": 204
+    },
+    {
+      "httpMethod": "POST",
+      "pathTemplate": "channels/{channelId}/snoop",
+      "statusCode": 200,
+      "model": "Channel",
+      "body": {
+        "id": "snoop-01HTQ0",
+        "name": "Snoop/PJSIP/agent-0000002a-00000001",
+        "state": "Up",
+        "protocol_id": "a1b2c3d4@203.0.113.10",
+        "caller": {
+          "name": "Jordan Reyes",
+          "number": "+15550001"
+        },
+        "connected": {
+          "name": "",
+          "number": "5551000"
+        },
+        "accountcode": "",
+        "dialplan": {
+          "context": "crestapps-inbound",
+          "exten": "5551000",
+          "priority": 1,
+          "app_name": "Stasis",
+          "app_data": "crestapps-telephony"
+        },
+        "creationtime": "2023-11-13T14:20:00.123+0000",
+        "language": "en"
+      }
+    },
+    {
+      "httpMethod": "GET",
+      "pathTemplate": "recordings/live/{recordingName}",
+      "statusCode": 200,
+      "model": "LiveRecording",
+      "body": {
+        "name": "rec-01HTQ0",
+        "format": "wav",
+        "state": "recording",
+        "target_uri": "bridge:conf-01HTQ0",
+        "duration": 42,
+        "talking_duration": 30,
+        "silence_duration": 12
+      }
+    },
+    {
+      "httpMethod": "POST",
+      "pathTemplate": "recordings/live/{recordingName}/pause",
+      "statusCode": 204
+    },
+    {
+      "httpMethod": "DELETE",
+      "pathTemplate": "recordings/live/{recordingName}/pause",
+      "statusCode": 204
+    },
+    {
+      "httpMethod": "POST",
+      "pathTemplate": "recordings/live/{recordingName}/stop",
+      "statusCode": 204
+    },
+    {
+      "httpMethod": "GET",
+      "pathTemplate": "recordings/stored/{recordingName}",
+      "statusCode": 200,
+      "model": "StoredRecording",
+      "body": {
+        "name": "rec-01HTQ0",
+        "format": "wav"
+      }
+    },
+    {
+      "httpMethod": "GET",
+      "pathTemplate": "recordings/stored/{recordingName}/file",
+      "statusCode": 200,
+      "textBody": "RIFF-WAVE-CASSETTE"
+    },
+    {
+      "httpMethod": "DELETE",
+      "pathTemplate": "recordings/stored/{recordingName}",
+      "statusCode": 204
+    }
+  ]
+}

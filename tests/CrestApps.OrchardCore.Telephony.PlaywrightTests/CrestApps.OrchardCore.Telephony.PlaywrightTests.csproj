@@ -20,11 +20,8 @@
 
   <ItemGroup>
     <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Telephony.Abstractions/CrestApps.OrchardCore.Telephony.Abstractions.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <!-- Serve the real soft phone client locally so the test is hermetic. -->
-    <Content Include="../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone.js" Link="assets/soft-phone.js" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The harness reads the module's resource manifest to load exactly the scripts the real widget loads. -->
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Telephony/CrestApps.OrchardCore.Telephony.csproj" />
   </ItemGroup>
 
   <ItemGroup>

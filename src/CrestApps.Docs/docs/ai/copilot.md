@@ -3,6 +3,9 @@ sidebar_label: Copilot Integration
 sidebar_position: 5
 title: Copilot Integration
 description: GitHub Copilot SDK-based orchestrator for AI chat sessions in Orchard Core.
+user_manual:
+  - user-manual/ai/profiles
+  - user-manual/ai/chat-interactions
 ---
 
 | | |
@@ -115,7 +118,7 @@ The **Wire API Format** controls the HTTP format used by the underlying SDK:
 
 ## Usage
 
-Usage differs slightly depending on the authentication type selected in **Settings → Artificial Intelligence → Copilot**.
+Usage differs slightly depending on the authentication type selected in **Settings → Artificial Intelligence → Copilot**. The fields appear in the **General** card of the AI profile editor and on the **Settings** tab of chat interactions; see [AI profiles](../user-manual/ai/profiles.md#general) and [Chat interactions](../user-manual/ai/chat-interactions.md#settings-tab) in the User Manual.
 
 In all modes, **Allow All** is checked by default (passes `--allow-all` to the Copilot CLI) and settings are saved automatically via SignalR using the extensible `IChatInteractionSettingsHandler` pipeline.
 
@@ -171,7 +174,7 @@ The module uses `IChatInteractionSettingsHandler` to decouple Copilot-specific s
 
 ### Orchestration Context Flow
 
-1. `CopilotOrchestrationContextHandler` (implements `IOrchestrationContextHandler`) reads `CopilotSessionMetadata` from the resource entity and sets it on `OrchestrationContext.Properties`
+1. `CopilotOrchestrationContextHandler` (implements `IOrchestrationContextBuilderHandler`) reads `CopilotSessionMetadata` from the resource entity and sets it on `OrchestrationContext.Properties`
 2. `CopilotOrchestrator` reads the metadata from `Properties` to configure the session model and the `--allow-all` flag
 3. Authentication uses the SDK's `GithubToken` property (not environment variables) and `CliArgs` for the allow-all flag
 

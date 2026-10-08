@@ -32,6 +32,20 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Name = "Omnichannel Channel Endpoints",
+    Id = OmnichannelConstants.Features.ChannelEndpoints,
+    Category = "Contact Center",
+    Description = "Adds only the channel-endpoint (number/address) administration screen and services, so a feature that needs to reuse channel endpoints can depend on this without pulling in the full Omnichannel management screens.",
+    EnabledByDependencyOnly = true,
+    Dependencies =
+    [
+        OmnichannelConstants.Features.Activities,
+        "CrestApps.OrchardCore.Resources",
+        "OrchardCore.Resources",
+    ]
+)]
+
+[assembly: Feature(
     Name = "Omnichannel Management",
     Id = OmnichannelConstants.Features.Managements,
     Category = "Contact Center",
@@ -39,7 +53,23 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         OmnichannelConstants.Features.Activities,
+        OmnichannelConstants.Features.ChannelEndpoints,
         "CrestApps.OrchardCore.Resources",
+        "OrchardCore.Resources",
         "OrchardCore.ContentTypes",
+    ]
+)]
+
+[assembly: Feature(
+    Name = "Omnichannel CRM",
+    Id = OmnichannelConstants.Features.Crm,
+    Category = "Contact Center",
+    Description = "Adds leads, accounts and opportunities to the omnichannel CRM: lead records that are called and texted like contacts but kept apart until they are converted, accounts that hold contacts and opportunities, and opportunity stages for the pipeline.",
+    Dependencies =
+    [
+        OmnichannelConstants.Features.Managements,
+        "OrchardCore.ContentFields",
+        "OrchardCore.Lists",
+        "OrchardCore.Title",
     ]
 )]

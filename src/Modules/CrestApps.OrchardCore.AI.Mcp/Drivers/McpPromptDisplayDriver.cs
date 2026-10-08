@@ -51,6 +51,12 @@ internal sealed class McpPromptDisplayDriver : DisplayDriver<McpPrompt>
                     Required = a.Required ?? false,
                 }).ToList() ?? [];
             }
+
+            model.Messages = entry.Messages?.Select(m => new McpPromptMessageViewModel
+            {
+                Role = m.Role,
+                Content = m.Content,
+            }).ToList() ?? [];
         }).Location("Content:1");
     }
 
@@ -69,6 +75,22 @@ internal sealed class McpPromptDisplayDriver : DisplayDriver<McpPrompt>
         var validArguments = model.Arguments?
             .Where(a => !string.IsNullOrWhiteSpace(a.Name))
             .ToList() ?? [];
+
+        // Validate messages if provided. Keep rows that have content and default the role to
+        // "user" when it is empty; reject any explicitly supplied role other than user/assistant.
+        var validMessages = model.Messages?
+            .Where(m => !string.IsNullOrWhiteSpace(m.Content))
+            .ToList() ?? [];
+
+        for (var i = 0; i < validMessages.Count; i++)
+        {
+            var role = validMessages[i].Role;
+
+            if (!string.IsNullOrWhiteSpace(role) && !IsValidRole(role))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, $"{nameof(model.Messages)}[{i}].{nameof(McpPromptMessageViewModel.Role)}", S["Message {0} must have a role of 'user' or 'assistant'.", i + 1]);
+            }
+        }
 
         var name = model.Name ?? string.Empty;
 
@@ -90,6 +112,16 @@ internal sealed class McpPromptDisplayDriver : DisplayDriver<McpPrompt>
             Required = a.Required,
         }).ToList();
 
+        entry.Messages = validMessages.Select(m => new McpPromptMessage
+        {
+            Role = string.IsNullOrWhiteSpace(m.Role) ? "user" : m.Role.Trim().ToLowerInvariant(),
+            Content = m.Content,
+        }).ToList();
+
         return Edit(entry, context);
     }
+
+    private static bool IsValidRole(string role)
+        => string.Equals(role, "user", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(role, "assistant", StringComparison.OrdinalIgnoreCase);
 }

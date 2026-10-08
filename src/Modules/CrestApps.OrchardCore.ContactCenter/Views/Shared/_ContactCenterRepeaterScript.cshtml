@@ -1,0 +1,78 @@
+@*
+    Adds and removes rows of a repeatable form section without a client framework. A container carries
+    data-repeater and data-repeater-prefix (the model-binding prefix of the list); its rows live under
+    data-repeater-rows, a <template data-repeater-template> holds one blank row with __KEY__ where the
+    collection index goes, and buttons marked data-repeater-add / data-repeater-remove drive it. Rows bind
+    through the .Index hidden field convention, so keys need not be sequential.
+
+    A row drawn as a bag-style card can name itself after one of its selects: the select carries
+    data-repeater-title-source and the header element carries data-repeater-title, whose text follows the selected
+    option (or its data-repeater-title-empty text while nothing is selected).
+*@
+<script at="Foot">
+    (function () {
+        function initRepeater(container) {
+            // Several sections of one editor may each include this script: a repeater is bound once.
+            if (container.hasAttribute('data-repeater-bound')) {
+                return;
+            }
+
+            container.setAttribute('data-repeater-bound', '');
+
+            var rows = container.querySelector('[data-repeater-rows]');
+            var template = container.querySelector('template[data-repeater-template]');
+            var addButton = container.querySelector('[data-repeater-add]');
+            var counter = 0;
+
+            if (addButton && template && rows) {
+                addButton.addEventListener('click', function () {
+                    var key = 'n' + Date.now().toString(36) + (counter++).toString(36);
+                    var html = template.innerHTML.split('__KEY__').join(key);
+                    var holder = document.createElement(rows.tagName === 'TBODY' ? 'tbody' : 'div');
+                    holder.innerHTML = html;
+
+                    while (holder.firstElementChild) {
+                        rows.appendChild(holder.firstElementChild);
+                    }
+                });
+            }
+
+            container.addEventListener('click', function (event) {
+                var removeButton = event.target.closest('[data-repeater-remove]');
+
+                if (!removeButton || !container.contains(removeButton)) {
+                    return;
+                }
+
+                var row = removeButton.closest('[data-repeater-row]');
+
+                if (row) {
+                    row.remove();
+                }
+            });
+
+            container.addEventListener('change', function (event) {
+                var source = event.target.closest('[data-repeater-title-source]');
+
+                if (!source || !container.contains(source)) {
+                    return;
+                }
+
+                var row = source.closest('[data-repeater-row]');
+                var title = row ? row.querySelector('[data-repeater-title]') : null;
+
+                if (!title) {
+                    return;
+                }
+
+                var option = source.selectedIndex >= 0 ? source.options[source.selectedIndex] : null;
+
+                title.textContent = option && option.value
+                    ? option.text
+                    : (title.getAttribute('data-repeater-title-empty') || '');
+            });
+        }
+
+        document.querySelectorAll('[data-repeater]').forEach(initRepeater);
+    })();
+</script>

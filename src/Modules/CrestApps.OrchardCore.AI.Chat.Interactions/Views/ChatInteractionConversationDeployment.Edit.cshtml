@@ -1,0 +1,23 @@
+@using CrestApps.OrchardCore.AI.Chat.Interactions.Core
+@using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
+
+@model EditChatInteractionConnectionViewModel
+
+@* The model that carries a spoken conversation, separate from the text model above it. An interaction has
+   no chat mode of its own -- the site holds it -- so this is only shown while chat interactions are set to
+   conversation mode, and naming a deployment here is how the interaction asks to speak.
+
+   Rendered by the settings panel but driven from the chat shape, which finds it by the shared element id. *@
+<div class="mb-3@(Model.ConversationModeEnabled ? string.Empty : " d-none")" id="@ChatInteractionsConstants.ElementIds.ConversationDeploymentGroup">
+    <label asp-for="ConversationDeploymentName" class="form-label" for="@ChatInteractionsConstants.ElementIds.ConversationDeploymentSelect">
+        @T["Conversation deployment"]
+        <span class="text-muted" data-bs-toggle="tooltip" title="@T["Select the model that carries the voice conversation. Leave it empty to inherit the site's default realtime deployment."]">
+            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+        </span>
+    </label>
+    <select asp-for="ConversationDeploymentName" asp-items="Model.ConversationDeployments" class="form-select setting-input" id="@ChatInteractionsConstants.ElementIds.ConversationDeploymentSelect" data-setting="conversationDeploymentName">
+        <option value="">@T["Use the site's default realtime deployment"]</option>
+    </select>
+    <span asp-validation-for="ConversationDeploymentName" class="text-danger"></span>
+    <div class="form-text">@T["The model that speaks. Leave blank to inherit the site default; with none available, conversation mode falls back to speech-to-text plus text-to-speech."]</div>
+</div>

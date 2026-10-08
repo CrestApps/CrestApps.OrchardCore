@@ -1,9 +1,20 @@
 @using CrestApps.Core.Models
+@using CrestApps.OrchardCore.AI.Core
 @model EditCatalogEntryViewModel
 
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["New '{0}' Profile", Model.DisplayName])</h1>
+    <breadcrumb name="AIProfilesCreate" title="@T["New Profile"]">
+        <breadcrumb-item id="AIProfiles" action="Index" controller="Profiles" area="CrestApps.OrchardCore.AI" permission="@AIPermissions.ManageAIProfiles.Name">@T["AI Profiles"]</breadcrumb-item>
+    </breadcrumb>
 </zone>
+
+@if (ViewData["IsClone"] is true)
+{
+    <div class="alert alert-warning" role="alert">
+        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+        @T["This is an unsaved draft cloned from an existing profile. Review the technical name and title, then save to create the new profile."]
+    </div>
+}
 
 <form method="post" enctype="multipart/form-data" class="no-multisubmit">
     @Html.ValidationSummary()

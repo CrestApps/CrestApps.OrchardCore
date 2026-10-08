@@ -3,6 +3,8 @@ sidebar_label: Reports
 sidebar_position: 7
 title: Reports
 description: A reusable reporting framework for OrchardCore with a shared admin Reports area, extensible filters, a uniform report renderer, and pluggable exports.
+user_manual:
+  - user-manual/reports
 ---
 
 | | |
@@ -22,7 +24,7 @@ The optional **Reports (OpenXml)** add-on extends the Reports area with Excel wo
 
 The implementation is split into three layers:
 
-- **`CrestApps.OrchardCore.Reports.Abstractions`** defines the shared report contracts and document models, including `IReport`, `IReportExportFormat`, `IReportManager`, and `IReportExportManager`.
+- **`CrestApps.OrchardCore.Reports.Abstractions`** defines the shared report contracts and document models, including `IReport`, `IReportProvider`, `IReportExportFormat`, `IReportManager`, and `IReportExportManager`.
 - **`CrestApps.OrchardCore.Reports.Core`** contains the default non-Orchard-specific implementations such as the report/export registries and the built-in CSV export formatter.
 - **`CrestApps.OrchardCore.Reports`** contains Orchard-specific wiring such as the admin menu, controller, views, and the display-driver-based filter UI.
 
@@ -34,6 +36,8 @@ The implementation is split into three layers:
 - **`IReportExportFormat`** — an export format. CSV ships in the box; the optional **Reports (OpenXml)** add-on adds Excel (`.xlsx`); and any module can add more formats by registering another implementation.
 
 ## Reports area
+
+How people find a report, set its date range and filters, and export it is described in the User Manual: [Reports](../user-manual/reports.md). The Contact Center reports are listed in the [Report Catalog](../contact-center/report-catalog.md).
 
 Enabling the feature adds a top-level **Reports** item to the admin menu. Reports are alphabetized within consistently ordered role-based groups: **Executive**, **Operations**, **Queue & Routing**, **Agent Performance**, **Workforce & Payroll**, **Billing & Usage**, **CRM & Campaigns**, **Compliance & Audit**, **Technical & IT**, and **General**. Each entry is gated by the report's own permission, so a user only sees the reports they are allowed to run. Selecting a report opens a page with the filter form, the rendered document, and export actions for the current filter. A single enabled exporter renders as a normal button, while multiple enabled exporters render as an **Export** dropdown that can download CSV and, when the add-on is enabled, Excel (`.xlsx`).
 
@@ -132,6 +136,16 @@ return new ReportDocument()
 ```
 
 When the **Reports (OpenXml)** add-on is enabled, the Excel (`.xlsx`) export applies the font color, background fill, and bold weight to the matching cells. Header rows, subtotal rows, and grand-total rows are exported bold automatically. CSV has no native styling, so it always exports values only.
+
+### Contributing a family of reports
+
+When a module exposes a whole family of reports driven by data — for example a catalog of report definitions that differ only by a metric selector — registering one `IReport` service per report clutters startup code and traps the metadata in imperative registrations where another feature cannot extend it. Implement `IReportProvider` instead and register it once:
+
+```csharp
+services.AddScoped<IReportProvider, MyReportProvider>();
+```
+
+`GetReports()` returns the reports the provider contributes; the `IReportManager` merges them with the individually registered `IReport` services and enforces unique names across both. Because the provider is resolved from the request scope, it can construct a fresh report instance per enumeration and project its catalog from options, so other features can add or remove entries through the options pipeline without editing the provider. The Contact Center module uses this pattern to project its enterprise interaction and agent workforce report catalogs.
 
 ## Enable via recipe
 

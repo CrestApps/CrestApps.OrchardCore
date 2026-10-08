@@ -42,6 +42,48 @@ public class EditAIProfileDocumentsViewModel
     public DocumentRetrievalMode? DocumentRetrievalMode { get; set; }
 
     /// <summary>
+    /// Gets or sets how much extracted text an uploaded document may hold and still be indexed, or
+    /// <see langword="null"/> to use the site's own limit.
+    /// </summary>
+    public int? MaxIndexableCharacters { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether figures in an uploaded document are described by a vision model, or
+    /// <see langword="null"/> to follow the site's own setting.
+    /// </summary>
+    /// <remarks>
+    /// The form posts <see cref="DescribeFiguresInUploadsSelection"/>, which is the only thing that sets
+    /// this. Binding both would let whichever the binder reached last decide the value.
+    /// </remarks>
+    [BindNever]
+    public bool? DescribeFiguresInUploads { get; set; }
+
+    /// <summary>
+    /// Gets or sets <see cref="DescribeFiguresInUploads"/> as the string a three-state select posts.
+    /// </summary>
+    /// <remarks>
+    /// Binding the nullable bool straight to a select with an empty option renders a null as "false" in
+    /// some binders, which preselects "Do not describe figures" on a brand new profile instead of the
+    /// site default. Going through a string keeps the three states distinct whatever the binder does.
+    /// </remarks>
+    public string DescribeFiguresInUploadsSelection
+    {
+        get => DescribeFiguresInUploads switch
+        {
+            true => "true",
+            false => "false",
+            _ => string.Empty,
+        };
+
+        set => DescribeFiguresInUploads = value switch
+        {
+            "true" => true,
+            "false" => false,
+            _ => null,
+        };
+    }
+
+    /// <summary>
     /// Gets or sets whether an index profile is configured for document embedding.
     /// </summary>
     public bool HasIndexProfile { get; set; }
@@ -55,6 +97,13 @@ public class EditAIProfileDocumentsViewModel
     /// Gets or sets whether the configured index profile has a valid embedding search service.
     /// </summary>
     public bool HasVectorSearchService { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the attached documents can be downloaded. Only profile documents are
+    /// downloadable; profile template documents use a reference type the download endpoint does not serve.
+    /// </summary>
+    [BindNever]
+    public bool AllowDownload { get; set; }
 
     /// <summary>
     /// Gets or sets the available document retrieval modes.

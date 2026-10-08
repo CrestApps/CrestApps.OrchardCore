@@ -1,23 +1,30 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <Sdk Name="Aspire.AppHost.Sdk" Version="13.2.2" />
+  <Sdk Name="Aspire.AppHost.Sdk" Version="13.6.0" />
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <IsAspireHost>true</IsAspireHost>
     <IsPackable>false</IsPackable>
+    <AspireUseCliBundle>false</AspireUseCliBundle>
+    <NoWarn>$(NoWarn);ASPIRE010</NoWarn>
     <UserSecretsId>0e4ae8bf-0fbf-43e7-b88a-91a70740841c</UserSecretsId>
+    <!-- This local AppHost intentionally runs without the Aspire CLI bundle, so silence the analyzer that
+         recommends enabling it (ASPIRE010). See https://aka.ms/aspire/diagnostics/aspire010. -->
+    <NoWarn>$(NoWarn);ASPIRE010</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.AppHost" />
     <PackageReference Include="Aspire.Hosting.Elasticsearch" />
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" />
     <PackageReference Include="Aspire.Hosting.Redis" />
     <PackageReference Include="CommunityToolkit.Aspire.Hosting.Ollama" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../CrestApps.OrchardCore.Cms.Web/CrestApps.OrchardCore.Cms.Web.csproj" />
+    <ProjectReference Include="../CrestApps.OrchardCore.Asterisk.Web/CrestApps.OrchardCore.Asterisk.Web.csproj" />
     <ProjectReference Include="../CrestApps.OrchardCore.Samples.A2AClient/CrestApps.OrchardCore.Samples.A2AClient.csproj" />
     <ProjectReference Include="../CrestApps.OrchardCore.Samples.McpClient/CrestApps.OrchardCore.Samples.McpClient.csproj" />
   </ItemGroup>

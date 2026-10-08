@@ -1,7 +1,9 @@
+using CrestApps.Core;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Settings;
 
@@ -32,13 +34,14 @@ public sealed class DefaultAIDeploymentManagerTests
             _storeMock.Object,
             [],
             _siteServiceMock.Object,
-            NullLogger<SiteSettingsAIDeploymentManager>.Instance);
+            NullLogger<SiteSettingsAIDeploymentManager>.Instance,
+            Options.Create(AIDeploymentSlotOptions.CreateDefault()));
     }
 
     [Fact]
     public async Task FindByIdAsync_WithValidId_ReturnsDeployment()
     {
-        var deployment = CreateDeployment("dep-1", "gpt-4", AIDeploymentPurpose.Chat);
+        var deployment = CreateDeployment("dep-1", "gpt-4", AIDeploymentFeatureNames.TextGeneration);
 
         _storeMock.Setup(m => m.FindByIdAsync("dep-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(deployment);
@@ -70,24 +73,23 @@ public sealed class DefaultAIDeploymentManagerTests
     }
 
     [Fact]
-
-    public async Task ResolveAsync_WithExplicitDeploymentId_ReturnsThatDeployment()
+    public async Task ResolveSlotAsync_WithExplicitDeploymentId_ReturnsThatDeployment()
     {
-        var deployment = CreateDeployment("dep-explicit", "openai-chat", AIDeploymentPurpose.Chat, modelName: "gpt-4");
+        var deployment = CreateDeployment("dep-explicit", "openai-chat", AIDeploymentFeatureNames.TextGeneration, modelName: "gpt-4");
 
         _storeMock.Setup(m => m.FindByIdAsync("dep-explicit", It.IsAny<CancellationToken>()))
             .ReturnsAsync(deployment);
 
         var connectionDeployments = new[]
         {
-            CreateDeployment("dep-conn", "gpt-4o", AIDeploymentPurpose.Chat, isDefault: true, connectionName: "conn-1"),
+            CreateDeployment("dep-conn", "gpt-4o", AIDeploymentFeatureNames.TextGeneration, isDefault: true, connectionName: "conn-1"),
         };
 
         _storeMock.Setup(m => m.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(connectionDeployments);
 
-        var result = await _manager.ResolveOrDefaultAsync(
-            AIDeploymentPurpose.Chat,
+        var result = await _manager.ResolveSlotAsync(
+            AIDeploymentSlotNames.Chat,
             deploymentName: "dep-explicit",
             clientName: "openai",
             cancellationToken: TestContext.Current.CancellationToken);
@@ -97,16 +99,16 @@ public sealed class DefaultAIDeploymentManagerTests
     }
 
     [Fact]
-    public async Task ResolveAsync_WithExplicitDeploymentName_ReturnsThatDeployment()
+    public async Task ResolveSlotAsync_WithExplicitDeploymentName_ReturnsThatDeployment()
     {
-        var deployment = CreateDeployment("dep-explicit", "azure-chat", AIDeploymentPurpose.Chat, modelName: "gpt-4.1");
+        var deployment = CreateDeployment("dep-explicit", "azure-chat", AIDeploymentFeatureNames.TextGeneration, modelName: "gpt-4.1");
 
         _storeMock.Setup(m => m.FindByIdAsync("azure-chat", It.IsAny<CancellationToken>()))
             .ReturnsAsync((AIDeployment)null);
         _storeMock.Setup(m => m.FindByNameAsync("azure-chat", It.IsAny<CancellationToken>()))
             .ReturnsAsync(deployment);
 
-        var result = await _manager.ResolveOrDefaultAsync(AIDeploymentPurpose.Chat, deploymentName: "azure-chat", cancellationToken: TestContext.Current.CancellationToken);
+        var result = await _manager.ResolveSlotAsync(AIDeploymentSlotNames.Chat, deploymentName: "azure-chat", cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
         Assert.Equal("dep-explicit", result.ItemId);
@@ -114,16 +116,16 @@ public sealed class DefaultAIDeploymentManagerTests
     }
 
     [Fact]
-    public async Task ResolveAsync_WithNoExplicit_FallsBackToGlobalDefaultBeforeScopedDeployments()
+    public async Task ResolveSlotAsync_WithNoExplicit_FallsBackToGlobalDefaultBeforeScopedDeployments()
     {
         _settings.DefaultUtilityDeploymentName = "global-utility";
 
         var deployments = new[]
         {
-            CreateDeployment("dep-scoped", "scoped-utility", AIDeploymentPurpose.Utility, isDefault: true, connectionName: "conn-1", modelName: "gpt-4o"),
+            CreateDeployment("dep-scoped", "scoped-utility", AIDeploymentFeatureNames.TextGeneration, isDefault: true, connectionName: "conn-1", modelName: "gpt-4o"),
         };
 
-        var globalDeployment = CreateDeployment("dep-global", "global-utility", AIDeploymentPurpose.Utility, modelName: "gpt-4.1-mini");
+        var globalDeployment = CreateDeployment("dep-global", "global-utility", AIDeploymentFeatureNames.TextGeneration, modelName: "gpt-4.1-mini");
 
         _storeMock.Setup(m => m.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(deployments);
@@ -132,8 +134,8 @@ public sealed class DefaultAIDeploymentManagerTests
         _storeMock.Setup(m => m.FindByNameAsync("global-utility", It.IsAny<CancellationToken>()))
             .ReturnsAsync(globalDeployment);
 
-        var result = await _manager.ResolveOrDefaultAsync(
-            AIDeploymentPurpose.Utility,
+        var result = await _manager.ResolveSlotAsync(
+            AIDeploymentSlotNames.Utility,
             clientName: "openai",
             cancellationToken: TestContext.Current.CancellationToken);
 
@@ -142,16 +144,16 @@ public sealed class DefaultAIDeploymentManagerTests
     }
 
     [Fact]
-    public async Task ResolveAsync_WithNoGlobalDefault_FallsBackToFirstMatchingScopedDeployment()
+    public async Task ResolveSlotAsync_WithNoGlobalDefault_FallsBackToFirstMatchingScopedDeployment()
     {
-        var scopedDeployment = CreateDeployment("dep-scoped", "gpt-4-turbo", AIDeploymentPurpose.Utility, connectionName: "conn-1");
-        var otherDeployment = CreateDeployment("dep-other", "gpt-4o", AIDeploymentPurpose.Utility, clientName: "azure", connectionName: "conn-2");
+        var scopedDeployment = CreateDeployment("dep-scoped", "gpt-4-turbo", AIDeploymentFeatureNames.TextGeneration, connectionName: "conn-1");
+        var otherDeployment = CreateDeployment("dep-other", "gpt-4o", AIDeploymentFeatureNames.TextGeneration, clientName: "azure", connectionName: "conn-2");
 
         _storeMock.Setup(m => m.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync([otherDeployment, scopedDeployment]);
 
-        var result = await _manager.ResolveOrDefaultAsync(
-            AIDeploymentPurpose.Utility,
+        var result = await _manager.ResolveSlotAsync(
+            AIDeploymentSlotNames.Utility,
             clientName: "openai",
             cancellationToken: TestContext.Current.CancellationToken);
 
@@ -160,11 +162,11 @@ public sealed class DefaultAIDeploymentManagerTests
     }
 
     [Fact]
-    public async Task ResolveAsync_WithMissingGlobalDefault_FallsBackToFirstMatchingDeployment()
+    public async Task ResolveSlotAsync_WithMissingGlobalDefault_FallsBackToFirstMatchingDeployment()
     {
         _settings.DefaultChatDeploymentName = "missing-chat";
 
-        var chatDeployment = CreateDeployment("dep-chat-first", "openai-chat", AIDeploymentPurpose.Chat, modelName: "gpt-4.1");
+        var chatDeployment = CreateDeployment("dep-chat-first", "openai-chat", AIDeploymentFeatureNames.TextGeneration, modelName: "gpt-4.1");
 
         _storeMock.Setup(m => m.FindByIdAsync("missing-chat", It.IsAny<CancellationToken>()))
             .ReturnsAsync((AIDeployment)null);
@@ -173,17 +175,32 @@ public sealed class DefaultAIDeploymentManagerTests
         _storeMock.Setup(m => m.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync([chatDeployment]);
 
-        var result = await _manager.ResolveOrDefaultAsync(AIDeploymentPurpose.Chat, cancellationToken: TestContext.Current.CancellationToken);
+        var result = await _manager.ResolveSlotAsync(AIDeploymentSlotNames.Chat, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
         Assert.Equal("dep-chat-first", result.ItemId);
     }
 
     [Fact]
+    public async Task ResolveSlotAsync_ChatSlot_SkipsRealtimeOnlyDeployment()
+    {
+        // A realtime deployment serves only the realtime API and answers a text completion with an HTTP 400,
+        // so the chat slot excludes it even though it is the only deployment configured.
+        var realtimeDeployment = CreateDeployment("dep-realtime", "gpt-realtime", AIDeploymentFeatureNames.Realtime);
+
+        _storeMock.Setup(m => m.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([realtimeDeployment]);
+
+        var result = await _manager.ResolveSlotAsync(AIDeploymentSlotNames.Chat, cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
     public async Task ResolveUtilityOrDefaultAsync_FallsBackToChat_WhenNoUtilityFound()
     {
-        // No utility deployment exists, but a chat deployment does.
-        var chatDeployment = CreateDeployment("dep-chat", "gpt-4o", AIDeploymentPurpose.Chat, isDefault: true, connectionName: "conn-1");
+        // No utility deployment is configured, but a chat deployment is.
+        var chatDeployment = CreateDeployment("dep-chat", "gpt-4o", AIDeploymentFeatureNames.TextGeneration, isDefault: true, connectionName: "conn-1");
 
         _storeMock.Setup(m => m.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { chatDeployment });
@@ -195,81 +212,101 @@ public sealed class DefaultAIDeploymentManagerTests
 
         Assert.NotNull(result);
         Assert.Equal("dep-chat", result.ItemId);
-        Assert.Equal(AIDeploymentPurpose.Chat, result.Purpose);
     }
 
     [Fact]
-    public async Task ResolveOrDefaultAsync_UtilityWithoutFallbacks_ReturnsNull()
+    public async Task ResolveSlotAsync_UtilityWithoutFallbacks_ReturnsNull()
     {
         _storeMock.Setup(m => m.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
-        var result = await _manager.ResolveOrDefaultAsync(AIDeploymentPurpose.Utility, cancellationToken: TestContext.Current.CancellationToken);
+        var result = await _manager.ResolveSlotAsync(AIDeploymentSlotNames.Utility, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Null(result);
     }
 
     [Fact]
-    public async Task ResolveAsync_WithNoFallbacks_ReturnsNull()
+    public async Task ResolveSlotAsync_WithNoFallbacks_ReturnsNull()
     {
         _storeMock.Setup(m => m.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
-        var result = await _manager.ResolveOrDefaultAsync(AIDeploymentPurpose.Chat, cancellationToken: TestContext.Current.CancellationToken);
+        var result = await _manager.ResolveSlotAsync(AIDeploymentSlotNames.Chat, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Null(result);
     }
 
     [Fact]
-    public async Task ResolveAsync_WithNoFallbacks_ThrowsInvalidOperationException()
+    public async Task ResolveSlotOrThrowAsync_WithNoFallbacks_ThrowsInvalidOperationException()
     {
         _storeMock.Setup(m => m.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
         var manager = (IAIDeploymentManager)_manager;
 
-        await Assert.ThrowsAsync<InvalidOperationException>(async () => await manager.ResolveAsync(AIDeploymentPurpose.Chat));
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await manager.ResolveSlotOrThrowAsync(AIDeploymentSlotNames.Chat));
     }
 
     [Fact]
-    public async Task GetAllByTypeAsync_ReturnsOnlyMatchingType()
+    public async Task GetAllBySlotAsync_ReturnsOnlyDeploymentsCapableOfTheSlot()
     {
         var allDeployments = new[]
         {
-            CreateDeployment("dep-chat-1", "gpt-4", AIDeploymentPurpose.Chat, clientName: "openai"),
-            CreateDeployment("dep-chat-2", "gpt-4o", AIDeploymentPurpose.Chat, clientName: "azure"),
-            CreateDeployment("dep-chat-utility", "gpt-4.1-mini", AIDeploymentPurpose.Chat | AIDeploymentPurpose.Utility, clientName: "openai"),
-            CreateDeployment("dep-embed-1", "ada-002", AIDeploymentPurpose.Embedding, clientName: "openai"),
-            CreateDeployment("dep-img-1", "dall-e-3", AIDeploymentPurpose.Image, clientName: "openai"),
+            CreateDeployment("dep-chat-1", "gpt-4", AIDeploymentFeatureNames.TextGeneration, clientName: "openai"),
+            CreateDeployment("dep-chat-2", "gpt-4o", AIDeploymentFeatureNames.TextGeneration, clientName: "azure"),
+            CreateDeployment("dep-chat-utility", "gpt-4.1-mini", AIDeploymentFeatureNames.TextGeneration, clientName: "openai"),
+            CreateDeployment("dep-embed-1", "ada-002", AIDeploymentFeatureNames.TextEmbedding, clientName: "openai"),
+            CreateDeployment("dep-img-1", "dall-e-3", AIDeploymentFeatureNames.ImageOutput, clientName: "openai"),
+            CreateDeployment("dep-realtime-1", "gpt-realtime", AIDeploymentFeatureNames.Realtime, clientName: "openai"),
         };
 
         _storeMock.Setup(m => m.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(allDeployments);
 
-        var result = (await _manager.GetAllByPurposeAsync(AIDeploymentPurpose.Chat, cancellationToken: TestContext.Current.CancellationToken)).ToList();
+        var result = (await _manager.GetAllBySlotAsync(AIDeploymentSlotNames.Chat, cancellationToken: TestContext.Current.CancellationToken)).ToList();
 
         Assert.Equal(3, result.Count);
-        Assert.All(result, d => Assert.True(d.SupportsPurpose(AIDeploymentPurpose.Chat)));
         Assert.Contains(result, d => d.ItemId == "dep-chat-1");
         Assert.Contains(result, d => d.ItemId == "dep-chat-2");
         Assert.Contains(result, d => d.ItemId == "dep-chat-utility");
     }
 
+    [Fact]
+    public async Task GetConversationalDeploymentsAsync_ReturnsTextCapableAndRealtimeDeployments()
+    {
+        // The picker asks "what can this profile talk to", so it unions the chat and realtime slots. The chat
+        // slot alone would drop the realtime deployment, which converses perfectly well -- it just speaks.
+        var allDeployments = new[]
+        {
+            CreateDeployment("dep-chat-1", "gpt-4", AIDeploymentFeatureNames.TextGeneration, clientName: "openai"),
+            CreateDeployment("dep-embed-1", "ada-002", AIDeploymentFeatureNames.TextEmbedding, clientName: "openai"),
+            CreateDeployment("dep-realtime-1", "gpt-realtime", AIDeploymentFeatureNames.Realtime, clientName: "openai"),
+        };
+
+        _storeMock.Setup(m => m.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(allDeployments);
+
+        var result = (await _manager.GetConversationalDeploymentsAsync(cancellationToken: TestContext.Current.CancellationToken)).ToList();
+
+        Assert.Equal(2, result.Count);
+        Assert.Contains(result, d => d.ItemId == "dep-chat-1");
+        Assert.Contains(result, d => d.ItemId == "dep-realtime-1");
+    }
+
     private static AIDeployment CreateDeployment(
         string itemId,
         string name,
-        AIDeploymentPurpose type,
+        string feature,
         bool isDefault = false,
         string clientName = "openai",
         string connectionName = "default",
         string modelName = null)
     {
-        return new AIDeployment
+        var deployment = new AIDeployment
         {
             ItemId = itemId,
             Name = name,
             ModelName = modelName,
-            Purpose = type,
             Properties = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
             {
                 ["IsDefault"] = isDefault,
@@ -277,5 +314,12 @@ public sealed class DefaultAIDeploymentManagerTests
             ClientName = clientName,
             ConnectionName = connectionName,
         };
+
+        deployment.Put(new AIDeploymentMetadata
+        {
+            Features = [feature],
+        });
+
+        return deployment;
     }
 }

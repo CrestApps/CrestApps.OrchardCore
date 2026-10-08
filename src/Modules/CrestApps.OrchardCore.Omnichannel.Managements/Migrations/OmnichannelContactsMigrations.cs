@@ -9,7 +9,6 @@ using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.ContentManagement.Records;
 using OrchardCore.Data;
-using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Shell.Scope;
 using YesSql;
 using YesSql.Services;
@@ -38,6 +37,7 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
         ("IDX_OCIndex_E164Home", ["NormalizedPrimaryHomePhoneNumber", "Published", "Latest"]),
         ("IDX_OCIndex_PrimaryHome", ["PrimaryHomePhoneNumber", "Published", "Latest"]),
         ("IDX_OCIndex_TimeZoneVersion", ["TimeZoneId", "Published", "Latest"]),
+        ("IDX_OCIndex_ContentType", ["ContentType", "Published", "Latest"]),
     ];
 
     private readonly IContentDefinitionManager _contentDefinitionManager;
@@ -80,7 +80,7 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
         await CreateContactIndexIndexesAsync(SchemaBuilder);
         ScheduleContactDefinitionRepair();
 
-        return 11;
+        return 12;
     }
 
     /// <summary>
@@ -116,15 +116,12 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
     /// </summary>
     public async Task<int> UpdateFrom2Async()
     {
-        await using var connection = DbConnectionAccessor.CreateConnection();
-        await connection.OpenAsync();
-
-        await ApplyIsolatedSchemaChangeAsync(connection,
+        await ApplyIsolatedSchemaChangeAsync(
             builder => builder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
                 table.AddColumn<string>("TimeZoneId", column => column.WithLength(64))),
             "The 'TimeZoneId' column may already exist on the OmnichannelContactIndex table.");
 
-        await ApplyIsolatedSchemaChangeAsync(connection,
+        await ApplyIsolatedSchemaChangeAsync(
             builder => builder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
                 table.CreateIndex("IDX_OmnichannelContactIndex_TimeZoneId", "DocumentId", "TimeZoneId")),
             "The 'IDX_OmnichannelContactIndex_TimeZoneId' index may already exist.");
@@ -217,6 +214,83 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
         return 11;
     }
 
+    /// <summary>
+    /// Adds the content type and converted-lead columns, so a lookup can tell a lead from a contact without loading
+    /// the item, and fills the content type of every existing row from the content item index. No content item is
+    /// saved again: the value is copied in SQL, one statement per content type.
+    /// </summary>
+    public async Task<int> UpdateFrom11Async()
+    {
+        await EnsureColumnExistsAsync<OmnichannelContactIndex>(
+            collection: null,
+            columnName: nameof(OmnichannelContactIndex.ContentType),
+            addColumn: table => table.AddColumn<string>(nameof(OmnichannelContactIndex.ContentType), column => column.WithLength(255)),
+            operation: "add the 'ContentType' column to the contact index");
+
+        await EnsureColumnExistsAsync<OmnichannelContactIndex>(
+            collection: null,
+            columnName: nameof(OmnichannelContactIndex.IsConverted),
+            addColumn: table => table.AddColumn<bool>(nameof(OmnichannelContactIndex.IsConverted), column => column.NotNull().WithDefault(false)),
+            operation: "add the 'IsConverted' column to the contact index");
+
+        await ApplyIsolatedSchemaChangeAsync(
+            builder => builder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
+                table.CreateIndex("IDX_OCIndex_ContentType", "ContentType", "Published", "Latest")),
+            "create the 'IDX_OCIndex_ContentType' index");
+
+        var failure = await TryApplyIsolatedAsync(BackfillContactIndexContentTypesAsync);
+
+        if (failure is not null)
+        {
+            // A row left without a content type is ranked as a contact, which is what every row was before the
+            // column existed, and the next save of the contact fills it. The failure is still worth seeing.
+            Logger.LogWarning(failure, "The content type of the existing contact index rows could not be filled in.");
+        }
+
+        return 12;
+    }
+
+    private async Task BackfillContactIndexContentTypesAsync(ISchemaBuilder builder)
+    {
+        var dialect = Store.Configuration.SqlDialect;
+        var schema = Store.Configuration.Schema;
+        var prefix = Store.Configuration.TablePrefix;
+        var contactTable = dialect.QuoteForTableName(
+            $"{prefix}{Store.Configuration.TableNameConvention.GetIndexTable(typeof(OmnichannelContactIndex))}",
+            schema);
+        var contentItemTable = dialect.QuoteForTableName(
+            $"{prefix}{Store.Configuration.TableNameConvention.GetIndexTable(typeof(ContentItemIndex))}",
+            schema);
+        var documentId = dialect.QuoteForColumnName("DocumentId");
+        var contentType = dialect.QuoteForColumnName("ContentType");
+
+        // One statement per content type keeps the update free of a correlated reference to the updated table,
+        // which the supported databases spell differently.
+        var contentTypes = (await builder.Connection.QueryAsync<string>(
+            $"SELECT DISTINCT {contentType} FROM {contentItemTable} WHERE {documentId} IN (SELECT {documentId} FROM {contactTable} WHERE {contentType} IS NULL)",
+            transaction: builder.Transaction))
+            .Where(value => !string.IsNullOrEmpty(value))
+            .ToArray();
+
+        var updated = 0;
+
+        foreach (var value in contentTypes)
+        {
+            updated += await builder.Connection.ExecuteAsync(
+                $"UPDATE {contactTable} SET {contentType} = @ContentType WHERE {contentType} IS NULL AND {documentId} IN (SELECT {documentId} FROM {contentItemTable} WHERE {contentType} = @ContentType)",
+                new { ContentType = value },
+                builder.Transaction);
+        }
+
+        if (Logger.IsEnabled(LogLevel.Information))
+        {
+            Logger.LogInformation(
+                "Filled in the content type of {RowCount} contact index row(s) across {ContentTypeCount} content type(s).",
+                updated,
+                contentTypes.Length);
+        }
+    }
+
     private void ScheduleContactDefinitionRepair()
     {
         Logger.LogDebug("Scheduling deferred omnichannel contact definition repair.");
@@ -231,6 +305,8 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
     {
         await schemaBuilder.CreateMapIndexTableAsync<OmnichannelContactIndex>(table => table
             .Column<string>("ContentItemId", column => column.WithLength(26))
+            .Column<string>("ContentType", column => column.WithLength(255))
+            .Column<bool>("IsConverted", column => column.NotNull().WithDefault(false))
             .Column<bool>("Published", column => column.NotNull().WithDefault(false))
             .Column<bool>("Latest", column => column.NotNull().WithDefault(false))
             .Column<string>("PrimaryCellPhoneNumber", column => column.WithLength(50))
@@ -255,9 +331,6 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
     {
         await RemoveLegacyCollectionContactIndexTableAsync();
 
-        await using var connection = DbConnectionAccessor.CreateConnection();
-        await connection.OpenAsync();
-
         if (Logger.IsEnabled(LogLevel.Information))
         {
             Logger.LogInformation(
@@ -266,38 +339,38 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
                 Store.Configuration.TablePrefix);
         }
 
-        await ApplyIsolatedSchemaChangeAsync(connection,
+        await ApplyIsolatedSchemaChangeAsync(
             CreateContactIndexTableAsync,
             "create the table");
 
-        await ApplyIsolatedSchemaChangeAsync(connection,
+        await ApplyIsolatedSchemaChangeAsync(
             builder => builder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
                 table.AddColumn<bool>("Published", column => column.NotNull().WithDefault(false))),
             "add the 'Published' column");
 
-        await ApplyIsolatedSchemaChangeAsync(connection,
+        await ApplyIsolatedSchemaChangeAsync(
             builder => builder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
                 table.AddColumn<bool>("Latest", column => column.NotNull().WithDefault(false))),
             "add the 'Latest' column");
 
-        await ApplyIsolatedSchemaChangeAsync(connection,
+        await ApplyIsolatedSchemaChangeAsync(
             builder => builder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
                 table.AddColumn<string>("NormalizedPrimaryCellPhoneNumber", column => column.WithLength(50))),
             "add the 'NormalizedPrimaryCellPhoneNumber' column");
 
-        await ApplyIsolatedSchemaChangeAsync(connection,
+        await ApplyIsolatedSchemaChangeAsync(
             builder => builder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
                 table.AddColumn<string>("NormalizedPrimaryHomePhoneNumber", column => column.WithLength(50))),
             "add the 'NormalizedPrimaryHomePhoneNumber' column");
 
-        await ApplyIsolatedSchemaChangeAsync(connection,
+        await ApplyIsolatedSchemaChangeAsync(
             builder => builder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
                 table.AddColumn<string>("TimeZoneId", column => column.WithLength(64))),
             "add the 'TimeZoneId' column");
 
         foreach (var (name, columns) in _contactIndexIndexes)
         {
-            await ApplyIsolatedSchemaChangeAsync(connection,
+            await ApplyIsolatedSchemaChangeAsync(
                 builder => builder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
                     table.CreateIndex(name, columns)),
                 $"create the '{name}' index");
@@ -306,25 +379,22 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
 
     private async Task RemoveRedundantNationalPhoneColumnsAsync()
     {
-        await using var connection = DbConnectionAccessor.CreateConnection();
-        await connection.OpenAsync();
-
-        await ApplyIsolatedSchemaChangeAsync(connection,
+        await ApplyIsolatedSchemaChangeAsync(
             builder => builder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
                 table.DropIndex("IDX_OCIndex_NationalCell")),
             "drop the obsolete 'IDX_OCIndex_NationalCell' index");
 
-        await ApplyIsolatedSchemaChangeAsync(connection,
+        await ApplyIsolatedSchemaChangeAsync(
             builder => builder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
                 table.DropIndex("IDX_OCIndex_NationalHome")),
             "drop the obsolete 'IDX_OCIndex_NationalHome' index");
 
-        await ApplyIsolatedSchemaChangeAsync(connection,
+        await ApplyIsolatedSchemaChangeAsync(
             builder => builder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
                 table.DropColumn("NationalPrimaryCellPhoneNumber")),
             "drop the obsolete 'NationalPrimaryCellPhoneNumber' column");
 
-        await ApplyIsolatedSchemaChangeAsync(connection,
+        await ApplyIsolatedSchemaChangeAsync(
             builder => builder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
                 table.DropColumn("NationalPrimaryHomePhoneNumber")),
             "drop the obsolete 'NationalPrimaryHomePhoneNumber' column");
@@ -336,28 +406,29 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
         var table = $"{Store.Configuration.TablePrefix}{LegacyPhoneIndexTableName}";
         var quotedTable = dialect.QuoteForTableName(table, Store.Configuration.Schema);
 
-        try
-        {
-            await using var connection = DbConnectionAccessor.CreateConnection();
-            await connection.OpenAsync();
-            await connection.ExecuteAsync($"drop table {quotedTable}");
+        // The drop fails whenever the table is already gone, so it runs in isolation: on the shared migration
+        // transaction a failed statement would otherwise take every sibling step down with it.
+        var failure = await TryApplyIsolatedAsync(builder =>
+            builder.Connection.ExecuteAsync($"drop table {quotedTable}", transaction: builder.Transaction));
 
+        if (failure is null)
+        {
             if (Logger.IsEnabled(LogLevel.Information))
             {
                 Logger.LogInformation(
                     "Dropped the obsolete default-collection contact phone index table '{TableName}'.",
                     table);
             }
+
+            return;
         }
-        catch (Exception ex)
+
+        if (Logger.IsEnabled(LogLevel.Debug))
         {
-            if (Logger.IsEnabled(LogLevel.Debug))
-            {
-                Logger.LogDebug(
-                    ex,
-                    "The obsolete default-collection contact phone index table '{TableName}' was not dropped because it was unavailable or already removed.",
-                    table);
-            }
+            Logger.LogDebug(
+                failure,
+                "The obsolete default-collection contact phone index table '{TableName}' was not dropped because it was unavailable or already removed.",
+                table);
         }
     }
 
@@ -367,38 +438,47 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
         var tableName = Store.Configuration.TableNameConvention.GetIndexTable(typeof(OmnichannelContactIndex), OmnichannelConstants.CollectionName);
         var table = $"{Store.Configuration.TablePrefix}{tableName}";
         var quotedTable = dialect.QuoteForTableName(table, Store.Configuration.Schema);
+        var rowCount = 0;
 
-        await using var connection = DbConnectionAccessor.CreateConnection();
-        await connection.OpenAsync();
-
-        try
+        // The count fails whenever the table is already gone, which is the usual case, so the count and the drop
+        // run together in isolation: on the shared migration transaction a failed statement would otherwise take
+        // every sibling step down with it.
+        var failure = await TryApplyIsolatedAsync(async builder =>
         {
-            var rowCount = await connection.ExecuteScalarAsync<int>($"select count(*) from {quotedTable}");
+            rowCount = await builder.Connection.ExecuteScalarAsync<int>($"select count(*) from {quotedTable}", transaction: builder.Transaction);
 
             if (rowCount > 0)
             {
-                Logger.LogWarning(
-                    "Skipping removal of the legacy Omnichannel collection contact index table because it still contains {RowCount} row(s).",
-                    rowCount);
-
                 return;
             }
 
-            await connection.ExecuteAsync($"drop table {quotedTable}");
+            await builder.Connection.ExecuteAsync($"drop table {quotedTable}", transaction: builder.Transaction);
+        });
 
-            if (Logger.IsEnabled(LogLevel.Information))
-            {
-                Logger.LogInformation(
-                    "Dropped the legacy Omnichannel collection contact index table '{TableName}' so the default-collection contact index can be recreated.",
-                    table);
-            }
-        }
-        catch (Exception ex)
+        if (failure is not null)
         {
             if (Logger.IsEnabled(LogLevel.Debug))
             {
-                Logger.LogDebug(ex, "The legacy Omnichannel collection contact index table '{TableName}' was not removed because it was not available for cleanup.", table);
+                Logger.LogDebug(failure, "The legacy Omnichannel collection contact index table '{TableName}' was not removed because it was not available for cleanup.", table);
             }
+
+            return;
+        }
+
+        if (rowCount > 0)
+        {
+            Logger.LogWarning(
+                "Skipping removal of the legacy Omnichannel collection contact index table because it still contains {RowCount} row(s).",
+                rowCount);
+
+            return;
+        }
+
+        if (Logger.IsEnabled(LogLevel.Information))
+        {
+            Logger.LogInformation(
+                "Dropped the legacy Omnichannel collection contact index table '{TableName}' so the default-collection contact index can be recreated.",
+                table);
         }
     }
 

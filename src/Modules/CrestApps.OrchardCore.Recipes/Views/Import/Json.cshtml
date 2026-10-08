@@ -2,7 +2,9 @@
 @model OrchardCore.Deployment.ViewModels.ImportJsonViewModel
 
 @inject CrestApps.OrchardCore.Recipes.Core.Services.RecipeSchemaService RecipeSchemaService
-<zone Name="Title"><h1>@RenderTitleSegments(T["JSON Import"])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="DeploymentImportJson" title="@T["JSON Import"]" />
+</zone>
 
 @{
     var schema = await RecipeSchemaService.GetRecipeSchemaAsync();

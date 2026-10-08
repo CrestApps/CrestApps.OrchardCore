@@ -1,0 +1,35 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+@using CrestApps.OrchardCore.PhoneNumbers
+
+@model ContactPrimaryMethodsViewModel
+
+@inject IPhoneNumberService PhoneNumberService
+
+@if (Model.Methods is null || Model.Methods.Count == 0)
+{
+    return;
+}
+
+<ul class="list-unstyled mt-2 mb-0">
+    @foreach (var method in Model.Methods)
+    {
+        <li class="d-flex align-items-center flex-wrap gap-2 mb-1">
+            @if (method.Kind == ContactPrimaryMethodKind.Email)
+            {
+                <i class="fa-solid fa-envelope fa-fw text-muted" aria-hidden="true"></i>
+                <span class="text-muted">@T["Email"]:</span>
+                <a href="mailto:@method.Value">@method.Value</a>
+            }
+            else
+            {
+                <i class="fa-solid fa-phone fa-fw text-muted" aria-hidden="true"></i>
+                <span class="text-muted">@(string.IsNullOrEmpty(method.Label) ? T["Phone"].Value : method.Label):</span>
+                @* The tel: href keeps the exact stored number; the text is grouped so it can be read back. *@
+                <a href="tel:@method.Value">@PhoneNumberService.FormatForDisplay(method.Value)</a>
+                @* The call and SMS buttons are added by the soft phone and messaging modules when they are enabled.
+                   Only a mobile number gets the SMS button. *@
+                @await DisplayAsync(await New.PhoneNumberActions(PhoneNumber: method.Value, CanText: method.CanText))
+            }
+        </li>
+    }
+</ul>

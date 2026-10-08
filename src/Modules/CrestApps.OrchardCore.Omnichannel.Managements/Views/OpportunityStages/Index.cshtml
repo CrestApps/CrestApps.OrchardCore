@@ -1,0 +1,70 @@
+@using CrestApps.OrchardCore.Core.Models
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+
+@model IList<CatalogEntryViewModel<OpportunityStage>>
+
+<zone Name="Title">
+    <breadcrumb name="OmnichannelOpportunityStages" title="@T["Opportunity Stages"]" />
+</zone>
+
+@* The form is necessary to generate an antiforgery token for the delete action. *@
+<form asp-action="Index" method="post" class="no-multisubmit">
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-1">
+                <div class="col">
+                    <div class="has-search">
+                        <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                        <input id="search-box" class="form-control" placeholder="@T["Filter"]" type="search" autofocus autocomplete="off" />
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <a class="btn btn-secondary create" role="button" asp-action="Create">@T["Add Opportunity Stage"]</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <ul class="list-group" id="catalog-entries">
+        @if (Model.Count > 0)
+        {
+            foreach (var entry in Model)
+            {
+                <li class="list-group-item item" data-filter-value="@entry.Model.Name?.ToLowerInvariant()">
+                    @await DisplayAsync(entry.Shape)
+                </li>
+            }
+        }
+        else
+        {
+            <li class="list-group-item list-group-item-info text-center ignore-elements">
+                @T["<strong>Nothing here!</strong> There are no opportunity stages at the moment."]
+            </li>
+        }
+    </ul>
+
+    <div id="list-alert" class="alert alert-info my-3 d-none text-center" role="alert">
+        @T["Your search returned no results."]
+    </div>
+</form>
+
+<script at="Foot">
+    (() => {
+        const searchBox = document.getElementById('search-box');
+        const alert = document.getElementById('list-alert');
+        const items = document.querySelectorAll('#catalog-entries li.item');
+
+        searchBox?.addEventListener('input', () => {
+            const value = searchBox.value.trim().toLowerCase();
+            let visible = 0;
+
+            items.forEach(item => {
+                const match = !value || (item.dataset.filterValue || '').includes(value);
+                item.classList.toggle('d-none', !match);
+                visible += match ? 1 : 0;
+            });
+
+            alert.classList.toggle('d-none', visible > 0 || items.length === 0);
+        });
+    })();
+</script>

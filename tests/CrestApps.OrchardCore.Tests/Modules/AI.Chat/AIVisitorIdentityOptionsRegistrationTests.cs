@@ -15,6 +15,8 @@ public sealed class AIVisitorIdentityOptionsRegistrationTests
         {
             CookieName = "chat-visitor",
             CookieLifetime = TimeSpan.FromDays(30),
+            AllowCrossSiteEmbedding = true,
+            UsePartitionedCookie = false,
             RemoteAddressMode = AIVisitorRemoteAddressMode.Encrypted,
             RemoteAddressHashSalt = "tenant-salt",
         };
@@ -29,6 +31,8 @@ public sealed class AIVisitorIdentityOptionsRegistrationTests
 
         Assert.Equal("chat-visitor", options.CookieName);
         Assert.Equal(TimeSpan.FromDays(30), options.CookieLifetime);
+        Assert.True(options.AllowCrossSiteEmbedding);
+        Assert.False(options.UsePartitionedCookie);
         Assert.Equal(AIVisitorRemoteAddressMode.Encrypted, options.RemoteAddressMode);
         Assert.Equal("tenant-salt", options.RemoteAddressHashSalt);
     }

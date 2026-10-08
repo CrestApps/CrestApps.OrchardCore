@@ -3,6 +3,8 @@ sidebar_label: Azure OpenAI
 sidebar_position: 2
 title: Azure OpenAI Integration
 description: Azure OpenAI integration for AI chat profiles, deployments, and connections in Orchard Core.
+user_manual:
+  - user-manual/ai/connections
 ---
 
 | | |
@@ -12,11 +14,7 @@ description: Azure OpenAI integration for AI chat profiles, deployments, and con
 
 Provides AI services using Azure OpenAI models.
 
-The screencast below shows the Azure OpenAI provider connection and the chat, utility, and embedding deployments it exposes in the admin dashboard.
-
-<video controls preload="metadata" width="100%" aria-label="Screen cast of the Azure OpenAI provider connection and its chat, utility, and embedding deployments">
-  <source src="/img/docs/ai-provider-azure-openai.mp4" type="video/mp4" />
-</video>
+Adding the connection and its deployments in the admin is described, with a screencast of an Azure OpenAI connection and its chat, utility, and embedding deployments, in the User Manual under [Connect an AI provider](../../user-manual/ai/connections.md). The connection editor offers **Endpoint**, **Authentication type** (**Default authentication**, **Managed identity**, **API key**), **API key** and **Identity client ID**.
 
 ## Overview
 
@@ -31,29 +29,50 @@ Add the following section to `appsettings.json`:
   "OrchardCore": {
     "CrestApps": {
       "AI": {
-        "Providers": {
-          "Azure": {
-            "DefaultConnectionName": "azure-openai",
-            "Connections": {
-              "azure-openai": {
-                "Endpoint": "https://your-resource.openai.azure.com/",
-                "AuthenticationType": "ApiKey",
-                "ApiKey": "your-api-key",
-                "Deployments": [
-                  { "Name": "chat-deployment", "Purpose": "Chat" },
-                  { "Name": "utility-deployment", "Purpose": "Utility" },
-                  { "Name": "embedding-deployment", "Purpose": "Embedding" },
-                  { "Name": "image-deployment", "Purpose": "Image" }
-                ]
+        "Connections": [
+          {
+            "Name": "azure-openai",
+            "ClientName": "Azure",
+            "DisplayText": "Azure OpenAI",
+            "Endpoint": "https://your-resource.openai.azure.com/",
+            "AuthenticationType": "ApiKey",
+            "ApiKey": "your-api-key"
+          }
+        ],
+        "Deployments": [
+          {
+            "Name": "chat-deployment",
+            "ClientName": "Azure",
+            "ConnectionName": "azure-openai",
+            "ModelName": "gpt-4.1",
+            "Properties": {
+              "AIDeploymentMetadata": {
+                "Features": [ "textGeneration", "toolCalling", "streaming", "structuredOutputs" ]
+              }
+            }
+          },
+          {
+            "Name": "embedding-deployment",
+            "ClientName": "Azure",
+            "ConnectionName": "azure-openai",
+            "ModelName": "text-embedding-3-small",
+            "Properties": {
+              "AIDeploymentMetadata": {
+                "Features": [ "textEmbedding" ]
               }
             }
           }
-        }
+        ]
       }
     }
   }
 }
 ```
+
+`ClientName` ties a deployment to its provider and `ConnectionName` to the connection it authenticates
+with. `Features` declares what the model can do; which deployment serves chat, utility, embedding and the
+rest is decided by the deployment slots under **Configuration** -> **Artificial Intelligence** ->
+**Settings**. See [Model capabilities](../model-capabilities.md) for the full list of features and slots.
 
 Valid values for `AuthenticationType` are `Default`, `ManagedIdentity`, and `ApiKey`. If using `ApiKey`, the `ApiKey` field is required.
 
@@ -61,13 +80,15 @@ When using `ManagedIdentity`, you can optionally provide an `IdentityId` to use 
 
 ```json
 {
-  "Connections": {
-    "azure-openai": {
+  "Connections": [
+    {
+      "Name": "azure-openai",
+      "ClientName": "Azure",
       "Endpoint": "https://my-account.openai.azure.com/",
       "AuthenticationType": "ManagedIdentity",
       "IdentityId": "optional-user-assigned-managed-identity-client-id"
     }
-  }
+  ]
 }
 ```
 
@@ -111,13 +132,23 @@ Use `AIProviderConnections` to create the connection, `AIDeployment` to create t
           "Name": "chat-deployment",
           "ClientName": "Azure",
           "ConnectionName": "azure-openai",
-          "Purpose": "Chat"
+          "ModelName": "gpt-4.1",
+          "Properties": {
+            "AIDeploymentMetadata": {
+              "Features": [ "textGeneration", "toolCalling", "streaming" ]
+            }
+          }
         },
         {
-          "Name": "utility-deployment",
+          "Name": "embedding-deployment",
           "ClientName": "Azure",
           "ConnectionName": "azure-openai",
-          "Purpose": "Utility"
+          "ModelName": "text-embedding-3-small",
+          "Properties": {
+            "AIDeploymentMetadata": {
+              "Features": [ "textEmbedding" ]
+            }
+          }
         }
       ]
     },
@@ -163,13 +194,15 @@ This is useful when:
 
 ### How to create an Azure Speech deployment
 
-1. Navigate to **AI Services** -> **Deployments** in the admin dashboard.
-2. Click **Add Deployment** and select **Azure Speech** as the provider.
-3. Enter a deployment name.
-4. Set the deployment purpose to **SpeechToText**.
-5. Provide the endpoint URL of your Azure Speech Service resource.
-6. Select the authentication type: `Default`, `ManagedIdentity`, or `ApiKey`.
+1. Navigate to **Artificial Intelligence** -> **Deployments** in the admin dashboard.
+2. Click **Add Deployment** and select **Azure AI Services** as the provider.
+3. Enter the **Model name** (the **Technical name** follows it).
+4. On the **Model capabilities** card, enable the **Speech to text (transcription)** feature.
+5. Provide the **Endpoint** URL of your Azure Speech Service resource.
+6. Select the **Authentication type**: **Default authentication**, **Managed identity**, or **API key** (stored as `Default`, `ManagedIdentity` or `ApiKey`).
 7. Save the deployment.
+
+The deployment editor is described in the User Manual under [Add a deployment](../../user-manual/ai/connections.md#add-a-deployment).
 
 :::tip
 You can find your Speech Service endpoint and API key in the [Azure AI Foundry portal](https://ai.azure.com/) or the Azure Portal under your Speech Service resource's **Keys and Endpoint** section.
@@ -192,10 +225,14 @@ Instead of creating Azure Speech deployments through the admin UI, you can defin
           {
             "ClientName": "AzureSpeech",
             "Name": "my-speech-to-text",
-            "Purpose": "SpeechToText",
             "Endpoint": "https://eastus.api.cognitive.microsoft.com/",
             "AuthenticationType": "ApiKey",
-            "ApiKey": "your-speech-service-api-key"
+            "ApiKey": "your-speech-service-api-key",
+            "Properties": {
+              "AIDeploymentMetadata": {
+                "Features": [ "speechToText" ]
+              }
+            }
           }
         ]
       }

@@ -10,6 +10,7 @@ using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Records;
 using OrchardCore.Entities;
+using OrchardCore.FileStorage;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;
@@ -39,6 +40,7 @@ public sealed class ExportFilesBackgroundTask : IBackgroundTask
         var fileStore = serviceProvider.GetRequiredService<IContentTransferFileStore>();
         var contentDefinitionManager = serviceProvider.GetRequiredService<IContentDefinitionManager>();
         var contentImportManager = serviceProvider.GetRequiredService<IContentImportManager>();
+        var tempDirectoryProvider = serviceProvider.GetRequiredService<ITempDirectoryProvider>();
 
         var entries = await session.Query<ContentTransferEntry, ContentTransferEntryIndex>(x =>
             (x.Status == ContentTransferEntryStatus.New || x.Status == ContentTransferEntryStatus.Processing)
@@ -89,6 +91,7 @@ public sealed class ExportFilesBackgroundTask : IBackgroundTask
                 {
                     ContentItem = await serviceProvider.GetRequiredService<IContentManager>().NewAsync(entry.ContentType),
                     ContentTypeDefinition = contentTypeDefinition,
+                    Entry = entry,
                 };
 
                 var columns = await contentImportManager.GetColumnsAsync(context);
@@ -124,7 +127,7 @@ public sealed class ExportFilesBackgroundTask : IBackgroundTask
                 }
 
                 var fileName = entry.StoredFileName;
-                var tempFilePath = Path.GetTempFileName();
+                var tempFilePath = tempDirectoryProvider.GetTempFileName();
 
                 using var tempStream = new FileStream(tempFilePath, FileMode.Create, FileAccess.ReadWrite, FileShare.None, bufferSize: 4096, FileOptions.DeleteOnClose);
                 var columnNames = exportColumns.Select(c => c.Name).ToList();
@@ -164,6 +167,14 @@ public sealed class ExportFilesBackgroundTask : IBackgroundTask
                             break;
                         }
 
+                        // Let handlers pre-load per-page data in a single pass before mapping rows.
+                        await contentImportManager.PrepareExportBatchAsync(new ContentExportBatchContext
+                        {
+                            ContentItems = items,
+                            ContentTypeDefinition = contentTypeDefinition,
+                            Entry = entry,
+                        });
+
                         // Create a temporary DataTable for this batch only.
                         using var dataTable = new DataTable();
 
@@ -178,10 +189,20 @@ public sealed class ExportFilesBackgroundTask : IBackgroundTask
                             {
                                 ContentItem = contentItem,
                                 ContentTypeDefinition = contentTypeDefinition,
+                                Entry = entry,
                                 Row = dataTable.NewRow(),
                             };
 
                             await contentImportManager.ExportAsync(mapContext);
+
+                            progressPart.TotalProcessed++;
+
+                            // A handler may exclude a content item from the output (for example, a contributed
+                            // "only rows that match" filter). Count it as processed but do not write it.
+                            if (mapContext.Exclude)
+                            {
+                                continue;
+                            }
 
                             var rowValues = new List<string>(columnNames.Count);
                             foreach (var colName in columnNames)
@@ -190,7 +211,9 @@ public sealed class ExportFilesBackgroundTask : IBackgroundTask
                             }
 
                             writer.WriteRow(rowValues);
-                            progressPart.TotalProcessed++;
+
+                            // Track how many records were actually written so the UI can show the exported total.
+                            progressPart.ImportedCount++;
                         }
 
                         // Save progress after each page.

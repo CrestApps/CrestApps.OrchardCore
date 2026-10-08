@@ -1,0 +1,20 @@
+@model EntryPointViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="VoicemailEnabled" data-entry-point-agent-field>
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="VoicemailEnabled" class="form-check-input" data-entry-point-voicemail-toggle />
+            <label asp-for="VoicemailEnabled" class="form-check-label">@T["Send unanswered calls to voicemail"]</label>
+            <span class="hint dashed">@T["When off, the caller keeps ringing and is held for the agent until answered or they hang up."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="RingTimeoutSeconds" data-entry-point-agent-field data-entry-point-ringwindow-field>
+    <label asp-for="RingTimeoutSeconds" class="ocat-label">@T["Ring window (seconds)"]</label>
+    <div class="ocat-end">
+        <input asp-for="RingTimeoutSeconds" type="number" min="5" max="300" class="form-control" />
+        <span asp-validation-for="RingTimeoutSeconds" class="text-danger"></span>
+        <span class="hint">@T["How long the caller rings and is held for the agent before going to voicemail. Default 30 seconds."]</span>
+    </div>
+</div>

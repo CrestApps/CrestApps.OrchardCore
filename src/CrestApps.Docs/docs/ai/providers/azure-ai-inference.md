@@ -3,6 +3,8 @@ sidebar_label: Azure AI Inference
 sidebar_position: 3
 title: Azure AI Inference Chat Feature
 description: Azure AI Inference integration for GitHub models using Azure AI provider in Orchard Core.
+user_manual:
+  - user-manual/ai/connections
 ---
 
 | | |
@@ -25,35 +27,37 @@ Add the following settings to `appsettings.json`:
   "OrchardCore": {
     "CrestApps": {
       "AI": {
-        "Providers": {
-          "AzureAIInference": {
-            "DefaultConnectionName": "default",
-            "Connections": {
-              "default": {
-                "Endpoint": "https://your-resource.services.ai.azure.com/models",
-                "AuthenticationType": "ApiKey",
-                "ApiKey": "your-api-key",
-                "Deployments": [
-                  {
-                    "Name": "github-models-chat",
-                    "ModelName": "Phi-3-medium-4k-instruct",
-                    "Purpose": "Chat"
-                  },
-                  {
-                    "Name": "github-models-utility",
-                    "ModelName": "Phi-3-medium-4k-instruct",
-                    "Purpose": "Utility"
-                  }
-                ]
+        "Connections": [
+          {
+            "Name": "default",
+            "ClientName": "AzureAIInference",
+            "Endpoint": "https://your-resource.services.ai.azure.com/models",
+            "AuthenticationType": "ApiKey",
+            "ApiKey": "your-api-key"
+          }
+        ],
+        "Deployments": [
+          {
+            "Name": "github-models-chat",
+            "ClientName": "AzureAIInference",
+            "ConnectionName": "default",
+            "ModelName": "Phi-3-medium-4k-instruct",
+            "Properties": {
+              "AIDeploymentMetadata": {
+                "Features": [ "textGeneration", "toolCalling", "streaming" ]
               }
             }
           }
-        }
+        ]
       }
     }
   }
 }
 ```
+
+`Features` declares what the model can do; which deployment serves chat, utility, embedding and the rest is
+decided by the deployment slots under **Configuration** -> **Artificial Intelligence** -> **Settings**, so one
+deployment can back several slots. See [Model capabilities](../model-capabilities.md) for the full list of features and slots.
 
 `AuthenticationType` can be `Default`, `ManagedIdentity`, or `ApiKey`. When using `ApiKey`, the `ApiKey` field is required.
 
@@ -61,13 +65,15 @@ When using `ManagedIdentity`, you can optionally provide an `IdentityId` to use 
 
 ```json
 {
-  "Connections": {
-    "default": {
+  "Connections": [
+    {
+      "Name": "default",
+      "ClientName": "AzureAIInference",
       "Endpoint": "https://my-resource.services.ai.azure.com/models",
       "AuthenticationType": "ManagedIdentity",
       "IdentityId": "optional-user-assigned-managed-identity-client-id"
     }
-  }
+  ]
 }
 ```
 

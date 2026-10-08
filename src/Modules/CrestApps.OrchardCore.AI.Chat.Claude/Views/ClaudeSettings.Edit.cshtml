@@ -27,7 +27,7 @@
         <div class="ocat-limited-wrapper">
             <label asp-for="ApiKey" class="ocat-label">@T["API key"]</label>
             <div class="ocat-limited">
-                <input asp-for="ApiKey" type="password" class="form-control" placeholder="@T["Enter API key"]" />
+                <input asp-for="ApiKey" type="password" class="form-control" placeholder="@T["Enter API key"]" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
                 <span asp-validation-for="ApiKey" class="text-danger"></span>
                 @if (Model.HasApiKey)
                 {

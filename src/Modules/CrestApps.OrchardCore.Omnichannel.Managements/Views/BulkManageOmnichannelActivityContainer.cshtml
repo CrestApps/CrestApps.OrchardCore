@@ -9,7 +9,7 @@
 <script asp-name="flatpickr-culture" at="Foot"></script>
 <style asp-name="flatpickr"></style>
 
-<form asp-route-area="CrestApps.OrchardCore.Omnichannel.Managements" asp-action="ManageActivities" asp-controller="Activities" method="post" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-item-input-name="ItemIds">
+<form asp-route-area="CrestApps.OrchardCore.Omnichannel.Managements" asp-action="ManageActivities" asp-route-pageSize="@Context.Request.Query["pageSize"]" asp-controller="Activities" method="post" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-item-input-name="ItemIds" data-bulk-action-selector="">
     <input type="submit" name="submit.Filter" id="submitFilter" value="Filter" class="visually-hidden" />
     <input type="submit" name="submit.BulkAction" value="Execute" class="visually-hidden" />
     <input type="hidden" name="BulkAction" id="BulkAction" value="@nameof(BulkActivityAction.None)" />
@@ -32,11 +32,6 @@
                 <div class="card-body">
                     <div class="row gx-2 gy-2 align-items-end">
                         @await DisplayAsync(Model.Header)
-
-                        <div class="col-auto">
-                            <label class="form-label form-label-sm mb-1" for="page-size">@T["Page size"]</label>
-                            <select id="page-size" name="pageSize" asp-items="Model.PageSizeOptions" class="form-select form-select-sm"></select>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -108,7 +103,18 @@
         var bulkActionParams = document.getElementById('bulk-action-params');
         var bulkActionInput = document.getElementById('BulkAction');
         var bulkActionTitle = document.getElementById('bulk-action-title');
+        var bulkActionDefaultTitle = bulkActionTitle ? bulkActionTitle.textContent : '';
+        var bulkActionForm = bulkActionInput ? bulkActionInput.form : null;
+        var applyToAllMatchingInput = document.getElementById('apply-to-all-matching');
         var dropdownItems = document.querySelectorAll('.bulk-action-item');
+        var purgeConfirmed = false;
+        var purgeDialogText = {
+            title: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(T["Purge activities"].Value)),
+            selectedMessage: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(T["Purge the selected activities? This cannot be undone."].Value)),
+            allMatchingMessage: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(string.Format(T["Purge all {0} matching activities? This cannot be undone."].Value, Model.TotalCount))),
+            okText: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(T["Purge"].Value)),
+            cancelText: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(T["Cancel"].Value)),
+        };
         var togglePanelInputs = function (activePanel) {
             document.querySelectorAll('.bulk-action-param').forEach(function (panel) {
                 var isActive = panel === activePanel;
@@ -120,6 +126,52 @@
         };
 
         togglePanelInputs(null);
+
+        var resetBulkAction = function () {
+            bulkActionInput.value = '@nameof(BulkActivityAction.None)';
+
+            if (bulkActionTitle) {
+                bulkActionTitle.textContent = bulkActionDefaultTitle;
+            }
+        };
+
+        // Purging cannot be undone, so every submission of the Purge action (from the action menu or the
+        // Execute Action button) is held until the user confirms it. The listener sits on the form itself and
+        // stops the event before it reaches the admin theme's multi-submit guard on the body, which would
+        // otherwise mark the form as already submitting and swallow the confirmed resubmission.
+        if (bulkActionForm) {
+            bulkActionForm.addEventListener('submit', function (e) {
+                var isBulkActionSubmit = !e.submitter || e.submitter.name === 'submit.BulkAction';
+
+                if (purgeConfirmed || !isBulkActionSubmit || bulkActionInput.value !== '@nameof(BulkActivityAction.Purge)') {
+                    return;
+                }
+
+                e.preventDefault();
+                e.stopPropagation();
+
+                var submitter = e.submitter || bulkActionForm.querySelector('[name="submit.BulkAction"]');
+                var applyToAllMatching = applyToAllMatchingInput && applyToAllMatchingInput.checked;
+
+                confirmDialog({
+                    title: purgeDialogText.title,
+                    message: applyToAllMatching ? purgeDialogText.allMatchingMessage : purgeDialogText.selectedMessage,
+                    okText: purgeDialogText.okText,
+                    cancelText: purgeDialogText.cancelText,
+                    okClass: 'btn-danger',
+                    callback: function (confirmed) {
+                        if (!confirmed) {
+                            resetBulkAction();
+
+                            return;
+                        }
+
+                        purgeConfirmed = true;
+                        submitter.click();
+                    }
+                });
+            });
+        }
 
         dropdownItems.forEach(function (item) {
             item.addEventListener('click', function () {
@@ -136,10 +188,13 @@
                     paramPanel.classList.remove('d-none');
                     bulkActionParams.classList.remove('d-none');
                     togglePanelInputs(paramPanel);
-                } else if (action === 'Purge') {
+                } else if (action === '@nameof(BulkActivityAction.Purge)') {
                     togglePanelInputs(null);
+                    bulkActionParams.classList.add('d-none');
                     bulkActionInput.value = action;
-                    document.querySelector('[name="submit.BulkAction"]').click();
+
+                    // The form's submit listener asks for confirmation before anything is purged.
+                    bulkActionForm.querySelector('[name="submit.BulkAction"]').click();
 
                     return;
                 } else {

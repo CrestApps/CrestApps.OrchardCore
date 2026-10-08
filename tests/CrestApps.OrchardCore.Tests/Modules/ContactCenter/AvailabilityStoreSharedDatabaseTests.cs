@@ -1,0 +1,270 @@
+using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Indexes;
+using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Tests.Utilities;
+using YesSql;
+using YesSql.Provider.Sqlite;
+using YesSql.Sql;
+
+namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
+
+public sealed class AvailabilityStoreSharedDatabaseTests
+{
+    private static readonly DateTime _now = new(2026, 7, 15, 8, 0, 0, DateTimeKind.Utc);
+
+    [Fact]
+    public async Task AgentSessionStore_ListByUserIdsAsync_WhenMoreThanBatchSize_ReturnsEveryMatchingSession()
+    {
+        // Arrange
+        var databasePath = Path.Combine(Path.GetTempPath(), $"contact-center-availability-sessions-{Guid.NewGuid():N}.db");
+        var store = await CreateStoreAsync(databasePath);
+        var userIds = Enumerable.Range(0, 501).Select(index => $"user-{index:D3}").ToArray();
+
+        try
+        {
+            await using (var seedSession = store.CreateSession())
+            {
+                foreach (var userId in userIds)
+                {
+                    await seedSession.SaveAsync(
+                        new AgentSession
+                        {
+                            ItemId = $"session-{userId}",
+                            UserId = userId,
+                            IsOnline = true,
+                            LastHeartbeatUtc = _now,
+                            CreatedUtc = _now,
+                        },
+                        collection: ContactCenterStorage.CollectionName,
+                        cancellationToken: TestContext.Current.CancellationToken);
+                }
+
+                await seedSession.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            await using var querySession = store.CreateSession();
+            var sessionStore = new AgentSessionStore(querySession);
+
+            // Act
+            var sessions = await sessionStore.GetByUserIdsAsync(userIds, TestContext.Current.CancellationToken);
+
+            // Assert
+            Assert.Equal(userIds.Length, sessions.Count);
+            Assert.Contains(sessions, session => session.UserId == userIds[0]);
+            Assert.Contains(sessions, session => session.UserId == userIds[userIds.Length - 1]);
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task InteractionStore_AvailabilityQueries_FilterStatusesWrapUpsAndBatchedAgentIds()
+    {
+        // Arrange
+        var databasePath = Path.Combine(Path.GetTempPath(), $"contact-center-availability-interactions-{Guid.NewGuid():N}.db");
+        var store = await CreateStoreAsync(databasePath);
+        var agentIds = Enumerable.Range(0, 501).Select(index => $"agent-{index:D3}").ToArray();
+
+        try
+        {
+            await using (var seedSession = store.CreateSession())
+            {
+                await SaveInteractionAsync(seedSession, "active-first", agentIds[0], InteractionStatus.Connected);
+                await SaveInteractionAsync(seedSession, "active-last", agentIds[agentIds.Length - 1], InteractionStatus.Ringing);
+                await SaveInteractionAsync(seedSession, "created", agentIds[0], InteractionStatus.Created);
+                await SaveInteractionAsync(seedSession, "failed", agentIds[0], InteractionStatus.Failed);
+                await SaveInteractionAsync(
+                    seedSession,
+                    "pending-wrap-up",
+                    agentIds[0],
+                    InteractionStatus.Ended,
+                    wrapUpStartedUtc: _now.AddMinutes(-5));
+                await SaveInteractionAsync(
+                    seedSession,
+                    "completed-wrap-up",
+                    agentIds[0],
+                    InteractionStatus.Ended,
+                    wrapUpStartedUtc: _now.AddMinutes(-10),
+                    wrapUpCompletedUtc: _now.AddMinutes(-2));
+                await SaveInteractionAsync(
+                    seedSession,
+                    "other-agent-wrap-up",
+                    agentIds[1],
+                    InteractionStatus.Ended,
+                    wrapUpStartedUtc: _now.AddMinutes(-5));
+                await seedSession.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            await using var querySession = store.CreateSession();
+            var interactionStore = new InteractionStore(querySession);
+
+            // Act
+            var activeCounts = await interactionStore.CountActiveByAgentIdsAsync(
+                agentIds,
+                TestContext.Current.CancellationToken);
+            var pendingWrapUps = await interactionStore.GetPendingWrapUpsByAgentAsync(
+                agentIds[0],
+                TestContext.Current.CancellationToken);
+
+            // Assert
+            Assert.Equal(1, activeCounts[agentIds[0]]);
+            Assert.Equal(1, activeCounts[agentIds[agentIds.Length - 1]]);
+            var pendingWrapUp = Assert.Single(pendingWrapUps);
+            Assert.Equal("pending-wrap-up", pendingWrapUp.ItemId);
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task InteractionStore_CountActiveByAgentIds_SeesWorkWrittenInTheSameUncommittedUnitOfWork()
+    {
+        // The count is answered by a statement issued on the session's own transaction rather than through the
+        // document query pipeline, so it only sees what has actually reached the database. A caller that reserves
+        // an interaction and then asks for the agent's load in the same unit of work must not be told the agent
+        // is free: that is how an agent gets handed a second interaction they are already handling.
+        var databasePath = Path.Combine(Path.GetTempPath(), $"contact-center-availability-flush-{Guid.NewGuid():N}.db");
+        var store = await CreateStoreAsync(databasePath);
+        var agentId = "agent-uncommitted";
+
+        try
+        {
+            await using var session = store.CreateSession();
+            await SaveInteractionAsync(session, "reserved-in-flight", agentId, InteractionStatus.Ringing);
+
+            var interactionStore = new InteractionStore(session);
+
+            // Act
+            var counts = await interactionStore.CountActiveByAgentIdsAsync(
+                [agentId],
+                TestContext.Current.CancellationToken);
+
+            // Assert
+            Assert.Equal(1, counts[agentId]);
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task InteractionStore_ListActiveByAgentIds_ReturnsOnlyActiveInteractionsAcrossBatches()
+    {
+        // Arrange
+        var databasePath = Path.Combine(Path.GetTempPath(), $"contact-center-availability-list-active-{Guid.NewGuid():N}.db");
+        var store = await CreateStoreAsync(databasePath);
+        var agentIds = Enumerable.Range(0, 501).Select(index => $"agent-{index:D3}").ToArray();
+
+        try
+        {
+            await using (var seedSession = store.CreateSession())
+            {
+                await SaveInteractionAsync(seedSession, "first-agent-older", agentIds[0], InteractionStatus.Connected, createdUtc: _now.AddMinutes(-5));
+                await SaveInteractionAsync(seedSession, "first-agent-newer", agentIds[0], InteractionStatus.Ringing, createdUtc: _now);
+                await SaveInteractionAsync(seedSession, "first-agent-created", agentIds[0], InteractionStatus.Created);
+                await SaveInteractionAsync(seedSession, "last-agent-active", agentIds[agentIds.Length - 1], InteractionStatus.Connected);
+                await SaveInteractionAsync(seedSession, "unscoped-agent-active", "agent-not-requested", InteractionStatus.Connected);
+                await seedSession.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            await using var querySession = store.CreateSession();
+            var interactionStore = new InteractionStore(querySession);
+
+            // Act
+            var active = await interactionStore.GetActiveByAgentIdsAsync(
+                agentIds,
+                TestContext.Current.CancellationToken);
+
+            // Assert
+            Assert.Equal(3, active.Count);
+            Assert.Contains(active, interaction => interaction.ItemId == "first-agent-older");
+            Assert.Contains(active, interaction => interaction.ItemId == "first-agent-newer");
+            Assert.Contains(active, interaction => interaction.ItemId == "last-agent-active");
+            Assert.DoesNotContain(active, interaction => interaction.ItemId == "first-agent-created");
+            Assert.DoesNotContain(active, interaction => interaction.ItemId == "unscoped-agent-active");
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
+    private static async Task<IStore> CreateStoreAsync(string databasePath)
+    {
+        var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={databasePath};Pooling=False"));
+        store.RegisterIndexes(
+        [
+            new AgentSessionIndexProvider(),
+            new InteractionIndexProvider(),
+        ]);
+        await store.InitializeAsync(TestContext.Current.CancellationToken);
+        await store.InitializeCollectionAsync(ContactCenterStorage.CollectionName, TestContext.Current.CancellationToken);
+
+        await using var session = store.CreateSession();
+        var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
+        var schemaBuilder = new SchemaBuilder(store.Configuration, transaction);
+
+        await schemaBuilder.CreateMapIndexTableAsync<AgentSessionIndex>(table => table
+            .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<string>("UserId", column => column.WithLength(26))
+            .Column<bool>("IsOnline")
+            .Column<DateTime>("LastHeartbeatUtc"),
+            collection: ContactCenterStorage.CollectionName);
+
+        await schemaBuilder.CreateMapIndexTableAsync<InteractionIndex>(table => table
+            .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<InteractionChannel>("Channel")
+            .Column<InteractionDirection>("Direction")
+            .Column<InteractionStatus>("Status")
+            .Column<string>("ActivityItemId", column => column.WithLength(26))
+            .Column<string>("ProviderName", column => column.WithLength(128))
+            .Column<string>("ProviderInteractionId", column => column.WithLength(128))
+            .Column<string>("ProviderLegId", column => column.WithLength(128))
+            .Column<string>("QueueId", column => column.WithLength(26))
+            .Column<string>("AgentId", column => column.WithLength(26))
+            .Column<string>("CorrelationId", column => column.WithLength(26))
+            .Column<DateTime>("CreatedUtc", column => column.NotNull())
+            .Column<DateTime>("EndedUtc")
+            .Column<DateTime>("WrapUpStartedUtc")
+            .Column<DateTime>("WrapUpCompletedUtc")
+            .Column<bool>("RecordingLegalHold")
+            .Column<RecordingState>("RecordingState")
+            .Column<DateTime>("RecordingPausedUtc"),
+            collection: ContactCenterStorage.CollectionName);
+
+        await transaction.CommitAsync(TestContext.Current.CancellationToken);
+
+        return store;
+    }
+
+    private static async Task SaveInteractionAsync(
+        ISession session,
+        string itemId,
+        string agentId,
+        InteractionStatus status,
+        DateTime? wrapUpStartedUtc = null,
+        DateTime? wrapUpCompletedUtc = null,
+        DateTime? createdUtc = null)
+    {
+        await session.SaveAsync(
+            new Interaction
+            {
+                ItemId = itemId,
+                AgentId = agentId,
+                CreatedUtc = createdUtc ?? _now,
+                WrapUpStartedUtc = wrapUpStartedUtc,
+                WrapUpCompletedUtc = wrapUpCompletedUtc,
+            }.RestorePersistedStatus(status),
+            collection: ContactCenterStorage.CollectionName,
+            cancellationToken: TestContext.Current.CancellationToken);
+    }
+}

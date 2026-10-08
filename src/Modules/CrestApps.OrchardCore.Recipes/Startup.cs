@@ -1914,3 +1914,23 @@ public sealed class TimeZonesRecipeStartup : StartupBase
         services.AddScoped<IRecipeStep, TimeZoneMapsRecipeStep>();
     }
 }
+
+/// <summary>
+/// Registers workflow activity schemas for the Contact Center workflows feature.
+/// </summary>
+[RequireFeatures("OrchardCore.Workflows", "CrestApps.OrchardCore.ContactCenter")]
+public sealed class ContactCenterWorkflowRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddWorkflowActivitySchema<ContactCenterEventSchema>()
+            .AddWorkflowActivitySchema<EnqueueActivityTaskSchema>()
+            .AddWorkflowActivitySchema<ScheduleCallbackTaskSchema>()
+            .AddWorkflowActivitySchema<SetAgentPresenceTaskSchema>()
+            .AddWorkflowActivitySchema<StartCallRecordingTaskSchema>()
+            .AddWorkflowActivitySchema<StartOmnichannelActivityTaskSchema>()
+            .AddWorkflowActivitySchema<StopCallRecordingTaskSchema>()
+            .AddWorkflowActivitySchema<TransferToAgentTaskSchema>();
+    }
+}

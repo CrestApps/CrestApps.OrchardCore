@@ -106,7 +106,7 @@ public sealed class RecordsController : Controller
             : PhoneNumberVerificationsSettings.DefaultMaxVerificationAttempts;
 
         var term = string.IsNullOrWhiteSpace(q) ? null : q.Trim();
-        var pager = new Pager(pagerParameters, _pagerOptions.GetPageSize());
+        var pager = new Pager(pagerParameters, _pagerOptions);
 
         var query = ApplyStatusFilter(BuildBaseQuery(term), status, maxAttempts);
 

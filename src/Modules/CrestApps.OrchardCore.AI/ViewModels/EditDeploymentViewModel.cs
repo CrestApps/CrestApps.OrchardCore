@@ -19,19 +19,15 @@ public class EditDeploymentViewModel
     public string ModelName { get; set; }
 
     /// <summary>
-    /// Gets or sets the selected purposes.
+    /// Gets or sets whether this deployment sends a model name to a provider. A cascaded realtime
+    /// deployment talks to no provider of its own, so it has no model name to give.
     /// </summary>
-    public string[] SelectedPurposes { get; set; }
+    [BindNever]
+    public bool HasModelName { get; set; } = true;
 
     /// <summary>
     /// Gets or sets a value indicating whether is new.
     /// </summary>
     [BindNever]
     public bool IsNew { get; set; }
-
-    /// <summary>
-    /// Gets or sets the available purposes.
-    /// </summary>
-    [BindNever]
-    public IList<SelectListItem> Purposes { get; set; }
 }

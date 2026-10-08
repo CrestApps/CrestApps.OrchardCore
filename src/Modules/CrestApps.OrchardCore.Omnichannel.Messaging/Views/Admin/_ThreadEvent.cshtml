@@ -1,0 +1,26 @@
+@using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models
+@using CrestApps.OrchardCore.Omnichannel.Messaging.Services
+@model MessagingConversationEvent
+
+@{
+    // ThreadTimeline.DescribeTransfer words the sentence from the names captured when the transfer happened, so the
+    // choice of who is named, and how a queue is, is tested there.
+    var transfer = ThreadTimeline.DescribeTransfer(Model, T);
+}
+
+<div class="messaging-history-event d-flex flex-column align-items-center text-center text-muted small my-3" data-history-event>
+    <span class="badge rounded-pill text-bg-light border fw-normal text-wrap px-3 py-2">
+        <i class="fa-solid fa-share me-1" aria-hidden="true"></i>
+        @{
+            // Written from a code block, as the sentence always was, so the badge keeps its exact whitespace.
+            @transfer
+        }
+        <span class="ms-1">&middot; @Model.OccurredUtc.ToLocalTime().ToString("t")</span>
+    </span>
+    @if (!string.IsNullOrWhiteSpace(Model.Note))
+    {
+        <span class="mt-1 fst-italic" style="max-width: 80%; white-space: pre-wrap; word-break: break-word;" title="@T["An internal note for other agents; the customer never sees it."]">
+            <i class="fa-regular fa-note-sticky me-1" aria-hidden="true"></i>@Model.Note
+        </span>
+    }
+</div>

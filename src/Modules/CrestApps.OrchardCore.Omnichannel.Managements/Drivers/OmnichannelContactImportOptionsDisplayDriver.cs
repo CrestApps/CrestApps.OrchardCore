@@ -1,10 +1,15 @@
 using CrestApps.OrchardCore.ContentTransfer.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
+using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -21,6 +26,10 @@ public sealed class OmnichannelContactImportOptionsDisplayDriver : DisplayDriver
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly IPhoneNumberService _phoneNumberService;
+    private readonly IOmnichannelContactTypeProvider _contactTypeProvider;
+    private readonly INamedCatalog<LeadStatus> _leadStatuses;
+    private readonly LeadSourceProvider _leadSources;
+    private readonly bool _crmEnabled;
     private readonly IStringLocalizer S;
 
     /// <summary>
@@ -29,11 +38,23 @@ public sealed class OmnichannelContactImportOptionsDisplayDriver : DisplayDriver
     /// <param name="contentDefinitionManager">The content definition manager.</param>
     /// <param name="phoneNumberService">The phone number service.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="contactTypeProvider">Tells lead types from contact types.</param>
+    /// <param name="leadStatuses">The lead status catalog.</param>
+    /// <param name="leadSources">The lead sources.</param>
+    /// <param name="crmOptions">Whether the CRM feature is enabled.</param>
     public OmnichannelContactImportOptionsDisplayDriver(
         IContentDefinitionManager contentDefinitionManager,
         IPhoneNumberService phoneNumberService,
-        IStringLocalizer<OmnichannelContactImportOptionsDisplayDriver> stringLocalizer)
+        IStringLocalizer<OmnichannelContactImportOptionsDisplayDriver> stringLocalizer,
+        IOmnichannelContactTypeProvider contactTypeProvider,
+        INamedCatalog<LeadStatus> leadStatuses,
+        LeadSourceProvider leadSources,
+        IOptions<OmnichannelCrmOptions> crmOptions)
     {
+        _contactTypeProvider = contactTypeProvider;
+        _leadStatuses = leadStatuses;
+        _leadSources = leadSources;
+        _crmEnabled = crmOptions.Value.Enabled;
         _contentDefinitionManager = contentDefinitionManager;
         _phoneNumberService = phoneNumberService;
         S = stringLocalizer;
@@ -47,12 +68,32 @@ public sealed class OmnichannelContactImportOptionsDisplayDriver : DisplayDriver
         }
 
         var options = model.GetOrCreate<OmnichannelContactImportOptionsPart>();
+        var isLeadType = await IsLeadTypeAsync(model);
 
-        return Initialize<OmnichannelContactImportOptionsViewModel>("OmnichannelContactImportOptions_Edit", viewModel =>
+        return Initialize<OmnichannelContactImportOptionsViewModel>("OmnichannelContactImportOptions_Edit", async viewModel =>
         {
             viewModel.IgnoreDuplicateByPhoneNumber = options.IgnoreDuplicateByPhoneNumber;
             viewModel.SelectedCountryCode = NormalizeCountryCode(options.SelectedCountryCode);
             viewModel.AvailableCountries = GetCountryOptions(viewModel.SelectedCountryCode);
+            viewModel.CrmEnabled = _crmEnabled;
+            viewModel.IsLeadType = isLeadType;
+            viewModel.DuplicateScope = options.DuplicateScope;
+            viewModel.SkipNumbersOfExistingContacts = options.SkipNumbersOfExistingContacts;
+            viewModel.SkipNumbersOfOpenLeads = options.SkipNumbersOfOpenLeads;
+            viewModel.LeadSourceId = options.LeadSourceId;
+            viewModel.LeadListName = options.LeadListName;
+            viewModel.LeadStatusId = options.LeadStatusId;
+            viewModel.LeadOwnerId = options.LeadOwnerId;
+
+            if (isLeadType)
+            {
+                viewModel.LeadStatuses = (await _leadStatuses.GetAllAsync())
+                    .Where(status => !status.IsConverted)
+                    .OrderBy(status => status.Order)
+                    .Select(status => new SelectListItem(status.Name, status.ItemId, status.ItemId == options.LeadStatusId))
+                    .ToList();
+                viewModel.LeadSources = await _leadSources.GetOptionsAsync(options.LeadSourceId);
+            }
         }).Location("Content:5");
     }
 
@@ -75,6 +116,18 @@ public sealed class OmnichannelContactImportOptionsDisplayDriver : DisplayDriver
             var options = model.GetOrCreate<OmnichannelContactImportOptionsPart>();
             options.IgnoreDuplicateByPhoneNumber = viewModel.IgnoreDuplicateByPhoneNumber;
             options.SelectedCountryCode = NormalizeCountryCode(viewModel.SelectedCountryCode);
+            options.DuplicateScope = viewModel.DuplicateScope;
+
+            if (await IsLeadTypeAsync(model))
+            {
+                options.SkipNumbersOfExistingContacts = viewModel.SkipNumbersOfExistingContacts;
+                options.SkipNumbersOfOpenLeads = viewModel.SkipNumbersOfOpenLeads;
+                options.LeadSourceId = await _leadSources.FindIdAsync(viewModel.LeadSourceId);
+                options.LeadListName = Trim(viewModel.LeadListName);
+                options.LeadStatusId = Trim(viewModel.LeadStatusId);
+                options.LeadOwnerId = Trim(viewModel.LeadOwnerId);
+            }
+
             model.Put(options);
         }
 
@@ -93,6 +146,14 @@ public sealed class OmnichannelContactImportOptionsDisplayDriver : DisplayDriver
         return contentTypeDefinition?.Parts?.Any(p =>
             p.PartDefinition.Name == OmnichannelConstants.ContentParts.OmnichannelContact) == true;
     }
+
+    private async Task<bool> IsLeadTypeAsync(ImportContent model)
+        => _crmEnabled &&
+        !string.IsNullOrEmpty(model.ContentTypeId) &&
+        (await _contactTypeProvider.GetLeadContentTypesAsync()).Contains(model.ContentTypeId);
+
+    private static string Trim(string value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private List<SelectListItem> GetCountryOptions(string selectedCountryCode)
     {

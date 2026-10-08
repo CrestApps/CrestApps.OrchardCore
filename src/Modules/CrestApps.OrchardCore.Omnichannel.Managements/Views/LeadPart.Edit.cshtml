@@ -1,0 +1,14 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model LeadPartViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="StatusId">
+    <label asp-for="StatusId" class="ocat-label">@T["Lead status"]</label>
+    <div class="ocat-end">
+        <select asp-for="StatusId" asp-items="Model.Statuses" class="form-select">
+            <option value="">@T["Default status"]</option>
+        </select>
+        <span asp-validation-for="StatusId" class="text-danger"></span>
+        <span class="hint">@T["Where the lead is in qualification. A lead takes the converted status only when it is converted."]</span>
+    </div>
+</div>

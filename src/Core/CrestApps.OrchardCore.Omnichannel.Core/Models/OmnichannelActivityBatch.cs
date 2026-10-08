@@ -1,4 +1,5 @@
-﻿using CrestApps.Core;
+using System.Text.Json;
+using CrestApps.Core;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 
@@ -67,6 +68,56 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
     public string TextToSpeechVoiceId { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether realtime calls carry a quiet background bed — room tone and the
+    /// sound of the agent typing — instead of arriving on a dead-silent line.
+    /// </summary>
+    public bool UseCallAmbience { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the AI may update the contact during automated conversations
+    /// loaded from this batch. Chosen when the automated inventory is loaded and snapshotted onto each activity.
+    /// </summary>
+    public bool AllowAIToUpdateContact { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the AI may update the subject during automated conversations
+    /// loaded from this batch. Chosen when the automated inventory is loaded and snapshotted onto each activity.
+    /// </summary>
+    public bool AllowAIToUpdateSubject { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets how long automated conversations loaded from this batch wait before sending each AI reply, so
+    /// responses do not feel instant. Snapshotted onto each activity when the inventory is loaded.
+    /// </summary>
+    public OmnichannelResponseDelayMode ResponseDelayMode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the reply delay in seconds. For <see cref="OmnichannelResponseDelayMode.Fixed"/> this is the exact
+    /// wait; for <see cref="OmnichannelResponseDelayMode.Random"/> this is the base the jitter is applied around.
+    /// </summary>
+    public int ResponseDelaySeconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the jitter, in seconds, applied around <see cref="ResponseDelaySeconds"/> when
+    /// <see cref="ResponseDelayMode"/> is <see cref="OmnichannelResponseDelayMode.Random"/>.
+    /// </summary>
+    public int ResponseDelayJitterSeconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the business-hours calendar that gates background-initiated sends (such as
+    /// re-engagement nudges) for conversations loaded from this batch. Evaluated in the contact's local time zone.
+    /// When empty, sends are never restricted by hours. Snapshotted onto each activity when the inventory is loaded.
+    /// </summary>
+    public string BusinessHoursCalendarId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the reusable <c>Cadence</c> that defines the re-engagement cadence and
+    /// messages for contacts who go quiet. When empty, the automation never nudges. Snapshotted onto each activity when
+    /// the inventory is loaded. Every nudge still respects <see cref="BusinessHoursCalendarId"/>.
+    /// </summary>
+    public string CadenceId { get; set; }
+
+    /// <summary>
     /// Gets or sets the dialer profile identifier assigned to dialer activities loaded from this batch.
     /// </summary>
     public string DialerProfileId { get; set; }
@@ -125,6 +176,64 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
     /// Gets or sets the total loaded.
     /// </summary>
     public long? TotalLoaded { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many contacts matched the batch filters on its last load, whether or not an activity was
+    /// created for them. <see langword="null"/> for a batch loaded before the load was reported.
+    /// </summary>
+    /// <remarks>
+    /// A load that finds fewer people than the operator expected has to say why, or the only way to find out is to
+    /// read the database. This and the skip counts below are that explanation: every matching contact is either
+    /// loaded or counted against exactly one reason.
+    /// </remarks>
+    public long? TotalMatched { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many matching contacts were skipped on the last load because they already had an open
+    /// activity for the batch subject.
+    /// </summary>
+    public long TotalSkippedAsDuplicate { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many matching contacts were skipped on the last load because they had asked not to be
+    /// reached on the batch channel.
+    /// </summary>
+    public long TotalSkippedAsOptedOut { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many matching contacts were skipped on the last load because another record sharing one of
+    /// their phone numbers had asked not to be reached on the batch channel.
+    /// </summary>
+    public long TotalSkippedAsSharedNumberOptedOut { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many matching contacts were skipped on the last load because they had no address on the
+    /// batch channel for an automated activity to use.
+    /// </summary>
+    public long TotalSkippedForNoDestination { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many matching contacts were skipped on the last load because every phone number they had on
+    /// the batch channel is known not to be in service.
+    /// </summary>
+    public long TotalSkippedAsNotInService { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many matching contacts were not examined on the last load because the limit had already been
+    /// reached.
+    /// </summary>
+    public long TotalSkippedByLimit { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many matching leads the last load skipped because they were already converted into contacts.
+    /// </summary>
+    public long TotalSkippedAsConverted { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many matching leads the last load skipped because their phone number already belongs to a
+    /// contact, so a customer is not called again as a stranger.
+    /// </summary>
+    public long TotalSkippedAsExistingContact { get; set; }
 
     /// <summary>
     /// Gets or sets the prevent duplicates.
@@ -189,6 +298,23 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
     public string LastActivityDispositionId { get; set; }
 
     /// <summary>
+    /// Clears the counts of the previous load, so a reload reports only what it did itself.
+    /// </summary>
+    public void ResetLoadCounts()
+    {
+        TotalLoaded = 0;
+        TotalMatched = 0;
+        TotalSkippedAsDuplicate = 0;
+        TotalSkippedAsOptedOut = 0;
+        TotalSkippedAsSharedNumberOptedOut = 0;
+        TotalSkippedForNoDestination = 0;
+        TotalSkippedAsNotInService = 0;
+        TotalSkippedByLimit = 0;
+        TotalSkippedAsConverted = 0;
+        TotalSkippedAsExistingContact = 0;
+    }
+
+    /// <summary>
     /// Creates a copy of the current activity batch.
     /// </summary>
     public OmnichannelActivityBatch Clone()
@@ -207,6 +333,14 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
             SpeechToTextDeploymentName = SpeechToTextDeploymentName,
             TextToSpeechDeploymentName = TextToSpeechDeploymentName,
             TextToSpeechVoiceId = TextToSpeechVoiceId,
+            UseCallAmbience = UseCallAmbience,
+            AllowAIToUpdateContact = AllowAIToUpdateContact,
+            AllowAIToUpdateSubject = AllowAIToUpdateSubject,
+            ResponseDelayMode = ResponseDelayMode,
+            ResponseDelaySeconds = ResponseDelaySeconds,
+            ResponseDelayJitterSeconds = ResponseDelayJitterSeconds,
+            BusinessHoursCalendarId = BusinessHoursCalendarId,
+            CadenceId = CadenceId,
             DialerProfileId = DialerProfileId,
             UserIds = UserIds?.ToArray(),
             IncludeDoNoCalls = IncludeDoNoCalls,
@@ -219,6 +353,15 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
             ScheduleAt = ScheduleAt,
             Instructions = Instructions,
             TotalLoaded = TotalLoaded,
+            TotalMatched = TotalMatched,
+            TotalSkippedAsDuplicate = TotalSkippedAsDuplicate,
+            TotalSkippedAsOptedOut = TotalSkippedAsOptedOut,
+            TotalSkippedAsSharedNumberOptedOut = TotalSkippedAsSharedNumberOptedOut,
+            TotalSkippedForNoDestination = TotalSkippedForNoDestination,
+            TotalSkippedAsNotInService = TotalSkippedAsNotInService,
+            TotalSkippedByLimit = TotalSkippedByLimit,
+            TotalSkippedAsConverted = TotalSkippedAsConverted,
+            TotalSkippedAsExistingContact = TotalSkippedAsExistingContact,
             PreventDuplicates = PreventDuplicates,
             UrgencyLevel = UrgencyLevel,
             Status = Status,
@@ -231,6 +374,10 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
             TimeZoneIds = TimeZoneIds?.ToArray(),
             LastActivitySubjectContentType = LastActivitySubjectContentType,
             LastActivityDispositionId = LastActivityDispositionId,
+            // Everything a driver stores with Put lives here; a clone without it drops those settings on every save.
+            Properties = Properties is null
+                ? null
+                : JsonSerializer.Deserialize<Dictionary<string, object>>(JsonSerializer.Serialize(Properties)),
         };
     }
 }

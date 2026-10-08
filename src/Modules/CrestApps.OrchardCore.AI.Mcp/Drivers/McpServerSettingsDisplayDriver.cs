@@ -1,4 +1,3 @@
-using CrestApps.Core;
 using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Tooling;
@@ -16,7 +15,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Environment.Shell;
+using OrchardCore.Environment.Options;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
 
@@ -31,8 +30,9 @@ public sealed class McpServerSettingsDisplayDriver : SiteDisplayDriver<McpServer
     private readonly AIToolDefinitionOptions _toolDefinitions;
     private readonly IAIToolInstanceAccessor _instanceAccessor;
     private readonly IAuthorizationService _authorizationService;
+    private readonly IAIToolAccessEvaluator _toolAccessEvaluator;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IShellReleaseManager _shellReleaseManager;
+    private readonly IOptionsUpdateNotifier _optionsUpdateNotifier;
 
     internal readonly IStringLocalizer S;
 
@@ -44,22 +44,25 @@ public sealed class McpServerSettingsDisplayDriver : SiteDisplayDriver<McpServer
     /// <param name="toolDefinitions">The registered AI tool definitions.</param>
     /// <param name="instanceAccessor">The accessor that resolves the tool instances the current user may assign.</param>
     /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="toolAccessEvaluator">The evaluator used to check tool access permissions.</param>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
-    /// <param name="shellReleaseManager">The shell release manager.</param>
+    /// <param name="optionsUpdateNotifier">The options update notifier.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public McpServerSettingsDisplayDriver(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
         IAIToolInstanceAccessor instanceAccessor,
         IAuthorizationService authorizationService,
+        IAIToolAccessEvaluator toolAccessEvaluator,
         IHttpContextAccessor httpContextAccessor,
-        IShellReleaseManager shellReleaseManager,
+        IOptionsUpdateNotifier optionsUpdateNotifier,
         IStringLocalizer<McpServerSettingsDisplayDriver> stringLocalizer)
     {
         _toolDefinitions = toolDefinitions.Value;
         _instanceAccessor = instanceAccessor;
         _authorizationService = authorizationService;
+        _toolAccessEvaluator = toolAccessEvaluator;
         _httpContextAccessor = httpContextAccessor;
-        _shellReleaseManager = shellReleaseManager;
+        _optionsUpdateNotifier = optionsUpdateNotifier;
         S = stringLocalizer;
     }
 
@@ -69,8 +72,6 @@ public sealed class McpServerSettingsDisplayDriver : SiteDisplayDriver<McpServer
         {
             return null;
         }
-
-        context.AddTenantReloadWarningWrapper();
 
         var accessibleTools = await GetAccessibleToolsAsync();
         var accessibleInstances = await _instanceAccessor.GetAccessibleInstancesAsync();
@@ -87,9 +88,9 @@ public sealed class McpServerSettingsDisplayDriver : SiteDisplayDriver<McpServer
                 [
                     new SelectListItem(S["OpenID Connect"], nameof(McpServerAuthenticationType.OpenId)),
                     new SelectListItem(S["API key"], nameof(McpServerAuthenticationType.ApiKey)),
-                    new SelectListItem(S["None (development only)"], nameof(McpServerAuthenticationType.None)),
+                    new SelectListItem(S["None (Anonymous access)"], nameof(McpServerAuthenticationType.None)),
                 ];
-            }).Location("Content:1%MCP Server;1")
+            }).Location("Content:10%MCP Server;1")
             .OnGroup(SettingsGroupId),
         };
 
@@ -109,7 +110,7 @@ public sealed class McpServerSettingsDisplayDriver : SiteDisplayDriver<McpServer
                         Description = entry.Value.Description,
                         IsSelected = selected.Contains(entry.Key),
                     }).OrderBy(entry => entry.DisplayText).ToArray());
-            }).Location("Content:1%MCP Server;5")
+            }).Location("Content:10%MCP Server;5")
             .OnGroup(SettingsGroupId));
         }
 
@@ -128,7 +129,7 @@ public sealed class McpServerSettingsDisplayDriver : SiteDisplayDriver<McpServer
                     })
                     .OrderBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)
                     .ToArray();
-            }).Location("Content:1%MCP Server;10")
+            }).Location("Content:10%MCP Server;10")
             .OnGroup(SettingsGroupId));
         }
 
@@ -191,7 +192,7 @@ public sealed class McpServerSettingsDisplayDriver : SiteDisplayDriver<McpServer
         settings.ExposeAllTools = model.ExposeAllTools;
         settings.Tools = tools;
 
-        _shellReleaseManager.RequestRelease();
+        _optionsUpdateNotifier.RequestUpdate<McpServerOptions>();
 
         return await EditAsync(site, settings, context);
     }
@@ -209,7 +210,7 @@ public sealed class McpServerSettingsDisplayDriver : SiteDisplayDriver<McpServer
 
         foreach (var tool in _toolDefinitions.GetSelectableTools())
         {
-            if (await _authorizationService.AuthorizeAsync(user, AIPermissions.AccessAITool, tool.Key as object))
+            if (await _toolAccessEvaluator.IsAuthorizedAsync(user, tool.Key))
             {
                 accessibleTools[tool.Key] = tool.Value;
             }

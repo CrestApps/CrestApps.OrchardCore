@@ -46,12 +46,11 @@
     };
 }
 
-<nav aria-label="breadcrumb">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a asp-action="List" asp-controller="Admin">@T["Bulk Import"]</a></li>
-        <li class="breadcrumb-item active" aria-current="page">@RenderTitleSegments(T["Import {0} contents", Model.ContentTypeDefinition.DisplayName])</li>
-    </ol>
-</nav>
+<zone Name="Title">
+    <breadcrumb name="ContentTransferImport" title="@T["Import {0} contents", Model.ContentTypeDefinition.DisplayName]">
+        <breadcrumb-item id="ContentTransferImports" action="List" controller="Admin" area="CrestApps.OrchardCore.ContentTransfer" permission="@ContentTransferPermissions.ListContentTransferEntries.Name">@T["Bulk Import"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
 
 @if (!ViewContext.ModelState.IsValid)
 {

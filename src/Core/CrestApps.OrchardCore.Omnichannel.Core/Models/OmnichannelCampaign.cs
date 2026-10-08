@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CrestApps.Core;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
@@ -33,11 +34,6 @@ public sealed class OmnichannelCampaign : CatalogItem, IDisplayTextAwareModel, I
     /// Gets or sets the channel.
     /// </summary>
     public string Channel { get; set; }
-
-    /// <summary>
-    /// Gets or sets the channel endpoint id.
-    /// </summary>
-    public string ChannelEndpointId { get; set; }
 
     /// <summary>
     /// When the campaign in automated, this will be the initial message to start the converation with the customer.
@@ -143,7 +139,6 @@ public sealed class OmnichannelCampaign : CatalogItem, IDisplayTextAwareModel, I
             CampaignGroupId = CampaignGroupId,
             InteractionType = InteractionType,
             Channel = Channel,
-            ChannelEndpointId = ChannelEndpointId,
             InitialOutboundPromptPattern = InitialOutboundPromptPattern,
             CampaignGoal = CampaignGoal,
             ProviderName = ProviderName,
@@ -162,6 +157,10 @@ public sealed class OmnichannelCampaign : CatalogItem, IDisplayTextAwareModel, I
             OwnerId = OwnerId,
             AllowAIToUpdateContact = AllowAIToUpdateContact,
             AllowAIToUpdateSubject = AllowAIToUpdateSubject,
+            // Everything a driver stores with Put lives here; a clone without it drops those settings on every save.
+            Properties = Properties is null
+                ? null
+                : JsonSerializer.Deserialize<Dictionary<string, object>>(JsonSerializer.Serialize(Properties)),
         };
     }
 }

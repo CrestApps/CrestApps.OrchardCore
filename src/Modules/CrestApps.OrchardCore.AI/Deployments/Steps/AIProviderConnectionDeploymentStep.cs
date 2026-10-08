@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.AI.Recipes;
-using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
+using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.AI.Deployments.Steps;
 
@@ -9,22 +9,17 @@ namespace CrestApps.OrchardCore.AI.Deployments.Steps;
 /// </summary>
 public sealed class AIProviderConnectionDeploymentStep : DeploymentStep
 {
+    private static readonly LocalizationSource _category = LocalizationSource.Create<AIProviderConnectionDeploymentStep>("Artificial Intelligence");
+    private static readonly LocalizationSource _title = LocalizationSource.Create<AIProviderConnectionDeploymentStep>("AI Provider Connections");
+
     /// <summary>
     /// Initializes a new instance of the <see cref="AIProviderConnectionDeploymentStep"/> class.
     /// </summary>
     public AIProviderConnectionDeploymentStep()
     {
         Name = AIProviderConnectionsStep.StepKey;
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AIProviderConnectionDeploymentStep"/> class.
-    /// </summary>
-    /// <param name="S">The string localizer.</param>
-    public AIProviderConnectionDeploymentStep(IStringLocalizer<AIProviderConnectionDeploymentStep> S)
-        : this()
-    {
-        Category = S["Artificial Intelligence"];
+        Category = _category;
+        Title = _title;
     }
 
     /// <summary>

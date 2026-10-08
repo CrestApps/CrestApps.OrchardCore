@@ -5,10 +5,12 @@ using CrestApps.OrchardCore.ContentTransfer.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
+using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentFields.Fields;
 using OrchardCore.ContentManagement;
+using OrchardCore;
 using OrchardCore.Entities;
 using OrchardCore.Flows.Models;
 using OrchardCore.Modules;
@@ -26,6 +28,7 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
 
     private readonly IClock _clock;
     private readonly IPhoneNumberService _phoneNumberService;
+    private readonly ImportRowDoNotCallFlags _doNotCallFlags;
 
     private ImportColumn _emailColumn;
     private ImportColumn _cellPhoneColumn;
@@ -36,8 +39,6 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
     private ImportColumn _doNotSmsUtcColumn;
     private ImportColumn _doNotEmailColumn;
     private ImportColumn _doNotEmailUtcColumn;
-    private ImportColumn _doNotChatColumn;
-    private ImportColumn _doNotChatUtcColumn;
     private ImportColumn _timeZoneIdColumn;
 
     /// <summary>
@@ -46,11 +47,14 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
     /// <param name="clock">The clock.</param>
     /// <param name="phoneNumberService">The phone number service for E.164 formatting.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="doNotCallFlags">The rows the do-not-call screening chose to import marked Do not call.</param>
     public OmnichannelContactPartContentImportHandler(
         IClock clock,
         IPhoneNumberService phoneNumberService,
-        IStringLocalizer<OmnichannelContactPartContentImportHandler> stringLocalizer)
+        IStringLocalizer<OmnichannelContactPartContentImportHandler> stringLocalizer,
+        ImportRowDoNotCallFlags doNotCallFlags = null)
     {
+        _doNotCallFlags = doNotCallFlags;
         _clock = clock;
         _phoneNumberService = phoneNumberService;
         S = stringLocalizer;
@@ -86,8 +90,6 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
         _doNotSmsUtcColumn ??= CreatePreferenceColumn(nameof(OmnichannelContactPart.DoNotSmsUtc), S["When the SMS block was recorded in UTC."]);
         _doNotEmailColumn ??= CreateBooleanPreferenceColumn(nameof(OmnichannelContactPart.DoNotEmail), S["Whether email is blocked for the contact. Use true or false."]);
         _doNotEmailUtcColumn ??= CreatePreferenceColumn(nameof(OmnichannelContactPart.DoNotEmailUtc), S["When the email block was recorded in UTC."]);
-        _doNotChatColumn ??= CreateBooleanPreferenceColumn(nameof(OmnichannelContactPart.DoNotChat), S["Whether chat is blocked for the contact. Use true or false."]);
-        _doNotChatUtcColumn ??= CreatePreferenceColumn(nameof(OmnichannelContactPart.DoNotChatUtc), S["When the chat block was recorded in UTC."]);
         _timeZoneIdColumn ??= new ImportColumn()
         {
             Name = nameof(OmnichannelContactPart.TimeZoneId),
@@ -107,8 +109,6 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
             _doNotSmsUtcColumn,
             _doNotEmailColumn,
             _doNotEmailUtcColumn,
-            _doNotChatColumn,
-            _doNotChatUtcColumn,
         ];
     }
 
@@ -137,9 +137,6 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
         var doNotEmail = false;
         DateTime? doNotEmailUtc = null;
         var hasDoNotEmail = false;
-        var doNotChat = false;
-        DateTime? doNotChatUtc = null;
-        var hasDoNotChat = false;
         var hasTimeZoneId = false;
 
         foreach (DataColumn column in context.Columns)
@@ -185,14 +182,6 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
             {
                 doNotEmailUtc = TryParseDateTime(context.Row[column]);
             }
-            else if (Is(column.ColumnName, _doNotChatColumn))
-            {
-                hasDoNotChat = TryParseBoolean(context.Row[column], out doNotChat);
-            }
-            else if (Is(column.ColumnName, _doNotChatUtcColumn))
-            {
-                doNotChatUtc = TryParseDateTime(context.Row[column]);
-            }
         }
 
         if (string.IsNullOrEmpty(email) &&
@@ -202,11 +191,9 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
             !hasDoNotCall &&
             !hasDoNotSms &&
             !hasDoNotEmail &&
-            !hasDoNotChat &&
             !doNotCallUtc.HasValue &&
             !doNotSmsUtc.HasValue &&
-            !doNotEmailUtc.HasValue &&
-            !doNotChatUtc.HasValue)
+            !doNotEmailUtc.HasValue)
         {
             return Task.CompletedTask;
         }
@@ -251,6 +238,13 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
             contactPart.DoNotCallUtc = doNotCall ? doNotCallUtc ?? contactPart.DoNotCallUtc : null;
         }
 
+        // A number the registry screening found is imported marked Do not call, whatever the file says, because the
+        // registry decides that the number must not be called.
+        if (_doNotCallFlags?.IsMarked(context.Row) == true)
+        {
+            contactPart.SetDoNotCall(true, utcNow);
+        }
+
         if (hasDoNotSms)
         {
             contactPart.SetDoNotSms(doNotSms, utcNow);
@@ -261,12 +255,6 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
         {
             contactPart.SetDoNotEmail(doNotEmail, utcNow);
             contactPart.DoNotEmailUtc = doNotEmail ? doNotEmailUtc ?? contactPart.DoNotEmailUtc : null;
-        }
-
-        if (hasDoNotChat)
-        {
-            contactPart.SetDoNotChat(doNotChat, utcNow);
-            contactPart.DoNotChatUtc = doNotChat ? doNotChatUtc ?? contactPart.DoNotChatUtc : null;
         }
 
         if (hasTimeZoneId)
@@ -380,7 +368,6 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
             context.Row[_doNotCallColumn.Name] = contactPart.DoNotCall;
             context.Row[_doNotSmsColumn.Name] = contactPart.DoNotSms;
             context.Row[_doNotEmailColumn.Name] = contactPart.DoNotEmail;
-            context.Row[_doNotChatColumn.Name] = contactPart.DoNotChat;
 
             if (contactPart.DoNotCallUtc.HasValue)
             {
@@ -395,11 +382,6 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
             if (contactPart.DoNotEmailUtc.HasValue)
             {
                 context.Row[_doNotEmailUtcColumn.Name] = contactPart.DoNotEmailUtc.Value;
-            }
-
-            if (contactPart.DoNotChatUtc.HasValue)
-            {
-                context.Row[_doNotChatUtcColumn.Name] = contactPart.DoNotChatUtc.Value;
             }
         }
 
@@ -560,6 +542,11 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
     {
         var contentItem = new ContentItem();
         contentItem.ContentType = OmnichannelConstants.ContentTypes.EmailAddress;
+        // Each bag item must carry its own unique identifiers. Without them, multiple communication methods share
+        // an empty/duplicated ContentItemId, and OrchardCore's BagPart editor throws on the duplicate key when the
+        // contact is edited, silently dropping every change in the bag.
+        contentItem.ContentItemId = IdGenerator.GenerateId();
+        contentItem.ContentItemVersionId = IdGenerator.GenerateId();
         contentItem.DisplayText = email;
 
         contentItem.Alter<EmailInfoPart>(part =>
@@ -574,6 +561,11 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
     {
         var contentItem = new ContentItem();
         contentItem.ContentType = OmnichannelConstants.ContentTypes.PhoneNumber;
+        // Each bag item must carry its own unique identifiers. Without them, the cell and home phone methods share
+        // an empty/duplicated ContentItemId, and OrchardCore's BagPart editor throws on the duplicate key when the
+        // contact is edited, silently dropping every change in the bag.
+        contentItem.ContentItemId = IdGenerator.GenerateId();
+        contentItem.ContentItemVersionId = IdGenerator.GenerateId();
         contentItem.DisplayText = $"{type}: {number}";
 
         contentItem.Alter<PhoneNumberInfoPart>(part =>

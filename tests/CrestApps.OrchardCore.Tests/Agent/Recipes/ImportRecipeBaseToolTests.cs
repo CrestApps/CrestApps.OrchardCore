@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
+using OrchardCore.FileStorage;
 using OrchardCore.Json;
 
 namespace CrestApps.OrchardCore.Tests.Agent.Recipes;
@@ -97,9 +98,15 @@ public sealed class ImportRecipeBaseToolTests
             [],
             recipeSteps,
             new MemoryCache(new MemoryCacheOptions()));
+        var tempDirectoryProvider = new Mock<ITempDirectoryProvider>();
+        tempDirectoryProvider
+            .Setup(provider => provider.GetTempFileName(It.IsAny<string>()))
+            .Returns((string extension) => Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + (extension ?? string.Empty)));
+
         var recipeExecutionService = new RecipeExecutionService(
             [],
             Options.Create(new DocumentJsonSerializerOptions()),
+            tempDirectoryProvider.Object,
             NullLogger<RecipeExecutionService>.Instance);
 
         return new ServiceCollection()

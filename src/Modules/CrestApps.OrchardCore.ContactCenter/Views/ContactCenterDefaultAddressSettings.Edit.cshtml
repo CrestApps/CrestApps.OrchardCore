@@ -1,0 +1,26 @@
+@model ContactCenterDefaultAddressSettingsViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<div class="ocat-wrapper" asp-validation-class-for="DefaultPhoneAddressId">
+    <label asp-for="DefaultPhoneAddressId" class="ocat-label">@T["Default phone number"]</label>
+    <div class="ocat-end">
+        <select asp-for="DefaultPhoneAddressId" asp-items="Model.PhoneAddressOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a number"]" title="@T["None"]">
+            <option value="">@T["None"]</option>
+        </select>
+        <span asp-validation-for="DefaultPhoneAddressId" class="text-danger"></span>
+        <span class="hint">@T["The number used for an agent who has no phone number of their own, for example by the Find Agent Numbers workflow task. The numbers are the Omnichannel Addresses used for voice calls."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="DefaultSmsAddressId">
+    <label asp-for="DefaultSmsAddressId" class="ocat-label">@T["Default SMS number"]</label>
+    <div class="ocat-end">
+        <select asp-for="DefaultSmsAddressId" asp-items="Model.SmsAddressOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a number"]" title="@T["None"]">
+            <option value="">@T["None"]</option>
+        </select>
+        <span asp-validation-for="DefaultSmsAddressId" class="text-danger"></span>
+        <span class="hint">@T["The number an agent who has no texting number of their own sends from: it is the messaging composer's starting From number and the Find Agent Numbers workflow task's SMS number. The numbers are the Omnichannel Addresses used for text messages."]</span>
+    </div>
+</div>

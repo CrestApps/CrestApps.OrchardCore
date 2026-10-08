@@ -3,6 +3,8 @@ sidebar_label: Phone Number Verifications - Twilio
 sidebar_position: 11
 title: Twilio Phone Number Verification
 description: Configure the Twilio Lookup provider for the Phone Number Verifications module.
+user_manual:
+  - user-manual/administration/phone-number-verification
 ---
 
 | | |
@@ -23,6 +25,7 @@ Configure the provider under **Settings** -> **Phone Number Verifications** on t
 
 | Setting | Default | Purpose |
 | --- | --- | --- |
+| **Enable this provider** | Off | Makes the provider available. Its other settings appear, and it can be picked as the **Default provider**, only after this is switched on and saved. |
 | **Authentication type** | API key SID and secret | The Twilio authentication strategy. |
 | **API key SID** / **API key secret** | _(empty)_ | Recommended production credentials. The secret is stored as a protected value. |
 | **Account SID** / **Auth Token** | _(empty)_ | Local testing credentials. The token is stored as a protected value. |
@@ -93,10 +96,12 @@ When the `line_status` data package returns a status, the provider only verifies
 
 ## Sample configuration
 
+The User Manual walks administrators through these screens on [Phone Number Verification](../user-manual/administration/phone-number-verification.md#set-up-a-provider). In short:
+
 1. Create or select a Twilio account and enable access to [Twilio Lookup](https://www.twilio.com/docs/lookup).
 2. Create an API key in the [Twilio Console API keys page](https://www.twilio.com/console/project/api-keys), or copy the Account SID and Auth Token from the [Twilio Console](https://www.twilio.com/console) for local testing.
-3. Enable the **Twilio Phone Number Verification** feature under **Configuration** -> **Features**.
-4. Open **Settings** -> **Phone Number Verifications**, select the **Twilio** tab, choose the authentication type, enter the matching credentials, and save.
+3. Enable the **Twilio Phone Number Verification** feature under **Tools** -> **Features**.
+4. Open **Settings** -> **Phone Number Verifications**, select the **Twilio** tab, switch on **Enable this provider**, choose the authentication type, enter the matching credentials, and save.
 5. On the **General** tab, select **Twilio** as the default provider.
 
 ## Troubleshooting

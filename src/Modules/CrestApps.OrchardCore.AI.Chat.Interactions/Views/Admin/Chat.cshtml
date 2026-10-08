@@ -3,7 +3,9 @@
 @model EditChatInteractionEntryViewModel
 
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["Chat: {0}", Model.DisplayName])</h1>
+    <breadcrumb name="AIChatInteractionsChat" title="@T["Chat: {0}", Model.DisplayName]">
+        <breadcrumb-item id="AIChatInteractions" action="Index" controller="Admin" area="CrestApps.OrchardCore.AI.Chat.Interactions" permission="@AIPermissions.ListChatInteractions.Name">@T["Chat Interactions"]</breadcrumb-item>
+    </breadcrumb>
 </zone>
 
 @await DisplayAsync(Model.Editor)

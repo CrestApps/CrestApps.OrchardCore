@@ -1,5 +1,5 @@
 {
-  "docsSidebar": [
+  "technicalSidebar": [
     "intro",
     "getting-started",
     "feature-reference",
@@ -96,8 +96,7 @@
       "type": "category",
       "label": "Telephony",
       "items": [
-        "telephony/index",
-        "telephony/dialpad"
+        "telephony/index"
       ]
     },
     {

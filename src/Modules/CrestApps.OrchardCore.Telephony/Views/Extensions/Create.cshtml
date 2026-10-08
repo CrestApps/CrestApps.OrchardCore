@@ -1,0 +1,21 @@
+@using CrestApps.OrchardCore.Core.Models
+
+@model EditCatalogEntryViewModel
+
+<zone Name="Title">
+    <breadcrumb name="TelephonyExtensionsCreate" title="@T["New Extension"]">
+        <breadcrumb-item id="TelephonyExtensions" action="Index" controller="Extensions" area="CrestApps.OrchardCore.Telephony" permission="@TelephonyPermissions.ManageExtensions.Name">@T["Extensions"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" class="no-multisubmit">
+    @Html.ValidationSummary()
+    @await DisplayAsync(Model.Editor)
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button class="btn btn-primary" type="submit">@T["Save"]</button>
+            <a class="btn btn-secondary cancel" role="button" asp-route-action="Index" asp-route-controller="Extensions">@T["Cancel"]</a>
+        </div>
+    </div>
+</form>

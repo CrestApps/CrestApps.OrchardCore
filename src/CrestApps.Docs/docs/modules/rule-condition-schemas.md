@@ -223,6 +223,6 @@ Both registration extensions live in `Microsoft.Extensions.DependencyInjection`.
 - **Use the display text from the editor.** Operator display texts come from the invariant key inside `S["..."]`, for example `S["Does not equal"]`.
 - **Reuse the operator schema through the context.** Value based conditions must expose their `Operation` through `context.OperatorSchema` so every operator stays available and future operators are picked up automatically.
 
-## Auditing coverage
+## Keeping coverage complete
 
-The unit test suite validates the composed schema against complete `LayerRule` payloads, including nested groups, confirms that custom or unknown conditions are accepted, and asserts that a condition missing its `$type` discriminator is rejected. When you add a new condition or operator to a CrestApps module, add its schema definition and its registration in the same change so the `Layers` step keeps describing every supported rule.
+The composed schema accepts complete `LayerRule` payloads, including nested groups, accepts custom or unknown conditions, and rejects a condition missing its `$type` discriminator. When you add a new condition or operator to a CrestApps module, add its schema definition and its registration in the same change so the `Layers` step keeps describing every supported rule.

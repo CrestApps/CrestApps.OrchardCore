@@ -3,6 +3,8 @@ sidebar_label: Elasticsearch
 sidebar_position: 2
 title: AI Data Sources - Elasticsearch
 description: Elasticsearch support for AI data source knowledge base indexes with vector search and RAG capabilities.
+user_manual:
+  - user-manual/ai/knowledge
 ---
 
 | | |
@@ -30,10 +32,63 @@ When AI profiles are configured with data sources, the system needs to search an
 ## Getting Started
 
 1. Enable the **AI Data Sources - Elasticsearch** feature in the Orchard Core admin dashboard.
-2. Create an Elasticsearch knowledge base index via **Search > Indexes** using the "AI Knowledge Base Index" type.
+2. Create an Elasticsearch knowledge base index via **Search > Indexing** using the **AI Knowledge Base Index (Elasticsearch)** type.
 3. Configure an AI data source under **Artificial Intelligence > Data Sources**, selecting either an Orchard-managed Elasticsearch source index profile or the **Elasticsearch** external source type and the knowledge base index.
 4. For external Elasticsearch sources, choose the environment and authentication mode that matches the target cluster:
    - **Self-managed** with URL
    - **Cloud-hosted** with Elastic Cloud ID
    - **None**, **Basic**, **API key**, **Base64 API key**, or **Key ID and key** authentication
 4. The module will automatically sync documents from the source index to the knowledge base index with embeddings.
+
+The data source editor is described in the User Manual under [Data sources](../../user-manual/ai/knowledge.md#data-sources).
+
+## Global connection
+
+A connection can be configured once for the whole application instead of on every data source. When one is configured, the source editor offers **Use the globally configured connection**; a data source that uses it stores only the index name, and the connection fields are hidden.
+
+Configure it under the shared Elasticsearch section, which every Elasticsearch feature reads:
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "Elasticsearch": {
+        "Url": "http://localhost:9200",
+        "AuthenticationType": "Basic",
+        "Username": "elastic",
+        "Password": "elasticsearch"
+      }
+    }
+  }
+}
+```
+
+The section accepts `Url`, `CloudId`, `AuthenticationType` (`None`, `Basic`, `ApiKey`, `Base64ApiKey` or `KeyIdAndKey`), `Username`, `Password`, `ApiKey`, `Base64ApiKey`, `ApiKeyId` and `CertificateFingerprint`. Setting `CloudId` instead of `Url` connects to an Elastic Cloud deployment, and the authentication type is inferred from the supplied credentials when it is left out.
+
+To point data sources at a different cluster than the rest of the application, override the shared values under the data source section:
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "AI": {
+        "DataSources": {
+          "Elasticsearch": {
+            "Url": "http://reporting:9200"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+The same values can be supplied as environment variables, which is how the Aspire host wires its local Elasticsearch container:
+
+```text
+OrchardCore__CrestApps__Elasticsearch__Url
+OrchardCore__CrestApps__Elasticsearch__Username
+OrchardCore__CrestApps__Elasticsearch__Password
+```
+
+Connection settings stored on a data source always win over the configured values. This section is separate from `OrchardCore:OrchardCore_Elasticsearch`, which configures the Orchard Core Elasticsearch feature that owns the Orchard-managed indexes.

@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.ContactCenter.Workflows.ViewModels
+
+@model StartOmnichannelActivityTaskViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="ActivityItemId">
+    <label class="ocat-label" asp-for="ActivityItemId">@T["Activity"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="ActivityItemId" />
+        <span asp-validation-for="ActivityItemId"></span>
+        <span class="hint">@T["A Liquid expression resolving the CRM activity to start, for example <code>{{ Workflow.Input.AggregateId }}</code>. A Phone activity is dialed; an SMS activity is sent its opening message. The activity's own channel decides which."]</span>
+    </div>
+</div>

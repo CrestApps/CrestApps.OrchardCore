@@ -1,0 +1,22 @@
+@using CrestApps.OrchardCore.ContactCenter.Core
+@using CrestApps.OrchardCore.Core.Models
+
+@model EditCatalogEntryViewModel
+
+<zone Name="Title">
+    <breadcrumb name="ContactCenterQueueGroupsEdit" title="@T["Edit '{0}' Queue Group", Model.DisplayName]">
+        <breadcrumb-item id="ContactCenterQueueGroups" action="Index" controller="QueueGroups" area="CrestApps.OrchardCore.ContactCenter" permission="@ContactCenterPermissions.ManageQueueGroups.Name">@T["Queue groups"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" asp-route-id="@ViewContext.HttpContext.Request.RouteValues["id"]" enctype="multipart/form-data" class="no-multisubmit">
+    @Html.ValidationSummary()
+    @await DisplayAsync(Model.Editor)
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button class="btn btn-primary" type="submit">@T["Save"]</button>
+            <a class="btn btn-secondary cancel" role="button" asp-route-action="Index">@T["Cancel"]</a>
+        </div>
+    </div>
+</form>

@@ -3,6 +3,10 @@ sidebar_label: AI Chat
 sidebar_position: 2
 title: AI Chat
 description: AI chat capabilities for Orchard Core with admin and frontend chat widgets.
+user_manual:
+  - user-manual/ai/chat
+  - user-manual/ai/chat-widgets
+  - user-manual/ai/profiles
 ---
 
 | | |
@@ -12,37 +16,21 @@ description: AI chat capabilities for Orchard Core with admin and frontend chat 
 
 Provides UI to interact with AI models using the profiles.
 
-The screencast below creates a chat-type AI profile on the `gpt-4.1-mini` deployment, shows it on the admin menu, and then opens its chat to ask the model a question — all starting from the admin dashboard.
+This page covers the features, prerequisites, runtime behavior and security settings of AI Chat. For day-to-day use, see the User Manual:
 
-<video controls preload="metadata" width="100%" aria-label="Screen cast of creating a chat AI profile and chatting with the model">
-  <source src="/img/docs/ai-chat.mp4" type="video/mp4" />
-</video>
+- [Chat with an AI assistant](../user-manual/ai/chat.md): starting chats, chat history, attachments, dictation, conversation mode, read-aloud, citations and **Invoke Profile**.
+- [AI profiles](../user-manual/ai/profiles.md): the **New AI Profile** picker and every field of the profile editor.
+- [Chat widgets](../user-manual/ai/chat-widgets.md): turning on the admin widget and placing the website widget.
 
 ## AI Chat Feature
 
-The **AI Chat** feature adds profile-driven chat capabilities to **AI Services**. Once enabled, any chat-type AI profile with the **Show On Admin Menu** option appears under **Artificial Intelligence** in the admin menu.
+The **AI Chat** feature adds profile-driven chat capabilities to **AI Services**. Once enabled, any chat-type AI profile with the **Show On Admin Menu** option appears under **Artificial Intelligence** in the admin menu. The menu entry requires `QueryAnyAIProfile` (or the per-profile `QueryAIProfile_{profileName}` permission), and the menu is cached and invalidated whenever a profile is saved.
 
-AI profiles are source-agnostic in the admin UI. When you click **Add Profile**, Orchard Core opens the profile editor directly, and the selected chat and utility deployments determine which client and model are used.
+AI profiles are source-agnostic in the admin UI. **Add Profile** opens the **New AI Profile** picker: **Blank profile** opens the profile editor directly, and every other card creates the profile from a profile template (see [Creating a profile from a starting point](profile-templates#creating-a-profile-from-a-starting-point)). Either way, the selected chat and utility deployments determine which client and model are used.
 
 ### AI Profile and Template Editor Layout
 
-The AI Profile editor groups the most common profile settings into five cards at the top of the page:
-
-- **General** — title, technical name, data source, profile type, orchestrator, and admin menu visibility
-- **Deployments** — chat deployment and utility deployment
-- **Interactions** — title behavior, welcome/initial prompt behavior, chat mode, and per-profile user memory. **Prompt subject** appears only for **Template generated prompt** profiles.
-- **Instructions** — prompt template selection, template-specific prompt text, and system instructions
-- **Parameters** — model tuning values and data-source retrieval parameters
-
-Profile-source AI Templates use the same top-level card grouping:
-
-- **General** — title, technical name, category, profile type, orchestrator, response handler, data source, and admin menu visibility
-- **Deployments** — chat deployment and utility deployment
-- **Interactions** — title behavior, welcome message, chat mode, and per-template user memory. **Prompt subject** appears only for **Template generated prompt** profile-source templates.
-- **Instructions** — prompt template text and system instructions
-- **Parameters** — model tuning values and data-source retrieval parameters
-
-Additional advanced sections such as capabilities, response handling, analytics, documents, and post-session processing continue to appear below these cards in their existing sections.
+The profile editor and the editor of profile-source AI templates share one layout. The first tab holds the **General**, **Deployments & Interactions**, **Instructions**, **Parameters** and **Prompt Security** cards; the **Knowledge**, **Capabilities** and **Data Processing & Metrics** tabs are contributed by the enabled features through display drivers. Every field is described in the User Manual under [AI profiles](../user-manual/ai/profiles.md#the-profile-editor).
 
 For chat profiles, the required **Past messages included** parameter loads the default value automatically when a profile is opened without an explicit saved value.
 
@@ -59,58 +47,45 @@ When the AI Documents features are enabled, the **Knowledge** tab for **AI Profi
 
 When an AI profile has a **Welcome Message** configured, it is displayed as placeholder text for new sessions. It is not automatically added to the model conversation history.
 
-If **Add initial prompt** is enabled on the profile, the welcome message is ignored for new sessions. The initial prompt is now saved lazily: Orchard creates and persists the chat session only after the visitor sends the first real message, then the configured assistant **Initial prompt** is inserted ahead of that first user prompt in the stored conversation history.
+If **Start the conversation automatically** is enabled on the profile, the welcome message is ignored for new sessions. The opening message is now saved lazily: Orchard creates and persists the chat session only after the visitor sends the first real message, then the configured assistant **Opening message** is inserted ahead of that first user prompt in the stored conversation history.
 
 This avoids creating empty anonymous chat sessions just because a page or widget loaded.
 
 ### Chat Mode
 
-AI Chat supports three chat modes that control how users interact with the AI. The **Chat Mode** dropdown appears on the AI Profile editor (and AI Profile Template editor for Profile source templates) only for profiles of type **Chat**.
+AI Chat supports three chat modes that control how users interact with the AI. The **Chat mode** dropdown appears on the AI Profile editor (and AI Profile Template editor for Profile source templates) only for profiles saved with the type **Chat**.
 
 | Mode | Description | UI Element |
 | --- | --- | --- |
-| **Text Only** (default) | Standard text-based chat. Users type prompts and receive text responses. | — |
-| **Audio Input** | Adds a microphone button (🎤) for speech-to-text dictation. Users speak their prompts, review the transcribed text, and click send manually. | Microphone button |
-| **Conversation** | Persistent two-way voice interaction like ChatGPT voice mode. A continuous audio stream stays open — the user speaks, the AI responds with both text and voice simultaneously. | Headset button |
+| **Text only** (default) | Standard text-based chat. Users type prompts and receive text responses. | — |
+| **Audio input** | Adds a microphone button for speech-to-text dictation. Users speak their prompts, review the transcribed text, and click send manually. | Microphone button |
+| **Conversation** | Two-way voice interaction the user switches on and off beside an ordinary message box. Starting a session hands the turn to speech; ending it gives the message box back, and both kinds of turn land in the same thread. | Soundwave button |
+
+How each mode looks and works for the person chatting is described in [Talk instead of type](../user-manual/ai/chat.md#talk-instead-of-type).
 
 #### Prerequisites
 
-- **Audio Input** requires a **Default Speech-to-Text Deployment** configured in **Settings → Artificial Intelligence → Default Deployments** (any deployment supporting the `ISpeechToTextClient` interface, such as Azure Speech or OpenAI Whisper).
-- **Conversation** requires both a **Default Speech-to-Text Deployment** and a **Default Text-to-Speech Deployment** configured in default deployment settings.
+- **Audio input** requires a **Default Speech-to-Text Deployment** configured in **Settings → Artificial Intelligence → Default Deployments** (any deployment supporting the `ISpeechToTextClient` interface, such as Azure Speech or OpenAI Whisper).
+- **Conversation** is carried by a realtime (speech-to-speech) deployment when one resolves — the profile's own **Conversation deployment**, then the site's default realtime deployment, then the first realtime-capable deployment. See [Realtime Voice](realtime-voice.md). When none resolves it falls back to the client-driven speech-to-text plus text-to-speech cascade, which requires both a **Default Speech-to-Text Deployment** and a **Default Text-to-Speech Deployment**.
 - Optionally, set a **Default Text-to-Speech Voice** in **Settings → Artificial Intelligence → Default Deployments**. This voice is used when no profile-specific voice is selected.
 - If an AI Profile leaves its chat model set to **Default deployment**, chat sessions use **Default Chat Deployment** from **Settings → Artificial Intelligence → Default Deployments** after checking the connection-level default.
 
 #### Configuring Chat Mode
 
-1. Navigate to the AI Profile editor (or AI Profile Template editor for Profile source templates).
-2. Select the desired option from the **Chat Mode** dropdown. The dropdown only appears for **Chat** profile types and when the required default deployments are configured.
-3. When **Conversation** is selected, a **Voice** dropdown appears. Available voices are fetched from the configured text-to-speech provider. If no voice is selected, the default voice from site settings (or the provider's default) is used.
-4. Save the profile.
+Chat mode is set per profile, in the **Deployments & Interactions** card (see [AI profiles](../user-manual/ai/profiles.md#deployments--interactions)). When **Conversation** is selected, the **Conversation deployment** and **Voice** fields appear. The voices are fetched from the model that will speak — the resolved realtime deployment's own voices, or the text-to-speech provider's when the conversation runs as the cascade. If no voice is selected, the default voice from site settings (or the provider's default) is used.
+
+The **Chat deployment** is a separate question: it names the text model the profile talks to, and it answers typed messages including those typed during a voice conversation. Its picker lists text-capable deployments only.
 
 Once configured, the selected chat mode applies to all chat UIs associated with that profile:
+
 - Admin session chat
 - Frontend widget
 - Admin widget
 
-#### How Audio Input Works
+#### Runtime behavior
 
-1. Click the microphone button to start recording.
-2. Speak your prompt — the button shows a pulsing red stop icon while recording.
-3. Audio is streamed to the server in real-time via SignalR as the user speaks (chunks are sent approximately every second).
-4. The server transcribes audio using the configured speech-to-text provider and streams transcript text back to the UI as it becomes available — you see words appear while still speaking.
-5. Click the stop button (or the transcription finishes automatically when you stop speaking).
-6. The complete transcribed text appears in the input field for review or editing before sending as a prompt.
-
-#### How Conversation Mode Works
-
-1. Click the **headset** button to start conversation mode.
-2. The microphone button, send button, and text input are hidden — a persistent audio stream opens to the server.
-3. Speak naturally — your speech is continuously streamed to the server and transcribed in real time.
-4. When a complete utterance is recognized, it is automatically displayed as a user message in the chat and sent to the AI.
-5. The AI response streams to the chat as text **and** is simultaneously synthesized to speech — you see the text appear while hearing it read aloud.
-6. If you start speaking while the AI is still responding, the AI's current response (both text and audio) is interrupted, and your new prompt is processed instead.
-7. The stream stays open for continuous back-and-forth conversation — no need to click send between turns.
-8. Click the headset button again to end the conversation. The microphone, send button, and text input are restored.
+- **Audio input** streams the recorded audio to the server over SignalR in chunks of approximately one second. The server transcribes it with the configured speech-to-text provider and streams the transcript back as it becomes available, so words appear while the user is still speaking. The final transcript is placed in the input field for review; it is not sent automatically.
+- **Conversation** keeps the audio stream open for continuous back-and-forth. Each recognized utterance is added to the chat as a user message and sent automatically. The response streams as text and is synthesized to speech at the same time. Speech from the user while the AI is responding interrupts the current response (text and audio), and the new prompt is processed instead. Sending a typed message ends any live voice session first, so the two kinds of turn take turns rather than overlapping.
 
 :::info
 If the speech-to-text service encounters an error (e.g., authentication failure), the error is reported immediately and the recording stops automatically — the microphone button resets so you can try again.
@@ -122,37 +97,35 @@ Text-to-speech synthesis occurs after the full response text has been received �
 
 ### Text-to-Speech Playback
 
-Even when a profile is not using the full **Conversation** chat mode, you can enable on-demand text-to-speech playback for AI-generated messages. When enabled, a playback button (🔊) appears on each AI message, allowing users to click and listen to the response as synthesized speech.
+Even when a profile is not using the full **Conversation** chat mode, on-demand text-to-speech playback can add a **Read aloud** button to each AI-generated message.
 
 #### Enabling TTS Playback
 
 TTS playback can be enabled at two levels:
 
-- **Site level (Chat Interactions)**: Navigate to **Settings → Artificial Intelligence → Chat Interactions** and check **Enable text-to-speech playback**. This enables playback across all Chat Interaction sessions.
-- **Profile level**: On the AI Profile editor, under the **Chat Mode** section, check **Enable text-to-speech playback**. This enables playback for all chat UIs associated with that specific profile.
+- **Site level (Chat Interactions)**: **Enable text-to-speech playback** in the **Chat Interactions** section of **Settings → Artificial Intelligence** enables playback across all Chat Interaction sessions.
+- **Profile level**: **Enable text-to-speech playback** on the AI Profile editor enables playback for all chat UIs associated with that specific profile.
 
 #### Prerequisites
 
 - A **Default Text-to-Speech Deployment** must be configured in **Settings → Artificial Intelligence → Default Deployments**.
-- The playback feature works with any chat mode (Text Only, Audio Input, or Conversation). In Conversation mode, TTS is already built-in and always active.
+- The playback feature works with any chat mode (Text only, Audio input, or Conversation). In Conversation mode, TTS is already built-in and always active, so the per-message playback button is hidden.
 
 #### Behavior
 
-- When a user clicks the playback button on a message, the text is sent to the configured TTS provider and audio is streamed back to the browser.
-- Message actions appear at the bottom-right of each response so they stay aligned above the divider line instead of covering the top edge of the message.
-- During playback, the playback button switches between play and pause, stays highlighted while audio is active, and starting another message playback automatically stops the current one.
-- In Conversation mode, the per-message playback button is hidden so the live voice conversation is not interrupted by manual playback.
-- Users can stop playback by clicking the button again.
+When a user clicks the playback button on a message, the text is sent to the configured TTS provider and audio is streamed back to the browser. Starting another message's playback stops the current one. See [Listen to an answer](../user-manual/ai/chat.md#listen-to-an-answer) for what the user sees.
 
 ### Session document uploads
+
+Session uploads require the **AI Documents for Chat Sessions** feature (`CrestApps.OrchardCore.AI.Documents.ChatSessions`) and are opted in per profile with **Allow session document uploads** and **Allow session image uploads**. Image uploads also need a vision deployment. How users attach files is described in [Attach files to a chat](../user-manual/ai/chat.md#attach-files-to-a-chat).
 
 If a profile allows session document uploads or session image uploads, the chat UI keeps restored widget sessions aligned with the current profile before uploading files. This avoids sending attachment requests through a different profile.
 
 The admin and frontend chat widgets restore their saved toggle and panel positions before the chat app finishes initializing.
 
-The admin session chat now shows the same compact **Supported formats** note above the input attachment bar that the widgets already expose, so users can see the exact upload extensions allowed for the current profile. Document extensions follow the profile's **Allow session document uploads** setting, and image extensions only appear when **Allow session image uploads** is enabled and a vision deployment is available.
+The admin session chat and both widgets show a compact **Supported formats** note above the input attachment bar. Document extensions follow the profile's **Allow session document uploads** setting, and image extensions only appear when **Allow session image uploads** is enabled and a vision deployment is available.
 
-The module packages the upstream CSS source maps for the main chat UI and widget styles alongside the compiled assets, so browser developer tools can resolve `ai-chat.css.map` and `chat-widget.css.map` without 404 warnings.
+The module packages the upstream CSS source maps for the main chat UI and widget styles alongside the compiled assets, so browser developer tools can resolve `ai-chat.css.map` and `chat-widget.css.map` without 404 warnings. The chat UI scripts and styles come from the `@crestapps/ai-chat-ui` npm package and are copied into the module's `wwwroot`.
 
 By default, session-document uploads are stored on the local file system through the shared AI Documents storage pipeline. If you want widget uploads stored in Azure Blob Storage instead, enable `CrestApps.OrchardCore.AI.Documents.Azure` and configure it as described in [AI Documents - Azure Blob Storage](./documents/azure-blob-storage.md).
 
@@ -160,9 +133,11 @@ By default, session-document uploads are stored on the local file system through
 
 When a chat response includes document markers such as `[doc:1]`, the AI Chat UIs convert them into superscript citations and render a linked reference list below the assistant message when a resolver can provide a URL for the reference.
 
-This linked citation rendering now applies consistently across the admin chat UI, the admin widget, and the frontend widget.
+This linked citation rendering applies consistently across the admin chat UI, the admin widget, and the frontend widget.
 
 ### Admin Chat User Interface
+
+The admin chat page is served at `ai/chat/session/{profileId}/{sessionId?}`, and the chat history at the profile's **View chat history** action. Deleting one session requires `DeleteChatSession`; deleting all of a profile's sessions requires `DeleteAllChatSessions`. Both are granted to the Administrator role by default.
 
 <video controls preload="metadata" width="100%" aria-label="Screen cast of the admin chat">
   <source src="/img/docs/admin-ui-sample.mp4" type="video/mp4" />
@@ -170,13 +145,7 @@ This linked citation rendering now applies consistently across the admin chat UI
 
 ### Invoking Utility and Agent Profiles
 
-For **Utility** and **Agent** profile types, the AI profile list includes an **Invoke Profile** action in the actions menu. Clicking **Invoke Profile** opens a dedicated single-response screen where you can:
-
-- Send a message to the profile and see the streamed response in real time.
-- Each new message clears the previous response so only the latest prompt and its reply are visible.
-- Invoke your profile without creating persistent chat sessions.
-
-This is useful for quickly iterating on system instructions, verifying tool integrations, or confirming that the profile produces the expected output.
+For **Utility** and **Agent** profile types, the AI profile list includes an **Invoke Profile** action (route `ai/chat/test/{profileId}`, requires `QueryAnyAIProfile`). It opens a single-response screen that keeps no chat session, history, metrics or ratings. See [Try out a utility or agent profile](../user-manual/ai/chat.md#try-out-a-utility-or-agent-profile).
 
 ---
 
@@ -189,74 +158,32 @@ This is useful for quickly iterating on system instructions, verifying tool inte
 
 Provides a floating AI chat widget on every admin page, allowing users to interact with a predefined AI profile.
 
-The **AI Chat Admin Widget** adds a floating chat widget to the Orchard Core admin dashboard. This allows administrators to interact with AI directly from any admin page without navigating away.
+The widget is configured in the **Admin Widget** section of **Settings → Artificial Intelligence** (stored as site settings, editable with the **Manage AI profiles** permission): the chat profile, the maximum number of history sessions (1–50, default 10), and the primary color (default `#41b670`). It renders on every admin page for signed-in users who are authorized to query the selected profile, and it stores its position, size, open state and current session in the browser's local storage.
 
-When session uploads are enabled for the selected profile, attached files are shown in a dedicated bar above the message input so the input width is preserved, each attachment keeps a visible remove button, and the supported-formats note stays compact instead of dominating the widget.
+Setting it up and using it are described in [Chat widgets](../user-manual/ai/chat-widgets.md#turn-on-the-admin-chat-widget).
 
-Referenced responses use the same citation rendering as the main admin chat UI, so `[doc:N]` markers are shown as superscript links with a matching reference list instead of raw marker text.
-
-#### Enabling the Admin Widget
-
-1. Go to **Tools** > **Features** in the admin menu.
-2. Search for **AI Chat Admin Widget** and enable it.
-3. The floating chat widget will appear in the bottom-right corner of the admin dashboard.
-
-#### Configuring the Admin Widget
-
-Navigate to **Settings** → **Artificial Intelligence** → **Admin Widget** to configure:
-
-- **Profile**: Select the AI chat profile to use for the admin widget. 
-- **Max Sessions**: Set the maximum number of previous chat sessions displayed in the history panel (1–50).
-- **Primary Color**: Customize the widget's primary color (header, toggle button). Defaults to `#41b670` (Orchard Core green).
-
-- :::tip Pro Tip
-It's best to enable **Orchard Core AI Agent** (i.e., `CrestApps.OrchardCore.AI.Agent`). Then when creating a profile, select all available capabilities to allow the profile to perform tasks on your website.
+:::tip[Pro Tip]
+It's best to enable **Orchard Core AI Agent** (i.e., `CrestApps.OrchardCore.AI.Agent`). Then when creating a profile, select the tool capabilities the profile needs to perform tasks on your website.
 :::
-
-The screencast below enables the **AI Chat Admin Widget** feature, creates a chat profile with **all tool capabilities selected**, points the widget at that profile in **Settings → Artificial Intelligence → Admin Widget**, and then opens the floating widget to ask the assistant a question it answers using its tools.
-
-<video controls preload="metadata" width="100%" aria-label="Screen cast of enabling the admin widget, creating an all-tools profile, and using the floating admin assistant">
-  <source src="/img/docs/ai-admin-widget.mp4" type="video/mp4" />
-</video>
 
 ---
 
 ### Frontend Chat Widget
 
-A **frontend chat widget** is available to add to your site's public-facing pages using the Orchard Core Widgets system. This allows site visitors to interact with AI chat directly on the frontend.
+A **frontend chat widget** is available to add to your site's public-facing pages using the Orchard Core Widgets system. The module registers the `AIChat` widget content type (displayed as **Artificial Intelligence Chat**) with the `AIProfilePart`, when the **Widgets** feature (`OrchardCore.Widgets`) is enabled. The part stores the chat profile and the number of history sessions to show; the history list is only populated for authenticated visitors.
 
-When the widget's profile allows session document uploads or session image uploads, file attachments are rendered above the input row instead of beside it, matching the admin widget layout, keeping the remove button visible for each attached file, and reducing the visual weight of the supported-formats note.
+The widget is only rendered for visitors who are authorized to query its profile, so grant the `Anonymous` role the per-profile `QueryAIProfile_{profileName}` permission for a public assistant.
 
-When the response contains references, the widget also renders `[doc:N]` markers as superscript citations with linked references beneath the assistant message.
+Placing the widget in a layer through the admin UI is described in [Add a chat box to your website](../user-manual/ai/chat-widgets.md#add-a-chat-box-to-your-website).
 
 The frontend widget also normalizes theme paragraph spacing inside rendered chat messages so theme-level `p` margins and padding do not add extra blank space above or below each response.
 
-Frontend widgets now also work with the shared anonymous-visitor protection flow:
+Frontend widgets also work with the shared anonymous-visitor protection flow:
 
 - Anonymous visitors receive a stable first-party visitor cookie for more accurate unique-visitor analytics.
 - Chat message throttling and anonymous session-start throttling use that visitor identity together with the configured remote-address mode.
-- Widgets no longer auto-create sessions on page load just because a profile has an initial prompt.
-- **Settings → Artificial Intelligence** now includes **Prompt security** and **Anonymous visitor identity** sections so operators can tune rate limits, prompt filtering, and remote-address handling.
-
-#### Adding the Frontend Widget
-
-To show the widget on every page of the site, place it in a layer whose rule always evaluates to `true`:
-
-1. Ensure the **Widgets** and **Layers** features are enabled.
-2. Create a dedicated AI chat profile (for example, a public-facing *Website Assistant* profile of type **Chat**).
-3. Go to **Design** > **Layers** and create a new layer (for example, *Global*).
-4. Edit the layer, add a **Boolean** rule, and keep its value set to **True** so the layer is always active.
-5. Back on the **Layers** screen, use the **Add Widget** menu on the target zone (for example, **Footer**) and add an **Artificial Intelligence Chat** widget.
-6. Select the *Global* layer and the AI chat profile you created, then publish the widget.
-7. Visit any public page and open the floating chat widget to talk to your assistant.
-
-#### Frontend Widget Screen Cast
-
-The following screen cast walks through creating a public-facing profile, adding an always-on layer with a Boolean rule, placing the AI Chat widget in the footer zone, and chatting with it from the site's home page.
-
-<video controls preload="metadata" width="100%" aria-label="Screen cast of adding the frontend widget with an always-on layer">
-  <source src="/img/docs/ai-frontend-widget.mp4" type="video/mp4" />
-</video>
+- Widgets no longer auto-create sessions on page load just because a profile has an opening message.
+- **Settings → Artificial Intelligence** includes **Prompt security** and **Anonymous visitor identity** sections so operators can tune rate limits, prompt filtering, and remote-address handling.
 
 ---
 
@@ -279,23 +206,51 @@ The **Prompt Security** section tunes the shared AI chat protections.
 | Enable audit logging | Enabled | Records prompt security decisions for diagnostics and abuse investigations. |
 | Maximum prompt length | `8000` | Prompts longer than this character count are rejected. Must be between `1` and `100000`. |
 | Blocking threshold | `High` | Prompts classified at or above this risk level (`None`, `Low`, `Medium`, `High`, `Critical`) are blocked. |
-| Maximum messages per window | `20` | How many chat messages one rate-limit partition can send within the message window. Set to `0` to disable message throttling. |
+| Maximum messages per window | `20` | How many chat messages one rate-limit partition can send within the message window. Governs authenticated callers, and anonymous callers only when no anonymous message tiers are configured. Set to `0` to disable message throttling. |
 | Message rate-limit window (seconds) | `60` | Duration of the shared chat message rate-limit window. Must be between `1` and `86400`. |
-| Maximum anonymous sessions per window | `5` | Limits how many new anonymous chat sessions can be started within the anonymous session window. Set to `0` to disable anonymous session-start throttling. |
+| Anonymous message rate-limit tiers | `5, 00:00:30`<br />`30, 00:05:00`<br />`150, 01:00:00`<br />`500, 1.00:00:00` | Multi-tier sliding-window message limits applied to anonymous callers only. Leave blank to fall back to the single message window above. |
+| Maximum anonymous sessions per window | `20` | Limits how many new anonymous chat sessions can be started within the anonymous session window. Used only when no anonymous session-start tiers are configured. Set to `0` to disable anonymous session-start throttling. |
 | Anonymous session window (seconds) | `600` | Duration of the anonymous chat session-start rate-limit window. Must be between `1` and `86400`. |
+| Anonymous session-start rate-limit tiers | `5, 00:00:30`<br />`10, 00:05:00`<br />`150, 01:00:00`<br />`500, 1.00:00:00` | Multi-tier sliding-window session-start limits applied to anonymous callers only. Leave blank to fall back to the single session window above. |
 
-Message and session-start throttling are keyed by the resolved visitor identity (authenticated user id or anonymous visitor id) together with the configured remote-address mode described below.
+Message and session-start throttling are keyed by the resolved visitor identity (authenticated user id or anonymous visitor id) together with the configured remote-address mode described below. Authenticated callers are additionally keyed by their network address, so signing out does not shed the per-address allowance.
+
+When a visitor is throttled while starting a new chat, the message shown to them is deliberately generic and discloses neither the configured limit, the current count, nor the retry delay, since those values would let an abuser tune their traffic to sit just under the throttle.
+
+##### Anonymous rate-limit tiers
+
+The two tier fields accept one tier per line in the form `limit, window`, where the window is a .NET `TimeSpan` such as `00:00:30`, `01:00:00`, or `1.00:00:00` for a day. A request is throttled when it would exceed **any** configured tier, which lets a short burst tier sit alongside longer sustained tiers. Blank lines are ignored, and clearing the field falls back to the single-window limits above. Tiers apply to anonymous callers only — authenticated callers are always governed by **Maximum messages per window** and **Message rate-limit window**.
+
+:::caution[Tiers take precedence over the single-window values]
+The single-window settings are **fallbacks used only when the matching tier field is empty**. Because the shipped defaults populate both tier fields, lowering **Maximum anonymous sessions per window** on its own has **no effect**.
+
+For example, setting **Maximum anonymous sessions per window** to `5` while the default `10, 00:05:00` tier is still present throttles anonymous visitors at **10**, not `5`. To make the single-window value authoritative, clear the tier field; to tighten the limit while keeping tiers, lower the relevant tier instead. The same applies to **Maximum messages per window** for anonymous callers.
+:::
 
 ##### Per-profile throttle overrides
 
-The four anti-spam **throttle** limits above are site-wide defaults. Individual AI profiles can raise or lower them for their own use case from a **Prompt Security** tab on the AI Profile editor, and AI profile templates (source `Profile`) can seed the same overrides so a template acts as a reusable throttle preset.
+The six anti-spam **throttle** limits above are site-wide defaults. Individual AI profiles can raise or lower them for their own use case from a **Prompt Security** tab on the AI Profile editor, and AI profile templates (source `Profile`) can seed the same overrides so a template acts as a reusable throttle preset.
 
 | Override | Behavior |
 | --- | --- |
 | Maximum messages per window | When left blank, inherits the site default. Set to `0` to disable message throttling for this profile only. |
 | Message rate-limit window (seconds) | When left blank, inherits the site default. Must be between `1` and `86400`. |
+| Anonymous message rate-limit tiers | When left blank, inherits the site tiers. Enter one tier per line as `limit, window` to replace them for this profile. |
 | Maximum anonymous sessions per window | When left blank, inherits the site default. Set to `0` to disable anonymous session-start throttling for this profile only. |
 | Anonymous session window (seconds) | When left blank, inherits the site default. Must be between `1` and `86400`. |
+| Anonymous session-start rate-limit tiers | When left blank, inherits the site tiers. Enter one tier per line as `limit, window` to replace them for this profile. |
+
+Each tier field also has a **Do not use tiered ... limits for this profile** checkbox. The three states are:
+
+| Tier field | Checkbox | Result |
+| --- | --- | --- |
+| Blank | Unchecked | Inherits the site tiers. |
+| One tier per line | Unchecked | Uses the profile's tiers instead of the site tiers. |
+| Blank | Checked | Opts this profile out of tiered limits entirely, falling back to the profile's single-window values. |
+
+Filling in the tiers *and* checking the box is rejected, because one of the two would have to be silently discarded.
+
+The same precedence trap applies per profile: while a profile inherits or defines tiers, its **Maximum anonymous sessions per window** override is ignored. Check the box to make the single-window overrides authoritative for that profile.
 
 Each override is optional and independent: an unset field always falls back to the corresponding site-wide default, so a profile can override only the message limit while still inheriting the anonymous session limits. Overrides are stored on the profile settings and applied by the chat message and session-start rate limiters. When a profile is created from a profile-source template, the template's throttle overrides are copied onto the new profile. The higher-level prompt-injection, output-filtering, and prompt-length guards remain site-wide only and cannot be overridden per profile.
 
@@ -303,12 +258,22 @@ Each override is optional and independent: an unset field always falls back to t
 
 The **Visitor Identity** section controls how anonymous widget visitors are tracked for unique-visitor analytics, abuse controls, and optional remote-address storage. Anonymous visitors receive a stable first-party cookie during page load so repeat visits are recognized as the same visitor instead of a new one for each chat session.
 
+That identity is also what a visitor's chat history is listed by: an anonymous visitor sees the sessions their own cookie owns, exactly as a signed-in user sees theirs. A visitor whose cookie has not been issued yet, or whose browser refuses it, has no history to list.
+
 | Setting | Default | Description |
 | --- | --- | --- |
 | Visitor cookie name | `crestapps-ai-visitor` | Stable first-party cookie used to identify anonymous visitors across chat sessions. |
 | Cookie lifetime (days) | `180` | How long the anonymous visitor cookie remains valid before a new visitor identity is issued. Must be between `1` and `3650`. |
+| Allow cross-site embedding | Off | Writes the cookie `SameSite=None; Secure` so it survives inside a frame on another site. See below. |
+| Partition the cookie per embedding site | On | Adds the `Partitioned` attribute (CHIPS) while cross-site embedding is on. |
 | Remote address storage mode | `Hashed` | How the remote address is captured. See the modes below. |
 | Remote address hash salt | `CrestApps.Core.AI.VisitorIdentity` | Application-specific salt used when hashing remote addresses for abuse controls. Required for the `Hashed` and `Encrypted` modes. |
+
+Turn **Allow cross-site embedding** on only when the chat is embedded in a frame on another site, such as the external chat widget. The cookie is otherwise written `SameSite=Lax`, which a browser refuses in a third-party context and reports as "Cookie 'crestapps-ai-visitor' has been rejected because it is in a cross-site context". Every request from inside the frame then looks like a brand new visitor: the conversation does not survive a page load, and the visitor rate-limit partition never accumulates, so throttling falls back to the coarser network-address, session, and connection keys. The cookie stays `HttpOnly` either way, and it identifies a visitor rather than authenticating one, so it grants no privilege of its own.
+
+`SameSite=None` is only legal together with `Secure`, and a `Secure` cookie never reaches a plain HTTP page, so a request that did not arrive over HTTPS keeps the `SameSite=Lax` cookie rather than losing it altogether.
+
+Leave **Partition the cookie per embedding site** on unless a deployment needs one identifier across sites. `SameSite` is not part of a cookie's identity key, so without partitioning the cookie written inside a frame replaces the first-party cookie of the same name and downgrades that one to `SameSite=None` everywhere. Partitioning also keeps the cookie working in browsers that are phasing out unrestricted third-party cookies, and gives a visitor a separate identifier per embedding site, which is what per-site abuse control wants.
 
 The **Remote address storage mode** supports the following values:
 
@@ -327,9 +292,9 @@ The remote-address value is read from the `X-Forwarded-For` header when present,
 
 | | |
 | --- | --- |
-| **Feature Name** | AI Chat Analytics |
+| **Feature Name** | AI Chat Session Analytics |
 | **Feature ID** | `CrestApps.OrchardCore.AI.Chat.Analytics` |
 
 Provides comprehensive analytics and reporting for AI chat sessions, including conversation metrics, performance tracking, user segmentation, and feedback analysis.
 
-For complete documentation, see the [AI Chat Analytics](./chat-analytics.md) guide.
+For complete documentation, see the [AI Chat Session Analytics](./chat-analytics.md) guide.

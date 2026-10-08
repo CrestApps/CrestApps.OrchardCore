@@ -1,0 +1,33 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model OpportunityPartViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="StageId">
+    <label asp-for="StageId" class="ocat-label">@T["Stage"]</label>
+    <div class="ocat-end">
+        <select asp-for="StageId" asp-items="Model.Stages" class="form-select">
+            <option value="">@T["First stage"]</option>
+        </select>
+        <span asp-validation-for="StageId" class="text-danger"></span>
+        <span class="hint">@T["Where the deal is in the pipeline. The stages come from the settings of this opportunity type."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Probability">
+    <label asp-for="Probability" class="ocat-label">@T["Probability (%)"]</label>
+    <div class="ocat-end">
+        <input asp-for="Probability" type="number" min="0" max="100" class="form-control" />
+        <span asp-validation-for="Probability" class="text-danger"></span>
+        <span class="hint">@T["The chance the deal is won. It starts from the stage's probability and follows the stage when the stage changes."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="CampaignId">
+    <label asp-for="CampaignId" class="ocat-label">@T["Campaign"]</label>
+    <div class="ocat-end">
+        <select asp-for="CampaignId" asp-items="Model.Campaigns" class="form-select">
+            <option value="">@T["None"]</option>
+        </select>
+        <span class="hint">@T["The campaign the deal came from, for campaign reporting."]</span>
+    </div>
+</div>

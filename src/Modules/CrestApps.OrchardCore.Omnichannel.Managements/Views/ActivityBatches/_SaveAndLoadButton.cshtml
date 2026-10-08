@@ -1,0 +1,58 @@
+@* The name must match ActivityBatchesController.SaveAndLoadSubmitName, which routes the post to Save & Load. *@
+<button class="btn btn-success"
+        type="submit"
+        name="submit.SaveAndLoad"
+        value="submit.SaveAndLoad"
+        data-save-and-load
+        data-title="@T["Save & Load activities"]"
+        data-message="@T["Are you sure you want to save this batch and load its activities now?"]"
+        data-ok-text="@T["Save & Load"]"
+        data-cancel-text="@T["Cancel"]">@T["Save & Load activities"]</button>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('button[data-save-and-load]').forEach(function (button) {
+            // The button's own form, never the first form on the page: on admin pages that is the log off form.
+            var form = button.form;
+
+            if (!form) {
+                return;
+            }
+
+            var confirmed = false;
+
+            // The listener sits on the form itself and stops the event before it reaches the admin theme's
+            // multi-submit guard on the body, which would otherwise mark the form as already submitting and swallow
+            // the confirmed resubmission.
+            form.addEventListener('submit', function (e) {
+                if (confirmed || e.submitter !== button) {
+                    return;
+                }
+
+                e.preventDefault();
+                e.stopPropagation();
+
+                var proceed = function (result) {
+                    if (!result) {
+                        return;
+                    }
+
+                    confirmed = true;
+                    button.click();
+                };
+
+                if (typeof confirmDialog === 'function') {
+                    confirmDialog({
+                        title: button.dataset.title,
+                        message: button.dataset.message,
+                        okText: button.dataset.okText,
+                        cancelText: button.dataset.cancelText,
+                        callback: proceed
+                    });
+                } else {
+                    proceed(window.confirm(button.dataset.message));
+                }
+            });
+        });
+    });
+</script>

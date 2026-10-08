@@ -24,7 +24,7 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "~/CrestApps.OrchardCore.ContentFields/scripts/international-telephone-editor.min.js",
                 "~/CrestApps.OrchardCore.ContentFields/scripts/international-telephone-editor.js")
             .SetDependencies("intl-tel-input")
-            .SetVersion("1.0.0");
+            .SetVersion("1.0.1");
     }
 
     /// <summary>

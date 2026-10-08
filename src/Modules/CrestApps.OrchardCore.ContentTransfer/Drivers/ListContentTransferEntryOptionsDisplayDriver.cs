@@ -26,7 +26,7 @@ public sealed class ListContentTransferEntryOptionsDisplayDriver : DisplayDriver
 
     public override Task<IDisplayResult> EditAsync(ListContentTransferEntryOptions model, BuildEditorContext context)
     {
-        model.FilterResult.MapTo(model);
+        model.FilterResult?.MapTo(model);
 
         return CombineAsync(
             Initialize<ListContentTransferEntryOptions>("ListContentTransferEntriesAdminListBulkActions", m => BuildOptionsViewModel(m, model))
@@ -52,7 +52,7 @@ public sealed class ListContentTransferEntryOptionsDisplayDriver : DisplayDriver
     public override Task<IDisplayResult> UpdateAsync(ListContentTransferEntryOptions model, UpdateEditorContext context)
     {
         // Map the incoming values from a form post to the filter result.
-        model.FilterResult.MapFrom(model);
+        model.FilterResult?.MapFrom(model);
 
         return EditAsync(model, context);
     }

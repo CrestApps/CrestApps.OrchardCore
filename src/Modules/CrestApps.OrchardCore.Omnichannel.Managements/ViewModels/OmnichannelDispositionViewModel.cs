@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
+
 namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 
 /// <summary>
@@ -19,4 +21,9 @@ public class OmnichannelDispositionViewModel
     /// Gets or sets the description.
     /// </summary>
     public string Description { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the disposition means to the platform.
+    /// </summary>
+    public DispositionOutcome Outcome { get; set; }
 }

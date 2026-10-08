@@ -1,5 +1,5 @@
-using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
+using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Taxation.Deployments.Steps;
 
@@ -8,21 +8,16 @@ namespace CrestApps.OrchardCore.Taxation.Deployments.Steps;
 /// </summary>
 public sealed class TaxTypeDeploymentStep : DeploymentStep
 {
+    private static readonly LocalizationSource _category = LocalizationSource.Create<TaxTypeDeploymentStep>("Taxation");
+    private static readonly LocalizationSource _title = LocalizationSource.Create<TaxTypeDeploymentStep>("Tax Types");
+
     /// <summary>
     /// Initializes a new instance of the <see cref="TaxTypeDeploymentStep"/> class.
     /// </summary>
     public TaxTypeDeploymentStep()
     {
         Name = TaxationDeploymentSteps.TaxType;
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="TaxTypeDeploymentStep"/> class.
-    /// </summary>
-    /// <param name="stringLocalizer">The string localizer.</param>
-    public TaxTypeDeploymentStep(IStringLocalizer<TaxTypeDeploymentStep> stringLocalizer)
-        : this()
-    {
-        Category = stringLocalizer["Taxation"];
+        Category = _category;
+        Title = _title;
     }
 }

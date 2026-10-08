@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<ConvertLeadTask>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Convert Lead"])
+    </h4>
+</header>

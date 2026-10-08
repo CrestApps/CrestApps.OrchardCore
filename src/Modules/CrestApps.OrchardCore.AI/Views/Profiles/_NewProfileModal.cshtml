@@ -1,0 +1,207 @@
+@using CrestApps.Core.AI.Models
+@using CrestApps.OrchardCore.AI.Controllers
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model ProfileScenarioPickerViewModel
+
+@{
+    const string uncategorized = "__uncategorized";
+    const string blank = "__blank";
+
+    var categories = Model.Scenarios
+        .Select(scenario => scenario.Category)
+        .Where(category => !string.IsNullOrEmpty(category))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToList();
+
+    var hasUncategorized = Model.Scenarios.Any(scenario => string.IsNullOrEmpty(scenario.Category));
+
+    var blankTitle = T["Blank profile"].Value;
+    var blankDescription = T["Start from scratch with every setting on one page and nothing filled in."].Value;
+    var blankSearch = (blankTitle + " " + blankDescription).ToLowerInvariant();
+
+    string GetIcon(ProfileScenarioCardViewModel scenario)
+    {
+        if (!string.IsNullOrEmpty(scenario.Icon))
+        {
+            return scenario.Icon;
+        }
+
+        return scenario.ProfileType switch
+        {
+            AIProfileType.Chat => "fa-solid fa-comments",
+            AIProfileType.Utility => "fa-solid fa-gears",
+            AIProfileType.Agent => "fa-solid fa-robot",
+            AIProfileType.TemplatePrompt => "fa-solid fa-file-lines",
+            _ => "fa-solid fa-wand-magic-sparkles",
+        };
+    }
+}
+
+<style at="Head">
+    @@media (min-width: 768px) {
+        #newProfileModal .nav-link {
+            white-space: normal !important;
+        }
+    }
+</style>
+
+<div class="modal fade" id="newProfileModal" tabindex="-1" aria-labelledby="newProfileModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="newProfileModalTitle">@T["New AI Profile"]</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Close"]"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <div class="position-sticky top-0">
+                            <input type="search" class="form-control mb-3" placeholder="@T["Filter"]" aria-label="@T["Filter starting points"]" autocomplete="off" data-profile-picker-filter />
+                            @* On a narrow screen the categories sit above the cards, so they scroll sideways in one row
+                               rather than wrapping into a block that pushes the cards out of view. *@
+                            <nav class="nav nav-pills flex-nowrap flex-md-column overflow-auto gap-1 pb-2 pb-md-0" aria-label="@T["Categories"]">
+                                <button type="button" class="nav-link text-start text-nowrap active" aria-pressed="true" data-profile-picker-category="">@T["All"]</button>
+                                @foreach (var category in categories)
+                                {
+                                    <button type="button" class="nav-link text-start text-nowrap" aria-pressed="false" data-profile-picker-category="@category">@category</button>
+                                }
+                                @if (hasUncategorized)
+                                {
+                                    <button type="button" class="nav-link text-start text-nowrap" aria-pressed="false" data-profile-picker-category="@uncategorized">@T["Other"]</button>
+                                }
+                            </nav>
+                        </div>
+                    </div>
+                    <div class="col-md-9">
+                        <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-2">
+                            <div class="col" data-profile-picker-card data-category="@blank" data-search="@blankSearch">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title d-flex align-items-baseline gap-2">
+                                            <i class="fa-regular fa-file fa-fw text-primary" aria-hidden="true"></i>
+                                            <span>@blankTitle</span>
+                                        </h5>
+                                        <p class="card-text text-body-secondary mb-0">@blankDescription</p>
+                                    </div>
+                                    <div class="card-footer d-flex align-items-center gap-2">
+                                        <span class="me-auto"></span>
+                                        <a class="btn btn-primary btn-sm" asp-controller="Profiles" asp-action="Create">@T["Start"]</a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            @foreach (var scenario in Model.Scenarios)
+                            {
+                                var category = string.IsNullOrEmpty(scenario.Category) ? uncategorized : scenario.Category;
+                                var search = string.Join(' ', scenario.Title, scenario.Description, scenario.Category, scenario.ProfileType?.ToString()).ToLowerInvariant();
+
+                                <div class="col" data-profile-picker-card data-category="@category" data-search="@search">
+                                    <div class="card h-100 @(scenario.IsAvailable ? null : "bg-body-tertiary")">
+                                        <div class="card-body">
+                                            <h5 class="card-title d-flex align-items-baseline gap-2">
+                                                <i class="@GetIcon(scenario) fa-fw @(scenario.IsAvailable ? "text-primary" : "text-body-secondary")" aria-hidden="true"></i>
+                                                <span class="@(scenario.IsAvailable ? null : "text-body-secondary")">@scenario.Title</span>
+                                            </h5>
+                                            @if (!string.IsNullOrEmpty(scenario.Description))
+                                            {
+                                                <p class="card-text text-body-secondary mb-0">@scenario.Description</p>
+                                            }
+                                        </div>
+                                        <div class="card-footer d-flex align-items-center gap-2">
+                                            @if (scenario.IsAvailable)
+                                            {
+                                                <span class="me-auto">@await Html.PartialAsync("_ScenarioTypeBadge", scenario)</span>
+                                                <a class="btn btn-primary btn-sm" asp-controller="ProfileWizard" asp-action="Setup" asp-route-templateId="@scenario.TemplateId">@T["Start"]</a>
+                                            }
+                                            else
+                                            {
+                                                <span class="me-auto small text-warning-emphasis">
+                                                    <i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@T["Enable {0} to use this.", string.Join(", ", scenario.MissingFeatureNames)]
+                                                </span>
+                                                <button type="button" class="btn btn-secondary btn-sm" disabled>@T["Start"]</button>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <p class="d-none text-center text-body-secondary py-5 mb-0" data-profile-picker-empty>@T["No starting points match your filter."]</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script at="Foot">
+    (function () {
+        var modal = document.getElementById('newProfileModal');
+
+        if (!modal) {
+            return;
+        }
+
+        var filter = modal.querySelector('[data-profile-picker-filter]');
+        var categoryButtons = modal.querySelectorAll('[data-profile-picker-category]');
+        var cards = modal.querySelectorAll('[data-profile-picker-card]');
+        var emptyMessage = modal.querySelector('[data-profile-picker-empty]');
+        var activeCategory = '';
+
+        function applyFilters() {
+            var term = filter.value.trim().toLowerCase();
+            var visibleCount = 0;
+
+            cards.forEach(function (card) {
+                // The blank profile has no category of its own, so it shows under "All" only.
+                var inCategory = !activeCategory || card.dataset.category === activeCategory;
+                var matchesTerm = !term || card.dataset.search.indexOf(term) !== -1;
+                var visible = inCategory && matchesTerm;
+
+                card.classList.toggle('d-none', !visible);
+
+                if (visible) {
+                    visibleCount++;
+                }
+            });
+
+            emptyMessage.classList.toggle('d-none', visibleCount > 0);
+        }
+
+        categoryButtons.forEach(function (button) {
+            button.addEventListener('click', function () {
+                activeCategory = button.dataset.profilePickerCategory;
+
+                categoryButtons.forEach(function (other) {
+                    var isActive = other === button;
+                    other.classList.toggle('active', isActive);
+                    other.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+                });
+
+                applyFilters();
+            });
+        });
+
+        filter.addEventListener('input', applyFilters);
+
+        modal.addEventListener('shown.bs.modal', function () {
+            filter.focus();
+        });
+
+        // Returning from the setup step, or following a link to "ai/profile/new", lands here with the picker
+        // asked for in the address. Open it through its own trigger so Bootstrap handles the rest.
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.location.hash !== '#@ProfileWizardController.PickerFragment') {
+                return;
+            }
+
+            history.replaceState(null, '', window.location.pathname + window.location.search);
+
+            var trigger = document.querySelector('[data-bs-target="#newProfileModal"]');
+
+            if (trigger) {
+                trigger.click();
+            }
+        });
+    })();
+</script>

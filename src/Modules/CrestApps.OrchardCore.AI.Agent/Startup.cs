@@ -489,7 +489,7 @@ public sealed class EmailStartup : StartupBase
     {
         services.AddCoreAITool<SendEmailTool>(SendEmailTool.TheName)
             .WithTitle(S["Send Emails"])
-            .WithDescription(S["Sends a email message on the behalf of the logged user."])
+            .WithDescription(S["Sends an email using the configured email provider."])
             .WithCategory(S["Communications"])
             .Selectable();
     }

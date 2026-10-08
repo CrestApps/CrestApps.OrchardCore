@@ -1,11 +1,10 @@
-@using OrchardCore
-@using CrestApps.OrchardCore.ContentTransfer
-
 @model BulkExportViewModel
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["Bulk Export"])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="ContentTransferExport" title="@T["Bulk Export"]" />
+</zone>
 
-<div id="export-request-panel" class="collapse mb-3 @(Model.Exporter.ContentTypes.Count == 0 ? "show" : string.Empty)">
+<div id="export-request-panel" class="collapse mb-3 @((Model.Exporter.ContentTypes.Count == 0 || !ViewData.ModelState.IsValid) ? "show" : string.Empty)">
     <div class="card text-bg-theme">
         <div class="card-header fw-bold">@T["Export contents"]</div>
         <div class="card-body">
@@ -114,6 +113,11 @@
                         </div>
                     </div>
 
+                    @if (Model.Exporter.Content != null)
+                    {
+                        @await DisplayAsync(Model.Exporter.Content)
+                    }
+
                     <div class="ocat-limited-wrapper">
                         <div class="ocat-limited">
                             <button type="submit" id="export_contents_button" class="btn btn-primary" disabled>@T["Export Data"]</button>
@@ -125,7 +129,7 @@
     </div>
 </div>
 
-<form asp-action="Export" asp-controller="Admin" method="post" id="items-form" autocomplete="off">
+<form asp-action="Export" asp-route-pageSize="@Context.Request.Query["pageSize"]" asp-controller="Admin" method="post" id="items-form" autocomplete="off">
     @await DisplayAsync(Model.List)
 </form>
 

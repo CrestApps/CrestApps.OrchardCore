@@ -3,12 +3,15 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.Infrastructure;
 using CrestApps.Core.Infrastructure.Indexing.DataSources;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Drivers;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Handlers;
+using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Models;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Elasticsearch;
 using OrchardCore.Indexing;
@@ -35,6 +38,7 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddTransient<IConfigureOptions<ElasticsearchDataSourceOptions>, ElasticsearchDataSourceOptionsConfiguration>();
         services.AddOrchardCoreIndexingAdapters(ElasticsearchConstants.ProviderName);
         services.TryAddKeyedScoped<IDataSourceContentManager, OrchardCoreElasticsearchDataSourceContentManager>(ElasticsearchConstants.ProviderName);
         services.TryAddKeyedScoped<IDataSourceDocumentReader, OrchardCoreElasticsearchDataSourceDocumentReader>(ElasticsearchConstants.ProviderName);
@@ -42,10 +46,14 @@ public sealed class Startup : StartupBase
         services.AddScoped<IDocumentIndexHandler, DataSourceElasticsearchDocumentIndexHandler>();
         services.AddDisplayDriver<AIDataSource, ElasticsearchAIDataSourceDisplayDriver>();
         services.AddKeyedScoped<IAIDataSourceSourceHandler, ElasticsearchAIDataSourceSourceHandler>(AIDataSourceSourceTypes.Elasticsearch);
+
+        // This source reads rows it did not shape, and its handler extracts each document by the configured
+        // TitleFieldName and ContentFieldName, so it has to ask which field is which.
+        services.Configure<AIDataSourceFieldMappingOptions>(options => options.Require(AIDataSourceSourceTypes.Elasticsearch));
         services.Configure<AIDataSourceSourceOptions>(options => options.AddOrUpdate(
             AIDataSourceSourceTypes.Elasticsearch,
             S["Elasticsearch"],
-            S["Read source documents from an external Elasticsearch index using explicit connection settings."]));
+            S["Read source documents from an external Elasticsearch index using explicit or globally configured connection settings."]));
 
         services.AddElasticsearchIndexingSource(DataSourceConstants.IndexingTaskType, o =>
         {

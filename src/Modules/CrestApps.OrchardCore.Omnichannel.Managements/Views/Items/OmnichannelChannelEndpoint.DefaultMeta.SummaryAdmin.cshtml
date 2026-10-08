@@ -1,11 +1,54 @@
 @using System.Globalization
 @using CrestApps.OrchardCore.Omnichannel.Core.Models
 @using OrchardCore.DisplayManagement.Views
+@using Microsoft.Extensions.Options
+
+@inject IOptions<OmnichannelAddressOptions> AddressOptions
 
 @model ShapeViewModel<OmnichannelChannelEndpoint>
 
 @{
     var modifiedAt = Model.Value.ModifiedUtc ?? Model.Value.CreatedUtc;
+    var addressType = Model.Value.GetAddressType();
+    var addressTypeName = !string.IsNullOrEmpty(addressType) && AddressOptions.Value.AddressTypes.TryGetValue(addressType, out var type) && type.DisplayName != null
+        ? type.DisplayName.Value
+        : addressType;
+    var addressTypeIcon = string.Equals(addressType, "EmailAddress", StringComparison.OrdinalIgnoreCase) ? "fa-envelope" : "fa-phone";
+}
+
+@if (!string.IsNullOrEmpty(addressTypeName))
+{
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Address type"]">
+        <i class="fa-solid @addressTypeIcon text-secondary me-1" aria-hidden="true"></i>@addressTypeName
+    </span>
+}
+
+@foreach (var capability in Model.Value.GetCapabilities())
+{
+    var capabilityName = AddressOptions.Value.Capabilities.TryGetValue(capability, out var registered) && registered.DisplayName != null
+        ? registered.DisplayName.Value
+        : capability;
+    var capabilityIcon = string.Equals(capability, "SMS", StringComparison.OrdinalIgnoreCase)
+        ? "fa-comment-sms"
+        : string.Equals(capability, "Phone", StringComparison.OrdinalIgnoreCase) ? "fa-headset" : "fa-tag";
+
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Used for"]">
+        <i class="fa-solid @capabilityIcon text-secondary me-1" aria-hidden="true"></i>@capabilityName
+    </span>
+}
+
+@if (!string.IsNullOrEmpty(Model.Value.Value))
+{
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Address"]">
+        <i class="fa-solid fa-hashtag text-secondary me-1" aria-hidden="true"></i>@Model.Value.Value
+    </span>
+}
+
+@if (!string.IsNullOrEmpty(Model.Value.ProviderName))
+{
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["SMS provider"]">
+        <i class="fa-solid fa-plug text-secondary me-1" aria-hidden="true"></i>@Model.Value.ProviderName
+    </span>
 }
 
 <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@await DisplayAsync(await New.DateTime(Utc: modifiedAt, Format: "g"))">

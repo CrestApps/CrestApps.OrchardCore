@@ -39,6 +39,11 @@ public sealed class TelephonyInteractionIndex : MapIndex
     public CallDirection Direction { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the interaction was an internal extension call.
+    /// </summary>
+    public bool IsExtension { get; set; }
+
+    /// <summary>
     /// Gets or sets the outcome of the call.
     /// </summary>
     public CallOutcome Outcome { get; set; }
@@ -47,6 +52,16 @@ public sealed class TelephonyInteractionIndex : MapIndex
     /// Gets or sets the time, in UTC, when the call started.
     /// </summary>
     public DateTime StartedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the interaction is a voicemail.
+    /// </summary>
+    public bool IsVoicemail { get; set; }
+
+    /// <summary>
+    /// Gets or sets the time, in UTC, when the voicemail was read. Null while the voicemail is unread.
+    /// </summary>
+    public DateTime? VoicemailReadUtc { get; set; }
 }
 
 /// <summary>
@@ -65,8 +80,11 @@ public sealed class TelephonyInteractionIndexProvider : IndexProvider<TelephonyI
                 UserId = interaction.UserId,
                 UserName = interaction.UserName,
                 Direction = interaction.Direction,
+                IsExtension = interaction.IsExtension,
                 Outcome = interaction.Outcome,
                 StartedUtc = interaction.StartedUtc,
+                IsVoicemail = interaction.IsVoicemail,
+                VoicemailReadUtc = interaction.VoicemailReadUtc,
             });
     }
 }

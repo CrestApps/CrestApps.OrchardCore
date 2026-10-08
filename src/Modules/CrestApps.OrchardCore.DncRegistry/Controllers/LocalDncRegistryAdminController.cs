@@ -83,7 +83,7 @@ public sealed class LocalDncRegistryAdminController : Controller
             return Forbid();
         }
 
-        var pager = new Pager(pagerParameters, _pagerOptions.GetPageSize());
+        var pager = new Pager(pagerParameters, _pagerOptions);
         var totalCount = await _listManager.GetCountAsync();
         var lists = await _listManager.GetListsAsync(pager.Page, pager.PageSize);
 

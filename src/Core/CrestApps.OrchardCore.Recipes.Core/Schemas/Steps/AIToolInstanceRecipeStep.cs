@@ -56,7 +56,10 @@ public sealed class AIToolInstanceRecipeStep : IRecipeStep
                 ("HttpApiRequestToolSettings", BuildHttpApiRequestSettingsSchema().Description("Settings for the built-in 'http-api-request' source.")),
                 ("SitemapDocumentationToolSettings", BuildSitemapSettingsSchema().Description("Settings for the built-in sitemap documentation search source.")),
                 ("SearchIndexDocumentationToolSettings", BuildSearchIndexSettingsSchema().Description("Settings for the built-in prebuilt search index documentation source.")),
-                ("AlgoliaDocumentationToolSettings", BuildAlgoliaSettingsSchema().Description("Settings for the built-in Algolia DocSearch documentation source.")))
+                ("AlgoliaDocumentationToolSettings", BuildAlgoliaSettingsSchema().Description("Settings for the built-in Algolia DocSearch documentation source.")),
+                ("WebsiteSearchToolSettings", BuildWebsiteSearchSettingsSchema().Description("Settings for the built-in live website search source.")),
+                ("DataSourceSearchToolSettings", BuildDataSourceSearchSettingsSchema().Description("Settings for the built-in AI data source vector search source.")),
+                ("AIToolInstanceParametersMetadata", BuildParametersMetadataSchema().Description("User-declared parameters for sources that opt into parameter support.")))
             .AdditionalProperties(true)
             .Description("Source-specific tool instance settings, grouped by settings object name. Secrets are stored encrypted at rest.");
 
@@ -78,6 +81,34 @@ public sealed class AIToolInstanceRecipeStep : IRecipeStep
             "AIToolInstances",
             [("instances", RecipeStepSchemaBuilders.Array(instanceSchema, 1).Description("The AI tool instances to create or update."))],
             ["instances"]);
+    }
+
+    private static JsonSchemaBuilder BuildParametersMetadataSchema()
+    {
+        var parameterSchema = new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("Name", RecipeStepSchemaBuilders.String().Description("Parameter name. For model-filled parameters this is the property name in the function schema and must be a valid identifier, unique within the instance.")),
+                ("Description", RecipeStepSchemaBuilders.String().Description("Natural-language description shown to the AI model. Required for model-filled parameters.")),
+                ("Type", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("String", "Integer", "Number", "Boolean", "Array", "Object").Description("JSON schema type of the parameter.")),
+                ("Fill", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Model", "Fixed", "Context").Description("Who supplies the value at invocation time: Model (the AI model), Fixed (a pinned value), or Context (resolved server-side from the request context).")),
+                ("Required", RecipeStepSchemaBuilders.Boolean().Description("Whether the AI model must supply the value. Only meaningful when Fill is Model.")),
+                ("DefaultValue", new JsonSchemaBuilder().Description("Value applied when the model omits an optional parameter, or the pinned value when Fill is Fixed. A Fixed secret value is stored encrypted at rest.")),
+                ("AllowedValues", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.String)).Description("Closed set of accepted values, emitted as the schema enum and enforced by the binder. Empty means any value of the declared type.")),
+                ("ContextKey", RecipeStepSchemaBuilders.String().Description("Well-known context key resolved when Fill is Context, for example user.id.")),
+                ("Binding", RecipeStepSchemaBuilders.String().Description("Source-specific placement of the resolved value, expressed as Target or Target:name (for example Query:orderId). Valid targets are declared by the owning source.")),
+                ("IsSecret", RecipeStepSchemaBuilders.Boolean().Description("Whether a Fixed value is a credential. Secret values are stored encrypted at rest and never returned to the UI in clear text.")))
+            .Required("Name")
+            .AdditionalProperties(true);
+
+        return new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("Parameters", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Array)
+                    .Items(parameterSchema)
+                    .Description("The declared parameters, in the order they appear in the function schema the AI model sees.")))
+            .AdditionalProperties(true);
     }
 
     private static JsonSchemaBuilder BuildHttpApiRequestSettingsSchema()
@@ -133,5 +164,31 @@ public sealed class AIToolInstanceRecipeStep : IRecipeStep
                 ("ApiKey", RecipeStepSchemaBuilders.String().Description("Algolia search-only API key. Stored encrypted at rest.")),
                 ("IndexName", RecipeStepSchemaBuilders.String().Description("Algolia index name.")),
                 ("MaxResults", RecipeStepSchemaBuilders.Integer().Description("Maximum passages returned for a single search.")))
+            .AdditionalProperties(true);
+
+    private static JsonSchemaBuilder BuildDataSourceSearchSettingsSchema()
+        => new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("DataSourceId", RecipeStepSchemaBuilders.String().Description("Identifier of the AI data source the instance searches.")),
+                ("RetrievalMode", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Chunk", "Hierarchical").Description("Whether a search returns only the matching chunks or the full source documents they belong to.")),
+                ("TopNDocuments", RecipeStepSchemaBuilders.Integer().Description("Number of top-scoring documents returned for a single search. Empty uses the site default.")),
+                ("Strictness", RecipeStepSchemaBuilders.Integer().Description("Relevance threshold a result must clear to be returned. Empty uses the site default.")),
+                ("Filter", RecipeStepSchemaBuilders.String().Description("OData filter expression translated to the index provider's own syntax before the search runs.")))
+            .AdditionalProperties(true);
+
+    private static JsonSchemaBuilder BuildWebsiteSearchSettingsSchema()
+        => new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("BaseUrl", RecipeStepSchemaBuilders.String().Description("Root URL of the site to search (for example https://www.example.com).")),
+                ("SearchPath", RecipeStepSchemaBuilders.String().Description("Search endpoint path appended to the base URL. Defaults to the WordPress REST search endpoint.")),
+                ("QueryParameter", RecipeStepSchemaBuilders.String().Description("Query-string parameter that carries the model's free-text query. Defaults to 'search'.")),
+                ("ExtraQuery", RecipeStepSchemaBuilders.String().Description("Fixed extra query-string parameters always appended to the request. Defaults to '_embed=1'.")),
+                ("ResultsPath", RecipeStepSchemaBuilders.String().Description("Dotted path to the results array in the response. Empty means the response body is itself the array.")),
+                ("TitlePath", RecipeStepSchemaBuilders.String().Description("Dotted path, relative to each result, to the result title. Defaults to 'title'.")),
+                ("UrlPath", RecipeStepSchemaBuilders.String().Description("Dotted path, relative to each result, to the result URL. Defaults to 'url'.")),
+                ("SnippetPath", RecipeStepSchemaBuilders.String().Description("Dotted path, relative to each result, to the text snippet. Defaults to the embedded WordPress excerpt.")),
+                ("MaxResults", RecipeStepSchemaBuilders.Integer().Description("Maximum results returned for a single search.")))
             .AdditionalProperties(true);
 }

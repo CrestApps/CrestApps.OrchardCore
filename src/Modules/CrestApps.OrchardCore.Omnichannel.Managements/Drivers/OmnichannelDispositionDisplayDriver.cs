@@ -40,7 +40,8 @@ internal sealed class OmnichannelDispositionDisplayDriver : DisplayDriver<Omnich
             model.IsNew = context.IsNew;
             model.Name = disposition.Name;
             model.Description = disposition.Description;
-        }).Location("Content:1");
+            model.Outcome = disposition.Outcome;
+        }).Location("Content:1%General;1");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(OmnichannelDisposition disposition, UpdateEditorContext context)
@@ -58,6 +59,7 @@ internal sealed class OmnichannelDispositionDisplayDriver : DisplayDriver<Omnich
         }
 
         disposition.Description = model.Description?.Trim();
+        disposition.Outcome = Enum.IsDefined(model.Outcome) ? model.Outcome : DispositionOutcome.None;
 
         return Edit(disposition, context);
     }

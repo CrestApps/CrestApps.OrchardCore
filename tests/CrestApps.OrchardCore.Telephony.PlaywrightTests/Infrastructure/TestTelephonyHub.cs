@@ -10,10 +10,47 @@ namespace CrestApps.OrchardCore.Telephony.PlaywrightTests.Infrastructure;
 public sealed class TestTelephonyHub : Hub<ITelephonyClient>
 {
     private readonly InMemoryTelephonyProvider _provider;
+    private readonly TestVoicemailInbox _voicemailInbox;
+    private readonly BrowserCallLog _browserCalls;
 
-    public TestTelephonyHub(InMemoryTelephonyProvider provider)
+    public TestTelephonyHub(InMemoryTelephonyProvider provider, TestVoicemailInbox voicemailInbox, BrowserCallLog browserCalls)
     {
         _provider = provider;
+        _voicemailInbox = voicemailInbox;
+        _browserCalls = browserCalls;
+    }
+    public Task RecordBrowserCall(string callId, string to, string from)
+    {
+        _browserCalls.Started(callId);
+
+        return Task.CompletedTask;
+    }
+
+    public Task RecordBrowserCallEnded(string callId, bool connected)
+    {
+        _browserCalls.Ended(callId);
+
+        return Task.CompletedTask;
+    }
+
+    public Task ReportBrowserCallsAlive(string[] callIds, string[] connectedCallIds)
+    {
+        _browserCalls.Alive(callIds);
+
+        return Task.CompletedTask;
+    }
+
+    public Task ReportClientDiagnostic(string level, string code, string message, string context)
+    {
+        _browserCalls.Diagnostic(code, context);
+        _provider.ClientDiagnosticCodes.Enqueue(code);
+
+        return Task.CompletedTask;
+    }
+
+    public Task<BrowserCallLogSnapshot> GetBrowserCallLog()
+    {
+        return Task.FromResult(_browserCalls.Snapshot());
     }
 
     public Task<TelephonyResult> Dial(DialRequest request)
@@ -56,6 +93,21 @@ public sealed class TestTelephonyHub : Hub<ITelephonyClient>
         return _provider.MergeAsync(request);
     }
 
+    public Task<TelephonyResult> GetConsult(ConsultTransferRequest request)
+    {
+        return _provider.GetConsultAsync(request);
+    }
+
+    public Task<TelephonyResult> CompleteConsult(ConsultTransferRequest request)
+    {
+        return _provider.CompleteConsultAsync(request);
+    }
+
+    public Task<TelephonyResult> CancelConsult(ConsultTransferRequest request)
+    {
+        return _provider.CancelConsultAsync(request);
+    }
+
     public Task<TelephonyResult> SendDigits(SendDigitsRequest request)
     {
         return _provider.SendDigitsAsync(request);
@@ -71,9 +123,20 @@ public sealed class TestTelephonyHub : Hub<ITelephonyClient>
         return _provider.RejectAsync(call);
     }
 
-    public Task<TelephonyClientCredentials> GetCredentials()
+    public async Task<TelephonyClientCredentials> GetCredentials()
     {
-        return _provider.GetClientCredentialsAsync();
+        var credentials = await _provider.GetClientCredentialsAsync();
+
+        // A page opened with ?mediaAdapter= runs one of the phone's own media adapters (against a stand-in provider
+        // SDK) instead of the in-memory one; the credentials have to name the adapter the page was configured with.
+        var mediaAdapter = Context.GetHttpContext()?.Request.Query[SoftPhoneTestServer.MediaAdapterQueryKey].ToString();
+
+        if (!string.IsNullOrEmpty(mediaAdapter))
+        {
+            credentials.BrowserMediaAdapterName = mediaAdapter;
+        }
+
+        return credentials;
     }
 
     public Task<TelephonyConnectionStatus> GetConnectionStatus()
@@ -97,6 +160,16 @@ public sealed class TestTelephonyHub : Hub<ITelephonyClient>
         return _provider.GetDirectoryAsync();
     }
 
+    public Task<TelephonyExtensionDirectoryResult> GetExtensionDirectory()
+    {
+        return Task.FromResult(_provider.GetExtensionDirectory());
+    }
+
+    public Task<TelephonyResult> DialExtension(ExtensionDialRequest request)
+    {
+        return Task.FromResult(_provider.DialExtension(request));
+    }
+
     public Task<int> GetDialRequestCount()
     {
         return Task.FromResult(_provider.GetDialRequestCount());
@@ -115,6 +188,16 @@ public sealed class TestTelephonyHub : Hub<ITelephonyClient>
     public Task<int> GetTransferRequestCount()
     {
         return Task.FromResult(_provider.GetTransferRequestCount());
+    }
+
+    public Task<TransferRequest> GetLastTransfer()
+    {
+        return Task.FromResult(_provider.GetLastTransfer());
+    }
+
+    public Task<MergeRequest> GetLastMerge()
+    {
+        return Task.FromResult(_provider.GetLastMerge());
     }
 
     public Task SetDialDelay(int milliseconds)
@@ -181,6 +264,23 @@ public sealed class TestTelephonyHub : Hub<ITelephonyClient>
         await Clients.Caller.CallStateChanged(call);
     }
 
+    public Task ReportCallQuality(CallQualityReport report)
+    {
+        if (report is not null)
+        {
+            _provider.CallQualityReports.Enqueue(report);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task PublishTrackedCallState(TelephonyCall call)
+    {
+        _provider.TrackCall(call);
+
+        return Clients.Caller.CallStateChanged(call);
+    }
+
     public Task PublishCallState(TelephonyCall call)
     {
         return Clients.Caller.CallStateChanged(call);
@@ -211,6 +311,22 @@ public sealed class TestTelephonyHub : Hub<ITelephonyClient>
                 StartedUtc = new DateTime(2024, 1, 1, 9, 30, 0, DateTimeKind.Utc),
             },
         };
+
+        // An extension call, stored with the username it rang at the time.
+        interactions.Add(new TelephonyInteraction
+        {
+            InteractionId = "int-ext-1",
+            CallId = "call-ext-1",
+            ProviderName = _provider.Name.Name,
+            To = "jdoe",
+            IsExtension = true,
+            ExtensionNumber = "2",
+            Direction = CallDirection.Outbound,
+            Outcome = CallOutcome.Completed,
+            StartedUtc = new DateTime(2024, 1, 1, 9, 0, 0, DateTimeKind.Utc),
+        });
+
+        interactions.AddRange(_voicemailInbox.List());
 
         return Task.FromResult<IEnumerable<TelephonyInteraction>>(interactions.Take(count));
     }

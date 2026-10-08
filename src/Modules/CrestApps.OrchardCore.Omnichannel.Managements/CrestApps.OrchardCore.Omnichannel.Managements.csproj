@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.ContactCenter.DistributedTests" />
   </ItemGroup>
 
   <ItemGroup>
@@ -22,8 +23,10 @@
     <PackageReference Include="OrchardCore.ContentFields" />
     <PackageReference Include="OrchardCore.Title" />
     <PackageReference Include="OrchardCore.Flows.Core" />
+    <PackageReference Include="OrchardCore.Lists" />
     <PackageReference Include="OrchardCore.Navigation.Core" />
     <PackageReference Include="OrchardCore.Sms.Abstractions" />
+    <PackageReference Include="OrchardCore.Workflows.Abstractions" />
     <PackageReference Include="NodaTime" />
   </ItemGroup>
 

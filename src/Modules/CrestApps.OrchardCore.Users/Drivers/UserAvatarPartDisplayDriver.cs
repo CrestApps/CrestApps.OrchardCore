@@ -29,7 +29,7 @@ public sealed class UserAvatarPartDisplayDriver : SectionDisplayDriver<User, Use
     private readonly AttachedMediaFieldFileService _attachedMediaFieldFileService;
     private readonly MediaOptions _mediaOptions;
     private readonly IContentTypeProvider _contentTypeProvider;
-    private readonly UserAvatarOptions _userAvatarOptions;
+    private readonly IOptionsMonitor<UserAvatarOptions> _userAvatarOptions;
 
     internal readonly IStringLocalizer S;
 
@@ -48,7 +48,7 @@ public sealed class UserAvatarPartDisplayDriver : SectionDisplayDriver<User, Use
         IAuthorizationService authorizationService,
         AttachedMediaFieldFileService attachedMediaFieldFileService,
         IContentTypeProvider contentTypeProvider,
-        IOptions<UserAvatarOptions> userAvatarOptions,
+        IOptionsMonitor<UserAvatarOptions> userAvatarOptions,
         IOptions<MediaOptions> mediaOptions,
         IStringLocalizer<UserAvatarPartDisplayDriver> stringLocalizer)
     {
@@ -57,7 +57,7 @@ public sealed class UserAvatarPartDisplayDriver : SectionDisplayDriver<User, Use
         _attachedMediaFieldFileService = attachedMediaFieldFileService;
         _mediaOptions = mediaOptions.Value;
         _contentTypeProvider = contentTypeProvider;
-        _userAvatarOptions = userAvatarOptions.Value;
+        _userAvatarOptions = userAvatarOptions;
         S = stringLocalizer;
     }
 
@@ -192,7 +192,7 @@ public sealed class UserAvatarPartDisplayDriver : SectionDisplayDriver<User, Use
             {
                 AllowedExtensions = extensions.ToArray(),
                 AllowAnchors = true,
-                Required = _userAvatarOptions.Required,
+                Required = _userAvatarOptions.CurrentValue.Required,
             };
         }
 

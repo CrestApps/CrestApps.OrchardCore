@@ -1,0 +1,23 @@
+@using CrestApps.Core.Models
+@using CrestApps.OrchardCore.Core.Models
+@using CrestApps.OrchardCore.Omnichannel.Core
+
+@model EditCatalogEntryViewModel
+
+<zone Name="Title">
+    <breadcrumb name="OmnichannelCadencesCreate" title="@T["New Cadence"]">
+        <breadcrumb-item id="OmnichannelCadences" action="Index" controller="Cadences" area="CrestApps.OrchardCore.Omnichannel.Managements" permission="@OmnichannelConstants.Permissions.ManageCadences.Name">@T["Cadences"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" enctype="multipart/form-data" class="no-multisubmit">
+    @Html.ValidationSummary()
+    @await DisplayAsync(Model.Editor)
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button class="btn btn-primary" type="submit">@T["Save"]</button>
+            <a class="btn btn-secondary cancel" role="button" asp-route-action="Index">@T["Cancel"]</a>
+        </div>
+    </div>
+</form>

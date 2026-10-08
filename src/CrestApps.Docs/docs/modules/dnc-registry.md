@@ -3,6 +3,8 @@ sidebar_label: DNC Registry
 sidebar_position: 3
 title: DNC Registry
 description: Configure national do-not-call registry providers and global import enforcement for Omnichannel contact imports.
+user_manual:
+  - user-manual/administration/do-not-call-lists
 ---
 
 | | |
@@ -10,23 +12,25 @@ description: Configure national do-not-call registry providers and global import
 | **Feature Name** | DNC Registry |
 | **Feature ID** | `CrestApps.OrchardCore.DncRegistry` |
 
-The **DNC Registry** module provides a shared compliance layer for Omnichannel contact imports. It lets site owners configure national do-not-call registry providers, enforce registry checks globally, and expose additional registry choices during bulk imports.
+The **DNC Registry** module provides a shared compliance layer for Omnichannel contact imports. It lets site owners configure national do-not-call registry providers, enforce registry checks globally, and expose additional registry choices during bulk imports. The same registries screen outbound dialing in the Contact Center.
 
-The screencast below enables the **Local Do Not Call Registry** feature, opens it from the **Interaction Center** menu, and uploads a CSV list of phone numbers for a country.
-
-<video controls preload="metadata" width="100%" aria-label="Screen cast of enabling the Local Do Not Call Registry and uploading a CSV list">
-  <source src="/img/docs/dnc-registry.mp4" type="video/mp4" />
-</video>
+:::tip[Using the do-not-call screens]
+The step-by-step instructions for administrators (uploading and managing local lists, preparing the CSV file,
+enforcing checks on every import, and entering registry credentials) are in the User Manual:
+[Do Not Call Lists and Registries](../user-manual/administration/do-not-call-lists.md). This page covers the
+features, settings objects, storage, screening semantics and extension points.
+:::
 
 ## Built-in registry integrations
 
-The module currently ships with these provider features:
+The module ships with these provider features:
 
 | Registry | Feature ID | Admin location |
 | --- | --- | --- |
 | USA FTC Do Not Call Registry | `CrestApps.OrchardCore.DncRegistry.UsaFtc` | **Settings** -> **DNC Registries** -> **USA FTC Registry** |
 | Canada LNNTE-DNCL Registry | `CrestApps.OrchardCore.DncRegistry.CanadaDncl` | **Settings** -> **DNC Registries** -> **Canada LNNTE-DNCL Registry** |
 | Local Do Not Call Registry | `CrestApps.OrchardCore.DncRegistry.Local` | **Interaction Center** -> **Local DNC Registry** |
+| DNC Registry - Azure Blob Storage | `CrestApps.OrchardCore.DncRegistry.Azure` | Configuration only -- see [below](#store-local-registry-files-in-azure-blob-storage) |
 
 Enable the core **DNC Registry** feature first, then enable the provider features you want to use. The **USA FTC Registry**, **Canada LNNTE-DNCL Registry**, and **Local DNC Registry** admin pages are only added to the admin menu when their matching provider feature is enabled.
 
@@ -41,9 +45,11 @@ The module splits settings by responsibility:
 | **Settings** -> **DNC Registries** -> **Canada LNNTE-DNCL Registry** | Configure Canada DNCL API access |
 | **Interaction Center** -> **Local DNC Registry** | Manage locally uploaded DNC lists |
 
+The settings pages and the Local DNC Registry screen require the **Manage DNC registry settings** (`ManageDncRegistrySettings`) permission.
+
 When global enforcement is enabled, Omnichannel imports always perform DNC checks even if the importer does not opt in on the import form.
 
-The same settings can now be provisioned through the Recipes module's generic `Settings` step by using the `DncRegistrySettings`, `UsaFtcDncRegistrySettings`, and `CanadaDnclRegistrySettings` objects when the matching features are enabled.
+The same settings can be provisioned through the Recipes module's generic `Settings` step by using the `DncRegistrySettings`, `UsaFtcDncRegistrySettings`, and `CanadaDnclRegistrySettings` objects when the matching features are enabled. `EnforcedRegistryKeys` takes the registry keys: `usa-ftc-dnc` (USA FTC), `canada-lnnte-dncl` (Canada LNNTE-DNCL), and `local-dnc` (Local Do Not Call Registry).
 
 ```json
 {
@@ -52,7 +58,7 @@ The same settings can now be provisioned through the Recipes module's generic `S
       "name": "settings",
       "DncRegistrySettings": {
         "EnforceGlobally": true,
-        "EnforcedRegistryKeys": ["usa-ftc", "canada-dncl"]
+        "EnforcedRegistryKeys": ["usa-ftc-dnc", "canada-lnnte-dncl"]
       },
       "UsaFtcDncRegistrySettings": {
         "OrganizationId": "example-org",
@@ -80,7 +86,7 @@ When **Omnichannel Management** and **Content Transfer** are enabled, Omnichanne
 
 - ignore duplicate rows by phone number
 - check duplicate phone numbers against both the current import batch and the contact records that already exist in Orchard before the batch saves
-- skip rows whose phone numbers are found on one or more selected registries
+- skip rows whose phone numbers are found on one or more selected registries, or import them marked Do not call instead
 - merge importer-selected registries with any registries enforced globally by site settings
 
 Registry checks run in parallel across the selected providers so a single import can compare the same row against multiple external compliance services. Rows skipped because of duplicate phone numbers or DNC matches are added to the import error export together with the skip reason.
@@ -99,21 +105,25 @@ The **Local DNC Registry** feature (`CrestApps.OrchardCore.DncRegistry.Local`) a
 - **List replacement**: Delete old lists and upload replacements (e.g., monthly DNC updates)
 - **Phone number normalization**: Uploaded phone numbers are normalized to [E.164](https://en.wikipedia.org/wiki/E.164) format (`+<country code><subscriber number>`, e.g., `+17024993350`) using [libphonenumber](https://github.com/twcclegg/libphonenumber-csharp). This globally unique format eliminates ambiguity between countries and provides a consistent comparison key.
 
-### Managing local lists
+### Local lists and background processing
 
-Navigate to **Interaction Center** -> **Local DNC Registry** to:
+Lists are managed under **Interaction Center** -> **Local DNC Registry** (requires `ManageDncRegistrySettings`). An
+upload saves a `LocalDncList` with the **Pending** status and returns immediately; the rows are imported in the
+background. Each list tracks total, processed, successful and rejected rows, and the rejected rows (with a reason
+each) can be downloaded as CSV. The operator actions (**Process now**, **Pause import**, **Delete**, **Download
+errors**) are described in the [User Manual](../user-manual/administration/do-not-call-lists.md#upload-a-local-list).
 
-1. **View uploaded lists** — see all lists with their country, phone number count, and upload date
-2. **Upload a new list** — use either the page action or **Interaction Center** -> **Upload DNC List**, then select a country (the picker shows the dialing prefix), provide a name, and upload a CSV file
-3. **Delete a list** — remove a list and all its phone numbers from the list grid when it is no longer needed
+A background task (**Local DNC Import Processor**) runs every 10 minutes and keeps lists from getting stuck:
 
-After upload, the request returns immediately and the import continues in the background. The list grid shows whether a list is **Pending**, **Processing**, **Completed**, or **Failed**, together with row progress, success counts, and error counts.
+- It starts **Pending** imports.
+- It resumes a **Processing** import or a **Deleting** list that has saved no progress for 10 minutes, for example after the site restarted. The work continues where it stopped rather than starting over.
+- It retries a **Failed** import up to 5 times, waiting 10 minutes longer after each failure. After that, the list stays failed until someone uses **Process now**, which also gives it 5 more automatic retries. An import whose uploaded file is missing is not retried.
 
-The screencast below uploads a suppression list to the Local DNC Registry and then turns on global enforcement. It opens **Local DNC Registry**, uploads a named CSV list for the United States, then visits **Settings** -> **Content Import** to enable **Enforce do-not-call registry checks globally** and select the **Local Do Not Call Registry** so every contact import automatically scrubs numbers that appear on the list.
+A list's stored status is **Pending**, **Processing**, **Completed**, **Failed**, **Paused**, or **Deleting**. The admin list shows a completed list that has rejected rows as **Completed with errors**; it is still stored as **Completed**.
 
-<video controls preload="metadata" width="100%" aria-label="Screen cast of uploading a local DNC list and enforcing it globally">
-  <source src="/img/docs/omni-dnc-local.mp4" type="video/mp4" />
-</video>
+Only **Completed** lists are used for screening; a list that is still importing, paused, or failed is not consulted. Uploaded files are stored under `App_Data/Sites/{tenant}/DncRegistry` unless [Azure Blob Storage](#store-local-registry-files-in-azure-blob-storage) is enabled.
+
+The import and deletion of lists are paced by the shared `CrestApps:BackgroundWork:Pacing` settings described in [Content Transfer](content-transfer.md#limiting-how-much-of-the-database-an-import-uses).
 
 ### CSV file format
 
@@ -166,33 +176,73 @@ When no `CountryCode` is specified (or the context is `null`), the local registr
 
 ## Provider-specific configuration
 
-### USA FTC Do Not Call Registry
+Each national registry is configured on its own page under **Settings** -> **DNC Registries**. The field-by-field
+reference is in the [User Manual](../user-manual/administration/do-not-call-lists.md#connect-a-national-registry).
 
-Configure the USA FTC provider under **Settings** -> **DNC Registries** -> **USA FTC Registry**.
+| Registry | Settings object | Properties | Default `BaseUrl` |
+| --- | --- | --- | --- |
+| USA FTC Do Not Call Registry | `UsaFtcDncRegistrySettings` | `OrganizationId`, `BaseUrl`, `ProtectedApiKey` | `https://telemarketing.donotcall.gov/api/` |
+| Canada LNNTE-DNCL Registry | `CanadaDnclRegistrySettings` | `AccountNumber`, `BaseUrl`, `ProtectedApiKey` | `https://www.lnnte-dncl.gc.ca/api/` |
 
-Current settings:
+`BaseUrl` is required when the settings are saved from the admin screen. A registry with no credentials does not
+take part in screening (see [Screening fails closed](#screening-fails-closed)).
 
-| Setting | Purpose |
+To obtain access, follow the official programs: the FTC National Do Not Call Registry at
+[telemarketing.donotcall.gov](https://telemarketing.donotcall.gov/), and the Canada DNCL API onboarding at
+[www.lnnte-dncl.gc.ca/en/Organization/DNCL_API](https://www.lnnte-dncl.gc.ca/en/Organization/DNCL_API).
+
+## Store local registry files in Azure Blob Storage
+
+| | |
 | --- | --- |
-| **Organization ID** | The FTC organization identifier used for API requests |
-| **Base URL** | The FTC API base address |
-| **API key** | The protected credential used to authenticate requests |
+| **Feature Name** | DNC Registry - Azure Blob Storage |
+| **Feature ID** | `CrestApps.OrchardCore.DncRegistry.Azure` |
 
-To obtain access, follow the FTC registration and API guidance provided by the official National Do Not Call Registry program at [telemarketing.donotcall.gov](https://telemarketing.donotcall.gov/).
+By default the **Local Do Not Call Registry** keeps uploaded list files on the local file system. Enable
+**DNC Registry - Azure Blob Storage** to keep them in an Azure Blob container instead, which is what a
+multi-instance deployment needs so every instance reads the same uploads.
 
-### Canada LNNTE-DNCL Registry
+The feature depends on **Local Do Not Call Registry** and has no admin screen of its own. It is configured
+entirely through the `CrestApps:DncRegistry:AzureBlobStorage` shell configuration section, which sits under
+the `OrchardCore` key in the application's root `appsettings.json`:
 
-Configure the Canada provider under **Settings** -> **DNC Registries** -> **Canada LNNTE-DNCL Registry**.
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "DncRegistry": {
+        "AzureBlobStorage": {
+          "ConnectionString": "",
+          "ContainerName": "dnc-registry",
+          "BasePath": "some/base/path",
+          "CreateContainer": true
+        }
+      }
+    }
+  }
+}
+```
 
-Current settings:
-
-| Setting | Purpose |
+| Setting | Description |
 | --- | --- |
-| **Account number** | The Canada DNCL account identifier used for lookups |
-| **Base URL** | The DNCL API base address |
-| **API key** | The protected credential sent in the request header |
+| `ConnectionString` | Azure Storage account connection string. **Required.** |
+| `ContainerName` | Azure Blob container name. Must follow Azure container naming rules and should be lowercase. **Required.** |
+| `BasePath` | Optional subdirectory inside the container where registry files are stored. |
+| `CreateContainer` | When `true`, the container is created automatically if it does not already exist. |
+| `RemoveContainer` | When `true`, the container is removed when the tenant is deleted. |
+| `RemoveFilesFromBasePath` | Removes only the configured `BasePath` contents when the tenant is deleted. Use this instead of `RemoveContainer` when the container is shared. |
 
-To obtain access, follow the official API onboarding guidance at [www.lnnte-dncl.gc.ca/en/Organization/DNCL_API](https://www.lnnte-dncl.gc.ca/en/Organization/DNCL_API).
+:::warning
+`ConnectionString` and `ContainerName` are both required. When either is missing, the feature stays enabled
+but **does not take over storage** — an error is written to the log and the local file system keeps serving
+the registry files.
+:::
+
+:::note
+A tenant that overrides these values in its own `App_Data/Sites/{tenant}/appsettings.json` writes the same
+keys **without** the `OrchardCore` wrapper, starting at `CrestApps`, because that file is already scoped to
+the tenant.
+:::
 
 ## Adding a new registry
 

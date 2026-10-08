@@ -6,10 +6,12 @@ using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Infrastructure.Indexing.Models;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Models;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Transport;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Services;
 
@@ -18,18 +20,22 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
     private const int BatchSize = 1000;
 
     private readonly IDataProtectionProvider _dataProtectionProvider;
+    private readonly ElasticsearchDataSourceOptions _options;
     private readonly ILogger<ElasticsearchAIDataSourceSourceHandler> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ElasticsearchAIDataSourceSourceHandler"/> class.
     /// </summary>
     /// <param name="dataProtectionProvider">The data protection provider.</param>
+    /// <param name="options">The global Elasticsearch data source options.</param>
     /// <param name="logger">The logger.</param>
     public ElasticsearchAIDataSourceSourceHandler(
         IDataProtectionProvider dataProtectionProvider,
+        IOptions<ElasticsearchDataSourceOptions> options,
         ILogger<ElasticsearchAIDataSourceSourceHandler> logger)
     {
         _dataProtectionProvider = dataProtectionProvider;
+        _options = options.Value;
         _logger = logger;
     }
 
@@ -50,9 +56,20 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
             return ValueTask.CompletedTask;
         }
 
-        if (string.IsNullOrWhiteSpace(metadata.Url))
+        // Data sources without their own connection settings use the globally configured connection.
+        if (!HasStoredConnection(metadata))
         {
-            result.Fail(new ValidationResult("Elasticsearch URL is required.", [nameof(ElasticsearchSourceMetadata.Url)]));
+            if (!_options.HasConnection)
+            {
+                result.Fail(new ValidationResult($"Elasticsearch connection settings are required. Provide them for this data source or configure '{ElasticsearchDataSourceOptionsConfiguration.SharedConfigurationSectionName}:{nameof(ElasticsearchDataSourceOptions.Url)}'.", [nameof(ElasticsearchSourceMetadata.Url)]));
+            }
+
+            if (string.IsNullOrWhiteSpace(metadata.IndexName))
+            {
+                result.Fail(new ValidationResult("Elasticsearch index name is required.", [nameof(ElasticsearchSourceMetadata.IndexName)]));
+            }
+
+            return ValueTask.CompletedTask;
         }
 
         var environmentType = metadata.GetEnvironmentType();
@@ -222,6 +239,11 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
             throw new InvalidOperationException("Elasticsearch source metadata is missing.");
         }
 
+        if (!HasStoredConnection(metadata))
+        {
+            return (CreateConfiguredClient(), metadata);
+        }
+
         var environmentType = metadata.GetEnvironmentType();
         var authenticationType = metadata.GetAuthenticationType();
         var protector = _dataProtectionProvider.CreateProtector(AIDataSourceProtectionConstants.SourceSecretPurpose);
@@ -249,6 +271,74 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
         }
 
         return (new ElasticsearchClient(settings), metadata);
+    }
+
+    private static bool HasStoredConnection(ElasticsearchSourceMetadata metadata)
+        => !string.IsNullOrWhiteSpace(metadata.Url) || !string.IsNullOrWhiteSpace(metadata.CloudId);
+
+    private ElasticsearchClient CreateConfiguredClient()
+    {
+        if (!_options.HasConnection)
+        {
+            throw new InvalidOperationException($"No Elasticsearch connection is available. Provide connection settings for the data source or configure '{ElasticsearchDataSourceOptionsConfiguration.SharedConfigurationSectionName}:{nameof(ElasticsearchDataSourceOptions.Url)}'.");
+        }
+
+        var authorizationHeader = CreateConfiguredAuthorizationHeader();
+        ElasticsearchClientSettings settings;
+
+        if (string.Equals(_options.GetEnvironmentType(), ElasticsearchSourceMetadata.CloudHostedEnvironmentType, StringComparison.OrdinalIgnoreCase))
+        {
+            settings = new ElasticsearchClientSettings(
+                new CloudNodePool(_options.CloudId, authorizationHeader ?? throw new InvalidOperationException("Elastic Cloud connections require an authentication type and matching credentials.")));
+        }
+        else
+        {
+            settings = new ElasticsearchClientSettings(new Uri(_options.Url));
+        }
+
+        if (authorizationHeader != null)
+        {
+            settings = settings.Authentication(authorizationHeader);
+        }
+
+        if (!string.IsNullOrWhiteSpace(_options.CertificateFingerprint))
+        {
+            settings = settings.CertificateFingerprint(_options.CertificateFingerprint);
+        }
+
+        return new ElasticsearchClient(settings);
+    }
+
+    private AuthorizationHeader CreateConfiguredAuthorizationHeader()
+    {
+        var authenticationType = _options.GetAuthenticationType();
+
+        if (string.Equals(authenticationType, ElasticsearchSourceMetadata.NoneAuthenticationType, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        if (string.Equals(authenticationType, ElasticsearchSourceMetadata.BasicAuthenticationType, StringComparison.OrdinalIgnoreCase))
+        {
+            return new BasicAuthentication(_options.Username, _options.Password);
+        }
+
+        if (string.Equals(authenticationType, ElasticsearchSourceMetadata.ApiKeyAuthenticationType, StringComparison.OrdinalIgnoreCase))
+        {
+            return new ApiKey(_options.ApiKey);
+        }
+
+        if (string.Equals(authenticationType, ElasticsearchSourceMetadata.Base64ApiKeyAuthenticationType, StringComparison.OrdinalIgnoreCase))
+        {
+            return new Base64ApiKey(_options.Base64ApiKey);
+        }
+
+        if (string.Equals(authenticationType, ElasticsearchSourceMetadata.KeyIdAndKeyAuthenticationType, StringComparison.OrdinalIgnoreCase))
+        {
+            return new Base64ApiKey(_options.ApiKeyId, _options.ApiKey);
+        }
+
+        throw new InvalidOperationException($"Unsupported Elasticsearch authentication type '{authenticationType}'.");
     }
 
     private AuthorizationHeader CreateAuthorizationHeader(

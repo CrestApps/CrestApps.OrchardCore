@@ -1,0 +1,175 @@
+@using CrestApps.OrchardCore.ContactCenter.Core.Models
+@model QueueViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+@{
+    var overflowTargetsPrefix = Html.NameFor(m => m.OverflowTargets);
+    var overflowTargetsId = Html.IdFor(m => m.OverflowTargets);
+    var noQueueTitle = T["Select a queue"].Value;
+}
+
+@if (Model.RoutesFromEntryPoints)
+{
+    <div class="ocat-wrapper">
+        <span class="ocat-label">@T["Inbound numbers"]</span>
+        <div class="ocat-end">
+            <span class="hint">@T["Numbers are routed to this queue from their"] <a asp-route="ContactCenterEntryPointsIndex">@T["inbound entry points"]</a>.</span>
+        </div>
+    </div>
+}
+else
+{
+    <div class="ocat-wrapper" asp-validation-class-for="InboundChannelEndpointId">
+        <label asp-for="InboundChannelEndpointId" class="ocat-label">@T["Inbound phone number"]</label>
+        <div class="ocat-end">
+            <select asp-for="InboundChannelEndpointId" asp-items="Model.InboundChannelEndpointOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select an endpoint"]" title="@T["Default inbound queue"]">
+                <option value="">@T["Default inbound queue"]</option>
+            </select>
+            <span asp-validation-for="InboundChannelEndpointId" class="text-danger"></span>
+            <span class="hint">@T["Calls received on this number route to this queue. Leave empty for a default inbound queue."]</span>
+        </div>
+    </div>
+}
+
+<div class="ocat-wrapper" asp-validation-class-for="BusinessHoursCalendarId">
+    <label asp-for="BusinessHoursCalendarId" class="ocat-label">@T["Business hours calendar"]</label>
+    <div class="ocat-end">
+        <select asp-for="BusinessHoursCalendarId" asp-items="Model.BusinessHoursCalendarOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a calendar"]" title="@T["Always open"]">
+            <option value="">@T["Always open"]</option>
+        </select>
+        <span asp-validation-for="BusinessHoursCalendarId" class="text-danger"></span>
+        <span class="hint">@T["Routing pauses while the calendar reports the queue closed. Leave empty to route around the clock."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="AfterHoursAction">
+    <label asp-for="AfterHoursAction" class="ocat-label">@T["After-hours action"]</label>
+    <div class="ocat-end">
+        <select asp-for="AfterHoursAction" class="form-select">
+            <option value="@QueueAfterHoursAction.HoldInQueue">@T["Hold in queue"]</option>
+            <option value="@QueueAfterHoursAction.Overflow">@T["Overflow"]</option>
+        </select>
+        <span asp-validation-for="AfterHoursAction" class="text-danger"></span>
+        <span class="hint">@T["What happens to waiting items while the queue is closed."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="OverflowQueueId">
+    <label asp-for="OverflowQueueId" class="ocat-label">@T["Overflow queue"]</label>
+    <div class="ocat-end">
+        <select asp-for="OverflowQueueId" asp-items="Model.OverflowQueueOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a queue"]" title="@T["No overflow"]">
+            <option value="">@T["No overflow"]</option>
+        </select>
+        <span asp-validation-for="OverflowQueueId" class="text-danger"></span>
+        <span class="hint">@T["A single overflow hop. Items move to this queue when they wait too long or while the queue is closed and set to overflow. Ignored when an overflow chain is configured below."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="OverflowAfterSeconds">
+    <label asp-for="OverflowAfterSeconds" class="ocat-label">@T["Overflow after (seconds)"]</label>
+    <div class="ocat-end">
+        <input asp-for="OverflowAfterSeconds" class="form-control" />
+        <span asp-validation-for="OverflowAfterSeconds" class="text-danger"></span>
+        <span class="hint">@T["How long an item may wait before it overflows to the single overflow queue. Set to 0 to disable wait-time overflow."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Overflow chain"]</label>
+    <div class="ocat-end">
+        @* Each hop is drawn like an Orchard bag-part item: a collapsible card whose header names the queue, with the
+           delete (trash) button on its right. *@
+        <div data-repeater data-repeater-prefix="@overflowTargetsPrefix">
+            <div data-repeater-rows>
+                @for (var i = 0; i < Model.OverflowTargets.Count; i++)
+                {
+                    var row = Model.OverflowTargets[i];
+                    var key = i.ToString();
+                    var itemId = $"{overflowTargetsId}-{key}";
+                    var queueName = Model.OverflowQueueOptions.FirstOrDefault(option => string.Equals(option.Value, row.QueueId, StringComparison.Ordinal))?.Text;
+
+                    <div class="widget-editor card mb-2" data-repeater-row>
+                        <input type="hidden" name="@(overflowTargetsPrefix).Index" value="@key" />
+                        <div class="widget-editor-header card-header text-muted d-flex align-items-center gap-2 py-1 ps-2 pe-1">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#@(itemId)-body" aria-expanded="true" aria-controls="@(itemId)-body" title="@T["Collapse or expand"]"><i class="fa-solid fa-angle-down" aria-hidden="true"></i></button>
+                            <span class="flex-grow-1 text-truncate">
+                                <span data-repeater-title data-repeater-title-empty="@noQueueTitle">@(string.IsNullOrEmpty(queueName) ? noQueueTitle : queueName)</span>
+                                <span class="hint dashed">@T["Overflow hop"]</span>
+                            </span>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-danger" data-repeater-remove title="@T["Remove"]" aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                            </div>
+                        </div>
+                        <div id="@(itemId)-body" class="collapse show">
+                            <div class="widget-editor-body card-body">
+                                <div class="ocat-wrapper">
+                                    <label class="ocat-label" for="@(itemId)-queue">@T["Queue"]</label>
+                                    <div class="ocat-end">
+                                        <select id="@(itemId)-queue" name="@(overflowTargetsPrefix)[@key].QueueId" class="form-select" data-repeater-title-source>
+                                            <option value="">@T["Select a queue"]</option>
+                                            @foreach (var option in Model.OverflowQueueOptions)
+                                            {
+                                                <option value="@option.Value" selected="@(string.Equals(option.Value, row.QueueId, StringComparison.Ordinal))">@option.Text</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="ocat-wrapper">
+                                    <label class="ocat-label" for="@(itemId)-after">@T["After (seconds)"]</label>
+                                    <div class="ocat-end">
+                                        <input type="number" min="0" id="@(itemId)-after" name="@(overflowTargetsPrefix)[@key].AfterSeconds" value="@row.AfterSeconds" class="form-control" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+            <template data-repeater-template>
+                <div class="widget-editor card mb-2" data-repeater-row>
+                    <input type="hidden" name="@(overflowTargetsPrefix).Index" value="__KEY__" />
+                    <div class="widget-editor-header card-header text-muted d-flex align-items-center gap-2 py-1 ps-2 pe-1">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#@(overflowTargetsId)-__KEY__-body" aria-expanded="true" aria-controls="@(overflowTargetsId)-__KEY__-body" title="@T["Collapse or expand"]"><i class="fa-solid fa-angle-down" aria-hidden="true"></i></button>
+                        <span class="flex-grow-1 text-truncate">
+                            <span data-repeater-title data-repeater-title-empty="@noQueueTitle">@noQueueTitle</span>
+                            <span class="hint dashed">@T["Overflow hop"]</span>
+                        </span>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-danger" data-repeater-remove title="@T["Remove"]" aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                        </div>
+                    </div>
+                    <div id="@(overflowTargetsId)-__KEY__-body" class="collapse show">
+                        <div class="widget-editor-body card-body">
+                            <div class="ocat-wrapper">
+                                <label class="ocat-label" for="@(overflowTargetsId)-__KEY__-queue">@T["Queue"]</label>
+                                <div class="ocat-end">
+                                    <select id="@(overflowTargetsId)-__KEY__-queue" name="@(overflowTargetsPrefix)[__KEY__].QueueId" class="form-select" data-repeater-title-source>
+                                        <option value="">@T["Select a queue"]</option>
+                                        @foreach (var option in Model.OverflowQueueOptions)
+                                        {
+                                            <option value="@option.Value">@option.Text</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="ocat-wrapper">
+                                <label class="ocat-label" for="@(overflowTargetsId)-__KEY__-after">@T["After (seconds)"]</label>
+                                <div class="ocat-end">
+                                    <input type="number" min="0" id="@(overflowTargetsId)-__KEY__-after" name="@(overflowTargetsPrefix)[__KEY__].AfterSeconds" value="0" class="form-control" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-repeater-add><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add overflow hop"]</button>
+        </div>
+        <span class="hint">@T["Where a waiting caller widens to, and after how long: from specialists to a general pool as they wait. A caller is never sent back to a queue they have already been through. When any hop is set, the chain replaces the single overflow queue above."]</span>
+    </div>
+</div>
+
+@await Html.PartialAsync("_ContactCenterRepeaterScript")

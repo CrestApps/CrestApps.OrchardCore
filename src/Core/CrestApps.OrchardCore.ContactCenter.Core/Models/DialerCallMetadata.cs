@@ -1,0 +1,320 @@
+using System.Globalization;
+using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Telephony.Models;
+
+namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
+
+/// <summary>
+/// What a dialer attempt records on its interaction: the profile that dialed it, which attempt it was, whether an agent
+/// was ever connected to it and how it ended. Every value is stored as a plain string, which the store hands back as a
+/// string.
+/// </summary>
+/// <remarks>
+/// A campaign call is placed before an agent is on it: the customer is dialed first and the agent's leg is joined only
+/// once a person answers. Until then the call is the dialer's, not the agent's, and these values are how every screen
+/// and every release decision tells the two apart.
+/// </remarks>
+public static class DialerCallMetadata
+{
+    /// <summary>
+    /// The key of the dialer profile that placed the call.
+    /// </summary>
+    public const string DialerProfileIdKey = "dialer_profile_id";
+
+    /// <summary>
+    /// The key of the attempt number of the call, counted from one.
+    /// </summary>
+    public const string AttemptNumberKey = "dialer_attempt_number";
+
+    /// <summary>
+    /// The key of the most attempts the dialer profile allowed when the call was placed.
+    /// </summary>
+    public const string MaxAttemptsKey = "dialer_max_attempts";
+
+    /// <summary>
+    /// The key of the instant an agent was first connected to the call.
+    /// </summary>
+    public const string AgentJoinedUtcKey = "dialer_agent_joined_utc";
+
+    /// <summary>
+    /// The key of the attempt's outcome, one of <see cref="DialerAttemptOutcomes"/>, recorded when the call ends.
+    /// </summary>
+    public const string OutcomeKey = "dialer_attempt_outcome";
+
+    /// <summary>
+    /// The key of the instant the dialer learned a person, not a machine, answered the call: the answer itself, or the
+    /// provider's verdict when answering machines are screened. The abandonment rule is measured from it.
+    /// </summary>
+    public const string LiveAnsweredUtcKey = "dialer_live_answered_utc";
+
+    /// <summary>
+    /// The key of why the call was abandoned, one of <see cref="DialerAbandonment.Reasons"/>, when it was.
+    /// </summary>
+    public const string AbandonedReasonKey = "dialer_abandoned_reason";
+
+    /// <summary>
+    /// The key of how the call was paced, <see cref="OverDialPacingModel"/> when it was placed before any agent was
+    /// reserved for it.
+    /// </summary>
+    public const string PacingModelKey = "dialer_pacing_model";
+
+    /// <summary>
+    /// The <see cref="PacingModelKey"/> value of a call an over-dialing Predictive profile placed without an agent.
+    /// </summary>
+    public const string OverDialPacingModel = "overdial";
+
+    /// <summary>
+    /// The key of the instant an agent was claimed for an over-dialed call a person answered.
+    /// </summary>
+    public const string AgentClaimedUtcKey = "dialer_agent_claimed_utc";
+
+    /// <summary>
+    /// Records that the call is placed without a reserved agent, so an agent is picked only when a person answers.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    public static void MarkOverDialed(Interaction interaction)
+    {
+        ArgumentNullException.ThrowIfNull(interaction);
+
+        interaction.TechnicalMetadata[PacingModelKey] = OverDialPacingModel;
+    }
+
+    /// <summary>
+    /// Whether the call is a campaign dial an over-dialing Predictive profile placed without a reserved agent.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    public static bool IsOverDialed(Interaction interaction)
+        => IsCampaignDial(interaction) &&
+            string.Equals(Read(interaction, PacingModelKey), OverDialPacingModel, StringComparison.Ordinal);
+
+    /// <summary>
+    /// Records that an agent was claimed for the over-dialed call, keeping the first instant it happened.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    /// <param name="claimedUtc">When the agent was claimed.</param>
+    /// <returns><see langword="true"/> when this is the first time it is recorded.</returns>
+    public static bool MarkAgentClaimed(Interaction interaction, DateTime claimedUtc)
+    {
+        if (interaction is null || IsAgentClaimed(interaction))
+        {
+            return false;
+        }
+
+        interaction.TechnicalMetadata[AgentClaimedUtcKey] = claimedUtc.ToString("O", CultureInfo.InvariantCulture);
+
+        return true;
+    }
+
+    /// <summary>
+    /// Whether an agent was claimed for the over-dialed call.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    public static bool IsAgentClaimed(Interaction interaction)
+        => !string.IsNullOrEmpty(Read(interaction, AgentClaimedUtcKey));
+
+    /// <summary>
+    /// When an agent was claimed for the over-dialed call, or <see langword="null"/> while none has been.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    public static DateTime? GetAgentClaimedUtc(Interaction interaction)
+        => ReadUtc(interaction, AgentClaimedUtcKey);
+
+    /// <summary>
+    /// Why the call was abandoned, one of <see cref="DialerAbandonment.Reasons"/>, or <see langword="null"/>.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    public static string GetAbandonedReason(Interaction interaction)
+        => Read(interaction, AbandonedReasonKey);
+
+    /// <summary>
+    /// Records the profile and the attempt on the interaction of a call the dialer is about to place.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    /// <param name="profile">The dialer profile placing the call.</param>
+    /// <param name="attemptNumber">The attempt number of the call, counted from one.</param>
+    public static void StampDial(Interaction interaction, DialerProfile profile, int attemptNumber)
+    {
+        ArgumentNullException.ThrowIfNull(interaction);
+        ArgumentNullException.ThrowIfNull(profile);
+
+        interaction.TechnicalMetadata[DialerProfileIdKey] = profile.ItemId;
+        interaction.TechnicalMetadata[AttemptNumberKey] = attemptNumber.ToString(CultureInfo.InvariantCulture);
+        interaction.TechnicalMetadata[MaxAttemptsKey] = profile.MaxAttempts.ToString(CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>
+    /// Whether the interaction is an outbound call a campaign dialer profile placed (preview or paced). A queued
+    /// callback is dialed with a profile of its own but is not campaign work, so it is not one.
+    /// </summary>
+    /// <param name="interaction">The interaction to check.</param>
+    public static bool IsCampaignDial(Interaction interaction)
+    {
+        if (interaction is null ||
+            interaction.Direction != InteractionDirection.Outbound ||
+            string.IsNullOrEmpty(interaction.ActivityItemId))
+        {
+            return false;
+        }
+
+        var profileId = GetDialerProfileId(interaction);
+
+        return !string.IsNullOrEmpty(profileId) && !QueueCallbackDialerProfile.IsCallbackProfile(profileId);
+    }
+
+    /// <summary>
+    /// The dialer profile that placed the call, or <see langword="null"/>.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    public static string GetDialerProfileId(Interaction interaction)
+        => Read(interaction, DialerProfileIdKey);
+
+    /// <summary>
+    /// The attempt number of the call, or <see langword="null"/> when the dialer did not record it.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    public static int? GetAttemptNumber(Interaction interaction)
+        => ReadInt(interaction, AttemptNumberKey);
+
+    /// <summary>
+    /// The most attempts the profile allowed when the call was placed, or <see langword="null"/>.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    public static int? GetMaxAttempts(Interaction interaction)
+        => ReadInt(interaction, MaxAttemptsKey);
+
+    /// <summary>
+    /// Records that an agent was connected to the call, keeping the first instant it happened.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    /// <param name="joinedUtc">When the agent was connected.</param>
+    /// <returns><see langword="true"/> when this is the first time it is recorded.</returns>
+    public static bool MarkAgentJoined(Interaction interaction, DateTime joinedUtc)
+    {
+        if (interaction is null || HasAgentJoined(interaction))
+        {
+            return false;
+        }
+
+        interaction.TechnicalMetadata[AgentJoinedUtcKey] = joinedUtc.ToString("O", CultureInfo.InvariantCulture);
+
+        return true;
+    }
+
+    /// <summary>
+    /// Whether an agent was ever connected to the call.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    public static bool HasAgentJoined(Interaction interaction)
+        => !string.IsNullOrEmpty(Read(interaction, AgentJoinedUtcKey));
+
+    /// <summary>
+    /// When an agent was first connected to the call, or <see langword="null"/> while none has been.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    public static DateTime? GetAgentJoinedUtc(Interaction interaction)
+        => ReadUtc(interaction, AgentJoinedUtcKey);
+
+    /// <summary>
+    /// Records that a person, not a machine, answered the call, keeping the first instant it happened.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    /// <param name="answeredUtc">When the dialer learned a person answered.</param>
+    /// <returns><see langword="true"/> when this is the first time it is recorded.</returns>
+    public static bool MarkLiveAnswered(Interaction interaction, DateTime answeredUtc)
+    {
+        if (interaction is null || !string.IsNullOrEmpty(Read(interaction, LiveAnsweredUtcKey)))
+        {
+            return false;
+        }
+
+        interaction.TechnicalMetadata[LiveAnsweredUtcKey] = answeredUtc.ToString("O", CultureInfo.InvariantCulture);
+
+        return true;
+    }
+
+    /// <summary>
+    /// When the dialer learned a person answered the call, or <see langword="null"/> when none has.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    public static DateTime? GetLiveAnsweredUtc(Interaction interaction)
+        => ReadUtc(interaction, LiveAnsweredUtcKey);
+
+    /// <summary>
+    /// Records that the call was abandoned, keeping the first reason given.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    /// <param name="reason">One of <see cref="DialerAbandonment.Reasons"/>.</param>
+    /// <returns><see langword="true"/> when this is the first time it is recorded.</returns>
+    public static bool MarkAbandoned(Interaction interaction, string reason)
+    {
+        if (interaction is null || string.IsNullOrEmpty(reason) || IsAbandoned(interaction))
+        {
+            return false;
+        }
+
+        interaction.TechnicalMetadata[AbandonedReasonKey] = reason;
+
+        return true;
+    }
+
+    /// <summary>
+    /// Whether the call was recorded as abandoned.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    public static bool IsAbandoned(Interaction interaction)
+        => !string.IsNullOrEmpty(Read(interaction, AbandonedReasonKey));
+
+    /// <summary>
+    /// Whether the call is a campaign dial that no agent has been connected to: the customer is still being dialed, a
+    /// machine answered, or the customer hung up before the agent joined. Such a call is never the agent's work.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    public static bool IsAwaitingAgent(Interaction interaction)
+        => IsCampaignDial(interaction) && !HasAgentJoined(interaction);
+
+    /// <summary>
+    /// Records how the attempt ended.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    /// <param name="outcome">One of <see cref="DialerAttemptOutcomes"/>.</param>
+    public static void SetOutcome(Interaction interaction, string outcome)
+    {
+        ArgumentNullException.ThrowIfNull(interaction);
+
+        if (!string.IsNullOrEmpty(outcome))
+        {
+            interaction.TechnicalMetadata[OutcomeKey] = outcome;
+        }
+    }
+
+    /// <summary>
+    /// How the attempt ended, or <see langword="null"/> while it has not.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    public static string GetOutcome(Interaction interaction)
+        => Read(interaction, OutcomeKey);
+
+    /// <summary>
+    /// Whether the provider said a machine or a fax, rather than a person, answered the call.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    public static bool WasAnsweredByMachine(Interaction interaction)
+        => Read(interaction, ContactCenterConstants.TelephonyMetadata.AnswerClassification) is nameof(AnswerClassification.Machine) or nameof(AnswerClassification.Fax);
+
+    private static string Read(Interaction interaction, string key)
+        => interaction?.TechnicalMetadata is not null &&
+            interaction.TechnicalMetadata.TryGetValue(key, out var value) &&
+            value?.ToString() is { Length: > 0 } text
+            ? text
+            : null;
+
+    private static DateTime? ReadUtc(Interaction interaction, string key)
+        => DateTime.TryParse(Read(interaction, key), CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var value)
+            ? DateTime.SpecifyKind(value, DateTimeKind.Utc)
+            : null;
+
+    private static int? ReadInt(Interaction interaction, string key)
+        => int.TryParse(Read(interaction, key), NumberStyles.Integer, CultureInfo.InvariantCulture, out var number)
+            ? number
+            : null;
+}

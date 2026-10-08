@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+
 namespace CrestApps.OrchardCore.AI.ViewModels;
 
 /// <summary>
@@ -34,4 +36,11 @@ public class AIProfileTemplateFieldsViewModel
     /// Gets or sets a value indicating whether is new.
     /// </summary>
     public bool IsNew { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the template creates AI profiles, as opposed to another source
+    /// such as a system prompt.
+    /// </summary>
+    [BindNever]
+    public bool IsProfileTemplate { get; set; }
 }

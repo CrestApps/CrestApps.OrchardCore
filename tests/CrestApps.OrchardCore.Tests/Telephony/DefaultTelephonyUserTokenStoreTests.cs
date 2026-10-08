@@ -25,15 +25,15 @@ public sealed class DefaultTelephonyUserTokenStoreTests
         };
 
         // Act
-        await store.StoreAsync("Dialpad", tokens, TestContext.Current.CancellationToken);
-        var retrieved = await store.GetAsync("Dialpad", TestContext.Current.CancellationToken);
+        await store.StoreAsync("Contoso", tokens, TestContext.Current.CancellationToken);
+        var retrieved = await store.GetAsync("Contoso", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(retrieved);
         Assert.Equal("access-token-value", retrieved.AccessToken);
         Assert.Equal("refresh-token-value", retrieved.RefreshToken);
         Assert.Equal("Bearer", retrieved.TokenType);
-        Assert.True(accessor.UpdateCount > 0);
+        Assert.True(accessor.PersistCount > 0);
     }
 
     [Fact]
@@ -51,7 +51,7 @@ public sealed class DefaultTelephonyUserTokenStoreTests
         };
 
         // Act
-        await store.StoreAsync("Dialpad", tokens, TestContext.Current.CancellationToken);
+        await store.StoreAsync("Contoso", tokens, TestContext.Current.CancellationToken);
 
         // Assert - the raw persisted properties must not contain the plaintext tokens.
         var serialized = user.Properties.ToJsonString();
@@ -67,11 +67,11 @@ public sealed class DefaultTelephonyUserTokenStoreTests
         var accessor = new FakeTelephonyUserAccessor(user);
         var store = new DefaultTelephonyUserTokenStore(accessor, new EphemeralDataProtectionProvider());
 
-        await store.StoreAsync("Dialpad", new TelephonyUserTokens { AccessToken = "a" }, TestContext.Current.CancellationToken);
+        await store.StoreAsync("Contoso", new TelephonyUserTokens { AccessToken = "a" }, TestContext.Current.CancellationToken);
 
         // Act
-        await store.RemoveAsync("Dialpad", TestContext.Current.CancellationToken);
-        var retrieved = await store.GetAsync("Dialpad", TestContext.Current.CancellationToken);
+        await store.RemoveAsync("Contoso", TestContext.Current.CancellationToken);
+        var retrieved = await store.GetAsync("Contoso", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(retrieved);

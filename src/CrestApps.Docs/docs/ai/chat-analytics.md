@@ -3,6 +3,8 @@ sidebar_label: AI Chat Session Analytics
 sidebar_position: 3
 title: AI Chat Session Analytics
 description: Comprehensive analytics and reporting for AI chat sessions in Orchard Core, including conversation metrics, performance tracking, user segmentation, and feedback analysis.
+user_manual:
+  - user-manual/ai/analytics
 ---
 
 | | |
@@ -18,13 +20,11 @@ The **AI Chat Session Analytics** feature captures detailed metrics about every 
 
 ### Enabling Analytics
 
-1. Go to **Tools** > **Features** in the admin menu.
-2. Search for **AI Chat Session Analytics** and enable it.
-3. Open each **AI Profile** where you want to collect metrics.
-4. In the **Analytics** section of the profile editor, check **Enable Session Metrics**.
-5. Navigate to **Artificial Intelligence** > **Chat Session Analytics** in the admin menu.
+Enable the **AI Chat Session Analytics** feature, then tick **Enable session metrics** on each chat profile that should collect data (on the profile editor's **Data Processing & Metrics** tab). The reports are under **Artificial Intelligence > Reports**: **AI Chat Session Analytics**, **AI Chat Extracted Data** and **AI Chat Conversion Goals**, all gated by `ViewChatAnalytics`. **AI Usage Analytics** needs only the **AI Chat** feature and the same permission, and is listed under **Reports > Billing & Usage**.
 
 > **Note:** Session metrics collection is disabled by default. You must enable it per-profile in the profile editor.
+
+Running and reading the reports is described in the User Manual under [Analytics](../user-manual/ai/analytics.md).
 
 ### Prerequisites
 
@@ -35,23 +35,7 @@ The **AI Chat Session Analytics** feature captures detailed metrics about every 
 
 ## Analytics Dashboard
 
-The analytics dashboard provides a comprehensive view of your AI chat performance through multiple report sections. Use the **Filters** panel to narrow results by date range and AI profile.
-
-The screencast below enables the feature, confirms **Enable session metrics** on the profile, then opens the dashboard and runs a report showing conversation counts and usage distribution across time of day and day of week.
-
-<video controls preload="metadata" width="100%" aria-label="Screen cast of enabling session metrics and running the AI chat analytics report">
-  <source src="/img/docs/ai-chat-analytics.mp4" type="video/mp4" />
-</video>
-
-### Filters
-
-| Filter | Description |
-| --- | --- |
-| **Start Date** | Filter sessions starting from this date. Uses a flatpickr date picker for easy selection. |
-| **End Date** | Filter sessions up to this date. |
-| **AI Profile** | Optionally filter analytics to a specific AI chat profile. |
-
-Click **Generate Report** to run the query and display results.
+The analytics dashboard provides a comprehensive view of your AI chat performance through multiple report sections. The report is filtered by a **From** / **To** date range and an optional AI profile, and runs when the user clicks **Show**. The User Manual page [Analytics](../user-manual/ai/analytics.md#ai-chat-session-analytics) walks through the report with a screencast.
 
 ---
 
@@ -228,10 +212,7 @@ Analytics events are stored as documents in the YesSql database using the AI col
 
 Session metrics collection is **disabled by default**. To enable it for a specific AI profile:
 
-1. Edit the AI profile in **Artificial Intelligence** > **Profiles**.
-2. Open the **Analytics** section.
-3. Check **Enable Session Metrics**.
-4. Save the profile.
+Tick **Enable session metrics** in the analytics section of the profile editor's **Data Processing & Metrics** tab. The analytics fields only appear on profiles saved with the **Chat** type.
 
 When enabled, the following data is captured for each chat session:
 - Session start/end timestamps and duration
@@ -251,11 +232,11 @@ Ratings are per-session (not per-message). The most recent rating is stored and 
 
 ### Inactivity Timeout
 
-Sessions are considered "abandoned" when they exceed the inactivity timeout configured on the AI profile's **Data Extraction** settings. The background task runs every 10 minutes to close inactive sessions.
+Sessions are considered "abandoned" when they exceed the **Session inactivity timeout (minutes)** configured on the AI profile's **Data Processing & Metrics** tab (default 30 minutes). The background task runs every 10 minutes to close inactive sessions.
 
 ### AI Resolution Detection
 
-By default, sessions closed by inactivity timeout are marked as "abandoned." When **Enable AI Resolution Detection** is checked in the Analytics section, the system uses AI to analyze the conversation transcript and determine if the user's query was semantically resolved — even if no explicit close action occurred.
+By default, sessions closed by inactivity timeout are marked as "abandoned." When **Enable AI resolution detection** is checked in the analytics section, the system uses AI to analyze the conversation transcript and determine if the user's query was semantically resolved — even if no explicit close action occurred.
 
 This dramatically reduces false-positive abandonment rates. For example, a user who asks a question, receives a satisfactory answer, and simply stops chatting would be correctly classified as "resolved" rather than "abandoned."
 
@@ -267,14 +248,13 @@ Conversion metrics allow you to define **custom goals** for each AI profile and 
 
 #### Configuring Conversion Goals
 
-1. Edit the AI profile in **Artificial Intelligence** > **Profiles**.
-2. Open the **Analytics** section.
-3. Check **Enable Conversion Metrics**.
-4. Define one or more goals:
-   - **Name**: A unique identifier for the goal (alphanumeric + underscores).
-   - **Description**: Instructions for the AI on how to evaluate this goal.
-   - **Min Score** / **Max Score**: The scoring range (default: 0–10).
-5. Save the profile.
+Goals are added under **Enable conversion metrics** on the profile editor's **Data Processing & Metrics** tab (see [AI profiles](../user-manual/ai/profiles.md#data-processing-and-metrics)). Each goal has:
+
+- **Name**: A unique identifier for the goal (alphanumeric + underscores).
+- **Description**: Instructions for the AI on how to evaluate this goal. Required.
+- **Min score** / **Max score**: The scoring range (default: 0–10). The minimum cannot be negative and the maximum must be greater than the minimum.
+
+Per-session goal scores are listed in the **AI Chat Conversion Goals** report.
 
 After a session closes, the AI evaluates the conversation against each configured goal and assigns a score within the defined range. The results include per-goal scores with reasoning, an aggregate conversion score, and a conversion rate percentage.
 
@@ -300,6 +280,9 @@ Token usage data is captured from AI completion responses when available. The am
 - **Azure OpenAI**: Reports `InputTokenCount`, `OutputTokenCount`, and `TotalTokenCount`
 - **OpenAI**: Reports token usage for non-streaming completions
 - **Ollama**: Token reporting may vary by model
+
+Provider usage across every completion, and the talk time of automated voice calls, is reported on the
+[AI Usage Analytics](./usage-analytics.md) page.
 
 ---
 
@@ -399,7 +382,7 @@ Retrieves detailed configuration for a specific AI profile including analytics s
 
 ## Post-Session Processing
 
-Post-session processing runs after a chat session is closed and performs AI-powered analysis on the full conversation transcript. Configure tasks in the **Data Processing** tab of each AI profile.
+Post-session processing runs after a chat session is closed and performs AI-powered analysis on the full conversation transcript. Configure tasks in the **Data Processing & Metrics** tab of each AI profile.
 
 ### Task Types
 
@@ -410,17 +393,12 @@ Post-session processing runs after a chat session is closed and performs AI-powe
 
 ### Configuring Tasks
 
-1. Edit the AI profile in **Artificial Intelligence** > **Profiles**.
-2. Open the **Data Processing** tab.
-3. Check **Enable Post-Session Processing**.
-4. Click **Add Task** to create a new task in the **Tasks** tab.
-5. Configure the task:
-   - **Name**: A unique identifier (alphanumeric + underscores only).
-   - **Type**: Choose **Predefined Options** or **Semantic**.
-   - **Instructions**: Guidance for the AI model on how to process this task. This field uses a Markdown editor in the admin UI.
-   - For **Predefined Options**: Add options with values and optional descriptions.
-6. Optionally, switch to the **Capabilities** tab to select AI tools that should be available during post-session processing.
-7. Save the profile.
+Tasks are configured under **Enable post-session processing** on the profile editor's **Data Processing & Metrics** tab; the fields are described in the User Manual under [AI profiles](../user-manual/ai/profiles.md#data-processing-and-metrics). Rules enforced on save:
+
+- Task names must be unique and use only letters, digits and underscores.
+- A **Predefined Options** task needs at least one option, and option values must be unique.
+- Enabling post-session processing requires at least one task.
+- The **Instructions** field uses a Markdown editor, and tools selected on the post-session **Capabilities** tab are only available during post-session processing.
 
 For data extraction entries on the same **Data Processing & Metrics** tab, entry descriptions use multiline textareas so longer extraction guidance is easier to author and review.
 

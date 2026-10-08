@@ -1,0 +1,107 @@
+@model CatalogListViewModel
+
+<zone Name="Title">
+    <breadcrumb name="@Model.BreadcrumbName" title="@Model.Title" />
+</zone>
+
+@* The form is necessary to generate an antiforgery token for delete actions. *@
+<form asp-action="Index" asp-route-pageSize="@Context.Request.Query["pageSize"]" method="post" class="no-multisubmit">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-3">
+                <div class="col">
+                    <div class="has-search">
+                        <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                        <input id="search-box" asp-for="Options.Search" class="form-control" placeholder="@T["Search"]" type="search" autofocus autocomplete="off" />
+                    </div>
+                </div>
+                <div class="col-auto">
+                    @if (Model.CreateOptions is { Count: > 1 })
+                    {
+                        <button type="button" class="btn btn-secondary create" data-bs-toggle="modal" data-bs-target="#@(Model.ListId)-create-dialog">@Model.CreateLabel</button>
+                    }
+                    else if (Model.CreateOptions is { Count: 1 })
+                    {
+                        <a class="btn btn-secondary create" role="button" asp-action="Create" asp-all-route-data="Model.CreateOptions[0].RouteValues">@Model.CreateLabel</a>
+                    }
+                    else
+                    {
+                        <a class="btn btn-secondary create" role="button" asp-action="Create">@Model.CreateLabel</a>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <ul class="list-group with-checkbox" id="@Model.ListId">
+        @if (Model.Entries.Count > 0)
+        {
+            <li class="list-group-item text-bg-theme ignore-elements">
+                @(Model.Entries.Count == 1 ? T["1 item"] : T["{0} items", Model.Entries.Count])
+            </li>
+
+            @foreach (var entry in Model.Entries)
+            {
+                <li class="list-group-item item d-flex justify-content-between align-items-center" data-filter-value="@entry.FilterValue">
+                    <div class="flex-grow-1">
+                        @await DisplayAsync(entry.Shape)
+                    </div>
+                </li>
+            }
+        }
+        else
+        {
+            <li class="list-group-item list-group-item-info text-center ignore-elements">
+                @Model.EmptyMessage
+            </li>
+        }
+    </ul>
+
+    <div id="list-alert" class="alert alert-info my-3 d-none text-center" role="alert">
+        @T["Your search returned no results."]
+    </div>
+</form>
+
+@await DisplayAsync(Model.Pager)
+
+@if (Model.CreateOptions is { Count: > 1 })
+{
+    @* The same dialog the address list asks its kind of address in: a card per kind, each with what it is for. *@
+    <div class="modal fade" id="@(Model.ListId)-create-dialog" tabindex="-1" role="dialog" aria-labelledby="@(Model.ListId)-create-dialog-title" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="@(Model.ListId)-create-dialog-title">@(Model.CreateDialogTitle ?? Model.CreateLabel)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Close"]"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row row-cols-1 row-cols-md-3 g-2">
+                        @foreach (var option in Model.CreateOptions)
+                        {
+                            <div class="col">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h4>@option.Label</h4>
+                                        @if (!string.IsNullOrWhiteSpace(option.Description))
+                                        {
+                                            <p class="hint mb-0">@option.Description</p>
+                                        }
+                                    </div>
+                                    <div class="card-footer text-muted text-sm-end">
+                                        <a class="btn btn-primary btn-sm" asp-action="Create" asp-all-route-data="option.RouteValues">@T["Add"]</a>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Cancel"]</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+

@@ -1,0 +1,564 @@
+using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Managements.Services;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using OrchardCore.ContentFields.Fields;
+using OrchardCore.ContentFields.Settings;
+using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.ContentManagement.Metadata.Models;
+using OrchardCore.ContentManagement.Records;
+using OrchardCore.ContentManagement.Metadata.Settings;
+using OrchardCore.Data;
+using OrchardCore.Environment.Shell.Scope;
+using OrchardCore.Lists.Models;
+using OrchardCore.Title.Models;
+using YesSql;
+using YesSql.Services;
+using YesSql.Sql;
+
+namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
+
+/// <summary>
+/// Creates the CRM parts with their content fields, the <c>Account</c> and <c>LeadSource</c> content types, the lead
+/// and opportunity indexes, and seeds the lead statuses and opportunity stages.
+/// </summary>
+/// <remarks>
+/// The migration never alters a content type that already exists, so an administrator's changes to the
+/// <c>Account</c> type survive every upgrade, and it creates no contact, lead or opportunity type: those are the
+/// tenant's to name.
+/// </remarks>
+public sealed class CrmMigrations : OmnichannelIndexMigration
+{
+    private const int FieldMoveBatchSize = 200;
+
+    private readonly IContentDefinitionManager _contentDefinitionManager;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CrmMigrations"/> class.
+    /// </summary>
+    /// <param name="contentDefinitionManager">The content definition manager.</param>
+    /// <param name="store">The YesSql store.</param>
+    /// <param name="dbConnectionAccessor">The database connection accessor.</param>
+    /// <param name="logger">The logger.</param>
+    public CrmMigrations(
+        IContentDefinitionManager contentDefinitionManager,
+        IStore store,
+        IDbConnectionAccessor dbConnectionAccessor,
+        ILogger<CrmMigrations> logger)
+        : base(store, dbConnectionAccessor, logger)
+    {
+        _contentDefinitionManager = contentDefinitionManager;
+    }
+
+    /// <summary>
+    /// Creates the CRM parts, the account type, the indexes and the seeded catalogs.
+    /// </summary>
+    public async Task<int> CreateAsync()
+    {
+        await _contentDefinitionManager.AlterPartDefinitionAsync(OmnichannelConstants.ContentParts.Lead, part => part
+            .Attachable()
+            .WithDisplayName("Lead")
+            .WithDescription("Marks a contact type as a lead type: its records are called and texted like contacts but kept apart from them until they are converted. Attach it together with the Omnichannel Contact part."));
+
+        await _contentDefinitionManager.AlterPartDefinitionAsync(OmnichannelConstants.ContentParts.Account, part => part
+            .Attachable()
+            .WithDisplayName("Account")
+            .WithDescription("Marks a content type as an account, the company or household that contacts and opportunities belong to."));
+
+        await _contentDefinitionManager.AlterPartDefinitionAsync(OmnichannelConstants.ContentParts.Opportunity, part => part
+            .Attachable()
+            .WithDisplayName("Opportunity")
+            .WithDescription("Marks a content type as an opportunity, a deal in progress with a stage, an amount and a close date. Attach it to one content type per kind of deal."));
+
+        if (await _contentDefinitionManager.GetTypeDefinitionAsync(OmnichannelConstants.ContentTypes.Account) is null)
+        {
+            var definitions = await _contentDefinitionManager.ListTypeDefinitionsAsync();
+            var containedContentTypes = definitions
+                .Where(Core.Services.OmnichannelRecordKinds.IsAccountChild)
+                .Select(definition => definition.Name)
+                .ToArray();
+
+            await _contentDefinitionManager.AlterTypeDefinitionAsync(OmnichannelConstants.ContentTypes.Account, type => type
+                .WithDisplayName("Account")
+                .Creatable()
+                .Listable()
+                .Securable()
+                .WithPart<TitlePart>(part => part
+                    .WithPosition("1"))
+                .WithPart(OmnichannelConstants.ContentParts.Account, part => part
+                    .WithPosition("2")
+                    .WithSettings(new Core.Models.AccountPartSettings
+                    {
+                        OfferedContentTypes = containedContentTypes,
+                    }))
+                .WithPart(OmnichannelConstants.ContentParts.List, part => part
+                    .WithPosition("3")
+                    .WithSettings(new ListPartSettings
+                    {
+                        PageSize = 20,
+                        ShowHeader = true,
+                        ContainedContentTypes = containedContentTypes,
+                    })));
+        }
+
+        await CreateLeadSourceTypeAsync();
+        await AddLeadFieldsAsync();
+        await AddOpportunityFieldsAsync();
+
+        // A tenant can hold one of these tables from an earlier install although its migration was never recorded.
+        // Creating it again failed this step on every start ("There is already an object named ..."), so only a
+        // missing table is created, and a table that is already there is brought up to date as UpdateFrom1Async does.
+        var existingTableFound = false;
+
+        if (await IndexTableExistsAsync<LeadIndex>(null))
+        {
+            existingTableFound = true;
+
+            await EnsureColumnExistsAsync<LeadIndex>(
+                null,
+                "SourceId",
+                table => table.AddColumn<string>("SourceId", column => column.WithLength(26)),
+                "add the 'SourceId' column to the existing lead index");
+        }
+        else
+        {
+            await CreateLeadIndexAsync(SchemaBuilder);
+        }
+
+        if (await IndexTableExistsAsync<OpportunityIndex>(null))
+        {
+            existingTableFound = true;
+
+            await EnsureColumnExistsAsync<OpportunityIndex>(
+                null,
+                "SourceId",
+                table => table.AddColumn<string>("SourceId", column => column.WithLength(26)),
+                "add the 'SourceId' column to the existing opportunity index");
+        }
+        else
+        {
+            await CreateOpportunityIndexAsync(SchemaBuilder);
+        }
+
+        if (existingTableFound)
+        {
+            if (Logger.IsEnabled(LogLevel.Warning))
+            {
+                Logger.LogWarning("The CRM index tables were partly present before the CRM migration ran; existing leads and opportunities will be moved into fields and indexed again.");
+            }
+
+            ShellScope.AddDeferredTask(MoveValuesIntoFieldsAsync);
+        }
+
+        ShellScope.AddDeferredTask(scope => scope.ServiceProvider
+            .GetRequiredService<CrmCatalogSeeder>()
+            .SeedAsync());
+
+        return 3;
+    }
+
+    /// <summary>
+    /// Adds the lead source content type, moves the data of the lead and opportunity parts into content fields, and
+    /// adds the lead source identifier column to the lead and opportunity indexes. Stored values move into the
+    /// fields; free-text sources cannot name a lead source item, so they are dropped. The old free-text
+    /// <c>Source</c> columns are left in place, unused, because migrations only add to the schema.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await CreateLeadSourceTypeAsync();
+        await AddLeadFieldsAsync();
+        await AddOpportunityFieldsAsync();
+
+        // A tenant can be recorded at version 1 without the index tables; adding a column to a missing table would
+        // fail the migration, so the tables are created first.
+        await EnsureIndexTablesAsync();
+
+        await EnsureColumnExistsAsync<LeadIndex>(
+            null,
+            "SourceId",
+            table => table.AddColumn<string>("SourceId", column => column.WithLength(26)),
+            "add the 'SourceId' column to the lead index");
+
+        await EnsureColumnExistsAsync<OpportunityIndex>(
+            null,
+            "SourceId",
+            table => table.AddColumn<string>("SourceId", column => column.WithLength(26)),
+            "add the 'SourceId' column to the opportunity index");
+
+        ShellScope.AddDeferredTask(MoveValuesIntoFieldsAsync);
+
+        return 3;
+    }
+
+    /// <summary>
+    /// Recreates the lead and opportunity index tables on tenants whose migration was recorded without them. A
+    /// missing table fails every content save that maps to it, and with it any bulk import into the tenant.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom2Async()
+    {
+        await EnsureIndexTablesAsync();
+
+        return 3;
+    }
+
+    // Creates whichever index table is missing. Items saved while it was missing have no index row, so they are
+    // saved again once it exists; moving their values into fields is safe to repeat and saves every one of them.
+    private async Task EnsureIndexTablesAsync()
+    {
+        var created = false;
+
+        if (!await IndexTableExistsAsync<LeadIndex>(null))
+        {
+            await CreateLeadIndexAsync(SchemaBuilder);
+            created = true;
+
+            if (Logger.IsEnabled(LogLevel.Warning))
+            {
+                Logger.LogWarning("Created the missing lead index table; existing leads will be indexed again.");
+            }
+        }
+
+        if (!await IndexTableExistsAsync<OpportunityIndex>(null))
+        {
+            await CreateOpportunityIndexAsync(SchemaBuilder);
+            created = true;
+
+            if (Logger.IsEnabled(LogLevel.Warning))
+            {
+                Logger.LogWarning("Created the missing opportunity index table; existing opportunities will be indexed again.");
+            }
+        }
+
+        if (created)
+        {
+            ShellScope.AddDeferredTask(MoveValuesIntoFieldsAsync);
+        }
+    }
+
+    // Leads and opportunities saved before the parts had fields hold plain values under the names the fields now use,
+    // which could not be read as fields. Each is rewritten into the shape of its field, then saved to reindex it.
+    private static async Task MoveValuesIntoFieldsAsync(ShellScope scope)
+    {
+        var store = scope.ServiceProvider.GetRequiredService<IStore>();
+        var definitions = await scope.ServiceProvider.GetRequiredService<IContentDefinitionManager>().ListTypeDefinitionsAsync();
+
+        await MoveValuesAsync(store, definitions, OmnichannelConstants.ContentParts.Lead, part =>
+        {
+            WrapText(part, nameof(LeadPart.Company));
+            WrapText(part, nameof(LeadPart.ListName));
+            WrapText(part, nameof(LeadPart.Rating));
+            WrapId(part, "OwnerId", nameof(LeadPart.Owner), nameof(UserPickerField.UserIds));
+            part.Remove("SourceId");
+
+            if (part[nameof(LeadPart.Source)] is JsonValue)
+            {
+                part.Remove(nameof(LeadPart.Source));
+            }
+        });
+
+        await MoveValuesAsync(store, definitions, OmnichannelConstants.ContentParts.Opportunity, part =>
+        {
+            WrapValue(part, nameof(OpportunityPart.Amount));
+            WrapValue(part, nameof(OpportunityPart.CloseDate));
+            WrapId(part, "OwnerId", nameof(OpportunityPart.Owner), nameof(UserPickerField.UserIds));
+            WrapId(part, "PrimaryContactItemId", nameof(OpportunityPart.PrimaryContact), nameof(ContentPickerField.ContentItemIds));
+            part.Remove("SourceId");
+
+            if (part[nameof(OpportunityPart.Source)] is JsonValue)
+            {
+                part.Remove(nameof(OpportunityPart.Source));
+            }
+        });
+    }
+
+    private static async Task MoveValuesAsync(
+        IStore store,
+        IEnumerable<ContentTypeDefinition> definitions,
+        string partName,
+        Action<JsonObject> move)
+    {
+        var contentTypes = definitions
+            .Where(definition => Core.Services.OmnichannelRecordKinds.HasPart(definition, partName))
+            .Select(definition => definition.Name)
+            .ToArray();
+
+        if (contentTypes.Length == 0)
+        {
+            return;
+        }
+
+        var documentId = 0L;
+
+        while (true)
+        {
+            await using var session = store.CreateSession();
+
+            var batch = (await session.Query<ContentItem, ContentItemIndex>(index =>
+                    index.ContentType.IsIn(contentTypes) &&
+                    index.DocumentId > documentId)
+                .OrderBy(index => index.DocumentId)
+                .Take(FieldMoveBatchSize)
+                .ListAsync())
+                .ToList();
+
+            if (batch.Count == 0)
+            {
+                break;
+            }
+
+            foreach (var contentItem in batch)
+            {
+                documentId = Math.Max(documentId, contentItem.Id);
+
+                if (((JsonObject)contentItem.Content)[partName] is JsonObject part)
+                {
+                    move(part);
+                    await session.SaveAsync(contentItem);
+                }
+            }
+
+            await session.SaveChangesAsync();
+        }
+    }
+
+    private static void WrapText(JsonObject part, string name)
+    {
+        if (part[name] is JsonValue value)
+        {
+            part[name] = new JsonObject
+            {
+                [nameof(TextField.Text)] = value.ToString(),
+            };
+        }
+    }
+
+    private static void WrapValue(JsonObject part, string name)
+    {
+        if (part[name] is JsonValue value)
+        {
+            part[name] = new JsonObject
+            {
+                ["Value"] = value.DeepClone(),
+            };
+        }
+    }
+
+    private static void WrapId(JsonObject part, string oldName, string fieldName, string idsName)
+    {
+        var id = part[oldName] is JsonValue value ? value.ToString() : null;
+
+        part.Remove(oldName);
+
+        if (!string.IsNullOrEmpty(id) && part[fieldName] is null)
+        {
+            part[fieldName] = new JsonObject
+            {
+                [idsName] = new JsonArray(JsonValue.Create(id)),
+            };
+        }
+    }
+
+    private Task AddLeadFieldsAsync()
+    {
+        return _contentDefinitionManager.AlterPartDefinitionAsync(OmnichannelConstants.ContentParts.Lead, part => part
+            .WithField(nameof(LeadPart.Company), field => field
+                .OfType(nameof(TextField))
+                .WithDisplayName("Company")
+                .WithPosition("1")
+                .WithSettings(new TextFieldSettings
+                {
+                    Hint = "The company the lead works for. Converting the lead creates or picks an account with this name.",
+                }))
+            .WithField(nameof(LeadPart.Source), field => field
+                .OfType(nameof(ContentPickerField))
+                .WithDisplayName("Lead source")
+                .WithPosition("2")
+                .WithSettings(new ContentPickerFieldSettings
+                {
+                    Hint = "Where the lead came from, for example Web form, Purchased list or Trade show.",
+                    DisplayedContentTypes = [OmnichannelConstants.ContentTypes.LeadSource],
+                }))
+            .WithField(nameof(LeadPart.ListName), field => field
+                .OfType(nameof(TextField))
+                .WithDisplayName("List")
+                .WithPosition("3")
+                .WithSettings(new TextFieldSettings
+                {
+                    Hint = "The list or import the lead arrived in, so the whole list can be loaded and reported on together.",
+                }))
+            .WithField(nameof(LeadPart.Rating), field => field
+                .OfType(nameof(TextField))
+                .WithDisplayName("Rating")
+                .WithPosition("4")
+                .WithEditor("PredefinedList")
+                .MergeSettings<TextFieldPredefinedListEditorSettings>(settings =>
+                {
+                    settings.Editor = EditorOption.Dropdown;
+                    settings.DefaultValue = string.Empty;
+                    settings.Options = LeadRatings.All
+                        .Select(rating => new ListValueOption
+                        {
+                            Name = rating,
+                            Value = rating,
+                        })
+                        .ToArray();
+                }))
+            .WithField(nameof(LeadPart.Owner), field => field
+                .OfType(nameof(UserPickerField))
+                .WithDisplayName("Lead owner")
+                .WithPosition("5")
+                .WithSettings(new UserPickerFieldSettings
+                {
+                    Hint = "The person responsible for working the lead.",
+                    DisplayAllUsers = true,
+                })));
+    }
+
+    private async Task AddOpportunityFieldsAsync()
+    {
+        // The primary contact picker lists the contact types; the account list synchronizer keeps it current as
+        // contact types are added or removed.
+        var contactTypes = (await _contentDefinitionManager.ListTypeDefinitionsAsync())
+            .Where(Core.Services.OmnichannelRecordKinds.IsContact)
+            .Select(definition => definition.Name)
+            .ToArray();
+
+        await _contentDefinitionManager.AlterPartDefinitionAsync(OmnichannelConstants.ContentParts.Opportunity, part => part
+            .WithField(nameof(OpportunityPart.Amount), field => field
+                .OfType(nameof(NumericField))
+                .WithDisplayName("Amount")
+                .WithPosition("1")
+                .WithSettings(new NumericFieldSettings
+                {
+                    Hint = "The expected value of the deal.",
+                    Scale = 2,
+                    Minimum = 0,
+                }))
+            .WithField(nameof(OpportunityPart.CloseDate), field => field
+                .OfType(nameof(DateField))
+                .WithDisplayName("Close date")
+                .WithPosition("2")
+                .WithSettings(new DateFieldSettings
+                {
+                    Hint = "When the deal is expected to close.",
+                }))
+            .WithField(nameof(OpportunityPart.PrimaryContact), field => field
+                .OfType(nameof(ContentPickerField))
+                .WithDisplayName("Primary contact")
+                .WithPosition("3")
+                .WithSettings(new ContentPickerFieldSettings
+                {
+                    Hint = "The main person the deal is with.",
+                    DisplayedContentTypes = contactTypes,
+                }))
+            .WithField(nameof(OpportunityPart.Owner), field => field
+                .OfType(nameof(UserPickerField))
+                .WithDisplayName("Opportunity owner")
+                .WithPosition("4")
+                .WithSettings(new UserPickerFieldSettings
+                {
+                    Hint = "The person responsible for the deal.",
+                    DisplayAllUsers = true,
+                }))
+            .WithField(nameof(OpportunityPart.Source), field => field
+                .OfType(nameof(ContentPickerField))
+                .WithDisplayName("Lead source")
+                .WithPosition("5")
+                .WithSettings(new ContentPickerFieldSettings
+                {
+                    Hint = "Where the deal came from. A converted lead passes its source on.",
+                    DisplayedContentTypes = [OmnichannelConstants.ContentTypes.LeadSource],
+                })));
+    }
+
+    private async Task CreateLeadSourceTypeAsync()
+    {
+        if (await _contentDefinitionManager.GetTypeDefinitionAsync(OmnichannelConstants.ContentTypes.LeadSource) is not null)
+        {
+            return;
+        }
+
+        await _contentDefinitionManager.AlterTypeDefinitionAsync(OmnichannelConstants.ContentTypes.LeadSource, type => type
+            .WithDisplayName("Lead Source")
+            .Creatable()
+            .Listable()
+            .Securable()
+            .WithPart<TitlePart>(part => part
+                .WithPosition("1")
+                .WithSettings(new TitlePartSettings
+                {
+                    Options = TitlePartOptions.EditableRequired,
+                })));
+    }
+
+    internal static async Task CreateLeadIndexAsync(ISchemaBuilder schemaBuilder)
+    {
+        await schemaBuilder.CreateMapIndexTableAsync<LeadIndex>(table => table
+            .Column<string>("ContentItemId", column => column.WithLength(26))
+            .Column<string>("ContentType", column => column.WithLength(255))
+            .Column<bool>("Published", column => column.NotNull().WithDefault(false))
+            .Column<bool>("Latest", column => column.NotNull().WithDefault(false))
+            .Column<string>("StatusId", column => column.WithLength(50))
+            .Column<bool>("IsClosed", column => column.NotNull().WithDefault(false))
+            .Column<bool>("IsConverted", column => column.NotNull().WithDefault(false))
+            .Column<string>("SourceId", column => column.WithLength(26))
+            .Column<string>("ListName", column => column.WithLength(255))
+            .Column<string>("Rating", column => column.WithLength(20))
+            .Column<string>("OwnerId", column => column.WithLength(50))
+            .Column<string>("ConvertedContactItemId", column => column.WithLength(26))
+            .Column<DateTime>("ConvertedUtc", column => column.Nullable())
+            .Column<DateTime>("CreatedUtc", column => column.Nullable()));
+
+        await schemaBuilder.AlterIndexTableAsync<LeadIndex>(table => table
+            .CreateIndex("IDX_LeadIndex_DocumentId", "DocumentId", "ContentItemId", "Published", "Latest"));
+
+        await schemaBuilder.AlterIndexTableAsync<LeadIndex>(table => table
+            .CreateIndex("IDX_LeadIndex_Status", "StatusId", "IsConverted", "Published", "Latest"));
+
+        await schemaBuilder.AlterIndexTableAsync<LeadIndex>(table => table
+            .CreateIndex("IDX_LeadIndex_ListName", "ListName", "IsConverted", "Published", "Latest"));
+
+        await schemaBuilder.AlterIndexTableAsync<LeadIndex>(table => table
+            .CreateIndex("IDX_LeadIndex_Owner", "OwnerId", "IsConverted", "Published", "Latest"));
+    }
+
+    private static async Task CreateOpportunityIndexAsync(ISchemaBuilder schemaBuilder)
+    {
+        await schemaBuilder.CreateMapIndexTableAsync<OpportunityIndex>(table => table
+            .Column<string>("ContentItemId", column => column.WithLength(26))
+            .Column<string>("ContentType", column => column.WithLength(255))
+            .Column<bool>("Published", column => column.NotNull().WithDefault(false))
+            .Column<bool>("Latest", column => column.NotNull().WithDefault(false))
+            .Column<string>("StageId", column => column.WithLength(50))
+            .Column<bool>("IsClosed", column => column.NotNull().WithDefault(false))
+            .Column<bool>("IsWon", column => column.NotNull().WithDefault(false))
+            .Column<int>("Probability", column => column.Nullable())
+            .Column<decimal>("Amount", column => column.Nullable())
+            .Column<DateTime>("CloseDate", column => column.Nullable())
+            .Column<string>("OwnerId", column => column.WithLength(50))
+            .Column<string>("AccountContentItemId", column => column.WithLength(26))
+            .Column<string>("CampaignId", column => column.WithLength(50))
+            .Column<string>("PrimaryContactItemId", column => column.WithLength(26))
+            .Column<string>("SourceId", column => column.WithLength(26))
+            .Column<string>("ConvertedFromLeadItemId", column => column.WithLength(26))
+            .Column<DateTime>("CreatedUtc", column => column.Nullable()));
+
+        await schemaBuilder.AlterIndexTableAsync<OpportunityIndex>(table => table
+            .CreateIndex("IDX_OpportunityIndex_DocumentId", "DocumentId", "ContentItemId", "Published", "Latest"));
+
+        await schemaBuilder.AlterIndexTableAsync<OpportunityIndex>(table => table
+            .CreateIndex("IDX_OpportunityIndex_Stage", "StageId", "IsClosed", "Published", "Latest"));
+
+        await schemaBuilder.AlterIndexTableAsync<OpportunityIndex>(table => table
+            .CreateIndex("IDX_OpportunityIndex_Account", "AccountContentItemId", "Published", "Latest"));
+
+        await schemaBuilder.AlterIndexTableAsync<OpportunityIndex>(table => table
+            .CreateIndex("IDX_OpportunityIndex_CloseDate", "CloseDate", "IsClosed", "Published", "Latest"));
+    }
+}

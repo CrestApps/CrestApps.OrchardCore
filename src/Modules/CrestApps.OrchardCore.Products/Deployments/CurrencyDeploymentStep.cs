@@ -1,5 +1,5 @@
-using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
+using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Products.Deployments;
 
@@ -8,22 +8,17 @@ namespace CrestApps.OrchardCore.Products.Deployments;
 /// </summary>
 public sealed class CurrencyDeploymentStep : DeploymentStep
 {
+    private static readonly LocalizationSource _category = LocalizationSource.Create<CurrencyDeploymentStep>("Commerce");
+    private static readonly LocalizationSource _title = LocalizationSource.Create<CurrencyDeploymentStep>("Currencies");
+
     /// <summary>
     /// Initializes a new instance of the <see cref="CurrencyDeploymentStep"/> class.
     /// </summary>
     public CurrencyDeploymentStep()
     {
         Name = ProductsConstants.Recipes.Currencies;
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="CurrencyDeploymentStep"/> class.
-    /// </summary>
-    /// <param name="stringLocalizer">The string localizer.</param>
-    public CurrencyDeploymentStep(IStringLocalizer<CurrencyDeploymentStep> stringLocalizer)
-        : this()
-    {
-        Category = stringLocalizer["Commerce"];
+        Category = _category;
+        Title = _title;
     }
 
     /// <summary>

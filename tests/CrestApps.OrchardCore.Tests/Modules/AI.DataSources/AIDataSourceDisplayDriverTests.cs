@@ -1,4 +1,5 @@
 using System.Reflection;
+using CrestApps.OrchardCore.AI.Core.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -22,6 +23,7 @@ public sealed class AIDataSourceDisplayDriverTests
             type,
             Mock.Of<IIndexProfileStore>(),
             Options.Create(indexingOptions),
+            Options.Create(new AIDataSourceFieldMappingOptions()),
             null)!;
         var method = GetBuildGroupedIndexProfileItemsMethod(type);
 

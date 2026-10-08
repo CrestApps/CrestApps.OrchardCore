@@ -1,9 +1,11 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Documents;
 using CrestApps.Core.AI.Documents.Models;
 using CrestApps.Core.AI.Documents.Services;
+using CrestApps.Core.AI.Ingestion;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Resilience;
 using CrestApps.Core.Infrastructure.Indexing;
@@ -183,15 +185,15 @@ public sealed class AICompletionWithConfigDocumentsDisplayDriver : DisplayDriver
 
             if (model.Files != null && model.Files.Length > 0)
             {
-                var chatDeployment = await _deploymentManager.ResolveOrDefaultAsync(
-                    AIDeploymentPurpose.Chat,
+                var chatDeployment = await _deploymentManager.ResolveSlotAsync(
+                    AIDeploymentSlotNames.Chat,
                     deploymentName: interaction.ChatDeploymentName);
-                var embeddingDeployment = await _deploymentManager.ResolveOrDefaultAsync(
-                    AIDeploymentPurpose.Embedding,
+                var embeddingDeployment = await _deploymentManager.ResolveSlotAsync(
+                    AIDeploymentSlotNames.Embedding,
                     clientName: chatDeployment?.ClientName);
                 var embeddingGenerator = embeddingDeployment == null
                     ? null
-                    : await _aiClientFactory.CreateEmbeddingGeneratorAsync(embeddingDeployment, builder => builder.UseDefaultResilience());
+                    : await _aiClientFactory.CreateEmbeddingGeneratorAsync(embeddingDeployment, builder => builder.UseDefaultResilience().UseUsageLabels(purpose: AIUsagePurposes.Indexing));
                 var processedDocuments = new List<AIDocument>();
 
                 foreach (var file in model.Files)

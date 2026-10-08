@@ -1,0 +1,21 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<OpportunityStage>
+
+<h5>@Model.Value.Name</h5>
+<div class="d-flex flex-wrap gap-1">
+    <span class="badge ta-badge font-weight-normal" title="@T["Probability"]">@Model.Value.Probability%</span>
+    @if (Model.Value.IsClosed)
+    {
+        <span class="badge text-bg-secondary">@T["Closed"]</span>
+    }
+    @if (Model.Value.IsWon)
+    {
+        <span class="badge text-bg-secondary">@T["Won"]</span>
+    }
+</div>
+@if (!string.IsNullOrEmpty(Model.Value.Description))
+{
+    <div class="text-muted small">@Model.Value.Description</div>
+}

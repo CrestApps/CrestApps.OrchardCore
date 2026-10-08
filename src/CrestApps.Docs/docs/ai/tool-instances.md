@@ -1,6 +1,8 @@
 ---
 title: AI Tool Instances
 description: Configure reusable AI tool instances from registered sources and expose each one to the AI model as its own function.
+user_manual:
+  - user-manual/ai/tools-and-agents
 ---
 
 # AI Tool Instances
@@ -19,20 +21,9 @@ This is the difference between a tool and a tool instance:
 
 Enable the **AI Tool Instances** feature (`CrestApps.OrchardCore.AI.ToolInstances`). It depends on the **AI Services** feature and adds the **Artificial Intelligence → Tool Instances** admin menu entry.
 
-The screencast below enables the feature, then creates an HTTP API Request tool instance named **Order Lookup API** — the function name the AI model calls is derived automatically from that name.
-
-<video controls preload="metadata" width="100%" aria-label="Screen cast of enabling AI Tool Instances and creating an HTTP API Request instance">
-  <source src="/img/docs/ai-tool-instances.mp4" type="video/mp4" />
-</video>
-
 ## Managing tool instances
 
-Navigate to **Artificial Intelligence → Tool Instances**.
-
-1. Select **Add Tool Instance**. A modal lists every registered source.
-2. Pick a source. The editor renders the fields the source contributes.
-3. Provide a **Name** and a **Description**. These two fields are always rendered first and are required for every source.
-4. Fill in the source-specific fields and save.
+**Artificial Intelligence → Tool Instances** lists the instances. **Add Tool Instance** opens a modal of every registered source; the editor then renders the shared **Name** and **Description** fields first, followed by the fields the source contributes. Creating instances in the admin, with a screencast, is described in the User Manual under [Tool instances](../user-manual/ai/tools-and-agents.md#tool-instances).
 
 The **Name** must be unique across all tool instances and cannot be changed after the instance is created, because it is used to derive the function name that the AI model calls. Function names are prefixed and sanitized automatically, so `Order Lookup API` becomes something like `tool_instance_order_lookup_api`.
 
@@ -53,7 +44,7 @@ All secrets (API key, token, password, and client secret) are encrypted with ASP
 
 ## The documentation search sources
 
-The feature also registers three built-in sources that turn a public documentation site into a searchable tool instance, so the AI model can answer questions from product or framework documentation without indexing it into a vector store. Each configured instance binds one site and is exposed to the model as its own function, so you can offer "search the CrestApps docs" and "search the Orchard Core docs" as two distinct tools.
+The feature also registers four built-in sources that turn a public documentation site into a searchable tool instance, so the AI model can answer questions from product or framework documentation without indexing it into a vector store. Each configured instance binds one site and is exposed to the model as its own function, so you can offer "search the CrestApps docs" and "search the Orchard Core docs" as two distinct tools.
 
 Pick the source that matches how the site publishes its content:
 
@@ -61,27 +52,55 @@ Pick the source that matches how the site publishes its content:
 | --- | --- | --- |
 | **Documentation search (sitemap)** (`sitemap-documentation`) | Any site that publishes a `sitemap.xml`, such as Docusaurus, MkDocs, and most static sites. | Crawls pages, strips the HTML, and ranks passages locally with keyword scoring. |
 | **Documentation search (search index)** (`search-index-documentation`) | MkDocs Material and other sites that publish a fetchable `search_index.json`. | Downloads the prebuilt index once and ranks its entries locally. |
-| **Documentation search (Algolia)** (`algolia-documentation`) | Docusaurus sites (and others) wired to hosted Algolia DocSearch. | Forwards the query to Algolia, which performs the ranking. |
+| **Documentation search (Algolia DocSearch)** (`algolia-documentation`) | Docusaurus sites (and others) wired to hosted Algolia DocSearch. | Forwards the query to Algolia, which performs the ranking. |
+| **Website search (live API)** (`website-search`) | WordPress sites and any site that exposes its own search API. | Calls the site's own search API live on each request — no crawling, no local corpus, and no cold-start indexing delay. The site performs the ranking. |
 
-All three sources carry the **Knowledgebase** category. Each source captures its own fields:
+All four sources carry the **Knowledgebase** category. Each source captures its own fields:
 
 - **Sitemap** — a **Base URL** (the site root, for example `https://example.com`), an optional **Sitemap URL** (defaults to `{BaseUrl}/sitemap.xml`), an optional **Maximum results**, and an optional **Maximum pages**.
 - **Search index** — a **Base URL** (used to resolve relative links and the default index URL), an optional **Index URL** (defaults to `{BaseUrl}/search/search_index.json`), and an optional **Maximum results**.
 - **Algolia** — an **Application id**, a **search-only API key** (never a write key), an **Index name**, and an optional **Maximum results**. The API key is encrypted with ASP.NET Core data protection before it is stored; when you edit an existing instance, leaving the API key field empty keeps the previously stored key.
+- **Website search** — a **Base URL** (the site root) plus overridable request and response-mapping fields, all defaulting to the WordPress REST search endpoint, so a WordPress site needs only a base URL. The **Search endpoint path** (`/wp-json/wp/v2/search`), **Query parameter** (`search`), and **Extra query parameters** (`_embed=1`) shape the request; the **Results array path**, **Title path** (`title`), **URL path** (`url`), and **Snippet path** (`_embedded.self[0].excerpt.rendered`) are dotted paths (supporting `[index]`) that map the JSON response to each result's title, URL, and text snippet. An optional **Maximum results** caps how many results a search returns.
 
-The first search materializes the corpus (the crawled pages or the downloaded index) and caches it. Later searches reuse the cache until the instance settings change.
+The sitemap and search index sources materialize a corpus (the crawled pages or the downloaded index) on the first search and cache it; later searches reuse the cache until the instance settings change. The website search source keeps no corpus — it issues a live query per request — so there is no cold-start indexing delay and results reflect the site's own relevance ranking.
 
 These instances are usable anywhere tool instances are — on a profile, a chat interaction, or exposed to external clients through the [MCP server](mcp/server#tool-exposure).
 
+## The data source search source
+
+When the **AI Data Sources** feature is enabled, the tool instances feature also registers a **Data source search (vector)** source (`data-source-search`), also under the **Knowledgebase** category. It turns one of the [AI data sources](data-sources/index.md) you already curate into a callable vector search function, so the model can reach a knowledge base on demand instead of having it attached to a profile and retrieved on every turn.
+
+Each instance binds **one** data source plus the retrieval parameters applied to every search it runs, so several instances can expose several knowledge bases side by side, each under its own function name and description. The instance captures:
+
+- **Data source** — the knowledge base this tool searches. Required.
+- **Retrieval mode** — *Chunk* returns only the matching chunks; *Hierarchical* returns the full source documents those chunks belong to, which gives the model complete context at a much larger payload.
+- **Strictness** — how relevant a result must be to survive (1–5). Leave it empty to use the site default from **Settings → Artificial Intelligence → Data Sources**.
+- **Retrieved documents** — the number of top-scoring results to return (3–20). Leave it empty to use the site default.
+- **Filter** — an optional OData filter expression, validated as you save and translated to the index provider's own filter syntax before the search runs.
+
+The model supplies only the search phrases — one, or up to three when a question spans genuinely distinct topics (*"how does our vacation policy compare with sick leave?"*). They are embedded in a single batched call with the **same embedding deployment the knowledge base index was indexed with**, searched in parallel, and fused into one ranking, so a passage matched by two phrases is returned once. Results carry `[doc:N]` citations, one per source document.
+
+Leaving strictness and retrieved documents empty keeps reading the site defaults, so changing them under **Settings** moves every instance that did not pin its own value.
+
+:::note
+There is no **restrict answers to retrieved data only** option here, unlike the data source attached to a profile. Scope is enforceable on a profile because retrieval runs before the turn and shapes the prompt the model answers from. A tool the model chose to call cannot enforce it: the most it could do is word the "nothing found" reply differently, and the model stays free to answer from its general knowledge. Keep retrieval on the profile when answers must be grounded.
+:::
+
+:::tip
+This source and the data source attached directly to an AI profile share one retrieval pipeline, so an instance honors exactly the same parameters, thresholds, and output format. The difference is where the parameters come from: the instance carries its own, and the model decides when to search rather than retrieval running on every turn.
+:::
+
 ## Assigning instances to a profile
 
-Open an **AI Profile** (or an **AI Profile Template** of the *Profile* source) and go to the **Capabilities** tab. The **Tool Instances** section lists every instance the current user is allowed to access. Selected instances are passed to the AI model alongside the profile's regular tools.
+The **Tool Instances** section of the **Capabilities** tab on an **AI Profile** (or an **AI Profile Template** of the *Profile* source) lists every instance the current user is allowed to access. Selected instances are stored in `AIToolInstanceMetadata` and passed to the AI model alongside the profile's regular tools.
 
 Because AI profile templates copy their properties onto the profiles created from them, instances selected on a template are inherited by every profile created from that template.
 
 ## Assigning instances to a chat interaction
 
-Open a **Chat Interaction** and go to the **Capabilities** tab. The **Tool Instances** section works exactly like the profile editor and lists every instance the current user is allowed to access. Cloning an interaction carries the selected instances over to the copy.
+The **Capabilities** tab of a **Chat Interaction** has the same **Tool Instances** section. Cloning an interaction (**Chat with Preset Settings**) carries the selected instances over to the copy.
+
+See [Use a tool instance](../user-manual/ai/tools-and-agents.md#use-a-tool-instance) in the User Manual.
 
 ## Using instances during post-session processing
 

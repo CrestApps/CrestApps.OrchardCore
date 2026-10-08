@@ -31,8 +31,6 @@ internal sealed class OmnichannelContactCommunicationPreferenceIndexProvider : I
                     DoNotSmsUtc = contactPart.DoNotSmsUtc,
                     DoNotEmail = contactPart.DoNotEmail,
                     DoNotEmailUtc = contactPart.DoNotEmailUtc,
-                    DoNotChat = contactPart.DoNotChat,
-                    DoNotChatUtc = contactPart.DoNotChatUtc,
                 };
             });
     }

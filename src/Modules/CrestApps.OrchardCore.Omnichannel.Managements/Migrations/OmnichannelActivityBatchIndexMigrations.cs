@@ -53,15 +53,12 @@ internal sealed class OmnichannelActivityBatchIndexMigrations : OmnichannelIndex
     }
 
     /// <summary>
-    /// Adds the activity batch source column in an isolated transaction so it survives sibling migration failures.
+    /// Adds the activity batch source column in isolation so it survives sibling migration failures.
     /// </summary>
     /// <returns>The migration version number.</returns>
     public async Task<int> UpdateFrom1Async()
     {
-        await using var connection = DbConnectionAccessor.CreateConnection();
-        await connection.OpenAsync();
-
-        await ApplyIsolatedSchemaChangeAsync(connection,
+        await ApplyIsolatedSchemaChangeAsync(
             builder => builder.AlterIndexTableAsync<OmnichannelActivityBatchIndex>(table =>
                 table.AddColumn<string>("Source", column => column.WithLength(50)),
                 collection: OmnichannelConstants.CollectionName),
@@ -71,16 +68,13 @@ internal sealed class OmnichannelActivityBatchIndexMigrations : OmnichannelIndex
     }
 
     /// <summary>
-    /// Adds the activity batch created UTC column, used to order batches by newest first, in an isolated
-    /// transaction so it survives sibling migration failures in the same feature.
+    /// Adds the activity batch created UTC column, used to order batches by newest first, in isolation so
+    /// it survives sibling migration failures in the same feature.
     /// </summary>
     /// <returns>The migration version number.</returns>
     public async Task<int> UpdateFrom2Async()
     {
-        await using var connection = DbConnectionAccessor.CreateConnection();
-        await connection.OpenAsync();
-
-        await ApplyIsolatedSchemaChangeAsync(connection,
+        await ApplyIsolatedSchemaChangeAsync(
             builder => builder.AlterIndexTableAsync<OmnichannelActivityBatchIndex>(table =>
                 table.AddColumn<DateTime>("CreatedUtc"),
                 collection: OmnichannelConstants.CollectionName),

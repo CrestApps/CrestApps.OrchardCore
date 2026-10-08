@@ -28,7 +28,13 @@
     }, JOptions.CamelCase);
 }
 
-<div class="container-fluid d-flex flex-column" style="height: calc(100vh - 2rem - var(--oc-top-nav-height, 0));">
+<zone Name="Title">
+    <breadcrumb name="AIChatTest" title="@T["Test {0}", Model.Profile?.DisplayText ?? Model.Profile?.Name ?? Model.ProfileId]" heading="">
+        <breadcrumb-item id="AIProfiles" action="Index" controller="Profiles" area="CrestApps.OrchardCore.AI" permission="@AIPermissions.ManageAIProfiles.Name">@T["AI Profiles"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="container-fluid d-flex flex-column flex-grow-1 mb-3" style="min-height: 0;">
     <div class="flex-grow-1 overflow-y-auto p-3 mb-3 rounded-2 border bg-theme" id="@chatContainerHtmlId">
         <div class="w-100 ai-chat-messages">
             <div id="@placeholderHtmlId" class="text-center p-3">
@@ -71,7 +77,10 @@
      data-coreai-chat-config="@chatConfigJson"></div>
 
 <style at="Head">
+    /* The chat fills the rest of the screen below the breadcrumb, whether or not the trail is shown. */
     .ta-content {
+        display: flex !important;
+        flex-direction: column;
         height: 100% !important;
         padding-left: 0 !important;
         padding-right: 0 !important;
