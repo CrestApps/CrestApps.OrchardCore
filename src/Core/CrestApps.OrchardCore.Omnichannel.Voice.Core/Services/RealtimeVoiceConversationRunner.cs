@@ -253,20 +253,20 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
             return false;
         }
 
-        await using var media = await mediaProvider.OpenSessionAsync(new ContactCenterVoiceMediaSessionRequest
-        {
-            ProviderCallId = context.ProviderCallId,
-            InteractionId = context.InteractionId,
-        }, cancellationToken);
+        // The call's audio and the model's session are opened side by side. One after the other, the caller who
+        // answered with "hello?" waited for the provider to connect its stream, and only then for the model's
+        // session to open -- the greeting came four and a half seconds after the pickup. Neither needs the other
+        // until the greeting is asked for.
+        var (media, first) = await OpenMediaAndSessionAsync(mediaProvider, context, cancellationToken);
 
-        _outgoing = new OutgoingCallAudio(media.OutgoingFormat);
-
-        var first = await StartConversationAsync(context, conversationSoFar: null, cancellationToken);
+        await using var mediaLease = media;
 
         if (first is null)
         {
             return false;
         }
+
+        _outgoing = new OutgoingCallAudio(media.OutgoingFormat);
 
         using var callScope = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 

@@ -4,11 +4,15 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Orchestration;
 using CrestApps.Core.AI.Realtime;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Voice.Tools;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Environment.Shell.Scope;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 
@@ -150,6 +154,82 @@ public sealed partial class RealtimeVoiceConversationRunner
     /// for the call's first session.
     /// </param>
     /// <param name="cancellationToken">The call's token.</param>
+    /// <summary>
+    /// Opens the call's audio stream and the model's session at the same time.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The media providers read the site settings, and that read can go through this request's database session --
+    /// the same session the orchestrator reads the profile and its prompts through while the model's session opens.
+    /// One session cannot serve two reads at once, so the settings are read first, here, and the provider's own read
+    /// is then served from what this one loaded. Nothing else the providers do touches the database.
+    /// </para>
+    /// <para>
+    /// Whatever opened is closed again when the other side fails, so a failed call never leaves a stream running at
+    /// the provider or a session open at the model.
+    /// </para>
+    /// </remarks>
+    /// <returns>The opened media session, and the model's session or <see langword="null"/> when it could not be started.</returns>
+    private async Task<(IContactCenterVoiceMediaSession Media, IRealtimeConversation Conversation)> OpenMediaAndSessionAsync(
+        IContactCenterVoiceMediaProvider mediaProvider,
+        RealtimeVoiceConversationContext context,
+        CancellationToken cancellationToken)
+    {
+        var siteService = ShellScope.Services?.GetService<ISiteService>();
+
+        if (siteService is not null)
+        {
+            await siteService.GetSiteSettingsAsync();
+        }
+
+        var mediaOpening = mediaProvider.OpenSessionAsync(new ContactCenterVoiceMediaSessionRequest
+        {
+            ProviderCallId = context.ProviderCallId,
+            InteractionId = context.InteractionId,
+        }, cancellationToken);
+
+        IRealtimeConversation conversation;
+
+        try
+        {
+            conversation = await StartConversationAsync(context, conversationSoFar: null, cancellationToken);
+        }
+        catch
+        {
+            await CloseWhenOpenedAsync(mediaOpening);
+
+            throw;
+        }
+
+        try
+        {
+            return (await mediaOpening, conversation);
+        }
+        catch
+        {
+            if (conversation is not null)
+            {
+                await conversation.DisposeAsync();
+            }
+
+            throw;
+        }
+    }
+
+    // The conversation could not be started, so a stream that opened anyway has nothing to carry.
+    private async Task CloseWhenOpenedAsync(Task<IContactCenterVoiceMediaSession> mediaOpening)
+    {
+        try
+        {
+            var media = await mediaOpening;
+            await media.DisposeAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "A call's audio stream that was opening alongside a failed realtime session did not open either.");
+        }
+    }
+
     private async Task<IRealtimeConversation> StartConversationAsync(
         RealtimeVoiceConversationContext context,
         string conversationSoFar,

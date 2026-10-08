@@ -1216,7 +1216,7 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
             var mediaProvider = new Mock<IContactCenterVoiceMediaProvider>();
             mediaProvider.SetupGet(x => x.TechnicalName).Returns("Fake");
             mediaProvider.Setup(x => x.OpenSessionAsync(It.IsAny<ContactCenterVoiceMediaSessionRequest>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(Media);
+                .Returns(OpenMediaAsync);
 
             var mediaResolver = new Mock<IContactCenterVoiceMediaProviderResolver>();
             mediaResolver.Setup(x => x.Get(It.IsAny<string>()))
@@ -1251,6 +1251,32 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         }
 
         public Mock<ISession> DocumentSession { get; }
+
+        /// <summary>
+        /// When set, the call's audio stream is still connecting until this completes, the way a provider takes most
+        /// of a second to dial its stream back in.
+        /// </summary>
+        public TaskCompletionSource MediaConnecting { get; set; }
+
+        /// <summary>
+        /// When set, the call's audio stream fails to open.
+        /// </summary>
+        public bool MediaFails { get; set; }
+
+        private async Task<IContactCenterVoiceMediaSession> OpenMediaAsync()
+        {
+            if (MediaConnecting is not null)
+            {
+                await MediaConnecting.Task;
+            }
+
+            if (MediaFails)
+            {
+                throw new InvalidOperationException("The call's audio stream could not be opened.");
+            }
+
+            return Media;
+        }
 
         /// <summary>
         /// The number of stored prompts observed at each flush, in flush order.
@@ -1702,7 +1728,13 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
             return Task.CompletedTask;
         }
 
+        public bool Disposed { get; private set; }
+
         public ValueTask DisposeAsync()
-            => ValueTask.CompletedTask;
+        {
+            Disposed = true;
+
+            return ValueTask.CompletedTask;
+        }
     }
 }
