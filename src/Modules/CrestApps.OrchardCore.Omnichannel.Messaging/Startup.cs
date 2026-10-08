@@ -244,6 +244,7 @@ public sealed class Startup : StartupBase
 
         // Permissions.
         services.AddPermissionProvider<MessagingPermissionProvider>();
+        services.AddDataMigration<MessagingPermissionMigrations>();
 
         // Redact contact/service addresses in logs, matching the other telephony modules.
         services.AddRedaction(builder => builder.SetRedactor<ErasingRedactor>(LogDataClassifications.AddressSet));

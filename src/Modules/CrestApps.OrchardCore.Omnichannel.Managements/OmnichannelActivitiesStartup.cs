@@ -217,6 +217,7 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
         // deployment still has to authorize the requests it serves, and a permission that only exists when the
         // administration feature is on would fail closed for every headless caller.
         services.AddPermissionProvider<PermissionProvider>();
+        services.AddDataMigration<SupervisorReportPermissionMigrations>();
         // The handler declares its authorization-service dependency but resolves it lazily, because the service
         // is what runs the handler.
         services.AddScoped(sp => new Lazy<IAuthorizationService>(sp.GetRequiredService<IAuthorizationService>));

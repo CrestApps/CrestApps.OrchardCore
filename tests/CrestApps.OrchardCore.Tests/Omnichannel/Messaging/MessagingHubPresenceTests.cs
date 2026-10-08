@@ -37,6 +37,19 @@ public sealed class MessagingHubPresenceTests
         Assert.Contains(Group(MessagingHub.QueueGroup("queue-1")), harness.JoinedGroups);
     }
 
+    // A queue's group hears every new message in the queue, with the customer's address and a preview, so only a role
+    // that may see the queue's shared inbox joins it.
+    [Fact]
+    public async Task OnConnected_WithoutTheQueuePermission_JoinsOnlyTheAgentsOwnGroup()
+    {
+        var harness = CreateHarness(passive: true, grantQueues: false);
+
+        await harness.Hub.OnConnectedAsync();
+
+        Assert.Contains(Group(MessagingHub.AgentGroup(AgentId)), harness.JoinedGroups);
+        Assert.DoesNotContain(Group(MessagingHub.QueueGroup("queue-1")), harness.JoinedGroups);
+    }
+
     [Fact]
     public async Task OnConnected_FromTheWorkspace_RecordsPresence()
     {
@@ -83,7 +96,7 @@ public sealed class MessagingHubPresenceTests
 
     private static string Group(string name) => TenantSignalRGroupName.ForGroup(TenantName, name);
 
-    private static Harness CreateHarness(bool passive, bool grantWorkspace = true)
+    private static Harness CreateHarness(bool passive, bool grantWorkspace = true, bool grantQueues = true)
     {
         var agentProfiles = new Mock<IAgentProfileManager>();
         agentProfiles
@@ -120,6 +133,11 @@ public sealed class MessagingHubPresenceTests
         var granted = grantWorkspace
             ? new HashSet<string> { MessagingPermissions.UseMessagingWorkspace.Name }
             : [];
+
+        if (grantWorkspace && grantQueues)
+        {
+            granted.Add(MessagingPermissions.ViewQueueConversations.Name);
+        }
 
         var hub = new MessagingHub(
             agentProfiles.Object,

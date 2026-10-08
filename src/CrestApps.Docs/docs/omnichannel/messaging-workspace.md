@@ -133,11 +133,14 @@ While an automated (AI) activity is handling a contact on an endpoint, the works
 
 | Permission | Display name | Grants |
 | --- | --- | --- |
-| `UseMessagingWorkspace` | Use the messaging workspace | Use the workspace on the endpoints you own or serve. |
-| `ViewAllMessagingConversations` | View all messaging conversations | See every conversation (supervisors), and transfer any of them. The holder of a conversation can transfer it without this. |
+| `UseMessagingWorkspace` | Use the messaging workspace and view your own conversations | Open the workspace and work your own conversations: the ones assigned to you, and the ones sent to an endpoint you own that no colleague has claimed. |
+| `ViewQueueMessagingConversations` | View unclaimed messaging conversations in your queues | Read, claim and answer the conversations nobody has claimed yet in the queues you serve, as far as your agent entitlements allow. |
+| `ViewAllMessagingConversations` | View all messaging conversations | See every conversation (supervisors), including the ones colleagues have claimed and the ones no route gave to an agent or a queue, and transfer any of them. The holder of a conversation can transfer it without this. |
 | `SendGroupMessages` | Send group messages | Send broadcasts and multi-recipient messages. |
 | `SendMessagesDuringQuietHours` | Send messages outside business hours | Changes the quiet-hours banner to a plain notice without the unsociable-hour warning. Sending is never blocked, with or without it. |
 | `ManageMessaging` | Manage the messaging workspace | Manage templates (**Messaging > Templates**). |
+
+None of these implies another, except that `ViewAllMessagingConversations` includes the other two viewing permissions. An agent never sees a conversation a colleague has claimed. By default the **Agent** role gets `UseMessagingWorkspace` and `ViewQueueMessagingConversations`; the **Supervisor** role also gets `ViewAllMessagingConversations`, `SendGroupMessages`, `SendMessagesDuringQuietHours` and `ManageMessaging`. A role with `UseMessagingWorkspace` alone sees only its users' own conversations, which suits people who text from their own number and serve no queue.
 
 Permissions apply to every channel; there is no per-channel permission. Where a number's messages go is edited on its entry point, under **Interaction Center > Management > Inbound entry points**, which requires the **Manage Contact Center queues** permission.
 

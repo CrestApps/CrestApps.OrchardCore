@@ -204,6 +204,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core
         public static readonly OrchardCore.Security.Permissions.Permission SendGroupMessages;
         public static readonly OrchardCore.Security.Permissions.Permission UseMessagingWorkspace;
         public static readonly OrchardCore.Security.Permissions.Permission ViewAllConversations;
+        public static readonly OrchardCore.Security.Permissions.Permission ViewQueueConversations;
     }
 }
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models

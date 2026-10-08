@@ -9,10 +9,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 
 /// <summary>
 /// The default <see cref="IMessagingConversationAuthorizationService"/>. A supervisor holding
-/// <see cref="MessagingPermissions.ViewAllConversations"/> may do anything; every other caller is resolved to
-/// an agent profile and may only act on the threads they own, are assigned, or serve through a queue they belong
-/// to; the holder of a thread may also transfer it. Queue membership is confirmed against the agent entitlement policy, so the Agent Entitlements feature
-/// narrows messaging access the same way it narrows queue sign-in.
+/// <see cref="MessagingPermissions.ViewAllConversations"/> may do anything. Every other caller is resolved to an agent
+/// profile and may act on their own threads: the ones assigned to them, and the personal threads sent to them that no
+/// colleague has claimed. With <see cref="MessagingPermissions.ViewQueueConversations"/> they may also read, claim and
+/// answer the unclaimed threads of the queues they serve. A thread another agent has claimed, and a thread no route
+/// gave to anybody, are never theirs. Queue membership is confirmed against the agent entitlement policy, so the Agent
+/// Entitlements feature narrows messaging access the same way it narrows queue sign-in.
 /// </summary>
 public sealed class MessagingConversationAuthorizationService : IMessagingConversationAuthorizationService
 {
@@ -70,58 +72,54 @@ public sealed class MessagingConversationAuthorizationService : IMessagingConver
             return false;
         }
 
-        return conversation.OwnerType == ConversationOwnerType.Queue
-            ? AuthorizeQueueConversation(agent, conversation, operation)
-            : AuthorizePersonalConversation(agent, conversation, operation);
-    }
-
-    private static bool AuthorizePersonalConversation(
-        AgentProfile agent,
-        MessagingConversation conversation,
-        ConversationOperation operation)
-    {
-        if (IsSameAgent(conversation.OwnerId, agent.ItemId) || IsSameAgent(conversation.AssignedAgentId, agent.ItemId))
-        {
-            return operation != ConversationOperation.Claim || IsClaimable(conversation);
-        }
-
-        // Nobody owns the thread yet, so any workspace agent may read it, claim it, or reply on it (a reply claims).
-        if (IsClaimable(conversation) && string.IsNullOrEmpty(conversation.OwnerId))
-        {
-            return operation is ConversationOperation.View
-                or ConversationOperation.Claim
-                or ConversationOperation.Send;
-        }
-
-        return false;
-    }
-
-    private bool AuthorizeQueueConversation(
-        AgentProfile agent,
-        MessagingConversation conversation,
-        ConversationOperation operation)
-    {
-        if (!IsQueueMember(agent, conversation.OwnerId))
-        {
-            return false;
-        }
-
+        // The thread is held by the caller, so it is theirs whichever queue it came from: an agent who has left the
+        // queue since, or was handed it from a queue they never served, can still finish what they hold.
         if (IsSameAgent(conversation.AssignedAgentId, agent.ItemId))
         {
             return true;
         }
 
-        // The thread belongs to a colleague in the same department: claim-to-own means it is no longer theirs to
-        // read or answer.
+        // A colleague holds it: claim-to-own means it is no longer anybody else's to read or answer.
         if (!string.IsNullOrEmpty(conversation.AssignedAgentId))
         {
             return false;
         }
 
-        // Nobody holds the thread yet, so any member may read it, claim it, or reply on it (a reply claims it).
-        return operation is ConversationOperation.View
-            or ConversationOperation.Claim
-            or ConversationOperation.Send;
+        return conversation.OwnerType == ConversationOwnerType.Queue
+            ? await AuthorizeUnclaimedQueueConversationAsync(principal, agent, conversation, operation)
+            : AuthorizeUnclaimedPersonalConversation(agent, conversation, operation);
+    }
+
+    // A personal thread nobody holds is the endpoint owner's. One with no owner is a message no route claimed: it waits
+    // for a supervisor to triage it, not for whichever agent opens it first.
+    private static bool AuthorizeUnclaimedPersonalConversation(
+        AgentProfile agent,
+        MessagingConversation conversation,
+        ConversationOperation operation)
+    {
+        if (!IsSameAgent(conversation.OwnerId, agent.ItemId))
+        {
+            return false;
+        }
+
+        return operation != ConversationOperation.Claim || IsClaimable(conversation);
+    }
+
+    // Nobody holds the thread yet, so a member who may see their queues' shared inbox may read it, claim it, or reply on
+    // it (a reply claims it).
+    private async Task<bool> AuthorizeUnclaimedQueueConversationAsync(
+        ClaimsPrincipal principal,
+        AgentProfile agent,
+        MessagingConversation conversation,
+        ConversationOperation operation)
+    {
+        if (operation is not (ConversationOperation.View or ConversationOperation.Claim or ConversationOperation.Send))
+        {
+            return false;
+        }
+
+        return IsQueueMember(agent, conversation.OwnerId) &&
+            await _authorizationService.AuthorizeAsync(principal, MessagingPermissions.ViewQueueConversations);
     }
 
     private bool IsQueueMember(AgentProfile agent, string queueId)

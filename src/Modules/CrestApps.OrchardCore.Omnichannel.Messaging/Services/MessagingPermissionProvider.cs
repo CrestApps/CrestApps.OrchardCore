@@ -13,9 +13,10 @@ internal sealed class MessagingPermissionProvider : IPermissionProvider
     [
         MessagingPermissions.ManageMessaging,
         MessagingPermissions.UseMessagingWorkspace,
+        MessagingPermissions.ViewQueueConversations,
+        MessagingPermissions.ViewAllConversations,
         MessagingPermissions.SendDuringQuietHours,
         MessagingPermissions.SendGroupMessages,
-        MessagingPermissions.ViewAllConversations,
     ];
 
     /// <inheritdoc/>
@@ -29,10 +30,13 @@ internal sealed class MessagingPermissionProvider : IPermissionProvider
             },
             new PermissionStereotype
             {
+                // An agent works their own conversations and the unclaimed ones in the queues they serve. A conversation
+                // a colleague has claimed, every conversation, and group messages are the supervisor's.
                 Name = "Agent",
                 Permissions =
                 [
                     MessagingPermissions.UseMessagingWorkspace,
+                    MessagingPermissions.ViewQueueConversations,
                 ],
             },
             new PermissionStereotype
@@ -41,8 +45,10 @@ internal sealed class MessagingPermissionProvider : IPermissionProvider
                 Permissions =
                 [
                     MessagingPermissions.UseMessagingWorkspace,
-                    MessagingPermissions.SendGroupMessages,
+                    MessagingPermissions.ViewQueueConversations,
                     MessagingPermissions.ViewAllConversations,
+                    MessagingPermissions.SendGroupMessages,
+                    MessagingPermissions.SendDuringQuietHours,
                     MessagingPermissions.ManageMessaging,
                 ],
             },

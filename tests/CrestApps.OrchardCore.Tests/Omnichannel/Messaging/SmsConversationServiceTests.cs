@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
@@ -19,6 +20,7 @@ using OrchardCore.ContentManagement;
 using OrchardCore.Entities;
 using OrchardCore.Infrastructure;
 using OrchardCore.Modules;
+using OrchardCore.Security;
 using OrchardCore.Sms;
 using YesSql;
 
@@ -358,12 +360,16 @@ public class SmsConversationServiceTests
         => new(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "user-7")], "Test"));
 
     // The real conversation rule for a queue member who is not a supervisor.
+    // A queue member with the Agent role: they may see their queues' shared inbox, but not every conversation.
     private static MessagingConversationAuthorizationService CreateQueueMemberAuthorization()
     {
         var authorizationService = new Mock<IAuthorizationService>();
         authorizationService
             .Setup(service => service.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
-            .ReturnsAsync(AuthorizationResult.Failed());
+            .ReturnsAsync((ClaimsPrincipal _, object _, IEnumerable<IAuthorizationRequirement> requirements) =>
+                requirements.OfType<PermissionRequirement>().All(requirement => requirement.Permission.Name == MessagingPermissions.ViewQueueConversations.Name)
+                    ? AuthorizationResult.Success()
+                    : AuthorizationResult.Failed());
 
         var agentProfileManager = new Mock<IAgentProfileManager>();
         agentProfileManager

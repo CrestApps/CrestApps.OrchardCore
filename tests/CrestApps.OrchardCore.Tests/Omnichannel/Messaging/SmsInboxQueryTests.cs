@@ -323,12 +323,35 @@ public sealed class SmsInboxQueryTests
         await using var harness = await Harness.CreateAsync();
         await harness.SeedAsync(AttentionSeed());
 
-        var (builder, _) = CreateBuilder(harness.Store, new AgentProfile { ItemId = "agent-1", UserId = "user-1", QueueIds = ["q-1"] });
+        var (builder, _) = CreateBuilder(
+            harness.Store,
+            new AgentProfile { ItemId = "agent-1", UserId = "user-1", QueueIds = ["q-1"] },
+            MessagingPermissions.UseMessagingWorkspace,
+            MessagingPermissions.ViewQueueConversations);
 
         var count = await builder.CountNeedingAttentionAsync(User(), TestContext.Current.CancellationToken);
 
         // Mine and unread, the transfer to me, and the unread one in my queue's pool.
         Assert.Equal(3, count);
+    }
+
+    // Using the workspace grants an agent their own conversations; their queues' shared inbox is a permission of its
+    // own, and without it the pool is neither listed nor counted.
+    [Fact]
+    public async Task CountNeedingAttentionAsync_ForAnAgentWithoutTheQueuePermission_CountsOnlyTheirOwn()
+    {
+        await using var harness = await Harness.CreateAsync();
+        await harness.SeedAsync(AttentionSeed());
+
+        var (builder, _) = CreateBuilder(
+            harness.Store,
+            new AgentProfile { ItemId = "agent-1", UserId = "user-1", QueueIds = ["q-1"] },
+            MessagingPermissions.UseMessagingWorkspace);
+
+        var count = await builder.CountNeedingAttentionAsync(User(), TestContext.Current.CancellationToken);
+
+        // Mine and unread, and the transfer to me.
+        Assert.Equal(2, count);
     }
 
     [Fact]

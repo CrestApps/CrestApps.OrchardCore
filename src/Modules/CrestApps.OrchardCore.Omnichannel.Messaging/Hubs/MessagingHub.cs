@@ -124,13 +124,17 @@ public sealed class MessagingHub : Hub<IMessagingHubClient>
                 await Groups.AddToGroupAsync(Context.ConnectionId, ForGroup(MessagingHub.AgentGroup(profile.ItemId)));
                 groupCount++;
 
-                // Only the queues the agent's entitlements still allow: every new message in a queue reaches its group
-                // with the customer's address and a preview, and one they may no longer open is none of theirs.
-                foreach (var queueId in profile.QueueIds.Concat(profile.AllowedQueueIds).Distinct()
-                    .Where(queueId => !string.IsNullOrEmpty(queueId) && _entitlementPolicy.AllowsQueue(profile, queueId)))
+                // Only the queues the agent's entitlements still allow, and only for a role that may see its queues'
+                // shared inbox: every new message in a queue reaches its group with the customer's address and a
+                // preview, and one they may not open is none of theirs.
+                if (await _authorizationService.AuthorizeAsync(httpContext.User, MessagingPermissions.ViewQueueConversations))
                 {
-                    await Groups.AddToGroupAsync(Context.ConnectionId, ForGroup(QueueGroup(queueId)));
-                    groupCount++;
+                    foreach (var queueId in profile.QueueIds.Concat(profile.AllowedQueueIds).Distinct()
+                        .Where(queueId => !string.IsNullOrEmpty(queueId) && _entitlementPolicy.AllowsQueue(profile, queueId)))
+                    {
+                        await Groups.AddToGroupAsync(Context.ConnectionId, ForGroup(QueueGroup(queueId)));
+                        groupCount++;
+                    }
                 }
             }
 

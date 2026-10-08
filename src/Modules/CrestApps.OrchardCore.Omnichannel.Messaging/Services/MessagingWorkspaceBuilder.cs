@@ -155,8 +155,8 @@ public sealed class MessagingWorkspaceBuilder
         string selectedCustomerKey,
         CancellationToken cancellationToken)
     {
-        // Supervisors (ViewAllConversations) see every conversation; everyone else sees the conversations assigned
-        // to them or owned by a queue they belong to.
+        // Supervisors (ViewAllConversations) see every conversation; everyone else sees their own conversations and,
+        // with ViewQueueConversations, the unclaimed ones of the queues they serve.
         var canViewAll = await _authorizationService.AuthorizeAsync(user, MessagingPermissions.ViewAllConversations);
 
         var viewModel = new InboxViewModel
@@ -189,7 +189,7 @@ public sealed class MessagingWorkspaceBuilder
             _ => MessagingInboxFilter.All,
         };
 
-        var visibleQueueIds = GetVisibleQueueIds(currentAgent);
+        var visibleQueueIds = await GetVisibleQueueIdsAsync(user, currentAgent);
 
         MessagingInboxQuery BuildQuery(MessagingInboxFilter tab, int skip, int take) => new()
         {
@@ -363,7 +363,7 @@ public sealed class MessagingWorkspaceBuilder
             return 0;
         }
 
-        var visibleQueueIds = GetVisibleQueueIds(agent);
+        var visibleQueueIds = await GetVisibleQueueIdsAsync(user, agent);
 
         MessagingInboxQuery BuildQuery(MessagingInboxFilter tab) => new()
         {
@@ -619,14 +619,20 @@ public sealed class MessagingWorkspaceBuilder
 
     // The queues whose shared conversations the agent sees: the ones they belong to and the ones they may serve, as
     // far as their entitlements allow. Opening a conversation already applies the entitlements; the list, the count
-    // and the notifications did not, so an agent whose queue was taken away kept seeing its customers there.
-    private string[] GetVisibleQueueIds(AgentProfile agent)
-        => agent is null
-            ? []
-            : agent.QueueIds.Concat(agent.AllowedQueueIds)
-                .Where(queueId => !string.IsNullOrEmpty(queueId) && _entitlementPolicy.AllowsQueue(agent, queueId))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToArray();
+    // and the notifications did not, so an agent whose queue was taken away kept seeing its customers there. A role
+    // without the queue permission sees no queue's shared inbox at all, only the conversations that are the agent's own.
+    private async Task<string[]> GetVisibleQueueIdsAsync(ClaimsPrincipal user, AgentProfile agent)
+    {
+        if (agent is null || !await _authorizationService.AuthorizeAsync(user, MessagingPermissions.ViewQueueConversations))
+        {
+            return [];
+        }
+
+        return agent.QueueIds.Concat(agent.AllowedQueueIds)
+            .Where(queueId => !string.IsNullOrEmpty(queueId) && _entitlementPolicy.AllowsQueue(agent, queueId))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
 
     private static ChannelViewModel ToViewModel(IMessagingChannel channel)
         => new()
