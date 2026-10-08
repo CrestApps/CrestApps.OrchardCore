@@ -104,6 +104,17 @@ public sealed class RealtimeVoiceConversationContext
     public Func<int> EndCallRequests { get; set; }
 
     /// <summary>
+    /// Gets or sets what is told each line the assistant finishes, so a question it asked keeps the call open until
+    /// the customer answers. Left unset, nothing is.
+    /// </summary>
+    public Action<string> AssistantSaid { get; set; }
+
+    /// <summary>
+    /// Gets or sets what is told when the customer says something.
+    /// </summary>
+    public Action CustomerAnswered { get; set; }
+
+    /// <summary>
     /// Gets or sets the guidance telling the model when to hand the caller to a live agent, or
     /// <see langword="null"/> when this call has nowhere to hand them.
     /// </summary>

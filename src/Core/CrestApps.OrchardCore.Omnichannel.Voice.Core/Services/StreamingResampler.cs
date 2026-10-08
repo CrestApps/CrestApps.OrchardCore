@@ -25,7 +25,7 @@ internal sealed class StreamingResampler
     private readonly int _toRate;
     private readonly long _step;
     private readonly long _unit;
-    private readonly Biquad[] _before;
+    private readonly AntiAliasFilter _before;
     private readonly Biquad[] _after;
 
     private bool _started;
@@ -51,8 +51,10 @@ internal sealed class StreamingResampler
         _unit = toRate / divisor;
 
         // Band-limited on the way down before samples are dropped, on the way up after they are made, and to the
-        // telephone passband either way. Four poles, as the whole-buffer converter uses.
-        _before = toRate < fromRate ? Biquad.LowPass(fromRate, Cutoff(fromRate, toRate)) : [];
+        // telephone passband either way. Going down, a sharp filter: what is left above the new rate's Nyquist folds
+        // back into the line as harshness on every "s". Going up there is nothing to fold, and four poles, as the
+        // whole-buffer converter uses, are enough.
+        _before = toRate < fromRate ? AntiAliasFilter.For(fromRate, toRate) : null;
         _after = toRate > fromRate ? Biquad.LowPass(toRate, Cutoff(toRate, fromRate)) : [];
     }
 
@@ -84,7 +86,7 @@ internal sealed class StreamingResampler
 
         for (var i = 0; i < samples.Length; i++)
         {
-            input[i] = Filter(_before, samples[i]);
+            input[i] = _before?.Next(samples[i]) ?? samples[i];
         }
 
         if (!_started)
@@ -122,10 +124,7 @@ internal sealed class StreamingResampler
         _previous = 0;
         _position = 0;
 
-        foreach (var section in _before)
-        {
-            section.Reset();
-        }
+        _before?.Reset();
 
         foreach (var section in _after)
         {
@@ -160,6 +159,118 @@ internal sealed class StreamingResampler
     /// <summary>
     /// One second-order Butterworth low-pass section that remembers where it was.
     /// </summary>
+    /// <summary>
+    /// A linear-phase low-pass (a Kaiser-windowed sinc) that keeps what a phone carries and removes what would fold.
+    /// </summary>
+    /// <remarks>
+    /// It used to be two Butterworth sections at 3.4 kHz. Taking 24 kHz to 8 kHz, a 5 kHz component -- the bright
+    /// part of an "s" -- was only about 15 dB down when it folded back to 3 kHz. One realtime model's voice is
+    /// brighter than another's, and on the line it sounded harsher: its recordings carried 6 to 8 dB more energy at
+    /// the top of the band than the other model's, while every band below matched to within a decibel. This passes
+    /// the telephone band flat and holds everything that would fold into it at least 70 dB down.
+    /// </remarks>
+    private sealed class AntiAliasFilter
+    {
+        // The stopband floor, in dB.
+        private const double AttenuationDb = 70d;
+
+        private readonly double[] _taps;
+        private readonly double[] _history;
+        private int _next;
+
+        private AntiAliasFilter(double[] taps)
+        {
+            _taps = taps;
+            _history = new double[taps.Length];
+        }
+
+        /// <summary>
+        /// The filter for taking a stream from one rate down to another.
+        /// </summary>
+        /// <param name="fromRate">The rate it is filtered at.</param>
+        /// <param name="toRate">The rate it is going down to.</param>
+        public static AntiAliasFilter For(int fromRate, int toRate)
+        {
+            // Flat to the telephone band, and fully down by the frequency that folds onto its upper edge.
+            var passEdge = Math.Min(3_400d, toRate * 0.425d);
+            var stopEdge = Math.Min(toRate - passEdge, passEdge + 1_200d);
+            var cutoff = (passEdge + stopEdge) / 2d / fromRate;
+            var transition = 2d * Math.PI * (stopEdge - passEdge) / fromRate;
+
+            // Kaiser's estimates for the length and the window's shape at that attenuation.
+            var length = (int)Math.Ceiling((AttenuationDb - 8d) / (2.285d * transition)) + 1;
+            length |= 1;
+            var beta = 0.1102d * (AttenuationDb - 8.7d);
+
+            var taps = new double[length];
+            var middle = (length - 1) / 2d;
+            var sum = 0d;
+
+            for (var n = 0; n < length; n++)
+            {
+                var t = n - middle;
+                var sinc = t == 0 ? 2d * cutoff : Math.Sin(2d * Math.PI * cutoff * t) / (Math.PI * t);
+                var ratio = t / middle;
+                taps[n] = sinc * BesselI0(beta * Math.Sqrt(1d - (ratio * ratio))) / BesselI0(beta);
+                sum += taps[n];
+            }
+
+            // Unity gain at DC, so the level of the voice is not changed by its filter.
+            for (var n = 0; n < length; n++)
+            {
+                taps[n] /= sum;
+            }
+
+            return new AntiAliasFilter(taps);
+        }
+
+        public double Next(double x)
+        {
+            _history[_next] = x;
+
+            var y = 0d;
+            var index = _next;
+
+            for (var k = 0; k < _taps.Length; k++)
+            {
+                y += _taps[k] * _history[index];
+                index = index == 0 ? _history.Length - 1 : index - 1;
+            }
+
+            _next = _next == _history.Length - 1 ? 0 : _next + 1;
+
+            return y;
+        }
+
+        public void Reset()
+        {
+            Array.Clear(_history);
+            _next = 0;
+        }
+
+        // The zeroth-order modified Bessel function of the first kind, by its series: enough terms for any beta used.
+        private static double BesselI0(double x)
+        {
+            var sum = 1d;
+            var term = 1d;
+            var half = x / 2d;
+
+            for (var k = 1; k < 50; k++)
+            {
+                term *= half / k;
+                var squared = term * term;
+                sum += squared;
+
+                if (squared < sum * 1e-16)
+                {
+                    break;
+                }
+            }
+
+            return sum;
+        }
+    }
+
     private sealed class Biquad
     {
         private readonly double _b0;

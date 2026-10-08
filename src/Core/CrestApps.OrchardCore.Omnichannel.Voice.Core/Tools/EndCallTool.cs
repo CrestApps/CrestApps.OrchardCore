@@ -79,18 +79,30 @@ public sealed class EndCallTool : AIFunction
         // The turn is a scoped service the session resolved for this call, so recording the decision here is
         // visible to that session and to nothing else running concurrently.
         var turn = arguments.Services?.GetService<IVoiceCallEndTurn>();
+        var logger = arguments.Services?.GetService<ILogger<EndCallTool>>();
+
+        // The assistant asked the customer something, or said it would read details back, and they have not
+        // answered. A voicemail has nobody to answer, so it is never held. See VoiceConfirmation.
+        if (!answeredByMachine && turn is not null && turn.TryHoldForAnswer())
+        {
+            if (logger is not null && logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("The AI asked to end the call while waiting on the customer's answer; the call is kept open for it.");
+            }
+
+            return ValueTask.FromResult<object>(
+                "The call has NOT been ended. You asked the customer something, or said you would read details " +
+                "back, and they have not answered yet. If you said you would read something back, read it now and " +
+                "ask them to confirm. Then stop and wait for their answer. End the call only after they reply.");
+        }
+
         var recorded = turn is not null;
 
         turn?.RequestEndCall(reason, answeredByMachine);
 
-        if (arguments.Services is not null)
+        if (logger is not null && logger.IsEnabled(LogLevel.Information))
         {
-            var logger = arguments.Services.GetService<ILogger<EndCallTool>>();
-
-            if (logger is not null && logger.IsEnabled(LogLevel.Information))
-            {
-                logger.LogInformation("The AI ended the call (recorded: {Recorded}, answered by a machine: {AnsweredByMachine}).", recorded, answeredByMachine);
-            }
+            logger.LogInformation("The AI ended the call (recorded: {Recorded}, answered by a machine: {AnsweredByMachine}).", recorded, answeredByMachine);
         }
 
         // What the model reads back after the tool call. It is told the hangup is handled so it does not narrate

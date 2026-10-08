@@ -74,4 +74,29 @@ public interface IVoiceCallEndTurn
     /// Clears the decision, so the call that follows starts from nothing recorded.
     /// </summary>
     void Reset();
+
+    /// <summary>
+    /// Notes a line the assistant has finished saying, so a question or an announced read-back keeps the call open
+    /// until the customer has answered it (see <see cref="TryHoldForAnswer"/>).
+    /// </summary>
+    /// <param name="line">The line, as transcribed.</param>
+    void AssistantSaid(string line)
+    {
+    }
+
+    /// <summary>
+    /// Notes that the customer has said something, which answers whatever the assistant was waiting on.
+    /// </summary>
+    void CustomerAnswered()
+    {
+    }
+
+    /// <summary>
+    /// Whether a request to end the call should be refused because the assistant is still waiting on the customer:
+    /// it asked them something, or said it would read details back, and they have not answered. Refused at most
+    /// twice for the same wait, so a model that keeps asking can still end the call.
+    /// </summary>
+    /// <returns><see langword="true"/> when the call should stay open for the customer's answer.</returns>
+    bool TryHoldForAnswer()
+        => false;
 }

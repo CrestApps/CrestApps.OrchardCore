@@ -473,6 +473,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                         if (!string.IsNullOrWhiteSpace(conversationEvent.Text))
                         {
                             Interlocked.Exchange(ref _lastCallerSpeechTicks, DateTime.UtcNow.Ticks);
+                            context.CustomerAnswered?.Invoke();
                         }
 
                         // Recorded so the call is concluded, summarized and dispositioned exactly the way a
@@ -522,6 +523,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                         utteranceInFlight = false;
                         Volatile.Write(ref spokeSinceCaller, true);
                         Volatile.Write(ref lastAssistantLine, spoken);
+                        context.AssistantSaid?.Invoke(spoken);
 
                         // The line that was in flight when the call was closed is the goodbye, when it is one. It
                         // has now been said, so the assistant is done talking. A line that was not a goodbye leaves

@@ -154,9 +154,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         bool ReachedVoicemail { get; }
         string Reason { get; }
         int RequestCount { get; }
+        void AssistantSaid(string line);
+        void CustomerAnswered();
         void RequestEndCall(string reason);
         void RequestEndCall(string reason, bool reachedVoicemail);
         void Reset();
+        bool TryHoldForAnswer();
     }
     public sealed class NoRealtimeVoiceConversationRunner : CrestApps.OrchardCore.Omnichannel.Voice.Services.IRealtimeVoiceConversationRunner
     {
@@ -181,7 +184,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
     {
         public RealtimeVoiceConversationContext() { }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity Activity { get; set; }
+        public System.Action<string> AssistantSaid { get; set; }
         public string ContactName { get; set; }
+        public System.Action CustomerAnswered { get; set; }
         public System.Threading.CancellationToken EndCallRequested { get; set; }
         public System.Func<int> EndCallRequests { get; set; }
         public string HandoffInstructions { get; set; }
@@ -264,9 +269,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         public bool ReachedVoicemail { get; }
         public string Reason { get; }
         public int RequestCount { get; }
+        public void AssistantSaid(string line) { }
+        public void CustomerAnswered() { }
         public void RequestEndCall(string reason) { }
         public void RequestEndCall(string reason, bool reachedVoicemail) { }
         public void Reset() { }
+        public bool TryHoldForAnswer() { }
     }
     public static class VoicemailGreeting
     {
