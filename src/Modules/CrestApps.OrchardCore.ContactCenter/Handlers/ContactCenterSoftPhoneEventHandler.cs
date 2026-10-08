@@ -105,14 +105,10 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
         if (await IsPacedDialAwaitingAgentAsync(interaction, cancellationToken))
         {
             // The end is the one worth naming: it is where a dead number used to reach the agent.
-            var level = interactionEvent.EventType == ContactCenterConstants.Events.CallEnded ? LogLevel.Information : LogLevel.Debug;
-
-            if (_logger.IsEnabled(level))
+            if (interactionEvent.EventType == ContactCenterConstants.Events.CallEnded && _logger.IsEnabled(LogLevel.Information))
             {
-                _logger.Log(
-                    level,
-                    "Kept {EventType} of paced dialer call '{InteractionId}' (activity '{ActivityId}') off agent '{AgentId}''s soft phone because no agent joined it; the dialer settles the attempt.",
-                    interactionEvent.EventType,
+                _logger.LogInformation(
+                    "Kept the end of paced dialer call '{InteractionId}' (activity '{ActivityId}') off agent '{AgentId}''s soft phone because no agent joined it; the dialer settles the attempt.",
                     interaction.ItemId.SanitizeLogValue(),
                     interaction.ActivityItemId.SanitizeLogValue(),
                     interaction.AgentId.SanitizeLogValue());
