@@ -26,7 +26,9 @@ internal static class VoiceCallGuidance
     /// </para>
     /// <para>
     /// The callback rule is here for the same reason: live, a customer said "can you call me later?" and the model
-    /// said goodbye and hung up without asking when, so the follow-up could only be scheduled for a guess.
+    /// said goodbye and hung up without asking when, so the follow-up could only be scheduled for a guess. And a
+    /// customer who answered "no, not right now" was wished a good day and closed as finished -- never called again
+    /// -- when "not now" is a timing answer, not a refusal.
     /// </para>
     /// </remarks>
     public const string EndingTheCall =
@@ -38,8 +40,10 @@ internal static class VoiceCallGuidance
         "or is being transferred to a person. When you read details back to confirm them, only a clear yes " +
         "confirms them: an answer you could not make out, or one that does not plainly say yes, is not a " +
         "confirmation -- ask again (\"Sorry, was that a yes?\"), and if they correct you, read the corrected " +
-        "details back before you go on. If the customer asks to be called back without saying when, ask once " +
-        "when would suit them before you close, and say that time back to them in your goodbye.";
+        "details back before you go on. If the customer says now is not a good time, offer to call them back " +
+        "unless they have made clear they are not interested at all. If they ask to be called back, or accept " +
+        "the offer, without saying when, ask once when would suit them before you close, and say that time back " +
+        "to them in your goodbye.";
 
     /// <summary>
     /// The same guidance under its own heading, for a system prompt that is assembled in sections.

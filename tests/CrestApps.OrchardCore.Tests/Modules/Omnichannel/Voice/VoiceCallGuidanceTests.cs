@@ -21,6 +21,13 @@ public sealed class VoiceCallGuidanceTests
     public void ACallbackWithoutATime_IsAskedWhenBeforeTheGoodbye()
     {
         // Live, a customer said "can you call me later?" and the model said goodbye and hung up without asking when.
-        Assert.Contains("called back without saying when, ask once", VoiceCallGuidance.EndingTheCall, StringComparison.Ordinal);
+        Assert.Contains("without saying when, ask once", VoiceCallGuidance.EndingTheCall, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void NotRightNow_IsAnsweredWithAnOfferToCallBack()
+    {
+        // Live, "no, not right now" was wished a good day and closed as finished, so the lead was never called again.
+        Assert.Contains("now is not a good time, offer to call them back", VoiceCallGuidance.EndingTheCall, StringComparison.Ordinal);
     }
 }
