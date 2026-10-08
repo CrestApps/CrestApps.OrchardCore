@@ -139,16 +139,20 @@ public sealed partial class VoiceAgentConversationLoop
         var clock = services.GetRequiredService<IClock>();
         var session = services.GetRequiredService<ISession>();
 
-        var profile = await profileManager.FindByIdAsync(activity.AIProfileId ?? string.Empty);
+        var flowSettings = string.IsNullOrWhiteSpace(activity.SubjectContentType)
+            ? null
+            : await flowSettingsService.FindConfiguredFlowSettingsAsync(activity.SubjectContentType);
+
+        // The profile the call ran on: the activity's own, or its subject flow's when the load did not set one -- the
+        // same fallback the call itself used when it was answered. Looked up by the activity's alone, an activity
+        // loaded without one could not be concluded at all (the lookup refuses an empty id).
+        var profileId = !string.IsNullOrWhiteSpace(activity.AIProfileId) ? activity.AIProfileId : flowSettings?.ProfileId;
+        var profile = string.IsNullOrWhiteSpace(profileId) ? null : await profileManager.FindByIdAsync(profileId);
 
         if (profile is null)
         {
             return;
         }
-
-        var flowSettings = string.IsNullOrWhiteSpace(activity.SubjectContentType)
-            ? null
-            : await flowSettingsService.FindConfiguredFlowSettingsAsync(activity.SubjectContentType);
 
         // Dispositions the AI may choose from: those wired to the subject's actions, falling back to all
         // configured dispositions so a call is never left without a way to be classified.

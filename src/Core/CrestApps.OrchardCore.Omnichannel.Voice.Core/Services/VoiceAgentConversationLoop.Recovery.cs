@@ -1,9 +1,11 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell.Scope;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 
@@ -56,6 +58,19 @@ public sealed partial class VoiceAgentConversationLoop
             try
             {
                 await ConcludeAsync(scope.ServiceProvider, activityId);
+
+                // A call that could not be reviewed -- no profile left to review it with, say -- is failed rather than
+                // left open, or the sweep finds it again every few minutes for ever.
+                var store = scope.ServiceProvider.GetRequiredService<IOmnichannelActivityStore>();
+                var concluded = await store.FindByIdAsync(activityId);
+
+                if (concluded is not null && !concluded.Status.IsTerminal())
+                {
+                    concluded.Status = ActivityStatus.Failed;
+                    concluded.TerminalReasonCode = StrandedReasonCode;
+                    concluded.CompletedUtc ??= scope.ServiceProvider.GetRequiredService<IClock>().UtcNow;
+                    await store.UpdateAsync(concluded);
+                }
             }
             catch (Exception ex)
             {
