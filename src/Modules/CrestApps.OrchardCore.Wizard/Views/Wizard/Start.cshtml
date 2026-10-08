@@ -2,6 +2,11 @@
 
 @model WizardViewModel
 
+@* The generic wizard host does not know the name of the wizard it runs, so its trail leaves the browser title alone. *@
+<zone Name="Title">
+    <breadcrumb name="WizardStart" title="@T["Wizard"]" page-title="false" />
+</zone>
+
 <form id="wizard-form" method="post" asp-route="@CrestApps.OrchardCore.Wizard.WizardConstants.RouteNames.Start" asp-route-wizardType="@Model.WizardType">
 
     <input type="hidden" name="wizardType" value="@Model.WizardType" />

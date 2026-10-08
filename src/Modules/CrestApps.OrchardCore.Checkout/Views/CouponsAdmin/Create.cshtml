@@ -1,7 +1,12 @@
+@using CrestApps.OrchardCore.Checkout.Core
 @using CrestApps.OrchardCore.Checkout.ViewModels
 @model CouponEditViewModel
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["Add coupon"])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="CheckoutCouponsCreate" title="@T["Add coupon"]">
+        <breadcrumb-item id="CheckoutCoupons" action="Index" controller="CouponsAdmin" area="CrestApps.OrchardCore.Checkout" permission="@CheckoutPermissions.ManageCoupons.Name">@T["Coupons"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
 
 <form asp-action="Create" method="post">
     <partial name="_Editor" model="Model" />

@@ -6,6 +6,10 @@
 
 @inject IContentItemDisplayManager DisplayManager
 
+<zone Name="Title">
+    <breadcrumb name="SubscriptionsServicePlans" title="@T["Service plans"]" />
+</zone>
+
 @if (Model.ServicePlans == null || Model.ServicePlans.Count == 0)
 {
     <div class="alert alert-info text-center" role="alert">

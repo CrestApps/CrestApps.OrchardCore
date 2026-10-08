@@ -2,6 +2,11 @@
 
 @model WizardViewModel
 
+@* The generic wizard host does not know the name of the wizard it runs, so its trail leaves the browser title alone. *@
+<zone Name="Title">
+    <breadcrumb name="WizardConfirmation" title="@T["Confirmation"]" page-title="false" />
+</zone>
+
 @if (Model.Content != null)
 {
     @await DisplayAsync(Model.Content)

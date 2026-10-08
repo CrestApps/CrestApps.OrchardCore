@@ -1,7 +1,13 @@
+@using CrestApps.OrchardCore.Subscriptions.Core
 @using CrestApps.OrchardCore.Subscriptions.Models
+@using OrchardCore.DisplayManagement.Html
 @model Subscription
 
-<zone Name="Title"><h1>@RenderTitleSegments(Model.Title)</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="SubscriptionsAgreementsDetail" title="@(new HtmlContentString(Model.Title ?? string.Empty))">
+        <breadcrumb-item id="SubscriptionsAgreements" action="Index" controller="SubscriptionAgreements" area="CrestApps.OrchardCore.Subscriptions" permission="@SubscriptionPermissions.ManageSubscriptions.Name">@T["Subscriptions"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
 
 <div class="card mb-3">
     <div class="card-body">

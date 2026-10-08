@@ -1,3 +1,5 @@
+@using CrestApps.OrchardCore.Transactions.Core
+
 @model RefundRequestViewModel
 
 @{
@@ -5,7 +7,11 @@
     var settled = attempt.ConfirmedAmount + attempt.ConfirmedTaxAmount;
 }
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["Refund payment"])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="TransactionsPaymentsRefund" title="@T["Refund payment"]">
+        <breadcrumb-item id="TransactionsPayments" action="Index" controller="PaymentsAdmin" area="CrestApps.OrchardCore.Transactions" permission="@TransactionsPermissions.ManageRefunds.Name">@T["Payments"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
 
 <div class="card mb-3">
     <div class="card-body">
