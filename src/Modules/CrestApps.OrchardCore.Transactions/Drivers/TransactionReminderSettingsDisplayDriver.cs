@@ -42,6 +42,7 @@ public sealed class TransactionReminderSettingsDisplayDriver : SiteDisplayDriver
             model.FirstReminderDelayDays = settings.FirstReminderDelayDays;
             model.ReminderIntervalDays = settings.ReminderIntervalDays;
             model.MaxReminders = settings.MaxReminders;
+            model.UpcomingReminderDays = settings.UpcomingReminderDays;
         }).Location("Content:1")
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TransactionsPermissions.ManageTransactionSettings))
         .OnGroup(SettingsGroupId);
@@ -65,6 +66,7 @@ public sealed class TransactionReminderSettingsDisplayDriver : SiteDisplayDriver
         settings.FirstReminderDelayDays = Math.Max(0, model.FirstReminderDelayDays);
         settings.ReminderIntervalDays = Math.Max(1, model.ReminderIntervalDays);
         settings.MaxReminders = Math.Max(0, model.MaxReminders);
+        settings.UpcomingReminderDays = Math.Max(0, model.UpcomingReminderDays);
 
         return Edit(site, settings, context);
     }

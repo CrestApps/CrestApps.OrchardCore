@@ -74,3 +74,17 @@ public sealed class NotificationStartup : StartupBase
         services.AddSingleton<IBackgroundTask, TransactionReminderBackgroundTask>();
     }
 }
+
+/// <summary>
+/// Registers the receipts sent after every payment applied to a transaction, and the printable receipt page.
+/// </summary>
+[Feature(TransactionsConstants.Features.Receipts)]
+public sealed class ReceiptsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<ITransactionReceiptBuilder, TransactionReceiptBuilder>();
+        services.AddScoped<ITransactionPaymentHandler, PaymentReceiptTransactionPaymentHandler>();
+    }
+}

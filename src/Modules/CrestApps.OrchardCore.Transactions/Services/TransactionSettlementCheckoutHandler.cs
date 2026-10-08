@@ -4,8 +4,10 @@ using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Payments;
+using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
@@ -23,6 +25,7 @@ public sealed class TransactionSettlementCheckoutHandler : CheckoutHandlerBase
 {
     private readonly ITransactionManager _transactionManager;
     private readonly IPaymentAttemptStore _paymentAttemptStore;
+    private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -33,18 +36,21 @@ public sealed class TransactionSettlementCheckoutHandler : CheckoutHandlerBase
     /// </summary>
     /// <param name="transactionManager">The transaction manager.</param>
     /// <param name="paymentAttemptStore">The durable payment-attempt ledger used to read confirmed amounts.</param>
+    /// <param name="serviceProvider">The service provider the payment handlers are resolved from when they are needed.</param>
     /// <param name="clock">The clock used for settlement timestamps.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public TransactionSettlementCheckoutHandler(
         ITransactionManager transactionManager,
         IPaymentAttemptStore paymentAttemptStore,
+        IServiceProvider serviceProvider,
         IClock clock,
         ILogger<TransactionSettlementCheckoutHandler> logger,
         IStringLocalizer<TransactionSettlementCheckoutHandler> stringLocalizer)
     {
         _transactionManager = transactionManager;
         _paymentAttemptStore = paymentAttemptStore;
+        _serviceProvider = serviceProvider;
         _clock = clock;
         _logger = logger;
         S = stringLocalizer;
@@ -88,6 +94,10 @@ public sealed class TransactionSettlementCheckoutHandler : CheckoutHandlerBase
                         : transaction.Title,
                     Amount = transaction.OutstandingAmount,
                     Plan = null,
+
+                    // The transaction already carries its own tax, decided when it was raised. Settling it is
+                    // paying that total, not a new sale, so it must not be taxed a second time.
+                    ExcludeFromTax = true,
                 },
             ],
         });
@@ -177,15 +187,21 @@ public sealed class TransactionSettlementCheckoutHandler : CheckoutHandlerBase
             transaction.SettledUtc = now;
         }
 
+        var payments = new List<TransactionEvent>();
+
         foreach (var attempt in newAttempts)
         {
-            transaction.Events.Add(new TransactionEvent
-            {
-                CreatedUtc = now,
-                Type = TransactionEventType.PaymentRecorded,
-                PaymentAttemptId = attempt.ItemId,
-                Message = S["Recorded a payment of {0} {1} against the transaction from checkout session '{2}' (payment attempt '{3}').", CurrencyScale.Format(attempt.ConfirmedAmount + attempt.ConfirmedTaxAmount, transaction.Currency), transaction.Currency, session.SessionId, attempt.ItemId].Value,
-            });
+            var paid = attempt.ConfirmedAmount + attempt.ConfirmedTaxAmount;
+            var payment = TransactionPaymentHandlerExtensions.CreatePaymentEvent(
+                now,
+                paid,
+                TransactionsConstants.SettlementMethods.Online,
+                S["Recorded a payment of {0} {1} against the transaction from checkout session '{2}' (payment attempt '{3}').", CurrencyScale.Format(paid, transaction.Currency), transaction.Currency, session.SessionId, attempt.ItemId].Value);
+
+            payment.PaymentAttemptId = attempt.ItemId;
+
+            transaction.Events.Add(payment);
+            payments.Add(payment);
         }
 
         try
@@ -203,6 +219,10 @@ public sealed class TransactionSettlementCheckoutHandler : CheckoutHandlerBase
         {
             _logger.LogDebug("Transaction '{TransactionId}' was settled online through checkout session '{SessionId}'.", transaction.ItemId, session.SessionId);
         }
+
+        // Resolved here rather than injected: a handler may itself start a payment through the checkout, and the
+        // checkout is what runs this handler, so injecting them would make the two depend on each other.
+        await _serviceProvider.GetServices<ITransactionPaymentHandler>().PaymentRecordedAsync(transaction, payments, _logger);
     }
 
     private static bool IsTransactionReference(string referenceType)

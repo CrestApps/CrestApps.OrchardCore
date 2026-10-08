@@ -121,6 +121,18 @@ public sealed class TransactionStore : DocumentCatalog<Transaction, TransactionI
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<Transaction>> GetComingDueAsync(DateTime afterUtc, DateTime untilUtc, CancellationToken cancellationToken = default)
+    {
+        var records = await Session.Query<Transaction, TransactionIndex>(
+            x => (x.Status == TransactionStatus.Pending || x.Status == TransactionStatus.Outstanding || x.Status == TransactionStatus.PartiallyPaid) &&
+                x.DueUtc != null && x.DueUtc > afterUtc && x.DueUtc <= untilUtc,
+            collection: CollectionName)
+            .ListAsync(cancellationToken);
+
+        return records.ToArray();
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyList<Transaction>> GetDueForRenewalAsync(DateTime asOfUtc, CancellationToken cancellationToken = default)
     {
         // A canceled agreement and one whose next cycle already exists both map NextCycleUtc to null, so the

@@ -22,9 +22,10 @@ namespace CrestApps.OrchardCore.Stripe.Services;
 /// authoritative API rather than trusting a cached webhook so an obligation is never marked paid when the
 /// gateway actually failed.
 /// </summary>
-public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, ICheckoutPaymentRefundProvider
+public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, ICheckoutPaymentRefundProvider, ICheckoutSavedPaymentMethodProvider
 {
     private readonly IStripePaymentIntentService _paymentIntentService;
+    private readonly IStripePaymentMethodService _paymentMethodService;
     private readonly IStripeSubscriptionService _subscriptionService;
     private readonly IStripeRefundService _refundService;
     private readonly IStripeCheckoutCustomerResolver _customerResolver;
@@ -38,6 +39,7 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
     /// Initializes a new instance of the <see cref="StripeCheckoutPaymentProvider"/> class.
     /// </summary>
     /// <param name="paymentIntentService">The Stripe PaymentIntent service.</param>
+    /// <param name="paymentMethodService">The Stripe payment method service, used to describe a saved card.</param>
     /// <param name="subscriptionService">The Stripe subscription service, used to verify recurring obligations.</param>
     /// <param name="refundService">The Stripe refund service.</param>
     /// <param name="customerResolver">The resolver for the customer this checkout belongs to.</param>
@@ -47,6 +49,7 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
     /// <param name="stringLocalizer">The string localizer used for the display name.</param>
     public StripeCheckoutPaymentProvider(
         IStripePaymentIntentService paymentIntentService,
+        IStripePaymentMethodService paymentMethodService,
         IStripeSubscriptionService subscriptionService,
         IStripeRefundService refundService,
         IStripeCheckoutCustomerResolver customerResolver,
@@ -56,6 +59,7 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
         IStringLocalizer<StripeCheckoutPaymentProvider> stringLocalizer)
     {
         _paymentIntentService = paymentIntentService;
+        _paymentMethodService = paymentMethodService;
         _subscriptionService = subscriptionService;
         _refundService = refundService;
         _customerResolver = customerResolver;
@@ -95,6 +99,9 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
         SupportsCombinedOneTimeAndRecurring = true,
         CollectsTaxDynamically = false,
         SupportsRefunds = true,
+
+        // A card authenticated for future use while the payer is present can be charged again without them.
+        SupportsSavedPaymentMethods = true,
     };
 
     /// <inheritdoc/>
@@ -109,6 +116,21 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
         // tax it determined, so the intent is created for base + tax.
         var grossAmount = attempt.ExpectedAmount + attempt.ExpectedTaxAmount;
 
+        if (CheckoutPaymentDataKeys.IsSet(context.ProviderData, CheckoutPaymentDataKeys.OffSession))
+        {
+            return await ChargeSavedPaymentMethodAsync(context, grossAmount);
+        }
+
+        var paymentMethodId = GetProviderValue(context.ProviderData, StripeRecurringPaymentProvider.PaymentMethodDataKey);
+        var savePaymentMethod = CheckoutPaymentDataKeys.IsSet(context.ProviderData, CheckoutPaymentDataKeys.SavePaymentMethod);
+
+        if (savePaymentMethod && string.IsNullOrEmpty(paymentMethodId))
+        {
+            // A card can only be kept if the browser tokenized it first. Taking the payment anyway would leave
+            // nothing to charge later, which the caller asked for and would only find out about on the due date.
+            return PaymentBeginResult.Failure(S["The card could not be saved for later payments. Please enter it again."]);
+        }
+
         try
         {
             // When the same checkout also establishes a recurring agreement, the browser tokenizes one
@@ -119,14 +141,24 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
             var customerId = await _customerResolver.ResolveAsync(
                 context.Session,
                 attempt.SessionId,
-                GetProviderValue(context.ProviderData, StripeRecurringPaymentProvider.PaymentMethodDataKey),
+                paymentMethodId,
                 GetProviderValue(context.ProviderData, StripeRecurringPaymentProvider.CustomerDataKey));
+
+            if (savePaymentMethod && string.IsNullOrEmpty(customerId))
+            {
+                return PaymentBeginResult.Failure(S["The card could not be saved for later payments. Please try again."]);
+            }
 
             var response = await _paymentIntentService.CreateForCheckoutAsync(new CreateCheckoutPaymentIntentRequest
             {
                 Amount = grossAmount,
                 Currency = attempt.Currency,
                 CustomerId = customerId,
+
+                // A card that is kept is tied to the intent, so the one the payer authenticates now is the one
+                // charged later.
+                PaymentMethodId = savePaymentMethod ? paymentMethodId : null,
+                SaveForOffSessionUse = savePaymentMethod,
 
                 // A stable idempotency key makes retrying BeginAsync return the same PaymentIntent instead
                 // of creating a duplicate charge.
@@ -299,6 +331,112 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
 
             return PaymentCancelResult.Failure(ex.Message);
         }
+    }
+
+    /// <inheritdoc/>
+    public async Task<SavedPaymentMethod> GetSavedPaymentMethodAsync(PaymentAttempt attempt, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(attempt);
+
+        if (string.IsNullOrEmpty(attempt.ProviderReference) || IsSubscriptionReference(attempt.ProviderReference))
+        {
+            return null;
+        }
+
+        var intent = await _paymentIntentService.RetrieveAsync(new RetrievePaymentIntentRequest
+        {
+            PaymentIntentId = attempt.ProviderReference,
+        });
+
+        // Only a payment authenticated for future use left a card that can be charged without the customer. A
+        // card used for one charge is attached to nothing Stripe would let us charge again.
+        if (intent is null ||
+            !string.Equals(intent.SetupFutureUsage, "off_session", StringComparison.Ordinal) ||
+            string.IsNullOrEmpty(intent.CustomerId) ||
+            string.IsNullOrEmpty(intent.PaymentMethodId))
+        {
+            return null;
+        }
+
+        var savedPaymentMethod = new SavedPaymentMethod
+        {
+            ProviderKey = Key,
+            CustomerReference = intent.CustomerId,
+            PaymentMethodReference = intent.PaymentMethodId,
+        };
+
+        var information = await _paymentMethodService.GetInformationAsync(intent.PaymentMethodId);
+
+        if (information?.Card is { } card)
+        {
+            savedPaymentMethod.Brand = card.Brand;
+            savedPaymentMethod.Last4 = card.LastFour;
+            savedPaymentMethod.ExpirationMonth = card.ExpirationMonth > 0 ? (int)card.ExpirationMonth : null;
+            savedPaymentMethod.ExpirationYear = card.ExpirationYear > 0 ? (int)card.ExpirationYear : null;
+        }
+
+        return savedPaymentMethod;
+    }
+
+    // Charges a card kept on a customer, server-side. There is no browser to confirm anything, so the result is
+    // final at once: accepted (and still verified against Stripe before it counts as paid) or declined.
+    private async Task<PaymentBeginResult> ChargeSavedPaymentMethodAsync(BeginPaymentContext context, decimal grossAmount)
+    {
+        var attempt = context.Attempt;
+        var customerId = GetProviderValue(context.ProviderData, CheckoutPaymentDataKeys.SavedCustomerReference);
+        var paymentMethodId = GetProviderValue(context.ProviderData, CheckoutPaymentDataKeys.SavedPaymentMethodReference);
+
+        if (string.IsNullOrEmpty(customerId) || string.IsNullOrEmpty(paymentMethodId))
+        {
+            return PaymentBeginResult.Failure(S["There is no saved card to charge."]);
+        }
+
+        ChargeOffSessionResponse response;
+
+        try
+        {
+            response = await _paymentIntentService.ChargeOffSessionAsync(new ChargeOffSessionRequest
+            {
+                Amount = grossAmount,
+                Currency = attempt.Currency,
+                CustomerId = customerId,
+                PaymentMethodId = paymentMethodId,
+                IdempotencyKey = attempt.IdempotencyKey,
+                Metadata = new Dictionary<string, string>
+                {
+                    ["checkout_attempt_id"] = attempt.ItemId,
+                    ["checkout_session_id"] = attempt.SessionId,
+                    ["off_session"] = "true",
+                },
+            });
+        }
+        catch (Exception ex)
+        {
+            // A transport failure says nothing about the card. It is reported as a failure to start, not a
+            // decline, so the caller tries again instead of telling the customer their card was refused.
+            _logger.LogError(ex, "Failed to charge a saved Stripe payment method for checkout attempt '{AttemptId}'.", attempt.ItemId);
+
+            return PaymentBeginResult.Failure(ex.Message);
+        }
+
+        if (!response.Succeeded)
+        {
+            var message = response.RequiresAuthentication
+                ? S["The card's bank asked the cardholder to approve this payment, which cannot be done without them. The customer needs to pay it themselves."].Value
+                : response.ErrorMessage ?? S["The card was declined."].Value;
+
+            return PaymentBeginResult.Decline(message, response.PaymentIntentId);
+        }
+
+        return new PaymentBeginResult
+        {
+            Succeeded = true,
+            ProviderReference = response.PaymentIntentId,
+
+            // Confirmed already: nothing for a browser to do. Settlement is still decided by verifying the
+            // intent against Stripe, never by this answer.
+            RequiresAction = false,
+        };
     }
 
     // Stripe object ids are prefixed by type, so the prefix is what tells a subscription agreement apart from

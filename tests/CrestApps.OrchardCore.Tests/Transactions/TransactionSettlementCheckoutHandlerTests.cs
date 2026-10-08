@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Transactions;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -304,11 +305,21 @@ public sealed class TransactionSettlementCheckoutHandlerTests
             UpdatedUtc = _now,
         };
 
-    private static TransactionSettlementCheckoutHandler CreateHandler(FakeTransactionStore store, InMemoryPaymentAttemptStore attempts = null)
-        => new(
+    private static TransactionSettlementCheckoutHandler CreateHandler(FakeTransactionStore store, InMemoryPaymentAttemptStore attempts = null, params ITransactionPaymentHandler[] paymentHandlers)
+    {
+        var services = new ServiceCollection();
+
+        foreach (var paymentHandler in paymentHandlers)
+        {
+            services.AddSingleton(paymentHandler);
+        }
+
+        return new(
             TransactionManagerFactory.Create(store),
             attempts ?? new InMemoryPaymentAttemptStore(),
+            services.BuildServiceProvider(),
             new TestClock(_now),
             NullLogger<TransactionSettlementCheckoutHandler>.Instance,
             new PassThroughStringLocalizer<TransactionSettlementCheckoutHandler>());
+    }
 }

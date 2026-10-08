@@ -24,4 +24,9 @@ public class TransactionReminderSettingsViewModel
     /// Gets or sets the maximum number of reminders to send for a single transaction.
     /// </summary>
     public int MaxReminders { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many days before a payment falls due the owner is told it is coming due.
+    /// </summary>
+    public int UpcomingReminderDays { get; set; }
 }

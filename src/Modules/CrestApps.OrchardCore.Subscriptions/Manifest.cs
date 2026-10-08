@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Products.Core;
 using CrestApps.OrchardCore.Receipts.Core;
 using CrestApps.OrchardCore.Subscriptions.Core;
+using CrestApps.OrchardCore.Transactions;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -44,5 +45,20 @@ using OrchardCore.Modules.Manifest;
 
         // Tenants brings the setup services that create a site.
         "OrchardCore.Tenants",
+    ]
+)]
+
+[assembly: Feature(
+    Name = "Subscriptions - Installment Plans",
+    Id = SubscriptionConstants.Features.Installments,
+    Description = "Lets an administrator set up a payment plan for a customer: take a down payment by card, then collect a fixed number of scheduled payments, charged to the saved card or invoiced, with reminders and receipts.",
+    Category = "Subscriptions",
+    Dependencies =
+    [
+        SubscriptionConstants.Features.Area,
+
+        // Every payment on a plan is a ledger transaction, so the customer sees and pays them like any other.
+        TransactionsConstants.Features.Area,
+        CheckoutConstants.Features.Area,
     ]
 )]

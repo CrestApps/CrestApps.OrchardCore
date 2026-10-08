@@ -19,6 +19,8 @@
     <PackageReference Include="OrchardCore.Users.Core" />
     <PackageReference Include="OrchardCore.Setup.Abstractions" />
     <PackageReference Include="OrchardCore.Workflows.Abstractions" />
+    <PackageReference Include="OrchardCore.Notifications.Abstractions" />
+    <PackageReference Include="OrchardCore.Notifications.Core" />
   </ItemGroup>
 
   <ItemGroup>

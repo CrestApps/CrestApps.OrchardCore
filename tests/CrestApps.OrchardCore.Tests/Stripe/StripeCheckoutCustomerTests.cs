@@ -182,6 +182,7 @@ public sealed class StripeCheckoutCustomerTests
 
         return new StripeCheckoutPaymentProvider(
             intentService,
+            Mock.Of<IStripePaymentMethodService>(),
             Mock.Of<IStripeSubscriptionService>(),
             Mock.Of<IStripeRefundService>(),
             new StripeCheckoutCustomerResolver(customerService.Object),

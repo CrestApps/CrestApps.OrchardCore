@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
@@ -42,6 +43,8 @@ public sealed class AdminController : Controller
     private readonly IClock _clock;
     private readonly INotifier _notifier;
     private readonly TransactionSourceOptions _sourceOptions;
+    private readonly IEnumerable<ITransactionPaymentHandler> _paymentHandlers;
+    private readonly ILogger _logger;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -67,6 +70,8 @@ public sealed class AdminController : Controller
         IClock clock,
         INotifier notifier,
         IOptions<TransactionSourceOptions> sourceOptions,
+        IEnumerable<ITransactionPaymentHandler> paymentHandlers,
+        ILogger<AdminController> logger,
         IHtmlLocalizer<AdminController> htmlLocalizer,
         IStringLocalizer<AdminController> stringLocalizer,
         ITransactionReminderService reminderService = null)
@@ -79,6 +84,8 @@ public sealed class AdminController : Controller
         _clock = clock;
         _notifier = notifier;
         _sourceOptions = sourceOptions.Value;
+        _paymentHandlers = paymentHandlers;
+        _logger = logger;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -319,14 +326,16 @@ public sealed class AdminController : Controller
             ? string.Empty
             : S[" Note: {0}", model.Note].Value;
 
-        transaction.Events.Add(new TransactionEvent
-        {
-            CreatedUtc = now,
-            Type = TransactionEventType.PaymentRecorded,
-            Message = S["An offline payment of {0} {1} was recorded.{2}", transaction.Currency, CurrencyScale.Format(applied, transaction.Currency), noteSuffix].Value,
-            ActorId = User.FindFirstValue(ClaimTypes.NameIdentifier),
-            ActorName = await GetCurrentUserNameAsync(),
-        });
+        var payment = TransactionPaymentHandlerExtensions.CreatePaymentEvent(
+            now,
+            applied,
+            TransactionsConstants.SettlementMethods.Offline,
+            S["An offline payment of {0} {1} was recorded.{2}", CurrencyScale.Format(applied, transaction.Currency), transaction.Currency, noteSuffix].Value);
+
+        payment.ActorId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        payment.ActorName = await GetCurrentUserNameAsync();
+
+        transaction.Events.Add(payment);
 
         if (transaction.OutstandingAmount <= 0m)
         {
@@ -346,6 +355,7 @@ public sealed class AdminController : Controller
 
         if (await TrySaveAsync(transaction))
         {
+            await _paymentHandlers.PaymentRecordedAsync(transaction, [payment], _logger);
             await _notifier.SuccessAsync(H["The payment was recorded."]);
         }
 
@@ -380,22 +390,33 @@ public sealed class AdminController : Controller
 
         var now = _clock.UtcNow;
 
+        // Marking paid settles whatever was still owed, so that remainder is the payment it records.
+        var settled = transaction.OutstandingAmount;
+
         transaction.AmountPaid = transaction.TotalAmount;
         transaction.Status = TransactionStatus.Paid;
         transaction.SettledUtc = now;
         transaction.UpdatedUtc = now;
         transaction.SettlementMethod = TransactionsConstants.SettlementMethods.Offline;
-        transaction.Events.Add(new TransactionEvent
-        {
-            CreatedUtc = now,
-            Type = TransactionEventType.StatusChanged,
-            Message = S["The transaction was marked as paid."].Value,
-            ActorId = User.FindFirstValue(ClaimTypes.NameIdentifier),
-            ActorName = await GetCurrentUserNameAsync(),
-        });
+
+        var payment = TransactionPaymentHandlerExtensions.CreatePaymentEvent(
+            now,
+            settled,
+            TransactionsConstants.SettlementMethods.Offline,
+            S["The transaction was marked as paid."].Value);
+
+        payment.ActorId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        payment.ActorName = await GetCurrentUserNameAsync();
+
+        transaction.Events.Add(payment);
 
         if (await TrySaveAsync(transaction))
         {
+            if (settled > 0m)
+            {
+                await _paymentHandlers.PaymentRecordedAsync(transaction, [payment], _logger);
+            }
+
             await _notifier.SuccessAsync(H["The transaction was marked as paid."]);
         }
 

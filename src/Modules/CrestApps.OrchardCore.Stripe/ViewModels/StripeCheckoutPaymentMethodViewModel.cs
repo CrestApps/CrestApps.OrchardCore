@@ -30,4 +30,9 @@ public class StripeCheckoutPaymentMethodViewModel
     /// the card before the payment starts. A checkout with nothing recurring skips that round trip.
     /// </remarks>
     public bool HasRecurringItems { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the card is kept for later charges without the payer present.
+    /// </summary>
+    public bool SavePaymentMethod { get; set; }
 }

@@ -30,6 +30,8 @@ public static class TransactionsConstants
         /// It depends on <c>OrchardCore.Notifications</c> so reminders honor each owner's channel preference.
         /// </summary>
         public const string Notification = "CrestApps.OrchardCore.Transactions.Notification";
+
+        public const string Receipts = "CrestApps.OrchardCore.Transactions.Receipts";
     }
 
     /// <summary>

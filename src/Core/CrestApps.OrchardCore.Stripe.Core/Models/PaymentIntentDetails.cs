@@ -40,4 +40,25 @@ public sealed class PaymentIntentDetails
     /// Gets or sets the identifier of the latest charge produced by the PaymentIntent, when available.
     /// </summary>
     public string LatestChargeId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Stripe customer the PaymentIntent was created for, when any.
+    /// </summary>
+    public string CustomerId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the payment method the PaymentIntent was confirmed with, when any.
+    /// </summary>
+    public string PaymentMethodId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the PaymentIntent's <c>setup_future_usage</c>, which is <c>off_session</c> when the payment
+    /// method was kept for later charges without the customer present.
+    /// </summary>
+    public string SetupFutureUsage { get; set; }
+
+    /// <summary>
+    /// Gets or sets the explanation of the most recent failed confirmation, when any.
+    /// </summary>
+    public string LastPaymentErrorMessage { get; set; }
 }

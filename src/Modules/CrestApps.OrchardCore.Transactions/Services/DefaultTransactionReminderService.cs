@@ -14,9 +14,9 @@ using OrchardCore.Users.Services;
 namespace CrestApps.OrchardCore.Transactions.Services;
 
 /// <summary>
-/// Delivers outstanding-payment reminders. An authenticated owner is reached through the notification
-/// system so the reminder honors the owner's channel preference; a guest owner (who has no user account) is
-/// reached by email using the contact captured at purchase time, when the email feature is available.
+/// Delivers payment reminders. An authenticated owner is reached through the notification system so the
+/// reminder honors the owner's channel preference; a guest owner (who has no user account) is reached by email
+/// using the contact captured at purchase time, when the email feature is available.
 /// </summary>
 public sealed class DefaultTransactionReminderService : ITransactionReminderService
 {
@@ -68,15 +68,23 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
         }
 
         var amount = FormatAmount(transaction.OutstandingAmount, transaction.Currency);
-        var title = string.IsNullOrEmpty(transaction.Title)
-            ? S["your recent purchase"].Value
-            : transaction.Title;
+        var title = GetTitle(transaction);
+        var isGuest = transaction.OwnerKind == CustomerOwnerKind.Guest;
 
-        var delivered = transaction.OwnerKind == CustomerOwnerKind.Guest
-            ? await SendGuestReminderAsync(transaction, amount, title, cancellationToken)
-            : await SendAuthenticatedReminderAsync(transaction, amount, title, cancellationToken);
+        var reminder = new Reminder
+        {
+            Subject = S["Payment reminder: {0} outstanding", amount].Value,
+            Summary = S["You have an outstanding balance of {0} for {1}.", amount, title].Value,
+            Body = (transaction.DueUtc.HasValue, isGuest) switch
+            {
+                (true, false) => S["This is a reminder that you have an outstanding balance of {0} for {1}, due on {2:d}. Please sign in to settle it.", amount, title, transaction.DueUtc.Value].Value,
+                (false, false) => S["This is a reminder that you have an outstanding balance of {0} for {1}. Please sign in to settle it.", amount, title].Value,
+                (true, true) => S["This is a reminder that you have an outstanding balance of {0} for {1}, due on {2:d}. Please settle it at your earliest convenience.", amount, title, transaction.DueUtc.Value].Value,
+                (false, true) => S["This is a reminder that you have an outstanding balance of {0} for {1}. Please settle it at your earliest convenience.", amount, title].Value,
+            },
+        };
 
-        if (!delivered)
+        if (!await DeliverAsync(transaction, reminder, cancellationToken))
         {
             return false;
         }
@@ -96,7 +104,74 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
         return true;
     }
 
-    private async Task<bool> SendAuthenticatedReminderAsync(Transaction transaction, string amount, string title, CancellationToken cancellationToken)
+    /// <inheritdoc/>
+    public async Task<bool> SendUpcomingReminderAsync(Transaction transaction, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(transaction);
+
+        if (string.IsNullOrEmpty(transaction.OwnerId) || transaction.OutstandingAmount <= 0m || !transaction.DueUtc.HasValue)
+        {
+            return false;
+        }
+
+        var amount = FormatAmount(transaction.OutstandingAmount, transaction.Currency);
+        var title = GetTitle(transaction);
+        var dueUtc = transaction.DueUtc.Value;
+        var paymentMethod = transaction.AutoCollection?.PaymentMethodDescription;
+
+        // A payment that will be taken automatically needs no action, only notice: the owner should know which
+        // card is charged and when, so a charge is never a surprise and a card that will not work can be
+        // replaced in time. A payment the owner makes themselves needs a call to action instead.
+        var reminder = transaction.AutoCollection is not null
+            ? new Reminder
+            {
+                Subject = S["Upcoming payment: {0} on {1:d}", amount, dueUtc].Value,
+                Summary = string.IsNullOrEmpty(paymentMethod)
+                    ? S["{0} for {1} will be charged to your card on file on {2:d}.", amount, title, dueUtc].Value
+                    : S["{0} for {1} will be charged to {2} on {3:d}.", amount, title, paymentMethod, dueUtc].Value,
+                Body = string.IsNullOrEmpty(paymentMethod)
+                    ? S["This is a reminder that your scheduled payment of {0} for {1} will be charged to your card on file on {2:d}. You do not need to do anything. If the card has changed, please contact us before then.", amount, title, dueUtc].Value
+                    : S["This is a reminder that your scheduled payment of {0} for {1} will be charged to {2} on {3:d}. You do not need to do anything. If the card has changed, please contact us before then.", amount, title, paymentMethod, dueUtc].Value,
+            }
+            : new Reminder
+            {
+                Subject = S["Payment due on {1:d}: {0}", amount, dueUtc].Value,
+                Summary = S["A payment of {0} for {1} is due on {2:d}.", amount, title, dueUtc].Value,
+                Body = transaction.OwnerKind == CustomerOwnerKind.Guest
+                    ? S["This is a reminder that a payment of {0} for {1} is due on {2:d}.", amount, title, dueUtc].Value
+                    : S["This is a reminder that a payment of {0} for {1} is due on {2:d}. Please sign in to pay it by then.", amount, title, dueUtc].Value,
+            };
+
+        if (!await DeliverAsync(transaction, reminder, cancellationToken))
+        {
+            return false;
+        }
+
+        var now = _clock.UtcNow;
+
+        transaction.UpcomingReminderSentUtc = now;
+        transaction.UpdatedUtc = now;
+        transaction.Events.Add(new TransactionEvent
+        {
+            CreatedUtc = now,
+            Type = TransactionEventType.ReminderSent,
+            Message = S["A reminder that {0} is due on {1:d} was sent.", amount, dueUtc].Value,
+        });
+
+        return true;
+    }
+
+    private string GetTitle(Transaction transaction)
+        => string.IsNullOrEmpty(transaction.Title)
+            ? S["your recent purchase"].Value
+            : transaction.Title;
+
+    private Task<bool> DeliverAsync(Transaction transaction, Reminder reminder, CancellationToken cancellationToken)
+        => transaction.OwnerKind == CustomerOwnerKind.Guest
+            ? SendGuestReminderAsync(transaction, reminder, cancellationToken)
+            : SendAuthenticatedReminderAsync(transaction, reminder, cancellationToken);
+
+    private async Task<bool> SendAuthenticatedReminderAsync(Transaction transaction, Reminder reminder, CancellationToken cancellationToken)
     {
         var user = await _userService.GetUserByUniqueIdAsync(transaction.OwnerId);
 
@@ -109,11 +184,9 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
 
         var message = new NotificationMessage
         {
-            Subject = S["Payment reminder: {0} outstanding", amount],
-            Summary = S["You have an outstanding balance of {0} for {1}.", amount, title],
-            TextBody = transaction.DueUtc.HasValue
-                ? S["This is a reminder that you have an outstanding balance of {0} for {1}, due on {2:d}. Please sign in to settle it.", amount, title, transaction.DueUtc.Value].Value
-                : S["This is a reminder that you have an outstanding balance of {0} for {1}. Please sign in to settle it.", amount, title].Value,
+            Subject = reminder.Subject,
+            Summary = reminder.Summary,
+            TextBody = reminder.Body,
         };
 
         var result = await _notificationService.SendAsync(user, message, cancellationToken);
@@ -121,7 +194,7 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
         return result.SuccessfulCount > 0;
     }
 
-    private async Task<bool> SendGuestReminderAsync(Transaction transaction, string amount, string title, CancellationToken cancellationToken)
+    private async Task<bool> SendGuestReminderAsync(Transaction transaction, Reminder reminder, CancellationToken cancellationToken)
     {
         var owner = CustomerOwner.ForGuest(transaction.OwnerId);
         var guestContact = new CustomerContact
@@ -148,15 +221,11 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
             return false;
         }
 
-        var body = transaction.DueUtc.HasValue
-            ? S["This is a reminder that you have an outstanding balance of {0} for {1}, due on {2:d}. Please settle it at your earliest convenience.", amount, title, transaction.DueUtc.Value].Value
-            : S["This is a reminder that you have an outstanding balance of {0} for {1}. Please settle it at your earliest convenience.", amount, title].Value;
-
         var message = new MailMessage
         {
             To = contact.Email,
-            Subject = S["Payment reminder: {0} outstanding", amount].Value,
-            TextBody = body,
+            Subject = reminder.Subject,
+            TextBody = reminder.Body,
         };
 
         var result = await emailService.SendAsync(message, cancellationToken: cancellationToken);
@@ -178,5 +247,14 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
         return string.IsNullOrEmpty(currency)
             ? formatted
             : $"{currency} {formatted}";
+    }
+
+    private sealed class Reminder
+    {
+        public string Subject { get; init; }
+
+        public string Summary { get; init; }
+
+        public string Body { get; init; }
     }
 }

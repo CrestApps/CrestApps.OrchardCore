@@ -45,4 +45,11 @@ public sealed class PaymentProviderCapabilities
     /// Whether the provider supports refunding a settled payment.
     /// </summary>
     public bool SupportsRefunds { get; set; }
+
+    /// <summary>
+    /// Whether the provider can keep the payment method used for a payment so it can be charged again later
+    /// without the payer present, and can take such a charge. A provider that sets this implements
+    /// <see cref="ICheckoutSavedPaymentMethodProvider"/> and honors the <see cref="CheckoutPaymentDataKeys"/>.
+    /// </summary>
+    public bool SupportsSavedPaymentMethods { get; set; }
 }

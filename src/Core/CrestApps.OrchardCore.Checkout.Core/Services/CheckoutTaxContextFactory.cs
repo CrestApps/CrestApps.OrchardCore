@@ -27,7 +27,9 @@ public static class CheckoutTaxContextFactory
 
         foreach (var lineItem in invoice.LineItems ?? [])
         {
-            if (!IsDueNow(lineItem))
+            // A line whose tax was already decided (a balance being settled carries its own) is not taxed
+            // again; adding tax on top would charge it twice.
+            if (!IsDueNow(lineItem) || lineItem.ExcludeFromTax)
             {
                 continue;
             }

@@ -81,6 +81,7 @@ public sealed class CheckoutInvoiceBuilder
                     UnitPrice = billingItem.Amount,
                     Plan = billingItem.Plan,
                     PriceId = billingItem.PriceId,
+                    ExcludeFromTax = billingItem.ExcludeFromTax,
                 };
 
                 if (billingItem.Plan == null)

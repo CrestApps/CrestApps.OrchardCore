@@ -36,6 +36,7 @@ public sealed class StripeCheckoutPaymentMethodDisplayDriver : DisplayDriver<Che
             model.PublishableKey = _stripeOptions.PublishableKey;
             model.IsLive = _stripeOptions.IsLive;
             model.HasRecurringItems = method.Flow?.Session is not null && method.Flow.Session.TryGet<CheckoutInvoice>(out var invoice) && invoice.GetRecurringGroups().Count > 0;
+            model.SavePaymentMethod = method.SavePaymentMethod;
         })
         .Location("Content")
         .OnGroup(StripeConstants.ProcessorKey);

@@ -38,6 +38,12 @@ public sealed class CheckoutLineItem
     public string PriceId { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the line is left out of the tax determination, because its tax
+    /// was already decided elsewhere (see <see cref="BillingItem.ExcludeFromTax"/>).
+    /// </summary>
+    public bool ExcludeFromTax { get; set; }
+
+    /// <summary>
     /// Returns the line total rounded to the precision of the supplied currency. Rounding at the currency's
     /// own scale keeps zero-decimal (for example JPY) and three-decimal (for example KWD) currencies exact.
     /// </summary>

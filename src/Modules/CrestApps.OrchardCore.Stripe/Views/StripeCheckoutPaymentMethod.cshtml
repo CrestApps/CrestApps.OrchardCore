@@ -41,6 +41,7 @@
         cardElementSelector: '#stripe-checkout-card',
         errorSelector: '#stripe-checkout-card-errors',
         nameElement: '#stripe-checkout-name',
-        hasRecurringItems: @Model.HasRecurringItems.ToString().ToLowerInvariant()
+        hasRecurringItems: @Model.HasRecurringItems.ToString().ToLowerInvariant(),
+        savePaymentMethod: @Model.SavePaymentMethod.ToString().ToLowerInvariant()
     });
 </script>

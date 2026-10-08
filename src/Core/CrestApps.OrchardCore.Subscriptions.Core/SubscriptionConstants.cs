@@ -22,6 +22,38 @@ public static class SubscriptionConstants
     public const string TenantProvisioningCollectionName = "TenantProvisioning";
 
     /// <summary>
+    /// The YesSql collection installment plans are stored in.
+    /// </summary>
+    public const string InstallmentPlanCollectionName = "InstallmentPlan";
+
+    /// <summary>
+    /// Values shared by the installment plans feature.
+    /// </summary>
+    public static class InstallmentPlans
+    {
+        /// <summary>
+        /// The reference type on the ledger transactions that record a plan's payments; the reference id is the
+        /// plan's identifier.
+        /// </summary>
+        public const string ReferenceType = "InstallmentPlan";
+
+        /// <summary>
+        /// The source on the ledger transactions that record a plan's payments.
+        /// </summary>
+        public const string TransactionSource = "installment-plan";
+
+        /// <summary>
+        /// The site settings group of the installment plan settings.
+        /// </summary>
+        public const string SettingsGroupId = "installment-plans";
+
+        /// <summary>
+        /// The prefix of the distributed lock taken while a plan is changed.
+        /// </summary>
+        public const string LockPrefix = "INSTALLMENT_PLAN_";
+    }
+
+    /// <summary>
     /// The entitlement kinds shipped with the module. A kind selects the feature that applies what a
     /// subscription grants, so the subscription module never has to know what a role or a tenant is.
     /// </summary>
@@ -78,6 +110,11 @@ public static class SubscriptionConstants
         /// The feature identifier for selling Orchard Core tenants through the public checkout.
         /// </summary>
         public const string Tenants = "CrestApps.OrchardCore.Subscriptions.Tenants";
+
+        /// <summary>
+        /// The feature identifier for payment plans an administrator sets up for a customer.
+        /// </summary>
+        public const string Installments = "CrestApps.OrchardCore.Subscriptions.Installments";
     }
 
     /// <summary>

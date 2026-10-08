@@ -113,6 +113,17 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
                 {
                     newSession.Put(request.Contact);
                 }
+
+                // A session started for someone else belongs to them. Anything the store derived from the
+                // current request (an administrator's identity, or a guest token issued to the browser that
+                // happens to be making the call) does not describe this buyer, so it is dropped.
+                if (!string.IsNullOrEmpty(request.OwnerId))
+                {
+                    newSession.OwnerId = request.OwnerId;
+                    newSession.GuestTokenHash = null;
+                    newSession.IPAddress = null;
+                    newSession.AgentInfo = null;
+                }
             },
             cancellationToken);
 
@@ -182,7 +193,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
 
             foreach (var obligationId in expectedObligations)
             {
-                var step = await BeginObligationAsync(
+                var (step, providerError, declined) = await BeginObligationAsync(
                     session,
                     invoice,
                     provider,
@@ -199,7 +210,14 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
                     // request returns sees them and resumes instead of creating a second set.
                     await _session.SaveChangesAsync(cancellationToken);
 
-                    return PaymentBeginOutcome.Failure("The payment could not be started. Please try again or choose another payment method.");
+                    var failure = PaymentBeginOutcome.Failure(declined
+                        ? "The payment was declined. Please try again or choose another payment method."
+                        : "The payment could not be started. Please try again or choose another payment method.");
+
+                    failure.ProviderErrorMessage = providerError;
+                    failure.Declined = declined;
+
+                    return failure;
                 }
 
                 outcome.Steps.Add(step);
@@ -430,7 +448,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
 
     // Begins (or resumes) one obligation. An obligation that already has a non-failed attempt is resumed
     // rather than re-created, which is what makes a refreshed payment page or a double submit safe.
-    private async Task<PaymentBeginStep> BeginObligationAsync(
+    private async Task<(PaymentBeginStep Step, string ProviderError, bool Declined)> BeginObligationAsync(
         CheckoutSession session,
         CheckoutInvoice invoice,
         ICheckoutPaymentProvider provider,
@@ -447,17 +465,30 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         if (attempt?.State == PaymentAttemptState.Succeeded)
         {
             // Already paid. Nothing for the client to do for this obligation.
-            return new PaymentBeginStep
+            return (new PaymentBeginStep
             {
                 ObligationId = obligationId,
                 AttemptId = attempt.ItemId,
                 RequiresAction = false,
-            };
+            }, null, false);
         }
 
         if (attempt is null)
         {
             attempt = CreateAttempt(session, invoice, provider.Key, obligationId);
+
+            // A declined attempt is final, so a new one for the same obligation is a genuinely new charge. It
+            // needs its own idempotency key: reusing the declined attempt's key would make the gateway replay the
+            // decline instead of trying the payment method it is now given.
+            var declinedBefore = existingAttempts.Count(candidate =>
+                string.Equals(candidate.ObligationId, obligationId, StringComparison.Ordinal) &&
+                string.Equals(candidate.ProviderKey, provider.Key, StringComparison.OrdinalIgnoreCase) &&
+                candidate.State == PaymentAttemptState.Failed);
+
+            if (declinedBefore > 0)
+            {
+                attempt.IdempotencyKey += "_retry" + declinedBefore;
+            }
 
             // Persist BEFORE the provider is contacted. A crash between these two lines must leave a record
             // that the reconciliation sweep can resolve, not an invisible charge.
@@ -495,14 +526,30 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         {
             _logger.LogError(exception, "Provider '{ProviderKey}' threw while beginning obligation '{ObligationId}' of checkout '{SessionId}'.", provider.Key, obligationId, session.SessionId);
 
-            return null;
+            return (null, null, false);
         }
 
         if (!result.Succeeded)
         {
             _logger.LogWarning("Provider '{ProviderKey}' refused to begin obligation '{ObligationId}' of checkout '{SessionId}': {Error}", provider.Key, obligationId, session.SessionId, result.ErrorMessage);
 
-            return null;
+            if (result.Declined)
+            {
+                // The gateway refused the money, so this attempt is over. Recording that, with the gateway's
+                // reason and reference, keeps the ledger truthful and stops a later begin from resuming an
+                // attempt that can never settle.
+                attempt.State = PaymentAttemptState.Failed;
+                attempt.FailureReason = result.ErrorMessage;
+
+                if (!string.IsNullOrEmpty(result.ProviderReference))
+                {
+                    attempt.ProviderReference = result.ProviderReference;
+                }
+
+                await _attemptStore.UpdateAsync(attempt, cancellationToken);
+            }
+
+            return (null, result.ErrorMessage, result.Declined);
         }
 
         // Record the provider's reference immediately so the remote resource can always be found again,
@@ -512,14 +559,14 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
 
         await _attemptStore.UpdateAsync(attempt, cancellationToken);
 
-        return new PaymentBeginStep
+        return (new PaymentBeginStep
         {
             ObligationId = obligationId,
             AttemptId = attempt.ItemId,
             ClientSecret = result.ClientSecret,
             RedirectUrl = result.RedirectUrl,
             RequiresAction = result.RequiresAction || !string.IsNullOrEmpty(result.RedirectUrl),
-        };
+        }, null, false);
     }
 
     // Establishes the recurring agreement for one interval. A provider whose capabilities claim recurring

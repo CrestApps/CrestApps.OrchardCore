@@ -69,6 +69,19 @@ public sealed class TransactionManager : CatalogManager<Transaction>, ITransacti
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<Transaction>> GetComingDueAsync(DateTime afterUtc, DateTime untilUtc, CancellationToken cancellationToken = default)
+    {
+        var transactions = await _store.GetComingDueAsync(afterUtc, untilUtc, cancellationToken);
+
+        foreach (var transaction in transactions)
+        {
+            await LoadAsync(transaction, cancellationToken);
+        }
+
+        return transactions;
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyList<Transaction>> GetDueForRenewalAsync(DateTime asOfUtc, CancellationToken cancellationToken = default)
     {
         var transactions = await _store.GetDueForRenewalAsync(asOfUtc, cancellationToken);
