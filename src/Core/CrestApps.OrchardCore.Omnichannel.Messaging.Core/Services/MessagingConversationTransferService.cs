@@ -3,9 +3,11 @@ using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Notifications;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 
@@ -29,7 +31,7 @@ public sealed class MessagingConversationTransferService : IMessagingConversatio
     public const int MaxHistoryEntries = 50;
 
     private readonly IMessagingConversationStore _conversationStore;
-    private readonly IMessagingConversationAuthorizationService _conversationAuthorizationService;
+    private readonly IAuthorizationService _authorizationService;
     private readonly IAgentProfileManager _agentProfileManager;
     private readonly IActivityQueueManager _queueManager;
     private readonly IAgentEntitlementPolicy _entitlementPolicy;
@@ -43,7 +45,7 @@ public sealed class MessagingConversationTransferService : IMessagingConversatio
     /// </summary>
     public MessagingConversationTransferService(
         IMessagingConversationStore conversationStore,
-        IMessagingConversationAuthorizationService conversationAuthorizationService,
+        IAuthorizationService authorizationService,
         IAgentProfileManager agentProfileManager,
         IEnumerable<IActivityQueueManager> queueManagers,
         IAgentEntitlementPolicy entitlementPolicy,
@@ -53,7 +55,7 @@ public sealed class MessagingConversationTransferService : IMessagingConversatio
         ILogger<MessagingConversationTransferService> logger)
     {
         _conversationStore = conversationStore;
-        _conversationAuthorizationService = conversationAuthorizationService;
+        _authorizationService = authorizationService;
         _agentProfileManager = agentProfileManager;
         // Queues belong to a feature the workspace does not require. Without it a conversation can still go to a
         // person, just not back to a queue.
@@ -85,7 +87,7 @@ public sealed class MessagingConversationTransferService : IMessagingConversatio
         }
 
         if (request.Principal is not null &&
-            !await _conversationAuthorizationService.AuthorizeAsync(request.Principal, conversation, ConversationOperation.Transfer, cancellationToken))
+            !await _authorizationService.AuthorizeConversationAsync(request.Principal, conversation, ConversationOperation.Transfer))
         {
             return MessagingTransferResult.Failed("You are not allowed to transfer this conversation.");
         }

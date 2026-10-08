@@ -40,13 +40,6 @@ public sealed class ChatAnalyticsAdminMenu : AdminNavigationProvider
                         .Action("Index", "ChatExtractedData", "CrestApps.OrchardCore.AI.Chat")
                         .LocalNav()
                     )
-                    .Add(S["AI Usage Analytics"], S["AI Usage Analytics"].PrefixPosition(), usageAnalytics => usageAnalytics
-                        .AddClass("ai-usage-analytics")
-                        .Id("aiUsageAnalytics")
-                        .Permission(ChatAnalyticsPermissionProvider.ViewChatAnalytics)
-                        .Action("Index", "UsageAnalytics", "CrestApps.OrchardCore.AI.Chat")
-                        .LocalNav()
-                    )
                     .Add(S["AI Chat Conversion Goals"], S["AI Chat Conversion Goals"].PrefixPosition(), conversionGoals => conversionGoals
                         .AddClass("chat-conversion-goals")
                         .Id("chatConversionGoals")

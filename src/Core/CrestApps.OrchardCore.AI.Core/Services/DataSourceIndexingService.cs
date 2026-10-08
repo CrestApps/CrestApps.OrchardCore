@@ -1,5 +1,6 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
@@ -542,7 +543,7 @@ public sealed class DataSourceIndexingService
             return;
         }
 
-        var embeddingGenerator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(deployment, builder => builder.UseDefaultResilience());
+        var embeddingGenerator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(deployment, builder => builder.UseDefaultResilience().UseUsageLabels(purpose: AIUsagePurposes.Indexing));
 
         if (embeddingGenerator == null)
         {
@@ -796,7 +797,7 @@ public sealed class DataSourceIndexingService
             return;
         }
 
-        var embeddingGenerator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(deployment, builder => builder.UseDefaultResilience());
+        var embeddingGenerator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(deployment, builder => builder.UseDefaultResilience().UseUsageLabels(purpose: AIUsagePurposes.Indexing));
 
         if (embeddingGenerator == null)
         {

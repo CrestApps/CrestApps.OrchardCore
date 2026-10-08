@@ -3,15 +3,16 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
-using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 using Microsoft.AspNetCore.Authorization;
-using Moq;
 using OrchardCore.Security;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Tests.Omnichannel.Messaging;
 
-public class SmsConversationAuthorizationServiceTests
+// A conversation is authorized against ViewAllMessagingConversations, the way Orchard Core authorizes a content item
+// against ViewContent: a supervisor holds it, and the handler grants anybody else the conversations that are theirs.
+public class MessagingConversationAuthorizationHandlerTests
 {
     private const string UserId = "user-1";
     private const string AgentId = "agent-1";
@@ -68,8 +69,10 @@ public class SmsConversationAuthorizationServiceTests
     [InlineData(ConversationOperation.View)]
     [InlineData(ConversationOperation.Claim)]
     [InlineData(ConversationOperation.Send)]
-    public async Task AuthorizeAsync_WhenPersonalThreadIsUnassigned_AllowsViewClaimAndSend(ConversationOperation operation)
+    public async Task AuthorizeAsync_WhenPersonalThreadHasNoOwner_DeniesAnAgent_BecauseItWaitsForASupervisorToTriage(ConversationOperation operation)
     {
+        // A message no route gave to an agent or a queue is nobody's: only a supervisor who sees every conversation
+        // may pick it up, not whichever agent opens it first.
         var conversation = CreatePersonalConversation(ownerId: null, assignedAgentId: null);
         conversation.AssignmentStatus = ConversationAssignmentStatus.Unassigned;
 
@@ -77,7 +80,37 @@ public class SmsConversationAuthorizationServiceTests
 
         var allowed = await service.AuthorizeAsync(CreatePrincipal(), conversation, operation, TestContext.Current.CancellationToken);
 
+        Assert.False(allowed);
+    }
+
+    [Theory]
+    [InlineData(ConversationOperation.View)]
+    [InlineData(ConversationOperation.Claim)]
+    [InlineData(ConversationOperation.Send)]
+    public async Task AuthorizeAsync_WhenPersonalThreadSentToTheCallerIsUnclaimed_AllowsViewClaimAndSend(ConversationOperation operation)
+    {
+        var conversation = CreatePersonalConversation(ownerId: AgentId, assignedAgentId: null);
+        var service = CreateService(canViewAll: false, agent: CreateAgent());
+
+        var allowed = await service.AuthorizeAsync(CreatePrincipal(), conversation, operation, TestContext.Current.CancellationToken);
+
         Assert.True(allowed);
+    }
+
+    [Theory]
+    [InlineData(ConversationOperation.View)]
+    [InlineData(ConversationOperation.Send)]
+    [InlineData(ConversationOperation.Claim)]
+    [InlineData(ConversationOperation.Transfer)]
+    public async Task AuthorizeAsync_WhenAColleagueClaimedAThreadSentToTheCaller_Denies(ConversationOperation operation)
+    {
+        // The endpoint is the caller's, but a colleague holds the conversation now: it is theirs, not the caller's.
+        var conversation = CreatePersonalConversation(ownerId: AgentId, assignedAgentId: OtherAgentId);
+        var service = CreateService(canViewAll: false, agent: CreateAgent());
+
+        var allowed = await service.AuthorizeAsync(CreatePrincipal(), conversation, operation, TestContext.Current.CancellationToken);
+
+        Assert.False(allowed);
     }
 
     [Fact]
@@ -130,6 +163,73 @@ public class SmsConversationAuthorizationServiceTests
         var service = CreateService(canViewAll: false, agent: CreateAgent(queueIds: [QueueId], allowedQueueIds: [QueueId]));
 
         var allowed = await service.AuthorizeAsync(CreatePrincipal(), conversation, operation, TestContext.Current.CancellationToken);
+
+        Assert.False(allowed);
+    }
+
+    [Theory]
+    [InlineData(ConversationOperation.View)]
+    [InlineData(ConversationOperation.Claim)]
+    [InlineData(ConversationOperation.Send)]
+    public async Task AuthorizeAsync_WhenQueueMemberLacksTheQueuePermission_DeniesTheUnclaimedThread(ConversationOperation operation)
+    {
+        // Using the workspace grants an agent their own conversations only; their queues' shared inbox is a permission
+        // of its own.
+        var conversation = CreateQueueConversation(assignedAgentId: null, ConversationAssignmentStatus.Pooled);
+        var service = CreateService(canViewAll: false, agent: CreateAgent(queueIds: [QueueId], allowedQueueIds: [QueueId]), canViewQueue: false);
+
+        var allowed = await service.AuthorizeAsync(CreatePrincipal(), conversation, operation, TestContext.Current.CancellationToken);
+
+        Assert.False(allowed);
+    }
+
+    [Theory]
+    [InlineData(ConversationOperation.View)]
+    [InlineData(ConversationOperation.Send)]
+    [InlineData(ConversationOperation.Close)]
+    public async Task AuthorizeAsync_WhenTheCallerHoldsAQueueThread_AllowsIt_WithTheOwnPermission_EvenOutsideTheQueue(ConversationOperation operation)
+    {
+        // What an agent holds is their own: handed it from a queue they never served, or after leaving the queue, they
+        // can still finish it.
+        var conversation = CreateQueueConversation(assignedAgentId: AgentId, ConversationAssignmentStatus.Assigned);
+        var service = CreateService(canViewAll: false, agent: CreateAgent(), canViewQueue: false);
+
+        var allowed = await service.AuthorizeAsync(CreatePrincipal(), conversation, operation, TestContext.Current.CancellationToken);
+
+        Assert.True(allowed);
+    }
+
+    [Fact]
+    public async Task AuthorizeAsync_WithOnlyTheOwnPermission_AllowsTheCallersThread_ButNotTheQueuePool()
+    {
+        var agent = CreateAgent(queueIds: [QueueId], allowedQueueIds: [QueueId]);
+        var service = CreateService(canViewAll: false, agent, canViewQueue: false);
+
+        var own = await service.AuthorizeAsync(CreatePrincipal(), CreatePersonalConversation(ownerId: AgentId, assignedAgentId: AgentId), ConversationOperation.Send, TestContext.Current.CancellationToken);
+        var pooled = await service.AuthorizeAsync(CreatePrincipal(), CreateQueueConversation(assignedAgentId: null, ConversationAssignmentStatus.Pooled), ConversationOperation.View, TestContext.Current.CancellationToken);
+
+        Assert.True(own);
+        Assert.False(pooled);
+    }
+
+    [Fact]
+    public async Task AuthorizeAsync_WithoutAnyConversationPermission_DeniesEvenTheCallersOwnThread()
+    {
+        var conversation = CreatePersonalConversation(ownerId: AgentId, assignedAgentId: AgentId);
+        var service = CreateService(canViewAll: false, agent: CreateAgent(), canViewQueue: false, canViewOwn: false);
+
+        var allowed = await service.AuthorizeAsync(CreatePrincipal(), conversation, ConversationOperation.View, TestContext.Current.CancellationToken);
+
+        Assert.False(allowed);
+    }
+
+    [Fact]
+    public async Task AuthorizeAsync_WhenQueueThreadIsClaimedByAnotherMember_DeniesView()
+    {
+        var conversation = CreateQueueConversation(assignedAgentId: OtherAgentId, ConversationAssignmentStatus.Assigned);
+        var service = CreateService(canViewAll: false, agent: CreateAgent(queueIds: [QueueId], allowedQueueIds: [QueueId]));
+
+        var allowed = await service.AuthorizeAsync(CreatePrincipal(), conversation, ConversationOperation.View, TestContext.Current.CancellationToken);
 
         Assert.False(allowed);
     }
@@ -309,35 +409,40 @@ public class SmsConversationAuthorizationServiceTests
     private static ClaimsPrincipal CreatePrincipal()
         => new(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, UserId)], "Test"));
 
-    private static MessagingConversationAuthorizationService CreateService(
+    private static ConversationAuthorizer CreateService(
         bool canViewAll,
         AgentProfile agent,
-        IAgentEntitlementPolicy entitlementPolicy = null)
+        IAgentEntitlementPolicy entitlementPolicy = null,
+        bool canViewQueue = true,
+        bool canViewOwn = true)
     {
-        var authorizationService = new Mock<IAuthorizationService>();
+        var granted = new List<Permission>();
 
-        authorizationService
-            .Setup(service => service.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
-            .ReturnsAsync((ClaimsPrincipal _, object _, IEnumerable<IAuthorizationRequirement> requirements) =>
-            {
-                var wantsViewAll = requirements
-                    .OfType<PermissionRequirement>()
-                    .Any(requirement => requirement.Permission.Name == MessagingPermissions.ViewAllConversations.Name);
+        if (canViewAll)
+        {
+            granted.Add(MessagingPermissions.ViewAllConversations);
+        }
 
-                return canViewAll && wantsViewAll
-                    ? AuthorizationResult.Success()
-                    : AuthorizationResult.Failed();
-            });
+        if (canViewQueue)
+        {
+            granted.Add(MessagingPermissions.ViewQueueConversations);
+        }
 
-        var agentProfileManager = new Mock<IAgentProfileManager>();
+        if (canViewOwn)
+        {
+            granted.Add(MessagingPermissions.ViewOwnConversations);
+        }
 
-        agentProfileManager
-            .Setup(manager => manager.FindByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(agent);
+        return new ConversationAuthorizer(MessagingTestAuthorization.Create(agent, entitlementPolicy, [.. granted]));
+    }
 
-        return new MessagingConversationAuthorizationService(
-            authorizationService.Object,
-            agentProfileManager.Object,
-            entitlementPolicy ?? new PermissiveAgentEntitlementPolicy());
+    private sealed class ConversationAuthorizer(IAuthorizationService authorizationService)
+    {
+        public Task<bool> AuthorizeAsync(ClaimsPrincipal user, MessagingConversation conversation, ConversationOperation operation, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            return authorizationService.AuthorizeConversationAsync(user, conversation, operation);
+        }
     }
 }

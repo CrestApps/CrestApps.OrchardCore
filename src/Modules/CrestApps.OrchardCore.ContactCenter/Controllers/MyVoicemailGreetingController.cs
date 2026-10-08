@@ -47,6 +47,7 @@ public sealed class MyVoicemailGreetingController : Controller
 
     private readonly IAgentProfileManager _agentProfileManager;
     private readonly IAuthorizationService _authorizationService;
+    private readonly IClock _clock;
     private readonly INotifier _notifier;
     private readonly IHtmlLocalizer H;
     private readonly IStringLocalizer S;
@@ -54,12 +55,14 @@ public sealed class MyVoicemailGreetingController : Controller
     public MyVoicemailGreetingController(
         IAgentProfileManager agentProfileManager,
         IAuthorizationService authorizationService,
+        IClock clock,
         INotifier notifier,
         IHtmlLocalizer<MyVoicemailGreetingController> htmlLocalizer,
         IStringLocalizer<MyVoicemailGreetingController> stringLocalizer)
     {
         _agentProfileManager = agentProfileManager;
         _authorizationService = authorizationService;
+        _clock = clock;
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
@@ -180,6 +183,8 @@ public sealed class MyVoicemailGreetingController : Controller
     // The signed-in user's own agent profile, or null when they may not work as an agent. Every action goes through
     // here, so the permission is checked before the profile is read. Having a profile was the only check once: a user
     // whose agent role was taken away, but whose profile remained, could still upload and set the greeting callers hear.
+    // A user the role does allow, but who has no profile yet, gets one: the menu offers them this page, and refusing it
+    // sent a new agent to the access-denied page before they had ever been onboarded or opened the messaging workspace.
     private async Task<AgentProfile> GetCurrentAgentAsync()
     {
         if (!await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.SignIntoQueues))
@@ -189,8 +194,29 @@ public sealed class MyVoicemailGreetingController : Controller
 
         var userId = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
-        return string.IsNullOrEmpty(userId)
-            ? null
-            : await _agentProfileManager.FindByUserIdAsync(userId, HttpContext.RequestAborted);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return null;
+        }
+
+        var agent = await _agentProfileManager.FindByUserIdAsync(userId, HttpContext.RequestAborted);
+
+        if (agent is not null)
+        {
+            return agent;
+        }
+
+        var userName = User.Identity?.Name;
+
+        agent = await _agentProfileManager.NewAsync();
+        agent.UserId = userId;
+        agent.UserName = userName;
+        agent.DisplayName = userName;
+        agent.Name = userId;
+        agent.CreatedUtc = _clock.UtcNow;
+
+        await _agentProfileManager.CreateAsync(agent);
+
+        return agent;
     }
 }

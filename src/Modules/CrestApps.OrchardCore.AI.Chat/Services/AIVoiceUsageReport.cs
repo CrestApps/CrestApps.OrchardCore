@@ -41,17 +41,38 @@ internal static class AIVoiceUsageReport
     /// <param name="label">What the set is.</param>
     /// <param name="calls">The calls.</param>
     /// <param name="textTokensBySession">The text completion tokens recorded against each chat session.</param>
-    public static AIVoiceUsageSummaryViewModel Summarize(string label, IReadOnlyCollection<AIVoiceSessionSummaryIndex> calls, IReadOnlyDictionary<string, long> textTokensBySession)
+    /// <param name="audioTokensBySession">The realtime audio tokens recorded against each chat session, or <see langword="null"/>.</param>
+    public static AIVoiceUsageSummaryViewModel Summarize(
+        string label,
+        IReadOnlyCollection<AIVoiceSessionSummaryIndex> calls,
+        IReadOnlyDictionary<string, long> textTokensBySession,
+        IReadOnlyDictionary<string, long> audioTokensBySession = null)
     {
         var sessions = calls.Where(call => call.SessionDurationMs.HasValue).ToList();
         var callerMeasured = calls.Where(call => call.CallerSpeakingMs.HasValue).ToList();
         var silenceMeasured = calls.Where(call => call.MutualSilenceMs.HasValue).ToList();
         var firstAudio = calls.Where(call => call.TimeToFirstAssistantAudioMs.HasValue).ToList();
         var interruptible = calls.Where(call => call.BargeIns.HasValue).ToList();
+        var sessionIds = calls
+            .Select(call => call.AISessionId)
+            .Where(sessionId => !string.IsNullOrEmpty(sessionId))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        // A summary that carries its own audio tokens is used as is; otherwise the tokens come from the usage the
+        // realtime provider reported for the call's session.
         var audioTokens = calls
             .Where(call => call.InputAudioTokens.HasValue || call.OutputAudioTokens.HasValue)
             .Select(call => (call.InputAudioTokens ?? 0) + (call.OutputAudioTokens ?? 0))
             .ToList();
+
+        if (audioTokens.Count == 0 && audioTokensBySession is not null)
+        {
+            audioTokens = sessionIds
+                .Where(audioTokensBySession.ContainsKey)
+                .Select(sessionId => audioTokensBySession[sessionId])
+                .ToList();
+        }
 
         return new AIVoiceUsageSummaryViewModel
         {
@@ -68,11 +89,7 @@ internal static class AIVoiceUsageReport
                 : calls.Count(call => string.Equals(call.Outcome, nameof(AIVoiceSessionOutcome.HandedToAgent), StringComparison.Ordinal)) / (double)calls.Count,
             BargeInsPerCall = interruptible.Count == 0 ? null : Math.Round(interruptible.Average(call => call.BargeIns.Value), 2),
             IdlePrompts = calls.Sum(call => call.IdlePrompts),
-            TextTokens = calls
-                .Select(call => call.AISessionId)
-                .Where(sessionId => !string.IsNullOrEmpty(sessionId))
-                .Distinct(StringComparer.Ordinal)
-                .Sum(sessionId => textTokensBySession.GetValueOrDefault(sessionId)),
+            TextTokens = sessionIds.Sum(sessionId => textTokensBySession.GetValueOrDefault(sessionId)),
             AudioTokens = audioTokens.Count == 0 ? null : audioTokens.Sum(),
         };
     }
@@ -85,16 +102,18 @@ internal static class AIVoiceUsageReport
     /// <param name="profileNames">Current profile names by identifier.</param>
     /// <param name="toLocal">Converts a UTC time to the site's local time, for grouping by day.</param>
     /// <param name="textTokensBySession">The text completion tokens recorded against each chat session.</param>
+    /// <param name="audioTokensBySession">The realtime audio tokens recorded against each chat session, or <see langword="null"/>.</param>
     public static IReadOnlyList<AIVoiceUsageSummaryViewModel> BuildRows(
         IReadOnlyCollection<AIVoiceSessionSummaryIndex> calls,
         AIVoiceUsageGroupBy groupBy,
         IReadOnlyDictionary<string, string> profileNames,
         Func<DateTime, DateTime> toLocal,
-        IReadOnlyDictionary<string, long> textTokensBySession)
+        IReadOnlyDictionary<string, long> textTokensBySession,
+        IReadOnlyDictionary<string, long> audioTokensBySession = null)
     {
         var rows = calls
             .GroupBy(call => Label(call, groupBy, profileNames, toLocal), StringComparer.Ordinal)
-            .Select(group => Summarize(group.Key, group.ToList(), textTokensBySession));
+            .Select(group => Summarize(group.Key, group.ToList(), textTokensBySession, audioTokensBySession));
 
         // A day is read in date order; everything else by how much it was used.
         return groupBy == AIVoiceUsageGroupBy.Day

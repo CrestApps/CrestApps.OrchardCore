@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Notifications;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.Entities;
@@ -29,7 +30,7 @@ public sealed class MessagingConversationService : IMessagingConversationService
     private readonly IContentManager _contentManager;
     private readonly IMessagingContactResolver _contactResolver;
     private readonly IMessagingRealTimeNotifier _notifier;
-    private readonly IMessagingConversationAuthorizationService _conversationAuthorizationService;
+    private readonly IAuthorizationService _authorizationService;
     private readonly ISession _session;
     private readonly IMessagingFirstResponseSlaService _slaService;
     private readonly IMessagingAttachmentUrlProvider _attachmentUrlProvider;
@@ -45,7 +46,7 @@ public sealed class MessagingConversationService : IMessagingConversationService
         IContentManager contentManager,
         IMessagingContactResolver contactResolver,
         IMessagingRealTimeNotifier notifier,
-        IMessagingConversationAuthorizationService conversationAuthorizationService,
+        IAuthorizationService authorizationService,
         ISession session,
         IMessagingFirstResponseSlaService slaService,
         IMessagingAttachmentUrlProvider attachmentUrlProvider,
@@ -57,7 +58,7 @@ public sealed class MessagingConversationService : IMessagingConversationService
         _contentManager = contentManager;
         _contactResolver = contactResolver;
         _notifier = notifier;
-        _conversationAuthorizationService = conversationAuthorizationService;
+        _authorizationService = authorizationService;
         _session = session;
         _slaService = slaService;
         _attachmentUrlProvider = attachmentUrlProvider;
@@ -93,7 +94,7 @@ public sealed class MessagingConversationService : IMessagingConversationService
             return MessagingSendResult.Failed($"The '{conversation.Channel}' channel is not enabled.");
         }
 
-        if (!await IsPrincipalAuthorizedAsync(request.Principal, conversation, ConversationOperation.Send, cancellationToken))
+        if (!await IsPrincipalAuthorizedAsync(request.Principal, conversation, ConversationOperation.Send))
         {
             return MessagingSendResult.Failed("You are not allowed to send on this conversation.");
         }
@@ -138,7 +139,7 @@ public sealed class MessagingConversationService : IMessagingConversationService
         // the same assignment and the same announcement. A thread someone already holds keeps its holder, even when
         // the sender may reply on it.
         var claims = IsClaimableBy(conversation, request.ActingAgentId) &&
-            await IsPrincipalAuthorizedAsync(request.Principal, conversation, ConversationOperation.Claim, cancellationToken);
+            await IsPrincipalAuthorizedAsync(request.Principal, conversation, ConversationOperation.Claim);
 
         // Sending marks the thread read.
         conversation.LastMessageUtc = message.CreatedUtc;
@@ -366,7 +367,7 @@ public sealed class MessagingConversationService : IMessagingConversationService
             return MessagingSendResult.Failed("The conversation was not found.");
         }
 
-        if (!await IsPrincipalAuthorizedAsync(principal, conversation, ConversationOperation.Claim, cancellationToken))
+        if (!await IsPrincipalAuthorizedAsync(principal, conversation, ConversationOperation.Claim))
         {
             return MessagingSendResult.Failed("You are not allowed to claim this conversation.");
         }
@@ -396,7 +397,7 @@ public sealed class MessagingConversationService : IMessagingConversationService
             return MessagingSendResult.Failed("The conversation was not found.");
         }
 
-        if (!await IsPrincipalAuthorizedAsync(principal, conversation, ConversationOperation.Transfer, cancellationToken))
+        if (!await IsPrincipalAuthorizedAsync(principal, conversation, ConversationOperation.Transfer))
         {
             return MessagingSendResult.Failed("You are not allowed to transfer this conversation.");
         }
@@ -421,7 +422,7 @@ public sealed class MessagingConversationService : IMessagingConversationService
             _ => ConversationOperation.Close,
         };
 
-        if (!await IsPrincipalAuthorizedAsync(principal, conversation, operation, cancellationToken))
+        if (!await IsPrincipalAuthorizedAsync(principal, conversation, operation))
         {
             return MessagingSendResult.Failed("You are not allowed to change the status of this conversation.");
         }
@@ -531,15 +532,14 @@ public sealed class MessagingConversationService : IMessagingConversationService
     private async Task<bool> IsPrincipalAuthorizedAsync(
         ClaimsPrincipal principal,
         MessagingConversation conversation,
-        ConversationOperation operation,
-        CancellationToken cancellationToken)
+        ConversationOperation operation)
     {
         if (principal is null)
         {
             return true;
         }
 
-        return await _conversationAuthorizationService.AuthorizeAsync(principal, conversation, operation, cancellationToken);
+        return await _authorizationService.AuthorizeConversationAsync(principal, conversation, operation);
     }
 
     private async Task<bool> IsOptedOutAsync(IMessagingChannel channel, MessagingConversation conversation)

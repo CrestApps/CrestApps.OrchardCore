@@ -1,6 +1,7 @@
 using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Documents;
 using CrestApps.Core.AI.Documents.Models;
@@ -202,7 +203,7 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
                     clientName: deployment?.ClientName);
                 var embeddingGenerator = embeddingDeployment == null
                     ? null
-                    : await _aiClientFactory.CreateEmbeddingGeneratorAsync(embeddingDeployment, builder => builder.UseDefaultResilience());
+                    : await _aiClientFactory.CreateEmbeddingGeneratorAsync(embeddingDeployment, builder => builder.UseDefaultResilience().UseUsageLabels(purpose: AIUsagePurposes.Indexing));
                 var processedDocuments = new List<AIDocument>();
 
                 foreach (var file in model.Files)

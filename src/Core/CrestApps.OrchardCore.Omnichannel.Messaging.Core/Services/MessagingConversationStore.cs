@@ -276,13 +276,15 @@ public sealed class MessagingConversationStore : DocumentCatalog<MessagingConver
                 return results.Where(index => index.ItemId == null);
             }
 
+            // A personal thread sent to the agent stays theirs only while no colleague has claimed it; one they hold
+            // is matched by the first term.
             results = queueIds.Length == 0
                 ? results.Where(index =>
                     index.AssignedAgentId == agentId ||
-                    (index.OwnerType == personal && index.OwnerId == agentId))
+                    (index.OwnerType == personal && index.OwnerId == agentId && index.AssignedAgentId == null))
                 : results.Where(index =>
                     index.AssignedAgentId == agentId ||
-                    (index.OwnerType == personal && index.OwnerId == agentId) ||
+                    (index.OwnerType == personal && index.OwnerId == agentId && index.AssignedAgentId == null) ||
                     (index.OwnerType == queueOwner &&
                         index.OwnerId.IsIn(queueIds) &&
                         (index.AssignmentStatus != assigned || index.AssignedAgentId == null)));

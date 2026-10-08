@@ -1,9 +1,11 @@
 using CrestApps.Core;
+using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Handlers;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Orchestration;
 using CrestApps.Core.AI.Realtime;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -291,6 +293,7 @@ public sealed partial class RealtimeVoiceConversationRunner
     {
         try
         {
+            using var usageScope = AIUsageScope.Begin(contextType: AIUsageCategories.Voice);
             return await _orchestrator.StartAsync(new RealtimeOrchestrationRequest
             {
                 Resource = context.Profile,

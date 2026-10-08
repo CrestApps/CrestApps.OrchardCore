@@ -12,6 +12,7 @@ using CrestApps.Core.AI.Resilience;
 using CrestApps.Core.Services;
 using CrestApps.Core.Support;
 using CrestApps.Core.Templates.Services;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -273,7 +274,7 @@ public sealed partial class VoiceAgentConversationLoop
             return;
         }
 
-        var client = await clientFactory.CreateChatClientAsync(deployment, builder => builder.UseDefaultResilience());
+        var client = await clientFactory.CreateChatClientAsync(deployment, builder => builder.UseDefaultResilience().UseUsageLabels(contextType: AIUsageCategories.Voice, purpose: AIUsageFeaturePurposes.ConversationConclusion));
 
         var messages = new List<ChatMessage>
         {

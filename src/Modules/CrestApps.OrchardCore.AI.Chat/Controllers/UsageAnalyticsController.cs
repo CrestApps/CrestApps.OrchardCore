@@ -1,6 +1,7 @@
 using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.AI.Services;
 using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using CrestApps.OrchardCore.AI.Core.Indexes;
@@ -126,6 +127,15 @@ public sealed class UsageAnalyticsController : Controller
     {
         model.ShowReport = true;
 
+        // Metered usage covers every request sent to a provider, of every kind and from every feature, not only
+        // the chat completions the tables below count.
+        var meteredRecords = string.IsNullOrEmpty(model.ProfileId)
+            ? records
+            : records.Where(record => string.Equals(record.ProfileId, model.ProfileId, StringComparison.Ordinal)).ToList();
+
+        model.TotalMeteredRequests = meteredRecords.Count;
+        model.MeteringRows = AIUsageReport.Build(meteredRecords, model.MeteringGroupBy);
+
         var relevantRecords = AICompletionUsageReport.Relevant(records, model.ProfileId);
 
         model.TotalCalls = relevantRecords.Count;
@@ -144,11 +154,12 @@ public sealed class UsageAnalyticsController : Controller
 
         // A call's text tokens are the completions recorded against its chat session: the turn-based replies and
         // the review that concludes every call.
-        var textTokensBySession = AICompletionUsageReport.TokensBySession(relevantRecords);
+        var textTokensBySession = AICompletionUsageReport.TokensBySession(meteredRecords);
+        var audioTokensBySession = AICompletionUsageReport.AudioTokensBySession(meteredRecords);
         var calls = AIVoiceUsageReport.Calls(voiceSessions, model.ProfileId);
 
-        model.VoiceTotals = AIVoiceUsageReport.Summarize(label: null, calls, textTokensBySession);
-        model.VoiceRows = AIVoiceUsageReport.BuildRows(calls, model.VoiceGroupBy, profileNames, toLocal, textTokensBySession);
+        model.VoiceTotals = AIVoiceUsageReport.Summarize(label: null, calls, textTokensBySession, audioTokensBySession);
+        model.VoiceRows = AIVoiceUsageReport.BuildRows(calls, model.VoiceGroupBy, profileNames, toLocal, textTokensBySession, audioTokensBySession);
     }
 
     private async Task<IReadOnlyDictionary<string, string>> GetProfileNamesAsync()

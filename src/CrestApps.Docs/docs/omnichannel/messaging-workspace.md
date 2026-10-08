@@ -133,11 +133,15 @@ While an automated (AI) activity is handling a contact on an endpoint, the works
 
 | Permission | Display name | Grants |
 | --- | --- | --- |
-| `UseMessagingWorkspace` | Use the messaging workspace | Use the workspace on the endpoints you own or serve. |
-| `ViewAllMessagingConversations` | View all messaging conversations | See every conversation (supervisors), and transfer any of them. The holder of a conversation can transfer it without this. |
+| `UseMessagingWorkspace` | Use the messaging workspace | Open the workspace. Which conversations it shows is decided by the three permissions below. |
+| `ViewOwnMessagingConversations` | View your own messaging conversations | Work your own conversations: the ones assigned to you, and the ones sent to an endpoint you own that no colleague has claimed. |
+| `ViewQueueMessagingConversations` | View your own and your queues' unclaimed messaging conversations | Also read, claim and answer the conversations nobody has claimed yet in the queues you serve, as far as your agent entitlements allow. |
+| `ViewAllMessagingConversations` | View all messaging conversations | Every conversation (supervisors), including the ones colleagues have claimed and the ones no route gave to an agent or a queue, and transfer any of them. The holder of a conversation can transfer it without this. |
 | `SendGroupMessages` | Send group messages | Send broadcasts and multi-recipient messages. |
 | `SendMessagesDuringQuietHours` | Send messages outside business hours | Changes the quiet-hours banner to a plain notice without the unsociable-hour warning. Sending is never blocked, with or without it. |
 | `ManageMessaging` | Manage the messaging workspace | Manage templates (**Messaging > Templates**). |
+
+The three conversation permissions narrow like Orchard Core's **View all content** and **View own content**: `ViewAllMessagingConversations` includes the queue permission, which includes the own permission. A conversation is always authorized against `ViewAllMessagingConversations`; for anybody who does not hold it, an authorization handler grants the conversations that are theirs through the narrower permissions. An agent never sees a conversation a colleague has claimed. None of the other permissions implies another. By default the **Agent** role gets `UseMessagingWorkspace` and `ViewQueueMessagingConversations`, and the **Supervisor** role gets `UseMessagingWorkspace`, `ViewAllMessagingConversations`, `SendGroupMessages`, `SendMessagesDuringQuietHours` and `ManageMessaging`. A role given `ViewOwnMessagingConversations` instead of the queue permission sees only its users' own conversations, which suits people who text from their own number and serve no queue.
 
 Permissions apply to every channel; there is no per-channel permission. Where a number's messages go is edited on its entry point, under **Interaction Center > Management > Inbound entry points**, which requires the **Manage Contact Center queues** permission.
 

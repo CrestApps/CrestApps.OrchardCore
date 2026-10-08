@@ -632,8 +632,8 @@ public sealed class SmsPortalAdminControllerTests
             null);
     }
 
-    // Grants the portal permission, and grants (or denies) the per-conversation rule the way the
-    // MessagingConversationAuthorizationHandler does at runtime. A rule, when given, reads the conversation it is asked
+    // Grants the workspace permission, and grants (or denies) a conversation the way the
+    // MessagingConversationAuthorizationHandler does at runtime; the caller is never a supervisor. A rule, when given, reads the conversation it is asked
     // about, so a test can grant what depends on the state a transfer left the conversation in.
     private sealed class ConversationAuthorizationService : IAuthorizationService
     {
@@ -659,12 +659,15 @@ public sealed class SmsPortalAdminControllerTests
             object resource,
             IEnumerable<IAuthorizationRequirement> requirements)
         {
-            if (resource is ConversationAuthorizationResource conversationResource &&
-                (!_allowConversation ||
-                    _deniedOperations.Contains(conversationResource.Operation) ||
-                    (_rule is not null && !_rule(conversationResource.Conversation, conversationResource.Operation))))
+            // A conversation is authorized against ViewAllMessagingConversations with the conversation as the resource;
+            // the handler grants the caller's own, so the test's rule stands in for it.
+            if (resource is ConversationAuthorizationResource conversationResource)
             {
-                return Task.FromResult(AuthorizationResult.Failed());
+                var allowed = _allowConversation &&
+                    !_deniedOperations.Contains(conversationResource.Operation) &&
+                    (_rule is null || _rule(conversationResource.Conversation, conversationResource.Operation));
+
+                return Task.FromResult(allowed ? AuthorizationResult.Success() : AuthorizationResult.Failed());
             }
 
             var permissions = requirements

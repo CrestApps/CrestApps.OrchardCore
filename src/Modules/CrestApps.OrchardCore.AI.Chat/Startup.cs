@@ -50,6 +50,8 @@ public sealed class Startup : StartupBase
 
         services
             .AddPermissionProvider<ChatSessionPermissionProvider>()
+            .AddPermissionProvider<ChatAnalyticsPermissionProvider>()
+            .AddNavigationProvider<AIUsageAnalyticsAdminMenu>()
             .AddScoped<AIChatProfileAccessEvaluator>()
             .AddSingleton<IAIProfileAdminMenuCacheService, DefaultAIProfileAdminMenuCacheService>()
             .AddScoped<ICatalogEntryHandler<AIProfile>, AIProfileAdminMenuCacheHandler>()
@@ -146,7 +148,6 @@ public sealed class ChatAnalyticsUIStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services
-            .AddPermissionProvider<ChatAnalyticsPermissionProvider>()
             .AddNavigationProvider<ChatAnalyticsAdminMenu>()
             .AddDataMigration<AIChatSessionExtractedDataMigrations>()
             .AddDisplayDriver<AIProfile, AIProfileAnalyticsDisplayDriver>()

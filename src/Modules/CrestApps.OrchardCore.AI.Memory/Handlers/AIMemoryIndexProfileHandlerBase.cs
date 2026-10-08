@@ -1,4 +1,5 @@
 using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Memory;
 using CrestApps.Core.AI.Resilience;
@@ -49,7 +50,7 @@ public abstract class AIMemoryIndexProfileHandlerBase : IndexProfileHandlerBase
                 return defaultDimensions;
             }
 
-            var embeddingGenerator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(deployment, builder => builder.UseDefaultResilience());
+            var embeddingGenerator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(deployment, builder => builder.UseDefaultResilience().UseUsageLabels(purpose: AIUsagePurposes.Indexing));
 
             if (embeddingGenerator is null)
             {
