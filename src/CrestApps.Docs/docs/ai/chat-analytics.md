@@ -20,7 +20,7 @@ The **AI Chat Session Analytics** feature captures detailed metrics about every 
 
 ### Enabling Analytics
 
-Enable the **AI Chat Session Analytics** feature, then tick **Enable session metrics** on each chat profile that should collect data (on the profile editor's **Data Processing & Metrics** tab). The reports are under **Artificial Intelligence > Reports**: **AI Chat Session Analytics**, **AI Chat Extracted Data**, **AI Usage Analytics** and **AI Chat Conversion Goals**, all gated by `ViewChatAnalytics`.
+Enable the **AI Chat Session Analytics** feature, then tick **Enable session metrics** on each chat profile that should collect data (on the profile editor's **Data Processing & Metrics** tab). The reports are under **Artificial Intelligence > Reports**: **AI Chat Session Analytics**, **AI Chat Extracted Data** and **AI Chat Conversion Goals**, all gated by `ViewChatAnalytics`. **AI Usage Analytics** needs only the **AI Chat** feature and the same permission, and is listed under **Reports > Billing & Usage**.
 
 > **Note:** Session metrics collection is disabled by default. You must enable it per-profile in the profile editor.
 

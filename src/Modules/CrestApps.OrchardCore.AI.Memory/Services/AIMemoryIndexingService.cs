@@ -209,7 +209,6 @@ internal sealed class AIMemoryIndexingService
 
         var embeddingText = $"Name: {memory.Name}{Environment.NewLine}Description: {memory.Description}";
 
-        using var usageScope = AIUsageScope.Begin(purpose: AIUsagePurposes.Indexing);
         var embeddings = await embeddingGenerator.GenerateAsync(
             [embeddingText],
             cancellationToken: cancellationToken);
@@ -266,6 +265,6 @@ internal sealed class AIMemoryIndexingService
             return null;
         }
 
-        return await _aiClientFactory.CreateEmbeddingGeneratorAsync(deployment, builder => builder.UseDefaultResilience());
+        return await _aiClientFactory.CreateEmbeddingGeneratorAsync(deployment, builder => builder.UseDefaultResilience().UseUsageLabels(purpose: AIUsagePurposes.Indexing));
     }
 }

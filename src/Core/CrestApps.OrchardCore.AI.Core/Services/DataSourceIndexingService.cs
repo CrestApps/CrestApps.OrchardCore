@@ -543,7 +543,7 @@ public sealed class DataSourceIndexingService
             return;
         }
 
-        var embeddingGenerator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(deployment, builder => builder.UseDefaultResilience());
+        var embeddingGenerator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(deployment, builder => builder.UseDefaultResilience().UseUsageLabels(purpose: AIUsagePurposes.Indexing));
 
         if (embeddingGenerator == null)
         {
@@ -591,7 +591,6 @@ public sealed class DataSourceIndexingService
 
             try
             {
-                using var usageScope = AIUsageScope.Begin(purpose: AIUsagePurposes.Indexing);
                 var embeddings = await embeddingGenerator.GenerateAsync(chunkTexts, cancellationToken: cancellationToken);
 
                 if (embeddings == null || embeddings.Count != chunkTexts.Count)
@@ -798,7 +797,7 @@ public sealed class DataSourceIndexingService
             return;
         }
 
-        var embeddingGenerator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(deployment, builder => builder.UseDefaultResilience());
+        var embeddingGenerator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(deployment, builder => builder.UseDefaultResilience().UseUsageLabels(purpose: AIUsagePurposes.Indexing));
 
         if (embeddingGenerator == null)
         {
@@ -861,7 +860,6 @@ public sealed class DataSourceIndexingService
             // Generate embeddings for all chunks.
             try
             {
-                using var usageScope = AIUsageScope.Begin(purpose: AIUsagePurposes.Indexing);
                 var embeddings = await embeddingGenerator.GenerateAsync(chunkTexts, cancellationToken: cancellationToken);
 
                 if (embeddings == null || embeddings.Count != chunkTexts.Count)

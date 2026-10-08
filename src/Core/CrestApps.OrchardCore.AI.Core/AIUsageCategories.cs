@@ -4,7 +4,8 @@ namespace CrestApps.OrchardCore.AI.Core;
 
 /// <summary>
 /// The usage categories this host records for features other than chat sessions and chat interactions, so the AI
-/// usage report can show what each feature spent. They label requests through <see cref="AIUsageScope"/>.
+/// usage report can show what each feature spent. They label requests through
+/// <c>UseUsageLabels(...)</c> on a client the code creates, or through <see cref="AIUsageScope"/>.
 /// </summary>
 public static class AIUsageCategories
 {

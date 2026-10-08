@@ -119,7 +119,7 @@ Shows how each finished chat scored against the profile's conversion goals.
 
 Shows what AI used across the whole site: every request sent to an AI service, the completions from chats and chat interactions, and the automated AI phone calls. Use it to see which models and which features your AI budget goes to.
 
-1. Open **Artificial Intelligence > Reports > AI Usage Analytics**.
+1. Open **Reports > Billing & Usage > AI Usage Analytics**. It needs only the **AI Chat** feature, not **AI Chat Session Analytics**.
 2. Choose **From**, **To**, and optionally an **AI profile**.
 3. Choose how to group the figures:
    - **Group metered usage by**: **Model**, **Model and category** (which feature made the request: chat, SMS, voice calls, the API, workflows) or **Model and purpose** (why: answering, searching, indexing documents, transcribing, and so on).

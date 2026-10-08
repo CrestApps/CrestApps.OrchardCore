@@ -53,14 +53,13 @@ public abstract class DataSourceIndexProfileHandlerBase : IndexProfileHandlerBas
                 return defaultDimensions;
             }
 
-            var embeddingGenerator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(deployment, builder => builder.UseDefaultResilience());
+            var embeddingGenerator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(deployment, builder => builder.UseDefaultResilience().UseUsageLabels(purpose: AIUsagePurposes.Indexing));
 
             if (embeddingGenerator == null)
             {
                 return defaultDimensions;
             }
 
-            using var usageScope = AIUsageScope.Begin(purpose: AIUsagePurposes.Indexing);
             var embedding = await embeddingGenerator.GenerateAsync(["Sample"]);
 
             if (embedding?.Count > 0 && embedding[0].Vector.Length > 0)

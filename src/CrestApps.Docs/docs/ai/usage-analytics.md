@@ -9,9 +9,9 @@ user_manual:
 
 | | |
 | --- | --- |
-| **Feature Name** | AI Chat Session Analytics |
-| **Feature ID** | `CrestApps.OrchardCore.AI.Chat.Analytics` |
-| **Page** | **Artificial Intelligence → Reports → AI Usage Analytics** (`/Admin/AI/UsageAnalytics/Index`) |
+| **Feature Name** | AI Chat |
+| **Feature ID** | `CrestApps.OrchardCore.AI.Chat` |
+| **Page** | **Reports → Billing & Usage → AI Usage Analytics** (`/Admin/AI/UsageAnalytics/Index`) |
 | **Permission** | `ViewChatAnalytics` |
 
 The AI Usage Analytics page reports what AI cost a tenant, in three parts:

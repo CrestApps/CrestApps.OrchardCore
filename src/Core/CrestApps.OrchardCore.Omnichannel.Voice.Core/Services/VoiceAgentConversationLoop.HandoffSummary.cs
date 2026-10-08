@@ -7,6 +7,7 @@ using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.Resilience;
 using CrestApps.Core.Support;
 using CrestApps.Core.Templates.Services;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -100,7 +101,7 @@ public sealed partial class VoiceAgentConversationLoop
         }
 
         var client = await services.GetRequiredService<IAIClientFactory>()
-            .CreateChatClientAsync(deployment, builder => builder.UseDefaultResilience());
+            .CreateChatClientAsync(deployment, builder => builder.UseDefaultResilience().UseUsageLabels(contextType: AIUsageCategories.Voice, purpose: AIUsageFeaturePurposes.HandoffSummary));
 
         using var timeout = new CancellationTokenSource(_handoffSummaryTimeout);
 
