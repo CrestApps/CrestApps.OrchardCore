@@ -31,6 +31,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core
         public const string CollectionName = "Omnichannel";
         public const string CompleteActivityGroup = "complete";
         public const string NotInServiceDispositionName = "Number Not In Service";
+        public const string SupervisorRole = "Supervisor";
         public static class ActionTypes
         {
             public const string ConvertLead = "ConvertLead";

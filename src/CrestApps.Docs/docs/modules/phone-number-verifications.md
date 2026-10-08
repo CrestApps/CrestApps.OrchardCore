@@ -30,7 +30,7 @@ architecture, data model, background processing, permissions and extension point
 | Permission | Key | Grants |
 | --- | --- | --- |
 | Manage phone number verification settings | `ManagePhoneNumberVerificationSettings` | **Settings** -> **Phone Number Verifications** and the provider tabs. |
-| Run 'Phone Number Verifications' Report | `RunPhoneNumberVerificationsReport` | **Tools** -> **Phone Verifications Queue** and the report under **Reports**. |
+| Run 'Phone Number Verifications' Report | `RunPhoneNumberVerificationsReport` | **Tools** -> **Phone Verifications Queue** and the report under **Reports**. Granted to the built-in **Supervisor** role by default. |
 | Verify phone numbers | `VerifyPhoneNumbers` | Re-queuing records from the queue (**Retry now**, **Retry selected**, **Retry all failed**). |
 
 All three are granted to the **Administrator** role by default.

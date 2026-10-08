@@ -18,6 +18,8 @@ public static class OmnichannelConstants
 
     public const string AgentRole = "Agent";
 
+    public const string SupervisorRole = "Supervisor";
+
     public const string CompleteActivityGroup = "complete";
 
     /// <summary>

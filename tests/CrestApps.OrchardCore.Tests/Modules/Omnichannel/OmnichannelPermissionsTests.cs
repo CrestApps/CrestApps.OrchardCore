@@ -38,6 +38,15 @@ public sealed class OmnichannelPermissionsTests
     }
 
     [Fact]
+    public void GetDefaultStereotypes_GrantsTheReportsToSupervisor()
+    {
+        var supervisor = new PermissionProvider().GetDefaultStereotypes()
+            .Single(stereotype => stereotype.Name == OmnichannelConstants.SupervisorRole);
+
+        Assert.Contains(OmnichannelConstants.Permissions.ViewReports, supervisor.Permissions);
+    }
+
+    [Fact]
     public void GetDefaultStereotypes_DoesNotGrantPurgeActivityToAgent()
     {
         // Arrange

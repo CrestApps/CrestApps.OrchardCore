@@ -37,13 +37,13 @@ internal static class LegacySmsPortalImport
     private const string LegacyRoutingSettingsKey = "SmsEndpointRoutingSettings";
     private const string RoutingSettingsKey = nameof(MessagingEndpointRoutingSettings);
 
-    private static readonly Dictionary<string, string> _permissionRenames = new(StringComparer.Ordinal)
+    private static readonly Dictionary<string, string[]> _permissionRenames = new(StringComparer.Ordinal)
     {
-        ["UseSmsPortal"] = MessagingPermissions.UseMessagingWorkspace.Name,
-        ["ManageSmsNumberRoutes"] = MessagingPermissions.ManageMessaging.Name,
-        ["SendSmsDuringQuietHours"] = MessagingPermissions.SendDuringQuietHours.Name,
-        ["SendGroupSms"] = MessagingPermissions.SendGroupMessages.Name,
-        ["ViewAllSmsConversations"] = MessagingPermissions.ViewAllConversations.Name,
+        ["UseSmsPortal"] = [MessagingPermissions.UseMessagingWorkspace.Name, MessagingPermissions.ViewQueueConversations.Name],
+        ["ManageSmsNumberRoutes"] = [MessagingPermissions.ManageMessaging.Name],
+        ["SendSmsDuringQuietHours"] = [MessagingPermissions.SendDuringQuietHours.Name],
+        ["SendGroupSms"] = [MessagingPermissions.SendGroupMessages.Name],
+        ["ViewAllSmsConversations"] = [MessagingPermissions.ViewAllConversations.Name],
     };
 
     /// <summary>
@@ -68,7 +68,9 @@ internal static class LegacySmsPortalImport
             // The routing just copied onto the numbers belongs on entry points, and the migration that moves it has
             // already run on this tenant.
             await MessagingEntryPointMigrations.MoveRoutingToEntryPointsAsync(serviceProvider);
-            await ImportRolePermissionsAsync(serviceProvider, logger);
+            // A role granted a portal permission is granted the workspace permissions that replaced it, so nobody who
+            // could work the SMS inbox is locked out of the workspace the day it is enabled.
+            await MessagingRolePermissions.GrantAsync(serviceProvider, _permissionRenames, logger);
         }
         catch (Exception ex)
         {
@@ -220,55 +222,6 @@ internal static class LegacySmsPortalImport
             if (logger.IsEnabled(LogLevel.Information))
             {
                 logger.LogInformation("Carried the SMS routing of {Count} endpoints over to the messaging workspace.", updated);
-            }
-        }
-    }
-
-    // A role granted a portal permission is granted the workspace permission that replaced it, so nobody who could work
-    // the SMS inbox is locked out of the workspace the day it is enabled.
-    private static async Task ImportRolePermissionsAsync(IServiceProvider serviceProvider, ILogger logger)
-    {
-        var roleService = serviceProvider.GetService<IRoleService>();
-        var roleManager = serviceProvider.GetService<RoleManager<IRole>>();
-
-        if (roleService is null || roleManager is null)
-        {
-            return;
-        }
-
-        foreach (var role in await roleService.GetRolesAsync())
-        {
-            if (role is not Role editable || editable.RoleClaims is null)
-            {
-                continue;
-            }
-
-            var granted = editable.RoleClaims
-                .Where(claim => claim.ClaimType == Permission.ClaimType)
-                .Select(claim => claim.ClaimValue)
-                .ToHashSet(StringComparer.Ordinal);
-
-            var additions = _permissionRenames
-                .Where(rename => granted.Contains(rename.Key) && !granted.Contains(rename.Value))
-                .Select(rename => rename.Value)
-                .Distinct(StringComparer.Ordinal)
-                .ToArray();
-
-            if (additions.Length == 0)
-            {
-                continue;
-            }
-
-            foreach (var permission in additions)
-            {
-                editable.RoleClaims.Add(new RoleClaim { ClaimType = Permission.ClaimType, ClaimValue = permission });
-            }
-
-            await roleManager.UpdateAsync(editable);
-
-            if (logger.IsEnabled(LogLevel.Information))
-            {
-                logger.LogInformation("Granted the role {Role} the messaging workspace permissions that replace its SMS portal permissions.", editable.RoleName);
             }
         }
     }

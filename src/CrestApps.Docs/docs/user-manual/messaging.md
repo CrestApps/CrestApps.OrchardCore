@@ -13,7 +13,7 @@ The **Messaging workspace** is a shared inbox for text conversations with custom
 | | |
 | --- | --- |
 | **Menu** | Messaging > Inbox, Messaging > Broadcasts, Messaging > Templates |
-| **Permissions** | Use the messaging workspace (agents); View all messaging conversations (supervisors); Send group messages (broadcasts); Manage the messaging workspace (templates) |
+| **Permissions** | Use the messaging workspace, plus one of: View your own messaging conversations; View your own and your queues' unclaimed messaging conversations (agents); View all messaging conversations (supervisors). Send group messages (broadcasts); Manage the messaging workspace (templates) |
 | **Features** | Omnichannel Messaging Workspace and SMS Messaging Channel |
 
 <AskYourAdmin />

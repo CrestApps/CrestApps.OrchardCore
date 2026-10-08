@@ -91,7 +91,7 @@ Examples include:
 See [Management: Reports](management.md#reports) and [Reports](../user-manual/reports.md) in the user manual.
 
 Access is gated by the **View Omnichannel reports** (`ViewOmnichannelReports`) permission, which is
-implied by **Manage activities** and granted to administrators by default.
+implied by **Manage activities** and granted to administrators and the built-in **Supervisor** role by default.
 
 ## Notes
 

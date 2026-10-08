@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Notifications;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.ContentManagement;
@@ -99,7 +100,7 @@ public class SmsConversationAssignmentTests
             new Mock<IContentManager>().Object,
             new Mock<IMessagingContactResolver>().Object,
             notifier.Object,
-            Mock.Of<IMessagingConversationAuthorizationService>(),
+            Mock.Of<IAuthorizationService>(),
             new Mock<ISession>().Object,
             new NoOpSmsFirstResponseSlaService(),
             new FakeAttachmentUrlProvider(),
