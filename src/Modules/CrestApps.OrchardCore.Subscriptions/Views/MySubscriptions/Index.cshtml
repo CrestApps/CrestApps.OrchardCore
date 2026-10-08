@@ -2,7 +2,9 @@
 @using CrestApps.OrchardCore.Subscriptions.ViewModels
 @model MySubscriptionsViewModel
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["My subscriptions"])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="SubscriptionsMySubscriptions" title="@T["My subscriptions"]" />
+</zone>
 
 @if (Model.Subscriptions.Count == 0)
 {

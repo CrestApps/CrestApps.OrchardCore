@@ -1,6 +1,8 @@
 @model ListCatalogEntryViewModel<CatalogEntryViewModel<TaxType>>
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["Tax Types"])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="TaxationTypes" title="@T["Tax Types"]" />
+</zone>
 
 @* The post form provides the antiforgery token used by the delete action. *@
 <form asp-action="Index" method="post" class="no-multisubmit">

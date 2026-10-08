@@ -1,9 +1,12 @@
 @using CrestApps.OrchardCore.Core.Models
+@using CrestApps.OrchardCore.Products
 
 @model EditCatalogEntryViewModel
 
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["Edit Currency '{0}'", Model.DisplayName])</h1>
+    <breadcrumb name="ProductsCurrenciesEdit" title="@(T["Edit Currency '{0}'", Model.DisplayName])">
+        <breadcrumb-item id="ProductsCurrencies" action="Index" controller="Currencies" area="CrestApps.OrchardCore.Products" permission="@ProductsConstants.Permissions.ManageCurrencies.Name">@T["Currencies"]</breadcrumb-item>
+    </breadcrumb>
 </zone>
 
 <form method="post" asp-route-id="@ViewContext.HttpContext.Request.RouteValues["id"]" enctype="multipart/form-data" class="no-multisubmit">

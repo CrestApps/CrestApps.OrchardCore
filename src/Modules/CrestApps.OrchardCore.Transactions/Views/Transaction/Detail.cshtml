@@ -1,4 +1,6 @@
+@using CrestApps.OrchardCore.Transactions.Core
 @using CrestApps.OrchardCore.Transactions.Models
+@using OrchardCore.DisplayManagement.Html
 @model TransactionDetailViewModel
 
 @{
@@ -6,7 +8,11 @@
     var canPay = transaction.OutstandingAmount > 0m && transaction.Status != TransactionStatus.Canceled;
 }
 
-<zone Name="Title"><h1>@RenderTitleSegments(string.IsNullOrEmpty(transaction.Title) ? T["Transaction"].Value : transaction.Title)</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="TransactionsMyTransactionsDetail" title="@(new HtmlContentString(string.IsNullOrEmpty(transaction.Title) ? T["Transaction"].Value : transaction.Title))">
+        <breadcrumb-item id="TransactionsMyTransactions" action="Index" controller="Transaction" area="CrestApps.OrchardCore.Transactions" permission="@TransactionsPermissions.ViewOwnTransactions.Name">@T["My Transactions"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
 
 <div class="card mb-3">
     <div class="card-header d-flex justify-content-between align-items-center">

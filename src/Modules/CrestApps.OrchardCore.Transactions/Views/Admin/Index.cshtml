@@ -1,7 +1,9 @@
 @using CrestApps.OrchardCore.Transactions.Models
 @model TransactionsAdminIndexViewModel
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["Transactions"])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="Transactions" title="@T["Transactions"]" />
+</zone>
 
 <form asp-action="Index" method="post" class="no-multisubmit">
     <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />

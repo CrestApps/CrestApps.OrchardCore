@@ -1,7 +1,11 @@
+@using CrestApps.OrchardCore.Taxation.Core
+
 @model EditCatalogEntryViewModel
 
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["Create {0}", Model.DisplayName])</h1>
+    <breadcrumb name="TaxationJurisdictionsCreate" title="@(T["Create {0}", Model.DisplayName])">
+        <breadcrumb-item id="TaxationJurisdictions" action="Index" controller="TaxJurisdictions" area="CrestApps.OrchardCore.Taxation" permission="@TaxationPermissions.ManageTaxation.Name">@T["Tax Jurisdictions"]</breadcrumb-item>
+    </breadcrumb>
 </zone>
 
 <form method="post" enctype="multipart/form-data" class="no-multisubmit">

@@ -4,7 +4,9 @@
 
 @model ListCatalogEntryViewModel<CatalogEntryViewModel<CurrencyEntry>>
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["Currencies"])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="ProductsCurrencies" title="@T["Currencies"]" />
+</zone>
 
 <form asp-action="Index" method="post" class="no-multisubmit">
     <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />

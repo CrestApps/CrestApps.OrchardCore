@@ -2,7 +2,9 @@
 @using OrchardCore.DisplayManagement
 @model ListSourceModelViewModel<TaxCalculationMethodEntry, CatalogEntryViewModel<TaxRule>>
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["Tax Rules"])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="TaxationRules" title="@T["Tax Rules"]" />
+</zone>
 
 @* The post form provides the antiforgery token used by the delete action. *@
 <form asp-action="Index" method="post" class="no-multisubmit">

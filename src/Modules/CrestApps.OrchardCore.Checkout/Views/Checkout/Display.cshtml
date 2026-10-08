@@ -3,6 +3,10 @@
 
 @model CheckoutViewModel
 
+<zone Name="Title">
+    <breadcrumb name="CheckoutDisplay" title="@T["Checkout"]" />
+</zone>
+
 <h1 class="visually-hidden">@T["Checkout"]</h1>
 
 <form asp-route="@CheckoutConstants.RouteNames.Step"

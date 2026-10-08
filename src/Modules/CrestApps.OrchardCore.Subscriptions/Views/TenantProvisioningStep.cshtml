@@ -64,7 +64,7 @@
 <div class="row">
     <div class="col-md-6 mb-3">
         <label asp-for="AdminPassword" class="form-label">@T["Password"]</label>
-        <input asp-for="AdminPassword" type="password" class="form-control" autocomplete="new-password" />
+        <input asp-for="AdminPassword" type="password" class="form-control" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
         <span asp-validation-for="AdminPassword"></span>
         @if (Model.HasPassword)
         {
@@ -73,7 +73,7 @@
     </div>
     <div class="col-md-6 mb-3">
         <label asp-for="ConfirmPassword" class="form-label">@T["Confirm password"]</label>
-        <input asp-for="ConfirmPassword" type="password" class="form-control" autocomplete="new-password" />
+        <input asp-for="ConfirmPassword" type="password" class="form-control" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
         <span asp-validation-for="ConfirmPassword"></span>
     </div>
 </div>

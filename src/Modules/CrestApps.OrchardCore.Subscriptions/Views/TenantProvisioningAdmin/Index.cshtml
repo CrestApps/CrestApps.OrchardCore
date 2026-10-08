@@ -1,7 +1,9 @@
 @using CrestApps.OrchardCore.Subscriptions.Models
 @model IReadOnlyList<TenantProvisioningJob>
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["Site provisioning"])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="SubscriptionsTenantProvisioning" title="@T["Site provisioning"]" />
+</zone>
 
 @if (Model.Count == 0)
 {

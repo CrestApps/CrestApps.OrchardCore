@@ -1,3 +1,4 @@
+@using CrestApps.OrchardCore.Transactions.Core
 @using CrestApps.OrchardCore.Transactions.Models
 @model TransactionDetailViewModel
 
@@ -7,7 +8,11 @@
         transaction.Status != TransactionStatus.Canceled;
 }
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["Transaction: {0}", string.IsNullOrEmpty(transaction.Title) ? T["(untitled)"].Value : transaction.Title])</h1></zone>
+<zone Name="Title">
+    <breadcrumb name="TransactionsDetail" title="@(T["Transaction: {0}", string.IsNullOrEmpty(transaction.Title) ? T["(untitled)"].Value : transaction.Title])">
+        <breadcrumb-item id="Transactions" action="Index" controller="Admin" area="CrestApps.OrchardCore.Transactions" permission="@TransactionsPermissions.ManageTransactions.Name">@T["Transactions"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
 
 <div class="row">
     <div class="col-lg-7">

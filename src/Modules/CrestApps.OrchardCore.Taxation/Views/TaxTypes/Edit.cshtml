@@ -1,7 +1,11 @@
+@using CrestApps.OrchardCore.Taxation.Core
+
 @model EditCatalogEntryViewModel
 
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["Edit {0}", Model.DisplayName])</h1>
+    <breadcrumb name="TaxationTypesEdit" title="@(T["Edit {0}", Model.DisplayName])">
+        <breadcrumb-item id="TaxationTypes" action="Index" controller="TaxTypes" area="CrestApps.OrchardCore.Taxation" permission="@TaxationPermissions.ManageTaxation.Name">@T["Tax Types"]</breadcrumb-item>
+    </breadcrumb>
 </zone>
 
 <form method="post" asp-route-id="@ViewContext.HttpContext.Request.RouteValues["id"]" enctype="multipart/form-data" class="no-multisubmit">
