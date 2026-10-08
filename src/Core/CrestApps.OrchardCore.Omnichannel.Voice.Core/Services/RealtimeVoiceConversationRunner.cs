@@ -278,7 +278,8 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         // Only now: a session that never opened held nothing, and the turn-based loop takes the call instead.
         _meter?.Start(answeredTicks);
 
-        await ApplyTelephonyTurnDetectionAsync(first, cancellationToken);
+        // Quick to hear the caller's first words, then the configured detector: see the Opening partial.
+        await ApplyOpeningTurnDetectionAsync(first, cancellationToken);
 
         // We placed this call, so the silence after the customer picks up is ours to fill. Left to itself the
         // session waits to be spoken to -- voice detection is how a turn begins -- and every live transcript

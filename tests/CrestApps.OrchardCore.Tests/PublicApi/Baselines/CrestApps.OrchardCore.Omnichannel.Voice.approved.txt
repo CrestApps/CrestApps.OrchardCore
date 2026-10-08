@@ -6,6 +6,15 @@
 [assembly: OrchardCore.Modules.Manifest.Module(Author="The CrestApps Team", Category="Contact Center", Description="Runs an automated AI voice conversation over any telephony provider.", Name="Automated Voice", Version="3.0.0", Website="https://crestapps.com")]
 [assembly: OrchardCore.Modules.Manifest.ModuleMarker("CrestApps.OrchardCore.Omnichannel.Voice", "Module")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Tests")]
+namespace CrestApps.OrchardCore.Omnichannel.Voice.BackgroundTasks
+{
+    [OrchardCore.BackgroundTasks.BackgroundTask(Description="Concludes automated voice calls whose end the telephony provider never reported.", LockExpiration=120000, LockTimeout=5000, Schedule="*/5 * * * *", Title="Stranded Automated Voice Call Recovery")]
+    public sealed class StrandedVoiceCallRecoveryBackgroundTask : OrchardCore.BackgroundTasks.IBackgroundTask
+    {
+        public StrandedVoiceCallRecoveryBackgroundTask() { }
+        public System.Threading.Tasks.Task DoWorkAsync(System.IServiceProvider serviceProvider, System.Threading.CancellationToken cancellationToken) { }
+    }
+}
 namespace CrestApps.OrchardCore.Omnichannel.Voice
 {
     [OrchardCore.Modules.RequireFeatures(new string[] {

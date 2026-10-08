@@ -201,12 +201,16 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         // On an 8 kHz companded line those defaults had the model answering phantom turns and restarting its own
         // sentences — the caller's experience is an assistant talking to itself that never lets them speak.
         var harness = new RealtimeHarness();
+        harness.Conversation.Queue(new RealtimeConversationEvent { Type = RealtimeConversationEventType.UserTurnCommitted });
 
         // Act
         await harness.RunAsync();
 
         // Assert
-        var applied = Assert.Single(harness.Conversation.TurnDetectionUpdates);
+        // The call opens on a quick detector for the caller's "hello?" (see the next test); from their first turn on
+        // it runs on the configured one, tuned for the phone.
+        Assert.Equal(2, harness.Conversation.TurnDetectionUpdates.Count);
+        var applied = harness.Conversation.TurnDetectionUpdates[^1];
 
         Assert.True(applied.AllowInterruption, "Being talked over is the other half of sounding like a machine.");
         Assert.True(applied.SilenceDurationMs >= 800, "A caller must be allowed to pause mid-sentence.");
@@ -218,8 +222,33 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         // quiet. (Under the default semantic detector the provider ignores this value anyway.)
         Assert.True(applied.VadThreshold <= 0.55f, "A short 'yeah' must not be clipped before the model hears it.");
 
-        // The detector type belongs to the provider; naming one here would be a guess that fails closed.
+        // The detector type belongs to the provider's configuration; leaving it unnamed restores what the session
+        // was configured with.
         Assert.Null(applied.TurnDetectionType);
+    }
+
+    [Fact]
+    public async Task TheCallersFirstWords_AreHeardQuickly_ThenTheConfiguredDetectorTakesOver()
+    {
+        // Arrange
+        // Live, a caller answered with "hello?", which cancelled the greeting about to be said, and the patient
+        // default detector took 1.3 seconds to decide they had finished: the greeting came three seconds after them.
+        var harness = new RealtimeHarness();
+        harness.Conversation.Queue(new RealtimeConversationEvent { Type = RealtimeConversationEventType.UserTurnCommitted });
+        harness.Conversation.Queue(new RealtimeConversationEvent { Type = RealtimeConversationEventType.UserTurnCommitted });
+
+        // Act
+        await harness.RunAsync();
+
+        // Assert
+        var opening = harness.Conversation.TurnDetectionUpdates[0];
+        Assert.Equal(RealtimeTurnDetectionTypes.ServerVad, opening.TurnDetectionType);
+        Assert.True(opening.SilenceDurationMs <= 500, "The first turn is \"hello?\"; it should not wait over a second.");
+        Assert.True(opening.AllowInterruption);
+
+        // Restored once, at the first turn, and not again at the second.
+        Assert.Equal(2, harness.Conversation.TurnDetectionUpdates.Count);
+        Assert.Null(harness.Conversation.TurnDetectionUpdates[1].TurnDetectionType);
     }
 
     [Fact]

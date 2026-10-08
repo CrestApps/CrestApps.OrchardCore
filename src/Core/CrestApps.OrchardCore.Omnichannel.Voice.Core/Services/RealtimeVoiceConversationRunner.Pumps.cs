@@ -450,6 +450,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                         {
                             _meter?.CallerSpeechStopped(DateTime.UtcNow.Ticks);
                             ProviderHeardCaller(turnOpen: false);
+                            await LeaveOpeningTurnDetectionAsync(conversation, cancellationToken);
                         }
 
                         // A new turn, so speech from here is not the rest of a line the caller talked over.
