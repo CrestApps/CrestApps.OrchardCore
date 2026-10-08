@@ -283,6 +283,9 @@ public sealed partial class RealtimeVoiceConversationRunner
         // muted -- the customer heard silence and then the line go dead.
         string lastAssistantLine = null;
 
+        // How many of the caller's turns the provider could not transcribe on this call.
+        var transcriptionFailures = 0;
+
         // When the provider last took a caller turn as finished, and whether its answer has started playing yet:
         // for how long the caller waited for each answer, and on what.
         long turnCommittedTicks = 0;
@@ -529,14 +532,30 @@ public sealed partial class RealtimeVoiceConversationRunner
                     case RealtimeConversationEventType.UserTranscriptFailed:
                         callerLineStartedUtc = null;
 
-                        // The provider took an utterance and could not transcribe it. Said at information level
-                        // rather than debug because it is not a detail: a turn the caller took has been lost, the
-                        // model is still waiting for them, and the caller believes they have already answered.
-                        if (_logger.IsEnabled(LogLevel.Information))
+                        // The provider took an utterance and could not transcribe it. A speech-to-speech model
+                        // heard the audio and answers it; what is lost is the caller's line in the transcript, which
+                        // is what the call's review, its notes and its disposition are written from. The first
+                        // failure on a call is a warning carrying the provider's reason, because when every turn
+                        // fails the cause is configuration -- live, a transcription model the provider would not
+                        // run -- and the reason is the only thing that says so.
+                        transcriptionFailures++;
+
+                        var failureReason = conversationEvent.ErrorMessage.SanitizeLogValue() ?? "(no reason given)";
+
+                        if (transcriptionFailures == 1)
+                        {
+                            _logger.LogWarning(
+                                "A caller utterance on activity '{ActivityId}' could not be transcribed: {Reason}. The model heard it, but the transcript the call is reviewed from will not have it.",
+                                activityId,
+                                failureReason);
+                        }
+                        else if (_logger.IsEnabled(LogLevel.Information))
                         {
                             _logger.LogInformation(
-                                "A caller utterance on activity '{ActivityId}' could not be transcribed, so the model never saw it.",
-                                activityId);
+                                "Another caller utterance on activity '{ActivityId}' could not be transcribed ({Failures} so far): {Reason}.",
+                                activityId,
+                                transcriptionFailures,
+                                failureReason);
                         }
 
                         break;
