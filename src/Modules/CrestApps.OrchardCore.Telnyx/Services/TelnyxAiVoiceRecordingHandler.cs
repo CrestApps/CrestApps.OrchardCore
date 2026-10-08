@@ -65,8 +65,9 @@ public sealed class TelnyxAiVoiceRecordingHandler : ITelnyxAiVoiceEventHandler
         var scope = await _shellHost.GetScopeAsync(_shellSettings);
 
         // On the thread pool, not inline: an un-awaited scope runs on this thread until something truly yields, and
-        // on SQLite a YesSql call never does -- the conversation would wait for the recording after all.
-        _ = Task.Run(() => RecordInOwnScopeAsync(scope, callControlId, activityId, customerNumber, isInbound));
+        // on SQLite a YesSql call never does -- the conversation would wait for the recording after all. Not tied to
+        // the request's token either: the recording outlives the webhook that started it.
+        _ = Task.Run(() => RecordInOwnScopeAsync(scope, callControlId, activityId, customerNumber, isInbound), CancellationToken.None);
     }
 
     private async Task RecordInOwnScopeAsync(
