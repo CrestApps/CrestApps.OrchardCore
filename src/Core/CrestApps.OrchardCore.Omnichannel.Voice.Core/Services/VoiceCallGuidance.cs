@@ -19,6 +19,11 @@ internal static class VoiceCallGuidance
     /// <remarks>
     /// Said plainly, because the model is speaking rather than writing and cannot see the call state: on a phone
     /// call somebody has to hang up, and if it does not, the customer is left holding a dead line.
+    /// <para>
+    /// The confirmation rule is here because ending the call is where a wrong one costs: live, a model read an
+    /// email address back wrongly, the customer's reply came through garbled, and the model took it for a yes,
+    /// thanked them and hung up with the wrong address.
+    /// </para>
     /// </remarks>
     public const string EndingTheCall =
         "You are on a live phone call. When the conversation has genuinely finished — the customer has what " +
@@ -26,7 +31,10 @@ internal static class VoiceCallGuidance
         "closing line and then call the " + EndCallTool.ToolName + " tool. The call is hung up for you once you " +
         "have finished speaking and the customer has had a moment to add anything, so do not announce that you " +
         "are hanging up and do not wait for them to do it. Never call it while the customer still has questions " +
-        "or is being transferred to a person.";
+        "or is being transferred to a person. When you read details back to confirm them, only a clear yes " +
+        "confirms them: an answer you could not make out, or one that does not plainly say yes, is not a " +
+        "confirmation -- ask again (\"Sorry, was that a yes?\"), and if they correct you, read the corrected " +
+        "details back before you go on.";
 
     /// <summary>
     /// The same guidance under its own heading, for a system prompt that is assembled in sections.
