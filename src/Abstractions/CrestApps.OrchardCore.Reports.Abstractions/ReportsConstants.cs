@@ -16,6 +16,27 @@ public static class ReportsConstants
     public const string OpenXmlFeature = "CrestApps.OrchardCore.Reports.OpenXml";
 
     /// <summary>
+    /// The identifier of the report designer feature, which lets people design reports from data sources with drag and
+    /// drop, save reusable views, and share reports.
+    /// </summary>
+    public const string DesignerFeature = "CrestApps.OrchardCore.Reports.Designer";
+
+    /// <summary>
+    /// The identifier of the feature that adds the tenant's content types as a report data source.
+    /// </summary>
+    public const string ContentsFeature = "CrestApps.OrchardCore.Reports.Contents";
+
+    /// <summary>
+    /// The technical name of the data source that exposes saved report views as data sets.
+    /// </summary>
+    public const string ViewsDataSource = "ReportViews";
+
+    /// <summary>
+    /// The technical name of the data source that exposes content types as data sets.
+    /// </summary>
+    public const string ContentsDataSource = "Contents";
+
+    /// <summary>
     /// The technical name of the built-in CSV export format.
     /// </summary>
     public const string CsvExportFormat = "csv";
