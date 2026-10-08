@@ -1,6 +1,7 @@
 using CrestApps.Core.AI.Capabilities;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -91,6 +92,10 @@ public sealed class AIProfileChatModeDisplayDriver : DisplayDriver<AIProfile>
                 .Where(deployment => !string.IsNullOrWhiteSpace(deployment.Name))
                 .Select(deployment => deployment.Name)
                 .ToArray();
+
+            model.UntranscribedRealtimeDeploymentNames = await RealtimeTranscriptionCoverage.GetUntranscribedAsync(
+                realtimeDeployments,
+                clientName => _deploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.SpeechToText, clientName: clientName));
         }).Location("Content:1.7%Deployments & Interactions;2")
         .RenderWhen(async () =>
         {
