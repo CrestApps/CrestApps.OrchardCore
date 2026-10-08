@@ -25,7 +25,8 @@ internal sealed class StreamingResampler
     private readonly int _toRate;
     private readonly long _step;
     private readonly long _unit;
-    private readonly AntiAliasFilter _before;
+    private readonly Biquad[] _before;
+    private readonly AntiAliasFilter _antiAlias;
     private readonly Biquad[] _after;
 
     private bool _started;
@@ -51,10 +52,11 @@ internal sealed class StreamingResampler
         _unit = toRate / divisor;
 
         // Band-limited on the way down before samples are dropped, on the way up after they are made, and to the
-        // telephone passband either way. Going down, a sharp filter: what is left above the new rate's Nyquist folds
-        // back into the line as harshness on every "s". Going up there is nothing to fold, and four poles, as the
-        // whole-buffer converter uses, are enough.
-        _before = toRate < fromRate ? AntiAliasFilter.For(fromRate, toRate) : null;
+        // telephone passband either way. Four poles, as the whole-buffer converter uses, give the voice the tone it
+        // has always had on the line. Going down, a sharp filter follows them: four poles alone leave what is above
+        // the new rate's Nyquist to fold back into the line as harshness on every "s".
+        _before = toRate < fromRate ? Biquad.LowPass(fromRate, Cutoff(fromRate, toRate)) : [];
+        _antiAlias = toRate < fromRate ? AntiAliasFilter.For(fromRate, toRate) : null;
         _after = toRate > fromRate ? Biquad.LowPass(toRate, Cutoff(toRate, fromRate)) : [];
     }
 
@@ -86,7 +88,8 @@ internal sealed class StreamingResampler
 
         for (var i = 0; i < samples.Length; i++)
         {
-            input[i] = _before?.Next(samples[i]) ?? samples[i];
+            var value = Filter(_before, samples[i]);
+            input[i] = _antiAlias?.Next(value) ?? value;
         }
 
         if (!_started)
@@ -124,7 +127,12 @@ internal sealed class StreamingResampler
         _previous = 0;
         _position = 0;
 
-        _before?.Reset();
+        foreach (var section in _before)
+        {
+            section.Reset();
+        }
+
+        _antiAlias?.Reset();
 
         foreach (var section in _after)
         {
@@ -167,7 +175,10 @@ internal sealed class StreamingResampler
     /// part of an "s" -- was only about 15 dB down when it folded back to 3 kHz. One realtime model's voice is
     /// brighter than another's, and on the line it sounded harsher: its recordings carried 6 to 8 dB more energy at
     /// the top of the band than the other model's, while every band below matched to within a decibel. This passes
-    /// the telephone band flat and holds everything that would fold into it at least 70 dB down.
+    /// the telephone band flat and holds everything that would fold into it at least 70 dB down. It follows the
+    /// four-pole filter rather than replacing it, so the voice keeps the tone it had: replaced, the top of the band
+    /// came through a few decibels brighter for every model, and the one that already sounded right would have
+    /// changed too.
     /// </remarks>
     private sealed class AntiAliasFilter
     {

@@ -18,13 +18,26 @@ public sealed class StreamingResamplerTests
     [Theory]
     [InlineData(300d)]
     [InlineData(1_000d)]
-    [InlineData(2_500d)]
-    [InlineData(3_300d)]
-    public void TheTelephoneBand_PassesAtItsOwnLevel(double frequency)
+    [InlineData(2_000d)]
+    public void TheHeartOfTheTelephoneBand_PassesAtItsOwnLevel(double frequency)
     {
         var output = Resample(frequency);
 
         Assert.InRange(RmsDbfs(output) - InputDbfs, -1d, 0.5d);
+    }
+
+    [Theory]
+    [InlineData(2_500d, -1.6d)]
+    [InlineData(3_000d, -3.5d)]
+    [InlineData(3_300d, -5.3d)]
+    public void TheTopOfTheBand_KeepsTheToneTheVoiceAlwaysHad(double frequency, double fourPoleDb)
+    {
+        // The sharp filter was added after the old four poles, not in place of them. In place of them, every
+        // model came out a few decibels brighter at the top of the band, including the one that already sounded
+        // right.
+        var output = Resample(frequency);
+
+        Assert.InRange(RmsDbfs(output) - InputDbfs, fourPoleDb - 0.6d, fourPoleDb + 0.6d);
     }
 
     [Theory]
