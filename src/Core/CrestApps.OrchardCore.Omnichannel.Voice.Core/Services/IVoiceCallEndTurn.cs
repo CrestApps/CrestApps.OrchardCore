@@ -101,8 +101,8 @@ public interface IVoiceCallEndTurn
         => false;
 
     /// <summary>
-    /// Gets a value indicating whether the customer spoke last and the assistant has said nothing since, so a call
-    /// ended now would end on the customer's words with no closing line.
+    /// Gets a value indicating whether the assistant has not said goodbye since the customer last spoke, so a call
+    /// ended now would end with no closing line: the customer spoke last, or the assistant's last line was not one.
     /// </summary>
     /// <remarks>
     /// Live, a customer confirmed their email with "yes", the model answered with the end-call tool alone, was told

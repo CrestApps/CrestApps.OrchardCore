@@ -98,8 +98,9 @@ public sealed class EndCallTool : AIFunction
 
         var recorded = turn is not null;
 
-        // Read before the request: the customer's words are the last thing on the call, so ending it now ends it on
-        // them. A voicemail's message is its closing line.
+        // Read before the request: no goodbye has been said since the customer last spoke -- they spoke last, or the
+        // assistant's last line was something else ("let me wrap this up") -- so ending it now ends it without one.
+        // A voicemail's message is its closing line.
         var closingLineOwed = recorded && !answeredByMachine && turn.ClosingLineOwed;
 
         turn?.RequestEndCall(reason, answeredByMachine);
@@ -123,8 +124,8 @@ public sealed class EndCallTool : AIFunction
         }
 
         return ValueTask.FromResult<object>(closingLineOwed
-            ? "The call will be ended for you once you finish speaking, but you have not said goodbye: the customer " +
-              "spoke last. Say one short closing line now -- thank them and say goodbye -- and nothing else. Do not " +
+            ? "The call will be ended for you once you finish speaking, but you have not said goodbye yet. " +
+              "Say one short closing line now -- thank them and say goodbye -- and nothing else. Do not " +
               "ask anything and do not mention hanging up."
             : "The call will be ended for you once you finish speaking. Say nothing further unless the customer speaks again.");
     }

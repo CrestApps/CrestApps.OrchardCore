@@ -119,6 +119,18 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     private static readonly TimeSpan ClosingSpeechStartGrace = TimeSpan.FromSeconds(4);
 
     /// <summary>
+    /// How long after asking to end the call the model may still be producing a response before the call is hung up
+    /// regardless.
+    /// </summary>
+    /// <remarks>
+    /// The goodbye often comes in a response of its own after the tool call, and the line before it is not always one:
+    /// live, "let me wrap this up for you" ended, the countdown ran from its last word, and the line dropped while the
+    /// goodbye was still being produced. A response under way is the model still talking; bounded, because one that
+    /// never finishes must not hold the line open.
+    /// </remarks>
+    private static readonly TimeSpan ClosingResponseLimit = TimeSpan.FromSeconds(10);
+
+    /// <summary>
     /// How long the caller is left the line after the assistant's goodbye before the call is hung up.
     /// </summary>
     /// <remarks>
@@ -604,6 +616,12 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
             // the closing line from being cut off at the first word. A model that says nothing at all still has
             // to end the call, so the wait is bounded.
             if (!closingLineStarted && now - requestedAtTicks < ClosingSpeechStartGrace.Ticks)
+            {
+                continue;
+            }
+
+            // The model is still producing something -- usually the goodbye itself -- so it has not finished speaking.
+            if (Volatile.Read(ref _responseInFlight) == 1 && now - requestedAtTicks < ClosingResponseLimit.Ticks)
             {
                 continue;
             }

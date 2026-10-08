@@ -207,17 +207,37 @@ public sealed class EndCallToolTests
     }
 
     [Fact]
-    public void AReset_ForgetsWhoSpokeLast()
+    public async Task EndingTheCall_AfterALineThatIsNotAGoodbye_AsksForAGoodbyeFirst()
+    {
+        // Arrange
+        // Live, a model said "let me wrap this up for you", ended the call, was told to say nothing further, and the
+        // line dropped with no goodbye at all.
+        var (tool, turn, arguments) = Create();
+        turn.CustomerAnswered();
+        turn.AssistantSaid("Alright, thanks for confirming—let me wrap this up for you.");
+
+        // Act
+        var result = await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(turn.EndCallRequested);
+        Assert.Contains("you have not said goodbye", result?.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AReset_ForgetsTheGoodbyeAlreadySaid()
     {
         // Arrange
         var turn = new VoiceCallEndTurn();
         turn.CustomerAnswered();
+        turn.AssistantSaid("Thanks, Haneen. Have a great day!");
+        Assert.False(turn.ClosingLineOwed);
 
         // Act
         turn.Reset();
 
         // Assert
-        Assert.False(turn.ClosingLineOwed);
+        Assert.Equal(new VoiceCallEndTurn().ClosingLineOwed, turn.ClosingLineOwed);
     }
 
     private static (EndCallTool Tool, VoiceCallEndTurn Turn, AIFunctionArguments Arguments) Create()

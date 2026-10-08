@@ -12,6 +12,7 @@ public sealed class VoiceCallEndTurn : IVoiceCallEndTurn
     private int _awaitingAnswer;
     private int _holds;
     private int _customerSpokeLast;
+    private int _lastLineSaidGoodbye;
 
     // How many times one unanswered question may keep the call open against the model's request to end it.
     private const int MaximumHolds = 2;
@@ -53,6 +54,7 @@ public sealed class VoiceCallEndTurn : IVoiceCallEndTurn
         if (!string.IsNullOrWhiteSpace(line))
         {
             Volatile.Write(ref _customerSpokeLast, 0);
+            Volatile.Write(ref _lastLineSaidGoodbye, VoiceGoodbye.SoundsLikeOne(line) ? 1 : 0);
         }
 
         // Only set here, never cleared: a goodbye said straight after the question, without the customer
@@ -72,8 +74,12 @@ public sealed class VoiceCallEndTurn : IVoiceCallEndTurn
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Owed too when the assistant spoke last but not to say goodbye: live, a model said "let me wrap this up for you",
+    /// ended the call, was told to say nothing further, and the line dropped with no goodbye at all.
+    /// </remarks>
     public bool ClosingLineOwed
-        => Volatile.Read(ref _customerSpokeLast) == 1;
+        => Volatile.Read(ref _customerSpokeLast) == 1 || Volatile.Read(ref _lastLineSaidGoodbye) == 0;
 
     /// <inheritdoc/>
     public bool TryHoldForAnswer()
@@ -91,6 +97,7 @@ public sealed class VoiceCallEndTurn : IVoiceCallEndTurn
         Volatile.Write(ref _awaitingAnswer, 0);
         Volatile.Write(ref _holds, 0);
         Volatile.Write(ref _customerSpokeLast, 0);
+        Volatile.Write(ref _lastLineSaidGoodbye, 0);
         EndCallRequested = false;
         Reason = null;
         ReachedVoicemail = false;
