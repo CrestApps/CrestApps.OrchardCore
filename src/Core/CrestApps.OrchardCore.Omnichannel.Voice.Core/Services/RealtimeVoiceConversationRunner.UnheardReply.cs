@@ -36,6 +36,9 @@ public sealed partial class RealtimeVoiceConversationRunner
     /// </summary>
     private CallerReplyListener _replyListener;
 
+    // The assistant's last finished line, for the prompt that asks for an answer it did not hear.
+    private string _lastAssistantLine;
+
     /// <summary>
     /// When the provider last reported anything of the caller's turn: its start, or its being committed.
     /// </summary>
@@ -119,11 +122,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                 Interlocked.Exchange(ref _lastAssistantAudioTicks, now);
 
                 await conversation.RequestUnpromptedResponseAsync(
-                    WithSessionInstructions(
-                        "The customer just answered you, but their answer was too short or too faint for you to " +
-                        "hear. Say one short sentence only, asking them to say it again -- after a yes-or-no " +
-                        "question, for example, \"Sorry, was that a yes?\". Do not repeat your whole question, do " +
-                        "not ask anything new, and do not move on."),
+                    WithSessionInstructions(UnheardReplyPrompt(Volatile.Read(ref _lastAssistantLine))),
                     callToken);
             }
         }
@@ -160,6 +159,28 @@ public sealed partial class RealtimeVoiceConversationRunner
             leveler.AverageSpeechGainDb,
             AssistantVoiceLeveler.TargetDbfs,
             leveler.LimitedSamples);
+    }
+
+    /// <summary>
+    /// What the model is asked to say when the caller's answer went unheard.
+    /// </summary>
+    /// <remarks>
+    /// It is told what it last said. Asked only to "say it again", a model that had just read an email address back
+    /// and asked "did I get that right?" asked the caller for the whole address again, and the caller -- who had
+    /// said "yes" -- answered that they had already given it and it had already been confirmed.
+    /// </remarks>
+    /// <param name="lastAssistantLine">The assistant's last line, or <see langword="null"/> when there is none.</param>
+    internal static string UnheardReplyPrompt(string lastAssistantLine)
+    {
+        var asked = string.IsNullOrWhiteSpace(lastAssistantLine)
+            ? string.Empty
+            : $"Your last words to them were: \"{lastAssistantLine.Trim()}\" ";
+
+        return
+            "The customer just answered you, but their answer was too short or too faint for you to hear. " + asked +
+            "Say one short sentence only, asking them to repeat their answer to that -- after a yes-or-no question, " +
+            "simply \"Sorry, was that a yes?\". Do not ask them to repeat anything they told you earlier, do not repeat " +
+            "your whole question, do not ask anything new, and do not move on.";
     }
 
     /// <summary>

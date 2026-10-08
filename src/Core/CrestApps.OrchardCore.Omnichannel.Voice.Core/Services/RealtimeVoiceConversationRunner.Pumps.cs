@@ -524,6 +524,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                         utteranceInFlight = false;
                         Volatile.Write(ref spokeSinceCaller, true);
                         Volatile.Write(ref lastAssistantLine, spoken);
+                        Volatile.Write(ref _lastAssistantLine, spoken);
                         context.AssistantSaid?.Invoke(spoken);
 
                         // The line that was in flight when the call was closed is the goodbye, when it is one. It
