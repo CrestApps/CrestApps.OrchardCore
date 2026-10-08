@@ -299,6 +299,10 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         Interlocked.Exchange(ref _lastCallerSpeechTicks, startedTicks);
         Interlocked.Exchange(ref _assistantSpeechEndsTicks, 0);
         Volatile.Write(ref _goodbyeAlreadySaid, false);
+        _replyListener = new CallerReplyListener();
+        Interlocked.Exchange(ref _providerHeardCallerTicks, 0);
+        Interlocked.Exchange(ref _callerTurnOpenSinceTicks, 0);
+        Interlocked.Exchange(ref _responseInFlight, 0);
 
         // The moment the model asks to transfer, the caller stops being the assistant's to talk to. Without this
         // the session ran until the caller hung up — the transfer was recorded, the caller was told someone was
@@ -324,6 +328,10 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         // assistant waiting for a turn it never saw while the caller waits for an answer they think they already
         // gave. Neither side will break that on its own.
         var idle = SpeakUpWhenNobodyHasAsync(live, context, callScope.Token);
+
+        // The narrower case of the same thing, caught within a breath instead of twelve seconds: the caller
+        // answered, the line carried it, and the provider never reported hearing it.
+        var unheard = AskAgainWhenAReplyGoesUnheardAsync(live, context, callScope.Token);
 
         // One generator drives both paths, at the rate the model speaks: the bed is mixed under the assistant's
         // own audio while it talks, and written on its own while it does not, so the room never cuts in and out.
@@ -353,11 +361,18 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         {
             _meter?.Stop(DateTime.UtcNow.Ticks);
             await callScope.CancelAsync();
+            LogVoiceLevel(context);
 
             // All of them are awaited so none is left writing to a disposed session.
-            await Task.WhenAll(Settle(toModel), Settle(bed), Settle(closing), Settle(idle));
+            await Task.WhenAll(Settle(toModel), Settle(bed), Settle(closing), Settle(idle), Settle(unheard));
             await media.StopAsync(CancellationToken.None);
         }
+
+        // Whatever the session still had pending -- usage recorded for a line that never got a transcript, a turn
+        // cut off as the call ended -- is committed before the call is handed on. The caller finishes the call and
+        // writes its summary on scopes of their own, and on SQLite those cannot write while this request still
+        // holds the write lock.
+        await _session.SaveChangesAsync(CancellationToken.None);
 
         return true;
     }

@@ -1,3 +1,4 @@
+using System.Data.Common;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
@@ -196,7 +197,10 @@ public sealed class TelnyxRecordingIngestEnqueuer : ITelnyxRecordingSavedHandler
         // Let it propagate: the durable provider webhook inbox lets the delivery's claim expire and re-dispatches
         // it in a fresh scope, which re-reads the interaction and stamps the recording. Swallowing it here would
         // settle the delivery as handled and silently drop the voicemail so it never surfaces on the soft phone.
-        catch (Exception ex) when (ex is not OperationCanceledException and not ConcurrencyException)
+        // A database that could not be reached is the same: live, SQLite stayed locked past its busy timeout as a
+        // call ended, the recording was never queued, and nothing would ever have downloaded it. Thrown, the inbox
+        // settles the delivery as failed and runs it again.
+        catch (Exception ex) when (ex is not OperationCanceledException and not ConcurrencyException and not DbException)
         {
             _logger.LogError(
                 ex,
@@ -246,7 +250,7 @@ public sealed class TelnyxRecordingIngestEnqueuer : ITelnyxRecordingSavedHandler
 
             return true;
         }
-        catch (Exception ex) when (ex is not OperationCanceledException and not ConcurrencyException)
+        catch (Exception ex) when (ex is not OperationCanceledException and not ConcurrencyException and not DbException)
         {
             _logger.LogError(
                 ex,
