@@ -104,7 +104,9 @@ public sealed partial class RealtimeVoiceConversationRunner
 
                 released.Clear();
                 var now = DateTime.UtcNow.Ticks;
-                guard.Process(audio, now, Interlocked.Read(ref _assistantSpeechEndsTicks), released);
+                var assistantPlaysUntil = Interlocked.Read(ref _assistantSpeechEndsTicks);
+                guard.Process(audio, now, assistantPlaysUntil, released);
+                _replyListener?.Hear(audio.Span, now, assistantPlaysUntil);
 
                 // Recorded before the audio goes to the model, so that by the time the provider reports the caller
                 // starting, the other pump already knows it was a voice over the assistant and not its echo.
@@ -255,6 +257,12 @@ public sealed partial class RealtimeVoiceConversationRunner
         // it called the tool and only then said "bye, take care" -- a goodbye this would otherwise have muted.
         var spokeSinceCaller = false;
 
+        // The assistant's last finished line. A line said after the request to end the call is muted only as a
+        // repeat of a goodbye, and it is not one when the line before it was not a goodbye: live, a model said
+        // "let me just read that back", ended the call in the same breath, and the read-back and its goodbye were
+        // muted -- the customer heard silence and then the line go dead.
+        string lastAssistantLine = null;
+
         // The requests already acted on, so a later one -- the model ending the call again after the customer
         // answered its first goodbye -- is recognised as new.
         var requestsSeen = 0;
@@ -265,7 +273,9 @@ public sealed partial class RealtimeVoiceConversationRunner
 
             // Nothing is being said, and the assistant has already answered the customer, so the goodbye is behind
             // us. The closing watchdog is told too, so it does not wait for a goodbye this pump will now suppress.
-            if (!Volatile.Read(ref utteranceInFlight) && Volatile.Read(ref spokeSinceCaller))
+            if (!Volatile.Read(ref utteranceInFlight) &&
+                Volatile.Read(ref spokeSinceCaller) &&
+                VoiceGoodbye.SoundsLikeOne(Volatile.Read(ref lastAssistantLine)))
             {
                 goodbyeSaid = true;
                 Volatile.Write(ref _goodbyeAlreadySaid, true);
@@ -369,14 +379,32 @@ public sealed partial class RealtimeVoiceConversationRunner
                         break;
 
                     case RealtimeConversationEventType.ResponseCompleted:
+                        ResponseInFlight(false);
+
                         // The line is over: fade it out and send its last, padded packet, rather than stopping dead
                         // on whatever sample it ended on -- which was heard as a click as the assistant finished.
                         await WriteToLineAsync(media, _outgoing.Finish(), cancellationToken);
+
+                        // The response's usage was recorded on this scope's session just before this event was
+                        // handed over, and recording it flushes: the write lock is taken and held until something
+                        // commits. The transcript commit (StorePromptAsync) comes before the response completes,
+                        // so without this the lock was held through the caller's whole next turn and, after the
+                        // last response, until the call ended -- live, a 37 second tenant-wide stall at hangup.
+                        // Bookkeeping, so a commit the database refuses is reported and the conversation goes on.
+                        try
+                        {
+                            await _session.SaveChangesAsync(cancellationToken);
+                        }
+                        catch (Exception ex) when (ex is not OperationCanceledException)
+                        {
+                            _logger.LogWarning(ex, "Could not commit the usage of a realtime response on activity '{ActivityId}'; the call carries on.", activityId);
+                        }
 
                         break;
 
                     case RealtimeConversationEventType.UserSpeechStarted:
                         _meter?.CallerSpeechStarted(DateTime.UtcNow.Ticks);
+                        ProviderHeardCaller(turnOpen: true);
 
                         // The first start since the last transcript: a pause mid-sentence starts speech again, but
                         // the line it belongs to began at the first one.
@@ -413,6 +441,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                         if (conversationEvent.Type == RealtimeConversationEventType.ResponseStarted)
                         {
                             assistantLineStartedUtc = null;
+                            ResponseInFlight(true);
                         }
 
                         // The detector commits the caller's turn once it hears them stop, which is the only end of
@@ -420,6 +449,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                         if (conversationEvent.Type == RealtimeConversationEventType.UserTurnCommitted)
                         {
                             _meter?.CallerSpeechStopped(DateTime.UtcNow.Ticks);
+                            ProviderHeardCaller(turnOpen: false);
                         }
 
                         // A new turn, so speech from here is not the rest of a line the caller talked over.
@@ -443,6 +473,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                         if (!string.IsNullOrWhiteSpace(conversationEvent.Text))
                         {
                             Interlocked.Exchange(ref _lastCallerSpeechTicks, DateTime.UtcNow.Ticks);
+                            context.CustomerAnswered?.Invoke();
                         }
 
                         // Recorded so the call is concluded, summarized and dispositioned exactly the way a
@@ -491,10 +522,13 @@ public sealed partial class RealtimeVoiceConversationRunner
 
                         utteranceInFlight = false;
                         Volatile.Write(ref spokeSinceCaller, true);
+                        Volatile.Write(ref lastAssistantLine, spoken);
+                        context.AssistantSaid?.Invoke(spoken);
 
-                        // The line that was in flight when the call was closed is the goodbye. It has now been
-                        // said, so the assistant is done talking.
-                        goodbyeSaid = closingRequested;
+                        // The line that was in flight when the call was closed is the goodbye, when it is one. It
+                        // has now been said, so the assistant is done talking. A line that was not a goodbye leaves
+                        // the next one to be heard: that is where the model is still saying what it meant to.
+                        goodbyeSaid = closingRequested && VoiceGoodbye.SoundsLikeOne(spoken);
 
                         break;
 

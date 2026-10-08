@@ -79,6 +79,11 @@ internal sealed class OutgoingCallAudio
     public int FrameBytes { get; }
 
     /// <summary>
+    /// The leveler the assistant's voice passes through, for reporting what it measured and did on this call.
+    /// </summary>
+    internal AssistantVoiceLeveler Leveler => _leveler;
+
+    /// <summary>
     /// Converts the next piece of the assistant's voice, returning the whole packets it completes.
     /// </summary>
     /// <param name="pcm">16-bit little-endian PCM at the realtime rate. An odd byte is kept for the next piece.</param>

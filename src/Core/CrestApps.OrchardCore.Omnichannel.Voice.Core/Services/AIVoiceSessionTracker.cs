@@ -100,26 +100,37 @@ internal sealed class AIVoiceSessionTracker : IAIVoiceSessionTracker
 
             // Not awaited, exactly as the finished live session is handed on: the request this was called from
             // may already be abandoned, and the summary must not depend on it living long enough to write it.
-            _ = scope.UsingAsync(async childScope =>
-            {
-                try
-                {
-                    await childScope.ServiceProvider
-                        .GetRequiredService<AIVoiceSessionSummaryWriter>()
-                        .WriteAsync(draft);
-                }
-                catch (Exception ex)
-                {
-                    childScope.ServiceProvider
-                        .GetRequiredService<ILogger<AIVoiceSessionTracker>>()
-                        .LogWarning(ex, "Could not record the AI voice session of activity '{ActivityId}'.", draft.ActivityId.SanitizeLogValue());
-                }
-            });
+            //
+            // And not started on this thread either. Un-awaited is not the same as off the thread: on SQLite every
+            // YesSql call completes synchronously, so the whole scope -- its commit included -- ran inline before
+            // this method returned. The caller's own session usually still holds the write lock at that point (a
+            // flushed write it commits when its scope ends), so the summary's commit waited out the 30 second busy
+            // timeout against its own request. The request and every other writer in the tenant stalled for that
+            // long, and the commit then failed where nothing observed it, losing the summary.
+            _ = Task.Run(() => WriteInOwnScopeAsync(scope, draft));
         }
         catch (Exception ex)
         {
             // A report that cannot be written must never cost the call anything.
             _logger.LogWarning(ex, "Could not open a scope to record the AI voice session of activity '{ActivityId}'.", draft.ActivityId.SanitizeLogValue());
+        }
+    }
+
+    private async Task WriteInOwnScopeAsync(ShellScope scope, AIVoiceSessionDraft draft)
+    {
+        try
+        {
+            await scope.UsingAsync(async childScope =>
+            {
+                await childScope.ServiceProvider
+                    .GetRequiredService<AIVoiceSessionSummaryWriter>()
+                    .WriteAsync(draft);
+            });
+        }
+        catch (Exception ex)
+        {
+            // Around the scope rather than inside it, so a commit refused when the scope ends is reported too.
+            _logger.LogWarning(ex, "Could not record the AI voice session of activity '{ActivityId}'.", draft.ActivityId.SanitizeLogValue());
         }
     }
 
