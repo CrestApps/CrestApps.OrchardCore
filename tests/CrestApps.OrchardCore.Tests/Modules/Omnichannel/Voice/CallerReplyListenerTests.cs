@@ -145,6 +145,25 @@ public sealed class CallerReplyListenerTests
     }
 
     [Fact]
+    public void AReply_IsNotTaken_WhileTheCallerIsStillMakingSound()
+    {
+        // Arrange
+        // Live, a soft "um" was taken for a reply, and the question came just as the caller began their answer.
+        var listener = new CallerReplyListener();
+        var replyEnds = Feed(listener, Frames(Speech, 10), _start + Ms(1_000), _start);
+        var now = replyEnds + _wait.Ticks;
+
+        // More voice, too short yet to be a reply of its own, right before the reply would be taken.
+        Feed(listener, Frames(Speech, 3), now - Ms(100), _start);
+
+        // Act
+        var unheard = listener.TryTakeUnheardReply(now, providerHeardCallerTicks: 0, _wait);
+
+        // Assert
+        Assert.False(unheard);
+    }
+
+    [Fact]
     public void ASecondReply_AfterTheFirstWasHeard_CanStillGoUnheard()
     {
         // Arrange

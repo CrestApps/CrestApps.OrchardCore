@@ -7,10 +7,12 @@ public sealed partial class RealtimeVoiceConversationRunner
 {
     /// <summary>
     /// How long after the caller's reply the provider is given to report hearing it before the assistant asks for
-    /// it again. The provider reports speech a few hundred milliseconds after it begins; a reply it has not
-    /// reported a second after it ended is one it is not going to.
+    /// it again. The provider reports speech a few hundred milliseconds after it begins, so a reply it has not
+    /// reported by now is one it is not going to. Two seconds rather than one: live, at one and a bit, a soft "um"
+    /// before an answer was taken for a missed reply and the question came just as the caller began to answer.
+    /// The reply this exists for went unanswered for seven.
     /// </summary>
-    private static readonly TimeSpan UnheardReplyWait = TimeSpan.FromMilliseconds(1200);
+    private static readonly TimeSpan UnheardReplyWait = TimeSpan.FromSeconds(2);
 
     /// <summary>
     /// How often the unheard-reply watchdog looks. Fine enough that the assistant asks within a breath.

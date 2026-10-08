@@ -54,6 +54,9 @@ internal sealed class CallerReplyListener
     private long _replyStartTicks;
     private long _replyEndTicks;
 
+    // When any voice was last heard after the assistant finished, for the watchdog.
+    private long _lastVoiceTicks;
+
     // Read and written only by the watchdog.
     private long _lastTakenReplyStartTicks;
 
@@ -107,6 +110,7 @@ internal sealed class CallerReplyListener
 
         _loudBytes += pcm.Length;
         _lastLoudTicks = nowTicks;
+        Interlocked.Exchange(ref _lastVoiceTicks, nowTicks);
 
         if (_loudBytes >= BytesFor(MinimumReplyMilliseconds))
         {
@@ -129,6 +133,14 @@ internal sealed class CallerReplyListener
         var end = Interlocked.Read(ref _replyEndTicks);
 
         if (start == 0 || start <= _lastTakenReplyStartTicks || nowTicks - end < wait.Ticks)
+        {
+            return false;
+        }
+
+        // Somebody is talking on the line right now, too briefly yet to be a reply of its own. Live, a soft "um"
+        // two seconds before the answer was taken for a reply the provider missed, and the assistant asked for it
+        // again just as the caller started to give it. Wait for them to finish.
+        if (nowTicks - Interlocked.Read(ref _lastVoiceTicks) < GapMilliseconds * TimeSpan.TicksPerMillisecond)
         {
             return false;
         }
