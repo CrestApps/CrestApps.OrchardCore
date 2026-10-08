@@ -1,12 +1,16 @@
+using CrestApps.Core.Support;
+using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.SignalR.Core;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.ContactCenter.Handlers;
@@ -22,6 +26,8 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
     private readonly IAgentProfileManager _agentProfileManager;
     private readonly ITelephonyInteractionStore _telephonyInteractionStore;
     private readonly IHubContext<TelephonyHub, ITelephonyClient> _hubContext;
+    private readonly IOmnichannelActivityStore _activityStore;
+    private readonly ILogger _logger;
     private readonly string _tenantName;
 
     /// <summary>
@@ -33,19 +39,28 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
     /// <param name="telephonyInteractionStore">The telephony interaction store used by the soft phone's recent-call history.</param>
     /// <param name="hubContext">The telephony hub context used to push call-state changes to the soft phone.</param>
     /// <param name="shellSettings">The current Orchard shell settings.</param>
+    /// <param name="activityStore">
+    /// The activity store, read to tell a system-paced dial (whose call is the dialer's until the agent joins it) from
+    /// one the agent placed.
+    /// </param>
+    /// <param name="logger">The logger.</param>
     public ContactCenterSoftPhoneEventHandler(
         IInteractionManager interactionManager,
         ICallSessionManager callSessionManager,
         IAgentProfileManager agentProfileManager,
         ITelephonyInteractionStore telephonyInteractionStore,
         IHubContext<TelephonyHub, ITelephonyClient> hubContext,
-        ShellSettings shellSettings)
+        ShellSettings shellSettings,
+        IOmnichannelActivityStore activityStore,
+        ILogger<ContactCenterSoftPhoneEventHandler> logger)
     {
         _interactionManager = interactionManager;
         _callSessionManager = callSessionManager;
         _agentProfileManager = agentProfileManager;
         _telephonyInteractionStore = telephonyInteractionStore;
         _hubContext = hubContext;
+        _activityStore = activityStore;
+        _logger = logger;
         _tenantName = shellSettings.Name;
     }
 
@@ -76,6 +91,29 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
 
         if (interaction is null || string.IsNullOrEmpty(interaction.ProviderInteractionId))
         {
+            return;
+        }
+
+        // The agent's leg answering is projected only for a dialer call, where it is the moment the call becomes the
+        // agent's (see IsPacedDialAwaitingAgentAsync). Other calls reach the soft phone through their own events.
+        if (interactionEvent.EventType == ContactCenterConstants.Events.AgentLegAnswered &&
+            !DialerCallMetadata.IsCampaignDial(interaction))
+        {
+            return;
+        }
+
+        if (await IsPacedDialAwaitingAgentAsync(interaction, cancellationToken))
+        {
+            // The end is the one worth naming: it is where a dead number used to reach the agent.
+            if (interactionEvent.EventType == ContactCenterConstants.Events.CallEnded && _logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Kept the end of paced dialer call '{InteractionId}' (activity '{ActivityId}') off agent '{AgentId}''s soft phone because no agent joined it; the dialer settles the attempt.",
+                    interaction.ItemId.SanitizeLogValue(),
+                    interaction.ActivityItemId.SanitizeLogValue(),
+                    interaction.AgentId.SanitizeLogValue());
+            }
+
             return;
         }
 
@@ -117,6 +155,24 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
         await _hubContext.Clients
             .Group(TenantSignalRGroupName.ForUser(_tenantName, agent.UserId))
             .CallStateChanged(call);
+    }
+
+    // While the dialer is still reaching the customer of a system-paced dial (Power, Progressive, Predictive), the call is
+    // the dialer's, not the agent's: the agent is only held for it, as the agent workspace already treats it. Projected
+    // onto the soft phone, every attempt that never reached anyone showed there -- dialing, then gone -- and a dead
+    // number told the agent it was not in service, although the dialer dispositions those attempts itself and the
+    // agent has nothing to do with them. The soft phone hears of the call once the agent joins it. A preview dial is
+    // the agent's own from the start, so it still shows.
+    private async Task<bool> IsPacedDialAwaitingAgentAsync(Interaction interaction, CancellationToken cancellationToken)
+    {
+        if (!DialerCallMetadata.IsAwaitingAgent(interaction))
+        {
+            return false;
+        }
+
+        var activity = await _activityStore.FindByIdAsync(interaction.ActivityItemId, cancellationToken);
+
+        return AgentOfferKindHelper.FromActivitySource(activity?.Source) == AgentOfferKind.AutoDial;
     }
 
     private static bool IsVoicemailProjection(Interaction interaction)
@@ -165,6 +221,10 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
             eventType == ContactCenterConstants.Events.RecordingStopped ||
             eventType == ContactCenterConstants.Events.CallEnded ||
             eventType == ContactCenterConstants.Events.CallSentToVoicemail ||
+
+            // A paced dial is kept off the soft phone until the agent joins it, and the join is the agent's leg
+            // answering: the customer's own answer came before it, so nothing else would put the call on the phone.
+            eventType == ContactCenterConstants.Events.AgentLegAnswered ||
 
             // The call is the supervisor's once they take it over (the session names them as its agent): live, nothing
             // put it on their soft phone, which showed only a banner with nothing to mute, hold or hang up.

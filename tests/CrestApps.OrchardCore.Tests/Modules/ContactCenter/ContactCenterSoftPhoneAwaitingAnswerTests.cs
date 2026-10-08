@@ -3,11 +3,13 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Handlers;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.SignalR.Core;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Environment.Shell;
 
@@ -138,6 +140,8 @@ public sealed class ContactCenterSoftPhoneAwaitingAnswerTests
             agentManager.Object,
             store.Object,
             hubContext.Object,
-            _shellSettings);
+            _shellSettings,
+            Mock.Of<IOmnichannelActivityStore>(),
+            NullLogger<ContactCenterSoftPhoneEventHandler>.Instance);
     }
 }

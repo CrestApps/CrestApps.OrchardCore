@@ -72,6 +72,55 @@ public sealed class AssistantVoiceLevelerTests
         Assert.All(burst, sample => Assert.InRange(Math.Abs(sample), 0, 32767));
     }
 
+    [Theory]
+    [InlineData(-24d)]
+    [InlineData(-21d)]
+    [InlineData(-15d)]
+    public void AVoiceAtOrAboveTheTarget_PassesThroughUnchanged(double dbfs)
+    {
+        // The model callers already heard clearly speaks here. Whatever is done for a quieter one must not touch it:
+        // not its speech, and not the gaps in it.
+        var leveler = new AssistantVoiceLeveler(SampleRate);
+        var speech = Tone(seconds: 2, dbfs: dbfs);
+        var gap = Tone(seconds: 0.5, dbfs: dbfs - 30);
+        var samples = speech.Concat(gap).Concat(Tone(seconds: 1, dbfs: dbfs)).ToList();
+        var original = samples.ToList();
+
+        leveler.Process(samples);
+
+        Assert.Equal(original, samples);
+    }
+
+    [Fact]
+    public void TheGapsBetweenWords_GetHalfTheBoost()
+    {
+        // Arrange: a quiet voice that has settled, then the quiet between its words: breath, word tails, the room.
+        var leveler = new AssistantVoiceLeveler(SampleRate);
+        leveler.Process(Tone(seconds: 2, dbfs: -36));
+        var speechGainDb = leveler.CurrentGainDb;
+
+        // Act
+        leveler.Process(Tone(seconds: 1, dbfs: -60));
+
+        // Assert
+        Assert.InRange(leveler.CurrentGainDb, speechGainDb / 2 - 0.5, speechGainDb / 2 + 0.5);
+    }
+
+    [Fact]
+    public void TheGain_DoesNotFollowEachWord()
+    {
+        // Arrange: a quiet voice that has settled, then one word said 6 dB louder.
+        var leveler = new AssistantVoiceLeveler(SampleRate);
+        leveler.Process(Tone(seconds: 2, dbfs: -36));
+        var before = leveler.CurrentGainDb;
+
+        // Act
+        leveler.Process(Tone(seconds: 0.3, dbfs: -30));
+
+        // Assert: the gain moved by a fraction of that, so the word stays louder, as the model said it.
+        Assert.InRange(before - leveler.CurrentGainDb, 0, 1.5);
+    }
+
     private static List<double> Tone(double seconds, double dbfs)
     {
         // A sine whose RMS is the given level: amplitude = RMS * sqrt(2).

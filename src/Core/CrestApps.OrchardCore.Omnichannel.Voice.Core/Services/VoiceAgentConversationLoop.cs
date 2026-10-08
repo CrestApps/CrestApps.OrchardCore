@@ -275,6 +275,11 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
                     // and the model ending it again afterwards must still hang up.
                     EndCallRequests = () => _endCallTurn.RequestCount,
 
+                    // So a question the assistant asked, or a read-back it announced, keeps the call open until the
+                    // customer has answered it, however eager the model is to finish.
+                    AssistantSaid = _endCallTurn.AssistantSaid,
+                    CustomerAnswered = _endCallTurn.CustomerAnswered,
+
                     // Only when this call actually has an agent to reach. Telling a model it may transfer, on a
                     // call where nothing can receive the caller, promises the caller a person who is not coming.
                     HandoffInstructions = realtimeHandoffService is null
