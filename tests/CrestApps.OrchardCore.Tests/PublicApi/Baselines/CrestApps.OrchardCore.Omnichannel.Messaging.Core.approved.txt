@@ -197,6 +197,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Indexes
 }
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core
 {
+    public static class MessagingAuthorizationServiceExtensions
+    {
+        public static System.Threading.Tasks.Task<bool> AuthorizeConversationAsync(this Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, System.Security.Claims.ClaimsPrincipal user, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation conversation, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.ConversationOperation operation) { }
+    }
     public static class MessagingPermissions
     {
         public static readonly OrchardCore.Security.Permissions.Permission ManageMessaging;
@@ -204,6 +208,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core
         public static readonly OrchardCore.Security.Permissions.Permission SendGroupMessages;
         public static readonly OrchardCore.Security.Permissions.Permission UseMessagingWorkspace;
         public static readonly OrchardCore.Security.Permissions.Permission ViewAllConversations;
+        public static readonly OrchardCore.Security.Permissions.Permission ViewOwnConversations;
         public static readonly OrchardCore.Security.Permissions.Permission ViewQueueConversations;
     }
 }
@@ -455,10 +460,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services
     {
         System.Threading.Tasks.Task<string> ResolveAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation conversation, System.Threading.CancellationToken cancellationToken = default);
     }
-    public interface IMessagingConversationAuthorizationService
-    {
-        System.Threading.Tasks.Task<bool> AuthorizeAsync(System.Security.Claims.ClaimsPrincipal principal, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation conversation, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.ConversationOperation operation, System.Threading.CancellationToken cancellationToken = default);
-    }
     public interface IMessagingConversationManager : CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation>
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation> FindByAddressesAsync(string channel, string serviceAddress, string contactAddress, System.Threading.CancellationToken cancellationToken = default);
@@ -590,11 +591,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services
         public MessagingContactResolver(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.IMessagingChannelResolver channelResolver) { }
         public System.Threading.Tasks.ValueTask<string> ResolveContactContentItemIdAsync(string channel, string address, System.Threading.CancellationToken cancellationToken = default) { }
     }
-    public sealed class MessagingConversationAuthorizationService : CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingConversationAuthorizationService
-    {
-        public MessagingConversationAuthorizationService(Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentProfileManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentEntitlementPolicy entitlementPolicy) { }
-        public System.Threading.Tasks.Task<bool> AuthorizeAsync(System.Security.Claims.ClaimsPrincipal principal, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation conversation, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.ConversationOperation operation, System.Threading.CancellationToken cancellationToken = default) { }
-    }
     public sealed class MessagingConversationManager : CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation>, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation>, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingConversationManager
     {
         public MessagingConversationManager(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingConversationStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation>> handlers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation>> logger) { }
@@ -615,7 +611,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services
     }
     public sealed class MessagingConversationService : CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingConversationService
     {
-        public MessagingConversationService(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingConversationStore conversationStore, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.IMessagingChannelResolver channelResolver, OrchardCore.ContentManagement.IContentManager contentManager, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingContactResolver contactResolver, CrestApps.OrchardCore.Omnichannel.Messaging.Notifications.IMessagingRealTimeNotifier notifier, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingConversationAuthorizationService conversationAuthorizationService, YesSql.ISession session, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingFirstResponseSlaService slaService, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.IMessagingAttachmentUrlProvider attachmentUrlProvider, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingConversationService> logger) { }
+        public MessagingConversationService(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingConversationStore conversationStore, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.IMessagingChannelResolver channelResolver, OrchardCore.ContentManagement.IContentManager contentManager, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingContactResolver contactResolver, CrestApps.OrchardCore.Omnichannel.Messaging.Notifications.IMessagingRealTimeNotifier notifier, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, YesSql.ISession session, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingFirstResponseSlaService slaService, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.IMessagingAttachmentUrlProvider attachmentUrlProvider, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingConversationService> logger) { }
         public System.Threading.Tasks.Task<bool> ApplyDeliveryReceiptAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessageDeliveryReceipt receipt, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingSendResult> AssignAsync(string conversationId, string targetAgentId, System.Security.Claims.ClaimsPrincipal principal = null, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingSendResult> ClaimAsync(string conversationId, string actingAgentId, System.Security.Claims.ClaimsPrincipal principal = null, System.Threading.CancellationToken cancellationToken = default) { }
@@ -645,7 +641,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services
     {
         public const int MaxHistoryEntries = 50;
         public const int MaxNoteLength = 500;
-        public MessagingConversationTransferService(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingConversationStore conversationStore, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingConversationAuthorizationService conversationAuthorizationService, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentProfileManager, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueManager> queueManagers, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentEntitlementPolicy entitlementPolicy, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingAgentNameProvider agentNames, CrestApps.OrchardCore.Omnichannel.Messaging.Notifications.IMessagingRealTimeNotifier notifier, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingConversationTransferService> logger) { }
+        public MessagingConversationTransferService(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingConversationStore conversationStore, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentProfileManager, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueManager> queueManagers, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentEntitlementPolicy entitlementPolicy, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingAgentNameProvider agentNames, CrestApps.OrchardCore.Omnichannel.Messaging.Notifications.IMessagingRealTimeNotifier notifier, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingConversationTransferService> logger) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingTransferResult> TransferAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingTransferRequest request, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class MessagingFavoritesService : CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingFavoritesService

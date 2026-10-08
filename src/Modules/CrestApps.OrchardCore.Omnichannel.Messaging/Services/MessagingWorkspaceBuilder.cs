@@ -155,9 +155,8 @@ public sealed class MessagingWorkspaceBuilder
         string selectedCustomerKey,
         CancellationToken cancellationToken)
     {
-        // Supervisors (ViewAllConversations) see every conversation; everyone else sees their own conversations and,
-        // with ViewQueueConversations, the unclaimed ones of the queues they serve.
-        var canViewAll = await _authorizationService.AuthorizeAsync(user, MessagingPermissions.ViewAllConversations);
+        // Supervisors see every conversation; an agent sees their own and the unclaimed ones of the queues they serve.
+        var scope = await MessagingInboxScope.ResolveAsync(_authorizationService, _entitlementPolicy, user, currentAgent);
 
         var viewModel = new InboxViewModel
         {
@@ -189,13 +188,11 @@ public sealed class MessagingWorkspaceBuilder
             _ => MessagingInboxFilter.All,
         };
 
-        var visibleQueueIds = await GetVisibleQueueIdsAsync(user, currentAgent);
-
         MessagingInboxQuery BuildQuery(MessagingInboxFilter tab, int skip, int take) => new()
         {
-            AgentId = currentAgent?.ItemId,
-            QueueIds = visibleQueueIds,
-            IncludeAll = canViewAll,
+            AgentId = scope.AgentId,
+            QueueIds = scope.QueueIds,
+            IncludeAll = scope.IncludeAll,
             Filter = tab,
             Channel = viewModel.ChannelFilter,
             Skip = skip,
@@ -356,20 +353,18 @@ public sealed class MessagingWorkspaceBuilder
             ? null
             : await _agentProfileManager.FindByUserIdAsync(userId, cancellationToken);
 
-        var canViewAll = await _authorizationService.AuthorizeAsync(user, MessagingPermissions.ViewAllConversations);
+        var scope = await MessagingInboxScope.ResolveAsync(_authorizationService, _entitlementPolicy, user, agent);
 
-        if (agent is null && !canViewAll)
+        if (scope.AgentId is null && !scope.IncludeAll)
         {
             return 0;
         }
 
-        var visibleQueueIds = await GetVisibleQueueIdsAsync(user, agent);
-
         MessagingInboxQuery BuildQuery(MessagingInboxFilter tab) => new()
         {
-            AgentId = agent?.ItemId,
-            QueueIds = visibleQueueIds,
-            IncludeAll = canViewAll,
+            AgentId = scope.AgentId,
+            QueueIds = scope.QueueIds,
+            IncludeAll = scope.IncludeAll,
             Filter = tab,
             OpenOnly = true,
             UnreadOnly = true,
@@ -377,7 +372,7 @@ public sealed class MessagingWorkspaceBuilder
 
         // The two tabs never overlap (one is assigned, the other is not), so their counts add up without counting a
         // conversation twice. A supervisor without a profile has nothing assigned to them.
-        var mine = agent is null
+        var mine = scope.AgentId is null
             ? 0
             : await _conversationStore.CountAsync(BuildQuery(MessagingInboxFilter.Mine), cancellationToken);
 
@@ -477,14 +472,11 @@ public sealed class MessagingWorkspaceBuilder
     }
 
     /// <summary>
-    /// Applies the per-thread rule on top of the workspace permission: the caller must be allowed to perform this
-    /// operation on this specific conversation, not merely to use the workspace.
+    /// Determines whether the user may perform the operation on this specific conversation, not merely use the
+    /// workspace.
     /// </summary>
     public Task<bool> AuthorizeAsync(ClaimsPrincipal user, MessagingConversation conversation, ConversationOperation operation)
-        => _authorizationService.AuthorizeAsync(
-            user,
-            MessagingPermissions.UseMessagingWorkspace,
-            new ConversationAuthorizationResource(conversation, operation));
+        => _authorizationService.AuthorizeConversationAsync(user, conversation, operation);
 
     /// <summary>
     /// Builds the bubbles for messages added since a client-supplied high-water mark, so the open conversation can
@@ -597,11 +589,6 @@ public sealed class MessagingWorkspaceBuilder
     {
         ArgumentNullException.ThrowIfNull(user);
 
-        if (await _authorizationService.AuthorizeAsync(user, MessagingPermissions.ViewAllConversations))
-        {
-            return [];
-        }
-
         var unreachable = new List<string>();
 
         foreach (var address in contactAddresses ?? [])
@@ -615,23 +602,6 @@ public sealed class MessagingWorkspaceBuilder
         }
 
         return unreachable;
-    }
-
-    // The queues whose shared conversations the agent sees: the ones they belong to and the ones they may serve, as
-    // far as their entitlements allow. Opening a conversation already applies the entitlements; the list, the count
-    // and the notifications did not, so an agent whose queue was taken away kept seeing its customers there. A role
-    // without the queue permission sees no queue's shared inbox at all, only the conversations that are the agent's own.
-    private async Task<string[]> GetVisibleQueueIdsAsync(ClaimsPrincipal user, AgentProfile agent)
-    {
-        if (agent is null || !await _authorizationService.AuthorizeAsync(user, MessagingPermissions.ViewQueueConversations))
-        {
-            return [];
-        }
-
-        return agent.QueueIds.Concat(agent.AllowedQueueIds)
-            .Where(queueId => !string.IsNullOrEmpty(queueId) && _entitlementPolicy.AllowsQueue(agent, queueId))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
     }
 
     private static ChannelViewModel ToViewModel(IMessagingChannel channel)

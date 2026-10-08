@@ -346,12 +346,30 @@ public sealed class SmsInboxQueryTests
         var (builder, _) = CreateBuilder(
             harness.Store,
             new AgentProfile { ItemId = "agent-1", UserId = "user-1", QueueIds = ["q-1"] },
-            MessagingPermissions.UseMessagingWorkspace);
+            MessagingPermissions.UseMessagingWorkspace,
+            MessagingPermissions.ViewOwnConversations);
 
         var count = await builder.CountNeedingAttentionAsync(User(), TestContext.Current.CancellationToken);
 
         // Mine and unread, and the transfer to me.
         Assert.Equal(2, count);
+    }
+
+    // The workspace alone opens the page; which conversations it lists is the conversation permissions' to say.
+    [Fact]
+    public async Task CountNeedingAttentionAsync_ForAnAgentWithoutAnyConversationPermission_IsZero()
+    {
+        await using var harness = await Harness.CreateAsync();
+        await harness.SeedAsync(AttentionSeed());
+
+        var (builder, _) = CreateBuilder(
+            harness.Store,
+            new AgentProfile { ItemId = "agent-1", UserId = "user-1", QueueIds = ["q-1"] },
+            MessagingPermissions.UseMessagingWorkspace);
+
+        var count = await builder.CountNeedingAttentionAsync(User(), TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, count);
     }
 
     [Fact]
@@ -602,15 +620,18 @@ public sealed class SmsInboxQueryTests
         }
     }
 
-    // Grants the named permissions and nothing else.
+    // Grants the named permissions, and what they imply, and nothing else.
     private sealed class PermissionGrants(ISet<string> granted) : IAuthorizationService
     {
         public Task<AuthorizationResult> AuthorizeAsync(ClaimsPrincipal user, object resource, IEnumerable<IAuthorizationRequirement> requirements)
         {
-            var allowed = requirements.OfType<PermissionRequirement>().All(requirement => granted.Contains(requirement.Permission.Name));
+            var allowed = requirements.OfType<PermissionRequirement>().All(requirement => IsGranted(requirement.Permission));
 
             return Task.FromResult(allowed ? AuthorizationResult.Success() : AuthorizationResult.Failed());
         }
+
+        private bool IsGranted(Permission permission)
+            => permission is not null && (granted.Contains(permission.Name) || (permission.ImpliedBy ?? []).Any(IsGranted));
 
         public Task<AuthorizationResult> AuthorizeAsync(ClaimsPrincipal user, object resource, string policyName)
             => Task.FromResult(AuthorizationResult.Failed());

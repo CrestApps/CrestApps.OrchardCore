@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.SignalR.Core;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
@@ -109,6 +110,10 @@ public sealed class MessagingHub : Hub<IMessagingHubClient>
         {
             var profile = await _agentProfileManager.FindByUserIdAsync(userId, Context.ConnectionAborted);
 
+            // Every new message reaches its group with the customer's address and a preview, so a connection joins only
+            // the groups of the conversations the user's inbox shows them.
+            var scope = await MessagingInboxScope.ResolveAsync(_authorizationService, _entitlementPolicy, httpContext.User, profile);
+
             if (profile is not null)
             {
                 agentId = profile.ItemId;
@@ -120,25 +125,21 @@ public sealed class MessagingHub : Hub<IMessagingHubClient>
                 {
                     await _presenceTracker.TouchAsync(profile.ItemId, Context.ConnectionAborted);
                 }
-
-                await Groups.AddToGroupAsync(Context.ConnectionId, ForGroup(MessagingHub.AgentGroup(profile.ItemId)));
-                groupCount++;
-
-                // Only the queues the agent's entitlements still allow, and only for a role that may see its queues'
-                // shared inbox: every new message in a queue reaches its group with the customer's address and a
-                // preview, and one they may not open is none of theirs.
-                if (await _authorizationService.AuthorizeAsync(httpContext.User, MessagingPermissions.ViewQueueConversations))
-                {
-                    foreach (var queueId in profile.QueueIds.Concat(profile.AllowedQueueIds).Distinct()
-                        .Where(queueId => !string.IsNullOrEmpty(queueId) && _entitlementPolicy.AllowsQueue(profile, queueId)))
-                    {
-                        await Groups.AddToGroupAsync(Context.ConnectionId, ForGroup(QueueGroup(queueId)));
-                        groupCount++;
-                    }
-                }
             }
 
-            if (await _authorizationService.AuthorizeAsync(httpContext.User, MessagingPermissions.ViewAllConversations))
+            if (scope.AgentId is not null)
+            {
+                await Groups.AddToGroupAsync(Context.ConnectionId, ForGroup(MessagingHub.AgentGroup(scope.AgentId)));
+                groupCount++;
+            }
+
+            foreach (var queueId in scope.QueueIds)
+            {
+                await Groups.AddToGroupAsync(Context.ConnectionId, ForGroup(QueueGroup(queueId)));
+                groupCount++;
+            }
+
+            if (scope.IncludeAll)
             {
                 await Groups.AddToGroupAsync(Context.ConnectionId, ForGroup(UnassignedGroup));
                 groupCount++;

@@ -1,5 +1,5 @@
-using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Notifications;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -84,7 +85,7 @@ public class SmsSendDirectTests
             new Mock<IContentManager>().Object,
             contactResolver.Object,
             new Mock<IMessagingRealTimeNotifier>().Object,
-            Mock.Of<IMessagingConversationAuthorizationService>(),
+            Mock.Of<IAuthorizationService>(),
             session.Object,
             new NoOpSmsFirstResponseSlaService(),
             new FakeAttachmentUrlProvider(),

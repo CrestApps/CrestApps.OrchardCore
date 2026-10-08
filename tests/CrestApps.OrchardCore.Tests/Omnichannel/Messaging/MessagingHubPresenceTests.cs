@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Security;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Tests.Omnichannel.Messaging;
 
@@ -134,9 +135,10 @@ public sealed class MessagingHubPresenceTests
             ? new HashSet<string> { MessagingPermissions.UseMessagingWorkspace.Name }
             : [];
 
-        if (grantWorkspace && grantQueues)
+        if (grantWorkspace)
         {
-            granted.Add(MessagingPermissions.ViewQueueConversations.Name);
+            // The Agent role: their own conversations, and their queues' unclaimed ones unless the test takes them away.
+            granted.Add(grantQueues ? MessagingPermissions.ViewQueueConversations.Name : MessagingPermissions.ViewOwnConversations.Name);
         }
 
         var hub = new MessagingHub(
@@ -161,15 +163,18 @@ public sealed class MessagingHubPresenceTests
         public HttpContext HttpContext { get; set; } = httpContext;
     }
 
-    // Grants the named permissions and nothing else.
+    // Grants the named permissions, and what they imply, and nothing else.
     private sealed class PermissionGrants(ISet<string> granted) : IAuthorizationService
     {
         public Task<AuthorizationResult> AuthorizeAsync(ClaimsPrincipal user, object resource, IEnumerable<IAuthorizationRequirement> requirements)
         {
-            var allowed = requirements.OfType<PermissionRequirement>().All(requirement => granted.Contains(requirement.Permission.Name));
+            var allowed = requirements.OfType<PermissionRequirement>().All(requirement => IsGranted(requirement.Permission));
 
             return Task.FromResult(allowed ? AuthorizationResult.Success() : AuthorizationResult.Failed());
         }
+
+        private bool IsGranted(Permission permission)
+            => permission is not null && (granted.Contains(permission.Name) || (permission.ImpliedBy ?? []).Any(IsGranted));
 
         public Task<AuthorizationResult> AuthorizeAsync(ClaimsPrincipal user, object resource, string policyName)
             => Task.FromResult(AuthorizationResult.Failed());

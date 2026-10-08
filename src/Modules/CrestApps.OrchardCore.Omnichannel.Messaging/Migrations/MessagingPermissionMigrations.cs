@@ -1,39 +1,34 @@
-using CrestApps.OrchardCore.Omnichannel.Core;
-using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Shell.Scope;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Migrations;
 
 /// <summary>
-/// Brings the roles of a tenant already running the workspace in line with its permissions. Using the workspace used
-/// to imply seeing every conversation; it now covers only the agent's own, and the unclaimed conversations of their
-/// queues have a permission of their own. Every role that could use the workspace is granted that permission, so its
-/// agents keep the shared inbox they had, while conversations claimed by their colleagues leave their view. The
-/// Supervisor role is granted what its stereotype gained.
+/// Using the workspace used to imply seeing every conversation. Which conversations an agent sees is now its own
+/// permission, so every role that could use the workspace is granted the agent's own conversations and their queues'
+/// unclaimed ones: its agents keep the inbox they had, and lose only the conversations their colleagues have claimed.
 /// </summary>
 internal sealed class MessagingPermissionMigrations : DataMigration
 {
+    private static readonly Dictionary<string, string[]> _grants = new(StringComparer.Ordinal)
+    {
+        [MessagingPermissions.UseMessagingWorkspace.Name] = [MessagingPermissions.ViewQueueConversations.Name],
+    };
+
     /// <summary>
     /// Schedules the grants.
     /// </summary>
     /// <returns>The migration version number.</returns>
-    public int Create()
+    public static int Create()
     {
         // The roles are documents; they are written once this step's own transaction has committed.
-        ShellScope.AddDeferredTask(async scope =>
-        {
-            await RolePermissionGrants.GrantToRolesHoldingAsync(
-                scope.ServiceProvider,
-                MessagingPermissions.UseMessagingWorkspace,
-                [MessagingPermissions.ViewQueueConversations]);
-
-            await RolePermissionGrants.GrantToRoleAsync(
-                scope.ServiceProvider,
-                OmnichannelConstants.SupervisorRole,
-                [MessagingPermissions.ViewQueueConversations, MessagingPermissions.SendDuringQuietHours]);
-        });
+        ShellScope.AddDeferredTask(scope => MessagingRolePermissions.GrantAsync(
+            scope.ServiceProvider,
+            _grants,
+            scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger<MessagingPermissionMigrations>()));
 
         return 1;
     }

@@ -19,12 +19,12 @@ public sealed class MessagingPermissionsTests
         Assert.DoesNotContain(GrantingNames(permission), name => name == MessagingPermissions.UseMessagingWorkspace.Name);
     }
 
+    // Using the workspace opens the page; which conversations it shows is the conversation permissions' to say.
     [Fact]
-    public void ViewQueueConversations_IsNotImpliedByUsingTheWorkspace()
+    public void ConversationPermissions_AreNotImpliedByUsingTheWorkspace()
     {
-        Assert.DoesNotContain(
-            GrantingNames(MessagingPermissions.ViewQueueConversations),
-            name => name == MessagingPermissions.UseMessagingWorkspace.Name);
+        Assert.DoesNotContain(GrantingNames(MessagingPermissions.ViewQueueConversations), name => name == MessagingPermissions.UseMessagingWorkspace.Name);
+        Assert.DoesNotContain(GrantingNames(MessagingPermissions.ViewOwnConversations), name => name == MessagingPermissions.UseMessagingWorkspace.Name);
     }
 
     // Static fields initialize in declaration order, so a permission declared above one it lists captures a null.
@@ -37,11 +37,14 @@ public sealed class MessagingPermissionsTests
         }
     }
 
+    // Like ViewContent and ViewOwnContent: the broader conversation permission includes the narrower ones.
     [Fact]
-    public void ViewAllConversations_ImpliesTheQueueInboxAndTheWorkspace()
+    public void ConversationPermissions_NarrowFromAllToQueueToOwn()
     {
         Assert.Contains(MessagingPermissions.ViewAllConversations.Name, GrantingNames(MessagingPermissions.ViewQueueConversations));
-        Assert.Contains(MessagingPermissions.ViewAllConversations.Name, GrantingNames(MessagingPermissions.UseMessagingWorkspace));
+        Assert.Contains(MessagingPermissions.ViewAllConversations.Name, GrantingNames(MessagingPermissions.ViewOwnConversations));
+        Assert.Contains(MessagingPermissions.ViewQueueConversations.Name, GrantingNames(MessagingPermissions.ViewOwnConversations));
+        Assert.Empty(GrantingNames(MessagingPermissions.ViewAllConversations));
     }
 
     [Fact]
@@ -94,9 +97,10 @@ public sealed class MessagingPermissionsTests
         =>
         [
             MessagingPermissions.ManageMessaging,
+            MessagingPermissions.UseMessagingWorkspace,
             MessagingPermissions.ViewAllConversations,
             MessagingPermissions.ViewQueueConversations,
-            MessagingPermissions.UseMessagingWorkspace,
+            MessagingPermissions.ViewOwnConversations,
             MessagingPermissions.SendDuringQuietHours,
             MessagingPermissions.SendGroupMessages,
         ];

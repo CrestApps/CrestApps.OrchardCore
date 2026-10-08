@@ -48,7 +48,6 @@ public sealed class Startup : StartupBase
 
         services.AddIndexProvider<PhoneNumberVerificationPartIndexProvider>();
         services.AddDataMigration<PhoneNumberVerificationsMigrations>();
-        services.AddDataMigration<SupervisorReportPermissionMigrations>();
 
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, PhoneNumberRevalidationBackgroundTask>());
     }

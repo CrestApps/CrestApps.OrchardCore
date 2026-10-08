@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.Routing;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Environment.Shell;
 
@@ -145,7 +146,7 @@ public sealed class MessagingFeatureActivationTests
     }
 
     [Fact]
-    public async Task FreshTenant_WorkspaceAlone_ResolvesTheConversationAuthorizationService()
+    public async Task FreshTenant_WorkspaceAlone_RegistersTheConversationAuthorizationHandler()
     {
         // Arrange
         var profile = new ContactCenterTenantProfile
@@ -161,12 +162,12 @@ public sealed class MessagingFeatureActivationTests
         var tenant = await host.CreateTenantAsync(profile);
 
         // Act
-        var resolved = await host.ExecuteInTenantScopeAsync(
+        var handlerNames = await host.ExecuteInTenantScopeAsync(
             tenant,
-            services => Task.FromResult(services.GetService<IMessagingConversationAuthorizationService>()));
+            services => Task.FromResult(services.GetServices<IAuthorizationHandler>().Select(handler => handler.GetType().Name).ToArray()));
 
         // Assert
-        Assert.NotNull(resolved);
+        Assert.Contains("MessagingConversationAuthorizationHandler", handlerNames);
     }
 
     [Fact]
