@@ -225,6 +225,44 @@ public sealed class EndCallToolTests
     }
 
     [Fact]
+    public async Task EndingTheCallAgain_BeforeTheCustomerSpeaks_IsNotANewRequest()
+    {
+        // Arrange
+        // Live, a model said goodbye, ended the call, and then answered the tool's reply by ending it again -- twelve
+        // times, every half second, each one a response that kept the line open as if it were still talking.
+        var (tool, turn, arguments) = Create();
+        turn.CustomerAnswered();
+        turn.AssistantSaid("Thanks, Haneen—talk soon.");
+        await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
+
+        // Act
+        var result = await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(1, turn.RequestCount);
+        Assert.Contains("Do not call this tool again", result?.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task EndingTheCallAgain_AfterTheCustomerSpoke_IsANewRequest()
+    {
+        // Arrange
+        // The customer answered the goodbye ("thank you"), took the call back, and the model ends it again.
+        var (tool, turn, arguments) = Create();
+        turn.CustomerAnswered();
+        turn.AssistantSaid("Thanks, Haneen—talk soon.");
+        await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
+        turn.CustomerAnswered();
+        turn.AssistantSaid("Thanks, Haneen, talk to you soon. Bye.");
+
+        // Act
+        await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(2, turn.RequestCount);
+    }
+
+    [Fact]
     public void AReset_ForgetsTheGoodbyeAlreadySaid()
     {
         // Arrange

@@ -98,6 +98,21 @@ public sealed class EndCallTool : AIFunction
 
         var recorded = turn is not null;
 
+        // The model already ended the call and has said nothing since the customer last spoke: this is the same
+        // decision again, made in answer to the tool's own reply. It is not counted as a new request, and the model
+        // is told plainly to stop -- told only to "say nothing further", one model ended the call twelve times running.
+        if (recorded && !answeredByMachine && turn.EndCallAlreadyRequested)
+        {
+            if (logger is not null && logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug("The AI asked again to end a call it had already ended; the repeat is ignored.");
+            }
+
+            return ValueTask.FromResult<object>(
+                "The call is already ending. Do not call this tool again, and do not say anything more unless the " +
+                "customer speaks.");
+        }
+
         // Read before the request: no goodbye has been said since the customer last spoke -- they spoke last, or the
         // assistant's last line was something else ("let me wrap this up") -- so ending it now ends it without one.
         // A voicemail's message is its closing line.
