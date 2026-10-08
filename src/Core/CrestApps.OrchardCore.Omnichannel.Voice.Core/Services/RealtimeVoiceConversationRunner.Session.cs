@@ -13,6 +13,7 @@ using CrestApps.OrchardCore.Omnichannel.Voice.Tools;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Settings;
 
@@ -213,9 +214,16 @@ public sealed partial class RealtimeVoiceConversationRunner
 
             if (conversation is not null && _logger.IsEnabled(LogLevel.Information))
             {
+                // What the call runs on, said where its timing is: a call that answers slowly is checked first
+                // against the model and the turn detector, and neither was visible anywhere in the log.
+                var transport = ShellScope.Services?.GetService<IOptions<RealtimeTransportOptions>>()?.Value;
+
                 _logger.LogInformation(
-                    "Opened the call on activity '{ActivityId}': the model's session {SessionMilliseconds} ms and the call's audio stream {MediaMilliseconds} ms after it was answered.",
+                    "Opened the call on activity '{ActivityId}' on deployment '{DeploymentName}' (turn detection {TurnDetectionType}, eagerness {TurnDetectionEagerness}): the model's session {SessionMilliseconds} ms and the call's audio stream {MediaMilliseconds} ms after it was answered.",
                     context.Activity?.ItemId.SanitizeLogValue(),
+                    context.RealtimeDeploymentName.SanitizeLogValue() ?? "(the realtime slot's)",
+                    transport?.TurnDetectionType.SanitizeLogValue() ?? "(default)",
+                    transport?.TurnDetectionEagerness.SanitizeLogValue() ?? "(default)",
                     (sessionOpenedTicks - answeredTicks) / TimeSpan.TicksPerMillisecond,
                     (DateTime.UtcNow.Ticks - answeredTicks) / TimeSpan.TicksPerMillisecond);
             }
