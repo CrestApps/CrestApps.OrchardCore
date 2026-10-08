@@ -146,15 +146,6 @@ public sealed partial class RealtimeVoiceConversationRunner
     }
 
     /// <summary>
-    /// Opens a live session for the call, or returns <see langword="null"/> when one cannot be opened.
-    /// </summary>
-    /// <param name="context">The call being held.</param>
-    /// <param name="conversationSoFar">
-    /// What has been said on the call already, for a session that replaces one that was lost; <see langword="null"/>
-    /// for the call's first session.
-    /// </param>
-    /// <param name="cancellationToken">The call's token.</param>
-    /// <summary>
     /// Opens the call's audio stream and the model's session at the same time.
     /// </summary>
     /// <remarks>
@@ -170,9 +161,14 @@ public sealed partial class RealtimeVoiceConversationRunner
     /// </para>
     /// </remarks>
     /// <returns>The opened media session, and the model's session or <see langword="null"/> when it could not be started.</returns>
+    /// <param name="mediaProvider">The provider carrying the call's audio.</param>
+    /// <param name="context">The call being held.</param>
+    /// <param name="answeredTicks">When the call was answered, in UTC ticks, for the opening times logged.</param>
+    /// <param name="cancellationToken">The call's token.</param>
     private async Task<(IContactCenterVoiceMediaSession Media, IRealtimeConversation Conversation)> OpenMediaAndSessionAsync(
         IContactCenterVoiceMediaProvider mediaProvider,
         RealtimeVoiceConversationContext context,
+        long answeredTicks,
         CancellationToken cancellationToken)
     {
         var siteService = ShellScope.Services?.GetService<ISiteService>();
@@ -190,9 +186,17 @@ public sealed partial class RealtimeVoiceConversationRunner
 
         IRealtimeConversation conversation;
 
+        long sessionOpenedTicks = 0;
+
         try
         {
             conversation = await StartConversationAsync(context, conversationSoFar: null, cancellationToken);
+            sessionOpenedTicks = DateTime.UtcNow.Ticks;
+
+            if (conversation is not null)
+            {
+                await AskForTheGreetingAsync(conversation, cancellationToken);
+            }
         }
         catch
         {
@@ -203,7 +207,18 @@ public sealed partial class RealtimeVoiceConversationRunner
 
         try
         {
-            return (await mediaOpening, conversation);
+            var media = await mediaOpening;
+
+            if (conversation is not null && _logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Opened the call on activity '{ActivityId}': the model's session {SessionMilliseconds} ms and the call's audio stream {MediaMilliseconds} ms after it was answered.",
+                    context.Activity?.ItemId.SanitizeLogValue(),
+                    (sessionOpenedTicks - answeredTicks) / TimeSpan.TicksPerMillisecond,
+                    (DateTime.UtcNow.Ticks - answeredTicks) / TimeSpan.TicksPerMillisecond);
+            }
+
+            return (media, conversation);
         }
         catch
         {
@@ -214,6 +229,36 @@ public sealed partial class RealtimeVoiceConversationRunner
 
             throw;
         }
+    }
+
+    /// <summary>
+    /// Asks the model for its greeting, on the quick opening detector.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// We placed this call, so the silence after the customer picks up is ours to fill. Left to itself the session
+    /// waits to be spoken to -- voice detection is how a turn begins -- and every live transcript opened with the
+    /// customer saying "Hello?" into dead air before the assistant introduced itself. A session that creates its own
+    /// responses ignores this, so it is safe to ask either way.
+    /// </para>
+    /// <para>
+    /// Asked for as soon as the model's session is open, without waiting for the call's audio stream. The model takes
+    /// about a second to produce its first audio, and the provider about as long to connect the stream -- live, one
+    /// took two and a half -- so asking only once both were open put those two waits end to end. What the model says
+    /// before the stream connects waits in the session's events and plays the moment the line is there.
+    /// </para>
+    /// <para>
+    /// Asked for with no instructions of its own, on purpose. Instructions given with one response replace the
+    /// session's for that response -- the profile's persona included -- and a call opened that way greeted the
+    /// customer as a generic assistant ("Hi there! I'm ChatGPT"). What the opening must be is said in the session's
+    /// own instructions instead (see VoiceCallGuidance.WhenTalkedOver).
+    /// </para>
+    /// </remarks>
+    private async Task AskForTheGreetingAsync(IRealtimeConversation conversation, CancellationToken cancellationToken)
+    {
+        // Quick to hear the caller's first words, then the configured detector: see the Opening partial.
+        await ApplyOpeningTurnDetectionAsync(conversation, cancellationToken);
+        await conversation.RequestUnpromptedResponseAsync(cancellationToken: cancellationToken);
     }
 
     // The conversation could not be started, so a stream that opened anyway has nothing to carry.
@@ -230,6 +275,15 @@ public sealed partial class RealtimeVoiceConversationRunner
         }
     }
 
+    /// <summary>
+    /// Opens a live session for the call, or returns <see langword="null"/> when one cannot be opened.
+    /// </summary>
+    /// <param name="context">The call being held.</param>
+    /// <param name="conversationSoFar">
+    /// What has been said on the call already, for a session that replaces one that was lost; <see langword="null"/>
+    /// for the call's first session.
+    /// </param>
+    /// <param name="cancellationToken">The call's token.</param>
     private async Task<IRealtimeConversation> StartConversationAsync(
         RealtimeVoiceConversationContext context,
         string conversationSoFar,

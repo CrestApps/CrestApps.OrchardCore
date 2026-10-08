@@ -389,6 +389,12 @@ public sealed partial class RealtimeVoiceConversationRunner
                             // to actually finish before it hangs up. Both mean "finished playing", not "arrived".
                             // Where it plays is kept too, so a caller who talks over it can have it taken back.
                             var startsTicks = ExtendAssistantPlayback(speech.Length);
+                            var spokenBytes = AssistantSpeechExtent.SpokenBytes(speech.Span);
+
+                            if (spokenBytes > 0)
+                            {
+                                Interlocked.Exchange(ref _assistantVoiceEndsTicks, startsTicks + AssistantBargeIn.DurationTicks(spokenBytes));
+                            }
                             assistantLineStartedUtc ??= new DateTime(startsTicks, DateTimeKind.Utc);
                             bargeIn.Queued(conversationEvent.ResponseId, conversationEvent.ItemId, startsTicks, speech.Length, DateTime.UtcNow.Ticks);
                             _meter?.AssistantAudioScheduled(startsTicks, AssistantBargeIn.DurationTicks(speech.Length));

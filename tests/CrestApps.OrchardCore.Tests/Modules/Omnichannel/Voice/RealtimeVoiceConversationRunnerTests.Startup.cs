@@ -28,6 +28,27 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
     }
 
     [Fact]
+    public async Task TheGreeting_IsAskedFor_BeforeTheCallsAudioHasConnected()
+    {
+        // Arrange
+        // Live, the provider took two and a half seconds to connect the stream, and the greeting was asked for only
+        // after that: the model's own second to first audio came on top, and the caller said "hello?" into silence.
+        var harness = new RealtimeHarness { MediaConnecting = new TaskCompletionSource() };
+
+        // Act
+        var run = harness.RunAsync();
+        await WaitUntilAsync(() => harness.Conversation.Unprompted.Count == 1);
+
+        // Assert
+        Assert.False(harness.MediaConnecting.Task.IsCompleted);
+        Assert.Equal(string.Empty, harness.Conversation.Unprompted[0]);
+
+        harness.MediaConnecting.SetResult();
+        await LetTheCallGoAsync(harness, run);
+        Assert.Single(harness.Conversation.Unprompted);
+    }
+
+    [Fact]
     public async Task ASessionThatCannotOpen_ClosesTheAudioStreamThatOpenedBesideIt()
     {
         // Arrange

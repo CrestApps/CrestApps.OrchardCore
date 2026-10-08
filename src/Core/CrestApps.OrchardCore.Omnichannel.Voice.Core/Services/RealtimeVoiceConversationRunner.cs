@@ -64,6 +64,15 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     private long _assistantSpeechEndsTicks;
 
     /// <summary>
+    /// When the assistant's last spoken word is projected to finish playing, or zero before it has said anything.
+    /// </summary>
+    /// <remarks>
+    /// Earlier than <see cref="_assistantSpeechEndsTicks"/> by the silence a line ends on, which is what the wait after
+    /// a goodbye is measured from: see <see cref="AssistantSpeechExtent"/>.
+    /// </remarks>
+    private long _assistantVoiceEndsTicks;
+
+    /// <summary>
     /// When the caller was last heard to say something, so a closing call can tell "they are done" from "they
     /// had one more thing".
     /// </summary>
@@ -258,7 +267,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         // answered with "hello?" waited for the provider to connect its stream, and only then for the model's
         // session to open -- the greeting came four and a half seconds after the pickup. Neither needs the other
         // until the greeting is asked for.
-        var (media, first) = await OpenMediaAndSessionAsync(mediaProvider, context, cancellationToken);
+        var (media, first) = await OpenMediaAndSessionAsync(mediaProvider, context, answeredTicks, cancellationToken);
 
         await using var mediaLease = media;
 
@@ -279,19 +288,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         // Only now: a session that never opened held nothing, and the turn-based loop takes the call instead.
         _meter?.Start(answeredTicks);
 
-        // Quick to hear the caller's first words, then the configured detector: see the Opening partial.
-        await ApplyOpeningTurnDetectionAsync(first, cancellationToken);
-
-        // We placed this call, so the silence after the customer picks up is ours to fill. Left to itself the
-        // session waits to be spoken to -- voice detection is how a turn begins -- and every live transcript
-        // opened with the customer saying "Hello?" into dead air before the assistant introduced itself. A
-        // session that creates its own responses ignores this, so it is safe to ask either way.
-        //
-        // Asked for with no instructions of its own, on purpose. Instructions given with one response replace the
-        // session's for that response -- the profile's persona included -- and a call opened that way greeted the
-        // customer as a generic assistant ("Hi there! I'm ChatGPT"). What the opening must be is said in the
-        // session's own instructions instead (see VoiceCallGuidance.WhenTalkedOver).
-        await first.RequestUnpromptedResponseAsync(cancellationToken: cancellationToken);
+        // The greeting was already asked for, the moment the model's session opened: see OpenMediaAndSessionAsync.
 
         // Both silence clocks start now rather than at zero. Left unset, "quiet since the beginning of time" is a
         // very long silence indeed, and the watchdog below would speak up a second into the call -- over the top
@@ -300,6 +297,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         Interlocked.Exchange(ref _lastAssistantAudioTicks, startedTicks);
         Interlocked.Exchange(ref _lastCallerSpeechTicks, startedTicks);
         Interlocked.Exchange(ref _assistantSpeechEndsTicks, 0);
+        Interlocked.Exchange(ref _assistantVoiceEndsTicks, 0);
         Volatile.Write(ref _goodbyeAlreadySaid, false);
         _replyListener = new CallerReplyListener();
         Volatile.Write(ref _lastAssistantLine, null);
@@ -616,7 +614,15 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
             // to, so there the call ends as soon as the message has reached the far end.
             var afterGoodbye = reachedVoicemail?.Invoke() == true ? VoicemailTailGrace : ClosingListeningGrace;
 
-            if (now - lastAssistantTicks < afterGoodbye.Ticks)
+            // From the goodbye's last word rather than the silence it is padded with, when that word was still to be
+            // heard after the request: the padding is about a second, and counted as speech it was heard as the call
+            // taking too long to end.
+            var lastWordTicks = Interlocked.Read(ref _assistantVoiceEndsTicks);
+            var goodbyeEndsTicks = lastWordTicks > requestedAtTicks && lastWordTicks < lastAssistantTicks
+                ? lastWordTicks
+                : lastAssistantTicks;
+
+            if (now - goodbyeEndsTicks < afterGoodbye.Ticks)
             {
                 continue;
             }
