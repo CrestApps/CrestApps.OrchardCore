@@ -963,7 +963,7 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
         // see or pay their payments; until then nothing can sign in to it.
         var user = new User
         {
-            UserName = email,
+            UserName = await CreateUserNameAsync(email),
             Email = email,
             EmailConfirmed = false,
             IsEnabled = true,
@@ -979,6 +979,32 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
         }
 
         return (user, default);
+    }
+
+    // A user name is derived from the email, because sites restrict which characters a user name may contain (often
+    // to letters and digits) and an email rarely fits. A taken name gets a number until it is free.
+    private async Task<string> CreateUserNameAsync(string email)
+    {
+        var allowed = _userManager.Options?.User?.AllowedUserNameCharacters;
+        var localPart = email.Split('@')[0];
+
+        var baseName = string.IsNullOrEmpty(allowed)
+            ? localPart
+            : new string(localPart.Where(allowed.Contains).ToArray());
+
+        if (string.IsNullOrEmpty(baseName))
+        {
+            baseName = "customer";
+        }
+
+        var candidate = baseName;
+
+        for (var suffix = 2; await _userManager.FindByNameAsync(candidate) is not null; suffix++)
+        {
+            candidate = baseName + suffix.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }
+
+        return candidate;
     }
 
     private IEnumerable<ICheckoutPaymentProvider> GetSavedPaymentMethodProviders()

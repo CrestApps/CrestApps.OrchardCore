@@ -19,7 +19,13 @@
             <dd class="col-sm-9">@Model.Currency @Model.TotalAmount.ToString("0.00") @T["every"] @Model.BillingDuration @Model.DurationType</dd>
 
             <dt class="col-sm-3">@T["Cycles billed"]</dt>
-            <dd class="col-sm-9">@Model.CyclesBilled @(Model.BillingCycleLimit.HasValue ? T["of {0}", Model.BillingCycleLimit.Value].Value : string.Empty)</dd>
+            <dd class="col-sm-9">
+                @Model.CyclesBilled
+                @if (Model.BillingCycleLimit.HasValue)
+                {
+                    @T["of {0}", Model.BillingCycleLimit.Value]
+                }
+            </dd>
 
             <dt class="col-sm-3">@T["Current period"]</dt>
             <dd class="col-sm-9">@Model.CurrentPeriodStartUtc.ToString("d") &ndash; @Model.CurrentPeriodEndUtc.ToString("d")</dd>

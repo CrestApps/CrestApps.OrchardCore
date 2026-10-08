@@ -84,7 +84,13 @@
                     </dd>
 
                     <dt class="col-sm-4">@T["Created"]</dt>
-                    <dd class="col-sm-8">@plan.CreatedUtc.ToString("g") @(string.IsNullOrEmpty(plan.CreatedByName) ? string.Empty : T["by {0}", plan.CreatedByName].Value)</dd>
+                    <dd class="col-sm-8">
+                        @plan.CreatedUtc.ToString("g")
+                        @if (!string.IsNullOrEmpty(plan.CreatedByName))
+                        {
+                            @T["by {0}", plan.CreatedByName]
+                        }
+                    </dd>
 
                     @if (!string.IsNullOrWhiteSpace(plan.Notes))
                     {
@@ -119,7 +125,7 @@
                             }
 
                             <tr>
-                                <td>@(payment.Number == 0 ? T["Down payment"].Value : T["Payment {0} of {1}", payment.Number, plan.InstallmentCount].Value)</td>
+                                <td>@(payment.Number == 0 ? T["Down payment"] : T["Payment {0} of {1}", payment.Number, plan.InstallmentCount])</td>
                                 <td class="text-nowrap">@payment.DueUtc.ToString("d")</td>
                                 <td class="text-end text-nowrap">@Money(payment.Amount)</td>
                                 <td>

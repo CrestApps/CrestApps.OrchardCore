@@ -152,6 +152,29 @@ public sealed class DefaultInstallmentPlanServiceTests
     }
 
     [Fact]
+    public async Task CreateAsync_ForANewCustomer_GivesThemAUserNameTheSiteAccepts()
+    {
+        // Arrange
+        // Found live: a site that allows only letters and digits in a user name refused the email as one.
+        var context = new TestContextBuilder();
+        var service = context.Build();
+        context.UserManager.Object.Options.User.AllowedUserNameCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        context.UserManager.Setup(manager => manager.FindByNameAsync("janedoe")).ReturnsAsync(new User { UserId = "taken" });
+
+        var request = CreateRequest();
+        request.CustomerUserId = null;
+        request.NewCustomerName = "Jane Doe";
+        request.NewCustomerEmail = "jane.doe@example.com";
+
+        // Act
+        var result = await service.CreateAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded, string.Join(" ", result.Errors.Select(error => error.Value)));
+        context.UserManager.Verify(manager => manager.CreateAsync(It.Is<IUser>(user => user.UserName == "janedoe2")), Times.Once);
+    }
+
+    [Fact]
     public async Task CreateAsync_ForAnEmailAlreadyInUse_AsksForTheExistingCustomer()
     {
         // Arrange
