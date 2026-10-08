@@ -45,9 +45,10 @@
     }
     checkoutPayment.register(options.processorKey, {
       prepare: async function () {
-        // Only a recurring agreement needs a reusable payment method up front. A one-time charge is
-        // confirmed straight from the card element, so tokenizing first would be a wasted round trip.
-        if (!options.hasRecurringItems) {
+        // Only a recurring agreement, or a card kept for later charges, needs a reusable payment method
+        // up front. A one-time charge is confirmed straight from the card element, so tokenizing first
+        // would be a wasted round trip.
+        if (!options.hasRecurringItems && !options.savePaymentMethod) {
           return null;
         }
         var result = await stripe.createPaymentMethod({
@@ -62,9 +63,14 @@
           return false;
         }
         preparedPaymentMethodId = result.paymentMethod.id;
-        return {
+        var data = {
           paymentMethodId: preparedPaymentMethodId
         };
+        if (options.savePaymentMethod) {
+          // Asks the server to keep this card on the customer for charges made without them present.
+          data.savePaymentMethod = 'true';
+        }
+        return data;
       },
       confirm: async function (step) {
         if (!step.clientSecret) {

@@ -1,0 +1,21 @@
+@using CrestApps.OrchardCore.Subscriptions.Models
+@model InstallmentPaymentStatus
+
+@switch (Model)
+{
+    case InstallmentPaymentStatus.Scheduled:
+        <span class="badge text-bg-light border">@T["Scheduled"]</span>
+        break;
+    case InstallmentPaymentStatus.Due:
+        <span class="badge text-bg-warning">@T["Due"]</span>
+        break;
+    case InstallmentPaymentStatus.Paid:
+        <span class="badge text-bg-success">@T["Paid"]</span>
+        break;
+    case InstallmentPaymentStatus.Failed:
+        <span class="badge text-bg-danger">@T["Failed"]</span>
+        break;
+    case InstallmentPaymentStatus.Canceled:
+        <span class="badge text-bg-dark">@T["Canceled"]</span>
+        break;
+}

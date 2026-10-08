@@ -174,6 +174,7 @@ public sealed class TransactionController : Controller
         {
             Transaction = transaction,
             CanManage = false,
+            ShowReceipts = HttpContext.RequestServices.GetService<ITransactionReceiptBuilder>() is not null,
         };
 
         return View(model);

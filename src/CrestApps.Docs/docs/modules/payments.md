@@ -173,6 +173,24 @@ Beyond the subscription-specific endpoints, Stripe also registers a **generic `I
 - **`VerifyAsync`** retrieves the PaymentIntent from Stripe's authoritative API and reports the net/tax split the durable ledger validates, so an obligation is never marked paid on a cached webhook.
 - Every amount crosses the Stripe boundary through **`StripeCurrency`**, which honors zero-decimal (JPY) and three-decimal (KWD, rounded to a multiple of ten) currencies.
 
+### Saved cards and charges without the customer
+
+The provider also keeps a card for later and charges it without the customer present, which is what
+[installment plans](subscriptions#installment-plans) are built on (`SupportsSavedPaymentMethods`). Both are asked
+for through the provider-neutral `CheckoutPaymentDataKeys` on an ordinary checkout begin:
+
+- **`savePaymentMethod`** — the browser tokenizes the card first; the PaymentIntent is created for a Stripe
+  customer with that card and `setup_future_usage = off_session`, and the customer (or the administrator entering
+  the card for them) confirms it as usual. Authenticating this payment is what lets later charges skip it.
+  `ICheckoutSavedPaymentMethodProvider.GetSavedPaymentMethodAsync` then reads back the customer, the card, its
+  brand, last four digits and expiry.
+- **`offSession`** with **`savedCustomerReference`** and **`savedPaymentMethodReference`** — the PaymentIntent is
+  created and confirmed server-side with `off_session = true`. A declined card is reported as a decline carrying
+  Stripe's reason, and the engine records the attempt as failed; a bank that insists on authenticating the
+  cardholder declines with `authentication_required`, and that payment has to be made by the customer. A network
+  failure is not a decline, so it is retried without counting against the card. Only server code sets these keys:
+  the down payment page strips them from anything the browser sends.
+
 ### Refunds
 
 The same provider implements **`ICheckoutPaymentRefundProvider`**, so a settled Stripe payment can be refunded through the checkout's durable refund ledger (`ICheckoutRefundService`) rather than by calling Stripe directly. Refunds are recorded before Stripe is contacted, carry the refund's idempotency key so a retry never double-refunds, and allocate tax from the original payment's immutable snapshot. See [Checkout → Refunds](checkout#refunds--the-durable-refund-ledger) for the full model. The refund itself runs through the `IStripeRefundService`, which converts the major-unit amount to the currency's minor units with `StripeCurrency`.

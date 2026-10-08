@@ -1,0 +1,104 @@
+@using CrestApps.OrchardCore.Payments
+@using CrestApps.OrchardCore.Subscriptions.Models
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+@model InstallmentPlansIndexViewModel
+
+<zone Name="Title">
+    <breadcrumb name="SubscriptionsInstallmentPlans" title="@T["Installment Plans"]" />
+</zone>
+
+<form asp-action="Index" method="post" class="no-multisubmit">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-1">
+                <div class="col">
+                    <div class="has-search">
+                        <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                        <input asp-for="Options.Search" class="form-control" placeholder="@T["Search by plan or customer"]" type="search" autocomplete="off" />
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <select asp-for="Options.Status" asp-items="Model.Options.Statuses" class="form-select"></select>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" name="submit.Filter" class="btn btn-primary text-nowrap">
+                        <i class="fa-solid fa-filter me-1" aria-hidden="true"></i>@T["Filter"]
+                    </button>
+                </div>
+                <div class="col-auto">
+                    <a asp-action="Create" class="btn btn-secondary text-nowrap">
+                        <i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["New plan"]
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+@if (Model.Plans.Count > 0)
+{
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">@T["Plan"]</th>
+                    <th scope="col">@T["Customer"]</th>
+                    <th scope="col" class="text-end">@T["Total"]</th>
+                    <th scope="col" class="text-end">@T["Paid"]</th>
+                    <th scope="col" class="text-end">@T["Outstanding"]</th>
+                    <th scope="col">@T["Next payment"]</th>
+                    <th scope="col">@T["Status"]</th>
+                    <th scope="col" class="text-end">@T["Actions"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var plan in Model.Plans)
+                {
+                    var next = plan.NextPayment;
+
+                    <tr>
+                        <td>
+                            <a asp-action="Detail" asp-route-itemId="@plan.ItemId">@plan.Title</a>
+                        </td>
+                        <td>
+                            <div>@plan.CustomerName</div>
+                            <div class="text-muted small">@plan.CustomerEmail</div>
+                        </td>
+                        <td class="text-end text-nowrap">@plan.Currency @CurrencyScale.Format(plan.TotalAmount, plan.Currency)</td>
+                        <td class="text-end text-nowrap">@plan.Currency @CurrencyScale.Format(plan.AmountPaid, plan.Currency)</td>
+                        <td class="text-end text-nowrap">@plan.Currency @CurrencyScale.Format(plan.AmountOutstanding, plan.Currency)</td>
+                        <td class="text-nowrap">
+                            @if (next is not null && plan.Status is not (InstallmentPlanStatus.Canceled or InstallmentPlanStatus.Completed))
+                            {
+                                <span>@next.DueUtc.ToString("d")</span>
+                                <span class="text-muted small">@plan.Currency @CurrencyScale.Format(next.Amount, plan.Currency)</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">&mdash;</span>
+                            }
+                        </td>
+                        <td><partial name="_InstallmentPlanStatusBadge" model="plan.Status" /></td>
+                        <td class="text-end text-nowrap">
+                            @if (plan.Status == InstallmentPlanStatus.Draft)
+                            {
+                                <a class="btn btn-sm btn-primary" asp-action="Pay" asp-route-itemId="@plan.ItemId">@T["Take down payment"]</a>
+                            }
+                            <a class="btn btn-sm btn-secondary" asp-action="Detail" asp-route-itemId="@plan.ItemId">@T["Manage"]</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else
+{
+    <div class="alert alert-info text-center" role="alert">
+        @T["<strong>Nothing here!</strong> There are no installment plans that match the current filter."]
+    </div>
+}
+
+@await DisplayAsync(Model.Pager)

@@ -17,6 +17,9 @@ using CrestApps.OrchardCore.Subscriptions.Reports;
 using CrestApps.OrchardCore.Subscriptions.Services;
 using CrestApps.OrchardCore.Subscriptions.Tasks;
 using CrestApps.OrchardCore.Subscriptions.Workflows.Drivers;
+using CrestApps.OrchardCore.Transactions.Core;
+using CrestApps.OrchardCore.Transactions.Services;
+using Microsoft.Extensions.Localization;
 using Microsoft.AspNetCore.Authorization;
 using CrestApps.OrchardCore.Subscriptions.Handlers;
 using Microsoft.Extensions.DependencyInjection;
@@ -259,5 +262,49 @@ public sealed class FeatureProfileTenantProvisioningStartup : StartupBase
     {
         services.AddContentPart<TenantOnboardingPart>()
             .UseDisplayDriver<FeatureProfilesTenantOnboardingPartDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Registers installment plans: payment plans an administrator sets up for a customer, collected through the
+/// checkout and recorded on the transaction ledger.
+/// </summary>
+[Feature(SubscriptionConstants.Features.Installments)]
+public sealed class InstallmentPlansStartup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InstallmentPlansStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public InstallmentPlansStartup(IStringLocalizer<InstallmentPlansStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddTransactionSource(SubscriptionConstants.InstallmentPlans.TransactionSource, source =>
+        {
+            source.DisplayName = S["Installment plan"];
+            source.Description = S["Down payments and scheduled payments of installment plans."];
+        });
+
+        services.Configure<StoreCollectionOptions>(options => options.Collections.Add(SubscriptionConstants.InstallmentPlanCollectionName));
+
+        services.AddDataMigration<InstallmentPlanMigrations>()
+            .AddIndexProvider<InstallmentPlanIndexProvider>();
+
+        services.AddScoped<IInstallmentPlanStore, InstallmentPlanStore>();
+        services.AddScoped<IInstallmentPlanService, DefaultInstallmentPlanService>();
+        services.AddScoped<ITransactionPaymentHandler, InstallmentPlanTransactionPaymentHandler>();
+
+        services.AddSiteDisplayDriver<InstallmentPlanSettingsDisplayDriver>();
+        services.AddNavigationProvider<InstallmentPlansAdminMenu>();
+        services.AddPermissionProvider<InstallmentPlanPermissionsProvider>();
+
+        services.AddSingleton<IBackgroundTask, InstallmentPlanBackgroundTask>();
     }
 }

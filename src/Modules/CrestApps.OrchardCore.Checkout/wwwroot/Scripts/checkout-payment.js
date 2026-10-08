@@ -74,13 +74,16 @@ var checkoutPayment = function () {
     }
   }
   async function postJson(url, body) {
+    // A page whose endpoints are antiforgery-protected (an admin page taking a payment for a customer) passes
+    // its token here; the storefront endpoints rely on the same-origin check instead and pass nothing.
+    var headers = Object.assign({
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    }, config.requestHeaders || {});
     var response = await fetch(url, {
       method: 'POST',
       credentials: 'same-origin',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
+      headers: headers,
       body: JSON.stringify(body || {})
     });
     var payload = null;

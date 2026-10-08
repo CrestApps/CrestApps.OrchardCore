@@ -75,6 +75,10 @@
                                 <span class="text-muted small">@evt.CreatedUtc.ToString("g")</span>
                             </div>
                             <div>@evt.Message</div>
+                            @if (Model.ShowReceipts && evt.Type == TransactionEventType.PaymentRecorded && !string.IsNullOrEmpty(evt.Id))
+                            {
+                                <a class="small" asp-action="Index" asp-controller="TransactionReceipt" asp-route-itemId="@transaction.ItemId" asp-route-paymentId="@evt.Id">@T["View receipt"]</a>
+                            }
                             @if (!string.IsNullOrEmpty(evt.ActorName))
                             {
                                 <div class="text-muted small">@T["By {0}", evt.ActorName]</div>

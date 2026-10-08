@@ -1,0 +1,216 @@
+@using CrestApps.OrchardCore.Payments
+@using CrestApps.OrchardCore.Subscriptions.Core
+@using CrestApps.OrchardCore.Subscriptions.Models
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+@using CrestApps.OrchardCore.Transactions.Models
+@using OrchardCore.DisplayManagement.Html
+@model InstallmentPlanDetailViewModel
+
+@{
+    var plan = Model.Plan;
+    var isOpen = plan.Status is InstallmentPlanStatus.Active or InstallmentPlanStatus.PastDue;
+    var canCharge = isOpen && plan.CollectionMethod == InstallmentCollectionMethod.AutoCharge && plan.PaymentMethod is not null;
+    var cardExpired = plan.PaymentMethod?.IsExpired(Model.UtcNow) == true;
+
+    string Money(decimal amount) => $"{plan.Currency} {CurrencyScale.Format(amount, plan.Currency)}";
+}
+
+<zone Name="Title">
+    <breadcrumb name="SubscriptionsInstallmentPlansDetail" title="@(new HtmlContentString(plan.Title ?? string.Empty))">
+        <breadcrumb-item id="SubscriptionsInstallmentPlans" action="Index" controller="InstallmentPlans" area="CrestApps.OrchardCore.Subscriptions" permission="@SubscriptionPermissions.ManageInstallmentPlans.Name">@T["Installment Plans"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+@if (plan.Status == InstallmentPlanStatus.Draft)
+{
+    <div class="alert alert-info d-flex justify-content-between align-items-center" role="alert">
+        <span>@T["Nothing is scheduled until the down payment is received."]</span>
+        <a class="btn btn-primary btn-sm" asp-action="Pay" asp-route-itemId="@plan.ItemId">@T["Take the down payment"]</a>
+    </div>
+}
+
+@if (cardExpired && isOpen && plan.CollectionMethod == InstallmentCollectionMethod.AutoCharge)
+{
+    <div class="alert alert-warning" role="alert">
+        @T["The card on file has expired, so the next charges will be declined. Ask the customer for a new card."]
+    </div>
+}
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>@T["Summary"]</span>
+                <partial name="_InstallmentPlanStatusBadge" model="plan.Status" />
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">@T["Customer"]</dt>
+                    <dd class="col-sm-8">@plan.CustomerName <span class="text-muted small">@plan.CustomerEmail</span></dd>
+
+                    <dt class="col-sm-4">@T["Total"]</dt>
+                    <dd class="col-sm-8">@Money(plan.TotalAmount)</dd>
+
+                    <dt class="col-sm-4">@T["Received"]</dt>
+                    <dd class="col-sm-8">@Money(plan.AmountPaid)</dd>
+
+                    <dt class="col-sm-4">@T["Outstanding"]</dt>
+                    <dd class="col-sm-8"><strong>@Money(plan.AmountOutstanding)</strong></dd>
+
+                    <dt class="col-sm-4">@T["Schedule"]</dt>
+                    <dd class="col-sm-8">@T["Down payment of {0}, then {1} payments from {2:d}", Money(plan.DownPaymentAmount), plan.InstallmentCount, plan.FirstDueUtc]</dd>
+
+                    <dt class="col-sm-4">@T["Collected by"]</dt>
+                    <dd class="col-sm-8">
+                        @if (plan.CollectionMethod == InstallmentCollectionMethod.AutoCharge)
+                        {
+                            @if (plan.PaymentMethod is not null)
+                            {
+                                <span>@T["Charging {0}", plan.PaymentMethod.Describe()]</span>
+                                @if (plan.PaymentMethod.ExpirationMonth.HasValue && plan.PaymentMethod.ExpirationYear.HasValue)
+                                {
+                                    <span class="text-muted small">@T["expires {0:00}/{1}", plan.PaymentMethod.ExpirationMonth.Value, plan.PaymentMethod.ExpirationYear.Value]</span>
+                                }
+                            }
+                            else
+                            {
+                                <span>@T["Charging the card used for the down payment"]</span>
+                            }
+                        }
+                        else
+                        {
+                            <span>@T["Invoicing the customer"]</span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-4">@T["Created"]</dt>
+                    <dd class="col-sm-8">@plan.CreatedUtc.ToString("g") @(string.IsNullOrEmpty(plan.CreatedByName) ? string.Empty : T["by {0}", plan.CreatedByName].Value)</dd>
+
+                    @if (!string.IsNullOrWhiteSpace(plan.Notes))
+                    {
+                        <dt class="col-sm-4">@T["Note"]</dt>
+                        <dd class="col-sm-8">@plan.Notes</dd>
+                    }
+                </dl>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header">@T["Payments"]</div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">@T["Payment"]</th>
+                            <th scope="col">@T["Due"]</th>
+                            <th scope="col" class="text-end">@T["Amount"]</th>
+                            <th scope="col">@T["Status"]</th>
+                            <th scope="col"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var payment in plan.Payments.OrderBy(payment => payment.Number))
+                        {
+                            Transaction transaction = null;
+
+                            if (!string.IsNullOrEmpty(payment.TransactionId))
+                            {
+                                Model.Transactions.TryGetValue(payment.TransactionId, out transaction);
+                            }
+
+                            <tr>
+                                <td>@(payment.Number == 0 ? T["Down payment"].Value : T["Payment {0} of {1}", payment.Number, plan.InstallmentCount].Value)</td>
+                                <td class="text-nowrap">@payment.DueUtc.ToString("d")</td>
+                                <td class="text-end text-nowrap">@Money(payment.Amount)</td>
+                                <td>
+                                    <partial name="_InstallmentPaymentStatusBadge" model="payment.Status" />
+                                    @if (payment.PaidUtc.HasValue)
+                                    {
+                                        <div class="text-muted small">@T["Received {0:d}", payment.PaidUtc.Value]</div>
+                                    }
+                                    @if (payment.Status != InstallmentPaymentStatus.Paid && !string.IsNullOrEmpty(payment.LastFailureMessage))
+                                    {
+                                        <div class="text-danger small">@payment.LastFailureMessage</div>
+                                    }
+                                    @if (payment.Status != InstallmentPaymentStatus.Paid && payment.NextChargeAttemptUtc.HasValue)
+                                    {
+                                        <div class="text-muted small">@T["Next try {0:g}", payment.NextChargeAttemptUtc.Value]</div>
+                                    }
+                                </td>
+                                <td class="text-end text-nowrap">
+                                    @if (transaction is not null)
+                                    {
+                                        <a class="btn btn-sm btn-outline-secondary" asp-action="Detail" asp-controller="Admin" asp-area="CrestApps.OrchardCore.Transactions" asp-route-itemId="@transaction.ItemId">@T["Transaction"]</a>
+
+                                        @if (Model.ShowReceipts)
+                                        {
+                                            foreach (var recorded in transaction.Events.Where(evt => evt.Type == TransactionEventType.PaymentRecorded && !string.IsNullOrEmpty(evt.Id)))
+                                            {
+                                                <a class="btn btn-sm btn-outline-secondary" asp-action="Index" asp-controller="TransactionReceipt" asp-area="CrestApps.OrchardCore.Transactions" asp-route-itemId="@transaction.ItemId" asp-route-paymentId="@recorded.Id">@T["Receipt"]</a>
+                                            }
+                                        }
+                                    }
+
+                                    @if (canCharge && payment.Number > 0 && payment.Status is not (InstallmentPaymentStatus.Paid or InstallmentPaymentStatus.Canceled))
+                                    {
+                                        <form asp-action="Charge" method="post" class="d-inline">
+                                            <input type="hidden" name="itemId" value="@plan.ItemId" />
+                                            <input type="hidden" name="paymentNumber" value="@payment.Number" />
+                                            <button type="submit" class="btn btn-sm btn-primary"
+                                                    data-url-af="UnsafeUrl"
+                                                    data-title="@T["Charge now"]"
+                                                    data-message="@T["Charge {0} to {1} now?", Money(payment.Amount), plan.PaymentMethod.Describe()]">
+                                                @T["Charge now"]
+                                            </button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header">@T["History"]</div>
+            <ul class="list-group list-group-flush">
+                @foreach (var entry in plan.Events.OrderByDescending(entry => entry.CreatedUtc))
+                {
+                    <li class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <span>@entry.Message</span>
+                            <span class="text-muted small text-nowrap ms-3">@entry.CreatedUtc.ToString("g")</span>
+                        </div>
+                        @if (!string.IsNullOrEmpty(entry.ActorName))
+                        {
+                            <div class="text-muted small">@T["By {0}", entry.ActorName]</div>
+                        }
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        @if (plan.Status is not (InstallmentPlanStatus.Completed or InstallmentPlanStatus.Canceled))
+        {
+            <div class="card mb-3">
+                <div class="card-header">@T["Cancel the plan"]</div>
+                <div class="card-body">
+                    <p class="text-muted small">@T["Payments already received stay received and can be refunded from Payments. Payments not yet received are canceled and will not be collected."]</p>
+                    <form asp-action="Cancel" method="post">
+                        <input type="hidden" name="itemId" value="@plan.ItemId" />
+                        <input type="text" class="form-control mb-2" name="reason" placeholder="@T["Reason (optional)"]" />
+                        <button type="submit" class="btn btn-outline-danger w-100"
+                                data-url-af="UnsafeUrl"
+                                data-title="@T["Cancel the plan"]"
+                                data-message="@T["Are you sure you want to cancel this plan? Payments not yet received will not be collected."]">
+                            @T["Cancel the plan"]
+                        </button>
+                    </form>
+                </div>
+            </div>
+        }
+    </div>
+</div>

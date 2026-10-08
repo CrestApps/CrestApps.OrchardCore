@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -217,6 +218,7 @@ public sealed class AdminController : Controller
             OwnerName = await ResolveOwnerNameAsync(transaction.OwnerId),
             CanManage = true,
             CanSendReminder = _reminderService is not null,
+            ShowReceipts = HttpContext.RequestServices.GetService<ITransactionReceiptBuilder>() is not null,
         };
 
         return View(model);

@@ -305,6 +305,103 @@ public sealed class TransactionSettlementCheckoutHandlerTests
             UpdatedUtc = _now,
         };
 
+    [Fact]
+    public async Task ActivatingAsync_LeavesTheBalanceOutOfTheTaxDetermination()
+    {
+        // Arrange
+        var transaction = CreateOutstandingTransaction();
+        var handler = CreateHandler(new FakeTransactionStore(transaction));
+        var session = new CheckoutSession
+        {
+            SessionId = "settlement-1",
+            ReferenceType = TransactionsConstants.ReferenceTypes.Transaction,
+            ReferenceId = transaction.ItemId,
+        };
+
+        // Act
+        await handler.ActivatingAsync(new CheckoutFlowActivatingContext(session));
+
+        // Assert
+        // The transaction already carries its own tax; settling it must not tax it again.
+        Assert.True(Assert.Single(Assert.Single(session.Steps).BillingItems).ExcludeFromTax);
+    }
+
+    [Fact]
+    public async Task CompletedAsync_TellsThePaymentHandlersWhatWasPaid()
+    {
+        // Arrange
+        var transaction = CreateOutstandingTransaction();
+        var store = new FakeTransactionStore(transaction);
+        var attempts = new InMemoryPaymentAttemptStore(new PaymentAttempt
+        {
+            ItemId = "attempt-9",
+            SessionId = "settlement-1",
+            Currency = "USD",
+            State = PaymentAttemptState.Succeeded,
+            ConfirmedAmount = 100m,
+            ConfirmedTaxAmount = 8m,
+        });
+
+        var recorder = new RecordingPaymentHandler();
+        var handler = CreateHandler(store, attempts, recorder);
+
+        // Act
+        await handler.CompletedAsync(new CheckoutFlowCompletedContext(new CheckoutFlow(CreateSettlementSession(transaction, "settlement-1"))));
+
+        // Assert
+        var recorded = Assert.Single(recorder.Contexts);
+
+        Assert.Same(transaction, recorded.Transaction);
+        Assert.Equal(108m, recorded.Payment.Amount);
+        Assert.Equal(TransactionsConstants.SettlementMethods.Online, recorded.Payment.Method);
+        Assert.Equal("attempt-9", recorded.Payment.PaymentAttemptId);
+        Assert.False(string.IsNullOrEmpty(recorded.Payment.Id));
+        Assert.Equal(TransactionEventType.PaymentRecorded, recorded.Payment.Type);
+    }
+
+    [Fact]
+    public async Task CompletedAsync_AHandlerThatThrows_DoesNotUndoThePayment()
+    {
+        // Arrange
+        var transaction = CreateOutstandingTransaction();
+        var store = new FakeTransactionStore(transaction);
+        var attempts = new InMemoryPaymentAttemptStore(new PaymentAttempt
+        {
+            SessionId = "settlement-1",
+            Currency = "USD",
+            State = PaymentAttemptState.Succeeded,
+            ConfirmedAmount = 108m,
+        });
+
+        var recorder = new RecordingPaymentHandler();
+        var handler = CreateHandler(store, attempts, new ThrowingPaymentHandler(), recorder);
+
+        // Act
+        await handler.CompletedAsync(new CheckoutFlowCompletedContext(new CheckoutFlow(CreateSettlementSession(transaction, "settlement-1"))));
+
+        // Assert
+        Assert.Equal(TransactionStatus.Paid, (await store.FindByIdAsync(transaction.ItemId, TestContext.Current.CancellationToken)).Status);
+        Assert.Single(recorder.Contexts);
+    }
+
+    private sealed class RecordingPaymentHandler : ITransactionPaymentHandler
+    {
+        public List<TransactionPaymentRecordedContext> Contexts { get; } = [];
+
+        public Task PaymentRecordedAsync(TransactionPaymentRecordedContext context, CancellationToken cancellationToken = default)
+        {
+            Contexts.Add(context);
+
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class ThrowingPaymentHandler : ITransactionPaymentHandler
+    {
+        public Task PaymentRecordedAsync(TransactionPaymentRecordedContext context, CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("The receipt could not be sent.");
+    }
+
     private static TransactionSettlementCheckoutHandler CreateHandler(FakeTransactionStore store, InMemoryPaymentAttemptStore attempts = null, params ITransactionPaymentHandler[] paymentHandlers)
     {
         var services = new ServiceCollection();

@@ -63,6 +63,27 @@ Reminders are delivered by `ITransactionReminderService`. An **authenticated** o
 
 Reminders are gated behind the separate **Transaction Reminders** feature (`CrestApps.OrchardCore.Transactions.Notification`), which depends on the OrchardCore **Notifications** feature. The core Transactions ledger, report, statements, and settlement work without it; enable the reminders feature only when you want manual and scheduled reminders. When it is disabled, the *Send reminder* action and the reminder settings are not shown.
 
+Besides chasing what is overdue, the sweep tells the owner a payment is **coming due**, once, a few days before
+its due date (`SendUpcomingReminderAsync`). A transaction that will be collected without the owner acting — an
+installment charged to a saved card — carries a `TransactionAutoCollection` describing the card, and its notice
+says which card will be charged and when instead of asking the owner to pay.
+
+### Payment receipts
+
+The **Payment Receipts** feature (`CrestApps.OrchardCore.Transactions.Receipts`, which needs the
+[Receipts](receipts) module) sends the owner a receipt for every payment applied to a transaction: settled online,
+recorded offline, or marked paid. A receipt covers the money in that one payment, with that payment's share of the
+transaction's tax, so a balance paid in three parts gets three receipts that add up. A signed-up owner receives it
+through the notification system with an HTML body; a guest owner receives it by email. Each payment on a
+transaction's timeline links to its printable receipt, for the owner and for administrators.
+
+### Reacting to a payment
+
+`ITransactionPaymentHandler.PaymentRecordedAsync` is raised after a payment is applied to a transaction, however it
+was paid. Receipts and installment plans use it; implement it to react to payments without caring which screen or
+process took the money. Each recorded payment is a `TransactionEvent` with an `Id`, the `Amount` applied and the
+`Method` (`online` or `offline`). A handler that fails is logged and never undoes the payment.
+
 ## Using the module
 
 ### Customer statement — "My Transactions"
@@ -121,6 +142,7 @@ Reminder settings appear only when the **Transaction Reminders** feature (`Crest
 | **First reminder delay (days)** | Days to wait after a transaction becomes due before the first reminder. | `0` |
 | **Reminder interval (days)** | Days to wait between reminders. | `7` |
 | **Maximum reminders** | Maximum reminders per transaction (`0` = no limit). | `3` |
+| **Remind before the due date (days)** | How many days before a payment falls due the owner is told it is coming due, once per payment (`0` = off). | `3` |
 
 The background task runs the sweep on a schedule and sends a reminder only when a transaction is due for one under this cadence, up to the maximum.
 
