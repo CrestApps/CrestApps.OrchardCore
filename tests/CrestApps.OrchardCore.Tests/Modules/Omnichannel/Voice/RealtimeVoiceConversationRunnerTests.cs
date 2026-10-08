@@ -661,6 +661,48 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
     }
 
     [Fact]
+    public async Task NothingIsAddedToAVoicemail_AfterTheMessage()
+    {
+        // Arrange
+        // Live, the model left its message, ended the call on voicemail, and then said "Thanks, goodbye." onto the
+        // recording as well: the message did not sound like a goodbye, so the line after it was let through.
+        var harness = new RealtimeHarness();
+        using var endCall = new CancellationTokenSource();
+        harness.EndCallRequested = endCall.Token;
+        harness.Conversation.KeepAlive = true;
+        harness.Media.KeepAlive = true;
+
+        var run = harness.RunAsync();
+
+        harness.Conversation.Queue(
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantAudioDelta, Audio = new byte[320] },
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantTranscriptDone, Text = "Hi Haneen, it's Sarah with Prestige Auto Group. Please call us back when you can." });
+
+        await Task.Delay(TimeSpan.FromMilliseconds(300), TestContext.Current.CancellationToken);
+        harness.ReachedVoicemail = true;
+        await endCall.CancelAsync();
+
+        await Task.Delay(TimeSpan.FromMilliseconds(500), TestContext.Current.CancellationToken);
+        var spokenAfterMessage = harness.Media.WrittenAudio.Count;
+
+        // Act
+        harness.Conversation.Queue(
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantAudioDelta, Audio = new byte[320] },
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantTranscriptDone, Text = "Thanks, goodbye." });
+
+        await Task.Delay(TimeSpan.FromMilliseconds(500), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(spokenAfterMessage, harness.Media.WrittenAudio.Count);
+        Assert.Single(harness.StoredPrompts, prompt => prompt.Role == ChatRole.Assistant);
+
+        harness.Conversation.KeepAlive = false;
+        harness.Media.KeepAlive = false;
+
+        await Task.WhenAny(run, Task.Delay(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public async Task ACustomerWhoStartsSpeakingAfterTheGoodbye_IsNotHungUpOn()
     {
         // Arrange

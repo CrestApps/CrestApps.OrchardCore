@@ -298,9 +298,11 @@ public sealed partial class RealtimeVoiceConversationRunner
 
             // Nothing is being said, and the assistant has already answered the customer, so the goodbye is behind
             // us. The closing watchdog is told too, so it does not wait for a goodbye this pump will now suppress.
+            // On voicemail the message is the goodbye, whatever it says: live, "Thanks, goodbye." was added to the
+            // recording after it.
             if (!Volatile.Read(ref utteranceInFlight) &&
                 Volatile.Read(ref spokeSinceCaller) &&
-                VoiceGoodbye.SoundsLikeOne(Volatile.Read(ref lastAssistantLine)))
+                (VoiceGoodbye.SoundsLikeOne(Volatile.Read(ref lastAssistantLine)) || ReachedVoicemail(context)))
             {
                 goodbyeSaid = true;
                 Volatile.Write(ref _goodbyeAlreadySaid, true);
@@ -570,7 +572,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                         // The line that was in flight when the call was closed is the goodbye, when it is one. It
                         // has now been said, so the assistant is done talking. A line that was not a goodbye leaves
                         // the next one to be heard: that is where the model is still saying what it meant to.
-                        goodbyeSaid = closingRequested && VoiceGoodbye.SoundsLikeOne(spoken);
+                        goodbyeSaid = closingRequested && (VoiceGoodbye.SoundsLikeOne(spoken) || ReachedVoicemail(context));
 
                         break;
 
@@ -763,6 +765,10 @@ public sealed partial class RealtimeVoiceConversationRunner
             activityId,
             (int)lag.TotalMilliseconds);
     }
+
+    // Whether the model ended the call on voicemail, where its message is the closing line.
+    private static bool ReachedVoicemail(RealtimeVoiceConversationContext context)
+        => context.ReachedVoicemail?.Invoke() == true;
 
     private static ValueTask WriteToLineAsync(IContactCenterVoiceMediaSession media, ReadOnlyMemory<byte> audio, CancellationToken cancellationToken)
         => audio.IsEmpty
