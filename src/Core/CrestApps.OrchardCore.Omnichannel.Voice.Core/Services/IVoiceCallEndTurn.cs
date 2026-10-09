@@ -110,4 +110,15 @@ public interface IVoiceCallEndTurn
     /// </remarks>
     bool ClosingLineOwed
         => false;
+
+    /// <summary>
+    /// Gets a value indicating whether the model has already asked to end the call since the customer last spoke.
+    /// </summary>
+    /// <remarks>
+    /// Live, a model said goodbye, ended the call, read "say nothing further" back and answered it by ending the call
+    /// again -- twelve times, every half second, each one a response that kept the line open as if it were still
+    /// talking. A repeat is not a new decision, and the tool tells the model so.
+    /// </remarks>
+    bool EndCallAlreadyRequested
+        => false;
 }
